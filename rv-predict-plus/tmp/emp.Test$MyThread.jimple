@@ -1,0 +1,103 @@
+class emp.Test$MyThread extends java.lang.Thread
+{
+    emp.Test t;
+
+    void <init>(emp.Test)
+    {
+        emp.Test$MyThread r0;
+        emp.Test r1;
+
+        r0 := @this: emp.Test$MyThread;
+        r1 := @parameter0: emp.Test;
+        staticinvoke <rvpredict.logging.RT: void logMethodBegin(java.lang.String,java.lang.String)>("emp.Test$MyThread", "void <init>(emp.Test)");
+        staticinvoke <rvpredict.logging.RT: void logConstructorBegin(java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)>("java.lang.Thread", "void <init>()", "emp.Test$MyThread", 4, 4);
+        specialinvoke r0.<java.lang.Thread: void <init>()>();
+        staticinvoke <rvpredict.logging.RT: void logConstructorEnd(java.lang.Object,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)>(r0, "java.lang.Thread", "void <init>()", "emp.Test$MyThread", 4, 4);
+        r0.<emp.Test$MyThread: emp.Test t> = r1;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("emp.Test$MyThread", "t", r0, "emp.Test$MyThread", "void <init>(emp.Test)", 6, 1);
+        staticinvoke <rvpredict.logging.RT: void logMethodEnd(java.lang.String,java.lang.String)>("emp.Test$MyThread", "void <init>(emp.Test)");
+        return;
+    }
+
+    public void run()
+    {
+        emp.Test$MyThread r0;
+
+        r0 := @this: emp.Test$MyThread;
+        staticinvoke <rvpredict.logging.RT: void logMethodBegin(java.lang.String,java.lang.String)>("emp.Test$MyThread", "void run()");
+        staticinvoke <rvpredict.logging.RT: void logInstanceInvokeBegin(java.lang.Object,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)>(r0, "emp.Test$MyThread", "void m2()", "emp.Test$MyThread", 3, 3);
+        specialinvoke r0.<emp.Test$MyThread: void m2()>();
+        staticinvoke <rvpredict.logging.RT: void logMethodEnd(java.lang.String,java.lang.String)>("emp.Test$MyThread", "void run()");
+        return;
+    }
+
+    private void m2()
+    {
+        emp.Test$MyThread r0;
+        emp.Test r1, $r3, $r4, $r6;
+        java.lang.InterruptedException r2, $r5;
+        int $i0, $i1;
+        java.lang.Throwable $r7;
+
+        r0 := @this: emp.Test$MyThread;
+        staticinvoke <rvpredict.logging.RT: void logMethodBegin(java.lang.String,java.lang.String)>("emp.Test$MyThread", "void m2()");
+        $r3 = r0.<emp.Test$MyThread: emp.Test t>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("emp.Test$MyThread", "t", r0, "emp.Test$MyThread", "void m2()", 2, 0);
+        r1 = $r3;
+        entermonitor $r3;
+        staticinvoke <rvpredict.logging.RT: void logLock(java.lang.Object)>($r3);
+
+     label0:
+        $r4 = r0.<emp.Test$MyThread: emp.Test t>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("emp.Test$MyThread", "t", r0, "emp.Test$MyThread", "void m2()", 7, 0);
+        virtualinvoke $r4.<java.lang.Object: void wait()>();
+        staticinvoke <rvpredict.logging.RT: void logWait(java.lang.Object,java.lang.String,java.lang.String,int)>($r4, "emp.Test$MyThread", "void m2()", 9);
+
+     label1:
+        staticinvoke <rvpredict.logging.RT: void logBranch(java.lang.String,java.lang.String,int)>("emp.Test$MyThread", "void m2()", 12);
+        goto label3;
+
+     label2:
+        $r5 := @caughtexception;
+        staticinvoke <rvpredict.logging.RT: void logException(java.lang.Throwable)>($r5);
+        r2 = $r5;
+        virtualinvoke r2.<java.lang.InterruptedException: void printStackTrace()>();
+        staticinvoke <rvpredict.logging.RT: void logImpureCall(java.lang.String,boolean,java.lang.Object,java.lang.String,java.lang.String,int)>("java.lang.InterruptedException", 1, r2, "emp.Test$MyThread", "void m2()", 16);
+
+     label3:
+        $i0 = <emp.Test: int x>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("emp.Test", "x", null, "emp.Test$MyThread", "void m2()", 18, 0);
+        $i1 = $i0 + 1;
+        <emp.Test: int x> = $i1;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("emp.Test", "x", null, "emp.Test$MyThread", "void m2()", 21, 1);
+        $r6 = r0.<emp.Test$MyThread: emp.Test t>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("emp.Test$MyThread", "t", r0, "emp.Test$MyThread", "void m2()", 23, 0);
+        staticinvoke <rvpredict.logging.RT: void logNotify(java.lang.Object,java.lang.String,java.lang.String,int)>($r6, "emp.Test$MyThread", "void m2()", 26);
+        virtualinvoke $r6.<java.lang.Object: void notify()>();
+        exitmonitor r1;
+        staticinvoke <rvpredict.logging.RT: void logUnlock(java.lang.Object)>(r1);
+
+     label4:
+        staticinvoke <rvpredict.logging.RT: void logBranch(java.lang.String,java.lang.String,int)>("emp.Test$MyThread", "void m2()", 30);
+        goto label8;
+
+     label5:
+        $r7 := @caughtexception;
+        staticinvoke <rvpredict.logging.RT: void logException(java.lang.Throwable)>($r7);
+
+     label6:
+        exitmonitor r1;
+        staticinvoke <rvpredict.logging.RT: void logUnlock(java.lang.Object)>(r1);
+
+     label7:
+        throw $r7;
+
+     label8:
+        staticinvoke <rvpredict.logging.RT: void logMethodEnd(java.lang.String,java.lang.String)>("emp.Test$MyThread", "void m2()");
+        return;
+
+        catch java.lang.InterruptedException from label0 to label1 with label2;
+        catch java.lang.Throwable from label0 to label4 with label5;
+        catch java.lang.Throwable from label6 to label7 with label5;
+    }
+}

@@ -1,0 +1,286 @@
+### Configuration file for the rv-predict test suite ###
+
+### Tests to run, you are encouraged to add more ###
+# Tests are named by their package names
+Tests:
+  account:
+    classname: Main
+    arguments: ""
+    effort: 1
+    # Race fields are treated as distinct even when on the same field
+    races: [ "account.Account.amount", "account.Account.amount" ]
+  cdep:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "cdep.Main.lock", "cdep.Main.x" ]
+  elevator:
+    classname: Elevator
+    arguments: ""
+    effort: 5
+    races: [ "java.io.PrintStream", "elevator.Lift.count" ]
+  emptyfor:
+    classname: Simple
+    arguments: ""
+    effort: 0
+    races: [ "emptyfor.Simple.i" ]
+  failfinalize:
+    classname: Simple
+    arguments: ""
+    effort: 2
+    races: [ ]
+  file:
+    classname: File
+    arguments: ""
+    effort: 0
+    races: [ "java.io.FileWriter" ]
+  finalvar:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "finalvar.Main.i", "finalvar.Main.leak" ]
+  finalvar2:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "finalvar2.Main.i" ]
+  finalvar3:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ ]
+  finalvar4:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ ]
+  huge:
+    classname: NumberOfEvents
+    arguments: ""
+    effort: 4
+    races: [ "huge.NumberOfEvents.x" ]
+  impure:
+    classname: Simple
+    arguments: ""
+    effort: 0
+    races: [ "java.io.PrintStream" ]
+  innerclass:
+    classname: Simple
+    arguments: ""
+    effort: 0
+    races: [ "innerclass.Simple.i" ]
+  joinsimple:
+    classname: Simple
+    arguments: ""
+    effort: 0
+    races: [ ]
+  mixedlocksbig:
+    classname: Main
+    arguments: ""
+    effort: 2
+    races: [ "mixedlocksbig.Main.shared" ]
+  nonssabug:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "nonssabug.Main.i" ]
+  pseudosafecdep:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "pseudosafecdep.Main.lock" ]
+  reflection.one:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.one.Main.i", "java.io.PrintStream" ]
+  reflection.two:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.two.Main.i" ]
+  reflection.three:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.three.Main.i" ]
+  reflection.four:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.four.Main.i", "java.io.PrintStream" ]
+  reflection.five:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.five.Main.i", "java.io.PrintStream" ]
+  reflection.clinit:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ ]
+  reflection.singleton:
+    classname: Main
+    arguments: ""
+    effort: 2
+    races: [ ]
+  reflection.finalize.one:
+    classname: Simple
+    arguments: ""
+    effort: 0
+    races: [ ]
+  reflection.finalize.two:
+    classname: Simple
+    arguments: ""
+    effort: 0
+    races: [ ]
+  reflection.field.instance.booleanf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.instance.booleanf.Main.b" ]
+  reflection.field.instance.bytef:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.instance.bytef.Main.b" ]
+  reflection.field.instance.charf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.instance.charf.Main.b" ]
+  reflection.field.instance.doublef:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.instance.doublef.Main.b" ]
+  reflection.field.instance.floatf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.instance.floatf.Main.b" ]
+  reflection.field.instance.intf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.instance.intf.Main.b" ]
+  reflection.field.instance.longf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.instance.longf.Main.b" ]
+  reflection.field.instance.objectf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.instance.objectf.Main.b" ]
+  reflection.field.instance.shortf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.instance.shortf.Main.b" ]
+  reflection.field.staticf.booleanf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.staticf.booleanf.Main.b" ]
+  reflection.field.staticf.bytef:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.staticf.bytef.Main.b" ]
+  reflection.field.staticf.charf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.staticf.charf.Main.b" ]
+  reflection.field.staticf.doublef:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.staticf.doublef.Main.b" ]
+  reflection.field.staticf.floatf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.staticf.floatf.Main.b" ]
+  reflection.field.staticf.intf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.staticf.intf.Main.b" ]
+  reflection.field.staticf.longf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.staticf.longf.Main.b" ]
+  reflection.field.staticf.objectf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.staticf.objectf.Main.b" ]
+  reflection.field.staticf.shortf:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "reflection.field.staticf.shortf.Main.b" ]
+  safesimple:
+    classname: Simple
+    arguments: ""
+    effort: 0
+    races: [ ]
+  safewait:
+    classname: Simple
+    arguments: ""
+    effort: 0
+    races: [ ]
+  simple:
+    classname: Simple
+    arguments: ""
+    effort: 0
+    races: [ "java.io.PrintStream", "simple.Simple.i" ]
+  singleton:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ ]
+  staticsynch:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "java.io.PrintStream", "staticsynch.Main.i" ]
+  subtle:
+    classname: MyThread
+    arguments: ""
+    effort: 0
+    races: [ "subtle.MyThread.threadCount" ]
+  sync:
+    classname: Main
+    arguments: ""
+    effort: 0
+    races: [ "java.io.PrintStream", "sync.Main.i" ]
+  task:
+    classname: Task
+    arguments: ""
+    effort: 0
+    races: [ "task.Task.shared", "java.io.PrintStream" ]
+  unsafejoin:
+    classname: Simple
+    arguments: ""
+    effort: 0
+    races: [ "unsafejoin.Simple.i" ]
+  wait:
+    classname: Simple
+    arguments: ""
+    effort: 0
+    races: [ "wait.Simple.i" ]
+
+
+### Set up paths. This shouldn't need to be modified normally ###
+# Classpath (relative to srcRoot/lib/)
+cpSuffix: [ "jpredictor.jar", "external/sootclasses-2.4.0.jar", "external/jasminclasses-2.4.0.jar"
+          , "external/java_cup.jar", "external/protobuf-java-2.3.0.jar", "external/whirlycache-0.7.1.jar"
+          , "external/commons-logging-1.1.1.jar", "external/jdom-1.0.jar", "external/"
+          , "external/commons-collections-3.2.jar", "external/concurrent-1.3.4.jar", "external/guava-r04.jar"
+          ]
+## vim: tw=100:sw=2

@@ -1,0 +1,144 @@
+public class account.ManageAccount extends java.lang.Thread
+{
+    account.Account account;
+    static account.Account[] accounts;
+    static int num;
+    static int accNum;
+    int i;
+
+    static void <clinit>()
+    {
+        account.Account[] $r0;
+
+        staticinvoke <rvpredict.logging.RT: void logClassInitBegin(java.lang.String)>("account.ManageAccount");
+        $r0 = newarray (account.Account)[10];
+        <account.ManageAccount: account.Account[] accounts> = $r0;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "accounts", null, "account.ManageAccount", "void <clinit>()", 2, 1);
+        <account.ManageAccount: int num> = 2;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "num", null, "account.ManageAccount", "void <clinit>()", 4, 1);
+        <account.ManageAccount: int accNum> = 0;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "accNum", null, "account.ManageAccount", "void <clinit>()", 6, 1);
+        staticinvoke <rvpredict.logging.RT: void logClassInitEnd(java.lang.String)>("account.ManageAccount");
+        return;
+    }
+
+    public void <init>(java.lang.String, double)
+    {
+        account.ManageAccount r0;
+        java.lang.String r1;
+        double d0;
+        account.Account $r2, $r4;
+        int $i0, $i1, $i2, $i3, $i4, $i5;
+        account.Account[] $r3;
+
+        r0 := @this: account.ManageAccount;
+        r1 := @parameter0: java.lang.String;
+        d0 := @parameter1: double;
+        staticinvoke <rvpredict.logging.RT: void logMethodBegin(java.lang.String,java.lang.String)>("account.ManageAccount", "void <init>(java.lang.String,double)");
+        staticinvoke <rvpredict.logging.RT: void logConstructorBegin(java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)>("java.lang.Thread", "void <init>()", "account.ManageAccount", 5, 5);
+        specialinvoke r0.<java.lang.Thread: void <init>()>();
+        staticinvoke <rvpredict.logging.RT: void logConstructorEnd(java.lang.Object,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)>(r0, "java.lang.Thread", "void <init>()", "account.ManageAccount", 5, 5);
+        $r2 = new account.Account;
+        staticinvoke <rvpredict.logging.RT: void logConstructorBegin(java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)>("account.Account", "void <init>(java.lang.String,double)", "account.ManageAccount", 9, 9);
+        specialinvoke $r2.<account.Account: void <init>(java.lang.String,double)>(r1, d0);
+        staticinvoke <rvpredict.logging.RT: void logConstructorEnd(java.lang.Object,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)>($r2, "account.Account", "void <init>(java.lang.String,double)", "account.ManageAccount", 9, 9);
+        r0.<account.ManageAccount: account.Account account> = $r2;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "account", r0, "account.ManageAccount", "void <init>(java.lang.String,double)", 11, 1);
+        $i0 = <account.ManageAccount: int accNum>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "accNum", null, "account.ManageAccount", "void <init>(java.lang.String,double)", 13, 0);
+        r0.<account.ManageAccount: int i> = $i0;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "i", r0, "account.ManageAccount", "void <init>(java.lang.String,double)", 15, 1);
+        $r3 = <account.ManageAccount: account.Account[] accounts>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "accounts", null, "account.ManageAccount", "void <init>(java.lang.String,double)", 17, 0);
+        $i1 = r0.<account.ManageAccount: int i>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "i", r0, "account.ManageAccount", "void <init>(java.lang.String,double)", 19, 0);
+        $r4 = r0.<account.ManageAccount: account.Account account>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "account", r0, "account.ManageAccount", "void <init>(java.lang.String,double)", 21, 0);
+        $r3[$i1] = $r4;
+        staticinvoke <rvpredict.logging.RT: void logArrayAcc(java.lang.String,java.lang.Object,int,java.lang.String,java.lang.String,int,boolean)>("account.Account", $r3, $i1, "account.ManageAccount", "void <init>(java.lang.String,double)", 23, 0);
+        $i2 = <account.ManageAccount: int accNum>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "accNum", null, "account.ManageAccount", "void <init>(java.lang.String,double)", 25, 0);
+        $i3 = $i2 + 1;
+        $i4 = <account.ManageAccount: int num>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "num", null, "account.ManageAccount", "void <init>(java.lang.String,double)", 28, 0);
+        $i5 = $i3 % $i4;
+        <account.ManageAccount: int accNum> = $i5;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "accNum", null, "account.ManageAccount", "void <init>(java.lang.String,double)", 31, 1);
+        staticinvoke <rvpredict.logging.RT: void logMethodEnd(java.lang.String,java.lang.String)>("account.ManageAccount", "void <init>(java.lang.String,double)");
+        return;
+    }
+
+    public void run()
+    {
+        account.ManageAccount r0;
+        account.Account r1, $r2, $r3, $r5;
+        account.Account[] $r4;
+        int $i0, $i1, $i2, $i3;
+
+        r0 := @this: account.ManageAccount;
+        staticinvoke <rvpredict.logging.RT: void logMethodBegin(java.lang.String,java.lang.String)>("account.ManageAccount", "void run()");
+        $r2 = r0.<account.ManageAccount: account.Account account>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "account", r0, "account.ManageAccount", "void run()", 2, 0);
+        staticinvoke <rvpredict.logging.RT: void logInstanceInvokeBegin(java.lang.Object,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)>($r2, "account.Account", "void depsite(double)", "account.ManageAccount", 5, 5);
+        virtualinvoke $r2.<account.Account: void depsite(double)>(300.0);
+        $r3 = r0.<account.ManageAccount: account.Account account>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "account", r0, "account.ManageAccount", "void run()", 6, 0);
+        staticinvoke <rvpredict.logging.RT: void logInstanceInvokeBegin(java.lang.Object,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)>($r3, "account.Account", "void withdraw(int)", "account.ManageAccount", 9, 9);
+        virtualinvoke $r3.<account.Account: void withdraw(int)>(100);
+        $r4 = <account.ManageAccount: account.Account[] accounts>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "accounts", null, "account.ManageAccount", "void run()", 10, 0);
+        $i0 = r0.<account.ManageAccount: int i>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "i", r0, "account.ManageAccount", "void run()", 12, 0);
+        $i1 = $i0 + 1;
+        $i2 = <account.ManageAccount: int num>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "num", null, "account.ManageAccount", "void run()", 15, 0);
+        $i3 = $i1 % $i2;
+        r1 = $r4[$i3];
+        staticinvoke <rvpredict.logging.RT: void logArrayAcc(java.lang.String,java.lang.Object,int,java.lang.String,java.lang.String,int,boolean)>("account.Account", $r4, $i3, "account.ManageAccount", "void run()", 18, 0);
+        $r5 = r0.<account.ManageAccount: account.Account account>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "account", r0, "account.ManageAccount", "void run()", 20, 0);
+        staticinvoke <rvpredict.logging.RT: void logInstanceInvokeBegin(java.lang.Object,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)>($r5, "account.Account", "void transfer(account.Account,double)", "account.ManageAccount", 23, 23);
+        virtualinvoke $r5.<account.Account: void transfer(account.Account,double)>(r1, 99.0);
+        staticinvoke <rvpredict.logging.RT: void logMethodEnd(java.lang.String,java.lang.String)>("account.ManageAccount", "void run()");
+        return;
+    }
+
+    public static void printAllAccounts()
+    {
+        int i0, $i1;
+        account.Account[] $r0, $r2;
+        account.Account $r1, $r3;
+
+        staticinvoke <rvpredict.logging.RT: void logMethodBegin(java.lang.String,java.lang.String)>("account.ManageAccount", "void printAllAccounts()");
+        i0 = 0;
+        staticinvoke <rvpredict.logging.RT: void logBranch(java.lang.String,java.lang.String,int)>("account.ManageAccount", "void printAllAccounts()", 3);
+        goto label2;
+
+     label0:
+        $r0 = <account.ManageAccount: account.Account[] accounts>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "accounts", null, "account.ManageAccount", "void printAllAccounts()", 4, 0);
+        $r1 = $r0[i0];
+        staticinvoke <rvpredict.logging.RT: void logArrayAcc(java.lang.String,java.lang.Object,int,java.lang.String,java.lang.String,int,boolean)>("account.Account", $r0, i0, "account.ManageAccount", "void printAllAccounts()", 6, 0);
+        staticinvoke <rvpredict.logging.RT: void logBranch(java.lang.String,java.lang.String,int)>("account.ManageAccount", "void printAllAccounts()", 9);
+        if $r1 == null goto label1;
+
+        $r2 = <account.ManageAccount: account.Account[] accounts>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "accounts", null, "account.ManageAccount", "void printAllAccounts()", 10, 0);
+        $r3 = $r2[i0];
+        staticinvoke <rvpredict.logging.RT: void logArrayAcc(java.lang.String,java.lang.Object,int,java.lang.String,java.lang.String,int,boolean)>("account.Account", $r2, i0, "account.ManageAccount", "void printAllAccounts()", 12, 0);
+        staticinvoke <rvpredict.logging.RT: void logInstanceInvokeBegin(java.lang.Object,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)>($r3, "account.Account", "void print()", "account.ManageAccount", "void printAllAccounts()", 15);
+        virtualinvoke $r3.<account.Account: void print()>();
+
+     label1:
+        i0 = i0 + 1;
+
+     label2:
+        $i1 = <account.ManageAccount: int num>;
+        staticinvoke <rvpredict.logging.RT: void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)>("account.ManageAccount", "num", null, "account.ManageAccount", "void printAllAccounts()", 17, 0);
+        staticinvoke <rvpredict.logging.RT: void logBranch(java.lang.String,java.lang.String,int)>("account.ManageAccount", "void printAllAccounts()", 20);
+        if i0 < $i1 goto label0;
+
+        staticinvoke <rvpredict.logging.RT: void logMethodEnd(java.lang.String,java.lang.String)>("account.ManageAccount", "void printAllAccounts()");
+        return;
+    }
+}

@@ -1,0 +1,10 @@
+/--- Race found -----------------------------------------------\
+|  Read of constructor.Simple.leak at constructor.Simple$2:17  |
+|  Write of constructor.Simple.leak at constructor.Simple:6    |
+\--------------------------------------------------------------/
+
+/--- Race found --------------------------------------------------------------------\
+|  Write of constructor.Simple.i (instance #1888626692) at constructor.Simple$2:17  |
+|  Write of constructor.Simple.i (instance #1888626692) at constructor.Simple:7     |
+\-----------------------------------------------------------------------------------/
+

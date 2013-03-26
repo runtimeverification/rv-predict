@@ -1,0 +1,7 @@
+Warning: java.dyn.InvokeDynamic is a phantom class!
+No main class given. Inferred 'emp.Test' as main class.
+[Call Graph] For information on where the call graph may be incomplete, use the verbose option to the cg phase.
+Transforming emp.Test... 
+Transforming emp.Test$MyThread... 
+Writing to /Users/jeffhuang/Documents/workspace/RVPREDICT/javamop/tmp/emp.Test.jimple
+Writing to /Users/jeffhuang/Documents/workspace/RVPREDICT/javamop/tmp/emp.Test$MyThread.jimple

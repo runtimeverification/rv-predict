@@ -1,0 +1,144 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf340
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 Monaco;\f2\fnil\fcharset128 HiraKakuProN-W3;
+}
+{\colortbl;\red255\green255\blue255;\red127\green0\blue85;}
+\margl1440\margr1440\vieww15360\viewh8240\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+
+\f0\fs24 \cf0 \
+\
+\
+1. rvpredict requires aspectj?\
+2. why instrument com.google., jdbm, and rvpredict..\
+\
+\
+1. LOOP PEELER\
+philosophy: only instrument once? \
+\
+Q1. where do you put the cloned statements?\
+\
+let's see the jimple\
+\
+If s is a call to a Method, we need to clone that Method, as mentioned, so that the clone can be uninstrumented.\
+\
+Q2: what if the method calls form a long chain? inline all? or just limit method call depth?\
+\
+Q3: what all do you log?\
+methodbegin\
+methodend\
+constructorbegin\
+constructorend\
+fieldaccess\
+branch\
+\pard\pardeftab720
+
+\f1\fs22 \cf0 logImpureCall
+\f2 \'81\'48
+\f1 \
+
+\f0\fs24 logInstanceInvokingBegin--for instance\
+
+\f1\fs22 logInvokeBegin -- for static
+\f0\fs24   --- no end?\
+\
+logthreadstart /join\
+log lock /unlock \
+	-- treat synchronized block and sync method the same way?\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf0 	-- what if synchronized API which cannot be instrumented? \
+\pard\pardeftab720
+
+\f1\fs22 \cf0 logException\
+
+\f0\fs24 logwait\
+lognotify\
+\
+\
+logfinalize\
+
+\f1\fs22 \
+logMOPEvent -- 
+\fs24 \cf2 final\cf0  String eventName, \cf2 final\cf0  Object... os??
+\fs22 \
+\
+logStaticSyncLock/unlock -- synchronization on static methods\
+logArrayAccess -- array \'e9l\'e9ment acc\'e8ss\
+\
+logRefFieldAccess -- what's this??\
+
+\f0\fs24 \
+no yield\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf0 a. why not distinguish read/write? -- isWrite bool\
+b. seems loop peeling does not work?\
+\
+in PECAN, we do lock/read/write \'85 before/After... thread start/exit\
+\
+3473022750\
+\
+How to do loop peeling in my mind?\
+\
+-- only handle intra-procedural loops with no method invocation\
+--  sound -loop with no synchronization\
+-- loop condition must be satisfied\
+-- OR move instrumentation to outside loop?\
+-- LOOP PEELING IS BUGGY -- CONFIRMED\
+\
+Q4. how to use all these logged info in your later stage?\
+\
+Monitor-properties driven instrumentation framework?\
+\
+\
+RealSlicer: ArrayIndexOutOfBoundsException\
+why do you use future? - parallelism\
+\
+search algorithm looks bad?\
+1. candidate race pairs\
+2. check lockset&happens-before -> vector clock?\
+3. where is casual slicing implemented?\
+\
+GIVE ME YOUR CASUAL SLICING ALGORITHM??\
+VC -- reverse order, pat seems correct\
+what about lock acq/release?\
+associate each event with lockset??\
+check races is similar to PECAN, with also optimizations\
+\
+A. reduce instrumentation\
+B. move most logging data to static part\
+C. Have you run shared-object identification?\
+\
+Why do you need ThreadBufferIterator?\
+\
+BUG in event->jline->get stmt -- pathlinenumber seems not a good idea\
+-- with loop peeling vs without .., so line number cannot get corresponding stmts\
+\
+\
+\
+STEP1: static analysis\
+1. control-scope\
+2. instrumentation for shared variables only\
+\
+STEP2: runtime monitoring\
+1. collect necessary runtime object address & value\
+\
+STEP3: trace analysis\
+\
+1. find races, property violations\
+2. generate witness for violations\
+3. write a POR engine - graph reachability comparison mm vs dfs 1000: 162 vs >5mins vs 10secs\
+\
+STEP4: re-execution\
+\
+MOPDetection later\
+\
+TODO: \
+1. RV on MOP properties\
+2. interesting Multithreaded C programs, hard to verify\
+\
+\
+3. ssn -> annetta\
+next Tuesday, Kami\
+payroll office - insurance\
+vpn, illinoisnet, printer, does not work\
+}

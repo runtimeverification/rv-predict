@@ -1,0 +1,66 @@
+package rvpredict_events;
+
+option java_package = "rvpredict.logging";
+option java_outer_classname = "Protos";
+
+message Events {
+  repeated Event event = 1;
+}
+
+message Event {
+  enum Type {
+    Branch = 0;
+    MethodBegin = 1;
+    MethodEnd = 2;
+    ClassInitBegin = 3;
+    ClassInitEnd = 4;
+    Lock = 5;
+    Unlock = 6;
+    Access = 7;
+    MOPEvent = 8;
+    InstanceInvoke = 9;
+    Invoke = 10;
+    ConstructorBegin = 11;
+    ConstructorEnd = 12;
+    Start = 13;
+    Wait = 14;
+    Notify = 15;
+    Join = 16;
+    Finalize = 17;
+    Exception = 18;
+    ReqClassInit = 19;
+  }
+  required Type type = 1;
+  required fixed32 thread_id = 3;
+  optional string class_name = 4;
+  optional string method_name = 5;
+  optional fixed32 object_id = 6;
+  optional string field_name = 7;
+  optional string mopname = 8;
+  repeated fixed32 mopids = 9;
+  optional int32 index = 10;
+  optional bool is_write = 11;
+  optional bool is_static = 12;
+  optional Location location = 13;
+  repeated fixed32 lockset = 14;
+  optional bool is_important = 15;
+  optional Variable variable = 16;
+  repeated string classtack = 17;
+}
+
+message Location {
+  required string class_name = 1;
+  required string method_name = 2;
+  required int32 jimple_line = 3;
+}
+
+message Variable {
+  enum Type { StaticFieldAcc = 0; FieldAcc = 1; ArrayAcc = 2; ImpureCall = 3; }
+  required Type type = 1;
+  required string class_name = 2;
+  optional string field_name = 3;
+  optional fixed32 object_ID = 4;
+  optional int32 index = 5;
+}
+
+// vim: tw=100:sw=2

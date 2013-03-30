@@ -4,13 +4,13 @@
 	<classpathentry kind="src" path="examples/prediction"/>
 	<classpathentry kind="src" path="engine"/>
 	<classpathentry kind="src" path="test"/>
+	<classpathentry kind="src" path="db/src"/>
 	<classpathentry kind="var" path="JRE_LIB" sourcepath="/JRE_SRC"/>
 	<classpathentry kind="lib" path="lib/external/ant.jar"/>
 	<classpathentry kind="lib" path="lib/external/commons-collections-3.2.jar"/>
 	<classpathentry kind="lib" path="lib/external/commons-logging-1.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/external/concurrent-1.3.4.jar"/>
 	<classpathentry kind="lib" path="lib/external/guava-r04.jar"/>
-	<classpathentry kind="lib" path="lib/external/jasminclasses-2.4.0.jar"/>
 	<classpathentry kind="lib" path="lib/external/java_cup.jar"/>
 	<classpathentry kind="lib" path="lib/external/jdbm-1.0.jar"/>
 	<classpathentry kind="lib" path="lib/external/jdom-1.0.jar"/>
@@ -18,7 +18,8 @@
 	<classpathentry kind="lib" path="lib/external/protobuf-java-2.3.0.jar"/>
 	<classpathentry kind="lib" path="lib/external/scala-library.jar"/>
 	<classpathentry kind="lib" path="lib/external/snappy.jar"/>
-	<classpathentry kind="lib" path="lib/external/sootclasses-2.5.0.jar"/>
 	<classpathentry kind="lib" path="lib/external/whirlycache-0.7.1.jar"/>
+	<classpathentry kind="lib" path="lib/external/h2-1.3.171.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/soot"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

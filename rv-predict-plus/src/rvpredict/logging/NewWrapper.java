@@ -3,7 +3,17 @@ package rvpredict.logging;
 import java.util.Properties;
 
 import soot.Body;
+import soot.BooleanType;
+import soot.ByteType;
+import soot.CharType;
+import soot.DoubleType;
+import soot.FloatType;
+import soot.IntType;
+import soot.LongType;
+import soot.PrimType;
+import soot.RefType;
 import soot.Scene;
+import soot.ShortType;
 import soot.SootClass;
 import soot.SootField;
 import soot.SootMethodRef;
@@ -31,211 +41,95 @@ import soot.jimple.StringConstant;
 import static rvpredict.util.Util.*;
 
 public final class NewWrapper {
-  private static final Properties purityprops = new Properties();
-  static { try { purityprops.load(ClassLoader.getSystemResourceAsStream("rvpredict/Purity.properties")); } catch (Exception e) { e.printStackTrace(); System.exit(1); }}
   private static final SootClass logClass = Scene.v().loadClassAndSupport("rvpredict.logging.NewRT");
-  private static final SootMethodRef logMethodBeginMethod = logClass.getMethod("void logMethodBegin(java.lang.String,java.lang.String)").makeRef();
-  private static final SootMethodRef logMethodEndMethod = logClass.getMethod("void logMethodEnd(java.lang.String,java.lang.String)").makeRef();
-  private static final SootMethodRef logStaticSyncLockMethod = logClass.getMethod("void logStaticSyncLock(java.lang.String)").makeRef();
-  private static final SootMethodRef logLockMethod = logClass.getMethod("void logLock(java.lang.Object)").makeRef();
-  private static final SootMethodRef logUnlockMethod = logClass.getMethod("void logUnlock(java.lang.Object)").makeRef();
-  private static final SootMethodRef logWaitMethod = logClass.getMethod("void logWait(java.lang.Object,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logNotifyMethod = logClass.getMethod("void logNotify(java.lang.Object,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logStaticSyncUnlockMethod = logClass.getMethod("void logStaticSyncUnlock(java.lang.String)").makeRef();
-  private static final SootMethodRef logInvokeBeginMethod = logClass.getMethod("void logInvokeBegin(java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logInvokeEndMethod = logClass.getMethod("void logInvokeEnd(java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logExceptionMethod = 
-logClass.getMethod("void logException(java.lang.Throwable)").makeRef();
-  private static final SootMethodRef logInstanceInvokeBeginMethod = logClass.getMethod("void logInstanceInvokeBegin(java.lang.Object,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logInstanceInvokeEndMethod 
- = logClass.getMethod("void logInstanceInvokeEnd(java.lang.Object,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logFieldAccMethod = logClass.getMethod("void logFieldAcc(java.lang.String,java.lang.String,java.lang.Object,java.lang.String,java.lang.String,int,boolean)").makeRef();
-  private static final SootMethodRef logArrayAccMethod = logClass.getMethod("void logArrayAcc(java.lang.String,java.lang.Object,int,java.lang.String,java.lang.String,int,boolean)").makeRef();
-  private static final SootMethodRef logImpureCallMethod = logClass.getMethod("void logImpureCall(java.lang.String,boolean,java.lang.Object,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logConstructorBeginMethod 
-= logClass.getMethod("void logConstructorBegin(java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logConstructorEndMethod
-= logClass.getMethod("void logConstructorEnd(java.lang.Object,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logClassInitBeginMethod = logClass.getMethod("void logClassInitBegin(java.lang.String)").makeRef();
-  private static final SootMethodRef logClassInitEndMethod = logClass.getMethod("void logClassInitEnd(java.lang.String)").makeRef();
-  private static final SootMethodRef logStartMethod = logClass.getMethod("void logStart(java.lang.Object)").makeRef();
+  private static final SootMethodRef logLockMethod = logClass.getMethod("void logLock(int,java.lang.Object)").makeRef();
+  private static final SootMethodRef logUnlockMethod = logClass.getMethod("void logUnlock(int,java.lang.Object)").makeRef();
+  private static final SootMethodRef logWaitMethod = logClass.getMethod("void logWait(int,java.lang.Object)").makeRef();
+  private static final SootMethodRef logNotifyMethod = logClass.getMethod("void logNotify(int,java.lang.Object)").makeRef();
+  private static final SootMethodRef logFieldAccMethod = logClass.getMethod("void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)").makeRef();
+  //private static final SootMethodRef logArrayAccMethod = logClass.getMethod("void logArrayAcc(java.lang.String,java.lang.Object,int,java.lang.String,java.lang.String,int,boolean)").makeRef();
+  private static final SootMethodRef logStartMethod = logClass.getMethod("void logStart(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logJoinMethod = logClass.getMethod("void logJoin(int,java.lang.Object)").makeRef();
-  private static final SootMethodRef logFinalizeMethod = logClass.getMethod("void logFinalize(java.lang.Object,java.lang.String,java.lang.String)").makeRef();
-  private static final SootMethodRef logBranchMethod = logClass.getMethod("void logBranch(java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logBreakLocksMethod = logClass.getMethod("void breakLocks()").makeRef();
-  private static final SootMethodRef logReflFieldAccessMethod = logClass.getMethod("void logReflFieldAccess(java.lang.reflect.Field,java.lang.Object,boolean,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logReflNewInstanceBeginMethod = logClass.getMethod("void logReflNewInstanceBegin(java.lang.Class,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logReflNewInstanceEndMethod = logClass.getMethod("void logReflNewInstanceEnd(java.lang.Class,java.lang.Object,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logReflConstructorBeginMethod = logClass.getMethod("void logReflConstructorBegin(java.lang.reflect.Constructor,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logReflConstructorEndMethod = logClass.getMethod("void logReflConstructorEnd(java.lang.reflect.Constructor,java.lang.Object,java.lang.String,java.lang.String,int)").makeRef();
-  private static final SootMethodRef logReqClassInitMethod = logClass.getMethod("void logReqClassInitMethod(java.lang.String,java.lang.String,java.lang.String,int)").makeRef();
+  private static final SootMethodRef logBranchMethod = logClass.getMethod("void logBranch(int)").makeRef();
+  private static final SootMethodRef logBBMethod = logClass.getMethod("void logBasicBlock(int)").makeRef();
+  //private static final SootMethodRef logStaticSyncLockMethod = logClass.getMethod("void logStaticSyncLock(java.lang.String)").makeRef();
+  //private static final SootMethodRef logStaticSyncUnlockMethod = logClass.getMethod("void logStaticSyncUnlock(java.lang.String)").makeRef();
 
-  public static InvokeStmt logBranch(final Stmt s, final SootClass lclass, final SootMethod lmeth) {
+  private static final SootMethodRef valueOfBooleanMethod = Scene.v().getMethod("<java.lang.Boolean: java.lang.Boolean valueOf(boolean)>").makeRef();
+  private static final SootMethodRef valueOfByteMethod = Scene.v().getMethod("<java.lang.Byte: java.lang.Byte valueOf(byte)>").makeRef();
+  private static final SootMethodRef valueOfCharMethod = Scene.v().getMethod("<java.lang.Character: java.lang.Character valueOf(char)>").makeRef();
+  private static final SootMethodRef valueOfDoubleMethod = Scene.v().getMethod("<java.lang.Double: java.lang.Double valueOf(double)>").makeRef();
+  private static final SootMethodRef valueOfFloatMethod = Scene.v().getMethod("<java.lang.Float: java.lang.Float valueOf(float)>").makeRef();
+  private static final SootMethodRef valueOfIntMethod = Scene.v().getMethod("<java.lang.Integer: java.lang.Integer valueOf(int)>").makeRef();
+  private static final SootMethodRef valueOfLongMethod = Scene.v().getMethod("<java.lang.Long: java.lang.Long valueOf(long)>").makeRef();
+  private static final SootMethodRef valueOfShortMethod = Scene.v().getMethod("<java.lang.Short: java.lang.Short valueOf(short)>").makeRef();
+
+
+  public static InvokeStmt logBranch(int id, final Stmt s) {
     InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logBranchMethod,
-        StringConstant.v(lclass.getName()),
-        StringConstant.v(lmeth.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
+        IntConstant.v(id));
     return Jimple.v().newInvokeStmt(logExpr);
   }
+  public static InvokeStmt logBasicBlock(int id, final Stmt s) {
+	    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logBBMethod,
+	        IntConstant.v(id));
+	    return Jimple.v().newInvokeStmt(logExpr);
+	  }
 
-  public static InvokeStmt logFinalize(Value v,SootMethod m) {
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logFinalizeMethod,
-        v,
-        StringConstant.v(m.getDeclaringClass().getName()),
-        StringConstant.v(m.getSubSignature()));
-    return Jimple.v().newInvokeStmt(logExpr);
+//  public static InvokeStmt logLock(SootClass c) {
+//    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logStaticSyncLockMethod,
+//        StringConstant.v(c.getName()));
+//    return Jimple.v().newInvokeStmt(logExpr);
+//  }
+
+  public static InvokeStmt logLock(int id, Stmt s) {
+        return logLock(id, ((EnterMonitorStmt)s).getOp());
   }
 
-  public static InvokeStmt logMethodBegin(SootMethod m) {
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logMethodBeginMethod,
-        StringConstant.v(m.getDeclaringClass().getName()),
-        StringConstant.v(m.getSubSignature()));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logMethodEnd(SootMethod m) {
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logMethodEndMethod,
-        StringConstant.v(m.getDeclaringClass().getName()),
-        StringConstant.v(m.getSubSignature()));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logException(Local l){
-   InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logExceptionMethod,l);
-   return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  
-  public static InvokeStmt logConstructorBegin(Stmt s, SootClass c, SootMethod m) {
-    InvokeExpr e = s.getInvokeExpr();
-
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logConstructorBeginMethod,
-        StringConstant.v(e.getMethod().getDeclaringClass().getName()),
-        StringConstant.v(e.getMethod().getSubSignature()),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logConstructorEnd(Stmt s, SootClass c, SootMethod m) {
-    InstanceInvokeExpr e = (InstanceInvokeExpr) s.getInvokeExpr();
-
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logConstructorEndMethod,
-        e.getBase(),
-        StringConstant.v(e.getMethod().getDeclaringClass().getName()),
-        StringConstant.v(e.getMethod().getSubSignature()),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logLock(SootClass c) {
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logStaticSyncLockMethod,
-        StringConstant.v(c.getName()));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logLock(Stmt s) {
-        return logLock(((EnterMonitorStmt)s).getOp());
-  }
-
-  public static InvokeStmt logLock(Value v) {
+  public static InvokeStmt logLock(int id, Value v) {
     InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logLockMethod,
+    		IntConstant.v(id),
         v);
     return Jimple.v().newInvokeStmt(logExpr);
   }
 
-  public static InvokeStmt logWait(Stmt s, SootClass c, SootMethod m){
-    InstanceInvokeExpr e = (InstanceInvokeExpr)s.getInvokeExpr();
+  public static InvokeStmt logWait(int id, Stmt s){
+	    InstanceInvokeExpr e = (InstanceInvokeExpr)s.getInvokeExpr();
 
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logWaitMethod,
-        e.getBase(),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
+	    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logWaitMethod,
+	    	IntConstant.v(id),	
+	        e.getBase());
+	    return Jimple.v().newInvokeStmt(logExpr);
+	  }
 
-  public static InvokeStmt logNotify(Stmt s, SootClass c, SootMethod m){
+  public static InvokeStmt logNotify(int id, Stmt s){
     InstanceInvokeExpr e = (InstanceInvokeExpr)s.getInvokeExpr();
 
     InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logNotifyMethod,
-        e.getBase(),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
+    		IntConstant.v(id),	
+        e.getBase());
     return Jimple.v().newInvokeStmt(logExpr);
   }
 
-  public static InvokeStmt logUnlock(SootClass c) {
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logStaticSyncUnlockMethod,
-        StringConstant.v(c.getName()));
-    return Jimple.v().newInvokeStmt(logExpr);
+//  public static InvokeStmt logUnlock(SootClass c) {
+//    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logStaticSyncUnlockMethod,
+//        StringConstant.v(c.getName()));
+//    return Jimple.v().newInvokeStmt(logExpr);
+//  }
+
+  public static InvokeStmt logUnlock(int id, Stmt s) {
+    return logUnlock(id, ((ExitMonitorStmt)s).getOp());
   }
 
-  public static InvokeStmt logUnlock(Stmt s) {
-    return logUnlock(((ExitMonitorStmt)s).getOp());
-  }
-
-  public static InvokeStmt logUnlock(Value v) {
+  public static InvokeStmt logUnlock(int id, Value v) {
     InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logUnlockMethod,
+    		IntConstant.v(id),
         v);
     return Jimple.v().newInvokeStmt(logExpr);
   }
 
-  public static InvokeStmt logInvokeBegin(Stmt s, SootClass c, SootMethod m) {
-    InvokeExpr e = s.getInvokeExpr();
 
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logInvokeBeginMethod,
-
-        StringConstant.v(e.getMethod().getDeclaringClass().getName()),
-        StringConstant.v(e.getMethod().getSubSignature()),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logInvokeEnd(Stmt s, SootClass c, SootMethod m) {
-    InvokeExpr e = s.getInvokeExpr();
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logInvokeEndMethod,
-        StringConstant.v(e.getMethod().getDeclaringClass().getName()),
-        StringConstant.v(e.getMethod().getSubSignature()),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logInstanceInvokeBegin(Stmt s, SootClass c, SootMethod m) {
-    InstanceInvokeExpr e = (InstanceInvokeExpr) s.getInvokeExpr();
-
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logInstanceInvokeBeginMethod,
-        e.getBase(),
-        StringConstant.v(e.getMethod().getDeclaringClass().getName()),
-        StringConstant.v(e.getMethod().getSubSignature()),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logInstanceInvokeEnd(Stmt s, SootClass c, SootMethod m) {
-    InstanceInvokeExpr e = (InstanceInvokeExpr) s.getInvokeExpr();
-
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logInstanceInvokeEndMethod,
-        e.getBase(),
-        StringConstant.v(e.getMethod().getDeclaringClass().getName()),
-        StringConstant.v(e.getMethod().getSubSignature()),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logFieldAcc(Stmt s, SootClass c, SootMethod m) {
+  public static InvokeStmt logFieldAcc(int id, int sid, Body body, Stmt s) {
     SootField f = s.getFieldRef().getField();
     DefinitionStmt d = (DefinitionStmt)s;
     boolean write = (d.getLeftOp() instanceof FieldRef);
@@ -245,142 +139,123 @@ logClass.getMethod("void logException(java.lang.Throwable)").makeRef();
     } else {
       instanceObject = NullConstant.v();
     }
+    
+	Local rv_local;
+	AssignStmt newAssignStmt;
+	Value staticInvoke;
+	
+    Value v;
+    if(write)
+    	v = d.getRightOp();
+    else
+    	v = d.getLeftOp();
+        
+    if(v.getType() instanceof PrimType)
+    {
 
+    	
+    	if(v.getType() instanceof BooleanType)
+    	{
+    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Boolean"));           
+            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfBooleanMethod,v);  
+    	}
+    	else if(v.getType() instanceof ByteType)
+    	{
+    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Byte"));           
+            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfByteMethod,v); 
+    	}
+    	else if(v.getType() instanceof CharType)
+    	{
+    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Char"));           
+            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfCharMethod,v); 
+    	}
+    	else if(v.getType() instanceof DoubleType)
+    	{
+    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Double"));           
+            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfDoubleMethod,v); 
+    	}
+    	else if(v.getType() instanceof FloatType)
+    	{
+    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Float"));           
+            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfFloatMethod,v); 
+    	}
+    	else if(v.getType() instanceof IntType)
+    	{
+    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Int"));           
+            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfIntMethod,v); 
+    	}
+    	else if(v.getType() instanceof LongType)
+    	{
+    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Long"));           
+            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfLongMethod,v); 
+    	}
+    	else//if (v.getType() instanceof ShortType)
+    	{
+    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Short"));           
+            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfShortMethod,v); 
+    	}
+		
+        newAssignStmt = Jimple.v().newAssignStmt(rv_local, staticInvoke);
+		 			 
+    }
+    else
+    {
+		rv_local = Jimple.v().newLocal("rv_local", v.getType());           
+        newAssignStmt = Jimple.v().newAssignStmt(rv_local, v);
+
+    }
+
+    body.getLocals().add(rv_local);
+    body.getUnits().insertAfter(newAssignStmt,s);
+    
     InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logFieldAccMethod,
-        StringConstant.v(f.getDeclaringClass().getName()),
-        StringConstant.v(f.getName()),
-        instanceObject,
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1),
+    		IntConstant.v(id),
+    		instanceObject,
+    		IntConstant.v(sid),
+    		rv_local,
         IntConstant.v(write?1:0));
-    return Jimple.v().newInvokeStmt(logExpr);
+    
+    InvokeStmt invokeStmt = Jimple.v().newInvokeStmt(logExpr);
+	 body.getUnits().insertAfter(invokeStmt,newAssignStmt);
+
+    
+    return invokeStmt;
+    
   }
 
-  public static InvokeStmt logArrayAcc(Stmt s, SootClass c, SootMethod m) {
-    ArrayRef ar = s.getArrayRef();
-    DefinitionStmt d = (DefinitionStmt)s;
-    boolean write = (d.getLeftOp() instanceof FieldRef);
+//  public static InvokeStmt logArrayAcc(Stmt s, SootClass c, SootMethod m) {
+//    ArrayRef ar = s.getArrayRef();
+//    DefinitionStmt d = (DefinitionStmt)s;
+//    boolean write = (d.getLeftOp() instanceof FieldRef);
+//
+//    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logArrayAccMethod,
+//        StringConstant.v(ar.getType().toString()),
+//        ar.getBase(),
+//        ar.getIndex(),
+//        StringConstant.v(c.getName()),
+//        StringConstant.v(m.getSubSignature()),
+//        IntConstant.v(/*getJimpleLine(s)*/-1),
+//        IntConstant.v(write?1:0));
+//    return Jimple.v().newInvokeStmt(logExpr);
+//  }
 
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logArrayAccMethod,
-        StringConstant.v(ar.getType().toString()),
-        ar.getBase(),
-        ar.getIndex(),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1),
-        IntConstant.v(write?1:0));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logImpureCall(Stmt s, SootClass c, SootMethod m) {
-    InstanceInvokeExpr e = (InstanceInvokeExpr) s.getInvokeExpr();
-
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logImpureCallMethod,
-        StringConstant.v(e.getBase().getType().toString()),
-        IntConstant.v(new Boolean(purityprops.getProperty(e.getMethod().getDeclaringClass().toString()+"."+e.getMethod().getName(),"true"))?1:0),
-        e.getBase(),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logClassInitBegin(SootClass cls) {
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logClassInitBeginMethod,
-        StringConstant.v(cls.getName()));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logClassInitEnd(SootClass cls) {
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logClassInitEndMethod,
-        StringConstant.v(cls.getName()));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logStart(Stmt s) {
+  public static InvokeStmt logStart(int id, Stmt s) {
     InstanceInvokeExpr e = (InstanceInvokeExpr) s.getInvokeExpr();
 
     InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logStartMethod,
+    		IntConstant.v(id),
         e.getBase());
     return Jimple.v().newInvokeStmt(logExpr);
   }
 
-  public static InvokeStmt logJoin(Stmt s) {
+  public static InvokeStmt logJoin(int id, Stmt s) {
     InstanceInvokeExpr e = (InstanceInvokeExpr) s.getInvokeExpr();
 
     InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logJoinMethod,
+    		IntConstant.v(id),
         e.getBase());
     return Jimple.v().newInvokeStmt(logExpr);
   }
 
-  public static InvokeStmt logTimeoutWait() {
-    return Jimple.v().newInvokeStmt(Jimple.v().newStaticInvokeExpr(logBreakLocksMethod));
-  }
-
-  public static InvokeStmt logReflFieldAccess(final Stmt s, final boolean isWrite, final SootClass c, final SootMethod m) {
-    InstanceInvokeExpr e = (InstanceInvokeExpr) s.getInvokeExpr();
-    assert e.getArgCount() > 0;
-
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logReflFieldAccessMethod,
-        e.getBase(),
-        e.getArg(0),
-        IntConstant.v(isWrite?1:0),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-
-  public static InvokeStmt logReflNewInstanceBegin(final Stmt s, final AssignStmt astmt, final SootClass c, final SootMethod m) {
-    InstanceInvokeExpr e = (InstanceInvokeExpr) astmt.getInvokeExpr();
-
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logReflNewInstanceBeginMethod,
-        e.getBase(),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-  public static InvokeStmt logReflNewInstanceEnd(final Stmt s, final AssignStmt astmt, final SootClass c, final SootMethod m) {
-    InstanceInvokeExpr e = (InstanceInvokeExpr) astmt.getInvokeExpr();
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logReflNewInstanceEndMethod,
-        e.getBase(),
-        astmt.getLeftOp(),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-  public static InvokeStmt logReflConstructorBegin(final Stmt s, final AssignStmt astmt, final SootClass c, final SootMethod m) {
-    InstanceInvokeExpr e = (InstanceInvokeExpr) astmt.getInvokeExpr();
-
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logReflConstructorBeginMethod,
-        e.getBase(),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-  public static InvokeStmt logReflConstructorEnd(final Stmt s, final AssignStmt astmt, final SootClass c, final SootMethod m) {
-    InstanceInvokeExpr e = (InstanceInvokeExpr) astmt.getInvokeExpr();
-    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logReflConstructorEndMethod,
-        e.getBase(),
-        astmt.getLeftOp(),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
-  public static InvokeStmt logReqClassInit(final Stmt s, final SootClass c, final SootMethod m) {
-    final InvokeExpr e =  s.getInvokeExpr();
-    assert e.getArgCount() > 0;
-    final InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logReqClassInitMethod,
-        e.getArg(0),
-        StringConstant.v(c.getName()),
-        StringConstant.v(m.getSubSignature()),
-        IntConstant.v(/*getJimpleLine(s)*/-1));
-    return Jimple.v().newInvokeStmt(logExpr);
-  }
 }
 // vim: tw=100:sw=2

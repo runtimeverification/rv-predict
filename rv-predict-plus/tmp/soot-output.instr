@@ -1,7 +1,44 @@
-Warning: java.dyn.InvokeDynamic is a phantom class!
-No main class given. Inferred 'emp.Test' as main class.
 [Call Graph] For information on where the call graph may be incomplete, use the verbose option to the cg phase.
-Transforming emp.Test... 
-Transforming emp.Test$MyThread... 
-Writing to /Users/jeffhuang/Documents/workspace/RVPREDICT/javamop/tmp/emp.Test.jimple
-Writing to /Users/jeffhuang/Documents/workspace/RVPREDICT/javamop/tmp/emp.Test$MyThread.jimple
+[Spark] Pointer Assignment Graph in 0.2 seconds.
+[Spark] Type masks in 0.0 seconds.
+[Spark] Pointer Graph simplified in 0.0 seconds.
+[Spark] Propagation in 0.2 seconds.
+[Spark] Solution found in 0.2 seconds.
+[local-objects] Analyzing local objects for emp.Example$MyThread
+[local-objects]   preparing class             Sat Mar 30 00:04:36 CDT 2013
+[local-objects]   analyzing class             Sat Mar 30 00:04:36 CDT 2013
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+[local-objects]   propagating over call graph Sat Mar 30 00:04:38 CDT 2013
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+[local-objects]   finished at                 Sat Mar 30 00:04:38 CDT 2013
+[local-objects]   (#analyzed/#encountered): 36/74
+[local-objects] Analyzing local objects for emp.Example
+[local-objects]   preparing class             Sat Mar 30 00:04:38 CDT 2013
+[local-objects]   analyzing class             Sat Mar 30 00:04:38 CDT 2013
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+[local-objects]   propagating over call graph Sat Mar 30 00:04:38 CDT 2013
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+[local-objects]   finished at                 Sat Mar 30 00:04:38 CDT 2013
+[local-objects]   (#analyzed/#encountered): 54/112
+Transforming emp.Example... 
+Transforming emp.Example$MyThread... 
+Transforming emp.LocalClass... 
+Writing to /Users/jeffhuang/git/rv-predict-plus/rv-predict-plus/tmp/emp/Example.class
+Writing to /Users/jeffhuang/git/rv-predict-plus/rv-predict-plus/tmp/emp/Example$MyThread.class
+Writing to /Users/jeffhuang/git/rv-predict-plus/rv-predict-plus/tmp/emp/LocalClass.class

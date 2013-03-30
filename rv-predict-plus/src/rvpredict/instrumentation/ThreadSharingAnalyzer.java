@@ -5,10 +5,12 @@ import static rvpredict.logging.NewWrapper.*;
 import soot.*;
 import soot.jimple.*;
 import soot.jimple.internal.*;
-
+import soot.toolkits.graph.*;
 import soot.options.Options;
 
+import soot.tagkit.LineNumberTag;
 import soot.tagkit.Tag;
+import soot.toolkits.graph.CompleteBlockGraph;
 
 import soot.util.Chain;
 import soot.util.HashChain;
@@ -28,14 +30,28 @@ import java.util.Iterator;
 
 public class ThreadSharingAnalyzer extends SceneTransformer {
   private static ThreadLocalObjectsAnalysis tlo;
-
-  private static HashMap<String,Integer> sigIdMap = new HashMap<String,Integer>();
+  private int totalAccess;
+  private int sharedAccess;
+  private HashMap<String,Integer> sharedvariableIdMap = new HashMap<String,Integer>();
   
+  private static HashMap<String,Integer> sigIdMap = new HashMap<String,Integer>();
+ 
+  private static final SootClass objectClass = Scene.v().loadClassAndSupport("java.lang.Object");
+
+  private static final SootMethod notify = objectClass.getMethod("void notify()");
+  private static final SootMethod notifyAll = objectClass.getMethod("void notifyAll()");
+  private static final SootMethod wait1 = objectClass.getMethod("void wait()");
+  private static final SootMethod wait2 = objectClass.getMethod("void wait(long)");
+  private static final SootMethod wait3 = objectClass.getMethod("void wait(long,int)");
+
+  private static final SootMethod start = Scene.v().loadClassAndSupport("java.lang.Thread").getMethod("void start()");
   private static final SootMethod join = Scene.v().loadClassAndSupport("java.lang.Thread").getMethod("void join()");
 
   protected void internalTransform(String phase, Map options){
     //if(true) return;
     //System.out.println("running");
+
+      tlo = new ThreadLocalObjectsAnalysis(new SynchObliviousMhpAnalysis());
 
     for(SootClass sc : Scene.v().getClasses()){
       String packageName = sc.getPackageName();
@@ -47,7 +63,6 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
             continue;
           }
       
-      tlo = new ThreadLocalObjectsAnalysis(new SynchObliviousMhpAnalysis());
       
       //System.out.println("class: " + sc.getName());
       for(SootMethod m : sc.getMethods()){
@@ -67,23 +82,161 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
           //ridiculously, Java will not let you do this without assigning the boolean value to
           //something
           
-//          boolean unused = markJoin(body,stmt) || markStart(stmt) || /*markConstructor(stmt) ||*/ markLock(stmt) || markWaitAndNotify(stmt)
-//        	       || markFieldAccess(stmt) || markArrayAccess(stmt) || /*markReflectAccess(stmt) || markReflectConstructor(stmt) || markReflForName(stmt)*/
-//        	       /*|| markImpureCall(stmt)*/ || markBranch(stmt) || markInvocation(stmt);
+          boolean unused = markJoin(body,stmt) || markStart(body,stmt) || /*markConstructor(stmt) ||*/ markLock(body,stmt) || markWaitAndNotify(body,stmt)
+        	       || markFieldAccess(body,stmt)  /*|| markArrayAccess(stmt)*/ /*|| markReflectAccess(stmt) || markReflectConstructor(stmt) || markReflForName(stmt)*/
+        	       /*|| markImpureCall(stmt)*/ || markBranch(body, stmt) /*|| markInvocation(stmt)*/;
 
+          
+          //Need to mark basic-block transition
+          
+          //do static slicing following the basic-block paths
+        }
+        
+        CompleteBlockGraph cfg = new CompleteBlockGraph(body);
+        Iterator<Block> cfgIt = cfg.iterator();
+        while(cfgIt.hasNext())
+        {
+        	Block block = cfgIt.next();
+        	Unit unit = block.getHead();
+        	while(unit instanceof IdentityStmt)
+        	{
+        		unit = block.getSuccOf(unit);
+        	}
+        	if(unit!=null)
+        	{
+	        	Stmt stmt = (Stmt)unit;
+	        	
+	        	int id = getStaticId(body, stmt);
+	
+	  	      	InvokeStmt is = logBasicBlock(id,stmt);
+	  	      	body.getUnits().insertBefore(is,stmt);
+        	}
         }
       }
     }
+    
+    
   }
+  
+  public void reportStatistics()
+  {
+	  float percentage = ((float)sharedAccess)/((float)totalAccess);
+      System.out.println("* Shared data access percentage: " + sharedAccess + "/" + totalAccess +" ["+percentage+"] *");
+      Iterator<String> svIt = sharedvariableIdMap.keySet().iterator();
+      while(svIt.hasNext())
+      {
+    	  System.out.println("* "+svIt.next()+" *");
+      }
+  }
+  
+  private boolean markBranch(Body body, Stmt stmt) {
+	    if (stmt.branches()) {
+	    	
+	    	int id = getStaticId(body, stmt);
 
+	      InvokeStmt is = logBranch(id,stmt);
+
+	      body.getUnits().insertBefore(is,stmt);
+	      return true;
+	    }
+	    return false;
+	  }
+  private boolean markFieldAccess(Body body, Stmt stmt) {
+	    if (stmt.containsFieldRef()) {
+	      assert (stmt instanceof AssignStmt) : "Unknown FieldReffing Stmt";
+	      totalAccess++;
+	      
+	      if(!tlo.isObjectThreadLocal(stmt.getFieldRef(), body.getMethod()))
+	      { 
+	    	  sharedAccess++;
+
+	    		  
+	    	  int sid = getSharedVariableId(stmt.getFieldRef().getField());
+	    	  
+	    	int id = getStaticId(body, stmt);
+
+	    	//objectinstance,fieldsignature-id
+	      InvokeStmt is 
+	        = logFieldAcc(id,sid,body,stmt);
+	      //body.getUnits().insertAfter(is,stmt);//for replay, must insert before
+	      return true;
+	      }
+	    }
+	    return false;
+	  }
+  
+  //mark waits and notifies.  Unfortunately, part of this is redundant 
+  //with marking class inits and marking invocations.  If we had HoFs 
+  //I would factor the commonalities out.  With the limited ability of 
+  //java 6 I will just repeat code.  This will be factored once java 7
+  //goes live and we can use closures
+  private boolean markWaitAndNotify(Body body, Stmt stmt){
+    if (stmt.containsInvokeExpr()) {
+ 
+      SootMethod method = stmt.getInvokeExpr().getMethod();
+      if (method == wait1) {
+      	int id = getStaticId(body, stmt);
+
+        InvokeStmt is = logWait(id,stmt);
+        body.getUnits().insertBefore(is,stmt);
+        return true;
+      }
+      if (method == wait2 || method == wait3) {
+        //body.getUnits().insertAfter(logTimeoutWait(id),stmt);
+        return true;
+      }
+      if(method == notify || method == notifyAll) {
+      	int id = getStaticId(body, stmt);
+
+        InvokeStmt is = 
+          logNotify(id,stmt);
+        body.getUnits().insertBefore(is,stmt);
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  // When a lock is aquired an EnterMonitorStmt is encountered. When a lock is released an
+  // ExitMonitorStmt is encountered.   
+  private boolean markLock(Body body, Stmt stmt) {
+	  
+
+    if (stmt instanceof EnterMonitorStmt){
+        int id = getStaticId(body, stmt);
+
+      body.getUnits().insertBefore(logLock(id,stmt), stmt);
+      return true;
+    }
+    if (stmt instanceof ExitMonitorStmt){
+        int id = getStaticId(body, stmt);
+
+      body.getUnits().insertAfter(logUnlock(id,stmt), stmt);
+      return true;
+    }
+    return false;
+  }
+  
+  private boolean markStart(Body body, Stmt stmt) {
+	    if (stmt.containsInvokeExpr()) {
+	      if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
+	        if (stmt.getInvokeExpr().getMethod() == start) {
+	        	
+	        	int id = getStaticId(body, stmt);
+	          body.getUnits().insertBefore(logStart(id,stmt),stmt);
+	          return true;
+	        }
+	      }
+	    }
+	    return false;
+	  }
   private boolean markJoin(Body body, Stmt stmt) {
 	    if (stmt.containsInvokeExpr()) {
 	      if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 	        if (stmt.getInvokeExpr().getMethod() == join) {
 	        	
-	        int id = getStaticId(stmt);
-	        	
-//	          body.getUnits().insertAfter(logJoin(id,stmt),stmt);
+	        int id = getStaticId(body, stmt);
+	          body.getUnits().insertAfter(logJoin(id,stmt),stmt);
 	          return true;
 	        }
 	      }
@@ -91,9 +244,13 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
 	    return false;
 	  }
   
-  private static int getStaticId(Stmt stmt)
+  private static int getStaticId(Body body, Stmt stmt)
   {
-	  String sig = getStmtSignature(stmt);
+	  String methodname = body.getMethod().getSignature();
+	  
+	  Tag tag =  stmt.getTag("LineNumberTag");
+
+	  String sig = methodname+"|"+stmt+"|"+(tag==null?0:((LineNumberTag)tag).getLineNumber());
 	  if(sigIdMap.get(sig)==null)
 	  {
 		  sigIdMap.put(sig, sigIdMap.size()+1);
@@ -102,10 +259,16 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
 	  return sigIdMap.get(sig);
 	  
   }
-
-  private static String getStmtSignature(Stmt stmt) {
-	
+  
+  private int getSharedVariableId(SootField f)
+  {
+	  String sig = f.getSignature();
+	  if(sharedvariableIdMap.get(sig)==null)
+	  {
+		  sharedvariableIdMap.put(sig, sharedvariableIdMap.size()+1);
+	  }
 	  
-	return null;
+	  return sharedvariableIdMap.get(sig);
+	  
   }
 }

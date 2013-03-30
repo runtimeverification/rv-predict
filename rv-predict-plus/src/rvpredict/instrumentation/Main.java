@@ -3,12 +3,14 @@ import rvpredict.GUIMain;
 
 import soot.Pack;
 import soot.PackManager;
+import soot.Scene;
 import soot.SootMethod;
 import soot.Transform;
 import soot.options.Options;
 
 import soot.*;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.io.BufferedReader;
@@ -19,6 +21,7 @@ import java.io.FileOutputStream;
 import java.io.PrintStream;
 
 import soot.jimple.IdentityStmt;
+import soot.jimple.spark.SparkTransformer;
 
 import rvpredict.analysis.MethodAnalyzer;
 
@@ -54,10 +57,13 @@ public class Main{
       list.add("rvpredict.");
       list.add("jdbm.");
       list.add("com.");
+      list.add("java.");
+      list.add("javax.");
+      list.add("sun.");
       Options.v().set_exclude(list); 
       
-      Options.v().set_output_format(1);//output jimple
-      //Options.v().set_print_tags_in_output(true);//print tag
+      //Options.v().set_output_format(1);//output jimple
+      Options.v().set_print_tags_in_output(true);//print tag
       Options.v().set_output_dir(System.getProperty("user.dir")+ File.separator+"tmp");
       //-------------------
       
@@ -68,14 +74,38 @@ public class Main{
       Options.v().set_allow_phantom_refs(true);
       Options.v().set_app(true); 
       
-      //Added by Jeff
-      PackManager.v().getPack("wjtp").add(new Transform("wjtp.ThreadSharingAnalyzer", new ThreadSharingAnalyzer()));
 
+      //Added by Jeff
+      Scene.v().setSootClassPath(System.getProperty("sun.boot.class.path")
+              + File.pathSeparator + System.getProperty("java.class.path"));
+      
+      ThreadSharingAnalyzer analyzer = new ThreadSharingAnalyzer();
+      
+      PackManager.v().getPack("wjtp").add(new Transform("wjtp.ThreadSharingAnalyzer", analyzer));
+
+    //Jeff: make sure the parameter is only the main class
+      String mainclass = args[0];
+      SootClass appclass = Scene.v().loadClassAndSupport(mainclass);
+      Scene.v().setMainClass(appclass);
+
+    //Enable Spark
+      HashMap<String,String> opt = new HashMap<String,String>();
+      //opt.put("verbose","true");
+      opt.put("propagator","worklist");
+      opt.put("simple-edges-bidirectional","false");
+      opt.put("on-fly-cg","true");
+      opt.put("set-impl","double");
+      opt.put("double-set-old","hybrid");
+      opt.put("double-set-new","hybrid");
+      opt.put("pre_jimplify", "true");
+      SparkTransformer.v().transform("",opt);
+      PhaseOptions.v().setPhaseOption("cg.spark", "enabled:true");
+      
       //Commented by Jeff
       //PackManager.v().getPack("wjtp").add(new Transform("wjtp.LoopPeeler", new LoopPeeler()));
       //PackManager.v().getPack("jtp").add(new Transform("jtp.instrumenter", new Instrumentor()));
       
-      Scene.v().addBasicClass("rvpredict.logging.RT",SootClass.SIGNATURES);
+      Scene.v().addBasicClass("rvpredict.logging.NewRT",SootClass.SIGNATURES);
       Scene.v().loadNecessaryClasses();
       float t = ((System.currentTimeMillis() - time)/ 1000f);
       String stars = mkStars(t);
@@ -98,6 +128,10 @@ public class Main{
       stars = mkStars(t);
       System.out.println("*****************************" + stars); 
       System.out.println("* Finished Instrumenting " + GUIMain.YELLOW + "[" + t + "s] *");
+      System.out.println("*****************************" + stars + "\n"); 
+
+      System.out.println("*****************************" + stars);
+      analyzer.reportStatistics();
       System.out.println("*****************************" + stars + "\n"); 
 
     } catch (Exception e) { e.printStackTrace(); System.exit(1); }

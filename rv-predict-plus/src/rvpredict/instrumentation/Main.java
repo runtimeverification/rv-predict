@@ -62,8 +62,10 @@ public class Main{
       list.add("sun.");
       Options.v().set_exclude(list); 
       
-      //Options.v().set_output_format(1);//output jimple
-      Options.v().set_print_tags_in_output(true);//print tag
+      //output jimple
+      //Options.v().set_output_format(1);
+      //print tag
+      //Options.v().set_print_tags_in_output(true);
       Options.v().set_output_dir(System.getProperty("user.dir")+ File.separator+"tmp");
       //-------------------
       

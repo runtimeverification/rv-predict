@@ -1,5 +1,6 @@
 package rvpredict.logging;
 
+import java.util.HashMap;
 import java.util.Properties;
 
 import soot.Body;
@@ -41,13 +42,18 @@ import soot.jimple.StringConstant;
 import static rvpredict.util.Util.*;
 
 public final class NewWrapper {
+	
+	private static final String RV_LOCAL = "rv_local";
+	private static HashMap<String,Integer> methodRVLocalMap = new HashMap<String,Integer>();
+
+	
   private static final SootClass logClass = Scene.v().loadClassAndSupport("rvpredict.logging.NewRT");
   private static final SootMethodRef logLockMethod = logClass.getMethod("void logLock(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logUnlockMethod = logClass.getMethod("void logUnlock(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logWaitMethod = logClass.getMethod("void logWait(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logNotifyMethod = logClass.getMethod("void logNotify(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logFieldAccMethod = logClass.getMethod("void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)").makeRef();
-  //private static final SootMethodRef logArrayAccMethod = logClass.getMethod("void logArrayAcc(java.lang.String,java.lang.Object,int,java.lang.String,java.lang.String,int,boolean)").makeRef();
+  private static final SootMethodRef logArrayAccMethod = logClass.getMethod("void logArrayAcc(int,java.lang.Object,int,java.lang.Object,boolean)").makeRef();
   private static final SootMethodRef logStartMethod = logClass.getMethod("void logStart(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logJoinMethod = logClass.getMethod("void logJoin(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logBranchMethod = logClass.getMethod("void logBranch(int)").makeRef();
@@ -65,6 +71,19 @@ public final class NewWrapper {
   private static final SootMethodRef valueOfShortMethod = Scene.v().getMethod("<java.lang.Short: java.lang.Short valueOf(short)>").makeRef();
 
 
+  private static String  getRVLocalName(String methodSig)
+  {
+	  Integer id = methodRVLocalMap.get(methodSig);
+	  if(id==null)
+	  {
+		  id=0;
+	  }
+	  methodRVLocalMap.put(methodSig, ++id);
+	  
+	  return RV_LOCAL+id;
+  }
+
+  
   public static InvokeStmt logBranch(int id, final Stmt s) {
     InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logBranchMethod,
         IntConstant.v(id));
@@ -128,9 +147,118 @@ public final class NewWrapper {
     return Jimple.v().newInvokeStmt(logExpr);
   }
 
+  
+  public static InvokeStmt logArrayAcc(int id, Body body, Stmt s)
+  {
+	  Local rv_local1,rv_local2,rv_local3;
+	  AssignStmt newAssignStmt1,newAssignStmt2,newAssignStmt3;
 
+	  Value base = s.getArrayRef().getBase();
+	  Value index = s.getArrayRef().getIndex();
+	  
+	  DefinitionStmt d = (DefinitionStmt)s;
+	    boolean write = (d.getLeftOp() instanceof ArrayRef);
+	    
+		
+	    Value v;
+	    if(write)
+	    	v = d.getRightOp();
+	    else
+	    	v = d.getLeftOp();
+	    
+    	String rv_local1_name = getRVLocalName(body.getMethod().getSignature());
+    	String rv_local2_name = getRVLocalName(body.getMethod().getSignature());
+    	String rv_local3_name = getRVLocalName(body.getMethod().getSignature());
+
+
+		rv_local1 = Jimple.v().newLocal(rv_local1_name, base.getType()); 
+		rv_local2 = Jimple.v().newLocal(rv_local2_name, index.getType()); 
+		
+        newAssignStmt1 = Jimple.v().newAssignStmt(rv_local1, base);
+        newAssignStmt2 = Jimple.v().newAssignStmt(rv_local2, index);
+		
+	    if(v.getType() instanceof PrimType)
+	    {
+	    	Value staticInvoke;
+
+	    	if(v.getType() instanceof BooleanType)
+	    	{
+	    		rv_local3 = Jimple.v().newLocal(rv_local3_name, RefType.v("java.lang.Boolean"));           
+	            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfBooleanMethod,v);  
+	    	}
+	    	else if(v.getType() instanceof ByteType)
+	    	{
+	    		rv_local3 = Jimple.v().newLocal(rv_local3_name, RefType.v("java.lang.Byte"));           
+	            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfByteMethod,v); 
+	    	}
+	    	else if(v.getType() instanceof CharType)
+	    	{
+	    		rv_local3 = Jimple.v().newLocal(rv_local3_name, RefType.v("java.lang.Char"));           
+	            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfCharMethod,v); 
+	    	}
+	    	else if(v.getType() instanceof DoubleType)
+	    	{
+	    		rv_local3 = Jimple.v().newLocal(rv_local3_name, RefType.v("java.lang.Double"));           
+	            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfDoubleMethod,v); 
+	    	}
+	    	else if(v.getType() instanceof FloatType)
+	    	{
+	    		rv_local3 = Jimple.v().newLocal(rv_local3_name, RefType.v("java.lang.Float"));           
+	            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfFloatMethod,v); 
+	    	}
+	    	else if(v.getType() instanceof IntType)
+	    	{
+	    		rv_local3 = Jimple.v().newLocal(rv_local3_name, RefType.v("java.lang.Int"));           
+	            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfIntMethod,v); 
+	    	}
+	    	else if(v.getType() instanceof LongType)
+	    	{
+	    		rv_local3 = Jimple.v().newLocal(rv_local3_name, RefType.v("java.lang.Long"));           
+	            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfLongMethod,v); 
+	    	}
+	    	else//if (v.getType() instanceof ShortType)
+	    	{
+	    		rv_local3 = Jimple.v().newLocal(rv_local3_name, RefType.v("java.lang.Short"));           
+	            staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfShortMethod,v); 
+	    	}
+			
+	    	newAssignStmt3 = Jimple.v().newAssignStmt(rv_local3, staticInvoke);
+			 			 
+	    }
+	    else
+	    {
+			rv_local3 = Jimple.v().newLocal(rv_local3_name, v.getType()); 
+	        newAssignStmt3 = Jimple.v().newAssignStmt(rv_local3, v);
+
+	    }
+		
+		
+
+
+        body.getLocals().add(rv_local1);
+        body.getLocals().add(rv_local2);
+        body.getLocals().add(rv_local3);
+
+    
+    //body.getUnits().insertAfter(newAssignStmt1,s);
+    //body.getUnits().insertAfter(newAssignStmt2,newAssignStmt1);
+    body.getUnits().insertAfter(newAssignStmt2,s);
+    body.getUnits().insertAfter(newAssignStmt3,newAssignStmt2);
+
+    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logArrayAccMethod,
+    		IntConstant.v(id),
+    		//rv_local1,
+    		base,
+    		rv_local2,
+    		rv_local3,
+        IntConstant.v(write?1:0));
+    
+    InvokeStmt invokeStmt = Jimple.v().newInvokeStmt(logExpr);
+	 body.getUnits().insertAfter(invokeStmt,newAssignStmt3);
+    
+    return invokeStmt;
+  }
   public static InvokeStmt logFieldAcc(int id, int sid, Body body, Stmt s) {
-    SootField f = s.getFieldRef().getField();
     DefinitionStmt d = (DefinitionStmt)s;
     boolean write = (d.getLeftOp() instanceof FieldRef);
     Value instanceObject;
@@ -142,7 +270,6 @@ public final class NewWrapper {
     
 	Local rv_local;
 	AssignStmt newAssignStmt;
-	Value staticInvoke;
 	
     Value v;
     if(write)
@@ -150,48 +277,50 @@ public final class NewWrapper {
     else
     	v = d.getLeftOp();
         
+	String rv_local_name = getRVLocalName(body.getMethod().getSignature());
+
     if(v.getType() instanceof PrimType)
     {
+    	Value staticInvoke;
 
-    	
     	if(v.getType() instanceof BooleanType)
     	{
-    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Boolean"));           
+    		rv_local = Jimple.v().newLocal(rv_local_name, RefType.v("java.lang.Boolean"));           
             staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfBooleanMethod,v);  
     	}
     	else if(v.getType() instanceof ByteType)
     	{
-    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Byte"));           
+    		rv_local = Jimple.v().newLocal(rv_local_name, RefType.v("java.lang.Byte"));           
             staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfByteMethod,v); 
     	}
     	else if(v.getType() instanceof CharType)
     	{
-    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Char"));           
+    		rv_local = Jimple.v().newLocal(rv_local_name, RefType.v("java.lang.Char"));           
             staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfCharMethod,v); 
     	}
     	else if(v.getType() instanceof DoubleType)
     	{
-    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Double"));           
+    		rv_local = Jimple.v().newLocal(rv_local_name, RefType.v("java.lang.Double"));           
             staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfDoubleMethod,v); 
     	}
     	else if(v.getType() instanceof FloatType)
     	{
-    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Float"));           
+    		rv_local = Jimple.v().newLocal(rv_local_name, RefType.v("java.lang.Float"));           
             staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfFloatMethod,v); 
     	}
     	else if(v.getType() instanceof IntType)
     	{
-    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Int"));           
+    		rv_local = Jimple.v().newLocal(rv_local_name, RefType.v("java.lang.Int"));           
             staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfIntMethod,v); 
     	}
     	else if(v.getType() instanceof LongType)
     	{
-    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Long"));           
+    		rv_local = Jimple.v().newLocal(rv_local_name, RefType.v("java.lang.Long"));           
             staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfLongMethod,v); 
     	}
     	else//if (v.getType() instanceof ShortType)
     	{
-    		rv_local = Jimple.v().newLocal("rv_local", RefType.v("java.lang.Short"));           
+    		rv_local = Jimple.v().newLocal(rv_local_name, RefType.v("java.lang.Short"));           
             staticInvoke = Jimple.v().newStaticInvokeExpr(valueOfShortMethod,v); 
     	}
 		
@@ -200,7 +329,7 @@ public final class NewWrapper {
     }
     else
     {
-		rv_local = Jimple.v().newLocal("rv_local", v.getType());           
+		rv_local = Jimple.v().newLocal(rv_local_name, v.getType());           
         newAssignStmt = Jimple.v().newAssignStmt(rv_local, v);
 
     }

@@ -30,10 +30,8 @@ public final class NewRT {
 
   public static  void logFieldAcc(int ID, final Object o, int SID, final Object v, final boolean write) {
   }
-
-  public static  void logArrayAcc(final String type, final Object base, final int index, final String lclass, final String lmeth, final int jline, final boolean write) {
+  public static  void logArrayAcc(int ID, final Object o, int index, final Object v, final boolean write) {
   }
-
 
   public static  void logStart(int ID, final Object o) {
   }

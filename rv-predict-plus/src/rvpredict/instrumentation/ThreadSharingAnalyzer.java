@@ -83,7 +83,8 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
           //something
           
           boolean unused = markJoin(body,stmt) || markStart(body,stmt) || /*markConstructor(stmt) ||*/ markLock(body,stmt) || markWaitAndNotify(body,stmt)
-        	       || markFieldAccess(body,stmt)  /*|| markArrayAccess(stmt)*/ /*|| markReflectAccess(stmt) || markReflectConstructor(stmt) || markReflForName(stmt)*/
+        	       || markFieldAccess(body,stmt)  
+        	       || markArrayAccess(body, stmt) /*|| markReflectAccess(stmt) || markReflectConstructor(stmt) || markReflForName(stmt)*/
         	       /*|| markImpureCall(stmt)*/ || markBranch(body, stmt) /*|| markInvocation(stmt)*/;
 
           
@@ -151,7 +152,7 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
 	    	  sharedAccess++;
 
 	    		  
-	    	  int sid = getSharedVariableId(stmt.getFieldRef().getField());
+	    	  int sid = getSharedVariableId(stmt.getFieldRef().getField().getSignature());
 	    	  
 	    	int id = getStaticId(body, stmt);
 
@@ -165,6 +166,27 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
 	    return false;
 	  }
   
+  private boolean markArrayAccess(Body body, Stmt stmt) {
+	    if (stmt.containsArrayRef()) {
+	      assert (stmt instanceof AssignStmt) : "Unknown ArrayReffing Stmt";
+
+	      totalAccess++;
+	      
+	      if(!tlo.isObjectThreadLocal(stmt.getArrayRef().getBase(), body.getMethod()))
+	      { 
+	    	  sharedAccess++;
+	    	  int sid = getSharedVariableId(body.getMethod().getSignature()+"|"+stmt.getArrayRef().getBase().toString());
+
+	    	  int id = getStaticId(body, stmt);
+		      InvokeStmt is 
+		        = logArrayAcc(id,body,stmt);
+		      //body.getUnits().insertAfter(is,stmt);
+		      return true;
+	      }
+	      
+	    }
+	    return false;
+	  }
   //mark waits and notifies.  Unfortunately, part of this is redundant 
   //with marking class inits and marking invocations.  If we had HoFs 
   //I would factor the commonalities out.  With the limited ability of 
@@ -260,9 +282,8 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
 	  
   }
   
-  private int getSharedVariableId(SootField f)
+  private int getSharedVariableId(String sig)
   {
-	  String sig = f.getSignature();
 	  if(sharedvariableIdMap.get(sig)==null)
 	  {
 		  sharedvariableIdMap.put(sig, sharedvariableIdMap.size()+1);

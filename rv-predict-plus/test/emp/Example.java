@@ -10,26 +10,11 @@ public class Example {
 	MyThread t1,t2;
 	public static void main(String[] args) throws InterruptedException
 	{
-		
 		Example t = new Example();
 		t.a = new int[2];
 		int[] at = t.a;
-		at[0]=0;
-		at[1]=1;
-		
-		//t.wait(1000);//that does not have lock release/acquire semantics?
-		byte p = 'a';
-		Object o = p;
-		System.out.print(o);
-		long pp = 1000;
-		o = pp;
-		System.out.print(o);
-		o =t;
-		System.out.print(o);
-		boolean bb = false;
-		o = bb;
-		System.out.print(o);
-
+		at[0]=10;
+		at[1]=20;
 		
 		t.r = new Random();
 		t.x=0;		
@@ -89,8 +74,8 @@ public class Example {
 			t.b = t.r.nextBoolean();
 			else
 				t.b = true;
-			
-			if(t.b)
+						
+			if(id<2)
 			{
 				synchronized(t)
 				{
@@ -98,7 +83,6 @@ public class Example {
 					try {
 						t.wait();//This program has a bug here: may block forever
 						dec();
-						t.notify();
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -107,8 +91,13 @@ public class Example {
 			}
 			else
 			{
-				mul();
-				div();
+				synchronized(t)
+				{
+					t.notify();
+
+					mul();
+					div();
+				}
 			}
 		}
 	}

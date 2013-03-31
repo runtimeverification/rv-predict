@@ -20,6 +20,10 @@
 	<classpathentry kind="lib" path="lib/external/snappy.jar"/>
 	<classpathentry kind="lib" path="lib/external/whirlycache-0.7.1.jar"/>
 	<classpathentry kind="lib" path="lib/external/h2-1.3.171.jar"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/soot"/>
+	<classpathentry kind="lib" path="lib/external/soot-jeff.jar"/>
+	<classpathentry kind="lib" path="lib/external/jasminclasses-2.5.0.jar"/>
+	<classpathentry kind="lib" path="lib/external/polyglot.jar"/>
+	<classpathentry kind="lib" path="lib/external/baksmali-1.3.2.jar"/>
+	<classpathentry kind="lib" path="lib/external/AXMLPrinter2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

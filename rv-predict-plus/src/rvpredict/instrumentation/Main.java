@@ -134,6 +134,7 @@ public class Main{
 
       System.out.println("*****************************" + stars);
       analyzer.reportStatistics();
+      analyzer.saveMetaToDB(mainclass);
       System.out.println("*****************************" + stars + "\n"); 
 
     } catch (Exception e) { e.printStackTrace(); System.exit(1); }

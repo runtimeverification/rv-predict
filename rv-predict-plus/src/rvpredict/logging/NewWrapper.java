@@ -58,8 +58,8 @@ public final class NewWrapper {
   private static final SootMethodRef logJoinMethod = logClass.getMethod("void logJoin(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logBranchMethod = logClass.getMethod("void logBranch(int)").makeRef();
   private static final SootMethodRef logBBMethod = logClass.getMethod("void logBasicBlock(int)").makeRef();
-  //private static final SootMethodRef logStaticSyncLockMethod = logClass.getMethod("void logStaticSyncLock(java.lang.String)").makeRef();
-  //private static final SootMethodRef logStaticSyncUnlockMethod = logClass.getMethod("void logStaticSyncUnlock(java.lang.String)").makeRef();
+  private static final SootMethodRef logStaticSyncLockMethod = logClass.getMethod("void logStaticSyncLock(int,int)").makeRef();
+  private static final SootMethodRef logStaticSyncUnlockMethod = logClass.getMethod("void logStaticSyncUnlock(int,int)").makeRef();
 
   private static final SootMethodRef valueOfBooleanMethod = Scene.v().getMethod("<java.lang.Boolean: java.lang.Boolean valueOf(boolean)>").makeRef();
   private static final SootMethodRef valueOfByteMethod = Scene.v().getMethod("<java.lang.Byte: java.lang.Byte valueOf(byte)>").makeRef();
@@ -104,7 +104,12 @@ public final class NewWrapper {
   public static InvokeStmt logLock(int id, Stmt s) {
         return logLock(id, ((EnterMonitorStmt)s).getOp());
   }
-
+  public static InvokeStmt logLock(int id, int sid) {
+	    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logStaticSyncLockMethod,
+	    		IntConstant.v(id),
+	    		IntConstant.v(sid));
+	    return Jimple.v().newInvokeStmt(logExpr);
+  }	
   public static InvokeStmt logLock(int id, Value v) {
     InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logLockMethod,
     		IntConstant.v(id),
@@ -139,7 +144,12 @@ public final class NewWrapper {
   public static InvokeStmt logUnlock(int id, Stmt s) {
     return logUnlock(id, ((ExitMonitorStmt)s).getOp());
   }
-
+  public static InvokeStmt logUnlock(int id, int sid) {
+	  InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logStaticSyncUnlockMethod,
+	    		IntConstant.v(id),
+	    		IntConstant.v(sid));
+	    return Jimple.v().newInvokeStmt(logExpr);
+	  }
   public static InvokeStmt logUnlock(int id, Value v) {
     InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logUnlockMethod,
     		IntConstant.v(id),

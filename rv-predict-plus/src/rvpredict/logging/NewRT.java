@@ -15,11 +15,10 @@ public final class NewRT {
   }
 
 
-
-  public static  void logStaticSyncLock(final String s) {
+  public static  void logStaticSyncLock(int ID, int SID) {
   }
 
-  public static  void logStaticSyncUnlock(final String s) {
+  public static  void logStaticSyncUnlock(int ID, int SID) {
   }
 
   public static  void logLock(int ID, final Object lock) {

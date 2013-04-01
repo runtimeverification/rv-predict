@@ -65,6 +65,10 @@ public class Example {
 			inc();
 			dec();
 		}
+		public static synchronized void m2()
+		{
+			System.out.println("Hello");
+		}
 		public void run()
 		{
 			LocalClass o = new LocalClass();
@@ -88,6 +92,9 @@ public class Example {
 						e.printStackTrace();
 					}
 				}
+				
+				m();
+				m2();
 			}
 			else
 			{

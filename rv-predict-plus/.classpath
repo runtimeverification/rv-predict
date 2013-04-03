@@ -2,9 +2,8 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="examples/prediction"/>
-	<classpathentry kind="src" path="engine"/>
+	<classpathentry excluding="z3/Z3Interface.java|z3/Z3Task.java" kind="src" path="engine"/>
 	<classpathentry kind="src" path="test"/>
-	<classpathentry kind="src" path="db/src"/>
 	<classpathentry kind="var" path="JRE_LIB" sourcepath="/JRE_SRC"/>
 	<classpathentry kind="lib" path="lib/external/ant.jar"/>
 	<classpathentry kind="lib" path="lib/external/commons-collections-3.2.jar"/>
@@ -20,10 +19,12 @@
 	<classpathentry kind="lib" path="lib/external/snappy.jar"/>
 	<classpathentry kind="lib" path="lib/external/whirlycache-0.7.1.jar"/>
 	<classpathentry kind="lib" path="lib/external/h2-1.3.171.jar"/>
-	<classpathentry kind="lib" path="lib/external/soot-jeff.jar"/>
 	<classpathentry kind="lib" path="lib/external/jasminclasses-2.5.0.jar"/>
 	<classpathentry kind="lib" path="lib/external/polyglot.jar"/>
 	<classpathentry kind="lib" path="lib/external/baksmali-1.3.2.jar"/>
 	<classpathentry kind="lib" path="lib/external/AXMLPrinter2.jar"/>
+	<classpathentry kind="lib" path="lib/external/jigsaw-sexpr.jar"/>
+	<classpathentry kind="lib" path="lib/external/ant-launcher.jar"/>
+	<classpathentry kind="lib" path="lib/external/soot-jeff.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

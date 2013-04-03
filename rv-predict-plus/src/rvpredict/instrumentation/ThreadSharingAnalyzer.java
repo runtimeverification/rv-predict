@@ -40,6 +40,9 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
   
   private static HashMap<String,Integer> stmtSigIdMap = new HashMap<String,Integer>();
  
+  public static final String constructorName = "<init>";
+  public static final String staticInitializerName = "<clinit>";
+  
   private static final SootClass objectClass = Scene.v().loadClassAndSupport("java.lang.Object");
 
   private static final SootMethod notify = objectClass.getMethod("void notify()");
@@ -219,7 +222,9 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
 	      assert (stmt instanceof AssignStmt) : "Unknown FieldReffing Stmt";
 	      totalAccess++;
 	      
-	      if(!tlo.isObjectThreadLocal(stmt.getFieldRef(), body.getMethod()))
+	      if(body.getMethod().getName().equals(constructorName)
+	    		  ||body.getMethod().getName().equals(staticInitializerName)
+	    		  ||!tlo.isObjectThreadLocal(stmt.getFieldRef(), body.getMethod()))
 	      { 
 	    	  sharedAccess++;
 
@@ -244,7 +249,9 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
 
 	      totalAccess++;
 	      
-	      if(!tlo.isObjectThreadLocal(stmt.getArrayRef().getBase(), body.getMethod()))
+	      if(body.getMethod().getName().equals(constructorName)
+	    		  ||body.getMethod().getName().equals(staticInitializerName)
+	    		  ||!tlo.isObjectThreadLocal(stmt.getArrayRef().getBase(), body.getMethod()))
 	      { 
 	    	  sharedAccess++;
 	    	  int sid = getSharedVariableId(body.getMethod().getSignature()+"|"+stmt.getArrayRef().getBase().toString());
@@ -272,7 +279,7 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
       	int id = getStaticId(body, stmt);
 
         InvokeStmt is = logWait(id,stmt);
-        body.getUnits().insertBefore(is,stmt);
+        body.getUnits().insertAfter(is,stmt);
         return true;
       }
       if (method == wait2 || method == wait3) {
@@ -299,13 +306,13 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
     if (stmt instanceof EnterMonitorStmt){
         int id = getStaticId(body, stmt);
 
-      body.getUnits().insertBefore(logLock(id,stmt), stmt);
+      body.getUnits().insertAfter(logLock(id,stmt), stmt);
       return true;
     }
     if (stmt instanceof ExitMonitorStmt){
         int id = getStaticId(body, stmt);
 
-      body.getUnits().insertAfter(logUnlock(id,stmt), stmt);
+      body.getUnits().insertBefore(logUnlock(id,stmt), stmt);
       return true;
     }
     return false;

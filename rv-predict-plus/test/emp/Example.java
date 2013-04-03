@@ -4,9 +4,12 @@ import java.util.Random;
 
 public class Example {
 	Random r;
-	int x;
-	boolean b; 
+	int x=0;
+	boolean b=false; 
 	int[] a;
+	
+	static int xxx = 100;
+	
 	MyThread t1,t2;
 	public static void main(String[] args) throws InterruptedException
 	{

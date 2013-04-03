@@ -23,7 +23,7 @@ public class Z3Run
 	
 	Z3Model model;
 	
-	private static String cmds = "z3 -smt2 ";
+	private static String CMD = "z3 -smt2 ";
 	
 	boolean sat;
 	
@@ -65,7 +65,7 @@ public class Z3Run
 	public void exec(File outFile, File errFile, String file) throws IOException
 	{
 		
-		cmds = cmds + file;
+		String cmds = CMD + file;
 
 //		args2 += " 1>"+outFile;
 //		args2 += " 2>"+errFile;

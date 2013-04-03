@@ -1,0 +1,64 @@
+03-31 16:36:42 jdbc[2]: exception
+org.h2.jdbc.JdbcSQLException: Schema "SHAREDVARSIG" not found; SQL statement:
+DROP TABLE IF EXISTS sharedvarsig.emp.Example [90079-171]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:329)
+	at org.h2.message.DbException.get(DbException.java:169)
+	at org.h2.message.DbException.get(DbException.java:146)
+	at org.h2.command.Parser.getSchema(Parser.java:612)
+	at org.h2.command.Parser.getSchema(Parser.java:619)
+	at org.h2.command.Parser.parseDrop(Parser.java:1201)
+	at org.h2.command.Parser.parsePrepared(Parser.java:337)
+	at org.h2.command.Parser.parse(Parser.java:278)
+	at org.h2.command.Parser.parse(Parser.java:250)
+	at org.h2.command.Parser.prepareCommand(Parser.java:217)
+	at org.h2.engine.Session.prepareLocal(Session.java:417)
+	at org.h2.engine.Session.prepareCommand(Session.java:366)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1116)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:164)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:152)
+	at db.DBEngine.createSharedVarSignatureTable(DBEngine.java:79)
+	at rvpredict.instrumentation.ThreadSharingAnalyzer.saveMetaToDB(ThreadSharingAnalyzer.java:141)
+	at rvpredict.instrumentation.Main.main(Main.java:137)
+03-31 16:54:37 jdbc[2]: exception
+org.h2.jdbc.JdbcSQLException: Column count does not match; SQL statement:
+INSERT INTO trace_a_b_c_test VALUES (?,?,?,?) [21002-171]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:329)
+	at org.h2.message.DbException.get(DbException.java:169)
+	at org.h2.message.DbException.get(DbException.java:146)
+	at org.h2.message.DbException.get(DbException.java:135)
+	at org.h2.command.dml.Insert.prepare(Insert.java:226)
+	at org.h2.command.Parser.prepareCommand(Parser.java:218)
+	at org.h2.engine.Session.prepareLocal(Session.java:417)
+	at org.h2.engine.Session.prepareCommand(Session.java:366)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1116)
+	at org.h2.jdbc.JdbcPreparedStatement.<init>(JdbcPreparedStatement.java:74)
+	at org.h2.jdbc.JdbcConnection.prepareStatement(JdbcConnection.java:267)
+	at db.DBEngine.createTraceTable(DBEngine.java:107)
+	at db.DBEngine.main(DBEngine.java:226)
+03-31 17:43:53 jdbc[2]: exception
+org.h2.jdbc.JdbcSQLException: Table "STMTSIG_EMP_EXAMPLE" not found; SQL statement:
+SELECT * FROM stmtsig_emp_Example [42102-171]
+03-31 17:43:53 jdbc[2]: exception
+org.h2.jdbc.JdbcSQLException: Table "TRACE_EMP_EXAMPLE" not found; SQL statement:
+SELECT * FROM trace_emp_Example ORDER BY ID [42102-171]
+03-31 17:45:36 jdbc[2]: exception
+org.h2.jdbc.JdbcSQLException: Table "STMTSIG_EMP_EXAMPLE" not found; SQL statement:
+SELECT * FROM stmtsig_emp_Example [42102-171]
+03-31 17:45:36 jdbc[2]: exception
+org.h2.jdbc.JdbcSQLException: Table "TRACE_EMP_EXAMPLE" not found; SQL statement:
+SELECT * FROM trace_emp_Example ORDER BY ID [42102-171]
+03-31 17:47:45 jdbc[2]: exception
+org.h2.jdbc.JdbcSQLException: Table "TRACE_EMP_EXAMPLE" not found; SQL statement:
+SELECT * FROM trace_emp_Example ORDER BY ID [42102-171]
+03-31 21:25:37 jdbc[2]: exception
+org.h2.jdbc.JdbcSQLException: Table "TRACE_EMP_EXAMPLE" not found; SQL statement:
+SELECT * FROM trace_emp_Example ORDER BY ID [42102-171]
+03-31 21:31:00 jdbc[2]: exception
+org.h2.jdbc.JdbcSQLException: Table "TRACE_EMP_EXAMPLE" not found; SQL statement:
+SELECT * FROM trace_emp_Example ORDER BY ID [42102-171]
+03-31 21:32:30 jdbc[2]: exception
+org.h2.jdbc.JdbcSQLException: Table "TRACE_EMP_EXAMPLE" not found; SQL statement:
+SELECT * FROM trace_emp_Example ORDER BY ID [42102-171]
+03-31 21:36:08 jdbc[2]: exception
+org.h2.jdbc.JdbcSQLException: Table "TRACE_EMP_EXAMPLE" not found; SQL statement:
+SELECT * FROM trace_emp_Example ORDER BY ID [42102-171]

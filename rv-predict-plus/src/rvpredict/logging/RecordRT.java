@@ -1,6 +1,6 @@
 package rvpredict.logging;
 
-public final class NewRT {
+public final class RecordRT {
 
   public static  void logBranch(int ID) {
   }

@@ -1,6 +1,7 @@
 package z3;
 
 import trace.AbstractNode;
+import trace.IMemNode;
 import trace.ISyncNode;
 import trace.JoinNode;
 import trace.LockNode;
@@ -8,6 +9,7 @@ import trace.LockPair;
 import trace.NotifyNode;
 import trace.ReadNode;
 import trace.StartNode;
+import trace.Trace;
 import trace.UnlockNode;
 import trace.WaitNode;
 import trace.WriteNode;
@@ -25,6 +27,7 @@ import java.util.Map.Entry;
 public class Z3Engine
 {
 	private static int id =0;
+	public Z3Run task;
 	
 	private String CONS_DECLARE = "";
 	private String CONS_ASSERT = "";
@@ -46,8 +49,9 @@ public class Z3Engine
 	public void declareVariables(Vector<AbstractNode> trace)
 	{
 		CONS_ASSERT = "(assert (distinct ";
-		
-		for(int i=0;i<trace.size();i++)
+		String CONS_ASSERT_RANGE ="";
+		int size = trace.size();
+		for(int i=0;i<size;i++)
 		{
 			AbstractNode node = trace.get(i);
 			long GID = node.getGID();
@@ -55,11 +59,15 @@ public class Z3Engine
 			
 			CONS_DECLARE += "(declare-const "+var+" Int)\n";
 			CONS_ASSERT+=var+" ";
+			
+			CONS_ASSERT_RANGE += "(assert (and (> "+var+" 0) (< "+var+" "+(size+1)+")))\n";
+
 		}
 		
 		CONS_ASSERT+="))\n";
-		CONS_ASSERT+="(assert (> "+makeVariable(trace.get(0).getGID())+" 0))\n";
 		
+		CONS_ASSERT= CONS_ASSERT_RANGE;//don't use distinct +
+				
 	}
 	public void addIntraThreadConstraints(HashMap<Long,Vector<AbstractNode>> map)
 	{
@@ -345,16 +353,42 @@ public class Z3Engine
 		String var1 = makeVariable(node1.getGID());
 		String var2 = makeVariable(node2.getGID());
 		
-		String QUERY = "(assert (or (= (- "+var1+" "+var2+") 1)\n" +
+		String QUERY = //"(assert (= "+var1+" "+var2+"))\n";//not global order
+				"(assert (or (= (- "+var1+" "+var2+") 1)\n" +
 									"(= (- "+var1+" "+var2+") -1)" +
 											"))\n";
 		
 		id++;
-		Z3Run task = new Z3Run(id);
+		task = new Z3Run(id);
 		String msg = CONS_DECLARE+CONS_ASSERT+QUERY+CONS_GETMODEL;
 		task.sendMessage(msg);
 		
 		return task.sat;
+	}
+	
+	public boolean isAtomicityViolation(IMemNode node1, IMemNode node2,
+			IMemNode node3) {
+		
+		String var1 = makeVariable(node1.getGID());
+		String var2 = makeVariable(node2.getGID());
+		String var3 = makeVariable(node3.getGID());
+
+		//not global order
+		String QUERY = "(assert (and (<= "+var1+" "+var3+")\n" +
+									"(<= "+var3+" "+var2+")" +
+											"))\n";
+		
+		id++;
+		task = new Z3Run(id);
+		String msg = CONS_DECLARE+CONS_ASSERT+QUERY+CONS_GETMODEL;
+		task.sendMessage(msg);
+		
+		return task.sat;
+	}
+	
+	public void detectBugs()
+	{
+		
 	}
 	
 	public static void testConstructLockConstraints()
@@ -407,4 +441,21 @@ public class Z3Engine
 		//testConstructLockConstraints();
 		testConstructReadWriteConstraints();
 	}
+	public Vector<String> getSchedule(HashMap<Long,Long> nodeGIDTidMap
+			,HashMap<Long,String> threadIdNameMap) {
+		
+		Vector<String> schedule = new Vector<String>();
+		for (int i=0;i<task.schedule.size();i++)
+		{
+			String xi = task.schedule.get(i);
+			long gid = Long.valueOf(xi.substring(1));
+			long tid = nodeGIDTidMap.get(gid);
+			String name = threadIdNameMap.get(tid);
+			schedule.add(name);
+		}
+		
+		return schedule;
+	}
+
+
 }

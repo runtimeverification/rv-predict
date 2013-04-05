@@ -1,6 +1,6 @@
 package trace;
 
-public class ReadNode extends AbstractNode
+public class ReadNode extends AbstractNode implements IMemNode
 {
 	private String value;
 	private String addr;

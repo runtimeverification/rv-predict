@@ -41,13 +41,13 @@ import soot.jimple.StringConstant;
 
 import static rvpredict.util.Util.*;
 
-public final class NewWrapper {
+public final class RecordWrapper {
 	
 	private static final String RV_LOCAL = "rv_local";
 	private static HashMap<String,Integer> methodRVLocalMap = new HashMap<String,Integer>();
 
 	
-  private static final SootClass logClass = Scene.v().loadClassAndSupport("rvpredict.logging.NewRT");
+  private static final SootClass logClass = Scene.v().loadClassAndSupport("rvpredict.logging.RecordRT");
   private static final SootMethodRef logLockMethod = logClass.getMethod("void logLock(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logUnlockMethod = logClass.getMethod("void logUnlock(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logWaitMethod = logClass.getMethod("void logWait(int,java.lang.Object)").makeRef();

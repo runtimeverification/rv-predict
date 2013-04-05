@@ -52,7 +52,7 @@ public class Z3ModelReader
 			String result = readResult(p);
 			if(result.startsWith("(error "))
 				throw new Error("smt2 file has errors");
-			System.out.println("Feasible: " + "sat".equals(result));
+			//System.out.println("Feasible: " + "sat".equals(result));
 
 			if("sat".equals(result)) {
 				Z3Model model = process((Vector) p.parse());

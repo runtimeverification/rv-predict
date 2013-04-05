@@ -1,6 +1,6 @@
 package trace;
 
-public class WriteNode extends AbstractNode
+public class WriteNode extends AbstractNode implements IMemNode
 {
 	private String value;
 	private String addr;

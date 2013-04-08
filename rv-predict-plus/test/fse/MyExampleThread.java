@@ -10,16 +10,19 @@ public class MyExampleThread extends Thread
  }
  public void run()
  {
-   int i = -1;
+   int j =0;
+   
    try
    {
-     for (i = 0; i < 10000; i++) 
+     for (int i = 0; i < 10000; i++) 
      {
        int old = MyExample.value;
-       old++;
+       old = old+1;
+       
        if (i >= 9998 && this.id == 2) {
          Thread.sleep(100);
        }
+       j=i;
        if (MyExample.value != old - 1) {
          int x = 1 / 0;
        }
@@ -27,9 +30,8 @@ public class MyExampleThread extends Thread
      }
    }catch(Exception e)
      {
-       System.out.println("Died at " + i);
+       System.out.println("Died at " + j);
        e.printStackTrace();
-       "Crashed_with".equals(e);
        System.exit(1);
      }
  }

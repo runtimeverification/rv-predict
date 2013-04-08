@@ -1,6 +1,7 @@
 package emp;
 
 public class Simple {
+	static Object lock = new Object();
 	static int x=0;
 	public static void main(String[] args)
 	{
@@ -10,11 +11,17 @@ public class Simple {
 
 		t1.start();
 		t2.start();
+		
+		synchronized(lock)
+		{
+			x++;
+		}
+		x=0;
+		
 		t1.join();
+		
 		t2.join();
-		
-		System.out.println(x);
-		
+				
 		}catch(Exception e)
 		{
 			e.printStackTrace();
@@ -26,7 +33,11 @@ public class Simple {
 	{
 		public void run()
 		{
-		x++;
+			synchronized(lock)
+			{x++;
+			}
+			System.out.println(1/x);
+
 		}
 	}
 }

@@ -23,6 +23,7 @@ public final class ReplayRT {
 	{		
 		DBEngine db = new DBEngine(appname);
 		schedule = db.getSchedule(id);
+		db.closeDB();
 		if(schedule==null)
 		{
 			//no schedule to replay, just terminate
@@ -114,6 +115,10 @@ public final class ReplayRT {
 	  
 	  synchronized(lock)
 	  {
+		//should we stop running or continue if pos is out of bounds?
+		  
+		  if(pos<schedule.length)
+		  {
 		  if(name.equals(schedule[pos]))
 		  {
 			  //proceed
@@ -126,7 +131,10 @@ public final class ReplayRT {
 			  {
 				  try {
 					  lock.notifyAll();
-					  lock.wait(10);//once all other threads finish, need someone to notify the blocked threads 
+					  lock.wait(10);//once all other threads finish, need someone to notify the blocked threads
+					  
+					  if(pos>=schedule.length)
+						  break;
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -135,6 +143,7 @@ public final class ReplayRT {
 			  
 			  pos++;
 			  
+		  }
 		  }
 	  }
   }

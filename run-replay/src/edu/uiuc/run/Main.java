@@ -23,7 +23,7 @@ private static void run(String[] args)
 	try 
 	{		
 		String appname = args[0];
-		int id =3;
+		int id =1;
 		if(args.length>1)
 			id = Integer.valueOf(args[1]);
 			

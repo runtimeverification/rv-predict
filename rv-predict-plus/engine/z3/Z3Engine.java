@@ -353,11 +353,13 @@ public class Z3Engine
 		String var1 = makeVariable(node1.getGID());
 		String var2 = makeVariable(node2.getGID());
 		
-		String QUERY = //"(assert (= "+var1+" "+var2+"))\n";//not global order
-				"(assert (or (= (- "+var1+" "+var2+") 1)\n" +
-									"(= (- "+var1+" "+var2+") -1)" +
-											"))\n";
-		
+		String QUERY = "(assert (= (+ "+var1+" 1) "+var2+"))\n";
+				
+//				"(assert (or (= (- "+var1+" "+var2+") 1)\n" +
+//									"(= (- "+var1+" "+var2+") -1)" +
+//											"))\n";
+	
+				//"(assert (= "+var1+" "+var2+"))\n";//not global order
 		id++;
 		task = new Z3Run(id);
 		String msg = CONS_DECLARE+CONS_ASSERT+QUERY+CONS_GETMODEL;

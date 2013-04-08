@@ -116,6 +116,9 @@ public class Z3Run
 		
 		Process process = Runtime.getRuntime().exec(cmds); 
 		InputStream inputStream = process.getInputStream();
+		
+		//do we need to wait for Z3 to finish?
+		
 		// write the inputStream to a FileOutputStream
 		OutputStream out = new FileOutputStream(outFile);
 	 

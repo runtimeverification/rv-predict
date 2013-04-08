@@ -12,7 +12,7 @@ import z3.Z3Engine;
 import db.DBEngine;
 
 
-public class RVPredict {
+public class NewRVPredict {
 
 	/**
 	 * @param args
@@ -74,6 +74,8 @@ public class RVPredict {
 				if(writenodes==null)
 					continue;
 				
+				WriteNode initWrite = writenodes.get(0);
+				
 				//System.out.println("***** Checking Data Race *****\n");
 				//check race read-write
 				if(detectRace)
@@ -81,7 +83,7 @@ public class RVPredict {
 				{
 					ReadNode rnode = readnodes.get(i);
 					
-					for(int j=0;j<writenodes.size();j++)
+					for(int j=1;j<writenodes.size();j++)//skip the initial write node?
 					{
 						WriteNode wnode = writenodes.get(j);
 						if(rnode.getTid()!=wnode.getTid())
@@ -90,27 +92,41 @@ public class RVPredict {
 							{
 								String sig = stmtIdSigMap.get(rnode.getID())+
 										" - "+stmtIdSigMap.get(wnode.getID());
-										
-							System.out.println("Race: "+sig);
+								Vector<String> schedule_a = engine.getSchedule(trace.getNodeGIDTIdMap(),threadIdNameMap);
+
+								engine.isRace(wnode,rnode);
+								Vector<String> schedule_b = engine.getSchedule(trace.getNodeGIDTIdMap(),threadIdNameMap);
+
+								
+								
 							
+								String sig_a = sig+" * a";
+
+							if(!schedules.containsKey(sig_a))
+							{
+								System.out.println("Race: "+sig);
+
+								String sig_b = sig+" * b";
+
+								schedules.put(sig_a, schedule_a);
+								schedules.put(sig_b, schedule_b);
+
+								System.out.println("Schedule_a: "+schedule_a);
+								System.out.println("Schedule_b: "+schedule_b+"\n");
+
+							}
 							
-							
-							Vector<String> schedule = engine.getSchedule(trace.getNodeGIDTIdMap(),threadIdNameMap);
-							
-							System.out.println("Schedule: "+schedule+"\n");
-							
-							schedules.put(sig, schedule);
 							}
 						}
 					}
 				}
 				//check race write-write
 				if(detectRace)
-				for(int i=0;i<writenodes.size();i++)
+				for(int i=1;i<writenodes.size();i++)//skip the initial write node?
 				{
 					WriteNode wnode1 = writenodes.get(i);
 					
-					for(int j=0;j<writenodes.size();j++)
+					for(int j=1;j<writenodes.size();j++)
 					{
 						WriteNode wnode2 = writenodes.get(j);
 						if(wnode1.getTid()!=wnode2.getTid())
@@ -119,15 +135,29 @@ public class RVPredict {
 							{
 								String sig = stmtIdSigMap.get(wnode1.getID())+
 								" - "+stmtIdSigMap.get(wnode2.getID());
-								
-							System.out.println("Race: "+sig);
-							
-							Vector<String> schedule = engine.getSchedule(trace.getNodeGIDTIdMap(),threadIdNameMap);
-							
-							System.out.println("Schedule: "+schedule+"\n");
-							
-							schedules.put(sig, schedule);
+								Vector<String> schedule_a = engine.getSchedule(trace.getNodeGIDTIdMap(),threadIdNameMap);
 
+								engine.isRace(wnode2,wnode1);
+								Vector<String> schedule_b = engine.getSchedule(trace.getNodeGIDTIdMap(),threadIdNameMap);
+
+								
+								
+							
+								String sig_a = sig+" * a";
+
+							if(!schedules.containsKey(sig_a))
+							{
+								System.out.println("Race: "+sig);
+
+								String sig_b = sig+" * b";
+
+								schedules.put(sig_a, schedule_a);
+								schedules.put(sig_b, schedule_b);
+
+								System.out.println("Schedule_a: "+schedule_a);
+								System.out.println("Schedule_b: "+schedule_b+"\n");
+
+							}
 							}
 						}
 					}
@@ -151,6 +181,7 @@ public class RVPredict {
 						{
 							for(int k=0;k<rwnodes1.size()-1;k++)
 							{
+								//require atomic region specification
 								IMemNode node1 = rwnodes1.get(k);
 								IMemNode node2 = rwnodes1.get(k+1);
 								
@@ -158,9 +189,11 @@ public class RVPredict {
 								{
 									IMemNode node3 = rwnodes2.get(m);
 									
-									if(node1.getType()==TYPE.WRITE
+									if((node1.getType()==TYPE.WRITE
 											||node2.getType()==TYPE.WRITE
-											||node3.getType()==TYPE.WRITE)
+											||node3.getType()==TYPE.WRITE)&&
+											node1.getGID()!=initWrite.getGID()
+													&&node1.getGID()!=initWrite.getGID())
 									{
 										if(engine.isAtomicityViolation(node1, node2, node3))
 										{
@@ -168,13 +201,17 @@ public class RVPredict {
 													" - "+stmtIdSigMap.get(node3.getID())+
 													" - "+stmtIdSigMap.get(node2.getID());
 											
-											System.out.println("Atomicity Violation: "+sig);
 											
 											Vector<String> schedule = engine.getSchedule(trace.getNodeGIDTIdMap(),threadIdNameMap);
-											
+																						
+											if(!schedules.containsKey(sig))
+											{
+												schedules.put(sig, schedule);
+
+											System.out.println("Atomicity Violation: "+sig);
+
 											System.out.println("Schedule: "+schedule+"\n");
-											
-											schedules.put(sig, schedule);
+											}
 										}
 									}
 								}
@@ -184,8 +221,11 @@ public class RVPredict {
 			}
 			
 			//save schedules to db
-			if(schedules.size()>0)
+			int size = schedules.size();
+			if(size>0)
 			{
+				System.out.println("Total #Schedules: "+size);
+
 				db.createScheduleTable();
 				db.saveSchedulesToDB(schedules);
 			}

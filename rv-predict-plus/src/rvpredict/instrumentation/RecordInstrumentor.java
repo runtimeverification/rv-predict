@@ -92,7 +92,8 @@ public class RecordInstrumentor extends SceneTransformer {
           
           boolean unused = markJoin(body,stmt) || markStart(body,stmt) /*markConstructor(stmt) ||*/ 
         		  	|| markLock(body,stmt) || markWaitAndNotify(body,stmt)
-        	       || markFieldAccess(body,stmt) || markArrayAccess(body, stmt)
+        	       || markFieldAccess(body,stmt) 
+        	       || markArrayAccess(body, stmt)
         	       || markSynchronizedMethodCall(body,stmt)
         	       || markBranch(body, stmt)
         	        /*|| markReflectAccess(stmt) || markReflectConstructor(stmt) || markReflForName(stmt)*/

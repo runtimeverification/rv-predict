@@ -3,6 +3,7 @@ import java.sql.*;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Set;
 import java.util.Vector;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
@@ -22,27 +23,39 @@ public class DBEngine {
 	private final String[] stmtsigtablecolname={"SIG","ID"};
 	private final String[] stmtsigtablecoltype={"VARCHAR","INT"};
 	
+	private final String[] scheduletablecolname ={"ID","SIG","SCHEDULE"};
+	private final String[] scheduletablecoltype ={"INT","VARCHAR","ARRAY"};
+	
 	private final String[] sharedvarsigtablecolname={"SIG","ID"};
 	private final String[] sharedvarsigcoltype={"VARCHAR","INT"};
 
 	private final String[] tracetablecolname={"GID","TID","ID","ADDR","VALUE","TYPE"};
 	private final String[] tracetablecoltype={"BIGINT","BIGINT","INT","VARCHAR","VARCHAR","TINYINT"};
+	
+	private final String[] tidtablecolname={"TID","NAME"};
+	private final String[] tidtablecoltype={"BIGINT","VARCHAR"};
+	
 	//READ,WRITE,LOCK,UNLOCK,WAIT,NOTIFY,START,JOIN,BRANCH,BB
 	public final byte[] tracetypetable ={'0','1','2','3','4','5','6','7','8','9','a'};
 	private Connection conn;
 	private PreparedStatement prepStmt;
+	
+	private PreparedStatement prepStmt2;//just for thread id-name
+
 	public String tracetablename;
+	public String tidtablename;
 	public String stmtsigtablename;
 	public String sharedvarsigtablename;
-
+	public String scheduletablename;
 	public DBEngine(String name)
 	{
 		name = name.replace('.', '_');
 		appname = name;
 		tracetablename = "trace_"+name;
+		tidtablename = "tid_"+name;
 		stmtsigtablename="stmtsig_"+name;
 		sharedvarsigtablename="sharedvarsig_"+name;
-		
+		scheduletablename = "schedule_"+name;
 		try
 		{
 			connectDB();
@@ -58,6 +71,22 @@ public class DBEngine {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+	}
+	public void createScheduleTable() throws Exception
+	{
+		String sql_dropTable = "DROP TABLE IF EXISTS "+scheduletablename;
+    	String sql_insertdata = "INSERT INTO "+scheduletablename+" VALUES (?,?,?)";
+
+    	Statement stmt = conn.createStatement();
+        stmt.execute(sql_dropTable);
+        
+        String sql_createTable = "CREATE TABLE "+scheduletablename+" ("+
+        		scheduletablecolname[0]+" "+scheduletablecoltype[0]+" PRIMARY KEY, "+
+        		scheduletablecolname[1]+" "+scheduletablecoltype[1]+", "+
+        		scheduletablecolname[2]+" "+scheduletablecoltype[2]+")";
+        stmt.execute(sql_createTable);
+        
+        prepStmt = conn.prepareStatement(sql_insertdata);
 	}
 	public void createStmtSignatureTable() throws Exception
 	{
@@ -92,7 +121,6 @@ public class DBEngine {
 	public void createTraceTable() throws Exception
 	{
 		String sql_dropTable = "DROP TABLE IF EXISTS "+tracetablename;
-    	String sql_insertdata = "INSERT INTO "+tracetablename+" VALUES (?,?,?,?,?,?)";
 
     	Statement stmt = conn.createStatement();
         stmt.execute(sql_dropTable);
@@ -106,8 +134,39 @@ public class DBEngine {
         tracetablecolname[5]+" "+tracetablecoltype[5]+")";
         stmt.execute(sql_createTable);
         
+    	String sql_insertdata = "INSERT INTO "+tracetablename+" VALUES (?,?,?,?,?,?)";
         prepStmt = conn.prepareStatement(sql_insertdata);
 		
+	}
+	
+	public void createThreadIdTable() throws Exception
+	{
+		String sql_dropTable = "DROP TABLE IF EXISTS "+tidtablename;
+
+    	Statement stmt = conn.createStatement();
+        stmt.execute(sql_dropTable);
+        
+        String sql_createTable = "CREATE TABLE "+tidtablename+" ("+
+        tidtablecolname[0]+" "+tidtablecoltype[0]+" PRIMARY KEY, "+
+        tidtablecolname[1]+" "+tidtablecoltype[1]+")";
+        stmt.execute(sql_createTable);
+        
+    	String sql_insertdata = "INSERT INTO "+tidtablename+" VALUES (?,?)";
+        prepStmt2 = conn.prepareStatement(sql_insertdata);
+	}
+	public void saveThreadTidNameToDB(long id, String name)
+	{
+		try
+		{
+			prepStmt2.setLong(1, id);
+			prepStmt2.setString(2,name);
+		
+			prepStmt2.execute();
+		
+		}catch(Exception e)
+		{
+			e.printStackTrace();
+		}
 	}
 	public void saveStmtSignatureToDB(String sig, int id)
 	{
@@ -170,6 +229,30 @@ public class DBEngine {
 
 	}
 	
+	 public HashMap<Long, String> getThreadIdNameMap()
+	{	
+		 HashMap<Long, String> map = new HashMap<Long, String>();
+		 
+		 try{
+				String sql_select = "SELECT * FROM "+tidtablename;
+				
+				Statement stmt = conn.createStatement();
+				ResultSet rs = stmt.executeQuery(sql_select);
+				while (rs.next()) 
+			    {
+			        // Get the data from the row using the column index
+			        Long tid = rs.getLong(1);
+			        String name = rs.getString(2);
+
+			        //System.out.println(ID+"-"+SIG);
+			        map.put(tid, name);
+			    }
+				}catch(Exception e)
+				{
+					e.printStackTrace();
+				}
+				return map;
+	}
 	public HashMap<Integer, String> getSharedVarSigIdMap()
 	{
 		HashMap<Integer, String> map = new HashMap<Integer, String>();
@@ -255,7 +338,6 @@ public class DBEngine {
 	        
 	        //System.out.println(node);
 	    }
-	    conn.close();
 	    return trace;
 	}
 	
@@ -302,7 +384,7 @@ public class DBEngine {
 	 */
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		String appname = "emp.Simple";
+		String appname = "emp.Simple";//emp.Example stringbuffer.StringBufferTest
 		try{
 			DBEngine db = new DBEngine(appname);
 			
@@ -311,6 +393,10 @@ public class DBEngine {
 			HashMap<Integer, String> stmtIdSigMap = db.getStmtSigIdMap();
 			
 			Trace trace = db.getTrace();
+			
+			HashMap<Long,String> threadIdNameMap = db.getThreadIdNameMap();
+			trace.setThreadIdNameMap(threadIdNameMap);			
+			
 			
 			Z3Engine engine = new Z3Engine();
 			//1. declare all variables 
@@ -322,12 +408,24 @@ public class DBEngine {
 			//4. match read-write
 			engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
 
+			HashMap<String,Vector<String>> schedules = new HashMap<String,Vector<String>>();
+			
+			boolean detectRace = true;
+			boolean detectAtomicityViolation = true;
+			
+			HashMap<String,HashMap<Long,Vector<IMemNode>>> indexedThreadReadWriteNodes 
+									= trace.getIndexedThreadReadWriteNodes();
+			
 			Iterator<Entry<String, Vector<ReadNode>>> 
 							entryIt =trace.getIndexedReadNodes().entrySet().iterator();
 			while(entryIt.hasNext())
 			{
 				Entry<String, Vector<ReadNode>> entry = entryIt.next();
 				String addr = entry.getKey();
+				
+				int pos = addr.indexOf('.');
+				int sid = Integer.valueOf(addr.substring(pos+1));
+				//System.out.println(sharedVarIdSigMap.get(sid));
 				
 				//get all read nodes on the address
 				Vector<ReadNode> readnodes = entry.getValue();
@@ -337,6 +435,9 @@ public class DBEngine {
 				if(writenodes==null)
 					continue;
 				
+				//System.out.println("***** Checking Data Race *****\n");
+				//check race read-write
+				if(detectRace)
 				for(int i=0;i<readnodes.size();i++)
 				{
 					ReadNode rnode = readnodes.get(i);
@@ -346,14 +447,26 @@ public class DBEngine {
 						WriteNode wnode = writenodes.get(j);
 						if(rnode.getTid()!=wnode.getTid())
 						{
-							System.out.print(stmtIdSigMap.get(rnode.getID())+
-									" - "+stmtIdSigMap.get(wnode.getID())+ ": ");
-							System.out.println(engine.isRace(rnode, wnode));
+							if(engine.isRace(rnode, wnode))
+							{
+								String sig = stmtIdSigMap.get(rnode.getID())+
+										" - "+stmtIdSigMap.get(wnode.getID());
+										
+							System.out.println("Race: "+sig);
 							
+							
+							
+							Vector<String> schedule = engine.getSchedule(trace.getNodeGIDTIdMap(),threadIdNameMap);
+							
+							System.out.println("Schedule: "+schedule+"\n");
+							
+							schedules.put(sig, schedule);
+							}
 						}
 					}
 				}
-				
+				//check race write-write
+				if(detectRace)
 				for(int i=0;i<writenodes.size();i++)
 				{
 					WriteNode wnode1 = writenodes.get(i);
@@ -363,22 +476,132 @@ public class DBEngine {
 						WriteNode wnode2 = writenodes.get(j);
 						if(wnode1.getTid()!=wnode2.getTid())
 						{
-							System.out.print(stmtIdSigMap.get(wnode1.getID())+
-									" - "+stmtIdSigMap.get(wnode2.getID())+ ": ");
-							System.out.println(engine.isRace(wnode1, wnode2));
+							if(engine.isRace(wnode1, wnode2))
+							{
+								String sig = stmtIdSigMap.get(wnode1.getID())+
+								" - "+stmtIdSigMap.get(wnode2.getID());
+								
+							System.out.println("Race: "+sig);
 							
+							Vector<String> schedule = engine.getSchedule(trace.getNodeGIDTIdMap(),threadIdNameMap);
+							
+							System.out.println("Schedule: "+schedule+"\n");
+							
+							schedules.put(sig, schedule);
+
+							}
 						}
 					}
 				}
 				
+				//System.out.println("\n***** Checking Atomicity Violations *****\n");
+
+				//check atomicity-violation all nodes
+				HashMap<Long,Vector<IMemNode>> threadReadWriteNodes = indexedThreadReadWriteNodes.get(addr);
 				
+				Object[] threads = threadReadWriteNodes.keySet().toArray();
+				if(detectAtomicityViolation)
+				for(int i=0;i<threads.length-1;i++)
+					for(int j=i+1;j<threads.length;j++)
+					{
+						Vector<IMemNode> rwnodes1 = threadReadWriteNodes.get(threads[i]);
+						
+						Vector<IMemNode> rwnodes2 = threadReadWriteNodes.get(threads[j]);
+
+						if(rwnodes1!=null&rwnodes2!=null&&rwnodes1.size()>1)
+						{
+							for(int k=0;k<rwnodes1.size()-1;k++)
+							{
+								IMemNode node1 = rwnodes1.get(k);
+								IMemNode node2 = rwnodes1.get(k+1);
+								
+								for(int m =0;m<rwnodes2.size();m++)
+								{
+									IMemNode node3 = rwnodes2.get(m);
+									
+									if(node1.getType()==TYPE.WRITE
+											||node2.getType()==TYPE.WRITE
+											||node3.getType()==TYPE.WRITE)
+									{
+										if(engine.isAtomicityViolation(node1, node2, node3))
+										{
+											String sig = stmtIdSigMap.get(node1.getID())+
+													" - "+stmtIdSigMap.get(node3.getID())+
+													" - "+stmtIdSigMap.get(node2.getID());
+											
+											System.out.println("Atomicity Violation: "+sig);
+											
+											Vector<String> schedule = engine.getSchedule(trace.getNodeGIDTIdMap(),threadIdNameMap);
+											
+											System.out.println("Schedule: "+schedule+"\n");
+											
+											schedules.put(sig, schedule);
+										}
+									}
+								}
+							}
+						}
+					}
 			}
+			
+			//save schedules to db
+			if(schedules.size()>0)
+			{
+				db.createScheduleTable();
+				db.saveSchedulesToDB(schedules);
+			}
+			
 		}
 		catch(Exception e)
 		  {
 			  e.printStackTrace();
 		  }
 	}
-
+	public Object[] getSchedule(int id)
+	{
+		try{
+		String sql_select = "SELECT * FROM "+scheduletablename +" WHERE ID="+id;
+		
+		Statement stmt = conn.createStatement();
+		ResultSet rs = stmt.executeQuery(sql_select);
+		if (rs.next()) 
+	    {
+	        Object o = rs.getObject(3);
+	        Object[] schedule = (Object[])o;
+	         
+	        return schedule;	        
+	    }
+		}catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		return null;
+	}
+	public void saveSchedulesToDB(HashMap<String, Vector<String>> schedules) {
+		
+		Iterator<Entry<String,Vector<String>>> entryIt = schedules.entrySet().iterator();
+		int i=0;
+		while(entryIt.hasNext())
+		{
+			i++;
+			Entry<String,Vector<String>> entry = entryIt.next();
+			String sig = entry.getKey();
+			Vector<String> schedule = entry.getValue();
+			try
+			{				
+				prepStmt.setInt(1, i);
+				prepStmt.setString(2, sig);
+				//Array aArray = conn.createArrayOf("VARCHAR", schedule.toArray());
+				prepStmt.setObject(3,schedule.toArray());
+				
+				prepStmt.execute();
+				
+			}catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
+		
+	}
 
 }

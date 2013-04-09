@@ -1,0 +1,9 @@
+database design:
+
+Tables: 
+
+appname-stmtsignature [signature, id]
+appname-sharedvariable[signature,id]
+appname-trace [gid,tid,id,type,address,value]
+
+

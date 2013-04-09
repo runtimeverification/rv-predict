@@ -1,0 +1,45 @@
+[Call Graph] For information on where the call graph may be incomplete, use the verbose option to the cg phase.
+[Spark] Pointer Assignment Graph in 0.1 seconds.
+[Spark] Type masks in 0.0 seconds.
+[Spark] Pointer Graph simplified in 0.0 seconds.
+[Spark] Propagation in 0.4 seconds.
+[Spark] Solution found in 0.4 seconds.
+[local-objects] Analyzing local objects for stringbuffer.StringBufferTest
+[local-objects]   preparing class             Thu Apr 04 21:08:19 CDT 2013
+[local-objects]   analyzing class             Thu Apr 04 21:08:19 CDT 2013
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+[local-objects]   propagating over call graph Thu Apr 04 21:08:22 CDT 2013
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+Attempting to print graph (will succeed only if ./dfg/ is a valid path)
+[local-objects]   finished at                 Thu Apr 04 21:08:22 CDT 2013
+[local-objects]   (#analyzed/#encountered): 50/103
+Transforming stringbuffer.StringBufferTest... 
+Transforming stringbuffer.StringBuffer... 
+Writing to /Users/jeffhuang/git/rv-predict-plus/rv-predict-plus/tmp/record/stringbuffer/StringBufferTest.class
+Writing to /Users/jeffhuang/git/rv-predict-plus/rv-predict-plus/tmp/record/stringbuffer/StringBuffer.class

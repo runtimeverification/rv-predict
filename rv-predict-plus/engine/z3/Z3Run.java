@@ -13,6 +13,7 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.Vector;
 
 public class Z3Run
 {
@@ -21,7 +22,8 @@ public class Z3Run
 	private static String Z3_ERR = "z3err.";
 	File smtFile,z3OutFile,z3ErrFile;
 	
-	Z3Model model;
+	public Z3Model model;
+	public Vector<String> schedule;
 	
 	private static String CMD = "z3 -smt2 ";
 	
@@ -34,7 +36,7 @@ public class Z3Run
         
 		z3OutFile = Util.newOutFile(Z3_OUT+id);
         
-		z3ErrFile = Util.newOutFile(Z3_ERR+id);
+		//z3ErrFile = Util.newOutFile(Z3_ERR+id);//looks useless
 		}catch(IOException e)
 		{
 			System.err.println(e.getMessage());
@@ -52,6 +54,11 @@ public class Z3Run
 
 	        model = Z3ModelReader.read(z3OutFile);
 	        
+	        if(model!=null)
+	        {
+	        	sat = true;
+	        	schedule = computeSchedule(model);
+	        }
 	        //String z3OutFileName = z3OutFile.getAbsolutePath();
 	        //retrieveResult(z3OutFileName);
 		    
@@ -60,6 +67,39 @@ public class Z3Run
 			System.err.println(e.getMessage());
 
 		}
+	}
+	
+	public Vector<String> computeSchedule(Z3Model model) {
+		
+		Vector<String> schedule = new Vector<String>();
+		
+		Iterator<Entry<String,Object>> setIt = model.getMap().entrySet().iterator();
+		while(setIt.hasNext())
+		{
+			Entry<String,Object> entryModel = setIt.next();
+			String op = entryModel.getKey();
+			int order = (Integer)entryModel.getValue();
+						
+			if(schedule.isEmpty())
+				schedule.add(op);
+			else
+			for(int i=0;i<schedule.size();i++)
+			{
+				if(order<(Integer)model.getMap().get(schedule.get(i)))
+				{
+					schedule.insertElementAt(op, i);
+					break;
+				}
+				else if(i==schedule.size()-1)
+				{
+					schedule.add(op);
+					break;
+				}
+				
+			}
+		}
+		
+		return schedule;
 	}
 	
 	public void exec(File outFile, File errFile, String file) throws IOException
@@ -76,6 +116,9 @@ public class Z3Run
 		
 		Process process = Runtime.getRuntime().exec(cmds); 
 		InputStream inputStream = process.getInputStream();
+		
+		//do we need to wait for Z3 to finish?
+		
 		// write the inputStream to a FileOutputStream
 		OutputStream out = new FileOutputStream(outFile);
 	 

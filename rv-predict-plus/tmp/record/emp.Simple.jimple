@@ -1,0 +1,173 @@
+public class emp.Simple extends java.lang.Object
+{
+    static java.lang.Object lock;
+    static int x;
+    static int y;
+    static int z;
+    static int q;
+    static int[] foo;
+
+    static void <clinit>()
+    {
+        java.lang.Object $r0, rv_local1;
+        int[] $r1, rv_local6;
+        java.lang.Int rv_local2, rv_local3, rv_local4, rv_local5;
+
+        $r0 = new java.lang.Object;
+        specialinvoke $r0.<java.lang.Object: void <init>()>();
+        <emp.Simple: java.lang.Object lock> = $r0;
+        rv_local1 = $r0;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(1, null, 1, rv_local1, 1);
+        <emp.Simple: int x> = 0;
+        rv_local2 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>(0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(2, null, 2, rv_local2, 1);
+        <emp.Simple: int y> = 0;
+        rv_local3 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>(0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(3, null, 3, rv_local3, 1);
+        <emp.Simple: int z> = 0;
+        rv_local4 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>(0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(4, null, 4, rv_local4, 1);
+        <emp.Simple: int q> = 0;
+        rv_local5 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>(0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(5, null, 5, rv_local5, 1);
+        $r1 = newarray (int)[10];
+        <emp.Simple: int[] foo> = $r1;
+        rv_local6 = $r1;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(6, null, 6, rv_local6, 1);
+        return;
+    }
+
+    public void <init>()
+    {
+        emp.Simple r0;
+
+        r0 := @this: emp.Simple;
+        specialinvoke r0.<java.lang.Object: void <init>()>();
+        return;
+    }
+
+    static void foo(boolean)
+    {
+        boolean z0;
+        int $i0, $i1, $i2, $i3;
+        java.io.PrintStream $r0, rv_local3;
+        java.lang.Int rv_local1, rv_local2, rv_local4, rv_local5;
+
+        z0 := @parameter0: boolean;
+        $i0 = <emp.Simple: int z>;
+        rv_local1 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(7, null, 4, rv_local1, 0);
+        $i1 = $i0 + 1;
+        <emp.Simple: int z> = $i1;
+        rv_local2 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i1);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(8, null, 4, rv_local2, 1);
+        staticinvoke <rvpredict.logging.RecordRT: void logBranch(int)>(9);
+        if z0 == 0 goto label0;
+
+        $r0 = <java.lang.System: java.io.PrintStream out>;
+        rv_local3 = $r0;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(10, null, 7, rv_local3, 0);
+        $i2 = <emp.Simple: int q>;
+        rv_local4 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i2);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(11, null, 5, rv_local4, 0);
+        $i3 = $i2 + 1;
+        <emp.Simple: int q> = $i3;
+        rv_local5 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i3);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(12, null, 5, rv_local5, 1);
+        virtualinvoke $r0.<java.io.PrintStream: void println(int)>($i2);
+
+     label0:
+        return;
+    }
+
+    public static void main(java.lang.String[])
+    {
+        java.lang.String[] r0;
+        emp.Simple$MyThread $r1, r2, r3, $r4;
+        int i0, $i1, $i2;
+        int[] $r5;
+        java.lang.Exception $r6, r7;
+
+        r0 := @parameter0: java.lang.String[];
+
+     label0:
+        $r1 = new emp.Simple$MyThread;
+        specialinvoke $r1.<emp.Simple$MyThread: void <init>()>();
+        r2 = $r1;
+        $r4 = new emp.Simple$MyThread;
+        specialinvoke $r4.<emp.Simple$MyThread: void <init>()>();
+        r3 = $r4;
+        staticinvoke <rvpredict.logging.RecordRT: void logStart(int,java.lang.Object)>(19, r2);
+        virtualinvoke r2.<emp.Simple$MyThread: void start()>();
+        staticinvoke <rvpredict.logging.RecordRT: void logStart(int,java.lang.Object)>(20, r3);
+        virtualinvoke r3.<emp.Simple$MyThread: void start()>();
+        i0 = 0;
+        staticinvoke <rvpredict.logging.RecordRT: void logBranch(int)>(21);
+        goto label2;
+
+     label1:
+        $i1 = <emp.Simple: int y>;
+        $i2 = $i1 + 1;
+        <emp.Simple: int y> = $i2;
+        $r5 = <emp.Simple: int[] foo>;
+        $r5[i0] = i0;
+        staticinvoke <emp.Simple: void foo(boolean,RVPredictCloneClass0)>(1, null);
+        i0 = i0 + 1;
+
+     label2:
+        if i0 < 2000 goto label1;
+
+        virtualinvoke r2.<emp.Simple$MyThread: void join()>();
+        staticinvoke <rvpredict.logging.RecordRT: void logJoin(int,java.lang.Object)>(22, r2);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(13, null, 3, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(14, null, 3, 1);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(15, null, 6, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logArrayAcc(int,java.lang.Object,boolean)>(16, $r5, 1);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(17, null, 4, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(18, null, 4, 1);
+        virtualinvoke r3.<emp.Simple$MyThread: void join()>();
+        staticinvoke <rvpredict.logging.RecordRT: void logJoin(int,java.lang.Object)>(23, r3);
+
+     label3:
+        staticinvoke <rvpredict.logging.RecordRT: void logBranch(int)>(24);
+        goto label5;
+
+     label4:
+        $r6 := @caughtexception;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(13, null, 3, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(14, null, 3, 1);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(15, null, 6, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logArrayAcc(int,java.lang.Object,boolean)>(16, $r5, 1);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(17, null, 4, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(18, null, 4, 1);
+        r7 = $r6;
+        virtualinvoke r7.<java.lang.Exception: void printStackTrace()>();
+
+     label5:
+        return;
+
+        catch java.lang.Exception from label0 to label3 with label4;
+    }
+
+    static void foo(boolean, RVPredictCloneClass0)
+    {
+        boolean z0;
+        int $i0, $i1, $i2, $i3;
+        java.io.PrintStream $r0;
+
+        z0 := @parameter0: boolean;
+        $i0 = <emp.Simple: int z>;
+        $i1 = $i0 + 1;
+        <emp.Simple: int z> = $i1;
+        if z0 == 0 goto label0;
+
+        $r0 = <java.lang.System: java.io.PrintStream out>;
+        $i2 = <emp.Simple: int q>;
+        $i3 = $i2 + 1;
+        <emp.Simple: int q> = $i3;
+        virtualinvoke $r0.<java.io.PrintStream: void println(int)>($i2);
+
+     label0:
+        return;
+    }
+}

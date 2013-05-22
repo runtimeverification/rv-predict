@@ -25,6 +25,9 @@
 	<classpathentry kind="lib" path="lib/external/AXMLPrinter2.jar"/>
 	<classpathentry kind="lib" path="lib/external/jigsaw-sexpr.jar"/>
 	<classpathentry kind="lib" path="lib/external/ant-launcher.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/soot"/>
 	<classpathentry kind="lib" path="lib/external/soot-jeff.jar"/>
+	<classpathentry kind="lib" path="/dacapo-9.12/out"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/derby-10.3.2.1"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

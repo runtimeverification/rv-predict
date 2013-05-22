@@ -29,10 +29,14 @@ import rvpredict.analysis.MethodAnalyzer;
 
 import rvpredict.prediction.PredictorOptions;
 
+
 public class Main{
+	
 	private static String DIR_RECORD = "record";
 	private static String DIR_REPLAY = "replay";
 
+    private static LoopOptimizationMode loopOptimizationMode = LoopOptimizationMode.NONE;
+    
     static LinkedList<String> excludeList = new LinkedList<String> ();
     static
     {
@@ -49,6 +53,7 @@ public class Main{
     for(int i = 0; i < s.length(); ++i) stars += "*";
     return stars;
   }
+  
 
   public static void main(String[] args) {
     /* check the arguments */
@@ -68,7 +73,23 @@ public class Main{
       
       //Jeff: make sure the parameter is only the main class
       String mainclass = args[0];
+     
+      //Patrick:  for now second argument must specify loop optimization mode
+      if(args.length >= 2){
+        if(args[1].toUpperCase().equals("AGGRESSIVE")){
+          loopOptimizationMode = LoopOptimizationMode.AGGRESSIVE;	
+        }
+        else if(args[1].toUpperCase().equals("NOARRAYS")){
+          loopOptimizationMode = LoopOptimizationMode.NOARRAYS;	
+        }
+      }
       
+      //String reflogPath = System.getProperty("user.dir")+ System.getProperty("file.separator")+"../dacapo-9.12/";
+      //reflogPath = "/Users/pmeredit/Documents/workspace/dacapo-9.12/";
+      
+      String[] args2={"-p","cg"}; //,"reflection-log:"+reflogPath+"out/refl.log"};
+      Options.v().parse(args2);
+  
       //Record version
       Set<String> sharedVariables = transformRecordVersion(mainclass);
       
@@ -84,7 +105,7 @@ public class Main{
   private static Set<String> transformRecordVersion(String mainclass)
   {
       //output jimple
-      //Options.v().set_output_format(1);
+      Options.v().set_output_format(1);
       //print tag
       //Options.v().set_print_tags_in_output(true);
 
@@ -94,8 +115,15 @@ public class Main{
       
       setClassPath();
       enableSpark();
-      
+
+      SetupPass setupPass = new SetupPass(loopOptimizationMode);
+      MethodCloner methodClone = new MethodCloner();
       RecordInstrumentor recordInst = new RecordInstrumentor();
+      PackManager.v().getPack("wjtp").add(new Transform("wjtp.SetupPass", setupPass));
+      switch(loopOptimizationMode){
+        case NONE: break;
+        default: PackManager.v().getPack("wjtp").add(new Transform("wjtp.MethodCloner", methodClone)); break;
+      }
       PackManager.v().getPack("wjtp").add(new Transform("wjtp.RecordInstrument", recordInst));
 
       SootClass appclass = Scene.v().loadClassAndSupport(mainclass);
@@ -136,7 +164,7 @@ public class Main{
   private static void transformReplayVersion(String mainclass, Set<String> sharedVariables)
   {
       //output jimple
-      //Options.v().set_output_format(1);
+    //  Options.v().set_output_format(1);
       //print tag
       //Options.v().set_print_tags_in_output(true);
 

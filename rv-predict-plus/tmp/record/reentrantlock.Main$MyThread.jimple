@@ -1,0 +1,103 @@
+class reentrantlock.Main$MyThread extends java.lang.Thread
+{
+
+    void <init>()
+    {
+        reentrantlock.Main$MyThread r0;
+
+        r0 := @this: reentrantlock.Main$MyThread;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(16);
+        specialinvoke r0.<java.lang.Thread: void <init>()>();
+        return;
+    }
+
+    public void run()
+    {
+        reentrantlock.Main$MyThread r0;
+        int i0, $i1;
+        java.lang.Int rv_local1;
+
+        r0 := @this: reentrantlock.Main$MyThread;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(21);
+        i0 = 0;
+        staticinvoke <rvpredict.logging.RecordRT: void logBranch(int)>(17);
+        goto label1;
+
+     label0:
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(22);
+        staticinvoke <rvpredict.logging.RecordRT: void logLock(int,java.lang.Object)>(18, r0);
+        specialinvoke r0.<reentrantlock.Main$MyThread: void m()>();
+        staticinvoke <rvpredict.logging.RecordRT: void logUnlock(int,java.lang.Object)>(18, r0);
+        i0 = i0 + 1;
+
+     label1:
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(19);
+        $i1 = <reentrantlock.Main: int TIMES>;
+        rv_local1 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i1);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(19, null, 1, rv_local1, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logBranch(int)>(20);
+        if i0 < $i1 goto label0;
+
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(23);
+        return;
+    }
+
+    private synchronized void m()
+    {
+        reentrantlock.Main$MyThread r0, r2;
+        int $i0, $i1;
+        java.lang.Throwable $r3;
+        java.lang.Int rv_local1, rv_local2;
+
+        r0 := @this: reentrantlock.Main$MyThread;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(29);
+        r2 = r0;
+        entermonitor r0;
+        staticinvoke <rvpredict.logging.RecordRT: void logLock(int,java.lang.Object)>(24, r0);
+
+     label0:
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(25);
+        $i0 = <reentrantlock.Main: int x>;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(30);
+        rv_local1 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i0);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(31);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(25, null, 5, rv_local1, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(32);
+        $i1 = $i0 + 1;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(26);
+        <reentrantlock.Main: int x> = $i1;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(33);
+        rv_local2 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i1);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(34);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(26, null, 5, rv_local2, 1);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(35);
+        staticinvoke <rvpredict.logging.RecordRT: void logUnlock(int,java.lang.Object)>(27, r2);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(27);
+        exitmonitor r2;
+
+     label1:
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(36);
+        staticinvoke <rvpredict.logging.RecordRT: void logBranch(int)>(28);
+        goto label5;
+
+     label2:
+        $r3 := @caughtexception;
+
+     label3:
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(35);
+        staticinvoke <rvpredict.logging.RecordRT: void logUnlock(int,java.lang.Object)>(27, r2);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(27);
+        exitmonitor r2;
+
+     label4:
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(37);
+        throw $r3;
+
+     label5:
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(38);
+        return;
+
+        catch java.lang.Throwable from label0 to label1 with label2;
+        catch java.lang.Throwable from label3 to label4 with label2;
+    }
+}

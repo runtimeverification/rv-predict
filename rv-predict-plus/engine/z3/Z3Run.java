@@ -17,8 +17,8 @@ import java.util.Vector;
 
 public class Z3Run
 {
-	private static String Z3_SMT = "z3smt.";
-	private static String Z3_OUT = "z3out.";
+	private static String Z3_SMT = "z3smt";
+	private static String Z3_OUT = "z3out";
 	private static String Z3_ERR = "z3err.";
 	File smtFile,z3OutFile,z3ErrFile;
 	
@@ -29,12 +29,12 @@ public class Z3Run
 	
 	boolean sat;
 	
-	public Z3Run(int id)
+	public Z3Run(String appname, int id)
 	{				
 		try{
-		smtFile = Util.newOutFile(Z3_SMT+id);
+		smtFile = Util.newOutFile(Z3_SMT+"_"+appname+"_"+id);
         
-		z3OutFile = Util.newOutFile(Z3_OUT+id);
+		z3OutFile = Util.newOutFile(Z3_OUT+"_"+appname+"_"+id);
         
 		//z3ErrFile = Util.newOutFile(Z3_ERR+id);//looks useless
 		}catch(IOException e)
@@ -152,7 +152,7 @@ public class Z3Run
 					"(assert (not (= b c)))\n"+
 					"(assert (not (= b c)))";
 		
-		Z3Run task = new Z3Run(1);
+		Z3Run task = new Z3Run("test",1);
 		task.sendMessage(msg);
 		Iterator<Entry<String,Object>> setIt = task.model.getMap().entrySet().iterator();
 		while(setIt.hasNext())

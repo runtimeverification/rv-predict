@@ -127,9 +127,10 @@ public class ReplayInstrumentor extends SceneTransformer {
 	    if (stmt.containsFieldRef()) {
 	      assert (stmt instanceof AssignStmt) : "Unknown FieldReffing Stmt";
 	      
-	      if(body.getMethod().getName().equals(constructorName)
-	    		  ||body.getMethod().getName().equals(staticInitializerName)
-	    		  ||sharedvariables.contains(stmt.getFieldRef().getField().getSignature()+"|"+getLineNumber(stmt)))//may add line number later
+	      //NO NEED TO INSTRUMENT CONSTRUCTORS
+	      if(//body.getMethod().getName().equals(constructorName)||
+	    		  //body.getMethod().getName().equals(staticInitializerName)||
+	    		  sharedvariables.contains(stmt.getFieldRef().getField().getSignature()+"|"+getLineNumber(stmt)))//may add line number later
 	      { 
 
 	      InvokeStmt is 
@@ -145,9 +146,10 @@ public class ReplayInstrumentor extends SceneTransformer {
 	    if (stmt.containsArrayRef()) {
 	      assert (stmt instanceof AssignStmt) : "Unknown ArrayReffing Stmt";
 	      
-	      if(body.getMethod().getName().equals(constructorName)
-	    		  ||body.getMethod().getName().equals(staticInitializerName)
-	    		  ||sharedvariables.contains( body.getMethod().getSignature()+"|"+stmt.getArrayRef().getBase().toString()+"|"+getLineNumber(stmt)))
+	      //NO NEED TO INSTRUMENT CONSTRUCTORS
+	      if(//body.getMethod().getName().equals(constructorName)||
+	    		  //body.getMethod().getName().equals(staticInitializerName)||
+	    		  sharedvariables.contains( body.getMethod().getSignature()+"|"+stmt.getArrayRef().getBase().toString()+"|"+getLineNumber(stmt)))
 	      { 
 	    	  
 		      InvokeStmt is 
@@ -171,7 +173,7 @@ public class ReplayInstrumentor extends SceneTransformer {
       if (method == wait1) {
 
         InvokeStmt is = logWait();
-        body.getUnits().insertBefore(is,stmt);
+        body.getUnits().insertBefore(is,stmt);//seems we do not need to intercept wait/notify
         return true;
       }
       if (method == wait2 || method == wait3) {

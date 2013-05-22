@@ -1,0 +1,82 @@
+public class reentrantlock.Main extends java.lang.Object
+{
+    static int TIMES;
+    static int x;
+    static reentrantlock.Main$MyThread t1;
+    static reentrantlock.Main$MyThread t2;
+
+    static void <clinit>()
+    {
+        java.lang.Int rv_local1;
+
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(1);
+        <reentrantlock.Main: int TIMES> = 10;
+        rv_local1 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>(10);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(1, null, 1, rv_local1, 1);
+        return;
+    }
+
+    public void <init>()
+    {
+        reentrantlock.Main r0;
+
+        r0 := @this: reentrantlock.Main;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(2);
+        specialinvoke r0.<java.lang.Object: void <init>()>();
+        return;
+    }
+
+    public static void main(java.lang.String[]) throws java.lang.InterruptedException
+    {
+        java.lang.String[] r0;
+        reentrantlock.Main $r1, r2;
+        reentrantlock.Main$MyThread $r3, $r4, $r5, $r6, $r7, $r8, rv_local1, rv_local2, rv_local3, rv_local4, rv_local5, rv_local6;
+        java.io.PrintStream $r9, rv_local7;
+        int $i0;
+        java.lang.Int rv_local8;
+
+        r0 := @parameter0: java.lang.String[];
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(15);
+        $r1 = new reentrantlock.Main;
+        specialinvoke $r1.<reentrantlock.Main: void <init>()>();
+        r2 = $r1;
+        $r3 = new reentrantlock.Main$MyThread;
+        specialinvoke $r3.<reentrantlock.Main$MyThread: void <init>()>();
+        <reentrantlock.Main: reentrantlock.Main$MyThread t1> = $r3;
+        rv_local1 = $r3;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(3, null, 2, rv_local1, 1);
+        $r4 = new reentrantlock.Main$MyThread;
+        specialinvoke $r4.<reentrantlock.Main$MyThread: void <init>()>();
+        <reentrantlock.Main: reentrantlock.Main$MyThread t2> = $r4;
+        rv_local2 = $r4;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(4, null, 3, rv_local2, 1);
+        $r5 = <reentrantlock.Main: reentrantlock.Main$MyThread t1>;
+        rv_local3 = $r5;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(5, null, 2, rv_local3, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logStart(int,java.lang.Object)>(6, $r5);
+        virtualinvoke $r5.<reentrantlock.Main$MyThread: void start()>();
+        $r6 = <reentrantlock.Main: reentrantlock.Main$MyThread t2>;
+        rv_local4 = $r6;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(7, null, 3, rv_local4, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logStart(int,java.lang.Object)>(8, $r6);
+        virtualinvoke $r6.<reentrantlock.Main$MyThread: void start()>();
+        $r7 = <reentrantlock.Main: reentrantlock.Main$MyThread t1>;
+        rv_local5 = $r7;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(9, null, 2, rv_local5, 0);
+        virtualinvoke $r7.<reentrantlock.Main$MyThread: void join()>();
+        staticinvoke <rvpredict.logging.RecordRT: void logJoin(int,java.lang.Object)>(10, $r7);
+        $r8 = <reentrantlock.Main: reentrantlock.Main$MyThread t2>;
+        rv_local6 = $r8;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(11, null, 3, rv_local6, 0);
+        virtualinvoke $r8.<reentrantlock.Main$MyThread: void join()>();
+        staticinvoke <rvpredict.logging.RecordRT: void logJoin(int,java.lang.Object)>(12, $r8);
+        $r9 = <java.lang.System: java.io.PrintStream out>;
+        rv_local7 = $r9;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(13, null, 4, rv_local7, 0);
+        $i0 = <reentrantlock.Main: int x>;
+        rv_local8 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(14, null, 5, rv_local8, 0);
+        virtualinvoke $r9.<java.io.PrintStream: void println(int)>($i0);
+        return;
+    }
+}

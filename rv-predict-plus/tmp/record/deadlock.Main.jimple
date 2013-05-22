@@ -1,0 +1,110 @@
+public class deadlock.Main extends java.lang.Object
+{
+
+    public void <init>()
+    {
+        deadlock.Main r0;
+
+        r0 := @this: deadlock.Main;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(1);
+        specialinvoke r0.<java.lang.Object: void <init>()>();
+        return;
+    }
+
+    public static void main(java.lang.String[])
+    {
+        java.lang.String[] r0;
+        deadlock.Account $r1, r2, r3, $r6;
+        deadlock.Client r4, r5, $r7, $r8;
+        java.io.PrintStream $r9, rv_local1;
+        java.lang.StringBuilder $r10, $r12, $r13;
+        int $i0, $i1;
+        java.lang.String $r11, $r14;
+        java.lang.Exception $r15, r16;
+
+        r0 := @parameter0: java.lang.String[];
+
+     label0:
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(8);
+        $r1 = new deadlock.Account;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(9);
+        specialinvoke $r1.<deadlock.Account: void <init>(int)>(1000);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(10);
+        r2 = $r1;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(11);
+        $r6 = new deadlock.Account;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(12);
+        specialinvoke $r6.<deadlock.Account: void <init>(int)>(1000);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(13);
+        r3 = $r6;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(14);
+        $r7 = new deadlock.Client;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(15);
+        specialinvoke $r7.<deadlock.Client: void <init>(deadlock.Account,deadlock.Account)>(r2, r3);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(16);
+        r4 = $r7;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(17);
+        $r8 = new deadlock.Client;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(18);
+        specialinvoke $r8.<deadlock.Client: void <init>(deadlock.Account,deadlock.Account)>(r3, r2);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(19);
+        r5 = $r8;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(20);
+        staticinvoke <rvpredict.logging.RecordRT: void logStart(int,java.lang.Object)>(2, r4);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(2);
+        virtualinvoke r4.<deadlock.Client: void start()>();
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(21);
+        staticinvoke <rvpredict.logging.RecordRT: void logStart(int,java.lang.Object)>(3, r5);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(3);
+        virtualinvoke r5.<deadlock.Client: void start()>();
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(4);
+        virtualinvoke r4.<deadlock.Client: void join()>();
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(22);
+        staticinvoke <rvpredict.logging.RecordRT: void logJoin(int,java.lang.Object)>(4, r4);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(5);
+        virtualinvoke r5.<deadlock.Client: void join()>();
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(23);
+        staticinvoke <rvpredict.logging.RecordRT: void logJoin(int,java.lang.Object)>(5, r5);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(6);
+        $r9 = <java.lang.System: java.io.PrintStream out>;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(24);
+        rv_local1 = $r9;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(25);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(6, null, 1, rv_local1, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(26);
+        $r10 = new java.lang.StringBuilder;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(27);
+        $i0 = virtualinvoke r2.<deadlock.Account: int getBalance()>();
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(28);
+        $r11 = staticinvoke <java.lang.String: java.lang.String valueOf(int)>($i0);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(29);
+        specialinvoke $r10.<java.lang.StringBuilder: void <init>(java.lang.String)>($r11);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(30);
+        $r12 = virtualinvoke $r10.<java.lang.StringBuilder: java.lang.StringBuilder append(java.lang.String)>(" ");
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(31);
+        $i1 = virtualinvoke r3.<deadlock.Account: int getBalance()>();
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(32);
+        $r13 = virtualinvoke $r12.<java.lang.StringBuilder: java.lang.StringBuilder append(int)>($i1);
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(33);
+        $r14 = virtualinvoke $r13.<java.lang.StringBuilder: java.lang.String toString()>();
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(34);
+        virtualinvoke $r9.<java.io.PrintStream: void println(java.lang.String)>($r14);
+
+     label1:
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(35);
+        staticinvoke <rvpredict.logging.RecordRT: void logBranch(int)>(7);
+        goto label3;
+
+     label2:
+        $r15 := @caughtexception;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(36);
+        r16 = $r15;
+        virtualinvoke r16.<java.lang.Exception: void printStackTrace()>();
+
+     label3:
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(37);
+        return;
+
+        catch java.lang.Exception from label0 to label1 with label2;
+    }
+}

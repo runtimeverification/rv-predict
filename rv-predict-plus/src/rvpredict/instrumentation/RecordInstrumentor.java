@@ -11,6 +11,7 @@ import soot.options.Options;
 import soot.tagkit.LineNumberTag;
 import soot.tagkit.Tag;
 import soot.toolkits.graph.CompleteBlockGraph;
+import soot.toolkits.graph.MHGPostDominatorsFinder;
 
 import soot.util.Chain;
 import soot.util.HashChain;
@@ -21,18 +22,34 @@ import soot.jimple.toolkits.thread.ThreadLocalObjectsAnalysis;
 import soot.jimple.toolkits.thread.mhp.SynchObliviousMhpAnalysis;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Iterator;
 
 import db.DBEngine;
 
 public class RecordInstrumentor extends SceneTransformer {
-  private static ThreadLocalObjectsAnalysis tlo;
+  private static LoopFinder lf;
+  private static MHGPostDominatorsFinder pdf;
+  private static HashMap<SootMethod, MHGPostDominatorsFinder> pdfMap 
+    = new HashMap<SootMethod, MHGPostDominatorsFinder>();
+  //TODO:  Currently, if there are multiple read/write accesses
+  //to a given variable used uncondintionally within a loop (transitivelty)
+  //we will put all the access at the lop accesses even though we don't really
+  //need to know more than just one read/write.  I will fix this if it becomes
+  //an issue.  The problem is I keep a set of Stmts when I should probaly
+  //design some sort of "access object" that just records the ID and w/r info.
+  //It should be noted that this is still correct, it just migght be *slightly*
+  //less efficient in some cases (but still way more than not doing the optimization)
+  private static HashMap<SootMethod, LinkedHashSet<Stmt>> accessesMap
+    = new HashMap<SootMethod, LinkedHashSet<Stmt>>();
+  
   
   private int totalAccess;
   private int sharedAccess;
@@ -59,7 +76,6 @@ public class RecordInstrumentor extends SceneTransformer {
     //if(true) return;
     //System.out.println("running");
 
-      tlo = new ThreadLocalObjectsAnalysis(new SynchObliviousMhpAnalysis());
 
     for(SootClass sc : Scene.v().getClasses()){
       String packageName = sc.getPackageName();
@@ -78,10 +94,26 @@ public class RecordInstrumentor extends SceneTransformer {
           continue;
         }
         Body body = m.getActiveBody();
+        lf = new LoopFinder();
+        lf.transform(body);
+        pdf = pdfMap.get(m);
+        if(pdf == null){
+        	pdf = new MHGPostDominatorsFinder(new BriefUnitGraph(body));
+        	pdfMap.put(m, pdf);
+        }
+      //    if(m.getName().equals("main")){
+       //   System.out.println(body);
+        //  }
+        
+        
+        if(SetupPass.loopOptimizationMode != LoopOptimizationMode.NONE){
+        	handleLoops(body);
+        }
+        
         Iterator<Unit> it = body.getUnits().snapshotIterator();
         while(it.hasNext()){
           Stmt stmt = (Stmt)it.next();
-         
+          if(stmt.hasTag("NoInstrumentTag")) continue;
           //for each statement we apply the following methods until one of them succeeds
           //order is partially important in that markInvocations needs to come after
           //markStarts markConstructors and markLocks. The important thing is these
@@ -91,7 +123,7 @@ public class RecordInstrumentor extends SceneTransformer {
           //something
           
           boolean unused = markJoin(body,stmt) || markStart(body,stmt) /*markConstructor(stmt) ||*/ 
-        		  	|| markLock(body,stmt) || markWaitAndNotify(body,stmt)
+        		   || markLock(body,stmt) || markWaitAndNotify(body,stmt)
         	       || markFieldAccess(body,stmt) 
         	       || markArrayAccess(body, stmt)
         	       || markSynchronizedMethodCall(body,stmt)
@@ -99,11 +131,17 @@ public class RecordInstrumentor extends SceneTransformer {
         	        /*|| markReflectAccess(stmt) || markReflectConstructor(stmt) || markReflForName(stmt)*/
         	       /*|| markImpureCall(stmt)*/  /*|| markInvocation(stmt)*/;
 
-          
           //Need to mark basic-block transition
           
           //do static slicing following the basic-block paths
         }
+        
+//          if(m.getName().equals("main")){
+  //        System.out.println(body);
+    //      }
+        //System.out.println(m.getActiveBody());
+        /* Disable tracking thread execution path for now
+         * We will use it later for performing offline symbolic analysis
         
         CompleteBlockGraph cfg = new CompleteBlockGraph(body);
         Iterator<Block> cfgIt = cfg.iterator();
@@ -125,8 +163,165 @@ public class RecordInstrumentor extends SceneTransformer {
 	  	      	body.getUnits().insertBefore(is,stmt);
         	}
         }
+         */
       }
     }
+  }
+  
+  //These methods do special instrumentation
+  //for loops in the case where loop optimization
+  //is turned on
+  // Optimization: if there are no synchronization statements
+  //in a loop (and transitively any methods it calls), we can
+  //move instrumentation for unconditionally executed accesses
+  //to the loop exits.
+  private void handleLoops(Body body){
+	 for(Loop l : lf.loops()){
+		 handleLoop(l, body);
+	 }
+  }
+  
+  private void handleLoop(Loop l, Body body){
+	 if(!MethodCloner.checkForSynchStmts(l)) { 
+		Collection<Stmt> exits = l.getLoopExits();
+		Collection<Stmt> targets = new HashSet<Stmt>();
+		for(Stmt exit : exits){
+			targets.addAll(closeTargets(l.targetsOfLoopExit(exit), body));
+		}
+		//printLoop(l);
+		//System.out.println(targets);
+		Iterator<Stmt> it = l.getLoopStatements().iterator();
+		it.next(); //this is the loop header which is a branch, we want the target of the branch
+		Stmt firstStmt = it.next(); 
+		//printLoop(l);
+		Stmt loopHead = l.getHead();
+		LinkedHashSet<Stmt> accesses = new LinkedHashSet<Stmt>();
+		for(Stmt stmt: l.getLoopStatements()){
+			//it is pointless to mark branches within loops
+            //only mark field and array accesses to shared vars
+			if(pdf.isDominatedBy(firstStmt, stmt)){
+                if(stmt.containsArrayRef() || stmt.containsFieldRef()){ 
+                   accesses.add(stmt);
+                }
+                if(stmt instanceof JInvokeStmt){
+            	   accesses.addAll(findAccesses((JInvokeStmt) stmt, targets)); 
+                }
+              }
+			  //we don't want to instrument anything in loops other than by
+			  //the loop through the accesses below.  This ensures that
+			  //things guarded by branches do not get instrumented at all
+			  //so that we do not end up with false positives
+              stmt.addTag(NoInstrumentTag.v());
+		}
+		for(Stmt stmt : accesses) {
+			boolean used = markFieldAccess(body, stmt, targets);
+		    if(!used && SetupPass.loopOptimizationMode != LoopOptimizationMode.NOARRAYS){
+				markArrayAccess(body, stmt, targets);
+			}
+		}
+	 }
+  }
+
+  //Unfortunately the LoopFinder returns targets of loop exist that are just branches
+  //immediately to other targets.  This method transitively closes this so that
+  //we don't end up with extra instrumentation
+  private static Collection<Stmt> closeTargets(Collection<Stmt> targets, Body body){
+	  //System.out.println("closeTargets before:" + targets);
+	  Collection<Stmt> ret = new HashSet<Stmt>();
+	  for(Stmt target : targets){
+		 ret.addAll(closeTarget(target, body)); 
+	  }
+	  //System.out.println("closeTargets after:" + ret);
+	  return ret;
+  }
+  
+  private static Collection<Stmt> closeTarget(Stmt target, Body body){
+	 Collection<Stmt> workList = new HashSet<Stmt>();
+	 Collection<Stmt> wlTmp = new HashSet<Stmt>();
+	 Collection<Stmt> ret = new HashSet<Stmt>();
+	 
+	 workList.add(target);
+	 boolean notFinished = true;
+	 while(notFinished){
+	   notFinished = false;
+	   for(Stmt stmt : workList){
+         if(stmt.branches()){
+           notFinished = true;
+    	   if(stmt instanceof GotoStmt){
+    	     wlTmp.add((Stmt)((GotoStmt)stmt).getTarget());
+    	   }
+    	   else if(stmt instanceof IfStmt){
+    	     IfStmt is = (IfStmt) stmt; 
+    	     wlTmp.add(is.getTarget());
+    	     Iterator<Unit> findFallThrough = body.getUnits().iterator(stmt);
+    	     findFallThrough.next();
+    	     Stmt fallThrough = (Stmt) findFallThrough.next();
+    	     wlTmp.add(fallThrough);
+    	   }
+         }
+         else{
+    	    ret.add(stmt);
+         } 
+	   }
+	   workList = wlTmp;
+	   wlTmp = new HashSet<Stmt>();
+	 }
+	 return ret;
+  }
+   
+  private static void printLoop(Loop l){
+	 for(Stmt s : l.getLoopStatements()){
+	   System.out.println(s);	 
+	 }
+  }
+ 
+  //This finds the accesses in recursively called methods.  Currently, we just
+  //save this as Stmts, which can result in say multiple reads to a given
+  //variable 'x' appearing at our target instrumentation point.  I will
+  //change this if it becomes and issue
+  private LinkedHashSet<Stmt> findAccesses(JInvokeStmt stmt, Collection<Stmt> targets){
+	  InvokeExpr origIE = stmt.getInvokeExpr();
+	  //System.out.println(origIE);
+	  //This is a hack we need because Soot does not properly update the
+	  //InvokeExpr.getMethod() between passes somehow
+	  SootMethod m = MethodCloner.cloneInvokeExprMethodMap.get(origIE);
+	  if(m == null){
+		  m = origIE.getMethod();
+		  if(!m.hasActiveBody()) 
+			  return new LinkedHashSet<Stmt>();
+	  }
+	  return findAccesses(m, targets);
+  }
+  
+  private LinkedHashSet<Stmt> findAccesses(SootMethod m, Collection<Stmt> targets){
+	LinkedHashSet<Stmt> ret = accessesMap.get(m);
+	if(ret != null){
+	  return ret;
+	}
+	ret = new LinkedHashSet<Stmt>();
+    Body body = m.getActiveBody();
+   
+    MHGPostDominatorsFinder lpdf = pdfMap.get(m); 
+    if(lpdf == null){
+      lpdf = new MHGPostDominatorsFinder(new BriefUnitGraph(body));
+      pdfMap.put(m, lpdf);
+    }
+    Iterator<Unit> it = body.getUnits().snapshotIterator();
+    Stmt firstStmt = (Stmt) body.getUnits().getFirst();
+	while(it.hasNext()){
+	  Stmt stmt = (Stmt) it.next();
+		if(lpdf.isDominatedBy(firstStmt, stmt)){
+          if(stmt.containsFieldRef() || stmt.containsArrayRef()){
+        	 ret.add(stmt); 
+          }
+          else if(stmt instanceof JInvokeStmt){
+            ret.addAll(findAccesses((JInvokeStmt) stmt, targets)); 
+          }
+		}
+       // redundant stmt.addTag(NoInstrumentTag.v());
+	}
+	accessesMap.put(m, ret);
+	return ret;
   }
   
   public Set<String> getSharedVariableSignatures()
@@ -187,21 +382,29 @@ public class RecordInstrumentor extends SceneTransformer {
   
   private boolean markSynchronizedMethodCall(Body body, Stmt stmt)
   {
-	  if(stmt instanceof JInvokeStmt && ((JInvokeStmt)stmt).getInvokeExpr().getMethod().isSynchronized())
+	 
+	  if((stmt instanceof JInvokeStmt && ((JInvokeStmt)stmt).getInvokeExpr().getMethod().isSynchronized())
+			  || (stmt instanceof AssignStmt && ((AssignStmt) stmt).getRightOp() instanceof InvokeExpr 
+					  && ((InvokeExpr)((AssignStmt) stmt).getRightOp()).getMethod().isSynchronized()))
 	  {
-		  		  
+		  InvokeExpr expr;
+		  if(stmt instanceof JInvokeStmt)
+			  expr = ((JInvokeStmt)stmt).getInvokeExpr();
+		  else
+			  expr = ((InvokeExpr)((AssignStmt) stmt).getRightOp());
+			  
 		  int id = getStaticId(body, stmt);
-		  if(((JInvokeStmt)stmt).getInvokeExpr() instanceof JSpecialInvokeExpr)
+		  if(expr instanceof InstanceInvokeExpr)
 		  {
-		  body.getUnits().insertBefore(logLock(id,((JSpecialInvokeExpr)((JInvokeStmt)stmt).getInvokeExpr()).getBase()), stmt);
-		  body.getUnits().insertAfter(logUnlock(id,((JSpecialInvokeExpr)((JInvokeStmt)stmt).getInvokeExpr()).getBase()), stmt);
+		  body.getUnits().insertBefore(logLock(id,((InstanceInvokeExpr)expr).getBase()), stmt);
+		  body.getUnits().insertAfter(logUnlock(id,((InstanceInvokeExpr)expr).getBase()), stmt);
 		  }
 		  else
 		  {
 			  
 			  //System.out.println("Static Sync: "+stmt);
 			  
-			  int sid = getSharedVariableId(((AbstractInvokeExpr)stmt.getInvokeExpr()).getClass().toString(),stmt);
+			  int sid = getSharedVariableId(expr.getMethod().getDeclaringClass().toString(),stmt);
 			  
 			  body.getUnits().insertBefore(logLock(id,sid), stmt);
 			  body.getUnits().insertAfter(logUnlock(id,sid), stmt);
@@ -223,25 +426,47 @@ public class RecordInstrumentor extends SceneTransformer {
 	    }
 	    return false;
 	  }
-  private boolean markFieldAccess(Body body, Stmt stmt) {
+ 
+  //if insertsAfter is null we know it is not a loop access that we
+  //are instrumenting.  Loops accesses need instrumentation points
+  //specified
+  private boolean markFieldAccess(Body body, final Stmt stmt) {
+	  return markFieldAccess(body, stmt, null);
+  }
+  
+  private boolean markFieldAccess(Body body, Stmt stmt, Collection<Stmt> insertsAfter) {
 	    if (stmt.containsFieldRef()) {
 	      assert (stmt instanceof AssignStmt) : "Unknown FieldReffing Stmt";
 	      totalAccess++;
 	      
-	      if(body.getMethod().getName().equals(constructorName)
-	    		  ||body.getMethod().getName().equals(staticInitializerName)
-	    		  ||!tlo.isObjectThreadLocal(stmt.getFieldRef(), body.getMethod()))
+	      //WE NEED TO INSTRUMENT CONSTRUCTORS to COLLET THE INITIAL WRITE
+	      if(body.getMethod().getName().equals(constructorName)||
+	    		  body.getMethod().getName().equals(staticInitializerName))
+	    {
+	    	  		//check if it is a write
+	    	  boolean write = (((DefinitionStmt)stmt).getLeftOp() instanceof FieldRef);
+	    	  if(write&&! SetupPass.tlo.isObjectThreadLocal(stmt.getFieldRef(), body.getMethod()))
+	    	  {
+		    	  int sid = getSharedVariableId(stmt.getFieldRef().getField().getSignature(),stmt);
+
+		    	  int id = getStaticId(body, stmt);
+	    	      if(insertsAfter == null) logFieldAcc(id,sid,body,stmt);
+	    	      else logLoopFieldAcc(id,sid,body,stmt, insertsAfter);
+			      return true;
+	    	  }
+	    	  
+	    }
+	      else if(!SetupPass.tlo.isObjectThreadLocal(stmt.getFieldRef(), body.getMethod()))
 	      { 
 	    	  sharedAccess++;
-
 	    		  
-	    	  int sid = getSharedVariableId(stmt.getFieldRef().getField().getSignature(),stmt);
+	    	int sid = getSharedVariableId(stmt.getFieldRef().getField().getSignature(),stmt);
 	    	  
 	    	int id = getStaticId(body, stmt);
 
 	    	//objectinstance,fieldsignature-id
-	      InvokeStmt is 
-	        = logFieldAcc(id,sid,body,stmt);
+	    	if(insertsAfter == null) logFieldAcc(id,sid,body,stmt);
+	    	else logLoopFieldAcc(id, sid, body, stmt, insertsAfter);
 	      //body.getUnits().insertAfter(is,stmt);//for replay, must insert before
 	      return true;
 	      }
@@ -249,22 +474,46 @@ public class RecordInstrumentor extends SceneTransformer {
 	    return false;
 	  }
   
-  private boolean markArrayAccess(Body body, Stmt stmt) {
+  //if insertsAfter is null we know it is not a loop access that we
+  //are instrumenting.  Loops accesses need instrumentation points
+  //specified
+  private boolean markArrayAccess(Body body, final Stmt stmt) {
+	  return markArrayAccess(body, stmt, null);
+  }
+  
+  private boolean markArrayAccess(Body body, Stmt stmt, Collection<Stmt> insertsAfter) {
 	    if (stmt.containsArrayRef()) {
 	      assert (stmt instanceof AssignStmt) : "Unknown ArrayReffing Stmt";
 
 	      totalAccess++;
-	      
-	      if(body.getMethod().getName().equals(constructorName)
-	    		  ||body.getMethod().getName().equals(staticInitializerName)
-	    		  ||!tlo.isObjectThreadLocal(stmt.getArrayRef().getBase(), body.getMethod()))
+	    
+	      //WE NEED TO INSTRUMENT CONSTRUCTORS to COLLET THE INITIAL WRITE
+	      if(body.getMethod().getName().equals(constructorName)||
+	    		  body.getMethod().getName().equals(staticInitializerName))
+	    {
+	    	  		//check if it is a write
+	    	  boolean write = (((DefinitionStmt)stmt).getLeftOp() instanceof ArrayRef);
+	    	  if(write&& !SetupPass.tlo.isObjectThreadLocal(stmt.getFieldRef(), body.getMethod()))
+	    	  {
+		    	  //we need the following, please don't comment!
+		    	  int sid = getSharedVariableId(body.getMethod().getSignature()+"|"+stmt.getArrayRef().getBase().toString(),stmt);
+
+		    	  int id = getStaticId(body, stmt);
+		    	  if(insertsAfter == null) logArrayAcc(id,body,stmt);
+		    	  else logLoopArrayAcc(id, body, stmt, insertsAfter);
+			      return true;
+	    	  }
+	    	  
+	    }
+	      else if(!SetupPass.tlo.isObjectThreadLocal(stmt.getArrayRef().getBase(), body.getMethod()))
 	      { 
 	    	  sharedAccess++;
+	    	  //we need the following, please don't comment!
 	    	  int sid = getSharedVariableId(body.getMethod().getSignature()+"|"+stmt.getArrayRef().getBase().toString(),stmt);
 
 	    	  int id = getStaticId(body, stmt);
-		      InvokeStmt is 
-		        = logArrayAcc(id,body,stmt);
+	    	  if(insertsAfter == null) logArrayAcc(id,body,stmt);
+	    	  else logLoopArrayAcc(id, body, stmt, insertsAfter);
 		      //body.getUnits().insertAfter(is,stmt);
 		      return true;
 	      }
@@ -275,7 +524,7 @@ public class RecordInstrumentor extends SceneTransformer {
   //mark waits and notifies.  Unfortunately, part of this is redundant 
   //with marking class inits and marking invocations.  If we had HoFs 
   //I would factor the commonalities out.  With the limited ability of 
-  //java 6 I will just repeat code.  This will be factored once java 7
+  //java 6 I will just repeat code.  This will be factored once java 8(!, bastards)
   //goes live and we can use closures
   private boolean markWaitAndNotify(Body body, Stmt stmt){
     if (stmt.containsInvokeExpr()) {

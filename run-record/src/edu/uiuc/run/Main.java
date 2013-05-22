@@ -22,9 +22,15 @@ private static void run(String[] args)
 {
 	try 
 	{		
+		String tablename = args[0];
+//		if(args.length>1)
+//		for(int i=1;i<args.length;i++)
+//		{
+//			tablename+="."+args[i];
+//		}
 		
+		RecordRT.init(tablename);
 		String appname = args[0];
-		RecordRT.init(appname);
 
 		Class<?> c = Class.forName(appname);
 		

@@ -4,8 +4,8 @@ public final class ReplayRT {
 
   public static  void logBranch() {
   }
-  public static void logBasicBlock()
-  {
+  
+  public static void logBasicBlock(){
   }
 
   public static  void logWait() {
@@ -25,7 +25,7 @@ public final class ReplayRT {
   }
 
   public static  void logUnlock() {
- }
+  }
 
   public static  void logFieldAcc() {
   }

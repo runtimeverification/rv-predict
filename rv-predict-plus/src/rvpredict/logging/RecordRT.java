@@ -25,10 +25,17 @@ public final class RecordRT {
   }
 
   public static  void logUnlock(int ID,final Object lock) {
- }
+  }
 
+  public static  void logFieldAcc(int ID, final Object o, int SID, final boolean write) {
+  }
+  
   public static  void logFieldAcc(int ID, final Object o, int SID, final Object v, final boolean write) {
   }
+  
+  public static  void logArrayAcc(int ID, final Object o, final boolean write) {
+  }
+  
   public static  void logArrayAcc(int ID, final Object o, int index, final Object v, final boolean write) {
   }
 

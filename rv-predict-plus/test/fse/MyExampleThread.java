@@ -24,7 +24,7 @@ public class MyExampleThread extends Thread
        }
        j=i;
        if (MyExample.value != old - 1) {
-         int x = 1 / 0;
+         int x = 1 / (MyExample.value-5000);
        }
        MyExample.value = old;
      }

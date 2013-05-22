@@ -1,0 +1,100 @@
+public class emp.Example extends java.lang.Object
+{
+    java.util.Random r;
+    int x;
+    boolean b;
+    int[] a;
+    static int TIMES;
+    emp.Example$MyThread t1;
+    emp.Example$MyThread t2;
+
+    static void <clinit>()
+    {
+        staticinvoke <rvpredict.logging.ReplayRT: void logFieldAcc()>();
+        <emp.Example: int TIMES> = 10;
+        return;
+    }
+
+    public void <init>()
+    {
+        emp.Example r0;
+
+        r0 := @this: emp.Example;
+        specialinvoke r0.<java.lang.Object: void <init>()>();
+        r0.<emp.Example: int x> = 0;
+        r0.<emp.Example: boolean b> = 0;
+        return;
+    }
+
+    public static void main(java.lang.String[]) throws java.lang.InterruptedException
+    {
+        java.lang.String[] r0;
+        emp.Example $r1, r2;
+        int[] r3, $r5;
+        java.lang.String r4, $r13;
+        java.util.Random $r6;
+        emp.Example$MyThread $r7, $r8, $r9, $r10, $r11, $r12;
+        int $i0;
+        java.io.PrintStream $r14;
+
+        r0 := @parameter0: java.lang.String[];
+        $r1 = new emp.Example;
+        specialinvoke $r1.<emp.Example: void <init>()>();
+        r2 = $r1;
+        $r5 = newarray (int)[2];
+        staticinvoke <rvpredict.logging.ReplayRT: void logFieldAcc()>();
+        r2.<emp.Example: int[] a> = $r5;
+        staticinvoke <rvpredict.logging.ReplayRT: void logFieldAcc()>();
+        r3 = r2.<emp.Example: int[] a>;
+        staticinvoke <rvpredict.logging.ReplayRT: void logArrayAcc()>();
+        r3[0] = 10;
+        staticinvoke <rvpredict.logging.ReplayRT: void logArrayAcc()>();
+        r3[1] = 20;
+        $r6 = new java.util.Random;
+        specialinvoke $r6.<java.util.Random: void <init>()>();
+        staticinvoke <rvpredict.logging.ReplayRT: void logFieldAcc()>();
+        r2.<emp.Example: java.util.Random r> = $r6;
+        staticinvoke <rvpredict.logging.ReplayRT: void logFieldAcc()>();
+        r2.<emp.Example: int x> = 0;
+        $r7 = new emp.Example$MyThread;
+        specialinvoke $r7.<emp.Example$MyThread: void <init>(emp.Example,int)>(r2, 1);
+        staticinvoke <rvpredict.logging.ReplayRT: void logFieldAcc()>();
+        r2.<emp.Example: emp.Example$MyThread t1> = $r7;
+        $r8 = new emp.Example$MyThread;
+        specialinvoke $r8.<emp.Example$MyThread: void <init>(emp.Example,int)>(r2, 2);
+        staticinvoke <rvpredict.logging.ReplayRT: void logFieldAcc()>();
+        r2.<emp.Example: emp.Example$MyThread t2> = $r8;
+        staticinvoke <rvpredict.logging.ReplayRT: void logFieldAcc()>();
+        $r9 = r2.<emp.Example: emp.Example$MyThread t1>;
+        staticinvoke <rvpredict.logging.ReplayRT: void logStart(java.lang.Object)>($r9);
+        virtualinvoke $r9.<emp.Example$MyThread: void start()>();
+        staticinvoke <rvpredict.logging.ReplayRT: void logFieldAcc()>();
+        $r10 = r2.<emp.Example: emp.Example$MyThread t2>;
+        staticinvoke <rvpredict.logging.ReplayRT: void logStart(java.lang.Object)>($r10);
+        virtualinvoke $r10.<emp.Example$MyThread: void start()>();
+        staticinvoke <rvpredict.logging.ReplayRT: void logFieldAcc()>();
+        $r11 = r2.<emp.Example: emp.Example$MyThread t1>;
+        staticinvoke <rvpredict.logging.ReplayRT: void logJoin()>();
+        virtualinvoke $r11.<emp.Example$MyThread: void join()>();
+        staticinvoke <rvpredict.logging.ReplayRT: void logFieldAcc()>();
+        $r12 = r2.<emp.Example: emp.Example$MyThread t2>;
+        staticinvoke <rvpredict.logging.ReplayRT: void logJoin()>();
+        virtualinvoke $r12.<emp.Example$MyThread: void join()>();
+        staticinvoke <rvpredict.logging.ReplayRT: void logFieldAcc()>();
+        $i0 = r2.<emp.Example: int x>;
+        if $i0 != 0 goto label0;
+
+        $r13 = "true";
+        goto label1;
+
+     label0:
+        $r13 = "false";
+
+     label1:
+        r4 = $r13;
+        staticinvoke <rvpredict.logging.ReplayRT: void logFieldAcc()>();
+        $r14 = <java.lang.System: java.io.PrintStream out>;
+        virtualinvoke $r14.<java.io.PrintStream: void println(java.lang.String)>(r4);
+        return;
+    }
+}

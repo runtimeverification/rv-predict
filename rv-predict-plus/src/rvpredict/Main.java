@@ -98,7 +98,7 @@ public class Main {
       list.add("com.");
       Options.v().set_exclude(list); 
       
-      //Options.v().set_output_format(1);//output jimple
+      Options.v().set_output_format(1);//output jimple
       //Options.v().set_print_tags_in_output(true);//print tag
       String output_path = System.getProperty("user.dir");
       output_path = output_path.replace("javamop", "run");

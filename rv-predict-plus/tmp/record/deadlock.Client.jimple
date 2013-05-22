@@ -1,0 +1,62 @@
+public class deadlock.Client extends java.lang.Thread
+{
+    private deadlock.Account a1;
+    private deadlock.Account a2;
+
+    void <init>(deadlock.Account, deadlock.Account)
+    {
+        deadlock.Client r0;
+        deadlock.Account r1, r2, rv_local1, rv_local2;
+
+        r0 := @this: deadlock.Client;
+        r1 := @parameter0: deadlock.Account;
+        r2 := @parameter1: deadlock.Account;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(50);
+        specialinvoke r0.<java.lang.Thread: void <init>()>();
+        r0.<deadlock.Client: deadlock.Account a1> = r1;
+        rv_local1 = r1;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(48, r0, 3, rv_local1, 1);
+        r0.<deadlock.Client: deadlock.Account a2> = r2;
+        rv_local2 = r2;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(49, r0, 4, rv_local2, 1);
+        return;
+    }
+
+    public void run()
+    {
+        deadlock.Client r0;
+        deadlock.Account $r1, $r2, rv_local1, rv_local2;
+
+        r0 := @this: deadlock.Client;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(51);
+        $r1 = r0.<deadlock.Client: deadlock.Account a1>;
+        rv_local1 = $r1;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(51, r0, 3, rv_local1, 0);
+        $r2 = r0.<deadlock.Client: deadlock.Account a2>;
+        rv_local2 = $r2;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(52, r0, 4, rv_local2, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logLock(int,java.lang.Object)>(53, r0);
+        specialinvoke r0.<deadlock.Client: void move(deadlock.Account,deadlock.Account)>($r1, $r2);
+        staticinvoke <rvpredict.logging.RecordRT: void logUnlock(int,java.lang.Object)>(53, r0);
+        return;
+    }
+
+    private synchronized void move(deadlock.Account, deadlock.Account)
+    {
+        deadlock.Client r0;
+        deadlock.Account r1, r2;
+        int $i0;
+
+        r0 := @this: deadlock.Client;
+        r1 := @parameter0: deadlock.Account;
+        r2 := @parameter1: deadlock.Account;
+        staticinvoke <rvpredict.logging.RecordRT: void logBasicBlock(int)>(56);
+        staticinvoke <rvpredict.logging.RecordRT: void logLock(int,java.lang.Object)>(54, r1);
+        $i0 = virtualinvoke r1.<deadlock.Account: int withdraw(int)>(100);
+        staticinvoke <rvpredict.logging.RecordRT: void logUnlock(int,java.lang.Object)>(54, r1);
+        staticinvoke <rvpredict.logging.RecordRT: void logLock(int,java.lang.Object)>(55, r2);
+        virtualinvoke r2.<deadlock.Account: void deposit(int)>($i0);
+        staticinvoke <rvpredict.logging.RecordRT: void logUnlock(int,java.lang.Object)>(55, r2);
+        return;
+    }
+}

@@ -1,0 +1,298 @@
+class loop.TestLoop$MyThread extends java.lang.Thread
+{
+    int id;
+    loop.TestLoop t;
+
+    void <init>(loop.TestLoop, int)
+    {
+        loop.TestLoop$MyThread r0;
+        loop.TestLoop r1;
+        int i0;
+
+        r0 := @this: loop.TestLoop$MyThread;
+        r1 := @parameter0: loop.TestLoop;
+        i0 := @parameter1: int;
+        specialinvoke r0.<java.lang.Thread: void <init>()>();
+        r0.<loop.TestLoop$MyThread: loop.TestLoop t> = r1;
+        r0.<loop.TestLoop$MyThread: int id> = i0;
+        return;
+    }
+
+    private void inc()
+    {
+        loop.TestLoop$MyThread r0;
+        loop.TestLoop $r1, $r2, rv_local1, rv_local2;
+        int $i0, $i1, $i2;
+        java.lang.Int rv_local3, rv_local4, rv_local5;
+
+        r0 := @this: loop.TestLoop$MyThread;
+        $r1 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        rv_local1 = $r1;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(22, r0, 9, rv_local1, 0);
+        $r2 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        rv_local2 = $r2;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(23, r0, 9, rv_local2, 0);
+        $i0 = $r2.<loop.TestLoop: int x>;
+        rv_local3 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(24, $r2, 5, rv_local3, 0);
+        $i1 = r0.<loop.TestLoop$MyThread: int id>;
+        rv_local4 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i1);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(25, r0, 10, rv_local4, 0);
+        $i2 = $i0 + $i1;
+        $r1.<loop.TestLoop: int x> = $i2;
+        rv_local5 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i2);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(26, $r1, 5, rv_local5, 1);
+        return;
+    }
+
+    private void dec()
+    {
+        loop.TestLoop$MyThread r0;
+        loop.TestLoop $r1, $r2, rv_local1, rv_local2;
+        int $i0, $i1, $i2;
+        java.lang.Int rv_local3, rv_local4, rv_local5;
+
+        r0 := @this: loop.TestLoop$MyThread;
+        $r1 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        rv_local1 = $r1;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(27, r0, 9, rv_local1, 0);
+        $r2 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        rv_local2 = $r2;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(28, r0, 9, rv_local2, 0);
+        $i0 = $r2.<loop.TestLoop: int x>;
+        rv_local3 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(29, $r2, 5, rv_local3, 0);
+        $i1 = r0.<loop.TestLoop$MyThread: int id>;
+        rv_local4 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i1);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(30, r0, 10, rv_local4, 0);
+        $i2 = $i0 - $i1;
+        $r1.<loop.TestLoop: int x> = $i2;
+        rv_local5 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i2);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(31, $r1, 5, rv_local5, 1);
+        return;
+    }
+
+    private void mul()
+    {
+        loop.TestLoop$MyThread r0;
+        loop.TestLoop $r1, $r2, rv_local1, rv_local2;
+        int $i0, $i1, $i2;
+        java.lang.Int rv_local3, rv_local4, rv_local5;
+
+        r0 := @this: loop.TestLoop$MyThread;
+        $r1 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        rv_local1 = $r1;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(32, r0, 9, rv_local1, 0);
+        $r2 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        rv_local2 = $r2;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(33, r0, 9, rv_local2, 0);
+        $i0 = $r2.<loop.TestLoop: int x>;
+        rv_local3 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(34, $r2, 5, rv_local3, 0);
+        $i1 = r0.<loop.TestLoop$MyThread: int id>;
+        rv_local4 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i1);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(35, r0, 10, rv_local4, 0);
+        $i2 = $i0 * $i1;
+        $r1.<loop.TestLoop: int x> = $i2;
+        rv_local5 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i2);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(36, $r1, 5, rv_local5, 1);
+        return;
+    }
+
+    private void div()
+    {
+        loop.TestLoop$MyThread r0;
+        loop.TestLoop $r1, $r2, rv_local1, rv_local2;
+        int $i0, $i1, $i2;
+        java.lang.Int rv_local3, rv_local4, rv_local5;
+
+        r0 := @this: loop.TestLoop$MyThread;
+        $r1 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        rv_local1 = $r1;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(37, r0, 9, rv_local1, 0);
+        $r2 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        rv_local2 = $r2;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(38, r0, 9, rv_local2, 0);
+        $i0 = $r2.<loop.TestLoop: int x>;
+        rv_local3 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(39, $r2, 5, rv_local3, 0);
+        $i1 = r0.<loop.TestLoop$MyThread: int id>;
+        rv_local4 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i1);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(40, r0, 10, rv_local4, 0);
+        $i2 = $i0 / $i1;
+        $r1.<loop.TestLoop: int x> = $i2;
+        rv_local5 = staticinvoke <java.lang.Integer: java.lang.Integer valueOf(int)>($i2);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(41, $r1, 5, rv_local5, 1);
+        return;
+    }
+
+    private void m()
+    {
+        loop.TestLoop$MyThread r0;
+
+        r0 := @this: loop.TestLoop$MyThread;
+        specialinvoke r0.<loop.TestLoop$MyThread: void inc()>();
+        specialinvoke r0.<loop.TestLoop$MyThread: void dec()>();
+        return;
+    }
+
+    public static void m2()
+    {
+        java.io.PrintStream $r0, rv_local1;
+
+        $r0 = <java.lang.System: java.io.PrintStream out>;
+        rv_local1 = $r0;
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)>(42, null, 8, rv_local1, 0);
+        virtualinvoke $r0.<java.io.PrintStream: void println(java.lang.String)>("Hello");
+        return;
+    }
+
+    public void run()
+    {
+        loop.TestLoop$MyThread r0;
+        int i0, i1, $i2, $i3;
+        loop.TestLoop $r1, $r3, $r4, $r6, $r7;
+        java.util.Random $r2, $r5;
+        boolean $z0;
+
+        r0 := @this: loop.TestLoop$MyThread;
+        i0 = 0;
+        staticinvoke <rvpredict.logging.RecordRT: void logBranch(int)>(55);
+        goto label5;
+
+     label0:
+        $r1 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        $r2 = $r1.<loop.TestLoop: java.util.Random r>;
+        i1 = virtualinvoke $r2.<java.util.Random: int nextInt()>();
+        if i1 <= 10 goto label1;
+
+        $r3 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        $r4 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        $r5 = $r4.<loop.TestLoop: java.util.Random r>;
+        $z0 = virtualinvoke $r5.<java.util.Random: boolean nextBoolean()>();
+        $r3.<loop.TestLoop: boolean b> = $z0;
+        goto label2;
+
+     label1:
+        $r6 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        $r6.<loop.TestLoop: boolean b> = 1;
+
+     label2:
+        $i2 = r0.<loop.TestLoop$MyThread: int id>;
+        if $i2 >= 2 goto label3;
+
+        specialinvoke r0.<loop.TestLoop$MyThread: void m(RVPredictCloneClass0)>(null);
+        staticinvoke <loop.TestLoop$MyThread: void m2(RVPredictCloneClass0)>(null);
+        goto label4;
+
+     label3:
+        $r7 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        $r7.<loop.TestLoop: boolean b> = 1;
+        specialinvoke r0.<loop.TestLoop$MyThread: void mul(RVPredictCloneClass0)>(null);
+        specialinvoke r0.<loop.TestLoop$MyThread: void div(RVPredictCloneClass0)>(null);
+
+     label4:
+        i0 = i0 + 1;
+
+     label5:
+        $i3 = <loop.TestLoop: int TIMES>;
+        if i0 < $i3 goto label0;
+
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(43, null, 1, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(44, r0, 9, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(45, r0, 9, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(46, $r2, 5, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(47, r0, 10, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(48, $r1, 5, 1);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(49, r0, 9, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(50, r0, 9, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(51, $r2, 5, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(52, r0, 10, 0);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(53, $r1, 5, 1);
+        staticinvoke <rvpredict.logging.RecordRT: void logFieldAcc(int,java.lang.Object,int,boolean)>(54, null, 8, 0);
+        return;
+    }
+
+    private void m(RVPredictCloneClass0)
+    {
+        loop.TestLoop$MyThread r0;
+
+        r0 := @this: loop.TestLoop$MyThread;
+        specialinvoke r0.<loop.TestLoop$MyThread: void inc(RVPredictCloneClass0)>(null);
+        specialinvoke r0.<loop.TestLoop$MyThread: void dec(RVPredictCloneClass0)>(null);
+        return;
+    }
+
+    private void inc(RVPredictCloneClass0)
+    {
+        loop.TestLoop$MyThread r0;
+        loop.TestLoop $r1, $r2;
+        int $i0, $i1, $i2;
+
+        r0 := @this: loop.TestLoop$MyThread;
+        $r1 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        $r2 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        $i0 = $r2.<loop.TestLoop: int x>;
+        $i1 = r0.<loop.TestLoop$MyThread: int id>;
+        $i2 = $i0 + $i1;
+        $r1.<loop.TestLoop: int x> = $i2;
+        return;
+    }
+
+    private void dec(RVPredictCloneClass0)
+    {
+        loop.TestLoop$MyThread r0;
+        loop.TestLoop $r1, $r2;
+        int $i0, $i1, $i2;
+
+        r0 := @this: loop.TestLoop$MyThread;
+        $r1 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        $r2 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        $i0 = $r2.<loop.TestLoop: int x>;
+        $i1 = r0.<loop.TestLoop$MyThread: int id>;
+        $i2 = $i0 - $i1;
+        $r1.<loop.TestLoop: int x> = $i2;
+        return;
+    }
+
+    public static void m2(RVPredictCloneClass0)
+    {
+        java.io.PrintStream $r0;
+
+        $r0 = <java.lang.System: java.io.PrintStream out>;
+        virtualinvoke $r0.<java.io.PrintStream: void println(java.lang.String)>("Hello");
+        return;
+    }
+
+    private void mul(RVPredictCloneClass0)
+    {
+        loop.TestLoop$MyThread r0;
+        loop.TestLoop $r1, $r2;
+        int $i0, $i1, $i2;
+
+        r0 := @this: loop.TestLoop$MyThread;
+        $r1 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        $r2 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        $i0 = $r2.<loop.TestLoop: int x>;
+        $i1 = r0.<loop.TestLoop$MyThread: int id>;
+        $i2 = $i0 * $i1;
+        $r1.<loop.TestLoop: int x> = $i2;
+        return;
+    }
+
+    private void div(RVPredictCloneClass0)
+    {
+        loop.TestLoop$MyThread r0;
+        loop.TestLoop $r1, $r2;
+        int $i0, $i1, $i2;
+
+        r0 := @this: loop.TestLoop$MyThread;
+        $r1 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        $r2 = r0.<loop.TestLoop$MyThread: loop.TestLoop t>;
+        $i0 = $r2.<loop.TestLoop: int x>;
+        $i1 = r0.<loop.TestLoop$MyThread: int id>;
+        $i2 = $i0 / $i1;
+        $r1.<loop.TestLoop: int x> = $i2;
+        return;
+    }
+}

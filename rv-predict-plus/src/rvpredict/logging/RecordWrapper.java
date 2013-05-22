@@ -1,8 +1,10 @@
 package rvpredict.logging;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Properties;
 
+import rvpredict.instrumentation.InstrumentationTag;
 import soot.Body;
 import soot.BooleanType;
 import soot.ByteType;
@@ -20,6 +22,7 @@ import soot.SootField;
 import soot.SootMethodRef;
 import soot.SootMethod;
 import soot.Type;
+import soot.Unit;
 import soot.Value;
 import soot.Local;
 
@@ -36,6 +39,8 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.InvokeStmt;
 import soot.jimple.Jimple;
 import soot.jimple.NullConstant;
+import soot.jimple.ReturnStmt;
+import soot.jimple.ReturnVoidStmt;
 import soot.jimple.Stmt;
 import soot.jimple.StringConstant;
 
@@ -53,7 +58,9 @@ public final class RecordWrapper {
   private static final SootMethodRef logWaitMethod = logClass.getMethod("void logWait(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logNotifyMethod = logClass.getMethod("void logNotify(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logFieldAccMethod = logClass.getMethod("void logFieldAcc(int,java.lang.Object,int,java.lang.Object,boolean)").makeRef();
+  private static final SootMethodRef logLoopFieldAccMethod = logClass.getMethod("void logFieldAcc(int,java.lang.Object,int,boolean)").makeRef();
   private static final SootMethodRef logArrayAccMethod = logClass.getMethod("void logArrayAcc(int,java.lang.Object,int,java.lang.Object,boolean)").makeRef();
+  private static final SootMethodRef logLoopArrayAccMethod = logClass.getMethod("void logArrayAcc(int,java.lang.Object,boolean)").makeRef();
   private static final SootMethodRef logStartMethod = logClass.getMethod("void logStart(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logJoinMethod = logClass.getMethod("void logJoin(int,java.lang.Object)").makeRef();
   private static final SootMethodRef logBranchMethod = logClass.getMethod("void logBranch(int)").makeRef();
@@ -158,7 +165,73 @@ public final class RecordWrapper {
   }
 
   
-  public static InvokeStmt logArrayAcc(int id, Body body, Stmt s)
+  public static void logLoopArrayAcc(int id, Body body, Stmt s, java.util.Collection<Stmt> insertsAfter){
+	  
+	  Value base = s.getArrayRef().getBase();
+	  Value index = s.getArrayRef().getIndex();
+	  
+	  DefinitionStmt d = (DefinitionStmt)s;
+	  boolean write = (d.getLeftOp() instanceof ArrayRef);
+		
+	  Value v;
+	  if(write)
+	   	v = d.getRightOp();
+	  else
+	   	v = d.getLeftOp();
+	    
+	  InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logLoopArrayAccMethod,
+    		IntConstant.v(id),
+    		base,
+            IntConstant.v(write?1:0));
+    
+	 //TODO: Move this giant ass for loop into a separate method
+    for(Stmt insertAfter : insertsAfter){ 	
+      InvokeStmt invokeStmt = Jimple.v().newInvokeStmt(logExpr);
+      invokeStmt.addTag(InstrumentationTag.v());
+      if(  !(insertAfter instanceof ReturnStmt 
+        || insertAfter instanceof ReturnVoidStmt) ) {
+        Iterator<Unit> units = body.getUnits().iterator(insertAfter);
+        Stmt insertBefore = (Stmt) units.next();
+        while(units.hasNext()){
+          if(insertBefore == insertAfter || insertBefore.hasTag("InstrumentationTag")){
+        	 insertBefore = (Stmt) units.next(); 
+          }
+          else {
+        	  break;
+          }
+        }
+        //System.out.println("INSERT BEFORE" + insertBefore);
+        if(insertBefore == insertAfter){
+          //if we are at the end insertBefore == insertAfter
+          //if we are at the end simply insert the instrumentation at the end
+          //I'm not sure that this case is actually possible since the end
+          //of every chain should be a ReturnStmt or ReturnVoidStmt
+          body.getUnits().insertAfter(invokeStmt, insertAfter);	
+        }
+        else if(insertBefore.hasTag("InstrumentationTag")){
+        	//if this is Instrumentation we need to insert after
+        	//instead of before
+            body.getUnits().insertAfter(invokeStmt, insertBefore);
+        }
+        else{ 
+        	//System.out.println("inserting before " + insertBefore);
+        	//insertBefore isn't instrumentation so we can
+        	//actually insert before it, as the name would suggest
+            body.getUnits().insertBefore(invokeStmt, insertBefore);
+            insertBefore.redirectJumpsToThisTo(invokeStmt);
+        }
+      }
+      else {
+    	//don't put instrumentation after a return 
+    	//put it before the return
+    	body.getUnits().insertBefore(invokeStmt, insertAfter);
+        insertAfter.redirectJumpsToThisTo(invokeStmt);
+      }
+	}  
+	  
+  }
+  
+  public static void logArrayAcc(int id, Body body, Stmt s)
   {
 	  Local rv_local1,rv_local2,rv_local3;
 	  AssignStmt newAssignStmt1,newAssignStmt2,newAssignStmt3;
@@ -179,7 +252,6 @@ public final class RecordWrapper {
     	String rv_local1_name = getRVLocalName(body.getMethod().getSignature());
     	String rv_local2_name = getRVLocalName(body.getMethod().getSignature());
     	String rv_local3_name = getRVLocalName(body.getMethod().getSignature());
-
 
 		rv_local1 = Jimple.v().newLocal(rv_local1_name, base.getType()); 
 		rv_local2 = Jimple.v().newLocal(rv_local2_name, index.getType()); 
@@ -243,18 +315,6 @@ public final class RecordWrapper {
 	    }
 		
 		
-
-
-        body.getLocals().add(rv_local1);
-        body.getLocals().add(rv_local2);
-        body.getLocals().add(rv_local3);
-
-    
-    //body.getUnits().insertAfter(newAssignStmt1,s);
-    //body.getUnits().insertAfter(newAssignStmt2,newAssignStmt1);
-    body.getUnits().insertAfter(newAssignStmt2,s);
-    body.getUnits().insertAfter(newAssignStmt3,newAssignStmt2);
-
     InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logArrayAccMethod,
     		IntConstant.v(id),
     		//rv_local1,
@@ -262,13 +322,87 @@ public final class RecordWrapper {
     		rv_local2,
     		rv_local3,
         IntConstant.v(write?1:0));
-    
+     
     InvokeStmt invokeStmt = Jimple.v().newInvokeStmt(logExpr);
-	 body.getUnits().insertAfter(invokeStmt,newAssignStmt3);
+    invokeStmt.addTag(InstrumentationTag.v());
     
-    return invokeStmt;
+  //  body.getLocals().add(rv_local1);
+    body.getLocals().add(rv_local2);
+    body.getLocals().add(rv_local3);
+
+    //body.getUnits().insertAfter(newAssignStmt1,s);
+    //body.getUnits().insertAfter(newAssignStmt2,newAssignStmt1);
+    body.getUnits().insertAfter(newAssignStmt2,s);
+    body.getUnits().insertAfter(newAssignStmt3,newAssignStmt2);
+    body.getUnits().insertAfter(invokeStmt, newAssignStmt3);
+    //return invokeStmt;
   }
-  public static InvokeStmt logFieldAcc(int id, int sid, Body body, Stmt s) {
+ 
+  public static void logLoopFieldAcc(int id, int sid, Body body, Stmt s, java.util.Collection<Stmt> insertsAfter){
+      Value instanceObject;
+	  if (s.getFieldRef() instanceof InstanceFieldRef) {
+	    instanceObject = ((InstanceFieldRef)s.getFieldRef()).getBase();
+	  } else {
+	    instanceObject = NullConstant.v();
+	  }
+	  
+	  
+      DefinitionStmt d = (DefinitionStmt)s;
+      boolean write = (d.getLeftOp() instanceof FieldRef);
+	    
+	  InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logLoopFieldAccMethod,
+    		IntConstant.v(id),
+    		instanceObject,
+    		IntConstant.v(sid),
+            IntConstant.v(write?1:0));
+    
+    //TODO: Move this giant ass for loop into a separate method
+    for(Stmt insertAfter : insertsAfter){ 	
+      InvokeStmt invokeStmt = Jimple.v().newInvokeStmt(logExpr);
+      invokeStmt.addTag(InstrumentationTag.v());
+      if(  !(insertAfter instanceof ReturnStmt 
+        || insertAfter instanceof ReturnVoidStmt) ) {
+        Iterator<Unit> units = body.getUnits().iterator(insertAfter);
+        Stmt insertBefore = (Stmt) units.next();
+        while(units.hasNext()){
+          if(insertBefore == insertAfter || insertBefore.hasTag("InstrumentationTag")){
+        	 insertBefore = (Stmt) units.next(); 
+          }
+          else {
+        	  break;
+          }
+        }
+        //System.out.println("INSERT BEFORE" + insertBefore);
+        if(insertBefore == insertAfter){
+          //if we are at the end insertBefore == insertAfter
+          //if we are at the end simply insert the instrumentation at the end
+          //I'm not sure that this case is actually possible since the end
+          //of every chain should be a ReturnStmt or ReturnVoidStmt
+          body.getUnits().insertAfter(invokeStmt, insertAfter);	
+        }
+        else if(insertBefore.hasTag("InstrumentationTag")){
+        	//if this is Instrumentation we need to insert after
+        	//instead of before
+            body.getUnits().insertAfter(invokeStmt, insertBefore);
+        }
+        else{ 
+        	//System.out.println("inserting before " + insertBefore);
+        	//insertBefore isn't instrumentation so we can
+        	//actually insert before it, as the name would suggest
+            body.getUnits().insertBefore(invokeStmt, insertBefore);
+            insertBefore.redirectJumpsToThisTo(invokeStmt);
+        }
+      }
+      else {
+    	//don't put instrumentation after a return 
+    	//put it before the return
+    	body.getUnits().insertBefore(invokeStmt, insertAfter);
+        insertAfter.redirectJumpsToThisTo(invokeStmt);
+      }
+	}  
+  }
+  
+  public static void logFieldAcc(int id, int sid, Body body, Stmt s) {
     DefinitionStmt d = (DefinitionStmt)s;
     boolean write = (d.getLeftOp() instanceof FieldRef);
     Value instanceObject;
@@ -341,25 +475,25 @@ public final class RecordWrapper {
     {
 		rv_local = Jimple.v().newLocal(rv_local_name, v.getType());           
         newAssignStmt = Jimple.v().newAssignStmt(rv_local, v);
-
+        newAssignStmt.addTag(InstrumentationTag.v());
     }
-
-    body.getLocals().add(rv_local);
-    body.getUnits().insertAfter(newAssignStmt,s);
-    
+ 
     InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logFieldAccMethod,
     		IntConstant.v(id),
     		instanceObject,
     		IntConstant.v(sid),
     		rv_local,
         IntConstant.v(write?1:0));
-    
+     
     InvokeStmt invokeStmt = Jimple.v().newInvokeStmt(logExpr);
-	 body.getUnits().insertAfter(invokeStmt,newAssignStmt);
-
-    
-    return invokeStmt;
-    
+    invokeStmt.addTag(InstrumentationTag.v());
+    body.getLocals().add(rv_local);
+    //we do this here so that we do not accidentally
+    //insert newAssignment *after* the instrumentation call
+    //in the case where we are not instrumenting a loop exit
+    body.getUnits().insertAfter(newAssignStmt,s);
+    body.getUnits().insertAfter(invokeStmt,newAssignStmt);
+   // return invokeStmt;
   }
 
 //  public static InvokeStmt logArrayAcc(Stmt s, SootClass c, SootMethod m) {

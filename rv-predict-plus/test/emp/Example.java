@@ -8,9 +8,10 @@ public class Example {
 	boolean b=false; 
 	int[] a;
 	
-	static int xxx = 100;
+	static int TIMES = 10;
 	
 	MyThread t1,t2;
+	
 	public static void main(String[] args) throws InterruptedException
 	{
 		Example t = new Example();
@@ -74,6 +75,8 @@ public class Example {
 		}
 		public void run()
 		{
+			for(int i=0;i<TIMES;i++)
+			{
 			LocalClass o = new LocalClass();
 			o.setX(t.r.nextInt());
 			int temp = o.getX();
@@ -88,7 +91,8 @@ public class Example {
 				{
 					inc();
 					try {
-						t.wait();//This program has a bug here: may block forever
+
+						t.wait(10);//This program has a bug here: may block forever
 						dec();
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
@@ -103,11 +107,14 @@ public class Example {
 			{
 				synchronized(t)
 				{
-					t.notify();
+					t.b = true;
 
+					t.notify();
+					
 					mul();
 					div();
 				}
+			}
 			}
 		}
 	}

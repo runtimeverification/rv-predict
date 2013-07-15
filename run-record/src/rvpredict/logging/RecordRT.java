@@ -5,13 +5,16 @@ import java.util.HashSet;
 import java.util.Stack;
 
 import db.DBEngine;
+import db.DBEngineParallel;
 
 public final class RecordRT {
 
 //	static HashMap<Long,HashMap<Object,Stack<Object>>>
 //		threadReEntrantLockMap = new HashMap<Long,HashMap<Object,Stack<Object>>>();
 	final static boolean doTraceFilter = false;
-	final static boolean doInterleave = true;
+	final static boolean doInterleave = false;
+	final static boolean doLogInParallel = false;
+	
 	static HashMap<Long,HashSet<Integer>> threadlocalWriteIDSet;
 	static HashMap<Long,HashSet<Integer>> threadlocalReadIDSet;
 
@@ -58,17 +61,28 @@ public final class RecordRT {
 	static DBEngine db;
 	public static void init(String appname) throws Exception
 	{
-		db= new DBEngine(appname);
-		db.createTraceTable();
+		long tid = Thread.currentThread().getId();
+
+		if(doLogInParallel)
+		{
+			db= new DBEngineParallel(appname);//use parallel db engine
+			((DBEngineParallel)db).createTraceTable(tid);
+
+		}
+		else
+		{
+			db= new DBEngine(appname);
+			db.createTraceTable();
+		}	
+		
 		db.createThreadIdTable();
 		
 		//db.startAsynchronousLogging();//perform asynchronous logging, hopefully we can improve performance
 		
 		//attachShutDownHook();
 		
-		
+
 		threadTidNameMap = new HashMap<Long,String>();
-		long tid = Thread.currentThread().getId();
 		db.saveThreadTidNameToDB(tid, MAIN_NAME);
 		
 		threadTidNameMap.put(tid, MAIN_NAME);

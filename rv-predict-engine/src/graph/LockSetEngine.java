@@ -1,0 +1,229 @@
+package graph;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Set;
+import java.util.Vector;
+
+import trace.LockNode;
+import trace.LockPair;
+
+public class LockSetEngine 
+{
+	/**
+	 * This is the input trace containing all the events of a thread
+	 * PLEASE DON'T MODIFY IT!!!
+	 */
+	Vector<LockNode> locktrace;
+	int n_type = 0;
+	int N = 0;
+	Map<Integer,Integer> lock_types = new HashMap<Integer,Integer>();
+	Map<Integer,Integer> type_locks = new HashMap<Integer,Integer>();
+	
+	Vector<Object> lock_index = new Vector<Object>();
+	
+	private HashMap<String,HashMap<Long,ArrayList<LockPair>>> indexedThreadLockMaps 
+		= new HashMap<String,HashMap<Long,ArrayList<LockPair>>>();
+	
+	public void add(String addr, long tid, LockPair lp) {
+		// TODO Auto-generated method stub
+		HashMap<Long,ArrayList<LockPair>> threadlockmap = indexedThreadLockMaps.get(addr);
+		if(threadlockmap == null)
+		{
+			threadlockmap = new HashMap<Long,ArrayList<LockPair>>();
+			indexedThreadLockMaps.put(addr, threadlockmap);
+		}
+		
+		ArrayList<LockPair> lockpairs = threadlockmap.get(tid);
+		if(lockpairs ==null)
+		{
+			lockpairs = new ArrayList<LockPair>();
+			threadlockmap.put(tid, lockpairs);
+		}
+		
+		lockpairs.add(lp);
+	}
+	//NOTE: it's possible two lockpairs overlap, because we skipped wait nodes
+	public boolean hasCommonLock(long tid1, long gid1, long tid2, long gid2)
+	{
+		Iterator<HashMap<Long,ArrayList<LockPair>>> threadlockmapIt 
+				= indexedThreadLockMaps.values().iterator();
+		while(threadlockmapIt.hasNext())
+		{
+			HashMap<Long,ArrayList<LockPair>> threadlockmap = threadlockmapIt.next();
+			ArrayList<LockPair> lockpairs1 = threadlockmap.get(tid1);
+			ArrayList<LockPair> lockpairs2 = threadlockmap.get(tid2);
+			if(lockpairs1!=null&&lockpairs2!=null)
+			{
+				boolean hasLock1 = matchAnyLockPair(lockpairs1,gid1);
+				if(hasLock1)
+				{
+					boolean hasLock2 = matchAnyLockPair(lockpairs2,gid2);
+					if(hasLock2)
+						return true;
+				}
+			}
+		}
+
+		return false;
+	}
+	public boolean isAtomic(long tid1, long gid1a, long gid1b, long tid2, long gid2)
+	{
+		Iterator<HashMap<Long,ArrayList<LockPair>>> threadlockmapIt 
+				= indexedThreadLockMaps.values().iterator();
+		while(threadlockmapIt.hasNext())
+		{
+			HashMap<Long,ArrayList<LockPair>> threadlockmap = threadlockmapIt.next();
+			ArrayList<LockPair> lockpairs1 = threadlockmap.get(tid1);
+			ArrayList<LockPair> lockpairs2 = threadlockmap.get(tid2);
+			if(lockpairs1!=null&&lockpairs2!=null)
+			{
+				boolean hasLock2 = matchAnyLockPair(lockpairs2,gid2);
+				if(hasLock2)
+				{
+					boolean hasLock1 = matchAnyLockPair(lockpairs1,gid1a,gid1b);
+					if(hasLock1)
+						return true;
+				}
+			}
+		}
+
+		return false;
+	}
+	private boolean matchAnyLockPair(ArrayList<LockPair> lockpair,long gida,long gidb)
+	{
+		int s, e, mid;
+		
+		s = 0;
+		e = lockpair.size()-1;
+		while ( s <= e ) 
+		{
+			mid = ( s + e ) / 2;
+			
+			LockPair lp = lockpair.get(mid);
+			
+			if(lp.lock==null)
+			{
+				if(gidb<lp.unlock.getGID())
+					return true;
+				else
+				{
+					s = mid+1;
+				}
+			}
+			else if(lp.unlock==null)
+			{
+				if(gida>lp.lock.getGID())
+					return true;
+				else
+				{
+					e = mid - 1;
+				}
+			}
+			else
+			{
+				if(gida>lp.unlock.getGID())
+					s = mid+1;
+				else if(gidb<lp.lock.getGID())
+					e = mid - 1;
+				else if(lp.lock.getGID()<gida&&gidb<lp.unlock.getGID())
+					return true;
+				else
+					return false;
+			}
+		}
+		
+		return false;
+	}
+	private boolean matchAnyLockPair(ArrayList<LockPair> lockpair,long gid)
+	{
+		int s, e, mid;
+		
+		s = 0;
+		e = lockpair.size()-1;
+		while ( s <= e ) 
+		{
+			mid = ( s + e ) / 2;
+			
+			LockPair lp = lockpair.get(mid);
+			
+			if(lp.lock==null)
+			{
+				if(gid<lp.unlock.getGID())
+					return true;
+				else
+				{
+					s = mid+1;
+				}
+			}
+			else if(lp.unlock==null)
+			{
+				if(gid>lp.lock.getGID())
+					return true;
+				else
+				{
+					e = mid - 1;
+				}
+			}
+			else
+			{
+				if(gid>lp.unlock.getGID())
+					s = mid+1;
+				else if(gid<lp.lock.getGID())
+					e = mid - 1;
+				else
+					return true;
+			}
+		}
+		
+		return false;
+	}
+	private int upper_bound( Vector<Integer> vec, int x )
+	{
+		int s, e, mid;
+		
+		s = 0;
+		e = vec.size()-1;
+		mid = ( s + e ) / 2;
+		while ( s <= e ) 
+		{
+			mid = ( s + e ) / 2;
+			int value = vec.get(mid).intValue();
+			
+			if ( value > x ) e = mid - 1;
+			else if(value <x) s = mid+1;
+			else
+				return mid;
+			
+		}
+		
+		return s;
+	}
+
+	private int lower_bound( Vector<Integer> vec, int x )
+	{
+		int s, e, mid;
+		
+		s = 0;
+		e = vec.size()-1;
+		mid = ( s + e ) / 2;
+		while ( s <= e ) 
+		{
+			mid = ( s + e ) / 2;
+			int value = vec.get(mid).intValue();
+			
+			if ( value < x ) s = mid + 1;
+			else if(value>x) e = mid-1;
+			else return mid;
+			
+		}
+		
+		return e;
+	}
+
+
+}

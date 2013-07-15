@@ -1,9 +1,6 @@
 package rvpredict.logging;
 
 import java.util.HashMap;
-import java.util.Vector;
-
-import db.DBEngine;
 
 public final class ReplayRT {
 
@@ -18,17 +15,9 @@ public final class ReplayRT {
 	/*
 	 * load input + schedule from database
 	 */
-	
-	public static void init(String appname, int id) throws Exception
+	public static void init(String appname, Object[] s) throws Exception
 	{		
-		DBEngine db = new DBEngine(appname);
-		schedule = db.getSchedule(id);
-		db.closeDB();
-		if(schedule==null)
-		{
-			//no schedule to replay, just terminate
-			System.exit(0);
-		}
+		schedule = s;
 		
 		pos=0;
 		

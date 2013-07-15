@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="rv-replayer" default="run-many">
+    <taskdef resource="net/sf/antcontrib/antlib.xml">
+        <classpath>
+            <pathelement location="lib/ant-contrib.jar"/>
+        </classpath>
+    </taskdef>
+	<property name="replay.main.class" value="edu.uiuc.run.Main"/>
+	<property name="app.main.class" value="demo.Example"/>
+	<!--
+	demo.Example
+	demo.Example2
+	demo.Authenticate
+	-->
+
+	<property name="file.list" value="1,2,3,4,5,6,7,8,9,10"/>
+	    <!-- 
+	     -->	
+	    	
+	<target name="run-many">
+		<stopwatch name="timer" action="start"/>
+		<for param="number" list="${file.list}"><!-- <antcall target="run-once"/> -->
+			
+		  <sequential>
+		  	<echo message="run: @{number}"/>		  	
+	    	<java classname="${app.main.class}" fork="true" maxmemory="1500m">
+	            <classpath>
+	            	<pathelement location="${user.dir}/bin"/> 
+	            		            	     
+	            </classpath>
+	        </java>
+
+		  </sequential>
+		</for>
+		<stopwatch name="timer" action="total"/>
+		<echo message="run: ${timer}"/>
+    </target>
+
+</project>
+

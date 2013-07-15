@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="run-rv-predict" default="run-once">
+    <taskdef resource="net/sf/antcontrib/antlib.xml">
+        <classpath>
+            <pathelement location="lib/ant-contrib.jar"/>
+        </classpath>
+    </taskdef>
+	<property name="rvpredict.main.class" value="NewRVPredict"/>
+	<property name="app.main.class" value="demo.Example"/>
+	<!--
+	rmm.PSO
+	demo.Example
+	demo.Authenticate
+	authen.Authenticate
+	spec.jbb.JBBmain
+	driver.JigsawDriver
+	driver.FTPMainDriver
+	shop.Shop
+	race.Racey
+	pingpong.PingPong
+	microbench.BenchMain
+	mergesort.MergeSort
+	manager.Manager
+	loader.Loader
+	linkedlist.LLinkedList
+	gui.Main
+	fse.MyExample
+	filewriter.FFileWriter
+	example.Example
+	deadlockexception.DeadLockException
+	deadlock.DeadLock
+	critical.Critical
+	bufwriter.BufWriter
+	bubblesort.BubbleSort
+	boundedbuffer.BoundedBuffer
+	stringbuffer.StringBufferTest
+	emp.Example
+	reentrantlock.Main
+	causal.Main
+	causal.Tricky1
+	causal.Tricky2
+	causal.Tricky3
+	hard.Test
+	org.apache.lucene.demo.IndexFiles
+	tsp.Tsp
+	sor.Sor
+	driver.WeblechSpider
+	benchmarks.dstest.LinkedListTest
+	benchmarks.dstest.ArrayListTest
+	benchmarks.dstest.MTTreeSetTest
+	benchmarks.dstest.HashSetTest
+	benchmarks.dstest.MTArrayListTest
+	benchmarks.dstest.MTHashtableTest
+	benchmarks.dstest.MTLinkedHashSetTest
+	benchmarks.dstest.MTVectorTest
+	stringbuffer.StringBufferTest
+	HedcDriver
+	derby2861.Derby2861
+	benchmarks.JGFRayTracerBenchSizeA
+	benchmarks.JGFMonteCarloBenchSizeA
+	benchmarks.JGFMolDynBenchSizeA
+	allocationvector.AllocationVector
+	-->
+	
+	<property name="rv-predict-engine.home" location="${user.home}/workspace/rv-predict-engine"/>
+	
+   <target name="run-once">   
+   	<stopwatch name="timer" action="start"/>
+    	    	<java classname="${rvpredict.main.class}" fork="true" maxmemory="1000m">
+    	    	 	<arg value="${app.main.class}"/>
+    	    	 		    	 	
+    	    		<classpath>
+    	    			<pathelement location="${rv-predict-engine.home}/bin"/>
+    	    		
+    	    			<pathelement location="${rv-predict-engine.home}/lib/commons-cli-1.2.jar"/>
+    	    			<pathelement location="${rv-predict-engine.home}/lib/h2-1.3.171.jar"/>
+		            	<pathelement location="${rv-predict-engine.home}/lib/jigsaw-sexpr.jar"/>
+
+
+    	    			            	<!--
+    	    							-->
+    	    			            		            	     
+    	    			            </classpath>
+    	        </java>  
+	<stopwatch name="timer" action="total"/>
+	<echo message="run: ${timer}"/>
+   </target>
+	
+</project>
+

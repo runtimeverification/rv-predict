@@ -37,17 +37,15 @@ import java.io.PrintWriter;
 
 public class Util {
 
-	private static String outDir  = System.getProperty("user.dir")+
-			System.getProperty("file.separator")+"z3";
 
-	public static File newOutFile(String name) throws IOException {
+	public static File newOutFile(String path, String name) throws IOException {
 		
-		File z3Dir = new File(outDir);
+		File z3Dir = new File(path);
 		//Here comes the existence check
 		if(!z3Dir.exists())
 			z3Dir.mkdirs();
 		
-		File f = new File(outDir, name);
+		File f = new File(path, name);
 		if(f.exists())
 		{
 		f.delete();

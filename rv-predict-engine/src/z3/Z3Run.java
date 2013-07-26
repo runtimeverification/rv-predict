@@ -43,32 +43,45 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Vector;
 
+import config.Configuration;
+
 public class Z3Run
 {
-	private static String Z3_SMT = "z3smt";
-	private static String Z3_OUT = "z3out";
-	private static String Z3_ERR = "z3err.";
+	protected static String Z3_SMT = "z3smt";
+	protected static String Z3_OUT = "z3out";
+	protected static String Z3_ERR = "z3err.";
+	
 	File smtFile,z3OutFile,z3ErrFile;
+	protected String FORMAT;
 	
 	public Z3Model model;
 	public Vector<String> schedule;
 	
-	private static String CMD = "z3 -T:300 -memory:8000 -smt2 ";
+	protected static String CMD;
 	
 	boolean sat;
 	
-	public Z3Run(String appname, int id)
+	public Z3Run(Configuration config, int id)
 	{				
 		try{
-		smtFile = Util.newOutFile(Z3_SMT+"_"+appname+"_"+id);
-        
-		z3OutFile = Util.newOutFile(Z3_OUT+"_"+appname+"_"+id);
-        
-		//z3ErrFile = Util.newOutFile(Z3_ERR+id);//looks useless
+			init(config,id);
+		
 		}catch(IOException e)
 		{
 			System.err.println(e.getMessage());
 		}
+	}
+	protected void init(Configuration config, int id) throws IOException
+	{
+		FORMAT = ".smt2";
+		
+		smtFile = Util.newOutFile(config.constraint_outdir,Z3_SMT+"_"+config.appname+"_"+id+FORMAT);
+        
+		z3OutFile = Util.newOutFile(config.constraint_outdir,Z3_OUT+"_"+config.appname+"_"+id+FORMAT);
+		
+		//z3ErrFile = Util.newOutFile(Z3_ERR+id);//looks useless
+		
+		CMD = "z3 -T:"+config.solver_timeout+" -memory:"+config.solver_memory+" -smt2 ";
 	}
 	public void sendMessage(String msg)
 	{
@@ -165,28 +178,4 @@ public class Z3Run
 
 	}
 	
-	public static void main(String[] args) throws IOException
-	{
-		String msg ="(declare-const a Int)\n"+
-					"(declare-const b Int)\n"+
-					"(declare-const c Int)\n"+
-					"(declare-const d Int)\n"+
-					"(assert (> a 0))\n"+
-					"(assert (> c 0))\n"+
-					"(assert (< a b))\n"+
-					"(assert (< c d))\n"+
-					"(assert (not (= a c)))\n"+
-					"(assert (not (= a d)))\n"+
-					"(assert (not (= b c)))\n"+
-					"(assert (not (= b c)))";
-		
-		Z3Run task = new Z3Run("test",1);
-		task.sendMessage(msg);
-		Iterator<Entry<String,Object>> setIt = task.model.getMap().entrySet().iterator();
-		while(setIt.hasNext())
-		{
-			Entry<String,Object> entry = setIt.next();
-			System.out.println(entry.getKey()+": "+entry.getValue());
-		}
-	}
 }

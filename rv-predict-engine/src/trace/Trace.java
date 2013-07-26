@@ -168,6 +168,8 @@ public class Trace {
 		
 		return allReadNodes;
 	}
+	
+	//TODO: NEED to include the dependent nodes from other threads
 	public Vector<ReadNode> getDependentReadNodes(IMemNode rnode, boolean nobranch) {
 		
 		Vector<ReadNode> readnodes = new Vector<ReadNode>();

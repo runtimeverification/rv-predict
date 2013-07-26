@@ -56,11 +56,18 @@ import java.util.Stack;
 import java.util.Vector;
 import java.util.Map.Entry;
 
+/**
+ * The engine class for causal-precedes (CP) based race detection.
+ * It maintains the CP edge between events and answers reachability inquiries
+ * between conflicting events.
+ * 
+ * @author jeffhuang
+ *
+ */
 public class CPEngine
 {
 	
 	private ReachabilityEngine reachEngine = new ReachabilityEngine();//TODO: do segmentation on this
-	private LockSetEngine lockEngine;
 
 	CPEngine(Trace trace)
 	{
@@ -69,6 +76,10 @@ public class CPEngine
 		addCPEdges(trace,trace.getThreadFirstNodeMap(),trace.getThreadLastNodeMap());
 	}
 
+	/**
+	 * add program order CP edges
+	 * @param map
+	 */
 	private void addIntraThreadEdge(HashMap<Long,Vector<AbstractNode>> map)
 	{
 		Iterator<Vector<AbstractNode>> mapIt = map.values().iterator();
@@ -87,6 +98,19 @@ public class CPEngine
 			}
 		}
 	}
+	/**
+	 * add inter-thread CP edges.
+	 * CP edges for fork/begin and end/join are simply added as it is.
+	 * CP edges for lock regions are added if they have conflicting accesses inside
+	 * To ensure the soundness for all detected races, we also include the CP edges
+	 * for write/write, write/read, read/write.
+	 * 
+	 * TODO: need to distinguish reads and writes for checking conflicting lock regions
+	 *
+	 * @param trace
+	 * @param firstNodes
+	 * @param lastNodes
+	 */
 	private void addCPEdges(Trace trace,
 			HashMap<Long, AbstractNode> firstNodes,HashMap<Long, AbstractNode> lastNodes)
 	{
@@ -229,38 +253,41 @@ public class CPEngine
 					else
 					{
 						lp = new LockPair(syncstack.pop(),(ISyncNode)node);
-					}					
+						
+						//filter out re-entrant locks
+						if(syncstack.size()>0)
+							if(((UnlockNode) node).getAddr().equals(syncstack.get(0).getAddr()))
+							{
+								continue;
+							}
+					}		
 					
-					
-					
-					HashSet<String> addresses = threadCurrentLockRegionAddresses.get(tid);
-					if(addresses==null)
-					{
-						addresses = new HashSet<String>();
-						threadCurrentLockRegionAddresses.put(tid, addresses);
-					}
-					
-					String addr = ((UnlockNode) node).getAddr();
-					
-					ArrayList<HashSet<String>> addrList = lockAccessedAddresses.get(addr);
-					ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
-					if(addrList==null)
-					{
-						addrList = new ArrayList<HashSet<String>>();
-						syncNodeList = new ArrayList<LockPair>();
-						lockAccessedAddresses.put(addr, addrList);
-						lockAddrNodes.put(addr, syncNodeList);
-					
-					}
-					addrList.add(new HashSet(addresses));syncNodeList.add(lp);
-					
-					Stack<HashSet<String>> stack = threadAccessAddrStack.get(tid);
-					if(stack!=null&&!stack.isEmpty())
-					{
-						addresses.addAll(stack.pop());
-					}
-					
-					
+						HashSet<String> addresses = threadCurrentLockRegionAddresses.get(tid);
+						if(addresses==null)
+						{
+							addresses = new HashSet<String>();
+							threadCurrentLockRegionAddresses.put(tid, addresses);
+						}
+						
+						String addr = ((UnlockNode) node).getAddr();
+						
+						ArrayList<HashSet<String>> addrList = lockAccessedAddresses.get(addr);
+						ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
+						if(addrList==null)
+						{
+							addrList = new ArrayList<HashSet<String>>();
+							syncNodeList = new ArrayList<LockPair>();
+							lockAccessedAddresses.put(addr, addrList);
+							lockAddrNodes.put(addr, syncNodeList);
+						
+						}
+						addrList.add(new HashSet(addresses));syncNodeList.add(lp);
+						
+						Stack<HashSet<String>> stack = threadAccessAddrStack.get(tid);
+						if(stack!=null&&!stack.isEmpty())
+						{
+							addresses.addAll(stack.pop());
+						}
 					
 				}
 				else if (node instanceof WaitNode)
@@ -311,11 +338,8 @@ public class CPEngine
 					LockPair lp = null;
 					if(syncstack.isEmpty())
 						lp = new LockPair(null,((WaitNode) node));
-					else 
+					else
 						lp = new LockPair(syncstack.pop(),((WaitNode) node));
-					
-						syncstack.push(((WaitNode) node));
-					
 					
 					HashSet<String> addresses = threadCurrentLockRegionAddresses.get(tid);
 					if(addresses==null)
@@ -345,6 +369,7 @@ public class CPEngine
 					}
 					
 							
+					syncstack.push(((WaitNode) node));
 
 					
 
@@ -356,7 +381,7 @@ public class CPEngine
 			}
 			
 			
-			//last lock node
+			//process the last lock node
 			Iterator<Long> tidIt = threadSyncStack.keySet().iterator();
 			while(tidIt.hasNext())
 			{
@@ -371,7 +396,7 @@ public class CPEngine
 					
 					while(stack.size()>0)
 					{
-						ISyncNode node = stack.pop();
+						ISyncNode node = stack.remove(0);
 						LockPair lp = new LockPair(node,null);
 						
 						String addr = node.getAddr();
@@ -387,7 +412,9 @@ public class CPEngine
 				}
 			}
 			
-			
+			//add CP edge between lock regions
+			//a CP edge a->b between two regions a and b is added if they contain conflicting
+			//accesses.
 			
 			Iterator<String> addrIt = lockAccessedAddresses.keySet().iterator();
 			while(addrIt.hasNext())
@@ -403,6 +430,8 @@ public class CPEngine
 						LockPair lp = syncNodeList.get(k);
 						if(lp.lock!=null)
 						{
+							long gid2 = lp.lock.getGID();
+
 							HashSet<String>  addresses = addrList.get(k);
 							
 							for(int k1 = k-1;k1>=0;k1--)
@@ -414,9 +443,14 @@ public class CPEngine
 								if(!lastAddresses.isEmpty())
 								{
 									ISyncNode lastnode = syncNodeList.get(k1).unlock;
-									if(lastnode!=null)
+									if(lastnode!=null&&lastnode.getTid()!=lp.lock.getTid())
 									{
-										reachEngine.addEdge(lastnode.getGID(), lp.lock.getGID());
+										long gid1 = lastnode.getGID();
+										
+										reachEngine.addEdge(gid1, gid2);
+										
+										//System.out.println(gid1+" "+gid2);
+										
 									}
 								}
 							}
@@ -428,7 +462,13 @@ public class CPEngine
 						
 		
 	}
-	
+	/**
+	 * return true if node1 and node2 are not reachable by all the indirect CP edges
+	 * excluding the possible direct CP edge between node1 and node2
+	 * @param node1
+	 * @param node2
+	 * @return
+	 */
 	public boolean isRace(AbstractNode node1, AbstractNode node2)
 	{
 		long gid1 = node1.getGID();
@@ -440,6 +480,7 @@ public class CPEngine
 			gid1 = gid2;
 			gid2 = t;
 		}
+		
 		//exclude this edge first
 		boolean e12 = reachEngine.deleteEdge(gid1, gid2); 
 		boolean e21 = reachEngine.deleteEdge(gid2, gid1);

@@ -103,11 +103,11 @@ public class Z3Task extends ExecTask
 	{		
 		PrintWriter smtWriter = null;
 		try{
-			smtFile = Util.newOutFile(Z3_SMT+id);
+			smtFile = Util.newOutFile("",Z3_SMT+id);
 	        
-			z3OutFile = Util.newOutFile(Z3_OUT+id);
+			z3OutFile = Util.newOutFile("",Z3_OUT+id);
 	        
-			z3ErrFile = Util.newOutFile(Z3_ERR+id);
+			z3ErrFile = Util.newOutFile("",Z3_ERR+id);
 			
 			smtWriter = Util.newWriter(smtFile, true);
 			smtWriter.println(msg);

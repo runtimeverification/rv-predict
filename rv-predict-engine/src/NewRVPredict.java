@@ -48,9 +48,18 @@ import violation.AtomicityViolation;
 import violation.Deadlock;
 import violation.IViolation;
 import violation.Race;
+import z3.YicesEngineSMTLIB1;
 import z3.Z3Engine;
 import db.DBEngine;
 
+/**
+ * The NewRVPredict class implements our new race detection algorithm based on 
+ * constraint solving. The events in the trace are loaded and processed window 
+ * by window with a configurable window size. 
+ * 
+ * @author jeffhuang
+ *
+ */
 public class NewRVPredict {
 
 	private static HashSet<IViolation> violations= new HashSet<IViolation>();
@@ -61,6 +70,12 @@ public class NewRVPredict {
 	private static boolean detectAtomicityViolation = false;
 	private static boolean detectDeadlock = false;
 	
+	/**
+	 * Initialize the file printer. All race detection statistics are stored
+	 * into the file result."window_size".
+	 * 
+	 * @param appname
+	 */
 	private static void initPrinter(String appname)
 	{
 		try{
@@ -100,6 +115,12 @@ public class NewRVPredict {
 			System.out.println(msg);
 	}
 	
+	/**
+	 * Deadlock detection method. Not used in race detection.
+	 * @param engine
+	 * @param trace
+	 * @param schedule_prefix
+	 */
 	private static void detectDeadlock(Z3Engine engine,Trace trace,Vector<String> schedule_prefix)
 	{
 		HashMap<Long,HashMap<String,Vector<LockPair>>> threadIndexedLockPairs 
@@ -193,6 +214,12 @@ public class NewRVPredict {
 			}
 		}
 	}
+	/**
+	 * Trim the schedule to show the last 100 only entries
+	 * 
+	 * @param schedule
+	 * @return
+	 */
 	private static Vector<String> trim(Vector<String> schedule)
 	{
 		if(schedule.size()>100)
@@ -206,45 +233,65 @@ public class NewRVPredict {
 		else
 			return schedule;
 	}
+	/**
+	 * Race detection method. For every pair of conflicting data accesses, 
+	 * the corresponding race constraint is generated and solved by a solver.
+	 * If the solver returns a solution, we report a real data race and 
+	 * generate a racy schedule. Otherwise, a potential race is reported.
+	 * We call it a potential race but not a false race because it might be
+	 * a real data race in another trace.
+	 * 
+	 * @param engine
+	 * @param trace
+	 * @param schedule_prefix
+	 */
 	private static void detectRace(Z3Engine engine, Trace trace, Vector<String> schedule_prefix)
 	{
 		Iterator<String> 
 		addrIt =trace.getIndexedThreadReadWriteNodes().keySet().iterator();
 		while(addrIt.hasNext())
 		{
-			
+			//the dynamic memory location
 			String addr = addrIt.next();
-			
 			
 			//get all read nodes on the address
 			Vector<ReadNode> readnodes = trace.getIndexedReadNodes().get(addr);
 			
 			//get all write nodes on the address
 			Vector<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
+			
+			//skip if there is no write events to the address
 			if(writenodes==null||writenodes.size()<1)
 			continue;
 						
-			//System.out.println("***** Checking Data Race *****\n");
-			//check race read-write
+			//check read-write conflict
 			if(readnodes!=null)
 			for(int i=0;i<readnodes.size();i++)
 			{
-				ReadNode rnode = readnodes.get(i);
+				ReadNode rnode = readnodes.get(i);//read
 				
 				for(int j=0;j<writenodes.size();j++)
 				{
-					WriteNode wnode = writenodes.get(j);
+					WriteNode wnode = writenodes.get(j);//write
+					
+					//check read and write are by different threads
 					if(rnode.getTid()!=wnode.getTid())
 					{
+						//create a potential race
 						Race race = new Race(trace.getStmtSigIdMap().get(rnode.getID()),
 								trace.getStmtSigIdMap().get(wnode.getID()),rnode.getID(),wnode.getID());
 						
+						//skip redundant races with the same signature, i.e., from same program locations
 						if(!violations.contains(race))//&&!potentialviolations.contains(race) may miss real violation with the same signature
 						{
 							
+							//Quick check first: lockset algorithm + weak HB
+							
+							//lockset algorithm
 							if(engine.hasCommonLock(rnode,wnode))
 								continue;
 							
+							//weak HB check
 							//a simple reachability analysis to reduce the solver invocations
 							if(rnode.getGID()<wnode.getGID())
 							{
@@ -257,9 +304,11 @@ public class NewRVPredict {
 									continue;
 							}
 							
+							//If the race passes the quick check, we build constraints
+							//for it and determine if it is race by solving the constraints
 							
 							StringBuilder sb;
-							if(config.allconsistent)
+							if(config.allconsistent)//all read-write consistency used by the Said approach
 							{
 								Vector<ReadNode> readNodes_rw = trace.getAllReadNodes();
 								sb = engine.constructCausalReadWriteConstraintsOptimized(readNodes_rw, 
@@ -267,36 +316,48 @@ public class NewRVPredict {
 							}
 							else
 							{
+								
+								//the following builds the constraints for maximal causal model
+								
 							//get dependent nodes of rnode and wnode
+							//if w/o branch information, then all read nodes that happen-before rnode/wnode are considered
+							//otherwise, only the read nodes that before the most recent branch nodes before rnode/wnode are considered
 							Vector<ReadNode> readNodes_r = trace.getDependentReadNodes(rnode,config.nobranch);
 							Vector<ReadNode> readNodes_w = trace.getDependentReadNodes(wnode,config.nobranch);
 							
-							
-							
+							//construct the optimized read-write constraints ensuring the feasibility of rnode and wnode
 							StringBuilder sb1 = engine.constructCausalReadWriteConstraintsOptimized(readNodes_r, 
 												trace.getIndexedWriteNodes(),trace.getInitialWriteValueMap());
 							StringBuilder sb2 = engine.constructCausalReadWriteConstraintsOptimized(readNodes_w, 
 												trace.getIndexedWriteNodes(),trace.getInitialWriteValueMap());
+							//conjunct them
 							sb = sb1.append(sb2);
 							}
-							//TODO: NEED to ensure that the other non-dependent nodes by other threads are not included
+							//query the engine to check rnode/wnode forms a race or not
 							if(engine.isRace(rnode, wnode,sb))
 							{
+								//real race found
 								
-								report("Race: "+race,true);
-								violations.add(race);
-								
+								report("Race: "+race,true);//report it
+								violations.add(race);//save it to violations
 								
 								if(config.noschedule)
 									continue;
 								
-								Vector<String> schedule_a = engine.getSchedule(wnode.getGID(),trace.getNodeGIDTIdMap(),trace.getThreadIdNameMap());
+								//generate the corresponding racey schedule
 
-								Vector<String> schedule_b = new Vector<String>(schedule_a);
+								//for race, there are two schedules:
+								//rnode before or after wnode 
+								Vector<String> schedule_a = engine.getSchedule(rnode.getGID(),trace.getNodeGIDTIdMap(),trace.getThreadIdNameMap());
+								schedule_a.add(trace.getThreadIdNameMap().get(trace.getNodeGIDTIdMap().get(wnode.getGID())));
 								
+								Vector<String> schedule_b = new Vector<String>(schedule_a);
 								
 								String str1 = schedule_b.remove(schedule_b.size()-1);
 								
+								//Due to identical solution to events by other threads
+								//rnode may not be immediately before wnode, 								
+								//in such a case, we find rnode first and then move it to after wnode
 								int pos = schedule_b.size()-1;
 								String str2 = schedule_b.remove(pos);
 								while(str1==str2)
@@ -312,9 +373,8 @@ public class NewRVPredict {
 								
 								schedule_a.addAll(0, schedule_prefix);
 								schedule_b.addAll(0, schedule_prefix);
-
-								//TODO: need to remove all the after nodes in the schedule 
-								//add the reverse order first
+ 
+								//add the schedules to the race
 								if(rnode.getGID()<wnode.getGID())
 								{
 									race.addSchedule(schedule_a);
@@ -326,14 +386,17 @@ public class NewRVPredict {
 									race.addSchedule(schedule_a);
 								}
 								
-							
+								//report the schedules
 								report("Schedule_a: "+trim(schedule_a),true);
 								report("Schedule_b: "+trim(schedule_b)+"\n",true);
 							
 							}
 							else
 							{
-								//if we arrive here, it means we find a case where lockset+happens-before could produce false positive
+								//report potential races
+								
+								//if we arrive here, it means we find a case where 
+								//lockset+happens-before could produce false positive
 								if(potentialviolations.add(race))
 									report("Potential Race: "+race,false);
 
@@ -403,8 +466,9 @@ public class NewRVPredict {
 										continue;
 									
 
-									Vector<String> schedule_a = engine.getSchedule(wnode2.getGID(),trace.getNodeGIDTIdMap(),trace.getThreadIdNameMap());
-								
+									Vector<String> schedule_a = engine.getSchedule(wnode1.getGID(),trace.getNodeGIDTIdMap(),trace.getThreadIdNameMap());
+									schedule_a.add(trace.getThreadIdNameMap().get(trace.getNodeGIDTIdMap().get(wnode2.getGID())));
+
 
 								
 									Vector<String> schedule_b = new Vector<String>(schedule_a);
@@ -456,6 +520,13 @@ public class NewRVPredict {
 				}
 		}
 	}
+	/**
+	 * Detect atomicty violations. Not used for race detection.
+	 * 
+	 * @param engine
+	 * @param trace
+	 * @param schedule_prefix
+	 */
 	private static void detectAtomicityViolation(Z3Engine engine, Trace trace,Vector<String> schedule_prefix)
 	{
 	
@@ -573,55 +644,70 @@ public class NewRVPredict {
 				}
 		}
 	}
+	
 	/**
+	 * The input is the application name and the optional options
+	 * 
 	 * @param args
 	 */
 	public static void main(String[] args) {
 
 		config = new Configuration(args);
 		
-		
-		initPrinter(config.appname);
-		
 		try{
 			
+			//Now let's start predict analysis
+			long start_time = System.currentTimeMillis();
+			
+			//initialize printer
+			initPrinter(config.appname);
+			
+			//db engine is used for interacting with database
 			DBEngine db = new DBEngine(config.appname);
 
+			//load all the metadata in the application
 			HashMap<Integer, String> sharedVarIdSigMap = db.getSharedVarSigIdMap();
 			HashMap<Integer, String> stmtIdSigMap = db.getStmtSigIdMap();
 			HashMap<Long,String> threadIdNameMap = db.getThreadIdNameMap();
 			
 
+			//the total number of events in the trace
 			long TOTAL_TRACE_LENGTH = db.getTraceSize();
-			
-			int TOTAL_THREAD_NUMBER = db.getTraceThreadNumber();
-			int TOTAL_SHAREDVARIABLE_NUMBER = db.getTraceSharedVariableNumber();
-			int TOTAL_BRANCH_NUMBER = db.getTraceBranchNumber();
-			int TOTAL_READWRITE_NUMBER = db.getTraceReadWriteNumber();
-			int TOTAL_SYNC_NUMBER = db.getTraceSyncNumber();
 
+			//this is used to maintain the schedule in the previous windows
 			Vector<String> schedule_prefix = new Vector<String>();
 
-			Z3Engine engine = new Z3Engine(config.appname);
+			//z3 engine is used for interacting with constraints
+			Z3Engine engine;
+			if(config.smtlib1)//if yices smt format
+				engine = new YicesEngineSMTLIB1(config);
+			else//use z3 smt2 format by default
+				engine = new Z3Engine(config);
+			
+			//map from memory address to the initial value  
 			HashMap<String,String> initialWriteValueMap = new HashMap<String,String>();
 			
-			//start predict analysis
-			long start_time = System.currentTimeMillis();
-			
+			//process the trace window by window
 			for(int round =0;round*config.window_size<TOTAL_TRACE_LENGTH;round++)
 			{
 				long index_start = round*config.window_size+1;
 				long index_end = (round+1)*config.window_size;
 				//if(TOTAL_TRACE_LENGTH>MAX_LENGTH)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+TOTAL_TRACE_LENGTH+" ******************\n");
 				
-				Trace trace = db.getTrace(index_start,index_end);
 				
+				//load trace
+				Trace trace = db.getTrace(index_start,index_end);
+				//metadata
 				trace.setSharedVarIdSigMap(sharedVarIdSigMap);
 				trace.setStmtIdSigMap(stmtIdSigMap);
 				trace.setThreadIdNameMap(threadIdNameMap);	
 				
+				//starting from the second window, the initial value map becomes
+				//the last write map in the last window
 				if(round>0)trace.setInitialWriteValueMap(initialWriteValueMap);
 				
+				
+				//Now, construct the constraints
 				
 				//1. declare all variables 
 				engine.declareVariables(trace.getFullTrace());
@@ -635,31 +721,45 @@ public class NewRVPredict {
 				engine.addSynchronizationConstraints(trace,trace.getSyncNodesMap(),trace.getThreadFirstNodeMap(),trace.getThreadLastNodeMap());
 				
 				//4. match read-write
-				//TODO: what if we don't have read-write constraints?
+				//This is only used for constructing all read-write consistency constraints
+				
 				//engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
 				//engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
 
 					
+
+				if(detectRace)//detecting races
+				{
+					detectRace(engine,trace,schedule_prefix);
+				}
+				if(detectAtomicityViolation)//detecting atomicity violations
+				{
+					detectAtomicityViolation(engine,trace,schedule_prefix);
+				}
 				if(detectDeadlock)//when detecting deadlocks, make sure the lock constraints of the rest unlock nodes are disabled
 				{
 					 detectDeadlock(engine,trace,schedule_prefix);
 				}
-				if(detectRace)
-				{
-					detectRace(engine,trace,schedule_prefix);
-				}
-				if(detectAtomicityViolation)
-				{
-					detectAtomicityViolation(engine,trace,schedule_prefix);
-				}
-				
-				schedule_prefix.addAll(getTraceSchedule(trace));
 				
 				//get last write value from the current trace 
 				//as the initial value for the next round
 				initialWriteValueMap = trace.getInitialWriteValueMap();
 				trace.saveLastWriteValues(initialWriteValueMap); 
-			}	
+				
+				//append the schedule in the current trace to schedule_prefix
+				//which maybe used in the next window for generating racey schedules
+				if((round+1)*config.window_size<TOTAL_TRACE_LENGTH)
+					schedule_prefix.addAll(getTraceSchedule(trace));
+			}
+			
+			
+			//Report statistics about the trace and race detection
+
+			int TOTAL_THREAD_NUMBER = db.getTraceThreadNumber();
+			int TOTAL_SHAREDVARIABLE_NUMBER = db.getTraceSharedVariableNumber();
+			int TOTAL_BRANCH_NUMBER = db.getTraceBranchNumber();
+			int TOTAL_READWRITE_NUMBER = db.getTraceReadWriteNumber();
+			int TOTAL_SYNC_NUMBER = db.getTraceSyncNumber();
 			
 			report("Trace Size: "+TOTAL_TRACE_LENGTH,false);
 			report("Total #Threads: "+TOTAL_THREAD_NUMBER,false);
@@ -677,11 +777,10 @@ public class NewRVPredict {
 			{
 				//save schedules to db
 				int size = violations.size();
-				int size_schedule =0;
 				if(size>0)
 				{
 					db.createScheduleTable();
-					size_schedule = db.saveSchedulesToDB(violations);			
+					db.saveSchedulesToDB(violations);			
 				}
 			}
 		}
@@ -695,6 +794,12 @@ public class NewRVPredict {
 		}
 	}
 	
+	/**
+	 * Return the schedule, i.e., the thread execution order, of the trace
+	 * 
+	 * @param trace
+	 * @return
+	 */
 	private static Vector<String> getTraceSchedule(Trace trace) {
 		
 		Vector<String> fullschedule = new Vector<String>();

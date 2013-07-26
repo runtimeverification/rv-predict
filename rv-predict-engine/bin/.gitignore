@@ -7,3 +7,5 @@
 /trace
 /violation
 /z3
+/HBEngine.class
+/HBRaceDetect.class

@@ -56,31 +56,36 @@ import java.util.Stack;
 import java.util.Vector;
 import java.util.Map.Entry;
 
+import config.Configuration;
+
 public class Z3Engine
 {
-	private int id =0;
-	private String appname;
-	public Z3Run task;
+	protected int id =0;
+	protected Z3Run task;
 	
-	private ReachabilityEngine reachEngine = new ReachabilityEngine();//TODO: do segmentation on this
-	private LockSetEngine lockEngine;
+	protected Configuration config;
+	
+	protected ReachabilityEngine reachEngine = new ReachabilityEngine();//TODO: do segmentation on this
+	protected LockSetEngine lockEngine;
 
-	private StringBuilder CONS_DECLARE;
-	private StringBuilder CONS_ASSERT;
-	private final StringBuilder CONS_GETMODEL = new StringBuilder("(check-sat)\n(get-model)\n(exit)");
+	protected StringBuilder CONS_DECLARE;
+	protected StringBuilder CONS_ASSERT;
+	protected String CONS_SETLOGIC;
+	protected final StringBuilder CONS_GETMODEL = new StringBuilder("(check-sat)\n(get-model)\n(exit)");
 
-	public Z3Engine(String appname)
+	public Z3Engine(Configuration config)
 	{
-		this.appname = appname;
+		this.config = config;
 		this.id = 0;
 	}
-	private static String makeVariable(long GID)
+	protected static String makeVariable(long GID)
 	{
 		return "x"+GID;
 	}
 	
 	public void declareVariables(Vector<AbstractNode> trace)
 	{
+		CONS_SETLOGIC = "(set-logic QF_IDL)\n";
 		CONS_DECLARE = new StringBuilder("");
 		CONS_ASSERT = new StringBuilder("");
 		
@@ -96,8 +101,8 @@ public class Z3Engine
 		
 			//CONS_ASSERT.append(var).append(" ");
 			
-			CONS_ASSERT.append("(assert (and (> ").append(var).append(" 0) (< ").append(var)
-			    .append(" ").append(size+1).append(")))\n");
+//			CONS_ASSERT.append("(assert (and (> ").append(var).append(" 0) (< ").append(var)
+//			    .append(" ").append(size+1).append(")))\n");
 		}
 		
 		//CONS_ASSERT.append("))\n");
@@ -395,7 +400,7 @@ public class Z3Engine
 			if(flexLockPairs.size()>0)
 			{
 				String cons_b = "";
-				String cons_b_end = "true";
+				String cons_b_end = "";
 
 			for(int j=0;j<flexLockPairs.size();j++)
 			{
@@ -416,12 +421,12 @@ public class Z3Engine
 				//lp1_b==null, lp2_a=null
 				if(lp1.unlock==null||lp2.lock==null)
 				{
-					cons_b+= "(and (> "+var_lp1_a+" "+var_lp2_b+")\n";
+					cons_b= "(> "+var_lp1_a+" "+var_lp2_b+")\n"+cons_b;
 
 				}
 				else
 				{
-					cons_b+= "(and (or (> "+var_lp1_a+" "+var_lp2_b+") (> "+var_lp2_a+" "+var_lp1_b+"))\n";
+					cons_b= "(or (> "+var_lp1_a+" "+var_lp2_b+") (> "+var_lp2_a+" "+var_lp1_b+"))\n"+cons_b;
 				}
 				
 				/*String cons_b_ = "";				
@@ -436,8 +441,12 @@ public class Z3Engine
 				{
 					cons_b_ = "(and (> "+var_lp1_a+" "+var_lp2_b+")\n";	//must hold here
 				}*/
-				cons_b_end +=")";
 				
+				if(j<flexLockPairs.size())
+				{	
+					cons_b= "(and "+cons_b;
+					cons_b_end +=")";
+				}
 				/*
 				String cons_c = "";	
 				String cons_c_end = "true";
@@ -798,7 +807,7 @@ public class Z3Engine
 				String cons_a_end="";
 
 				String cons_b = "";
-				String cons_b_end = "false";
+				String cons_b_end = "";
 				
 
 				
@@ -808,17 +817,12 @@ public class Z3Engine
 				{
 					WriteNode wnode1 = writenodes_value_match.get(j);
 					String var_w1 = makeVariable(wnode1.getGID());
-					
-					
-					cons_a= "(and (> "+var_w1+" "+var_r+")\n" + cons_a;
-					cons_a_end +=")";
-					
 
-					String cons_b_ = "(and (> "+var_r+" "+var_w1+")\n";						
+					String cons_b_ = "(> "+var_r+" "+var_w1+")\n";						
 
 					String cons_c = "";	
-					String cons_c_end = "true";
-					
+					String cons_c_end = "";
+					String last_cons_d = null;
 					for(int k=0;k<writenodes.size();k++)
 					{
 						WriteNode wnode2 = writenodes.get(k);
@@ -826,23 +830,42 @@ public class Z3Engine
 						{
 							String var_w2 = makeVariable(wnode2.getGID());
 							
-							String cons_d = "(and " +
+							if(last_cons_d!=null)
+							{
+								cons_c+="(and " +last_cons_d;
+								cons_c_end +=")";
+							
+							}
+							last_cons_d = 
 									"(or (> "+var_w2+" "+var_r+")" +
 											" (> " +var_w1+" "+var_w2+"))\n";
 							
-							cons_c= cons_d + cons_c;
-							cons_c_end +=")";
+
 						}
 					}
+					if(last_cons_d!=null)
+					{
+						cons_c+=last_cons_d;
+					}
+					cons_c=cons_c+cons_c_end;
 					
-					cons_c+=cons_c_end;
+					if(cons_c.length()>0)
+						cons_b_ ="(and "+cons_b_+" "+cons_c + ")\n";
 					
-					cons_b_ = cons_b_ + cons_c + ")\n";
-
-					cons_b += "(or "+cons_b_;
-					
-					cons_b_end +=")";
-					
+						
+					if(j+1<writenodes_value_match.size())
+					{
+						cons_b+= "(or "+cons_b_;
+						cons_b_end +=")";
+						
+						cons_a+= "(and (> "+var_w1+" "+var_r+")\n";
+						cons_a_end +=")";
+					}
+					else
+					{
+						cons_b+= cons_b_;
+						cons_a+= "(> "+var_w1+" "+var_r+")\n";
+					}
 				}
 				
 				cons_b +=cons_b_end;
@@ -870,7 +893,7 @@ public class Z3Engine
 				{
 					if(cons_a.length()>0)
 					{
-						cons_a+="true"+cons_a_end+"\n";
+						cons_a+=cons_a_end+"\n";
 						CONS_CAUSAL_RW.append("(assert \n(or \n"+cons_a+" "+cons_b+"))\n\n");
 					}
 				}
@@ -1116,11 +1139,15 @@ public class Z3Engine
 		String var1 = makeVariable(gid1);
 		String var2 = makeVariable(gid2);
 		
-		String QUERY = "(assert (= "+var1+" "+var2+"))\n\n";
+		//String QUERY = "\n(assert (= "+var1+" "+var2+"))\n\n";
 		
 		id++;
-		task = new Z3Run(appname,id);
-		StringBuilder msg = new StringBuilder(CONS_DECLARE).append(CONS_ASSERT).append(casualConstraint).append(QUERY).append(CONS_GETMODEL);
+		task = new Z3Run(config,id);
+		casualConstraint.append(CONS_ASSERT);
+		String cons_assert = casualConstraint.toString();
+		cons_assert = cons_assert.replace(var2+" ", var1+" ");
+		cons_assert = cons_assert.replace(var2+")", var1+")");
+		StringBuilder msg = new StringBuilder(CONS_SETLOGIC).append(CONS_DECLARE).append(cons_assert).append(CONS_GETMODEL);	
 		task.sendMessage(msg.toString());
 		
 		return task.sat;
@@ -1132,7 +1159,7 @@ public class Z3Engine
 		String var1 = makeVariable(node1.getGID());
 		String var2 = makeVariable(node2.getGID());
 		
-		String QUERY = "(assert (= "+var1+" "+var2+"))\n\n";
+		//String QUERY = "(assert (= "+var1+" "+var2+"))\n\n";
 				
 //				"(assert (or (= (- "+var1+" "+var2+") 1)\n" +
 //									"(= (- "+var1+" "+var2+") -1)" +
@@ -1140,8 +1167,12 @@ public class Z3Engine
 	
 				//"(assert (= "+var1+" "+var2+"))\n";//not global order
 		id++;
-		task = new Z3Run(appname,id);
-		StringBuilder msg = new StringBuilder(CONS_DECLARE).append(CONS_ASSERT).append(QUERY).append(CONS_GETMODEL);
+		task = new Z3Run(config,id);
+		//StringBuilder msg = new StringBuilder(CONS_DECLARE).append(CONS_ASSERT).append(QUERY).append(CONS_GETMODEL);
+		String cons_assert = CONS_ASSERT.toString();
+		cons_assert.replace(var2+" ", var1+" ");
+		
+		StringBuilder msg = new StringBuilder(CONS_DECLARE).append(cons_assert).append(CONS_GETMODEL);
 		task.sendMessage(msg.toString());
 		
 		return task.sat;
@@ -1174,7 +1205,7 @@ public class Z3Engine
 											"))\n\n";
 		
 		id++;
-		task = new Z3Run(appname,id);
+		task = new Z3Run(config,id);
 		StringBuilder msg = new StringBuilder(CONS_DECLARE).append(CONS_ASSERT).append(casualConstraint1).append(casualConstraint2).append(casualConstraint3).append(QUERY).append(CONS_GETMODEL);
 		task.sendMessage(msg.toString());
 		
@@ -1193,7 +1224,7 @@ public class Z3Engine
 											"))\n\n";
 		
 		id++;
-		task = new Z3Run(appname,id);
+		task = new Z3Run(config,id);
 		StringBuilder msg = new StringBuilder(CONS_DECLARE).append(CONS_ASSERT).append(QUERY).append(CONS_GETMODEL);
 		task.sendMessage(msg.toString());
 		
@@ -1245,7 +1276,7 @@ public class Z3Engine
 
 		
 		id++;
-		task = new Z3Run(appname,id);
+		task = new Z3Run(config,id);
 		StringBuilder msg = new StringBuilder(CONS_DECLARE).append(CONS_ASSERT).append(QUERY).append(CONS_GETMODEL);
 		task.sendMessage(msg.toString());
 		
@@ -1326,7 +1357,5 @@ public class Z3Engine
 		
 		return schedule;
 	}
-	
-
 
 }

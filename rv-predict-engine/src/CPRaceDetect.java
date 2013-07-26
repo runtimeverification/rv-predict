@@ -49,6 +49,12 @@ import violation.Race;
 import z3.Z3Engine;
 import db.DBEngine;
 
+/**
+ * CPRaceDetect implements the causal-precedes methods for race detection.
+ * 
+ * @author jeffhuang
+ *
+ */
 public class CPRaceDetect {
 
 	private static int MAX_LENGTH = 1000;
@@ -96,6 +102,13 @@ public class CPRaceDetect {
 		else
 			return schedule;
 	}
+	/**
+	 * traverse all conflicting pairs. For each pair, query the CPEngine 
+	 * whether there are reachable or not. If yes, report a race.
+	 * 
+	 * @param engine
+	 * @param trace
+	 */
 	private static void detectRace(CPEngine engine, Trace trace)
 	{
 		Iterator<String> 
@@ -111,7 +124,7 @@ public class CPRaceDetect {
 			
 			//get all write nodes on the address
 			Vector<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
-			if(writenodes==null||writenodes.size()<2)
+			if(writenodes==null||writenodes.size()<1)
 			continue;
 						
 			//System.out.println("***** Checking Data Race *****\n");
@@ -121,7 +134,7 @@ public class CPRaceDetect {
 			{
 				ReadNode rnode = readnodes.get(i);
 				
-				for(int j=1;j<writenodes.size();j++)//skip the initial write node
+				for(int j=0;j<writenodes.size();j++)
 				{
 					WriteNode wnode = writenodes.get(j);
 					if(rnode.getTid()!=wnode.getTid())
@@ -131,7 +144,10 @@ public class CPRaceDetect {
 						
 						if(!races.contains(race))
 						{
-														
+											
+//							if(race.toString().equals("<boundedbuffer.Buffer: void enq(java.lang.Object)>|$i0 = r0.<boundedbuffer.Buffer: int _last>|119 - <boundedbuffer.Buffer: void enq(java.lang.Object)>|r0.<boundedbuffer.Buffer: int _last> = $i9|130"))
+//								System.out.print("");
+							
 							if(engine.isRace(rnode, wnode))
 							{
 								report("Race: "+race,true);
@@ -144,11 +160,11 @@ public class CPRaceDetect {
 				}
 			}
 				//check race write-write
-				for(int i=1;i<writenodes.size();i++)//skip the initial write node
+				for(int i=0;i<writenodes.size();i++)
 				{
 					WriteNode wnode1 = writenodes.get(i);
 					
-					for(int j=1;j<writenodes.size();j++)
+					for(int j=0;j<writenodes.size();j++)
 					{
 						WriteNode wnode2 = writenodes.get(j);
 						if(wnode1.getTid()!=wnode2.getTid())

@@ -631,41 +631,7 @@ public class DBEngine {
 		  }
 		
 	}
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-		String appname = "emp.Simple";//emp.Example stringbuffer.StringBufferTest
-		try{
-			DBEngine db = new DBEngine(appname);
-			
-			HashMap<Integer, String> sharedVarIdSigMap = db.getSharedVarSigIdMap();
-			
-			HashMap<Integer, String> stmtIdSigMap = db.getStmtSigIdMap();
-			
-			Trace trace = db.getTrace();
-			
-			HashMap<Long,String> threadIdNameMap = db.getThreadIdNameMap();
-			trace.setThreadIdNameMap(threadIdNameMap);			
-			
-			
-			Z3Engine engine = new Z3Engine(appname);
-			//1. declare all variables 
-			engine.declareVariables(trace.getFullTrace());
-			//2. intra-thread order for all nodes, excluding branches and basic block transitions
-			engine.addIntraThreadConstraints(trace.getThreadNodesMap());
-			//3. order for locks, signals, fork/joins
-			engine.addSynchronizationConstraints(trace, trace.getSyncNodesMap(),trace.getThreadFirstNodeMap(),trace.getThreadLastNodeMap());
-			//4. match read-write
-			engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
-			
-		}
-		catch(Exception e)
-		  {
-			  e.printStackTrace();
-		  }
-	}
+
 	public int getScheduleSize()
 	{
 		try{

@@ -2,18 +2,31 @@ package rvpredict.logging;
 
 import java.util.HashMap;
 
+/**
+ * This ReplayRT class contains the utilities for schedule enforcement
+ * 
+ * @author jeffhuang
+ *
+ */
 public final class ReplayRT {
 
+	//the lock used for enforcing schedule
 	final static Object lock = new Object();
 
-	static Object[] schedule;
-	private static int pos;
+	static Object[] schedule;//input schedule loaded from database
+	private static int pos;//current position in the schedule
+	
+	//the following data structure are used to enforce a consistent
+	//thread identification across record and replay
 	static HashMap<Long,String> threadTidNameMap;
 	static HashMap<Long,Integer> threadTidIndexMap;
 	final static String MAIN_NAME = "0";
 	
-	/*
-	 * load input + schedule from database
+	/**
+	 * load thread id to name map and schedule from database
+	 * @param appname
+	 * @param s
+	 * @throws Exception
 	 */
 	public static void init(String appname, Object[] s) throws Exception
 	{		
@@ -70,6 +83,10 @@ public final class ReplayRT {
 
   }
 
+  /**
+   * before a thread is started, it is associated with a unique identity.
+   * @param o
+   */
   public static  void logStart(Object o) {
 
 	  long tid = Thread.currentThread().getId();
@@ -97,6 +114,12 @@ public final class ReplayRT {
 
   }
 
+  /**
+   * Method for enforce the schedule. If it is not the turn of 
+   * the current thread to executed the next access by checking the schedule,
+   * the current thread is postponed. Thread postponement is achieved using
+   * wait/notifyAll. 
+   */
   private static void checkOrder()
   {
 	  long tid = Thread.currentThread().getId();

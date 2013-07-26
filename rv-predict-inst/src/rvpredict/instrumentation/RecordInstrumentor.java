@@ -1,3 +1,31 @@
+/*******************************************************************************
+ * Copyright (c) 2013 University of Illinois
+ * 
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ * 
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ ******************************************************************************/
 package rvpredict.instrumentation;
 
 import static rvpredict.logging.RecordWrapper.*;
@@ -26,8 +54,20 @@ import java.util.Iterator;
 
 import db.DBEngine;
 
+/**
+ * The RecordInstrumentor extends SceneTransformer to instrument the
+ * application classes to generate the record version. Shared data accesses
+ * and thread synchronizations are instrumented.
+ * 
+ * @author jeffhuang
+ *
+ */
 public class RecordInstrumentor extends SceneTransformer {
 	
+/**
+ * meta data during transformation:
+ * shared variable accesses to id, statement signature to id, etc.
+ */
   private int totalAccess;
   private int sharedAccess;
   private HashMap<String,Integer> sharedvariableIdMap = new HashMap<String,Integer>();
@@ -132,6 +172,9 @@ public class RecordInstrumentor extends SceneTransformer {
   {
 	  return sharedVariableAccessSignatures;
   }
+  /**
+   * Report percentage of shared data accesses, etc.
+   */
   public void reportStatistics()
   {
 	  float percentage = ((float)sharedAccess)/((float)totalAccess);
@@ -142,7 +185,10 @@ public class RecordInstrumentor extends SceneTransformer {
 //    	  System.out.println("* "+svIt.next()+" *");
 //      }
   }
-  
+  /**
+   * Save sharedvariableIdMap and stmtSigIdMap to database
+   * @param appName
+   */
   public void saveMetaToDB(String appName)
   {
 	  try{
@@ -189,7 +235,12 @@ public class RecordInstrumentor extends SceneTransformer {
 	  }
 	  
   }
-  
+  /**
+   * insert instrumentation before and after the synchronized method call
+   * @param body
+   * @param stmt
+   * @return
+   */
   private boolean markSynchronizedMethodCall(Body body, Stmt stmt)
   {
 	 
@@ -224,6 +275,12 @@ public class RecordInstrumentor extends SceneTransformer {
 	  
 	  return false;
   }
+  /**
+   *  insert instrumentation before a branch statement JIfStmt
+   * @param body
+   * @param stmt
+   * @return
+   */
   private boolean markBranch(Body body, Stmt stmt) {
 	    if (stmt.branches()) {
 	    	
@@ -239,6 +296,13 @@ public class RecordInstrumentor extends SceneTransformer {
 	    }
 	    return false;
 	  }
+  /**
+   * insert instrumentation before a shared field access.
+   * shared writes in constructors are instrumented to track the initial value
+   * @param body
+   * @param stmt
+   * @return
+   */
   private boolean markFieldAccess(Body body, Stmt stmt) {
 	    if (stmt.containsFieldRef()) {
 	      assert (stmt instanceof AssignStmt) : "Unknown FieldReffing Stmt";
@@ -269,7 +333,12 @@ public class RecordInstrumentor extends SceneTransformer {
 		return false;
 
   }
-  
+  /**
+   * add instrumentation before shared array accesses, similar to markFieldAccess
+   * @param body
+   * @param stmt
+   * @return
+   */
   private boolean markArrayAccess(Body body, Stmt stmt) {
 	    if (stmt.containsArrayRef()) {
 	      assert (stmt instanceof AssignStmt) : "Unknown ArrayReffing Stmt";
@@ -300,7 +369,15 @@ public class RecordInstrumentor extends SceneTransformer {
 	    }
 	    return false;
 	  }
-  //mark waits and notifies.  Unfortunately, part of this is redundant 
+  
+  /**
+   * mark waits and notifies.
+   * Instrumentations are inserted after wait and before notify
+   * @param body
+   * @param stmt
+   * @return
+   */
+  //Unfortunately, part of this is redundant 
   //with marking class inits and marking invocations.  If we had HoFs 
   //I would factor the commonalities out.  With the limited ability of 
   //java 6 I will just repeat code.  This will be factored once java 7
@@ -332,8 +409,13 @@ public class RecordInstrumentor extends SceneTransformer {
     return false;
   }
   
-  // When a lock is aquired an EnterMonitorStmt is encountered. When a lock is released an
-  // ExitMonitorStmt is encountered.   
+  /**
+   *  Add instrumentation when a lock is aquired an EnterMonitorStmt is encountered.
+   *  When a lock is released an ExitMonitorStmt is encountered
+   * @param body
+   * @param stmt
+   * @return
+   */ 
   private boolean markLock(Body body, Stmt stmt) {
 	  
 
@@ -352,6 +434,12 @@ public class RecordInstrumentor extends SceneTransformer {
     return false;
   }
   
+  /**
+   * add instrumentation before start a Thread object
+   * @param body
+   * @param stmt
+   * @return
+   */
   private boolean markStart(Body body, Stmt stmt) {
 	    if (stmt.containsInvokeExpr()) {
 	      if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
@@ -365,6 +453,13 @@ public class RecordInstrumentor extends SceneTransformer {
 	    }
 	    return false;
 	  }
+  
+  /**
+   * Add instrumentation after joining a Thread object
+   * @param body
+   * @param stmt
+   * @return
+   */
   private boolean markJoin(Body body, Stmt stmt) {
 	    if (stmt.containsInvokeExpr()) {
 	      if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
@@ -378,7 +473,12 @@ public class RecordInstrumentor extends SceneTransformer {
 	    }
 	    return false;
 	  }
-  
+  /**
+   * Retrieve the ID of the statement from stmtSigIdMap
+   * @param body
+   * @param stmt
+   * @return
+   */
   private static int getStaticId(Body body, Stmt stmt)
   {
 	  String methodname = body.getMethod().getSignature();
@@ -392,6 +492,11 @@ public class RecordInstrumentor extends SceneTransformer {
 	  return stmtSigIdMap.get(sig);
 	  
   }
+  /**
+   * Get line number of the given statement
+   * @param stmt
+   * @return
+   */
   private static int getLineNumber(Stmt stmt)
   {
 	  Tag tag =  stmt.getTag("LineNumberTag");
@@ -401,6 +506,13 @@ public class RecordInstrumentor extends SceneTransformer {
 		  return ((LineNumberTag)tag).getLineNumber();
   }
   
+  /**
+   * Retrieve the ID of the shared variable signature
+   * sharedVariableAccessSignatures
+   * @param sig
+   * @param stmt
+   * @return
+   */
   private int getSharedVariableId(String sig, Stmt stmt)
   {
 	  sharedVariableAccessSignatures.add(sig+"|"+getLineNumber(stmt));

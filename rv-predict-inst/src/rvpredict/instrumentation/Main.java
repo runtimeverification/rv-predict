@@ -1,3 +1,31 @@
+/*******************************************************************************
+ * Copyright (c) 2013 University of Illinois
+ * 
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ * 
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ ******************************************************************************/
 package rvpredict.instrumentation;
 
 import soot.Pack;
@@ -24,11 +52,20 @@ import java.io.PrintStream;
 import soot.jimple.IdentityStmt;
 import soot.jimple.spark.SparkTransformer;
 
-
+/**
+ * The Main class is the entry class for RVPredict instrumentation.
+ * Two transformed versions of the application code are generated: 
+ * a record version for runtime trace collection and a replay version
+ * for bug reproduction. The generated classes are under tmp/record
+ * and tmp/replay respectively.
+ */
 public class Main{
 	private static String DIR_RECORD = "record";
 	private static String DIR_REPLAY = "replay";
 
+	static boolean outputJimple = false;
+	static boolean noReplay = true;
+	
     static LinkedList<String> excludeList = new LinkedList<String> ();
     static LinkedList<String> includeList = new LinkedList<String> ();
 
@@ -51,6 +88,11 @@ public class Main{
     includeList.add("org.w3c.");//for jigsaw
     includeList.add("avrora.");//for avrora
     }
+    /**
+     * Skip instrumenting classes under the packages in excludeList
+     * @param packageName
+     * @return
+     */
     public static boolean skipPackage(String packageName)
     {
     	for(String name : excludeList)
@@ -66,6 +108,10 @@ public class Main{
     return stars;
   }
 
+  /**
+   * The input is the name of the application entry class
+   * @param args
+   */
   public static void main(String[] args) {
     /* check the arguments */
     if (args.length == 0) {
@@ -80,13 +126,15 @@ public class Main{
       System.out.println(
           "****************************************************");
       
-      Options.v().parse(args);
+      //Options.v().parse(args);
       
-      //Jeff: make sure the first parameter is the main class
+      //Make sure the first parameter is the main class
       String mainclass = args[0];
       
       //Record version
       Set<String> sharedVariables = transformRecordVersion(mainclass);
+      
+      if(noReplay)return;
       
       soot.G.reset();
 
@@ -95,11 +143,15 @@ public class Main{
 
     } catch (Exception e) { e.printStackTrace(); System.exit(1); }
   }
-
+/**
+ * Record version transformation 
+ * @param mainclass
+ * @return meta data for replay version transformation
+ */
   private static Set<String> transformRecordVersion(String mainclass)
   {
       //output jimple
-      //Options.v().set_output_format(1);
+	  if(outputJimple)Options.v().set_output_format(1);
       //print tag
       //Options.v().set_print_tags_in_output(true);
 
@@ -108,12 +160,15 @@ public class Main{
 	  setOptions(DIR_RECORD);
       
       setClassPath();
+      
       enableSpark();
       
       ThreadSharingAnalyzer sharingAnalyzer = new ThreadSharingAnalyzer();
+      //ThreadSharingAnalyzer in the first phase to find shared variables
       PackManager.v().getPack("wjtp").add(new Transform("wjtp.ThreadSharing", sharingAnalyzer));
 
       RecordInstrumentor recordInst = new RecordInstrumentor(sharingAnalyzer);
+      //Transformation instrumentation for record version
       PackManager.v().getPack("wjtp").add(new Transform("wjtp.RecordInstrument", recordInst));
 
       SootClass appclass = Scene.v().loadClassAndSupport(mainclass);
@@ -151,10 +206,15 @@ public class Main{
 
       return recordInst.getSharedVariableSignatures();
   }
+  /**
+   * Transformation for replay version
+   * @param mainclass
+   * @param sharedVariables
+   */
   private static void transformReplayVersion(String mainclass, Set<String> sharedVariables)
   {
       //output jimple
-      //Options.v().set_output_format(1);
+	  if(outputJimple)Options.v().set_output_format(1);
       //print tag
       //Options.v().set_print_tags_in_output(true);
 
@@ -204,18 +264,22 @@ public class Main{
       
       Options.v().set_keep_line_number(true);
       Options.v().set_whole_program(true);
-      Options.v().set_no_bodies_for_excluded(true);//must be disabled for a sound call graph
+      
+    //this option must be disabled for a sound call graph
+      Options.v().set_no_bodies_for_excluded(true);
+      
       Options.v().set_allow_phantom_refs(true);
       Options.v().set_app(true);
       
-      try {
-		G.v().out = new PrintStream(new FileOutputStream(Options.v().output_dir() + File.separator + "soot-output.instr"));
-	} catch (FileNotFoundException e) {
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	}
+//      try {
+//		G.v().out = new PrintStream(new FileOutputStream(Options.v().output_dir() + File.separator + "soot-output.instr"));
+//	} catch (FileNotFoundException e) {
+//		// TODO Auto-generated catch block
+//		e.printStackTrace();
+//	}
 
   }
+  /** Enable Spark for whole program points-to analysis */
   private static void enableSpark()
   {
 	    //Enable Spark
@@ -231,6 +295,11 @@ public class Main{
       SparkTransformer.v().transform("",opt);
       PhaseOptions.v().setPhaseOption("cg.spark", "enabled:true");
   }
+  /**
+   * Create a folder under the "tmp" directory with the given parameter name
+   * @param name
+   * @return
+   */
   private static String getTempSubDirectory(String name)
   {
 	  String tempdir = System.getProperty("user.dir");

@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry excluding="PredictorTestSuite/|rvpredict/analysis/|rvpredict/prediction/|rvpredict/traces/|rvpredict/util/" kind="src" path="src"/>
-	<classpathentry kind="src" path="test"/>
-	<classpathentry kind="var" path="JDK1.7_LIB"/>
-	<classpathentry kind="lib" path="lib/external/baksmali-1.3.2.jar"/>
 	<classpathentry kind="lib" path="lib/external/h2-1.3.171.jar"/>
 	<classpathentry kind="lib" path="lib/external/soot-jeff.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/rv-predict-engine"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/rv-predict-demo"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -8,7 +8,6 @@
 	<property name="record.main.class" value="edu.uiuc.run.Main"/>
 	<property name="app.main.class" value="demo.Example"/>
 	<!--
-	rmm.PSO
 	demo.Example
 	demo.Authenticate
 	loop.TestLoop

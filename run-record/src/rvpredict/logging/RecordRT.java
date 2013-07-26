@@ -1,3 +1,31 @@
+/*******************************************************************************
+ * Copyright (c) 2013 University of Illinois
+ * 
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ * 
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ ******************************************************************************/
 package rvpredict.logging;
 
 import java.util.HashMap;
@@ -11,9 +39,11 @@ public final class RecordRT {
 
 //	static HashMap<Long,HashMap<Object,Stack<Object>>>
 //		threadReEntrantLockMap = new HashMap<Long,HashMap<Object,Stack<Object>>>();
-	final static boolean doTraceFilter = false;
-	final static boolean doInterleave = false;
-	final static boolean doLogInParallel = false;
+	
+	//The following three options are for testing purposes
+	final static boolean doTraceFilter = false;//true if we reduce redundant accesses
+	final static boolean doInterleave = false;//true if we use random schedule
+	final static boolean doLogInParallel = false;//true if we log in parallel
 	
 	static HashMap<Long,HashSet<Integer>> threadlocalWriteIDSet;
 	static HashMap<Long,HashSet<Integer>> threadlocalReadIDSet;
@@ -58,7 +88,15 @@ public final class RecordRT {
 //			  });
 //
 //	}
+	
+	//engine for storing events into database
 	static DBEngine db;
+	
+	/**
+	 * initialize the database engine
+	 * @param appname
+	 * @throws Exception
+	 */
 	public static void init(String appname) throws Exception
 	{
 		long tid = Thread.currentThread().getId();
@@ -75,6 +113,7 @@ public final class RecordRT {
 			db.createTraceTable();
 		}	
 		
+		//create table for storing thread id to unique identifier map
 		db.createThreadIdTable();
 		
 		//db.startAsynchronousLogging();//perform asynchronous logging, hopefully we can improve performance
@@ -262,6 +301,14 @@ public final class RecordRT {
 	  return false;
   }
 
+  /**
+   * When starting a new thread, a consistent unique identifier of the thread
+   * is created, and stored into a map with the thread id as the key.
+   * The unique identifier, i.e, name, is a concatenation of the name of the 
+   * parent thread with the order of children threads forked by the parent thread.
+   * @param ID
+   * @param o
+   */
   public static  void logStart(int ID, final Object o) {
 	  long tid = Thread.currentThread().getId();
 	  Thread t = (Thread) o;

@@ -271,12 +271,12 @@ public class Main{
       Options.v().set_allow_phantom_refs(true);
       Options.v().set_app(true);
       
-//      try {
-//		G.v().out = new PrintStream(new FileOutputStream(Options.v().output_dir() + File.separator + "soot-output.instr"));
-//	} catch (FileNotFoundException e) {
-//		// TODO Auto-generated catch block
-//		e.printStackTrace();
-//	}
+      try {
+		G.v().out = new PrintStream(new FileOutputStream(Options.v().output_dir() + File.separator + "soot-output.txt"));
+	} catch (FileNotFoundException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
 
   }
   /** Enable Spark for whole program points-to analysis */

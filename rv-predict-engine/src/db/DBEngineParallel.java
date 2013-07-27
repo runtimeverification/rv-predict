@@ -48,6 +48,13 @@ import trace.AbstractNode.TYPE;
 import violation.IViolation;
 import z3.Z3Engine;
 
+/**
+ * Parallel trace collection.
+ * Combined with parallel runtime monitoring with to speed up runtime performance.
+ * 
+ * @author jeffhuang
+ *
+ */
 public class DBEngineParallel extends DBEngine{
 	
 	private final String[] tracetablecolname={"ID","ADDR","VALUE","TYPE"};

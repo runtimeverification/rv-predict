@@ -40,6 +40,13 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.File;
 
+/**
+ * Parser of the model returned by Z3
+ * 
+ * @author jeffhuang
+ *
+ */
+
 public class Z3ModelReader
 {
 	public static Z3Model read(File file)
@@ -55,6 +62,8 @@ public class Z3ModelReader
 			//System.out.println("Feasible: " + "sat".equals(result));
 
 			if("sat".equals(result)) {
+				//if the constraints are satisfied
+
 				Z3Model model = process((Vector) p.parse());
 				fis.close();
 				return model;

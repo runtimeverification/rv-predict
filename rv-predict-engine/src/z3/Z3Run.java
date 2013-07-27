@@ -45,20 +45,25 @@ import java.util.Vector;
 
 import config.Configuration;
 
+/**
+ * Constraint solving with Z3 solver
+ * 
+ * @author jeffhuang
+ *
+ */
 public class Z3Run
 {
-	protected static String Z3_SMT = "z3smt";
-	protected static String Z3_OUT = "z3out";
-	protected static String Z3_ERR = "z3err.";
+	protected static String Z3_SMT2 = ".z3smt2";
+	protected static String Z3_OUT = ".z3out";
+	protected static String Z3_ERR = ".z3err.";
+	
 	
 	File smtFile,z3OutFile,z3ErrFile;
-	protected String FORMAT;
+	protected String CMD;
 	
 	public Z3Model model;
 	public Vector<String> schedule;
-	
-	protected static String CMD;
-	
+		
 	boolean sat;
 	
 	public Z3Run(Configuration config, int id)
@@ -71,18 +76,31 @@ public class Z3Run
 			System.err.println(e.getMessage());
 		}
 	}
+	/**
+	 * initialize solver configuration
+	 * @param config
+	 * @param id
+	 * @throws IOException
+	 */
 	protected void init(Configuration config, int id) throws IOException
 	{
-		FORMAT = ".smt2";
 		
-		smtFile = Util.newOutFile(config.constraint_outdir,Z3_SMT+"_"+config.appname+"_"+id+FORMAT);
+		//constraint file
+		smtFile = Util.newOutFile(config.constraint_outdir,config.appname+"_"+id+Z3_SMT2);
         
-		z3OutFile = Util.newOutFile(config.constraint_outdir,Z3_OUT+"_"+config.appname+"_"+id+FORMAT);
+		//solution file
+		z3OutFile = Util.newOutFile(config.constraint_outdir,config.appname+"_"+id+Z3_OUT);
 		
 		//z3ErrFile = Util.newOutFile(Z3_ERR+id);//looks useless
 		
+		//command line to Z3 solver
 		CMD = "z3 -T:"+config.solver_timeout+" -memory:"+config.solver_memory+" -smt2 ";
 	}
+	
+	/**
+	 * solve constraint "msg"
+	 * @param msg
+	 */
 	public void sendMessage(String msg)
 	{
 		PrintWriter smtWriter = null;
@@ -91,6 +109,7 @@ public class Z3Run
 			smtWriter.println(msg);
 		    smtWriter.close();
 		    
+		    //invoke the solver
 	        exec(z3OutFile, z3ErrFile, smtFile.getAbsolutePath());
 
 	        model = Z3ModelReader.read(z3OutFile);
@@ -110,6 +129,12 @@ public class Z3Run
 		}
 	}
 	
+	/**
+	 * Given the model of solution, return the corresponding schedule
+	 * 
+	 * @param model
+	 * @return
+	 */
 	public Vector<String> computeSchedule(Z3Model model) {
 		
 		Vector<String> schedule = new Vector<String>();

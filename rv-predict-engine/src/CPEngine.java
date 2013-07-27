@@ -117,10 +117,14 @@ public class CPEngine
 			HashMap<String,WriteNode> addressLastWriteMap = new HashMap<String,WriteNode>();
 			HashMap<String,ReadNode> addressLastReadMap = new HashMap<String,ReadNode>();
 
-			HashMap<Long,HashSet<String>> threadCurrentLockRegionAddresses = new HashMap<Long,HashSet<String>>();
-			HashMap<Long,Stack<HashSet<String>>> threadAccessAddrStack = new HashMap<Long,Stack<HashSet<String>>>();
+			HashMap<Long,HashSet<String>> threadCurrentLockRegionReadAddresses = new HashMap<Long,HashSet<String>>();
+			HashMap<Long,HashSet<String>> threadCurrentLockRegionWriteAddresses = new HashMap<Long,HashSet<String>>();
+			HashMap<Long,Stack<HashSet<String>>> threadReadAccessAddrStack = new HashMap<Long,Stack<HashSet<String>>>();
+			HashMap<Long,Stack<HashSet<String>>> threadWriteAccessAddrStack = new HashMap<Long,Stack<HashSet<String>>>();
 
-			HashMap<String,ArrayList<HashSet<String>>> lockAccessedAddresses = new HashMap<String,ArrayList<HashSet<String>>>();
+			HashMap<String,ArrayList<HashSet<String>>> lockReadAccessedAddresses = new HashMap<String,ArrayList<HashSet<String>>>();
+			HashMap<String,ArrayList<HashSet<String>>> lockWriteAccessedAddresses = new HashMap<String,ArrayList<HashSet<String>>>();
+
 			HashMap<String,ArrayList<LockPair>> lockAddrNodes = new HashMap<String,ArrayList<LockPair>>();
 			HashMap<Long,Stack<ISyncNode>> threadSyncStack = new HashMap<Long,Stack<ISyncNode>>();
 
@@ -172,11 +176,11 @@ public class CPEngine
 					}
 					addressLastReadMap.put(addr, (ReadNode)node);
 					
-					HashSet<String> addresses = threadCurrentLockRegionAddresses.get(node.getTid());
+					HashSet<String> addresses = threadCurrentLockRegionReadAddresses.get(node.getTid());
 					if(addresses==null)
 					{
 						addresses = new HashSet<String>();
-						threadCurrentLockRegionAddresses.put(node.getTid(), addresses);
+						threadCurrentLockRegionReadAddresses.put(node.getTid(), addresses);
 					}
 					addresses.add(addr);
 				}
@@ -195,11 +199,11 @@ public class CPEngine
 					}
 					addressLastWriteMap.put(addr, (WriteNode)node);
 
-					HashSet<String> addresses = threadCurrentLockRegionAddresses.get(node.getTid());
+					HashSet<String> addresses = threadCurrentLockRegionWriteAddresses.get(node.getTid());
 					if(addresses==null)
 					{
 						addresses = new HashSet<String>();
-						threadCurrentLockRegionAddresses.put(node.getTid(), addresses);
+						threadCurrentLockRegionWriteAddresses.put(node.getTid(), addresses);
 					}
 					addresses.add(addr);
 				}
@@ -207,20 +211,34 @@ public class CPEngine
 				{
 					long tid = node.getTid();
 					
-					Stack<HashSet<String>> stack = threadAccessAddrStack.get(tid);
-					if(stack==null)
+					Stack<HashSet<String>> readstack = threadReadAccessAddrStack.get(tid);
+					if(readstack==null)
 					{
-						stack = new Stack<HashSet<String>>();
-						threadAccessAddrStack.put(tid, stack);
+						readstack = new Stack<HashSet<String>>();
+						threadReadAccessAddrStack.put(tid, readstack);
+					}
+					Stack<HashSet<String>> writestack = threadReadAccessAddrStack.get(tid);
+					if(writestack==null)
+					{
+						writestack = new Stack<HashSet<String>>();
+						threadWriteAccessAddrStack.put(tid, writestack);
 					}
 
-					HashSet<String> addresses = threadCurrentLockRegionAddresses.get(tid);
+					HashSet<String> readaddresses = threadCurrentLockRegionReadAddresses.get(tid);
 	
-					if(addresses!=null)
+					if(readaddresses!=null)
 					{
-						stack.push(new HashSet(addresses));	
-						addresses.clear();
+						readstack.push(new HashSet(readaddresses));	
+						readaddresses.clear();
 					}
+					HashSet<String> writeaddresses = threadCurrentLockRegionWriteAddresses.get(tid);
+					
+					if(writeaddresses!=null)
+					{
+						writestack.push(new HashSet(writeaddresses));	
+						writeaddresses.clear();
+					}
+					
 					
 					Stack<ISyncNode> syncstack = threadSyncStack.get(tid);
 					if(syncstack==null)
@@ -262,31 +280,57 @@ public class CPEngine
 							}
 					}		
 					
-						HashSet<String> addresses = threadCurrentLockRegionAddresses.get(tid);
-						if(addresses==null)
+						HashSet<String> readaddresses = threadCurrentLockRegionReadAddresses.get(tid);
+						if(readaddresses==null)
 						{
-							addresses = new HashSet<String>();
-							threadCurrentLockRegionAddresses.put(tid, addresses);
+							readaddresses = new HashSet<String>();
+							threadCurrentLockRegionReadAddresses.put(tid, readaddresses);
+						}
+						HashSet<String> writeaddresses = threadCurrentLockRegionWriteAddresses.get(tid);
+						if(writeaddresses==null)
+						{
+							writeaddresses = new HashSet<String>();
+							threadCurrentLockRegionWriteAddresses.put(tid, writeaddresses);
 						}
 						
 						String addr = ((UnlockNode) node).getAddr();
 						
-						ArrayList<HashSet<String>> addrList = lockAccessedAddresses.get(addr);
 						ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
-						if(addrList==null)
+						if(syncNodeList==null)
 						{
-							addrList = new ArrayList<HashSet<String>>();
 							syncNodeList = new ArrayList<LockPair>();
-							lockAccessedAddresses.put(addr, addrList);
 							lockAddrNodes.put(addr, syncNodeList);
 						
 						}
-						addrList.add(new HashSet(addresses));syncNodeList.add(lp);
-						
-						Stack<HashSet<String>> stack = threadAccessAddrStack.get(tid);
-						if(stack!=null&&!stack.isEmpty())
+						ArrayList<HashSet<String>> readaddrList = lockReadAccessedAddresses.get(addr);
+						if(readaddrList==null)
 						{
-							addresses.addAll(stack.pop());
+							readaddrList = new ArrayList<HashSet<String>>();
+							lockReadAccessedAddresses.put(addr, readaddrList);
+						
+						}
+						ArrayList<HashSet<String>> writeaddrList = lockWriteAccessedAddresses.get(addr);
+						if(writeaddrList==null)
+						{
+							writeaddrList = new ArrayList<HashSet<String>>();
+							lockWriteAccessedAddresses.put(addr, writeaddrList);
+						
+						}
+						readaddrList.add(new HashSet(readaddresses));
+						writeaddrList.add(new HashSet(writeaddresses));
+
+						syncNodeList.add(lp);
+						
+						Stack<HashSet<String>> readstack = threadReadAccessAddrStack.get(tid);
+						if(readstack!=null&&!readstack.isEmpty())
+						{
+							readaddresses.addAll(readstack.pop());
+						}
+						
+						Stack<HashSet<String>> writestack = threadWriteAccessAddrStack.get(tid);
+						if(writestack!=null&&!writestack.isEmpty())
+						{
+							writeaddresses.addAll(writestack.pop());
 						}
 					
 				}
@@ -341,32 +385,46 @@ public class CPEngine
 					else
 						lp = new LockPair(syncstack.pop(),((WaitNode) node));
 					
-					HashSet<String> addresses = threadCurrentLockRegionAddresses.get(tid);
-					if(addresses==null)
+					HashSet<String> readaddresses = threadCurrentLockRegionReadAddresses.get(tid);
+					if(readaddresses==null)
 					{
-						addresses = new HashSet<String>();
-						threadCurrentLockRegionAddresses.put(tid, addresses);
+						readaddresses = new HashSet<String>();
+						threadCurrentLockRegionReadAddresses.put(tid, readaddresses);
+					}
+					HashSet<String> writeaddresses = threadCurrentLockRegionWriteAddresses.get(tid);
+					if(writeaddresses==null)
+					{
+						writeaddresses = new HashSet<String>();
+						threadCurrentLockRegionWriteAddresses.put(tid, writeaddresses);
 					}
 					
 					String addr = ((WaitNode) node).getAddr();
 					
-					ArrayList<HashSet<String>> addrList = lockAccessedAddresses.get(addr);
 					ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
-					if(addrList==null)
+					if(syncNodeList==null)
 					{
-						addrList = new ArrayList<HashSet<String>>();
 						syncNodeList = new ArrayList<LockPair>();
-						lockAccessedAddresses.put(addr, addrList);
 						lockAddrNodes.put(addr, syncNodeList);
 					
 					}
-					addrList.add(new HashSet(addresses));syncNodeList.add(lp);
-					
-					Stack<HashSet<String>> stack = threadAccessAddrStack.get(tid);
-					if(stack!=null&&!stack.isEmpty())
+					ArrayList<HashSet<String>> readaddrList = lockReadAccessedAddresses.get(addr);
+					if(readaddrList==null)
 					{
-						addresses.addAll(stack.pop());
+						readaddrList = new ArrayList<HashSet<String>>();
+						lockReadAccessedAddresses.put(addr, readaddrList);
+					
 					}
+					ArrayList<HashSet<String>> writeaddrList = lockWriteAccessedAddresses.get(addr);
+					if(writeaddrList==null)
+					{
+						writeaddrList = new ArrayList<HashSet<String>>();
+						lockWriteAccessedAddresses.put(addr, writeaddrList);
+					
+					}
+					readaddrList.add(new HashSet(readaddresses));
+					writeaddrList.add(new HashSet(writeaddresses));
+
+					syncNodeList.add(lp);
 					
 							
 					syncstack.push(((WaitNode) node));
@@ -388,8 +446,10 @@ public class CPEngine
 				Long tid = tidIt.next();
 				
 				
-				HashSet<String> addresses = threadCurrentLockRegionAddresses.get(tid);
-				if(addresses!=null)
+				HashSet<String> readaddresses = threadCurrentLockRegionReadAddresses.get(tid);
+				HashSet<String> writeaddresses = threadCurrentLockRegionWriteAddresses.get(tid);
+
+				if(readaddresses!=null)
 				{
 
 					Stack<ISyncNode> stack = threadSyncStack.get(tid);
@@ -401,11 +461,20 @@ public class CPEngine
 						
 						String addr = node.getAddr();
 						
-						ArrayList<HashSet<String>> addrList = lockAccessedAddresses.get(addr);
 						ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
-						if(addrList!=null)
+						if(syncNodeList!=null)
+							syncNodeList.add(lp);
+						
+						ArrayList<HashSet<String>> readaddrList = lockReadAccessedAddresses.get(addr);
+						if(readaddrList!=null)
 						{
-							addrList.add(new HashSet(addresses));syncNodeList.add(lp);
+							readaddrList.add(new HashSet(readaddresses));
+						}
+						
+						ArrayList<HashSet<String>> writeaddrList = lockWriteAccessedAddresses.get(addr);
+						if(writeaddrList!=null)
+						{
+							writeaddrList.add(new HashSet(writeaddresses));
 						}
 						
 					}
@@ -416,31 +485,52 @@ public class CPEngine
 			//a CP edge a->b between two regions a and b is added if they contain conflicting
 			//accesses.
 			
-			Iterator<String> addrIt = lockAccessedAddresses.keySet().iterator();
+			Iterator<String> addrIt = lockReadAccessedAddresses.keySet().iterator();
 			while(addrIt.hasNext())
 			{
 				String addr = addrIt.next();
 				
-				ArrayList<HashSet<String>> addrList = lockAccessedAddresses.get(addr);
+				ArrayList<HashSet<String>> readaddrList = lockReadAccessedAddresses.get(addr);
+				ArrayList<HashSet<String>> writeaddrList = lockWriteAccessedAddresses.get(addr);
+
 				ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
-				if(addrList!=null)
+				if(readaddrList!=null)
 				{
-					for(int k=addrList.size()-1;k>=1;k--)
+					for(int k=readaddrList.size()-1;k>=1;k--)
 					{
 						LockPair lp = syncNodeList.get(k);
 						if(lp.lock!=null)
 						{
 							long gid2 = lp.lock.getGID();
 
-							HashSet<String>  addresses = addrList.get(k);
-							
+							HashSet<String>  readaddresses = readaddrList.get(k);
+							HashSet<String>  writeaddresses = writeaddrList.get(k);
+
 							for(int k1 = k-1;k1>=0;k1--)
 							{
-								HashSet<String> lastAddresses = new HashSet(addrList.get(k1));
+								//if there are conflicting accesses between the two regions, k and k1
+								//then we add a CP edge
 								
-								lastAddresses.retainAll(addresses);
+								boolean addCPEdge = false;
 								
-								if(!lastAddresses.isEmpty())
+								HashSet<String> lastWriteAddresses = new HashSet(writeaddrList.get(k1));
+								
+								lastWriteAddresses.retainAll(readaddresses);
+								
+								if(!lastWriteAddresses.isEmpty())
+								{
+									addCPEdge = true;
+								}
+								else
+								{
+									HashSet<String> lastReadWriteAddresses = new HashSet(readaddrList.get(k1));
+									lastReadWriteAddresses.addAll(writeaddrList.get(k1));
+									lastReadWriteAddresses.retainAll(writeaddresses);
+									if(!lastReadWriteAddresses.isEmpty())
+										addCPEdge = true;
+								}
+								
+								if(addCPEdge)
 								{
 									ISyncNode lastnode = syncNodeList.get(k1).unlock;
 									if(lastnode!=null&&lastnode.getTid()!=lp.lock.getTid())

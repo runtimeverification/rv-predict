@@ -17,10 +17,18 @@ import java.util.Vector;
 
 import config.Configuration;
 
+/**
+ * Constraint solving with Yices.
+ * The generated constraint is in the SMTLIB v1.2 format.
+ * It should work with other standard solvers.
+ * 
+ * @author jeffhuang
+ *
+ */
 public class YicesRunSMTLIB1 extends Z3Run
 {
-	protected static String YICES_SMT = "yices_smt";
-	protected static String YICES_OUT = "yices_out";
+	protected static String SMT = ".smt";
+	protected static String OUT = ".yicesout";
 	
 	File yicesOutFile,yicesErrFile;
 	
@@ -31,15 +39,11 @@ public class YicesRunSMTLIB1 extends Z3Run
 	}
 	
 	public void init(Configuration config, int id) throws IOException
-	{
-		FORMAT = ".smt";
-		
-		smtFile = Util.newOutFile(config.constraint_outdir,YICES_SMT+"_"+config.appname+"_"+id+FORMAT);
+	{		
+		smtFile = Util.newOutFile(config.constraint_outdir,config.appname+"_"+id+SMT);
         
-		yicesOutFile = Util.newOutFile(config.constraint_outdir,YICES_OUT+"_"+config.appname+"_"+id+FORMAT);
-		
-		//z3ErrFile = Util.newOutFile(Z3_ERR+id);//looks useless
-		
+		yicesOutFile = Util.newOutFile(config.constraint_outdir,config.appname+"_"+id+OUT);
+				
 		CMD = "yices-smt -m -t "+config.solver_timeout+" ";
 	}
 	public void sendMessage(String msg)

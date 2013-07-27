@@ -28,6 +28,12 @@
  ******************************************************************************/
 package trace;
 
+/**
+ * initial write node for some memory location.
+ * 
+ * @author jeffhuang
+ *
+ */
 public class InitNode extends AbstractNode
 {
 	private String value;

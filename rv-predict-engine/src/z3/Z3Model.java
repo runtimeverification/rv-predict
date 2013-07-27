@@ -34,6 +34,14 @@ package z3;
 import java.util.Map;
 import java.util.HashMap;
 
+/**
+ * Z3 model of the solution to order variables.
+ * THhe model is kept as a map from each order 
+ * variable to the corresponding value.
+ * 
+ * @author jeffhuang
+ *
+ */
 public class Z3Model
 {
 	Map<String,Object> vals = new HashMap();

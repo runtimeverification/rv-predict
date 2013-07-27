@@ -40,12 +40,14 @@ import java.util.Vector;
 import trace.LockNode;
 import trace.LockPair;
 
+/**
+ * Engine for computing the Lockset algorithm 
+ * 
+ * @author jeffhuang
+ *
+ */
 public class LockSetEngine 
 {
-	/**
-	 * This is the input trace containing all the events of a thread
-	 * PLEASE DON'T MODIFY IT!!!
-	 */
 	Vector<LockNode> locktrace;
 	int n_type = 0;
 	int N = 0;
@@ -210,48 +212,9 @@ public class LockSetEngine
 		
 		return false;
 	}
-	private int upper_bound( Vector<Integer> vec, int x )
-	{
-		int s, e, mid;
-		
-		s = 0;
-		e = vec.size()-1;
-		mid = ( s + e ) / 2;
-		while ( s <= e ) 
-		{
-			mid = ( s + e ) / 2;
-			int value = vec.get(mid).intValue();
-			
-			if ( value > x ) e = mid - 1;
-			else if(value <x) s = mid+1;
-			else
-				return mid;
-			
-		}
-		
-		return s;
-	}
 
-	private int lower_bound( Vector<Integer> vec, int x )
-	{
-		int s, e, mid;
-		
-		s = 0;
-		e = vec.size()-1;
-		mid = ( s + e ) / 2;
-		while ( s <= e ) 
-		{
-			mid = ( s + e ) / 2;
-			int value = vec.get(mid).intValue();
-			
-			if ( value < x ) s = mid + 1;
-			else if(value>x) e = mid-1;
-			else return mid;
-			
-		}
-		
-		return e;
-	}
+
+
 
 
 }

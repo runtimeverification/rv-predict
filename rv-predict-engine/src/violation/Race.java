@@ -31,14 +31,24 @@ package violation;
 import java.util.ArrayList;
 import java.util.Vector;
 
+/**
+ * Data race violation
+ * 
+ * @author jeffhuang
+ *
+ */
 public class Race implements IViolation{
 
 	//not mutable
 	//why hashset has strange behavior??
+	
+	
+	//a pair of conflicting nodes
 	final private String node1;
 	final private String node2;
 	private int hashcode;
 	
+	//the corresponding schedule
 	ArrayList<Vector<String>> schedules =  new ArrayList<Vector<String>>();
 	
 	public void addSchedule(Vector<String> schedule)

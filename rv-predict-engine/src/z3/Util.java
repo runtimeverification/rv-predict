@@ -34,10 +34,23 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-
+/**
+ * Utilities for interacting with file and solver
+ * 
+ * @author jeffhuang
+ *
+ */
 public class Util {
 
 
+	/**
+	 * Create a file "name" under the directory "path"
+	 * 
+	 * @param path
+	 * @param name
+	 * @return
+	 * @throws IOException
+	 */
 	public static File newOutFile(String path, String name) throws IOException {
 		
 		File z3Dir = new File(path);

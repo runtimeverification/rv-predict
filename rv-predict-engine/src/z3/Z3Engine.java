@@ -58,9 +58,15 @@ import java.util.Map.Entry;
 
 import config.Configuration;
 
+/**
+ * The engine for constraint construction and solving.
+ * 
+ * @author jeffhuang
+ *
+ */
 public class Z3Engine
 {
-	protected int id =0;
+	protected int id =0;//constraint id
 	protected Z3Run task;
 	
 	protected Configuration config;
@@ -68,6 +74,7 @@ public class Z3Engine
 	protected ReachabilityEngine reachEngine = new ReachabilityEngine();//TODO: do segmentation on this
 	protected LockSetEngine lockEngine;
 
+	//constraints below
 	protected StringBuilder CONS_DECLARE;
 	protected StringBuilder CONS_ASSERT;
 	protected String CONS_SETLOGIC;
@@ -83,9 +90,14 @@ public class Z3Engine
 		return "x"+GID;
 	}
 	
+	/**
+	 * declare an order variable for each event in the trace
+	 * 
+	 * @param trace
+	 */
 	public void declareVariables(Vector<AbstractNode> trace)
 	{
-		CONS_SETLOGIC = "(set-logic QF_IDL)\n";
+		CONS_SETLOGIC = "(set-logic QF_IDL)\n";//use integer difference logic
 		CONS_DECLARE = new StringBuilder("");
 		CONS_ASSERT = new StringBuilder("");
 		
@@ -108,6 +120,11 @@ public class Z3Engine
 		//CONS_ASSERT.append("))\n");
 						
 	}
+	/**
+	 * add program order constraints
+	 * 
+	 * @param map
+	 */
 	public void addIntraThreadConstraints(HashMap<Long,Vector<AbstractNode>> map)
 	{
 		Iterator<Vector<AbstractNode>> mapIt = map.values().iterator();
@@ -122,6 +139,7 @@ public class Z3Engine
 				String var = makeVariable(thisGID);
 				CONS_ASSERT.append("(assert (< ").append(lastVar).append(" ").append(var).append("))\n");
 				
+				//the order is added to reachability engine for quick testing
 				reachEngine.addEdge(lastGID, thisGID);
 
 				lastGID = thisGID;
@@ -130,6 +148,12 @@ public class Z3Engine
 			}
 		}
 	}
+	
+	/**
+	 * add intra-thread order constraint for POS memory model
+	 * 
+	 * @param indexedMap
+	 */
 	public void addPSOIntraThreadConstraints(HashMap<String,HashMap<Long,Vector<IMemNode>>> indexedMap)
 	{
 		
@@ -160,13 +184,21 @@ public class Z3Engine
 		}
 		
 	}
-	//the order constraints between wait/notify/fork/join/lock/unlock
+	/**
+	 * the order constraints between wait/notify/fork/join/lock/unlock
+	 * 
+	 * @param trace
+	 * @param syncNodesMap
+	 * @param firstNodes
+	 * @param lastNodes
+	 */
 	public void addSynchronizationConstraints(Trace trace, HashMap<String,Vector<ISyncNode>> syncNodesMap, 
 												HashMap<Long,AbstractNode> firstNodes,
 														HashMap<Long,AbstractNode> lastNodes)
 	{
-		lockEngine = new LockSetEngine();//construct a new lockset for this segment
-
+		//construct a new lockset for this segment
+		lockEngine = new LockSetEngine();
+		
 		//thread first node - last node
 		Iterator<Vector<ISyncNode>> mapIt = syncNodesMap.values().iterator();
 		while(mapIt.hasNext())
@@ -196,6 +228,7 @@ public class Z3Engine
 						long fGID = fnode.getGID();
 					String fvar = makeVariable(fGID);
 					
+					//start-begin ordering
 					CONS_ASSERT.append("(assert (< ").append(var).append(" ").append(fvar).append("))\n");
 					
 					reachEngine.addEdge(thisGID, fGID);
@@ -210,6 +243,8 @@ public class Z3Engine
 					{
 						long lGID = lnode.getGID();
 						String lvar = makeVariable(lGID);
+						
+						//end-join ordering
 						CONS_ASSERT.append("(assert (< ").append(lvar).append(" ").append(var).append("))\n");
 						reachEngine.addEdge(lGID,thisGID);
 
@@ -241,8 +276,8 @@ public class Z3Engine
 						threadSyncStack.put(tid, stack);
 					}
 					
-					//TODO: make sure no nested locks?
 
+					//pair lock/unlock nodes
 					if(stack.isEmpty())
 					{
 						LockPair lp = new LockPair(null,node);
@@ -287,6 +322,9 @@ public class Z3Engine
 						long waitNextGID = trace.getFullTrace().get(nodeIndex).getGID();
 						var = makeVariable(waitNextGID);
 						
+						
+						//notify-wait ordering
+						
 						CONS_ASSERT.append("(assert (< ").append(notifyVar).append(" ").append(var).append("))\n");
 						
 						reachEngine.addEdge(notifyGID,waitNextGID);
@@ -299,6 +337,10 @@ public class Z3Engine
 						//clear notifyNode
 						matchNotifyNode=null;
 					}
+					
+					//wait is interpreted as unlock-wait-lock
+					//so we first pair wait with previos lock
+					//and then push it into stack as a lock node
 					
 					Stack<ISyncNode> stack = threadSyncStack.get(tid);
 					//assert(stack.size()>0);
@@ -338,11 +380,18 @@ public class Z3Engine
 					lockEngine.add(node.getAddr(),node.getTid(),lp);
 				}
 			}
-						
+			
+			//Now construct the lock/unlock constraints
 			CONS_ASSERT.append(constructLockConstraintsOptimized(lockPairs));
 		}
 		
 	}
+	/**
+	 * lock/unlock constraints
+	 * Make sure no two regions on the same lock can interleave. 
+	 * @param lockPairs
+	 * @return
+	 */
 	private String constructLockConstraintsOptimized(Vector<LockPair> lockPairs)
 	{
 		String CONS_LOCK = "";
@@ -367,11 +416,6 @@ public class Z3Engine
 			
 			long lp1_tid = lp1.lock.getTid();
 			LockPair lp1_pre = lastLockPairMap.get(lp1_tid);
-			
-			/*String var_lp1_pre_b = "";
-			if(lp1_pre!=null)
-				var_lp1_pre_b = makeVariable(lp1_pre.unlock.getGID());;
-			*/
 			
 			ArrayList<LockPair> flexLockPairs = new ArrayList<LockPair>();
 			
@@ -402,224 +446,47 @@ public class Z3Engine
 				String cons_b = "";
 				String cons_b_end = "";
 
-			for(int j=0;j<flexLockPairs.size();j++)
-			{
-				LockPair lp2 = flexLockPairs.get(j);
+				//for each lock pair lp2 in flexLockPairs
+				//it is either before lp1 or after lp1
+				for(int j=0;j<flexLockPairs.size();j++)
+				{
+					LockPair lp2 = flexLockPairs.get(j);
+						
+					if(lp2.unlock==null||lp2.lock==null&&lp1_pre!=null)//impossible to match lp2
+							continue;
+						
+					String var_lp2_b="";
+					String var_lp2_a="";
 					
-				if(lp2.unlock==null||lp2.lock==null&&lp1_pre!=null)//impossible to match lp2
-						continue;
+					var_lp2_b = makeVariable(lp2.unlock.getGID());
 					
-				String var_lp2_b="";
-				String var_lp2_a="";
-				
-				var_lp2_b = makeVariable(lp2.unlock.getGID());
-				
-				if(lp2.lock!=null)
-					var_lp2_a = makeVariable(lp2.lock.getGID());
-				
-				
-				//lp1_b==null, lp2_a=null
-				if(lp1.unlock==null||lp2.lock==null)
-				{
-					cons_b= "(> "+var_lp1_a+" "+var_lp2_b+")\n"+cons_b;
-
-				}
-				else
-				{
-					cons_b= "(or (> "+var_lp1_a+" "+var_lp2_b+") (> "+var_lp2_a+" "+var_lp1_b+"))\n"+cons_b;
-				}
-				
-				/*String cons_b_ = "";				
-				
-
-				if(lp1_pre!=null)
-				{
+					if(lp2.lock!=null)
+						var_lp2_a = makeVariable(lp2.lock.getGID());
 					
-					cons_b_ = "(and (and (> "+var_lp1_a+" "+var_lp2_b+") (> "+var_lp2_a+" "+var_lp1_pre_b+"))\n";
-				}
-				else
-				{
-					cons_b_ = "(and (> "+var_lp1_a+" "+var_lp2_b+")\n";	//must hold here
-				}*/
-				
-				if(j<flexLockPairs.size())
-				{	
-					cons_b= "(and "+cons_b;
-					cons_b_end +=")";
-				}
-				/*
-				String cons_c = "";	
-				String cons_c_end = "true";
-				
-				//this can be commented out??
-				for(int k=0;k<flexLockPairs.size();k++)
-				{
-					if(k!=j)
+					
+					//lp1_b==null, lp2_a=null
+					if(lp1.unlock==null||lp2.lock==null)
 					{
-						LockPair lp3 = flexLockPairs.get(k);
-						Long lp3_tid = null;
-						if(lp3.lock==null)
-						{
-							lp3_tid = lp3.unlock.getTid();
-						}
-						else
-						{
-							lp3_tid = lp3.lock.getTid();
-						}
-						
-						if(lp3_tid!=lp1_tid)
-						{
-						
-						String var_lp3_a="";
-						String var_lp3_b="";
-						
-						if(lp3.lock!=null)
-						{
-							if(canReach((AbstractNode)lp3.lock,(AbstractNode)lp2.unlock))
-								continue;
-							
-							var_lp3_a = makeVariable(lp3.lock.getGID());
-							
-						}
-						if(lp3.unlock!=null)
-						{
-							
-							if(canReach((AbstractNode)lp3.unlock,(AbstractNode)lp2.unlock))
-								continue;
-							
-							var_lp3_b = makeVariable(lp3.unlock.getGID());
-							
-						}
-						
-						
-						String cons_d = "(and ";
-						//it's possible multiple lockpairs with unlock nodes null
-						if(lp3.unlock==null)//then the lock node must be the last one
-						{
-								if(lp1.unlock!=null)
-									cons_d +="(> "+var_lp3_a+" "+var_lp1_b+")\n";
-								else
-									cons_d +="(> "+var_lp3_a+" "+var_lp1_a+")\n";
-
-						}
-						else if(lp3.lock==null||lp1.unlock==null)//then the unlock node must be the first one
-						{
-							if(lp2.lock!=null)
-								cons_d +="(> " +var_lp2_a+" "+var_lp3_b+")\n";
-							else 
-								cons_d +="true\n";//looks impossible to be here
-						}
-						else
-						{
-							if(lp2.lock!=null)
-								cons_d += "(or (> "+var_lp3_a+" "+var_lp1_b+")" +
-										" (> " +var_lp2_a+" "+var_lp3_b+"))\n";
-							else
-								cons_d +="(> "+var_lp3_a+" "+var_lp1_b+")\n";
-								
-						}
-						
-						cons_c= cons_d + cons_c;
-						cons_c_end +=")";
-						}
+						cons_b= "(> "+var_lp1_a+" "+var_lp2_b+")\n"+cons_b;
+	
+					}
+					else
+					{
+						cons_b= "(or (> "+var_lp1_a+" "+var_lp2_b+") (> "+var_lp2_a+" "+var_lp1_b+"))\n"+cons_b;
+					}
+					
+					
+					if(j<flexLockPairs.size())
+					{	
+						cons_b= "(and "+cons_b;
+						cons_b_end +=")";
 					}
 					
 				}
-				
-				cons_c+=cons_c_end;
-				
-				cons_b_ = cons_b_ + cons_c + ")\n";
-
-				cons_b += "(or "+cons_b_;*/
-				
-			}
 			
-			cons_b +=cons_b_end;
-				
-			/*
-			String cons_a = "";//first lock
-			String cons_a_end = "true";
+				cons_b +=cons_b_end;
 			
-				//consider the first lock node and the pre-node cases 
-				if(lp1.unlock!=null)
-				if(lp1_pre==null||lp1_pre.lock==null)
-				{//lp1 is the first node -> all other nodes are after lp1
-					
-					for(int k=0;k<flexLockPairs.size();k++)
-					{
-						LockPair lp = flexLockPairs.get(k);
-						
-						if(lp.lock!=null)
-						{
-							String var_lp_a = makeVariable(lp.lock.getGID());
-							//it's possible that both lp and lp1 unlock are null, due to the trace incompleteness
-							if(lp1.unlock!=null)
-								cons_a= "(and (> "+var_lp_a+" "+var_lp1_b+")\n" + cons_a;
-							//else
-								//cons_a= "(and (> "+var_lp_a+" "+var_lp1_a+")\n" + cons_a;
-
-							cons_a_end +=")";
-						}
-					}
-				}
-				else if(lp1.unlock==null)
-				{
-					//all other nodes are before pre_node
-					String var_lp1_pre_a = makeVariable(lp1_pre.lock.getGID());
-					
-					for(int k=0;k<flexLockPairs.size();k++)
-					{
-						LockPair lp = flexLockPairs.get(k);
-						
-						if(lp.unlock!=null)
-						{
-								String var_lp_b = makeVariable(lp.unlock.getGID());
-								cons_a= "(and (> "+var_lp1_pre_a+" "+var_lp_b+")\n" + cons_a;
-								cons_a_end +=")";
-						}
-
-					}
-				}
-				else
-				{
-					String var_lp1_pre_a = makeVariable(lp1_pre.lock.getGID());
-					
-					for(int k=0;k<flexLockPairs.size();k++)
-					{
-						LockPair lp = flexLockPairs.get(k);
-						
-						if(lp.lock==null)
-						{
-							String var_lp_b = makeVariable(lp.unlock.getGID());
-							cons_a= "(and (> "+var_lp1_pre_a+" "+var_lp_b+")\n" + cons_a;
-							cons_a_end +=")";
-
-						}
-						else if(lp.unlock==null)
-						{
-							String var_lp_a = makeVariable(lp.lock.getGID());
-							cons_a= "(and (> "+var_lp_a+" "+var_lp1_b+")\n" + cons_a;
-							cons_a_end +=")";
-						}
-						else
-						{
-							String var_lp_a = makeVariable(lp.lock.getGID());
-							String var_lp_b = makeVariable(lp.unlock.getGID());
-
-							cons_a= "(and (or (> "+var_lp_a+" "+var_lp1_b+") (> "+var_lp1_pre_a+" "+var_lp_b+"))\n" + cons_a;
-							cons_a_end +=")";
-						}
-
-					}
-				}
-				
-				if(cons_a.length()>0)//should hold here, otherwise trace is incomplete
-				{
-					cons_a+=cons_a_end+"\n";
-					CONS_LOCK+="(assert \n(or \n"+cons_a+" "+cons_b+"))\n\n";
-				}*/
-			
-			CONS_LOCK+="(assert \n"+cons_b+")\n";
+				CONS_LOCK+="(assert \n"+cons_b+")\n";
 
 			}
 				lastLockPairMap.put(lp1.lock.getTid(), lp1);
@@ -629,130 +496,15 @@ public class Z3Engine
 		return CONS_LOCK;
 		
 	}
-	private static String constructLockConstraints(Vector<LockPair> lockPairs)
-	{
-		String CONS_LOCK = "";
-		//handle lock pairs
-		for(int i=0;i<lockPairs.size()-1;i++)
-		{
-			LockPair lp1 = lockPairs.get(i);
-			String var_lp1_a="";
-			String var_lp1_b="";
-			
-			if(lp1.lock==null)//
-				continue;
-			else
-				var_lp1_a = makeVariable(lp1.lock.getGID());
-			
-			if(lp1.unlock!=null)
-				var_lp1_b = makeVariable(lp1.unlock.getGID());
-
-			String cons_a = "";//first lock
-			String cons_a_end = "true";
-			boolean cons_a_maySatisfy = true;
-			
-			String cons_b = "";
-			String cons_b_end = "false";
-			
-			for(int j=i+1;j<lockPairs.size();j++)
-			{
-				LockPair lp2 = lockPairs.get(j);
-				String var_lp2_b="";
-				String var_lp2_a="";
-				
-				if(lp2.unlock==null)
-					continue;
-				else
-					var_lp2_b = makeVariable(lp2.unlock.getGID());
-				
-				if(lp2.lock!=null)
-					var_lp2_a = makeVariable(lp2.lock.getGID());
-
-				if(lp2.lock!=null&&lp1.unlock!=null)
-				{
-					cons_a= "(and (> "+var_lp2_a+" "+var_lp1_b+")\n" + cons_a;
-					cons_a_end +=")";
-				}
-				else
-					cons_a_maySatisfy = false;
-				
-				String cons_b_ = "(and (> "+var_lp1_a+" "+var_lp2_b+")\n";	//must hold here					
-
-				cons_b_end +=")";
-
-				String cons_c = "";	
-				String cons_c_end = "true";
-				
-				for(int k=0;k<lockPairs.size();k++)
-				{
-					if(k!=i&&k!=j)
-					{
-						LockPair lp3 = lockPairs.get(k);
-						
-						String var_lp3_a="";
-						String var_lp3_b="";
-						
-						
-						if(lp3.lock!=null)
-							var_lp3_a = makeVariable(lp3.lock.getGID());
-						if(lp3.unlock!=null)
-							var_lp3_b = makeVariable(lp3.unlock.getGID());
-						
-						String cons_d = "(and ";
-						
-						if(lp3.lock==null)//then the unlock node must be the first one
-						{
-							if(lp2.lock!=null)
-								cons_d +="(> " +var_lp2_a+" "+var_lp3_b+")\n";
-							else cons_d +="true\n";
-						}
-						else if(lp3.unlock==null)//then the lock node must be the last one
-						{
-							cons_d +="(> "+var_lp3_a+" "+var_lp1_b+")\n";
-						}
-						else
-						{
-							if(lp2.lock!=null)
-								cons_d += "(or (> "+var_lp3_a+" "+var_lp1_b+")" +
-										" (> " +var_lp2_a+" "+var_lp3_b+"))\n";
-							else
-								cons_d +="(> "+var_lp3_a+" "+var_lp1_b+")\n";
-								
-						}
-						
-						cons_c= cons_d + cons_c;
-						cons_c_end +=")";
-					}
-					
-				}
-				
-				cons_c+=cons_c_end;
-				
-				cons_b_ = cons_b_ + cons_c + ")\n";
-
-				cons_b += "(or "+cons_b_;
-				
-			}
-			cons_b +=cons_b_end;
-			
-			if(cons_a_maySatisfy)
-			{
-				cons_a+=cons_a_end+"\n";
-				
-				CONS_LOCK+="(assert \n(or \n"+cons_a+" "+cons_b+"))\n\n";
-			}
-			else
-				CONS_LOCK+="(assert "+cons_b+")\n\n";
-		}
-		
-		return CONS_LOCK;
-	}
-	public void addReadWriteConstraints(HashMap<String, Vector<ReadNode>> indexedReadNodes,
-			HashMap<String, Vector<WriteNode>> indexedWriteNodes)
-	{
-		CONS_ASSERT.append(constructReadWriteConstraints(indexedReadNodes,indexedWriteNodes));
-	}
 	
+	/**
+	 * return the read-write constraints
+	 * 
+	 * @param readNodes
+	 * @param indexedWriteNodes
+	 * @param initValueMap
+	 * @return
+	 */
 	//TODO: NEED to handle the feasibility of new added write nodes
 	public StringBuilder constructCausalReadWriteConstraintsOptimized(
 			Vector<ReadNode> readNodes,
@@ -760,9 +512,10 @@ public class Z3Engine
 	{
 		StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
 		
+		//for every read node in the set
+		//make sure it is matched with a write written the same value
 		for(int i=0;i<readNodes.size();i++)
 		{
-				
 			ReadNode rnode = readNodes.get(i);
 			
 			//get all write nodes on the address
@@ -801,15 +554,12 @@ public class Z3Engine
 
 						
 				String var_r = makeVariable(rnode.getGID());						
-	
-				
+		
 				String cons_a="";
 				String cons_a_end="";
 
 				String cons_b = "";
 				String cons_b_end = "";
-				
-
 				
 				//make sure all the nodes that x depends on read the same value
 
@@ -907,195 +657,15 @@ public class Z3Engine
 		
 		return CONS_CAUSAL_RW;
 	}
-	public static StringBuilder constructCausalReadWriteConstraints(
-			Vector<ReadNode> readNodes,
-			HashMap<String, Vector<WriteNode>> indexedWriteNodes)
-	{
-		StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
-		
-		for(int i=0;i<readNodes.size();i++)
-		{
-				
-			ReadNode rnode = readNodes.get(i);
-			
-			//get all write nodes on the address
-			Vector<WriteNode> writenodes = indexedWriteNodes.get(rnode.getAddr());
-			//no write to array field?
-			//Yes, it could be: java.io.PrintStream out
-			if(writenodes==null||writenodes.size()<2)//
-				continue;
-			
-			WriteNode initNode = writenodes.get(0);
-
-			//get all write nodes on the address & write the same value
-			Vector<WriteNode> writenodes_value_match = new Vector<WriteNode>();
-			for(int j=1;j<writenodes.size();j++)//start from j=1 to exclude the initial write
-			{
-				WriteNode wnode = writenodes.get(j);
-				if(wnode.getValue()==rnode.getValue())
-					writenodes_value_match.add(wnode);
-			}
-
-				String initVar = makeVariable(initNode.getGID());
-			
-				String var_r = makeVariable(rnode.getGID());
-				
-				CONS_CAUSAL_RW.append("(assert (> "+var_r+" "+initVar+"))\n");//initial write
-						
-	
-				
-				String cons_a="";
-				String cons_a_end = "(= "+rnode.getValue()+" "+initNode.getValue()+")\n";
-
-				String cons_b = "";
-				String cons_b_end = "false";
-				
-
-				
-				//make sure all the nodes that x depends on read the same value
-
-				for(int j=0;j<writenodes_value_match.size();j++)
-				{
-					WriteNode wnode1 = writenodes_value_match.get(j);
-					String var_w1 = makeVariable(wnode1.getGID());
-					
-					
-					cons_a= "(and (> "+var_w1+" "+var_r+")\n" + cons_a;
-					cons_a_end +=")";
-					
-
-					String cons_b_ = "(and (> "+var_r+" "+var_w1+")\n";						
-
-					String cons_c = "";	
-					String cons_c_end = "true";
-					
-					for(int k=0;k<writenodes.size();k++)
-					{
-						WriteNode wnode2 = writenodes.get(k);
-						if(wnode2.getGID()!=wnode1.getGID())
-						{
-							String var_w2 = makeVariable(wnode2.getGID());
-							
-							String cons_d = "(and " +
-									"(or (> "+var_w2+" "+var_r+")" +
-											" (> " +var_w1+" "+var_w2+"))\n";
-							
-							cons_c= cons_d + cons_c;
-							cons_c_end +=")";
-						}
-					}
-					
-					cons_c+=cons_c_end;
-					
-					cons_b_ = cons_b_ + cons_c + ")\n";
-
-					cons_b += "(or "+cons_b_;
-					
-					cons_b_end +=")";
-					
-				}
-				
-				cons_b +=cons_b_end;
-				cons_a+=cons_a_end+"\n";
-				
-				CONS_CAUSAL_RW.append("(assert \n(or \n"+cons_a+" "+cons_b+"))\n\n");
-		}
-		
-		return CONS_CAUSAL_RW;
-	}
-	
-	//does not consider value and causal dependence
-	private static String constructReadWriteConstraints(
-			HashMap<String, Vector<ReadNode>> indexedReadNodes,
-			HashMap<String, Vector<WriteNode>> indexedWriteNodes) {
-		
-		String CONS_RW = "";
-		
-		Iterator<Entry<String, Vector<ReadNode>>> 
-						entryIt =indexedReadNodes.entrySet().iterator();
-		while(entryIt.hasNext())
-		{
-			Entry<String, Vector<ReadNode>> entry = entryIt.next();
-			String addr = entry.getKey();
-			
-			//get all read nodes on the address
-			Vector<ReadNode> readnodes = entry.getValue();
-					
-			//get all write nodes on the address
-			Vector<WriteNode> writenodes = indexedWriteNodes.get(addr);
-			
-				
-			//no write to array field?
-			//Yes, it could be: java.io.PrintStream out
-			if(writenodes==null||writenodes.size()<2)
-				continue;
-						
-			
-			for(int i=0;i<readnodes.size();i++)
-			{
-				ReadNode rnode = readnodes.get(i);
-				String var_r = makeVariable(rnode.getGID());
-										
-				String cons_a = "";
-				
-				String cons_a_end = "true";
-				
-				String cons_b = "";
-				String cons_b_end = "false";
-				
-				//we start from j=1 to exclude the initial write
-				for(int j=1;j<writenodes.size();j++)
-				{
-					WriteNode wnode1 = writenodes.get(j);	
-					{
-						String var_w1 = makeVariable(wnode1.getGID());
-
-						cons_a= "(and (> "+var_w1+" "+var_r+")\n" + cons_a;
-						cons_a_end +=")";
-						
-						String cons_b_ = "(and (> "+var_r+" "+var_w1+")\n";						
-	
-						String cons_c = "";	
-						String cons_c_end = "true";
-						
-						for(int k=1;k<writenodes.size();k++)
-						{
-							if(j!=k)
-							{
-								WriteNode wnode2 = writenodes.get(k);
-								String var_w2 = makeVariable(wnode2.getGID());
-	
-								String cons_d = "(and " +
-										"(or (> "+var_w2+" "+var_r+")" +
-												" (> " +var_w1+" "+var_w2+"))\n";
-								
-								cons_c= cons_d + cons_c;
-								cons_c_end +=")";
-							}
-						}
-						
-						cons_c+=cons_c_end;
-						
-						cons_b_ = cons_b_ + cons_c + ")\n";
-	
-						cons_b += "(or "+cons_b_;
-						
-						cons_b_end +=")";
-					}
-				}
-				
-				cons_b +=cons_b_end;
-				
-				cons_a+=cons_a_end+"\n";
-				
-
-				CONS_RW+="(assert \n(or \n"+cons_a+" "+cons_b+"))\n\n";
-			}
-
-		}
-		
-		return CONS_RW;
-	}
+	/**
+	 * return true if the lockset of node1 and node2 
+	 * overlaps with that of node3
+	 * 
+	 * @param node1
+	 * @param node2
+	 * @param node3
+	 * @return
+	 */
 	public boolean isAtomic(IMemNode node1, IMemNode node2, IMemNode node3)
 	{
 		long gid1 = node1.getGID();
@@ -1105,6 +675,12 @@ public class Z3Engine
 		return lockEngine.isAtomic(node1.getTid(),gid1, gid2, node3.getTid(), gid3);	
 		
 	}
+	/**
+	 * return true if node1 and node2 has a common lock
+	 * @param node1
+	 * @param node2
+	 * @return
+	 */
 	public boolean hasCommonLock(IMemNode node1, IMemNode node2)
 	{
 		long gid1 = node1.getGID();
@@ -1113,6 +689,13 @@ public class Z3Engine
 		return lockEngine.hasCommonLock(node1.getTid(),gid1, node2.getTid(), gid2);	
 		
 	}
+	/**
+	 * return true if node1 can reach node2 from the ordering relation
+	 * 
+	 * @param node1
+	 * @param node2
+	 * @return
+	 */
 	public boolean canReach(AbstractNode node1, AbstractNode node2)
 	{
 		long gid1 = node1.getGID();
@@ -1121,6 +704,15 @@ public class Z3Engine
 		return reachEngine.canReach(gid1, gid2);	
 		
 	}
+	
+	/**
+	 * return true if the solver return a solution to the constraints
+	 * 
+	 * @param node1
+	 * @param node2
+	 * @param casualConstraint
+	 * @return
+	 */
 	public boolean isRace(AbstractNode node1, AbstractNode node2, StringBuilder casualConstraint)
 	{
 		long gid1 = node1.getGID();
@@ -1154,29 +746,6 @@ public class Z3Engine
 	}
 
 	
-	public boolean isRace(AbstractNode node1, AbstractNode node2)
-	{
-		String var1 = makeVariable(node1.getGID());
-		String var2 = makeVariable(node2.getGID());
-		
-		//String QUERY = "(assert (= "+var1+" "+var2+"))\n\n";
-				
-//				"(assert (or (= (- "+var1+" "+var2+") 1)\n" +
-//									"(= (- "+var1+" "+var2+") -1)" +
-//											"))\n";
-	
-				//"(assert (= "+var1+" "+var2+"))\n";//not global order
-		id++;
-		task = new Z3Run(config,id);
-		//StringBuilder msg = new StringBuilder(CONS_DECLARE).append(CONS_ASSERT).append(QUERY).append(CONS_GETMODEL);
-		String cons_assert = CONS_ASSERT.toString();
-		cons_assert.replace(var2+" ", var1+" ");
-		
-		StringBuilder msg = new StringBuilder(CONS_DECLARE).append(cons_assert).append(CONS_GETMODEL);
-		task.sendMessage(msg.toString());
-		
-		return task.sat;
-	}
 	public boolean isAtomicityViolation(IMemNode node1, IMemNode node2, IMemNode node3, 
 			StringBuilder casualConstraint1, StringBuilder casualConstraint2, StringBuilder casualConstraint3) {
 		
@@ -1284,61 +853,6 @@ public class Z3Engine
 		
 	}
 	
-	public void detectBugs()
-	{
-		
-	}
-	
-	public static void testConstructLockConstraints()
-	{
-		Vector<LockPair> lockPairs = new Vector<LockPair>();
-		
-		LockPair pair1 = new LockPair(new LockNode(1,1,1,"l",AbstractNode.TYPE.LOCK), 
-										new UnlockNode(2,1,2,"l",AbstractNode.TYPE.UNLOCK));
-		LockPair pair2 = new LockPair(new LockNode(3,2,3,"l",AbstractNode.TYPE.LOCK), 
-				new UnlockNode(4,2,4,"l",AbstractNode.TYPE.UNLOCK));
-		LockPair pair3 = new LockPair(new LockNode(5,3,5,"l",AbstractNode.TYPE.LOCK), 
-				new UnlockNode(6,3,6,"l",AbstractNode.TYPE.UNLOCK));
-		LockPair pair4 = new LockPair(new LockNode(7,4,7,"l",AbstractNode.TYPE.LOCK), 
-				new UnlockNode(8,4,8,"l",AbstractNode.TYPE.UNLOCK));
-
-		lockPairs.add(pair1);
-		lockPairs.add(pair2);
-		lockPairs.add(pair3);
-		lockPairs.add(pair4);
-
-		System.out.println(constructLockConstraints(lockPairs));
-	}
-	
-	public static void testConstructReadWriteConstraints()
-	{
-		HashMap<String, Vector<ReadNode>> indexedReadNodes = new HashMap<String, Vector<ReadNode>>();
-		
-		HashMap<String, Vector<WriteNode>> indexedWriteNodes = new HashMap<String, Vector<WriteNode>>();
-		
-		Vector<WriteNode> writeNodes = new Vector<WriteNode>();
-		writeNodes.add(new WriteNode(1,1,1,"s","0",AbstractNode.TYPE.WRITE));
-		writeNodes.add(new WriteNode(2,2,3,"s","0",AbstractNode.TYPE.WRITE));
-		writeNodes.add(new WriteNode(3,3,5,"s","1",AbstractNode.TYPE.WRITE));
-		writeNodes.add(new WriteNode(4,4,7,"s","1",AbstractNode.TYPE.WRITE));
-
-		Vector<ReadNode> readNodes = new Vector<ReadNode>();
-		readNodes.add(new ReadNode(5,1,2,"s","0",AbstractNode.TYPE.READ));
-		readNodes.add(new ReadNode(6,2,4,"s","0",AbstractNode.TYPE.READ));
-		readNodes.add(new ReadNode(7,3,6,"s","1",AbstractNode.TYPE.READ));
-		readNodes.add(new ReadNode(8,4,8,"s","1",AbstractNode.TYPE.READ));
-
-		indexedWriteNodes.put("s", writeNodes);
-		indexedReadNodes.put("s", readNodes);
-
-		System.out.println(constructReadWriteConstraints(indexedReadNodes,indexedWriteNodes));
-	}
-	
-	public static void main(String[] args) throws IOException
-	{
-		//testConstructLockConstraints();
-		testConstructReadWriteConstraints();
-	}
 
 	public Vector<String> getSchedule(long endGID, HashMap<Long,Long> nodeGIDTidMap
 			,HashMap<Long,String> threadIdNameMap) {

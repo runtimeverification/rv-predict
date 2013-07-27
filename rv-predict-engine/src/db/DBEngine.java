@@ -46,14 +46,23 @@ import trace.AbstractNode.TYPE;
 import violation.IViolation;
 import z3.Z3Engine;
 
+/**
+ * Engine for interacting with database.
+ * 
+ * @author jeffhuang
+ *
+ */
 public class DBEngine {
 
 	protected long globalEventID=0;
 	
+	//currently we use the h2 database
 	protected final String dbname = "RVDatabase";
 	protected final String driver = "org.h2.Driver";	
 	public String appname = "test";
 	
+	
+	//database schema
 	protected final String[] stmtsigtablecolname={"SIG","ID"};
 	protected final String[] stmtsigtablecoltype={"VARCHAR","INT"};
 	
@@ -92,7 +101,7 @@ public class DBEngine {
 	protected int BUFFER_THRESHOLD;
 	protected boolean asynchronousLogging;
 	
-	//private final String NO_AUTOCLOSE = ";DB_CLOSE_ON_EXIT=FALSE";//DON'T USE IT, IT IS BUGGY IN H2
+	//private final String NO_AUTOCLOSE = ";DB_CLOSE_ON_EXIT=FALSE";//BUGGY in H2, DON'T USE IT
 	
 	class EventItem
 	{
@@ -333,9 +342,9 @@ public class DBEngine {
 		}
 	}
 
-	/*
-	 * must be synchronized?? 
-	 * otherwise, easy to throw Unique index or primary key violation
+	/**
+	 * save an event to database. must be synchronized. 
+	 * otherwise, easy to throw Unique index or primary key violation.
 	 */
 	public synchronized void saveEventToDB(long TID, int ID, String ADDR, String VALUE, byte TYPE)
 	{
@@ -532,10 +541,23 @@ public class DBEngine {
 			size = rs.getLong(1);
 		return size;
 	}
+	
+	/**
+	 * load all trace
+	 * @return
+	 * @throws Exception
+	 */
 	public Trace getTrace() throws Exception
 	{
 		return getTrace(1,0);
 	}
+	/**
+	 * load trace from event min to event max
+	 * @param min
+	 * @param max
+	 * @return
+	 * @throws Exception
+	 */
 	public Trace getTrace(long min, long max) throws Exception
 	{
 		String sql_select = "SELECT * FROM "+tracetablename;
@@ -670,6 +692,14 @@ public class DBEngine {
 		}
 		return null;
 	}
+	
+	/**
+	 * Save schedules for each violation to database.
+	 * The schedule is identified by a unique order.
+	 * 
+	 * @param violations
+	 * @return
+	 */
 	public int saveSchedulesToDB(HashSet<IViolation> violations) {
 		
 		Iterator<IViolation> violationIt = violations.iterator();

@@ -36,37 +36,53 @@ import java.util.Map.Entry;
 import java.util.Stack;
 import java.util.Vector;
 
+/**
+ * Representation of the execution trace. Each event is created as a node
+ * with a corresponding type. Events are indexed by their thread Id, Type,
+ * and memory address.
+ * 
+ * @author jeffhuang
+ *
+ */
 public class Trace {
 
+	//fulltrace represents all the events in the global order
 	Vector<AbstractNode> fulltrace = new Vector<AbstractNode>();
 	
+	//keep a node GID to tid Map, used for generating schedules
 	HashMap<Long, Long> nodeGIDTidMap = new HashMap<Long, Long>();
 	
+	//per thread node map
 	HashMap<Long,Vector<AbstractNode>> threadNodesMap = new HashMap<Long,Vector<AbstractNode>>();
+	
+	//the first node and last node map of each thread
 	HashMap<Long, AbstractNode> threadFirstNodeMap = new HashMap<Long, AbstractNode>();
 	HashMap<Long, AbstractNode> threadLastNodeMap = new HashMap<Long, AbstractNode>();
 	
+	//per thread per lock lock/unlock pair
 	HashMap<Long,HashMap<String,Vector<LockPair>>> threadIndexedLockPairs = new HashMap<Long,HashMap<String,Vector<LockPair>>>();
 	HashMap<Long,Stack<ISyncNode>> threadSyncStack = new HashMap<Long,Stack<ISyncNode>>();
 
-	
+	//per thread branch nodes and basicblock nodes
 	HashMap<Long,Vector<BranchNode>> threadBranchNodes = new HashMap<Long,Vector<BranchNode>>();
 	HashMap<Long,Vector<BBNode>> threadBBNodes = new HashMap<Long,Vector<BBNode>>();
 	
+	//per thead synchronization nodes
 	HashMap<String,Vector<ISyncNode>> syncNodesMap = new HashMap<String,Vector<ISyncNode>>();	
 
-	
+	//per address read and write nodes 
 	HashMap<String,Vector<ReadNode>> indexedReadNodes = new HashMap<String,Vector<ReadNode>>();
-	
+	HashMap<String,Vector<WriteNode>> indexedWriteNodes = new HashMap<String,Vector<WriteNode>>();
+
+	//per address map from thread id to read/write nodes
 	HashMap<String,HashMap<Long,Vector<IMemNode>>> indexedThreadReadWriteNodes = new HashMap<String,HashMap<Long,Vector<IMemNode>>>();
 
-	HashMap<String,Vector<WriteNode>> indexedWriteNodes = new
-			HashMap<String,Vector<WriteNode>>();
-	
+	//per address initial write value
 	HashMap<String,String> initialWriteValueMap = new HashMap<String,String>();
 	
 	Vector<ReadNode> allReadNodes;
 
+	//metadata
 	HashMap<Long, String> threadIdNamemap;
 	HashMap<Integer, String> sharedVarIdSigMap;
 	HashMap<Integer, String> stmtIdSigMap;
@@ -211,13 +227,19 @@ public class Trace {
 		
 		return readnodes;
 	}
-	
+	/**
+	 * add a new event to the trace in the order of its appearance
+	 * 
+	 * @param node
+	 */
 	public void addNode(AbstractNode node)
 	{
 		Long tid = node.getTid();
 		
 		if(node instanceof BBNode)
 		{
+			//basicblock node
+			
 			Vector<BBNode> bbnodes = threadBBNodes.get(tid);
 			if(bbnodes == null)
 			{
@@ -228,6 +250,8 @@ public class Trace {
 		}
 		else if(node instanceof BranchNode)
 		{
+			//branch node
+			
 			Vector<BranchNode> branchnodes = threadBranchNodes.get(tid);
 			if(branchnodes == null)
 			{
@@ -238,10 +262,14 @@ public class Trace {
 		}
 		else if (node instanceof InitNode)
 		{
+			//initial write node
+			
 			initialWriteValueMap.put(((InitNode) node).getAddr(),((InitNode) node).getValue());
 		}
 		else
 		{
+			//all critical nodes -- read/write/synchronization events 
+			
 			fulltrace.add(node);
 
 			nodeGIDTidMap.put(node.getGID(), node.getTid());
@@ -257,7 +285,7 @@ public class Trace {
 			
 			threadNodes.add(node);
 			
-			//TODO: Optimize it
+			//TODO: Optimize it -- no need to update it every time
 			threadLastNodeMap.put(tid, node); 
 			if(node instanceof IMemNode)
 			{
@@ -302,6 +330,8 @@ public class Trace {
 			}
 			else
 			{
+				//synchronization nodes
+				
 				String addr = ((ISyncNode)node).getAddr();
 				Vector<ISyncNode> syncNodes = syncNodesMap.get(addr);
 				if(syncNodes==null)
@@ -356,7 +386,11 @@ public class Trace {
 			}
 		}
 	}
-	
+	/**
+	 * when trace is completely loaded, compute the lock/unlock pairs
+	 * because we analyze the trace window by window, lock/unlock may not be
+	 * in the same window, so we may have null lock or unlock node in the pair.
+	 */
 	public void finishedLoading()
 	{
 		//check threadSyncStack - only to handle when segmented
@@ -391,14 +425,6 @@ public class Trace {
 				}
 			}
 		}
-	}
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
-		
 	}
 
 }

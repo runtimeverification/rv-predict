@@ -44,8 +44,20 @@ import java.io.IOException;
 import java.io.File;
 import java.io.InputStreamReader;
 
+/**
+ * Model interpreter for Yices output format
+ * 
+ * @author jeffhuang
+ *
+ */
 public class YicesModelReaderSMTLIB1
 { 
+	/**
+	 * return a model of solution for the output file
+	 * 
+	 * @param file
+	 * @return
+	 */
 	public static Z3Model read(File file)
 	{
 		try{
@@ -59,6 +71,8 @@ public class YicesModelReaderSMTLIB1
 			//System.out.println("Feasible: " + "sat".equals(result));
 
 			if("sat".equals(result)) {
+				
+				//if the constraints are satisfied
 				
 				Z3Model model = new Z3Model();
 				

@@ -30,6 +30,11 @@ package trace;
 
 import trace.AbstractNode.TYPE;
 
+/**
+ * a common interface for read and write events.
+ * @author jeffhuang
+ *
+ */
 public interface IMemNode {
 
 	public String getAddr();

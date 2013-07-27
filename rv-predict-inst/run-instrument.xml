@@ -7,10 +7,11 @@
     </taskdef>
 	<property name="instrument.main.class" value="rvpredict.instrumentation.Main"/>
 	
-	<property name="app.main.class" value="demo.Example"/>
+	<property name="app.main.class" value="boundedbuffer.BoundedBuffer"/>
 	<!--
 	demo.Example
 	demo.Authenticate
+	cp.Test2
 	elevator.Elevator
 	loop.TestLoop
 	driver.FTPMainDriver
@@ -67,14 +68,12 @@
 	
 	-->
 	
-	<property name="rv-predict-inst.home" location="${user.home}/workspace/rv-predict-inst"/>
-	<property name="rv-predict-demo.home" location="${user.home}/workspace/rv-predict-demo"/>
+	<property name="rv-predict-inst.home" location="${user.home}/git/rv-predict-plus/rv-predict-inst"/>
+	<property name="rv-predict-demo.home" location="${user.home}/git/rv-predict-plus/rv-predict-demo"/>
 	<property name="rv-predict-test.home" location="${user.home}/workspace/test"/>
 	
-	<property name="rv-predict-engine.home" location="${user.home}/workspace/rv-predict-engine"/>
-		
-	<property name="soot.home.bin" location="${user.home}/workspace/soot/classes"/>
-
+	<property name="rv-predict-engine.home" location="${user.home}/git/rv-predict-plus/rv-predict-engine"/>
+	
    <target name="run-once">   
    	<stopwatch name="timer" action="start"/>
     	    	<java classname="${instrument.main.class}" fork="true" maxmemory="1000m">
@@ -89,8 +88,7 @@
     	               	<pathelement location="${rv-predict-inst.home}/bin"/>
     	               	<pathelement location="${rv-predict-engine.home}/bin"/>
     	               	
-    	    			<pathelement location="${soot.home.bin}"/>
-    	    			
+    	    			<pathelement location="${rv-predict-inst.home}/lib/external/soot-jeff.jar"/>
     	               	<pathelement location="${rv-predict-inst.home}/lib/external/jasminclasses-2.5.0.jar"/>
 		            	<pathelement location="${rv-predict-inst.home}/lib/external/polyglot.jar"/>
 		            	<pathelement location="${rv-predict-inst.home}/lib/external/java_cup.jar"/>

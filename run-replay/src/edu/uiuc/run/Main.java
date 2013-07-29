@@ -30,10 +30,11 @@ package edu.uiuc.run;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Method;
+import java.util.Scanner;
 
 import db.DBEngine;
-
 import rvpredict.logging.ReplayRT;
 
 /**
@@ -58,7 +59,7 @@ public class Main {
 	{
 		if(args.length==0)
 		{
-			System.err.println("please specify the application name");
+			System.err.println("java edu.uiuc.run.Main classname [schedule-id]");
 		}
 		else 
 		{
@@ -116,29 +117,34 @@ private static void run(String[] args)
 			db.closeDB();
 			for(int id=1;id<=size;id++)
 			{
-				ProcessBuilder pb = new ProcessBuilder("java", "-cp", "tmp/replay:rv-replayer.jar", "edu.uiuc.run.Main",appname+" "+id);
-				pb.redirectErrorStream();
-				
-				InputStream is = null;
-		        try {
+				String cmd = "java -cp tmp/replay:rv-predict-replay.jar edu.uiuc.run.Main "+appname+" "+id;
+				Process p = Runtime.getRuntime().exec(cmd);
+//				ProcessBuilder pb = new ProcessBuilder("java", "-cp", "tmp/replay:rv-predict-replay.jar", "edu.uiuc.run.Main",appname+" "+id);
+//				pb.redirectErrorStream();
+//				
+//				InputStream is = null;
+//		        try {
+//
+//		            Process process = pb.start();
+//		            process.waitFor();
+//		            
+//		            is = process.getInputStream();
+//
+//		            int value;
+//		            while ((value = is.read()) != -1) {
+//
+//		                char inChar = (char)value;
+//		                System.out.print(inChar);
+//
+//		            }
+//
+//		        } catch (IOException ex) {
+//		            ex.printStackTrace();
+//		        }        
 
-		            Process process = pb.start();
-		            process.waitFor();
-		            
-		            is = process.getInputStream();
-
-		            int value;
-		            while ((value = is.read()) != -1) {
-
-		                char inChar = (char)value;
-		                System.out.print(inChar);
-
-		            }
-
-		        } catch (IOException ex) {
-		            ex.printStackTrace();
-		        }        
-
+				inheritIO(p.getInputStream(), System.out);
+			    inheritIO(p.getErrorStream(), System.err);
+			    
 			}
 		    
 		}
@@ -146,4 +152,16 @@ private static void run(String[] args)
 			    x.printStackTrace();
 			}
 		}
+
+private static void inheritIO(final InputStream src, final PrintStream dest) {
+    new Thread(new Runnable() {
+        public void run() {
+            Scanner sc = new Scanner(src);
+            while (sc.hasNextLine()) {
+                dest.println(sc.nextLine());
+            }
+        }
+    }).start();
+}
+
 }

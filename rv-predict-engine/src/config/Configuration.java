@@ -140,8 +140,7 @@ public class Configuration {
 	private String getUsage()
 	{
 		return "\nGeneral Options:\n"
-				+padOpt(" -maxlen", "set window size" )
-			+padOpt(" -maxlen SIZE", "set window size" )
+			+padOpt(" -maxlen SIZE", "set window size to SIZE" )
 			+padOpt(" -noschedule", "disable generating racey schedule" )
 			+padOpt(" -nobranch", "disable control flow (MCM)" )
 			+padOpt(" -allconsistent", "require all read-write consistency (Said)" )

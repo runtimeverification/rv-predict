@@ -64,7 +64,7 @@ public class Main{
 	private static String DIR_REPLAY = "replay";
 
 	static boolean outputJimple = false;
-	static boolean noReplay = true;
+	static boolean noReplay = false;
 	
     static LinkedList<String> excludeList = new LinkedList<String> ();
     static LinkedList<String> includeList = new LinkedList<String> ();

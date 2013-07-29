@@ -6,7 +6,7 @@
         </classpath>
     </taskdef>
 	<property name="record.main.class" value="edu.uiuc.run.Main"/>
-	<property name="app.main.class" value="demo.Example"/>
+	<property name="app.main.class" value="boundedbuffer.BoundedBuffer"/>
 	<!--
 	demo.Example
 	demo.Authenticate
@@ -61,9 +61,9 @@
 	allocationvector.AllocationVector
 	-->
 	
-	<property name="rv-predict-inst.home" location="${user.home}/workspace/rv-predict-inst"/>
-	<property name="rv-predict-demo.home" location="${user.home}/workspace/rv-predict-demo"/>
-	<property name="rv-predict-engine.home" location="${user.home}/workspace/rv-predict-engine"/>
+	<property name="rv-predict-inst.home" location="${user.home}/git/rv-predict-plus/rv-predict-inst"/>
+	<property name="rv-predict-demo.home" location="${user.home}/git/rv-predict-plus/rv-predict-demo"/>
+	<property name="rv-predict-engine.home" location="${user.home}/git/rv-predict-plus/rv-predict-engine"/>
 	
    <target name="run-once">   
    	<stopwatch name="timer" action="start"/>

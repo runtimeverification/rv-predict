@@ -1,0 +1,13 @@
+count=0
+
+classname=$1
+count=$2
+
+index=1
+while [ "$index" -le "$count" ]
+do
+echo "run" $index
+java -cp bin $classname
+
+index=$(($index + 1))
+done

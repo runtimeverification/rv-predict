@@ -1,0 +1,3 @@
+#instrument
+echo "instrumenting "$1
+time java -Xmx1g -cp bin:rv-predict-inst.jar rvpredict.instrumentation.Main $1

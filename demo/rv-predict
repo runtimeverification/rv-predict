@@ -1,0 +1,3 @@
+#predict 
+echo "detecting races in "$@
+time java -Xmx1g -cp rv-predict-engine.jar NewRVPredict $1

@@ -75,16 +75,32 @@ public class LockSetEngine
 			threadlockmap.put(tid, lockpairs);
 		}
 		
+		//filter out re-entrant locks for CP 
+		while(!lockpairs.isEmpty())
+		{
+			int lastPos = lockpairs.size()-1;
+			LockPair lp2 = lockpairs.get(lastPos);
+			if(lp.lock==null||(lp2.lock!=null&&lp.lock.getGID()<lp2.lock.getGID()))
+				lockpairs.remove(lastPos);
+			else
+				break;
+		}
+		
+		
 		lockpairs.add(lp);
+		
+		
+		
 	}
 	//NOTE: it's possible two lockpairs overlap, because we skipped wait nodes
 	public boolean hasCommonLock(long tid1, long gid1, long tid2, long gid2)
 	{
-		Iterator<HashMap<Long,ArrayList<LockPair>>> threadlockmapIt 
-				= indexedThreadLockMaps.values().iterator();
-		while(threadlockmapIt.hasNext())
+		Iterator<String> keyIt 
+				= indexedThreadLockMaps.keySet().iterator();
+		while(keyIt.hasNext())
 		{
-			HashMap<Long,ArrayList<LockPair>> threadlockmap = threadlockmapIt.next();
+			String key = keyIt.next();
+			HashMap<Long,ArrayList<LockPair>> threadlockmap = indexedThreadLockMaps.get(key);
 			ArrayList<LockPair> lockpairs1 = threadlockmap.get(tid1);
 			ArrayList<LockPair> lockpairs2 = threadlockmap.get(tid2);
 			if(lockpairs1!=null&&lockpairs2!=null)

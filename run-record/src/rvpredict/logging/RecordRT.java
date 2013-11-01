@@ -28,6 +28,7 @@
  ******************************************************************************/
 package rvpredict.logging;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Stack;
@@ -255,7 +256,23 @@ public final class RecordRT {
 	  if(doInterleave)Thread.yield();
 	  long tid = Thread.currentThread().getId();
 	  if(!doTraceFilter||!isRedundant(tid,ID,write))
-	  db.saveEventToDB(tid, ID, o==null?SID+"":System.identityHashCode(o)+"."+SID, isPrim(v)?v+"":System.identityHashCode(v)+"", write?db.tracetypetable[2]: db.tracetypetable[1]);
+	  {
+		  
+		  //shared object reference variable deference
+		  //make it as a branch event
+		  
+		  int hashcode_o = System.identityHashCode(o);
+		  if(!isPrim(v))
+		  {
+			  db.saveEventToDB(tid, ID, o==null?"_."+SID:hashcode_o+"_."+SID, isPrim(v)?v+"":System.identityHashCode(v)+"_", write?db.tracetypetable[2]: db.tracetypetable[1]);
+
+			  logBranch(-1);
+		  }
+		  else
+			  db.saveEventToDB(tid, ID, o==null?"."+SID:hashcode_o+"."+SID, isPrim(v)?v+"":System.identityHashCode(v)+"_", write?db.tracetypetable[2]: db.tracetypetable[1]);
+
+	  }
+	  
 
   }
   
@@ -263,22 +280,24 @@ public final class RecordRT {
 	  if(doInterleave)Thread.yield();
 	  long tid = Thread.currentThread().getId();
 	  if(!doTraceFilter||!isRedundant(tid,ID,write))
-	  db.saveEventToDB(tid, ID, o==null?SID+"":System.identityHashCode(o)+"."+SID, "LOOP", write?db.tracetypetable[2]: db.tracetypetable[1]);
-
+	  {
+		  db.saveEventToDB(tid, ID, o==null?SID+"":System.identityHashCode(o)+"."+SID, "LOOP", write?db.tracetypetable[2]: db.tracetypetable[1]);
+	  }
   }
   public static void logInitialWrite(int ID, final Object o, int index, final Object v){
 	  
 	  if(doInterleave)Thread.yield();
 	  long tid = Thread.currentThread().getId();
 	  if(!doTraceFilter||!isRedundant(tid,ID,true))
-	  db.saveEventToDB(tid, ID, o==null?index+"":System.identityHashCode(o)+"."+index, isPrim(v)?v+"":System.identityHashCode(v)+"", db.tracetypetable[0]);
-
+	  db.saveEventToDB(tid, ID, o==null?"."+index:System.identityHashCode(o)+"."+index, isPrim(v)?v+"":System.identityHashCode(v)+"", db.tracetypetable[0]);
+	  
+	  
   }
   public static  void logArrayAcc(int ID, final Object o, int index, final Object v, final boolean write) {
 	  if(doInterleave)Thread.yield();
 	  long tid = Thread.currentThread().getId();
 	  if(!doTraceFilter||!isRedundant(tid,ID,write))
-	  db.saveEventToDB(tid, ID, System.identityHashCode(o)+"."+index, isPrim(v)?v+"":System.identityHashCode(v)+"", write?db.tracetypetable[2]: db.tracetypetable[1]);
+	  db.saveEventToDB(tid, ID, System.identityHashCode(o)+"_"+index, isPrim(v)?v+"":System.identityHashCode(v)+"_", write?db.tracetypetable[2]: db.tracetypetable[1]);
   }
   public static  void logArrayAcc(int ID, final Object o, final boolean write) {
 	  if(doInterleave)Thread.yield();
@@ -345,6 +364,24 @@ public final class RecordRT {
   public static  void logJoin(int ID, final Object o) {
 	  
 	  db.saveEventToDB(Thread.currentThread().getId(), ID, ""+((Thread) o).getId(), "", db.tracetypetable[8]);
+
+  }
+  
+  public static void logPropertyEvent(String monitor,int ID){
+	  
+	  //add event to database
+	  db.saveEventToDB(Thread.currentThread().getId(), ID, monitor, "", db.tracetypetable[11]);
+	  //System.err.println("logPropertyEvent: "+Thread.currentThread().getId()+" "+monitor+" "+ID);
+
+  }
+  public static void setProperty(String name, int ID){
+	  
+	  //save property to database
+	  if(ID==-1)
+		  db.saveProperty(name,ID,true);
+	  else db.saveProperty(name,ID,false);
+	  
+	  //System.err.println("setProperty: "+name +" "+ID);
 
   }
 

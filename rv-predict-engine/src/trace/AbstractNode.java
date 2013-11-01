@@ -92,7 +92,7 @@ public abstract class AbstractNode{
 	}
 	public enum TYPE
 	{
-		INIT,READ,WRITE,LOCK,UNLOCK,WAIT,NOTIFY,START,JOIN,BRANCH,BB
+		INIT,READ,WRITE,LOCK,UNLOCK,WAIT,NOTIFY,START,JOIN,BRANCH,BB,PROPERTY
 	}
 	public String toString()
 	{

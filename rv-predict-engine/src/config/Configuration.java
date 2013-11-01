@@ -43,17 +43,24 @@ public class Configuration {
 	final static String opt_max_len = "maxlen";
 	final static String opt_no_schedule = "noschedule";
 	final static String opt_no_branch = "nobranch";
+	final static String opt_no_volatile = "novolatile";
+	final static String opt_allrace = "allrace";
+
 	final static String opt_all_consistent = "allconsistent";
 	final static String opt_constraint_outdir = "outdir";
 	final static String opt_solver_timeout = "solver_timeout";
 	final static String opt_solver_memory = "solver_memory";
+	final static String opt_timeout = "timeout";
+
 	final static String opt_smtlib1 = "smtlib1";
+	final static String opt_optrace = "optrace";
 
 	final static String default_max_len= "1000";
-	final static String default_solver_timeout= "300";
+	final static String default_solver_timeout= "60";
 	final static String default_solver_memory= "8000";
 	final static String default_empty= "";
-	
+	final static String default_timeout= "3600";
+
 	final static String default_constraint_outdir  = System.getProperty("user.dir")+
 			System.getProperty("file.separator")+"z3";
 	
@@ -61,9 +68,16 @@ public class Configuration {
 	public long window_size;
 	public long solver_timeout;
 	public long solver_memory;
+	public long timeout;
+
 	public String constraint_outdir;
 	public boolean nobranch;
 	public boolean noschedule;
+	public boolean optrace;
+	public boolean allrace;
+	public boolean novolatile;
+
+
 	public boolean allconsistent;
 	public boolean rmm_pso;
 	public boolean smtlib1;
@@ -91,13 +105,17 @@ public class Configuration {
 		options.addOption(opt_max_len, true, "window size");
 		options.addOption(opt_no_schedule, false, "not report schedule");
 		options.addOption(opt_no_branch, false, "use no branch model");
+		options.addOption(opt_no_volatile, false, "exclude volatile variables");
 		options.addOption(opt_all_consistent, false, "require all read-write consistent");
 		options.addOption(opt_rmm_pso, false, "PSO memory model");
 		options.addOption(opt_smtlib1, false, "use constraint format smtlib v1.2");
+		options.addOption(opt_optrace, false, "optimize race detection");
+		options.addOption(opt_allrace, false, "check all races");
 
 		options.addOption(opt_constraint_outdir, true, "constraint file directory");
 		options.addOption(opt_solver_timeout, true, "solver timeout in seconds");
 		options.addOption(opt_solver_memory, true, "solver memory size in MB");
+		options.addOption(opt_timeout, true, "rvpredict timeout in seconds");
 
 		
 		CommandLineParser parser = new BasicParser();
@@ -112,21 +130,30 @@ public class Configuration {
 		String z3memory = cmd.getOptionValue(opt_solver_memory,default_solver_memory);
 		solver_memory = Long.valueOf(z3memory);
 		
+		String rvtimeout = cmd.getOptionValue(opt_timeout,default_timeout);
+		timeout = Long.valueOf(rvtimeout);
 		
 		constraint_outdir = cmd.getOptionValue(opt_constraint_outdir,default_constraint_outdir);
 		
 		
 		noschedule = cmd.hasOption(opt_no_schedule);
 		//ok, let's make noschedule by default
-		//noschedule = true;
+		noschedule = true;
 				
 		rmm_pso = cmd.hasOption(opt_rmm_pso);
 		//rmm_pso = true;
 		
 		 nobranch = cmd.hasOption(opt_no_branch);
+		 novolatile = cmd.hasOption(opt_no_volatile);
+
 		 allconsistent = cmd.hasOption(opt_all_consistent);
 		 smtlib1 = cmd.hasOption(opt_smtlib1);
+		 optrace = cmd.hasOption(opt_optrace);
+		 allrace = cmd.hasOption(opt_allrace);
 
+		 //by default optrace is true
+		 optrace = true;
+		 
 		appname = (String) cmd.getArgList().get(0);
 		}catch(Exception e)
 		{
@@ -143,11 +170,13 @@ public class Configuration {
 			+padOpt(" -maxlen SIZE", "set window size to SIZE" )
 			+padOpt(" -noschedule", "disable generating racey schedule" )
 			+padOpt(" -nobranch", "disable control flow (MCM)" )
+			+padOpt(" -novolatile", "exclude races on volatile variables" )
 			+padOpt(" -allconsistent", "require all read-write consistency (Said)" )
 			+padOpt(" -smtlib1", "use smtlib v1 format" )
 			+padOpt(" -outdir PATH", "constraint file directory to PATH" )
 			+padOpt(" -solver_timeout TIME", "set solver timeout to TIME seconds" )
 			+padOpt(" -solver_memory MEMORY", "set memory used by solver to MEMORY megabytes" )
+			+padOpt(" -timeout TIME", "set rvpredict timeout to TIME seconds" )
 			;
 	}
 	

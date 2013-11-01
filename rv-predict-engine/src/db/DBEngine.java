@@ -72,14 +72,20 @@ public class DBEngine {
 	protected final String[] sharedvarsigtablecolname={"SIG","ID"};
 	protected final String[] sharedvarsigcoltype={"VARCHAR","INT"};
 
+	protected final String[] volatilesigtablecolname={"SIG","ID"};
+	protected final String[] volatilesigcoltype={"VARCHAR","INT"};
+	
 	protected final String[] tracetablecolname={"GID","TID","ID","ADDR","VALUE","TYPE"};
 	protected final String[] tracetablecoltype={"BIGINT","BIGINT","INT","VARCHAR","VARCHAR","TINYINT"};
 	
 	protected final String[] tidtablecolname={"TID","NAME"};
 	protected final String[] tidtablecoltype={"BIGINT","VARCHAR"};
 	
+	protected final String[] propertytablecolname={"PROPERTY","ID"};
+	protected final String[] propertytablecoltype={"VARCHAR","INT"};
+	
 	//READ,WRITE,LOCK,UNLOCK,WAIT,NOTIFY,START,JOIN,BRANCH,BB
-	public final byte[] tracetypetable ={'0','1','2','3','4','5','6','7','8','9','a'};
+	public final byte[] tracetypetable ={'0','1','2','3','4','5','6','7','8','9','a','b'};
 	protected Connection conn;
 	protected PreparedStatement prepStmt;
 	
@@ -89,7 +95,10 @@ public class DBEngine {
 	public String tidtablename;
 	public String stmtsigtablename;
 	public String sharedvarsigtablename;
+	public String volatilesigtablename;
+
 	public String scheduletablename;
+	public String propertytablename;
 	
 	//TODO: What if the program does not terminate??
 	
@@ -198,9 +207,11 @@ public class DBEngine {
 		appname = name;
 		tracetablename = "trace_"+name;
 		tidtablename = "tid_"+name;
+		volatilesigtablename = "volatile_"+name;
 		stmtsigtablename="stmtsig_"+name;
 		sharedvarsigtablename="sharedvarsig_"+name;
 		scheduletablename = "schedule_"+name;
+		propertytablename = "property_"+name;
 		try
 		{
 			connectDB();
@@ -216,6 +227,33 @@ public class DBEngine {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+	}
+	public void saveProperty(String name, int ID, boolean dropTable)
+	{
+		try{
+			if(dropTable)createPropertyTable();
+	    	String sql_insertdata = "INSERT INTO "+propertytablename+" VALUES (?,?)";
+	    	PreparedStatement prepStmt = conn.prepareStatement(sql_insertdata);
+	    	prepStmt.setString(1, name);
+	    	prepStmt.setInt(2, ID);
+	    	prepStmt.execute();
+		}catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+	public void createPropertyTable() throws Exception
+	{
+		String sql_dropTable = "DROP TABLE IF EXISTS "+propertytablename;
+
+    	Statement stmt = conn.createStatement();
+        stmt.execute(sql_dropTable);
+        
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS "+propertytablename+" ("+
+        		propertytablecolname[0]+" "+propertytablecoltype[0]+", "+
+        		propertytablecolname[1]+" "+propertytablecoltype[1]+")";
+        stmt.execute(sql_createTable);
+        
 	}
 	public void createScheduleTable() throws Exception
 	{
@@ -259,6 +297,21 @@ public class DBEngine {
         String sql_createTable = "CREATE TABLE "+sharedvarsigtablename+" ("+
         		sharedvarsigtablecolname[0]+" "+sharedvarsigcoltype[0]+" PRIMARY KEY, "+
         		sharedvarsigtablecolname[1]+" "+sharedvarsigcoltype[1]+")";
+        stmt.execute(sql_createTable);
+        
+        prepStmt = conn.prepareStatement(sql_insertdata);
+	}
+	public void createVolatileSignatureTable() throws Exception
+	{
+		String sql_dropTable = "DROP TABLE IF EXISTS "+volatilesigtablename;
+    	String sql_insertdata = "INSERT INTO "+volatilesigtablename+" VALUES (?,?)";
+
+    	Statement stmt = conn.createStatement();
+        stmt.execute(sql_dropTable);
+        
+        String sql_createTable = "CREATE TABLE "+volatilesigtablename+" ("+
+        		volatilesigtablecolname[0]+" "+volatilesigcoltype[0]+" PRIMARY KEY, "+
+        		volatilesigtablecolname[1]+" "+volatilesigcoltype[1]+")";
         stmt.execute(sql_createTable);
         
         prepStmt = conn.prepareStatement(sql_insertdata);
@@ -341,7 +394,20 @@ public class DBEngine {
 			e.printStackTrace();
 		}
 	}
+	public void saveVolatileSignatureToDB(String sig, int id)
+	{
+		try
+		{
+		prepStmt.setString(1, sig);
+		prepStmt.setInt(2,id);
 
+		prepStmt.execute();
+
+		}catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
 	/**
 	 * save an event to database. must be synchronized. 
 	 * otherwise, easy to throw Unique index or primary key violation.
@@ -428,6 +494,28 @@ public class DBEngine {
 					e.printStackTrace();
 				}
 				return map;
+	}
+	public HashMap<Integer, String> getVolatileAddresses()
+	{
+		HashMap<Integer, String> map = new HashMap<Integer, String>();
+		try{
+		String sql_select = "SELECT * FROM "+volatilesigtablename;
+		
+		Statement stmt = conn.createStatement();
+		ResultSet rs = stmt.executeQuery(sql_select);
+		while (rs.next()) 
+	    {
+	        // Get the data from the row using the column index
+	        String SIG = rs.getString(1);
+	        Integer ID = rs.getInt(2);
+	        //System.out.println(ID+"-"+SIG);
+	        map.put(ID, SIG);
+	    }
+		}catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		return map;
 	}
 	public HashMap<Integer, String> getSharedVarSigIdMap()
 	{
@@ -529,7 +617,17 @@ public class DBEngine {
 			number = rs.getInt(1);
 		return number;
 	}
-	
+	public int getTracePropertyNumber() throws Exception
+	{
+		int number = 0;
+		String sql_select = "SELECT COUNT(*) FROM "+tracetablename +" WHERE "+
+				tracetablecolname[5]+" = "+tracetypetable[11];
+		Statement stmt = conn.createStatement();
+		ResultSet rs = stmt.executeQuery(sql_select);
+		if(rs.next())
+			number = rs.getInt(1);
+		return number;
+	}
 	public long getTraceSize() throws Exception
 	{
 		long size = 0;
@@ -547,9 +645,9 @@ public class DBEngine {
 	 * @return
 	 * @throws Exception
 	 */
-	public Trace getTrace() throws Exception
+	public Trace getTrace(TraceInfo info) throws Exception
 	{
-		return getTrace(1,0);
+		return getTrace(1,0,info);
 	}
 	/**
 	 * load trace from event min to event max
@@ -558,7 +656,7 @@ public class DBEngine {
 	 * @return
 	 * @throws Exception
 	 */
-	public Trace getTrace(long min, long max) throws Exception
+	public Trace getTrace(long min, long max, TraceInfo info) throws Exception
 	{
 		String sql_select = "SELECT * FROM "+tracetablename;
 		if(max>min)
@@ -568,7 +666,7 @@ public class DBEngine {
 		Statement stmt = conn.createStatement();
 		ResultSet rs = stmt.executeQuery(sql_select);
 		
-		Trace trace = new Trace();
+		Trace trace = new Trace(info);
 		AbstractNode node = null;
 //		int NUM_CS = 0;
 //		long lastTID = -1;
@@ -598,11 +696,12 @@ public class DBEngine {
 	        	case '8': node = new JoinNode(GID,TID,ID,ADDR,AbstractNode.TYPE.JOIN); break;
 	        	case '9': node = new BranchNode(GID,TID,ID,AbstractNode.TYPE.BRANCH); break;
 	        	case 'a': node = new BBNode(GID,TID,ID,AbstractNode.TYPE.BB); break;
+	        	case 'b': node = new PropertyNode(GID,TID,ID,ADDR,AbstractNode.TYPE.PROPERTY); break;
 
 	        	default:break;
 	        }
 	        
-	        trace.addNode(node);
+	        trace.addRawNode(node);
 	        
 //	        if(TID!=lastTID)
 //	        	NUM_CS++;
@@ -686,6 +785,32 @@ public class DBEngine {
 	         
 	        return schedule;	        
 	    }
+		}catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		return null;
+	}
+	public HashMap<String,Integer> getProperty()
+	{
+		try{
+		String sql_select = "SELECT * FROM "+propertytablename;
+		
+		Statement stmt = conn.createStatement();
+		ResultSet rs = stmt.executeQuery(sql_select);
+		HashMap<String,Integer> map = new HashMap<String,Integer>();
+
+		while (rs.next()) 
+	    {
+
+	        String name = rs.getString(1);
+	        Integer id = rs.getInt(2);
+
+	         map.put(name, id);
+	         
+	    }
+        return map;	        
+
 		}catch(Exception e)
 		{
 			e.printStackTrace();

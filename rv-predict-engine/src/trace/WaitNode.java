@@ -43,4 +43,8 @@ public class WaitNode extends AbstractNode  implements ISyncNode {
 		this.sig_addr = addr;
 	}
 	
+	public String toString()
+	{
+		return GID+": thread "+tid+" "+ID+" "+sig_addr+" "+type;
+	}
 }

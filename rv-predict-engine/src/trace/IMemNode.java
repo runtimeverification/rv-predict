@@ -42,5 +42,10 @@ public interface IMemNode {
 	public long getTid();
 	public TYPE getType();
 	public int getID();
+	
+	public long getPrevSyncId();
+	public void setPrevSyncId(long id);
+	public long getPrevBranchId();
+	public void setPrevBranchId(long id);
 
 }

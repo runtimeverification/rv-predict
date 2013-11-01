@@ -1,3 +1,31 @@
+/*******************************************************************************
+ * Copyright (c) 2013 University of Illinois
+ * 
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ * 
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ ******************************************************************************/
 package z3;
 
 import trace.AbstractNode;
@@ -13,14 +41,11 @@ import trace.Trace;
 import trace.UnlockNode;
 import trace.WaitNode;
 import trace.WriteNode;
-
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
 import java.io.BufferedReader;
-
 import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -71,6 +96,9 @@ public class YicesEngineSMTLIB1 extends Z3Engine
 	}
 	public void addIntraThreadConstraints(HashMap<Long,Vector<AbstractNode>> map)
 	{
+		//create reachability engine
+		reachEngine = new ReachabilityEngine();
+		
 		Iterator<Vector<AbstractNode>> mapIt = map.values().iterator();
 		while(mapIt.hasNext())
 		{
@@ -358,10 +386,6 @@ public class YicesEngineSMTLIB1 extends Z3Engine
 					}
 				}						
 			}
-			if(flexLockPairs.size()>0)
-			{
-				String cons_b = "";
-				String cons_b_end = "";
 
 			for(int j=0;j<flexLockPairs.size();j++)
 			{
@@ -378,209 +402,23 @@ public class YicesEngineSMTLIB1 extends Z3Engine
 				if(lp2.lock!=null)
 					var_lp2_a = makeVariable(lp2.lock.getGID());
 				
-				
+				String cons_b;
+
 				//lp1_b==null, lp2_a=null
 				if(lp1.unlock==null||lp2.lock==null)
 				{
-					cons_b= "(> "+var_lp1_a+" "+var_lp2_b+")\n"+cons_b;
+					cons_b= "(> "+var_lp1_a+" "+var_lp2_b+")\n";
+					//the trace may not be well-formed due to segmentation
+					if(lp1.lock.getGID()<lp2.unlock.getGID())cons_b = "";
 
 				}
 				else
 				{
-					cons_b= "(or (> "+var_lp1_a+" "+var_lp2_b+") (> "+var_lp2_a+" "+var_lp1_b+"))\n"+cons_b;
+					cons_b= "(or (> "+var_lp1_a+" "+var_lp2_b+") (> "+var_lp2_a+" "+var_lp1_b+"))\n";
 				}
 				
-				/*String cons_b_ = "";				
-				
-
-				if(lp1_pre!=null)
-				{
-					
-					cons_b_ = "(and (and (> "+var_lp1_a+" "+var_lp2_b+") (> "+var_lp2_a+" "+var_lp1_pre_b+"))\n";
-				}
-				else
-				{
-					cons_b_ = "(and (> "+var_lp1_a+" "+var_lp2_b+")\n";	//must hold here
-				}*/
-				
-				if(j<flexLockPairs.size())
-				{	
-					cons_b= "(and "+cons_b;
-					cons_b_end +=")";
-				}
-				/*
-				String cons_c = "";	
-				String cons_c_end = "true";
-				
-				//this can be commented out??
-				for(int k=0;k<flexLockPairs.size();k++)
-				{
-					if(k!=j)
-					{
-						LockPair lp3 = flexLockPairs.get(k);
-						Long lp3_tid = null;
-						if(lp3.lock==null)
-						{
-							lp3_tid = lp3.unlock.getTid();
-						}
-						else
-						{
-							lp3_tid = lp3.lock.getTid();
-						}
-						
-						if(lp3_tid!=lp1_tid)
-						{
-						
-						String var_lp3_a="";
-						String var_lp3_b="";
-						
-						if(lp3.lock!=null)
-						{
-							if(canReach((AbstractNode)lp3.lock,(AbstractNode)lp2.unlock))
-								continue;
-							
-							var_lp3_a = makeVariable(lp3.lock.getGID());
-							
-						}
-						if(lp3.unlock!=null)
-						{
-							
-							if(canReach((AbstractNode)lp3.unlock,(AbstractNode)lp2.unlock))
-								continue;
-							
-							var_lp3_b = makeVariable(lp3.unlock.getGID());
-							
-						}
-						
-						
-						String cons_d = "(and ";
-						//it's possible multiple lockpairs with unlock nodes null
-						if(lp3.unlock==null)//then the lock node must be the last one
-						{
-								if(lp1.unlock!=null)
-									cons_d +="(> "+var_lp3_a+" "+var_lp1_b+")\n";
-								else
-									cons_d +="(> "+var_lp3_a+" "+var_lp1_a+")\n";
-
-						}
-						else if(lp3.lock==null||lp1.unlock==null)//then the unlock node must be the first one
-						{
-							if(lp2.lock!=null)
-								cons_d +="(> " +var_lp2_a+" "+var_lp3_b+")\n";
-							else 
-								cons_d +="true\n";//looks impossible to be here
-						}
-						else
-						{
-							if(lp2.lock!=null)
-								cons_d += "(or (> "+var_lp3_a+" "+var_lp1_b+")" +
-										" (> " +var_lp2_a+" "+var_lp3_b+"))\n";
-							else
-								cons_d +="(> "+var_lp3_a+" "+var_lp1_b+")\n";
-								
-						}
-						
-						cons_c= cons_d + cons_c;
-						cons_c_end +=")";
-						}
-					}
-					
-				}
-				
-				cons_c+=cons_c_end;
-				
-				cons_b_ = cons_b_ + cons_c + ")\n";
-
-				cons_b += "(or "+cons_b_;*/
-				
-			}
 			
-			cons_b +=cons_b_end;
-				
-			/*
-			String cons_a = "";//first lock
-			String cons_a_end = "true";
-			
-				//consider the first lock node and the pre-node cases 
-				if(lp1.unlock!=null)
-				if(lp1_pre==null||lp1_pre.lock==null)
-				{//lp1 is the first node -> all other nodes are after lp1
-					
-					for(int k=0;k<flexLockPairs.size();k++)
-					{
-						LockPair lp = flexLockPairs.get(k);
-						
-						if(lp.lock!=null)
-						{
-							String var_lp_a = makeVariable(lp.lock.getGID());
-							//it's possible that both lp and lp1 unlock are null, due to the trace incompleteness
-							if(lp1.unlock!=null)
-								cons_a= "(and (> "+var_lp_a+" "+var_lp1_b+")\n" + cons_a;
-							//else
-								//cons_a= "(and (> "+var_lp_a+" "+var_lp1_a+")\n" + cons_a;
-
-							cons_a_end +=")";
-						}
-					}
-				}
-				else if(lp1.unlock==null)
-				{
-					//all other nodes are before pre_node
-					String var_lp1_pre_a = makeVariable(lp1_pre.lock.getGID());
-					
-					for(int k=0;k<flexLockPairs.size();k++)
-					{
-						LockPair lp = flexLockPairs.get(k);
-						
-						if(lp.unlock!=null)
-						{
-								String var_lp_b = makeVariable(lp.unlock.getGID());
-								cons_a= "(and (> "+var_lp1_pre_a+" "+var_lp_b+")\n" + cons_a;
-								cons_a_end +=")";
-						}
-
-					}
-				}
-				else
-				{
-					String var_lp1_pre_a = makeVariable(lp1_pre.lock.getGID());
-					
-					for(int k=0;k<flexLockPairs.size();k++)
-					{
-						LockPair lp = flexLockPairs.get(k);
-						
-						if(lp.lock==null)
-						{
-							String var_lp_b = makeVariable(lp.unlock.getGID());
-							cons_a= "(and (> "+var_lp1_pre_a+" "+var_lp_b+")\n" + cons_a;
-							cons_a_end +=")";
-
-						}
-						else if(lp.unlock==null)
-						{
-							String var_lp_a = makeVariable(lp.lock.getGID());
-							cons_a= "(and (> "+var_lp_a+" "+var_lp1_b+")\n" + cons_a;
-							cons_a_end +=")";
-						}
-						else
-						{
-							String var_lp_a = makeVariable(lp.lock.getGID());
-							String var_lp_b = makeVariable(lp.unlock.getGID());
-
-							cons_a= "(and (or (> "+var_lp_a+" "+var_lp1_b+") (> "+var_lp1_pre_a+" "+var_lp_b+"))\n" + cons_a;
-							cons_a_end +=")";
-						}
-
-					}
-				}
-				
-				if(cons_a.length()>0)//should hold here, otherwise trace is incomplete
-				{
-					cons_a+=cons_a_end+"\n";
-					CONS_LOCK+="(assert \n(or \n"+cons_a+" "+cons_b+"))\n\n";
-				}*/
-			
-			CONS_LOCK+=cons_b+"\n";
+				CONS_LOCK+=cons_b;
 
 			}
 				lastLockPairMap.put(lp1.lock.getTid(), lp1);
@@ -598,7 +436,7 @@ public class YicesEngineSMTLIB1 extends Z3Engine
 	}
 	
 	//TODO: NEED to handle the feasibility of new added write nodes
-	public StringBuilder constructCausalReadWriteConstraintsOptimized(
+	public StringBuilder constructCausalReadWriteConstraintsOptimized(long rgid,
 			Vector<ReadNode> readNodes,
 			HashMap<String, Vector<WriteNode>> indexedWriteNodes, HashMap<String,String> initValueMap )
 	{
@@ -608,6 +446,8 @@ public class YicesEngineSMTLIB1 extends Z3Engine
 		{
 				
 			ReadNode rnode = readNodes.get(i);
+			//filter out itself -- 
+			if(rgid==rnode.getGID())continue;
 			
 			//get all write nodes on the address
 			Vector<WriteNode> writenodes = indexedWriteNodes.get(rnode.getAddr());
@@ -623,7 +463,7 @@ public class YicesEngineSMTLIB1 extends Z3Engine
 			for(int j=0;j<writenodes.size();j++)
 			{
 				WriteNode wnode = writenodes.get(j);
-				if(wnode.getValue()==rnode.getValue()&&!canReach(rnode,wnode))
+				if(wnode.getValue().equals(rnode.getValue())&&!canReach(rnode,wnode))
 				{
 					if(wnode.getTid()!=rnode.getTid())
 						writenodes_value_match.add(wnode);
@@ -670,7 +510,7 @@ public class YicesEngineSMTLIB1 extends Z3Engine
 					for(int k=0;k<writenodes.size();k++)
 					{
 						WriteNode wnode2 = writenodes.get(k);
-						if(wnode2.getGID()!=wnode1.getGID())
+						if(!writenodes_value_match.contains(wnode2)&&!canReach(wnode2,wnode1)&&!canReach(rnode,wnode2))
 						{
 							String var_w2 = makeVariable(wnode2.getGID());
 							
@@ -745,6 +585,32 @@ public class YicesEngineSMTLIB1 extends Z3Engine
 				{
 					CONS_CAUSAL_RW.append(cons_b+"\n");
 				}
+			}
+			else
+			{
+				//make sure it reads the initial write
+				String rValue = rnode.getValue();
+				String initValue = initValueMap.get(rnode.getAddr());
+				
+				if(initValue!=null&&rValue.equals(initValue))
+				{
+					String var_r = makeVariable(rnode.getGID());
+					
+					for(int k=0;k<writenodes.size();k++)
+					{
+						WriteNode wnode3 = writenodes.get(k);
+							if(wnode3.getTid()!=rnode.getTid()&&!canReach(rnode,wnode3))
+							{
+							String var_w3 = makeVariable(wnode3.getGID());
+
+								String cons_e= "(> "+var_w3+" "+var_r+")\n";
+								CONS_CAUSAL_RW.append(cons_e);
+							}
+
+					}	
+					
+				}
+				
 			}
 				
 		}

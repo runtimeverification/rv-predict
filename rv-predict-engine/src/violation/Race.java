@@ -44,9 +44,9 @@ public class Race implements IViolation{
 	
 	
 	//a pair of conflicting nodes
-	final private String node1;
-	final private String node2;
-	private int hashcode;
+	final protected String node1;
+	final protected String node2;
+	protected int hashcode;
 	
 	//the corresponding schedule
 	ArrayList<Vector<String>> schedules =  new ArrayList<Vector<String>>();

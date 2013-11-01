@@ -35,27 +35,27 @@ import trace.JoinNode;
 import trace.LockNode;
 import trace.LockPair;
 import trace.NotifyNode;
+import trace.PropertyNode;
 import trace.ReadNode;
 import trace.StartNode;
 import trace.Trace;
 import trace.UnlockNode;
 import trace.WaitNode;
 import trace.WriteNode;
-
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
 import java.io.BufferedReader;
-
 import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Stack;
 import java.util.Vector;
 import java.util.Map.Entry;
 
+import property.EREProperty;
 import config.Configuration;
 
 /**
@@ -71,7 +71,7 @@ public class Z3Engine
 	
 	protected Configuration config;
 	
-	protected ReachabilityEngine reachEngine = new ReachabilityEngine();//TODO: do segmentation on this
+	protected ReachabilityEngine reachEngine;//TODO: do segmentation on this
 	protected LockSetEngine lockEngine;
 
 	//constraints below
@@ -127,6 +127,9 @@ public class Z3Engine
 	 */
 	public void addIntraThreadConstraints(HashMap<Long,Vector<AbstractNode>> map)
 	{
+		//create reachability engine
+		reachEngine = new ReachabilityEngine();
+
 		Iterator<Vector<AbstractNode>> mapIt = map.values().iterator();
 		while(mapIt.hasNext())
 		{
@@ -443,8 +446,6 @@ public class Z3Engine
 			}
 			if(flexLockPairs.size()>0)
 			{
-				String cons_b = "";
-				String cons_b_end = "";
 
 				//for each lock pair lp2 in flexLockPairs
 				//it is either before lp1 or after lp1
@@ -464,29 +465,27 @@ public class Z3Engine
 						var_lp2_a = makeVariable(lp2.lock.getGID());
 					
 					
+					String cons_b;
+
 					//lp1_b==null, lp2_a=null
 					if(lp1.unlock==null||lp2.lock==null)
 					{
-						cons_b= "(> "+var_lp1_a+" "+var_lp2_b+")\n"+cons_b;
-	
+						cons_b= "(> "+var_lp1_a+" "+var_lp2_b+")";
+						//the trace may not be well-formed due to segmentation
+						if(lp1.lock.getGID()<lp2.unlock.getGID())cons_b = "";
 					}
 					else
 					{
-						cons_b= "(or (> "+var_lp1_a+" "+var_lp2_b+") (> "+var_lp2_a+" "+var_lp1_b+"))\n"+cons_b;
+						cons_b= "(or (> "+var_lp1_a+" "+var_lp2_b+") (> "+var_lp2_a+" "+var_lp1_b+"))";
 					}
+					if(!cons_b.isEmpty())
+					CONS_LOCK+="(assert "+cons_b+")\n";
 					
-					
-					if(j<flexLockPairs.size())
-					{	
-						cons_b= "(and "+cons_b;
-						cons_b_end +=")";
-					}
 					
 				}
 			
-				cons_b +=cons_b_end;
 			
-				CONS_LOCK+="(assert \n"+cons_b+")\n";
+				
 
 			}
 				lastLockPairMap.put(lp1.lock.getTid(), lp1);
@@ -506,7 +505,7 @@ public class Z3Engine
 	 * @return
 	 */
 	//TODO: NEED to handle the feasibility of new added write nodes
-	public StringBuilder constructCausalReadWriteConstraintsOptimized(
+	public StringBuilder constructCausalReadWriteConstraintsOptimized(long rgid,
 			Vector<ReadNode> readNodes,
 			HashMap<String, Vector<WriteNode>> indexedWriteNodes, HashMap<String,String> initValueMap )
 	{
@@ -517,6 +516,9 @@ public class Z3Engine
 		for(int i=0;i<readNodes.size();i++)
 		{
 			ReadNode rnode = readNodes.get(i);
+			
+			//filter out itself -- 
+			if(rgid==rnode.getGID())continue;
 			
 			//get all write nodes on the address
 			Vector<WriteNode> writenodes = indexedWriteNodes.get(rnode.getAddr());
@@ -532,7 +534,7 @@ public class Z3Engine
 			for(int j=0;j<writenodes.size();j++)
 			{
 				WriteNode wnode = writenodes.get(j);
-				if(wnode.getValue()==rnode.getValue()&&!canReach(rnode,wnode))
+				if(wnode.getValue().equals(rnode.getValue())&&!canReach(rnode,wnode))
 				{
 					if(wnode.getTid()!=rnode.getTid())
 						writenodes_value_match.add(wnode);
@@ -576,7 +578,7 @@ public class Z3Engine
 					for(int k=0;k<writenodes.size();k++)
 					{
 						WriteNode wnode2 = writenodes.get(k);
-						if(wnode2.getGID()!=wnode1.getGID())
+						if(!writenodes_value_match.contains(wnode2)&&!canReach(wnode2,wnode1)&&!canReach(rnode,wnode2))
 						{
 							String var_w2 = makeVariable(wnode2.getGID());
 							
@@ -620,7 +622,7 @@ public class Z3Engine
 				
 				cons_b +=cons_b_end;
 				
-
+			
 					String rValue = rnode.getValue();
 					String initValue = initValueMap.get(rnode.getAddr());
 						
@@ -651,8 +653,33 @@ public class Z3Engine
 				{
 					CONS_CAUSAL_RW.append("(assert \n"+cons_b+")\n\n");
 				}
+			
 			}
+			else
+			{
+				//make sure it reads the initial write
+				String rValue = rnode.getValue();
+				String initValue = initValueMap.get(rnode.getAddr());
 				
+				if(initValue!=null&&rValue.equals(initValue))
+				{
+					String var_r = makeVariable(rnode.getGID());
+					
+					for(int k=0;k<writenodes.size();k++)
+					{
+						WriteNode wnode3 = writenodes.get(k);
+						if(wnode3.getTid()!=rnode.getTid()&&!canReach(rnode,wnode3))
+						{
+							String var_w3 = makeVariable(wnode3.getGID());
+
+								String cons_e= "(> "+var_w3+" "+var_r+")";
+								CONS_CAUSAL_RW.append("(assert \n"+cons_e+")\n");
+						}
+					}	
+					
+				}
+				
+			}
 		}
 		
 		return CONS_CAUSAL_RW;
@@ -703,6 +730,26 @@ public class Z3Engine
 		
 		return reachEngine.canReach(gid1, gid2);	
 		
+	}
+	
+	
+	/**
+	 * return true if the solver return a solution to the constraints
+	 * 
+	 * @param node1
+	 * @param node2
+	 * @param casualConstraint
+	 * @return
+	 */
+	public boolean isPropertySatisfied(StringBuilder propertyConstraint)
+	{
+		
+		id++;
+		task = new Z3Run(config,id);
+		StringBuilder msg = new StringBuilder(CONS_SETLOGIC).append(CONS_DECLARE).append(CONS_ASSERT).append(propertyConstraint).append(CONS_GETMODEL);	
+		task.sendMessage(msg.toString());
+		
+		return task.sat;
 	}
 	
 	/**
@@ -870,6 +917,136 @@ public class Z3Engine
 		}
 		
 		return schedule;
+	}
+	public String constructPropertyConstraint(ArrayList<PropertyNode> pi, boolean isParallel)
+	{
+		String CONS = "";
+		String CONS_END = "";
+		String CMP ="< ";
+		if(isParallel)CMP="= ";
+		
+        String	lastVar	= makeVariable(pi.get(0).getGID());
+		for(int i=1;i<pi.size();i++)
+		{
+			PropertyNode node = pi.get(i);
+			String var = makeVariable(node.getGID());
+			if(i+1<pi.size())
+			{
+				CONS+="(and ("+CMP+lastVar+" "+var+")\n";
+				CONS_END+=")";
+			}
+			else
+			{
+				CONS+="("+CMP+lastVar+" "+var+")";	
+			}
+			lastVar = var;
+		}
+		
+		return CONS+CONS_END+"\n";
+	}
+	/**
+	 * Construct the property constraints. 
+	 * The constraints for different monitors are disjuncted.
+	 * @param properties
+	 * @param trace
+	 * @return
+	 */
+	public HashSet<ArrayList<PropertyNode>> constructPropertyInstances(EREProperty property,
+			HashMap<Integer,Vector<PropertyNode>> indexedPropertyNodeMap) {
+		
+		
+		int SIZE = property.getPropertySize();
+
+		ArrayList<Integer> properties = property.getPropertyList();
+
+		HashSet<ArrayList<PropertyNode>> nodelist_ =null;
+				
+				for(int k=0;k<SIZE;k++)
+				{
+					Integer o = properties.get(k);
+					HashSet<ArrayList<PropertyNode>> nodelist_now = new HashSet<ArrayList<PropertyNode>>();
+
+					if(property.isPaired(k))
+					{
+						Integer index = property.getPairedID(k);
+						
+						Iterator<ArrayList<PropertyNode>> prevIt = nodelist_.iterator();
+						while(prevIt.hasNext())
+						{
+							ArrayList<PropertyNode> list = prevIt.next();
+							PropertyNode node = property.getPairedNode(list.get(index));
+							if(node!=null)
+							{
+							
+							ArrayList<PropertyNode> newlist = new ArrayList<PropertyNode>(list);
+							newlist.add(node);
+							nodelist_now.add(newlist);
+							}
+						}
+						
+					}
+					else
+					{
+						
+						Vector<PropertyNode> pnodes = indexedPropertyNodeMap.get(o);
+
+						for(int i=0;i<pnodes.size();i++)
+						{
+							PropertyNode node = pnodes.get(i);
+							if(nodelist_ ==null)
+							{
+								ArrayList<PropertyNode> list = new ArrayList<PropertyNode>();
+								list.add(node);
+								
+								nodelist_now.add(list);
+							}
+							else
+							{
+								Iterator<ArrayList<PropertyNode>> prevIt = nodelist_.iterator();
+								while(prevIt.hasNext())
+								{
+									ArrayList<PropertyNode> list = prevIt.next();
+									if(!list.contains(node)&&(!property.hasThreadBinding(k)
+											||property.hasCorrectThreadBinding(k,node.getTid(),list)))
+									{
+											ArrayList<PropertyNode> newlist = new ArrayList<PropertyNode>(list);
+											newlist.add(node);
+											nodelist_now.add(newlist);
+									}
+								}
+							}
+						}
+											
+
+					}
+					nodelist_ = nodelist_now;
+					
+				}
+				
+			return nodelist_;
+				
+	}
+	
+	private EREProperty property;
+	public EREProperty getProperty()
+	{
+		return property;
+	}
+	public EREProperty initProperty(HashMap<String, Integer> map, Trace trace) {
+		String name = "";
+		Iterator<String> nameIt = map.keySet().iterator();
+		while(nameIt.hasNext())
+		{
+			name = nameIt.next();
+			Integer ID = map.get(name);
+			if(ID==-1)
+			{
+				property = new EREProperty(name,map,trace);
+				break;
+			}
+		}
+		
+		return property;
 	}
 
 }

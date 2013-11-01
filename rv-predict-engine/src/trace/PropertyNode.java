@@ -28,23 +28,22 @@
  ******************************************************************************/
 package trace;
 
-public class NotifyNode extends AbstractNode  implements ISyncNode{
+public class PropertyNode extends AbstractNode  
+{
+	private String object_addr;
 	
-	private String sig_addr;
-	
-	public String getAddr()
-	{
-		return sig_addr;
-	}
-	
-	public NotifyNode(long GID, long tid, int ID, String addr , TYPE type)
+	public PropertyNode(long GID, long tid, int ID, String addr, TYPE type)
 	{
 		super(GID, tid, ID,type);
-		this.sig_addr = addr;
-}
+		this.object_addr = addr;
+	}
+
+	public String getAddr()
+	{
+		return object_addr;
+	}
 	public String toString()
 	{
-		return GID+": thread "+tid+" "+ID+" "+sig_addr+" "+type;
+		return GID+": thread "+tid+" "+ID+" "+object_addr+" "+type;
 	}
-	
 }

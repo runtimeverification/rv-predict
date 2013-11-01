@@ -26,25 +26,49 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package violation;
 
-public class NotifyNode extends AbstractNode  implements ISyncNode{
+import java.util.ArrayList;
+import java.util.Vector;
+
+/**
+ * Property violation
+ * 
+ * @author jeffhuang
+ *
+ */
+public class PropertyViolation implements IViolation{
+
+	String meta;
 	
-	private String sig_addr;
+	//the corresponding schedule
+	ArrayList<Vector<String>> schedules;
 	
-	public String getAddr()
+	public void addSchedule(Vector<String> schedule)
 	{
-		return sig_addr;
+		schedules.add(schedule);
+	}
+
+	public ArrayList<Vector<String>> getSchedules()
+	{
+		return schedules;
+	}
+//	public Race (String node1,String node2)
+//	{
+//		this.node1 = node1;
+//		this.node2 = node2;
+//	}
+	public PropertyViolation (String str)
+	{
+		this.meta = str;
 	}
 	
-	public NotifyNode(long GID, long tid, int ID, String addr , TYPE type)
-	{
-		super(GID, tid, ID,type);
-		this.sig_addr = addr;
-}
+	
+	@Override
 	public String toString()
 	{
-		return GID+": thread "+tid+" "+ID+" "+sig_addr+" "+type;
+		return meta;
 	}
 	
+
 }

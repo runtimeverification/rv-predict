@@ -26,25 +26,31 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package violation;
 
-public class NotifyNode extends AbstractNode  implements ISyncNode{
-	
-	private String sig_addr;
-	
-	public String getAddr()
+import java.util.ArrayList;
+import java.util.Vector;
+
+/**
+ * Data race violation - exact match
+ * 
+ * @author jeffhuang
+ *
+ */
+public class ExactRace extends Race{
+
+//	public Race (String node1,String node2)
+//	{
+//		this.node1 = node1;
+//		this.node2 = node2;
+//	}
+	public ExactRace (String node1,String node2, int gid1, int gid2)
 	{
-		return sig_addr;
+		super(node1,node2,gid1,gid2);
 	}
-	
-	public NotifyNode(long GID, long tid, int ID, String addr , TYPE type)
+	public ExactRace (Race race, int gid1, int gid2)
 	{
-		super(GID, tid, ID,type);
-		this.sig_addr = addr;
-}
-	public String toString()
-	{
-		return GID+": thread "+tid+" "+ID+" "+sig_addr+" "+type;
+		super(race.node1,race.node2,gid1,gid2);
 	}
-	
+
 }

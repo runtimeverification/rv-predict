@@ -31,6 +31,7 @@ package trace;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Stack;
@@ -46,9 +47,22 @@ import java.util.Vector;
  */
 public class Trace {
 
-	//fulltrace represents all the events in the global order
-	Vector<AbstractNode> fulltrace = new Vector<AbstractNode>();
+	//rawfulltrace represents all the raw events in the global order
+	Vector<AbstractNode> rawfulltrace = new Vector<AbstractNode>();
 	
+	//indexed by address, the set of read/write threads
+	//used to prune away local data accesses
+	HashMap<String,HashSet<Long>> indexedReadThreads = new HashMap<String,HashSet<Long>>();
+	HashMap<String,HashSet<Long>> indexedWriteThreads = new HashMap<String,HashSet<Long>>();
+
+	//the set of shared memory locations
+	HashSet<String> sharedAddresses = new HashSet<String>();
+	//the set of threads
+	HashSet<Long> threads = new HashSet<Long>();
+
+	//fulltrace represents all the critical events in the global order
+	Vector<AbstractNode> fulltrace = new Vector<AbstractNode>();
+
 	//keep a node GID to tid Map, used for generating schedules
 	HashMap<Long, Long> nodeGIDTidMap = new HashMap<Long, Long>();
 	
@@ -77,15 +91,32 @@ public class Trace {
 	//per address map from thread id to read/write nodes
 	HashMap<String,HashMap<Long,Vector<IMemNode>>> indexedThreadReadWriteNodes = new HashMap<String,HashMap<Long,Vector<IMemNode>>>();
 
+	//per type per address property node map
+	HashMap<String,HashMap<Integer,Vector<PropertyNode>>> propertyMonitors =  new HashMap<String,HashMap<Integer,Vector<PropertyNode>>>();
+	HashMap<Long,Vector<PropertyNode>> threadPropertyNodes =  new HashMap<Long,Vector<PropertyNode>>();
+
 	//per address initial write value
 	HashMap<String,String> initialWriteValueMap = new HashMap<String,String>();
 	
+	
+	TraceInfo info;
+	
+	public Trace(TraceInfo info)
+	{
+		this.info = info;
+	}
+	
 	Vector<ReadNode> allReadNodes;
 
-	//metadata
-	HashMap<Long, String> threadIdNamemap;
-	HashMap<Integer, String> sharedVarIdSigMap;
-	HashMap<Integer, String> stmtIdSigMap;
+
+	/**
+	 * return true if sharedAddresses is not empty 
+	 * @return
+	 */
+	public boolean mayRace()
+	{
+		return !sharedAddresses.isEmpty();
+	}
 	
 	public Vector<AbstractNode> getFullTrace()
 	{
@@ -102,32 +133,27 @@ public class Trace {
 	public HashMap<Long, Long> getNodeGIDTIdMap() {
 		return nodeGIDTidMap;
 	}
-	public void setSharedVarIdSigMap(HashMap<Integer, String> map) {
-		
-		sharedVarIdSigMap = map;
-	}
-	public void setStmtIdSigMap(HashMap<Integer, String> map) {
-		
-		stmtIdSigMap = map;
-	}
-	public void setThreadIdNameMap(HashMap<Long, String> map)
-	{
-		threadIdNamemap = map;
-	}
 	public HashMap<Integer, String> getSharedVarIdMap() {
 		
-		return sharedVarIdSigMap;
+		return info.getSharedVarIdMap();
 	}
 	public HashMap<Integer, String> getStmtSigIdMap() {
 		
-		return stmtIdSigMap;
+		return info.getStmtSigIdMap();
 	}
 	public HashMap<Long, String> getThreadIdNameMap()
 	{
-		return threadIdNamemap;
+		return info.getThreadIdNameMap();
 	}
 
-	
+	public HashMap<String,HashMap<Integer,Vector<PropertyNode>>> getPropertyMonitors()
+	{
+		return propertyMonitors;
+	}
+	public HashMap<Long,Vector<PropertyNode>> getThreadPropertyNodes()
+	{
+		return threadPropertyNodes;
+	}
 	public HashMap<Long, AbstractNode> getThreadFirstNodeMap()
 	{
 		return threadFirstNodeMap;
@@ -232,9 +258,44 @@ public class Trace {
 	 * 
 	 * @param node
 	 */
-	public void addNode(AbstractNode node)
+	public void addRawNode(AbstractNode node)
+	{
+		rawfulltrace.add(node);
+		if(node instanceof IMemNode)
+		{
+			String addr = ((IMemNode) node).getAddr();
+			Long tid = node.getTid();
+			
+			if(node instanceof ReadNode)
+			{
+				HashSet<Long> set = indexedReadThreads.get(addr);
+				if(set==null)
+				{
+					set = new HashSet<Long>();
+					indexedReadThreads.put(addr, set);
+				}
+				set.add(tid);
+			}
+			else
+			{
+				HashSet<Long> set = indexedWriteThreads.get(addr);
+				if(set==null)
+				{
+					set = new HashSet<Long>();
+					indexedWriteThreads.put(addr, set);
+				}
+				set.add(tid);
+			}
+		}
+	}
+	/**
+	 * add a new filtered event to the trace in the order of its appearance
+	 * @param node
+	 */
+	private void addNode(AbstractNode node)
 	{
 		Long tid = node.getTid();
+		threads.add(tid);
 		
 		if(node instanceof BBNode)
 		{
@@ -251,6 +312,7 @@ public class Trace {
 		else if(node instanceof BranchNode)
 		{
 			//branch node
+			info.incrementBranchNumber();
 			
 			Vector<BranchNode> branchnodes = threadBranchNodes.get(tid);
 			if(branchnodes == null)
@@ -265,6 +327,7 @@ public class Trace {
 			//initial write node
 			
 			initialWriteValueMap.put(((InitNode) node).getAddr(),((InitNode) node).getValue());
+			info.incrementInitWriteNumber();
 		}
 		else
 		{
@@ -287,9 +350,52 @@ public class Trace {
 			
 			//TODO: Optimize it -- no need to update it every time
 			threadLastNodeMap.put(tid, node); 
-			if(node instanceof IMemNode)
+			if(node instanceof PropertyNode
+					//&&node.getTid()!=1
+					)
 			{
-				String addr = ((IMemNode)node).getAddr();
+				info.incrementPropertyNumber();
+				
+				PropertyNode pnode = (PropertyNode)node;
+				//System.out.println(node);
+				{
+					//add to per thread property nodes
+					Vector<PropertyNode> nodes = threadPropertyNodes.get(tid);
+					if(nodes==null)
+					{
+						nodes =  new Vector<PropertyNode>();
+						threadPropertyNodes.put(tid, nodes);
+					}
+					nodes.add(pnode);
+				}
+				
+				
+				int ID = pnode.getID();
+				String addr = pnode.getAddr();
+
+				HashMap<Integer,Vector<PropertyNode>> indexedPropertyNodeMap = propertyMonitors.get(addr);
+				if(indexedPropertyNodeMap==null)
+				{
+					indexedPropertyNodeMap = new HashMap<Integer,Vector<PropertyNode>>();	
+					propertyMonitors.put(addr, indexedPropertyNodeMap);
+				}
+				
+				Vector<PropertyNode> pnodes =  indexedPropertyNodeMap.get(ID);
+				if(pnodes == null)
+				{
+					pnodes = new Vector<PropertyNode>();
+					indexedPropertyNodeMap.put(ID, pnodes);
+				}
+				
+				pnodes.add(pnode);
+			}
+			else if(node instanceof IMemNode)
+			{
+				info.incrementSharedReadWriteNumber();
+				
+				IMemNode mnode = (IMemNode)node;
+				
+				String addr = mnode.getAddr();
 
 				HashMap<Long, Vector<IMemNode>> threadReadWriteNodes = indexedThreadReadWriteNodes.get(addr);
 				if(threadReadWriteNodes==null)
@@ -303,7 +409,13 @@ public class Trace {
 					rwnodes =  new Vector<IMemNode>();
 					threadReadWriteNodes.put(tid, rwnodes);
 				}
-				rwnodes.add((IMemNode)node);
+				rwnodes.add(mnode);
+				
+				//set previous branch node and sync node
+				Vector<BranchNode> branchnodes = threadBranchNodes.get(tid);
+				if(branchnodes != null)
+					mnode.setPrevBranchId(branchnodes.lastElement().getGID());
+				
 				
 				if(node instanceof ReadNode)
 				{
@@ -328,9 +440,10 @@ public class Trace {
 					writeNodes.add((WriteNode)node);
 				}
 			}
-			else
+			else if(node instanceof ISyncNode)
 			{
 				//synchronization nodes
+				info.incrementSyncNumber();
 				
 				String addr = ((ISyncNode)node).getAddr();
 				Vector<ISyncNode> syncNodes = syncNodesMap.get(addr);
@@ -386,12 +499,78 @@ public class Trace {
 			}
 		}
 	}
+	
 	/**
-	 * when trace is completely loaded, compute the lock/unlock pairs
-	 * because we analyze the trace window by window, lock/unlock may not be
-	 * in the same window, so we may have null lock or unlock node in the pair.
+	 * once trace is completely loaded, do two things:
+	 * 1. prune away local data accesses 
+	 * 2. process the remaining trace
 	 */
 	public void finishedLoading()
+	{
+		HashSet<String> addrs = new HashSet<String>();
+		addrs.addAll(indexedReadThreads.keySet());
+		addrs.addAll(indexedWriteThreads.keySet());
+		for(Iterator<String> addrIt = addrs.iterator();addrIt.hasNext();)
+		{
+			String addr = addrIt.next();
+			HashSet<Long> wtids = indexedWriteThreads.get(addr);
+			if(wtids!=null&&wtids.size()>0)
+			{
+				if(wtids.size()>1)
+				{
+					sharedAddresses.add(addr);
+					
+				}
+				else
+				{
+					HashSet<Long> rtids = indexedReadThreads.get(addr);
+					if(rtids!=null)
+					{
+						HashSet<Long> set = new HashSet(rtids);
+						set.addAll(wtids);
+						if(set.size()>1)
+							sharedAddresses.add(addr);
+					}
+				}
+			}
+		}
+		
+		
+		//add trace
+		for(int i=0;i<rawfulltrace.size();i++)
+		{
+			AbstractNode node = rawfulltrace.get(i);
+			if(node instanceof IMemNode)
+			{
+				String addr = ((IMemNode) node).getAddr();
+				if(sharedAddresses.contains(addr))
+					addNode(node);
+				else
+					info.incrementLocalReadWriteNumber();
+
+			}
+			else
+				addNode(node);			
+		}
+		
+		//process sync stack to handle windowing
+		checkSyncStack();
+		
+		
+		//clear rawfulltrace
+		rawfulltrace.clear();
+		
+		//add info 
+		info.addSharedAddresses(sharedAddresses);
+		info.addThreads(threads);
+		
+	}
+	/**
+	 * compute the lock/unlock pairs because we analyze the trace window by window, 
+	 * lock/unlock may not be in the same window, so we may have null lock or unlock 
+	 * node in the pair.
+	 */
+	private void checkSyncStack()
 	{
 		//check threadSyncStack - only to handle when segmented
 		Iterator<Entry<Long,Stack<ISyncNode>>> entryIt = threadSyncStack.entrySet().iterator();
@@ -425,6 +604,11 @@ public class Trace {
 				}
 			}
 		}
+	}
+
+	public boolean isAddressVolatile(String addr) {
+		
+		return info.isAddressVolatile(addr);
 	}
 
 }

@@ -49,17 +49,24 @@ import java.util.Iterator;
  *
  */
 public class ThreadSharingAnalyzer extends SceneTransformer {
-  public ThreadLocalObjectsAnalysis tlo;
+  private ThreadLocalObjectsAnalysis tlo;
   //public ThreadSharedAccessAnalysis tlo;
-  
+  boolean noSharingAnalysis;
   private HashSet<String> sharedVariableSignatures = new HashSet<String>();
   
  
   public static final String constructorName = "<init>";
   public static final String staticInitializerName = "<clinit>";
   
-  protected void internalTransform(String phase, Map options){
+  public ThreadSharingAnalyzer(boolean nosa) {
+	// TODO Auto-generated constructor stub
+	  super();
+	  noSharingAnalysis = nosa;
+}
 
+protected void internalTransform(String phase, Map options){
+
+	if(!noSharingAnalysis)
       tlo = new ThreadLocalObjectsAnalysis(new SynchObliviousMhpAnalysis());
       
       //tlo = new ThreadSharedAccessAnalysis( new MHPAnalysis());
@@ -101,7 +108,8 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
     	    {
     	    	  		//check if it is a write
     	    	  boolean write = (((DefinitionStmt)stmt).getLeftOp() instanceof FieldRef);
-    	    	  if(write&&!tlo.isObjectThreadLocal(stmt.getFieldRef(), body.getMethod()))
+    	    	  if(write&&(noSharingAnalysis
+    	    			  || !tlo.isObjectThreadLocal(stmt.getFieldRef(), body.getMethod())))
     	    	  {
     	    		  
     	    		  sharedVariableSignatures.add(stmt.getFieldRef().getField().getSignature());
@@ -126,5 +134,11 @@ public class ThreadSharingAnalyzer extends SceneTransformer {
    */
 public boolean isShared(String sig) {
 	return sharedVariableSignatures.contains(sig);
+}
+public boolean isShared(Value v, SootMethod sm)
+{
+	if(noSharingAnalysis) return true;
+	else 
+		return !tlo.isObjectThreadLocal(v,sm);
 }
 }

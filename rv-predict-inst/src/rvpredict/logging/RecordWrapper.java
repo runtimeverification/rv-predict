@@ -48,9 +48,9 @@ import soot.SootField;
 import soot.SootMethodRef;
 import soot.SootMethod;
 import soot.Type;
+import soot.Unit;
 import soot.Value;
 import soot.Local;
-
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.DefinitionStmt;
@@ -393,7 +393,23 @@ public final class RecordWrapper {
     
     //body.getUnits().insertAfter(newAssignStmt1,s);
     //body.getUnits().insertAfter(newAssignStmt2,newAssignStmt1);
-    body.getUnits().insertAfter(newAssignStmt2,s);
+        
+        Unit insertPoint = s;
+        Unit nextPoint =  body.getUnits().getSuccOf(s);
+        //starting from nextPoint, find the super call until the end
+        String superClassName = body.getMethod().getDeclaringClass().getSuperclass().getName();
+        while(nextPoint!=null)//super call
+        {
+        	if(nextPoint.toString().contains("specialinvoke r0.<"+superClassName+": void <init>"))
+        	{
+                insertPoint = nextPoint;
+                break;
+        	}
+        	
+        	nextPoint =  body.getUnits().getSuccOf(nextPoint);
+        }
+        
+    body.getUnits().insertAfter(newAssignStmt2,insertPoint);
     body.getUnits().insertAfter(newAssignStmt3,newAssignStmt2);
 
     InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logInitialWriteAccMethod,
@@ -479,7 +495,23 @@ public final class RecordWrapper {
 	    }
 
 	    body.getLocals().add(rv_local);
-	    body.getUnits().insertAfter(newAssignStmt,s);
+	    
+        Unit insertPoint = s;
+        Unit nextPoint =  body.getUnits().getSuccOf(insertPoint);
+        //starting from nextPoint, find the super call until the end
+        String superClassName = body.getMethod().getDeclaringClass().getSuperclass().getName();
+        while(nextPoint!=null)//super call
+        {
+        	if(nextPoint.toString().contains("specialinvoke r0.<"+superClassName+": void <init>"))
+        	{
+                insertPoint = nextPoint;
+                break;
+        	}
+        	
+        	nextPoint =  body.getUnits().getSuccOf(nextPoint);
+        }
+	    
+	    body.getUnits().insertAfter(newAssignStmt,insertPoint);
 	    
 	    InvokeExpr logExpr = Jimple.v().newStaticInvokeExpr(logInitialWriteAccMethod,
 	    		IntConstant.v(id),

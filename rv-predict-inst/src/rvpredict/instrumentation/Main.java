@@ -34,12 +34,13 @@ import soot.Scene;
 import soot.SootMethod;
 import soot.Transform;
 import soot.options.Options;
-
 import soot.*;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.io.BufferedReader;
 import java.io.File;
@@ -60,34 +61,9 @@ import soot.jimple.spark.SparkTransformer;
  * and tmp/replay respectively.
  */
 public class Main{
-	private static String DIR_RECORD = "record";
-	private static String DIR_REPLAY = "replay";
 
-	static boolean outputJimple = false;
-	static boolean noReplay = false;
-	
-    static LinkedList<String> excludeList = new LinkedList<String> ();
-    static LinkedList<String> includeList = new LinkedList<String> ();
+	private static Configuration config;
 
-    static
-    {
-    // the following packages are excluded in Soot by default
-    //	java., sun., javax., com.sun., com.ibm., org.xml., org.w3c., apple.awt., com.apple.
-    excludeList.add("rvpredict.");
-    excludeList.add("java.");
-    excludeList.add("javax.");
-    excludeList.add("sun.");
-    excludeList.add("sunw.");
-    excludeList.add("com.sun.");
-    excludeList.add("com.ibm.");
-    excludeList.add("com.apple.");
-    excludeList.add("apple.awt.");
-    excludeList.add("org.xml.");
-    excludeList.add("jdbm.");
-    
-    includeList.add("org.w3c.");//for jigsaw
-    includeList.add("avrora.");//for avrora
-    }
     /**
      * Skip instrumenting classes under the packages in excludeList
      * @param packageName
@@ -95,7 +71,7 @@ public class Main{
      */
     public static boolean skipPackage(String packageName)
     {
-    	for(String name : excludeList)
+    	for(String name : config.excludeList)
     	if(packageName.startsWith(name))
     		return true;
 
@@ -113,11 +89,9 @@ public class Main{
    * @param args
    */
   public static void main(String[] args) {
-    /* check the arguments */
-    if (args.length == 0) {
-      System.err.println("Usage: java Main [options] classname");
-      System.exit(1);
-    }
+
+    config = new Configuration(args);
+    
     try {
       System.out.println(
           "****************************************************");
@@ -131,10 +105,13 @@ public class Main{
       //Make sure the first parameter is the main class
       String mainclass = args[0];
       
+      //the second argument is 
+      //TODO: parse the arguments
+      
       //Record version
       Set<String> sharedVariables = transformRecordVersion(mainclass);
       
-      if(noReplay)return;
+      if(config.noReplay)return;
       
       soot.G.reset();
 
@@ -151,19 +128,19 @@ public class Main{
   private static Set<String> transformRecordVersion(String mainclass)
   {
       //output jimple
-	  if(outputJimple)Options.v().set_output_format(1);
+	  if(config.outputJimple)Options.v().set_output_format(1);
       //print tag
       //Options.v().set_print_tags_in_output(true);
 
 	  long time = System.currentTimeMillis();
 
-	  setOptions(DIR_RECORD);
+	  setOptions(config.DIR_RECORD);
       
       setClassPath();
       
       enableSpark();
       
-      ThreadSharingAnalyzer sharingAnalyzer = new ThreadSharingAnalyzer();
+      ThreadSharingAnalyzer sharingAnalyzer = new ThreadSharingAnalyzer(config.nosa);
       //ThreadSharingAnalyzer in the first phase to find shared variables
       PackManager.v().getPack("wjtp").add(new Transform("wjtp.ThreadSharing", sharingAnalyzer));
 
@@ -200,7 +177,7 @@ public class Main{
       System.out.println("*****************************" + stars + "\n"); 
 
       System.out.println("*****************************" + stars);
-      recordInst.reportStatistics();
+      //recordInst.reportStatistics();
       recordInst.saveMetaToDB(mainclass);
       System.out.println("*****************************" + stars + "\n"); 
 
@@ -214,11 +191,11 @@ public class Main{
   private static void transformReplayVersion(String mainclass, Set<String> sharedVariables)
   {
       //output jimple
-	  if(outputJimple)Options.v().set_output_format(1);
+	  if(config.outputJimple)Options.v().set_output_format(1);
       //print tag
       //Options.v().set_print_tags_in_output(true);
 
-      setOptions(DIR_REPLAY);
+      setOptions(config.DIR_REPLAY);
 
       setClassPath();
       
@@ -250,14 +227,25 @@ public class Main{
   }
   private static void setClassPath()
   {
-      Scene.v().setSootClassPath(System.getProperty("sun.boot.class.path")
-              + File.pathSeparator + System.getProperty("java.class.path"));
+	  String bootpath = System.getProperty("sun.boot.class.path");
+      String javapath = System.getProperty("java.class.path");
+	  String path = bootpath + File.pathSeparator +javapath;
+      Scene.v().setSootClassPath(path);
+      
+      //System.out.println(path);
+      //directories containing all the application classes 
+//      if(config.nosa)
+//      {
+//    	  List<String> items = Arrays.asList(javapath.split(File.pathSeparator));
+//    	 
+//    	  Options.v().set_process_dir(items);
+//      }
 
   }
   private static void setOptions(String dir)
   {
-	  Options.v().set_include(includeList);
-	  Options.v().set_exclude(excludeList);
+	  Options.v().set_include(config.includeList);
+	  Options.v().set_exclude(config.excludeList);
 	  
       Options.v().set_output_dir(getTempSubDirectory(dir));
       //-------------------

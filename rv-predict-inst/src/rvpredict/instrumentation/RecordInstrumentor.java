@@ -29,17 +29,15 @@
 package rvpredict.instrumentation;
 
 import static rvpredict.logging.RecordWrapper.*;
-
 import soot.*;
 import soot.jimple.*;
 import soot.jimple.internal.*;
 import soot.toolkits.graph.*;
 import soot.options.Options;
-
 import soot.tagkit.LineNumberTag;
 import soot.tagkit.Tag;
 import soot.toolkits.graph.CompleteBlockGraph;
-
+import soot.toolkits.scalar.ArraySparseSet;
 import soot.util.Chain;
 import soot.util.HashChain;
 
@@ -71,6 +69,7 @@ public class RecordInstrumentor extends SceneTransformer {
   private int totalAccess;
   private int sharedAccess;
   private HashMap<String,Integer> sharedvariableIdMap = new HashMap<String,Integer>();
+  private HashMap<String,Integer> volatilevariableIdMap = new HashMap<String,Integer>();
   private HashSet<String> sharedVariableAccessSignatures = new HashSet<String>();
   
   private static HashMap<String,Integer> stmtSigIdMap = new HashMap<String,Integer>();
@@ -113,6 +112,10 @@ public class RecordInstrumentor extends SceneTransformer {
           continue;
         }
         Body body = m.getActiveBody();
+        
+        UnitGraph g = new ExceptionalUnitGraph(body);
+        BranchConditionDataFlowAnalysis an = new BranchConditionDataFlowAnalysis(g);
+        
         Iterator<Unit> it = body.getUnits().snapshotIterator();
         while(it.hasNext()){
           Stmt stmt = (Stmt)it.next();
@@ -130,7 +133,7 @@ public class RecordInstrumentor extends SceneTransformer {
         	       || markFieldAccess(body,stmt) 
         	       || markArrayAccess(body, stmt)
         	       || markSynchronizedMethodCall(body,stmt)
-        	       || markBranch(body, stmt)
+        	       || markBranch(an,body, stmt)
         	        /*|| markReflectAccess(stmt) || markReflectConstructor(stmt) || markReflForName(stmt)*/
         	       /*|| markImpureCall(stmt)*/  /*|| markInvocation(stmt)*/;
 
@@ -212,6 +215,25 @@ public class RecordInstrumentor extends SceneTransformer {
 
     	  }
       }
+      
+	  //save volatilevariable - id to database
+	  db.createVolatileSignatureTable();
+      Iterator<Entry<String,Integer>> volatileIt = volatilevariableIdMap.entrySet().iterator();
+      while(volatileIt.hasNext())
+      {
+    	  Entry<String,Integer> entry = volatileIt.next();
+    	  String sig = entry.getKey();
+    	  Integer id = entry.getValue();
+    	  
+    	  db.saveVolatileSignatureToDB(sig, id);
+    	  
+    	  //TODO: include array and lock access signatures
+    	  if(sharingAnalyzer.isShared(sig))
+    	  {
+        	  System.out.println("* volatile: ["+id+"] "+sig+" *");
+
+    	  }
+      }
 	  
       //save stmt - id to database
 	  db.createStmtSignatureTable();
@@ -265,7 +287,7 @@ public class RecordInstrumentor extends SceneTransformer {
 			  
 			  //System.out.println("Static Sync: "+stmt);
 			  
-			  int sid = getSharedVariableId(expr.getMethod().getDeclaringClass().toString(),stmt);
+			  int sid = getSharedVariableId(expr.getMethod().getDeclaringClass().toString(),stmt,false);
 			  
 			  body.getUnits().insertBefore(logLock(id,sid), stmt);
 			  body.getUnits().insertAfter(logUnlock(id,sid), stmt);
@@ -281,17 +303,29 @@ public class RecordInstrumentor extends SceneTransformer {
    * @param stmt
    * @return
    */
-  private boolean markBranch(Body body, Stmt stmt) {
+  private boolean markBranch(BranchConditionDataFlowAnalysis an, Body body, Stmt stmt) {
 	    if (stmt.branches()) {
 	    	
 	    	if(stmt instanceof JIfStmt)
 	    	{
-	    		int id = getStaticId(body, stmt);
+	    		
+	    		ArraySparseSet o = (ArraySparseSet) an.getFlowBefore(stmt);
+	    		for(Iterator it = o.iterator();it.hasNext();)
+	    		{
+	    			FieldRef r = (FieldRef) it.next();
+	    			String sig = r.getField().getSignature();
+	    		      if(sharingAnalyzer.isShared(sig))
+	    		      {
+	    		    		int id = getStaticId(body, stmt);
 
-		      InvokeStmt is = logBranch(id,stmt);
-	
-		      body.getUnits().insertBefore(is,stmt);
-		      return true;
+	    				      InvokeStmt is = logBranch(id,stmt);
+	    			
+	    				      body.getUnits().insertBefore(is,stmt);
+	    				      return true;
+	    		      }
+	    		}
+	    		
+
 	    	}
 	    }
 	    return false;
@@ -307,12 +341,12 @@ public class RecordInstrumentor extends SceneTransformer {
 	    if (stmt.containsFieldRef()) {
 	      assert (stmt instanceof AssignStmt) : "Unknown FieldReffing Stmt";
 	      totalAccess++;
-	      
-	      String sig = stmt.getFieldRef().getField().getSignature();
+	      SootField sootfield = stmt.getFieldRef().getField();
+	      String sig = sootfield.getSignature();
 	      if(sharingAnalyzer.isShared(sig))
 	      {
 	    	  sharedAccess++;
-	    	  int sid = getSharedVariableId(sig,stmt);
+	    	  int sid = getSharedVariableId(sig,stmt,sootfield.isVolatile());	    	  
 	    	  int id = getStaticId(body, stmt);
 	    	  
 	    	  if(body.getMethod().getName().equals(constructorName)||
@@ -345,11 +379,11 @@ public class RecordInstrumentor extends SceneTransformer {
 
 	      totalAccess++;
 	    
-	      if(!sharingAnalyzer.tlo.isObjectThreadLocal(stmt.getArrayRef().getBase(), body.getMethod()))
+	      if(sharingAnalyzer.isShared(stmt.getArrayRef().getBase(), body.getMethod()))
 	      { 
 	    	  sharedAccess++;
 	    	  //we need the following, please don't comment!
-	    	  int sid = getSharedVariableId(body.getMethod().getSignature()+"|"+stmt.getArrayRef().getBase().toString(),stmt);
+	    	  int sid = getSharedVariableId(body.getMethod().getSignature()+"|"+stmt.getArrayRef().getBase().toString(),stmt,false);
 
 	    	  int id = getStaticId(body, stmt);
 	    	  
@@ -359,11 +393,24 @@ public class RecordInstrumentor extends SceneTransformer {
 	    	  {
 	    		  boolean write = (((DefinitionStmt)stmt).getLeftOp() instanceof ArrayRef);
 		    	  if(write)logInitialArrayWriteAcc(id,body,stmt);
+		    	  
 	    	  }
 	    	  else
-		      logArrayAcc(id,body,stmt);
-		      //body.getUnits().insertAfter(is,stmt);
+	    	  {
+		      //handle array index here
+		    	 //if the index variable is a non-constant
+		    	if(!(stmt.getArrayRef().getIndex() instanceof Constant))
+		    	{    
+			      InvokeStmt is = logBranch(id,stmt);
+			      body.getUnits().insertBefore(is,stmt);
+		    	} 
+		      
+		    	logArrayAcc(id,body,stmt);
+		    	//body.getUnits().insertAfter(is,stmt);
+		      
+	    	  }
 		      return true;
+
 	      }
 	      
 	    }
@@ -513,16 +560,24 @@ public class RecordInstrumentor extends SceneTransformer {
    * @param stmt
    * @return
    */
-  private int getSharedVariableId(String sig, Stmt stmt)
+  private int getSharedVariableId(String sig, Stmt stmt, boolean isVolatile)
   {
 	  sharedVariableAccessSignatures.add(sig+"|"+getLineNumber(stmt));
+	  
+	  
 	  
 	  if(sharedvariableIdMap.get(sig)==null)
 	  {
 		  sharedvariableIdMap.put(sig, sharedvariableIdMap.size()+1);
 	  }
+	  int sid = sharedvariableIdMap.get(sig);
 	  
-	  return sharedvariableIdMap.get(sig);
+	  if(isVolatile)
+	  {
+		  volatilevariableIdMap.put(sig, sid);
+	  }
+	  
+	  return sid;
 	  
   }
 }

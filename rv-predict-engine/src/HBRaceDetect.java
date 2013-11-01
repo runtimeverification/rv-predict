@@ -32,38 +32,43 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.Vector;
 import java.util.Map.Entry;
 
+import config.Configuration;
 import trace.AbstractNode;
 import trace.IMemNode;
 import trace.LockPair;
 import trace.ReadNode;
 import trace.Trace;
+import trace.TraceInfo;
 import trace.WriteNode;
 import trace.AbstractNode.TYPE;
 import violation.AtomicityViolation;
 import violation.Deadlock;
+import violation.ExactRace;
 import violation.IViolation;
 import violation.Race;
 import z3.Z3Engine;
 import db.DBEngine;
 
 /**
- * HBRaceDetect implements the classical happens-before based race detection.
+ * HBRaceDetect implements the happens-before methods for race detection.
  * 
  * @author jeffhuang
  *
  */
 public class HBRaceDetect {
 
-	private static int MAX_LENGTH = 1000;
+	private static Configuration config;
 	private static HashSet<IViolation> races= new HashSet<IViolation>();
 	private static PrintWriter out;
 	private static void initPrinter(String appname)
 	{
 		try{
-		String fname = "result."+(MAX_LENGTH/1000)+"k";
+		String fname = "result."+(config.window_size/1000)+"k";
 		out = new PrintWriter(new FileWriter(fname,true));
 		out.println("\n------------------ HB: "+appname+" -------------------\n");
 		}catch(Exception e)
@@ -75,19 +80,7 @@ public class HBRaceDetect {
 	{
 		if(out!=null)
 			out.close();
-	}
-	private static void report(String msg, boolean isRealRace)
-	{
-		out.println(msg);
-		
-		if(isRealRace)
-		{
-			System.err.println(msg);
-		}
-		else
-			System.out.println(msg);
-	}
-	
+	}	
 
 	private static Vector<String> trim(Vector<String> schedule)
 	{
@@ -102,6 +95,13 @@ public class HBRaceDetect {
 		else
 			return schedule;
 	}
+	/**
+	 * traverse all conflicting pairs. For each pair, query the CPEngine 
+	 * whether there are reachable or not. If yes, report a race.
+	 * 
+	 * @param engine
+	 * @param trace
+	 */
 	private static void detectRace(HBEngine engine, Trace trace)
 	{
 		Iterator<String> 
@@ -110,8 +110,13 @@ public class HBRaceDetect {
 		{
 			
 			String addr = addrIt.next();
-			
-			
+			if(config.novolatile)
+			{
+			//all field addr should contain ".", not true for array access
+			int dotPos = addr.indexOf(".");
+			//continue if volatile
+			if(dotPos>-1&&trace.isAddressVolatile(addr.substring(dotPos+1))) continue;
+			}
 			//get all read nodes on the address
 			Vector<ReadNode> readnodes = trace.getIndexedReadNodes().get(addr);
 			
@@ -135,13 +140,25 @@ public class HBRaceDetect {
 						Race race = new Race(trace.getStmtSigIdMap().get(rnode.getID()),
 								trace.getStmtSigIdMap().get(wnode.getID()),rnode.getID(),wnode.getID());
 						
-						if(!races.contains(race))
+						if(config.allrace||!races.contains(race))
 						{
-														
+											
+//							if(race.toString().equals("<org.w3c.util.SyncLRUList: void toHead(org.w3c.util.LRUAble)>|$r3 = $r2.<org.w3c.util.LRUNode: org.w3c.util.LRUAble next>|14 - <org.w3c.util.LRUNode: void setNext(org.w3c.util.LRUAble)>|r0.<org.w3c.util.LRUNode: org.w3c.util.LRUAble next> = r1|36"))
+//								System.out.print("");
+							
+
+							
 							if(engine.isRace(rnode, wnode))
 							{
-								report("Race: "+race,true);
-								races.add(race);
+								report("Race: "+race,MSGTYPE.REAL);
+								//report(rnode.getGID()+"--"+wnode.getGID(),false);
+								if(config.allrace)
+								{
+									ExactRace race2 = new ExactRace(race,(int)rnode.getGID(),(int)wnode.getGID());
+									races.add(race2); 
+
+								}
+								else races.add(race);
 							
 							}
 						
@@ -154,7 +171,7 @@ public class HBRaceDetect {
 				{
 					WriteNode wnode1 = writenodes.get(i);
 					
-					for(int j=1;j<writenodes.size();j++)
+					for(int j=0;j<writenodes.size();j++)
 					{
 						WriteNode wnode2 = writenodes.get(j);
 						if(wnode1.getTid()!=wnode2.getTid())
@@ -162,12 +179,18 @@ public class HBRaceDetect {
 							Race race = new Race(trace.getStmtSigIdMap().get(wnode1.getID()),
 									trace.getStmtSigIdMap().get(wnode2.getID()),wnode1.getID(),wnode2.getID());
 							
-							if(!races.contains(race))
+							if(config.allrace||!races.contains(race))
 							{
 								if(engine.isRace(wnode1, wnode2))
 								{
-									report("Race: "+race,true);
-									
+									report("Race: "+race,MSGTYPE.REAL);
+									if(config.allrace)
+									{
+										ExactRace race2 = new ExactRace(race,(int)wnode1.getGID(),(int)wnode2.getGID());
+										races.add(race2); 
+
+									}
+									else
 									races.add(race); 
 								}
 							}
@@ -183,52 +206,60 @@ public class HBRaceDetect {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
-		//emp.Example stringbuffer.StringBufferTest
-		if(args.length==0)
-		{
-			System.err.println("Usage: java HBRaceDetect classname [window-size]");
-			return;
-		}
-		
-		String appname = args[0];
-		if(args.length>1)
-			MAX_LENGTH = Integer.valueOf(args[1]);
-		
-		initPrinter(appname);
-		
+		config = new Configuration(args);
+				
 		try{
 			
-
-			
-			DBEngine db = new DBEngine(appname);
-
-			HashMap<Integer, String> sharedVarIdSigMap = db.getSharedVarSigIdMap();
-			HashMap<Integer, String> stmtIdSigMap = db.getStmtSigIdMap();
-			HashMap<Long,String> threadIdNameMap = db.getThreadIdNameMap();
-			
-
-			long TOTAL_TRACE_LENGTH = db.getTraceSize();
-			
-			int TOTAL_THREAD_NUMBER = db.getTraceThreadNumber();
-			int TOTAL_SHAREDVARIABLE_NUMBER = db.getTraceSharedVariableNumber();
-			int TOTAL_READWRITE_NUMBER = db.getTraceReadWriteNumber();
-			int TOTAL_SYNC_NUMBER = db.getTraceSyncNumber();
-
-
 			//start predict analysis
 			long start_time = System.currentTimeMillis();
+			//initialize printer
+			initPrinter(config.appname);
 			
-			for(int round =0;round*MAX_LENGTH<TOTAL_TRACE_LENGTH;round++)
+			//db engine is used for interacting with database
+			DBEngine db = new DBEngine(config.appname);
+
+			//load all the metadata in the application
+			HashMap<Integer, String> sharedVarIdSigMap = db.getSharedVarSigIdMap();
+			HashMap<Integer, String> volatileAddresses = db.getVolatileAddresses();
+			HashMap<Integer, String> stmtIdSigMap = db.getStmtSigIdMap();
+			HashMap<Long,String> threadIdNameMap = db.getThreadIdNameMap();
+
+			TraceInfo info = new TraceInfo(sharedVarIdSigMap,volatileAddresses,stmtIdSigMap,threadIdNameMap);
+
+
+
+			long TOTAL_TRACE_LENGTH = db.getTraceSize();
+
+
+
+			
+			
+			ExecutionInfoTask task = new ExecutionInfoTask(start_time,info,TOTAL_TRACE_LENGTH);
+			//register a shutdown hook to store runtime statistics
+			Runtime.getRuntime().addShutdownHook(task);
+			
+			//set a timer to timeout in a configured period
+			Timer timer = new Timer();
+			timer.schedule(new TimerTask(){
+					public void run()
+					{
+						report("\n******* Timeout "+config.timeout+" seconds ******",MSGTYPE.REAL);//report it
+						System.exit(0);
+					}},config.timeout*1000);
+			
+			
+			
+			
+			
+			
+			
+			for(int round =0;round*config.window_size<TOTAL_TRACE_LENGTH;round++)
 			{
-				long index_start = round*MAX_LENGTH+1;
-				long index_end = (round+1)*MAX_LENGTH;
+				long index_start = round*config.window_size+1;
+				long index_end = (round+1)*config.window_size;
 				//if(TOTAL_TRACE_LENGTH>MAX_LENGTH)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+TOTAL_TRACE_LENGTH+" ******************\n");
 				
-				Trace trace = db.getTrace(index_start,index_end);
-				
-				trace.setSharedVarIdSigMap(sharedVarIdSigMap);
-				trace.setStmtIdSigMap(stmtIdSigMap);
-				trace.setThreadIdNameMap(threadIdNameMap);	
+				Trace trace = db.getTrace(index_start,index_end,info);
 					
 				HBEngine engine = new HBEngine(trace);				
 					
@@ -236,14 +267,7 @@ public class HBRaceDetect {
 				
 			}	
 			
-			report("Trace Size: "+TOTAL_TRACE_LENGTH,false);
-			report("Total #Threads: "+TOTAL_THREAD_NUMBER,false);
-			report("Total #SharedVariables: "+TOTAL_SHAREDVARIABLE_NUMBER,false);
-			report("Total #Read-Writes: "+TOTAL_READWRITE_NUMBER,false);
-			report("Total #Synchronizations: "+TOTAL_SYNC_NUMBER,false);
-			report("Total #races: "+races.size(),false);
-			report("Total Time: "+(System.currentTimeMillis()-start_time)+"ms",false); 			
-			
+				
 		}
 		catch(Exception e)
 		  {
@@ -251,7 +275,77 @@ public class HBRaceDetect {
 		  }
 		finally
 		{
+			
+			//terminate
+			System.exit(0);
+		}
+
+	}
+	
+	
+	static class ExecutionInfoTask extends Thread
+	{
+		TraceInfo info;
+		long start_time;
+		long TOTAL_TRACE_LENGTH;
+		ExecutionInfoTask (long st, TraceInfo info, long size)
+		{
+			this.info = info;
+			this.start_time =st;
+			this.TOTAL_TRACE_LENGTH = size;
+		}
+		
+		@Override
+		public void run() {
+			
+			//Report statistics about the trace and race detection
+			
+            //TODO: query the following information from DB may be expensive
+			
+			//int TOTAL_THREAD_NUMBER = db.getTraceThreadNumber();
+			int TOTAL_THREAD_NUMBER = info.getTraceThreadNumber();
+			//int TOTAL_SHAREDVARIABLE_NUMBER = db.getTraceSharedVariableNumber();
+			int TOTAL_SHAREDVARIABLE_NUMBER = info.getTraceSharedVariableNumber();
+			//int TOTAL_BRANCH_NUMBER = db.getTraceBranchNumber();
+			//int TOTAL_READWRITE_NUMBER = db.getTraceReadWriteNumber();
+			int TOTAL_READWRITE_NUMBER = info.getTraceSharedReadWriteNumber();
+			//int TOTAL_SYNC_NUMBER = db.getTraceSyncNumber();
+			int TOTAL_SYNC_NUMBER = info.getTraceSyncNumber();
+			//int TOTAL_PROPERTY_NUMBER = db.getTracePropertyNumber();
+			
+			report("Trace Size: "+TOTAL_TRACE_LENGTH,MSGTYPE.STATISTICS);
+			report("Total #Threads: "+TOTAL_THREAD_NUMBER,MSGTYPE.STATISTICS);
+			report("Total #SharedVariables: "+TOTAL_SHAREDVARIABLE_NUMBER,MSGTYPE.STATISTICS);
+			report("Total #Read-Writes: "+TOTAL_READWRITE_NUMBER,MSGTYPE.STATISTICS);
+			report("Total #Synchronizations: "+TOTAL_SYNC_NUMBER,MSGTYPE.STATISTICS);
+			report("Total #races: "+races.size(),MSGTYPE.STATISTICS);
+			report("Total Time: "+(System.currentTimeMillis()-start_time)+"ms",MSGTYPE.STATISTICS); 			
+		
 			closePrinter();
 		}
+		
 	}
+	
+	public enum MSGTYPE
+	{
+		REAL,POTENTIAL,STATISTICS
+	}
+	private static void report(String msg, MSGTYPE type)
+	{
+		switch(type)
+		{
+		case REAL:
+			System.err.println(msg);
+			out.println(msg);
+			break;
+		case STATISTICS:
+			System.out.println(msg);
+			out.println(msg);
+			break;
+		case POTENTIAL:
+			break;
+		default: break;
+		}
+	}
+	
 }

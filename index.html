@@ -1,0 +1,149 @@
+<html>
+  <head>
+    <title>RVPredict</title>
+  </head>
+
+<body>
+<div style="width: 1024px; margin-left: auto; margin-right: auto;">
+
+	<div style="background-color:#F6E3CE; padding: 5px">
+		<h1>RVPredict: Maximal Sound Predictive Race Detection with Control Flow Abstraction</h1>
+	</div>
+<p>
+RVPredict is a race detector for Java programs that can predict data races
+based on normal execution traces. It encodes program control flow information
+and thread scheduling constraints as a set of first-order logic formulae and
+detects races through constraint solving using SMT solvers Z3 and Yices.
+RVPredict is both sound and maximal.
+It never reports any false positive, and it detects all the possible races
+that can be detected by any sound technique based on the same trace.  
+Its behavior is further described in our <a href="rvpredict-tr.pdf">technical report</a>.
+</p>
+
+<p>
+For extra documentation, see the <a href="README.txt">README</a>.
+</p>
+
+<hr>
+
+<h2>Getting Started</h2>
+<p>
+    We provide some simple instructions for getting started running the basic
+    tests and (if desired) your own test programs using RVPredict.
+</p>
+<h3>Preparation:</h3>
+
+<ul>
+	<li>
+	<p>Install Z3 or Yices. Follow the instructions at
+<pre>
+Z3: <code>http://z3.codeplex.com/SourceControl/latest#README</code>
+</pre>
+<pre>
+Yices: <code>http://yices.csl.sri.com/download-yices2.shtml</code>
+</pre>
+Remember to add the executables to your PATH.</p>
+	</li>
+</ul>
+<h3>Basic compile and run:</h3>
+
+<ol>
+	<li>
+	<p>Compile RVPredict (plus test programs).</p>
+<pre>
+ant
+</pre>
+	</li>
+	<li>
+	<p>Compile the benchmarks.</p>
+<pre>
+ant benchmarks
+</pre>
+	</li>
+	<li>
+	<p>Run a simple example.</p>
+<pre>
+./run.sh demo.Example
+</pre>
+	</li>
+</ol>
+
+<h3>Decomposed steps:</h3>
+<ol>
+<li>
+	<p>Instrument the program.</p>
+
+<pre>
+./rv-instrument demo.Example
+</pre>
+	</li>
+<li>
+	<p>Log an execution trace.</p>
+<pre>
+./rv-log demo.Example
+</pre>
+</li>
+<li>
+	<p>Predict races.</p>
+<pre>
+./rv-predict demo.Example
+</pre>
+</li>
+</ul>
+</ol>
+
+<h4>Useful options:</h4>
+	<p>
+	<code>rv-predict</code> has a few options on race detection. To see these options, execute:
+<code>./rv-predict -h</code>
+	</p>
+<p>
+<code>-maxlen SIZE</code> -- set window size to SIZE.<br>
+<br>
+<code>-smtlib1</code> -- use smtlib v1 format (Yices)<br>
+<br>
+<code>-outdir PATH</code> -- set constraint file directory to PATH.<br>
+<br>
+<code>-solver_timeout TIME</code> -- set solver timeout to TIME seconds.<br>
+<br>
+<code>-solver_memory MEMORY</code> -- set memory used by solver to MEMORY megabytes.<br>
+<br>
+<code>-timeout TIME</code> -- set rvpredict timeout to TIME seconds.<br>
+<br>
+<code>-nobranch</code> -- disable control flow (MCM).<br>
+<br>
+<code>-novolatile</code> -- exclude races on volatile variables
+<br>
+<br>
+<code>-allconsistent</code> -- require all read-write consistency (Said)<br>
+<br>
+</p>
+<h4>Suggested options:</h4>
+<p>
+<pre>-maxlen 10000 -smtlib1</pre>
+</p>
+
+<h3>Benchmarks:</h3>
+<p>Our simpler tests are located in the tests directory.
+The larger benchmark tests are located in the benchmarks directory.
+</p>
+
+<p>A few examples:</p>
+<pre>
+./run.sh account.Account
+</pre>
+<pre>
+./rv-instrument boundedbuffer.BoundedBuffer
+./rv-log boundedbuffer.BoundedBuffer
+./rv-predict boundedbuffer.BoundedBuffer -maxlen 10000 smtlib1
+</pre>
+
+<h3>Rolling your own:</h3>
+<p>
+Put your own program in <code>tests/src/</code> and compile it by <code>ant tests</code>.
+Then run <code>./run.sh yourprogram</code>
+</p>
+
+<hr>
+    </body>
+</html>

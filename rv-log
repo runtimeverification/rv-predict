@@ -1,0 +1,11 @@
+RV_BENCH_BIN=benchmarks/bin
+RV_TEST_BIN=tests/bin
+RV_INST_BIN=lib/rv-predict-inst.jar
+RV_ENGINE_BIN=lib/rv-predict-engine.jar
+RV_LOG_BIN=lib/rv-predict-log.jar
+
+RV_RECORD_BIN=tmp/record
+
+#record
+echo "logging "$@
+time java -Xmx32g -cp $RV_RECORD_BIN:$RV_BENCH_BIN:$RV_TEST_BIN:$RV_LOG_BIN:$RV_ENGINE_BIN edu.uiuc.run.Main $@

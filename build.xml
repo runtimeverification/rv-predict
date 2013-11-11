@@ -1,0 +1,111 @@
+<project name="rvpredict" default="rvpredict-all">
+  <!-- set global properties for this bin -->
+  <property name="rvpredict.engine.src" location="rv-predict-engine/src"/>
+  <property name="rvpredict.inst.src" location="rv-predict-inst/src"/>
+  <property name="rvpredict.log.src" location="run-record/src"/>
+  <property name="rvpredict.engine.lib" location="rv-predict-engine/lib"/>
+  <property name="rvpredict.inst.lib" location="rv-predict-inst/lib"/>
+  <property name="rvpredict.log.lib" location="rv-predict-log/lib"/>
+  <property name="rvpredict.engine.bin" location="rv-predict-engine/bin"/>
+  <property name="rvpredict.inst.bin" location="rv-predict-inst/bin"/>
+  <property name="rvpredict.log.bin" location="run-record/bin"/>
+  <property name="test.src" location="tests/src"/>
+  <property name="test.bin" location="tests/bin"/>
+  <property name="benchmark.src" location="benchmarks/src"/>
+  <property name="benchmark.bin" location="benchmarks/bin"/>
+
+  <property name="rvpredict.lib" location="lib"/>
+
+  <target name="rvpredict-all" depends="rvpredict-engine,rvpredict-inst,rvpredict-log,tests"
+          description="compile rvpredict and test" />
+
+  <target name="rvpredict-engine" depends="init-rvpredict-engine"
+          description="compile rvpredict-engine" >
+    <javac srcdir="${rvpredict.engine.src}" destdir="${rvpredict.engine.bin}" debug="true" debuglevel="lines,vars,source">
+<classpath>
+<pathelement location="${rvpredict.engine.lib}/commons-cli-1.2.jar"/>
+<pathelement location="${rvpredict.engine.lib}/jigsaw-sexpr.jar"/>
+<pathelement location="${rvpredict.engine.lib}/h2-1.3.171.jar"/>
+</classpath>
+</javac>
+<mkdir dir="${rvpredict.lib}"/>
+<delete file="${rvpredict.lib}/rv-predict-engine.jar"/>
+        <jar destfile="${rvpredict.lib}/rv-predict-engine.jar"
+                     basedir="${rvpredict.engine.bin}">
+                     <zipgroupfileset dir="${rvpredict.engine.lib}" includes="h2-1.3.171.jar,jigsaw-sexpr.jar,commons-cli-1.2.jar" />
+                     </jar>
+      </target>
+  <target name="init-rvpredict-engine">
+      <!-- Create the time stamp -->
+    <tstamp/>
+        <!-- Create the bin directory structure used by compile -->
+    <mkdir dir="${rvpredict.engine.bin}"/>
+      </target>
+  <target name="rvpredict-inst" depends="init-rvpredict-inst,rvpredict-engine"
+          description="compile rvpredict-inst" >
+    <javac srcdir="${rvpredict.inst.src}" destdir="${rvpredict.inst.bin}" debug="true" debuglevel="lines,vars,source">
+<classpath>
+<pathelement location="${rvpredict.lib}/rv-predict-engine.jar"/>
+<pathelement location="${rvpredict.inst.lib}/soot-jeff.jar"/>
+</classpath>
+</javac>
+<delete file="${rvpredict.lib}/rv-predict-inst.jar"/>
+        <jar destfile="${rvpredict.lib}/rv-predict-inst.jar"
+                     basedir="${rvpredict.inst.bin}">
+                     <zipgroupfileset dir="${rvpredict.inst.lib}" includes="soot-jeff.jar" />
+                     </jar>
+      </target>
+  <target name="init-rvpredict-inst">
+      <!-- Create the time stamp -->
+    <tstamp/>
+        <!-- Create the bin directory structure used by compile -->
+    <mkdir dir="${rvpredict.inst.bin}"/>
+      </target>
+  <target name="rvpredict-log" depends="init-rvpredict-log,rvpredict-engine"
+          description="compile rvpredict-log" >
+    <javac srcdir="${rvpredict.log.src}" destdir="${rvpredict.log.bin}" debug="true" debuglevel="lines,vars,source">
+<classpath>
+<pathelement location="${rvpredict.lib}/rv-predict-engine.jar"/>
+</classpath>
+</javac>
+<delete file="${rvpredict.lib}/rv-predict-log.jar"/>
+        <jar destfile="${rvpredict.lib}/rv-predict-log.jar"
+                     basedir="${rvpredict.log.bin}">
+                     </jar>
+      </target>
+  <target name="init-rvpredict-log">
+      <!-- Create the time stamp -->
+    <tstamp/>
+        <!-- Create the bin directory structure used by compile -->
+    <mkdir dir="${rvpredict.log.bin}"/>
+      </target>
+
+  <target name="init-benchmarks">
+      <!-- Create the time stamp -->
+    <tstamp/>
+        <!-- Create the bin directory structure used by compile -->
+    <mkdir dir="${benchmark.bin}"/>
+      </target>
+  <target name="benchmarks" depends="init-benchmarks"
+          description="compile the benchmark" >
+              <!-- Compile the java code from ${benchmark.src} into ${benchmark.bin} -->
+    <javac srcdir="${benchmark.src}" destdir="${benchmark.bin}" debug="true" debuglevel="lines,vars,source"/>
+      </target>
+
+  <target name="init-tests">
+      <!-- Create the time stamp -->
+    <tstamp/>
+        <!-- Create the bin directory structure used by compile -->
+    <mkdir dir="${test.bin}"/>
+      </target>
+  <target name="tests" depends="init-tests"
+          description="compile the tests" >
+              <!-- Compile the java code from ${benchmark.src} into ${benchmark.bin} -->
+    <javac srcdir="${test.src}" destdir="${test.bin}" debug="true" debuglevel="lines,vars,source"/>
+      </target>
+  <target name="clean"
+          description="clean up" >
+              <!-- Delete the ${benchmark.bin} directory trees -->
+    <delete dir="${benchmark.bin}"/>
+          </target>
+          </project>

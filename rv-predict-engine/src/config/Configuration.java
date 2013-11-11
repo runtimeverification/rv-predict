@@ -38,6 +38,8 @@ import org.apache.commons.cli.ParseException;
 
 public class Configuration {
 
+	final static String opt_help = "h";
+
 	final static String opt_rmm_pso = "pso";//for testing only
 	
 	final static String opt_max_len = "maxlen";
@@ -61,6 +63,7 @@ public class Configuration {
 	final static String default_empty= "";
 	final static String default_timeout= "3600";
 
+
 	final static String default_constraint_outdir  = System.getProperty("user.dir")+
 			System.getProperty("file.separator")+"z3";
 	
@@ -77,21 +80,19 @@ public class Configuration {
 	public boolean allrace;
 	public boolean novolatile;
 
-
 	public boolean allconsistent;
 	public boolean rmm_pso;
 	public boolean smtlib1;
 	
+	private boolean help;
+
 	public Configuration (String[] args) {
 	
 		try{
 		
 		if(args.length==0)
 		{
-			System.err.println("Usage: java NewRVPredict [options] classname");
-			System.out.println(getUsage());
-
-			System.exit(1);
+			 printUsageAndExit();
 		}
 		
 		//emp.Example stringbuffer.StringBufferTest
@@ -117,7 +118,8 @@ public class Configuration {
 		options.addOption(opt_solver_memory, true, "solver memory size in MB");
 		options.addOption(opt_timeout, true, "rvpredict timeout in seconds");
 
-		
+		options.addOption(opt_help, false, "print help info");
+
 		CommandLineParser parser = new BasicParser();
 		CommandLine cmd = parser.parse( options, args);
 		
@@ -154,6 +156,12 @@ public class Configuration {
 		 //by default optrace is true
 		 optrace = true;
 		 
+		 help = cmd.hasOption(opt_help);
+		 
+		 if(help||cmd.getArgList().isEmpty())
+		 {
+			 printUsageAndExit();
+		 }
 		appname = (String) cmd.getArgList().get(0);
 		}catch(Exception e)
 		{
@@ -163,10 +171,17 @@ public class Configuration {
 
 	}
 
-	
-	private String getUsage()
+	private static void printUsageAndExit()
+	{
+		System.out.println("Usage: java NewRVPredict [options] classname");
+		System.out.println(getUsage());
+
+		System.exit(1);
+	}
+	private static String getUsage()
 	{
 		return "\nGeneral Options:\n"
+			+padOpt(" -help", "print this message" )
 			+padOpt(" -maxlen SIZE", "set window size to SIZE" )
 			+padOpt(" -noschedule", "disable generating racey schedule" )
 			+padOpt(" -nobranch", "disable control flow (MCM)" )
@@ -180,11 +195,11 @@ public class Configuration {
 			;
 	}
 	
-    protected String padOpt( String opts, String desc ) {
+    protected static String padOpt( String opts, String desc ) {
         return pad( 1, opts, 30, desc );
     }
 
-    private String pad( int initial, String opts, int tab, String desc ) {
+    private static String pad( int initial, String opts, int tab, String desc ) {
         StringBuffer b = new StringBuffer();
         for( int i = 0; i < initial; i++ ) b.append( " " );
         b.append(opts);

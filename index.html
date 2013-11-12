@@ -17,7 +17,7 @@ detects races through constraint solving using SMT solvers Z3 and Yices.
 RVPredict is both sound and maximal.
 It never reports any false positive, and it detects all the possible races
 that can be detected by any sound technique based on the same trace.  
-Its behavior is further described in our <a href="rvpredict-tr.pdf">technical report</a>.
+Its behavior is further described in our <a href="rvpredict-full.pdf">technical report</a>.
 </p>
 
 <p>
@@ -68,7 +68,7 @@ ant benchmarks
 	</li>
 </ol>
 
-<h3>Decomposed steps:</h3>
+<h3>Decomposed steps of <code>run.sh</code>:</h3>
 <ol>
 <li>
 	<p>Instrument the program.</p>
@@ -135,7 +135,7 @@ The larger benchmark tests are located in the benchmarks directory.
 <pre>
 ./rv-instrument boundedbuffer.BoundedBuffer
 ./rv-log boundedbuffer.BoundedBuffer
-./rv-predict boundedbuffer.BoundedBuffer -maxlen 10000 smtlib1
+./rv-predict boundedbuffer.BoundedBuffer -maxlen 10000 -smtlib1
 </pre>
 
 <h3>Rolling your own:</h3>

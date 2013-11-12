@@ -1,0 +1,6 @@
+#1. record
+echo "recording eclipse"
+java -Xmx32g -javaagent:iagent-jeff.jar -cp rv-predict-agent.jar:dacapo-eclipse.jar:eclipse.jar rvpredict.run.Main Harness eclipse -s small
+#2. race prediction 
+echo "detecting races in eclipse"
+java -Xmx32g -cp rv-predict-engine.jar NewRVPredict Harness -smtlib1 -timeout 3600 -novolatile -maxlen 100000

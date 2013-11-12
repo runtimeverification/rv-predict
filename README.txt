@@ -33,6 +33,7 @@ ant                           - Compile the test programs in test/src
 
 --------------------------------------
 #HOWTO run RVPredict on Eclipse
+cd ECLIPSE
 ./runeclipse  -- it will execute all steps automatically and detect races
 
 #files:

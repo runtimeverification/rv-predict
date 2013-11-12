@@ -1,0 +1,19 @@
+#1. instrument
+
+echo "instrumenting eclipse"
+rm -rf out scratch sootOutput
+java -Xmx32g -javaagent:poa.jar -cp dacapo-eclipse.jar:eclipse.jar Harness eclipse -s small
+java -Xmx32g -jar booster.jar -p cg reflection-log:out/refl.log -cp out Harness
+java -Xmx32g -cp sootOutput:rv-predict-inst.jar rvpredict.instrumentation.Main Harness -nosa
+
+#remove a buggy file
+rm tmp/record/org/eclipse/osgi/internal/loader/BundleLoader.class
+
+#2. record
+
+echo "recording eclipse"
+java -Xmx32g -cp tmp/record:rv-predict-log.jar:rv-predict-inst.jar:dacapo-eclipse.jar:eclipse.jar edu.uiuc.run.Main Harness eclipse -s small
+
+#3. race prediction 
+echo "detecting races in eclipse"
+java -Xmx32g -cp rv-predict-engine.jar NewRVPredict Harness -smtlib1 -timeout 3600 -novolatile -maxlen 100000

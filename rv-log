@@ -8,4 +8,4 @@ RV_RECORD_BIN=tmp/record
 
 #record
 echo "logging "$@
-time java -Xmx1336m -cp $RV_RECORD_BIN:$RV_BENCH_BIN:$RV_TEST_BIN:$RV_LOG_BIN:$RV_ENGINE_BIN edu.uiuc.run.Main $@
+time java -Xmx32g -cp $RV_RECORD_BIN:$RV_BENCH_BIN:$RV_TEST_BIN:$RV_LOG_BIN:$RV_ENGINE_BIN edu.uiuc.run.Main $@

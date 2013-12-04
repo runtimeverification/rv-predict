@@ -6,4 +6,4 @@ RV_LOG_BIN=lib/rv-predict-log.jar
 
 #instrument
 echo "instrumenting "$1
-time java -Xmx1336m -cp $RV_BENCH_BIN:$RV_TEST_BIN:$RV_INST_BIN:$RV_ENGINE_BIN rvpredict.instrumentation.Main $1 -nosa
+time java -Xmx32g -cp $RV_BENCH_BIN:$RV_TEST_BIN:$RV_INST_BIN:$RV_ENGINE_BIN rvpredict.instrumentation.Main $1 -nosa

@@ -1,0 +1,24 @@
+if [ $1 ]
+then
+#instrument
+size=100000
+classname=Harness
+echo "instrumenting dacapo"
+rm -rf out scratch sootOutput
+time java -Xmx1g -javaagent:dacapo/poa-2.0.1.jar -cp dacapo/dacapo-9.12-jeff.jar $classname -s small $1
+time java -Xmx1g -jar dacapo/booster.jar -p cg reflection-log:out/refl.log -cp out $classname
+time java -Xmx1g -cp sootOutput:dacapo/dacapo-9.12-jeff.jar:rv-predict-inst.jar:rv-predict-engine.jar rvpredict.instrumentation.Main $classname -nosa
+
+#record
+echo "recording dacapo"
+timeout 60 java -Xmx32g -cp tmp/record:rv-predict-log.jar:rv-predict-inst.jar:rv-predict-engine.jar:dacapo/dacapo-9.12-jeff.jar edu.uiuc.run.Main $classname -s small $@
+#predict 
+echo "detecting violations in dacapo"
+#10K
+java -Xmx2g -cp rv-predict-engine.jar NewRVPredict $classname -timeout 3600 -smtlib1 -novolatile -maxlen $size
+
+else  
+  echo "please specify the program: for example -- ./rundacapo sunflow"
+fi
+
+

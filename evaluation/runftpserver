@@ -1,0 +1,14 @@
+#instrument
+size=10000
+classname=driver.FTPMainDriver
+echo "instrumenting ftpserver"
+time java -Xmx1g -cp ftpserver/ftpserver.jar:rv-predict-inst.jar:rv-predict-engine.jar rvpredict.instrumentation.Main $classname -nosa
+
+#record
+echo "recording ftpserver"
+timeout 60 java -Xmx32g -cp tmp/record:rv-predict-log.jar:rv-predict-engine.jar:ftpserver/ftpserver.jar edu.uiuc.run.Main $classname
+#predict 
+echo "detecting violations in ftpserver"
+#10K
+java -Xmx2g -cp rv-predict-engine.jar NewRVPredict $classname -timeout 3600 -smtlib1 -novolatile -maxlen $size
+

@@ -1,4 +1,4 @@
-<project name="rvpredict" default="rvpredict-all">
+<project name="rvpredict" default="all">
   <!-- set global properties for this bin -->
   <property name="rvpredict.engine.src" location="rv-predict-engine/src"/>
   <property name="rvpredict.inst.src" location="rv-predict-inst/src"/>
@@ -15,6 +15,8 @@
   <property name="benchmark.bin" location="benchmarks/bin"/>
 
   <property name="rvpredict.lib" location="lib"/>
+  <target name="all" depends="rvpredict-all,benchmarks"
+          description="compile rvpredict and benchmarks" />
 
   <target name="rvpredict-all" depends="rvpredict-engine,rvpredict-inst,rvpredict-log,tests"
           description="compile rvpredict and test" />

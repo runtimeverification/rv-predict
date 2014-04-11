@@ -31,6 +31,9 @@ ant                           - Compile the test programs in test/src
 #Run all the steps above together
 ./run.sh demo.Example
 
+----------------------------------------
+More online documents: http://fsl.cs.illinois.edu/rvpredict/
+
 --------------------------------------
 #HOWTO run RVPredict on Eclipse
 cd ECLIPSE

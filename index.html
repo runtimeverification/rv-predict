@@ -6,8 +6,9 @@
 <body>
 <div style="width: 1024px; margin-left: auto; margin-right: auto;">
 
-	<div style="background-color:#F6E3CE; padding: 5px">
-		<h1>RVPredict: Maximal Sound Predictive Race Detection with Control Flow Abstraction</h1>
+	<div style="background-color:#F6E3CE; padding: 5px">	
+	<h1>RVPredict: Maximal Sound Predictive Race Detection with Control Flow Abstraction</h1>
+
 	</div>
 <p>
 RVPredict is a race detector for Java programs that can predict data races
@@ -17,9 +18,8 @@ detects races through constraint solving using SMT solvers Z3 and Yices.
 RVPredict is both sound and maximal.
 It never reports any false positive, and it detects all the possible races
 that can be detected by any sound technique based on the same trace.  
-Its behavior is further described in our <a href="rvpredict-full.pdf">technical report</a>.
+Its behavior is further described in our <a href="http://fsl.cs.illinois.edu/FSL/papers/2014/huang-meredith-rosu-2014-pldi/huang-meredith-rosu-2014-pldi-public.pdf">PLDI 2014 paper</a>.
 </p>
-
 <p>
 For extra documentation, see the <a href="README.txt">README</a>.
 </p>
@@ -34,6 +34,13 @@ For extra documentation, see the <a href="README.txt">README</a>.
 <h3>Preparation:</h3>
 
 <ul>
+<li>
+	<p><a href="http://fsl.cs.illinois.edu/rvpredict/rvpredict.tar.gz">Download RVPredict</a>.
+<pre>
+<code>tar xfz rvpredict.tar.gz</code>
+</pre>
+</p>
+	</li>
 	<li>
 	<p>Install Z3 or Yices. Follow the instructions at
 <pre>
@@ -100,7 +107,7 @@ ant benchmarks
 <p>
 <code>-maxlen SIZE</code> -- set window size to SIZE.<br>
 <br>
-<code>-smtlib1</code> -- use smtlib v1 format (Yices)<br>
+<code>-smtlib1</code> -- use smtlib v1 format (use Yices)<br>
 <br>
 <code>-outdir PATH</code> -- set constraint file directory to PATH.<br>
 <br>
@@ -120,7 +127,7 @@ ant benchmarks
 </p>
 <h4>Suggested options:</h4>
 <p>
-<pre>-maxlen 10000 -smtlib1</pre>
+<pre>-maxlen 10000 -smtlib1</pre> (must install Yices to use -smtlib1)
 </p>
 
 <h3>Benchmarks:</h3>
@@ -143,7 +150,6 @@ The larger benchmark tests are located in the benchmarks directory.
 Put your own program in <code>tests/src/</code> and compile it by <code>ant tests</code>.
 Then run <code>./run.sh yourprogram</code>
 </p>
-
-<hr>
-    </body>
+   </body>
 </html>
+

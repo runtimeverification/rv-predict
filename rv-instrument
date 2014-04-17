@@ -1,8 +1,8 @@
-RV_BENCH_BIN=benchmarks/bin
-RV_TEST_BIN=tests/bin
-RV_INST_BIN=lib/rv-predict-inst.jar
-RV_ENGINE_BIN=lib/rv-predict-engine.jar
-RV_LOG_BIN=lib/rv-predict-log.jar
+RV_BENCH_BIN=$(dirname $0)/benchmarks/bin
+RV_TEST_BIN=$(dirname $0)/tests/bin
+RV_INST_BIN=$(dirname $0)/lib/rv-predict-inst.jar
+RV_ENGINE_BIN=$(dirname $0)/lib/rv-predict-engine.jar
+RV_LOG_BIN=$(dirname $0)/lib/rv-predict-log.jar
 
 #instrument
 echo "instrumenting "$1

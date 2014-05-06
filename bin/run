@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+
+if [ $1 ]
+then
+$(dirname $0)/rv-instrument "$@"
+$(dirname $0)/rv-log "$@"
+$(dirname $0)/rv-predict "$@"
+else  
+  echo "please input your target program: $0 yourprogram"
+fi

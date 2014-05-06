@@ -24,12 +24,12 @@ Remember to add the z3 or yices (or both) binaries to your PATH
 #Suppose the main class of the target program is demo.Example
 
 ant                           - Compile the test programs in test/src
-./rv-instrument demo.Example  - Instrument the program
-./rv-log demo.Example         - Log a trace of the program execution
-./rv-predict demo.Example     - Predict races
+bin/rv-instrument demo.Example  - Instrument the program
+bin/rv-log demo.Example         - Log a trace of the program execution
+bin/rv-predict demo.Example     - Predict races
 
 #Run all the steps above together
-./run.sh demo.Example
+bin/run demo.Example
 
 ----------------------------------------
 More online documents: http://fsl.cs.illinois.edu/rvpredict/

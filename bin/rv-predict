@@ -1,4 +1,6 @@
-RV_ENGINE_BIN=lib/rv-predict-engine.jar
+#!/usr/bin/env sh
+
+RV_ENGINE_BIN=$(dirname $0)/../lib/rv-predict-engine.jar
 #predict 
 echo "predicting races"
 java -Xmx32g -cp $RV_ENGINE_BIN NewRVPredict $@

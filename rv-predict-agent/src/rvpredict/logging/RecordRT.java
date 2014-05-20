@@ -45,8 +45,13 @@ public final class RecordRT {
 	static DBEngine db;
 	static
 	{
-		appname = "org.eclipse.equinox.launcher.Main";
+		//appname = "org.eclipse.equinox.launcher.Main";
 		try{
+			
+			StackTraceElement[] stack = Thread.currentThread ().getStackTrace ();
+			StackTraceElement main = stack[stack.length - 1];
+			appname = main.getClassName ();
+			
 		init(appname,false);
 		}catch(Exception e)
 		{

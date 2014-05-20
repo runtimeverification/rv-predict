@@ -44,7 +44,10 @@ public class Config {
     public Config() {
         try {
             Properties properties = new Properties();
-    		properties.load(new FileInputStream(propFile));
+
+    		properties.load(this.getClass().getClassLoader()
+    	            .getResourceAsStream(propFile));
+    		
             verbose = properties.getProperty("rv.verbose","false").equals("true");
             excludeList = properties.getProperty("rv.excludeList","").split(",");
             //includeList = properties.getProperty("rv.includeList","").split(",");

@@ -1,0 +1,7 @@
+RV_BENCH_BIN=benchmarks/bin
+RV_TEST_BIN=tests/bin
+RV_AGENT_BIN=lib/rv-predict-agent.jar
+
+#agent logging
+echo "logging "$@
+time java -Xmx32g -javaagent:lib/iagent.jar -cp $RV_AGENT_BIN:$RV_BENCH_BIN:$RV_TEST_BIN $@

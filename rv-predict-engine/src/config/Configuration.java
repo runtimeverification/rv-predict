@@ -173,7 +173,7 @@ public class Configuration {
 
 	private static void printUsageAndExit()
 	{
-		System.out.println("Usage: java NewRVPredict [options] classname");
+		System.out.println("Usage: java rvpredict.engine.main.NewRVPredict [options] classname");
 		System.out.println(getUsage());
 
 		System.exit(1);

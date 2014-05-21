@@ -5,7 +5,7 @@
             <pathelement location="lib/ant-contrib.jar"/>
         </classpath>
     </taskdef>
-	<property name="rvpredict.main.class" value="NewRVPredict"/>
+	<property name="rvpredict.main.class" value="rvpredict.engine.main.NewRVPredict"/>
 	<property name="app.main.class" value="demo.Example"/>
 	<!--
 	demo.Example

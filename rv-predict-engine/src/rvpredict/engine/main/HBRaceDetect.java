@@ -1,4 +1,4 @@
-/*******************************************************************************
+package rvpredict.engine.main; /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
  * 
  * All rights reserved.
@@ -31,36 +31,27 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
-import java.util.Map.Entry;
 
 import config.Configuration;
-import trace.AbstractNode;
-import trace.IMemNode;
-import trace.LockPair;
 import trace.ReadNode;
 import trace.Trace;
 import trace.TraceInfo;
 import trace.WriteNode;
-import trace.AbstractNode.TYPE;
-import violation.AtomicityViolation;
-import violation.Deadlock;
 import violation.ExactRace;
 import violation.IViolation;
 import violation.Race;
-import z3.Z3Engine;
 import db.DBEngine;
 
 /**
- * CPRaceDetect implements the causal-precedes methods for race detection.
+ * HBRaceDetect implements the happens-before methods for race detection.
  * 
  * @author jeffhuang
  *
  */
-public class CPRaceDetect {
+public class HBRaceDetect {
 
 	private static Configuration config;
 	private static HashSet<IViolation> races= new HashSet<IViolation>();
@@ -70,7 +61,7 @@ public class CPRaceDetect {
 		try{
 		String fname = "result."+(config.window_size/1000)+"k";
 		out = new PrintWriter(new FileWriter(fname,true));
-		out.println("\n------------------ CP: "+appname+" -------------------\n");
+		out.println("\n------------------ HB: "+appname+" -------------------\n");
 		}catch(Exception e)
 		{
 			e.printStackTrace();
@@ -96,13 +87,13 @@ public class CPRaceDetect {
 			return schedule;
 	}
 	/**
-	 * traverse all conflicting pairs. For each pair, query the CPEngine 
+	 * traverse all conflicting pairs. For each pair, query the CPEngine
 	 * whether there are reachable or not. If yes, report a race.
 	 * 
 	 * @param engine
 	 * @param trace
 	 */
-	private static void detectRace(CPEngine engine, Trace trace)
+	private static void detectRace(HBEngine engine, Trace trace)
 	{
 		Iterator<String> 
 		addrIt =trace.getIndexedThreadReadWriteNodes().keySet().iterator();
@@ -117,7 +108,6 @@ public class CPRaceDetect {
 			//continue if volatile
 			if(dotPos>-1&&trace.isAddressVolatile(addr.substring(dotPos+1))) continue;
 			}
-			
 			//get all read nodes on the address
 			Vector<ReadNode> readnodes = trace.getIndexedReadNodes().get(addr);
 			
@@ -159,8 +149,7 @@ public class CPRaceDetect {
 									races.add(race2); 
 
 								}
-								else
-								races.add(race);
+								else races.add(race);
 							
 							}
 						
@@ -193,7 +182,7 @@ public class CPRaceDetect {
 
 									}
 									else
-										races.add(race); 
+									races.add(race); 
 								}
 							}
 						}
@@ -263,7 +252,7 @@ public class CPRaceDetect {
 				
 				Trace trace = db.getTrace(index_start,index_end,info);
 					
-				CPEngine engine = new CPEngine(trace);				
+				HBEngine engine = new HBEngine(trace);				
 					
 				detectRace(engine,trace);
 				

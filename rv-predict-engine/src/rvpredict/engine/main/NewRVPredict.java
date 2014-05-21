@@ -26,16 +26,9 @@ package rvpredict.engine.main; /************************************************
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-import java.io.FileWriter;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.Vector;
+import java.io.*;
+import java.net.URLDecoder;
+import java.util.*;
 import java.util.Map.Entry;
 
 import property.EREProperty;
@@ -1003,8 +996,35 @@ public class NewRVPredict {
 	public static void main(String[] args) {
 
 		config = new Configuration(args);
-		
-		try{			
+
+        String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
+        String basePath = getBasePath();
+        String separator = System.getProperty("file.separator");
+        String libPath = basePath + separator + "lib" + separator;
+        String iagent = libPath + "iagent.jar";
+        String rvAgent = libPath + "rv-predict-agent.jar";
+        String classpath = System.getProperty("java.class.path");
+        if (config.appClassPath != null) {
+            classpath = config.appClassPath;
+        }
+        classpath = rvAgent + System.getProperty("path.separator") + classpath;
+        String[] appArgs = new String[] {java, "-cp",
+                        classpath,
+                        "-javaagent:" + iagent,
+                        config.appname};
+        ProcessBuilder processBuilder =
+                new ProcessBuilder(appArgs).inheritIO();
+        try {
+            System.out.print("Starting " + config.appname + "...");
+            Process process = processBuilder.start();
+            process.waitFor();
+            System.out.println("done.");
+        } catch (IOException e) {
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        try{
 			
 			//Now let's start predict analysis
 			long start_time = System.currentTimeMillis();
@@ -1158,8 +1178,27 @@ public class NewRVPredict {
 		
 		
 	}
-	
-	/**
+
+    private static String getBasePath() {
+        String path = new File(NewRVPredict.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getAbsolutePath();
+        if (!path.endsWith(".jar"))
+            path = new File(path) //NewRVPredict
+                    .getParentFile() //main
+                    .getParentFile() //engine
+                    .getParentFile() //rvpredict
+                    .getParentFile() //src
+                    .getAbsolutePath() + "/";
+        try {
+            String decodedPath = URLDecoder.decode(path, "UTF-8");
+            File parent = new File(decodedPath).getParentFile().getParentFile();
+            return parent.getAbsolutePath();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
 	 * Return the schedule, i.e., the thread execution order, of the trace
 	 * 
 	 * @param trace

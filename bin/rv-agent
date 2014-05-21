@@ -14,4 +14,4 @@ JAVA_AGENT_LIB=$(dirname $0)/../lib/iagent.jar
 
 #agent logging
 echo "logging "$@
-time java -Xmx32g -javaagent:$JAVA_AGENT_LIB -cp $RV_AGENT_BIN:$PROGRAM_CLASSPATH $@
+time java -Xmx32g -javaagent:$JAVA_AGENT_LIB -cp $RV_AGENT_BIN:$PROGRAM_CLASSPATH "$@"

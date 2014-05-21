@@ -1,4 +1,4 @@
-/*******************************************************************************
+package rvpredict.engine.main; /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
  * 
  * All rights reserved.
@@ -61,7 +61,7 @@ import z3.Z3Engine;
 import db.DBEngine;
 
 /**
- * The NewRVPredict class implements our new race detection algorithm based on 
+ * The NewRVPredict class implements our new race detection algorithm based on
  * constraint solving. The events in the trace are loaded and processed window 
  * by window with a configurable window size. 
  * 

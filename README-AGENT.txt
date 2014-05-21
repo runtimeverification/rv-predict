@@ -9,5 +9,5 @@ Prediction         - Prediction occurs. For race detection this consists of an
 #Suppose the main class of the target program is demo.Example
 
 ant                           - Compile the test programs in test/src
-./rv-agent demo.Example         - Log a trace of the program execution
-./rv-predict demo.Example     - Predict races
+bin/rv-agent demo.Example     - Log a trace of the program execution
+bin/rv-predict demo.Example   - Predict races

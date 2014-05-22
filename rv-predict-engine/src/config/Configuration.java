@@ -48,11 +48,9 @@ public class Configuration {
 	final static String opt_no_volatile = "novolatile";
 	final static String opt_allrace = "allrace";
 
-
-	final static String opt_classpath = "app-classpath";
-
 	final static String opt_all_consistent = "allconsistent";
 	final static String opt_constraint_outdir = "outdir";
+    final static String opt_app_classpath = "cp";
 	final static String opt_solver_timeout = "solver_timeout";
 	final static String opt_solver_memory = "solver_memory";
 	final static String opt_timeout = "timeout";
@@ -76,9 +74,8 @@ public class Configuration {
 	public long solver_memory;
 	public long timeout;
 
-    public String appClassPath;
-
 	public String constraint_outdir;
+    public String appClassPath;
 	public boolean nobranch;
 	public boolean noschedule;
 	public boolean optrace;
@@ -119,6 +116,7 @@ public class Configuration {
 		options.addOption(opt_allrace, false, "check all races");
 
 		options.addOption(opt_constraint_outdir, true, "constraint file directory");
+        options.addOption(opt_app_classpath, true, "Application classpath");
 		options.addOption(opt_solver_timeout, true, "solver timeout in seconds");
 		options.addOption(opt_solver_memory, true, "solver memory size in MB");
 		options.addOption(opt_timeout, true, "rvpredict timeout in seconds");
@@ -141,7 +139,7 @@ public class Configuration {
 		timeout = Long.valueOf(rvtimeout);
 		
 		constraint_outdir = cmd.getOptionValue(opt_constraint_outdir,default_constraint_outdir);
-        appClassPath = cmd.getOptionValue(opt_classpath, null);
+        appClassPath = cmd.getOptionValue(opt_app_classpath, null);
 		
 		
 		noschedule = cmd.hasOption(opt_no_schedule);

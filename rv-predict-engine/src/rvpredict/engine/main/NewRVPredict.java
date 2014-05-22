@@ -994,35 +994,14 @@ public class NewRVPredict {
 	 * @param args
 	 */
 	public static void main(String[] args) {
+        Configuration config = new Configuration(args);
 
-		config = new Configuration(args);
+        run(config);
+    }
 
-        String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
-        String basePath = getBasePath();
-        String separator = System.getProperty("file.separator");
-        String libPath = basePath + separator + "lib" + separator;
-        String iagent = libPath + "iagent.jar";
-        String rvAgent = libPath + "rv-predict-agent.jar";
-        String classpath = System.getProperty("java.class.path");
-        if (config.appClassPath != null) {
-            classpath = config.appClassPath;
-        }
-        classpath = rvAgent + System.getProperty("path.separator") + classpath;
-        String[] appArgs = new String[] {java, "-cp",
-                        classpath,
-                        "-javaagent:" + iagent,
-                        config.appname};
-        ProcessBuilder processBuilder =
-                new ProcessBuilder(appArgs).inheritIO();
-        try {
-            System.out.print("Starting " + config.appname + "...");
-            Process process = processBuilder.start();
-            process.waitFor();
-            System.out.println("done.");
-        } catch (IOException e) {
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+    public static void run(Configuration conf) {
+        config = conf;
+
 
         try{
 			
@@ -1178,27 +1157,8 @@ public class NewRVPredict {
 		
 		
 	}
-
-    private static String getBasePath() {
-        String path = new File(NewRVPredict.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getAbsolutePath();
-        if (!path.endsWith(".jar"))
-            path = new File(path) //NewRVPredict
-                    .getParentFile() //main
-                    .getParentFile() //engine
-                    .getParentFile() //rvpredict
-                    .getParentFile() //src
-                    .getAbsolutePath() + "/";
-        try {
-            String decodedPath = URLDecoder.decode(path, "UTF-8");
-            File parent = new File(decodedPath).getParentFile().getParentFile();
-            return parent.getAbsolutePath();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    /**
+	
+	/**
 	 * Return the schedule, i.e., the thread execution order, of the trace
 	 * 
 	 * @param trace

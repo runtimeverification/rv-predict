@@ -6,6 +6,11 @@
   <property name="rvpredict.agent.lib" location="rv-predict-agent/lib"/>
   <property name="rvpredict.engine.bin" location="rv-predict-engine/bin"/>
   <property name="rvpredict.agent.bin" location="rv-predict-agent/bin"/>
+  <path id="rv-predict-agent.classpath">
+    <pathelement location="${rvpredict.agent.bin}"/>
+    <pathelement location="${rvpredict.agent.lib}/h2-1.3.171.jar"/>
+    <pathelement location="${rvpredict.agent.lib}/asm.jar"/>
+  </path>
   <property name="test.src" location="tests/src"/>
   <property name="test.bin" location="tests/bin"/>
   <property name="benchmark.src" location="benchmarks/src"/>
@@ -31,7 +36,7 @@
 <delete file="${rvpredict.lib}/rv-predict-engine.jar"/>
         <jar destfile="${rvpredict.lib}/rv-predict-engine.jar"
                      basedir="${rvpredict.engine.bin}">
-                     <zipgroupfileset dir="${rvpredict.engine.lib}" includes="h2-1.3.171.jar,jigsaw-sexpr.jar,commons-cli-1.2.jar" />
+                     <zipgroupfileset dir="${rvpredict.engine.lib}" includes="h2-1.3.171.jar,jigsaw-sexpr.jar,commons-cli-1.2.jar,ant.jar" />
                      </jar>
       </target>
   <target name="init-rvpredict-engine">
@@ -39,6 +44,13 @@
     <tstamp/>
         <!-- Create the bin directory structure used by compile -->
     <mkdir dir="${rvpredict.engine.bin}"/>
+    <copy includeemptydirs="false" todir="${rvpredict.engine.bin}">
+      <fileset dir="${rvpredict.engine.src}">
+        <exclude name="**/*.java"/>
+        <exclude name="java/io/"/>
+        <exclude name="java/"/>
+      </fileset>
+    </copy>
       </target>
 
  <target name="init-rvpredict-agent">
@@ -46,16 +58,32 @@
     <tstamp/>
         <!-- Create the bin directory structure used by compile -->
     <mkdir dir="${rvpredict.agent.bin}"/>
+    <copy includeemptydirs="false" todir="${rvpredict.agent.bin}">
+      <fileset dir="${rvpredict.agent.src}">
+        <exclude name="**/*.java"/>
+        <exclude name="java/io/"/>
+        <exclude name="java/"/>
+      </fileset>
+    </copy>
+ </target>
+
+ <target name="clean-rvpredict-agent">
+   <delete dir="${rvpredict.agent.bin}" />
+   <delete file="${rvpredict.lib}/rv-predict-agent.jar"/>
+ </target>
+
+  <target name="clean-rvpredict-engine">
+   <delete dir="${rvpredict.engine.bin}" />
+   <delete file="${rvpredict.lib}/rv-predict-engine.jar"/>
  </target>
   
 
-<target name="rvpredict-agent" depends="init-rvpredict-agent,rvpredict-engine"
+<target name="rvpredict-agent" depends="init-rvpredict-agent"
           description="compile rvpredict-agent" >
-    <javac srcdir="${rvpredict.agent.src}" destdir="${rvpredict.agent.bin}" debug="true" debuglevel="lines,vars,source">
-<classpath>
-<pathelement location="${rvpredict.agent.lib}/asm.jar"/>
-<pathelement location="${rvpredict.lib}/rv-predict-engine.jar"/>
-</classpath>
+    <javac srcdir="${rvpredict.agent.src}" destdir="${rvpredict.agent.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="false">
+<classpath refid="rv-predict-agent.classpath"/>
+            <exclude name="java/io/"/>
+            <exclude name="java/"/>
 </javac>
 <delete file="${rvpredict.lib}/rv-predict-agent.jar"/>
         <jar destfile="${rvpredict.lib}/rv-predict-agent.jar"
@@ -88,7 +116,7 @@
               <!-- Compile the java code from ${benchmark.src} into ${benchmark.bin} -->
     <javac srcdir="${test.src}" destdir="${test.bin}" debug="true" debuglevel="lines,vars,source"/>
       </target>
-  <target name="clean"
+  <target name="clean" depends="clean-rvpredict-agent,clean-rvpredict-engine"
           description="clean up" >
               <!-- Delete the ${benchmark.bin} directory trees -->
     <delete dir="${benchmark.bin}"/>

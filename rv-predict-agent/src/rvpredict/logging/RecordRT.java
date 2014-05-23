@@ -89,7 +89,11 @@ public final class RecordRT {
 			HashMap<String,Integer> stmtSigIdMap, boolean isVerbose)
 	{
 		try{
-			DBEngine db= new DBEngine(appname);
+			//just reuse the connection 
+			
+			//TODO: if db is null or closed, there must be something wrong
+			
+		//	DBEngine db= new DBEngine(appname);
 		//save sharedvariable - id to database
 		  db.createSharedVarSignatureTable();
 	      Iterator<Entry<String,Integer>> svIt = variableIdMap.entrySet().iterator();

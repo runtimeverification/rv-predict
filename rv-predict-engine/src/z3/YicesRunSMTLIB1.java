@@ -16,6 +16,7 @@ import java.util.Map.Entry;
 import java.util.Vector;
 
 import config.Configuration;
+import config.Util;
 
 /**
  * Constraint solving with Yices.

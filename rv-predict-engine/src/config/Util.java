@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package z3;
+package config;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -42,6 +42,7 @@ import java.io.PrintWriter;
  */
 public class Util {
 
+	private final static String RV_STR = "rv";
 
 	/**
 	 * Create a file "name" under the directory "path"
@@ -70,6 +71,19 @@ public class Util {
 	}
 	public static PrintWriter newWriter(File file, boolean append) throws IOException {
 	return new PrintWriter(new BufferedWriter(new FileWriter(file, append)));
+	}
+	
+	public static String getTempRVDirectory() {
+		String tempdir = System.getProperty("java.io.tmpdir");
+		
+		
+		String tempRVdir = tempdir + System.getProperty("file.separator")+RV_STR+ System.getProperty("file.separator");
+		
+		File tempFile = new File(tempRVdir);
+		if(!(tempFile.exists()))
+			tempFile.mkdir();
+		
+		return tempRVdir;
 	}
 
 }

@@ -41,8 +41,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
+import config.Util;
 import db.DBEngine.EventItem;
-
 import trace.*;
 import trace.AbstractNode.TYPE;
 import violation.IViolation;
@@ -69,7 +69,7 @@ public class DBEngineParallel extends DBEngine{
 	
 	public void connectDB(long tid) throws Exception
 	{
-        Connection conn  = DriverManager.getConnection("jdbc:h2:"+Util.getUserHomeDirectory()+dbname+"_"+tracetablename+"_"+tid);//+"_"+tid   +";MVCC=TRUE" +";MULTI_THREADED=1"
+        Connection conn  = DriverManager.getConnection("jdbc:h2:"+Util.getTempRVDirectory()+dbname+"_"+tracetablename+"_"+tid);//+"_"+tid   +";MVCC=TRUE" +";MULTI_THREADED=1"
         //conn.setAutoCommit(true);
         threadConnectionMap.put(tid, conn);
 	}

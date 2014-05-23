@@ -64,8 +64,7 @@ public class Configuration {
 	final static String default_timeout= "3600";
 
 
-	final static String default_constraint_outdir  = System.getProperty("user.dir")+
-			System.getProperty("file.separator")+"z3";
+	final static String default_constraint_outdir  =Util.getTempRVDirectory()+"z3";
 	
 	public String appname;
 	public long window_size;

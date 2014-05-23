@@ -41,6 +41,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
+import config.Util;
 import trace.*;
 import trace.AbstractNode.TYPE;
 import violation.IViolation;
@@ -467,7 +468,7 @@ public class DBEngine {
 	protected void connectDB() throws Exception
 	{
 		Class.forName(driver);
-        conn  = DriverManager.getConnection("jdbc:h2:"+Util.getUserHomeDirectory()+dbname);
+        conn  = DriverManager.getConnection("jdbc:h2:"+Util.getTempRVDirectory()+dbname);
         //conn.setAutoCommit(true);
 	}
 	

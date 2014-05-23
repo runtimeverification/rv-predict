@@ -381,7 +381,7 @@ public class DBEngine {
 	{
 		try{
 		Class.forName(driver);
-        conn  = DriverManager.getConnection("jdbc:h2:"+Util.getUserHomeDirectory()+dbname);//
+        conn  = DriverManager.getConnection("jdbc:h2:"+Util.getUserHomeDirectory()+dbname+";DB_CLOSE_ON_EXIT=FALSE");//
         //conn.setAutoCommit(true);
         //check if Database may be already in use
         //kill?

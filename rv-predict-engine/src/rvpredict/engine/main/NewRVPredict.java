@@ -26,16 +26,9 @@ package rvpredict.engine.main; /************************************************
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-import java.io.FileWriter;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.Vector;
+import java.io.*;
+import java.net.URLDecoder;
+import java.util.*;
 import java.util.Map.Entry;
 
 import property.EREProperty;
@@ -1001,10 +994,16 @@ public class NewRVPredict {
 	 * @param args
 	 */
 	public static void main(String[] args) {
+        Configuration config = new Configuration(args);
 
-		config = new Configuration(args);
-		
-		try{			
+        run(config);
+    }
+
+    public static void run(Configuration conf) {
+        config = conf;
+
+
+        try{
 			
 			//Now let's start predict analysis
 			long start_time = System.currentTimeMillis();

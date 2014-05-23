@@ -6,8 +6,8 @@ are verified to be real, i.e., RVPredict never reports false alarms.
 
 RVPredict runs through these phases:
 
-Instrumentation    - The program is instrumented using soot.
-Logging            - The instrumented program is run to collect execution logs.
+Instrumentation    - The program is instrumented at runtime using a java agent.
+Logging            - The instrumented program generates execution logs.
 Prediction         - Prediction occurs. For race detection this consists of an
                      un-ordered read-write or write-write conflict to a shared 
                      variable.
@@ -21,15 +21,10 @@ To install Yices, follow the instruction at
 Remember to add the z3 or yices (or both) binaries to your PATH
 
 -- Running 
-#Suppose the main class of the target program is demo.Example
+#Invoke rv-predict on a class as you would invoke the Java interpreter
 
-ant                           - Compile the test programs in test/src
-bin/rv-instrument demo.Example  - Instrument the program
-bin/rv-log demo.Example         - Log a trace of the program execution
-bin/rv-predict demo.Example     - Predict races
-
-#Run all the steps above together
-bin/run demo.Example
+ant                                           - Compile the tool and tests
+bin/rv-predict -cp tests/bin demo.Example     - Predict races
 
 ----------------------------------------
 More online documents: http://fsl.cs.illinois.edu/rvpredict/

@@ -38,15 +38,14 @@ public class Main {
                 classpath,
                 "-javaagent:" + iagent,
                 config.appname};
-        System.out.println(Arrays.toString(appArgs));
         ProcessBuilder processBuilder =
                 new ProcessBuilder(appArgs);
         processBuilder.inheritIO();
         try {
-            System.out.print("Starting " + config.appname + "...");
+            System.out.println("Started logging " + config.appname + ".");
             Process process = processBuilder.start();
             process.waitFor();
-            System.out.println("done.");
+            System.out.println("\nDone logging " + config.appname + ".");
         } catch (IOException e) {
         } catch (InterruptedException e) {
             e.printStackTrace();

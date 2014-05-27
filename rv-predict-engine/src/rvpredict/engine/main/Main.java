@@ -15,7 +15,6 @@ import java.util.*;
  * @author TraianSF
  */
 public class Main {
-
     public static void main(String[] args) {
 
         Configuration config = new Configuration();
@@ -103,7 +102,7 @@ public class Main {
 
         db = new DBEngine(config.appname);
         try {
-            if (!db.checkTables()) {
+            if (! db.checkTables()) {
                 System.err.print("Trace was not recorded properly. ");
                 if (config.agent) {
                     System.err.println("Please check the classpath.");
@@ -131,13 +130,8 @@ public class Main {
         }
     }
 
-
     private static String getBasePath() {
         String path = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getAbsolutePath();
-//        if (!path.endsWith(".jar"))
-//            path = new File(path) //bin
-//                    .getParentFile() //src
-//                    .getAbsolutePath() + "/";
         try {
             String decodedPath = URLDecoder.decode(path, "UTF-8");
             File parent = new File(decodedPath).getParentFile().getParentFile();

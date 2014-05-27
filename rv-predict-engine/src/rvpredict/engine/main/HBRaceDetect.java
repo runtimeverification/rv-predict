@@ -198,7 +198,7 @@ public class HBRaceDetect {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
-        final Configuration config = new Configuration();
+        config = new Configuration();
         JCommander jc = new JCommander(config);
 
         config.parseArguments(args, jc);

@@ -27,12 +27,10 @@ package rvpredict.engine.main; /************************************************
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 import java.io.*;
-import java.net.URLDecoder;
 import java.util.*;
 import java.util.Map.Entry;
 
 import com.beust.jcommander.JCommander;
-import com.beust.jcommander.ParameterException;
 import property.EREProperty;
 import config.Configuration;
 import trace.AbstractNode;
@@ -1002,7 +1000,6 @@ public class NewRVPredict {
         config.parseArguments(args, jc);
         run(config);
     }
-
 
     public static void run(Configuration conf) {
         config = conf;

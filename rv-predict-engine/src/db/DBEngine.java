@@ -59,7 +59,8 @@ public class DBEngine {
 	
 	//currently we use the h2 database
 	protected final String dbname = "RVDatabase";
-	protected final String driver = "org.h2.Driver";	
+	protected final String driver = "org.h2.Driver";
+    private final int TABLE_NOT_FOUND_ERROR_CODE = 42102;
 	public String appname = "test";
 	
 	
@@ -243,6 +244,62 @@ public class DBEngine {
 			e.printStackTrace();
 		}
 	}
+
+    /**
+     * Drops all relevant tables of the database.  Used for a clean start.
+     * @throws Exception if errors are reported by the sql command
+     */
+    public void dropAll() throws Exception {
+        Statement stmt = conn.createStatement();
+
+        String sql_dropTable;
+        sql_dropTable = "DROP TABLE IF EXISTS "+propertytablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS "+scheduletablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS "+stmtsigtablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS "+sharedvarsigtablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS "+volatilesigtablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS "+tracetablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS "+tidtablename;
+        stmt.execute(sql_dropTable);
+    }
+
+    /**
+     * Checks that all relevant tables exist.
+     * @throws Exception
+     */
+    public boolean checkTables() throws SQLException {
+        Statement stmt = conn.createStatement();
+
+        String sql_dropTable;
+//        sql_dropTable = "SELECT COUNT(*) FROM "+propertytablename;
+//        stmt.execute(sql_dropTable);
+//        sql_dropTable = "SELECT COUNT(*) FROM "+scheduletablename;
+//        stmt.execute(sql_dropTable);
+        try {
+            sql_dropTable = "SELECT COUNT(*) FROM "+stmtsigtablename;
+            stmt.execute(sql_dropTable);
+            sql_dropTable = "SELECT COUNT(*) FROM "+sharedvarsigtablename;
+            stmt.execute(sql_dropTable);
+            sql_dropTable = "SELECT COUNT(*) FROM "+volatilesigtablename;
+            stmt.execute(sql_dropTable);
+            sql_dropTable = "SELECT COUNT(*) FROM "+tracetablename;
+            stmt.execute(sql_dropTable);
+            sql_dropTable = "SELECT COUNT(*) FROM "+tidtablename;
+            stmt.execute(sql_dropTable);
+        } catch (SQLException e) {
+            if (e.getErrorCode() == TABLE_NOT_FOUND_ERROR_CODE)
+                return false;
+            throw e;
+        }
+        return true;
+    }
+
 	public void createPropertyTable() throws Exception
 	{
 		String sql_dropTable = "DROP TABLE IF EXISTS "+propertytablename;

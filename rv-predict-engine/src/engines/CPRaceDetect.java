@@ -203,7 +203,7 @@ public class CPRaceDetect {
         final Configuration config = new Configuration();
         JCommander jc = new JCommander(config);
 
-        Configuration.parseArguments(args, config, jc);
+        config.parseArguments(args, jc);
 
 		try{
 			

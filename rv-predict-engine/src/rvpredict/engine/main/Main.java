@@ -53,7 +53,7 @@ public class Main {
          // program specific options starting with the first named (and unknown) one
         String[] pgmArgs = Arrays.copyOfRange(args, max, args.length);
 
-        Configuration.parseArguments(rvArgs, config, jc);
+        config.parseArguments(rvArgs, jc);
 
         if (!config.agent && ! config.predict) {
             config.agent = config.predict = true;

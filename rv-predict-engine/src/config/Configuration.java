@@ -142,7 +142,7 @@ public class Configuration {
         javaOptions = new JavaOptions();
     }
 
-    public static void parseArguments(String[] args, Configuration config, JCommander jc) {
+    public void parseArguments(String[] args, JCommander jc) {
         try {
             jc.parse(args);
         } catch (ParameterException e) {
@@ -151,40 +151,40 @@ public class Configuration {
             System.exit(1);
         }
 
-        if (config.help) {
+        if (help) {
             jc.usage();
             System.exit(0);
         }
 
-        if (config.command_line == null && config.javaOptions.appJar == null) {
+        if (command_line == null && javaOptions.appJar == null) {
             System.out.println("Main class (or -jar option) missing.");
             jc.usage();
             System.exit(1);
         }
 
-        if (config.javaOptions.appJar == null) {
-            config.appname = config.command_line.get(0);
+        if (javaOptions.appJar == null) {
+            appname = command_line.get(0);
         } else { // set main class name and class path from the jar manifest
-            File file = new File(config.javaOptions.appJar);
+            File file = new File(javaOptions.appJar);
             if (!file.exists()) {
-                System.err.println("Error: Unable to access jarfile " + config.javaOptions.appJar);
+                System.err.println("Error: Unable to access jarfile " + javaOptions.appJar);
                 System.exit(1);
             }
-            config.javaOptions.appClassPath = config.javaOptions.appJar;
+            javaOptions.appClassPath = javaOptions.appJar;
             try {
-                JarFile jarFile = new JarFile(config.javaOptions.appJar);
+                JarFile jarFile = new JarFile(javaOptions.appJar);
                 Manifest manifest = jarFile.getManifest();
                 Attributes mainAttributes = manifest.getMainAttributes();
                 String mainClass = mainAttributes.getValue("Main-Class");
                 if (mainClass == null) {
-                    System.err.println("no main manifest attribute, in " + config.javaOptions.appJar);
+                    System.err.println("no main manifest attribute, in " + javaOptions.appJar);
                     System.exit(1);
                 }
-                config.appname = mainClass;
-                if (config.command_line == null) {
-                    config.command_line = new ArrayList<String>();
+                appname = mainClass;
+                if (command_line == null) {
+                    command_line = new ArrayList<String>();
                 }
-                config.command_line.add(0, config.appname);
+                command_line.add(0, appname);
                 String classPath = mainAttributes.getValue("Class-Path");
                 String basepath = file.getParent();
                 String pathSeparator = System.getProperty("path.separator");
@@ -193,11 +193,11 @@ public class Configuration {
                     String[] uris = classPath.split(" ");
                     for (String uri : uris) {
                         String decodedPath = URLDecoder.decode(uri, "UTF-8");
-                        config.javaOptions.appClassPath += pathSeparator + basepath + fileSeparator + decodedPath;
+                        javaOptions.appClassPath += pathSeparator + basepath + fileSeparator + decodedPath;
                     }
                 }
             } catch (IOException e) {
-                System.err.println("Unexpected I/O error while reading jar file " + config.javaOptions.appJar + ".");
+                System.err.println("Unexpected I/O error while reading jar file " + javaOptions.appJar + ".");
                 System.err.println(e.getMessage());
                 System.exit(1);
             }

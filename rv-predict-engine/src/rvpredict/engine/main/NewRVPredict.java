@@ -31,6 +31,8 @@ import java.net.URLDecoder;
 import java.util.*;
 import java.util.Map.Entry;
 
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.ParameterException;
 import property.EREProperty;
 import config.Configuration;
 import trace.AbstractNode;
@@ -994,10 +996,13 @@ public class NewRVPredict {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-        Configuration config = new Configuration(args);
+        Configuration config = new Configuration();
+        JCommander jc = new JCommander(config);
 
+        Configuration.parseArguments(args, config, jc);
         run(config);
     }
+
 
     public static void run(Configuration conf) {
         config = conf;

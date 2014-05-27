@@ -2,7 +2,6 @@
 SET RV_ENGINE_BIN=%~dp0..\lib\rv-predict-engine.jar
 
 REM predict
-echo "predicting races"
 for %%a in (%*) do call :expand %%a
 goto End
 

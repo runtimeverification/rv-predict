@@ -35,6 +35,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 
+import com.beust.jcommander.JCommander;
 import config.Configuration;
 import trace.ReadNode;
 import trace.Trace;
@@ -199,8 +200,11 @@ public class CPRaceDetect {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
-		config = new Configuration(args);
-				
+        final Configuration config = new Configuration();
+        JCommander jc = new JCommander(config);
+
+        Configuration.parseArguments(args, config, jc);
+
 		try{
 			
 			//start predict analysis

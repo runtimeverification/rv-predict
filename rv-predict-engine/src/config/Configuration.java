@@ -28,18 +28,12 @@
  ******************************************************************************/
 package config;
 
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
-import com.beust.jcommander.ParameterException;
-import com.beust.jcommander.ParametersDelegate;
+import com.beust.jcommander.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -51,11 +45,16 @@ import java.util.jar.Manifest;
  */
 public class Configuration {
 
+    public static final String PROGRAM_NAME = "rv-predict";
     @Parameter(description="<command_line>")
     public List<String> command_line;
 
     public String appname;
 
+	final static String short_opt_verbose = "-v";
+    final static String opt_verbose = "--verbose";
+    @Parameter(names = {short_opt_verbose, opt_verbose}, description = "generate more verbose output")
+    public boolean verbose;
 
 	final static String short_opt_help = "-h";
     final static String opt_help = "--help";
@@ -63,45 +62,45 @@ public class Configuration {
     public boolean help;
 
 	final static String opt_rmm_pso = "--pso";//for testing only
-    @Parameter(names = opt_rmm_pso, description = "PSO memory model")
+    @Parameter(names = opt_rmm_pso, description = "PSO memory model", hidden = true)
     public boolean rmm_pso;
 
 	final static String opt_max_len = "--maxlen";
     final static String default_max_len= "1000";
-    @Parameter(names=opt_max_len, description = "window size")
+    @Parameter(names=opt_max_len, description = "window size", hidden = true)
     public long window_size = 1000;
 
 	final static String opt_no_schedule = "--noschedule";
-    @Parameter(names=opt_no_schedule, description = "not report schedule")
+    @Parameter(names=opt_no_schedule, description = "not report schedule", hidden = true)
     //ok, let's make noschedule by default
     public boolean noschedule = true;
 
 	final static String opt_no_branch = "--nobranch";
-    @Parameter(names=opt_no_branch, description = "use no branch model")
+    @Parameter(names=opt_no_branch, description = "use no branch model", hidden = true)
     public boolean nobranch;
 
 	final static String opt_no_volatile = "--novolatile";
-    @Parameter(names=opt_no_volatile, description = "exclude volatile variables")
+    @Parameter(names=opt_no_volatile, description = "exclude volatile variables", hidden = true)
     public boolean novolatile;
 
 	final static String opt_allrace = "--allrace";
-    @Parameter(names=opt_allrace, description = "check all races")
+    @Parameter(names=opt_allrace, description = "check all races", hidden = true)
     public boolean allrace;
 
 	final static String opt_all_consistent = "--allconsistent";
-    @Parameter(names = opt_all_consistent, description = "require all read-write consistent")
+    @Parameter(names = opt_all_consistent, description = "require all read-write consistent", hidden = true)
     public boolean allconsistent;
 
 	final static String opt_constraint_outdir = "--outdir";
-    @Parameter(names = opt_constraint_outdir, description = "constraint file directory")
+    @Parameter(names = opt_constraint_outdir, description = "constraint file directory", hidden = true)
     public String constraint_outdir = Util.getTempRVDirectory()+"z3";
 
 	final static String opt_solver_timeout = "--solver_timeout";
-    @Parameter(names = opt_solver_timeout, description = "solver timeout in seconds")
+    @Parameter(names = opt_solver_timeout, description = "solver timeout in seconds", hidden = true)
     public long solver_timeout = 60;
 
 	final static String opt_solver_memory = "--solver_memory";
-    @Parameter(names = opt_solver_memory, description = "solver memory size in MB")
+    @Parameter(names = opt_solver_memory, description = "solver memory size in MB", hidden = true)
     public long solver_memory = 8000;
 
 	final static String opt_timeout = "--timeout";
@@ -109,11 +108,11 @@ public class Configuration {
     public long timeout = 3600;
 
 	final static String opt_smtlib1 = "--smtlib1";
-    @Parameter(names = opt_smtlib1, description = "use constraint format smtlib v1.2")
+    @Parameter(names = opt_smtlib1, description = "use constraint format smtlib v1.2", hidden = true)
     public boolean smtlib1;
 
 	final static String opt_optrace = "--optrace";
-    @Parameter(names = opt_optrace, description = "optimize race detection")
+    @Parameter(names = opt_optrace, description = "optimize race detection", hidden = true)
     //by default optrace is true
     public boolean optrace = true;
 
@@ -152,13 +151,13 @@ public class Configuration {
         }
 
         if (help) {
-            jc.usage();
+            usage(jc);
             System.exit(0);
         }
 
         if (command_line == null && javaOptions.appJar == null) {
             System.out.println("Main class (or -jar option) missing.");
-            jc.usage();
+            usage(jc);
             System.exit(1);
         }
 
@@ -203,5 +202,46 @@ public class Configuration {
             }
         }
     }
+
+    public void usage(JCommander jc) {
+        // computing names maximum length
+        int max_option_length = 0;
+        for (ParameterDescription parameterDescription : jc.getParameters()) {
+            if (parameterDescription.getNames().length() > max_option_length) {
+                max_option_length = parameterDescription.getNames().length();
+            }
+        }
+
+        // Computing usage
+        max_option_length++;
+        String usageHeader = "Usage: " + PROGRAM_NAME + " [java_options] [rv_predict_options] " + jc.getMainParameterDescription() + "\n";
+        String usage = usageHeader
+                + "  Options:" + "\n";
+        String shortUsage = usageHeader
+                + "  Common options (use -v for a complete list):" + "\n";
+        for (ParameterDescription parameterDescription : jc.getParameters()) {
+                String description = spaces(4) + parameterDescription.getNames()
+                        + spaces(max_option_length - parameterDescription.getNames().length()) + parameterDescription.getDescription()
+                        + " [" + parameterDescription.getDefault() + "]\n";
+                usage += description;
+            if (!parameterDescription.getParameter().hidden()) {
+                shortUsage += description;
+            }
+
+        }
+
+        if (verbose) {
+            System.out.println(usage);
+        } else {
+            System.out.println(shortUsage);
+        }
+    }
+
+    private static String spaces(int i) {
+        char[] spaces = new char[i];
+        Arrays.fill(spaces, ' ');
+        return new String(spaces);
+    }
+
 
 }

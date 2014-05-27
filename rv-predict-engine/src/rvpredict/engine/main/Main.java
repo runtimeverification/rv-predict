@@ -1,9 +1,7 @@
 package rvpredict.engine.main;
 
 import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterDescription;
-import com.beust.jcommander.ParameterException;
 import config.Configuration;
 import db.DBEngine;
 
@@ -18,20 +16,18 @@ import java.util.*;
  */
 public class Main {
 
-    public static final String PROGRAM_NAME = "rv-predict";
-
     public static void main(String[] args) {
 
         Configuration config = new Configuration();
         JCommander jc = new JCommander(config);
-        jc.setProgramName(PROGRAM_NAME);
+        jc.setProgramName(Configuration.PROGRAM_NAME);
 
         // Collect all parameter names.  It would be nice if JCommander provided this directly.
         Set<String> options = new HashSet<String>();
         for (ParameterDescription parameterDescription : jc.getParameters()) {
-           for (String name : parameterDescription.getParameter().names()) {
-               options.add(name);
-           }
+            for (String name : parameterDescription.getParameter().names()) {
+                options.add(name);
+            }
         }
 
         // remove the _opt option added by the rv-predict script to all options
@@ -94,7 +90,9 @@ public class Main {
                     new ProcessBuilder(appArgList.toArray(new String[appArgList.size()]));
             processBuilder.inheritIO();
             try {
-                System.out.println("Started logging " + config.appname + ".");
+                if (config.verbose) {
+                    System.out.println("Started logging " + config.appname + ".");
+                }
                 Process process = processBuilder.start();
                 process.waitFor();
             } catch (IOException e) {
@@ -106,11 +104,11 @@ public class Main {
         db = new DBEngine(config.appname);
         try {
             if (!db.checkTables()) {
-                System.err.print("Trace was not recorded properly.");
+                System.err.print("Trace was not recorded properly. ");
                 if (config.agent) {
                     System.err.println("Please check the classpath.");
                 } else {
-                    System.err.println("Please run " + PROGRAM_NAME + " with the " + Configuration.opt_only_log +
+                    System.err.println("Please run " + Configuration.PROGRAM_NAME + " with the " + Configuration.opt_only_log +
                             "option enabled.");
                 }
                 System.exit(1);
@@ -123,7 +121,7 @@ public class Main {
             db.closeDB();
         }
 
-        if (config.agent) {
+        if (config.agent && config.verbose) {
             System.out.println("\nDone logging " + config.appname + ".");
         }
 
@@ -133,15 +131,13 @@ public class Main {
         }
     }
 
+
     private static String getBasePath() {
         String path = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getAbsolutePath();
-        if (!path.endsWith(".jar"))
-            path = new File(path) //Main
-                    .getParentFile() //main
-                    .getParentFile() //engine
-                    .getParentFile() //rvpredict
-                    .getParentFile() //src
-                    .getAbsolutePath() + "/";
+//        if (!path.endsWith(".jar"))
+//            path = new File(path) //bin
+//                    .getParentFile() //src
+//                    .getAbsolutePath() + "/";
         try {
             String decodedPath = URLDecoder.decode(path, "UTF-8");
             File parent = new File(decodedPath).getParentFile().getParentFile();

@@ -1,5 +1,6 @@
 package rvpredict.engine.main;
 
+import com.beust.jcommander.JCommander;
 import config.Configuration;
 import db.DBEngine;
 
@@ -7,6 +8,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author TraianSF
@@ -15,13 +19,38 @@ public class Main {
     public static void main(String[] args) {
 
 
+        Configuration config = new Configuration();
+        int max = args.length;
         for (int i = 0; i < args.length; i++) {
             if (args[i].startsWith("-")) {
                 args[i] = args[i].substring(0, args[i].length() - 4);
+                if (max == args.length && !config.options.contains(args[i])) {
+                    max = i;
+                }
             }
         }
+        System.out.println(config.options);
+        String[] rvArgs = Arrays.copyOf(args, max);
+        System.out.println(Arrays.toString(rvArgs));
+        String[] pgmArgs = Arrays.copyOfRange(args, max, args.length);
+        System.out.println(Arrays.toString(pgmArgs));
 
-        Configuration config = new Configuration(args);
+        JCommander jc = new JCommander(config, rvArgs);
+        jc.setProgramName("rv-predict");
+
+        if (config.help) {
+            jc.usage();
+            System.exit(0);
+        }
+
+        if (config.command_line == null) {
+            System.out.println("Main class missing.");
+            jc.usage();
+            System.exit(1);
+        }
+
+        config.appname = config.command_line.get(0);
+
 
         DBEngine db = new DBEngine(config.appname);
         try {
@@ -40,16 +69,20 @@ public class Main {
         String iagent = libPath + "iagent.jar";
         String rvAgent = libPath + "rv-predict-agent.jar";
         String classpath = "";
-        if (config.appClassPath != null) {
-            classpath = config.appClassPath;
+        if (config.javaOptions.appClassPath != null) {
+            classpath = config.javaOptions.appClassPath;
         }
         classpath = rvAgent + System.getProperty("path.separator") + classpath;
-        String[] appArgs = new String[]{java, "-cp",
-                classpath,
-                "-javaagent:" + iagent,
-                config.appname};
+        List<String> appArgList = new ArrayList<String>();
+        appArgList.add(java);
+        appArgList.add("-cp");
+        appArgList.add(classpath);
+        appArgList.add( "-javaagent:" + iagent);
+        appArgList.addAll(config.command_line);
+        for (String appArg : pgmArgs) appArgList.add(appArg);
+
         ProcessBuilder processBuilder =
-                new ProcessBuilder(appArgs);
+                new ProcessBuilder(appArgList.toArray(new String[appArgList.size()]));
         processBuilder.inheritIO();
         try {
             System.out.println("Started logging " + config.appname + ".");

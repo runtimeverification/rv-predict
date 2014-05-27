@@ -28,207 +28,139 @@
  ******************************************************************************/
 package config;
 
-import java.util.StringTokenizer;
+import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParametersDelegate;
 
-import org.apache.commons.cli.BasicParser;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class Configuration {
 
-	final static String opt_help = "h";
+    public final Set<String> options = new HashSet<String>();
 
-	final static String opt_rmm_pso = "pso";//for testing only
-	
-	final static String opt_max_len = "maxlen";
-	final static String opt_no_schedule = "noschedule";
-	final static String opt_no_branch = "nobranch";
-	final static String opt_no_volatile = "novolatile";
-	final static String opt_allrace = "allrace";
+    @Parameter(description="<command_line>")
+    public List<String> command_line;
 
-	final static String opt_all_consistent = "allconsistent";
-	final static String opt_constraint_outdir = "outdir";
-    final static String opt_app_classpath = "cp";
-	final static String opt_solver_timeout = "solver_timeout";
-	final static String opt_solver_memory = "solver_memory";
-	final static String opt_timeout = "timeout";
-
-	final static String opt_smtlib1 = "smtlib1";
-	final static String opt_optrace = "optrace";
-
-	final static String default_max_len= "1000";
-	final static String default_solver_timeout= "60";
-	final static String default_solver_memory= "8000";
-	final static String default_empty= "";
-	final static String default_timeout= "3600";
+    public String appname;
 
 
-	final static String default_constraint_outdir  =Util.getTempRVDirectory()+"z3";
-	
-	public String appname;
-	public long window_size;
-	public long solver_timeout;
-	public long solver_memory;
-	public long timeout;
-
-	public String constraint_outdir;
-    public String appClassPath;
-	public boolean nobranch;
-	public boolean noschedule;
-	public boolean optrace;
-	public boolean allrace;
-	public boolean novolatile;
-
-	public boolean allconsistent;
-	public boolean rmm_pso;
-	public boolean smtlib1;
-	
-	private boolean help;
-
-	public Configuration (String[] args) {
-	
-		try{
-		
-		if(args.length==0)
-		{
-			 printUsageAndExit();
-		}
-		
-		//emp.Example stringbuffer.StringBufferTest
-		
-		//String[] args2 = {"abc","-maxlen","10000","-noschedule","-nobranch"};
-		
-		// create Options object
-		Options options = new Options();
-
-		// add t option
-		options.addOption(opt_max_len, true, "window size");
-		options.addOption(opt_no_schedule, false, "not report schedule");
-		options.addOption(opt_no_branch, false, "use no branch model");
-		options.addOption(opt_no_volatile, false, "exclude volatile variables");
-		options.addOption(opt_all_consistent, false, "require all read-write consistent");
-		options.addOption(opt_rmm_pso, false, "PSO memory model");
-		options.addOption(opt_smtlib1, false, "use constraint format smtlib v1.2");
-		options.addOption(opt_optrace, false, "optimize race detection");
-		options.addOption(opt_allrace, false, "check all races");
-
-		options.addOption(opt_constraint_outdir, true, "constraint file directory");
-        options.addOption(opt_app_classpath, true, "Application classpath");
-		options.addOption(opt_solver_timeout, true, "solver timeout in seconds");
-		options.addOption(opt_solver_memory, true, "solver memory size in MB");
-		options.addOption(opt_timeout, true, "rvpredict timeout in seconds");
-
-		options.addOption(opt_help, false, "print help info");
-
-		CommandLineParser parser = new BasicParser();
-		CommandLine cmd = parser.parse( options, args);
-		
-		String maxlen = cmd.getOptionValue(opt_max_len,default_max_len);
-		window_size = Long.valueOf(maxlen);
-		
-		String z3timeout = cmd.getOptionValue(opt_solver_timeout,default_solver_timeout);
-		solver_timeout = Long.valueOf(z3timeout);
-		
-		String z3memory = cmd.getOptionValue(opt_solver_memory,default_solver_memory);
-		solver_memory = Long.valueOf(z3memory);
-		
-		String rvtimeout = cmd.getOptionValue(opt_timeout,default_timeout);
-		timeout = Long.valueOf(rvtimeout);
-		
-		constraint_outdir = cmd.getOptionValue(opt_constraint_outdir,default_constraint_outdir);
-        appClassPath = cmd.getOptionValue(opt_app_classpath, null);
-		
-		
-		noschedule = cmd.hasOption(opt_no_schedule);
-		//ok, let's make noschedule by default
-		noschedule = true;
-				
-		rmm_pso = cmd.hasOption(opt_rmm_pso);
-		//rmm_pso = true;
-		
-		 nobranch = cmd.hasOption(opt_no_branch);
-		 novolatile = cmd.hasOption(opt_no_volatile);
-
-		 allconsistent = cmd.hasOption(opt_all_consistent);
-		 smtlib1 = cmd.hasOption(opt_smtlib1);
-		 optrace = cmd.hasOption(opt_optrace);
-		 allrace = cmd.hasOption(opt_allrace);
-
-		 //by default optrace is true
-		 optrace = true;
-		 
-		 help = cmd.hasOption(opt_help);
-		 
-		 if(help||cmd.getArgList().isEmpty())
-		 {
-			 printUsageAndExit();
-		 }
-		appname = (String) cmd.getArgList().get(0);
-		}catch(Exception e)
-		{
-			e.printStackTrace();
-			System.exit(0);
-		}
-
-	}
-
-	private static void printUsageAndExit()
-	{
-		System.out.println("Usage: java rvpredict.engine.main.NewRVPredict [options] classname");
-		System.out.println(getUsage());
-
-		System.exit(1);
-	}
-	private static String getUsage()
-	{
-		return "\nGeneral Options:\n"
-			+padOpt(" -help", "print this message" )
-			+padOpt(" -maxlen SIZE", "set window size to SIZE" )
-			+padOpt(" -noschedule", "disable generating racey schedule" )
-			+padOpt(" -nobranch", "disable control flow (MCM)" )
-			+padOpt(" -novolatile", "exclude races on volatile variables" )
-			+padOpt(" -allconsistent", "require all read-write consistency (Said)" )
-			+padOpt(" -smtlib1", "use smtlib v1 format" )
-			+padOpt(" -outdir PATH", "constraint file directory to PATH" )
-			+padOpt(" -solver_timeout TIME", "set solver timeout to TIME seconds" )
-			+padOpt(" -solver_memory MEMORY", "set memory used by solver to MEMORY megabytes" )
-			+padOpt(" -timeout TIME", "set rvpredict timeout to TIME seconds" )
-			;
-	}
-	
-    protected static String padOpt( String opts, String desc ) {
-        return pad( 1, opts, 30, desc );
+	final static String short_opt_help = "-h";
+    final static String opt_help = "--help";
+    @Parameter(names = {short_opt_help, opt_help}, description = "print help info", help = true)
+    public boolean help;
+    {
+        options.add(opt_help);
     }
 
-    private static String pad( int initial, String opts, int tab, String desc ) {
-        StringBuffer b = new StringBuffer();
-        for( int i = 0; i < initial; i++ ) b.append( " " );
-        b.append(opts);
-        int i;
-        if( tab <= opts.length() ) {
-            b.append( "\n" );
-            i = 0;
-        } else i = opts.length()+initial;
-        for( ; i <= tab; i++ ) {
-            b.append(" ");
-        }
-        for( StringTokenizer t = new StringTokenizer( desc );
-                t.hasMoreTokens(); )  {
-            String s = t.nextToken();
-            if( i + s.length() > 78 ) {
-                b.append( "\n" );
-                i = 0;
-                for( ; i <= tab; i++ ) {
-                    b.append(" ");
-                }
-            }
-            b.append( s );
-            b.append( " " );
-            i += s.length() + 1;
-        }
-        b.append( "\n" );
-        return b.toString();
+	final static String opt_rmm_pso = "--pso";//for testing only
+    @Parameter(names = opt_rmm_pso, description = "PSO memory model")
+    public boolean rmm_pso;
+    {
+        options.add(opt_rmm_pso);
     }
+
+	final static String opt_max_len = "--maxlen";
+    final static String default_max_len= "1000";
+    @Parameter(names=opt_max_len, description = "window size")
+    public long window_size = 1000;
+    {
+        options.add(opt_max_len);
+    }
+
+	final static String opt_no_schedule = "--noschedule";
+    @Parameter(names=opt_no_schedule, description = "not report schedule")
+    //ok, let's make noschedule by default
+    public boolean noschedule = true;
+    {
+        options.add(opt_no_schedule);
+    }
+
+	final static String opt_no_branch = "--nobranch";
+    @Parameter(names=opt_no_branch, description = "use no branch model")
+    public boolean nobranch;
+    {
+        options.add(opt_no_branch);
+    }
+
+	final static String opt_no_volatile = "--novolatile";
+    @Parameter(names=opt_no_volatile, description = "exclude volatile variables")
+    public boolean novolatile;
+    {
+        options.add(opt_no_volatile);
+    }
+
+	final static String opt_allrace = "--allrace";
+    @Parameter(names=opt_allrace, description = "check all races")
+    public boolean allrace;
+    {
+        options.add(opt_allrace);
+    }
+
+	final static String opt_all_consistent = "--allconsistent";
+    @Parameter(names = opt_all_consistent, description = "require all read-write consistent")
+    public boolean allconsistent;
+    {
+        options.add(opt_all_consistent);
+    }
+
+	final static String opt_constraint_outdir = "--outdir";
+    @Parameter(names = opt_constraint_outdir, description = "constraint file directory")
+    public String constraint_outdir = Util.getTempRVDirectory()+"z3";
+    {
+        options.add(opt_constraint_outdir);
+    }
+
+	final static String opt_solver_timeout = "--solver_timeout";
+    @Parameter(names = opt_solver_timeout, description = "solver timeout in seconds")
+    public long solver_timeout = 60;
+    {
+        options.add(opt_solver_timeout);
+    }
+
+	final static String opt_solver_memory = "--solver_memory";
+    @Parameter(names = opt_solver_memory, description = "solver memory size in MB")
+    public long solver_memory = 8000;
+    {
+        options.add(opt_solver_memory);
+    }
+
+	final static String opt_timeout = "--timeout";
+    @Parameter(names = opt_timeout, description = "rvpredict timeout in seconds")
+    public long timeout = 3600;
+    {
+        options.add(opt_timeout);
+    }
+
+	final static String opt_smtlib1 = "--smtlib1";
+    @Parameter(names = opt_smtlib1, description = "use constraint format smtlib v1.2")
+    public boolean smtlib1;
+    {
+        options.add(opt_smtlib1);
+    }
+
+	final static String opt_optrace = "--optrace";
+    @Parameter(names = opt_optrace, description = "optimize race detection")
+    //by default optrace is true
+    public boolean optrace = true;
+    {
+        options.add(opt_optrace);
+    }
+
+    @ParametersDelegate
+    public final JavaOptions javaOptions;
+
+    public class JavaOptions {
+        final static String opt_app_classpath = "-cp";
+        @Parameter(names = opt_app_classpath, description = "Application classpath")
+        public String appClassPath;
+        {
+            options.add(opt_app_classpath);
+        }
+    }
+
+	public Configuration () {
+        javaOptions = new JavaOptions();
+    }
+
 }

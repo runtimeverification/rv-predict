@@ -1,12 +1,12 @@
 package rvpredict.engine.main;
 
 import config.Configuration;
+import db.DBEngine;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
-import java.util.Arrays;
 
 /**
  * @author TraianSF
@@ -22,6 +22,16 @@ public class Main {
         }
 
         Configuration config = new Configuration(args);
+
+        DBEngine db = new DBEngine(config.appname);
+        try {
+            db.dropAll();
+        } catch (Exception e) {
+            System.err.println("Unexpected error while cleaning up the database:");
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
+        db.closeDB();
 
         String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
         String basePath = getBasePath();
@@ -45,12 +55,27 @@ public class Main {
             System.out.println("Started logging " + config.appname + ".");
             Process process = processBuilder.start();
             process.waitFor();
-            System.out.println("\nDone logging " + config.appname + ".");
         } catch (IOException e) {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
+
+        db = new DBEngine(config.appname);
+        try {
+            if (! db.checkTables()) {
+                System.err.println("Trace was not recorded properly. Please check the classpath.");
+                System.exit(1);
+            }
+        } catch (Exception e) {
+            System.err.println("Unexpected database error while recording the trace.");
+            System.err.println(e.getMessage());
+            System.exit(1);
+        } finally {
+            db.closeDB();
+        }
+
+        System.out.println("\nDone logging " + config.appname + ".");
         NewRVPredict.run(config);
     }
 

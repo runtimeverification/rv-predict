@@ -113,7 +113,7 @@ public class Main {
                 System.exit(1);
             }
         } catch (Exception e) {
-            System.err.println("Unexpected database error while checking the trace was recorded.");
+            System.err.println("Unexpected database error while checking whether the trace was recorded.");
             System.err.println(e.getMessage());
             System.exit(1);
         } finally {

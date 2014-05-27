@@ -51,16 +51,6 @@ public class Configuration {
 
     public String appname;
 
-	final static String short_opt_verbose = "-v";
-    final static String opt_verbose = "--verbose";
-    @Parameter(names = {short_opt_verbose, opt_verbose}, description = "generate more verbose output")
-    public boolean verbose;
-
-	final static String short_opt_help = "-h";
-    final static String opt_help = "--help";
-    @Parameter(names = {short_opt_help, opt_help}, description = "print help info", help = true)
-    public boolean help;
-
 	final static String opt_rmm_pso = "--pso";//for testing only
     @Parameter(names = opt_rmm_pso, description = "PSO memory model", hidden = true)
     public boolean rmm_pso;
@@ -117,12 +107,23 @@ public class Configuration {
     public boolean optrace = true;
 
     public final static String opt_only_log = "--agent";
-    @Parameter(names = opt_only_log, description = "Run (only) the logging stage")
+    @Parameter(names = opt_only_log, description = "Run only the logging stage")
     public boolean agent;
 
     public final static String opt_only_predict = "--predict";
-    @Parameter(names = opt_only_predict, description = "Run (only) the prediction stage")
+    @Parameter(names = opt_only_predict, description = "Run only the prediction stage")
     public boolean predict;
+
+
+	final static String short_opt_verbose = "-v";
+    final static String opt_verbose = "--verbose";
+    @Parameter(names = {short_opt_verbose, opt_verbose}, description = "generate more verbose output")
+    public boolean verbose;
+
+	final static String short_opt_help = "-h";
+    final static String opt_help = "--help";
+    @Parameter(names = {short_opt_help, opt_help}, description = "print help info", help = true)
+    public boolean help;
 
     @ParametersDelegate
     public final JavaOptions javaOptions;
@@ -219,21 +220,26 @@ public class Configuration {
                 + "  Options:" + "\n";
         String shortUsage = usageHeader
                 + "  Common options (use -v for a complete list):" + "\n";
+
+        Map<String, String> usageMap = new TreeMap<String, String>();
+        Map<String, String> shortUsageMap = new TreeMap<String, String>();
         for (ParameterDescription parameterDescription : jc.getParameters()) {
                 String description = spaces(4) + parameterDescription.getNames()
                         + spaces(max_option_length - parameterDescription.getNames().length()) + parameterDescription.getDescription()
-                        + " [" + parameterDescription.getDefault() + "]\n";
-                usage += description;
+                        + " [" + parameterDescription.getDefault() + "]";
+                usageMap.put(parameterDescription.getLongestName(), description);
             if (!parameterDescription.getParameter().hidden()) {
-                shortUsage += description;
+                shortUsageMap.put(parameterDescription.getLongestName(), description);
             }
 
         }
 
         if (verbose) {
             System.out.println(usage);
+            for (String usageCase : usageMap.values()) System.out.println(usageCase);
         } else {
             System.out.println(shortUsage);
+            for (String usageCase : shortUsageMap.values()) System.out.println(usageCase);
         }
     }
 

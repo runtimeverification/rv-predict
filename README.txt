@@ -20,10 +20,17 @@ To install Yices, follow the instruction at
          http://yices.csl.sri.com/download-yices2.shtml
 Remember to add the z3 or yices (or both) binaries to your PATH
 
+-- Compiling
+ant                                           - Compile the tool and tests
+
 -- Running 
 #Invoke rv-predict on a class as you would invoke the Java interpreter
+bin/rv-predict <rv_options> <MainClass> <program_options>
 
-ant                                           - Compile the tool and tests
+<rv_options> can be common options for the java interpreter (e.g., -cp) 
+or rv-predic specific options (run rv-predict --help for more information).
+
+-- Example
 bin/rv-predict -cp tests/bin demo.Example     - Predict races
 
 ----------------------------------------

@@ -28,207 +28,226 @@
  ******************************************************************************/
 package config;
 
-import java.util.StringTokenizer;
+import com.beust.jcommander.*;
 
-import org.apache.commons.cli.BasicParser;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import java.io.File;
+import java.io.IOException;
+import java.net.URLDecoder;
+import java.util.*;
+import java.util.jar.Attributes;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 
+
+/**
+ * Command line options class for rv-predict
+ * Used by JCommander to parse the main program parameters.
+ */
 public class Configuration {
 
-	final static String opt_help = "h";
+    public static final String PROGRAM_NAME = "rv-predict";
+    @Parameter(description="<command_line>")
+    public List<String> command_line;
 
-	final static String opt_rmm_pso = "pso";//for testing only
-	
-	final static String opt_max_len = "maxlen";
-	final static String opt_no_schedule = "noschedule";
-	final static String opt_no_branch = "nobranch";
-	final static String opt_no_volatile = "novolatile";
-	final static String opt_allrace = "allrace";
+    public String appname;
 
-	final static String opt_all_consistent = "allconsistent";
-	final static String opt_constraint_outdir = "outdir";
-    final static String opt_app_classpath = "cp";
-	final static String opt_solver_timeout = "solver_timeout";
-	final static String opt_solver_memory = "solver_memory";
-	final static String opt_timeout = "timeout";
+	final static String opt_rmm_pso = "--pso";//for testing only
+    @Parameter(names = opt_rmm_pso, description = "PSO memory model", hidden = true)
+    public boolean rmm_pso;
 
-	final static String opt_smtlib1 = "smtlib1";
-	final static String opt_optrace = "optrace";
+	final static String opt_max_len = "--maxlen";
+    final static String default_max_len= "1000";
+    @Parameter(names=opt_max_len, description = "window size", hidden = true)
+    public long window_size = 1000;
 
-	final static String default_max_len= "1000";
-	final static String default_solver_timeout= "60";
-	final static String default_solver_memory= "8000";
-	final static String default_empty= "";
-	final static String default_timeout= "3600";
+	final static String opt_no_schedule = "--noschedule";
+    @Parameter(names=opt_no_schedule, description = "not report schedule", hidden = true)
+    //ok, let's make noschedule by default
+    public boolean noschedule = true;
+
+	final static String opt_no_branch = "--nobranch";
+    @Parameter(names=opt_no_branch, description = "use no branch model", hidden = true)
+    public boolean nobranch;
+
+	final static String opt_no_volatile = "--novolatile";
+    @Parameter(names=opt_no_volatile, description = "exclude volatile variables", hidden = true)
+    public boolean novolatile;
+
+	final static String opt_allrace = "--allrace";
+    @Parameter(names=opt_allrace, description = "check all races", hidden = true)
+    public boolean allrace;
+
+	final static String opt_all_consistent = "--allconsistent";
+    @Parameter(names = opt_all_consistent, description = "require all read-write consistent", hidden = true)
+    public boolean allconsistent;
+
+	final static String opt_constraint_outdir = "--outdir";
+    @Parameter(names = opt_constraint_outdir, description = "constraint file directory", hidden = true)
+    public String constraint_outdir = Util.getTempRVDirectory()+"z3";
+
+	final static String opt_solver_timeout = "--solver_timeout";
+    @Parameter(names = opt_solver_timeout, description = "solver timeout in seconds", hidden = true)
+    public long solver_timeout = 60;
+
+	final static String opt_solver_memory = "--solver_memory";
+    @Parameter(names = opt_solver_memory, description = "solver memory size in MB", hidden = true)
+    public long solver_memory = 8000;
+
+	final static String opt_timeout = "--timeout";
+    @Parameter(names = opt_timeout, description = "rvpredict timeout in seconds")
+    public long timeout = 3600;
+
+	final static String opt_smtlib1 = "--smtlib1";
+    @Parameter(names = opt_smtlib1, description = "use constraint format smtlib v1.2", hidden = true)
+    public boolean smtlib1;
+
+	final static String opt_optrace = "--optrace";
+    @Parameter(names = opt_optrace, description = "optimize race detection", hidden = true)
+    //by default optrace is true
+    public boolean optrace = true;
+
+    public final static String opt_only_log = "--agent";
+    @Parameter(names = opt_only_log, description = "Run only the logging stage")
+    public boolean agent;
+
+    public final static String opt_only_predict = "--predict";
+    @Parameter(names = opt_only_predict, description = "Run only the prediction stage")
+    public boolean predict;
 
 
-	final static String default_constraint_outdir  =Util.getTempRVDirectory()+"z3";
-	
-	public String appname;
-	public long window_size;
-	public long solver_timeout;
-	public long solver_memory;
-	public long timeout;
+	final static String short_opt_verbose = "-v";
+    final static String opt_verbose = "--verbose";
+    @Parameter(names = {short_opt_verbose, opt_verbose}, description = "generate more verbose output")
+    public boolean verbose;
 
-	public String constraint_outdir;
-    public String appClassPath;
-	public boolean nobranch;
-	public boolean noschedule;
-	public boolean optrace;
-	public boolean allrace;
-	public boolean novolatile;
+	final static String short_opt_help = "-h";
+    final static String opt_help = "--help";
+    @Parameter(names = {short_opt_help, opt_help}, description = "print help info", help = true)
+    public boolean help;
 
-	public boolean allconsistent;
-	public boolean rmm_pso;
-	public boolean smtlib1;
-	
-	private boolean help;
+    @ParametersDelegate
+    public final JavaOptions javaOptions;
 
-	public Configuration (String[] args) {
-	
-		try{
-		
-		if(args.length==0)
-		{
-			 printUsageAndExit();
-		}
-		
-		//emp.Example stringbuffer.StringBufferTest
-		
-		//String[] args2 = {"abc","-maxlen","10000","-noschedule","-nobranch"};
-		
-		// create Options object
-		Options options = new Options();
+    public class JavaOptions {
+        final static String opt_app_classpath = "-cp";
+        @Parameter(names = opt_app_classpath, description = "Application classpath")
+        public String appClassPath;
 
-		// add t option
-		options.addOption(opt_max_len, true, "window size");
-		options.addOption(opt_no_schedule, false, "not report schedule");
-		options.addOption(opt_no_branch, false, "use no branch model");
-		options.addOption(opt_no_volatile, false, "exclude volatile variables");
-		options.addOption(opt_all_consistent, false, "require all read-write consistent");
-		options.addOption(opt_rmm_pso, false, "PSO memory model");
-		options.addOption(opt_smtlib1, false, "use constraint format smtlib v1.2");
-		options.addOption(opt_optrace, false, "optimize race detection");
-		options.addOption(opt_allrace, false, "check all races");
-
-		options.addOption(opt_constraint_outdir, true, "constraint file directory");
-        options.addOption(opt_app_classpath, true, "Application classpath");
-		options.addOption(opt_solver_timeout, true, "solver timeout in seconds");
-		options.addOption(opt_solver_memory, true, "solver memory size in MB");
-		options.addOption(opt_timeout, true, "rvpredict timeout in seconds");
-
-		options.addOption(opt_help, false, "print help info");
-
-		CommandLineParser parser = new BasicParser();
-		CommandLine cmd = parser.parse( options, args);
-		
-		String maxlen = cmd.getOptionValue(opt_max_len,default_max_len);
-		window_size = Long.valueOf(maxlen);
-		
-		String z3timeout = cmd.getOptionValue(opt_solver_timeout,default_solver_timeout);
-		solver_timeout = Long.valueOf(z3timeout);
-		
-		String z3memory = cmd.getOptionValue(opt_solver_memory,default_solver_memory);
-		solver_memory = Long.valueOf(z3memory);
-		
-		String rvtimeout = cmd.getOptionValue(opt_timeout,default_timeout);
-		timeout = Long.valueOf(rvtimeout);
-		
-		constraint_outdir = cmd.getOptionValue(opt_constraint_outdir,default_constraint_outdir);
-        appClassPath = cmd.getOptionValue(opt_app_classpath, null);
-		
-		
-		noschedule = cmd.hasOption(opt_no_schedule);
-		//ok, let's make noschedule by default
-		noschedule = true;
-				
-		rmm_pso = cmd.hasOption(opt_rmm_pso);
-		//rmm_pso = true;
-		
-		 nobranch = cmd.hasOption(opt_no_branch);
-		 novolatile = cmd.hasOption(opt_no_volatile);
-
-		 allconsistent = cmd.hasOption(opt_all_consistent);
-		 smtlib1 = cmd.hasOption(opt_smtlib1);
-		 optrace = cmd.hasOption(opt_optrace);
-		 allrace = cmd.hasOption(opt_allrace);
-
-		 //by default optrace is true
-		 optrace = true;
-		 
-		 help = cmd.hasOption(opt_help);
-		 
-		 if(help||cmd.getArgList().isEmpty())
-		 {
-			 printUsageAndExit();
-		 }
-		appname = (String) cmd.getArgList().get(0);
-		}catch(Exception e)
-		{
-			e.printStackTrace();
-			System.exit(0);
-		}
-
-	}
-
-	private static void printUsageAndExit()
-	{
-		System.out.println("Usage: java rvpredict.engine.main.NewRVPredict [options] classname");
-		System.out.println(getUsage());
-
-		System.exit(1);
-	}
-	private static String getUsage()
-	{
-		return "\nGeneral Options:\n"
-			+padOpt(" -help", "print this message" )
-			+padOpt(" -maxlen SIZE", "set window size to SIZE" )
-			+padOpt(" -noschedule", "disable generating racey schedule" )
-			+padOpt(" -nobranch", "disable control flow (MCM)" )
-			+padOpt(" -novolatile", "exclude races on volatile variables" )
-			+padOpt(" -allconsistent", "require all read-write consistency (Said)" )
-			+padOpt(" -smtlib1", "use smtlib v1 format" )
-			+padOpt(" -outdir PATH", "constraint file directory to PATH" )
-			+padOpt(" -solver_timeout TIME", "set solver timeout to TIME seconds" )
-			+padOpt(" -solver_memory MEMORY", "set memory used by solver to MEMORY megabytes" )
-			+padOpt(" -timeout TIME", "set rvpredict timeout to TIME seconds" )
-			;
-	}
-	
-    protected static String padOpt( String opts, String desc ) {
-        return pad( 1, opts, 30, desc );
+        final static String opt_app_jar = "-jar";
+        @Parameter(names = opt_app_jar, description = "Application JAR file")
+        public String appJar;
     }
 
-    private static String pad( int initial, String opts, int tab, String desc ) {
-        StringBuffer b = new StringBuffer();
-        for( int i = 0; i < initial; i++ ) b.append( " " );
-        b.append(opts);
-        int i;
-        if( tab <= opts.length() ) {
-            b.append( "\n" );
-            i = 0;
-        } else i = opts.length()+initial;
-        for( ; i <= tab; i++ ) {
-            b.append(" ");
+	public Configuration () {
+        javaOptions = new JavaOptions();
+    }
+
+    public void parseArguments(String[] args, JCommander jc) {
+        try {
+            jc.parse(args);
+        } catch (ParameterException e) {
+            System.err.println("Error while parsing command line arguments:");
+            System.err.println(e.getMessage());
+            System.exit(1);
         }
-        for( StringTokenizer t = new StringTokenizer( desc );
-                t.hasMoreTokens(); )  {
-            String s = t.nextToken();
-            if( i + s.length() > 78 ) {
-                b.append( "\n" );
-                i = 0;
-                for( ; i <= tab; i++ ) {
-                    b.append(" ");
-                }
+
+        if (help) {
+            usage(jc);
+            System.exit(0);
+        }
+
+        if (command_line == null && javaOptions.appJar == null) {
+            System.out.println("Main class (or -jar option) missing.");
+            usage(jc);
+            System.exit(1);
+        }
+
+        if (javaOptions.appJar == null) {
+            appname = command_line.get(0);
+        } else { // set main class name and class path from the jar manifest
+            File file = new File(javaOptions.appJar);
+            if (!file.exists()) {
+                System.err.println("Error: Unable to access jarfile " + javaOptions.appJar);
+                System.exit(1);
             }
-            b.append( s );
-            b.append( " " );
-            i += s.length() + 1;
+            javaOptions.appClassPath = javaOptions.appJar;
+            try {
+                JarFile jarFile = new JarFile(javaOptions.appJar);
+                Manifest manifest = jarFile.getManifest();
+                Attributes mainAttributes = manifest.getMainAttributes();
+                String mainClass = mainAttributes.getValue("Main-Class");
+                if (mainClass == null) {
+                    System.err.println("no main manifest attribute, in " + javaOptions.appJar);
+                    System.exit(1);
+                }
+                appname = mainClass;
+                if (command_line == null) {
+                    command_line = new ArrayList<String>();
+                }
+                command_line.add(0, appname);
+                String classPath = mainAttributes.getValue("Class-Path");
+                String basepath = file.getParent();
+                String pathSeparator = System.getProperty("path.separator");
+                String fileSeparator = System.getProperty("file.separator");
+                if (classPath != null) {
+                    String[] uris = classPath.split(" ");
+                    for (String uri : uris) {
+                        String decodedPath = URLDecoder.decode(uri, "UTF-8");
+                        javaOptions.appClassPath += pathSeparator + basepath + fileSeparator + decodedPath;
+                    }
+                }
+            } catch (IOException e) {
+                System.err.println("Unexpected I/O error while reading jar file " + javaOptions.appJar + ".");
+                System.err.println(e.getMessage());
+                System.exit(1);
+            }
         }
-        b.append( "\n" );
-        return b.toString();
     }
+
+    public void usage(JCommander jc) {
+        // computing names maximum length
+        int max_option_length = 0;
+        for (ParameterDescription parameterDescription : jc.getParameters()) {
+            if (parameterDescription.getNames().length() > max_option_length) {
+                max_option_length = parameterDescription.getNames().length();
+            }
+        }
+
+        // Computing usage
+        max_option_length++;
+        String usageHeader = "Usage: " + PROGRAM_NAME + " [java_options] [rv_predict_options] " + jc.getMainParameterDescription() + "\n";
+        String usage = usageHeader
+                + "  Options:" + "\n";
+        String shortUsage = usageHeader
+                + "  Common options (use -v for a complete list):" + "\n";
+
+        Map<String, String> usageMap = new TreeMap<String, String>();
+        Map<String, String> shortUsageMap = new TreeMap<String, String>();
+        for (ParameterDescription parameterDescription : jc.getParameters()) {
+                String description = spaces(4) + parameterDescription.getNames()
+                        + spaces(max_option_length - parameterDescription.getNames().length()) + parameterDescription.getDescription()
+                        + " [" + parameterDescription.getDefault() + "]";
+                usageMap.put(parameterDescription.getLongestName(), description);
+            if (!parameterDescription.getParameter().hidden()) {
+                shortUsageMap.put(parameterDescription.getLongestName(), description);
+            }
+
+        }
+
+        if (verbose) {
+            System.out.println(usage);
+            for (String usageCase : usageMap.values()) System.out.println(usageCase);
+        } else {
+            System.out.println(shortUsage);
+            for (String usageCase : shortUsageMap.values()) System.out.println(usageCase);
+        }
+    }
+
+    private static String spaces(int i) {
+        char[] spaces = new char[i];
+        Arrays.fill(spaces, ' ');
+        return new String(spaces);
+    }
+
+
 }

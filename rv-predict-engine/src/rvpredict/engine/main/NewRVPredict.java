@@ -27,10 +27,10 @@ package rvpredict.engine.main; /************************************************
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 import java.io.*;
-import java.net.URLDecoder;
 import java.util.*;
 import java.util.Map.Entry;
 
+import com.beust.jcommander.JCommander;
 import property.EREProperty;
 import config.Configuration;
 import trace.AbstractNode;
@@ -994,8 +994,10 @@ public class NewRVPredict {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-        Configuration config = new Configuration(args);
+        Configuration config = new Configuration();
+        JCommander jc = new JCommander(config);
 
+        config.parseArguments(args, jc);
         run(config);
     }
 
@@ -1208,21 +1210,26 @@ public class NewRVPredict {
 			int TOTAL_SYNC_NUMBER = info.getTraceSyncNumber();
 			//int TOTAL_PROPERTY_NUMBER = db.getTracePropertyNumber();
 			int TOTAL_PROPERTY_NUMBER = info.getTracePropertyNumber();
-			
-			report("Trace Size: "+TOTAL_TRACE_LENGTH,MSGTYPE.STATISTICS);
-			report("Total #Threads: "+TOTAL_THREAD_NUMBER,MSGTYPE.STATISTICS);
-			report("Total #SharedVariables: "+TOTAL_SHAREDVARIABLE_NUMBER,MSGTYPE.STATISTICS);
-			report("Total #Shared Read-Writes: "+TOTAL_SHAREDREADWRITE_NUMBER,MSGTYPE.STATISTICS);
-			report("Total #Local Read-Writes: "+TOTAL_LOCALREADWRITE_NUMBER,MSGTYPE.STATISTICS);
-			report("Total #Initial Writes: "+TOTAL_INITWRITE_NUMBER,MSGTYPE.STATISTICS);
-			report("Total #Synchronizations: "+TOTAL_SYNC_NUMBER,MSGTYPE.STATISTICS);
-			report("Total #Branches: "+TOTAL_BRANCH_NUMBER,MSGTYPE.STATISTICS);
-			report("Total #Property Events: "+TOTAL_PROPERTY_NUMBER,MSGTYPE.STATISTICS);
 
-			report("Total #Potential Violations: "+(potentialviolations.size()+violations.size()),MSGTYPE.STATISTICS);
-			report("Total #Real Violations: "+violations.size(),MSGTYPE.STATISTICS);
-			report("Total Time: "+(System.currentTimeMillis()-start_time)+"ms",MSGTYPE.STATISTICS); 
-			//System.out.println("Total #Schedules: "+size_schedule);
+            if (config.verbose) {
+                report("Trace Size: " + TOTAL_TRACE_LENGTH, MSGTYPE.STATISTICS);
+                report("Total #Threads: " + TOTAL_THREAD_NUMBER, MSGTYPE.STATISTICS);
+                report("Total #SharedVariables: " + TOTAL_SHAREDVARIABLE_NUMBER, MSGTYPE.STATISTICS);
+                report("Total #Shared Read-Writes: " + TOTAL_SHAREDREADWRITE_NUMBER, MSGTYPE.STATISTICS);
+                report("Total #Local Read-Writes: " + TOTAL_LOCALREADWRITE_NUMBER, MSGTYPE.STATISTICS);
+                report("Total #Initial Writes: " + TOTAL_INITWRITE_NUMBER, MSGTYPE.STATISTICS);
+                report("Total #Synchronizations: " + TOTAL_SYNC_NUMBER, MSGTYPE.STATISTICS);
+                report("Total #Branches: " + TOTAL_BRANCH_NUMBER, MSGTYPE.STATISTICS);
+                report("Total #Property Events: " + TOTAL_PROPERTY_NUMBER, MSGTYPE.STATISTICS);
+
+                report("Total #Potential Violations: " + (potentialviolations.size() + violations.size()), MSGTYPE.STATISTICS);
+                report("Total #Real Violations: " + violations.size(), MSGTYPE.STATISTICS);
+                report("Total Time: " + (System.currentTimeMillis() - start_time) + "ms", MSGTYPE.STATISTICS);
+                //System.out.println("Total #Schedules: "+size_schedule);
+            } else {
+                if (violations.size() == 0)
+                    report("No races found.", MSGTYPE.STATISTICS);
+            }
 			
 			closePrinter();
 			

@@ -3,6 +3,7 @@ package rvpredict.instrumentation;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.objectweb.asm.ClassReader;
 
@@ -11,9 +12,9 @@ import rvpredict.logging.RecordRT;
 
 public class GlobalStateForInstrumentation {
     public static GlobalStateForInstrumentation instance = new GlobalStateForInstrumentation();
-    public HashMap<String,Integer> variableIdMap = new HashMap<String,Integer>();
+    public ConcurrentHashMap<String,Integer> variableIdMap = new ConcurrentHashMap<String,Integer>();
     public HashSet<String> volatilevariables = new HashSet<String>();
-    public HashMap<String,Integer> stmtSigIdMap = new HashMap<String,Integer>();
+    public ConcurrentHashMap<String,Integer> stmtSigIdMap = new ConcurrentHashMap<String,Integer>();
     
     public 	GlobalStateForInstrumentation()
     {

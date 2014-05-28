@@ -31,7 +31,9 @@ package rvpredict.logging;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class RecordRT {
 
@@ -84,22 +86,20 @@ public final class RecordRT {
 		
 	}
 
-	public static void saveMetaData(HashMap<String,Integer> variableIdMap,
+	public static void saveMetaData(ConcurrentHashMap<String,Integer> variableIdMap,
 			HashSet<String> volatilevariables,
-			HashMap<String,Integer> stmtSigIdMap, boolean isVerbose)
+			ConcurrentHashMap<String,Integer> stmtSigIdMap, boolean isVerbose)
 	{
 		try{
 			//just reuse the connection 
 			
 			//TODO: if db is null or closed, there must be something wrong
+			DBEngine db= new DBEngine(appname);
 			
-		//	DBEngine db= new DBEngine(appname);
 		//save sharedvariable - id to database
 		  db.createSharedVarSignatureTable();
-	      Iterator<Entry<String,Integer>> svIt = variableIdMap.entrySet().iterator();
-	      while(svIt.hasNext())
+	      for(Map.Entry<String,Integer> entry: variableIdMap.entrySet())
 	      {
-	    	  Entry<String,Integer> entry = svIt.next();
 	    	  String sig = entry.getKey();
 	    	  Integer id = entry.getValue();
 	    	  
@@ -124,10 +124,8 @@ public final class RecordRT {
 	      //save stmt - id to database
 		  db.createStmtSignatureTable();
 
-	      Iterator<Entry<String,Integer>> sigIdIt = stmtSigIdMap.entrySet().iterator();
-	      while(sigIdIt.hasNext())
+	      for(Entry<String,Integer> entry: stmtSigIdMap.entrySet())
 	      {
-	    	  Entry<String,Integer> entry = sigIdIt.next();
 	    	  String sig = entry.getKey();
 	    	  Integer id = entry.getValue();
 	    	  

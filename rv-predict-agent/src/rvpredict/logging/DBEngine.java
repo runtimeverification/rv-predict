@@ -340,8 +340,6 @@ public class DBEngine {
 	 */
 	public synchronized void saveEventToDB(long TID, int ID, String ADDR, String VALUE, byte TYPE)
 	{
-		//for testing only
-		//if(TID==1)return;
 		
 		//make true->1. false->0
 		if(VALUE.equals("true"))
@@ -373,7 +371,10 @@ public class DBEngine {
 			
 		}catch(Exception e)
 		{
-			e.printStackTrace();
+			
+			if(!"Finalizer".equals(Thread.currentThread().getName()))
+				e.printStackTrace();// avoid finalizer thread
+
 		}
 	}
 	

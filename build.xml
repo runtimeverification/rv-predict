@@ -1,11 +1,13 @@
 <project name="rvpredict" default="all">
-  <!-- set global properties for this bin -->
+ 
+ <!-- set global properties for this bin -->
   <property name="rvpredict.engine.src" location="rv-predict-engine/src"/>
   <property name="rvpredict.agent.src" location="rv-predict-agent/src"/>
   <property name="rvpredict.engine.lib" location="rv-predict-engine/lib"/>
   <property name="rvpredict.agent.lib" location="rv-predict-agent/lib"/>
   <property name="rvpredict.engine.bin" location="rv-predict-engine/bin"/>
   <property name="rvpredict.agent.bin" location="rv-predict-agent/bin"/>
+
   <path id="rv-predict-agent.classpath">
     <pathelement location="${rvpredict.agent.bin}"/>
     <pathelement location="${rvpredict.agent.lib}/h2-1.3.171.jar"/>
@@ -24,11 +26,11 @@
   <property name="benchmark.bin" location="benchmarks/bin"/>
 
   <property name="rvpredict.lib" location="lib"/>
-  <target name="all" depends="rvpredict-all,benchmarks"
+  <target name="all" depends="rvpredict-all"
           description="compile rvpredict and benchmarks" />
 
-  <target name="rvpredict-all" depends="rvpredict-engine,rvpredict-agent,tests"
-          description="compile rvpredict and test" />
+  <target name="rvpredict-all" depends="rvpredict-engine,rvpredict-agent,init-tests,init-benchmarks"
+          description="compile rvpredict and benchmarks" />
 
   <target name="rvpredict-engine" depends="init-rvpredict-engine"
           description="compile rvpredict-engine" >
@@ -94,30 +96,44 @@
                      <zipgroupfileset dir="${rvpredict.agent.lib}" includes="asm.jar,h2-1.3.171.jar"/>
                      </jar>
                      <copy file="${rvpredict.agent.lib}/iagent.jar" todir="${rvpredict.lib}"/>
+                     <copy file="${rvpredict.agent.lib}/ant-contrib.jar" todir="${rvpredict.lib}"/>
       </target>
 
-  <target name="init-benchmarks">
-      <!-- Create the time stamp -->
-    <tstamp/>
+  <target name="init-benchmarks"
+          description="compile the benchmark" >
         <!-- Create the bin directory structure used by compile -->
     <mkdir dir="${benchmark.bin}"/>
-      </target>
-  <target name="benchmarks" depends="init-benchmarks"
-          description="compile the benchmark" >
               <!-- Compile the java code from ${benchmark.src} into ${benchmark.bin} -->
     <javac srcdir="${benchmark.src}" destdir="${benchmark.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="false"/>
+                     <copy file="${benchmark.src}/hitData" todir="${benchmark.bin}"/>
       </target>
 
   <target name="init-tests">
       <!-- Create the time stamp -->
     <tstamp/>
         <!-- Create the bin directory structure used by compile -->
-    <mkdir dir="${test.bin}"/>
-      </target>
-  <target name="tests" depends="init-tests"
-          description="compile the tests" >
+    <mkdir dir="${test.bin}" description="compile the tests"/>
               <!-- Compile the java code from ${benchmark.src} into ${benchmark.bin} -->
     <javac srcdir="${test.src}" destdir="${test.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="false"/>
+      </target>
+
+  <loadfile property="file.benchmarks" srcfile="benchmarks/benchmarks"/>
+
+<taskdef name="for-contrib" classname="net.sf.antcontrib.logic.ForTask" classpath="${rvpredict.lib}/ant-contrib.jar"/>
+  <target name="test" depends="init-benchmarks, init-tests"
+           description="run rv-predict with benchmarks">
+	   <for-contrib param="appname" list="${file.benchmarks}" delimiter="${line.separator}">
+	   <sequential>
+	   <echo message="testing @{appname}"/>
+           <exec dir="." executable="/bin/bash">
+           <arg value="bin/rv-predict"/>
+           <arg value="-v"/>
+           <arg value="-cp"/>
+           <arg value="${benchmark.bin}"/>
+           <arg value="@{appname}"/>
+           </exec>
+           </sequential>
+           </for-contrib>
       </target>
   <target name="clean" depends="clean-rvpredict-agent,clean-rvpredict-engine"
           description="clean up" >

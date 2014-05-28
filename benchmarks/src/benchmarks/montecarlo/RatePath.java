@@ -377,13 +377,15 @@ public class RatePath extends PathId {
     */
   private void readRatesFile(String dirName, String filename) throws DemoException {
     java.io.File ratesFile = new File(filename);
-    java.io.BufferedReader in;
-    if( ! ratesFile.canRead() ) {
-      throw new DemoException("Cannot read the file "+ratesFile.toString());
-    }
-    try{
-      in = new BufferedReader(new FileReader(ratesFile));
-    } catch( FileNotFoundException fnfex ) {
+	  java.io.BufferedReader in;
+	  try{InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(filename);
+    
+//    if( ! ratesFile.canRead() ) {
+//      throw new DemoException("Cannot read the file "+ratesFile.toString());
+//    }
+    
+      in = new BufferedReader(new InputStreamReader(inputStream));
+    } catch( Exception fnfex ) {
       throw new DemoException(fnfex.toString());
     }
     //

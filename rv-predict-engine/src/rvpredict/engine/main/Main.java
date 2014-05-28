@@ -29,14 +29,7 @@ public class Main {
             }
         }
 
-        // remove the _opt option added by the rv-predict script to all options
-        for (int i = 0; i < args.length; i++) {
-            if (args[i].startsWith("-") && args[i].endsWith("_opt")) {
-                args[i] = args[i].substring(0, args[i].length() - 4);
-            }
-        }
-
-       // Detecting where program options start
+       // Detecting a candidate for program options start
         int max;
         for(max = 0; max < args.length; max++) {
            if (args[max].startsWith("-")  && !options.contains(args[max]))
@@ -45,10 +38,17 @@ public class Main {
 
         // get all rv-predict & java arguments and (potentially) the first unnamed program arguments
         String[] rvArgs = Arrays.copyOf(args, max);
-         // program specific options starting with the first named (and unknown) one
-        String[] pgmArgs = Arrays.copyOfRange(args, max, args.length);
 
-        config.parseArguments(rvArgs, jc);
+        max = config.parseArguments(rvArgs, jc);
+        if (max < rvArgs.length - 1) { // more commands should go to the pgm, reparsing command line
+            config = new Configuration();
+            jc = new JCommander(config);
+            String[] newArgs = Arrays.copyOf(args, max + 1);
+            config.parseArguments(newArgs, jc);
+        }
+
+        // program specific options starting with the first named (and unknown) one
+        String[] pgmArgs = Arrays.copyOfRange(args, max, args.length);
 
         if (!config.agent && ! config.predict) {
             config.agent = config.predict = true;

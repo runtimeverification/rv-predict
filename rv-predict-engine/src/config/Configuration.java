@@ -142,13 +142,27 @@ public class Configuration {
         javaOptions = new JavaOptions();
     }
 
-    public void parseArguments(String[] args, JCommander jc) {
+    public int parseArguments(String[] args, JCommander jc) {
         try {
             jc.parse(args);
         } catch (ParameterException e) {
             System.err.println("Error while parsing command line arguments:");
             System.err.println(e.getMessage());
             System.exit(1);
+        }
+
+        // Detect main class or -jar option
+        List<String> argList = Arrays.asList(args);
+        int idx = args.length - 1;
+        if (command_line != null) {
+            idx = argList.indexOf(command_line.get(0));
+        }
+        if (javaOptions.appJar != null) {
+            int idxJar = argList.indexOf(JavaOptions.opt_app_jar) + 1;
+            if (idxJar < idx) idx = idxJar;
+        }
+        if (idx < args.length - 1) {
+            return idx;
         }
 
         if (help) {
@@ -202,6 +216,7 @@ public class Configuration {
                 System.exit(1);
             }
         }
+        return idx + 1;
     }
 
     public void usage(JCommander jc) {

@@ -1,16 +1,5 @@
 #!/usr/bin/env bash
 
-args=""
-for arg in "$@"
-do
-  first=${arg::1}
-  if [ "$first" == "-" ]; then
-    args="$args ${arg}_opt"
-  else
-    args="$args $arg"
-  fi
-done
-
 RV_ENGINE_BIN=$(dirname $0)/../lib/rv-predict-engine.jar
 #predict 
-java -Xmx32g -cp $RV_ENGINE_BIN rvpredict.engine.main.Main $args
+java -Xmx32g -cp $RV_ENGINE_BIN rvpredict.engine.main.Main "$@"

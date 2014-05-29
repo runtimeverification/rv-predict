@@ -96,7 +96,7 @@
                      <zipgroupfileset dir="${rvpredict.agent.lib}" includes="asm.jar,h2-1.3.171.jar"/>
                      </jar>
                      <copy file="${rvpredict.agent.lib}/iagent.jar" todir="${rvpredict.lib}"/>
-                     <copy file="${rvpredict.agent.lib}/ant-contrib.jar" todir="${rvpredict.lib}"/>
+                     <!--<copy file="${rvpredict.agent.lib}/ant-contrib.jar" todir="${rvpredict.lib}"/>-->
       </target>
 
   <target name="init-benchmarks"
@@ -119,7 +119,7 @@
 
   <loadfile property="file.benchmarks" srcfile="benchmarks/benchmarks"/>
 
-<taskdef name="for-contrib" classname="net.sf.antcontrib.logic.ForTask" classpath="${rvpredict.lib}/ant-contrib.jar"/>
+<taskdef name="for-contrib" classname="net.sf.antcontrib.logic.ForTask" classpath="${rvpredict.agent.lib}/ant-contrib.jar"/>
   <target name="test" depends="init-benchmarks, init-tests"
            description="run rv-predict with benchmarks">
 	   <for-contrib param="appname" list="${file.benchmarks}" delimiter="${line.separator}">

@@ -192,12 +192,12 @@ public class Configuration {
         int idxCp = -1;
         if (command_line == null) { // otherwise the program has already started
             command_line = new ArrayList<String>(argList);
-            idxCp = argList.indexOf(CP);
-            int idxJar = argList.indexOf(JAR);
-            if (idxJar != -1 && idxJar < idxCp) {
-                argList.set(idxJar, CP); // replace -jar with -cp
+            idxCp = command_line.indexOf(CP);
+            int idxJar = command_line.indexOf(JAR);
+            if (idxJar != -1 && (idxCp == -1 || idxJar < idxCp)) {// jar exists, and if cp exists too, jar is before cp
+                command_line.set(idxJar, CP); // replace -jar with -cp
                 idxCp = idxJar;
-                String appJar = argList.get(idxJar + 1);
+                String appJar = command_line.get(idxJar + 1);
                 File file = new File(appJar);
                 if (!file.exists()) {
                     System.err.println("Error: Unable to access jarfile " + appJar);
@@ -213,11 +213,7 @@ public class Configuration {
                         System.err.println("no main manifest attribute, in " + appJar);
                         System.exit(1);
                     }
-                    argList.add(idxJar + 2, mainClass);
-                    if (command_line == null) {
-                        command_line = new ArrayList<String>();
-                    }
-                    command_line.add(0, outdir);
+                    command_line.add(idxJar + 2, mainClass);
                     String classPath = mainAttributes.getValue("Class-Path");
                     String basepath = file.getParent();
                     if (classPath != null) {

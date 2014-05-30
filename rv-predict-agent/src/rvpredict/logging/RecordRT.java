@@ -45,10 +45,7 @@ public final class RecordRT {
 	final static String MAIN_NAME = "0";
 	
 	//engine for storing events into database
-	static String appname;
 	static DBEngine db;
-
-    public static final String TABLE_NAME = "log";
 
     static
 	{
@@ -57,9 +54,8 @@ public final class RecordRT {
 			
 			StackTraceElement[] stack = Thread.currentThread ().getStackTrace ();
 			StackTraceElement main = stack[stack.length - 1];
-			appname = TABLE_NAME;
-			
-		init(appname,false);
+
+		init(false);
 		}catch(Exception e)
 		{
 			//e.printStackTrace();
@@ -67,13 +63,11 @@ public final class RecordRT {
 	}
 	/**
 	 * initialize the database engine
-	 * @param name
 	 * @throws Exception
 	 */
-	public static void init(String name,boolean newTable) throws Exception
+	public static void init(boolean newTable) throws Exception
 	{
 		long tid = Thread.currentThread().getId();
-		appname = name;
 		db= new DBEngine(Config.logDir);
 		db.createTraceTable(newTable);	
 		

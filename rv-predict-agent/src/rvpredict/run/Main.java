@@ -66,7 +66,7 @@ private static void run(String[] args)
 //		}
 		
 		//initialize the recording data structures
-		RecordRT.init(tablename,true);
+		RecordRT.init(true);
 		String appname = args[0];
 
 		Class<?> c = Class.forName(appname);

@@ -27,6 +27,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 package rvpredict.logging;
+import rvpredict.config.Config;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -115,9 +117,9 @@ public class DBEngine {
 			this.TYPE = type;
 		}
 	}
-	public DBEngine(String name)
+	public DBEngine(String directory)
 	{
-		name = name.replace('.', '_');
+		String name = "LOG";
 		appname = name;
 		tracetablename = "trace_"+name;
 		tidtablename = "tid_"+name;
@@ -128,7 +130,7 @@ public class DBEngine {
 		propertytablename = "property_"+name;
 		try
 		{
-			connectDB();
+			connectDB(directory);
 		}catch(Exception e)
 		{
 			e.printStackTrace();
@@ -378,11 +380,11 @@ public class DBEngine {
 		}
 	}
 	
-	protected void connectDB() throws Exception
+	protected void connectDB(String directory) throws Exception
 	{
 		try{
 		Class.forName(driver);
-        conn  = DriverManager.getConnection("jdbc:h2:"+Util.getTempRVDirectory()+dbname+";DB_CLOSE_ON_EXIT=FALSE");//
+        conn  = DriverManager.getConnection("jdbc:h2:"+directory+"/"+dbname+";DB_CLOSE_ON_EXIT=FALSE");//
         //conn.setAutoCommit(true);
         //check if Database may be already in use
         //kill?

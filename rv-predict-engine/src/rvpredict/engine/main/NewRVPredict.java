@@ -30,7 +30,6 @@ import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
 
-import com.beust.jcommander.JCommander;
 import property.EREProperty;
 import config.Configuration;
 import trace.AbstractNode;
@@ -995,9 +994,8 @@ public class NewRVPredict {
 	 */
 	public static void main(String[] args) {
         Configuration config = new Configuration();
-        JCommander jc = new JCommander(config);
+        config.parseArguments(args);
 
-        config.parseArguments(args, jc);
         run(config);
     }
 
@@ -1013,10 +1011,10 @@ public class NewRVPredict {
 
 			
 			//initialize printer
-			initPrinter(config.appname);
+			initPrinter(config.outdir);
 			
 			//db engine is used for interacting with database
-			DBEngine db = new DBEngine(config.appname);
+			DBEngine db = new DBEngine(config.outdir);
 
 			//load all the metadata in the application
 			HashMap<Integer, String> sharedVarIdSigMap = db.getSharedVarSigIdMap();

@@ -1,7 +1,6 @@
 package rvpredict.engine.main;
 
 import com.beust.jcommander.JCommander;
-import com.beust.jcommander.ParameterDescription;
 import config.Configuration;
 import db.DBEngine;
 
@@ -18,37 +17,12 @@ public class Main {
     public static void main(String[] args) {
 
         Configuration config = new Configuration();
-        JCommander jc = new JCommander(config);
-        jc.setProgramName(Configuration.PROGRAM_NAME);
 
-        // Collect all parameter names.  It would be nice if JCommander provided this directly.
-        Set<String> options = new HashSet<String>();
-        for (ParameterDescription parameterDescription : jc.getParameters()) {
-            for (String name : parameterDescription.getParameter().names()) {
-                options.add(name);
-            }
+        int idxCp = config.parseArguments(args);
+        if (config.command_line.isEmpty()) {
+            System.err.println("You must provide a class or a jar to run.");
+            System.exit(1);
         }
-
-       // Detecting a candidate for program options start
-        int max;
-        for(max = 0; max < args.length; max++) {
-           if (args[max].startsWith("-")  && !options.contains(args[max]))
-               break; // the index of the first unknown command
-        }
-
-        // get all rv-predict & java arguments and (potentially) the first unnamed program arguments
-        String[] rvArgs = Arrays.copyOf(args, max);
-
-        max = config.parseArguments(rvArgs, jc);
-        if (max < rvArgs.length - 1) { // more commands should go to the pgm, reparsing command line
-            config = new Configuration();
-            jc = new JCommander(config);
-            String[] newArgs = Arrays.copyOf(args, max + 1);
-            config.parseArguments(newArgs, jc);
-        }
-
-        // program specific options starting with the first named (and unknown) one
-        String[] pgmArgs = Arrays.copyOfRange(args, max, args.length);
 
         if (!config.agent && ! config.predict) {
             config.agent = config.predict = true;
@@ -56,7 +30,16 @@ public class Main {
 
         DBEngine db;
         if (config.agent) {
-            db = new DBEngine(config.appname);
+            File outdirFile = new File(config.outdir);
+            if(!(outdirFile.exists())) {
+                outdirFile.mkdir();
+            } else {
+                if (!outdirFile.isDirectory()) {
+                    System.err.println(config.outdir + " is not a directory");
+                    System.exit(1);
+                }
+            }
+            db = new DBEngine(config.outdir);
             try {
                 db.dropAll();
             } catch (Exception e) {
@@ -72,25 +55,29 @@ public class Main {
             String libPath = basePath + separator + "lib" + separator;
             String iagent = libPath + "iagent.jar";
             String rvAgent = libPath + "rv-predict-agent.jar";
-            String classpath = "";
-            if (config.javaOptions.appClassPath != null) {
-                classpath = config.javaOptions.appClassPath;
-            }
+            String classpath = config.command_line.get(idxCp + 1);
             classpath = rvAgent + System.getProperty("path.separator") + classpath;
+            config.command_line.set(idxCp + 1, classpath);
             List<String> appArgList = new ArrayList<String>();
             appArgList.add(java);
-            appArgList.add("-cp");
-            appArgList.add(classpath);
-            appArgList.add("-javaagent:" + iagent);
+            appArgList.add("-javaagent:" + iagent + "=\"" + config.outdir + "\"");
             appArgList.addAll(config.command_line);
-            for (String appArg : pgmArgs) appArgList.add(appArg);
 
             ProcessBuilder processBuilder =
                     new ProcessBuilder(appArgList.toArray(new String[appArgList.size()]));
             processBuilder.inheritIO();
             try {
                 if (config.verbose) {
-                    System.out.println("Started logging " + config.appname + ".");
+                    System.out.println("Executing and logging command: ");
+                    System.out.print("   ");
+                    for (String arg : appArgList) {
+                        if (arg.contains(" ")) {
+                            System.out.print(" \"" + arg + "\"");
+                        } else {
+                            System.out.print(" " + arg);
+                        }
+                    }
+                    System.out.println();
                 }
                 Process process = processBuilder.start();
                 process.waitFor();
@@ -100,7 +87,7 @@ public class Main {
             }
         }
 
-        db = new DBEngine(config.appname);
+        db = new DBEngine(config.outdir);
         try {
             if (! db.checkTables()) {
                 System.err.print("Trace was not recorded properly. ");
@@ -108,7 +95,7 @@ public class Main {
                     System.err.println("Please check the classpath.");
                 } else {
                     System.err.println("Please run " + Configuration.PROGRAM_NAME + " with the " + Configuration.opt_only_log +
-                            "option enabled.");
+                            " option enabled.");
                 }
                 System.exit(1);
             }
@@ -121,11 +108,10 @@ public class Main {
         }
 
         if (config.agent && config.verbose) {
-            System.out.println("\nDone logging " + config.appname + ".");
+            System.out.println("\nDone executing and logging.");
         }
 
         if (config.predict) {
-
             NewRVPredict.run(config);
         }
     }

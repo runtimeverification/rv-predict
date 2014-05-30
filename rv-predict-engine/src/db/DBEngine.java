@@ -203,9 +203,9 @@ public class DBEngine {
 		t.start();
 		
 	}
-	public DBEngine(String name)
+	public DBEngine(String directory)
 	{
-		name = name.replace('.', '_');
+		String name = "LOG";
 		appname = name;
 		tracetablename = "trace_"+name;
 		tidtablename = "tid_"+name;
@@ -216,7 +216,7 @@ public class DBEngine {
 		propertytablename = "property_"+name;
 		try
 		{
-			connectDB();
+			connectDB(directory);
 		}catch(Exception e)
 		{
 			System.err.println(e.getMessage());
@@ -522,10 +522,10 @@ public class DBEngine {
 		}
 	}
 	
-	protected void connectDB() throws Exception
+	protected void connectDB(String directory) throws Exception
 	{
 		Class.forName(driver);
-        conn  = DriverManager.getConnection("jdbc:h2:"+Util.getTempRVDirectory()+dbname);
+        conn  = DriverManager.getConnection("jdbc:h2:"+directory+"/"+dbname);
         //conn.setAutoCommit(true);
 	}
 	

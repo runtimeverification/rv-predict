@@ -15,6 +15,7 @@ import java.security.ProtectionDomain;
 
 public class SnoopInstructionTransformer implements ClassFileTransformer {
 	public static void premain(String agentArgs, Instrumentation inst) {
+        Config.logDir=agentArgs;
         //System.out.println("calling premain");
 		inst.addTransformer(new SnoopInstructionTransformer());
 		

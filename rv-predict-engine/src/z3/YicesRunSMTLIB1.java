@@ -1,19 +1,8 @@
 package z3;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map.Entry;
-import java.util.Vector;
 
 import config.Configuration;
 import config.Util;
@@ -41,9 +30,9 @@ public class YicesRunSMTLIB1 extends Z3Run
 	
 	public void init(Configuration config, int id) throws IOException
 	{		
-		smtFile = Util.newOutFile(config.constraint_outdir,config.appname+"_"+id+SMT);
+		smtFile = Util.newOutFile(config.constraint_outdir,config.outdir +"_"+id+SMT);
         
-		yicesOutFile = Util.newOutFile(config.constraint_outdir,config.appname+"_"+id+OUT);
+		yicesOutFile = Util.newOutFile(config.constraint_outdir,config.outdir +"_"+id+OUT);
 				
 		CMD = "yices-smt -m -t "+config.solver_timeout+" ";
 	}

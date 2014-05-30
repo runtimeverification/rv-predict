@@ -28,6 +28,8 @@
  ******************************************************************************/
 package rvpredict.logging;
 
+import rvpredict.config.Config;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -45,14 +47,17 @@ public final class RecordRT {
 	//engine for storing events into database
 	static String appname;
 	static DBEngine db;
-	static
+
+    public static final String TABLE_NAME = "log";
+
+    static
 	{
 		//appname = "org.eclipse.equinox.launcher.Main";
 		try{
 			
 			StackTraceElement[] stack = Thread.currentThread ().getStackTrace ();
 			StackTraceElement main = stack[stack.length - 1];
-			appname = main.getClassName ();
+			appname = TABLE_NAME;
 			
 		init(appname,false);
 		}catch(Exception e)
@@ -62,14 +67,14 @@ public final class RecordRT {
 	}
 	/**
 	 * initialize the database engine
-	 * @param appname
+	 * @param name
 	 * @throws Exception
 	 */
 	public static void init(String name,boolean newTable) throws Exception
 	{
 		long tid = Thread.currentThread().getId();
 		appname = name;
-		db= new DBEngine(appname);
+		db= new DBEngine(Config.logDir);
 		db.createTraceTable(newTable);	
 		
 		//create table for storing thread id to unique identifier map
@@ -94,7 +99,7 @@ public final class RecordRT {
 			//just reuse the connection 
 			
 			//TODO: if db is null or closed, there must be something wrong
-			DBEngine db= new DBEngine(appname);
+			DBEngine db= new DBEngine(Config.logDir);
 			
 		//save sharedvariable - id to database
 		  db.createSharedVarSignatureTable();

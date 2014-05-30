@@ -7,6 +7,7 @@ import java.util.Properties;
 public class Config {
     public static final Config instance = new Config();
     public static final String propFile ="rv.conf";
+    public static String logDir = null;
     
     public final String LOG_FIELD_ACCESS = "logFieldAcc";
     public final String LOG_INIT_WRITE_ACCESS = "logInitialWrite";

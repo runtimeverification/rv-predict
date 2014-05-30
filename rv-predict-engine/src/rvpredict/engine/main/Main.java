@@ -60,7 +60,7 @@ public class Main {
             config.command_line.set(idxCp + 1, classpath);
             List<String> appArgList = new ArrayList<String>();
             appArgList.add(java);
-            appArgList.add("-javaagent:" + iagent + "=\"" + config.outdir + "\"");
+            appArgList.add("-javaagent:" + iagent + "=" + (config.outdir.contains(" ") ? "\"" + config.outdir + "\"" : config.outdir));
             appArgList.addAll(config.command_line);
 
             ProcessBuilder processBuilder =

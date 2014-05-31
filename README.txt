@@ -43,8 +43,16 @@ Moreover, in the unlikely case when the program takes as options -cp or -jar
 and is is run as a class (i.e., not using -jar) then the java -cp option must 
 be used explicitely for disambiguation.
 
--- Example
+-- Examples
 bin/rv-predict -cp tests/bin demo.Example     - Predict races
+
+Using --java to specify that the first -v argument should be sent to rv-predict,
+while the second one to the java command
+bin/rv-predict --verbose --java -verbose -cp tests/bin demo.Example  
+
+Using rv-predict with a jar
+bin/rv-predict -jar evaluation/ftpserver/ftpserver.jar
+
 
 ----------------------------------------
 More online documents: http://fsl.cs.illinois.edu/rvpredict/

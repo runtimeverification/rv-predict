@@ -165,7 +165,7 @@ public class Configuration {
         try {
             jc.parse(rvArgs);
         } catch (ParameterException e) {
-            System.err.println("Error while parsing command line arguments:");
+            System.err.println("Error: Cannot parse command line arguments.");
             System.err.println(e.getMessage());
             System.exit(1);
         }
@@ -176,7 +176,7 @@ public class Configuration {
             int i = rvArgs.length - 1;
             for (String command : command_line) {
                 if (!command.equals(rvArgs[i--])) {
-                    System.err.println("Unexpected argument " + command + " among rv-predict options.");
+                    System.err.println("Error: Unexpected argument " + command + " among rv-predict options.");
                     System.err.println("The " + opt_java + " option can be used to separate the java command.");
                     System.exit(1);
                 }
@@ -192,6 +192,11 @@ public class Configuration {
         int idxCp = -1;
         if (command_line == null) { // otherwise the program has already started
             command_line = new ArrayList<String>(argList);
+            if (command_line.isEmpty()) {
+                System.err.println("Error: Java command line is empty.");
+                usage(jc);
+                System.exit(1);
+            }
             idxCp = command_line.indexOf(CP);
             int idxJar = command_line.indexOf(JAR);
             if (idxJar != -1 && (idxCp == -1 || idxJar < idxCp)) {// jar exists, and if cp exists too, jar is before cp
@@ -210,7 +215,7 @@ public class Configuration {
                     Attributes mainAttributes = manifest.getMainAttributes();
                     String mainClass = mainAttributes.getValue("Main-Class");
                     if (mainClass == null) {
-                        System.err.println("no main manifest attribute, in " + appJar);
+                        System.err.println("Error: no main manifest attribute, in " + appJar);
                         System.exit(1);
                     }
                     command_line.add(idxJar + 2, mainClass);
@@ -224,7 +229,7 @@ public class Configuration {
                         }
                     }
                 } catch (IOException e) {
-                    System.err.println("Unexpected I/O error while reading jar file " + appJar + ".");
+                    System.err.println("Error: Unexpected I/O error while reading jar file " + appJar + ".");
                     System.err.println(e.getMessage());
                     System.exit(1);
                 }

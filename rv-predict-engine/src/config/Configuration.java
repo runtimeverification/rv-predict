@@ -149,16 +149,15 @@ public class Configuration {
         }
 
         // Detecting a candidate for program options start
-        int max;
-        for (max = 0; max < args.length; max++) {
-            if (args[max].equals(Configuration.opt_java)) { // if the --java option is used
-                max++;
-                break;
+        int max = Arrays.asList(args).indexOf(Configuration.opt_java);
+        if (max != -1) { // --java was used. Using it as a separator for java command line
+            max++;
+        } else { // --java was not specified.  Look for the first unknown option
+            for (max = 0; max < args.length; max++) {
+                if (args[max].startsWith("-") && !options.contains(args[max]))
+                    break; // the index of the first unknown command
             }
-            if (args[max].startsWith("-") && !options.contains(args[max]))
-                break; // the index of the first unknown command
         }
-
 
         // get all rv-predict arguments and (potentially) the first unnamed program arguments
         String[] rvArgs = Arrays.copyOf(args, max);

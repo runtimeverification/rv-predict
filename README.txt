@@ -25,13 +25,34 @@ ant                                           - Compile the tool and tests
 
 -- Running 
 #Invoke rv-predict on a class as you would invoke the Java interpreter
-bin/rv-predict <rv_options> <MainClass> <program_options>
+Usage: bin/rv-predict [rv_options] [--java] [java_options] class [args...]
+                     (to predict races in a class)
+   or  bin/rv-predict [rv_options] [--java] [java_options] -jar jarfile [args...]
+                     (to predict races in an executable jar file)
 
-<rv_options> can be common options for the java interpreter (e.g., -cp) 
-or rv-predic specific options (run rv-predict --help for more information).
+where [rv_options] are rv-predic specific options 
+(run rv-predict --help -v for more information), 
+  --java can be used as a separator for the java command line
+the remainding arguments are what one would pass to the java executable to 
+execute the class/jar
+The --java option is only required in the less frequent case when some of 
+the java or program options used have the same name as some of the 
+rv-predict options (including --java).
 
--- Example
+Moreover, in the unlikely case when the program takes as options -cp or -jar
+and is is run as a class (i.e., not using -jar) then the java -cp option must 
+be used explicitely for disambiguation.
+
+-- Examples
 bin/rv-predict -cp tests/bin demo.Example     - Predict races
+
+Using --java to specify that the first -v argument should be sent to rv-predict,
+while the second one to the java command
+bin/rv-predict --verbose --java -verbose -cp tests/bin demo.Example  
+
+Using rv-predict with a jar
+bin/rv-predict -jar evaluation/ftpserver/ftpserver.jar
+
 
 ----------------------------------------
 More online documents: http://fsl.cs.illinois.edu/rvpredict/

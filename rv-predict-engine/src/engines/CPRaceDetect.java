@@ -35,7 +35,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 
-import com.beust.jcommander.JCommander;
 import config.Configuration;
 import trace.ReadNode;
 import trace.Trace;
@@ -198,22 +197,19 @@ public class CPRaceDetect {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 
         config = new Configuration();
-        JCommander jc = new JCommander(config);
-
-        config.parseArguments(args, jc);
+        config.parseArguments(args);
 
 		try{
 			
 			//start predict analysis
 			long start_time = System.currentTimeMillis();
 			//initialize printer
-			initPrinter(config.appname);
+			initPrinter(config.outdir);
 			
 			//db engine is used for interacting with database
-			DBEngine db = new DBEngine(config.appname);
+			DBEngine db = new DBEngine(config.outdir);
 
 			//load all the metadata in the application
 			HashMap<Integer, String> sharedVarIdSigMap = db.getSharedVarSigIdMap();

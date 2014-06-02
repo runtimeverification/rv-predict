@@ -46,10 +46,10 @@ import java.util.jar.Manifest;
 public class Configuration {
 
     public static final String PROGRAM_NAME = "rv-predict";
+    public static final String JAR = "-jar";
+    public static final String CP = "-cp";
     @Parameter(description="<command_line>")
     public List<String> command_line;
-
-    public String appname;
 
 	final static String opt_rmm_pso = "--pso";//for testing only
     @Parameter(names = opt_rmm_pso, description = "PSO memory model", hidden = true)
@@ -81,9 +81,14 @@ public class Configuration {
     @Parameter(names = opt_all_consistent, description = "require all read-write consistent", hidden = true)
     public boolean allconsistent;
 
-	final static String opt_constraint_outdir = "--outdir";
-    @Parameter(names = opt_constraint_outdir, description = "constraint file directory", hidden = true)
-    public String constraint_outdir = Util.getTempRVDirectory()+"z3";
+//	final static String opt_constraint_outdir = "--outdir";
+//    @Parameter(names = opt_constraint_outdir, description = "constraint file directory", hidden = true)
+    public String constraint_outdir;
+
+ 	final static String opt_outdir = "--dir";
+    @Parameter(names = opt_outdir, description = "output directory", hidden = true)
+    public String outdir = "log";
+
 
 	final static String opt_solver_timeout = "--solver_timeout";
     @Parameter(names = opt_solver_timeout, description = "solver timeout in seconds", hidden = true)
@@ -125,30 +130,56 @@ public class Configuration {
     @Parameter(names = {short_opt_help, opt_help}, description = "print help info", help = true)
     public boolean help;
 
-    @ParametersDelegate
-    public final JavaOptions javaOptions;
+    public final static String opt_java = "--java";
+    @Parameter(names = opt_java, description = "optional separator for java arguments")
+    public boolean javaSeparator;
 
-    public class JavaOptions {
-        final static String opt_app_classpath = "-cp";
-        @Parameter(names = opt_app_classpath, description = "Application classpath")
-        public String appClassPath;
+    public int parseArguments(String[] args) {
+        String pathSeparator = System.getProperty("path.separator");
+        String fileSeparator = System.getProperty("file.separator");
+        JCommander jc = new JCommander(this);
+        jc.setProgramName(PROGRAM_NAME);
 
-        final static String opt_app_jar = "-jar";
-        @Parameter(names = opt_app_jar, description = "Application JAR file")
-        public String appJar;
-    }
+        // Collect all parameter names.  It would be nice if JCommander provided this directly.
+        Set<String> options = new HashSet<String>();
+        for (ParameterDescription parameterDescription : jc.getParameters()) {
+            for (String name : parameterDescription.getParameter().names()) {
+                options.add(name);
+            }
+        }
 
-	public Configuration () {
-        javaOptions = new JavaOptions();
-    }
+        // Detecting a candidate for program options start
+        int max = Arrays.asList(args).indexOf(Configuration.opt_java);
+        if (max != -1) { // --java was used. Using it as a separator for java command line
+            max++;
+        } else { // --java was not specified.  Look for the first unknown option
+            for (max = 0; max < args.length; max++) {
+                if (args[max].startsWith("-") && !options.contains(args[max]))
+                    break; // the index of the first unknown command
+            }
+        }
 
-    public void parseArguments(String[] args, JCommander jc) {
+        // get all rv-predict arguments and (potentially) the first unnamed program arguments
+        String[] rvArgs = Arrays.copyOf(args, max);
         try {
-            jc.parse(args);
+            jc.parse(rvArgs);
         } catch (ParameterException e) {
-            System.err.println("Error while parsing command line arguments:");
+            System.err.println("Error: Cannot parse command line arguments.");
             System.err.println(e.getMessage());
             System.exit(1);
+        }
+
+        constraint_outdir = outdir + fileSeparator + "z3";
+
+        if (command_line != null) { // if there are unnamed options they should all be at the end
+            int i = rvArgs.length - 1;
+            for (String command : command_line) {
+                if (!command.equals(rvArgs[i--])) {
+                    System.err.println("Error: Unexpected argument " + command + " among rv-predict options.");
+                    System.err.println("The " + opt_java + " option can be used to separate the java command.");
+                    System.exit(1);
+                }
+            }
         }
 
         if (help) {
@@ -156,52 +187,64 @@ public class Configuration {
             System.exit(0);
         }
 
-        if (command_line == null && javaOptions.appJar == null) {
-            System.out.println("Main class (or -jar option) missing.");
-            usage(jc);
-            System.exit(1);
-        }
-
-        if (javaOptions.appJar == null) {
-            appname = command_line.get(0);
-        } else { // set main class name and class path from the jar manifest
-            File file = new File(javaOptions.appJar);
-            if (!file.exists()) {
-                System.err.println("Error: Unable to access jarfile " + javaOptions.appJar);
+        List<String> argList = Arrays.asList(Arrays.copyOfRange(args, rvArgs.length, args.length));
+        int idxCp = -1;
+        if (command_line == null) { // otherwise the program has already started
+            command_line = new ArrayList<String>(argList);
+            if (command_line.isEmpty()) {
+                System.err.println("Error: Java command line is empty.");
+                usage(jc);
                 System.exit(1);
             }
-            javaOptions.appClassPath = javaOptions.appJar;
-            try {
-                JarFile jarFile = new JarFile(javaOptions.appJar);
-                Manifest manifest = jarFile.getManifest();
-                Attributes mainAttributes = manifest.getMainAttributes();
-                String mainClass = mainAttributes.getValue("Main-Class");
-                if (mainClass == null) {
-                    System.err.println("no main manifest attribute, in " + javaOptions.appJar);
+            idxCp = command_line.indexOf(CP);
+            int idxJar = command_line.indexOf(JAR);
+            if (idxJar != -1 && (idxCp == -1 || idxJar < idxCp)) {// jar exists, and if cp exists too, jar is before cp
+                command_line.set(idxJar, CP); // replace -jar with -cp
+                idxCp = idxJar;
+                String appJar = command_line.get(idxJar + 1);
+                File file = new File(appJar);
+                if (!file.exists()) {
+                    System.err.println("Error: Unable to access jarfile " + appJar);
                     System.exit(1);
                 }
-                appname = mainClass;
-                if (command_line == null) {
-                    command_line = new ArrayList<String>();
-                }
-                command_line.add(0, appname);
-                String classPath = mainAttributes.getValue("Class-Path");
-                String basepath = file.getParent();
-                String pathSeparator = System.getProperty("path.separator");
-                String fileSeparator = System.getProperty("file.separator");
-                if (classPath != null) {
-                    String[] uris = classPath.split(" ");
-                    for (String uri : uris) {
-                        String decodedPath = URLDecoder.decode(uri, "UTF-8");
-                        javaOptions.appClassPath += pathSeparator + basepath + fileSeparator + decodedPath;
+                String appClassPath = appJar;
+                try {
+                    JarFile jarFile = new JarFile(appJar);
+                    Manifest manifest = jarFile.getManifest();
+                    Attributes mainAttributes = manifest.getMainAttributes();
+                    String mainClass = mainAttributes.getValue("Main-Class");
+                    if (mainClass == null) {
+                        System.err.println("Error: no main manifest attribute, in " + appJar);
+                        System.exit(1);
                     }
+                    command_line.add(idxJar + 2, mainClass);
+                    String classPath = mainAttributes.getValue("Class-Path");
+                    String basepath = file.getParent();
+                    if (classPath != null) {
+                        String[] uris = classPath.split(" ");
+                        for (String uri : uris) {
+                            String decodedPath = URLDecoder.decode(uri, "UTF-8");
+                            appClassPath += pathSeparator + basepath + fileSeparator + decodedPath;
+                        }
+                    }
+                } catch (IOException e) {
+                    System.err.println("Error: Unexpected I/O error while reading jar file " + appJar + ".");
+                    System.err.println(e.getMessage());
+                    System.exit(1);
                 }
-            } catch (IOException e) {
-                System.err.println("Unexpected I/O error while reading jar file " + javaOptions.appJar + ".");
-                System.err.println(e.getMessage());
-                System.exit(1);
+                argList.set(idxCp + 1, appClassPath);
             }
+        } else {
+            command_line.addAll(argList);
         }
+        if (idxCp == -1) { // no classpath argument --- will use environment classpath as a base
+            command_line.add(0, "-cp");
+            String systemClasspath = System.getenv("CLASSPATH");
+            if (systemClasspath == null) systemClasspath = "";
+            command_line.add(1, systemClasspath);
+            idxCp = 0;
+        }
+        return idxCp;
     }
 
     public void usage(JCommander jc) {

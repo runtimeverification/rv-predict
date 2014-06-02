@@ -44,7 +44,6 @@ import trace.WriteNode;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -64,7 +63,7 @@ public class YicesEngineSMTLIB1 extends Z3Engine
 	public YicesEngineSMTLIB1(Configuration config)
 	{
 		super(config);
-		CONS_BENCHNAME="(benchmark "+config.appname+".smt\n";
+		CONS_BENCHNAME="(benchmark "+config.outdir +".smt\n";
 	}
 	
 	public void declareVariables(Vector<AbstractNode> trace)

@@ -98,7 +98,7 @@
                      <zipgroupfileset dir="${rvpredict.agent.lib}" includes="asm.jar,h2-1.3.171.jar"/>
                      </jar>
                      <copy file="${rvpredict.agent.lib}/iagent.jar" todir="${rvpredict.lib}"/>
-                     <copy file="${rvpredict.agent.lib}/ant-contrib.jar" todir="${rvpredict.lib}"/>
+                     <!--<copy file="${rvpredict.agent.lib}/ant-contrib.jar" todir="${rvpredict.lib}"/>-->
       </target>
 
   <target name="init-benchmarks"
@@ -147,23 +147,6 @@
 
         </junit>
     </target>
-    <!--
-  <target name="test" depends="init-benchmarks, init-tests"
-           description="run rv-predict with benchmarks">
-	   <for-contrib param="appname" list="${file.benchmarks}" delimiter="${line.separator}">
-	   <sequential>
-	   <echo message="testing @{appname}"/>
-           <exec dir="." executable="/bin/bash">
-           <arg value="bin/rv-predict"/>
-           <arg value="-v"/>
-           <arg value="-cp"/>
-           <arg value="${benchmark.bin}"/>
-           <arg value="@{appname}"/>
-           </exec>
-           </sequential>
-           </for-contrib>
-      </target>
-      -->
   <target name="clean" depends="clean-rvpredict-agent,clean-rvpredict-engine"
           description="clean up" >
               <!-- Delete the ${benchmark.bin} directory trees -->

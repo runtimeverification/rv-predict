@@ -1,0 +1,8 @@
+This version of the RV Predict tool is able 
+to find data races in Java programs without 
+false positives.
+
+This software is provided for evaluation 
+purposes only and may not be redistributed 
+in any form. This software may only be 
+obtained from Runtime Verification, Inc.

@@ -6,5 +6,6 @@
   </test>
   <test name="demo.Example">
     <arg key="-cp" value="tests/bin" />
+    <arg value="demo.Example" />
   </test>
 </tests>

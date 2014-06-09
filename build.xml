@@ -132,7 +132,7 @@
       <pathelement location="${rvpredict.engine.src}" />
    </path>
 
-    <target name="test" depends="init-benchmarks, init-tests">
+    <target name="test" depends="all">
         <mkdir dir="${reports.tests}" />
         <junit printsummary="yes">
             <classpath>

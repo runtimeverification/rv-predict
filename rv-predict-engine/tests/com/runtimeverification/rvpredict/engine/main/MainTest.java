@@ -22,7 +22,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Base class for C examples JUnit tests.
+ * Base class for rv-predict system tests
  * @author TraianSF
  */
 @RunWith(Parameterized.class)
@@ -59,12 +59,6 @@ public class MainTest {
         this.args.toArray(args);
         System.out.println(Arrays.toString(args));
         helper.testCommand(null, args);
-
-//        helper.deleteFiles(false,
-//                "tests/test.actual.out",
-//                "tests/test.actual.err"
-//        );
-
     }
 
     // The method bellow creates the set of parameter instances to be used as seeds by

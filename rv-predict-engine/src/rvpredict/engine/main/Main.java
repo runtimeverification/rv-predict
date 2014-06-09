@@ -63,7 +63,6 @@ public class Main {
             appArgList.add("-javaagent:" + iagent + "=" + (config.outdir.contains(" ") ? "\"" + config.outdir + "\"" : config.outdir));
             appArgList.addAll(config.command_line);
 
-            System.err.println(appArgList);
             ProcessBuilder processBuilder =
                     new ProcessBuilder(appArgList.toArray(new String[appArgList.size()]));
             processBuilder.inheritIO();

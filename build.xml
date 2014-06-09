@@ -1,7 +1,18 @@
 <project name="rvpredict" default="all">
  
  <!-- set global properties for this bin -->
+  <property name="rvpredict.version" value="0.1"/>
+  <property name="rvpredict.lib" location="lib"/>
+  <property name="rvpredict.dist" location="dist"/>
+  <property name="rvpredict.temp" location="tmp"/>
+  <property name="rvpredict.bin" location="bin"/>
+  <property name="rvpredict.demos" location="rv-predict-demo"/>
+  <property name="rvpredict.benchmarks" location="benchmarks"/>
+  <property name="rvpredict.base" location="."/>
+  <property name="rvpredict.eclipse" location="ECLIPSE"/>
+
   <property name="reports.tests" value="test-reports" />
+
   <property name="rvpredict.engine.src" location="rv-predict-engine/src"/>
   <property name="rvpredict.engine.src.tests" location="rv-predict-engine/tests"/>
   <property name="rvpredict.agent.src" location="rv-predict-agent/src"/>
@@ -29,7 +40,14 @@
   <property name="benchmark.src" location="benchmarks/src"/>
   <property name="benchmark.bin" location="benchmarks/bin"/>
 
-  <property name="rvpredict.lib" location="lib"/>
+  <property name="install.lib" location="izpack/lib"/>
+
+  <taskdef name="izpack" classpath="${install.lib}/standalone-compiler.jar"
+    classname="com.izforge.izpack.ant.IzPackTask"/>
+
+  <taskdef name="for-contrib" classname="net.sf.antcontrib.logic.ForTask"
+    classpath="${rvpredict.agent.lib}/ant-contrib.jar"/>
+
   <target name="all" depends="rvpredict-all"
           description="compile rvpredict and benchmarks" />
 
@@ -85,6 +103,10 @@
    <delete dir="${rvpredict.engine.bin}" />
    <delete file="${rvpredict.lib}/rv-predict-engine.jar"/>
  </target>
+
+  <target name="clean-install">
+   <delete dir="${rvpredict.dist}" />
+ </target>
   
 
 <target name="rvpredict-agent" depends="init-rvpredict-agent"
@@ -103,8 +125,26 @@
                      <!--<copy file="${rvpredict.agent.lib}/ant-contrib.jar" todir="${rvpredict.lib}"/>-->
       </target>
 
+    <target name="installer" depends="rvpredict-agent,rvpredict-engine">
+        <!-- Run installer build -->
+        <echo message="Running IzPack to build the installer..."/>
+        <mkdir dir="${rvpredict.temp}"/>
+        <mkdir dir="${rvpredict.dist}"/>
+        <izpack input="install-definition.xml"
+          output="${rvpredict.dist}/rv-predict-install.jar"
+          installerType="standard"
+          inheritAll="true"
+          basedir="${rvpredict.temp}"
+          compression="deflate"
+          compressionlevel="9"/>
+        <!-- Clean working directory -->
+        <echo message="Cleaning up working directory..."/>
+        <delete dir="${rvpredict.temp}" quiet="true" includeemptydirs="true"/>
+        <echo message="Done."/>
+    </target>
+
   <target name="init-benchmarks"
-          description="compile the benchmark" >
+          description="compile the benchmark" depends="installer" >
         <!-- Create the bin directory structure used by compile -->
     <mkdir dir="${benchmark.bin}"/>
               <!-- Compile the java code from ${benchmark.src} into ${benchmark.bin} -->
@@ -112,7 +152,7 @@
                      <copy file="${benchmark.src}/hitData" todir="${benchmark.bin}"/>
       </target>
 
-  <target name="init-tests">
+  <target name="init-tests" depends="installer">
       <!-- Create the time stamp -->
     <tstamp/>
         <!-- Create the bin directory structure used by compile -->
@@ -124,8 +164,7 @@
     </javac>
       </target>
 
-<!--    <taskdef name="for-contrib" classname="net.sf.antcontrib.logic.ForTask" classpath="${rvpredict.lib}/ant-contrib.jar"/>-->
-<loadfile property="file.benchmarks" srcfile="benchmarks/benchmarks"/>
+  <loadfile property="file.benchmarks" srcfile="benchmarks/benchmarks"/>
 
     <path id="classpath.test">
       <pathelement location="${rvpredict.external.lib}/ant-junit.jar" />
@@ -153,7 +192,7 @@
 
         </junit>
     </target>
-  <target name="clean" depends="clean-rvpredict-agent,clean-rvpredict-engine"
+  <target name="clean" depends="clean-rvpredict-agent,clean-rvpredict-engine,clean-install"
           description="clean up" >
               <!-- Delete the ${benchmark.bin} directory trees -->
     <delete dir="${benchmark.bin}"/>

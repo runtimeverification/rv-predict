@@ -4,8 +4,18 @@ import com.runtimeverification.rvpredict.TestHelper;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 import rvpredict.engine.main.Main;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -19,7 +29,7 @@ import java.util.List;
 public class MainTest {
     private static String basePath = Main.getBasePath();
     private static String separator = System.getProperty("file.separator");
-    private static String basePathFile = basePath + separator + "build.xml";
+    private static String testPathFile = basePath + separator + "test.xml";
     private static String rvPredictJar = basePath + separator + "lib" + separator + "rv-predict-engine.jar";
     private static String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
     private static List<String> rvArgList = Arrays.asList(new String[]{java, "-cp", rvPredictJar, "rvpredict.engine.main.Main"});
@@ -64,8 +74,40 @@ public class MainTest {
     @Parameterized.Parameters(name="{0}")
     public static Collection<Object[]> data() {
         Collection<Object[]> data = new ArrayList<Object[]>();
-        data.add(new Object[] {"Test 1", basePathFile, new String[] { "-jar", "evaluation/ftpserver/ftpserver.jar" }});
-        data.add(new Object[] {"Test 2", basePathFile, new String[] {"-cp", "tests/bin", "demo.Example"}});
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        try {
+            DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+            Document document = documentBuilder.parse(new File(testPathFile));
+            NodeList tests = document.getElementsByTagName("test");
+            for (int i = 0; i < tests.getLength(); i++) {
+                Node node = tests.item(i);
+                if (node.getNodeType() == Node.ELEMENT_NODE) {
+                    Element test = (Element) node;
+                    String name = test.getAttribute("name");
+                    List<String> arguments = new ArrayList<String>();
+                    NodeList args = test.getElementsByTagName("arg");
+                    for (int j = 0; j < args.getLength(); j++) {
+                        node = args.item(j);
+                        if (node.getNodeType() == Node.ELEMENT_NODE) {
+                            Element arg = (Element) node;
+                            String key = arg.getAttribute("key");
+                            if (!key.isEmpty()) {
+                                arguments.add(key);
+                            }
+                            arguments.add(arg.getAttribute("value"));
+                        }
+                    }
+                    String[] sArgs = new String[arguments.size()];
+                    data.add(new Object[]{ name, testPathFile, arguments.toArray(sArgs)});
+                }
+            }
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (SAXException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return data;
     }
 }

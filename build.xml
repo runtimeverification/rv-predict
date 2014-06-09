@@ -117,6 +117,9 @@
     <mkdir dir="${test.bin}" description="compile the tests"/>
               <!-- Compile the java code from ${benchmark.src} into ${benchmark.bin} -->
     <javac srcdir="${test.src}" destdir="${test.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="false"/>
+    <javac srcdir="${rvpredict.engine.src.tests}" destdir="${rvpredict.engine.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="true">
+            <classpath refid="classpath.test"/>
+    </javac>
       </target>
 
     <taskdef name="for-contrib" classname="net.sf.antcontrib.logic.ForTask" classpath="${rvpredict.lib}/ant-contrib.jar"/>

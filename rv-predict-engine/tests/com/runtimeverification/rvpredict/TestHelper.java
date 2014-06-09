@@ -59,9 +59,8 @@ public class TestHelper {
         }
         Process process = processBuilder.start();
         if (expectedFilePrefix == null) {
-            final InputStream outputStream = process.getInputStream();
-            getOutput(process.getInputStream());
-            getOutput(process.getErrorStream());
+            redirectOutput(process.getInputStream(), null);
+            redirectOutput(process.getErrorStream(), null);
         }
         int returnCode = process.waitFor();
         Assert.assertEquals("Expected no error during" + Arrays.toString(command) + ".", 0, returnCode);
@@ -71,13 +70,16 @@ public class TestHelper {
         }
     }
 
-    public void getOutput(final InputStream outputStream) {
+    public void redirectOutput(final InputStream outputStream, final PrintStream redirect) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 Scanner scanner = new Scanner(outputStream);
                 while (scanner.hasNextLine()) {
-                    System.err.println(scanner.nextLine());
+                    String s = scanner.nextLine();
+                    if (redirect != null) {
+                        redirect.println(s);
+                    }
                 }
             }
         }).start();

@@ -116,7 +116,7 @@ public class Main {
         }
     }
 
-    private static String getBasePath() {
+    public static String getBasePath() {
         String path = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getAbsolutePath();
         try {
             String decodedPath = URLDecoder.decode(path, "UTF-8");

@@ -1,7 +1,9 @@
 <project name="rvpredict" default="all">
  
  <!-- set global properties for this bin -->
+  <property name="reports.tests" value="test-reports" />
   <property name="rvpredict.engine.src" location="rv-predict-engine/src"/>
+  <property name="rvpredict.engine.src.tests" location="rv-predict-engine/tests"/>
   <property name="rvpredict.agent.src" location="rv-predict-agent/src"/>
   <property name="rvpredict.engine.lib" location="rv-predict-engine/lib"/>
   <property name="rvpredict.agent.lib" location="rv-predict-agent/lib"/>
@@ -115,26 +117,39 @@
     <mkdir dir="${test.bin}" description="compile the tests"/>
               <!-- Compile the java code from ${benchmark.src} into ${benchmark.bin} -->
     <javac srcdir="${test.src}" destdir="${test.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="false"/>
+    <javac srcdir="${rvpredict.engine.src.tests}" destdir="${rvpredict.engine.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="true">
+            <classpath refid="classpath.test"/>
+    </javac>
       </target>
 
+    <taskdef name="for-contrib" classname="net.sf.antcontrib.logic.ForTask" classpath="${rvpredict.lib}/ant-contrib.jar"/>
   <loadfile property="file.benchmarks" srcfile="benchmarks/benchmarks"/>
 
-<taskdef name="for-contrib" classname="net.sf.antcontrib.logic.ForTask" classpath="${rvpredict.agent.lib}/ant-contrib.jar"/>
-  <target name="test" depends="init-benchmarks, init-tests"
-           description="run rv-predict with benchmarks">
-	   <for-contrib param="appname" list="${file.benchmarks}" delimiter="${line.separator}">
-	   <sequential>
-	   <echo message="testing @{appname}"/>
-           <exec dir="." executable="/bin/bash">
-           <arg value="bin/rv-predict"/>
-           <arg value="-v"/>
-           <arg value="-cp"/>
-           <arg value="${benchmark.bin}"/>
-           <arg value="@{appname}"/>
-           </exec>
-           </sequential>
-           </for-contrib>
-      </target>
+    <path id="classpath.test">
+      <pathelement location="lib/external/junit.jar" />
+      <pathelement location="lib/external/hamcrest-core.jar" />
+      <pathelement location="${rvpredict.engine.bin}" />
+      <pathelement location="${rvpredict.engine.src}" />
+   </path>
+
+    <target name="test" depends="all">
+        <mkdir dir="${reports.tests}" />
+        <junit printsummary="yes">
+            <classpath>
+                <pathelement location="${rvpredict.lib}/rv-predict-engine.jar" />
+                <pathelement path="${java.class.path}"/>
+                <path refid="classpath.test" />
+            </classpath>
+            <batchtest fork="yes" todir="${reports.tests}">
+                <formatter type="xml"/>
+                <fileset dir="${rvpredict.engine.src.tests}">
+                    <include name="**/*Test*.java"/>
+                    <exclude name="**/TestHelper.java"/>
+                </fileset>
+            </batchtest>
+
+        </junit>
+    </target>
   <target name="clean" depends="clean-rvpredict-agent,clean-rvpredict-engine"
           description="clean up" >
               <!-- Delete the ${benchmark.bin} directory trees -->

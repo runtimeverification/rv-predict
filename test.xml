@@ -8,4 +8,8 @@
     <arg key="-cp" value="tests/bin" />
     <arg value="demo.Example" />
   </test>
+  <test name="account.Account">
+    <arg key="-cp" value="benchmarks/bin" />
+    <arg value="account.Account" />
+  </test>
 </tests>

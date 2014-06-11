@@ -57,38 +57,25 @@ public class Main {
             String classpath = config.command_line.get(idxCp + 1);
             classpath = rvAgent + System.getProperty("path.separator") + classpath;
             config.command_line.set(idxCp + 1, classpath);
-            String agentOptions = config.opt_outdir + " " + escapeString(config.outdir);
-            agentOptions += " " + config.opt_table_name + " " + escapeString(config.tableName);
-            if (config.agentOnlySharing) {
-                agentOptions += " " + config.opt_sharing_only;
-            }
+            String sharingAgentOptions = config.opt_outdir + " " + escapeString(config.outdir);
+            sharingAgentOptions += " " + config.opt_table_name + " " + escapeString(config.tableName);
+            String noSharingAgentOptions = sharingAgentOptions;
+            sharingAgentOptions += " " + config.opt_sharing_only;
 
             List<String> appArgList = new ArrayList<String>();
             appArgList.add(java);
-            appArgList.add("-javaagent:" + iagent + "=" + agentOptions);
+            int agentIds = appArgList.size();
+            if (config.optlog || config.agentOnlySharing) {
+                appArgList.add("-javaagent:" + iagent + "=" + sharingAgentOptions);
+            } else {
+                appArgList.add("-javaagent:" + iagent + "=" + noSharingAgentOptions);
+            }
             appArgList.addAll(config.command_line);
 
-            ProcessBuilder processBuilder =
-                    new ProcessBuilder(appArgList.toArray(new String[appArgList.size()]));
-            processBuilder.inheritIO();
-            try {
-                if (config.verbose) {
-                    System.out.println("Executing and logging command: ");
-                    System.out.print("   ");
-                    for (String arg : appArgList) {
-                        if (arg.contains(" ")) {
-                            System.out.print(" \"" + arg + "\"");
-                        } else {
-                            System.out.print(" " + arg);
-                        }
-                    }
-                    System.out.println();
-                }
-                Process process = processBuilder.start();
-                process.waitFor();
-            } catch (IOException e) {
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            runAgent(config, appArgList);
+            if (config.optlog) {
+                appArgList.set(agentIds, "-javaagent:" + iagent + "=" + noSharingAgentOptions);
+                runAgent(config, appArgList);
             }
         }
 
@@ -118,6 +105,31 @@ public class Main {
 
         if (config.predict) {
             NewRVPredict.run(config);
+        }
+    }
+
+    public static void runAgent(Configuration config, List<String> appArgList) {
+        ProcessBuilder processBuilder =
+                new ProcessBuilder(appArgList.toArray(new String[appArgList.size()]));
+        processBuilder.inheritIO();
+        try {
+            if (config.verbose) {
+                System.out.println("Executing and logging command: ");
+                System.out.print("   ");
+                for (String arg : appArgList) {
+                    if (arg.contains(" ")) {
+                        System.out.print(" \"" + arg + "\"");
+                    } else {
+                        System.out.print(" " + arg);
+                    }
+                }
+                System.out.println();
+            }
+            Process process = processBuilder.start();
+            process.waitFor();
+        } catch (IOException e) {
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 

@@ -235,7 +235,9 @@ public class Configuration {
                     Manifest manifest = jarFile.getManifest();
                     Attributes mainAttributes = manifest.getMainAttributes();
                     String mainClass = mainAttributes.getValue("Main-Class");
-                    tableName = mainClass.replace(".","_");
+                    if (tableName == null) {
+                        tableName = mainClass.replace(".", "_");
+                    }
                     if (mainClass == null) {
                         System.err.println("Error: no main manifest attribute, in " + appJar);
                         System.exit(1);

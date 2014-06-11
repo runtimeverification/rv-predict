@@ -1,3 +1,0 @@
-#replay
-java -Xmx1g -cp tmp/replay:rv-predict-replay.jar edu.uiuc.run.Main $@
-

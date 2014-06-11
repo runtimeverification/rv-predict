@@ -1,3 +1,0 @@
-#record
-echo "recording "$@
-time java -Xmx1g -cp tmp/record:rv-predict-record.jar edu.uiuc.run.Main $@

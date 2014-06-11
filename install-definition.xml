@@ -65,13 +65,6 @@
                 <exclude name="log/*"/>
             </fileset>
         </pack>
-        <pack name="Eclipse" required="no" installGroups="New Application" >
-            <description>Scripts and libraries to run RV-Predict on Eclipse.</description>
-            <fileset dir="@{rvpredict.eclipse}" targetdir="$INSTALL_PATH/eclipse"></fileset>
-            <executable targetfile="$INSTALL_PATH/eclipse/runeclipse" keep="true" stage="never" />
-            <executable targetfile="$INSTALL_PATH/eclipse/runeclipse2" keep="true" stage="never" />
-            <executable targetfile="$INSTALL_PATH/eclipse/runeclipse3" keep="true" stage="never" />
-        </pack>
     </packs>
 
     <!-- The native libraries to add. This is required for creating shortcuts on Windows -->

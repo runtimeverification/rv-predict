@@ -126,8 +126,8 @@
     </javac>
       </target>
 
-    <taskdef name="for-contrib" classname="net.sf.antcontrib.logic.ForTask" classpath="${rvpredict.lib}/ant-contrib.jar"/>
-  <loadfile property="file.benchmarks" srcfile="benchmarks/benchmarks"/>
+<!--    <taskdef name="for-contrib" classname="net.sf.antcontrib.logic.ForTask" classpath="${rvpredict.lib}/ant-contrib.jar"/>-->
+<loadfile property="file.benchmarks" srcfile="benchmarks/benchmarks"/>
 
     <path id="classpath.test">
       <pathelement location="${rvpredict.external.lib}/junit.jar" />

@@ -38,7 +38,7 @@ public class Main {
                     System.exit(1);
                 }
             }
-            db = new DBEngine(config.outdir);
+            db = new DBEngine(config.outdir, config.tableName);
             try {
                 db.dropAll();
             } catch (Exception e) {
@@ -57,7 +57,8 @@ public class Main {
             String classpath = config.command_line.get(idxCp + 1);
             classpath = rvAgent + System.getProperty("path.separator") + classpath;
             config.command_line.set(idxCp + 1, classpath);
-            String agentOptions = "--dir " + escapeString(config.outdir);
+            String agentOptions = config.opt_outdir + " " + escapeString(config.outdir);
+            agentOptions += " " + config.opt_table_name + " " + escapeString(config.tableName);
             if (config.agentOnlySharing) {
                 agentOptions += " " + config.opt_sharing_only;
             }
@@ -91,7 +92,7 @@ public class Main {
             }
         }
 
-        db = new DBEngine(config.outdir);
+        db = new DBEngine(config.outdir, config.tableName);
         try {
             if (! db.checkTables()) {
                 System.err.print("Trace was not recorded properly. ");

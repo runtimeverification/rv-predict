@@ -32,20 +32,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Set;
 import java.util.Stack;
 import java.util.Vector;
-import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
-import config.Util;
 import trace.*;
-import trace.AbstractNode.TYPE;
 import violation.IViolation;
-import z3.Z3Engine;
 
 /**
  * Engine for interacting with database.
@@ -203,9 +196,8 @@ public class DBEngine {
 		t.start();
 		
 	}
-	public DBEngine(String directory)
+	public DBEngine(String directory, String name)
 	{
-		String name = "LOG";
 		appname = name;
 		tracetablename = "trace_"+name;
 		tidtablename = "tid_"+name;
@@ -775,7 +767,7 @@ public class DBEngine {
 	private void test()
 	{
 		try{
-		DBEngine db = new DBEngine("a.b.c.test");
+		DBEngine db = new DBEngine("a.b.c.test", "name");
 		db.createSharedVarSignatureTable();
 		{
 			db.saveStmtSignatureToDB("a", 1);

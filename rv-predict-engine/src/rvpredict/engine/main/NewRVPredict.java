@@ -1011,10 +1011,10 @@ public class NewRVPredict {
 
 			
 			//initialize printer
-			initPrinter(config.prefix);
+			initPrinter(config.tableName);
 			
 			//db engine is used for interacting with database
-			DBEngine db = new DBEngine(config.outdir);
+			DBEngine db = new DBEngine(config.outdir, config.tableName);
 
 			//load all the metadata in the application
 			HashMap<Integer, String> sharedVarIdSigMap = db.getSharedVarSigIdMap();

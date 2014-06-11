@@ -28,25 +28,9 @@
  ******************************************************************************/
 package db;
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Set;
-import java.util.Stack;
-import java.util.Vector;
-import java.util.Map.Entry;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
 import config.Util;
-import db.DBEngine.EventItem;
-import trace.*;
-import trace.AbstractNode.TYPE;
-import violation.IViolation;
-import z3.Z3Engine;
 
 /**
  * Parallel trace collection.
@@ -62,9 +46,9 @@ public class DBEngineParallel extends DBEngine{
 	private HashMap<Long,PreparedStatement> threadPrepStmtMap = new HashMap<Long,PreparedStatement>();
 	private HashMap<Long,Connection> threadConnectionMap = new HashMap<Long,Connection>();
 
-	public DBEngineParallel(String name)
+	public DBEngineParallel(String directory, String name)
 	{
-		super(name);
+		super(directory, name);
 	}
 	
 	public void connectDB(long tid) throws Exception

@@ -87,11 +87,13 @@ public class Configuration {
 //    @Parameter(names = opt_constraint_outdir, description = "constraint file directory", hidden = true)
     public String constraint_outdir;
 
- 	final static String opt_outdir = "--dir";
+ 	public final static String opt_outdir = "--dir";
     @Parameter(names = opt_outdir, description = "output directory", hidden = true)
     public String outdir = null;
 
-    public String prefix = "main";
+    public final static String opt_table_name = "--table";
+    @Parameter(names = opt_table_name, description = "Name of the table (Default: jar main class)", hidden = true)
+    public String tableName = null;
 
 	final static String opt_solver_timeout = "--solver_timeout";
     @Parameter(names = opt_solver_timeout, description = "solver timeout in seconds", hidden = true)
@@ -233,7 +235,7 @@ public class Configuration {
                     Manifest manifest = jarFile.getManifest();
                     Attributes mainAttributes = manifest.getMainAttributes();
                     String mainClass = mainAttributes.getValue("Main-Class");
-                    prefix = mainClass.replace(".","_");
+                    tableName = mainClass.replace(".","_");
                     if (mainClass == null) {
                         System.err.println("Error: no main manifest attribute, in " + appJar);
                         System.exit(1);
@@ -264,6 +266,9 @@ public class Configuration {
             if (systemClasspath == null) systemClasspath = "";
             command_line.add(1, systemClasspath);
             idxCp = 0;
+        }
+        if (tableName == null) {
+            tableName = "main";
         }
         return idxCp;
     }

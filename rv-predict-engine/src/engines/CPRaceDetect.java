@@ -206,10 +206,10 @@ public class CPRaceDetect {
 			//start predict analysis
 			long start_time = System.currentTimeMillis();
 			//initialize printer
-			initPrinter(config.prefix);
+			initPrinter(config.tableName);
 			
 			//db engine is used for interacting with database
-			DBEngine db = new DBEngine(config.prefix);
+			DBEngine db = new DBEngine(config.tableName, config.tableName);
 
 			//load all the metadata in the application
 			HashMap<Integer, String> sharedVarIdSigMap = db.getSharedVarSigIdMap();

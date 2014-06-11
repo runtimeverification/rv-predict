@@ -1,6 +1,5 @@
 package rvpredict.engine.main;
 
-import com.beust.jcommander.JCommander;
 import config.Configuration;
 import db.DBEngine;
 
@@ -58,9 +57,14 @@ public class Main {
             String classpath = config.command_line.get(idxCp + 1);
             classpath = rvAgent + System.getProperty("path.separator") + classpath;
             config.command_line.set(idxCp + 1, classpath);
+            String agentOptions = "--dir " + escapeString(config.outdir);
+            if (config.agentOnlySharing) {
+                agentOptions += " " + config.opt_sharing_only;
+            }
+
             List<String> appArgList = new ArrayList<String>();
             appArgList.add(java);
-            appArgList.add("-javaagent:" + iagent + "=" + (config.outdir.contains(" ") ? "\"" + config.outdir + "\"" : config.outdir));
+            appArgList.add("-javaagent:" + iagent + "=" + agentOptions);
             appArgList.addAll(config.command_line);
 
             ProcessBuilder processBuilder =
@@ -114,6 +118,10 @@ public class Main {
         if (config.predict) {
             NewRVPredict.run(config);
         }
+    }
+
+    public static String escapeString(String s) {
+        return (s.contains(" ") ? "\\\"" + s + "\\\"" : s);
     }
 
     public static String getBasePath() {

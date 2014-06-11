@@ -1011,7 +1011,7 @@ public class NewRVPredict {
 
 			
 			//initialize printer
-			initPrinter(config.outdir);
+			initPrinter(config.prefix);
 			
 			//db engine is used for interacting with database
 			DBEngine db = new DBEngine(config.outdir);

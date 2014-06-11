@@ -30,9 +30,9 @@ public class YicesRunSMTLIB1 extends Z3Run
 	
 	public void init(Configuration config, int id) throws IOException
 	{		
-		smtFile = Util.newOutFile(config.constraint_outdir,config.outdir +"_"+id+SMT);
+		smtFile = Util.newOutFile(config.constraint_outdir,config.prefix +"_"+id+SMT);
         
-		yicesOutFile = Util.newOutFile(config.constraint_outdir,config.outdir +"_"+id+OUT);
+		yicesOutFile = Util.newOutFile(config.constraint_outdir,config.prefix +"_"+id+OUT);
 				
 		CMD = "yices-smt -m -t "+config.solver_timeout+" ";
 	}

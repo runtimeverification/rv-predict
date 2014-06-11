@@ -63,7 +63,7 @@ public class YicesEngineSMTLIB1 extends Z3Engine
 	public YicesEngineSMTLIB1(Configuration config)
 	{
 		super(config);
-		CONS_BENCHNAME="(benchmark "+config.outdir +".smt\n";
+		CONS_BENCHNAME="(benchmark "+config.prefix +".smt\n";
 	}
 	
 	public void declareVariables(Vector<AbstractNode> trace)

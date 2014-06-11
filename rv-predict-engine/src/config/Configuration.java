@@ -33,6 +33,8 @@ import com.beust.jcommander.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
@@ -87,8 +89,9 @@ public class Configuration {
 
  	final static String opt_outdir = "--dir";
     @Parameter(names = opt_outdir, description = "output directory", hidden = true)
-    public String outdir = "log";
+    public String outdir = null;
 
+    public String prefix = "main";
 
 	final static String opt_solver_timeout = "--solver_timeout";
     @Parameter(names = opt_solver_timeout, description = "solver timeout in seconds", hidden = true)
@@ -134,6 +137,11 @@ public class Configuration {
     @Parameter(names = opt_java, description = "optional separator for java arguments")
     public boolean javaSeparator;
 
+
+    public final static String opt_sharing_only = "--detectSharingOnly";
+    @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables.")
+    public boolean agentOnlySharing;
+
     public int parseArguments(String[] args) {
         String pathSeparator = System.getProperty("path.separator");
         String fileSeparator = System.getProperty("file.separator");
@@ -165,6 +173,18 @@ public class Configuration {
             jc.parse(rvArgs);
         } catch (ParameterException e) {
             System.err.println("Error: Cannot parse command line arguments.");
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
+
+
+        try {
+            if (outdir == null) {
+                outdir = Files.createTempDirectory(
+                        Paths.get(System.getProperty("java.io.tmpdir")), "rv-predict").toString();
+            }
+        } catch (IOException e) {
+            System.err.println("Error while attempting to create log dir.");
             System.err.println(e.getMessage());
             System.exit(1);
         }
@@ -213,6 +233,7 @@ public class Configuration {
                     Manifest manifest = jarFile.getManifest();
                     Attributes mainAttributes = manifest.getMainAttributes();
                     String mainClass = mainAttributes.getValue("Main-Class");
+                    prefix = mainClass.replace(".","_");
                     if (mainClass == null) {
                         System.err.println("Error: no main manifest attribute, in " + appJar);
                         System.exit(1);

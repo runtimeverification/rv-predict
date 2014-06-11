@@ -19,6 +19,12 @@ public class Config {
     @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables.")
     public static boolean agentOnlySharing;
 
+
+    public final static String opt_table_name = "--table";
+    @Parameter(names = opt_table_name, description = "Name of the table (Default: jar main class)", hidden = true)
+    public static String tableName = "main";
+
+
     public final String LOG_FIELD_ACCESS = "logFieldAcc";
     public final String LOG_INIT_WRITE_ACCESS = "logInitialWrite";
     public final String LOG_ARRAY_ACCESS = "logArrayAcc";

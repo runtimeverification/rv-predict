@@ -68,7 +68,7 @@ public final class RecordRT {
 	public static void init(boolean newTable) throws Exception
 	{
 		long tid = Thread.currentThread().getId();
-		db= new DBEngine(Config.logDir);
+		db= new DBEngine(Config.logDir, Config.tableName);
 		db.createTraceTable(newTable);	
 		
 		//create table for storing thread id to unique identifier map
@@ -93,7 +93,7 @@ public final class RecordRT {
 			//just reuse the connection 
 			
 			//TODO: if db is null or closed, there must be something wrong
-			DBEngine db= new DBEngine(Config.logDir);
+			DBEngine db= new DBEngine(Config.logDir, Config.tableName);
 			
 		//save sharedvariable - id to database
 		  db.createSharedVarSignatureTable();

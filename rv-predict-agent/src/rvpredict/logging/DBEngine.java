@@ -117,9 +117,8 @@ public class DBEngine {
 			this.TYPE = type;
 		}
 	}
-	public DBEngine(String directory)
+	public DBEngine(String directory, String name)
 	{
-		String name = "LOG";
 		appname = name;
 		tracetablename = "trace_"+name;
 		tidtablename = "tid_"+name;

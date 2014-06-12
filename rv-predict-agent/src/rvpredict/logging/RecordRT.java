@@ -54,6 +54,7 @@ public final class RecordRT {
 	final static String MAIN_NAME = "0";
 	
 	static ThreadLocal<HashSet<Integer>> threadLocalIDSet;
+	static ThreadLocal<HashSet<Integer>> threadLocalIDSet2;
 
 	//engine for storing events into database
 	static DBEngine db;
@@ -78,6 +79,14 @@ public final class RecordRT {
 		
 		    			}
     				};
+	    		threadLocalIDSet2 = new ThreadLocal<HashSet<Integer>>()
+	    				{
+			    			protected HashSet<Integer> initialValue() {
+			
+			                    return new HashSet<Integer>();
+			
+			    			}
+	    				};
     	}
     	else
     	{
@@ -274,7 +283,11 @@ public final class RecordRT {
 	  {
 		  if(!threadLocalIDSet.get().contains(ID))
 		  {
-			  threadLocalIDSet.get().add(ID);
+			  if(threadLocalIDSet2.get().contains(ID))
+				  threadLocalIDSet.get().add(ID);
+			  else
+				  threadLocalIDSet2.get().add(ID);
+			  
 			  
 			  //o is not used...
 			  
@@ -381,7 +394,10 @@ public final class RecordRT {
 	  //System.out.println(identifier);
 	  if(!threadLocalIDSet.get().contains(ID))
 	  {
-		  threadLocalIDSet.get().add(ID);
+		  if(threadLocalIDSet2.get().contains(ID))
+			  threadLocalIDSet.get().add(ID);
+		  else
+			  threadLocalIDSet2.get().add(ID);
 		  
 		  Integer sig = System.identityHashCode(o);//+"_"+index;//array
 

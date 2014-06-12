@@ -44,6 +44,11 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
         maxindex_cur=argSize+1;
         if(Config.instance.verbose)
         System.out.println("method: "+methodname);
+        
+        //DEBUG
+//        if(classname.equals("org/dacapo/harness/CommandLineArgs")
+//        		&&methodname.equals("<init>"))
+//        	System.out.println("method: "+methodname);
     }
     private void addBipushInsn(MethodVisitor mv, int val) {
         switch (val) {
@@ -132,8 +137,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     		maxindex_cur++;
     	}
 
-//    	if(classname.equals("org/eclipse/core/runtime/internal/adaptor/PluginConverterImpl"))
-//    		System.out.println("Signature: "+desc);
     }
     private void loadValue(String desc, int index)
     {
@@ -203,83 +206,87 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     }
     public void visitMethodInsn(int opcode, String owner, String name,
             String desc) {
-    	String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
-    	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+
     	switch (opcode) {
         case INVOKEVIRTUAL:
-        	if(GlobalStateForInstrumentation.instance.isThreadClass(owner)
-        			&&name.equals("start") &&desc.equals("()V")) {
-        		maxindex_cur++;
-            	int index = maxindex_cur;
-            	mv.visitInsn(DUP);
-            	mv.visitVarInsn(ASTORE, index);
-            	addBipushInsn(mv,ID);
-             	mv.visitVarInsn(ALOAD, index);
-        		mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_THREAD_START, 
-        				Config.instance.DESC_LOG_THREAD_START);
-                
-        		mv.visitMethodInsn(opcode, owner, name, desc);
-			}
-        	else if(GlobalStateForInstrumentation.instance.isThreadClass(owner)
-        			&&name.equals("join") &&desc.equals("()V")) {
-        		maxindex_cur++;
-            	int index = maxindex_cur;
-            	mv.visitInsn(DUP);
-            	mv.visitVarInsn(ASTORE, index);
-            	
-        		mv.visitMethodInsn(opcode, owner, name, desc);
-
-            	addBipushInsn(mv,ID);
-             	mv.visitVarInsn(ALOAD, index);
-        		mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_THREAD_JOIN, 
-        				Config.instance.DESC_LOG_THREAD_JOIN);
-                
-			}
-        	else if(GlobalStateForInstrumentation.instance.isThreadClass(owner)
-        			&&name.equals("wait") &&desc.equals("()V")) {
-        		maxindex_cur++;
-            	int index = maxindex_cur;
-            	mv.visitInsn(DUP);
-            	mv.visitVarInsn(ASTORE, index);
-            	
-            	addBipushInsn(mv,ID);
-             	mv.visitVarInsn(ALOAD, index);
-        		mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_WAIT, 
-        				Config.instance.DESC_LOG_WAIT);
-        		
+        	if(Config.detectSharingOnly
+        			||!GlobalStateForInstrumentation.instance.isThreadClass(owner))
         		mv.visitMethodInsn(opcode, owner, name, desc); 
-			}
-        	else if(GlobalStateForInstrumentation.instance.isThreadClass(owner)
-        			&&name.equals("wait") &&desc.equals("()V")) {
-        		maxindex_cur++;
-            	int index = maxindex_cur;
-            	mv.visitInsn(DUP);
-            	mv.visitVarInsn(ASTORE, index);
-            	
-            	addBipushInsn(mv,ID);
-             	mv.visitVarInsn(ALOAD, index);
-        		mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_WAIT, 
-        				Config.instance.DESC_LOG_WAIT);
-        		
-        		mv.visitMethodInsn(opcode, owner, name, desc); 
-			}
-        	else if(GlobalStateForInstrumentation.instance.isThreadClass(owner)
-        			&&(name.equals("notify")||name.equals("notifyAll"))&&desc.equals("()V")) {
-        		maxindex_cur++;
-            	int index = maxindex_cur;
-            	mv.visitInsn(DUP);
-            	mv.visitVarInsn(ASTORE, index);
-            	
-            	addBipushInsn(mv,ID);
-             	mv.visitVarInsn(ALOAD, index);
-        		mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_NOTIFY, 
-        				Config.instance.DESC_LOG_NOTIFY);
-        		
-        		mv.visitMethodInsn(opcode, owner, name, desc); 
-			}
         	else
-        		mv.visitMethodInsn(opcode, owner, name, desc); 
+        	{
+            	String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+            	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+        		
+	        	if(name.equals("start") &&desc.equals("()V")) {
+	        		maxindex_cur++;
+	            	int index = maxindex_cur;
+	            	mv.visitInsn(DUP);
+	            	mv.visitVarInsn(ASTORE, index);
+	            	addBipushInsn(mv,ID);
+	             	mv.visitVarInsn(ALOAD, index);
+	        		mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_THREAD_START, 
+	        				Config.instance.DESC_LOG_THREAD_START);
+	                
+	        		mv.visitMethodInsn(opcode, owner, name, desc);
+				}
+	        	else if(name.equals("join") &&desc.equals("()V")) {
+	        		maxindex_cur++;
+	            	int index = maxindex_cur;
+	            	mv.visitInsn(DUP);
+	            	mv.visitVarInsn(ASTORE, index);
+	            	
+	        		mv.visitMethodInsn(opcode, owner, name, desc);
+	
+	            	addBipushInsn(mv,ID);
+	             	mv.visitVarInsn(ALOAD, index);
+	        		mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_THREAD_JOIN, 
+	        				Config.instance.DESC_LOG_THREAD_JOIN);
+	                
+				}
+	        	else if(name.equals("wait") &&desc.equals("()V")) {
+	        		maxindex_cur++;
+	            	int index = maxindex_cur;
+	            	mv.visitInsn(DUP);
+	            	mv.visitVarInsn(ASTORE, index);
+	            	
+	            	addBipushInsn(mv,ID);
+	             	mv.visitVarInsn(ALOAD, index);
+	        		mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_WAIT, 
+	        				Config.instance.DESC_LOG_WAIT);
+	        		
+	        		mv.visitMethodInsn(opcode, owner, name, desc); 
+				}
+	        	else if(name.equals("wait") &&desc.equals("()V")) {
+	        		maxindex_cur++;
+	            	int index = maxindex_cur;
+	            	mv.visitInsn(DUP);
+	            	mv.visitVarInsn(ASTORE, index);
+	            	
+	            	addBipushInsn(mv,ID);
+	             	mv.visitVarInsn(ALOAD, index);
+	        		mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_WAIT, 
+	        				Config.instance.DESC_LOG_WAIT);
+	        		
+	        		mv.visitMethodInsn(opcode, owner, name, desc); 
+				}
+	        	else if((name.equals("notify")||name.equals("notifyAll"))&&desc.equals("()V")) {
+	        		maxindex_cur++;
+	            	int index = maxindex_cur;
+	            	mv.visitInsn(DUP);
+	            	mv.visitVarInsn(ASTORE, index);
+	            	
+	            	addBipushInsn(mv,ID);
+	             	mv.visitVarInsn(ALOAD, index);
+	        		mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_NOTIFY, 
+	        				Config.instance.DESC_LOG_NOTIFY);
+	        		
+	        		mv.visitMethodInsn(opcode, owner, name, desc); 
+				}
+	        	else
+	        		mv.visitMethodInsn(opcode, owner, name, desc); 
 
+        	}
+        		
         	break;
         case INVOKESPECIAL:
         case INVOKESTATIC:
@@ -296,78 +303,136 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
 
     	//signature + line number
     	String sig_var = (owner+"."+name).replace("/", ".");
-    	String sig_loc = (owner+"|"+methodsignature+"|"+sig_var+"|"+line_cur).replace("/", ".");
     	int SID = GlobalStateForInstrumentation.instance.getVariableId(sig_var);
+    	String sig_loc = (owner+"|"+methodsignature+"|"+sig_var+"|"+line_cur).replace("/", ".");
     	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
-    	
         switch (opcode) {
             case GETSTATIC:
             	mv.visitFieldInsn(opcode, owner, name, desc);
             	if(!isInit)
             	{
-            	maxindex_cur++;
 
-        		int index = maxindex_cur;
-        		storeValue(desc,index);
-            	
-            	addBipushInsn(mv,ID);
-            	mv.visitInsn(ACONST_NULL);
-            	addBipushInsn(mv,SID);
-            	loadValue(desc,index);
-            	addBipushInsn(mv,0);
+        	    	
+            		if(Config.detectSharingOnly)
+            		{
+            			addBipushInsn(mv,ID);
+                    	//mv.visitInsn(ACONST_NULL);
+                    	addBipushInsn(mv,SID);
+                    	addBipushInsn(mv,0);
+                    	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_FIELD_ACCESS,
+                    			Config.instance.DESC_LOG_FIELD_ACCESS_DETECT_SHARING);
+            		}
+            		else if(GlobalStateForInstrumentation.instance.isVariableShared(sig_var))
+            		{
 
-            	
-            	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_FIELD_ACCESS,
-            			Config.instance.DESC_LOG_FIELD_ACCESS);
-            	
+            	    	
+                    	maxindex_cur++;
+
+                		int index = maxindex_cur;
+                		storeValue(desc,index);
+                    	
+                    	addBipushInsn(mv,ID);
+                    	mv.visitInsn(ACONST_NULL);
+                    	addBipushInsn(mv,SID);
+                    	loadValue(desc,index);
+                    	addBipushInsn(mv,0);
+                    	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_FIELD_ACCESS,
+                    			Config.instance.DESC_LOG_FIELD_ACCESS);
+            		}
             	}
                 break;
             case PUTSTATIC:
-            	maxindex_cur++;
-            	int index = maxindex_cur;
-        		storeValue(desc,index);
+            	if(Config.detectSharingOnly)
+        		{
+        			mv.visitFieldInsn(opcode, owner, name, desc);
 
-            	 mv.visitFieldInsn(opcode, owner, name, desc);
-            	 addBipushInsn(mv,ID);
-             	mv.visitInsn(ACONST_NULL);
-             	addBipushInsn(mv,SID);
-             	loadValue(desc,index);
-             	
-             	if(isInit)
-                 	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
-                 			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);//
-             	else
-             	{
-                 	addBipushInsn(mv,1);
-             		mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_FIELD_ACCESS,
-             			Config.instance.DESC_LOG_FIELD_ACCESS);//
-             	}
-            	 
+            		if(!isInit)
+            		{
+            			addBipushInsn(mv,ID);
+                 		//mv.visitInsn(ACONST_NULL);
+                 		addBipushInsn(mv,SID);
+                 	
+                     	addBipushInsn(mv,1);
+                 		mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_FIELD_ACCESS,
+                 				Config.instance.DESC_LOG_FIELD_ACCESS_DETECT_SHARING);
+                 	}
+                			
+        		}
+        		else if(GlobalStateForInstrumentation.instance.isVariableShared(sig_var))
+        		{
+        			maxindex_cur++;
+                	int index = maxindex_cur;
+            		storeValue(desc,index);
+
+                	 mv.visitFieldInsn(opcode, owner, name, desc);
+                	 addBipushInsn(mv,ID);
+                 	mv.visitInsn(ACONST_NULL);
+                 	addBipushInsn(mv,SID);
+                 	loadValue(desc,index);
+                 	
+                 	if(isInit)
+                     	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
+                     			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);//
+                 	else
+                 	{
+                     	addBipushInsn(mv,1);
+                 		mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_FIELD_ACCESS,
+                 			Config.instance.DESC_LOG_FIELD_ACCESS);//
+                 	}
+        		}
+        		else 
+        			mv.visitFieldInsn(opcode, owner, name, desc);
+            	
                 break;
             case GETFIELD:
             	if(!isInit)
             	{
-	            	maxindex_cur++;
-	            	int index1 = maxindex_cur;
-	            	mv.visitInsn(DUP);
-	            	mv.visitVarInsn(ASTORE, index1);
-	            	
-	            	 mv.visitFieldInsn(opcode, owner, name, desc);
-	            	 
-	            	 maxindex_cur++;
-	            	 int index2 = maxindex_cur;
-	        		storeValue(desc,index2);
-	
-	             	addBipushInsn(mv,ID);
-	             	mv.visitVarInsn(ALOAD, index1);
-	             	addBipushInsn(mv,SID);
-	             	loadValue(desc,index2);
-	             	
-	             	addBipushInsn(mv,0);
-	
-	             	
-	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_FIELD_ACCESS,
-	             			Config.instance.DESC_LOG_FIELD_ACCESS);
+            		if(Config.detectSharingOnly)
+            		{
+//		            	maxindex_cur++;
+//		            	int index1 = maxindex_cur;
+//		            	mv.visitInsn(DUP);
+//		            	mv.visitVarInsn(ASTORE, index1);
+		            	
+		            	 mv.visitFieldInsn(opcode, owner, name, desc);
+
+		            	 addBipushInsn(mv,ID);
+		             	//mv.visitVarInsn(ALOAD, index1);
+		             	addBipushInsn(mv,SID);
+		             	
+		             	addBipushInsn(mv,0);
+		
+		             	
+		             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_FIELD_ACCESS,
+		             			Config.instance.DESC_LOG_FIELD_ACCESS_DETECT_SHARING);
+            		}
+            		else if(GlobalStateForInstrumentation.instance.isVariableShared(sig_var))
+            		{
+	                	
+		            	maxindex_cur++;
+		            	int index1 = maxindex_cur;
+		            	mv.visitInsn(DUP);
+		            	mv.visitVarInsn(ASTORE, index1);
+		            	
+		            	 mv.visitFieldInsn(opcode, owner, name, desc);
+		            	 
+		            	 maxindex_cur++;
+		            	 int index2 = maxindex_cur;
+		        		storeValue(desc,index2);
+		
+		             	addBipushInsn(mv,ID);
+		             	mv.visitVarInsn(ALOAD, index1);
+		             	addBipushInsn(mv,SID);
+		             	loadValue(desc,index2);
+		             	
+		             	addBipushInsn(mv,0);
+		
+		             	
+		             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_FIELD_ACCESS,
+		             			Config.instance.DESC_LOG_FIELD_ACCESS);
+            		}
+                	else
+   	            	 mv.visitFieldInsn(opcode, owner, name, desc);	
             	}
             	else
 	            	 mv.visitFieldInsn(opcode, owner, name, desc);	
@@ -392,88 +457,171 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
 //            		mv.visitFieldInsn(opcode, owner, name, desc);break;
 //            	}
             	
-            	maxindex_cur++;
-            	int index1 = maxindex_cur;     
-            	int index2;
-            	if(desc.startsWith("D"))
+            	if(Config.detectSharingOnly)
+        		{
+            		if(!isInit)
+            		{
+//		            	maxindex_cur++;
+//		            	int index1 = maxindex_cur;     
+//		            	int index2;
+//		            	if(desc.startsWith("D"))
+//		            	{
+//		            		mv.visitVarInsn(DSTORE, index1);
+//		            		maxindex_cur++;//double
+//		            		maxindex_cur++;
+//		                	index2 = maxindex_cur;
+//		                	mv.visitInsn(DUP);
+//		                 	mv.visitVarInsn(ASTORE, index2);
+//		                 	mv.visitVarInsn(DLOAD, index1);
+//		            	}
+//		            	else if(desc.startsWith("J"))
+//		            	{
+//		            		mv.visitVarInsn(LSTORE, index1);
+//		            		maxindex_cur++;//long
+//		            		maxindex_cur++;
+//		                	index2 = maxindex_cur;
+//		                	mv.visitInsn(DUP);
+//		                 	mv.visitVarInsn(ASTORE, index2);
+//		                 	mv.visitVarInsn(LLOAD, index1);
+//		            	}
+//		            	else if(desc.startsWith("F"))
+//		            	{
+//		            		mv.visitVarInsn(FSTORE, index1);
+//		            		maxindex_cur++;//float
+//		                	index2 = maxindex_cur;
+//		                	mv.visitInsn(DUP);
+//		                 	mv.visitVarInsn(ASTORE, index2);
+//		                 	mv.visitVarInsn(FLOAD, index1);
+//		            	}
+//		            	else if(desc.startsWith("["))
+//		            	{
+//		            		mv.visitVarInsn(ASTORE, index1);
+//		            		maxindex_cur++;//ref or array
+//		                	index2 = maxindex_cur;
+//		                	mv.visitInsn(DUP);
+//		                 	mv.visitVarInsn(ASTORE, index2);
+//		                 	mv.visitVarInsn(ALOAD, index1);
+//		            	}
+//		            	else if(desc.startsWith("L"))
+//		            	{
+//		            		mv.visitVarInsn(ASTORE, index1);
+//		            		maxindex_cur++;//ref or array
+//		                	index2 = maxindex_cur;
+//		                	mv.visitInsn(DUP);
+//		                 	mv.visitVarInsn(ASTORE, index2);
+//		                 	mv.visitVarInsn(ALOAD, index1);
+//		                 	
+//		            	}
+//		            	else
+//		            	{
+//		            		mv.visitVarInsn(ISTORE, index1);
+//		            		maxindex_cur++;//integer,char,short,boolean
+//		                	index2 = maxindex_cur;
+//		                	mv.visitInsn(DUP);
+//		                 	mv.visitVarInsn(ASTORE, index2);
+//		                 	mv.visitVarInsn(ILOAD, index1);
+//		            	}
+		
+		            	 mv.visitFieldInsn(opcode, owner, name, desc);
+		            	
+		            	 addBipushInsn(mv,ID);
+		            	 //mv.visitVarInsn(ALOAD, index2);
+			              	addBipushInsn(mv,SID);
+	            		
+	            		addBipushInsn(mv,1);            		
+		              	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_FIELD_ACCESS,
+		              			Config.instance.DESC_LOG_FIELD_ACCESS_DETECT_SHARING);
+            		}
+            		else
+            		mv.visitFieldInsn(opcode, owner, name, desc);
+        		}
+            	else if(GlobalStateForInstrumentation.instance.isVariableShared(sig_var))
             	{
-            		mv.visitVarInsn(DSTORE, index1);
-            		maxindex_cur++;//double
-            		maxindex_cur++;
-                	index2 = maxindex_cur;
-                	mv.visitInsn(DUP);
-                 	mv.visitVarInsn(ASTORE, index2);
-                 	mv.visitVarInsn(DLOAD, index1);
-            	}
-            	else if(desc.startsWith("J"))
-            	{
-            		mv.visitVarInsn(LSTORE, index1);
-            		maxindex_cur++;//long
-            		maxindex_cur++;
-                	index2 = maxindex_cur;
-                	mv.visitInsn(DUP);
-                 	mv.visitVarInsn(ASTORE, index2);
-                 	mv.visitVarInsn(LLOAD, index1);
-            	}
-            	else if(desc.startsWith("F"))
-            	{
-            		mv.visitVarInsn(FSTORE, index1);
-            		maxindex_cur++;//float
-                	index2 = maxindex_cur;
-                	mv.visitInsn(DUP);
-                 	mv.visitVarInsn(ASTORE, index2);
-                 	mv.visitVarInsn(FLOAD, index1);
-            	}
-            	else if(desc.startsWith("["))
-            	{
-            		mv.visitVarInsn(ASTORE, index1);
-            		maxindex_cur++;//ref or array
-                	index2 = maxindex_cur;
-                	mv.visitInsn(DUP);
-                 	mv.visitVarInsn(ASTORE, index2);
-                 	mv.visitVarInsn(ALOAD, index1);
-            	}
-            	else if(desc.startsWith("L"))
-            	{
-            		mv.visitVarInsn(ASTORE, index1);
-            		maxindex_cur++;//ref or array
-                	index2 = maxindex_cur;
-                	mv.visitInsn(DUP);
-                 	mv.visitVarInsn(ASTORE, index2);
-                 	mv.visitVarInsn(ALOAD, index1);
-                 	
-//                	if(classname.equals("org/dacapo/parser/Config$Size")
-//                			&&methodname.equals("<init>"))
-//                		System.out.println("index1: "+ index1+" index2: "+index2);
+	            	maxindex_cur++;
+	            	int index1 = maxindex_cur;     
+	            	int index2;
+	            	if(desc.startsWith("D"))
+	            	{
+	            		mv.visitVarInsn(DSTORE, index1);
+	            		maxindex_cur++;//double
+	            		maxindex_cur++;
+	                	index2 = maxindex_cur;
+	                	mv.visitInsn(DUP);
+	                 	mv.visitVarInsn(ASTORE, index2);
+	                 	mv.visitVarInsn(DLOAD, index1);
+	            	}
+	            	else if(desc.startsWith("J"))
+	            	{
+	            		mv.visitVarInsn(LSTORE, index1);
+	            		maxindex_cur++;//long
+	            		maxindex_cur++;
+	                	index2 = maxindex_cur;
+	                	mv.visitInsn(DUP);
+	                 	mv.visitVarInsn(ASTORE, index2);
+	                 	mv.visitVarInsn(LLOAD, index1);
+	            	}
+	            	else if(desc.startsWith("F"))
+	            	{
+	            		mv.visitVarInsn(FSTORE, index1);
+	            		maxindex_cur++;//float
+	                	index2 = maxindex_cur;
+	                	mv.visitInsn(DUP);
+	                 	mv.visitVarInsn(ASTORE, index2);
+	                 	mv.visitVarInsn(FLOAD, index1);
+	            	}
+	            	else if(desc.startsWith("["))
+	            	{
+	            		mv.visitVarInsn(ASTORE, index1);
+	            		maxindex_cur++;//ref or array
+	                	index2 = maxindex_cur;
+	                	mv.visitInsn(DUP);
+	                 	mv.visitVarInsn(ASTORE, index2);
+	                 	mv.visitVarInsn(ALOAD, index1);
+	            	}
+	            	else if(desc.startsWith("L"))
+	            	{
+	            		mv.visitVarInsn(ASTORE, index1);
+	            		maxindex_cur++;//ref or array
+	                	index2 = maxindex_cur;
+	                	mv.visitInsn(DUP);
+	                 	mv.visitVarInsn(ASTORE, index2);
+	                 	mv.visitVarInsn(ALOAD, index1);
+	                 	
+	//                	if(classname.equals("org/dacapo/parser/Config$Size")
+	//                			&&methodname.equals("<init>"))
+	//                		System.out.println("index1: "+ index1+" index2: "+index2);
+	            	}
+	            	else
+	            	{
+	            		mv.visitVarInsn(ISTORE, index1);
+	            		maxindex_cur++;//integer,char,short,boolean
+	                	index2 = maxindex_cur;
+	                	mv.visitInsn(DUP);
+	                 	mv.visitVarInsn(ASTORE, index2);
+	                 	mv.visitVarInsn(ILOAD, index1);
+	            	}
+	
+	            	 mv.visitFieldInsn(opcode, owner, name, desc);
+	            	 
+	            	
+	            	addBipushInsn(mv,ID);
+	              	mv.visitVarInsn(ALOAD, index2);
+	              	addBipushInsn(mv,SID);
+	              	loadValue(desc,index1);
+	              	
+	             	if(isInit)
+	                 	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
+	                 			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);//
+	             	else
+	             	{
+		              	addBipushInsn(mv,1);
+		
+		              	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_FIELD_ACCESS,
+		              			Config.instance.DESC_LOG_FIELD_ACCESS);
+	             	}
             	}
             	else
-            	{
-            		mv.visitVarInsn(ISTORE, index1);
-            		maxindex_cur++;//integer,char,short,boolean
-                	index2 = maxindex_cur;
-                	mv.visitInsn(DUP);
-                 	mv.visitVarInsn(ASTORE, index2);
-                 	mv.visitVarInsn(ILOAD, index1);
-            	}
-
-            	 mv.visitFieldInsn(opcode, owner, name, desc);
-            	 
-            	addBipushInsn(mv,ID);
-              	mv.visitVarInsn(ALOAD, index2);
-              	addBipushInsn(mv,SID);
-              	loadValue(desc,index1);
-              	
-             	if(isInit)
-                 	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
-                 			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);//
-             	else
-             	{
-	              	addBipushInsn(mv,1);
-	
-	              	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_FIELD_ACCESS,
-	              			Config.instance.DESC_LOG_FIELD_ACCESS);
-             	}
-             	
+            		mv.visitFieldInsn(opcode, owner, name, desc);
                 break;
             default:
                 System.err.println("Unknown field access opcode "+opcode);
@@ -516,36 +664,62 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	}
     }
     public void visitInsn(int opcode) {
-    	
-    	String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
-    	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
 
     	switch (opcode) {
     	case AALOAD:
     		if(!isInit)
     		{
-    		mv.visitInsn(DUP2);
-    		maxindex_cur++;
-        	int index1 = maxindex_cur;
-        	mv.visitVarInsn(ISTORE, index1);
-        	maxindex_cur++;
-        	int index2 = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index2);
-        	mv.visitInsn(opcode);
-        	mv.visitInsn(DUP);
-        	maxindex_cur++;
-        	int index3 = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index3);
-        	
-        	addBipushInsn(mv,ID);
-    		mv.visitVarInsn(ALOAD, index2);
-    		mv.visitVarInsn(ILOAD, index1);
-    		mv.visitVarInsn(ALOAD, index3);
-    		
-        	addBipushInsn(mv,0);
+    			String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+    	    	
+    			if(Config.detectSharingOnly)
+        		{
+		    		mv.visitInsn(DUP2);
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index1);
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index2);
+		        	mv.visitInsn(opcode);
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index2);
+		    		mv.visitVarInsn(ILOAD, index1);
+    				
+    	        	addBipushInsn(mv,0);
+    	        	
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
+        		}
+    			else if(GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc))
+    			{
+		    		mv.visitInsn(DUP2);
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index1);
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index2);
+		        	mv.visitInsn(opcode);
+		        	mv.visitInsn(DUP);
+		        	maxindex_cur++;
+		        	int index3 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index3);
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index2);
+		    		mv.visitVarInsn(ILOAD, index1);
+		    		mv.visitVarInsn(ALOAD, index3);
+		    		
+		        	addBipushInsn(mv,0);
+		
+		             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+		             			Config.instance.DESC_LOG_ARRAY_ACCESS);
+    			}
+    			else
+        			mv.visitInsn(opcode);
 
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
-             			Config.instance.DESC_LOG_ARRAY_ACCESS);
     		}
     		else
     			mv.visitInsn(opcode);
@@ -558,31 +732,58 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	case IALOAD:
     		if(!isInit)
     		{
-    		mv.visitInsn(DUP2);
-    		maxindex_cur++;
-        	int index1 = maxindex_cur;
-        	mv.visitVarInsn(ISTORE, index1);
-        	maxindex_cur++;
-        	int index2 = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index2);
-        	mv.visitInsn(opcode);
-        	mv.visitInsn(DUP);
-        	maxindex_cur++;
-        	int index3 = maxindex_cur;
-        	mv.visitVarInsn(ISTORE, index3);
-        	
-        	addBipushInsn(mv,ID);
-    		mv.visitVarInsn(ALOAD, index2);
-    		mv.visitVarInsn(ILOAD, index1);
-    		mv.visitVarInsn(ILOAD, index3);
-    		
-    		
-    		convertPrimitiveToObject(opcode);
-    		
-        	addBipushInsn(mv,0);
-
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
-             			Config.instance.DESC_LOG_ARRAY_ACCESS);
+    			String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+    	    	
+    			if(Config.detectSharingOnly)
+        		{
+		    		mv.visitInsn(DUP2);
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index1);
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index2);
+		        	mv.visitInsn(opcode);
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index2);
+		    		mv.visitVarInsn(ILOAD, index1);
+    				
+    	        	addBipushInsn(mv,0);
+    	        	
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
+        		}
+    			else if(GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc))
+    			{
+		    		mv.visitInsn(DUP2);
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index1);
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index2);
+		        	mv.visitInsn(opcode);
+		        	mv.visitInsn(DUP);
+		        	maxindex_cur++;
+		        	int index3 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index3);
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index2);
+		    		mv.visitVarInsn(ILOAD, index1);
+		    		mv.visitVarInsn(ILOAD, index3);
+		    		
+		    		
+		    		convertPrimitiveToObject(opcode);
+		    		
+		        	addBipushInsn(mv,0);
+		
+		             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+		             			Config.instance.DESC_LOG_ARRAY_ACCESS);
+    			}else
+        			mv.visitInsn(opcode);
     		}
     		else
     			mv.visitInsn(opcode);
@@ -590,31 +791,59 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	case FALOAD:
     		if(!isInit)
     		{
-    		mv.visitInsn(DUP2);
-    		maxindex_cur++;
-        	int index1 = maxindex_cur;
-        	mv.visitVarInsn(ISTORE, index1);
-        	maxindex_cur++;
-        	int index2 = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index2);
-        	mv.visitInsn(opcode);
-        	mv.visitInsn(DUP);
-        	maxindex_cur++;
-        	int index3 = maxindex_cur;
-        	mv.visitVarInsn(FSTORE, index3);
-        	
-        	addBipushInsn(mv,ID);
-    		mv.visitVarInsn(ALOAD, index2);
-    		mv.visitVarInsn(ILOAD, index1);
-    		mv.visitVarInsn(FLOAD, index3);
-    		
-    		
-    		convertPrimitiveToObject(opcode);
-    		
-        	addBipushInsn(mv,0);
-
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
-             			Config.instance.DESC_LOG_ARRAY_ACCESS);
+    			String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+    	    	
+    			if(Config.detectSharingOnly)
+        		{
+		    		mv.visitInsn(DUP2);
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index1);
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index2);
+		        	mv.visitInsn(opcode);
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index2);
+		    		mv.visitVarInsn(ILOAD, index1);
+    				
+    	        	addBipushInsn(mv,0);
+    	        	
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
+        		}
+    			else if(GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc))
+    			{
+		    		mv.visitInsn(DUP2);
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index1);
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index2);
+		        	mv.visitInsn(opcode);
+		        	mv.visitInsn(DUP);
+		        	maxindex_cur++;
+		        	int index3 = maxindex_cur;
+		        	mv.visitVarInsn(FSTORE, index3);
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index2);
+		    		mv.visitVarInsn(ILOAD, index1);
+		    		mv.visitVarInsn(FLOAD, index3);
+		    		
+		    		
+		    		convertPrimitiveToObject(opcode);
+		    		
+		        	addBipushInsn(mv,0);
+		
+		             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+		             			Config.instance.DESC_LOG_ARRAY_ACCESS);
+    			}
+				else
+		        	mv.visitInsn(opcode);
     		}
     		else
     			mv.visitInsn(opcode);
@@ -623,31 +852,59 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	case DALOAD:
     		if(!isInit)
     		{
-    		mv.visitInsn(DUP2);
-    		maxindex_cur++;
-        	int index1 = maxindex_cur;
-        	mv.visitVarInsn(ISTORE, index1);
-        	maxindex_cur++;
-        	int index2 = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index2);
-        	mv.visitInsn(opcode);
-        	mv.visitInsn(DUP2);//double
-        	maxindex_cur++;
-        	int index3 = maxindex_cur;
-        	mv.visitVarInsn(DSTORE, index3);maxindex_cur++;
-        	
-        	addBipushInsn(mv,ID);
-    		mv.visitVarInsn(ALOAD, index2);
-    		mv.visitVarInsn(ILOAD, index1);
-    		mv.visitVarInsn(DLOAD, index3);
-    		
-    		
-    		convertPrimitiveToObject(opcode);
-    		
-        	addBipushInsn(mv,0);
+    			String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+    	    	
+    			if(Config.detectSharingOnly)
+        		{
+		    		mv.visitInsn(DUP2);
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index1);
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index2);
+		        	mv.visitInsn(opcode);
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index2);
+		    		mv.visitVarInsn(ILOAD, index1);
+    				
+    	        	addBipushInsn(mv,0);
+    	        	
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
+        		}
+    			else if(GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc))
+    			{
+		    		mv.visitInsn(DUP2);
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index1);
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index2);
+		        	mv.visitInsn(opcode);
+		        	mv.visitInsn(DUP2);//double
+		        	maxindex_cur++;
+		        	int index3 = maxindex_cur;
+		        	mv.visitVarInsn(DSTORE, index3);maxindex_cur++;
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index2);
+		    		mv.visitVarInsn(ILOAD, index1);
+		    		mv.visitVarInsn(DLOAD, index3);
+		    		
+		    		
+		    		convertPrimitiveToObject(opcode);
+		    		
+		        	addBipushInsn(mv,0);
 
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+		        	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
              			Config.instance.DESC_LOG_ARRAY_ACCESS);
+    			}
+				else
+		        	mv.visitInsn(opcode);
     		}
     		else
     			mv.visitInsn(opcode);
@@ -655,238 +912,491 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	case LALOAD:
     		if(!isInit)
     		{
-    		mv.visitInsn(DUP2);
-    		maxindex_cur++;
-        	int index1 = maxindex_cur;
-        	mv.visitVarInsn(ISTORE, index1);
-        	maxindex_cur++;
-        	int index2 = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index2);
-        	mv.visitInsn(opcode);
-        	mv.visitInsn(DUP2);//long
-        	maxindex_cur++;
-        	int index3 = maxindex_cur;
-        	mv.visitVarInsn(LSTORE, index3);maxindex_cur++;
-        	
-        	addBipushInsn(mv,ID);
-    		mv.visitVarInsn(ALOAD, index2);
-    		mv.visitVarInsn(ILOAD, index1);
-    		mv.visitVarInsn(LLOAD, index3);
-    		
-    		
-    		convertPrimitiveToObject(opcode);
-    		
-        	addBipushInsn(mv,0);
-
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
-             			Config.instance.DESC_LOG_ARRAY_ACCESS);
+    			String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+    	    	
+    			if(Config.detectSharingOnly)
+        		{
+		    		mv.visitInsn(DUP2);
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index1);
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index2);
+		        	mv.visitInsn(opcode);
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index2);
+		    		mv.visitVarInsn(ILOAD, index1);
+    				
+    	        	addBipushInsn(mv,0);
+    	        	
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
+        		}
+    			else if(GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc))
+    			{
+    				mv.visitInsn(DUP2);
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index1);
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index2);
+		        	mv.visitInsn(opcode);
+		        	mv.visitInsn(DUP2);//long
+		        	maxindex_cur++;
+		        	int index3 = maxindex_cur;
+		        	mv.visitVarInsn(LSTORE, index3);maxindex_cur++;
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index2);
+		    		mv.visitVarInsn(ILOAD, index1);
+		    		mv.visitVarInsn(LLOAD, index3);
+		    		
+		    		
+		    		convertPrimitiveToObject(opcode);
+		    		
+		        	addBipushInsn(mv,0);
+		
+		             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+		             			Config.instance.DESC_LOG_ARRAY_ACCESS);
+    			}
+				else
+		        	mv.visitInsn(opcode);
     		}
     		else
     			mv.visitInsn(opcode);
     		break;
     	case AASTORE:
-    		maxindex_cur++;
-        	int index1 = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index1);
-        	maxindex_cur++;
-        	int index2 = maxindex_cur;
-        	mv.visitVarInsn(ISTORE, index2);
-        	
-        	mv.visitInsn(DUP);
-        	maxindex_cur++;
-        	int index3 = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index3);//arrayref
-        	mv.visitVarInsn(ILOAD, index2);//index
-        	mv.visitVarInsn(ALOAD, index1);//value
-
-        	mv.visitInsn(opcode);
-        	
-        	addBipushInsn(mv,ID);
-    		mv.visitVarInsn(ALOAD, index3);
-    		mv.visitVarInsn(ILOAD, index2);
-    		mv.visitVarInsn(ALOAD, index1);
-
-    		if(isInit)
+    	{
+			String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+	    	
+			if(Config.detectSharingOnly)
     		{
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
-             			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);
+				if(!isInit)
+	    		{
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index1);
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index2);
+		        	
+		        	mv.visitInsn(DUP);
+		        	maxindex_cur++;
+		        	int index3 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index3);//arrayref
+		        	mv.visitVarInsn(ILOAD, index2);//index
+		        	mv.visitVarInsn(ALOAD, index1);//value
+		
+		        	mv.visitInsn(opcode);
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index3);
+		    		mv.visitVarInsn(ILOAD, index2);
+					
+		    		addBipushInsn(mv,1);
+		        	
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
+		    	}
+				else
+		        	mv.visitInsn(opcode);
 
     		}
-    		else
-    		{
-            	addBipushInsn(mv,1);
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
-             			Config.instance.DESC_LOG_ARRAY_ACCESS);
-    		}
+			else if(GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc))
+			{
+	    		maxindex_cur++;
+	        	int index1 = maxindex_cur;
+	        	mv.visitVarInsn(ASTORE, index1);
+	        	maxindex_cur++;
+	        	int index2 = maxindex_cur;
+	        	mv.visitVarInsn(ISTORE, index2);
+	        	
+	        	mv.visitInsn(DUP);
+	        	maxindex_cur++;
+	        	int index3 = maxindex_cur;
+	        	mv.visitVarInsn(ASTORE, index3);//arrayref
+	        	mv.visitVarInsn(ILOAD, index2);//index
+	        	mv.visitVarInsn(ALOAD, index1);//value
+	
+	        	mv.visitInsn(opcode);
+	        	
+	        	addBipushInsn(mv,ID);
+	    		mv.visitVarInsn(ALOAD, index3);
+	    		mv.visitVarInsn(ILOAD, index2);
+	    		mv.visitVarInsn(ALOAD, index1);
+	
+	    		if(isInit)
+	    		{
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
+	             			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);
+	
+	    		}
+	    		else
+	    		{
+	            	addBipushInsn(mv,1);
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS);
+	    		}
+			}
+			else
+	        	mv.visitInsn(opcode);
     		break;
+    	}
     	case BASTORE:
     	case CASTORE:
     	case SASTORE:
     	case IASTORE:	
-    		maxindex_cur++;
-        	index1 = maxindex_cur;
-        	mv.visitVarInsn(ISTORE, index1);
-        	maxindex_cur++;
-        	index2 = maxindex_cur;
-        	mv.visitVarInsn(ISTORE, index2);
-        	
-        	mv.visitInsn(DUP);
-        	maxindex_cur++;
-        	index3 = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index3);//arrayref
-        	mv.visitVarInsn(ILOAD, index2);//index
-        	mv.visitVarInsn(ILOAD, index1);//value
-
-        	mv.visitInsn(opcode);
-        	
-        	addBipushInsn(mv,ID);
-    		mv.visitVarInsn(ALOAD, index3);
-    		mv.visitVarInsn(ILOAD, index2);
-    		mv.visitVarInsn(ILOAD, index1);
-    		convertPrimitiveToObject(opcode);
-
-    		if(isInit)
+    	{
+    		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+	    	
+			if(Config.detectSharingOnly)
     		{
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
-             			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);
-
-    		}
-    		else
-    		{
-            	addBipushInsn(mv,1);
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
-             			Config.instance.DESC_LOG_ARRAY_ACCESS);
-    		}
-    		
+				if(!isInit)
+	    		{
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index1);
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index2);
+		        	
+		        	mv.visitInsn(DUP);
+		        	maxindex_cur++;
+		        	int index3 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index3);//arrayref
+		        	mv.visitVarInsn(ILOAD, index2);//index
+		        	mv.visitVarInsn(ILOAD, index1);//value
+		
+		        	mv.visitInsn(opcode);
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index3);
+		    		mv.visitVarInsn(ILOAD, index2);
+					
+		    		addBipushInsn(mv,1);
+		        	
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
+		    	}
+				else
+		        	mv.visitInsn(opcode);
+    		} 
+			else if(GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc))
+			{
+	    		maxindex_cur++;
+	        	int index1 = maxindex_cur;
+	        	mv.visitVarInsn(ISTORE, index1);
+	        	maxindex_cur++;
+	        	int index2 = maxindex_cur;
+	        	mv.visitVarInsn(ISTORE, index2);
+	        	
+	        	mv.visitInsn(DUP);
+	        	maxindex_cur++;
+	        	int index3 = maxindex_cur;
+	        	mv.visitVarInsn(ASTORE, index3);//arrayref
+	        	mv.visitVarInsn(ILOAD, index2);//index
+	        	mv.visitVarInsn(ILOAD, index1);//value
+	
+	        	mv.visitInsn(opcode);
+	        	
+	        	addBipushInsn(mv,ID);
+	    		mv.visitVarInsn(ALOAD, index3);
+	    		mv.visitVarInsn(ILOAD, index2);
+	    		mv.visitVarInsn(ILOAD, index1);
+	    		convertPrimitiveToObject(opcode);
+	
+	    		if(isInit)
+	    		{
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
+	             			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);
+	
+	    		}
+	    		else
+	    		{
+	            	addBipushInsn(mv,1);
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS);
+	    		}
+			}
+			else
+	        	mv.visitInsn(opcode);
     		break;
+    	}
     	case FASTORE:
-    		maxindex_cur++;
-        	index1 = maxindex_cur;
-        	mv.visitVarInsn(FSTORE, index1);
-        	maxindex_cur++;
-        	index2 = maxindex_cur;
-        	mv.visitVarInsn(ISTORE, index2);
-        	
-        	mv.visitInsn(DUP);
-        	maxindex_cur++;
-        	index3 = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index3);//arrayref
-        	mv.visitVarInsn(ILOAD, index2);//index
-        	mv.visitVarInsn(FLOAD, index1);//value
-
-        	mv.visitInsn(opcode);
-        	
-        	addBipushInsn(mv,ID);
-    		mv.visitVarInsn(ALOAD, index3);
-    		mv.visitVarInsn(ILOAD, index2);
-    		mv.visitVarInsn(FLOAD, index1);
-    		convertPrimitiveToObject(opcode);
-
-    		if(isInit)
+    	{
+    		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+	    	
+			if(Config.detectSharingOnly)
     		{
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
-             			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);
-
+				if(!isInit)
+	    		{
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(FSTORE, index1);
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index2);
+		        	
+		        	mv.visitInsn(DUP);
+		        	maxindex_cur++;
+		        	int index3 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index3);//arrayref
+		        	mv.visitVarInsn(ILOAD, index2);//index
+		        	mv.visitVarInsn(FLOAD, index1);//value
+		
+		        	mv.visitInsn(opcode);
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index3);
+		    		mv.visitVarInsn(ILOAD, index2);
+					
+		    		addBipushInsn(mv,1);
+		        	
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
+		    	}
+				else
+		        	mv.visitInsn(opcode);
     		}
-    		else
-    		{
-            	addBipushInsn(mv,1);
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
-             			Config.instance.DESC_LOG_ARRAY_ACCESS);
-    		}
+			else if(GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc))
+			{
+				maxindex_cur++;
+	        	int index1 = maxindex_cur;
+	        	mv.visitVarInsn(FSTORE, index1);
+	        	maxindex_cur++;
+	        	int index2 = maxindex_cur;
+	        	mv.visitVarInsn(ISTORE, index2);
+	        	
+	        	mv.visitInsn(DUP);
+	        	maxindex_cur++;
+	        	int index3 = maxindex_cur;
+	        	mv.visitVarInsn(ASTORE, index3);//arrayref
+	        	mv.visitVarInsn(ILOAD, index2);//index
+	        	mv.visitVarInsn(FLOAD, index1);//value
+	
+	        	mv.visitInsn(opcode);
+	        	
+	        	addBipushInsn(mv,ID);
+	    		mv.visitVarInsn(ALOAD, index3);
+	    		mv.visitVarInsn(ILOAD, index2);
+	    		mv.visitVarInsn(FLOAD, index1);
+	    		convertPrimitiveToObject(opcode);
+	
+	    		if(isInit)
+	    		{
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
+	             			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);
+	
+	    		}
+	    		else
+	    		{
+	            	addBipushInsn(mv,1);
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS);
+	    		}
+			}
+			else
+	        	mv.visitInsn(opcode);
     		break;
+    	}
     	case DASTORE:
-    		maxindex_cur++;
-        	index1 = maxindex_cur;
-        	mv.visitVarInsn(DSTORE, index1);maxindex_cur++;
-        	mv.visitInsn(DUP2);//dup arrayref and index
-        	maxindex_cur++;
-        	index2 = maxindex_cur;
-        	mv.visitVarInsn(ISTORE, index2);//index
-        	maxindex_cur++;
-        	index3 = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index3);//arrayref
-    
-        	mv.visitVarInsn(DLOAD, index1);//double value
-
-        	mv.visitInsn(opcode);
-        	
-        	addBipushInsn(mv,ID);
-    		mv.visitVarInsn(ALOAD, index3);
-    		mv.visitVarInsn(ILOAD, index2);
-    		mv.visitVarInsn(DLOAD, index1);
-    		convertPrimitiveToObject(opcode);
-
-    		if(isInit)
+    	{
+    		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+	    	
+			if(Config.detectSharingOnly)
     		{
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
-             			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);
-
+				if(!isInit)
+	    		{
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(DSTORE, index1);maxindex_cur++;
+		        	mv.visitInsn(DUP2);//dup arrayref and index
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index2);//index
+		        	maxindex_cur++;
+		        	int index3 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index3);//arrayref
+		    
+		        	mv.visitVarInsn(DLOAD, index1);//double value
+		
+		        	mv.visitInsn(opcode);
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index3);
+		    		mv.visitVarInsn(ILOAD, index2);
+					
+		    		addBipushInsn(mv,1);
+		        	
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
+		    	}
+				else
+		        	mv.visitInsn(opcode);
     		}
-    		else
-    		{
-            	addBipushInsn(mv,1);
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
-             			Config.instance.DESC_LOG_ARRAY_ACCESS);
+			else if(GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc))
+			{
+	    		maxindex_cur++;
+	        	int index1 = maxindex_cur;
+	        	mv.visitVarInsn(DSTORE, index1);maxindex_cur++;
+	        	mv.visitInsn(DUP2);//dup arrayref and index
+	        	maxindex_cur++;
+	        	int index2 = maxindex_cur;
+	        	mv.visitVarInsn(ISTORE, index2);//index
+	        	maxindex_cur++;
+	        	int index3 = maxindex_cur;
+	        	mv.visitVarInsn(ASTORE, index3);//arrayref
+	    
+	        	mv.visitVarInsn(DLOAD, index1);//double value
+	
+	        	mv.visitInsn(opcode);
+	        	
+	        	addBipushInsn(mv,ID);
+	    		mv.visitVarInsn(ALOAD, index3);
+	    		mv.visitVarInsn(ILOAD, index2);
+	    		mv.visitVarInsn(DLOAD, index1);
+	    		convertPrimitiveToObject(opcode);
+	
+	    		if(isInit)
+	    		{
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
+	             			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);
+	
+	    		}
+	    		else
+	    		{
+	            	addBipushInsn(mv,1);
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS);
+	    		}
     		}
+			else
+	        	mv.visitInsn(opcode);
     		break;
+    	}
     	case LASTORE:
-    		maxindex_cur++;
-        	index1 = maxindex_cur;
-        	mv.visitVarInsn(LSTORE, index1);maxindex_cur++;
-        	mv.visitInsn(DUP2);//dup arrayref and index
-        	maxindex_cur++;
-        	index2 = maxindex_cur;
-        	mv.visitVarInsn(ISTORE, index2);//index
-        	maxindex_cur++;
-        	index3 = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index3);//arrayref
-    
-        	mv.visitVarInsn(LLOAD, index1);//double value
-
-        	mv.visitInsn(opcode);
-        	
-        	addBipushInsn(mv,ID);
-    		mv.visitVarInsn(ALOAD, index3);
-    		mv.visitVarInsn(ILOAD, index2);
-    		mv.visitVarInsn(LLOAD, index1);
-    		convertPrimitiveToObject(opcode);
-
-    		if(isInit)
+    	{
+    		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+	    	
+			if(Config.detectSharingOnly)
     		{
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
-             			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);
-
+				if(!isInit)
+	    		{
+		    		maxindex_cur++;
+		        	int index1 = maxindex_cur;
+		        	mv.visitVarInsn(LSTORE, index1);maxindex_cur++;
+		        	mv.visitInsn(DUP2);//dup arrayref and index
+		        	maxindex_cur++;
+		        	int index2 = maxindex_cur;
+		        	mv.visitVarInsn(ISTORE, index2);//index
+		        	maxindex_cur++;
+		        	int index3 = maxindex_cur;
+		        	mv.visitVarInsn(ASTORE, index3);//arrayref
+		    
+		        	mv.visitVarInsn(LLOAD, index1);//double value
+		
+		        	mv.visitInsn(opcode);
+		        	
+		        	addBipushInsn(mv,ID);
+		    		mv.visitVarInsn(ALOAD, index3);
+		    		mv.visitVarInsn(ILOAD, index2);
+					
+		    		addBipushInsn(mv,1);
+		        	
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
+		    	}
+				else
+		        	mv.visitInsn(opcode);
+    		}
+			else if(GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc))
+			{
+	    		maxindex_cur++;
+	        	int index1 = maxindex_cur;
+	        	mv.visitVarInsn(LSTORE, index1);maxindex_cur++;
+	        	mv.visitInsn(DUP2);//dup arrayref and index
+	        	maxindex_cur++;
+	        	int index2 = maxindex_cur;
+	        	mv.visitVarInsn(ISTORE, index2);//index
+	        	maxindex_cur++;
+	        	int index3 = maxindex_cur;
+	        	mv.visitVarInsn(ASTORE, index3);//arrayref
+	    
+	        	mv.visitVarInsn(LLOAD, index1);//double value
+	
+	        	mv.visitInsn(opcode);
+	        	
+	        	addBipushInsn(mv,ID);
+	    		mv.visitVarInsn(ALOAD, index3);
+	    		mv.visitVarInsn(ILOAD, index2);
+	    		mv.visitVarInsn(LLOAD, index1);
+	    		convertPrimitiveToObject(opcode);
+	
+	    		if(isInit)
+	    		{
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_INIT_WRITE_ACCESS,
+	             			Config.instance.DESC_LOG_INIT_WRITE_ACCESS);
+	
+	    		}
+	    		else
+	    		{
+	            	addBipushInsn(mv,1);
+	             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
+	             			Config.instance.DESC_LOG_ARRAY_ACCESS);
+	    		}
+	    	}
+			else
+	        	mv.visitInsn(opcode);
+    		break;
+    	}
+    	case MONITORENTER:{
+    		if(!Config.detectSharingOnly)
+    		{
+        		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    	    	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+    	    	
+	    		mv.visitInsn(DUP);
+	        	maxindex_cur++;
+	        	int index = maxindex_cur;
+	        	mv.visitVarInsn(ASTORE, index);//objectref
+	        	mv.visitInsn(opcode);
+	        	addBipushInsn(mv,ID);
+	    		mv.visitVarInsn(ALOAD, index);
+	         	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_LOCK_INSTANCE,
+	         			Config.instance.DESC_LOG_LOCK_INSTANCE);
     		}
     		else
-    		{
-            	addBipushInsn(mv,1);
-             	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_ARRAY_ACCESS,
-             			Config.instance.DESC_LOG_ARRAY_ACCESS);
-    		}
+	        	mv.visitInsn(opcode);
     		break;
-    	case MONITORENTER:
-    		mv.visitInsn(DUP);
-        	maxindex_cur++;
-        	int index = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index);//objectref
-        	mv.visitInsn(opcode);
-        	addBipushInsn(mv,ID);
-    		mv.visitVarInsn(ALOAD, index);
-         	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_LOCK_INSTANCE,
-         			Config.instance.DESC_LOG_LOCK_INSTANCE);
-    		break;
+    	}
     	case MONITOREXIT:
-    		mv.visitInsn(DUP);
-        	maxindex_cur++;
-        	index = maxindex_cur;
-        	mv.visitVarInsn(ASTORE, index);//objectref
-        	addBipushInsn(mv,ID);
-    		mv.visitVarInsn(ALOAD, index);
-         	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_UNLOCK_INSTANCE,
-         			Config.instance.DESC_LOG_UNLOCK_INSTANCE);
+    	{
+    		if(!Config.detectSharingOnly)
+    		{
+        		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    	    	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+    	    	
+	    		mv.visitInsn(DUP);
+	        	maxindex_cur++;
+	        	int index = maxindex_cur;
+	        	mv.visitVarInsn(ASTORE, index);//objectref
+	        	addBipushInsn(mv,ID);
+	    		mv.visitVarInsn(ALOAD, index);
+	         	mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_UNLOCK_INSTANCE,
+	         			Config.instance.DESC_LOG_UNLOCK_INSTANCE);
+    		}
         	mv.visitInsn(opcode);
     		break;
+    	}
     	case IRETURN:
     	case LRETURN:
     	case FRETURN:
@@ -894,8 +1404,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	case ARETURN:
     	case RETURN:
     	case ATHROW:
-    		if(isSynchronized)
+    		if(isSynchronized
+    				&&!Config.detectSharingOnly)
     		{
+        		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    	    	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+    	    	
     	    	addBipushInsn(mv,ID);
 
     			if(isStatic)
@@ -922,10 +1436,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     public void visitCode() {
         mv.visitCode();
         
-    	String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
-    	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
-    	if(isSynchronized)
+    	if(isSynchronized
+    			&&!Config.detectSharingOnly)
 		{
+        	String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+        	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+        	
 	    	addBipushInsn(mv,ID);
 
 			if(isStatic)
@@ -946,6 +1462,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
 		}
 
     }
+  //no branch
+    /*
     public void visitJumpInsn(int opcode, Label label) {
     	String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
@@ -984,5 +1502,5 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
      			Config.instance.DESC_LOG_BRANCH);
 		
 		mv.visitTableSwitchInsn(min, max, dflt, labels);
-    }
+    }*/
 }

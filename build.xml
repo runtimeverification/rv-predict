@@ -13,15 +13,15 @@
 
   <path id="rv-predict-agent.classpath">
     <pathelement location="${rvpredict.agent.bin}"/>
-    <pathelement location="${rvpredict.external.lib}/h2-1.3.171.jar"/>
-    <pathelement location="${rvpredict.agent.lib}/asm.jar"/>
+    <pathelement location="${rvpredict.external.lib}/h2-rvpredict.jar"/>
+    <pathelement location="${rvpredict.external.lib}/asm.jar"/>
     <pathelement location="${rvpredict.external.lib}/jcommander-1.36.jar"/>
   </path>
   <path id="rv-predict-engine.classpath">
     <pathelement location="${rvpredict.external.lib}/jcommander-1.36.jar"/>
-    <pathelement location="${rvpredict.engine.lib}/jigsaw-sexpr.jar"/>
-    <pathelement location="${rvpredict.external.lib}/h2-1.3.171.jar"/>
-    <pathelement location="${rvpredict.engine.lib}/ant.jar"/>
+    <pathelement location="${rvpredict.external.lib}/jigsaw-sexpr.jar"/>
+    <pathelement location="${rvpredict.external.lib}/h2-rvpredict.jar"/>
+    <pathelement location="${rvpredict.external.lib}/ant.jar"/>
   </path>
 
   <property name="test.src" location="tests/src"/>
@@ -45,8 +45,7 @@
 <delete file="${rvpredict.lib}/rv-predict-engine.jar"/>
         <jar destfile="${rvpredict.lib}/rv-predict-engine.jar"
                      basedir="${rvpredict.engine.bin}">
-                     <zipgroupfileset dir="${rvpredict.engine.lib}" includes="jigsaw-sexpr.jar,ant.jar" />
-                     <zipgroupfileset dir="${rvpredict.external.lib}" includes="h2-1.3.171.jar,jcommander-1.36.jar" />
+                     <zipgroupfileset dir="${rvpredict.external.lib}" includes="ant.jar,jigsaw-sexpr.jar,h2-rvpredict.jar,jcommander-1.36.jar" />
                      </jar>
       </target>
   <target name="init-rvpredict-engine">
@@ -98,8 +97,7 @@
 <delete file="${rvpredict.lib}/rv-predict-agent.jar"/>
         <jar destfile="${rvpredict.lib}/rv-predict-agent.jar"
                      basedir="${rvpredict.agent.bin}">
-                     <zipgroupfileset dir="${rvpredict.agent.lib}" includes="asm.jar"/>
-                     <zipgroupfileset dir="${rvpredict.external.lib}" includes="h2-1.3.171.jar,jcommander-1.36.jar" />
+                     <zipgroupfileset dir="${rvpredict.external.lib}" includes="asm.jar,h2-rvpredict.jar,jcommander-1.36.jar" />
                      </jar>
                      <copy file="${rvpredict.agent.lib}/iagent.jar" todir="${rvpredict.lib}"/>
                      <!--<copy file="${rvpredict.agent.lib}/ant-contrib.jar" todir="${rvpredict.lib}"/>-->
@@ -130,7 +128,8 @@
 <loadfile property="file.benchmarks" srcfile="benchmarks/benchmarks"/>
 
     <path id="classpath.test">
-      <pathelement location="${rvpredict.external.lib}/junit.jar" />
+      <pathelement location="${rvpredict.external.lib}/ant-junit.jar" />
+      <pathelement location="${rvpredict.external.lib}/junit.jar" /> 
       <pathelement location="${rvpredict.external.lib}/hamcrest-core.jar" />
       <pathelement location="${rvpredict.engine.bin}" />
       <pathelement location="${rvpredict.engine.src}" />

@@ -67,7 +67,7 @@ private static void run(String[] args)
 //		}
 		
 		//initialize the recording data structures
-		RecordRT.init(true);
+		RecordRT.initNonSharing(true);
 		String appname = args[0];
 
 		Class<?> c = Class.forName(appname);

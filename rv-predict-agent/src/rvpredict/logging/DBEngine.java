@@ -66,8 +66,14 @@ public class DBEngine {
 	protected final String[] scheduletablecolname ={"ID","SIG","SCHEDULE"};
 	protected final String[] scheduletablecoltype ={"INT","VARCHAR","ARRAY"};
 	
-	protected final String[] sharedvarsigtablecolname={"SIG","ID"};
-	protected final String[] sharedvarsigcoltype={"VARCHAR","INT"};
+	protected final String[] sharedvarsigtablecolname={"SIG"};
+	protected final String[] sharedvarsigcoltype={"VARCHAR"};
+	
+	protected final String[] sharedarrayloctablecolname={"SIG"};
+	protected final String[] sharedarrayloccoltype={"VARCHAR"};
+	
+	protected final String[] varsigtablecolname={"SIG","ID"};
+	protected final String[] varsigcoltype={"VARCHAR","INT"};
 
 	protected final String[] volatilesigtablecolname={"SIG","ID"};
 	protected final String[] volatilesigcoltype={"VARCHAR","INT"};
@@ -96,7 +102,8 @@ public class DBEngine {
 
 	public String scheduletablename;
 	public String propertytablename;
-
+	private String varsigtablename;
+	private String sharedarrayloctablename;
 	
 	class EventItem
 	{
@@ -124,6 +131,9 @@ public class DBEngine {
 		tidtablename = "tid_"+name;
 		volatilesigtablename = "volatile_"+name;
 		stmtsigtablename="stmtsig_"+name;
+		varsigtablename="varsig_"+name;
+		
+		sharedarrayloctablename="sharedarrayloc_"+name;
 		sharedvarsigtablename="sharedvarsig_"+name;
 		scheduletablename = "schedule_"+name;
 		propertytablename = "property_"+name;
@@ -203,17 +213,47 @@ public class DBEngine {
         
         prepStmt = conn.prepareStatement(sql_insertdata);
 	}
+	public void createVarSignatureTable() throws Exception
+	{
+		String sql_dropTable = "DROP TABLE IF EXISTS "+varsigtablename;
+    	String sql_insertdata = "INSERT INTO "+varsigtablename+" VALUES (?,?)";
+
+    	Statement stmt = conn.createStatement();
+        stmt.execute(sql_dropTable);
+        
+        String sql_createTable = "CREATE TABLE "+varsigtablename+" ("+
+        		varsigtablecolname[0]+" "+varsigcoltype[0]+" PRIMARY KEY, "+
+        		varsigtablecolname[1]+" "+varsigcoltype[1]+")";
+        stmt.execute(sql_createTable);
+        
+        prepStmt = conn.prepareStatement(sql_insertdata);
+	}
+	
+	public void createSharedArrayLocTable() throws Exception
+	{
+		String sql_dropTable = "DROP TABLE IF EXISTS "+sharedarrayloctablename;
+    	String sql_insertdata = "INSERT INTO "+sharedarrayloctablename+" VALUES (?)";
+
+    	Statement stmt = conn.createStatement();
+        stmt.execute(sql_dropTable);
+        
+        String sql_createTable = "CREATE TABLE "+sharedarrayloctablename+" ("+
+        		sharedarrayloctablecolname[0]+" "+sharedarrayloccoltype[0]+")";
+        stmt.execute(sql_createTable);
+        
+        prepStmt = conn.prepareStatement(sql_insertdata);
+	}
+	
 	public void createSharedVarSignatureTable() throws Exception
 	{
 		String sql_dropTable = "DROP TABLE IF EXISTS "+sharedvarsigtablename;
-    	String sql_insertdata = "INSERT INTO "+sharedvarsigtablename+" VALUES (?,?)";
+    	String sql_insertdata = "INSERT INTO "+sharedvarsigtablename+" VALUES (?)";
 
     	Statement stmt = conn.createStatement();
         stmt.execute(sql_dropTable);
         
         String sql_createTable = "CREATE TABLE "+sharedvarsigtablename+" ("+
-        		sharedvarsigtablecolname[0]+" "+sharedvarsigcoltype[0]+" PRIMARY KEY, "+
-        		sharedvarsigtablecolname[1]+" "+sharedvarsigcoltype[1]+")";
+        		sharedvarsigtablecolname[0]+" "+sharedvarsigcoltype[0]+")";
         stmt.execute(sql_createTable);
         
         prepStmt = conn.prepareStatement(sql_insertdata);
@@ -307,7 +347,79 @@ public class DBEngine {
 			e.printStackTrace();
 		}
 	}
-	public void saveSharedVarSignatureToDB(String sig, int id)
+	public void saveSharedArrayLocToDB(String sig)
+	{
+		try
+		{
+		prepStmt.setString(1, sig);
+
+		prepStmt.execute();
+
+		}catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+	public HashSet<String> loadSharedArrayLocs()
+	{
+		HashSet<String> sharedArrayLocs = new HashSet<String>();
+		try{
+		String sql_select = "SELECT * FROM "+sharedarrayloctablename;
+		
+		Statement stmt = conn.createStatement();
+		ResultSet rs = stmt.executeQuery(sql_select);
+		while (rs.next()) 
+	    {
+	        // Get the data from the row using the column index
+	        String SIG = rs.getString(1);
+	        sharedArrayLocs.add(SIG);
+	    }
+		}catch(Exception e)
+		{
+			//e.printStackTrace();
+		}
+		if(sharedArrayLocs.isEmpty())
+			return null;
+		else
+		return sharedArrayLocs;
+	}
+	public HashSet<String> loadSharedVariables()
+	{
+		HashSet<String> sharedVariables = new HashSet<String>();
+		try{
+		String sql_select = "SELECT * FROM "+sharedvarsigtablename;
+		
+		Statement stmt = conn.createStatement();
+		ResultSet rs = stmt.executeQuery(sql_select);
+		while (rs.next()) 
+	    {
+	        // Get the data from the row using the column index
+	        String SIG = rs.getString(1);
+	        sharedVariables.add(SIG);
+	    }
+		}catch(Exception e)
+		{
+			//e.printStackTrace();
+		}
+		if(sharedVariables.isEmpty())
+			return null;
+		else
+		return sharedVariables;
+	}
+	public void saveSharedVarSignatureToDB(String sig)
+	{
+		try
+		{
+		prepStmt.setString(1, sig);
+
+		prepStmt.execute();
+
+		}catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+	public void saveVarSignatureToDB(String sig, int id)
 	{
 		try
 		{
@@ -382,12 +494,15 @@ public class DBEngine {
 	protected void connectDB(String directory) throws Exception
 	{
 		try{
-		Class.forName(driver);
-        conn  = DriverManager.getConnection("jdbc:h2:"+directory+"/"+dbname+";DB_CLOSE_ON_EXIT=FALSE");//
-        //conn.setAutoCommit(true);
-        //check if Database may be already in use
-        //kill?
-		}catch(org.h2.jdbc.JdbcSQLException e)
+			Driver driver = new rvpredict.h2.Driver();
+			String db_url = "jdbc:h2:"+directory+"/"+dbname+";DB_CLOSE_ON_EXIT=FALSE";
+			conn = driver.connect(db_url, null);
+			
+			//conn  = DriverManager.getConnection(db_url);
+	        //conn.setAutoCommit(true);
+	        //check if Database may be already in use
+	        //kill?
+		}catch(Exception e)
 		{
 			e.printStackTrace();
 			//DBORDER++;

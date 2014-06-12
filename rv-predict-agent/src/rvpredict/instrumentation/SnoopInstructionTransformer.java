@@ -2,11 +2,13 @@ package rvpredict.instrumentation;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
+
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 
 import rvpredict.config.Config;
+import rvpredict.logging.RecordRT;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -18,7 +20,6 @@ import java.security.ProtectionDomain;
 public class SnoopInstructionTransformer implements ClassFileTransformer {
 
     public static void premain(String agentArgs, Instrumentation inst) {
-        Config.logDir=agentArgs;
         if (agentArgs.startsWith("\"")) {
             assert agentArgs.endsWith("\"") : "Argument must be quoted";
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
@@ -34,7 +35,9 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             System.exit(1);
         }
 
-        //System.out.println("calling premain");
+		//initialize RecordRT first
+        RecordRT.init();
+        
 		inst.addTransformer(new SnoopInstructionTransformer());
 		
 	}

@@ -29,6 +29,7 @@
 package rvpredict.logging;
 
 import rvpredict.config.Config;
+import rvpredict.instrumentation.GlobalStateForInstrumentation;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -42,33 +43,70 @@ public final class RecordRT {
 	//can be computed during offline analysis
 	static HashMap<Long,String> threadTidNameMap;
 	static HashMap<Long,Integer> threadTidIndexMap;
+	public static HashSet<Integer> sharedVariableIds;
+	public static HashSet<Integer> sharedArrayIds;
+	static HashMap<Integer,Long> writeThreadMap;
+	static HashMap<Integer,long[]> readThreadMap;
+	public static HashMap<Integer,HashSet<Integer>> arrayIdsMap;
+
+	static HashMap<Integer,Long> writeThreadArrayMap;
+	static HashMap<Integer,long[]> readThreadArrayMap;
 	final static String MAIN_NAME = "0";
 	
+	static ThreadLocal<HashSet<Integer>> threadLocalIDSet;
+
 	//engine for storing events into database
 	static DBEngine db;
 
-    static
+    public static void init()
 	{
-		//appname = "org.eclipse.equinox.launcher.Main";
-		try{
-			
-			StackTraceElement[] stack = Thread.currentThread ().getStackTrace ();
-			StackTraceElement main = stack[stack.length - 1];
-
-		init(false);
-		}catch(Exception e)
-		{
-			//e.printStackTrace();
-		}
+    	if(Config.detectSharingOnly){
+    		sharedVariableIds = new HashSet<Integer>();
+    		writeThreadMap = new HashMap<Integer,Long>();
+    		readThreadMap = new HashMap<Integer,long[]> ();
+    		
+    		sharedArrayIds = new HashSet<Integer>();
+    		arrayIdsMap = new HashMap<Integer,HashSet<Integer>>();
+    		writeThreadArrayMap = new HashMap<Integer,Long>();
+    		readThreadArrayMap = new HashMap<Integer,long[]>();
+    		
+    		threadLocalIDSet = new ThreadLocal<HashSet<Integer>>()
+    				{
+		    			protected HashSet<Integer> initialValue() {
+		
+		                    return new HashSet<Integer>();
+		
+		    			}
+    				};
+    	}
+    	else
+    	{
+			//appname = "org.eclipse.equinox.launcher.Main";
+			try{
+				
+//				StackTraceElement[] stack = Thread.currentThread ().getStackTrace ();
+//				StackTraceElement main = stack[stack.length - 1];
+	
+			initNonSharing(false);
+			}catch(Exception e)
+			{
+				//e.printStackTrace();
+			}
+    	}
 	}
 	/**
 	 * initialize the database engine
 	 * @throws Exception
 	 */
-	public static void init(boolean newTable) throws Exception
+	public static void initNonSharing(boolean newTable) throws Exception
 	{
 		long tid = Thread.currentThread().getId();
 		db= new DBEngine(Config.logDir, Config.tableName);
+		
+		//load sharedvariables and sharedarraylocations
+		GlobalStateForInstrumentation.instance.setSharedArrayLocations(db.loadSharedArrayLocs());
+		GlobalStateForInstrumentation.instance.setSharedVariables(db.loadSharedVariables());
+		
 		db.createTraceTable(newTable);	
 		
 		//create table for storing thread id to unique identifier map
@@ -84,7 +122,39 @@ public final class RecordRT {
 		threadTidIndexMap.put(tid, 1);
 		
 	}
+	public static void saveSharedMetaData(HashSet<String> sharedVariables,
+			HashSet<String> sharedArrayLocations) {
+		
+		DBEngine db= new DBEngine(Config.logDir, Config.tableName);
+		try {
+	    	if(Config.instance.verbose)
+	    		System.out.println("====================SHARED VARIABLES===================");
+	    	
+			db.createSharedVarSignatureTable();
+			for(String sig: sharedVariables)
+			{
+		    	db.saveSharedVarSignatureToDB(sig);
+		    	if(Config.instance.verbose)
+    			System.out.println(sig);
+			}
 
+	    	if(Config.instance.verbose)
+	    		System.out.println("====================SHARED ARRAY LOCATIONS===================");
+	    	
+			db.createSharedArrayLocTable();
+			for(String sig: sharedArrayLocations)
+			{
+		    	  db.saveSharedArrayLocToDB(sig);
+				if(Config.instance.verbose)
+	    			System.out.println(sig);
+			}
+			
+			db.closeDB();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 	public static void saveMetaData(ConcurrentHashMap<String,Integer> variableIdMap,
 			HashSet<String> volatilevariables,
 			ConcurrentHashMap<String,Integer> stmtSigIdMap, boolean isVerbose)
@@ -95,14 +165,14 @@ public final class RecordRT {
 			//TODO: if db is null or closed, there must be something wrong
 			DBEngine db= new DBEngine(Config.logDir, Config.tableName);
 			
-		//save sharedvariable - id to database
-		  db.createSharedVarSignatureTable();
+		//save variable - id to database
+		  db.createVarSignatureTable();
 	      for(Map.Entry<String,Integer> entry: variableIdMap.entrySet())
 	      {
 	    	  String sig = entry.getKey();
 	    	  Integer id = entry.getValue();
 	    	  
-	    	  db.saveSharedVarSignatureToDB(sig, id);
+	    	  db.saveVarSignatureToDB(sig, id);
 	    	  if(isVerbose)
         	  System.out.println("* ["+id+"] "+sig+" *");
 
@@ -189,6 +259,82 @@ public final class RecordRT {
 	  
 	  System.out.println("Thread "+tid+" "+str+" to file "+name);
   }
+  /**
+   * detect shared variables -- two conditions
+   * 1. the address is accessed by more than two threads 
+   * 2. at least one of them is a write
+   * @param ID -- shared variable id
+   * @param o -- runtime object
+   * @param SID -- field id
+   * @param write or read
+   */
+  public static  void logFieldAcc(int ID, int SID, final boolean write) {
+	  long tid = Thread.currentThread().getId();
+	  
+	  {
+		  if(!threadLocalIDSet.get().contains(ID))
+		  {
+			  threadLocalIDSet.get().add(ID);
+			  
+			  //o is not used...
+			  
+			  //instance-based approach consumes too much memory
+			  
+			  //String sig = o==null?"."+SID:System.identityHashCode(o)+"."+SID;
+	
+			  if(Config.instance.verbose)
+			  {
+			  String readOrWrite = (write?" write":" read");
+			  System.out.println("Thread "+tid+" "+readOrWrite+" variable "+SID);		  
+			  }
+			 if(!sharedVariableIds.contains(SID))
+			 {
+				 if(writeThreadMap.containsKey(SID))
+				 {
+					 if(writeThreadMap.get(SID)!=tid)
+					 {
+						 sharedVariableIds.add(SID);
+						 return;
+					 }
+				 }
+				 
+				 if(write)//write
+				 {
+					 if(readThreadMap.containsKey(SID))
+					 {
+						 long[] readThreads = readThreadMap.get(SID);
+						 if(readThreads!=null
+								 &&(readThreads[0]!=tid||
+								 (readThreads[1]>0&&readThreads[1]!=tid)))
+						 {
+							 sharedVariableIds.add(SID);
+							 return;
+						 }
+					 }
+					 
+					 writeThreadMap.put(SID, tid);
+				}
+				 else//read
+				 {
+					 long[] readThreads = readThreadMap.get(SID);
+					 
+					 if(readThreads==null)
+					 {
+						 readThreads = new long[2];
+						 readThreads[0]= tid;
+						 readThreadMap.put(SID, readThreads); 
+					 }	 
+					 else
+					 {
+						 if(readThreads[0]!=tid)
+							 readThreads[1]= tid;
+	
+					 }
+				 }
+			 }
+		  }
+	  }
+  }
   public static  void logFieldAcc(int ID, final Object o, int SID, final Object v, final boolean write) {
 	  long tid = Thread.currentThread().getId();
 	  {
@@ -223,6 +369,79 @@ public final class RecordRT {
 			  System.out.println("DB is null in logInitialWrite - appname is ");
 	  }
 	  
+  }
+  public static  void logArrayAcc(int ID, final Object o, int index, final boolean write) {
+	  long tid = Thread.currentThread().getId();
+	  
+//	  StringBuilder builder = new StringBuilder(20);
+//	  builder.append(ID).append('.').append(sig);
+//	  String identifier = builder.toString();
+	  
+	  //String identifier = ID+"."+sig;
+	  //System.out.println(identifier);
+	  if(!threadLocalIDSet.get().contains(ID))
+	  {
+		  threadLocalIDSet.get().add(ID);
+		  
+		  Integer sig = System.identityHashCode(o);//+"_"+index;//array
+
+		  HashSet<Integer> ids = arrayIdsMap.get(sig);
+		  if(ids==null){
+			  ids = new HashSet<Integer>();
+			  arrayIdsMap.put(sig, ids);
+		  }
+		  ids.add(ID);
+		  if(Config.instance.verbose)
+		  {	  
+			  String readOrWrite = (write?" write":" read");
+		  	System.out.println("Thread "+tid+" "+readOrWrite+" array "+GlobalStateForInstrumentation.instance.getArrayLocationSig(ID));		  
+		  }
+		 if(!sharedArrayIds.contains(sig))
+		 {
+			 if(writeThreadArrayMap.containsKey(sig))
+			 {
+				 if(writeThreadArrayMap.get(sig)!=tid)
+				 {
+					 sharedArrayIds.add(sig);
+					 return;
+				 }
+			 }
+			 
+			 if(write)//write
+			 {
+				 if(readThreadArrayMap.containsKey(sig))
+				 {
+					 long[] readThreads = readThreadArrayMap.get(sig);
+					 if(readThreads!=null
+							 &&(readThreads[0]!=tid||
+							 (readThreads[1]>0&&readThreads[1]!=tid)))
+					 {
+						 sharedArrayIds.add(sig);
+						 return;
+					 }
+				 }
+				 
+				 writeThreadArrayMap.put(sig, tid);
+			}
+			 else//read
+			 {
+				 long[] readThreads = readThreadArrayMap.get(sig);
+				 
+				 if(readThreads==null)
+				 {
+					 readThreads = new long[2];
+					 readThreads[0]= tid;
+					 readThreadArrayMap.put(sig, readThreads); 
+				 }	 
+				 else
+				 {
+					 if(readThreads[0]!=tid)
+						 readThreads[1]= tid;
+	
+				 }
+			 }
+		 }
+	 }
   }
   public static  void logArrayAcc(int ID, final Object o, int index, final Object v, final boolean write) {
 	  long tid = Thread.currentThread().getId();

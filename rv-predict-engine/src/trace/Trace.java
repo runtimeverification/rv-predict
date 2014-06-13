@@ -122,6 +122,10 @@ public class Trace {
 	{
 		return fulltrace;
 	}
+	public HashSet<String> getSharedVariables()
+	{
+		return sharedAddresses;
+	}
 	public HashMap<String,String> getInitialWriteValueMap()
 	{
 		return initialWriteValueMap;
@@ -564,6 +568,10 @@ public class Trace {
 		info.addSharedAddresses(sharedAddresses);
 		info.addThreads(threads);
 		
+	}
+	public	Vector<AbstractNode> getRawFullTrace()
+	{
+		return rawfulltrace;
 	}
 	/**
 	 * compute the lock/unlock pairs because we analyze the trace window by window, 

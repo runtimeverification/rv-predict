@@ -1,14 +1,30 @@
 package rvpredict.config;
 
+import com.beust.jcommander.Parameter;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
 public class Config {
+    public static final java.lang.String PROGRAM_NAME = "rv-predict-agent";
     public static final Config instance = new Config();
     public static final String propFile ="rv.conf";
+
+    final static String opt_outdir = "--dir";
+    @Parameter(names = opt_outdir, description = "output directory", hidden = true)
     public static String logDir = null;
-    
+
+    public final static String opt_sharing_only = "--detectSharingOnly";
+    @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables.")
+    public static boolean detectSharingOnly;
+
+
+    public final static String opt_table_name = "--table";
+    @Parameter(names = opt_table_name, description = "Name of the table (Default: jar main class)", hidden = true)
+    public static String tableName = "main";
+
+
     public final String LOG_FIELD_ACCESS = "logFieldAcc";
     public final String LOG_INIT_WRITE_ACCESS = "logInitialWrite";
     public final String LOG_ARRAY_ACCESS = "logArrayAcc";
@@ -24,8 +40,12 @@ public class Config {
 
     
     public final String DESC_LOG_FIELD_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;Z)V";
+    public final String DESC_LOG_FIELD_ACCESS_DETECT_SHARING = "(IIZ)V";
+    
     public final String DESC_LOG_INIT_WRITE_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;)V";
     public final String DESC_LOG_ARRAY_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;Z)V";
+    public final String DESC_LOG_ARRAY_ACCESS_DETECT_SHARING ="(ILjava/lang/Object;IZ)V";
+    
     public final String DESC_LOG_LOCK_INSTANCE = "(ILjava/lang/Object;)V";
     public final String DESC_LOG_LOCK_STATIC = "(II)V";
     public final String DESC_LOG_UNLOCK_INSTANCE = "(ILjava/lang/Object;)V";

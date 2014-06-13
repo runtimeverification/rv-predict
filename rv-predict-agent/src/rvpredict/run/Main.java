@@ -30,6 +30,7 @@ package rvpredict.run;
 
 import java.lang.reflect.Method;
 
+import rvpredict.config.Config;
 import rvpredict.logging.RecordRT;
 
 /**
@@ -58,7 +59,7 @@ private static void run(String[] args)
 {
 	try 
 	{		
-		String tablename = args[0];
+		Config.tableName = args[0];
 //		if(args.length>1)
 //		for(int i=1;i<args.length;i++)
 //		{
@@ -66,7 +67,7 @@ private static void run(String[] args)
 //		}
 		
 		//initialize the recording data structures
-		RecordRT.init(true);
+		RecordRT.initNonSharing(true);
 		String appname = args[0];
 
 		Class<?> c = Class.forName(appname);

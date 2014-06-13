@@ -82,10 +82,10 @@ public class Z3Run
 	{
 		
 		//constraint file
-		smtFile = Util.newOutFile(config.constraint_outdir,config.outdir +"_"+id+Z3_SMT2);
+		smtFile = Util.newOutFile(config.constraint_outdir,config.tableName +"_"+id+Z3_SMT2);
         
 		//solution file
-		z3OutFile = Util.newOutFile(config.constraint_outdir,config.outdir +"_"+id+Z3_OUT);
+		z3OutFile = Util.newOutFile(config.constraint_outdir,config.tableName +"_"+id+Z3_OUT);
 		
 		//z3ErrFile = Util.newOutFile(Z3_ERR+id);//looks useless
 		

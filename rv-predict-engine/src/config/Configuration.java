@@ -33,6 +33,8 @@ import com.beust.jcommander.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
@@ -85,10 +87,13 @@ public class Configuration {
 //    @Parameter(names = opt_constraint_outdir, description = "constraint file directory", hidden = true)
     public String constraint_outdir;
 
- 	final static String opt_outdir = "--dir";
+ 	public final static String opt_outdir = "--dir";
     @Parameter(names = opt_outdir, description = "output directory", hidden = true)
-    public String outdir = "log";
+    public String outdir = null;
 
+    public final static String opt_table_name = "--table";
+    @Parameter(names = opt_table_name, description = "Name of the table (Default: jar main class)", hidden = true)
+    public String tableName = null;
 
 	final static String opt_solver_timeout = "--solver_timeout";
     @Parameter(names = opt_solver_timeout, description = "solver timeout in seconds", hidden = true)
@@ -110,6 +115,10 @@ public class Configuration {
     @Parameter(names = opt_optrace, description = "optimize race detection", hidden = true)
     //by default optrace is true
     public boolean optrace = true;
+
+ 	final static String opt_optlog = "--optlog";
+    @Parameter(names = opt_optlog, description = "optimize logging size", hidden = true)
+    public boolean optlog;
 
     public final static String opt_only_log = "--agent";
     @Parameter(names = opt_only_log, description = "Run only the logging stage")
@@ -133,6 +142,11 @@ public class Configuration {
     public final static String opt_java = "--java";
     @Parameter(names = opt_java, description = "optional separator for java arguments")
     public boolean javaSeparator;
+
+
+    public final static String opt_sharing_only = "--detectSharingOnly";
+    @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables.")
+    public boolean agentOnlySharing;
 
     public int parseArguments(String[] args) {
         String pathSeparator = System.getProperty("path.separator");
@@ -165,6 +179,18 @@ public class Configuration {
             jc.parse(rvArgs);
         } catch (ParameterException e) {
             System.err.println("Error: Cannot parse command line arguments.");
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
+
+
+        try {
+            if (outdir == null) {
+                outdir = Files.createTempDirectory(
+                        Paths.get(System.getProperty("java.io.tmpdir")), "rv-predict").toString();
+            }
+        } catch (IOException e) {
+            System.err.println("Error while attempting to create log dir.");
             System.err.println(e.getMessage());
             System.exit(1);
         }
@@ -213,6 +239,9 @@ public class Configuration {
                     Manifest manifest = jarFile.getManifest();
                     Attributes mainAttributes = manifest.getMainAttributes();
                     String mainClass = mainAttributes.getValue("Main-Class");
+                    if (tableName == null) {
+                        tableName = mainClass.replace(".", "_");
+                    }
                     if (mainClass == null) {
                         System.err.println("Error: no main manifest attribute, in " + appJar);
                         System.exit(1);
@@ -243,6 +272,9 @@ public class Configuration {
             if (systemClasspath == null) systemClasspath = "";
             command_line.add(1, systemClasspath);
             idxCp = 0;
+        }
+        if (tableName == null) {
+            tableName = "main";
         }
         return idxCp;
     }

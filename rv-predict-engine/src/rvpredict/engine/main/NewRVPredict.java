@@ -995,29 +995,26 @@ public class NewRVPredict {
 	public static void main(String[] args) {
         Configuration config = new Configuration();
         config.parseArguments(args);
-
+        config.outdir="./log";
         run(config);
     }
 
     public static void run(Configuration conf) {
         config = conf;
 
-
         try{
 			
 			//Now let's start predict analysis
 			long start_time = System.currentTimeMillis();
-			
 
-			
 			//initialize printer
-			initPrinter(config.outdir);
+			initPrinter(config.tableName);
 			
 			//db engine is used for interacting with database
-			DBEngine db = new DBEngine(config.outdir);
+			DBEngine db = new DBEngine(config.outdir, config.tableName);
 
 			//load all the metadata in the application
-			HashMap<Integer, String> sharedVarIdSigMap = db.getSharedVarSigIdMap();
+			HashMap<Integer, String> sharedVarIdSigMap = db.getVarSigIdMap();
 			HashMap<Integer, String> volatileAddresses = db.getVolatileAddresses();
 			HashMap<Integer, String> stmtIdSigMap = db.getStmtSigIdMap();
 			HashMap<Long,String> threadIdNameMap = db.getThreadIdNameMap();

@@ -32,20 +32,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Set;
 import java.util.Stack;
 import java.util.Vector;
-import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
-import config.Util;
 import trace.*;
-import trace.AbstractNode.TYPE;
 import violation.IViolation;
-import z3.Z3Engine;
 
 /**
  * Engine for interacting with database.
@@ -59,9 +52,8 @@ public class DBEngine {
 	
 	//currently we use the h2 database
 	protected final String dbname = "RVDatabase";
-	protected final String driver = "org.h2.Driver";
     private final int TABLE_NOT_FOUND_ERROR_CODE = 42102;
-	public String appname = "test";
+	public String appname = "main";
 	
 	
 	//database schema
@@ -102,6 +94,8 @@ public class DBEngine {
 	public String scheduletablename;
 	public String propertytablename;
 	
+	private String varsigtablename;
+
 	//TODO: What if the program does not terminate??
 	
 	protected BlockingQueue<Stack<EventItem>> queue;
@@ -203,15 +197,16 @@ public class DBEngine {
 		t.start();
 		
 	}
-	public DBEngine(String directory)
+	public DBEngine(String directory, String name)
 	{
-		String name = "LOG";
 		appname = name;
 		tracetablename = "trace_"+name;
 		tidtablename = "tid_"+name;
 		volatilesigtablename = "volatile_"+name;
 		stmtsigtablename="stmtsig_"+name;
 		sharedvarsigtablename="sharedvarsig_"+name;
+		varsigtablename="varsig_"+name;
+		
 		scheduletablename = "schedule_"+name;
 		propertytablename = "property_"+name;
 		try
@@ -284,7 +279,7 @@ public class DBEngine {
         try {
             sql_dropTable = "SELECT COUNT(*) FROM "+stmtsigtablename;
             stmt.execute(sql_dropTable);
-            sql_dropTable = "SELECT COUNT(*) FROM "+sharedvarsigtablename;
+            sql_dropTable = "SELECT COUNT(*) FROM "+varsigtablename;
             stmt.execute(sql_dropTable);
             sql_dropTable = "SELECT COUNT(*) FROM "+volatilesigtablename;
             stmt.execute(sql_dropTable);
@@ -524,7 +519,7 @@ public class DBEngine {
 	
 	protected void connectDB(String directory) throws Exception
 	{
-		Class.forName(driver);
+		Class.forName("rvpredict.h2.Driver");
         conn  = DriverManager.getConnection("jdbc:h2:"+directory+"/"+dbname);
         //conn.setAutoCommit(true);
 	}
@@ -575,11 +570,11 @@ public class DBEngine {
 		}
 		return map;
 	}
-	public HashMap<Integer, String> getSharedVarSigIdMap()
+	public HashMap<Integer, String> getVarSigIdMap()
 	{
 		HashMap<Integer, String> map = new HashMap<Integer, String>();
 		try{
-		String sql_select = "SELECT * FROM "+sharedvarsigtablename;
+		String sql_select = "SELECT * FROM "+varsigtablename;
 		
 		Statement stmt = conn.createStatement();
 		ResultSet rs = stmt.executeQuery(sql_select);
@@ -775,7 +770,7 @@ public class DBEngine {
 	private void test()
 	{
 		try{
-		DBEngine db = new DBEngine("a.b.c.test");
+		DBEngine db = new DBEngine("a.b.c.test", "name");
 		db.createSharedVarSignatureTable();
 		{
 			db.saveStmtSignatureToDB("a", 1);

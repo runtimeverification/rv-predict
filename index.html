@@ -7,18 +7,18 @@
 <div style="width: 1024px; margin-left: auto; margin-right: auto;">
 
 	<div style="background-color:#F6E3CE; padding: 5px">	
-	<h1>RVPredict: Maximal Sound Predictive Race Detection with Control Flow Abstraction</h1>
+	<h1>RVPredict: Maximal and Sound Predictive Runtime Race Detection</h1>
 
 	</div>
 <p>
 RVPredict is a race detector for Java programs that can predict data races
-based on normal execution traces. It encodes program control flow information
-and thread scheduling constraints as a set of first-order logic formulae and
-detects races through constraint solving using SMT solvers Z3 and Yices.
-RVPredict is both sound and maximal.
-It never reports any false positive, and it detects all the possible races
-that can be detected by any sound technique based on the same trace.  
-Its behavior is further described in our <a href="http://fsl.cs.illinois.edu/FSL/papers/2014/huang-meredith-rosu-2014-pldi/huang-meredith-rosu-2014-pldi-public.pdf">PLDI 2014 paper</a>.
+based on normal execution traces. A salient feature of RVPredict is that
+it is both sound and maximal: all reported races are real (i.e.
+it never reports any false alarms), and it detects all the possible races
+that can be detected by any sound technique based on the same trace.
+RVPredict is powered by SMT solvers: it encodes program data/control flow
+and thread scheduling as constraints,
+and uses Z3/Yices to detect races.
 </p>
 <p>
 For extra documentation, see the <a href="README.txt">README</a>.
@@ -34,13 +34,7 @@ For extra documentation, see the <a href="README.txt">README</a>.
 <h3>Preparation:</h3>
 
 <ul>
-<li>
-	<p><a href="http://fsl.cs.illinois.edu/rvpredict/rvpredict.tar.gz">Download RVPredict</a>.
-<pre>
-<code>tar xfz rvpredict.tar.gz</code>
-</pre>
-</p>
-	</li>
+<li>Install Java 1.7 or later</li>
 	<li>
 	<p>Install Z3 or Yices. Follow the instructions at
 <pre>
@@ -51,84 +45,86 @@ Yices: <code>http://yices.csl.sri.com/download-yices2.shtml</code>
 </pre>
 Remember to add the executables to your PATH.</p>
 	</li>
+<li>
+	<p>Install RVPredict. <a href="http://fsl.cs.illinois.edu/rv-predict/rv-predict-install.jar">Download RVPredict installer</a> and run:
+<pre>
+<code>java -jar rv-predict-install.jar</code>
+</pre>
+</p>
+	</li>
 </ul>
 <h3>Basic compile and run:</h3>
 
 <ol>
 	<li>
-	<p>Compile RVPredict (plus test programs).</p>
+	<p>Compile RVPredict.</p>
 <pre>
 ant
 </pre>
 	</li>
 	<li>
-	<p>Compile the benchmarks.</p>
-<pre>
-ant benchmarks
-</pre>
-	</li>
-	<li>
-	<p>Run a simple example.</p>
-<pre>
-./run.sh demo.Example
-</pre>
-	</li>
-</ol>
 
-<h3>Decomposed steps of <code>run.sh</code>:</h3>
-<ol>
-<li>
-	<p>Instrument the program.</p>
+<p>Run RVPredict
+<pre>
+bin/rv-predict [rv_options] [--java] [java_options] class [args...]
+</pre>
+or
+<pre>
+bin/rv-predict [rv_options] [--java] [java_options] -jar jarfile [args...]
+</pre>
+<p>where [rv_options] are rv-predic specific options 
+(run rv-predict --help -v for more information), 
+  --java can be used as a separator for the java command line.
+The remainding arguments are what one would pass to the java executable to 
+execute the proram.
+</p>
+The --java option is only required in the less frequent case when some of 
+the java or program options used have the same name as some of the 
+rv-predict options (including --java).
+	<p>Run a simple example:</p>
+<pre>
+bin/rv-predict -cp tests/bin demo.Example
+</pre>
+<p>Using <code>--java</code> to specify that the first -v argument should be sent to rv-predict,
+while the second one to the java command:</p>
+<pre>bin/rv-predict --verbose --java -verbose -cp tests/bin demo.Example  
+</pre>
+<p>
+Using rv-predict with a jar:</p>
+<pre>bin/rv-predict -jar benchmarks/ftpserver/ftpserver.jar
+</pre>
 
-<pre>
-./rv-instrument demo.Example
-</pre>
-	</li>
-<li>
-	<p>Log an execution trace.</p>
-<pre>
-./rv-log demo.Example
-</pre>
-</li>
-<li>
-	<p>Predict races.</p>
-<pre>
-./rv-predict demo.Example
-</pre>
-</li>
-</ul>
-</ol>
 
 <h4>Useful options:</h4>
 	<p>
-	<code>rv-predict</code> has a few options on race detection. To see these options, execute:
-<code>./rv-predict -h</code>
+	RVPredict has a few options on race detection. To see these options, execute:
+<code>bin/rv-predict --help -v</code>
 	</p>
 <p>
-<code>-maxlen SIZE</code> -- set window size to SIZE.<br>
-<br>
-<code>-smtlib1</code> -- use smtlib v1 format (use Yices)<br>
-<br>
-<code>-outdir PATH</code> -- set constraint file directory to PATH.<br>
-<br>
-<code>-solver_timeout TIME</code> -- set solver timeout to TIME seconds.<br>
-<br>
-<code>-solver_memory MEMORY</code> -- set memory used by solver to MEMORY megabytes.<br>
-<br>
-<code>-timeout TIME</code> -- set rvpredict timeout to TIME seconds.<br>
-<br>
-<code>-nobranch</code> -- disable control flow (MCM).<br>
-<br>
-<code>-novolatile</code> -- exclude races on volatile variables
-<br>
-<br>
-<code>-allconsistent</code> -- require all read-write consistency (Said)<br>
-<br>
+<code>--agent</code> -- run only the logging stage [false]<br>
+<code>--allconsistent</code> -- require all read-write consistency [false]<br>
+<code>--allrace</code> -- check all races [false]<br>
+<code>--detectSharingOnly</code> --run agent only to detect shared variables. [false]<br>
+<code>--dir</code> -- output directory [log]<br>
+<code>-h, --help</code> -- print help info [false]<br>
+<code>--java</code> -- optional separator for java arguments [false]<br>
+<code>--maxlen</code> -- window size [1000]<br>
+<code>--nobranch</code> -- disable control flow (MCM).<br>
+<code>--noschedule</code> -- not report schedule [true]<br>
+<code>--novolatile</code> -- exclude volatile variables [false]<br>
+<code>--optlog</code> -- optimize logging size [false]<br>
+<code>--optrace</code> -- optimize race detection [true]<br>
+<code>--predict</code> -- run only the prediction stage [false]<br>
+<code>--pso</code> -- PSO memory model [false]<br>
+<code>--smtlib1</code> -- use smtlib v1 format (use Yices) [false]<br>
+<code>--solver_memory</code> -- solver memory in MB [8000]<br>
+<code>--solver_timeout</code> -- solver timeout in seconds [60]<br>
+<code>--table</code> --name of the table (Default: jar main class) [null]<br>
+<code>-timeout</code> -- rvpredict timeout in seconds [3600]<br>
+<code>-v, --verbose</code> -- generate more verbose output [false] <br>
 </p>
-<h4>Suggested options:</h4>
-<p>
-<pre>-maxlen 10000 -smtlib1</pre> (must install Yices to use -smtlib1)
-</p>
+	</li>
+</ol>
 
 <h3>Benchmarks:</h3>
 <p>Our simpler tests are located in the tests directory.
@@ -137,19 +133,12 @@ The larger benchmark tests are located in the benchmarks directory.
 
 <p>A few examples:</p>
 <pre>
-./run.sh account.Account
+bin/rv-predict -cp benchmarks/bin account.Account
+bin/rv-predict -cp benchmarks/bin bubblesort.BubbleSort
+bin/rv-predict -cp benchmarks/bin benchmarks.JGFRayTracerBenchSizeA
 </pre>
-<pre>
-./rv-instrument boundedbuffer.BoundedBuffer
-./rv-log boundedbuffer.BoundedBuffer
-./rv-predict boundedbuffer.BoundedBuffer -maxlen 10000 -smtlib1
-</pre>
+To run all benchmarks, execute: <code>ant test</code>
 
-<h3>Rolling your own:</h3>
-<p>
-Put your own program in <code>tests/src/</code> and compile it by <code>ant tests</code>.
-Then run <code>./run.sh yourprogram</code>
-</p>
    </body>
 </html>
 

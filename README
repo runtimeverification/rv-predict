@@ -51,4 +51,4 @@ Using rv-predict with a jar
 bin/rv-predict -jar benchmarks/ftpserver/ftpserver.jar
 
 ----------------------------------------
-More online documents: http://fsl.cs.illinois.edu/rvpredict/
+More online documents: http://fsl.cs.illinois.edu/rv-predict/

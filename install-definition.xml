@@ -11,7 +11,7 @@
     </info>
 
     <!-- GUI-Specific Preferences -->
-    <guiprefs width="600" height="480" resizable="no">
+    <guiprefs width="740" height="600" resizable="yes">
         <modifier key="useHeadingPanel" value="yes"/>
         <modifier key="useHeadingForSummary" value="yes"/>
         <modifier key="headingImageOnLeft" value="yes"/>
@@ -34,7 +34,6 @@
 
     <!-- Installer Panel Sequence -->
     <panels>
-        <panel classname="HelloPanel"/>
         <panel classname="LicencePanel"/>
         <panel classname="TargetPanel"/>
         <panel classname="PacksPanel"/>

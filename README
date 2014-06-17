@@ -71,7 +71,8 @@ rv-predict-inst.jar -- for instrumenting the target application
 rv-predict-log.jar -- for logging a runtime trace into database
 rv-predict-engine.jar -- perform race detection (see the usage below)
 
-Usage: java -jar rv-predict-engine.jar rvpredict.engine.main.NewRVPredict [options] classname
+Usage: java -jar rv-predict-engine.jar rvpredict.engine.main.NewRVPredict
+         [options] classname
 
 General Options:
   -maxlen SIZE                 set window size to SIZE 

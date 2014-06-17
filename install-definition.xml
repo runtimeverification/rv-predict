@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="iso-8859-1" standalone="yes" ?>
+
+<installation version="1.0">
+
+    <!-- General Application Information -->
+    <info>
+        <appname>RV-Predict</appname>
+        <appversion>@{rvpredict.version}</appversion>
+        <uninstaller path="${INSTALL_PATH}/uninstall" write="no"/>
+        <run-privileged condition="izpack.windowsinstall|izpack.macinstall" />
+    </info>
+
+    <!-- GUI-Specific Preferences -->
+    <guiprefs width="740" height="600" resizable="yes">
+        <modifier key="useHeadingPanel" value="yes"/>
+        <modifier key="useHeadingForSummary" value="yes"/>
+        <modifier key="headingImageOnLeft" value="yes"/>
+        <modifier key="headingLineCount" value="2"/>
+        <modifier key="headingFontSize" value="1.5"/>
+        <modifier key="headingBackgroundColor" value="0x00ffffff"/>
+        <modifier key="headingPanelCounter" value="text"/>
+        <modifier key="headingPanelCounterPos" value="inHeading"/>
+    </guiprefs>
+
+    <locale>
+        <langpack iso3="eng"/>
+    </locale>
+
+    <!-- Installer Resources -->
+    <resources>
+        <res id="InfoPanel.info" src="@{rvpredict.base}/README"/>
+        <res id="LicencePanel.licence" src="@{rvpredict.base}/LICENSE"/>
+    </resources>
+
+    <!-- Installer Panel Sequence -->
+    <panels>
+        <panel classname="LicencePanel"/>
+        <panel classname="TargetPanel"/>
+        <panel classname="PacksPanel"/>
+        <panel classname="SummaryPanel"/>
+        <panel classname="InstallPanel"/>
+        <panel classname="InfoPanel"/>
+        <!--<panel classname="RunPanel"/>-->
+    </panels>
+
+    <!-- Installable Package Tasks -->
+    <packs>
+        <pack name="RV-Predict" required="yes" installGroups="New Application" >
+            <description>The main RV-Predict libraries and run scripts.</description>
+            <file src="@{rvpredict.base}/README" targetdir="$INSTALL_PATH"/>
+            <file src="@{rvpredict.base}/LICENSE" targetdir="$INSTALL_PATH"/>
+            <fileset dir="@{rvpredict.bin}" casesensitive="yes" targetdir="$INSTALL_PATH/bin">
+                <exclude name="log/*"/>
+            </fileset>
+            <file src="@{rvpredict.lib}" targetdir="$INSTALL_PATH"/>
+            <executable targetfile="$INSTALL_PATH/bin/rv-predict" keep="true" stage="never" />
+            <executable targetfile="$INSTALL_PATH/bin/rv-predict.bat" keep="true" stage="never" />
+        </pack>
+        <pack name="Benchmarks" required="no" installGroups="New Application" >
+            <description>
+                Benchmarks for evaluating the performance of RV-Predict and showcasing its features.
+            </description>
+            <fileset dir="@{rvpredict.benchmarks}" casesensitive="yes" targetdir="$INSTALL_PATH/benchmarks">
+                <exclude name="bin/*"/>
+                <exclude name="log/*"/>
+            </fileset>
+        </pack>
+    </packs>
+
+    <!-- The native libraries to add. This is required for creating shortcuts on Windows -->
+    <native type="izpack" name="ShellLink.dll"/>
+
+</installation>

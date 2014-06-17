@@ -45,9 +45,6 @@
   <taskdef name="izpack" classpath="${install.lib}/standalone-compiler.jar"
     classname="com.izforge.izpack.ant.IzPackTask"/>
 
-  <taskdef name="for-contrib" classname="net.sf.antcontrib.logic.ForTask"
-    classpath="${rvpredict.agent.lib}/ant-contrib.jar"/>
-
   <target name="all" depends="rvpredict-all"
           description="compile rvpredict and benchmarks" />
 

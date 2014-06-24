@@ -1175,9 +1175,18 @@ public class GUIMain {
     private void predict(){
 
     String[] cmd = getRVCommand("--predict");
+    System.out.println("**************************************************"
+                     + "**************************************************"
+                     + "****************************");
+    System.out.println("* Predicting races in program using the command line:\n\t");
+    printCmd(cmd);
+    System.out.println("\n**************************************************"
+                       + "**************************************************"
+                       + "***************************");
+        File rootDir = new File(rootPath);
     try {
       long time = System.currentTimeMillis();
-      Process p  = Runtime.getRuntime().exec(cmd);
+      Process p  = Runtime.getRuntime().exec(cmd, null, rootDir);
       readExternalProcess(p, BLACK, RED);
       if(p.exitValue() != 0) killAction(); 
       if(v.kill) return;

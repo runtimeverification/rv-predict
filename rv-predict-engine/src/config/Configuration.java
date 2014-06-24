@@ -280,6 +280,19 @@ public class Configuration {
     }
 
     public void usage(JCommander jc) {
+/*
+--java can be used as a separator for the java command line
+the remaining arguments are what one would pass to the java executable to
+execute the class/jar
+The --java option is only required in the less frequent case when some of
+the java or program options used have the same name as some of the
+rv-predict options (including --java).
+
+Moreover, in the unlikely case when the program takes as options -cp or -jar
+and is run as a class (i.e., not using -jar) then the java -cp option must
+be used explicitly for disambiguation.
+*/
+
         // computing names maximum length
         int max_option_length = 0;
         for (ParameterDescription parameterDescription : jc.getParameters()) {

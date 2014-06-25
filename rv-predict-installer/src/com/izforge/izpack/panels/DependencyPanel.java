@@ -45,6 +45,8 @@ public class DependencyPanel extends IzPanel implements ActionListener {
 
     private static final long serialVersionUID = 3257848774955905587L;
     private JCheckBox checkBox;
+    ArrayList<String> dependencyList;
+    ArrayList<DependencyPanelTest> dependencyTests;
 
     /**
      * The constructor
@@ -74,8 +76,8 @@ public class DependencyPanel extends IzPanel implements ActionListener {
         final String dependencyId = DependencyPanelUtils.getId(idata);
         final String dependencySite = DependencyPanelUtils.getDependencySite(idata, dependencyId);
         final String dependencyHTML = DependencyPanelUtils.getDependencyHTML(dependencyId);
-        final ArrayList<String> dependencyList = DependencyPanelUtils.getDependencies(idata, dependencyId);
-        final ArrayList<DependencyPanelTest> dependencyTests = DependencyPanelUtils.getDependencyTests(idata, dependencyId);
+        dependencyList = DependencyPanelUtils.getDependencies(idata, dependencyId);
+        dependencyTests = DependencyPanelUtils.getDependencyTests(idata, dependencyId);
 
         if (DependencyPanelUtils.isDependencySatisfied(dependencyList, dependencyTests)) {
             setHidden(true);
@@ -110,8 +112,8 @@ public class DependencyPanel extends IzPanel implements ActionListener {
             }
         });
 
-        checkBox = new JCheckBox("I have installed the dependency and added it to the PATH, or wish to manage the dependency myself."
-            + "  I understand that failure to do so will mean the installed package may not work correctly.", false);
+        checkBox = new JCheckBox("<html> I have installed the dependency and added it to the PATH "
+            + "<br> (failure to do so may lead to errors in the installed packages). </html>", false);
         panel.add(checkBox, NEXT_LINE);
         checkBox.addActionListener(this);
 
@@ -130,21 +132,19 @@ public class DependencyPanel extends IzPanel implements ActionListener {
                 desktop.browse(new URI(url));
             } catch (Exception e) {
             JOptionPane.showMessageDialog(null,
-                        "Failed to launch the link, " +
-                        "your computer is likely misconfigured.",
-                        "Cannot Launch Link",JOptionPane.WARNING_MESSAGE);
+                "Failed to launch the link, " +
+                "your computer is likely misconfigured.",
+                "Cannot Launch Link",JOptionPane.WARNING_MESSAGE);
             }
         }
         else {
             JOptionPane.showMessageDialog(null,
-                    "Java is not able to launch links on your computer.",
-                    "Cannot Launch Link",JOptionPane.WARNING_MESSAGE);
+                "Java is not able to launch links on your computer.",
+                "Cannot Launch Link",JOptionPane.WARNING_MESSAGE);
         }
     }
 
-    /**
-     * When panel is ready, check if dependency is present and act accordingly
-     */
+    @Override
     public void panelActivate() {
         if (isHidden()) {
             parent.skipPanel();
@@ -154,20 +154,23 @@ public class DependencyPanel extends IzPanel implements ActionListener {
         }
     }
 
-    /**
-     * Indicates whether the panel has been validated or not
-     *
-     * @return Always true
-     */
+    @Override
+    public void panelDeactivate() {
+        if (!isHidden() && dependencyList != null && checkBox.isSelected()) {
+            if (!DependencyPanelUtils.isDependencySatisfied(dependencyList, dependencyTests)) {
+                emitWarning("Warning!", "<html> We have detected that the dependency is still not satisfied"
+                    + " in a way <br> that would make the installed program execute correctly. <br><br> Continuing anyway "
+                    + "may make it impossible for the installed application to correctly execute. </html>");
+            }
+        }
+    }
+
+    @Override
     public boolean isValidated() {
         return true;
     }
 
-    /**
-     * Actions-handling method (here it allows the installation)
-     *
-     * @param e The event
-    */
+    @Override
     public void actionPerformed(ActionEvent e)
     {
         if (checkBox.isSelected()) {

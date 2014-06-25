@@ -19,14 +19,17 @@ import com.izforge.izpack.installer.PanelConsoleHelper;
  */
 public class DependencyPanelConsoleHelper extends PanelConsoleHelper implements PanelConsole {
 
+    @Override
     public boolean runGeneratePropertiesFile(AutomatedInstallData installData,PrintWriter printWriter) {
         return true;
     }
 
+    @Override
     public boolean runConsoleFromPropertiesFile(AutomatedInstallData installData, Properties p) {
         return true;
     }
 
+    @Override
     public boolean runConsole(AutomatedInstallData idata) {
         final String dependencyId = DependencyPanelUtils.getId(idata);
         final String dependencySite = DependencyPanelUtils.getDependencySite(idata, dependencyId);

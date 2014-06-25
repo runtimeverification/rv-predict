@@ -151,13 +151,15 @@ public class DependencyPanelUtils {
             }
             isOnPath = false;
         }
+        if (!isOnPath)
+            return false;
         for (DependencyPanelTest test : testList) {
             if (!test.passes()) {
                 return false;
             }
         }
         // All tests pass and all required executables are on PATH
-        return isOnPath;
+        return true;
     }
 
     /**

@@ -13,14 +13,18 @@
 
   <property name="reports.tests" value="test-reports" />
 
+
   <property name="rvpredict.engine.src" location="rv-predict-engine/src"/>
   <property name="rvpredict.engine.src.tests" location="rv-predict-engine/tests"/>
   <property name="rvpredict.agent.src" location="rv-predict-agent/src"/>
+  <property name="rvpredict.installer.src" location="rv-predict-installer/src"/>
   <property name="rvpredict.engine.lib" location="rv-predict-engine/lib"/>
   <property name="rvpredict.agent.lib" location="rv-predict-agent/lib"/>
   <property name="rvpredict.engine.bin" location="rv-predict-engine/bin"/>
   <property name="rvpredict.agent.bin" location="rv-predict-agent/bin"/>
+  <property name="rvpredict.installer.bin" location="rv-predict-installer/bin"/>
   <property name="rvpredict.external.lib" location="lib/external"/>
+  <property name="rvpredict.installer.res" location="rv-predict-installer/res"/>
 
   <path id="rv-predict-agent.classpath">
     <pathelement location="${rvpredict.agent.bin}"/>
@@ -41,6 +45,9 @@
   <property name="benchmark.bin" location="benchmarks/bin"/>
 
   <property name="install.lib" location="izpack/lib"/>
+  <path id="rv-predict-installer.classpath">
+    <pathelement location="${install.lib}/standalone-compiler.jar"/>
+  </path>
 
   <taskdef name="izpack" classpath="${install.lib}/standalone-compiler.jar"
     classname="com.izforge.izpack.ant.IzPackTask"/>
@@ -127,6 +134,11 @@
         <echo message="Running IzPack to build the installer..."/>
         <mkdir dir="${rvpredict.temp}"/>
         <mkdir dir="${rvpredict.dist}"/>
+        <mkdir dir="${rvpredict.installer.bin}"/>
+        <javac source="1.6" target="1.6" srcdir="${rvpredict.installer.src}" destdir="${rvpredict.installer.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="false">
+            <classpath refid="rv-predict-installer.classpath"/>
+        </javac>
+        <jar destfile="${rvpredict.temp}/DependencyPanel.jar" basedir="${rvpredict.installer.bin}"/>
         <izpack input="install-definition.xml"
           output="${rvpredict.dist}/rv-predict-install.jar"
           installerType="standard"
@@ -137,6 +149,7 @@
         <!-- Clean working directory -->
         <echo message="Cleaning up working directory..."/>
         <delete dir="${rvpredict.temp}" quiet="true" includeemptydirs="true"/>
+        <delete dir="${rvpredict.installer.bin}"/>
         <echo message="Done."/>
     </target>
 
@@ -144,7 +157,7 @@
           description="compile the benchmark" depends="installer" >
         <!-- Create the bin directory structure used by compile -->
     <mkdir dir="${benchmark.bin}"/>
-              <!-- Compile the java code from ${benchmark.src} into ${benchmark.bin} -->
+        <!-- Compile the java code from ${benchmark.src} into ${benchmark.bin} -->
     <javac srcdir="${benchmark.src}" destdir="${benchmark.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="false"/>
                      <copy file="${benchmark.src}/hitData" todir="${benchmark.bin}"/>
       </target>

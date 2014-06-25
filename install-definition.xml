@@ -10,6 +10,15 @@
         <run-privileged condition="izpack.windowsinstall|izpack.macinstall" />
     </info>
 
+    <variables>
+        <!-- Z3 Dependency Info (either of z3 or z3.exe on PATH) -->
+        <variable name="DependencyPanel.z3.site" value="https://z3.codeplex.com/releases"/>
+        <variable name="DependencyPanel.z3.exe.1" value="z3"/>
+        <variable name="DependencyPanel.z3.exe.2" value="z3.exe"/>
+        <variable name="DependencyPanel.z3.test.1.command" value="z3 -version"/>
+        <variable name="DependencyPanel.z3.test.1.output_contains" value="Z3 version"/>
+    </variables>
+
     <!-- GUI-Specific Preferences -->
     <guiprefs width="740" height="600" resizable="yes">
         <modifier key="useHeadingPanel" value="yes"/>
@@ -30,10 +39,12 @@
     <resources>
         <res id="InfoPanel.info" src="@{rvpredict.base}/README"/>
         <res id="LicencePanel.licence" src="@{rvpredict.base}/LICENSE"/>
+        <res id="DependencyPanel.z3.html" src="@{rvpredict.installer.res}/z3.html"/>
     </resources>
 
     <!-- Installer Panel Sequence -->
     <panels>
+        <panel classname="DependencyPanel" id="z3" jar="@{rvpredict.temp}/DependencyPanel.jar" />
         <panel classname="LicencePanel"/>
         <panel classname="TargetPanel"/>
         <panel classname="PacksPanel"/>

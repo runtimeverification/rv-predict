@@ -88,7 +88,7 @@ public class GUIMain {
                            aboutItem, helpItem;
 
   public static void main(String[] args){
-    rootPath = args[0];
+    rootPath = Paths.get(args[0]).toAbsolutePath().toString();
     createGUI(args[0]);
   }
 

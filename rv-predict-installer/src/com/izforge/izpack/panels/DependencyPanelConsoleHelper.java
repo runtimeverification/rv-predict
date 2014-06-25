@@ -31,9 +31,10 @@ public class DependencyPanelConsoleHelper extends PanelConsoleHelper implements 
         final String dependencyId = DependencyPanelUtils.getId(idata);
         final String dependencySite = DependencyPanelUtils.getDependencySite(idata, dependencyId);
         final String dependencyText = DependencyPanelUtils.getDependencyText(dependencyId);
-        ArrayList<String> dependencyList = DependencyPanelUtils.getDependencies(idata, dependencyId);
+        final ArrayList<String> dependencyList = DependencyPanelUtils.getDependencies(idata, dependencyId);
+        final ArrayList<DependencyPanelTest> dependencyTests = DependencyPanelUtils.getDependencyTests(idata, dependencyId);
 
-        if (DependencyPanelUtils.isDependencyInstalled(dependencyList)) {
+        if (DependencyPanelUtils.isDependencySatisfied(dependencyList, dependencyTests)) {
             return true;
         }
 

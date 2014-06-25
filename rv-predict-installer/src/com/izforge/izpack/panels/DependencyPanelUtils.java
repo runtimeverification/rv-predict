@@ -5,10 +5,11 @@ package com.izforge.izpack.panels;
 
 import java.io.File;
 import java.util.ArrayList;
-import com.izforge.izpack.installer.IzPanel;
-import com.izforge.izpack.Panel;
+
 import com.izforge.izpack.installer.AutomatedInstallData;
+import com.izforge.izpack.installer.IzPanel;
 import com.izforge.izpack.installer.ResourceManager;
+import com.izforge.izpack.Panel;
 
 /** General utilities and methods used by DependencyPanel
  *
@@ -72,10 +73,26 @@ public class DependencyPanelUtils {
             i++;
             dependencyExecutable = idata.getVariable("DependencyPanel." + id + ".exe." + i);
         }
-        if (i == 1) {
-            throw new RuntimeException("At least one of variables DependencyPanel." + id + ".exe.[i = 1,2,3,...] must be defined.");
-        }
         return dependencyList;
+    }
+
+    /**
+     * Get list of dependency tests for current panel
+     *
+     * @param idata Current installer, id The ID of the current dependency
+     * @return Current dependency tests in wrapper class DependencyPanelTest
+     */
+    protected static ArrayList<DependencyPanelTest> getDependencyTests(AutomatedInstallData idata, String id) {
+        int i = 1;
+        ArrayList<DependencyPanelTest> testList = new ArrayList<DependencyPanelTest>();
+        String testCommand = idata.getVariable("DependencyPanel." + id + ".test." + i + ".command");
+        while (testCommand != null) {
+            String testOutput = idata.getVariable("DependencyPanel." + id + ".test." + i + ".output_contains");
+            testList.add(new DependencyPanelTest(testCommand, testOutput));
+            i++;
+            testCommand = idata.getVariable("DependencyPanel." + id + ".test." + i + ".command");
+        }
+        return testList;
     }
 
     /**
@@ -125,13 +142,22 @@ public class DependencyPanelUtils {
      * @param dependencyList Dependency list to check
      * @return true if any of dependencies exist in system PATH
      */
-    protected static boolean isDependencyInstalled(ArrayList<String> dependencyList) {
+    protected static boolean isDependencySatisfied(ArrayList<String> dependencyList, ArrayList<DependencyPanelTest> testList) {
+        boolean isOnPath = true;
         for (String executable : dependencyList) {
             if (findExecutableOnPath(executable) != null) {
-                return true;
+                isOnPath = true;
+                break;
+            }
+            isOnPath = false;
+        }
+        for (DependencyPanelTest test : testList) {
+            if (!test.passes()) {
+                return false;
             }
         }
-        return false;
+        // All tests pass and all required executables are on PATH
+        return isOnPath;
     }
 
     /**

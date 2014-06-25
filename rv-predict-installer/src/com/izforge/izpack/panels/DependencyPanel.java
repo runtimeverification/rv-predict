@@ -44,7 +44,6 @@ import javax.swing.*;
 public class DependencyPanel extends IzPanel implements ActionListener {
 
     private static final long serialVersionUID = 3257848774955905587L;
-    private ArrayList<String> dependencyList = new ArrayList<String>();
     private JCheckBox checkBox;
 
     /**
@@ -75,9 +74,10 @@ public class DependencyPanel extends IzPanel implements ActionListener {
         final String dependencyId = DependencyPanelUtils.getId(idata);
         final String dependencySite = DependencyPanelUtils.getDependencySite(idata, dependencyId);
         final String dependencyHTML = DependencyPanelUtils.getDependencyHTML(dependencyId);
-        dependencyList = DependencyPanelUtils.getDependencies(idata, dependencyId);
+        final ArrayList<String> dependencyList = DependencyPanelUtils.getDependencies(idata, dependencyId);
+        final ArrayList<DependencyPanelTest> dependencyTests = DependencyPanelUtils.getDependencyTests(idata, dependencyId);
 
-        if (DependencyPanelUtils.isDependencyInstalled(dependencyList)) {
+        if (DependencyPanelUtils.isDependencySatisfied(dependencyList, dependencyTests)) {
             setHidden(true);
             return;
         }
@@ -110,7 +110,8 @@ public class DependencyPanel extends IzPanel implements ActionListener {
             }
         });
 
-        checkBox = new JCheckBox("I have installed the dependency and wish to proceed with the installation.", false);
+        checkBox = new JCheckBox("I have installed the dependency and added it to the PATH, or wish to manage the dependency myself."
+            + "  I understand that failure to do so will mean the installed package may not work correctly.", false);
         panel.add(checkBox, NEXT_LINE);
         checkBox.addActionListener(this);
 

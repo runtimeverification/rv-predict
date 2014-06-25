@@ -11,6 +11,7 @@ package rvpredict.engine.main;
 import java.io.*;
 
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.jar.JarFile;
@@ -93,7 +94,7 @@ public class GUIMain {
   }
 
   static private void createGUI(final String resourcePath){
-      GUIMain.resourcePath = resourcePath;
+      GUIMain.resourcePath = Paths.get(resourcePath).toAbsolutePath().toString();
     EventQueue.invokeLater(new Runnable() {
       public void run() {
         predictB.setIcon(new ImageIcon(resourcePath + "/lib/images/button-predict.png"));

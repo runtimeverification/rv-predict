@@ -44,9 +44,9 @@
 
     <!-- Installer Panel Sequence -->
     <panels>
-        <panel classname="DependencyPanel" id="z3" jar="@{rvpredict.temp}/DependencyPanel.jar" />
         <panel classname="LicencePanel"/>
         <panel classname="TargetPanel"/>
+        <panel classname="DependencyPanel" id="z3" jar="@{rvpredict.temp}/DependencyPanel.jar" />
         <panel classname="PacksPanel"/>
         <panel classname="SummaryPanel"/>
         <panel classname="InstallPanel"/>

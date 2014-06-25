@@ -45,8 +45,10 @@ public class DependencyPanel extends IzPanel implements ActionListener {
 
     private static final long serialVersionUID = 3257848774955905587L;
     private JCheckBox checkBox;
-    ArrayList<String> dependencyList;
-    ArrayList<DependencyPanelTest> dependencyTests;
+    private ArrayList<String> dependencyList;
+    private ArrayList<DependencyPanelTest> dependencyTests;
+    private boolean initialized = false;
+    private JPanel panel;
 
     /**
      * The constructor
@@ -72,7 +74,45 @@ public class DependencyPanel extends IzPanel implements ActionListener {
         JPanel panel = new JPanel();
         add(panel);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        this.panel = panel;
+    }
 
+    /**
+     * Open system's browser to given URL using native methods
+     *
+     * @param url URL to navigate to
+     */
+    private void openBrowser(String url) {
+        if (Desktop.isDesktopSupported()){
+            try {
+                Desktop desktop = Desktop.getDesktop();
+                desktop.browse(new URI(url));
+            } catch (Exception e) {
+            JOptionPane.showMessageDialog(null,
+                "Failed to launch the link, " +
+                "your computer is likely misconfigured.",
+                "Cannot Launch Link",JOptionPane.WARNING_MESSAGE);
+            }
+        }
+        else {
+            JOptionPane.showMessageDialog(null,
+                "Java is not able to launch links on your computer.",
+                "Cannot Launch Link",JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    @Override
+    public void panelActivate() {
+        if (isHidden()) {
+            parent.skipPanel();
+        }
+        if ((checkBox == null) || !(checkBox.isSelected())) {
+            parent.lockNextButton();
+        }
+        if (initialized) {
+            return;
+        }
+        initialized = true;
         final String dependencyId = DependencyPanelUtils.getId(idata);
         final String dependencySite = DependencyPanelUtils.getDependencySite(idata, dependencyId);
         final String dependencyHTML = DependencyPanelUtils.getDependencyHTML(dependencyId);
@@ -118,40 +158,6 @@ public class DependencyPanel extends IzPanel implements ActionListener {
         checkBox.addActionListener(this);
 
         getLayoutHelper().completeLayout();
-    }
-
-    /**
-     * Open system's browser to given URL using native methods
-     *
-     * @param url URL to navigate to
-     */
-    private void openBrowser(String url) {
-        if (Desktop.isDesktopSupported()){
-            try {
-                Desktop desktop = Desktop.getDesktop();
-                desktop.browse(new URI(url));
-            } catch (Exception e) {
-            JOptionPane.showMessageDialog(null,
-                "Failed to launch the link, " +
-                "your computer is likely misconfigured.",
-                "Cannot Launch Link",JOptionPane.WARNING_MESSAGE);
-            }
-        }
-        else {
-            JOptionPane.showMessageDialog(null,
-                "Java is not able to launch links on your computer.",
-                "Cannot Launch Link",JOptionPane.WARNING_MESSAGE);
-        }
-    }
-
-    @Override
-    public void panelActivate() {
-        if (isHidden()) {
-            parent.skipPanel();
-        }
-        if ((checkBox == null) || !(checkBox.isSelected())) {
-            parent.lockNextButton();
-        }
     }
 
     @Override

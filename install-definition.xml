@@ -48,7 +48,6 @@
         <panel classname="TargetPanel"/>
         <panel classname="DependencyPanel" id="z3" jar="@{rvpredict.temp}/DependencyPanel.jar" />
         <panel classname="PacksPanel"/>
-        <panel classname="SummaryPanel"/>
         <panel classname="InstallPanel"/>
         <panel classname="InfoPanel"/>
         <!--<panel classname="RunPanel"/>-->

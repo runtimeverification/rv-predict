@@ -85,7 +85,7 @@ public class GUIMain {
 
   static private JMenuBar menuBar = new JMenuBar();
   static private JMenuItem openItem,  exitItem, predictionItem, 
-                           heapSizeItem, argsItem, classPathItem, 
+                           heapSizeItem, argsItem, mainClassItem, classPathItem,
                            aboutItem, helpItem;
 
   public static void main(String[] args){
@@ -403,6 +403,7 @@ public class GUIMain {
     heapSizeItem.setEnabled(true);
     argsItem.setEnabled(true);
     classPathItem.setEnabled(true);
+    mainClassItem.setEnabled(true);
   }
 
   private static void disableSettings(){
@@ -410,6 +411,7 @@ public class GUIMain {
     heapSizeItem.setEnabled(false);
     argsItem.setEnabled(false);
     classPathItem.setEnabled(false);
+    mainClassItem.setEnabled(false);
   }
 
   public static void createFileMenu(JMenu fileMenu){
@@ -448,15 +450,16 @@ public class GUIMain {
     predictionItem = settingsMenu.add("Prediction Algorithm");
     settingsMenu.addSeparator();
     classPathItem = settingsMenu.add("Classpath");
+    mainClassItem = settingsMenu.add("Main Class");
     heapSizeItem = settingsMenu.add("Heap Size");
     argsItem = settingsMenu.add("Program Arguments"); 
     
     predictionItem.setActionCommand("prediction");
     predictionItem.addActionListener(
-      new ActionListener() {
-        @Override
-        public void actionPerformed(ActionEvent e){
-          if ("prediction".equals(e.getActionCommand())){ 
+            new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if ("prediction".equals(e.getActionCommand())) {
         /*     String newPredictionMode = (String) JOptionPane.showInputDialog(null,
                                             "Choose a prediction algorithm", 
                                             "Prediction Algorithm",
@@ -470,90 +473,107 @@ public class GUIMain {
                                       );
             predictionMode = (newPredictionMode == null) ? predictionMode : newPredictionMode;
 */
-             predictionDialog = new JDialog(f, "Prediction Algorithm", true);
-             //predictionDialog.setLayout(new BoxLayout(predictionDialog, BoxLayout.Y_AXIS));
-             predictionDialog.setLayout(new BoxLayout(predictionDialog.getContentPane(), BoxLayout.Y_AXIS));
+                        predictionDialog = new JDialog(f, "Prediction Algorithm", true);
+                        //predictionDialog.setLayout(new BoxLayout(predictionDialog, BoxLayout.Y_AXIS));
+                        predictionDialog.setLayout(new BoxLayout(predictionDialog.getContentPane(), BoxLayout.Y_AXIS));
 
-             JRadioButton dataRaceButton = new JRadioButton("Data Race Detection", true);
-             dataRaceButton.setActionCommand("dataRaceButton");
-             dataRaceButton.addActionListener(
-               new ActionListener() {
-                 @Override
-                 public void actionPerformed(ActionEvent e){
-                   if ("dataRaceButton".equals(e.getActionCommand())){ 
-                      predictionMode = "Data Races";
-                   } 
-                 }
-               });
+                        JRadioButton dataRaceButton = new JRadioButton("Data Race Detection", true);
+                        dataRaceButton.setActionCommand("dataRaceButton");
+                        dataRaceButton.addActionListener(
+                                new ActionListener() {
+                                    @Override
+                                    public void actionPerformed(ActionEvent e) {
+                                        if ("dataRaceButton".equals(e.getActionCommand())) {
+                                            predictionMode = "Data Races";
+                                        }
+                                    }
+                                });
 
-             JRadioButton deadlockButton = new JRadioButton("Deadlock Detection (coming soon)");
-             JRadioButton atomButton = new JRadioButton("Atomicity Violation Detection (coming soon)");
-             JRadioButton genericButton = new JRadioButton("Generic Property Detection (coming soon)");
+                        JRadioButton deadlockButton = new JRadioButton("Deadlock Detection (coming soon)");
+                        JRadioButton atomButton = new JRadioButton("Atomicity Violation Detection (coming soon)");
+                        JRadioButton genericButton = new JRadioButton("Generic Property Detection (coming soon)");
 
-             deadlockButton.setEnabled(false);
-             atomButton.setEnabled(false);
-             genericButton.setEnabled(false);
+                        deadlockButton.setEnabled(false);
+                        atomButton.setEnabled(false);
+                        genericButton.setEnabled(false);
 
-             ButtonGroup group = new ButtonGroup();
-             group.add(dataRaceButton);
-             group.add(deadlockButton);
-             group.add(atomButton);
-             group.add(genericButton);
+                        ButtonGroup group = new ButtonGroup();
+                        group.add(dataRaceButton);
+                        group.add(deadlockButton);
+                        group.add(atomButton);
+                        group.add(genericButton);
 
-             predictionDialog.add(dataRaceButton);
-             predictionDialog.add(deadlockButton);
-             predictionDialog.add(atomButton);
-             predictionDialog.add(genericButton);
+                        predictionDialog.add(dataRaceButton);
+                        predictionDialog.add(deadlockButton);
+                        predictionDialog.add(atomButton);
+                        predictionDialog.add(genericButton);
 
-             JButton okButton = new JButton("Ok");
-             okButton.setActionCommand("ok");
-             okButton.addActionListener(
-               new ActionListener() {
-                 @Override
-                 public void actionPerformed(ActionEvent e){
-                   if ("ok".equals(e.getActionCommand())){ 
-                      predictionDialog.dispose();
-                   } 
-                 }
-               });
+                        JButton okButton = new JButton("Ok");
+                        okButton.setActionCommand("ok");
+                        okButton.addActionListener(
+                                new ActionListener() {
+                                    @Override
+                                    public void actionPerformed(ActionEvent e) {
+                                        if ("ok".equals(e.getActionCommand())) {
+                                            predictionDialog.dispose();
+                                        }
+                                    }
+                                });
 
-             predictionDialog.add(okButton);
-             predictionDialog.pack();
-             predictionDialog.setLocationRelativeTo(null);
-             predictionDialog.setVisible(true);
-          } 
-        }
-      });
+                        predictionDialog.add(okButton);
+                        predictionDialog.pack();
+                        predictionDialog.setLocationRelativeTo(null);
+                        predictionDialog.setVisible(true);
+                    }
+                }
+            });
 
     heapSizeItem.setActionCommand("heapSize");
     heapSizeItem.addActionListener(
-      new ActionListener() {
-        @Override
-        public void actionPerformed(ActionEvent e){
-          if ("heapSize".equals(e.getActionCommand())){ 
-             String newHeapSize = JOptionPane.showInputDialog("Please enter the heap size you wish to use for prediction", 
-                                                       heapSize);
-            if(newHeapSize != null) {
-              heapSize = newHeapSize;
-              printInfo();
-            }
-          } 
-        }
-      });
+            new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if ("heapSize".equals(e.getActionCommand())) {
+                        String newHeapSize = JOptionPane.showInputDialog("Please enter the heap size you wish to use for prediction",
+                                heapSize);
+                        if (newHeapSize != null) {
+                            heapSize = newHeapSize;
+                            printInfo();
+                        }
+                    }
+                }
+            });
  
     argsItem.setActionCommand("args");
     argsItem.addActionListener(
+            new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if ("args".equals(e.getActionCommand())) {
+                        String newCommandArgs = JOptionPane.showInputDialog("Please enter the arguments you wish passed to your program (excluding class path)",
+                                commandArgs);
+                        if (newCommandArgs != null) {
+                            commandArgs = newCommandArgs;
+                            printInfo();
+                        }
+                    }
+                }
+            });
+
+    mainClassItem.setActionCommand("MC");
+    mainClassItem.addActionListener(
       new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent e){
-          if ("args".equals(e.getActionCommand())){ 
-             String newCommandArgs = JOptionPane.showInputDialog("Please enter the arguments you wish passed to your program (excluding class path)", 
-                                                       commandArgs);
-            if(newCommandArgs != null) {
-              commandArgs = newCommandArgs;
-              printInfo();
-            }
-          } 
+          if ("MC".equals(e.getActionCommand())){
+             String newMainClass = JOptionPane.showInputDialog("Please update the main class as necessary.  Initially this is set automatically from the opened file.",
+                     className);
+
+             if(newMainClass != null){
+               className = newMainClass;
+               printAllInfo();
+             }
+          }
         }
       });
 
@@ -808,30 +828,34 @@ public class GUIMain {
         System.out.println(RED + "    Are you sure that it is a class file and in the proper directory?");
         rootPath = file.getParent();
         return;
-      } 
-      String stars;
-      String spaces;
-      if(rootPath.length() > className.length()){
-        stars = mkXStr(rootPath.length(), "*");
-        spaces = mkXStr(rootPath.length() - className.length(), " ");
-        System.out.println("*****************************************" + stars);
-        System.out.println("* Current application root directory:  " + rootPath + " *"); 
-        System.out.println("* Current main application class file: " + className + spaces + " *");
-        System.out.println("*****************************************" + stars);
-        printInfo();
-      } else {
-        stars = mkXStr(className.length(), "*");
-        spaces = mkXStr(className.length() - rootPath.length(), " ");
-        System.out.println("*****************************************" + stars);
-        System.out.println("* Current application root directory:  " + rootPath + spaces + " *"); 
-        System.out.println("* Current main application class file: " + className + " *");
-        System.out.println("*****************************************" + stars);
-        printInfo();
       }
+      printAllInfo();
 
   }
 
-  private static String mkXStr(int i, String s){
+    private static void printAllInfo() {
+        String stars;
+        String spaces;
+        if(rootPath.length() > className.length()){
+          stars = mkXStr(rootPath.length(), "*");
+          spaces = mkXStr(rootPath.length() - className.length(), " ");
+          System.out.println("*****************************************" + stars);
+          System.out.println("* Current application root directory:  " + rootPath + " *");
+          System.out.println("* Current main application class file: " + className + spaces + " *");
+          System.out.println("*****************************************" + stars);
+          printInfo();
+        } else {
+          stars = mkXStr(className.length(), "*");
+          spaces = mkXStr(className.length() - rootPath.length(), " ");
+          System.out.println("*****************************************" + stars);
+          System.out.println("* Current application root directory:  " + rootPath + spaces + " *");
+          System.out.println("* Current main application class file: " + className + " *");
+          System.out.println("*****************************************" + stars);
+          printInfo();
+        }
+    }
+
+    private static String mkXStr(int i, String s){
     String stars = "";
     for(; i > 0; --i) stars += s;
     return stars;

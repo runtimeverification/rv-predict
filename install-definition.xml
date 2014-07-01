@@ -56,7 +56,7 @@
     <!-- Installable Package Tasks -->
     <packs>
         <pack name="RV-Predict" required="yes" installGroups="New Application" >
-            <description>The main RV-Predict libraries and run scripts.</description>
+            <description>Required RV-Predict libraries and executables.</description>
             <file src="@{rvpredict.base}/README" targetdir="$INSTALL_PATH"/>
             <file src="@{rvpredict.base}/LICENSE" targetdir="$INSTALL_PATH"/>
             <fileset dir="@{rvpredict.bin}" casesensitive="yes" targetdir="$INSTALL_PATH/bin">
@@ -66,10 +66,8 @@
             <executable targetfile="$INSTALL_PATH/bin/rv-predict" keep="true" stage="never" />
             <executable targetfile="$INSTALL_PATH/bin/rv-predict.bat" keep="true" stage="never" />
         </pack>
-        <pack name="Benchmarks" required="no" installGroups="New Application" >
-            <description>
-                Benchmarks for evaluating the performance of RV-Predict and showcasing its features.
-            </description>
+        <pack name="Examples" required="no" installGroups="New Application" >
+            <description>Example Java programs illustrating RV-Predict's features.</description>
             <fileset dir="@{rvpredict.benchmarks}" casesensitive="yes" targetdir="$INSTALL_PATH/benchmarks">
                 <exclude name="bin/*"/>
                 <exclude name="log/*"/>

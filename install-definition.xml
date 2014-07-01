@@ -50,7 +50,6 @@
         <panel classname="PacksPanel"/>
         <panel classname="InstallPanel"/>
         <panel classname="InfoPanel"/>
-        <!--<panel classname="RunPanel"/>-->
     </panels>
 
     <!-- Installable Package Tasks -->

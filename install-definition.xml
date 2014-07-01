@@ -39,14 +39,14 @@
     <resources>
         <res id="InfoPanel.info" src="@{rvpredict.base}/README"/>
         <res id="LicencePanel.licence" src="@{rvpredict.base}/LICENSE"/>
-        <res id="DependencyPanel.z3.html" src="@{rvpredict.installer.res}/z3.html"/>
+        <res id="DependencyPanel.z3.html" src="@{rvpredict.temp}/res/rvdependencies/z3.html"/>
     </resources>
 
     <!-- Installer Panel Sequence -->
     <panels>
         <panel classname="LicencePanel"/>
         <panel classname="TargetPanel"/>
-        <panel classname="DependencyPanel" id="z3" jar="@{rvpredict.temp}/DependencyPanel.jar" />
+        <panel classname="DependencyPanel" id="z3" jar="@{rvpredict.temp}/res/panels/DependencyPanel.jar"/>
         <panel classname="PacksPanel"/>
         <panel classname="InstallPanel"/>
         <panel classname="InfoPanel"/>

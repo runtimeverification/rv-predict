@@ -8,28 +8,25 @@ without introducing false alarms.
 
 #Installation
 
+**Prerequisite:** RV-Predict relies on an SMT solver for solving 
+constraints. We assume below that [Z3](http://z3.codeplex.com) was installed 
+and added to the `PATH` prior to running the RV installer.  
+
 Download and execute `rv-predict-install.jar` from the 
 [RV-Predict website](http://runtimeverification.com/predict) 
 and follow the installation instructions.
 
-## Prerequisites
-
-RV-Predict relies on an SMT solver for solving constraints. Please download and 
-install [Z3](http://z3.codeplex.com) prior to running the RV installer. Although it was mostly tested with Z3, RV-Predict supports the smtlib1 language 
-(currently only for Yices).  Please check the options below.
-
-## Post installation
-
-Add the `bin` directory under the RV-Predict installation directory to your 
-`PATH` environment variable.
+The example below assumes the `bin` directory under the RV-Predict installation 
+directory was added to the `PATH` environment variable after running the 
+installer.
 
 # Running RV-Predict
 
-RV-Predict is designed as a replacement for the `java` command line. 
+The RV-Predict executable is designed such that the users need only to replace the `java` executable in the command line invoking their class/jar file. 
 
 ## Basic Usage
 
-Invoke rv-predict on a class as you would invoke the Java interpreter
+Invoke `rv-predict` on a class as you would invoke the Java interpreter
 
     rv-predict [options] class [args...]        #(to predict races in a class), or
     rv-predict [options] -jar jarfile [args...] #(to predict races in an executable jar)
@@ -39,7 +36,7 @@ where [options] include both RV-Predict and java specific options.
 
 Running command:
 
-    C:\Program Files\RV-Predict> rv-predict -cp benchmarks\bin account.Account
+    rv-predict -cp benchmarks\bin account.Account
 Standard output:
 
     Bank system started
@@ -114,7 +111,7 @@ option when invoking RV-Predict:
     Usage: rv-predict [rv_predict_options] [java_options] <command_line>
         Common options (use -h -v for a complete list):
 
-        --agent             Run only the logging stage [false]
+        --log               Run only the logging stage [false]
         --dir               output directory [null]
     -h, --help              print help info [false]
         --java              optional separator for java arguments [false]
@@ -124,7 +121,7 @@ option when invoking RV-Predict:
 
 
 - the `--dir` option can be used to specify the output directory of the tool.
-- the `--agent` option can used (usualy in conjunction with the `--dir` option 
+- the `--log` option can used (usualy in conjunction with the `--dir` option 
 to tell RV-Predict that the prediction phase should be skipped.
 - the `--predict` option can used (usualy in conjunction with the `--dir` option 
 to tell RV-Predict that the logging phase should be skipped, reusing an already

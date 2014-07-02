@@ -81,7 +81,7 @@ public class NewRVPredict {
 	{
 		try{
 		String fname = "result."+(config.window_size/1000)+"k";
-		out = new PrintWriter(new FileWriter(fname,true));
+		out = new PrintWriter(new FileWriter(config.outdir + "/" + fname,true));
 		
 		String type = "";
 		if(config.rmm_pso)

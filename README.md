@@ -9,7 +9,7 @@ be found based on the observed information.
 # Prerequisites
 
 RV-Predict relies on an SMT solver for solving constraints. Please download and 
-install [Z3](http://z3.codeplex.com) prior to running the RV-Predict installer. Although mostly tested with Z3, RV-Predict supports the SMT-LIB 1 language 
+install [Z3](http://z3.codeplex.com) prior to running the RV-Predict installer. Although mostly tested with Z3, RV-Predict supports the SMT-LIB v1.2 language 
 (currently only for Yices).  Please check the options below.
 
 # Installation
@@ -123,9 +123,9 @@ option when invoking RV-Predict:
 
 
 - the `--dir` option can be used to specify the output directory of the tool.
-- the `--log` option can used (usualy in conjunction with the `--dir` option 
+- the `--log` option can used (usually in conjunction with the `--dir` option 
 to tell RV-Predict that the prediction phase should be skipped.
-- the `--predict` option can used (usualy in conjunction with the `--dir` option 
+- the `--predict` option can used (usually in conjunction with the `--dir` option 
 to tell RV-Predict that the logging phase should be skipped, reusing an already
 logged trace to run the prediction algorithms on.
 - the `--timeout` option controls the total execution time we allow for the 
@@ -144,7 +144,7 @@ combining the `-h` and `-v` options when invoking RV-Predict:
 
 As this list is subject to evolution, we refrain from listing all these 
 options here.  However, we would like to mention `--smtlib1` which instructs
-RV-Predict to format SMT queries in the SMT-LIB 1 language and use Yices 
+RV-Predict to format SMT queries in the SMT-LIB v1.2 language and use Yices 
 (`yices-smt`) to check them.
 
 ----------

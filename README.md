@@ -38,7 +38,7 @@ where [options] include both RV-Predict and java specific options.
 
 Running command:
 
-    C:\Program Files\RV-Predict> rv-predict.bat -cp benchmarks\bin account.Account
+    C:\Program Files\RV-Predict> rv-predict -cp benchmarks\bin account.Account
 Standard output:
 
     Bank system started

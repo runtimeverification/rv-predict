@@ -12,8 +12,7 @@ install [Z3](http://z3.codeplex.com) prior to running the RV-Predict installer. 
 
 #Installation
 
-Download the installer from  
-[RV-Predict website](http://runtimeverification.com/predict/rv-predict-install.jar) and execute `java -jar rv-predict-install.jar`. Then follow the installation instructions.
+Download the installer from [RV-Predict website](http://runtimeverification.com/predict/rv-predict-install.jar) and execute `java -jar rv-predict-install.jar`. Then follow the installation instructions.
 
 Remember to add the `bin` directory under the RV-Predict installation directory to your 
 `PATH` environment variable.

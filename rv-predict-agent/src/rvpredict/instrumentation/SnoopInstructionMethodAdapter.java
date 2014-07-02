@@ -304,7 +304,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	//signature + line number
     	String sig_var = (owner+"."+name).replace("/", ".");
     	int SID = GlobalStateForInstrumentation.instance.getVariableId(sig_var);
-    	String sig_loc = (owner+"|"+methodsignature+"|"+sig_var+"|"+line_cur).replace("/", ".");
+    	String sig_loc = (classname+"|"+methodsignature+"|"+sig_var+"|"+line_cur).replace("/", ".");
     	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
         switch (opcode) {
             case GETSTATIC:

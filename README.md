@@ -1,37 +1,41 @@
 #Short Description
 
-RV-Predict is a dynamic data race detector with two salient features: 
-**precise** and **maximal**. 
-RV-Predict is precise that **it never reports any false alarm**.
-RV-Predict is maximal that **it finds all the possible data races** that can 
-be found based on the observed information.
+RV-Predict is a dynamic data race detector with two salient features:
+*precision* and *maximality*.  That means that RV-Predict reports
+no false races and it finds all the races that can be found based on
+the observed execution trace.
 
 # Prerequisites
 
-RV-Predict relies on an SMT solver for solving constraints. Please download and 
-install [Z3](http://z3.codeplex.com) prior to running the RV-Predict installer. Although mostly tested with Z3, RV-Predict supports the SMT-LIB v1.2 language 
-(currently only for Yices).  Please check the options below.
+RV-Predict relies on an SMT solver for solving constraints.  Please
+download and install [Z3](http://z3.codeplex.com) prior to installing
+RV-Predict.  Although mostly tested with Z3, RV-Predict also supports
+the SMT-LIB v1.2 language (currently only for Yices).  Please check
+the options below.
 
 # Installation
 
-Download the installer from [RV-Predict website](http://runtimeverification.com/predict/rv-predict-install.jar) and execute 
+Download the installer from
+[RV-Predict website](http://runtimeverification.com/predict/rv-predict-install.jar)
+and execute 
 
     java -jar rv-predict-install.jar 
-Then follow the installation instructions. Remember to add the `bin` directory 
+Then follow the installation instructions.  Remember to add the `bin` directory 
 under the RV-Predict installation directory to your `PATH` environment variable.
 
 # Running RV-Predict
 
-RV-Predict is designed as a drop-off replacement for the `java` command line. 
-It is invoked with `rv-predict.bat` on Windows, and `rv-predict` on Linux and UNIX platforms.
+RV-Predict is designed as a drop-off replacement for the `java` command
+line.  It is invoked with `rv-predict.bat` on Windows, and `rv-predict`
+on Linux and UNIX platforms.
 
 ## Basic Usage
 
-Invoke rv-predict on a class as you would invoke the Java interpreter:
+Invoke `rv-predict` on a class as you would invoke the Java interpreter:
 
     rv-predict [options] class [args...]        #(to predict races in a class), or
     rv-predict [options] -jar jarfile [args...] #(to predict races in an executable jar)
-where [options] include both RV-Predict and Java specific options.
+where `[options]` include both RV-Predict and Java specific options.
 
 ### Example
 
@@ -61,11 +65,13 @@ Standard error:
 
 ## Interpreting the results
 
-Upon invoking RV-Predict on a class or a jar file, one should expect a normal 
-execution of the class/jar (albeit slower, as the execution is logged), 
-followed by a list of races (if any) that were discovered as potential during 
-the execution.  Though some races might be benign, all reported races could 
-actually occur under a different thread interleaving.
+Upon invoking RV-Predict on a class or a jar file, one should expect a normal
+execution of the class/jar (albeit slower, as the execution is logged),
+followed by a list of races (if any) that were discovered during the execution.
+Although some races might be benign for a particular program, all reported
+races could actually occur under a different thread interleaving.  Benign
+races can become problematic when the memory model or the platform changes,
+so it is good practice to eliminate them from your code anyway.
 
 For the example above, the `Account` example is executed, and what we observe 
 in the standard output stream is a normal interaction which exhibits no 

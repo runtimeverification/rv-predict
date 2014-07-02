@@ -1,30 +1,31 @@
 #Short Description
 
-RV Predict is a sound dynamic predictive race detection tool that detects 
+RV-Predict is a dynamic predictive race detection tool that detects 
 data races through constraint solving. 
 A salient feature of RV-Predict is that all reported races are verified to be 
-real, i.e., **RV-Predict never reports false alarms**.
+real, i.e., **RV-Predict never reports false alarms**;  another one is its **maximality** — one cannot obtain better coverage when using dynamic analysis 
+without introducing false alarms.
 
 #Installation
 
 Download and execute `rv-predict-install.jar` from the 
-[RV Predict website](http://runtimeverification.com/predict) 
+[RV-Predict website](http://runtimeverification.com/predict) 
 and follow the installation instructions.
 
 ## Prerequisites
 
-RV Predict relies on an SMT solver for solving constraints. Please download and 
-install [Z3](http://z3.codeplex.com) prior to running the RV installer. Although it was mostly tested with Z3, RV Predict supports the smtlib1 language 
+RV-Predict relies on an SMT solver for solving constraints. Please download and 
+install [Z3](http://z3.codeplex.com) prior to running the RV installer. Although it was mostly tested with Z3, RV-Predict supports the smtlib1 language 
 (currently only for Yices).  Please check the options below.
 
 ## Post installation
 
-Add the `bin` directory under the RV Predict installation directory to your 
+Add the `bin` directory under the RV-Predict installation directory to your 
 `PATH` environment variable.
 
-# Running RV Predict
+# Running RV-Predict
 
-RV Predict is designed as a replacement for the `java` command line. 
+RV-Predict is designed as a replacement for the `java` command line. 
 
 ## Basic Usage
 
@@ -62,7 +63,7 @@ Standard error:
 
 ## Interpreting the results
 
-Upon invoking RV Predict on a class or a jar file, one should expect a normal 
+Upon invoking RV-Predict on a class or a jar file, one should expect a normal 
 execution of the class/jar (albeit slower, as the execution is logged), 
 followed by a list of races (if any) that were discovered as potential during 
 the execution.  Though some races might be benign, all reported races could 
@@ -101,13 +102,13 @@ standard output stream.
 ## Fine Tuning the Execution
 
 Although the basic usage should be sufficient for most scenarios, 
-RV Predict provides several options to allow advanced users to tune 
+RV-Predict provides several options to allow advanced users to tune 
 the execution, analysis, and the produced output.
 
 ### Common options
 
 The list of common options can be obtained by using the `-h` or `--help` 
-option when invoking RV Predict:
+option when invoking RV-Predict:
  		
     rv-predict --help
     Usage: rv-predict [rv_predict_options] [java_options] <command_line>
@@ -124,29 +125,29 @@ option when invoking RV Predict:
 
 - the `--dir` option can be used to specify the output directory of the tool.
 - the `--agent` option can used (usualy in conjunction with the `--dir` option 
-to tell RV Predict that the prediction phase should be skipped.
+to tell RV-Predict that the prediction phase should be skipped.
 - the `--predict` option can used (usualy in conjunction with the `--dir` option 
-to tell RV Predict that the logging phase should be skipped, reusing an already
+to tell RV-Predict that the logging phase should be skipped, reusing an already
 logged trace to run the prediction algorithms on.
 - the `--timeout` option controls the total execution time we allow for the 
 prediction phase.
 - the `--java` option can be used as the final RV-specific option, to separate
-the RV parameters from the java ones.  This is especially useful if the command 
+the RV-parameters from the java ones.  This is especially useful if the command 
 line of the program being run uses arguments with the same syntax as 
-the RV Predict ones.
+the RV-Predict ones.
 
 ### Advanced options
 
-The complete list of RV Predict options can be obtained by
-combining the `-h` and `-v` options when invoking RV Predict:
+The complete list of RV-Predict options can be obtained by
+combining the `-h` and `-v` options when invoking RV-Predict:
 
     rv-predict.bat -h -v
 
 As this list is subject to evolution, we refrain from listing all these 
 options here.  However, we would like to mention `--smtlib1` which instructs
-RV Predict to format SMT queries in the smtlib1 language and use Yices 
+RV-Predict to format SMT queries in the smtlib1 language and use Yices 
 (`yices-smt`) to check them.
 
 ----------
 Additional online documentation can be found on the 
-[RV Predict website](http://runtimeverification.com/predict)
+[RV-Predict website](http://runtimeverification.com/predict)

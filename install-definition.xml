@@ -44,17 +44,17 @@
         <res id="CustomLangpack.xml_eng" src="@{rvpredict.temp}/res/izpack-rv-eng-lang.xml"/>
         <res id="LicencePanel.licence" src="@{rvpredict.base}/LICENSE"/>
         <res id="DependencyPanel.z3.html" src="@{rvpredict.temp}/res/rvdependencies/z3.html"/>
-        <res id="HTMLInfoPanel.finish" src="@{rvpredict.temp}/res/rvdependencies/finish.html"/>
+        <res id="HTMLFinishInfoPanel.finish" src="@{rvpredict.temp}/res/rvdependencies/finish.html"/>
     </resources>
 
     <!-- Installer Panel Sequence -->
     <panels>
         <panel classname="LicencePanel"/>
         <panel classname="TargetPanel"/>
-        <panel classname="DependencyPanel" id="z3" jar="@{rvpredict.temp}/res/panels/DependencyPanel.jar"/>
+        <panel classname="DependencyPanel" id="z3" jar="@{rvpredict.temp}/res/panels/RVPanels.jar"/>
         <panel classname="PacksPanel"/>
         <panel classname="InstallPanel"/>
-        <panel classname="HTMLInfoPanel" id="finish"/>
+        <panel classname="HTMLFinishInfoPanel" id="finish" jar="@{rvpredict.temp}/res/panels/RVPanels.jar"/>
     </panels>
 
     <!-- Installable Package Tasks -->

@@ -54,10 +54,10 @@ Standard output:
 
 Standard error:
 
-    Race: account.BankAccount|go([Ljava.lang.String;)V|account.BankAccount.Balance|67 - account.BankAccount|Service(II)V|account.BankAccount.Balance|97
-    Race: account.Account|Service(II)V|account.Account.Bank_Total|98 - account.Account|Service(II)V|account.Account.Bank_Total|98
-    Race: account.Account|checkResult(I)V|account.Account.Bank_Total|75 - account.Account|Service(II)V|account.Account.Bank_Total|98
-    Race: account.Account|checkResult(I)V|account.Account.Bank_Total|76 - account.Account|Service(II)V|account.Account.Bank_Total|98  
+Race: account.Account|go([Ljava.lang.String;)V|account.BankAccount.Balance|67 - account.Account|Service(II)V|account.BankAccount.Balance|97
+Race: account.Account|Service(II)V|account.Account.Bank_Total|98 - account.Account|Service(II)V|account.Account.Bank_Total|98
+Race: account.Account|checkResult(I)V|account.Account.Bank_Total|75 - account.Account|Service(II)V|account.Account.Bank_Total|98
+Race: account.Account|checkResult(I)V|account.Account.Bank_Total|76 - account.Account|Service(II)V|account.Account.Bank_Total|98
 
 ## Interpreting the results
 
@@ -81,7 +81,7 @@ two strings identifying the locations in race, separated by ` - `.
 A location descriptor consists of 4 components separated by `|`.
 These components are:
 
-- `account.BankAccount` — the fully qualified name of the class where the
+- `account.Account` — the fully qualified name of the class where the
 conflict occurred
 - `go([Ljava.lang.String;)V` — the signature of the method in which the 
 conflict occurred 
@@ -90,9 +90,10 @@ involved in the race
 - `67` — the line number for this location
 
 Thus, the first race description can be read as follows:
-> There is a race between the `Balance` field of the `account.BankAccount`
-> class accessed in method `go` at line `67` and the access of the same field 
-> in method `Service` at line `97`.
+> There is a race between the `Balance` field of the `BankAccount`
+> class accessed in method `go` of the `Account` class at line `67` 
+> and the access of the same field in method `Service` of class 
+> `Account` at line `97`.
 
 If no races are found, then the message `No races found.` is appended to the
 standard output stream.

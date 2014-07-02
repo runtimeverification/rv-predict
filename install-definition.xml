@@ -55,7 +55,6 @@
         <panel classname="PacksPanel"/>
         <panel classname="InstallPanel"/>
         <panel classname="HTMLInfoPanel" id="finish"/>
-        <panel classname="FinishPanel"/>
     </panels>
 
     <!-- Installable Package Tasks -->

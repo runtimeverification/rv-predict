@@ -48,13 +48,11 @@ import java.util.jar.Manifest;
 public class Configuration {
 
     public static final String PROGRAM_NAME = "rv-predict";
-    public static final String JAR = "-jar";
-    public static final String CP = "-cp";
     @Parameter(description="<command_line>")
     public List<String> command_line;
 
-	final static String opt_rmm_pso = "--pso";//for testing only
-    @Parameter(names = opt_rmm_pso, description = "PSO memory model", hidden = true)
+//	final static String opt_rmm_pso = "--pso";//for testing only
+//    @Parameter(names = opt_rmm_pso, description = "PSO memory model", hidden = true)
     public boolean rmm_pso;
 
 	final static String opt_max_len = "--maxlen";
@@ -62,8 +60,8 @@ public class Configuration {
     @Parameter(names=opt_max_len, description = "window size", hidden = true)
     public long window_size = 1000;
 
-	final static String opt_no_schedule = "--noschedule";
-    @Parameter(names=opt_no_schedule, description = "not report schedule", hidden = true)
+//	final static String opt_no_schedule = "--noschedule";
+//    @Parameter(names=opt_no_schedule, description = "not report schedule", hidden = true)
     //ok, let's make noschedule by default
     public boolean noschedule = true;
 
@@ -79,8 +77,8 @@ public class Configuration {
     @Parameter(names=opt_allrace, description = "check all races", hidden = true)
     public boolean allrace;
 
-	final static String opt_all_consistent = "--allconsistent";
-    @Parameter(names = opt_all_consistent, description = "require all read-write consistent", hidden = true)
+//	final static String opt_all_consistent = "--allconsistent";
+//    @Parameter(names = opt_all_consistent, description = "require all read-write consistent", hidden = true)
     public boolean allconsistent;
 
 //	final static String opt_constraint_outdir = "--outdir";
@@ -88,7 +86,7 @@ public class Configuration {
     public String constraint_outdir;
 
  	public final static String opt_outdir = "--dir";
-    @Parameter(names = opt_outdir, description = "output directory", hidden = true)
+    @Parameter(names = opt_outdir, description = "output directory")
     public String outdir = null;
 
     public final static String opt_table_name = "--table";
@@ -104,7 +102,7 @@ public class Configuration {
     public long solver_memory = 8000;
 
 	final static String opt_timeout = "--timeout";
-    @Parameter(names = opt_timeout, description = "rvpredict timeout in seconds")
+    @Parameter(names = opt_timeout, description = "rv-predict timeout in seconds")
     public long timeout = 3600;
 
 	final static String opt_smtlib1 = "--smtlib1";
@@ -145,10 +143,10 @@ public class Configuration {
 
 
     public final static String opt_sharing_only = "--detectSharingOnly";
-    @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables.")
+    @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables.", hidden = true)
     public boolean agentOnlySharing;
 
-    public int parseArguments(String[] args) {
+    public void parseArguments(String[] args) {
         String pathSeparator = System.getProperty("path.separator");
         String fileSeparator = System.getProperty("file.separator");
         JCommander jc = new JCommander(this);
@@ -222,61 +220,12 @@ public class Configuration {
                 usage(jc);
                 System.exit(1);
             }
-            idxCp = command_line.indexOf(CP);
-            int idxJar = command_line.indexOf(JAR);
-            if (idxJar != -1 && (idxCp == -1 || idxJar < idxCp)) {// jar exists, and if cp exists too, jar is before cp
-                command_line.set(idxJar, CP); // replace -jar with -cp
-                idxCp = idxJar;
-                String appJar = command_line.get(idxJar + 1);
-                File file = new File(appJar);
-                if (!file.exists()) {
-                    System.err.println("Error: Unable to access jarfile " + appJar);
-                    System.exit(1);
-                }
-                String appClassPath = appJar;
-                try {
-                    JarFile jarFile = new JarFile(appJar);
-                    Manifest manifest = jarFile.getManifest();
-                    Attributes mainAttributes = manifest.getMainAttributes();
-                    String mainClass = mainAttributes.getValue("Main-Class");
-                    if (tableName == null) {
-                        tableName = mainClass.replace(".", "_");
-                    }
-                    if (mainClass == null) {
-                        System.err.println("Error: no main manifest attribute, in " + appJar);
-                        System.exit(1);
-                    }
-                    command_line.add(idxJar + 2, mainClass);
-                    String classPath = mainAttributes.getValue("Class-Path");
-                    String basepath = file.getParent();
-                    if (classPath != null) {
-                        String[] uris = classPath.split(" ");
-                        for (String uri : uris) {
-                            String decodedPath = URLDecoder.decode(uri, "UTF-8");
-                            appClassPath += pathSeparator + basepath + fileSeparator + decodedPath;
-                        }
-                    }
-                } catch (IOException e) {
-                    System.err.println("Error: Unexpected I/O error while reading jar file " + appJar + ".");
-                    System.err.println(e.getMessage());
-                    System.exit(1);
-                }
-                argList.set(idxCp + 1, appClassPath);
-            }
         } else {
             command_line.addAll(argList);
-        }
-        if (idxCp == -1) { // no classpath argument --- will use environment classpath as a base
-            command_line.add(0, "-cp");
-            String systemClasspath = System.getenv("CLASSPATH");
-            if (systemClasspath == null) systemClasspath = "";
-            command_line.add(1, systemClasspath);
-            idxCp = 0;
         }
         if (tableName == null) {
             tableName = "main";
         }
-        return idxCp;
     }
 
     public void usage(JCommander jc) {
@@ -303,17 +252,19 @@ be used explicitly for disambiguation.
 
         // Computing usage
         max_option_length++;
-        String usageHeader = "Usage: " + PROGRAM_NAME + " [java_options] [rv_predict_options] " + jc.getMainParameterDescription() + "\n";
+        String usageHeader = "Usage: " + PROGRAM_NAME + " [rv_predict_options] [java_options] "
+                + jc.getMainParameterDescription() + "\n";
         String usage = usageHeader
                 + "  Options:" + "\n";
         String shortUsage = usageHeader
-                + "  Common options (use -v for a complete list):" + "\n";
+                + "  Common options (use -h -v for a complete list):" + "\n";
 
         Map<String, String> usageMap = new TreeMap<String, String>();
         Map<String, String> shortUsageMap = new TreeMap<String, String>();
         for (ParameterDescription parameterDescription : jc.getParameters()) {
                 String description = spaces(4) + parameterDescription.getNames()
-                        + spaces(max_option_length - parameterDescription.getNames().length()) + parameterDescription.getDescription()
+                        + spaces(max_option_length - parameterDescription.getNames().length())
+                        + parameterDescription.getDescription()
                         + " [" + parameterDescription.getDefault() + "]";
                 usageMap.put(parameterDescription.getLongestName(), description);
             if (!parameterDescription.getParameter().hidden()) {

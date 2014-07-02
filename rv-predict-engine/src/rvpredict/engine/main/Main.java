@@ -17,7 +17,7 @@ public class Main {
 
         Configuration config = new Configuration();
 
-        int idxCp = config.parseArguments(args);
+         config.parseArguments(args);
         if (config.command_line.isEmpty()) {
             System.err.println("You must provide a class or a jar to run.");
             System.exit(1);
@@ -54,9 +54,6 @@ public class Main {
             String libPath = basePath + separator + "lib" + separator;
             String iagent = libPath + "iagent.jar";
             String rvAgent = libPath + "rv-predict-agent.jar";
-            String classpath = config.command_line.get(idxCp + 1);
-            classpath = rvAgent + System.getProperty("path.separator") + classpath;
-            config.command_line.set(idxCp + 1, classpath);
             String sharingAgentOptions = config.opt_outdir + " " + escapeString(config.outdir);
             sharingAgentOptions += " " + config.opt_table_name + " " + escapeString(config.tableName);
             String noSharingAgentOptions = sharingAgentOptions;

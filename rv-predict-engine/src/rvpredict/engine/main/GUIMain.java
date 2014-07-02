@@ -1144,7 +1144,7 @@ public class GUIMain {
 //    String cp = tmpDir.getAbsolutePath() + File.pathSeparator + baseCP
 //              + File.pathSeparator + rootPath + File.pathSeparator + cpAppend;
 //
-      String[] cmd = getRVCommand("--agent");
+      String[] cmd = getRVCommand("--log");
 
     System.out.println("**************************************************"
                      + "**************************************************"

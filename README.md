@@ -54,10 +54,10 @@ Standard output:
 
 Standard error:
 
-Race: account.Account|go([Ljava.lang.String;)V|account.BankAccount.Balance|67 - account.Account|Service(II)V|account.BankAccount.Balance|97
-Race: account.Account|Service(II)V|account.Account.Bank_Total|98 - account.Account|Service(II)V|account.Account.Bank_Total|98
-Race: account.Account|checkResult(I)V|account.Account.Bank_Total|75 - account.Account|Service(II)V|account.Account.Bank_Total|98
-Race: account.Account|checkResult(I)V|account.Account.Bank_Total|76 - account.Account|Service(II)V|account.Account.Bank_Total|98
+    Race: account.Account|go([Ljava.lang.String;)V|account.BankAccount.Balance|67 - account.Account|Service(II)V|account.BankAccount.Balance|97
+    Race: account.Account|Service(II)V|account.Account.Bank_Total|98 - account.Account|Service(II)V|account.Account.Bank_Total|98
+    Race: account.Account|checkResult(I)V|account.Account.Bank_Total|75 - account.Account|Service(II)V|account.Account.Bank_Total|98
+    Race: account.Account|checkResult(I)V|account.Account.Bank_Total|76 - account.Account|Service(II)V|account.Account.Bank_Total|98
 
 ## Interpreting the results
 

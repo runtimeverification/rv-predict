@@ -144,7 +144,7 @@ combining the `-h` and `-v` options when invoking RV-Predict:
 
 As this list is subject to evolution, we refrain from listing all these 
 options here.  However, we would like to mention `--smtlib1` which instructs
-RV-Predict to format SMT queries in the smtlib1 language and use Yices 
+RV-Predict to format SMT queries in the SMT-LIB 1 language and use Yices 
 (`yices-smt`) to check them.
 
 ----------

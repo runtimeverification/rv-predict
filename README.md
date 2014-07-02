@@ -90,7 +90,7 @@ involved in the race
 - `67` — the line number for this location
 
 Thus, the first race description can be read as follows:
-> There is a race between the `Ballance` field of the `account.BankAccount`
+> There is a race between the `Balance` field of the `account.BankAccount`
 > class accessed in method `go` at line `67` and the access of the same field 
 > in method `Service` at line `97`.
 

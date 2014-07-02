@@ -66,7 +66,8 @@ public class Config {
         try {
             Properties properties = new Properties();
 
-    		properties.load(this.getClass().getClassLoader()
+           
+    		properties.load( ClassLoader.getSystemClassLoader()//this.getClass().getClassLoader()
     	            .getResourceAsStream(propFile));
     		
             verbose = properties.getProperty("rv.verbose","false").equals("true");

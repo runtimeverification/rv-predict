@@ -10,10 +10,6 @@
         <run-privileged condition="izpack.windowsinstall|izpack.macinstall" />
     </info>
 
-    <langpack iso3="eng">
-        <str id="FinishPanel.success" txt="WHEE"/>
-    </langpack>
-
     <variables>
         <!-- Z3 Dependency Info (either of z3 or z3.exe on PATH) -->
         <variable name="DependencyPanel.z3.site" value="https://z3.codeplex.com/releases"/>
@@ -24,9 +20,9 @@
     </variables>
 
     <!-- GUI-Specific Preferences -->
-    <guiprefs width="740" height="600" resizable="yes">
+    <guiprefs width="580" height="650" resizable="yes">
         <modifier key="useHeadingPanel" value="yes"/>
-        <modifier key="useHeadingForSummary" value="yes"/>
+        <modifier key="useHeadingForSummary" value="no"/>
         <modifier key="headingImageOnLeft" value="yes"/>
         <modifier key="headingLineCount" value="2"/>
         <modifier key="headingFontSize" value="1.5"/>
@@ -45,6 +41,7 @@
         <res id="LicencePanel.licence" src="@{rvpredict.base}/LICENSE"/>
         <res id="DependencyPanel.z3.html" src="@{rvpredict.temp}/res/rvdependencies/z3.html"/>
         <res id="HTMLFinishInfoPanel.finish" src="@{rvpredict.temp}/res/rvdependencies/finish.html"/>
+        <res id="Heading.image" src="@{rvpredict.temp}/res/images/predict.png"/>
     </resources>
 
     <!-- Installer Panel Sequence -->

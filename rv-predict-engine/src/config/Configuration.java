@@ -118,7 +118,7 @@ public class Configuration {
     @Parameter(names = opt_optlog, description = "optimize logging size", hidden = true)
     public boolean optlog;
 
-    public final static String opt_only_log = "--agent";
+    public final static String opt_only_log = "--log";
     @Parameter(names = opt_only_log, description = "Run only the logging stage")
     public boolean agent;
 

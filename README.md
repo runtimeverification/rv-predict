@@ -1,36 +1,37 @@
 #Short Description
 
-RV-Predict is a dynamic predictive race detection tool that detects 
-data races through constraint solving. 
-A salient feature of RV-Predict is that all reported races are verified to be 
-real, i.e., **RV-Predict never reports false alarms**;  another one is its **maximality** — one cannot obtain better coverage when using dynamic analysis 
-without introducing false alarms.
+RV-Predict is a dynamic data race detector with two salient features: 
+**precise** and **maximal**. 
+RV-Predict is precise that **it never reports any false alarm**.
+RV-Predict is maximal that **it finds all the possible data races** that can 
+be found based on the observed information.
 
-#Installation
+# Prerequisites
 
-**Prerequisite:** RV-Predict relies on an SMT solver for solving 
-constraints. We assume below that [Z3](http://z3.codeplex.com) was installed 
-and added to the `PATH` prior to running the RV installer.  
+RV-Predict relies on an SMT solver for solving constraints. Please download and 
+install [Z3](http://z3.codeplex.com) prior to running the RV-Predict installer. Although mostly tested with Z3, RV-Predict supports the SMT-LIB 1 language 
+(currently only for Yices).  Please check the options below.
 
-Download and execute `rv-predict-install.jar` from the 
-[RV-Predict website](http://runtimeverification.com/predict) 
-and follow the installation instructions.
+# Installation
 
-The example below assumes the `bin` directory under the RV-Predict installation 
-directory was added to the `PATH` environment variable after running the 
-installer.
+Download the installer from [RV-Predict website](http://runtimeverification.com/predict/rv-predict-install.jar) and execute 
+
+    java -jar rv-predict-install.jar 
+Then follow the installation instructions. Remember to add the `bin` directory 
+under the RV-Predict installation directory to your `PATH` environment variable.
 
 # Running RV-Predict
 
-The RV-Predict executable is designed such that the users need only to replace the `java` executable in the command line invoking their class/jar file. 
+RV-Predict is designed as a drop-off replacement for the `java` command line. 
+It is invoked with `rv-predict.bat` on Windows, and `rv-predict` on Linux and UNIX platforms.
 
 ## Basic Usage
 
-Invoke `rv-predict` on a class as you would invoke the Java interpreter
+Invoke rv-predict on a class as you would invoke the Java interpreter:
 
     rv-predict [options] class [args...]        #(to predict races in a class), or
     rv-predict [options] -jar jarfile [args...] #(to predict races in an executable jar)
-where [options] include both RV-Predict and java specific options.
+where [options] include both RV-Predict and Java specific options.
 
 ### Example
 
@@ -68,7 +69,7 @@ actually occur under a different thread interleaving.
 
 For the example above, the `Account` example is executed, and what we observe 
 in the standard output stream is a normal interaction which exhibits no 
-datarace, also indicated by the fact that the records match at the end of 
+data race, also indicated by the fact that the records match at the end of 
 the session.
 
 The standard error stream output shows the results of the analysis performed 
@@ -77,7 +78,7 @@ occurred if the thread scheduling would have been different.
 
 A race description is introduced by the `Race: ` keyword, followed by the 
 two strings identifying the locations in race, separated by ` - `. 
-A location descriptor consists of 4 components separated by `|`.  
+A location descriptor consists of 4 components separated by `|`.
 These components are:
 
 - `account.BankAccount` — the fully qualified name of the class where the
@@ -114,7 +115,7 @@ option when invoking RV-Predict:
         --log               Run only the logging stage [false]
         --dir               output directory [null]
     -h, --help              print help info [false]
-        --java              optional separator for java arguments [false]
+        --java              optional separator for Java arguments [false]
         --predict           Run only the prediction stage [false]
         --timeout           rv-predict timeout in seconds [3600]
     -v, --verbose           generate more verbose output [false]
@@ -129,7 +130,7 @@ logged trace to run the prediction algorithms on.
 - the `--timeout` option controls the total execution time we allow for the 
 prediction phase.
 - the `--java` option can be used as the final RV-specific option, to separate
-the RV-parameters from the java ones.  This is especially useful if the command 
+the RV parameters from the Java ones.  This is especially useful if the command 
 line of the program being run uses arguments with the same syntax as 
 the RV-Predict ones.
 
@@ -138,7 +139,7 @@ the RV-Predict ones.
 The complete list of RV-Predict options can be obtained by
 combining the `-h` and `-v` options when invoking RV-Predict:
 
-    rv-predict.bat -h -v
+    rv-predict -h -v
 
 As this list is subject to evolution, we refrain from listing all these 
 options here.  However, we would like to mention `--smtlib1` which instructs

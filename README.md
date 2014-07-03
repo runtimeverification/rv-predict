@@ -14,7 +14,7 @@ technology underlying RV-Predict is best explained in this
 RV-Predict relies on an SMT solver for solving constraints.  Please
 download and install [Z3](http://z3.codeplex.com) prior to installing
 RV-Predict.  Although mostly tested with Z3, RV-Predict also supports
-the SMT-LIB v1.2 language (currently only for Yices).  Please check
+the SMT-LIB v1.2 language (currently only through Yices).  Please see
 the options below.
 
 # Installation
@@ -152,7 +152,7 @@ combining the `-h` and `-v` options when invoking RV-Predict:
 
     rv-predict -h -v
 
-As this list is subject to evolution, we refrain from listing all these 
+As this list is always evolving, we refrain from listing all these 
 options here.  However, we would like to mention `--smtlib1` which instructs
 RV-Predict to format SMT queries in the SMT-LIB v1.2 language and use Yices 
 (`yices-smt`) to check them.

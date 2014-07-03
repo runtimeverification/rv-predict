@@ -106,7 +106,7 @@ public class Configuration {
     public long timeout = 3600;
 
 	final static String opt_smtlib1 = "--smtlib1";
-    @Parameter(names = opt_smtlib1, description = "use constraint format smtlib v1.2", hidden = true)
+    @Parameter(names = opt_smtlib1, description = "use constraint format SMT-LIB v1.2", hidden = true)
     public boolean smtlib1;
 
 	final static String opt_optrace = "--optrace";

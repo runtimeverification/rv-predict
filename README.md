@@ -11,7 +11,9 @@ technology underlying RV-Predict is best explained in this
 
 # Prerequisites
 
-RV-Predict relies on an SMT solver for solving constraints.  Please
+RV-Predict requires Java Runtime Edition 1.7 or higher. 
+
+Moreover, RV-Predict relies on an SMT solver for solving constraints.  Please
 download and install [Z3](http://z3.codeplex.com) prior to installing
 RV-Predict.  Although mostly tested with Z3, RV-Predict also supports
 the SMT-LIB v1.2 language (currently only through Yices).  Please see

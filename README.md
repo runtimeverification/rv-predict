@@ -11,7 +11,7 @@ technology underlying RV-Predict is best explained in this
 
 # Prerequisites
 
-RV-Predict requires Java Runtime Edition 1.7 or higher. 
+RV-Predict requires Java Runtime Environment 1.7 or higher. 
 
 Moreover, RV-Predict relies on an SMT solver for solving constraints.  Please
 download and install [Z3](http://z3.codeplex.com) prior to installing

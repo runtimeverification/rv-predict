@@ -1,9 +1,13 @@
 #Short Description
 
-RV-Predict is a dynamic data race detector with two salient features:
-*precision* and *maximality*.  That means that RV-Predict reports
-no false races and it finds all the races that can be found based on
-the observed execution trace.
+RV-Predict is the only dynamic data race detector that is both sound and 
+maximal. 
+*Dynamic* means that it *executes* the program in order to extract an execution 
+trace to analyze. *Sound* means that it only reports races which are real (i.e., 
+no false positives). And *maximal* means that it finds all the races that can be 
+found by any other sound race detector analyzing the same execution trace. The 
+technology underlying RV-Predict is best explained in this
+[PLDI'14 paper](http://dx.doi.org/10.1145/2594291.2594315). 
 
 # Prerequisites
 

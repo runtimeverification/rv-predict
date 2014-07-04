@@ -56,8 +56,8 @@
     <packs>
         <pack name="RV-Predict" required="yes" installGroups="New Application" >
             <description>Required RV-Predict libraries and executables.</description>
-            <file src="@{rvpredict.base}/README" targetdir="$INSTALL_PATH"/>
             <file src="@{rvpredict.base}/LICENSE" targetdir="$INSTALL_PATH"/>
+            <singlefile src="@{rvpredict.base}/README.md" target="$INSTALL_PATH/README"/>
             <fileset dir="@{rvpredict.bin}" casesensitive="yes" targetdir="$INSTALL_PATH/bin">
                 <exclude name="log/*"/>
             </fileset>

@@ -2,6 +2,7 @@
  
  <!-- set global properties for this bin -->
   <property name="rvpredict.version" value="0.1"/>
+  <property name="rvpredict.installer.version" value="0.1"/>
   <property name="rvpredict.lib" location="lib"/>
   <property name="rvpredict.dist" location="dist"/>
   <property name="rvpredict.temp" location="tmp"/>
@@ -17,14 +18,11 @@
   <property name="rvpredict.engine.src" location="rv-predict-engine/src"/>
   <property name="rvpredict.engine.src.tests" location="rv-predict-engine/tests"/>
   <property name="rvpredict.agent.src" location="rv-predict-agent/src"/>
-  <property name="rvpredict.installer.src" location="rv-predict-installer/src"/>
   <property name="rvpredict.engine.lib" location="rv-predict-engine/lib"/>
   <property name="rvpredict.agent.lib" location="rv-predict-agent/lib"/>
   <property name="rvpredict.engine.bin" location="rv-predict-engine/bin"/>
   <property name="rvpredict.agent.bin" location="rv-predict-agent/bin"/>
-  <property name="rvpredict.installer.bin" location="rv-predict-installer/bin"/>
   <property name="rvpredict.external.lib" location="lib/external"/>
-  <property name="rvpredict.installer.res" location="rv-predict-installer/res"/>
 
   <path id="rv-predict-agent.classpath">
     <pathelement location="${rvpredict.agent.bin}"/>
@@ -43,14 +41,6 @@
   <property name="test.bin" location="tests/bin"/>
   <property name="benchmark.src" location="benchmarks/src"/>
   <property name="benchmark.bin" location="benchmarks/bin"/>
-
-  <property name="install.lib" location="izpack/lib"/>
-  <path id="rv-predict-installer.classpath">
-    <pathelement location="${install.lib}/standalone-compiler.jar"/>
-  </path>
-
-  <taskdef name="izpack" classpath="${install.lib}/standalone-compiler.jar"
-    classname="com.izforge.izpack.ant.IzPackTask"/>
 
   <target name="all" depends="rvpredict-all"
           description="compile rvpredict and benchmarks" />
@@ -131,14 +121,18 @@
 
     <target name="installer" depends="rvpredict-agent,rvpredict-engine">
         <!-- Run installer build -->
+        <property name="install.jarfile" value="rv-install-${rvpredict.installer.version}.jar" />
         <echo message="Running IzPack to build the installer..."/>
         <mkdir dir="${rvpredict.temp}"/>
         <mkdir dir="${rvpredict.dist}"/>
-        <mkdir dir="${rvpredict.installer.bin}"/>
-        <javac source="1.6" target="1.6" srcdir="${rvpredict.installer.src}" destdir="${rvpredict.installer.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="false">
-            <classpath refid="rv-predict-installer.classpath"/>
-        </javac>
-        <jar destfile="${rvpredict.temp}/DependencyPanel.jar" basedir="${rvpredict.installer.bin}"/>
+        <echo message="Fetching RV installer base..."/>
+        <get src="http://runtimeverification.com/dist/${install.jarfile}" dest="${rvpredict.temp}/${install.jarfile}"/>
+        <unzip src="${rvpredict.temp}/${install.jarfile}" dest="${rvpredict.temp}">
+            <patternset>
+                <include name="res/**"/>
+            </patternset>
+        </unzip>
+        <taskdef name="izpack" classpath="${rvpredict.temp}/${install.jarfile}" classname="com.izforge.izpack.ant.IzPackTask"/>
         <izpack input="install-definition.xml"
           output="${rvpredict.dist}/rv-predict-install.jar"
           installerType="standard"
@@ -149,12 +143,11 @@
         <!-- Clean working directory -->
         <echo message="Cleaning up working directory..."/>
         <delete dir="${rvpredict.temp}" quiet="true" includeemptydirs="true"/>
-        <delete dir="${rvpredict.installer.bin}"/>
         <echo message="Done."/>
     </target>
 
   <target name="init-benchmarks"
-          description="compile the benchmark" depends="installer" >
+          description="compile the benchmark" >
         <!-- Create the bin directory structure used by compile -->
     <mkdir dir="${benchmark.bin}"/>
         <!-- Compile the java code from ${benchmark.src} into ${benchmark.bin} -->
@@ -162,7 +155,7 @@
                      <copy file="${benchmark.src}/hitData" todir="${benchmark.bin}"/>
       </target>
 
-  <target name="init-tests" depends="installer">
+  <target name="init-tests">
       <!-- Create the time stamp -->
     <tstamp/>
         <!-- Create the bin directory structure used by compile -->

@@ -61,8 +61,8 @@ public class Main {
 
             List<String> appArgList = new ArrayList<String>();
             appArgList.add(java);
-            int agentIds = appArgList.size();
             appArgList.add("-Xbootclasspath/a:" + rvAgent);
+            int agentIds = appArgList.size();
             if (config.optlog || config.agentOnlySharing) {
                 appArgList.add("-javaagent:" + iagent + "=" + sharingAgentOptions);
             } else {

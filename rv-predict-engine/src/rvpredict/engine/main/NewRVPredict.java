@@ -574,7 +574,7 @@ public class NewRVPredict {
 							{
 								//real race found
 								
-								report("Race: "+race,MSGTYPE.REAL);//report it
+								report(race.toString(),MSGTYPE.REAL);//report it
 								if(config.allrace)violations.add(race2);//save it to violations
 								else violations.add(race);
 								
@@ -596,7 +596,7 @@ public class NewRVPredict {
 											Race r=new Race(trace.getStmtSigIdMap().get(node1.getID()),
 													trace.getStmtSigIdMap().get(node2.getID()),node1.getID(),node2.getID() );
 										if(violations.add(r))
-											report("Race: "+r,MSGTYPE.REAL);
+											report(r.toString(),MSGTYPE.REAL);
 										
 										}
 									}
@@ -659,7 +659,7 @@ public class NewRVPredict {
 								//if we arrive here, it means we find a case where 
 								//lockset+happens-before could produce false positive
 								if(potentialviolations.add(race2))
-									report("Potential Race: "+race2,MSGTYPE.POTENTIAL);
+									report("Potential "+race2,MSGTYPE.POTENTIAL);
 
 								if(equiMap.containsKey(rnode)||equiMap.containsKey(wnode))
 								{
@@ -680,7 +680,7 @@ public class NewRVPredict {
 											ExactRace r = new ExactRace(trace.getStmtSigIdMap().get(node1.getID()),
 													trace.getStmtSigIdMap().get(node2.getID()),(int)node1.getGID(),(int)node2.getGID() );
 											if(potentialviolations.add(r))
-												report("Potential Race: "+r,MSGTYPE.POTENTIAL);
+												report("Potential "+r,MSGTYPE.POTENTIAL);
 											
 										}
 									}
@@ -748,7 +748,7 @@ public class NewRVPredict {
 								//TODO: NEED to ensure that the other non-dependent nodes by other threads are not included
 								if(engine.isRace(wnode1, wnode2,sb))
 								{
-									report("Race: "+race,MSGTYPE.REAL);
+									report(race.toString(),MSGTYPE.REAL);
 
 									if(config.allrace)violations.add(race2);//save it to violations
 									else violations.add(race);									
@@ -771,7 +771,7 @@ public class NewRVPredict {
 												Race r=new Race(trace.getStmtSigIdMap().get(node1.getID()),
 														trace.getStmtSigIdMap().get(node2.getID()),node1.getID(),node2.getID() );
 											if(violations.add(r))
-												report("Race: "+r,MSGTYPE.REAL);
+												report(r.toString(),MSGTYPE.REAL);
 												
 
 											}
@@ -828,7 +828,7 @@ public class NewRVPredict {
 								{
 									//if we arrive here, it means we find a case where lockset+happens-before could produce false positive
 									if(potentialviolations.add(race2))
-										report("Potential Race: "+race2,MSGTYPE.POTENTIAL);
+										report("Potential "+race2,MSGTYPE.POTENTIAL);
 									
 									if(equiMap.containsKey(wnode1)||equiMap.containsKey(wnode2))
 									{
@@ -848,7 +848,7 @@ public class NewRVPredict {
 												ExactRace r = new ExactRace(trace.getStmtSigIdMap().get(node1.getID()),
 														trace.getStmtSigIdMap().get(node2.getID()),(int)node1.getGID(),(int)node2.getGID() );
 												if(potentialviolations.add(r))
-													report("Potential Race: "+r,MSGTYPE.POTENTIAL);
+													report("Potential "+r,MSGTYPE.POTENTIAL);
 												
 
 											}

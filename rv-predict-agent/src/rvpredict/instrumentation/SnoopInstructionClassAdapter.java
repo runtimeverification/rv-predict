@@ -11,6 +11,7 @@ import rvpredict.config.Config;
 public class SnoopInstructionClassAdapter extends ClassVisitor {
 	
 	private String classname;
+    private String source;
 	
     public SnoopInstructionClassAdapter(ClassVisitor cv) {
         super(Opcodes.ASM5,cv);
@@ -25,8 +26,16 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
         classname = name;
         if(Config.instance.verbose)
         System.out.println("classname: "+classname);
-    } 
-    
+    }
+
+    @Override
+    public void visitSource(String source, String debug) {
+        this.source = source;
+        if (cv != null) {
+            cv.visitSource(source, debug);
+        }
+    }
+
     public FieldVisitor visitField(int access, String name, String desc,
             String signature, Object value) {
 		String sig_var = (classname+"."+name).replace("/", ".");
@@ -67,7 +76,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
         			length++;
         	}
 //            System.out.println("******************* "+((access & Opcodes.ACC_STATIC)>0));
-            mv = new SnoopInstructionMethodAdapter(mv,classname,name,name+desc,name.equals("<init>")||name.equals("<clinit>"), isSynchronized,isStatic,length);
+            mv = new SnoopInstructionMethodAdapter(mv,source, classname,name,name+desc,name.equals("<init>")||name.equals("<clinit>"), isSynchronized,isStatic,length);
            
         }
 

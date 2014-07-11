@@ -98,8 +98,48 @@ public class Race implements IViolation{
 	@Override
 	public String toString()
 	{
-		return node1+" - "+node2;
+        // Assuming
+        // String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+sig_var+"|"+line_cur).replace("/", ".");
+        Location loc1 = new Location(node1);
+        String result = "Race on field " + loc1.varSignature + " between";
+        if (node1 == node2) {
+            result += " two instances of:\n" +
+                    "\t" + loc1 + "\n";
+        } else {
+            Location loc2 = new Location(node2);
+            result += ":\n" +
+                    "\t" + loc1 + "\n" +
+                    "\t" + loc2 + "\n";
+        }
+        return result;
 	}
+
+    class Location {
+        String source;
+        String className;
+        String methodName;
+        String methodSignature;
+        String varSignature;
+        String line;
+
+        Location(String descriptor) {
+            String[] fields = descriptor.split("\\|");
+            source = fields[0];
+            className = fields[1];
+            int par = fields[2].indexOf('(');
+            methodName = fields[2].substring(0, par);
+            methodSignature = fields[2].substring(par);
+            varSignature = fields[3];
+            line = fields[4];
+        }
+
+        @Override
+        public String toString() {
+            return className + "." + methodName + "(" + source + ":" + line + ")";
+        }
+    }
+
+
 	
 
 }

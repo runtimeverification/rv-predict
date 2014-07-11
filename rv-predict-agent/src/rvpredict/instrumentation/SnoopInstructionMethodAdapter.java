@@ -27,13 +27,15 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
 
     boolean isInit,isSynchronized,isStatic;
     String classname;
+    String source;
     String methodname;
     String methodsignature;
     private int maxindex_cur;//current max index of local variables 
     private int line_cur;
     
-    public SnoopInstructionMethodAdapter(MethodVisitor mv, String cname,String mname, String msignature,boolean isInit, boolean isSynchronized, boolean isStatic, int argSize) {
+    public SnoopInstructionMethodAdapter(MethodVisitor mv, String source, String cname, String mname, String msignature, boolean isInit, boolean isSynchronized, boolean isStatic, int argSize) {
         super(Opcodes.ASM5,mv);
+        this.source = source == null ? "Unknown" : source;
         this.classname = cname;
         this.methodname = mname;
         this.methodsignature = msignature;
@@ -214,7 +216,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
         		mv.visitMethodInsn(opcode, owner, name, desc); 
         	else
         	{
-            	String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+            	String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
             	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
         		
 	        	if(name.equals("start") &&desc.equals("()V")) {
@@ -304,7 +306,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	//signature + line number
     	String sig_var = (owner+"."+name).replace("/", ".");
     	int SID = GlobalStateForInstrumentation.instance.getVariableId(sig_var);
-    	String sig_loc = (classname+"|"+methodsignature+"|"+sig_var+"|"+line_cur).replace("/", ".");
+    	String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+sig_var+"|"+line_cur).replace("/", ".");
     	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
         switch (opcode) {
             case GETSTATIC:
@@ -669,7 +671,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	case AALOAD:
     		if(!isInit)
     		{
-    			String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    			String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
     	    	
     			if(Config.detectSharingOnly)
@@ -732,7 +734,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	case IALOAD:
     		if(!isInit)
     		{
-    			String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    			String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
     	    	
     			if(Config.detectSharingOnly)
@@ -791,7 +793,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	case FALOAD:
     		if(!isInit)
     		{
-    			String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    			String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
     	    	
     			if(Config.detectSharingOnly)
@@ -852,7 +854,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	case DALOAD:
     		if(!isInit)
     		{
-    			String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    			String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
     	    	
     			if(Config.detectSharingOnly)
@@ -912,7 +914,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	case LALOAD:
     		if(!isInit)
     		{
-    			String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    			String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
     	    	
     			if(Config.detectSharingOnly)
@@ -971,7 +973,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     		break;
     	case AASTORE:
     	{
-			String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+			String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
 	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 	    	
 			if(Config.detectSharingOnly)
@@ -1052,7 +1054,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	case SASTORE:
     	case IASTORE:	
     	{
-    		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
 	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 	    	
 			if(Config.detectSharingOnly)
@@ -1130,7 +1132,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	}
     	case FASTORE:
     	{
-    		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
 	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 	    	
 			if(Config.detectSharingOnly)
@@ -1208,7 +1210,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	}
     	case DASTORE:
     	{
-    		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
 	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 	    	
 			if(Config.detectSharingOnly)
@@ -1284,7 +1286,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	}
     	case LASTORE:
     	{
-    		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+    		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
 	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 	    	
 			if(Config.detectSharingOnly)
@@ -1361,7 +1363,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	case MONITORENTER:{
     		if(!Config.detectSharingOnly)
     		{
-        		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+        		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
     	    	
 	    		mv.visitInsn(DUP);
@@ -1382,7 +1384,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	{
     		if(!Config.detectSharingOnly)
     		{
-        		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+        		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
     	    	
 	    		mv.visitInsn(DUP);
@@ -1407,7 +1409,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     		if(isSynchronized
     				&&!Config.detectSharingOnly)
     		{
-        		String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+        		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
     	    	
     	    	addBipushInsn(mv,ID);
@@ -1439,7 +1441,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	if(isSynchronized
     			&&!Config.detectSharingOnly)
 		{
-        	String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+        	String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
         	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
         	
 	    	addBipushInsn(mv,ID);

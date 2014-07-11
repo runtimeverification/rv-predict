@@ -141,7 +141,7 @@ public class HBRaceDetect {
 							
 							if(engine.isRace(rnode, wnode))
 							{
-								report("Race: "+race,MSGTYPE.REAL);
+								report(race.toString(),MSGTYPE.REAL);
 								//report(rnode.getGID()+"--"+wnode.getGID(),false);
 								if(config.allrace)
 								{
@@ -174,7 +174,7 @@ public class HBRaceDetect {
 							{
 								if(engine.isRace(wnode1, wnode2))
 								{
-									report("Race: "+race,MSGTYPE.REAL);
+									report(race.toString(),MSGTYPE.REAL);
 									if(config.allrace)
 									{
 										ExactRace race2 = new ExactRace(race,(int)wnode1.getGID(),(int)wnode2.getGID());

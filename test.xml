@@ -12,9 +12,4 @@
     <arg key="-cp" value="benchmarks/bin" />
     <arg value="account.Account" />
    </test>
-  <test name="critical.Critical">
-    <arg key="-v" value="--"/> 
-    <arg key="-cp" value="benchmarks/bin" />
-    <arg value="critical.Critical" />
-  </test>
 </tests>

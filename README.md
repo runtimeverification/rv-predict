@@ -122,13 +122,12 @@ The list of common options can be obtained by using the `-h` or `--help`
 option when invoking RV-Predict:
  		
     rv-predict --help
-    Usage: rv-predict [rv_predict_options] [java_options] <command_line>
+    Usage: rv-predict [rv_predict_options] [--] [java_options] <command_line>
         Common options (use -h -v for a complete list):
 
         --log               Run only the logging stage [false]
         --dir               output directory [null]
     -h, --help              print help info [false]
-        --java              optional separator for Java arguments [false]
         --predict           Run only the prediction stage [false]
         --timeout           rv-predict timeout in seconds [3600]
     -v, --verbose           generate more verbose output [false]
@@ -137,15 +136,12 @@ option when invoking RV-Predict:
 - the `--dir` option can be used to specify the output directory of the tool.
 - the `--log` option can used (usually in conjunction with the `--dir` option 
 to tell RV-Predict that the prediction phase should be skipped.
-- the `--predict` option can used (usually in conjunction with the `--dir` option 
-to tell RV-Predict that the logging phase should be skipped, reusing an already
-logged trace to run the prediction algorithms on.
+- the `--predict` option can used (usually in conjunction with the `--dir` 
+option to tell RV-Predict that the logging phase should be skipped, reusing an 
+already logged trace to run the prediction algorithms on.
 - the `--timeout` option controls the total execution time we allow for the 
 prediction phase.
-- the `--java` option can be used as the final RV-specific option, to separate
-the RV parameters from the Java ones.  This is especially useful if the command 
-line of the program being run uses arguments with the same syntax as 
-the RV-Predict ones.
+- `--` can be used as a terminator for the RV-Predict options.
 
 ### Advanced options
 

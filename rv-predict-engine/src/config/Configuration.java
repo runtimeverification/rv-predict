@@ -48,7 +48,7 @@ import java.util.jar.Manifest;
 public class Configuration {
 
     public static final String PROGRAM_NAME = "rv-predict";
-    @Parameter(description="<command_line>")
+    @Parameter(description="<java_command_line>")
     public List<String> command_line;
 
 //	final static String opt_rmm_pso = "--pso";//for testing only
@@ -137,9 +137,9 @@ public class Configuration {
     @Parameter(names = {short_opt_help, opt_help}, description = "print help info", help = true)
     public boolean help;
 
-    public final static String opt_java = "--java";
-    @Parameter(names = opt_java, description = "optional separator for java arguments")
-    public boolean javaSeparator;
+    public final static String opt_java = "--";
+//    @Parameter(names = opt_java, description = "optional separator for java arguments")
+//    public boolean javaSeparator;
 
 
     public final static String opt_sharing_only = "--detectSharingOnly";
@@ -162,9 +162,9 @@ public class Configuration {
 
         // Detecting a candidate for program options start
         int max = Arrays.asList(args).indexOf(Configuration.opt_java);
-        if (max != -1) { // --java was used. Using it as a separator for java command line
+        if (max != -1) { // -- was used. Using it as a separator for java command line
             max++;
-        } else { // --java was not specified.  Look for the first unknown option
+        } else { // -- was not specified.  Look for the first unknown option
             for (max = 0; max < args.length; max++) {
                 if (args[max].startsWith("-") && !options.contains(args[max]))
                     break; // the index of the first unknown command
@@ -200,7 +200,7 @@ public class Configuration {
             for (String command : command_line) {
                 if (!command.equals(rvArgs[i--])) {
                     System.err.println("Error: Unexpected argument " + command + " among rv-predict options.");
-                    System.err.println("The " + opt_java + " option can be used to separate the java command.");
+                    System.err.println("The options terminator '" + opt_java + "' can be used to separate the java command.");
                     System.exit(1);
                 }
             }
@@ -212,8 +212,7 @@ public class Configuration {
         }
 
         List<String> argList = Arrays.asList(Arrays.copyOfRange(args, rvArgs.length, args.length));
-        int idxCp = -1;
-        if (command_line == null) { // otherwise the program has already started
+        if (command_line == null) { // otherwise the java command has already started
             command_line = new ArrayList<String>(argList);
             if (command_line.isEmpty()) {
                 System.err.println("Error: Java command line is empty.");
@@ -230,12 +229,12 @@ public class Configuration {
 
     public void usage(JCommander jc) {
 /*
---java can be used as a separator for the java command line
-the remaining arguments are what one would pass to the java executable to
+-- can be used as a terminator for the rv-predict specific options.
+The remaining arguments are what one would pass to the java executable to
 execute the class/jar
-The --java option is only required in the less frequent case when some of
+The -- option is only required in the less frequent case when some of
 the java or program options used have the same name as some of the
-rv-predict options (including --java).
+rv-predict options (including --).
 
 Moreover, in the unlikely case when the program takes as options -cp or -jar
 and is run as a class (i.e., not using -jar) then the java -cp option must
@@ -252,7 +251,7 @@ be used explicitly for disambiguation.
 
         // Computing usage
         max_option_length++;
-        String usageHeader = "Usage: " + PROGRAM_NAME + " [rv_predict_options] [java_options] "
+        String usageHeader = "Usage: " + PROGRAM_NAME + " [rv_predict_options] [--] [java_options] "
                 + jc.getMainParameterDescription() + "\n";
         String usage = usageHeader
                 + "  Options:" + "\n";

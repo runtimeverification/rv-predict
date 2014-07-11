@@ -162,17 +162,19 @@ public class Configuration {
 
         // Detecting a candidate for program options start
         int max = Arrays.asList(args).indexOf(Configuration.opt_java);
+        String[] rvArgs;
         if (max != -1) { // -- was used. Using it as a separator for java command line
+            rvArgs = Arrays.copyOf(args, max);
             max++;
         } else { // -- was not specified.  Look for the first unknown option
             for (max = 0; max < args.length; max++) {
                 if (args[max].startsWith("-") && !options.contains(args[max]))
                     break; // the index of the first unknown command
             }
+            rvArgs = Arrays.copyOf(args, max);
         }
 
         // get all rv-predict arguments and (potentially) the first unnamed program arguments
-        String[] rvArgs = Arrays.copyOf(args, max);
         try {
             jc.parse(rvArgs);
         } catch (ParameterException e) {
@@ -211,7 +213,7 @@ public class Configuration {
             System.exit(0);
         }
 
-        List<String> argList = Arrays.asList(Arrays.copyOfRange(args, rvArgs.length, args.length));
+        List<String> argList = Arrays.asList(Arrays.copyOfRange(args, max, args.length));
         if (command_line == null) { // otherwise the java command has already started
             command_line = new ArrayList<String>(argList);
             if (command_line.isEmpty()) {

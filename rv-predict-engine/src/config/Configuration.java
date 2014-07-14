@@ -34,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.jar.Attributes;
@@ -85,12 +86,12 @@ public class Configuration {
 //    @Parameter(names = opt_constraint_outdir, description = "constraint file directory", hidden = true)
     public String constraint_outdir;
 
- 	public final static String opt_outdir = "--dir";
-    @Parameter(names = opt_outdir, description = "output directory")
+	public final static String opt_outdir = "--dir";
+//    @Parameter(names = opt_outdir, description = "output directory")
     public String outdir = null;
 
     public final static String opt_table_name = "--table";
-    @Parameter(names = opt_table_name, description = "Name of the table (Default: jar main class)", hidden = true)
+    @Parameter(names = opt_table_name, description = "Name of the table storing the log", hidden = true)
     public String tableName = null;
 
 	final static String opt_solver_timeout = "--solver_timeout";
@@ -129,12 +130,14 @@ public class Configuration {
     public static String additionalExcludes;
 
     public final static String opt_only_log = "--log";
-    @Parameter(names = opt_only_log, description = "Run only the logging stage")
-    public boolean agent;
+    @Parameter(names = opt_only_log, description = "record execution in given directory (no prediction)")
+    public String log_dir = null;
+    public boolean log = true;
 
     public final static String opt_only_predict = "--predict";
-    @Parameter(names = opt_only_predict, description = "Run only the prediction stage")
-    public boolean predict;
+    @Parameter(names = opt_only_predict, description = "run prediction on logs from given directory")
+    public String predict_dir = null;
+    public boolean predict = true;
 
 
 	final static String short_opt_verbose = "-v";
@@ -193,16 +196,28 @@ public class Configuration {
             System.exit(1);
         }
 
-
-        try {
-            if (outdir == null) {
-                outdir = Files.createTempDirectory(
-                        Paths.get(System.getProperty("java.io.tmpdir")), "rv-predict").toString();
+        if (log_dir != null) {
+            if (predict_dir != null) {
+                System.err.println("Error: Options --log and --predict are mutually exclusive.");
+                System.exit(1);
+            } else {
+                outdir = Paths.get(log_dir).toAbsolutePath().toString();
+                predict = false;
             }
-        } catch (IOException e) {
-            System.err.println("Error while attempting to create log dir.");
-            System.err.println(e.getMessage());
-            System.exit(1);
+        } else  {
+            if (predict_dir != null) {
+                outdir = Paths.get(predict_dir).toAbsolutePath().toString();
+                log = false;
+            } else {
+                try {
+                    outdir = Files.createTempDirectory(
+                            Paths.get(System.getProperty("java.io.tmpdir")), "rv-predict").toString();
+                } catch (IOException e) {
+                    System.err.println("Error while attempting to create log dir.");
+                    System.err.println(e.getMessage());
+                    System.exit(1);
+                }
+            }
         }
 
         constraint_outdir = outdir + fileSeparator + "smt";
@@ -226,7 +241,7 @@ public class Configuration {
         List<String> argList = Arrays.asList(Arrays.copyOfRange(args, max, args.length));
         if (command_line == null) { // otherwise the java command has already started
             command_line = new ArrayList<String>(argList);
-            if (command_line.isEmpty()) {
+            if (command_line.isEmpty() && log) {
                 System.err.println("Error: Java command line is empty.");
                 usage(jc);
                 System.exit(1);
@@ -273,10 +288,11 @@ be used explicitly for disambiguation.
         Map<String, String> usageMap = new TreeMap<String, String>();
         Map<String, String> shortUsageMap = new TreeMap<String, String>();
         for (ParameterDescription parameterDescription : jc.getParameters()) {
-                String description = spaces(4) + parameterDescription.getNames()
-                        + spaces(max_option_length - parameterDescription.getNames().length())
-                        + parameterDescription.getDescription()
-                        + " [" + parameterDescription.getDefault() + "]";
+            String aDefault = getDefault(parameterDescription);
+            String description = spaces(4) + parameterDescription.getNames()
+                    + spaces(max_option_length - parameterDescription.getNames().length())
+                    + parameterDescription.getDescription()
+                    + (aDefault.isEmpty() ? "" : "\n" + spaces(4)  + spaces(max_option_length) + aDefault);
                 usageMap.put(parameterDescription.getLongestName(), description);
             if (!parameterDescription.getParameter().hidden()) {
                 shortUsageMap.put(parameterDescription.getLongestName(), description);
@@ -291,6 +307,12 @@ be used explicitly for disambiguation.
             System.out.println(shortUsage);
             for (String usageCase : shortUsageMap.values()) System.out.println(usageCase);
         }
+    }
+
+    private String getDefault(ParameterDescription parameterDescription) {
+        Object aDefault = parameterDescription.getDefault();
+        if (aDefault == null || aDefault.equals(Boolean.FALSE)) return "";
+        return "Default: " + aDefault;
     }
 
     private static String spaces(int i) {

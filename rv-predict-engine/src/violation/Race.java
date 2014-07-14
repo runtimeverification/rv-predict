@@ -101,7 +101,13 @@ public class Race implements IViolation{
         // Assuming
         // String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+sig_var+"|"+line_cur).replace("/", ".");
         Location loc1 = new Location(node1);
-        String result = "Race on field " + loc1.varSignature + " between";
+        String result = "Race on ";
+        if (loc1.varSignature == null) {
+            result += "an array access";
+        } else {
+            result += "field " + loc1.varSignature;
+        }
+        result +=  " between";
         if (node1 == node2) {
             result += " two instances of:\n" +
                     "\t" + loc1 + "\n";
@@ -129,8 +135,13 @@ public class Race implements IViolation{
             int par = fields[2].indexOf('(');
             methodName = fields[2].substring(0, par);
             methodSignature = fields[2].substring(par);
-            varSignature = fields[3];
-            line = fields[4];
+            if (fields.length == 4) {
+                varSignature = null;
+                line = fields[3];
+            } else {
+                varSignature = fields[3];
+                line = fields[4];
+            }
         }
 
         @Override

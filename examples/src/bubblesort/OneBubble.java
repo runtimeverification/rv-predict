@@ -13,15 +13,15 @@ package bubblesort;
  */
 public class OneBubble extends Thread
 {
-    private int st; // holds the sleeping time of this thread in mimseconds
+    private int st; // holds the sleeping time of this thread in milliseconds
     private int [] arr; // pointer to the array
     private int size; // size of the given array
     private static Object _threadCounterLock = new Object();// lock object
 
     /**
-     * Constructs a thread by pointing to an array of integers and gettin the array's size
+     * Constructs a thread by pointing to an array of integers and getting the array's size
      * @param array  The array to be sorted
-     * @param sleepingTime determins how many miliseconds this thread should sleep
+     * @param sleepingTime determines how many milliseconds this thread should sleep
      */
     public OneBubble(int [] array, int sleepingTime)
     {
@@ -36,7 +36,7 @@ public class OneBubble extends Thread
      */
     public void run()
     {
-        if(st != 0) // in this case level of concurency is not maximal
+        if(st != 0) // in this case level of concurrency is not maximal
         {
             try
             {
@@ -48,7 +48,7 @@ public class OneBubble extends Thread
         // running on the whole array once
         for(int i = 0;i < size - 1;++i)
         {
-            if(arr[i] > arr[i + 1])  // in case higher number is benieth lower number
+            if(arr[i] > arr[i + 1])  // in case higher number is beneath lower number
                 SwapConsecutives(i);// bubbling up the higher number
         }
     }

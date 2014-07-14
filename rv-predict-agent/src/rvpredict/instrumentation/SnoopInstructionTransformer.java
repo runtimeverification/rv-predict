@@ -10,12 +10,11 @@ import org.objectweb.asm.ClassWriter;
 import rvpredict.config.Config;
 import rvpredict.logging.RecordRT;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.security.ProtectionDomain;
+import java.util.Arrays;
 
 public class SnoopInstructionTransformer implements ClassFileTransformer {
 
@@ -25,7 +24,8 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        JCommander jc = new JCommander(Config.instance);
+        Config config = Config.instance;
+        JCommander jc = new JCommander(config);
         jc.setProgramName(Config.PROGRAM_NAME);
         try {
             jc.parse(args);
@@ -33,6 +33,14 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             System.err.println("Error: Cannot parse command line arguments.");
             System.err.println(e.getMessage());
             System.exit(1);
+        }
+        if (Config.additionalExcludes != null) {
+            String[] excludes = Config.additionalExcludes.replace('.','/').split(",");
+            String[] array = new String[config.excludeList.length + excludes.length];
+            System.arraycopy(config.excludeList, 0, array, 0, config.excludeList.length);
+            System.arraycopy(excludes, 0, array, config.excludeList.length, excludes.length);
+            System.out.println("Excluding: " + Arrays.toString(array));
+            config.excludeList = array;
         }
 
 		//initialize RecordRT first

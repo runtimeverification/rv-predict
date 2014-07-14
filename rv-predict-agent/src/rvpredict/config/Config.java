@@ -15,13 +15,18 @@ public class Config {
     @Parameter(names = opt_outdir, description = "output directory", hidden = true)
     public static String logDir = null;
 
+    final static String opt_exclude = "--exclude";
+    @Parameter(names = opt_exclude, description = "comma separated list of packages to exclude.", hidden = true)
+    public static String additionalExcludes;
+
+
     public final static String opt_sharing_only = "--detectSharingOnly";
     @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables.")
     public static boolean detectSharingOnly;
 
 
     public final static String opt_table_name = "--table";
-    @Parameter(names = opt_table_name, description = "Name of the table (Default: jar main class)", hidden = true)
+    @Parameter(names = opt_table_name, description = "Name of the table", hidden = true)
     public static String tableName = "main";
 
 

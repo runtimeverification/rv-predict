@@ -755,7 +755,7 @@ public class YicesEngineSMTLIB1 extends Z3Engine
 		//String QUERY = "\n(assert (= "+var1+" "+var2+"))\n\n";
 		
 		id++;
-		task = new YicesRunSMTLIB1(config,id);
+		task = new SMTLIB1Run(config,id);
 		
 		String cons_assert = CONS_ASSERT.toString()+casualConstraint.toString()+")\n";
 		cons_assert = cons_assert.replace(var2+" ", var1+" ");

@@ -2,4 +2,4 @@
 
 RV_ENGINE_BIN=$(dirname $0)/../lib/rv-predict-engine.jar
 #predict 
-java -Xmx32g -cp $RV_ENGINE_BIN rvpredict.engine.main.Main "$@"
+java -Xmx32g -cp "$RV_ENGINE_BIN" rvpredict.engine.main.Main "$@"

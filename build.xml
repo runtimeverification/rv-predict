@@ -8,7 +8,7 @@
   <property name="rvpredict.temp" location="tmp"/>
   <property name="rvpredict.bin" location="bin"/>
   <property name="rvpredict.demos" location="rv-predict-demo"/>
-  <property name="rvpredict.benchmarks" location="benchmarks"/>
+  <property name="rvpredict.examples" location="examples"/>
   <property name="rvpredict.base" location="."/>
   <property name="rvpredict.eclipse" location="ECLIPSE"/>
 
@@ -39,14 +39,14 @@
 
   <property name="test.src" location="tests/src"/>
   <property name="test.bin" location="tests/bin"/>
-  <property name="benchmark.src" location="benchmarks/src"/>
-  <property name="benchmark.bin" location="benchmarks/bin"/>
+  <property name="examples.src" location="examples/src"/>
+  <property name="examples.bin" location="examples/bin"/>
 
   <target name="all" depends="rvpredict-all"
-          description="compile rvpredict and benchmarks" />
+          description="compile rvpredict and examples" />
 
-  <target name="rvpredict-all" depends="rvpredict-engine,rvpredict-agent,init-tests,init-benchmarks"
-          description="compile rvpredict and benchmarks" />
+  <target name="rvpredict-all" depends="rvpredict-engine,rvpredict-agent,init-tests,init-examples"
+          description="compile rvpredict and examples" />
 
   <target name="rvpredict-engine" depends="init-rvpredict-engine"
           description="compile rvpredict-engine" >
@@ -146,13 +146,13 @@
         <echo message="Done."/>
     </target>
 
-  <target name="init-benchmarks"
-          description="compile the benchmark" >
+  <target name="init-examples"
+          description="compile the examples" >
         <!-- Create the bin directory structure used by compile -->
-    <mkdir dir="${benchmark.bin}"/>
-        <!-- Compile the java code from ${benchmark.src} into ${benchmark.bin} -->
-    <javac srcdir="${benchmark.src}" destdir="${benchmark.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="false"/>
-                     <copy file="${benchmark.src}/hitData" todir="${benchmark.bin}"/>
+    <mkdir dir="${examples.bin}"/>
+        <!-- Compile the java code from ${examples.src} into ${examples.bin} -->
+    <javac srcdir="${examples.src}" destdir="${examples.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="false"/>
+                     <copy file="${examples.src}/hitData" todir="${examples.bin}"/>
       </target>
 
   <target name="init-tests">
@@ -160,14 +160,14 @@
     <tstamp/>
         <!-- Create the bin directory structure used by compile -->
     <mkdir dir="${test.bin}" description="compile the tests"/>
-              <!-- Compile the java code from ${benchmark.src} into ${benchmark.bin} -->
+              <!-- Compile the java code from ${examples.src} into ${examples.bin} -->
     <javac srcdir="${test.src}" destdir="${test.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="false"/>
     <javac srcdir="${rvpredict.engine.src.tests}" destdir="${rvpredict.engine.bin}" debug="true" debuglevel="lines,vars,source" includeantruntime="true">
             <classpath refid="classpath.test"/>
     </javac>
       </target>
 
-  <loadfile property="file.benchmarks" srcfile="benchmarks/benchmarks"/>
+  <loadfile property="file.examples" srcfile="examples/examples"/>
 
     <path id="classpath.test">
       <pathelement location="${rvpredict.external.lib}/ant-junit.jar" />
@@ -197,7 +197,7 @@
     </target>
   <target name="clean" depends="clean-rvpredict-agent,clean-rvpredict-engine,clean-install"
           description="clean up" >
-              <!-- Delete the ${benchmark.bin} directory trees -->
-    <delete dir="${benchmark.bin}"/>
+              <!-- Delete the ${examples.bin} directory trees -->
+    <delete dir="${examples.bin}"/>
           </target>
           </project>

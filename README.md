@@ -47,7 +47,7 @@ where `[options]` include both RV-Predict and Java specific options.
 
 Running command:
 
-    rv-predict -cp benchmarks\bin account.Account
+    rv-predict -cp examples\bin account.Account
 Standard output:
 
     Bank system started

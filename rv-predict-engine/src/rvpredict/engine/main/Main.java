@@ -18,17 +18,13 @@ public class Main {
         Configuration config = new Configuration();
 
          config.parseArguments(args);
-        if (config.command_line.isEmpty()) {
-            System.err.println("You must provide a class or a jar to run.");
-            System.exit(1);
-        }
-
-        if (!config.agent && ! config.predict) {
-            config.agent = config.predict = true;
-        }
 
         DBEngine db;
-        if (config.agent) {
+        if (config.log) {
+            if (config.command_line.isEmpty()) {
+                System.err.println("You must provide a class or a jar to run.");
+                System.exit(1);
+            }
             File outdirFile = new File(config.outdir);
             if(!(outdirFile.exists())) {
                 outdirFile.mkdir();
@@ -81,11 +77,11 @@ public class Main {
         try {
             if (! db.checkTables()) {
                 System.err.print("Trace was not recorded properly. ");
-                if (config.agent) {
+                if (config.log) {
                     System.err.println("Please check the classpath.");
                 } else {
-                    System.err.println("Please run " + Configuration.PROGRAM_NAME + " with the " + Configuration.opt_only_log +
-                            " option enabled.");
+                    System.err.println("Please run " + Configuration.PROGRAM_NAME + " with " + Configuration.opt_only_log +
+                            " " + config.outdir + " first.");
                 }
                 System.exit(1);
             }
@@ -97,8 +93,8 @@ public class Main {
             db.closeDB();
         }
 
-        if (config.agent && config.verbose) {
-            System.out.println("\nDone executing and logging.");
+        if (config.log && config.verbose) {
+            System.out.println("\nDone executing. Trace logged in: " + config.outdir);
         }
 
         if (config.predict) {

@@ -288,7 +288,9 @@ public class DBEngine {
 		        tracetablecolname[2]+" "+tracetablecoltype[2]+", "+
 		        tracetablecolname[3]+" "+tracetablecoltype[3]+", "+
 		        tracetablecolname[4]+" "+tracetablecoltype[4]+", "+
-		        tracetablecolname[5]+" "+tracetablecoltype[5]+")";
+		        tracetablecolname[5]+" "+tracetablecoltype[5]+", " +
+                "PRIMARY KEY (" + tracetablecolname[0] + ")" +
+                ")";
 		        stmt.execute(sql_createTable);
 		        
     	String sql_insertdata = "INSERT INTO "+tracetablename+" ( "+tracetablecolname[1]+", "+

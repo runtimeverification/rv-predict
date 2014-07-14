@@ -122,16 +122,15 @@ The list of common options can be obtained by using the `-h` or `--help`
 option when invoking RV-Predict:
  		
     rv-predict --help
-    Usage: rv-predict [rv_predict_options] [java_options] <command_line>
-        Common options (use -h -v for a complete list):
-
-    -h, --help              print help info
-        --java              optional separator for Java arguments
-        --log                record execution in given directory (no prediction)
-        --predict            run prediction on logs from given directory
-        --timeout           rv-predict timeout in seconds 
-                            Default: 3600
-    -v, --verbose           generate more verbose output
+    Usage: rv-predict [rv_predict_options] [--] [java_options] <command_line>
+      Common options (use -h -v for a complete list):
+    
+        -h, --help              print help info
+            --log               record execution in given directory (no prediction)
+            --predict           run prediction on logs from given directory
+            --timeout           rv-predict timeout in seconds
+                                Default: 3600
+        -v, --verbose           generate more verbose output
 
 
 - the `--log` option can used to tell RV-Predict that the execution should be
@@ -141,10 +140,7 @@ using the logged trace in the given directory to run the prediction algorithms
 on. When using this option specifying the java command is no longer necessary.
 - the `--timeout` option controls the total execution time we allow for the 
 prediction phase.
-- the `--java` option can be used as the final RV-specific option, to separate
-the RV parameters from the Java ones.  This is especially useful if the command 
-line of the program being run uses arguments with the same syntax as 
-the RV-Predict ones.
+- `--` can be used as a terminator for the RV-Predict options.
 
 ### Advanced options
 
@@ -154,9 +150,11 @@ combining the `-h` and `-v` options when invoking RV-Predict:
     rv-predict -h -v
 
 As this list is always evolving, we refrain from listing all these 
-options here.  However, we would like to mention `--smtlib1` which instructs
-RV-Predict to format SMT queries in the SMT-LIB v1.2 language and use Yices 
-(`yices-smt`) to check them.
+options here.  However, we would like to mention `--solver` which instructs
+RV-Predict to use a different SMT solver command for handling SMT queries.
+The solver command needs to be such that it takes a file containing a formula
+in the SMT-LIB v1.2 language and produces a model if the formula is 
+satisfiable.  The default value for `--solver` is `z3 -smt`.
 
 ----------
 Additional online documentation can be found on the 

@@ -173,6 +173,7 @@
       <pathelement location="${rvpredict.external.lib}/ant-junit.jar" />
       <pathelement location="${rvpredict.external.lib}/junit.jar" /> 
       <pathelement location="${rvpredict.external.lib}/hamcrest-core.jar" />
+      <pathelement location="${rvpredict.external.lib}/jcommander-1.36.jar"/>
       <pathelement location="${rvpredict.engine.bin}" />
       <pathelement location="${rvpredict.engine.src}" />
    </path>

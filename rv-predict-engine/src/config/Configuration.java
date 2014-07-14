@@ -49,7 +49,7 @@ import java.util.jar.Manifest;
 public class Configuration {
 
     public static final String PROGRAM_NAME = "rv-predict";
-    @Parameter(description="<command_line>")
+    @Parameter(description="<java_command_line>")
     public List<String> command_line;
 
 //	final static String opt_rmm_pso = "--pso";//for testing only
@@ -106,9 +106,15 @@ public class Configuration {
     @Parameter(names = opt_timeout, description = "rv-predict timeout in seconds")
     public long timeout = 3600;
 
-	final static String opt_smtlib1 = "--smtlib1";
-    @Parameter(names = opt_smtlib1, description = "use constraint format SMT-LIB v1.2", hidden = true)
-    public boolean smtlib1;
+//    final static String opt_smtlib1 = "--smtlib1";
+//    @Parameter(names = opt_smtlib1, description = "use constraint format SMT-LIB v1.2", hidden = true)
+    public boolean smtlib1 = true;
+
+    final static String opt_smt_solver = "--solver";
+    @Parameter(names = opt_smt_solver, description = "solver command to use (SMT-LIB v1.2)", hidden = true)
+    public String smt_solver = "z3 -smt";
+
+
 
 	final static String opt_optrace = "--optrace";
     @Parameter(names = opt_optrace, description = "optimize race detection", hidden = true)
@@ -118,6 +124,10 @@ public class Configuration {
  	final static String opt_optlog = "--optlog";
     @Parameter(names = opt_optlog, description = "optimize logging size", hidden = true)
     public boolean optlog;
+
+    public final static String opt_exclude = "--exclude";
+    @Parameter(names = opt_exclude, description = "comma separated list of packages to exclude.", hidden = true)
+    public static String additionalExcludes;
 
     public final static String opt_only_log = "--log";
     @Parameter(names = opt_only_log, description = "record execution in given directory (no prediction)")
@@ -140,9 +150,9 @@ public class Configuration {
     @Parameter(names = {short_opt_help, opt_help}, description = "print help info", help = true)
     public boolean help;
 
-    public final static String opt_java = "--java";
-    @Parameter(names = opt_java, description = "optional separator for java arguments")
-    public boolean javaSeparator;
+    public final static String opt_java = "--";
+//    @Parameter(names = opt_java, description = "optional separator for java arguments")
+//    public boolean javaSeparator;
 
 
     public final static String opt_sharing_only = "--detectSharingOnly";
@@ -165,17 +175,19 @@ public class Configuration {
 
         // Detecting a candidate for program options start
         int max = Arrays.asList(args).indexOf(Configuration.opt_java);
-        if (max != -1) { // --java was used. Using it as a separator for java command line
+        String[] rvArgs;
+        if (max != -1) { // -- was used. Using it as a separator for java command line
+            rvArgs = Arrays.copyOf(args, max);
             max++;
-        } else { // --java was not specified.  Look for the first unknown option
+        } else { // -- was not specified.  Look for the first unknown option
             for (max = 0; max < args.length; max++) {
                 if (args[max].startsWith("-") && !options.contains(args[max]))
                     break; // the index of the first unknown command
             }
+            rvArgs = Arrays.copyOf(args, max);
         }
 
         // get all rv-predict arguments and (potentially) the first unnamed program arguments
-        String[] rvArgs = Arrays.copyOf(args, max);
         try {
             jc.parse(rvArgs);
         } catch (ParameterException e) {
@@ -208,14 +220,14 @@ public class Configuration {
             }
         }
 
-        constraint_outdir = outdir + fileSeparator + "z3";
+        constraint_outdir = outdir + fileSeparator + "smt";
 
         if (command_line != null) { // if there are unnamed options they should all be at the end
             int i = rvArgs.length - 1;
             for (String command : command_line) {
                 if (!command.equals(rvArgs[i--])) {
                     System.err.println("Error: Unexpected argument " + command + " among rv-predict options.");
-                    System.err.println("The " + opt_java + " option can be used to separate the java command.");
+                    System.err.println("The options terminator '" + opt_java + "' can be used to separate the java command.");
                     System.exit(1);
                 }
             }
@@ -226,9 +238,8 @@ public class Configuration {
             System.exit(0);
         }
 
-        List<String> argList = Arrays.asList(Arrays.copyOfRange(args, rvArgs.length, args.length));
-        int idxCp = -1;
-        if (command_line == null) { // otherwise the program has already started
+        List<String> argList = Arrays.asList(Arrays.copyOfRange(args, max, args.length));
+        if (command_line == null) { // otherwise the java command has already started
             command_line = new ArrayList<String>(argList);
             if (command_line.isEmpty() && log) {
                 System.err.println("Error: Java command line is empty.");
@@ -245,12 +256,12 @@ public class Configuration {
 
     public void usage(JCommander jc) {
 /*
---java can be used as a separator for the java command line
-the remaining arguments are what one would pass to the java executable to
+-- can be used as a terminator for the rv-predict specific options.
+The remaining arguments are what one would pass to the java executable to
 execute the class/jar
-The --java option is only required in the less frequent case when some of
+The -- option is only required in the less frequent case when some of
 the java or program options used have the same name as some of the
-rv-predict options (including --java).
+rv-predict options (including --).
 
 Moreover, in the unlikely case when the program takes as options -cp or -jar
 and is run as a class (i.e., not using -jar) then the java -cp option must
@@ -267,7 +278,7 @@ be used explicitly for disambiguation.
 
         // Computing usage
         max_option_length++;
-        String usageHeader = "Usage: " + PROGRAM_NAME + " [rv_predict_options] [java_options] "
+        String usageHeader = "Usage: " + PROGRAM_NAME + " [rv_predict_options] [--] [java_options] "
                 + jc.getMainParameterDescription() + "\n";
         String usage = usageHeader
                 + "  Options:" + "\n";

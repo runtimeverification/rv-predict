@@ -125,13 +125,14 @@ option when invoking RV-Predict:
     Usage: rv-predict [rv_predict_options] [java_options] <command_line>
         Common options (use -h -v for a complete list):
 
-        --log               Run only the logging stage [false]
-        --dir               output directory [null]
-    -h, --help              print help info [false]
-        --java              optional separator for Java arguments [false]
-        --predict           Run only the prediction stage [false]
-        --timeout           rv-predict timeout in seconds [3600]
-    -v, --verbose           generate more verbose output [false]
+        --dir               output directory
+    -h, --help              print help info
+        --java              optional separator for Java arguments
+        --log               Run only the logging stage
+        --predict           Run only the prediction stage
+        --timeout           rv-predict timeout in seconds 
+                            Default: 3600
+    -v, --verbose           generate more verbose output
 
 
 - the `--dir` option can be used to specify the output directory of the tool.

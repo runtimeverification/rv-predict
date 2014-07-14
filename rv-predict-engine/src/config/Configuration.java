@@ -90,7 +90,7 @@ public class Configuration {
     public String outdir = null;
 
     public final static String opt_table_name = "--table";
-    @Parameter(names = opt_table_name, description = "Name of the table (Default: jar main class)", hidden = true)
+    @Parameter(names = opt_table_name, description = "Name of the table storing the log", hidden = true)
     public String tableName = null;
 
 	final static String opt_solver_timeout = "--solver_timeout";
@@ -262,10 +262,11 @@ be used explicitly for disambiguation.
         Map<String, String> usageMap = new TreeMap<String, String>();
         Map<String, String> shortUsageMap = new TreeMap<String, String>();
         for (ParameterDescription parameterDescription : jc.getParameters()) {
-                String description = spaces(4) + parameterDescription.getNames()
-                        + spaces(max_option_length - parameterDescription.getNames().length())
-                        + parameterDescription.getDescription()
-                        + " [" + parameterDescription.getDefault() + "]";
+            String aDefault = getDefault(parameterDescription);
+            String description = spaces(4) + parameterDescription.getNames()
+                    + spaces(max_option_length - parameterDescription.getNames().length())
+                    + parameterDescription.getDescription()
+                    + (aDefault.isEmpty() ? "" : "\n" + spaces(4)  + spaces(max_option_length) + aDefault);
                 usageMap.put(parameterDescription.getLongestName(), description);
             if (!parameterDescription.getParameter().hidden()) {
                 shortUsageMap.put(parameterDescription.getLongestName(), description);
@@ -280,6 +281,12 @@ be used explicitly for disambiguation.
             System.out.println(shortUsage);
             for (String usageCase : shortUsageMap.values()) System.out.println(usageCase);
         }
+    }
+
+    private String getDefault(ParameterDescription parameterDescription) {
+        Object aDefault = parameterDescription.getDefault();
+        if (aDefault == null || aDefault.equals(Boolean.FALSE)) return "";
+        return "Default: " + aDefault;
     }
 
     private static String spaces(int i) {

@@ -119,7 +119,7 @@
                      <!--<copy file="${rvpredict.agent.lib}/ant-contrib.jar" todir="${rvpredict.lib}"/>-->
       </target>
 
-    <target name="installer" depends="rvpredict-agent,rvpredict-engine">
+    <target name="installer" depends="rvpredict-agent,rvpredict-engine,init-examples">
         <!-- Run installer build -->
         <property name="install.jarfile" value="rv-install-${rvpredict.installer.version}.jar" />
         <echo message="Running IzPack to build the installer..."/>

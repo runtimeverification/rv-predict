@@ -105,12 +105,12 @@ public class Configuration {
     @Parameter(names = opt_timeout, description = "rv-predict timeout in seconds")
     public long timeout = 3600;
 
-    final static String opt_smtlib1 = "--smtlib1";
-    @Parameter(names = opt_smtlib1, description = "use constraint format SMT-LIB v1.2", hidden = true)
-    public boolean smtlib1;
+//    final static String opt_smtlib1 = "--smtlib1";
+//    @Parameter(names = opt_smtlib1, description = "use constraint format SMT-LIB v1.2", hidden = true)
+    public boolean smtlib1 = true;
 
-    final static String opt_smt_solver = "--smtsolver";
-    @Parameter(names = opt_smt_solver, description = "solver command to use with SMT-LIB v1.2", hidden = true)
+    final static String opt_smt_solver = "--solver";
+    @Parameter(names = opt_smt_solver, description = "solver command to use (SMT-LIB v1.2)", hidden = true)
     public String smt_solver = "z3 -smt";
 
 
@@ -199,7 +199,7 @@ public class Configuration {
             System.exit(1);
         }
 
-        constraint_outdir = outdir + fileSeparator + "z3";
+        constraint_outdir = outdir + fileSeparator + "smt";
 
         if (command_line != null) { // if there are unnamed options they should all be at the end
             int i = rvArgs.length - 1;

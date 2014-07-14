@@ -12,4 +12,9 @@
     <arg key="-cp" value="benchmarks/bin" />
     <arg value="account.Account" />
   </test>
+  <test name="smtlib1 account.Account">
+    <arg value="--smtlib1" />
+    <arg key="-cp" value="benchmarks/bin" />
+    <arg value="account.Account" />
+  </test>
 </tests>

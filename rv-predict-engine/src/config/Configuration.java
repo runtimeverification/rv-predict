@@ -105,9 +105,15 @@ public class Configuration {
     @Parameter(names = opt_timeout, description = "rv-predict timeout in seconds")
     public long timeout = 3600;
 
-	final static String opt_smtlib1 = "--smtlib1";
+    final static String opt_smtlib1 = "--smtlib1";
     @Parameter(names = opt_smtlib1, description = "use constraint format SMT-LIB v1.2", hidden = true)
     public boolean smtlib1;
+
+    final static String opt_smt_solver = "--smtsolver";
+    @Parameter(names = opt_smt_solver, description = "solver command to use with SMT-LIB v1.2", hidden = true)
+    public String smt_solver = "z3 -smt";
+
+
 
 	final static String opt_optrace = "--optrace";
     @Parameter(names = opt_optrace, description = "optimize race detection", hidden = true)

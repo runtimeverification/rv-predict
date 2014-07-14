@@ -34,9 +34,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.util.Iterator;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Vector;
+import java.util.concurrent.*;
 
 import config.Configuration;
 import config.Util;
@@ -55,12 +55,14 @@ public class Z3Run
 	
 	
 	File smtFile,z3OutFile,z3ErrFile;
-	protected String CMD;
+	protected List<String> CMD;
 	
 	public Z3Model model;
 	public Vector<String> schedule;
 		
 	boolean sat;
+
+    long timeout;
 	
 	public Z3Run(Configuration config, int id)
 	{				
@@ -90,7 +92,8 @@ public class Z3Run
 		//z3ErrFile = Util.newOutFile(Z3_ERR+id);//looks useless
 		
 		//command line to Z3 solver
-		CMD = "z3 -T:"+config.solver_timeout+" -memory:"+config.solver_memory+" -smt2 ";
+		CMD = Arrays.asList("z3", "-memory:"+config.solver_memory, "-smt2");
+        timeout = config.solver_timeout;
 	}
 	
 	/**
@@ -164,39 +167,36 @@ public class Z3Run
 		return schedule;
 	}
 	
-	public void exec(File outFile, File errFile, String file) throws IOException
+	public void exec(final File outFile, File errFile, String file) throws IOException
 	{
-		
-		String cmds = CMD + file;
 
-//		args2 += " 1>"+outFile;
-//		args2 += " 2>"+errFile;
-//
-//		args2 = args2 + "\"";
+		final List<String> cmds = new ArrayList<String>();
+        cmds.addAll(CMD);
+        cmds.add(file);
 
-		//cmds = "z3 -version";
-		
-		Process process = Runtime.getRuntime().exec(cmds); 
-		InputStream inputStream = process.getInputStream();
-		
-		//do we need to wait for Z3 to finish?
-		
-		// write the inputStream to a FileOutputStream
-		OutputStream out = new FileOutputStream(outFile);
-	 
-		int read = 0;
-		byte[] bytes = new byte[1024];
-	 
-		while ((read = inputStream.read(bytes)) != -1) {
-			out.write(bytes, 0, read);
-		}
-	 
-		inputStream.close();
-		out.flush();
-		out.close();
-		//setError(errFile);
-		//setOutput(outFile);
-
-	}
+        FutureTask<Integer> task = new FutureTask<Integer>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                ProcessBuilder processBuilder = new ProcessBuilder(cmds);
+                processBuilder.redirectOutput(outFile);
+                Process process = processBuilder.start();
+                try {
+                    process.waitFor();
+                } catch (InterruptedException e) {
+                    process.destroy();
+                }
+                return process.exitValue();
+            }
+        });
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        executorService.execute(task);
+        try {
+            task.get(timeout, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            System.err.println("Timeout!");
+            task.cancel(true);
+            executorService.shutdown();
+        }
+    }
 	
 }

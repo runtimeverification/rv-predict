@@ -45,13 +45,13 @@ import java.io.File;
 import java.io.InputStreamReader;
 
 /**
- * Model interpreter for Yices output format
+ * Model interpreter for SMT-LIB v1.2 output format
  * 
  * @author jeffhuang
  *
  */
-public class YicesModelReaderSMTLIB1
-{ 
+public class SMTLIB1ModelReader
+{
 	/**
 	 * return a model of solution for the output file
 	 * 

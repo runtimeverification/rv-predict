@@ -3,6 +3,7 @@ package z3;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Arrays;
 
 import config.Configuration;
 import config.Util;
@@ -15,14 +16,14 @@ import config.Util;
  * @author jeffhuang
  *
  */
-public class YicesRunSMTLIB1 extends Z3Run
+public class SMTLIB1Run extends Z3Run
 {
 	protected static String SMT = ".smt";
-	protected static String OUT = ".yicesout";
+	protected static String OUT = ".smtout";
 	
-	File yicesOutFile,yicesErrFile;
+	File outFile, errFile;
 	
-	public YicesRunSMTLIB1(Configuration config, int id)
+	public SMTLIB1Run(Configuration config, int id)
 	{				
 			super(config,id);
 
@@ -32,9 +33,10 @@ public class YicesRunSMTLIB1 extends Z3Run
 	{		
 		smtFile = Util.newOutFile(config.constraint_outdir,config.tableName +"_"+id+SMT);
         
-		yicesOutFile = Util.newOutFile(config.constraint_outdir,config.tableName +"_"+id+OUT);
+		outFile = Util.newOutFile(config.constraint_outdir,config.tableName +"_"+id+OUT);
 				
-		CMD = "yices-smt -m -t "+config.solver_timeout+" ";
+		CMD = Arrays.asList(config.smt_solver.split(" "));
+        timeout = config.solver_timeout;
 	}
 	public void sendMessage(String msg)
 	{
@@ -44,9 +46,9 @@ public class YicesRunSMTLIB1 extends Z3Run
 			smtWriter.println(msg);
 		    smtWriter.close();
 		    
-	        exec(yicesOutFile, yicesErrFile, smtFile.getAbsolutePath());
+	        exec(outFile, errFile, smtFile.getAbsolutePath());
 
-	        model = YicesModelReaderSMTLIB1.read(yicesOutFile);
+	        model = SMTLIB1ModelReader.read(outFile);
 	        
 	        if(model!=null)
 	        {

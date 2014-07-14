@@ -2,14 +2,14 @@
 <!-- Copyright (c) 2014 Runtime Verification Inc. All Rights Reserved. -->
 <tests>
   <test name="ftpserver">
-    <arg key="-jar" value="benchmarks/ftpserver/ftpserver.jar" />
+    <arg key="-jar" value="examples/ftpserver/ftpserver.jar" />
   </test>
   <test name="demo.Example">
     <arg key="-cp" value="tests/bin" />
     <arg value="demo.Example" />
   </test>
   <test name="account.Account">
-    <arg key="-cp" value="benchmarks/bin" />
+    <arg key="-cp" value="examples/bin" />
     <arg value="account.Account" />
    </test>
 </tests>

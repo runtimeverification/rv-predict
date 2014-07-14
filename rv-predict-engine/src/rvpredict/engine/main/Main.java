@@ -55,6 +55,7 @@ public class Main {
             String iagent = libPath + "iagent.jar";
             String rvAgent = libPath + "rv-predict-agent.jar";
             String sharingAgentOptions = config.opt_outdir + " " + escapeString(config.outdir);
+            sharingAgentOptions += " " + Configuration.opt_exclude + " " + escapeString(config.additionalExcludes);
             sharingAgentOptions += " " + config.opt_table_name + " " + escapeString(config.tableName);
             String noSharingAgentOptions = sharingAgentOptions;
             sharingAgentOptions += " " + config.opt_sharing_only;

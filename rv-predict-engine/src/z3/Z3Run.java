@@ -193,7 +193,6 @@ public class Z3Run
         try {
             task.get(timeout, TimeUnit.SECONDS);
         } catch (Exception e) {
-            System.err.println("Timeout!");
             task.cancel(true);
             executorService.shutdown();
         }

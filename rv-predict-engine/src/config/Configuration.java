@@ -30,16 +30,10 @@ package config;
 
 import com.beust.jcommander.*;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URLDecoder;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.jar.Attributes;
-import java.util.jar.JarFile;
-import java.util.jar.Manifest;
 
 
 /**
@@ -49,8 +43,36 @@ import java.util.jar.Manifest;
 public class Configuration {
 
     public static final String PROGRAM_NAME = "rv-predict";
+    public static final String YES = "yes";
+    public static final String NO = "no";
     @Parameter(description="<java_command_line>")
     public List<String> command_line;
+
+    public final static String opt_only_log = "--log";
+    @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1000")
+    public String log_dir = null;
+    public boolean log = true;
+
+    final static String opt_log_output = "--output";
+    @Parameter(names = opt_log_output, description = "Output of the logged execution [yes|no|<file>]", hidden = true, descriptionKey = "1010")
+    public String log_output = YES;
+
+ 	final static String opt_optlog = "--aggressive";
+    @Parameter(names = opt_optlog, description = "Aggressively optimize logging size", hidden = true, descriptionKey = "1020")
+    public boolean optlog;
+
+    public final static String opt_exclude = "--exclude";
+    @Parameter(names = opt_exclude, description = "Comma separated list of packages to exclude", hidden = true, descriptionKey = "1030")
+    public static String additionalExcludes;
+
+    public final static String opt_sharing_only = "--detectSharingOnly";
+    @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables", hidden = true, descriptionKey = "1040")
+    public boolean agentOnlySharing;
+
+    public final static String opt_only_predict = "--predict";
+    @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "2000")
+    public String predict_dir = null;
+    public boolean predict = true;
 
 //	final static String opt_rmm_pso = "--pso";//for testing only
 //    @Parameter(names = opt_rmm_pso, description = "PSO memory model", hidden = true)
@@ -58,7 +80,7 @@ public class Configuration {
 
 	final static String opt_max_len = "--maxlen";
     final static String default_max_len= "1000";
-    @Parameter(names=opt_max_len, description = "window size", hidden = true)
+    @Parameter(names=opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
     public long window_size = 1000;
 
 //	final static String opt_no_schedule = "--noschedule";
@@ -67,15 +89,15 @@ public class Configuration {
     public boolean noschedule = true;
 
 	final static String opt_no_branch = "--nobranch";
-    @Parameter(names=opt_no_branch, description = "use no branch model", hidden = true)
+    @Parameter(names=opt_no_branch, description = "Use no branch model", hidden = true, descriptionKey = "2020")
     public boolean nobranch;
 
 	final static String opt_no_volatile = "--novolatile";
-    @Parameter(names=opt_no_volatile, description = "exclude volatile variables", hidden = true)
+    @Parameter(names=opt_no_volatile, description = "Exclude volatile variables", hidden = true, descriptionKey = "2030")
     public boolean novolatile;
 
 	final static String opt_allrace = "--allrace";
-    @Parameter(names=opt_allrace, description = "check all races", hidden = true)
+    @Parameter(names=opt_allrace, description = "Check all races", hidden = true, descriptionKey = "2040")
     public boolean allrace;
 
 //	final static String opt_all_consistent = "--allconsistent";
@@ -86,78 +108,54 @@ public class Configuration {
 //    @Parameter(names = opt_constraint_outdir, description = "constraint file directory", hidden = true)
     public String constraint_outdir;
 
-	public final static String opt_outdir = "--dir";
-//    @Parameter(names = opt_outdir, description = "output directory")
-    public String outdir = null;
-
     public final static String opt_table_name = "--table";
-    @Parameter(names = opt_table_name, description = "Name of the table storing the log", hidden = true)
+//    @Parameter(names = opt_table_name, description = "Name of the table storing the log", hidden = true)
     public String tableName = null;
 
+    final static String opt_smt_solver = "--solver";
+    @Parameter(names = opt_smt_solver, description = "Solver command to use (SMT-LIB v1.2)", hidden = true, descriptionKey = "2050")
+    public String smt_solver = "z3 -smt";
+
 	final static String opt_solver_timeout = "--solver_timeout";
-    @Parameter(names = opt_solver_timeout, description = "solver timeout in seconds", hidden = true)
+    @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
     public long solver_timeout = 60;
 
 	final static String opt_solver_memory = "--solver_memory";
-    @Parameter(names = opt_solver_memory, description = "solver memory size in MB", hidden = true)
+//    @Parameter(names = opt_solver_memory, description = "solver memory size in MB", hidden = true)
     public long solver_memory = 8000;
 
 	final static String opt_timeout = "--timeout";
-    @Parameter(names = opt_timeout, description = "rv-predict timeout in seconds")
+    @Parameter(names = opt_timeout, description = "Rv-predict timeout in seconds", hidden = true, descriptionKey = "2070")
     public long timeout = 3600;
 
 //    final static String opt_smtlib1 = "--smtlib1";
 //    @Parameter(names = opt_smtlib1, description = "use constraint format SMT-LIB v1.2", hidden = true)
     public boolean smtlib1 = true;
 
-    final static String opt_smt_solver = "--solver";
-    @Parameter(names = opt_smt_solver, description = "solver command to use (SMT-LIB v1.2)", hidden = true)
-    public String smt_solver = "z3 -smt";
-
-
-
 	final static String opt_optrace = "--optrace";
-    @Parameter(names = opt_optrace, description = "optimize race detection", hidden = true)
+//    @Parameter(names = opt_optrace, description = "optimize race detection", hidden = true)
     //by default optrace is true
     public boolean optrace = true;
 
- 	final static String opt_optlog = "--optlog";
-    @Parameter(names = opt_optlog, description = "optimize logging size", hidden = true)
-    public boolean optlog;
 
-    public final static String opt_exclude = "--exclude";
-    @Parameter(names = opt_exclude, description = "comma separated list of packages to exclude.", hidden = true)
-    public static String additionalExcludes;
-
-    public final static String opt_only_log = "--log";
-    @Parameter(names = opt_only_log, description = "record execution in given directory (no prediction)")
-    public String log_dir = null;
-    public boolean log = true;
-
-    public final static String opt_only_predict = "--predict";
-    @Parameter(names = opt_only_predict, description = "run prediction on logs from given directory")
-    public String predict_dir = null;
-    public boolean predict = true;
-
+	public final static String opt_outdir = "--dir";
+    @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")
+    public String outdir = null;
 
 	final static String short_opt_verbose = "-v";
     final static String opt_verbose = "--verbose";
-    @Parameter(names = {short_opt_verbose, opt_verbose}, description = "generate more verbose output")
+    @Parameter(names = {short_opt_verbose, opt_verbose}, description = "Generate more verbose output", descriptionKey = "9000")
     public boolean verbose;
 
 	final static String short_opt_help = "-h";
     final static String opt_help = "--help";
-    @Parameter(names = {short_opt_help, opt_help}, description = "print help info", help = true)
+    @Parameter(names = {short_opt_help, opt_help}, description = "Print help info", help = true, descriptionKey = "9900")
     public boolean help;
 
     public final static String opt_java = "--";
 //    @Parameter(names = opt_java, description = "optional separator for java arguments")
 //    public boolean javaSeparator;
 
-
-    public final static String opt_sharing_only = "--detectSharingOnly";
-    @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables.", hidden = true)
-    public boolean agentOnlySharing;
 
     public void parseArguments(String[] args) {
         String pathSeparator = System.getProperty("path.separator");
@@ -198,16 +196,23 @@ public class Configuration {
 
         if (log_dir != null) {
             if (predict_dir != null) {
-                System.err.println("Error: Options --log and --predict are mutually exclusive.");
-                System.exit(1);
+                exclusiveOptionsFailure(opt_only_log, opt_only_predict);
             } else {
+                if (outdir != null) {
+                    exclusiveOptionsFailure(opt_only_log, opt_outdir);
+                }
                 outdir = Paths.get(log_dir).toAbsolutePath().toString();
                 predict = false;
             }
         } else  {
             if (predict_dir != null) {
+                if (outdir != null) {
+                    exclusiveOptionsFailure(opt_only_predict, opt_outdir);
+                }
                 outdir = Paths.get(predict_dir).toAbsolutePath().toString();
                 log = false;
+            } else if (outdir != null) {
+                outdir = Paths.get(outdir).toAbsolutePath().toString();
             } else {
                 try {
                     outdir = Files.createTempDirectory(
@@ -254,6 +259,11 @@ public class Configuration {
         }
     }
 
+    public void exclusiveOptionsFailure(String opt1, String opt2) {
+        System.err.println("Error: Options " + opt1 + " and " + opt2 + " are mutually exclusive.");
+        System.exit(1);
+    }
+
     public void usage(JCommander jc) {
 /*
 -- can be used as a terminator for the rv-predict specific options.
@@ -281,21 +291,35 @@ be used explicitly for disambiguation.
         String usageHeader = "Usage: " + PROGRAM_NAME + " [rv_predict_options] [--] [java_options] "
                 + jc.getMainParameterDescription() + "\n";
         String usage = usageHeader
-                + "  Options:" + "\n";
+                + "  Options:";
         String shortUsage = usageHeader
-                + "  Common options (use -h -v for a complete list):" + "\n";
+                + "  Common options (use -h -v for a complete list):";
 
         Map<String, String> usageMap = new TreeMap<String, String>();
         Map<String, String> shortUsageMap = new TreeMap<String, String>();
+        int spacesBeforeCnt;
+        int spacesAfterCnt;
+        String description;
         for (ParameterDescription parameterDescription : jc.getParameters()) {
+            Parameter parameter = parameterDescription.getParameter().getParameter();
+            String descriptionKey = parameter.descriptionKey();
+            description = "\n";
+            spacesBeforeCnt = 2;
+            spacesAfterCnt = max_option_length - parameterDescription.getNames().length() + 2;
+            if (!descriptionKey.endsWith("00")) {
+                spacesBeforeCnt += 2;
+                spacesAfterCnt -= 2;
+                description = "";
+            }
+
             String aDefault = getDefault(parameterDescription);
-            String description = spaces(4) + parameterDescription.getNames()
-                    + spaces(max_option_length - parameterDescription.getNames().length())
+            description += Util.spaces(spacesBeforeCnt) + parameterDescription.getNames()
+                    + Util.spaces(spacesAfterCnt)
                     + parameterDescription.getDescription()
-                    + (aDefault.isEmpty() ? "" : "\n" + spaces(4)  + spaces(max_option_length) + aDefault);
-                usageMap.put(parameterDescription.getLongestName(), description);
-            if (!parameterDescription.getParameter().hidden()) {
-                shortUsageMap.put(parameterDescription.getLongestName(), description);
+                    + (aDefault.isEmpty() ? "" : "\n" + Util.spaces(4) + Util.spaces(max_option_length) + aDefault);
+            usageMap.put(descriptionKey, description);
+            if (!parameter.hidden()) {
+                shortUsageMap.put(descriptionKey, description);
             }
 
         }
@@ -313,12 +337,6 @@ be used explicitly for disambiguation.
         Object aDefault = parameterDescription.getDefault();
         if (aDefault == null || aDefault.equals(Boolean.FALSE)) return "";
         return "Default: " + aDefault;
-    }
-
-    private static String spaces(int i) {
-        char[] spaces = new char[i];
-        Arrays.fill(spaces, ' ');
-        return new String(spaces);
     }
 
 

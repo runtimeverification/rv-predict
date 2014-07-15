@@ -6,8 +6,8 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Scanner;
 
+import config.Util;
 import org.junit.Assert;
 
 /**
@@ -59,8 +59,8 @@ public class TestHelper {
         }
         Process process = processBuilder.start();
         if (expectedFilePrefix == null) {
-            redirectOutput(process.getInputStream(), null);
-            redirectOutput(process.getErrorStream(), null);
+            Util.redirectOutput(process.getInputStream(), null);
+            Util.redirectOutput(process.getErrorStream(), null);
         }
         int returnCode = process.waitFor();
         Assert.assertEquals("Expected no error during" + Arrays.toString(command) + ".", 0, returnCode);
@@ -70,29 +70,14 @@ public class TestHelper {
         }
     }
 
-    public void redirectOutput(final InputStream outputStream, final PrintStream redirect) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Scanner scanner = new Scanner(outputStream);
-                while (scanner.hasNextLine()) {
-                    String s = scanner.nextLine();
-                    if (redirect != null) {
-                        redirect.println(s);
-                    }
-                }
-            }
-        }).start();
-    }
-
     /**
      * Assert two files have equal content.
      * @param expectedFile The path to the file with the expected result.
      * @param actualFile The path to the file with the calculated result.
      */
     public void assertEqualFiles(String expectedFile, String actualFile) throws IOException {
-        String expectedText = convertFileToString(expectedFile);
-        String actualText = convertFileToString(actualFile);
+        String expectedText = Util.convertFileToString(expectedFile);
+        String actualText = Util.convertFileToString(actualFile);
 
         Assert.assertEquals(actualFile + " should match " + expectedFile, expectedText, actualText);
     }
@@ -140,20 +125,6 @@ public class TestHelper {
         return fileSystem.getPath(basePath.toString(), path);
     }
 
-
-
-    public static String convertFileToString(File file) throws IOException{
-        FileInputStream fileInputStream = new FileInputStream(file);
-        byte[] b = new byte[fileInputStream.available()];
-        fileInputStream.read(b);
-        fileInputStream.close();
-        String content = new String(b);
-        return content;
-    }
-
-    public static String convertFileToString(String path) throws IOException{
-        return convertFileToString(new File(path));
-    }
 
 }
 

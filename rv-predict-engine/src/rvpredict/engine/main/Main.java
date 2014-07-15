@@ -1,6 +1,7 @@
 package rvpredict.engine.main;
 
 import config.Configuration;
+import config.Util;
 import db.DBEngine;
 
 import java.io.File;
@@ -13,11 +14,16 @@ import java.util.*;
  * @author TraianSF
  */
 public class Main {
+
+    public static final int WIDTH = 75;
+    public static final char FILL = '-';
+
     public static void main(String[] args) {
 
         Configuration config = new Configuration();
 
-         config.parseArguments(args);
+        config.parseArguments(args);
+        boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
 
         DBEngine db;
         if (config.log) {
@@ -63,15 +69,30 @@ public class Main {
             appArgList.add("-Xbootclasspath/a:" + rvAgent);
             int agentIds = appArgList.size();
             if (config.optlog || config.agentOnlySharing) {
+                if (logOutput) {
+                    if (config.optlog) {
+                        System.out.println(center("First pass: Instrumented execution to detect shared variables"));
+                    } else {
+                        System.out.println(center("Instrumented execution to detect shared variables"));
+
+                    }
+                }
                 appArgList.add("-javaagent:" + iagent + "=" + sharingAgentOptions);
             } else {
                 appArgList.add("-javaagent:" + iagent + "=" + noSharingAgentOptions);
+                if (logOutput) {
+                    System.out.println(center("Instrumented execution to record the trace"));
+                }
             }
             appArgList.addAll(config.command_line);
 
             runAgent(config, appArgList);
             if (config.optlog) {
                 appArgList.set(agentIds, "-javaagent:" + iagent + "=" + noSharingAgentOptions);
+                if (logOutput) {
+                    System.out.println(center("Second pass: Instrumented execution to record the trace"));
+
+                }
                 runAgent(config, appArgList);
             }
         }
@@ -96,8 +117,11 @@ public class Main {
             db.closeDB();
         }
 
-        if (config.log && config.verbose) {
-            System.out.println("\nDone executing. Trace logged in: " + config.outdir);
+        if (config.log && (config.verbose || logOutput)) {
+            System.out.println(center("Logging phase completed."));
+            if (config.verbose) {
+                System.out.println("\tTrace logged in: " + config.outdir);
+            }
         }
 
         if (config.predict) {
@@ -105,13 +129,28 @@ public class Main {
         }
     }
 
+    public static String center(String msg) {
+        return Util.center(msg, WIDTH, FILL);
+    }
+
     public static void runAgent(Configuration config, List<String> appArgList) {
         ProcessBuilder processBuilder =
                 new ProcessBuilder(appArgList.toArray(new String[appArgList.size()]));
-        processBuilder.inheritIO();
+        String logOutputString = config.log_output;
+        boolean logToScreen = false;
+        String file = null;
+        if (logOutputString.equalsIgnoreCase(Configuration.YES)) {
+            logToScreen = true;
+        } else if (!logOutputString.equals(Configuration.NO)) {
+            file = logOutputString;
+            String actualOutFile = file + ".out";
+            String actualErrFile = file + ".err";
+            processBuilder.redirectError(new File(actualErrFile));
+            processBuilder.redirectOutput(new File(actualOutFile));
+        }
         try {
             if (config.verbose) {
-                System.out.println("Executing and logging command: ");
+                System.out.println("Executing command: ");
                 System.out.print("   ");
                 for (String arg : appArgList) {
                     if (arg.contains(" ")) {
@@ -123,6 +162,14 @@ public class Main {
                 System.out.println();
             }
             Process process = processBuilder.start();
+            if (logToScreen) {
+                Util.redirectOutput(process.getErrorStream(), System.err);
+                Util.redirectOutput(process.getInputStream(), System.out);
+            } else if (file == null) {
+                Util.redirectOutput(process.getErrorStream(), null);
+                Util.redirectOutput(process.getInputStream(), null);
+            }
+
             process.waitFor();
         } catch (IOException e) {
         } catch (InterruptedException e) {

@@ -13,15 +13,15 @@ technology underlying RV-Predict is best explained in this
 
 RV-Predict requires Java Runtime Environment 1.7 or higher. 
 
-Moreover, RV-Predict relies on an SMT solver for solving constraints.  Please
-download and install [Z3](http://z3.codeplex.com) prior to installing
-RV-Predict.  Although mostly tested with Z3, RV-Predict also supports
-the SMT-LIB v1.2 language (currently only through Yices).  Please see
-the options below.
+Moreover, RV-Predict relies on an SMT solver with support for the 
+SMT-LIB v1.2 language and model generation for solving constraints. Please 
+install such an SMT solver prior to installing RV-Predict.  RV-Predict uses 
+[z3](http://z3.codeplex.com) with the `-smt` option by default,
+but this behavior can be altered by the user.  Please see the options below.
 
 # Installation
 
-Download the installer from
+Download the installer from the
 [RV-Predict website](http://runtimeverification.com/predict/rv-predict-install.jar)
 and execute 
 
@@ -47,27 +47,38 @@ where `[options]` include both RV-Predict and Java specific options.
 
 Running command:
 
-    rv-predict -cp examples\bin account.Account
-Standard output:
+    rv-predict -cp examples/bin account.Account
 
+Output: 
+
+    ----------------Instrumented execution to record the trace-----------------
     Bank system started
     loop: 2
     loop: 2
-    sum: -174
     sum: 256
-    sum: -33
+    sum: -174
     sum: 76
+    sum: -33
     ..
     End of the week.
     Bank records = 125, accounts balance = 125.
     Records match.
+    
+    -------------------------Logging phase completed.--------------------------
+    Race on field account.BankAccount.Balance between:
+            account.Account.go(Account.java:67)
+            account.Account.Service(Account.java:97)
+    
+    Race on field account.Account.Bank_Total between two instances of:
+            account.Account.Service(Account.java:98)
+    
+    Race on field account.Account.Bank_Total between:
+            account.Account.checkResult(Account.java:75)
+            account.Account.Service(Account.java:98)
 
-Standard error:
-
-    Race: account.Account|go([Ljava.lang.String;)V|account.BankAccount.Balance|67 - account.Account|Service(II)V|account.BankAccount.Balance|97
-    Race: account.Account|Service(II)V|account.Account.Bank_Total|98 - account.Account|Service(II)V|account.Account.Bank_Total|98
-    Race: account.Account|checkResult(I)V|account.Account.Bank_Total|75 - account.Account|Service(II)V|account.Account.Bank_Total|98
-    Race: account.Account|checkResult(I)V|account.Account.Bank_Total|76 - account.Account|Service(II)V|account.Account.Bank_Total|98
+    Race on field account.Account.Bank_Total between:
+            account.Account.checkResult(Account.java:76)
+            account.Account.Service(Account.java:98)
 
 ## Interpreting the results
 
@@ -84,31 +95,29 @@ in the standard output stream is a normal interaction which exhibits no
 data race, also indicated by the fact that the records match at the end of 
 the session.
 
-The standard error stream output shows the results of the analysis performed 
-on the logged trace which exhibits 4 possible violations which could have 
-occurred if the thread scheduling would have been different.
+The analysis performed on the logged trace exhibits 4 violations 
+which could have occurred if the thread scheduling would have been different.
 
-A race description is introduced by the `Race: ` keyword, followed by the 
-two strings identifying the locations in race, separated by ` - `. 
-A location descriptor consists of 4 components separated by `|`.
-These components are:
+A race description usually follows the syntax 
 
-- `account.Account` — the fully qualified name of the class where the
-conflict occurred
-- `go([Ljava.lang.String;)V` — the signature of the method in which the 
-conflict occurred 
-- `account.BankAccount.Balance` — the fully qualified name of the field 
-involved in the race
-- `67` — the line number for this location
+    Race on field <field_name> between:
+            <method_name>(<file_name>:<line_number>)
+            <method_name>(<file_name>:<line_number>)
+Which presents the fully qualified name of the field on which the race occurred
+(`<field_name>`) and the two locations in race identified as frames on the
+method call stack: fully qualified name of the method (`<method_name>`), file 
+containing the location (`<file_name>`) and line number where the unprotected
+field access occurred (`<line_number>`).
 
-Thus, the first race description can be read as follows:
-> There is a race between the `Balance` field of the `BankAccount`
-> class accessed in method `go` of the `Account` class at line `67` 
-> and the access of the same field in method `Service` of class 
-> `Account` at line `97`.
+If the race occurrs between accesses at the same location, the syntax is:
 
-If no races are found, then the message `No races found.` is appended to the
-standard output stream.
+    Race on field <field_name> between two instances of:
+            <method_name>(<file_name>:<line_number>)
+
+Finally, if the race is due to an array access, the text `field <field_name>` 
+is replaced by `an array access` in the messages above.
+
+If no races are found, then the message `No races found.` is displayed.
 
 ## Fine Tuning the Execution
 
@@ -121,25 +130,25 @@ the execution, analysis, and the produced output.
 The list of common options can be obtained by using the `-h` or `--help` 
 option when invoking RV-Predict:
  		
-    rv-predict --help
-    Usage: rv-predict [rv_predict_options] [--] [java_options] <command_line>
+    $ rv-predict -h
+    Usage: rv-predict [rv_predict_options] [--] [java_options] <java_command_line>
       Common options (use -h -v for a complete list):
-    
-        -h, --help              print help info
-            --log               record execution in given directory (no prediction)
-            --predict           run prediction on logs from given directory
-            --timeout           rv-predict timeout in seconds
-                                Default: 3600
-        -v, --verbose           generate more verbose output
 
+          --log                 Record execution in given directory (no prediction)
 
-- the `--log` option can used to tell RV-Predict that the execution should be
-logged in the given directory and that the prediction phase should be skipped.
-- the `--predict` option can used to tell RV-Predict to skip the logging phase,
-using the logged trace in the given directory to run the prediction algorithms 
-on. When using this option specifying the java command is no longer necessary.
-- the `--timeout` option controls the total execution time we allow for the 
-prediction phase.
+          --predict             Run prediction on logs from given directory
+
+      -v, --verbose             Generate more verbose output
+
+      -h, --help                Print help info
+
+- the `--log <dir>` option can used to tell RV-Predict that the execution 
+should be logged in the `<dir>` directory and that the prediction phase 
+should be skipped.
+- the `--predict <dir>` option can used to tell RV-Predict to skip the 
+logging phase, using the logged trace from the `<dir>` directory to run 
+the prediction algorithms on. When using this option specifying the java 
+command is no longer necessary.
 - `--` can be used as a terminator for the RV-Predict options.
 
 ### Advanced options
@@ -150,11 +159,19 @@ combining the `-h` and `-v` options when invoking RV-Predict:
     rv-predict -h -v
 
 As this list is always evolving, we refrain from listing all these 
-options here.  However, we would like to mention `--solver` which instructs
-RV-Predict to use a different SMT solver command for handling SMT queries.
-The solver command needs to be such that it takes a file containing a formula
-in the SMT-LIB v1.2 language and produces a model if the formula is 
-satisfiable.  The default value for `--solver` is `z3 -smt`.
+options here.  However, we would like to mention the following:
+
+- the `--solver <cmd>` option instructs RV-Predict to use a different SMT solver 
+command for handling SMT queries. The solver command needs to be such that it 
+takes a file containing a formula in the SMT-LIB v1.2 language and produces a 
+model if the formula is satisfiable.  
+The default value for the `<cmd>` argument is `z3 -smt`.
+- the `--output [yes|no|<name>]` (default: `yes`) option controls how the output of the 
+program being analyzed should be handled. 
+	- `yes` specifies the output should be displayed; 
+	- `no` says the output should be removed; 
+	- a `<name>` tells to redirect the standard output to `<name>.out` and 
+the standard error to `<name>.err`.
 
 ----------
 Additional online documentation can be found on the 

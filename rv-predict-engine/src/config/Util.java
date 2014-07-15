@@ -28,11 +28,9 @@
  ******************************************************************************/
 package config;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
+import java.util.Arrays;
+import java.util.Scanner;
 
 /**
  * Utilities for interacting with file and solver
@@ -86,4 +84,46 @@ public class Util {
 		return tempRVdir;
 	}
 
+    static String spaces(int i) {
+        return chars(i, ' ');
+    }
+
+    public static String chars(int i, char c) {
+        char[] spaces = new char[i];
+        Arrays.fill(spaces, c);
+        return new String(spaces);
+    }
+
+    public static String center(String msg, int width, char fill) {
+        int fillWidth = width - msg.length();
+        return "\n" + chars(fillWidth / 2, fill) + msg + chars((fillWidth + 1) / 2, fill);
+    }
+
+    public static void redirectOutput(final InputStream outputStream, final PrintStream redirect) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Scanner scanner = new Scanner(outputStream);
+                while (scanner.hasNextLine()) {
+                    String s = scanner.nextLine();
+                    if (redirect != null) {
+                        redirect.println(s);
+                    }
+                }
+            }
+        }).start();
+    }
+
+    public static String convertFileToString(File file) throws IOException{
+        FileInputStream fileInputStream = new FileInputStream(file);
+        byte[] b = new byte[fileInputStream.available()];
+        fileInputStream.read(b);
+        fileInputStream.close();
+        String content = new String(b);
+        return content;
+    }
+
+    public static String convertFileToString(String path) throws IOException{
+        return convertFileToString(new File(path));
+    }
 }

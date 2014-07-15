@@ -58,7 +58,7 @@ public class Z3ModelReader
 			
 			String result = readResult(p);
 			if(result.startsWith("(error "))
-				throw new Error("smt2 file has errors");
+				throw new Error("smt file has errors");
 			//System.out.println("Feasible: " + "sat".equals(result));
 
 			if("sat".equals(result)) {
@@ -68,6 +68,12 @@ public class Z3ModelReader
 				fis.close();
 				return model;
 			}
+			else if("unsat".equals(result))
+			{
+				//constraint not satisfied
+			}
+			else
+				System.err.println(result);			
 			
 			fis.close();
 			return null;
@@ -76,7 +82,7 @@ public class Z3ModelReader
 			//e.printStackTrace();
 			return null;
 		}
-		catch(Error e){
+		catch(Error e){  
 			//throw new Error(e);
 			//e.printStackTrace();//don't throw it if it is a NPE
 			return null;

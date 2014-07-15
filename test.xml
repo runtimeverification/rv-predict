@@ -5,7 +5,7 @@
     <arg key="-jar" value="examples/ftpserver/ftpserver.jar" />
   </test>
   <test name="demo.Example">
-    <arg key="-cp" value="tests/bin" />
+    <arg key="-cp" value="examples/bin" />
     <arg value="demo.Example" />
   </test>
   <test name="account.Account">

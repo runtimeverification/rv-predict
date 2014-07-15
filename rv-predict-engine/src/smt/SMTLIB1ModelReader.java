@@ -30,10 +30,11 @@
 */
 
 
-package z3;
+package smt;
 
 import java.util.Vector;
 import java.text.DecimalFormat;
+
 import org.w3c.tools.sexpr.Symbol;
 import org.w3c.tools.sexpr.SimpleSExprStream;
 
@@ -58,7 +59,7 @@ public class SMTLIB1ModelReader
 	 * @param file
 	 * @return
 	 */
-	public static Z3Model read(File file)
+	public static Model read(File file)
 	{
 		try{
 			FileInputStream fis = new FileInputStream(file);	
@@ -74,7 +75,7 @@ public class SMTLIB1ModelReader
 				
 				//if the constraints are satisfied
 				
-				Z3Model model = new Z3Model();
+				Model model = new Model();
 				
 				//Read File Line By Line
 				while ((result = br.readLine()) != null)   {
@@ -97,8 +98,16 @@ public class SMTLIB1ModelReader
 				in.close();
 				
 				return model;
+			}			
+			else if("unsat".equals(result))
+			{
+				//constraint not satisfied
 			}
-
+			else if(result!=null)
+			{
+				System.err.println("Solver "+result);
+				System.exit(-1);
+			}
 			return null;
 		}catch(Exception e){
 			//throw new Error(e);

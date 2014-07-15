@@ -30,7 +30,7 @@
 */
 
 
-package z3;
+package smt;
 
 import java.util.Vector;
 import java.text.DecimalFormat;
@@ -47,9 +47,9 @@ import java.io.File;
  *
  */
 
-public class Z3ModelReader
+public class SMTLIB2ModelReader
 {
-	public static Z3Model read(File file)
+	public static Model read(File file)
 	{
 		try{
 			FileInputStream fis = new FileInputStream(file);
@@ -64,7 +64,7 @@ public class Z3ModelReader
 			if("sat".equals(result)) {
 				//if the constraints are satisfied
 
-				Z3Model model = process((Vector) p.parse());
+				Model model = process((Vector) p.parse());
 				fis.close();
 				return model;
 			}
@@ -72,7 +72,7 @@ public class Z3ModelReader
 			{
 				//constraint not satisfied
 			}
-			else
+			else if(result!=null)
 				System.err.println(result);			
 			
 			fis.close();
@@ -106,13 +106,13 @@ public class Z3ModelReader
 		return new String(cs, 0, i);
 	}
 	
-	private static Z3Model process(Vector root)
+	private static Model process(Vector root)
 	{
 
 		if(!((Symbol) root.elementAt(0)).toString().equals("model"))
 			assert false;
 
-		Z3Model model = new Z3Model();
+		Model model = new Model();
 	
 		int size = root.size();
 		for(int i = 1; i < size; i++)
@@ -121,7 +121,7 @@ public class Z3ModelReader
 		return model;
 	}
 
-	static private void define_fun(Object obj, Z3Model model)
+	static private void define_fun(Object obj, Model model)
 	{
 		Vector node = (Vector) obj;
 		if(!((Symbol) node.elementAt(0)).toString().equals("define-fun"))
@@ -172,7 +172,7 @@ public class Z3ModelReader
 				Vector value = (Vector) v;
 				String opName = ((Symbol) value.elementAt(0)).toString();
 				if(opName.equals("ite")){
-					Z3Model.Array array = new Z3Model.Array();
+					Model.Array array = new Model.Array();
 					ite(t, value, array);
 					return array;
 				}
@@ -185,7 +185,7 @@ public class Z3ModelReader
 		return null;
 	}
 	
-	static private void ite(String t, Vector iteExpr, Z3Model.Array array)
+	static private void ite(String t, Vector iteExpr, Model.Array array)
 	{
 		String opName = ((Symbol) iteExpr.elementAt(0)).toString();
 		if(opName.equals("ite")){

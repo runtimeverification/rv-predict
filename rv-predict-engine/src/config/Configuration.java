@@ -57,7 +57,7 @@ public class Configuration {
     @Parameter(names = opt_log_output, description = "Output of the logged execution [yes|no|<file>]", hidden = true, descriptionKey = "1010")
     public String log_output = YES;
 
- 	final static String opt_optlog = "--aggresive";
+ 	final static String opt_optlog = "--aggressive";
     @Parameter(names = opt_optlog, description = "Aggressively optimize logging size", hidden = true, descriptionKey = "1020")
     public boolean optlog;
 

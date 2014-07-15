@@ -73,7 +73,7 @@ public class SMTLIB2ModelReader
 				//constraint not satisfied
 			}
 			else if(result!=null)
-				System.err.println(result);			
+				System.err.println("Solver error: "+result);			
 			
 			fis.close();
 			return null;

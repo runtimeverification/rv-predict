@@ -105,7 +105,7 @@ public class SMTLIB1ModelReader
 			}
 			else if(result!=null)
 			{
-				System.err.println("Solver "+result);
+				System.err.println("Solver error: "+result);
 				System.exit(-1);
 			}
 			return null;

@@ -101,18 +101,18 @@ which could have occurred if the thread scheduling would have been different.
 A race description usually follows the syntax 
 
     Race on field <field_name> between:
-            <method_name>(<file_name>:<line_no>)
-            <method_name>(<file_name>:<line_no>)
+            <method_name>(<file_name>:<line_number>)
+            <method_name>(<file_name>:<line_number>)
 Which presents the fully qualified name of the field on which the race occurred
 (`<field_name>`) and the two locations in race identified as frames on the
 method call stack: fully qualified name of the method (`<method_name>`), file 
 containing the location (`<file_name>`) and line number where the unprotected
-field access occurred (`<line_no>`).
+field access occurred (`<line_number>`).
 
 If the race occurrs between accesses at the same location, the syntax is:
 
     Race on field <field_name> between two instances of:
-            <method_name>(<file_name>:<line_no>)
+            <method_name>(<file_name>:<line_number>)
 
 Finally, if the race is due to an array access, the text `field <field_name>` 
 is replaced by `an array access` in the messages above.

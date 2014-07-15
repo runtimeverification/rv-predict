@@ -1186,10 +1186,9 @@ public class GUIMain {
                 resourcePath + "/lib/rv-predict-engine.jar",
                 "rvpredict.engine.main.Main",
                 mode,
-                "--dir",
                 tmpDirMap.get(absoluteFileName)
         }));
-        cmd[0] = "--java";
+        cmd[0] = "--";
 
         cmdList.addAll(Arrays.asList(cmd));
 

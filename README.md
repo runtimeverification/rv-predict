@@ -14,7 +14,9 @@ technology underlying RV-Predict is best explained in this
 RV-Predict requires Java Runtime Environment 1.7 or higher. 
 
 Moreover, RV-Predict relies on an SMT solver with support for the 
-SMT-LIB v1.2 language and model generation for solving constraints. Please install such an SMT solver prior to installing RV-Predict.  RV-Predict uses [z3](http://z3.codeplex.com) with the `-smt` option by default,
+SMT-LIB v1.2 language and model generation for solving constraints. Please 
+install such an SMT solver prior to installing RV-Predict.  RV-Predict uses 
+[z3](http://z3.codeplex.com) with the `-smt` option by default,
 but this behavior can be altered by the user.  Please see the options below.
 
 # Installation
@@ -132,19 +134,21 @@ option when invoking RV-Predict:
     Usage: rv-predict [rv_predict_options] [--] [java_options] <java_command_line>
       Common options (use -h -v for a complete list):
 
-          --log                 record execution in given directory (no prediction)
+          --log                 Record execution in given directory (no prediction)
 
-          --predict             run prediction on logs from given directory
+          --predict             Run prediction on logs from given directory
 
-      -v, --verbose             generate more verbose output
+      -v, --verbose             Generate more verbose output
 
-      -h, --help                print help info
+      -h, --help                Print help info
 
-- the `--log` option can used to tell RV-Predict that the execution should be
-logged in the given directory and that the prediction phase should be skipped.
-- the `--predict` option can used to tell RV-Predict to skip the logging phase,
-using the logged trace in the given directory to run the prediction algorithms 
-on. When using this option specifying the java command is no longer necessary.
+- the `--log <dir>` option can used to tell RV-Predict that the execution 
+should be logged in the `<dir>` directory and that the prediction phase 
+should be skipped.
+- the `--predict <dir>` option can used to tell RV-Predict to skip the 
+logging phase, using the logged trace from the `<dir>` directory to run 
+the prediction algorithms on. When using this option specifying the java 
+command is no longer necessary.
 - `--` can be used as a terminator for the RV-Predict options.
 
 ### Advanced options
@@ -157,15 +161,17 @@ combining the `-h` and `-v` options when invoking RV-Predict:
 As this list is always evolving, we refrain from listing all these 
 options here.  However, we would like to mention the following:
 
-- the `--solver` option instructs RV-Predict to use a different SMT solver 
+- the `--solver <cmd>` option instructs RV-Predict to use a different SMT solver 
 command for handling SMT queries. The solver command needs to be such that it 
 takes a file containing a formula in the SMT-LIB v1.2 language and produces a 
 model if the formula is satisfiable.  
-The default value for `--solver` is `z3 -smt`.
-- the `--output` option controls how the output of the program being 
-analyzed should be handled.  The current options are `yes` for displaying 
-the output, `no` for hiding the output, or a `<name>`, for redirecting the standard output to `<name>.out` and the standard error to `<name>.err`.
-The default value for `--output` is `yes`.
+The default value for the `<cmd>` argument is `z3 -smt`.
+- the `--output [yes|no|<name>]` (default: `yes`) option controls how the output of the 
+program being analyzed should be handled. 
+	- `yes` specifies the output should be displayed; 
+	- `no` says the output should be removed; 
+	- a `<name>` tells to redirect the standard output to `<name>.out` and 
+the standard error to `<name>.err`.
 
 ----------
 Additional online documentation can be found on the 

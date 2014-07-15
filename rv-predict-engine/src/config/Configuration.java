@@ -49,20 +49,20 @@ public class Configuration {
     public List<String> command_line;
 
     public final static String opt_only_log = "--log";
-    @Parameter(names = opt_only_log, description = "record execution in given directory (no prediction)", descriptionKey = "1000")
+    @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1000")
     public String log_dir = null;
     public boolean log = true;
 
     final static String opt_log_output = "--output";
-    @Parameter(names = opt_log_output, description = "output of the logged execution [yes|no|<file>]", hidden = true, descriptionKey = "1010")
+    @Parameter(names = opt_log_output, description = "Output of the logged execution [yes|no|<file>]", hidden = true, descriptionKey = "1010")
     public String log_output = YES;
 
  	final static String opt_optlog = "--aggresive";
-    @Parameter(names = opt_optlog, description = "aggressively optimize logging size", hidden = true, descriptionKey = "1020")
+    @Parameter(names = opt_optlog, description = "Aggressively optimize logging size", hidden = true, descriptionKey = "1020")
     public boolean optlog;
 
     public final static String opt_exclude = "--exclude";
-    @Parameter(names = opt_exclude, description = "comma separated list of packages to exclude.", hidden = true, descriptionKey = "1030")
+    @Parameter(names = opt_exclude, description = "Comma separated list of packages to exclude.", hidden = true, descriptionKey = "1030")
     public static String additionalExcludes;
 
     public final static String opt_sharing_only = "--detectSharingOnly";
@@ -70,7 +70,7 @@ public class Configuration {
     public boolean agentOnlySharing;
 
     public final static String opt_only_predict = "--predict";
-    @Parameter(names = opt_only_predict, description = "run prediction on logs from given directory", descriptionKey = "2000")
+    @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "2000")
     public String predict_dir = null;
     public boolean predict = true;
 
@@ -80,7 +80,7 @@ public class Configuration {
 
 	final static String opt_max_len = "--maxlen";
     final static String default_max_len= "1000";
-    @Parameter(names=opt_max_len, description = "window size", hidden = true, descriptionKey = "2010")
+    @Parameter(names=opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
     public long window_size = 1000;
 
 //	final static String opt_no_schedule = "--noschedule";
@@ -89,15 +89,15 @@ public class Configuration {
     public boolean noschedule = true;
 
 	final static String opt_no_branch = "--nobranch";
-    @Parameter(names=opt_no_branch, description = "use no branch model", hidden = true, descriptionKey = "2020")
+    @Parameter(names=opt_no_branch, description = "Use no branch model", hidden = true, descriptionKey = "2020")
     public boolean nobranch;
 
 	final static String opt_no_volatile = "--novolatile";
-    @Parameter(names=opt_no_volatile, description = "exclude volatile variables", hidden = true, descriptionKey = "2030")
+    @Parameter(names=opt_no_volatile, description = "Exclude volatile variables", hidden = true, descriptionKey = "2030")
     public boolean novolatile;
 
 	final static String opt_allrace = "--allrace";
-    @Parameter(names=opt_allrace, description = "check all races", hidden = true, descriptionKey = "2040")
+    @Parameter(names=opt_allrace, description = "Check all races", hidden = true, descriptionKey = "2040")
     public boolean allrace;
 
 //	final static String opt_all_consistent = "--allconsistent";
@@ -117,11 +117,11 @@ public class Configuration {
     public String tableName = null;
 
     final static String opt_smt_solver = "--solver";
-    @Parameter(names = opt_smt_solver, description = "solver command to use (SMT-LIB v1.2)", hidden = true, descriptionKey = "2050")
+    @Parameter(names = opt_smt_solver, description = "Solver command to use (SMT-LIB v1.2)", hidden = true, descriptionKey = "2050")
     public String smt_solver = "z3 -smt";
 
 	final static String opt_solver_timeout = "--solver_timeout";
-    @Parameter(names = opt_solver_timeout, description = "solver timeout in seconds", hidden = true, descriptionKey = "2060")
+    @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
     public long solver_timeout = 60;
 
 	final static String opt_solver_memory = "--solver_memory";
@@ -129,7 +129,7 @@ public class Configuration {
     public long solver_memory = 8000;
 
 	final static String opt_timeout = "--timeout";
-    @Parameter(names = opt_timeout, description = "rv-predict timeout in seconds", hidden = true, descriptionKey = "2070")
+    @Parameter(names = opt_timeout, description = "Rv-predict timeout in seconds", hidden = true, descriptionKey = "2070")
     public long timeout = 3600;
 
 //    final static String opt_smtlib1 = "--smtlib1";
@@ -144,12 +144,12 @@ public class Configuration {
 
 	final static String short_opt_verbose = "-v";
     final static String opt_verbose = "--verbose";
-    @Parameter(names = {short_opt_verbose, opt_verbose}, description = "generate more verbose output", descriptionKey = "9000")
+    @Parameter(names = {short_opt_verbose, opt_verbose}, description = "Generate more verbose output", descriptionKey = "9000")
     public boolean verbose;
 
 	final static String short_opt_help = "-h";
     final static String opt_help = "--help";
-    @Parameter(names = {short_opt_help, opt_help}, description = "print help info", help = true, descriptionKey = "9900")
+    @Parameter(names = {short_opt_help, opt_help}, description = "Print help info", help = true, descriptionKey = "9900")
     public boolean help;
 
     public final static String opt_java = "--";

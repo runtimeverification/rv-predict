@@ -62,11 +62,11 @@ public class Configuration {
     public boolean optlog;
 
     public final static String opt_exclude = "--exclude";
-    @Parameter(names = opt_exclude, description = "Comma separated list of packages to exclude.", hidden = true, descriptionKey = "1030")
+    @Parameter(names = opt_exclude, description = "Comma separated list of packages to exclude", hidden = true, descriptionKey = "1030")
     public static String additionalExcludes;
 
     public final static String opt_sharing_only = "--detectSharingOnly";
-    @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables.", hidden = true, descriptionKey = "1040")
+    @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables", hidden = true, descriptionKey = "1040")
     public boolean agentOnlySharing;
 
     public final static String opt_only_predict = "--predict";
@@ -108,10 +108,6 @@ public class Configuration {
 //    @Parameter(names = opt_constraint_outdir, description = "constraint file directory", hidden = true)
     public String constraint_outdir;
 
-	public final static String opt_outdir = "--dir";
-//    @Parameter(names = opt_outdir, description = "output directory")
-    public String outdir = null;
-
     public final static String opt_table_name = "--table";
 //    @Parameter(names = opt_table_name, description = "Name of the table storing the log", hidden = true)
     public String tableName = null;
@@ -141,6 +137,10 @@ public class Configuration {
     //by default optrace is true
     public boolean optrace = true;
 
+
+	public final static String opt_outdir = "--dir";
+    @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")
+    public String outdir = null;
 
 	final static String short_opt_verbose = "-v";
     final static String opt_verbose = "--verbose";
@@ -196,16 +196,23 @@ public class Configuration {
 
         if (log_dir != null) {
             if (predict_dir != null) {
-                System.err.println("Error: Options --log and --predict are mutually exclusive.");
-                System.exit(1);
+                exclusiveOptionsFailure(opt_only_log, opt_only_predict);
             } else {
+                if (outdir != null) {
+                    exclusiveOptionsFailure(opt_only_log, opt_outdir);
+                }
                 outdir = Paths.get(log_dir).toAbsolutePath().toString();
                 predict = false;
             }
         } else  {
             if (predict_dir != null) {
+                if (outdir != null) {
+                    exclusiveOptionsFailure(opt_only_predict, opt_outdir);
+                }
                 outdir = Paths.get(predict_dir).toAbsolutePath().toString();
                 log = false;
+            } else if (outdir != null) {
+                outdir = Paths.get(outdir).toAbsolutePath().toString();
             } else {
                 try {
                     outdir = Files.createTempDirectory(
@@ -250,6 +257,11 @@ public class Configuration {
         if (tableName == null) {
             tableName = "main";
         }
+    }
+
+    public void exclusiveOptionsFailure(String opt1, String opt2) {
+        System.err.println("Error: Options " + opt1 + " and " + opt2 + " are mutually exclusive.");
+        System.exit(1);
     }
 
     public void usage(JCommander jc) {

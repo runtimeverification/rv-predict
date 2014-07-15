@@ -32,6 +32,8 @@ import java.util.Map.Entry;
 
 import property.EREProperty;
 import config.Configuration;
+import smt.EngineSMTLIB1;
+import smt.Engine;
 import trace.AbstractNode;
 import trace.IMemNode;
 import trace.ISyncNode;
@@ -48,8 +50,6 @@ import violation.ExactRace;
 import violation.IViolation;
 import violation.PropertyViolation;
 import violation.Race;
-import z3.YicesEngineSMTLIB1;
-import z3.Z3Engine;
 import db.DBEngine;
 
 /**
@@ -130,7 +130,7 @@ public class NewRVPredict {
 	 * @param trace
 	 * @param schedule_prefix
 	 */
-	private static void detectDeadlock(Z3Engine engine,Trace trace,Vector<String> schedule_prefix)
+	private static void detectDeadlock(Engine engine,Trace trace,Vector<String> schedule_prefix)
 	{
 		HashMap<Long,HashMap<String,Vector<LockPair>>> threadIndexedLockPairs 
 			= trace.getThreadIndexedLockPairs();
@@ -242,7 +242,7 @@ public class NewRVPredict {
 		else
 			return schedule;
 	}
-	private static void detectDeadlockProperty(Z3Engine engine, Trace trace, EREProperty property,
+	private static void detectDeadlockProperty(Engine engine, Trace trace, EREProperty property,
 			Vector<String> schedule_prefix)
 	{		
 		Vector<ReadNode> readNodes_rw = trace.getAllReadNodes();
@@ -311,7 +311,7 @@ public class NewRVPredict {
 		}
 		
 	}
-	private static void detectProperty(Z3Engine engine, Trace trace, EREProperty property,
+	private static void detectProperty(Engine engine, Trace trace, EREProperty property,
 			Vector<String> schedule_prefix)
 	{		
 		Vector<ReadNode> readNodes_rw = trace.getAllReadNodes();
@@ -376,7 +376,7 @@ public class NewRVPredict {
 	 * @param trace
 	 * @param schedule_prefix
 	 */
-	private static void detectRace(Z3Engine engine, Trace trace, Vector<String> schedule_prefix)
+	private static void detectRace(Engine engine, Trace trace, Vector<String> schedule_prefix)
 	{
 		//implement potentialraces to be exact match
 		
@@ -869,7 +869,7 @@ public class NewRVPredict {
 	 * @param trace
 	 * @param schedule_prefix
 	 */
-	private static void detectAtomicityViolation(Z3Engine engine, Trace trace,Vector<String> schedule_prefix)
+	private static void detectAtomicityViolation(Engine engine, Trace trace,Vector<String> schedule_prefix)
 	{
 	
 		HashMap<String,HashMap<Long,Vector<IMemNode>>> indexedThreadReadWriteNodes 
@@ -1041,11 +1041,7 @@ public class NewRVPredict {
 			Vector<String> schedule_prefix = new Vector<String>();
 
 			//z3 engine is used for interacting with constraints
-			Z3Engine engine;
-			if(config.smtlib1)//if yices smt format
-				engine = new YicesEngineSMTLIB1(config);
-			else//use z3 smt2 format by default
-				engine = new Z3Engine(config);
+			Engine engine = new EngineSMTLIB1(config);
 			
 			//map from memory address to the initial value  
 			HashMap<String,String> initialWriteValueMap = new HashMap<String,String>();

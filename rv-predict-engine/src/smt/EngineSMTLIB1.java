@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package z3;
+package smt;
 
 import trace.AbstractNode;
 import trace.IMemNode;
@@ -54,13 +54,13 @@ import java.util.Map.Entry;
 
 import config.Configuration;
 
-public class YicesEngineSMTLIB1 extends Z3Engine
+public class EngineSMTLIB1 extends Engine
 {
 	String CONS_BENCHNAME;
 	final String BRACKET_LEFT = "(";
 	final String BRACKET_RIGHT = ")";
 	
-	public YicesEngineSMTLIB1(Configuration config)
+	public EngineSMTLIB1(Configuration config)
 	{
 		super(config);
 		CONS_BENCHNAME="(benchmark "+config.tableName +".smt\n";
@@ -755,7 +755,7 @@ public class YicesEngineSMTLIB1 extends Z3Engine
 		//String QUERY = "\n(assert (= "+var1+" "+var2+"))\n\n";
 		
 		id++;
-		task = new SMTLIB1Run(config,id);
+		task = new SMTTaskRun(config,id);
 		
 		String cons_assert = CONS_ASSERT.toString()+casualConstraint.toString()+")\n";
 		cons_assert = cons_assert.replace(var2+" ", var1+" ");

@@ -29,7 +29,7 @@
   either expressed or implied, of the FreeBSD Project.
 */
 
-package z3;
+package smt;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -42,7 +42,7 @@ import java.util.HashMap;
  * @author jeffhuang
  *
  */
-public class Z3Model
+public class Model
 {
 	Map<String,Object> vals = new HashMap();
 	

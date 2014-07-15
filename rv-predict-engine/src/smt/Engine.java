@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package z3;
+package smt;
 
 import trace.AbstractNode;
 import trace.IMemNode;
@@ -64,10 +64,10 @@ import config.Configuration;
  * @author jeffhuang
  *
  */
-public class Z3Engine
+public class Engine
 {
 	protected int id =0;//constraint id
-	protected Z3Run task;
+	protected SMTTaskRun task;
 	
 	protected Configuration config;
 	
@@ -80,7 +80,7 @@ public class Z3Engine
 	protected String CONS_SETLOGIC;
 	protected final StringBuilder CONS_GETMODEL = new StringBuilder("(check-sat)\n(get-model)\n(exit)");
 
-	public Z3Engine(Configuration config)
+	public Engine(Configuration config)
 	{
 		this.config = config;
 		this.id = 0;
@@ -745,7 +745,7 @@ public class Z3Engine
 	{
 		
 		id++;
-		task = new Z3Run(config,id);
+		task = new SMTTaskRun(config,id);
 		StringBuilder msg = new StringBuilder(CONS_SETLOGIC).append(CONS_DECLARE).append(CONS_ASSERT).append(propertyConstraint).append(CONS_GETMODEL);	
 		task.sendMessage(msg.toString());
 		
@@ -781,7 +781,7 @@ public class Z3Engine
 		//String QUERY = "\n(assert (= "+var1+" "+var2+"))\n\n";
 		
 		id++;
-		task = new Z3Run(config,id);
+		task = new SMTTaskRun(config,id);
 		casualConstraint.append(CONS_ASSERT);
 		String cons_assert = casualConstraint.toString();
 		cons_assert = cons_assert.replace(var2+" ", var1+" ");
@@ -821,7 +821,7 @@ public class Z3Engine
 											"))\n\n";
 		
 		id++;
-		task = new Z3Run(config,id);
+		task = new SMTTaskRun(config,id);
 		StringBuilder msg = new StringBuilder(CONS_DECLARE).append(CONS_ASSERT).append(casualConstraint1).append(casualConstraint2).append(casualConstraint3).append(QUERY).append(CONS_GETMODEL);
 		task.sendMessage(msg.toString());
 		
@@ -840,7 +840,7 @@ public class Z3Engine
 											"))\n\n";
 		
 		id++;
-		task = new Z3Run(config,id);
+		task = new SMTTaskRun(config,id);
 		StringBuilder msg = new StringBuilder(CONS_DECLARE).append(CONS_ASSERT).append(QUERY).append(CONS_GETMODEL);
 		task.sendMessage(msg.toString());
 		
@@ -892,7 +892,7 @@ public class Z3Engine
 
 		
 		id++;
-		task = new Z3Run(config,id);
+		task = new SMTTaskRun(config,id);
 		StringBuilder msg = new StringBuilder(CONS_DECLARE).append(CONS_ASSERT).append(QUERY).append(CONS_GETMODEL);
 		task.sendMessage(msg.toString());
 		

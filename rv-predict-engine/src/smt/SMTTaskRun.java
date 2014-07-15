@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package z3;
+package smt;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -47,24 +47,22 @@ import config.Util;
  * @author jeffhuang
  *
  */
-public class Z3Run
+public class SMTTaskRun
 {
-	protected static String Z3_SMT2 = ".z3smt2";
-	protected static String Z3_OUT = ".z3out";
-	protected static String Z3_ERR = ".z3err.";
+	protected static String SMT = ".smt";
+	protected static String OUT = ".smtout";
 	
-	
-	File smtFile,z3OutFile,z3ErrFile;
+	File outFile,smtFile;
 	protected List<String> CMD;
 	
-	public Z3Model model;
+	public Model model;
 	public Vector<String> schedule;
 		
 	boolean sat;
 
     long timeout;
 	
-	public Z3Run(Configuration config, int id)
+	public SMTTaskRun(Configuration config, int id)
 	{				
 		try{
 			init(config,id);
@@ -80,19 +78,13 @@ public class Z3Run
 	 * @param id
 	 * @throws IOException
 	 */
-	protected void init(Configuration config, int id) throws IOException
-	{
-		
-		//constraint file
-		smtFile = Util.newOutFile(config.constraint_outdir,config.tableName +"_"+id+Z3_SMT2);
+	public void init(Configuration config, int id) throws IOException
+	{		
+		smtFile = Util.newOutFile(config.constraint_outdir,config.tableName +"_"+id+SMT);
         
-		//solution file
-		z3OutFile = Util.newOutFile(config.constraint_outdir,config.tableName +"_"+id+Z3_OUT);
-		
-		//z3ErrFile = Util.newOutFile(Z3_ERR+id);//looks useless
-		
-		//command line to Z3 solver
-		CMD = Arrays.asList("z3", "-memory:"+config.solver_memory, "-smt2");
+		outFile = Util.newOutFile(config.constraint_outdir,config.tableName +"_"+id+OUT);
+				
+		CMD = Arrays.asList(config.smt_solver.split(" "));
         timeout = config.solver_timeout;
 	}
 	
@@ -109,9 +101,9 @@ public class Z3Run
 		    smtWriter.close();
 		    
 		    //invoke the solver
-	        exec(z3OutFile, z3ErrFile, smtFile.getAbsolutePath());
+	        exec(outFile, smtFile.getAbsolutePath());
 
-	        model = Z3ModelReader.read(z3OutFile);
+	        model = SMTLIB1ModelReader.read(outFile);
 	        
 	        if(model!=null)
 	        {
@@ -134,7 +126,7 @@ public class Z3Run
 	 * @param model
 	 * @return
 	 */
-	public Vector<String> computeSchedule(Z3Model model) {
+	public Vector<String> computeSchedule(Model model) {
 		
 		Vector<String> schedule = new Vector<String>();
 		
@@ -167,7 +159,7 @@ public class Z3Run
 		return schedule;
 	}
 	
-	public void exec(final File outFile, File errFile, String file) throws IOException
+	public void exec(final File outFile, String file) throws IOException
 	{
 
 		final List<String> cmds = new ArrayList<String>();
@@ -179,6 +171,8 @@ public class Z3Run
             public Integer call() throws Exception {
                 ProcessBuilder processBuilder = new ProcessBuilder(cmds);
                 processBuilder.redirectOutput(outFile);
+                processBuilder.redirectErrorStream(true);
+                
                 Process process = processBuilder.start();
                 try {
                     process.waitFor();
@@ -191,11 +185,22 @@ public class Z3Run
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         executorService.execute(task);
         try {
-            task.get(timeout, TimeUnit.SECONDS);
-        } catch (Exception e) {
+            //Integer i = 
+            		task.get(timeout, TimeUnit.SECONDS);
+            
+            //if(i!=0) System.err.println("solver error");
+            
+        } catch (ExecutionException e) {
+        	System.err.println(e.getMessage());
+        	System.exit(-1);
+
+        }catch(Exception e)
+        {
+        	System.err.println(e.getMessage());
             task.cancel(true);
             executorService.shutdown();
         }
+       
     }
 	
 }

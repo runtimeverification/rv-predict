@@ -1,6 +1,9 @@
 package com.runtimeverification.rvpredict.engine.main;
 
+import com.runtimeverification.rvpredict.IntegrationTest;
 import com.runtimeverification.rvpredict.TestHelper;
+import config.Configuration;
+import org.junit.experimental.categories.Category;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -23,15 +26,20 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+
 /**
  * Base class for rv-predict system tests
  * @author TraianSF
  */
 @RunWith(Parameterized.class)
+@Category(IntegrationTest.class)
 public class MainTest {
-    private static String basePath = Main.getBasePath();
+    private static String version = System.getProperty("rvVersion");
+    private static String basePath = System.getProperty("rvPath");
     private static String separator = System.getProperty("file.separator");
-    private static String testPathFile = getTestConfigPath();
+    private static String testPathFile = System.getProperty("examplesPath");
+    private static String systemClassPath = System.getProperty("java.class.path","none");
+    private static String pathSeparator = System.getProperty("path.separator");
 
     private static String getTestConfigPath() {
         String path = null;
@@ -43,9 +51,10 @@ public class MainTest {
         return path;
     }
 
-    private static String rvPredictJar = basePath + separator + "lib" + separator + "rv-predict-engine.jar";
+    private static String rvPredictJar = basePath + separator + "lib" + separator + "*";
     private static String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
-    private static List<String> rvArgList = Arrays.asList(new String[]{java, "-cp", rvPredictJar, "rvpredict.engine.main.Main"});
+    private static List<String> rvArgList = Arrays.asList(new String[]{java, "-cp", rvPredictJar,
+            "rvpredict.engine.main.Main", "-cp", systemClassPath});
     String[] command;
     TestHelper helper;
     String name;
@@ -84,7 +93,7 @@ public class MainTest {
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         try {
             DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-            Document document = documentBuilder.parse(new File(testPathFile));
+            Document document = documentBuilder.parse(new File(getTestConfigPath()));
             NodeList tests = document.getElementsByTagName("test");
             for (int i = 0; i < tests.getLength(); i++) {
                 Node node = tests.item(i);

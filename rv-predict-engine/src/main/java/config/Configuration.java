@@ -137,10 +137,6 @@ public class Configuration {
     //by default optrace is true
     public boolean optrace = true;
 
-    public final static String opt_failOnFail = "--failOnFail";
-    @Parameter(names=opt_failOnFail, description = "Fail prediction on logging failure", hidden = true, descriptionKey = "2080")
-    public boolean failOnFail;
-
 
 	public final static String opt_outdir = "--dir";
     @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")

@@ -189,11 +189,7 @@ public class Main {
                 Util.redirectOutput(process.getInputStream(), null);
             }
 
-            int exitCode = process.waitFor();
-            if (exitCode != 0 && config.failOnFail) {
-                System.err.println("Error: Logging phase returned non-zero exit code " + exitCode);
-                System.exit(exitCode);
-            }
+            process.waitFor();
         } catch (IOException e) {
         } catch (InterruptedException e) {
             e.printStackTrace();

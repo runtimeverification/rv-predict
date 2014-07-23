@@ -6,6 +6,7 @@ import db.DBEngine;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.*;
@@ -17,6 +18,8 @@ public class Main {
 
     public static final int WIDTH = 75;
     public static final char FILL = '-';
+    public static final String GROUP_ID = "com.runtimeverification.rvpredict";
+    public static final String ARTEFACT_ID = "rv-predict-engine";
 
     public static void main(String[] args) {
 
@@ -54,8 +57,8 @@ public class Main {
             String basePath = getBasePath();
             String separator = System.getProperty("file.separator");
             String libPath = basePath + separator + "lib" + separator;
-            String iagent = libPath + "iagent.jar";
-            String rvAgent = libPath + "rv-predict-agent.jar";
+            String version = getVersion();
+            String rvAgent = libPath + "rv-predict-agent" + (version == null ? "" : "-" + version) + ".jar";
             String sharingAgentOptions = config.opt_outdir + " " + escapeString(config.outdir);
             if (config.additionalExcludes != null) {
                 sharingAgentOptions += " " + Configuration.opt_exclude + " " + escapeString(config.additionalExcludes);
@@ -66,7 +69,7 @@ public class Main {
 
             List<String> appArgList = new ArrayList<String>();
             appArgList.add(java);
-            appArgList.add("-Xbootclasspath/a:" + rvAgent);
+//            appArgList.add("-Xbootclasspath/a:" + rvAgent);
             int agentIds = appArgList.size();
             if (config.optlog || config.agentOnlySharing) {
                 if (logOutput) {
@@ -77,9 +80,9 @@ public class Main {
 
                     }
                 }
-                appArgList.add("-javaagent:" + iagent + "=" + sharingAgentOptions);
+                appArgList.add("-javaagent:" + rvAgent + "=" + sharingAgentOptions);
             } else {
-                appArgList.add("-javaagent:" + iagent + "=" + noSharingAgentOptions);
+                appArgList.add("-javaagent:" + rvAgent + "=" + noSharingAgentOptions);
                 if (logOutput) {
                     System.out.println(center("Instrumented execution to record the trace"));
                 }
@@ -88,7 +91,7 @@ public class Main {
 
             runAgent(config, appArgList);
             if (config.optlog) {
-                appArgList.set(agentIds, "-javaagent:" + iagent + "=" + noSharingAgentOptions);
+                appArgList.set(agentIds, "-javaagent:" + rvAgent + "=" + noSharingAgentOptions);
                 if (logOutput) {
                     System.out.println(center("Second pass: Instrumented execution to record the trace"));
 
@@ -127,6 +130,22 @@ public class Main {
         if (config.predict) {
             NewRVPredict.run(config);
         }
+    }
+
+    private static String getVersion() {
+        String version = null;
+        try {
+            Properties p = new Properties();
+            InputStream is = Main.class.getResourceAsStream("/META-INF/maven/" + GROUP_ID + "/" + ARTEFACT_ID +
+                    "/pom.properties");
+            if (is != null) {
+                p.load(is);
+                version = p.getProperty("version", null);
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return version;
     }
 
     public static String center(String msg) {

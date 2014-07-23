@@ -7,4 +7,4 @@ To install Yices, follow the instruction at
 Remember to add the z3 or yices (or both) binaries to your PATH
 
 -- Compiling
-ant                                           - Compile the tool and tests
+mvn package

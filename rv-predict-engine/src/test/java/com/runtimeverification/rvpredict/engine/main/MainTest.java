@@ -16,6 +16,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -29,7 +31,18 @@ import java.util.List;
 public class MainTest {
     private static String basePath = Main.getBasePath();
     private static String separator = System.getProperty("file.separator");
-    private static String testPathFile = basePath + separator + "test.xml";
+    private static String testPathFile = getTestConfigPath();
+
+    private static String getTestConfigPath() {
+        String path = null;
+        try {
+            path = Paths.get(MainTest.class.getResource("/test.xml").toURI()).toAbsolutePath().toString();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+        return path;
+    }
+
     private static String rvPredictJar = basePath + separator + "lib" + separator + "rv-predict-engine.jar";
     private static String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
     private static List<String> rvArgList = Arrays.asList(new String[]{java, "-cp", rvPredictJar, "rvpredict.engine.main.Main"});

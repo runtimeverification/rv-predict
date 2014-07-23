@@ -166,6 +166,10 @@ command for handling SMT queries. The solver command needs to be such that it
 takes a file containing a formula in the SMT-LIB v1.2 language and produces a 
 model if the formula is satisfiable.  
 The default value for the `<cmd>` argument is `z3 -smt`.
+- the `--maxlen <size>` (default: `1000`) option instructs RV-Predict to find
+races between events with the largest distance of `size` in the logged trace.
+The larger `size` is, the more races are expected to be detected,
+and more time RV-Predict will take.
 - the `--output [yes|no|<name>]` (default: `yes`) option controls how the output of the 
 program being analyzed should be handled. 
 	- `yes` specifies the output should be displayed; 

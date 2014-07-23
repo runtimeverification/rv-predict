@@ -63,8 +63,7 @@ public class TestHelper {
             Util.redirectOutput(process.getErrorStream(), null);
         }
         int returnCode = process.waitFor();
-        Assert.assertEquals("Expected no error during" + Arrays.toString(command) + " in directory" +
-                basePathFile.getAbsolutePath() + ".", 0, returnCode);
+        Assert.assertEquals("Expected no error during " + Arrays.toString(command) + ".", 0, returnCode);
         if (expectedFilePrefix != null) {
             assertEqualFiles(expectedOutFile, actualOutFile);
             assertEqualFiles(expectedErrFile, actualErrFile);

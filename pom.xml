@@ -9,6 +9,7 @@
         <module>rv-predict-agent</module>
         <module>rv-predict-engine</module>
         <module>examples</module>
+        <module>izpack</module>
     </modules>
     <url>http://www.runtimeverification.com</url>
     <scm>

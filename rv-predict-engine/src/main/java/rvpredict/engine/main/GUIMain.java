@@ -1183,7 +1183,7 @@ public class GUIMain {
                 "java",
                 "-Xmx" + heapSize,
                 "-cp",
-                resourcePath + "/lib/rv-predict-engine.jar",
+                resourcePath + "/lib/*",
                 "rvpredict.engine.main.Main",
                 mode,
                 tmpDirMap.get(absoluteFileName)

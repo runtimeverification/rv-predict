@@ -107,7 +107,7 @@
                     <systemPropertyVariables>
                         <rvVersion>${project.version}</rvVersion>
                         <rvPath>${project.parent.build.directory}/release/${project.parent.artifactId}</rvPath>
-                        <examplesPath>${parent.relativePath}</examplesPath>
+                        <examplesPath>${project.parent.relativePath}</examplesPath>
                     </systemPropertyVariables>
                 </configuration>
                 <executions>

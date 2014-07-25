@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-java -Xmx32g -cp "$(dirname "$0")/../lib/rv-predict-engine.jar" rvpredict.engine.main.Main "$@"
+"$(dirname "$0")/../target/release/rv-predict/bin/rv-predict" "$@"

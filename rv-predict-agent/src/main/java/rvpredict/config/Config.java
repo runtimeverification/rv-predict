@@ -15,6 +15,10 @@ public class Config {
     @Parameter(names = opt_outdir, description = "output directory", hidden = true)
     public static String logDir = null;
 
+    final static String opt_include = "--include";
+    @Parameter(names = opt_include, description = "comma separated list of packages to include.", hidden = true)
+    public static String additionalIncludes;
+
     final static String opt_exclude = "--exclude";
     @Parameter(names = opt_exclude, description = "comma separated list of packages to exclude.", hidden = true)
     public static String additionalExcludes;
@@ -77,7 +81,7 @@ public class Config {
     		
             verbose = properties.getProperty("rv.verbose","false").equals("true");
             excludeList = properties.getProperty("rv.excludeList","").split(",");
-            //includeList = properties.getProperty("rv.includeList","").split(",");
+            includeList = properties.getProperty("rv.includeList","").split(",");
             logClass = properties.getProperty("rv.logClass", "rvpredict.logging.RecordRT").replace('.','/');
 
     	} catch (IOException ex) {

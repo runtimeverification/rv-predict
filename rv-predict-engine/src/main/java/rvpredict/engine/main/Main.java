@@ -61,7 +61,12 @@ public class Main {
             String rvAgent = libPath + "rv-predict-agent" + (version == null ? "" : "-" + version) + ".jar";
             String sharingAgentOptions = config.opt_outdir + " " + escapeString(config.outdir);
             if (config.additionalExcludes != null) {
+                config.additionalExcludes.replaceAll(" ","");
                 sharingAgentOptions += " " + Configuration.opt_exclude + " " + escapeString(config.additionalExcludes);
+            }
+            if (config.additionalIncludes != null) {
+                config.additionalIncludes.replaceAll(" ","");
+                sharingAgentOptions += " " + Configuration.opt_include + " " + escapeString(config.additionalIncludes);
             }
             sharingAgentOptions += " " + config.opt_table_name + " " + escapeString(config.tableName);
             String noSharingAgentOptions = sharingAgentOptions;

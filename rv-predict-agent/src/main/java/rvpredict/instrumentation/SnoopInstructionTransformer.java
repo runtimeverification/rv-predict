@@ -42,6 +42,18 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             System.out.println("Excluding: " + Arrays.toString(array));
             config.excludeList = array;
         }
+        if (Config.additionalIncludes != null) {
+            String[] includes = Config.additionalIncludes.replace('.','/').split(",");
+            int length = config.includeList.length;
+            String[] array = new String[length + includes.length];
+            System.arraycopy(config.includeList, 0, array, 0, length);
+            System.arraycopy(includes, 0, array, length, includes.length);
+            System.out.println("Including: " + Arrays.toString(array));
+            config.includeList = array;
+        }
+        if (config.includeList.length == 1 && config.includeList[0].isEmpty()) {
+            config.includeList = null;
+        }
 
 		//initialize RecordRT first
         RecordRT.init();

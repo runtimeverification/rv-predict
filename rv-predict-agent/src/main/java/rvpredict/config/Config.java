@@ -81,7 +81,13 @@ public class Config {
     		
             verbose = properties.getProperty("rv.verbose","false").equals("true");
             excludeList = properties.getProperty("rv.excludeList","").split(",");
+            if (excludeList.length == 1 && excludeList[0].isEmpty()) {
+                excludeList = null;
+            }
             includeList = properties.getProperty("rv.includeList","").split(",");
+            if (includeList.length == 1 && includeList[0].isEmpty()) {
+                includeList = null;
+            }
             logClass = properties.getProperty("rv.logClass", "rvpredict.logging.RecordRT").replace('.','/');
 
     	} catch (IOException ex) {

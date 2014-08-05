@@ -55,18 +55,17 @@ public class MainTest {
     private static String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
     private static List<String> rvArgList = Arrays.asList(new String[]{java, "-cp", rvPredictJar,
             "rvpredict.engine.main.Main", "-cp", systemClassPath});
-    String[] command;
     TestHelper helper;
     String name;
     List<String> args;
 
 
-    public MainTest(String name, String specPath, String... command) {
+    public MainTest(String name, String specPath, List<String> rvArguments, List<String> arguments) {
         this.name = name;
         helper = new TestHelper(specPath);
-        this.command = command;
-        args = new ArrayList<String>(rvArgList);
-        args.addAll(Arrays.asList(command));
+        args = new ArrayList<>(rvArgList);
+        args.addAll(rvArguments);
+        args.addAll(arguments);
     }
 
     /**
@@ -100,21 +99,11 @@ public class MainTest {
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                     Element test = (Element) node;
                     String name = test.getAttribute("name");
-                    List<String> arguments = new ArrayList<String>();
-                    NodeList args = test.getElementsByTagName("arg");
-                    for (int j = 0; j < args.getLength(); j++) {
-                        node = args.item(j);
-                        if (node.getNodeType() == Node.ELEMENT_NODE) {
-                            Element arg = (Element) node;
-                            String key = arg.getAttribute("key");
-                            if (!key.isEmpty()) {
-                                arguments.add(key);
-                            }
-                            arguments.add(arg.getAttribute("value"));
-                        }
-                    }
-                    String[] sArgs = new String[arguments.size()];
-                    data.add(new Object[]{ name, testPathFile, arguments.toArray(sArgs)});
+                    List<String> arguments = new ArrayList<>();
+                    List<String> rvarguments = new ArrayList<>();
+                    processArguments(rvarguments, test.getElementsByTagName("rvarg"));
+                    processArguments(arguments, test.getElementsByTagName("arg"));
+                    data.add(new Object[]{ name, testPathFile, rvarguments, arguments});
                 }
             }
         } catch (ParserConfigurationException e) {
@@ -125,5 +114,20 @@ public class MainTest {
             e.printStackTrace();
         }
         return data;
+    }
+
+    private static void processArguments(List<String> arguments, NodeList args) {
+        Node node;
+        for (int j = 0; j < args.getLength(); j++) {
+            node = args.item(j);
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                Element arg = (Element) node;
+                String key = arg.getAttribute("key");
+                if (!key.isEmpty()) {
+                    arguments.add(key);
+                }
+                arguments.add(arg.getAttribute("value"));
+            }
+        }
     }
 }

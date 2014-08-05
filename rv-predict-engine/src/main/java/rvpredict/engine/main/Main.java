@@ -65,7 +65,7 @@ public class Main {
                 sharingAgentOptions += " " + Configuration.opt_exclude + " " + escapeString(config.additionalExcludes);
             }
             if (config.additionalIncludes != null) {
-                config.additionalIncludes.replaceAll(" ","");
+                config.additionalIncludes.replaceAll(" ", "");
                 sharingAgentOptions += " " + Configuration.opt_include + " " + escapeString(config.additionalIncludes);
             }
             sharingAgentOptions += " " + config.opt_table_name + " " + escapeString(config.tableName);

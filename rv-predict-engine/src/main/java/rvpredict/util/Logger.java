@@ -41,7 +41,7 @@ public class Logger {
 			type += "maximal-branch (yices): ";
 		else
 			type += "maximal-branch (z3): ";
-		out.println("\n------------------ "+type+config.tableName+" -------------------\n");
+//		out.println("\n------------------ "+type+config.tableName+" -------------------\n");
 		}catch(Exception e)
 		{
 			e.printStackTrace();
@@ -66,16 +66,21 @@ public class Logger {
 			System.err.println(msg);
 			out.println(msg);
 			break;
-		case STATISTICS:
         case INFO:
 			System.out.println(msg);
+			out.println(msg);
+			break;
+ 		case STATISTICS:
+            if (config.verbose) {
+                System.out.println(msg);
+            }
 			out.println(msg);
 			break;
         case VERBOSE:
             if (config.verbose) {
                 System.out.println(msg);
+                out.println(msg);
             }
-            out.println(msg);
             break;
 		case POTENTIAL:
 			break;

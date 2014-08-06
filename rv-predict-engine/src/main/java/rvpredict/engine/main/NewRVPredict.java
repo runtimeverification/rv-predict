@@ -1149,7 +1149,9 @@ public class NewRVPredict {
 			//int TOTAL_PROPERTY_NUMBER = db.getTracePropertyNumber();
 			int TOTAL_PROPERTY_NUMBER = info.getTracePropertyNumber();
 
-            if (config.verbose) {
+            if (violations.size() == 0)
+                logger.report("No races found.", Logger.MSGTYPE.STATISTICS);
+            else  {
                 logger.report("Trace Size: " + TOTAL_TRACE_LENGTH, Logger.MSGTYPE.STATISTICS);
                 logger.report("Total #Threads: " + TOTAL_THREAD_NUMBER, Logger.MSGTYPE.STATISTICS);
                 logger.report("Total #SharedVariables: " + TOTAL_SHAREDVARIABLE_NUMBER, Logger.MSGTYPE.STATISTICS);
@@ -1164,9 +1166,6 @@ public class NewRVPredict {
                 logger.report("Total #Real Violations: " + violations.size(), Logger.MSGTYPE.STATISTICS);
                 logger.report("Total Time: " + (System.currentTimeMillis() - start_time) + "ms", Logger.MSGTYPE.STATISTICS);
                 //System.out.println("Total #Schedules: "+size_schedule);
-            } else {
-                if (violations.size() == 0)
-                    logger.report("No races found.", Logger.MSGTYPE.STATISTICS);
             }
 			
 			logger.closePrinter();

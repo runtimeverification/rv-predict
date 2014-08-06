@@ -54,7 +54,7 @@ public class MainTest {
     private static String rvPredictJar = basePath + separator + "lib" + separator + "*";
     private static String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
     private static List<String> rvArgList = Arrays.asList(new String[]{java, "-cp", rvPredictJar,
-            "rvpredict.engine.main.Main", "-cp", systemClassPath});
+            "rvpredict.engine.main.Main"});
     TestHelper helper;
     String name;
     List<String> args;
@@ -65,6 +65,8 @@ public class MainTest {
         helper = new TestHelper(specPath);
         args = new ArrayList<>(rvArgList);
         args.addAll(rvArguments);
+        args.add("-cp");
+        args.add(systemClassPath);
         args.addAll(arguments);
     }
 

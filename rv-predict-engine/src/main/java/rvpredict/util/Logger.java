@@ -68,7 +68,9 @@ public class Logger {
 			break;
         case INFO:
 			System.out.println(msg);
-			out.println(msg);
+            if (config.verbose) {
+                out.println(msg);
+            }
 			break;
  		case STATISTICS:
             if (config.verbose) {

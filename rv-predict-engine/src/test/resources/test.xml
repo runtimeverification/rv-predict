@@ -5,6 +5,7 @@
     <arg key="-jar" value="examples/ftpserver/ftpserver.jar" />
   </test>
   <test name="demo.Example">
+    <rvarg key="--include" value="a.b" />
     <arg value="demo.Example" />
   </test>
   <test name="account.Account">

@@ -62,11 +62,13 @@ public class Configuration {
     public boolean optlog;
 
     public final static String opt_include = "--include";
-    @Parameter(names = opt_include, description = "Comma separated list of packages to include", hidden = true, descriptionKey = "1025")
+    @Parameter(names = opt_include, validateWith = PackageValidator.class,
+            description = "Comma separated list of packages to include", hidden = true, descriptionKey = "1025")
     public static String additionalIncludes;
 
     public final static String opt_exclude = "--exclude";
-    @Parameter(names = opt_exclude, description = "Comma separated list of packages to exclude", hidden = true, descriptionKey = "1030")
+    @Parameter(names = opt_exclude, validateWith = PackageValidator.class,
+            description = "Comma separated list of packages to exclude", hidden = true, descriptionKey = "1030")
     public static String additionalExcludes;
 
     public final static String opt_sharing_only = "--detectSharingOnly";

@@ -3,6 +3,7 @@ package rvpredict.engine.main;
 import config.Configuration;
 import config.Util;
 import db.DBEngine;
+import rvpredict.util.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,7 +32,7 @@ public class Main {
         DBEngine db;
         if (config.log) {
             if (config.command_line.isEmpty()) {
-                System.err.println("You must provide a class or a jar to run.");
+                config.logger.report("You must provide a class or a jar to run.", Logger.MSGTYPE.ERROR);
                 System.exit(1);
             }
             File outdirFile = new File(config.outdir);
@@ -39,7 +40,7 @@ public class Main {
                 outdirFile.mkdir();
             } else {
                 if (!outdirFile.isDirectory()) {
-                    System.err.println(config.outdir + " is not a directory");
+                    config.logger.report(config.outdir + " is not a directory", Logger.MSGTYPE.ERROR);
                     System.exit(1);
                 }
             }
@@ -47,8 +48,8 @@ public class Main {
             try {
                 db.dropAll();
             } catch (Exception e) {
-                System.err.println("Unexpected error while cleaning up the database:");
-                System.err.println(e.getMessage());
+                config.logger.report("Unexpected error while cleaning up the database:\n" +
+                        e.getMessage(), Logger.MSGTYPE.ERROR);
                 System.exit(1);
             }
             db.closeDB();
@@ -79,9 +80,9 @@ public class Main {
             if (config.optlog || config.agentOnlySharing) {
                 if (logOutput) {
                     if (config.optlog) {
-                        System.out.println(center("First pass: Instrumented execution to detect shared variables"));
+                        config.logger.report(center("First pass: Instrumented execution to detect shared variables"), Logger.MSGTYPE.INFO);
                     } else {
-                        System.out.println(center("Instrumented execution to detect shared variables"));
+                        config.logger.report(center("Instrumented execution to detect shared variables"), Logger.MSGTYPE.INFO);
 
                     }
                 }
@@ -89,7 +90,7 @@ public class Main {
             } else {
                 appArgList.add("-javaagent:" + rvAgent + "=" + noSharingAgentOptions);
                 if (logOutput) {
-                    System.out.println(center("Instrumented execution to record the trace"));
+                    config.logger.report(center("Instrumented execution to record the trace"), Logger.MSGTYPE.INFO);
                 }
             }
             appArgList.addAll(config.command_line);
@@ -98,7 +99,7 @@ public class Main {
             if (config.optlog) {
                 appArgList.set(agentIds, "-javaagent:" + rvAgent + "=" + noSharingAgentOptions);
                 if (logOutput) {
-                    System.out.println(center("Second pass: Instrumented execution to record the trace"));
+                    config.logger.report(center("Second pass: Instrumented execution to record the trace"), Logger.MSGTYPE.INFO);
 
                 }
                 runAgent(config, appArgList);
@@ -108,28 +109,26 @@ public class Main {
         db = new DBEngine(config.outdir, config.tableName);
         try {
             if (! db.checkTables()) {
-                System.err.print("Trace was not recorded properly. ");
+                config.logger.report("Trace was not recorded properly. ", Logger.MSGTYPE.ERROR);
                 if (config.log) {
-                    System.err.println("Please check the classpath.");
+                    config.logger.report("Please check the classpath.", Logger.MSGTYPE.ERROR);
                 } else {
-                    System.err.println("Please run " + Configuration.PROGRAM_NAME + " with " + Configuration.opt_only_log +
-                            " " + config.outdir + " first.");
+                    config.logger.report("Please run " + Configuration.PROGRAM_NAME + " with " + Configuration.opt_only_log +
+                            " " + config.outdir + " first.", Logger.MSGTYPE.ERROR);
                 }
                 System.exit(1);
             }
         } catch (Exception e) {
-            System.err.println("Unexpected database error while checking whether the trace was recorded.");
-            System.err.println(e.getMessage());
+            config.logger.report("Unexpected database error while checking whether the trace was recorded.\n" +
+                    e.getMessage(), Logger.MSGTYPE.ERROR);
             System.exit(1);
         } finally {
             db.closeDB();
         }
 
         if (config.log && (config.verbose || logOutput)) {
-            System.out.println(center("Logging phase completed."));
-            if (config.verbose) {
-                System.out.println("\tTrace logged in: " + config.outdir);
-            }
+            config.logger.report(center("Logging phase completed."), Logger.MSGTYPE.INFO);
+            config.logger.report("\tTrace logged in: " + config.outdir, Logger.MSGTYPE.VERBOSE);
         }
 
         if (config.predict) {
@@ -173,18 +172,17 @@ public class Main {
             processBuilder.redirectOutput(new File(actualOutFile));
         }
         try {
-            if (config.verbose) {
-                System.out.println("Executing command: ");
-                System.out.print("   ");
-                for (String arg : appArgList) {
-                    if (arg.contains(" ")) {
-                        System.out.print(" \"" + arg + "\"");
-                    } else {
-                        System.out.print(" " + arg);
-                    }
+            StringBuilder commandMsg = new StringBuilder();
+            commandMsg.append("Executing command: \n");
+            commandMsg.append("   ");
+            for (String arg : appArgList) {
+                if (arg.contains(" ")) {
+                    commandMsg.append(" \"" + arg + "\"");
+                } else {
+                    commandMsg.append(" " + arg);
                 }
-                System.out.println();
             }
+            config.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
             Process process = processBuilder.start();
             if (logToScreen) {
                 Util.redirectOutput(process.getErrorStream(), System.err);

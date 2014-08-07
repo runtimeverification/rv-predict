@@ -29,6 +29,7 @@
 package config;
 
 import com.beust.jcommander.*;
+import rvpredict.util.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -159,6 +160,7 @@ public class Configuration {
     public boolean help;
 
     public final static String opt_java = "--";
+    public Logger logger;
 //    @Parameter(names = opt_java, description = "optional separator for java arguments")
 //    public boolean javaSeparator;
 
@@ -263,6 +265,7 @@ public class Configuration {
         if (tableName == null) {
             tableName = "main";
         }
+        logger = new Logger(this);
     }
 
     public void exclusiveOptionsFailure(String opt1, String opt2) {

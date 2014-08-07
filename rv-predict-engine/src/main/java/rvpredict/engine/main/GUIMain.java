@@ -97,9 +97,9 @@ public class GUIMain {
       GUIMain.resourcePath = Paths.get(resourcePath).toAbsolutePath().toString();
     EventQueue.invokeLater(new Runnable() {
       public void run() {
-        predictB.setIcon(new ImageIcon(resourcePath + "/lib/images/button-predict.png"));
-        killB.setIcon(new ImageIcon(resourcePath + "/lib/images/button-stop.png"));
-        testB.setIcon(new ImageIcon(resourcePath + "/lib/images/button-check.png"));
+        predictB.setIcon(new ImageIcon(getClass().getResource("/images/button-predict.png")));
+        killB.setIcon(new ImageIcon(getClass().getResource("/images/button-stop.png")));
+        testB.setIcon(new ImageIcon(getClass().getResource("/images/button-check.png")));
 
         predictB.setFont(new Font("Monospaced", Font.PLAIN, 12));
         killB.setFont(new Font("Monospaced", Font.PLAIN, 12));
@@ -218,7 +218,7 @@ public class GUIMain {
         killB.setEnabled(false);
 
         try{
-          BufferedImage predictImage = ImageIO.read(new File(resourcePath + "/lib/images/rv-predict-logo.png"));
+          BufferedImage predictImage = ImageIO.read(getClass().getResource("/images/rv-predict-logo.png"));
           JLabel picLabel = new JLabel(new ImageIcon(predictImage));
         //  buttonPanel.add(Box.createRigidArea(new Dimension(0, 240)));
           JPanel j = new JPanel();
@@ -1183,7 +1183,7 @@ public class GUIMain {
                 "java",
                 "-Xmx" + heapSize,
                 "-cp",
-                resourcePath + "/lib/*",
+                resourcePath + "/lib/rv-predict-engine.jar",
                 "rvpredict.engine.main.Main",
                 mode,
                 tmpDirMap.get(absoluteFileName)

@@ -56,12 +56,8 @@ public class Main {
             String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
             String basePath = getBasePath();
             String separator = System.getProperty("file.separator");
-            String pathSeparator = System.getProperty("path.separator");
             String libPath = basePath + separator + "lib" + separator;
             String rvAgent = libPath + "rv-predict-agent"  + ".jar";
-            String jcom = libPath +"jcommander.jar";
-            String asm = libPath +"asm.jar";
-            String h2 =libPath +"h2-rvpredict.jar";
 
             String sharingAgentOptions = config.opt_outdir + " " + escapeString(config.outdir);
             if (config.additionalExcludes != null) {
@@ -73,8 +69,7 @@ public class Main {
 
             List<String> appArgList = new ArrayList<String>();
             appArgList.add(java);
-            appArgList.add("-Xbootclasspath/a:" + rvAgent+pathSeparator+jcom+pathSeparator+asm+pathSeparator+h2);
-//            appArgList.add("-Xbootclasspath/a:" + libPath + "*");
+            appArgList.add("-Xbootclasspath/a:" + rvAgent);
             int agentIds = appArgList.size();
             if (config.optlog || config.agentOnlySharing) {
                 if (logOutput) {

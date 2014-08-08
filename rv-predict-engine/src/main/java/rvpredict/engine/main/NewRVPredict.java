@@ -1150,7 +1150,7 @@ public class NewRVPredict {
 			int TOTAL_PROPERTY_NUMBER = info.getTracePropertyNumber();
 
             if (violations.size() == 0)
-                logger.report("No races found.", Logger.MSGTYPE.STATISTICS);
+                logger.report("No races found.", Logger.MSGTYPE.INFO);
             else  {
                 logger.report("Trace Size: " + TOTAL_TRACE_LENGTH, Logger.MSGTYPE.STATISTICS);
                 logger.report("Total #Threads: " + TOTAL_THREAD_NUMBER, Logger.MSGTYPE.STATISTICS);

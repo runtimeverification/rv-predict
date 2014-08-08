@@ -58,8 +58,8 @@ public class Main {
             String basePath = getBasePath();
             String separator = System.getProperty("file.separator");
             String libPath = basePath + separator + "lib" + separator;
-            String version = getVersion();
-            String rvAgent = libPath + "rv-predict-agent" + (version == null ? "" : "-" + version) + ".jar";
+            String rvAgent = libPath + "rv-predict-agent"  + ".jar";
+
             String sharingAgentOptions = config.opt_outdir + " " + escapeString(config.outdir);
             if (config.additionalExcludes != null) {
                 config.additionalExcludes.replaceAll(" ","");
@@ -75,7 +75,7 @@ public class Main {
 
             List<String> appArgList = new ArrayList<String>();
             appArgList.add(java);
-//            appArgList.add("-Xbootclasspath/a:" + rvAgent);
+            appArgList.add("-Xbootclasspath/a:" + rvAgent);
             int agentIds = appArgList.size();
             if (config.optlog || config.agentOnlySharing) {
                 if (logOutput) {

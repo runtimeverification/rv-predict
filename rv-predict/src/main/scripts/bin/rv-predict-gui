@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+java -Xmx32g -cp "$(dirname "$0")/../lib/rv-predict-engine.jar" rvpredict.engine.main.GUIMain "$(dirname "$0")/.."

@@ -562,13 +562,11 @@ public class EngineSMTLIB1 extends Engine
 					boolean allowMatchInit = true;
 					if(initValue==null)
 					{
-						for(int j=0;j<writenodes_value_match.size();j++)
-						{
-							if(writenodes_value_match.get(j).getGID()<rnode.getGID())
-							{	
+                                                //it's possible for the read node to match with the init write node
+                                                //if preNode is null
+						if(preNode!=null)
+                                                {
 								allowMatchInit = false;
-								break;
-							}
 						}
 					}
 					

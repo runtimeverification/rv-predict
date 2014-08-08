@@ -36,11 +36,28 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         }
         if (Config.additionalExcludes != null) {
             String[] excludes = Config.additionalExcludes.replace('.','/').split(",");
-            String[] array = new String[config.excludeList.length + excludes.length];
-            System.arraycopy(config.excludeList, 0, array, 0, config.excludeList.length);
-            System.arraycopy(excludes, 0, array, config.excludeList.length, excludes.length);
-            System.out.println("Excluding: " + Arrays.toString(array));
-            config.excludeList = array;
+            if (config.excludeList == null) {
+                config.excludeList = excludes;
+            } else {
+                String[] array = new String[config.excludeList.length + excludes.length];
+                System.arraycopy(config.excludeList, 0, array, 0, config.excludeList.length);
+                System.arraycopy(excludes, 0, array, config.excludeList.length, excludes.length);
+                config.excludeList = array;
+            }
+            System.out.println("Excluding: " + Arrays.toString(config.excludeList));
+        }
+        if (Config.additionalIncludes != null) {
+            String[] includes = Config.additionalIncludes.replace('.','/').split(",");
+            if (config.includeList == null) {
+                config.includeList = includes;
+            } else {
+                System.out.println("Includes: " + Arrays.toString(includes));
+                int length = config.includeList.length;
+                String[] array = new String[length + includes.length];
+                System.arraycopy(includes, 0, array, length, includes.length);
+                config.includeList = array;
+            }
+            System.out.println("Including: " + Arrays.toString(config.includeList));
         }
 
 		//initialize RecordRT first

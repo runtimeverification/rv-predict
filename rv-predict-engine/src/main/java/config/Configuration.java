@@ -29,6 +29,7 @@
 package config;
 
 import com.beust.jcommander.*;
+import rvpredict.util.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -57,12 +58,18 @@ public class Configuration {
     @Parameter(names = opt_log_output, description = "Output of the logged execution [yes|no|<file>]", hidden = true, descriptionKey = "1010")
     public String log_output = YES;
 
- 	final static String opt_optlog = "--aggressive";
-    @Parameter(names = opt_optlog, description = "Aggressively optimize logging size", hidden = true, descriptionKey = "1020")
+ 	final static String opt_optlog = "--with-profile";
+    @Parameter(names = opt_optlog, description = "Use profiling to optimize logging size", hidden = true, descriptionKey = "1020")
     public boolean optlog;
 
+    public final static String opt_include = "--include";
+    @Parameter(names = opt_include, validateWith = PackageValidator.class,
+            description = "Comma separated list of packages to include", hidden = true, descriptionKey = "1025")
+    public static String additionalIncludes;
+
     public final static String opt_exclude = "--exclude";
-    @Parameter(names = opt_exclude, description = "Comma separated list of packages to exclude", hidden = true, descriptionKey = "1030")
+    @Parameter(names = opt_exclude, validateWith = PackageValidator.class,
+            description = "Comma separated list of packages to exclude", hidden = true, descriptionKey = "1030")
     public static String additionalExcludes;
 
     public final static String opt_sharing_only = "--detectSharingOnly";
@@ -153,6 +160,7 @@ public class Configuration {
     public boolean help;
 
     public final static String opt_java = "--";
+    public Logger logger;
 //    @Parameter(names = opt_java, description = "optional separator for java arguments")
 //    public boolean javaSeparator;
 
@@ -257,6 +265,7 @@ public class Configuration {
         if (tableName == null) {
             tableName = "main";
         }
+        logger = new Logger(this);
     }
 
     public void exclusiveOptionsFailure(String opt1, String opt2) {

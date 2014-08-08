@@ -7,6 +7,7 @@
     <test name="demo.Example">
         <arg key="-cp" value="basic.jar" />
         <arg value="demo.Example" />
+        <rvarg key="--include" value="a.b" />
     </test>
     <test name="SpringExample.jar">
         <arg key="-jar" value="SpringExample.jar" />

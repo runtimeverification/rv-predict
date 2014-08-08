@@ -32,6 +32,7 @@ import java.util.Map.Entry;
 
 import property.EREProperty;
 import config.Configuration;
+import rvpredict.util.Logger;
 import smt.EngineSMTLIB1;
 import smt.Engine;
 import trace.AbstractNode;
@@ -64,66 +65,14 @@ public class NewRVPredict {
 
 	private static HashSet<IViolation> violations= new HashSet<IViolation>();
 	private static HashSet<IViolation> potentialviolations= new HashSet<IViolation>();
-	private static PrintWriter out;
 	private static Configuration config;
 	private static boolean detectRace = true;
 	private static boolean detectAtomicityViolation = false;
 	private static boolean detectDeadlock = false;
 	private static boolean detectProperty = false;
+    private static Logger logger;
 
-	/**
-	 * Initialize the file printer. All race detection statistics are stored
-	 * into the file result."window_size".
-	 * 
-	 * @param appname
-	 */
-	private static void initPrinter(String appname)
-	{
-		try{
-		String fname = "result."+(config.window_size/1000)+"k";
-		out = new PrintWriter(new FileWriter(config.outdir + "/" + fname,true));
-		
-		String type = "";
-		if(config.rmm_pso)
-			type+="pso: ";
-		
-		if(config.nobranch)
-			type += "maximal: ";
-		else if(config.allconsistent)
-			type += "Said et al.: ";
-		else if(config.smtlib1)
-			type += "maximal-branch (yices): ";
-		else 
-			type += "maximal-branch (z3): ";
-		out.println("\n------------------ "+type+appname+" -------------------\n");
-		}catch(Exception e)
-		{
-			e.printStackTrace();
-		}
-	}
-	private static void closePrinter()
-	{
-		if(out!=null)
-			out.close();
-	}
-	private static void report(String msg, MSGTYPE type)
-	{
-		switch(type)
-		{
-		case REAL:
-			System.err.println(msg);
-			out.println(msg);
-			break;
-		case STATISTICS:
-			System.out.println(msg);
-			out.println(msg);
-			break;
-		case POTENTIAL:
-			break;
-		default: break;
-		}
-	}
-	
+
 	/**
 	 * Deadlock detection method. Not used in race detection.
 	 * @param engine
@@ -204,9 +153,9 @@ public class NewRVPredict {
 										
 										violations.add(deadlock);
 					
-										report("Deadlock : "+deadlock,MSGTYPE.REAL);
+										logger.report("Deadlock : "+deadlock, Logger.MSGTYPE.REAL);
 					
-										report("Schedule: "+trim(schedule)+"\n",MSGTYPE.REAL);
+										logger.report("Schedule: "+trim(schedule)+"\n", Logger.MSGTYPE.REAL);
 								}
 							}
 				
@@ -301,7 +250,7 @@ public class NewRVPredict {
 				if(engine.isPropertySatisfied(sb.append(sb_rw)))
 				{
 					violations.add(pv);
-					report("Property "+pv+" Satisfied!",MSGTYPE.REAL);
+					logger.report("Property "+pv+" Satisfied!", Logger.MSGTYPE.REAL);
 				}
 				else
 				{
@@ -350,7 +299,7 @@ public class NewRVPredict {
 				if(engine.isPropertySatisfied(sb.append(sb_rw)))
 				{
 					violations.add(pv);
-					report("Property "+pv+" Satisfied!",MSGTYPE.REAL);
+					logger.report("Property "+pv+" Satisfied!", Logger.MSGTYPE.REAL);
 				}
 				else
 				{
@@ -574,7 +523,7 @@ public class NewRVPredict {
 							{
 								//real race found
 								
-								report(race.toString(),MSGTYPE.REAL);//report it
+								logger.report(race.toString(), Logger.MSGTYPE.REAL);//report it
 								if(config.allrace)violations.add(race2);//save it to violations
 								else violations.add(race);
 								
@@ -596,7 +545,7 @@ public class NewRVPredict {
 											Race r=new Race(trace.getStmtSigIdMap().get(node1.getID()),
 													trace.getStmtSigIdMap().get(node2.getID()),node1.getID(),node2.getID() );
 										if(violations.add(r))
-											report(r.toString(),MSGTYPE.REAL);
+											logger.report(r.toString(), Logger.MSGTYPE.REAL);
 										
 										}
 									}
@@ -648,8 +597,8 @@ public class NewRVPredict {
 								}
 								
 								//report the schedules
-								report("Schedule_a: "+trim(schedule_a),MSGTYPE.REAL);
-								report("Schedule_b: "+trim(schedule_b)+"\n",MSGTYPE.REAL);
+								logger.report("Schedule_a: "+trim(schedule_a), Logger.MSGTYPE.REAL);
+								logger.report("Schedule_b: "+trim(schedule_b)+"\n", Logger.MSGTYPE.REAL);
 							
 							}
 							else
@@ -659,7 +608,7 @@ public class NewRVPredict {
 								//if we arrive here, it means we find a case where 
 								//lockset+happens-before could produce false positive
 								if(potentialviolations.add(race2))
-									report("Potential "+race2,MSGTYPE.POTENTIAL);
+									logger.report("Potential "+race2, Logger.MSGTYPE.POTENTIAL);
 
 								if(equiMap.containsKey(rnode)||equiMap.containsKey(wnode))
 								{
@@ -680,7 +629,7 @@ public class NewRVPredict {
 											ExactRace r = new ExactRace(trace.getStmtSigIdMap().get(node1.getID()),
 													trace.getStmtSigIdMap().get(node2.getID()),(int)node1.getGID(),(int)node2.getGID() );
 											if(potentialviolations.add(r))
-												report("Potential "+r,MSGTYPE.POTENTIAL);
+												logger.report("Potential "+r, Logger.MSGTYPE.POTENTIAL);
 											
 										}
 									}
@@ -748,7 +697,7 @@ public class NewRVPredict {
 								//TODO: NEED to ensure that the other non-dependent nodes by other threads are not included
 								if(engine.isRace(wnode1, wnode2,sb))
 								{
-									report(race.toString(),MSGTYPE.REAL);
+									logger.report(race.toString(), Logger.MSGTYPE.REAL);
 
 									if(config.allrace)violations.add(race2);//save it to violations
 									else violations.add(race);									
@@ -771,7 +720,7 @@ public class NewRVPredict {
 												Race r=new Race(trace.getStmtSigIdMap().get(node1.getID()),
 														trace.getStmtSigIdMap().get(node2.getID()),node1.getID(),node2.getID() );
 											if(violations.add(r))
-												report(r.toString(),MSGTYPE.REAL);
+												logger.report(r.toString(), Logger.MSGTYPE.REAL);
 												
 
 											}
@@ -820,15 +769,15 @@ public class NewRVPredict {
 									}
 									
 								
-									report("Schedule_a: "+trim(schedule_a),MSGTYPE.REAL);
-									report("Schedule_b: "+trim(schedule_b)+"\n",MSGTYPE.REAL);
+									logger.report("Schedule_a: "+trim(schedule_a), Logger.MSGTYPE.REAL);
+									logger.report("Schedule_b: "+trim(schedule_b)+"\n", Logger.MSGTYPE.REAL);
 								
 								}
 								else
 								{
 									//if we arrive here, it means we find a case where lockset+happens-before could produce false positive
 									if(potentialviolations.add(race2))
-										report("Potential "+race2,MSGTYPE.POTENTIAL);
+										logger.report("Potential "+race2, Logger.MSGTYPE.POTENTIAL);
 									
 									if(equiMap.containsKey(wnode1)||equiMap.containsKey(wnode2))
 									{
@@ -848,7 +797,7 @@ public class NewRVPredict {
 												ExactRace r = new ExactRace(trace.getStmtSigIdMap().get(node1.getID()),
 														trace.getStmtSigIdMap().get(node2.getID()),(int)node1.getGID(),(int)node2.getGID() );
 												if(potentialviolations.add(r))
-													report("Potential "+r,MSGTYPE.POTENTIAL);
+													logger.report("Potential "+r, Logger.MSGTYPE.POTENTIAL);
 												
 
 											}
@@ -957,7 +906,7 @@ public class NewRVPredict {
 										if(engine.isAtomicityViolation(node1, node2, node3,sb1,sb2,sb3))
 										{
 											
-											report("Atomicity Violation: "+av,MSGTYPE.REAL);
+											logger.report("Atomicity Violation: "+av, Logger.MSGTYPE.REAL);
 
 											violations.add(av);
 	
@@ -969,12 +918,12 @@ public class NewRVPredict {
 											schedule.addAll(0, schedule_prefix);
 
 											av.addSchedule(schedule);
-											report("Schedule: "+trim(schedule)+"\n",MSGTYPE.REAL);
+											logger.report("Schedule: "+trim(schedule)+"\n", Logger.MSGTYPE.REAL);
 										}
 										else
 										{
 											//if we arrive here, it means we find a case where lockset+happens-before could produce false positive
-											report("Potential Atomicity Violation: "+av+"\n",MSGTYPE.POTENTIAL);
+											logger.report("Potential Atomicity Violation: "+av+"\n", Logger.MSGTYPE.POTENTIAL);
 											potentialviolations.add(av);
 
 										}
@@ -1001,15 +950,13 @@ public class NewRVPredict {
 
     public static void run(Configuration conf) {
         config = conf;
+        logger = config.logger;
 
         try{
 			
 			//Now let's start predict analysis
 			long start_time = System.currentTimeMillis();
 
-			//initialize printer
-			initPrinter(config.tableName);
-			
 			//db engine is used for interacting with database
 			DBEngine db = new DBEngine(config.outdir, config.tableName);
 
@@ -1033,7 +980,7 @@ public class NewRVPredict {
 			timer.schedule(new TimerTask(){
 					public void run()
 					{
-						report("\n******* Timeout "+config.timeout+" seconds ******",MSGTYPE.REAL);//report it
+						logger.report("\n******* Timeout "+config.timeout+" seconds ******", Logger.MSGTYPE.REAL);//report it
 						System.exit(0);
 					}},config.timeout*1000);
 			
@@ -1202,36 +1149,30 @@ public class NewRVPredict {
 			//int TOTAL_PROPERTY_NUMBER = db.getTracePropertyNumber();
 			int TOTAL_PROPERTY_NUMBER = info.getTracePropertyNumber();
 
-            if (config.verbose) {
-                report("Trace Size: " + TOTAL_TRACE_LENGTH, MSGTYPE.STATISTICS);
-                report("Total #Threads: " + TOTAL_THREAD_NUMBER, MSGTYPE.STATISTICS);
-                report("Total #SharedVariables: " + TOTAL_SHAREDVARIABLE_NUMBER, MSGTYPE.STATISTICS);
-                report("Total #Shared Read-Writes: " + TOTAL_SHAREDREADWRITE_NUMBER, MSGTYPE.STATISTICS);
-                report("Total #Local Read-Writes: " + TOTAL_LOCALREADWRITE_NUMBER, MSGTYPE.STATISTICS);
-                report("Total #Initial Writes: " + TOTAL_INITWRITE_NUMBER, MSGTYPE.STATISTICS);
-                report("Total #Synchronizations: " + TOTAL_SYNC_NUMBER, MSGTYPE.STATISTICS);
-                report("Total #Branches: " + TOTAL_BRANCH_NUMBER, MSGTYPE.STATISTICS);
-                report("Total #Property Events: " + TOTAL_PROPERTY_NUMBER, MSGTYPE.STATISTICS);
+            if (violations.size() == 0)
+                logger.report("No races found.", Logger.MSGTYPE.INFO);
+            else  {
+                logger.report("Trace Size: " + TOTAL_TRACE_LENGTH, Logger.MSGTYPE.STATISTICS);
+                logger.report("Total #Threads: " + TOTAL_THREAD_NUMBER, Logger.MSGTYPE.STATISTICS);
+                logger.report("Total #SharedVariables: " + TOTAL_SHAREDVARIABLE_NUMBER, Logger.MSGTYPE.STATISTICS);
+                logger.report("Total #Shared Read-Writes: " + TOTAL_SHAREDREADWRITE_NUMBER, Logger.MSGTYPE.STATISTICS);
+                logger.report("Total #Local Read-Writes: " + TOTAL_LOCALREADWRITE_NUMBER, Logger.MSGTYPE.STATISTICS);
+                logger.report("Total #Initial Writes: " + TOTAL_INITWRITE_NUMBER, Logger.MSGTYPE.STATISTICS);
+                logger.report("Total #Synchronizations: " + TOTAL_SYNC_NUMBER, Logger.MSGTYPE.STATISTICS);
+                logger.report("Total #Branches: " + TOTAL_BRANCH_NUMBER, Logger.MSGTYPE.STATISTICS);
+                logger.report("Total #Property Events: " + TOTAL_PROPERTY_NUMBER, Logger.MSGTYPE.STATISTICS);
 
-                report("Total #Potential Violations: " + (potentialviolations.size() + violations.size()), MSGTYPE.STATISTICS);
-                report("Total #Real Violations: " + violations.size(), MSGTYPE.STATISTICS);
-                report("Total Time: " + (System.currentTimeMillis() - start_time) + "ms", MSGTYPE.STATISTICS);
+                logger.report("Total #Potential Violations: " + (potentialviolations.size() + violations.size()), Logger.MSGTYPE.STATISTICS);
+                logger.report("Total #Real Violations: " + violations.size(), Logger.MSGTYPE.STATISTICS);
+                logger.report("Total Time: " + (System.currentTimeMillis() - start_time) + "ms", Logger.MSGTYPE.STATISTICS);
                 //System.out.println("Total #Schedules: "+size_schedule);
-            } else {
-                if (violations.size() == 0)
-                    report("No races found.", MSGTYPE.STATISTICS);
             }
 			
-			closePrinter();
+			logger.closePrinter();
 			
 		}
 		
 	}
-	
-	public enum MSGTYPE
-	{
-		REAL,POTENTIAL,STATISTICS
-	}
-	
+
 
 }

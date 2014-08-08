@@ -80,7 +80,7 @@ public class TestHelper {
     private void assertMatchPatterns(String expectedFile, String actualFile) throws IOException {
         String expectedPatterns = Util.convertFileToString(expectedFile);
         String actualText = Util.convertFileToString(actualFile);
-        for (String pattern : expectedPatterns.split("\n")) {
+        for (String pattern : expectedPatterns.split("(\n|\r)")) {
             Matcher m = Pattern.compile(pattern, Pattern.MULTILINE).matcher(actualText);
             Assert.assertTrue(String.format("Expected result to match regular expression:" +
                         "%n%s%n%nbut found:%n%s%n", pattern, actualText),m.find());

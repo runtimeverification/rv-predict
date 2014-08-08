@@ -28,7 +28,7 @@ public class TestHelper {
      */
     public TestHelper(String filePath)   {
         fileSystem = FileSystems.getDefault();
-        this.basePath = fileSystem.getPath(filePath).getParent();
+        this.basePath = fileSystem.getPath(filePath);
         basePathFile = basePath.toFile();
 
     }
@@ -43,6 +43,7 @@ public class TestHelper {
     public void testCommand(String expectedFilePrefix, String... command) throws Exception {
         ProcessBuilder processBuilder = new ProcessBuilder(command).inheritIO();
         processBuilder.directory(basePathFile);
+        System.out.println("Executing in " + basePathFile);
         String actualOutFile = null;
         String testsPrefix;
         String actualErrFile = null;

@@ -6,7 +6,7 @@
     <id>${project.parent.artifactId}</id>
     <includeBaseDirectory>false</includeBaseDirectory>
     <moduleSets>
-        <moduleSet>
+      <moduleSet>
             <useAllReactorProjects>true</useAllReactorProjects>
             <includes>
                 <include>com.runtimeverification.rvpredict:rv-predict-agent</include>
@@ -26,6 +26,26 @@
                 </dependencySets>
             </binaries>
         </moduleSet>
+        <moduleSet>
+            <useAllReactorProjects>true</useAllReactorProjects>
+            <includes>
+                <include>com.runtimeverification.rvpredict:basic</include>
+                <include>com.runtimeverification.rvpredict:SpringExample</include>
+            </includes>
+            <binaries>
+                <attachmentClassifier>jar-with-dependencies</attachmentClassifier>
+                <outputDirectory>/examples</outputDirectory>
+                <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
+                <unpack>false</unpack>
+                <dependencySets>
+                    <dependencySet>
+                        <excludes>
+                            <exclude>*:*</exclude>
+                        </excludes>
+                    </dependencySet>
+                </dependencySets>
+            </binaries>
+        </moduleSet>
     </moduleSets>
     <fileSets>
         <fileSet>
@@ -34,13 +54,22 @@
             <includes>
                 <include>LICENSE*</include>
                 <include>README*</include>
-                <include>examples/**</include>
+                <include>examples/basic-examples-list.txt</include>
             </includes>
-            <excludes>
-                <exclude>examples/pom.xml</exclude>
-                <exclude>examples/*.iml</exclude>
-                <exclude>examples/target/</exclude>
-            </excludes>
+        </fileSet>
+         <fileSet>
+            <directory>../examples/basic/src</directory>
+            <outputDirectory>/examples/basic-src</outputDirectory>
+            <includes>
+                <include>**</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/ftpserver</directory>
+            <outputDirectory>/examples</outputDirectory>
+            <includes>
+                <include>ftpserver.jar</include>
+            </includes>
         </fileSet>
         <fileSet>
             <directory>src/main/scripts/</directory>

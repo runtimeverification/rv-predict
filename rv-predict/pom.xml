@@ -16,12 +16,17 @@
         </dependency>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>rv-predict-examples</artifactId>
+            <artifactId>rv-predict-agent</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>rv-predict-agent</artifactId>
+            <artifactId>SpringExample</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+         <dependency>
+            <groupId>com.runtimeverification.rvpredict</groupId>
+            <artifactId>basic</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>
@@ -83,9 +88,7 @@
                 <configuration>
                     <groups>com.runtimeverification.rvpredict.IntegrationTest</groups>
                     <systemPropertyVariables>
-                        <rvVersion>${project.version}</rvVersion>
                         <rvPath>${project.parent.build.directory}/release/${artifactId}</rvPath>
-                        <examplesPath>${project.parent.relativePath}</examplesPath>
                     </systemPropertyVariables>
                 </configuration>
                 <executions>

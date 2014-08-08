@@ -34,12 +34,8 @@ import java.util.List;
 @RunWith(Parameterized.class)
 @Category(IntegrationTest.class)
 public class MainTest {
-    private static String version = System.getProperty("rvVersion");
     private static String basePath = System.getProperty("rvPath");
     private static String separator = System.getProperty("file.separator");
-    private static String testPathFile = System.getProperty("examplesPath");
-    private static String systemClassPath = System.getProperty("java.class.path","none");
-    private static String pathSeparator = System.getProperty("path.separator");
 
     private static String getTestConfigPath() {
         String path = null;
@@ -54,7 +50,7 @@ public class MainTest {
     private static String rvPredictJar = basePath + separator + "lib" + separator + "rv-predict-engine.jar";
     private static String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
     private static List<String> rvArgList = Arrays.asList(new String[]{java, "-cp", rvPredictJar,
-            "rvpredict.engine.main.Main", "-cp", systemClassPath});
+            "rvpredict.engine.main.Main"});
     String[] command;
     TestHelper helper;
     String name;
@@ -65,7 +61,7 @@ public class MainTest {
         this.name = name;
         helper = new TestHelper(specPath);
         this.command = command;
-        args = new ArrayList<String>(rvArgList);
+        args = new ArrayList<>(rvArgList);
         args.addAll(Arrays.asList(command));
     }
 
@@ -114,7 +110,7 @@ public class MainTest {
                         }
                     }
                     String[] sArgs = new String[arguments.size()];
-                    data.add(new Object[]{ name, testPathFile, arguments.toArray(sArgs)});
+                    data.add(new Object[]{ name, basePath, arguments.toArray(sArgs)});
                 }
             }
         } catch (ParserConfigurationException e) {

@@ -55,6 +55,7 @@
                 <include>LICENSE*</include>
                 <include>README*</include>
                 <include>examples/basic-examples-list.txt</include>
+                <include>examples/tests/**</include>
             </includes>
         </fileSet>
          <fileSet>

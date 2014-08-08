@@ -6,6 +6,8 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import config.Util;
 import org.junit.Assert;
@@ -37,13 +39,12 @@ public class TestHelper {
      * Execute command, tests return code and potentially checks standard and error output against expected content
      * in files if {@code expectedFilePrefix} not null.
      * @param expectedFilePrefix the prefix for the expected files, or null if output is not checked.
-     * @param command  list of arguments describing the system command to be executed.
-     * @throws Exception
+     * @param regex
+     *@param command  list of arguments describing the system command to be executed.  @throws Exception
      */
-    public void testCommand(String expectedFilePrefix, String... command) throws Exception {
+    public void testCommand(String expectedFilePrefix, boolean regex, String... command) throws Exception {
         ProcessBuilder processBuilder = new ProcessBuilder(command).inheritIO();
         processBuilder.directory(basePathFile);
-        System.out.println("Executing in " + basePathFile);
         String actualOutFile = null;
         String testsPrefix;
         String actualErrFile = null;
@@ -66,8 +67,23 @@ public class TestHelper {
         int returnCode = process.waitFor();
         Assert.assertEquals("Expected no error during " + Arrays.toString(command) + ".", 0, returnCode);
         if (expectedFilePrefix != null) {
-            assertEqualFiles(expectedOutFile, actualOutFile);
-            assertEqualFiles(expectedErrFile, actualErrFile);
+            if (regex) {
+                assertMatchPatterns(expectedOutFile, actualOutFile);
+                assertMatchPatterns(expectedErrFile, actualErrFile);
+            } else {
+                assertEqualFiles(expectedOutFile, actualOutFile);
+                assertEqualFiles(expectedErrFile, actualErrFile);
+            }
+        }
+    }
+
+    private void assertMatchPatterns(String expectedFile, String actualFile) throws IOException {
+        String expectedPatterns = Util.convertFileToString(expectedFile);
+        String actualText = Util.convertFileToString(actualFile);
+        for (String pattern : expectedPatterns.split("\n")) {
+            Matcher m = Pattern.compile(pattern, Pattern.MULTILINE).matcher(actualText);
+            Assert.assertTrue(String.format("Expected result to match regular expression:" +
+                        "%n%s%n%nbut found:%n%s%n", pattern, actualText),m.find());
         }
     }
 

@@ -2,7 +2,6 @@ package com.runtimeverification.rvpredict.engine.main;
 
 import com.runtimeverification.rvpredict.IntegrationTest;
 import com.runtimeverification.rvpredict.TestHelper;
-import config.Configuration;
 import org.junit.experimental.categories.Category;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -12,7 +11,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
-import rvpredict.engine.main.Main;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -36,6 +34,7 @@ import java.util.List;
 public class MainTest {
     private static String basePath = System.getProperty("rvPath");
     private static String separator = System.getProperty("file.separator");
+    private static String examplesPath = basePath + separator + "examples";
 
     private static String getTestConfigPath() {
         String path = null;
@@ -72,11 +71,9 @@ public class MainTest {
      */
     @Test
     public void testTest() throws Exception {
-        System.out.println(name);
         String[] args = new String[this.args.size()];
         this.args.toArray(args);
-        System.out.println(Arrays.toString(args));
-        helper.testCommand(null, args);
+        helper.testCommand("tests/" + name, true, args);
     }
 
     // The method bellow creates the set of parameter instances to be used as seeds by
@@ -110,7 +107,7 @@ public class MainTest {
                         }
                     }
                     String[] sArgs = new String[arguments.size()];
-                    data.add(new Object[]{ name, basePath, arguments.toArray(sArgs)});
+                    data.add(new Object[]{ name, examplesPath, arguments.toArray(sArgs)});
                 }
             }
         } catch (ParserConfigurationException e) {

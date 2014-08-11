@@ -16,7 +16,7 @@
     <url>http://www.runtimeverification.com</url>
     <scm>
         <connection>scm:git:https://github.com/runtimeverification/rv-predict.git</connection>
-        <tag>HEAD<tag>
+        <tag>HEAD</tag>
     </scm>
     <repositories>
         <repository>

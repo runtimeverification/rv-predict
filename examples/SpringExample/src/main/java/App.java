@@ -1,5 +1,3 @@
-package com.mkyong.common;
-
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 /**

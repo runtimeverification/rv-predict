@@ -3,8 +3,8 @@
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
 	http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
  
-	<bean id="helloBean" class="com.mkyong.common.HelloWorld">
-		<property name="name" value="Mkyong" />
+	<bean id="helloBean" class="HelloWorld">
+		<property name="name" value="World" />
 	</bean>
  
 </beans>

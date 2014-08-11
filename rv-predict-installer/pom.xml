@@ -7,8 +7,8 @@
     </parent>
     <!-- Based on guide at http://docs.codehaus.org/display/IZPACK/Compiling+Using+Maven -->
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>izpack</artifactId>
-    <name>izpack</name>
+    <artifactId>rv-predict-installer</artifactId>
+    <name>rv-predict-installer</name>
     <packaging>pom</packaging>
     <properties>
         <!-- Installer variables -->
@@ -19,11 +19,18 @@
     <dependencies>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>rv-predict-engine</artifactId>
-            <version>${project.parent.version}</version>
+            <artifactId>rv-predict</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
     <build>
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ssh</artifactId>
+                <version>1.0-beta-5</version>
+            </extension>
+        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -87,6 +94,27 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-install-plugin</artifactId>
                 <version>2.3.1</version>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>wagon-maven-plugin</artifactId>
+                <version>1.0-beta-5</version>
+                <executions>
+                    <execution>
+                        <id>upload-docs</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>upload</goal>
+                        </goals>
+                        <configuration>
+                            <serverId>rv-site</serverId>
+                            <url>sftp://grigore@runtimeverification.com/</url>
+                            <fromDir>target</fromDir>
+                            <includes>rv-predict-installer*.jar</includes>
+                            <toDir>/home/grigore/public_html/runtimeverification.com/predict/${version}</toDir>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

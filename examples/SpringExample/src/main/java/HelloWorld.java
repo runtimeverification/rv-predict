@@ -1,5 +1,3 @@
-package com.mkyong.common;
-
 /**
  * Spring bean
  *

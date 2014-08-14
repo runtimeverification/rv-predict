@@ -47,7 +47,7 @@ public class Configuration {
 
     // Copyright (c) 2013-2014 K Team. All Rights Reserved.
     public enum OS {
-        OSX(true, "macosx"), UNIX(true, "linux"), UNKNOWN(false, null), WIN(false, "cygwin");
+        OSX(true, "osx"), UNIX(true, "linux"), UNKNOWN(false, null), WIN(false, "cygwin");
 
         private OS(boolean isPosix, String libDir) {
             this.isPosix = isPosix;

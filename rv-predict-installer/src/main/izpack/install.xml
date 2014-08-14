@@ -14,16 +14,10 @@
 
     <variables>
         <variable name="TargetPanel.dir.windows" value="C:\$APP_NAME"/>
-        <!-- Z3 Dependency Info (either of z3 or z3.exe on PATH) -->
-        <variable name="DependencyPanel.z3.site" value="https://z3.codeplex.com/"/>
-        <variable name="DependencyPanel.z3.exe.1" value="z3"/>
-        <variable name="DependencyPanel.z3.exe.2" value="z3.exe"/>
-        <variable name="DependencyPanel.z3.test.1.command" value="z3 -version"/>
-        <variable name="DependencyPanel.z3.test.1.output_contains" value="Z3 version"/>
     </variables>
 
     <!-- GUI-Specific Preferences -->
-    <guiprefs width="630" height="700" resizable="yes">
+    <guiprefs width="630" height="450" resizable="yes">
         <modifier key="useHeadingPanel" value="yes"/>
         <modifier key="useHeadingForSummary" value="no"/>
         <modifier key="headingImageOnLeft" value="yes"/>
@@ -40,7 +34,6 @@
     <resources>
         <res id="CustomLangPack.xml_eng" src="res/izpack-rv-eng-lang.xml"/>
         <res id="LicencePanel.licence" src="LICENSE"/>
-        <res id="DependencyPanel.z3.html" src="res/rvdependencies/z3.html"/>
         <res id="HTMLFinishInfoPanel.finish" src="res/rvdependencies/finish.html"/>
         <res id="Heading.image" src="res/images/predict.png"/>
 <!--        <res id="TargetPanel.dir.windows" src="res/windows-installpath.txt"/> -->
@@ -50,7 +43,6 @@
     <panels>
         <panel classname="LicencePanel"/>
         <panel classname="TargetPanel"/>
-        <panel classname="com.izforge.izpack.panels.dependency.DependencyPanel" id="z3"/>
         <panel classname="PacksPanel"/>
         <panel classname="InstallPanel"/>
         <panel classname="com.izforge.izpack.panels.htmlfinishinfo.HTMLFinishInfoPanel" id="finish" />

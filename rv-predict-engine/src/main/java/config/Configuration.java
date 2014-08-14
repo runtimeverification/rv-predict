@@ -29,8 +29,10 @@
 package config;
 
 import com.beust.jcommander.*;
+import rvpredict.engine.main.Main;
 import rvpredict.util.Logger;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -42,6 +44,51 @@ import java.util.*;
  * Used by JCommander to parse the main program parameters.
  */
 public class Configuration {
+
+    // Copyright (c) 2013-2014 K Team. All Rights Reserved.
+    public enum OS {
+        OSX(true, "macosx"), UNIX(true, "linux"), UNKNOWN(false, null), WIN(false, "cygwin");
+
+        private OS(boolean isPosix, String libDir) {
+            this.isPosix = isPosix;
+            String arch = System.getProperty("os.arch");
+            this.libDir = Main.getBasePath() + File.separator + "lib" + File.separator + "native"
+                    + File.separator + libDir + File.separator +
+                    (arch.toLowerCase().contains("64") ? "64" : "32");
+        }
+
+        public final boolean isPosix;
+        public final String libDir;
+
+        public static OS current() {
+            String osString = System.getProperty("os.name").toLowerCase();
+            if (osString.contains("nix") || osString.contains("nux"))
+                return OS.UNIX;
+            else if (osString.contains("win"))
+                return OS.WIN;
+            else if (osString.contains("mac"))
+                return OS.OSX;
+            else
+                return OS.UNKNOWN;
+        }
+
+        public File getNativeExecutable(String executable) {
+            if (this == UNKNOWN) {
+                System.err.println(
+                        "Unknown OS type. " + System.getProperty("os.name") + " not recognized. " +
+                                "Please contact K developers with details of your OS.");
+                System.exit(1);
+            }
+            if (this == WIN) {
+                executable = executable + ".exe";
+            }
+            File f = new File(libDir, executable);
+            if (isPosix) {
+                f.setExecutable(true, false);
+            }
+            return f;
+        }
+    }
 
     public static final String PROGRAM_NAME = "rv-predict";
     public static final String YES = "yes";
@@ -121,7 +168,7 @@ public class Configuration {
 
     final static String opt_smt_solver = "--solver";
     @Parameter(names = opt_smt_solver, description = "Solver command to use (SMT-LIB v1.2)", hidden = true, descriptionKey = "2050")
-    public String smt_solver = "z3 -smt";
+    public String smt_solver = "\"" + OS.current().getNativeExecutable("z3") + "\"" + " -smt";
 
 	final static String opt_solver_timeout = "--solver_timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")

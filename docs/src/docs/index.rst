@@ -15,9 +15,15 @@ an execution trace to analyze. *Sound* means that it only reports races
 which are real (i.e., no false positives). And *maximal* means that it finds
 all the races that can be found by any other sound race detector analyzing
 the same execution trace. The technology underlying RV-Predict is best
-explained in this `PLDI‘14 paper`_.
+explained in the following paper:
 
-.. _PLDI‘14 paper: http://dx.doi.org/10.1145/2594291.2594315
+Jeff Huang, Patrick O'Neil Meredith, and Grigore Rosu. 2014.
+`Maximal sound predictive race detection with control flow abstraction`_.
+In Proceedings of the 35th ACM SIGPLAN Conference on
+Programming Language Design and Implementation (PLDI '14).
+ACM, New York, NY, USA, 337-348. DOI=10.1145/2594291.2594315
+
+.. _Maximal sound predictive race detection with control flow abstraction: http://dx.doi.org/10.1145/2594291.2594315
 
 Contents
 --------------------------------------

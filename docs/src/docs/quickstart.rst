@@ -10,18 +10,19 @@ extract an execution trace to analyze. *Sound* means that it only
 reports races which are real (i.e., no false positives). And *maximal*
 means that it finds all the races that can be found by any other sound
 race detector analyzing the same execution trace. The technology
-underlying RV-Predict is best explained in this `PLDI’14 paper`_.
+underlying RV-Predict is best explained in the following paper:
+
+Jeff Huang, Patrick O'Neil Meredith, and Grigore Rosu. 2014.
+`Maximal sound predictive race detection with control flow abstraction`_.
+In Proceedings of the 35th ACM SIGPLAN Conference on
+Programming Language Design and Implementation (PLDI '14).
+ACM, New York, NY, USA, 337-348. DOI=10.1145/2594291.2594315
+
 
 Prerequisites
 -------------
 
 RV-Predict requires Java Runtime Environment 1.7 or higher.
-
-Moreover, RV-Predict relies on an SMT solver with support for the
-SMT-LIB v1.2 language and model generation for solving constraints.
-Please install such an SMT solver prior to installing RV-Predict.
-RV-Predict uses `z3`_ with the ``-smt`` option by default, but this
-behavior can be altered by the user. Please see the options below.
 
 Installation
 ------------
@@ -100,7 +101,8 @@ options here.  However, we would like to mention the following:
    solver command for handling SMT queries. The solver command needs to be
    such that it takes a file containing a formula in the SMT-LIB v1.2 language
    and produces a model if the formula is satisfiable.
-   The default value for the ``<cmd>`` argument is ``z3 -smt``.
+   If no solver is specified, RV-Predict will use a bundled version of `z3`_
+   with the ``-smt`` option enabled (to specify that SMT-LIB v1 is used).
 -  the ``--maxlen <size>`` (default: ``1000``) option instructs RV-Predict to
    find races between events with the largest distance of `size` in the logged
    trace. The larger ``size`` is, the more races are expected to be detected,
@@ -114,6 +116,6 @@ options here.  However, we would like to mention the following:
       ``<name>.out`` and the standard error to ``<name>.err``.
 
 
-.. _PLDI’14 paper: http://dx.doi.org/10.1145/2594291.2594315
+.. _Maximal sound predictive race detection with control flow abstraction: http://dx.doi.org/10.1145/2594291.2594315
 .. _z3: http://z3.codeplex.com
-.. _RV-Predict website: http://runtimeverification.com/predict/rv-predict-install.jar
+.. _RV-Predict website: http://runtimeverification.com/predict

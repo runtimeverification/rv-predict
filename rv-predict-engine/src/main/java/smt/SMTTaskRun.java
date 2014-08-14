@@ -83,8 +83,23 @@ public class SMTTaskRun
 		smtFile = Util.newOutFile(config.constraint_outdir,config.tableName +"_"+id+SMT);
         
 		outFile = Util.newOutFile(config.constraint_outdir,config.tableName +"_"+id+OUT);
-				
-		CMD = Arrays.asList(config.smt_solver.split(" "));
+
+        String[] quotes = config.smt_solver.split("\"");
+        boolean inQuote = false;
+        CMD = new ArrayList<>();
+        for (String quote : quotes) {
+            if (inQuote) {
+                CMD.add(quote);
+            } else {
+                for (String arg : quote.split(" ")) {
+                    if (!arg.isEmpty()) {
+                        CMD.add(arg);
+                    }
+                }
+
+            }
+            inQuote = ! inQuote;
+        }
         timeout = config.solver_timeout;
 	}
 	

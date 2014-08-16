@@ -115,6 +115,9 @@ options here.  However, we would like to mention the following:
    -  a ``<name>`` tells to redirect the standard output to
       ``<name>.out`` and the standard error to ``<name>.err``.
 
+Additionally, the ``RV_OPTS`` environment variable can be used to specify
+extra options to the Java Virtual Machine running rv-predict (e.g.,  for
+increasing the memory limit).
 
 .. _Maximal sound predictive race detection with control flow abstraction: http://dx.doi.org/10.1145/2594291.2594315
 .. _z3: http://z3.codeplex.com

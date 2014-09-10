@@ -2,6 +2,7 @@ array.Test
 account.Account
 airlinetickets.Airlinetickets
 boundedbuffer.BoundedBuffer
+com.example.Main
 mergesort.MergeSort
 critical.Critical
 bufwriter.BufWriter

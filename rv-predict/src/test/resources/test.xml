@@ -20,6 +20,10 @@
         <arg key="-cp" value="basic.jar" />
         <arg value="array.Test" />
     </test>
+    <test name="input.MyScanner">
+        <arg key="-cp" value="basic.jar" />
+        <arg value="input.MyScanner" />
+    </test>
 <!--
     <test name="com.example.Main">
         <arg key="-cp" value="basic.jar" />

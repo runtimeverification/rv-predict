@@ -100,9 +100,9 @@ Enhancing the prediction power
 
 To be effective, RV-Predict tries to keep a good balance between efficiency 
 and prediction power.  Nevertheless, while the default settings were 
-engineered to work for most common cases, we acknowledge there might be 
-cases where user input could improve the prediction process.  We provide
-several options for advanced users to tune RV-Predict:
+engineered to work for most common cases, there might be cases where 
+user input could improve the prediction process.  We provide several 
+options for advanced users to tune RV-Predict:
 
 #. Window size.  For efficiency reasons, RV-Predict splits the execution 
    trace into segments (called windows) of a specified size.  The default 

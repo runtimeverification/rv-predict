@@ -45,6 +45,8 @@ import java.util.*;
  */
 public class Configuration {
 
+    public static int stackSize = 1024;
+
     // Copyright (c) 2013-2014 K Team. All Rights Reserved.
     public enum OS {
         OSX(true, "osx"), UNIX(true, "linux"), UNKNOWN(false, null), WIN(false, "cygwin");

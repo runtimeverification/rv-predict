@@ -93,6 +93,7 @@ public class Main {
                     config.logger.report(center("Instrumented execution to record the trace"), Logger.MSGTYPE.INFO);
                 }
             }
+            appArgList.add("-Xss" + Configuration.stackSize + "m");
             appArgList.addAll(config.command_line);
 
             runAgent(config, appArgList);

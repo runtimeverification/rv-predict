@@ -25,7 +25,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         }
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         Config config = Config.instance;
-        JCommander jc = new JCommander(config);
+        JCommander jc = new JCommander(config.commandLine);
         jc.setProgramName(Config.PROGRAM_NAME);
         try {
             jc.parse(args);
@@ -34,8 +34,8 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             System.err.println(e.getMessage());
             System.exit(1);
         }
-        if (Config.additionalExcludes != null) {
-            String[] excludes = Config.additionalExcludes.replace('.','/').split(",");
+        if (Config.instance.commandLine.additionalExcludes != null) {
+            String[] excludes = Config.instance.commandLine.additionalExcludes.replace('.','/').split(",");
             if (config.excludeList == null) {
                 config.excludeList = excludes;
             } else {
@@ -46,8 +46,8 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             }
             System.out.println("Excluding: " + Arrays.toString(config.excludeList));
         }
-        if (Config.additionalIncludes != null) {
-            String[] includes = Config.additionalIncludes.replace('.','/').split(",");
+        if (Config.instance.commandLine.additionalIncludes != null) {
+            String[] includes = Config.instance.commandLine.additionalIncludes.replace('.','/').split(",");
             if (config.includeList == null) {
                 config.includeList = includes;
             } else {

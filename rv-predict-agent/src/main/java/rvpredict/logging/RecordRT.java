@@ -61,7 +61,7 @@ public final class RecordRT {
 
     public static void init()
 	{
-    	if(Config.detectSharingOnly){
+    	if(Config.instance.commandLine.agentOnlySharing){
     		sharedVariableIds = new HashSet<Integer>();
     		writeThreadMap = new HashMap<Integer,Long>();
     		readThreadMap = new HashMap<Integer,long[]> ();
@@ -110,7 +110,7 @@ public final class RecordRT {
 	public static void initNonSharing(boolean newTable) throws Exception
 	{
 		long tid = Thread.currentThread().getId();
-		db= new DBEngine(Config.logDir, Config.tableName);
+		db= new DBEngine(Config.instance.commandLine.outdir, Config.instance.commandLine.tableName);
 		
 		//load sharedvariables and sharedarraylocations
 		GlobalStateForInstrumentation.instance.setSharedArrayLocations(db.loadSharedArrayLocs());
@@ -134,7 +134,7 @@ public final class RecordRT {
 	public static void saveSharedMetaData(HashSet<String> sharedVariables,
 			HashSet<String> sharedArrayLocations) {
 		
-		DBEngine db= new DBEngine(Config.logDir, Config.tableName);
+		DBEngine db= new DBEngine(Config.instance.commandLine.outdir, Config.instance.commandLine.tableName);
 		try {
 	    	if(Config.instance.verbose)
 	    		System.out.println("====================SHARED VARIABLES===================");
@@ -172,7 +172,7 @@ public final class RecordRT {
 			//just reuse the connection 
 			
 			//TODO: if db is null or closed, there must be something wrong
-			DBEngine db= new DBEngine(Config.logDir, Config.tableName);
+			DBEngine db= new DBEngine(Config.instance.commandLine.outdir, Config.instance.commandLine.tableName);
 			
 		//save variable - id to database
 		  db.createVarSignatureTable();
@@ -273,7 +273,6 @@ public final class RecordRT {
    * 1. the address is accessed by more than two threads 
    * 2. at least one of them is a write
    * @param ID -- shared variable id
-   * @param o -- runtime object
    * @param SID -- field id
    * @param write or read
    */

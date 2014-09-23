@@ -59,7 +59,7 @@ private static void run(String[] args)
 {
 	try 
 	{		
-		Config.tableName = args[0];
+		Config.instance.commandLine.tableName = args[0];
 //		if(args.length>1)
 //		for(int i=1;i<args.length;i++)
 //		{

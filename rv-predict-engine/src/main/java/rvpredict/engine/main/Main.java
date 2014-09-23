@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.security.CodeSource;
 import java.util.*;
 
 /**
@@ -69,7 +70,6 @@ public class Main {
                 config.additionalIncludes.replaceAll(" ", "");
                 sharingAgentOptions += " " + Configuration.opt_include + " " + escapeString(config.additionalIncludes);
             }
-            sharingAgentOptions += " " + config.opt_table_name + " " + escapeString(config.tableName);
             String noSharingAgentOptions = sharingAgentOptions;
             sharingAgentOptions += " " + config.opt_sharing_only;
 
@@ -205,7 +205,9 @@ public class Main {
     }
 
     public static String getBasePath() {
-        String path = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getAbsolutePath();
+        CodeSource codeSource = Main.class.getProtectionDomain().getCodeSource();
+        if (codeSource == null) return "";
+        String path = new File(codeSource.getLocation().getPath()).getAbsolutePath();
         try {
             String decodedPath = URLDecoder.decode(path, "UTF-8");
             File parent = new File(decodedPath).getParentFile().getParentFile();

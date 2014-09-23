@@ -23,6 +23,11 @@
             <artifactId>jcommander</artifactId>
             <version>1.35</version>
         </dependency>
+        <dependency>
+            <groupId>com.runtimeverification.rvpredict</groupId>
+            <artifactId>rv-predict-engine</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

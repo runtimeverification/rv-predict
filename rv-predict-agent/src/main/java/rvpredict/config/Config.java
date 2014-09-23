@@ -1,6 +1,7 @@
 package rvpredict.config;
 
 import com.beust.jcommander.Parameter;
+import config.Configuration;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -11,28 +12,7 @@ public class Config {
     public static final Config instance = new Config();
     public static final String propFile ="rv.conf";
 
-    final static String opt_outdir = "--dir";
-    @Parameter(names = opt_outdir, description = "output directory", hidden = true)
-    public static String logDir = null;
-
-    final static String opt_include = "--include";
-    @Parameter(names = opt_include, description = "comma separated list of packages to include.", hidden = true)
-    public static String additionalIncludes;
-
-    final static String opt_exclude = "--exclude";
-    @Parameter(names = opt_exclude, description = "comma separated list of packages to exclude.", hidden = true)
-    public static String additionalExcludes;
-
-
-    public final static String opt_sharing_only = "--detectSharingOnly";
-    @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables.")
-    public static boolean detectSharingOnly;
-
-
-    public final static String opt_table_name = "--table";
-    @Parameter(names = opt_table_name, description = "Name of the table", hidden = true)
-    public static String tableName = "main";
-
+    public final Configuration commandLine = new Configuration();
 
     public final String LOG_FIELD_ACCESS = "logFieldAcc";
     public final String LOG_INIT_WRITE_ACCESS = "logInitialWrite";

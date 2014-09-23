@@ -50,7 +50,7 @@ public class GlobalStateForInstrumentation {
     	//save instrumentation and runtime information?
     	Runtime.getRuntime().addShutdownHook(new Thread("Thread-logMetaData") {
     		public void run() {
-    	    	if(!Config.detectSharingOnly)
+    	    	if(!Config.instance.commandLine.agentOnlySharing)
     	    		RecordRT.saveMetaData(variableIdMap, volatilevariables, stmtSigIdMap,Config.instance.verbose);
     	    	else
     	    	{

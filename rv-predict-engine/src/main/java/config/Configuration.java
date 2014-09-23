@@ -162,9 +162,7 @@ public class Configuration {
 //    @Parameter(names = opt_constraint_outdir, description = "constraint file directory", hidden = true)
     public String constraint_outdir;
 
-    public final static String opt_table_name = "--table";
-//    @Parameter(names = opt_table_name, description = "Name of the table storing the log", hidden = true)
-    public String tableName = null;
+    public String tableName = "main";
 
     final static String opt_smt_solver = "--solver";
     @Parameter(names = opt_smt_solver, description = "Solver command to use (SMT-LIB v1.2)", hidden = true, descriptionKey = "2050")

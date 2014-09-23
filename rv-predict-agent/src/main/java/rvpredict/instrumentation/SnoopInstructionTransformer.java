@@ -8,6 +8,8 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 
 import rvpredict.config.Config;
+import rvpredict.engine.main.NewRVPredict;
+import rvpredict.h2.util.New;
 import rvpredict.logging.RecordRT;
 
 import java.lang.instrument.ClassFileTransformer;
@@ -19,21 +21,16 @@ import java.util.Arrays;
 public class SnoopInstructionTransformer implements ClassFileTransformer {
 
     public static void premain(String agentArgs, Instrumentation inst) {
+        if (agentArgs == null) {
+            agentArgs = "";
+        }
         if (agentArgs.startsWith("\"")) {
             assert agentArgs.endsWith("\"") : "Argument must be quoted";
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         Config config = Config.instance;
-        JCommander jc = new JCommander(config.commandLine);
-        jc.setProgramName(Config.PROGRAM_NAME);
-        try {
-            jc.parse(args);
-        } catch (ParameterException e) {
-            System.err.println("Error: Cannot parse command line arguments.");
-            System.err.println(e.getMessage());
-            System.exit(1);
-        }
+        config.commandLine.parseArguments(args, false);
         if (Config.instance.commandLine.additionalExcludes != null) {
             String[] excludes = Config.instance.commandLine.additionalExcludes.replace('.','/').split(",");
             if (config.excludeList == null) {
@@ -64,7 +61,17 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         RecordRT.init();
         
 		inst.addTransformer(new SnoopInstructionTransformer());
-		
+        if (Config.instance.commandLine.agent == true) {
+            final NewRVPredict predictor = new NewRVPredict();
+            Thread predict = new Thread() {
+                @Override
+                public void run() {
+                    predictor.initPredict(Config.instance.commandLine);
+                    predictor.run();
+	}
+            };
+            Runtime.getRuntime().addShutdownHook(predict);
+        }
 	}
 
     public byte[] transform(ClassLoader loader,String cname, Class<?> c, ProtectionDomain d, byte[] cbuf)

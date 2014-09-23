@@ -29,7 +29,7 @@ public class Main {
 
         Configuration config = new Configuration();
 
-        config.parseArguments(args);
+        config.parseArguments(args, false);
         boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
 
         DBEngine db;
@@ -134,7 +134,10 @@ public class Main {
         }
 
         if (config.predict) {
-            NewRVPredict.run(config);
+            NewRVPredict predictor = new NewRVPredict();
+            predictor.initPredict(config);
+            predictor.addHooks();
+            predictor.run();
         }
     }
 

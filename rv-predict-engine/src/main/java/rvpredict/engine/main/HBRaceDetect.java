@@ -197,7 +197,7 @@ public class HBRaceDetect {
 	public static void main(String[] args) {
 
         config = new Configuration();
-        config.parseArguments(args);
+        config.parseArguments(args, true);
 
 		try{
 			

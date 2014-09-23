@@ -123,6 +123,10 @@ public class Configuration {
     @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables", hidden = true, descriptionKey = "1040")
     public boolean agentOnlySharing;
 
+    public final static String opt_agent = "--agent";
+    @Parameter(names = opt_agent, description = "Run prediction in agent mode", hidden = true, descriptionKey = "1500")
+    public boolean agent;
+
     public final static String opt_only_predict = "--predict";
     @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "2000")
     public String predict_dir = null;
@@ -210,7 +214,7 @@ public class Configuration {
 //    public boolean javaSeparator;
 
 
-    public void parseArguments(String[] args) {
+    public void parseArguments(String[] args, boolean checkJava) {
         String pathSeparator = System.getProperty("path.separator");
         String fileSeparator = System.getProperty("file.separator");
         JCommander jc = new JCommander(this);
@@ -299,7 +303,7 @@ public class Configuration {
         List<String> argList = Arrays.asList(Arrays.copyOfRange(args, max, args.length));
         if (command_line == null) { // otherwise the java command has already started
             command_line = new ArrayList<String>(argList);
-            if (command_line.isEmpty() && log) {
+            if (command_line.isEmpty() && log && checkJava) {
                 System.err.println("Error: Java command line is empty.");
                 usage(jc);
                 System.exit(1);

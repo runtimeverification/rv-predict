@@ -111,7 +111,7 @@ public final class RecordRT {
 	{
 		long tid = Thread.currentThread().getId();
 		db= new DBEngine(Config.instance.commandLine.outdir, Config.instance.commandLine.tableName);
-		
+
 		//load sharedvariables and sharedarraylocations
 		GlobalStateForInstrumentation.instance.setSharedArrayLocations(db.loadSharedArrayLocs());
 		GlobalStateForInstrumentation.instance.setSharedVariables(db.loadSharedVariables());

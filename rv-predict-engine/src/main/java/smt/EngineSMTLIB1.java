@@ -52,7 +52,7 @@ import java.util.Stack;
 import java.util.Vector;
 import java.util.Map.Entry;
 
-import config.Configuration;
+import rvpredict.config.Configuration;
 
 public class EngineSMTLIB1 extends Engine
 {

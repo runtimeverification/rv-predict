@@ -1,22 +1,26 @@
 package rvpredict.instrumentation;
 
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.ParameterException;
-
+import db.DBEngine;
+import rvpredict.config.Configuration;
+import rvpredict.config.Util;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 
 import rvpredict.config.Config;
-import rvpredict.engine.main.NewRVPredict;
-import rvpredict.h2.util.New;
+import rvpredict.engine.main.Main;
 import rvpredict.logging.RecordRT;
+import rvpredict.util.Logger;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.security.ProtectionDomain;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class SnoopInstructionTransformer implements ClassFileTransformer {
 
@@ -57,18 +61,93 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             System.out.println("Including: " + Arrays.toString(config.includeList));
         }
 
+        DBEngine db = new DBEngine(Config.instance.commandLine.outdir, Config.instance.commandLine.tableName);
+        try {
+            db.dropAll();
+        } catch (Exception e) {
+            config.commandLine.logger.report("Unexpected error while cleaning up the database:\n" +
+                    e.getMessage(), Logger.MSGTYPE.ERROR);
+            System.exit(1);
+        }
+        db.closeDB();
 		//initialize RecordRT first
         RecordRT.init();
         
 		inst.addTransformer(new SnoopInstructionTransformer());
-        if (Config.instance.commandLine.agent == true) {
-            final NewRVPredict predictor = new NewRVPredict();
+        if (Config.instance.commandLine.predict == true) {
+            String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
+            String basePath = Main.getBasePath();
+            String separator = System.getProperty("file.separator");
+            String libPath = basePath + separator + "lib" + separator;
+            String rvEngine = libPath + "rv-predict-engine"  + ".jar";
+            List<String> appArgList = new ArrayList<>();
+            appArgList.add(java);
+            appArgList.add("-cp");
+            appArgList.add(rvEngine);
+            appArgList.add("rvpredict.engine.main.Main");
+            appArgList.addAll(Arrays.asList(args));
+
+            int index = appArgList.indexOf(Configuration.opt_outdir);
+            if (index != -1) {
+                appArgList.set(index, Configuration.opt_only_predict);
+            } else {
+                appArgList.add(Configuration.opt_only_predict);
+                appArgList.add(config.commandLine.outdir);
+            }
+
+            System.out.println("Prediction command: " + appArgList);
+
+            final ProcessBuilder processBuilder =
+                    new ProcessBuilder(appArgList.toArray(args));
+            String logOutputString = Config.instance.commandLine.log_output;
+            boolean logToScreen = false;
+            String file = null;
+            if (logOutputString.equalsIgnoreCase(Configuration.YES)) {
+                logToScreen = true;
+            } else if (!logOutputString.equals(Configuration.NO)) {
+                file = logOutputString;
+                String actualOutFile = file + ".out";
+                String actualErrFile = file + ".err";
+                processBuilder.redirectError(new File(actualErrFile));
+                processBuilder.redirectOutput(new File(actualOutFile));
+            }
+            StringBuilder commandMsg = new StringBuilder();
+            commandMsg.append("Executing command: \n");
+            commandMsg.append("   ");
+            for (String arg : args) {
+                if (arg.contains(" ")) {
+                    commandMsg.append(" \"" + arg + "\"");
+                } else {
+                    commandMsg.append(" " + arg);
+                }
+            }
+            Config.instance.commandLine.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
+
+            final boolean finalLogToScreen = logToScreen;
+            final String finalFile = file;
             Thread predict = new Thread() {
                 @Override
                 public void run() {
-                    predictor.initPredict(Config.instance.commandLine);
-                    predictor.run();
-	}
+                    Config.shutDown = true;
+                    Process process = null;
+                    try {
+                        process = processBuilder.start();
+                        if (finalLogToScreen) {
+                            Util.redirectOutput(process.getErrorStream(), System.err);
+                            Util.redirectOutput(process.getInputStream(), System.out);
+                        } else if (finalFile == null) {
+                            Util.redirectOutput(process.getErrorStream(), null);
+                            Util.redirectOutput(process.getInputStream(), null);
+                        }
+                        Util.redirectInput(process.getOutputStream(), System.in);
+
+                        process.waitFor();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
             };
             Runtime.getRuntime().addShutdownHook(predict);
         }

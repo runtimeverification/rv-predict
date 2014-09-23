@@ -1,6 +1,6 @@
 package rvpredict.util;
 
-import config.Configuration;
+import rvpredict.config.Configuration;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -41,7 +41,7 @@ public class Logger {
 			type += "maximal-branch (yices): ";
 		else
 			type += "maximal-branch (z3): ";
-//		out.println("\n------------------ "+type+config.tableName+" -------------------\n");
+//		out.println("\n------------------ "+type+rvpredict.config.tableName+" -------------------\n");
 		}catch(Exception e)
 		{
 			e.printStackTrace();

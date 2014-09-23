@@ -1,4 +1,4 @@
-package config;
+package rvpredict.config;
 
 import com.beust.jcommander.IParameterValidator;
 import com.beust.jcommander.ParameterException;

@@ -1,7 +1,7 @@
 package rvpredict.engine.main;
 
-import config.Configuration;
-import config.Util;
+import rvpredict.config.Configuration;
+import rvpredict.config.Util;
 import db.DBEngine;
 import rvpredict.util.Logger;
 
@@ -47,15 +47,6 @@ public class Main {
                     System.exit(1);
                 }
             }
-            db = new DBEngine(config.outdir, config.tableName);
-            try {
-                db.dropAll();
-            } catch (Exception e) {
-                config.logger.report("Unexpected error while cleaning up the database:\n" +
-                        e.getMessage(), Logger.MSGTYPE.ERROR);
-                System.exit(1);
-            }
-            db.closeDB();
 
             String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
             String basePath = getBasePath();

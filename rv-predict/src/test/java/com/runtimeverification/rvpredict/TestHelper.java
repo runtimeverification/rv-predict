@@ -9,7 +9,7 @@ import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import config.Util;
+import rvpredict.config.Util;
 import org.junit.Assert;
 
 /**

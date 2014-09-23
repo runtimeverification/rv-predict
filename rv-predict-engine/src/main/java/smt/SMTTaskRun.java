@@ -29,17 +29,14 @@
 package smt;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.*;
 
-import config.Configuration;
-import config.Util;
+import rvpredict.config.Configuration;
+import rvpredict.config.Util;
 
 /**
  * Constraint solving with Z3 solver

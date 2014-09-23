@@ -1,9 +1,5 @@
 package rvpredict.config;
 
-import com.beust.jcommander.Parameter;
-import config.Configuration;
-
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
@@ -50,6 +46,8 @@ public class Config {
     public String[] excludeList;
     public String[] includeList;
     public String logClass;
+
+    public static boolean shutDown = false;
 
     public Config() {
         try {

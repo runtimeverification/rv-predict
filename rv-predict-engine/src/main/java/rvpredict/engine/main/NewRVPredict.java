@@ -26,13 +26,11 @@ package rvpredict.engine.main; /************************************************
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
 
 import property.EREProperty;
-import config.Configuration;
-import rvpredict.h2.util.New;
+import rvpredict.config.Configuration;
 import rvpredict.util.Logger;
 import smt.EngineSMTLIB1;
 import smt.Engine;
@@ -977,7 +975,7 @@ public class NewRVPredict {
 			{
 				long index_start = round*config.window_size+1;
 				long index_end = (round+1)*config.window_size;
-				//if(totalTraceLength>config.window_size)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+totalTraceLength+" ******************\n");
+				//if(totalTraceLength>rvpredict.config.window_size)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+totalTraceLength+" ******************\n");
 				
 				
 				//load trace

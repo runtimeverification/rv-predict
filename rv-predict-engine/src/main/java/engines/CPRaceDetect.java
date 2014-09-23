@@ -35,7 +35,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 
-import config.Configuration;
+import rvpredict.config.Configuration;
 import trace.ReadNode;
 import trace.Trace;
 import trace.TraceInfo;

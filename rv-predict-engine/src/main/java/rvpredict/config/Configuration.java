@@ -45,6 +45,8 @@ import java.util.*;
  */
 public class Configuration {
 
+    private JCommander jCommander;
+
     // Copyright (c) 2013-2014 K Team. All Rights Reserved.
     public enum OS {
         OSX(true, "osx"), UNIX(true, "linux"), UNKNOWN(false, null), WIN(false, "cygwin");
@@ -122,10 +124,6 @@ public class Configuration {
     public final static String opt_sharing_only = "--detectSharingOnly";
     @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables", hidden = true, descriptionKey = "1040")
     public boolean agentOnlySharing;
-
-    public final static String opt_agent = "--agent";
-    @Parameter(names = opt_agent, description = "Run prediction in agent mode", hidden = true, descriptionKey = "1500")
-    public boolean agent;
 
     public final static String opt_only_predict = "--predict";
     @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "2000")
@@ -217,12 +215,12 @@ public class Configuration {
     public void parseArguments(String[] args, boolean checkJava) {
         String pathSeparator = System.getProperty("path.separator");
         String fileSeparator = System.getProperty("file.separator");
-        JCommander jc = new JCommander(this);
-        jc.setProgramName(PROGRAM_NAME);
+        jCommander = new JCommander(this);
+        jCommander.setProgramName(PROGRAM_NAME);
 
         // Collect all parameter names.  It would be nice if JCommander provided this directly.
         Set<String> options = new HashSet<String>();
-        for (ParameterDescription parameterDescription : jc.getParameters()) {
+        for (ParameterDescription parameterDescription : jCommander.getParameters()) {
             for (String name : parameterDescription.getParameter().names()) {
                 options.add(name);
             }
@@ -244,7 +242,7 @@ public class Configuration {
 
         // get all rv-predict arguments and (potentially) the first unnamed program arguments
         try {
-            jc.parse(rvArgs);
+            jCommander.parse(rvArgs);
         } catch (ParameterException e) {
             System.err.println("Error: Cannot parse command line arguments.");
             System.err.println(e.getMessage());
@@ -296,7 +294,7 @@ public class Configuration {
         }
 
         if (help) {
-            usage(jc);
+            usage();
             System.exit(0);
         }
 
@@ -305,7 +303,7 @@ public class Configuration {
             command_line = new ArrayList<String>(argList);
             if (command_line.isEmpty() && log && checkJava) {
                 System.err.println("Error: Java command line is empty.");
-                usage(jc);
+                usage();
                 System.exit(1);
             }
         } else {
@@ -322,7 +320,7 @@ public class Configuration {
         System.exit(1);
     }
 
-    public void usage(JCommander jc) {
+    public void usage() {
 /*
 -- can be used as a terminator for the rv-predict specific options.
 The remaining arguments are what one would pass to the java executable to
@@ -338,7 +336,7 @@ be used explicitly for disambiguation.
 
         // computing names maximum length
         int max_option_length = 0;
-        for (ParameterDescription parameterDescription : jc.getParameters()) {
+        for (ParameterDescription parameterDescription : jCommander.getParameters()) {
             if (parameterDescription.getNames().length() > max_option_length) {
                 max_option_length = parameterDescription.getNames().length();
             }
@@ -347,7 +345,7 @@ be used explicitly for disambiguation.
         // Computing usage
         max_option_length++;
         String usageHeader = "Usage: " + PROGRAM_NAME + " [rv_predict_options] [--] [java_options] "
-                + jc.getMainParameterDescription() + "\n";
+                + jCommander.getMainParameterDescription() + "\n";
         String usage = usageHeader
                 + "  Options:";
         String shortUsage = usageHeader
@@ -358,7 +356,7 @@ be used explicitly for disambiguation.
         int spacesBeforeCnt;
         int spacesAfterCnt;
         String description;
-        for (ParameterDescription parameterDescription : jc.getParameters()) {
+        for (ParameterDescription parameterDescription : jCommander.getParameters()) {
             Parameter parameter = parameterDescription.getParameter().getParameter();
             String descriptionKey = parameter.descriptionKey();
             description = "\n";

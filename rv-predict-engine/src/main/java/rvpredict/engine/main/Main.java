@@ -36,6 +36,7 @@ public class Main {
         if (config.log) {
             if (config.command_line.isEmpty()) {
                 config.logger.report("You must provide a class or a jar to run.", Logger.MSGTYPE.ERROR);
+                config.usage();
                 System.exit(1);
             }
             File outdirFile = new File(config.outdir);
@@ -44,6 +45,7 @@ public class Main {
             } else {
                 if (!outdirFile.isDirectory()) {
                     config.logger.report(config.outdir + " is not a directory", Logger.MSGTYPE.ERROR);
+                    config.usage();
                     System.exit(1);
                 }
             }
@@ -54,7 +56,7 @@ public class Main {
             String libPath = basePath + separator + "lib" + separator;
             String rvAgent = libPath + "rv-predict-agent"  + ".jar";
 
-            String sharingAgentOptions = config.opt_outdir + " " + escapeString(config.outdir);
+            String sharingAgentOptions = config.opt_only_log + " " + escapeString(config.outdir);
             if (config.additionalExcludes != null) {
                 config.additionalExcludes.replaceAll(" ","");
                 sharingAgentOptions += " " + Configuration.opt_exclude + " " + escapeString(config.additionalExcludes);

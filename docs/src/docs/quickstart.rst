@@ -129,5 +129,20 @@ options for advanced users to tune RV-Predict:
    significant speedups for larger applications, as it drastically reduces the 
    trace size.
 
+Running RV-Predict as an agent
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To ease integration with other tools (e.g., Maven), RV-Predict can be run
+as an agent.
+Assuming ``<rvPath>`` is the installation directory for RV-Predict,
+running RV-Predict as an agent along with your Java application simply amounts
+to adding the ``-javaagent:<rvPath>/lib/rv-predict.jar`` option to your Java
+command line.  Passing options to the agent can be done as usual for agents:
+using  ``-javaagent:<rvPath>/lib/rv-predict.jar="<opts>"``, where ``<opts>``
+are RV-Predict options.  Note though that some options related to logging,
+such as ``--with-profile`` would not work, as they require running the
+application twice (for detecting shared locations).
+
+
 .. _z3: http://z3.codeplex.com
 .. _RV-Predict website: http://runtimeverification.com/predict

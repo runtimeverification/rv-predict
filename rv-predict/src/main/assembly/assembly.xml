@@ -61,7 +61,6 @@
             <directory>../docs/target/docs/text</directory>
             <outputDirectory>/docs</outputDirectory>
             <excludes>
-                <exclude>index.txt</exclude>
                 <exclude>.doctrees/**</exclude>
             </excludes>
         </fileSet>

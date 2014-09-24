@@ -111,7 +111,7 @@
                             <url>sftp://grigore@runtimeverification.com/</url>
                             <fromDir>target</fromDir>
                             <includes>rv-predict-installer*.jar</includes>
-                            <toDir>/home/grigore/public_html/runtimeverification.com/predict/${version}</toDir>
+                            <toDir>/home/grigore/public_html/runtimeverification.com/predict/${project.version}</toDir>
                         </configuration>
                     </execution>
                 </executions>

@@ -79,7 +79,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             String basePath = Main.getBasePath();
             String separator = System.getProperty("file.separator");
             String libPath = basePath + separator + "lib" + separator;
-            String rvEngine = libPath + "rv-predict-engine"  + ".jar";
+            String rvEngine = libPath + "rv-predict"  + ".jar";
             List<String> appArgList = new ArrayList<>();
             appArgList.add(java);
             appArgList.add("-cp");
@@ -95,7 +95,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                 appArgList.add(config.commandLine.outdir);
             }
 
-            System.out.println("Prediction command: " + appArgList);
+            Config.instance.commandLine.logger.report("Prediction command: " + appArgList, Logger.MSGTYPE.VERBOSE);
 
             final ProcessBuilder processBuilder =
                     new ProcessBuilder(appArgList.toArray(args));

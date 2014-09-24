@@ -50,7 +50,7 @@
                             <formats>
                                 <format>dir</format>
                             </formats>
-                            <finalName>${artifactId}</finalName>
+                            <finalName>${project.artifactId}</finalName>
                             <appendAssemblyId>false</appendAssemblyId>
                             <outputDirectory>../target/release</outputDirectory>
                         </configuration>
@@ -93,7 +93,7 @@
                 <configuration>
                     <groups>com.runtimeverification.rvpredict.IntegrationTest</groups>
                     <systemPropertyVariables>
-                        <rvPath>${project.parent.build.directory}/release/${artifactId}</rvPath>
+                        <rvPath>${project.parent.build.directory}/release/${project.artifactId}</rvPath>
                     </systemPropertyVariables>
                 </configuration>
                 <executions>

@@ -22,8 +22,6 @@ public class Main {
 
     public static final int WIDTH = 75;
     public static final char FILL = '-';
-    public static final String GROUP_ID = "com.runtimeverification.rvpredict";
-    public static final String ARTEFACT_ID = "rv-predict-engine";
 
     public static void main(String[] args) {
 
@@ -54,7 +52,7 @@ public class Main {
             String basePath = getBasePath();
             String separator = System.getProperty("file.separator");
             String libPath = basePath + separator + "lib" + separator;
-            String rvAgent = libPath + "rv-predict-agent"  + ".jar";
+            String rvAgent = libPath + "rv-predict"  + ".jar";
 
             String sharingAgentOptions = config.opt_only_log + " " + escapeString(config.outdir);
             if (config.additionalExcludes != null) {
@@ -132,22 +130,6 @@ public class Main {
             predictor.addHooks();
             predictor.run();
         }
-    }
-
-    private static String getVersion() {
-        String version = null;
-        try {
-            Properties p = new Properties();
-            InputStream is = Main.class.getResourceAsStream("/META-INF/maven/" + GROUP_ID + "/" + ARTEFACT_ID +
-                    "/pom.properties");
-            if (is != null) {
-                p.load(is);
-                version = p.getProperty("version", null);
-            }
-        } catch (Exception e) {
-            // ignore
-        }
-        return version;
     }
 
     public static String center(String msg) {

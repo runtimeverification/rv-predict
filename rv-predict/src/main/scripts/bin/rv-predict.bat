@@ -1,1 +1,1 @@
-@java -Xmx32g -cp "%~dp0..\lib\rv-predict-engine.jar" rvpredict.engine.main.Main %*
+@java -Xmx32g -cp "%~dp0..\lib\rv-predict.jar" rvpredict.engine.main.Main %*

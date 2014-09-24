@@ -38,6 +38,9 @@
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
                     <archive>
+                        <manifest>
+                            <mainClass>rvpredict.engine.main.Main</mainClass>
+                        </manifest>
                         <manifestEntries>
                             <Premain-Class>rvpredict.instrumentation.SnoopInstructionTransformer</Premain-Class>
                         </manifestEntries>

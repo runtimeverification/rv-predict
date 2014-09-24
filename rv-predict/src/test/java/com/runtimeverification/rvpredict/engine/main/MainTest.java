@@ -46,7 +46,7 @@ public class MainTest {
         return path;
     }
 
-    private static String rvPredictJar = basePath + separator + "lib" + separator + "rv-predict-engine.jar";
+    private static String rvPredictJar = basePath + separator + "lib" + separator + "rv-predict.jar";
     private static String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
     private static List<String> rvArgList = Arrays.asList(new String[]{java, "-cp", rvPredictJar,
             "rvpredict.engine.main.Main"});

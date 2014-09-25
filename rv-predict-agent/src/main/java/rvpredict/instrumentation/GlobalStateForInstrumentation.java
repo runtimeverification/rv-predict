@@ -47,59 +47,57 @@ public class GlobalStateForInstrumentation {
     }
     public 	GlobalStateForInstrumentation()
     {
-    	//save instrumentation and runtime information?
-    	Runtime.getRuntime().addShutdownHook(new Thread("Thread-logMetaData") {
-    		public void run() {
-    	    	if(!Config.instance.commandLine.agentOnlySharing)
-    	    		RecordRT.saveMetaData(variableIdMap, volatilevariables, stmtSigIdMap,Config.instance.verbose);
-    	    	else
-    	    	{
-    	    		//show arrayId
-	    	    	HashSet<Integer> sharedArrayIds = new HashSet<Integer>();
-	    	    	for(Integer sid: RecordRT.sharedArrayIds)
-	    	    	{
-	    	    		HashSet<Integer> ids = RecordRT.arrayIdsMap.get(sid);
-	    	    			sharedArrayIds.addAll(ids);
-	    	    	}
-	    	    	
-	    	    	sharedVariables = new HashSet<String>();
-		    	    	//show variableId
-		    	    	for(Map.Entry<String,Integer> entry: variableIdMap.entrySet())
-		    	    	{	    	    		
-		    	    		Integer id = entry.getValue();
-		    	    		String var = entry.getKey();
-		    	    		if(RecordRT.sharedVariableIds.contains(id))
-		    	    			sharedVariables.add(var);
-		    	    		
-		    	    	}
-		    	    	
-		    	    	sharedArrayLocations = new HashSet<String>();
+    }
 
-		    	    	for(Integer id: arrayIdMap.keySet())
-		    	    	{	    	    		
-		    	    		String var = arrayIdMap.get(id);
-		    	    		if(sharedArrayIds.contains(id))
-			    	    		sharedArrayLocations.add(var);
-		    	    	}
+    public void saveMetaData() {
+        if(!Config.instance.commandLine.agentOnlySharing)
+            RecordRT.saveMetaData(variableIdMap, volatilevariables, stmtSigIdMap, Config.instance.verbose);
+        else
+        {
+            //show arrayId
+            HashSet<Integer> sharedArrayIds = new HashSet<Integer>();
+            for(Integer sid: RecordRT.sharedArrayIds)
+            {
+                HashSet<Integer> ids = RecordRT.arrayIdsMap.get(sid);
+                    sharedArrayIds.addAll(ids);
+            }
 
-		    	    	
-    	    		
-	    	    	if(Config.instance.verbose)
-	    	    	{
-		    	    	int size_var = variableIdMap.entrySet().size(); 
-		    	    	int size_array = arrayIdMap.entrySet().size(); 
+            sharedVariables = new HashSet<String>();
+                //show variableId
+                for(Map.Entry<String,Integer> entry: variableIdMap.entrySet())
+                {
+                    Integer id = entry.getValue();
+                    String var = entry.getKey();
+                    if(RecordRT.sharedVariableIds.contains(id))
+                        sharedVariables.add(var);
 
-		    	    	double svar_percent = size_var==0?0:((double)RecordRT.sharedVariableIds.size()/variableIdMap.entrySet().size());
-		    	    	double sarray_percent = size_array==0?0:((double)sharedArrayIds.size()/arrayIdMap.entrySet().size());
-	
-	    	    		System.out.println("\nSHARED VARIABLE PERCENTAGE: "+svar_percent);
-	    	    		System.out.println("SHARED ARRAY PERCENTAGE: "+sarray_percent);
-	    	    	}
-    	    		//save the sharedvariable to database??
-    	    		RecordRT.saveSharedMetaData(sharedVariables,sharedArrayLocations);
-    	    	}
-    			}
-    		});
+                }
+
+                sharedArrayLocations = new HashSet<String>();
+
+                for(Integer id: arrayIdMap.keySet())
+                {
+                    String var = arrayIdMap.get(id);
+                    if(sharedArrayIds.contains(id))
+                        sharedArrayLocations.add(var);
+                }
+
+
+
+            if(Config.instance.verbose)
+            {
+                int size_var = variableIdMap.entrySet().size();
+                int size_array = arrayIdMap.entrySet().size();
+
+                double svar_percent = size_var==0?0:((double)RecordRT.sharedVariableIds.size()/variableIdMap.entrySet().size());
+                double sarray_percent = size_array==0?0:((double)sharedArrayIds.size()/arrayIdMap.entrySet().size());
+
+                System.out.println("\nSHARED VARIABLE PERCENTAGE: "+svar_percent);
+                System.out.println("SHARED ARRAY PERCENTAGE: "+sarray_percent);
+            }
+            //save the sharedvariable to database??
+            RecordRT.saveSharedMetaData(sharedVariables,sharedArrayLocations);
+        }
     }
 
     public int getVariableId(String sig)

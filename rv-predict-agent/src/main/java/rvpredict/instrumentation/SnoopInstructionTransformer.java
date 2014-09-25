@@ -65,7 +65,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             System.out.println("Including: " + Arrays.toString(config.includeList));
         }
 
-        DBEngine db = new DBEngine(commandLine.outdir, commandLine.tableName);
+        final DBEngine db = new DBEngine(commandLine.outdir, commandLine.tableName);
         try {
             db.dropAll();
         } catch (Exception e) {
@@ -78,12 +78,15 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         RecordRT.init();
         
 		inst.addTransformer(new SnoopInstructionTransformer());
-        if (commandLine.predict == true) {
+        ProcessBuilder processBuilder = null;
+        boolean logToScreen = false;
+        String file = null;
+        if (commandLine.predict) {
             String java = JavaEnvUtils.getJreExecutable("java");
             String basePath = Main.getBasePath();
             String separator = System.getProperty("file.separator");
             String libPath = basePath + separator + "lib" + separator;
-            String rvEngine = libPath + "rv-predict"  + ".jar";
+            String rvEngine = libPath + "rv-predict" + ".jar";
             List<String> appArgList = new ArrayList<>();
             appArgList.add(java);
             appArgList.add("-cp");
@@ -99,11 +102,8 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                 appArgList.add(commandLine.outdir);
             }
 
-            final ProcessBuilder processBuilder =
-                    new ProcessBuilder(appArgList.toArray(args));
+            processBuilder = new ProcessBuilder(appArgList.toArray(args));
             String logOutputString = commandLine.log_output;
-            boolean logToScreen = false;
-            String file = null;
             if (logOutputString.equalsIgnoreCase(Configuration.YES)) {
                 logToScreen = true;
             } else if (!logOutputString.equals(Configuration.NO)) {
@@ -124,13 +124,18 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                 }
             }
             commandLine.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
+        }
 
-            final boolean finalLogToScreen = logToScreen;
-            final String finalFile = file;
-            Thread predict = new Thread() {
-                @Override
-                public void run() {
-                    Config.shutDown = true;
+        final boolean finalLogToScreen = logToScreen;
+        final String finalFile = file;
+        final ProcessBuilder finalProcessBuilder = processBuilder;
+        Thread predict = new Thread() {
+            @Override
+            public void run() {
+                Config.shutDown = true;
+                GlobalStateForInstrumentation.instance.saveMetaData();
+                db.closeDB();
+                if (commandLine.predict) {
                     if (commandLine.log && (commandLine.verbose || logOutput)) {
                         commandLine.logger.report(Main.center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
                         commandLine.logger.report(Configuration.TRACE_LOGGED_IN + commandLine.outdir, Logger.MSGTYPE.VERBOSE);
@@ -138,7 +143,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
 
                     Process process = null;
                     try {
-                        process = processBuilder.start();
+                        process = finalProcessBuilder.start();
                         if (finalLogToScreen) {
                             Util.redirectOutput(process.getErrorStream(), System.err);
                             Util.redirectOutput(process.getInputStream(), System.out);
@@ -155,14 +160,16 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                         e.printStackTrace();
                     }
                 }
-            };
-            Runtime.getRuntime().addShutdownHook(predict);
+            }
+        };
+        Runtime.getRuntime().addShutdownHook(predict);
 
+        if (commandLine.predict) {
             if (logOutput) {
                 commandLine.logger.report(Main.center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE), Logger.MSGTYPE.INFO);
             }
         }
-	}
+    }
 
     public byte[] transform(ClassLoader loader,String cname, Class<?> c, ProtectionDomain d, byte[] cbuf)
             throws IllegalClassFormatException {

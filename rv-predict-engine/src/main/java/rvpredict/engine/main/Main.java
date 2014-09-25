@@ -191,6 +191,7 @@ public class Main {
                 Util.redirectOutput(process.getErrorStream(), null);
                 Util.redirectOutput(process.getInputStream(), null);
             }
+            Util.redirectInput(process.getOutputStream(), System.in);
 
             process.waitFor();
         } catch (IOException e) {

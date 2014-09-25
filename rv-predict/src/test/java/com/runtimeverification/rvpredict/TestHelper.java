@@ -50,14 +50,20 @@ public class TestHelper {
         String actualErrFile = null;
         String expectedOutFile = null;
         String expectedErrFile = null;
+        String inFile = null;
         if (expectedFilePrefix != null) {
             testsPrefix = basePath.toString() + "/" + expectedFilePrefix;
             actualOutFile = testsPrefix + ".actual.out";
             actualErrFile = testsPrefix + ".actual.err";
             expectedOutFile = testsPrefix + ".expected.out";
             expectedErrFile = testsPrefix + ".expected.err";
+            inFile = testsPrefix + ".in";
             processBuilder.redirectError(new File(actualErrFile));
             processBuilder.redirectOutput(new File(actualOutFile));
+            File input = new File(inFile);
+            if (input.exists() && !input.isDirectory()) {
+                processBuilder.redirectInput(input);
+            }
         }
         Process process = processBuilder.start();
         if (expectedFilePrefix == null) {

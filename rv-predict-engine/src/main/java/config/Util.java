@@ -114,6 +114,25 @@ public class Util {
         }).start();
     }
 
+    public static void redirectInput(final OutputStream inputStream, final InputStream redirect) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (redirect != null) {
+                    try {
+                        int ret = -1;
+                        while ((ret = redirect.read()) != -1) {
+                            inputStream.write(ret);
+                            inputStream.flush();
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
+    }
+
     public static String convertFileToString(File file) throws IOException{
         FileInputStream fileInputStream = new FileInputStream(file);
         byte[] b = new byte[fileInputStream.available()];

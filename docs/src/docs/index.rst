@@ -6,9 +6,6 @@
 Welcome!
 ========
 
-Welcome to RV-Predict's documentation!
---------------------------------------
-
 RV-Predict is the only dynamic data race detector that is both sound and
 maximal. *Dynamic* means that it executes the program in order to extract
 an execution trace to analyze. *Sound* means that it only reports races

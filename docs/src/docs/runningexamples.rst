@@ -1,17 +1,12 @@
 Running Examples
 ================
 
-To clarify the use of RV-Predict on the included examples, we will walk
-through the running of several examples using the tool.
-
 RV-Predict comes with a suite of small benchmark examples which can be
-found in the ``examples/basic.jar`` and whose source can be inspected
-in the ``examples/basic-src`` directory.  The file
-``examples/basic-examples-list.txt`` lists all runnable classes in the
-``examples/basic.jar`` archive.
-
+found in ``examples/basic.jar``, whose source code is in
+``examples/basic-src``.  The file ``examples/basic-examples-list.txt``
+lists all runnable classes in ``examples/basic.jar``.
 Additionally, a `Spring Framework`_ example (``examples/SpringExample.jar``) is
-provided, to show that RV-Predict can handle multiple class-loaders, as well
+provided to show how RV-Predict can handle multiple class-loaders, as well
 as a more complex example based on the `Apache FtpServer`_
 (``examples/ftpserver.jar``).
 
@@ -22,13 +17,13 @@ Short Description
 ~~~~~~~~~~~~~~~~~
 
 The Account class is a demo for a multi-threaded system which manages accounts
-while keeping track of their internal balance. The chance for error is very low
-although possible for the lack of synchronization.
+while keeping track of their internal balance.  Because of poor synchronization,
+a rare data-race yielding a nondeterministic behavior is possible.
 
 Normal run
 ~~~~~~~~~~
 
-Below is the output (no race) shown during a normal run of the class:
+Below is the output (no race) shown during a normal run:
 
 Running command:
 
@@ -55,7 +50,7 @@ Expected output:
 RV-Predict run
 ~~~~~~~~~~~~~~
 
-Invoking the RV-Predict tool on the Account class is done by simply replacing
+To invoke RV-Predict on the Account class, simply replace
 ``java`` by ``rv-predict`` on the command line:
 
 .. code-block:: none
@@ -63,7 +58,7 @@ Invoking the RV-Predict tool on the Account class is done by simply replacing
     rv-predict -cp examples/basic.jar account.Account
 
 As previously, a complete execution output of the Account class is generated,
-most probably not exhibiting the datarace either.  Nevertheless, this output
+most probably not exhibiting the data-race either.  Nevertheless, this output
 is followed by the RV-Predict analysis of the observed execution which shows
 that under different thread scheduling multiple races could have been
 observed:
@@ -116,8 +111,8 @@ in the standard output stream is a normal interaction which exhibits no
 data race, also indicated by the fact that the records match at the end of
 the session.
 
-The analysis performed on the logged trace exhibits 4 violations
-which could have occurred if the thread scheduling would have been different.
+The analysis performed on the logged trace exhibits 4 data-races which could
+have occurred if the thread scheduling would have been different.
 
 A race description usually follows the syntax
 
@@ -127,8 +122,8 @@ A race description usually follows the syntax
             <method_name>(<file_name>:<line_number>)
             <method_name>(<file_name>:<line_number>)
 
-Which presents the fully qualified name of the field on which the race occurred
-(``<field_name>``) and the two locations in race identified as frames on the
+which presents the fully qualified name of the field on which the race occurred
+(``<field_name>``) and the two racing locations identified as frames on the
 method call stack: fully qualified name of the method (``<method_name>``), file
 containing the location (``<file_name>``) and line number where the unprotected
 field access occurred (``<line_number>``).
@@ -155,9 +150,7 @@ Short Description
 This example is built by altering the standard "Hello World!" example for the
 `Spring Framework`_ to exhibit a multi-threaded race condition which can be
 triggered by commuting the order of two synchronization blocks.
-
-The purpose of the example is both showing how RV-Predict runs on Jarfiles,
-and showing that it can handle complex class-loaders.
+This example shows that both ``jar`` files and complex class-loaders are supported.
 
 Normal Run
 ~~~~~~~~~~

@@ -29,6 +29,11 @@
             <artifactId>basic</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.runtimeverification.rvpredict</groupId>
+            <artifactId>docs</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

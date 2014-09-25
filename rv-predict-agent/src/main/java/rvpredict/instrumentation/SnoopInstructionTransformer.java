@@ -1,6 +1,7 @@
 package rvpredict.instrumentation;
 
 import db.DBEngine;
+import org.apache.tools.ant.util.JavaEnvUtils;
 import rvpredict.config.Configuration;
 import rvpredict.config.Util;
 import org.objectweb.asm.ClassReader;
@@ -33,10 +34,13 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        Config config = Config.instance;
-        config.commandLine.parseArguments(args, false);
-        if (Config.instance.commandLine.additionalExcludes != null) {
-            String[] excludes = Config.instance.commandLine.additionalExcludes.replace('.','/').split(",");
+        final Config config = Config.instance;
+        final Configuration commandLine = config.commandLine;
+        commandLine.parseArguments(args, false);
+
+        final boolean logOutput = commandLine.log_output.equalsIgnoreCase(Configuration.YES);
+        if (commandLine.additionalExcludes != null) {
+            String[] excludes = commandLine.additionalExcludes.replace('.','/').split(",");
             if (config.excludeList == null) {
                 config.excludeList = excludes;
             } else {
@@ -47,8 +51,8 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             }
             System.out.println("Excluding: " + Arrays.toString(config.excludeList));
         }
-        if (Config.instance.commandLine.additionalIncludes != null) {
-            String[] includes = Config.instance.commandLine.additionalIncludes.replace('.','/').split(",");
+        if (commandLine.additionalIncludes != null) {
+            String[] includes = commandLine.additionalIncludes.replace('.','/').split(",");
             if (config.includeList == null) {
                 config.includeList = includes;
             } else {
@@ -61,11 +65,11 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             System.out.println("Including: " + Arrays.toString(config.includeList));
         }
 
-        DBEngine db = new DBEngine(Config.instance.commandLine.outdir, Config.instance.commandLine.tableName);
+        DBEngine db = new DBEngine(commandLine.outdir, commandLine.tableName);
         try {
             db.dropAll();
         } catch (Exception e) {
-            config.commandLine.logger.report("Unexpected error while cleaning up the database:\n" +
+            commandLine.logger.report("Unexpected error while cleaning up the database:\n" +
                     e.getMessage(), Logger.MSGTYPE.ERROR);
             System.exit(1);
         }
@@ -74,8 +78,8 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         RecordRT.init();
         
 		inst.addTransformer(new SnoopInstructionTransformer());
-        if (Config.instance.commandLine.predict == true) {
-            String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
+        if (commandLine.predict == true) {
+            String java = JavaEnvUtils.getJreExecutable("java");
             String basePath = Main.getBasePath();
             String separator = System.getProperty("file.separator");
             String libPath = basePath + separator + "lib" + separator;
@@ -92,14 +96,12 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                 appArgList.set(index, Configuration.opt_only_predict);
             } else {
                 appArgList.add(Configuration.opt_only_predict);
-                appArgList.add(config.commandLine.outdir);
+                appArgList.add(commandLine.outdir);
             }
-
-            Config.instance.commandLine.logger.report("Prediction command: " + appArgList, Logger.MSGTYPE.VERBOSE);
 
             final ProcessBuilder processBuilder =
                     new ProcessBuilder(appArgList.toArray(args));
-            String logOutputString = Config.instance.commandLine.log_output;
+            String logOutputString = commandLine.log_output;
             boolean logToScreen = false;
             String file = null;
             if (logOutputString.equalsIgnoreCase(Configuration.YES)) {
@@ -121,7 +123,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                     commandMsg.append(" " + arg);
                 }
             }
-            Config.instance.commandLine.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
+            commandLine.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
 
             final boolean finalLogToScreen = logToScreen;
             final String finalFile = file;
@@ -129,6 +131,11 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                 @Override
                 public void run() {
                     Config.shutDown = true;
+                    if (commandLine.log && (commandLine.verbose || logOutput)) {
+                        commandLine.logger.report(Main.center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
+                        commandLine.logger.report(Configuration.TRACE_LOGGED_IN + commandLine.outdir, Logger.MSGTYPE.VERBOSE);
+                    }
+
                     Process process = null;
                     try {
                         process = processBuilder.start();
@@ -150,6 +157,10 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                 }
             };
             Runtime.getRuntime().addShutdownHook(predict);
+
+            if (logOutput) {
+                commandLine.logger.report(Main.center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE), Logger.MSGTYPE.INFO);
+            }
         }
 	}
 

@@ -7,7 +7,6 @@ import rvpredict.util.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -83,7 +82,7 @@ public class Main {
             } else {
                 appArgList.add("-javaagent:" + rvAgent + "=" + noSharingAgentOptions);
                 if (logOutput) {
-                    config.logger.report(center("Instrumented execution to record the trace"), Logger.MSGTYPE.INFO);
+                    config.logger.report(center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE), Logger.MSGTYPE.INFO);
                 }
             }
             appArgList.addAll(config.command_line);
@@ -120,8 +119,8 @@ public class Main {
         }
 
         if (config.log && (config.verbose || logOutput)) {
-            config.logger.report(center("Logging phase completed."), Logger.MSGTYPE.INFO);
-            config.logger.report("\tTrace logged in: " + config.outdir, Logger.MSGTYPE.VERBOSE);
+            config.logger.report(center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
+            config.logger.report(Configuration.TRACE_LOGGED_IN + config.outdir, Logger.MSGTYPE.VERBOSE);
         }
 
         if (config.predict) {

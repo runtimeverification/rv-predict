@@ -45,6 +45,9 @@ import java.util.*;
  */
 public class Configuration {
 
+    public static final String LOGGING_PHASE_COMPLETED = "Logging phase completed.";
+    public static final String TRACE_LOGGED_IN = "\tTrace logged in: ";
+    public static final String INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE = "Instrumented execution to record the trace";
     private JCommander jCommander;
 
     // Copyright (c) 2013-2014 K Team. All Rights Reserved.

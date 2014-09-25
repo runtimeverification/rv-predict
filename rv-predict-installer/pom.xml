@@ -48,7 +48,7 @@
                                 <artifactItem>
                                     <groupId>com.runtimeverification.install</groupId>
                                     <artifactId>rv-install</artifactId>
-                                    <version>0.2</version>
+                                    <version>0.3</version>
                                     <type>jar</type>
                                     <overWrite>true</overWrite>
                                     <outputDirectory>../target/release/rv-predict/</outputDirectory>

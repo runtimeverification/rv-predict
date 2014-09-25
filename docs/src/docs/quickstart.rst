@@ -92,11 +92,10 @@ displayed by ``rv-predict -h -v`` are not sufficient:
    -  a ``<name>`` tells to redirect the standard output to
       ``<name>.out`` and the standard error to ``<name>.err``.
 
-<<<<<<< HEAD
 Additionally, the ``RV_OPTS`` environment variable can be used to specify
 extra options to the Java Virtual Machine running rv-predict (e.g.,  for
 increasing the memory limit).
-=======
+
 Enhancing the prediction power
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -133,7 +132,6 @@ options for advanced users to tune RV-Predict:
    involves an additional preprocessing step for profiling), it can often bring 
    significant speedups for larger applications, as it drastically reduces the 
    trace size.
->>>>>>> master
 
 .. _z3: http://z3.codeplex.com
 .. _RV-Predict website: http://runtimeverification.com/predict

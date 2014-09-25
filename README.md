@@ -9,3 +9,6 @@ where `[options]` include both RV-Predict and Java specific options.
  
 Additional documentation can be found online on the 
 [RV-Predict website](http://runtimeverification.com/predict/docs).
+
+For support requests and bug reporting, contact predict@runtimeverification.com
+or visit [Runtime Verification Support](http://runtimeverification.com/support/predict).

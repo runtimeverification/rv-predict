@@ -1,2 +1,7 @@
 #!/usr/bin/env bash
-java -Xmx32g -cp "$(dirname "$0")/../lib/rv-predict.jar" rvpredict.engine.main.Main "$@"
+ulimit -s `ulimit -H -s`
+if [ -z "$RV_OPTS" ];
+  then export RV_OPTS="-Xms64m -Xmx1024m -Xss32m"
+fi
+
+java $RV_OPTS -cp "$(dirname "$0")/../lib/rv-predict.jar" rvpredict.engine.main.Main "$@"

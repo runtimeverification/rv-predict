@@ -9,15 +9,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.objectweb.asm.ClassReader;
 
 import rvpredict.config.Config;
+import rvpredict.logging.DBEngine;
 import rvpredict.logging.RecordRT;
 
 public class GlobalStateForInstrumentation {
     public static GlobalStateForInstrumentation instance = new GlobalStateForInstrumentation();
     public ConcurrentHashMap<String,Integer> variableIdMap = new ConcurrentHashMap<String,Integer>();
+    public ConcurrentHashMap<String,Integer> unsavedVariableIdMap = new ConcurrentHashMap<String,Integer>();
     public HashMap<Integer,String> arrayIdMap = new HashMap<Integer,String>();
 
-    public HashSet<String> volatilevariables = new HashSet<String>();
+    public HashSet<String> volatileVariables = new HashSet<String>();
+    public ConcurrentHashMap<String,Boolean> unsavedVolatileVariables = new ConcurrentHashMap<>();
     public ConcurrentHashMap<String,Integer> stmtSigIdMap = new ConcurrentHashMap<String,Integer>();
+    public ConcurrentHashMap<String,Integer> unsavedStmtSigIdMap = new ConcurrentHashMap<String,Integer>();
     HashSet<String> sharedVariables;
     HashSet<String> sharedArrayLocations;
     
@@ -49,9 +53,9 @@ public class GlobalStateForInstrumentation {
     {
     }
 
-    public void saveMetaData() {
+    public void saveMetaData(DBEngine db) {
         if(!Config.instance.commandLine.agentOnlySharing)
-            RecordRT.saveMetaData(variableIdMap, volatilevariables, stmtSigIdMap, Config.instance.verbose);
+            RecordRT.saveMetaData(db, GlobalStateForInstrumentation.instance, Config.instance.verbose);
         else
         {
             //show arrayId
@@ -96,15 +100,20 @@ public class GlobalStateForInstrumentation {
                 System.out.println("SHARED ARRAY PERCENTAGE: "+sarray_percent);
             }
             //save the sharedvariable to database??
-            RecordRT.saveSharedMetaData(sharedVariables,sharedArrayLocations);
+            RecordRT.saveSharedMetaData(db, sharedVariables,sharedArrayLocations);
         }
     }
 
     public int getVariableId(String sig)
     {
-  	  if(variableIdMap.get(sig)==null)
-  	  {
-  		variableIdMap.put(sig, variableIdMap.size()+1);
+  	  if(variableIdMap.get(sig)==null) {
+          synchronized (variableIdMap) {
+              if (variableIdMap.get(sig) == null) {
+                  int size = variableIdMap.size() + 1;
+                  variableIdMap.put(sig, size);
+                  unsavedVariableIdMap.put(sig, size);
+              }
+          }
   	  }
   	  int sid = variableIdMap.get(sig);
   	  
@@ -112,14 +121,27 @@ public class GlobalStateForInstrumentation {
     }
     public void addVolatileVariable(String sig)
     {
-    	volatilevariables.add(sig);
+        if (!volatileVariables.contains(sig)) {
+            synchronized (volatileVariables) {
+                if (!volatileVariables.contains(sig)) {
+                    volatileVariables.add(sig);
+                    unsavedVolatileVariables.put(sig, true);
+                }
+            }
+        }
     }
     
     public int getLocationId(String sig)
     {
     	if(stmtSigIdMap.get(sig)==null)
   	  {
-  		  stmtSigIdMap.put(sig, stmtSigIdMap.size()+1);
+          synchronized (stmtSigIdMap) {
+              if(stmtSigIdMap.get(sig)==null) {
+                  int size = stmtSigIdMap.size() + 1;
+                  stmtSigIdMap.put(sig, size);
+                  unsavedStmtSigIdMap.put(sig, size);
+              }
+          }
   	  }
   	  
   	  return stmtSigIdMap.get(sig);

@@ -131,15 +131,14 @@ public final class RecordRT {
 		threadTidIndexMap.put(tid, 1);
 		
 	}
-	public static void saveSharedMetaData(HashSet<String> sharedVariables,
-			HashSet<String> sharedArrayLocations) {
+	public static void saveSharedMetaData(DBEngine db, HashSet<String> sharedVariables,
+                                          HashSet<String> sharedArrayLocations) {
 		
-		DBEngine db= new DBEngine(Config.instance.commandLine.outdir, Config.instance.commandLine.tableName);
 		try {
 	    	if(Config.instance.verbose)
 	    		System.out.println("====================SHARED VARIABLES===================");
 	    	
-			db.createSharedVarSignatureTable();
+			db.createSharedVarSignatureTable(false);
 			for(String sig: sharedVariables)
 			{
 		    	db.saveSharedVarSignatureToDB(sig);
@@ -150,7 +149,7 @@ public final class RecordRT {
 	    	if(Config.instance.verbose)
 	    		System.out.println("====================SHARED ARRAY LOCATIONS===================");
 	    	
-			db.createSharedArrayLocTable();
+			db.createSharedArrayLocTable(false);
 			for(String sig: sharedArrayLocations)
 			{
 		    	  db.saveSharedArrayLocToDB(sig);
@@ -158,60 +157,63 @@ public final class RecordRT {
 	    			System.out.println(sig);
 			}
 			
-			db.closeDB();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-	public static void saveMetaData(ConcurrentHashMap<String,Integer> variableIdMap,
-			HashSet<String> volatilevariables,
-			ConcurrentHashMap<String,Integer> stmtSigIdMap, boolean isVerbose)
+	public static void saveMetaData(DBEngine db, GlobalStateForInstrumentation state,
+                                    boolean isVerbose)
 	{
+        ConcurrentHashMap<String, Integer> variableIdMap = state.unsavedVariableIdMap;
+        ConcurrentHashMap<String, Boolean> volatileVariables = state.unsavedVolatileVariables;
+        ConcurrentHashMap<String, Integer> stmtSigIdMap = state.unsavedStmtSigIdMap;
 		try{
 			//just reuse the connection 
 			
 			//TODO: if db is null or closed, there must be something wrong
-			DBEngine db= new DBEngine(Config.instance.commandLine.outdir, Config.instance.commandLine.tableName);
-			
 		//save variable - id to database
-		  db.createVarSignatureTable();
-	      for(Map.Entry<String,Integer> entry: variableIdMap.entrySet())
-	      {
+		  db.createVarSignatureTable(false);
+          Iterator<Entry<String, Integer>> variableIdMapIter = variableIdMap.entrySet().iterator();
+          while (variableIdMapIter.hasNext()) {
+              Map.Entry<String,Integer> entry = variableIdMapIter.next();
 	    	  String sig = entry.getKey();
 	    	  Integer id = entry.getValue();
-	    	  
-	    	  db.saveVarSignatureToDB(sig, id);
+              variableIdMapIter.remove();
+              db.saveVarSignatureToDB(sig, id);
 	    	  if(isVerbose)
         	  System.out.println("* ["+id+"] "+sig+" *");
 
     	  }
 	      
 	    //save volatilevariable - id to database
-		  db.createVolatileSignatureTable();
-	      Iterator<String> volatileIt = volatilevariables.iterator();
+		  db.createVolatileSignatureTable(false);
+	      Iterator<Entry<String,Boolean>> volatileIt = volatileVariables.entrySet().iterator();
 	      while(volatileIt.hasNext())
 	      {
-	    	  String sig = volatileIt.next();
-	    	  Integer id = variableIdMap.get(sig);
-	    	  
-	    	  db.saveVolatileSignatureToDB(sig, id);
+	    	  String sig = volatileIt.next().getKey();
+              volatileIt.remove();
+	    	  Integer id = GlobalStateForInstrumentation.instance.variableIdMap.get(sig);
+
+              db.saveVolatileSignatureToDB(sig, id);
 	    	  if(isVerbose)System.out.println("* volatile: ["+id+"] "+sig+" *");
 
     	  }
 	      //save stmt - id to database
-		  db.createStmtSignatureTable();
+		  db.createStmtSignatureTable(false);
 
-	      for(Entry<String,Integer> entry: stmtSigIdMap.entrySet())
+          Iterator<Entry<String, Integer>> stmtSigIdMapIter = stmtSigIdMap.entrySet().iterator();
+	      while(stmtSigIdMapIter.hasNext())
 	      {
+              Entry<String, Integer> entry = stmtSigIdMapIter.next();
+              stmtSigIdMapIter.remove();
 	    	  String sig = entry.getKey();
 	    	  Integer id = entry.getValue();
-	    	  
+
+              db.saveStmtSignatureToDB(sig, id);
 	    	  //System.out.println("* ["+id+"] "+sig+" *");
-	    	  db.saveStmtSignatureToDB(sig, id);
 	      }
 	      
-	      db.closeDB();
 		}catch(Exception e)
 		{
 			e.printStackTrace();

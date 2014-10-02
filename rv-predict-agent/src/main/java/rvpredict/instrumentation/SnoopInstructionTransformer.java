@@ -1,27 +1,21 @@
 package rvpredict.instrumentation;
 
-import db.DBEngine;
-import org.apache.tools.ant.util.JavaEnvUtils;
 import rvpredict.config.Configuration;
-import rvpredict.config.Util;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 
 import rvpredict.config.Config;
 import rvpredict.engine.main.Main;
+import rvpredict.logging.DBEngine;
 import rvpredict.logging.RecordRT;
 import rvpredict.util.Logger;
 
-import java.io.File;
-import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.security.ProtectionDomain;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 public class SnoopInstructionTransformer implements ClassFileTransformer {
 
@@ -33,12 +27,13 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             assert agentArgs.endsWith("\"") : "Argument must be quoted";
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
-        String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         final Config config = Config.instance;
         final Configuration commandLine = config.commandLine;
+        String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         commandLine.parseArguments(args, false);
 
         final boolean logOutput = commandLine.log_output.equalsIgnoreCase(Configuration.YES);
+        commandLine.logger.report(Main.center("Log dir: " + commandLine.outdir), Logger.MSGTYPE.INFO);
         if (commandLine.additionalExcludes != null) {
             String[] excludes = commandLine.additionalExcludes.replace('.','/').split(",");
             if (config.excludeList == null) {
@@ -73,95 +68,23 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                     e.getMessage(), Logger.MSGTYPE.ERROR);
             System.exit(1);
         }
-        db.closeDB();
+//        db.closeDB();
 		//initialize RecordRT first
         RecordRT.init();
         
 		inst.addTransformer(new SnoopInstructionTransformer());
-        ProcessBuilder processBuilder = null;
-        boolean logToScreen = false;
-        String file = null;
-        if (commandLine.predict) {
-            String java = JavaEnvUtils.getJreExecutable("java");
-            String basePath = Main.getBasePath();
-            String separator = System.getProperty("file.separator");
-            String libPath = basePath + separator + "lib" + separator;
-            String rvEngine = libPath + "rv-predict" + ".jar";
-            List<String> appArgList = new ArrayList<>();
-            appArgList.add(java);
-            appArgList.add("-cp");
-            appArgList.add(rvEngine);
-            appArgList.add("rvpredict.engine.main.Main");
-            appArgList.addAll(Arrays.asList(args));
-
-            int index = appArgList.indexOf(Configuration.opt_outdir);
-            if (index != -1) {
-                appArgList.set(index, Configuration.opt_only_predict);
-            } else {
-                appArgList.add(Configuration.opt_only_predict);
-                appArgList.add(commandLine.outdir);
-            }
-
-            processBuilder = new ProcessBuilder(appArgList.toArray(args));
-            String logOutputString = commandLine.log_output;
-            if (logOutputString.equalsIgnoreCase(Configuration.YES)) {
-                logToScreen = true;
-            } else if (!logOutputString.equals(Configuration.NO)) {
-                file = logOutputString;
-                String actualOutFile = file + ".out";
-                String actualErrFile = file + ".err";
-                processBuilder.redirectError(new File(actualErrFile));
-                processBuilder.redirectOutput(new File(actualOutFile));
-            }
-            StringBuilder commandMsg = new StringBuilder();
-            commandMsg.append("Executing command: \n");
-            commandMsg.append("   ");
-            for (String arg : args) {
-                if (arg.contains(" ")) {
-                    commandMsg.append(" \"" + arg + "\"");
-                } else {
-                    commandMsg.append(" " + arg);
-                }
-            }
-            commandLine.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
-        }
-
-        final boolean finalLogToScreen = logToScreen;
-        final String finalFile = file;
-        final ProcessBuilder finalProcessBuilder = processBuilder;
-        Thread predict = new Thread() {
+        final boolean inLogger = true;
+        final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
             @Override
-            public void run() {
-                Config.shutDown = true;
-                GlobalStateForInstrumentation.instance.saveMetaData();
-                db.closeDB();
-                if (commandLine.predict) {
-                    if (commandLine.log && (commandLine.verbose || logOutput)) {
-                        commandLine.logger.report(Main.center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
-                        commandLine.logger.report(Configuration.TRACE_LOGGED_IN + commandLine.outdir, Logger.MSGTYPE.VERBOSE);
-                    }
-
-                    Process process = null;
-                    try {
-                        process = finalProcessBuilder.start();
-                        if (finalLogToScreen) {
-                            Util.redirectOutput(process.getErrorStream(), System.err);
-                            Util.redirectOutput(process.getInputStream(), System.out);
-                        } else if (finalFile == null) {
-                            Util.redirectOutput(process.getErrorStream(), null);
-                            Util.redirectOutput(process.getInputStream(), null);
-                        }
-                        Util.redirectInput(process.getOutputStream(), System.in);
-
-                        process.waitFor();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+            public void cleanup() {
+                if (inLogger) {
+                    Config.shutDown = true;
+                    GlobalStateForInstrumentation.instance.saveMetaData(db);
+                    db.closeDB();
                 }
             }
         };
+        Thread predict = Main.getPredictionThread(commandLine, cleanupAgent, commandLine.predict);
         Runtime.getRuntime().addShutdownHook(predict);
 
         if (commandLine.predict) {

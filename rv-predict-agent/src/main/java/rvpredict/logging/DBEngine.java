@@ -28,6 +28,7 @@
  ******************************************************************************/
 package rvpredict.logging;
 import rvpredict.config.Config;
+import rvpredict.instrumentation.GlobalStateForInstrumentation;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -56,8 +57,8 @@ public class DBEngine {
 
     //currently we use the h2 database
     protected final String dbname = "RVDatabase";
-    protected final String driver = "org.h2.Driver";
-    public String appname = "test";
+    private final int TABLE_NOT_FOUND_ERROR_CODE = 42102;
+	public String appname = "main";
 
     //database schema
     protected final String[] stmtsigtablecolname = {"SIG", "ID"};
@@ -105,7 +106,20 @@ public class DBEngine {
     private String varsigtablename;
     private String sharedarrayloctablename;
 
-    class EventItem {
+	//TODO: What if the program does not terminate??
+
+	protected BlockingQueue<Stack<EventItem>> queue;
+	//we can also use our own Stack implementation here
+	protected Stack<EventItem> buffer;
+	protected Object dblock = new Object();
+
+	protected int BUFFER_THRESHOLD;
+	protected boolean asynchronousLogging;
+
+	//private final String NO_AUTOCLOSE = ";DB_CLOSE_ON_EXIT=FALSE";//BUGGY in H2, DON'T USE IT
+
+	class EventItem
+	{
         long GID;
         long TID;
         int ID;
@@ -123,7 +137,77 @@ public class DBEngine {
         }
     }
 
-    public DBEngine(String directory, String name) {
+	public void finishLogging()
+	{
+		//should wait for logging thread to finish
+		while(!queue.isEmpty());
+
+		saveEventsToDB(buffer);
+		closeDB();
+	}
+	public void saveEventsToDB(Stack<EventItem> stack)
+	{
+		synchronized(dblock)
+		{
+		while(!stack.isEmpty())
+		{
+			EventItem item = stack.pop();
+			//System.out.println(item.GID);
+		try
+		{
+			prepStmt.setLong(1, item.GID);
+			prepStmt.setLong(2, item.TID);
+			prepStmt.setInt(3, item.ID);
+			prepStmt.setString(4, item.ADDR);
+			prepStmt.setString(5, item.VALUE);
+			prepStmt.setByte(6, item.TYPE);
+
+			prepStmt.execute();
+
+		}catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		}
+		}
+	}
+	public void startAsynchronousLogging()
+	{
+		asynchronousLogging = true;
+
+		queue = new LinkedBlockingQueue<Stack<EventItem>>();
+		buffer = new Stack<EventItem>();
+		BUFFER_THRESHOLD = 100000;//TODO: make it configurable
+
+		Thread t = new Thread(new Runnable()
+		{
+
+			@Override
+			public void run() {
+
+
+				while(true)
+				{
+					try {
+						Stack<EventItem> stack = queue.take();
+						saveEventsToDB(stack);
+
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}
+
+		});
+
+		t.setDaemon(true);
+
+		t.start();
+
+	}
+	public DBEngine(String directory, String name)
+	{
         appname = name;
         tracetablename = "trace_" + name;
         tidtablename = "tid_" + name;
@@ -154,7 +238,7 @@ public class DBEngine {
 
     public void saveProperty(String name, int ID, boolean dropTable) {
         try {
-            if (dropTable) createPropertyTable();
+            if (dropTable) createPropertyTable(true);
             String sql_insertdata = "INSERT INTO " + propertytablename + " VALUES (?,?)";
             PreparedStatement prepStmt = conn.prepareStatement(sql_insertdata);
             prepStmt.setString(1, name);
@@ -165,11 +249,65 @@ public class DBEngine {
         }
     }
 
-    public void createPropertyTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + propertytablename;
-
+    /**
+     * Drops all relevant tables of the database.  Used for a clean start.
+     * @throws Exception if errors are reported by the sql command
+     */
+    public void dropAll() throws Exception {
         Statement stmt = conn.createStatement();
+
+        String sql_dropTable;
+        sql_dropTable = "DROP TABLE IF EXISTS "+propertytablename;
         stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS "+scheduletablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS "+stmtsigtablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS "+sharedvarsigtablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS "+volatilesigtablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS "+tracetablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS "+tidtablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS " + varsigtablename;
+        stmt.execute(sql_dropTable);
+    }
+
+    /**
+     * Checks that all relevant tables exist.
+     * @throws Exception
+     */
+    public boolean checkTables() throws SQLException {
+        Statement stmt = conn.createStatement();
+
+        String sql_checkTable;
+        try {
+            sql_checkTable = "SELECT COUNT(*) FROM "+stmtsigtablename;
+            stmt.execute(sql_checkTable);
+            sql_checkTable = "SELECT COUNT(*) FROM "+varsigtablename;
+            stmt.execute(sql_checkTable);
+            sql_checkTable = "SELECT COUNT(*) FROM "+volatilesigtablename;
+            stmt.execute(sql_checkTable);
+            sql_checkTable = "SELECT COUNT(*) FROM "+tracetablename;
+            stmt.execute(sql_checkTable);
+            sql_checkTable = "SELECT COUNT(*) FROM "+tidtablename;
+            stmt.execute(sql_checkTable);
+        } catch (SQLException e) {
+            if (e.getErrorCode() == TABLE_NOT_FOUND_ERROR_CODE)
+                return false;
+            throw e;
+        }
+        return true;
+    }
+
+    public void createPropertyTable(boolean newTable) throws Exception {
+        Statement stmt = conn.createStatement();
+        if (newTable) {
+            String sql_dropTable = "DROP TABLE IF EXISTS " + propertytablename;
+            stmt.execute(sql_dropTable);
+        }
 
         String sql_createTable = "CREATE TABLE IF NOT EXISTS " + propertytablename + " (" +
                 propertytablecolname[0] + " " + propertytablecoltype[0] + ", " +
@@ -178,92 +316,98 @@ public class DBEngine {
 
     }
 
-    public void createScheduleTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + scheduletablename;
-        String sql_insertdata = "INSERT INTO " + scheduletablename + " VALUES (?,?,?)";
-
+    public void createScheduleTable(boolean newTable) throws Exception {
         Statement stmt = conn.createStatement();
-        stmt.execute(sql_dropTable);
+        if (newTable) {
+            String sql_dropTable = "DROP TABLE IF EXISTS " + scheduletablename;
+            stmt.execute(sql_dropTable);
+        }
 
-        String sql_createTable = "CREATE TABLE " + scheduletablename + " (" +
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + scheduletablename + " (" +
                 scheduletablecolname[0] + " " + scheduletablecoltype[0] + " PRIMARY KEY, " +
                 scheduletablecolname[1] + " " + scheduletablecoltype[1] + ", " +
                 scheduletablecolname[2] + " " + scheduletablecoltype[2] + ")";
         stmt.execute(sql_createTable);
 
+        String sql_insertdata = "INSERT INTO " + scheduletablename + " VALUES (?,?,?)";
         prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
-    public void createStmtSignatureTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + stmtsigtablename;
-        String sql_insertdata = "INSERT INTO " + stmtsigtablename + " VALUES (?,?)";
-
+    public void createStmtSignatureTable(boolean newTable) throws Exception {
         Statement stmt = conn.createStatement();
-        stmt.execute(sql_dropTable);
+        if (newTable) {
+            String sql_dropTable = "DROP TABLE IF EXISTS " + stmtsigtablename;
+            stmt.execute(sql_dropTable);
+        }
 
-        String sql_createTable = "CREATE TABLE " + stmtsigtablename + " (" +
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + stmtsigtablename + " (" +
                 stmtsigtablecolname[0] + " " + stmtsigtablecoltype[0] + " PRIMARY KEY, " +
                 stmtsigtablecolname[1] + " " + stmtsigtablecoltype[1] + ")";
         stmt.execute(sql_createTable);
 
+        String sql_insertdata = "INSERT INTO " + stmtsigtablename + " VALUES (?,?)";
         prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
-    public void createVarSignatureTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + varsigtablename;
-        String sql_insertdata = "INSERT INTO " + varsigtablename + " VALUES (?,?)";
-
+    public void createVarSignatureTable(boolean newTable) throws Exception {
         Statement stmt = conn.createStatement();
-        stmt.execute(sql_dropTable);
+        if (newTable) {
+            String sql_dropTable = "DROP TABLE IF EXISTS " + varsigtablename;
+            stmt.execute(sql_dropTable);
+        }
 
-        String sql_createTable = "CREATE TABLE " + varsigtablename + " (" +
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + varsigtablename + " (" +
                 varsigtablecolname[0] + " " + varsigcoltype[0] + " PRIMARY KEY, " +
                 varsigtablecolname[1] + " " + varsigcoltype[1] + ")";
         stmt.execute(sql_createTable);
 
+        String sql_insertdata = "INSERT INTO " + varsigtablename + " VALUES (?,?)";
         prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
-    public void createSharedArrayLocTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + sharedarrayloctablename;
-        String sql_insertdata = "INSERT INTO " + sharedarrayloctablename + " VALUES (?)";
-
+    public void createSharedArrayLocTable(boolean newTable) throws Exception {
         Statement stmt = conn.createStatement();
-        stmt.execute(sql_dropTable);
+        if (newTable) {
+            String sql_dropTable = "DROP TABLE IF EXISTS " + sharedarrayloctablename;
+            stmt.execute(sql_dropTable);
+        }
 
-        String sql_createTable = "CREATE TABLE " + sharedarrayloctablename + " (" +
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + sharedarrayloctablename + " (" +
                 sharedarrayloctablecolname[0] + " " + sharedarrayloccoltype[0] + ")";
         stmt.execute(sql_createTable);
 
+        String sql_insertdata = "INSERT INTO " + sharedarrayloctablename + " VALUES (?)";
         prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
-    public void createSharedVarSignatureTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + sharedvarsigtablename;
-        String sql_insertdata = "INSERT INTO " + sharedvarsigtablename + " VALUES (?)";
-
+    public void createSharedVarSignatureTable(boolean newTable) throws Exception {
         Statement stmt = conn.createStatement();
-        stmt.execute(sql_dropTable);
+        if (newTable) {
+            String sql_dropTable = "DROP TABLE IF EXISTS " + sharedvarsigtablename;
+            stmt.execute(sql_dropTable);
+        }
 
-        String sql_createTable = "CREATE TABLE " + sharedvarsigtablename + " (" +
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + sharedvarsigtablename + " (" +
                 sharedvarsigtablecolname[0] + " " + sharedvarsigcoltype[0] + ")";
         stmt.execute(sql_createTable);
 
+        String sql_insertdata = "INSERT INTO " + sharedvarsigtablename + " VALUES (?)";
         prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
-    public void createVolatileSignatureTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + volatilesigtablename;
-        String sql_insertdata = "INSERT INTO " + volatilesigtablename + " VALUES (?,?)";
-
+    public void createVolatileSignatureTable(boolean newTable) throws Exception {
         Statement stmt = conn.createStatement();
-        stmt.execute(sql_dropTable);
+        if (newTable) {
+            String sql_dropTable = "DROP TABLE IF EXISTS " + volatilesigtablename;
+            stmt.execute(sql_dropTable);
+        }
 
-        String sql_createTable = "CREATE TABLE " + volatilesigtablename + " (" +
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + volatilesigtablename + " (" +
                 volatilesigtablecolname[0] + " " + volatilesigcoltype[0] + " PRIMARY KEY, " +
                 volatilesigtablecolname[1] + " " + volatilesigcoltype[1] + ")";
         stmt.execute(sql_createTable);
 
+        String sql_insertdata = "INSERT INTO " + volatilesigtablename + " VALUES (?,?)";
         prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
@@ -332,7 +476,8 @@ public class DBEngine {
             prepStmt.execute();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("\nGot exception while trying to save " + "* stmt: ["+id+"] "+sig+" *");
+            System.err.println(e.getMessage());
         }
     }
 
@@ -408,7 +553,8 @@ public class DBEngine {
             prepStmt.execute();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Got exception while trying to save " + "* ["+id+"] "+sig+" *");
+            System.err.println(e.getMessage());
         }
     }
 
@@ -420,7 +566,8 @@ public class DBEngine {
             prepStmt.execute();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Got exception while trying to save " + "* volatile: ["+id+"] "+sig+" *");
+            System.err.println(e.getMessage());
         }
     }
 
@@ -438,6 +585,9 @@ public class DBEngine {
 	public synchronized void synchronizedSaveEventToDB(long TID, int ID, String ADDR, String VALUE, byte TYPE)
 	{
 
+        PreparedStatement prepStmt = this.prepStmt;
+        RecordRT.saveMetaData(this, GlobalStateForInstrumentation.instance, false);
+        this.prepStmt = prepStmt;
 		//make true->1. false->0
 		if(VALUE.equals("true"))
 			VALUE="1";
@@ -463,7 +613,7 @@ public class DBEngine {
 			prepStmt.setByte(5, TYPE);
 			
 			prepStmt.execute();
-		
+
 
 			
 		}catch(Exception e)

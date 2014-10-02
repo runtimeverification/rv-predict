@@ -102,6 +102,12 @@ public class Configuration {
     @Parameter(description="<java_command_line>")
     public List<String> command_line;
 
+    public String[] getArgs() {
+        return args;
+    }
+
+    String[] args;
+
     public final static String opt_only_log = "--log";
     @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1000")
     public String log_dir = null;
@@ -217,6 +223,7 @@ public class Configuration {
 
 
     public void parseArguments(String[] args, boolean checkJava) {
+        this.args = args;
         String pathSeparator = System.getProperty("path.separator");
         String fileSeparator = System.getProperty("file.separator");
         jCommander = new JCommander(this);

@@ -89,6 +89,7 @@ public class Util {
     }
 
     public static String chars(int i, char c) {
+        if (i <= 0) i = 3;
         char[] spaces = new char[i];
         Arrays.fill(spaces, c);
         return new String(spaces);

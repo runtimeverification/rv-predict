@@ -211,7 +211,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
 
     	switch (opcode) {
         case INVOKEVIRTUAL:
-        	if(Config.detectSharingOnly
+        	if(Config.instance.commandLine.agentOnlySharing
         			||!GlobalStateForInstrumentation.instance.isThreadClass(owner))
         		mv.visitMethodInsn(opcode, owner, name, desc); 
         	else
@@ -315,7 +315,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
             	{
 
         	    	
-            		if(Config.detectSharingOnly)
+            		if(Config.instance.commandLine.agentOnlySharing)
             		{
             			addBipushInsn(mv,ID);
                     	//mv.visitInsn(ACONST_NULL);
@@ -344,7 +344,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
             	}
                 break;
             case PUTSTATIC:
-            	if(Config.detectSharingOnly)
+            	if(Config.instance.commandLine.agentOnlySharing)
         		{
         			mv.visitFieldInsn(opcode, owner, name, desc);
 
@@ -389,7 +389,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
             case GETFIELD:
             	if(!isInit)
             	{
-            		if(Config.detectSharingOnly)
+            		if(Config.instance.commandLine.agentOnlySharing)
             		{
 //		            	maxindex_cur++;
 //		            	int index1 = maxindex_cur;
@@ -459,7 +459,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
 //            		mv.visitFieldInsn(opcode, owner, name, desc);break;
 //            	}
             	
-            	if(Config.detectSharingOnly)
+            	if(Config.instance.commandLine.agentOnlySharing)
         		{
             		if(!isInit)
             		{
@@ -674,7 +674,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     			String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
     	    	
-    			if(Config.detectSharingOnly)
+    			if(Config.instance.commandLine.agentOnlySharing)
         		{
 		    		mv.visitInsn(DUP2);
 		    		maxindex_cur++;
@@ -737,7 +737,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     			String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
     	    	
-    			if(Config.detectSharingOnly)
+    			if(Config.instance.commandLine.agentOnlySharing)
         		{
 		    		mv.visitInsn(DUP2);
 		    		maxindex_cur++;
@@ -796,7 +796,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     			String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
     	    	
-    			if(Config.detectSharingOnly)
+    			if(Config.instance.commandLine.agentOnlySharing)
         		{
 		    		mv.visitInsn(DUP2);
 		    		maxindex_cur++;
@@ -857,7 +857,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     			String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
     	    	
-    			if(Config.detectSharingOnly)
+    			if(Config.instance.commandLine.agentOnlySharing)
         		{
 		    		mv.visitInsn(DUP2);
 		    		maxindex_cur++;
@@ -917,7 +917,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     			String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
     	    	
-    			if(Config.detectSharingOnly)
+    			if(Config.instance.commandLine.agentOnlySharing)
         		{
 		    		mv.visitInsn(DUP2);
 		    		maxindex_cur++;
@@ -976,7 +976,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
 			String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
 	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 	    	
-			if(Config.detectSharingOnly)
+			if(Config.instance.commandLine.agentOnlySharing)
     		{
 				if(!isInit)
 	    		{
@@ -1057,7 +1057,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
 	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 	    	
-			if(Config.detectSharingOnly)
+			if(Config.instance.commandLine.agentOnlySharing)
     		{
 				if(!isInit)
 	    		{
@@ -1135,7 +1135,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
 	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 	    	
-			if(Config.detectSharingOnly)
+			if(Config.instance.commandLine.agentOnlySharing)
     		{
 				if(!isInit)
 	    		{
@@ -1213,7 +1213,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
 	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 	    	
-			if(Config.detectSharingOnly)
+			if(Config.instance.commandLine.agentOnlySharing)
     		{
 				if(!isInit)
 	    		{
@@ -1289,7 +1289,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
 	    	int ID  = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 	    	
-			if(Config.detectSharingOnly)
+			if(Config.instance.commandLine.agentOnlySharing)
     		{
 				if(!isInit)
 	    		{
@@ -1361,7 +1361,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     		break;
     	}
     	case MONITORENTER:{
-    		if(!Config.detectSharingOnly)
+    		if(!Config.instance.commandLine.agentOnlySharing)
     		{
         		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
@@ -1382,7 +1382,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	}
     	case MONITOREXIT:
     	{
-    		if(!Config.detectSharingOnly)
+    		if(!Config.instance.commandLine.agentOnlySharing)
     		{
         		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
@@ -1407,7 +1407,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
     	case RETURN:
     	case ATHROW:
     		if(isSynchronized
-    				&&!Config.detectSharingOnly)
+    				&&!Config.instance.commandLine.agentOnlySharing)
     		{
         		String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
     	    	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
@@ -1439,7 +1439,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
         mv.visitCode();
         
     	if(isSynchronized
-    			&&!Config.detectSharingOnly)
+    			&&!Config.instance.commandLine.agentOnlySharing)
 		{
         	String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
         	int ID  = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);

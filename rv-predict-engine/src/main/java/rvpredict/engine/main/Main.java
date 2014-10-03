@@ -1,15 +1,18 @@
 package rvpredict.engine.main;
 
-import config.Configuration;
-import config.Util;
+import org.apache.tools.ant.util.JavaEnvUtils;
+import rvpredict.config.Configuration;
+import rvpredict.config.Util;
 import db.DBEngine;
 import rvpredict.util.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLDecoder;
+import java.security.CodeSource;
 import java.util.*;
 
 /**
@@ -19,20 +22,18 @@ public class Main {
 
     public static final int WIDTH = 75;
     public static final char FILL = '-';
-    public static final String GROUP_ID = "com.runtimeverification.rvpredict";
-    public static final String ARTEFACT_ID = "rv-predict-engine";
 
     public static void main(String[] args) {
 
         Configuration config = new Configuration();
 
-        config.parseArguments(args);
+        config.parseArguments(args, false);
         boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
 
-        DBEngine db;
         if (config.log) {
             if (config.command_line.isEmpty()) {
                 config.logger.report("You must provide a class or a jar to run.", Logger.MSGTYPE.ERROR);
+                config.usage();
                 System.exit(1);
             }
             File outdirFile = new File(config.outdir);
@@ -41,26 +42,18 @@ public class Main {
             } else {
                 if (!outdirFile.isDirectory()) {
                     config.logger.report(config.outdir + " is not a directory", Logger.MSGTYPE.ERROR);
+                    config.usage();
                     System.exit(1);
                 }
             }
-            db = new DBEngine(config.outdir, config.tableName);
-            try {
-                db.dropAll();
-            } catch (Exception e) {
-                config.logger.report("Unexpected error while cleaning up the database:\n" +
-                        e.getMessage(), Logger.MSGTYPE.ERROR);
-                System.exit(1);
-            }
-            db.closeDB();
 
             String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
             String basePath = getBasePath();
             String separator = System.getProperty("file.separator");
             String libPath = basePath + separator + "lib" + separator;
-            String rvAgent = libPath + "rv-predict-agent"  + ".jar";
+            String rvAgent = libPath + "rv-predict"  + ".jar";
 
-            String sharingAgentOptions = config.opt_outdir + " " + escapeString(config.outdir);
+            String sharingAgentOptions = config.opt_only_log + " " + escapeString(config.outdir);
             if (config.additionalExcludes != null) {
                 config.additionalExcludes.replaceAll(" ","");
                 sharingAgentOptions += " " + Configuration.opt_exclude + " " + escapeString(config.additionalExcludes);
@@ -69,7 +62,6 @@ public class Main {
                 config.additionalIncludes.replaceAll(" ", "");
                 sharingAgentOptions += " " + Configuration.opt_include + " " + escapeString(config.additionalIncludes);
             }
-            sharingAgentOptions += " " + config.opt_table_name + " " + escapeString(config.tableName);
             String noSharingAgentOptions = sharingAgentOptions;
             sharingAgentOptions += " " + config.opt_sharing_only;
 
@@ -90,23 +82,31 @@ public class Main {
             } else {
                 appArgList.add("-javaagent:" + rvAgent + "=" + noSharingAgentOptions);
                 if (logOutput) {
-                    config.logger.report(center("Instrumented execution to record the trace"), Logger.MSGTYPE.INFO);
+                    config.logger.report(center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE), Logger.MSGTYPE.INFO);
                 }
             }
             appArgList.add("-Xss" + Configuration.stackSize + "m");
             appArgList.addAll(config.command_line);
 
-            runAgent(config, appArgList);
             if (config.optlog) {
+                runAgent(config, appArgList, false);
                 appArgList.set(agentIds, "-javaagent:" + rvAgent + "=" + noSharingAgentOptions);
                 if (logOutput) {
                     config.logger.report(center("Second pass: Instrumented execution to record the trace"), Logger.MSGTYPE.INFO);
-
                 }
-                runAgent(config, appArgList);
+                runAgent(config, appArgList, false);
+            } else {
+                runAgent(config, appArgList, false);
+
             }
         }
 
+        checkAndPredict(config);
+    }
+
+    private static void checkAndPredict(Configuration config) {
+        boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
+        DBEngine db;
         db = new DBEngine(config.outdir, config.tableName);
         try {
             if (! db.checkTables()) {
@@ -128,36 +128,115 @@ public class Main {
         }
 
         if (config.log && (config.verbose || logOutput)) {
-            config.logger.report(center("Logging phase completed."), Logger.MSGTYPE.INFO);
-            config.logger.report("\tTrace logged in: " + config.outdir, Logger.MSGTYPE.VERBOSE);
+            config.logger.report(center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
+            config.logger.report(Configuration.TRACE_LOGGED_IN + config.outdir, Logger.MSGTYPE.VERBOSE);
         }
 
         if (config.predict) {
-            NewRVPredict.run(config);
+            NewRVPredict predictor = new NewRVPredict();
+            predictor.initPredict(config);
+            predictor.addHooks();
+            predictor.run();
         }
-    }
-
-    private static String getVersion() {
-        String version = null;
-        try {
-            Properties p = new Properties();
-            InputStream is = Main.class.getResourceAsStream("/META-INF/maven/" + GROUP_ID + "/" + ARTEFACT_ID +
-                    "/pom.properties");
-            if (is != null) {
-                p.load(is);
-                version = p.getProperty("version", null);
-            }
-        } catch (Exception e) {
-            // ignore
-        }
-        return version;
     }
 
     public static String center(String msg) {
         return Util.center(msg, WIDTH, FILL);
     }
 
-    public static void runAgent(Configuration config, List<String> appArgList) {
+    public static Thread getPredictionThread(final Configuration commandLine, final CleanupAgent cleanupAgent, final boolean predict) {
+        String[] args = commandLine.getArgs();
+        final boolean logOutput = commandLine.log_output.equalsIgnoreCase(Configuration.YES);
+        ProcessBuilder processBuilder = null;
+        boolean logToScreen = false;
+        String file = null;
+        if (predict) {
+            String java = JavaEnvUtils.getJreExecutable("java");
+            String basePath = getBasePath();
+            String separator = System.getProperty("file.separator");
+            String libPath = basePath + separator + "lib" + separator;
+            String rvEngine = libPath + "rv-predict" + ".jar";
+            List<String> appArgList = new ArrayList<>();
+            appArgList.add(java);
+            appArgList.add("-cp");
+            appArgList.add(rvEngine);
+            appArgList.add("rvpredict.engine.main.Main");
+            appArgList.addAll(Arrays.asList(args));
+
+            int index = appArgList.indexOf(Configuration.opt_outdir);
+            if (index != -1) {
+                appArgList.set(index, Configuration.opt_only_predict);
+            } else {
+                appArgList.add(Configuration.opt_only_predict);
+                appArgList.add(commandLine.outdir);
+            }
+
+            processBuilder = new ProcessBuilder(appArgList.toArray(args));
+            String logOutputString = commandLine.log_output;
+            if (logOutputString.equalsIgnoreCase(Configuration.YES)) {
+                logToScreen = true;
+            } else if (!logOutputString.equals(Configuration.NO)) {
+                file = logOutputString;
+                String actualOutFile = file + ".out";
+                String actualErrFile = file + ".err";
+                processBuilder.redirectError(new File(actualErrFile));
+                processBuilder.redirectOutput(new File(actualOutFile));
+            }
+            StringBuilder commandMsg = new StringBuilder();
+            commandMsg.append("Executing command: \n");
+            commandMsg.append("   ");
+            for (String arg : args) {
+                if (arg.contains(" ")) {
+                    commandMsg.append(" \"" + arg + "\"");
+                } else {
+                    commandMsg.append(" " + arg);
+                }
+            }
+            commandLine.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
+        }
+
+        final boolean finalLogToScreen = logToScreen;
+        final String finalFile = file;
+        final ProcessBuilder finalProcessBuilder = processBuilder;
+        return new Thread() {
+            @Override
+            public void run() {
+                cleanupAgent.cleanup();
+                if (predict) {
+                    if (commandLine.log && (commandLine.verbose || logOutput)) {
+                        commandLine.logger.report(center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
+                        commandLine.logger.report(Configuration.TRACE_LOGGED_IN + commandLine.outdir, Logger.MSGTYPE.VERBOSE);
+                    }
+
+                    Process process = null;
+                    try {
+                        process = finalProcessBuilder.start();
+                        if (finalLogToScreen) {
+                            Util.redirectOutput(process.getErrorStream(), System.err);
+                            Util.redirectOutput(process.getInputStream(), System.out);
+                        } else if (finalFile == null) {
+                            Util.redirectOutput(process.getErrorStream(), null);
+                            Util.redirectOutput(process.getInputStream(), null);
+                        }
+                        Util.redirectInput(process.getOutputStream(), System.in);
+
+                        process.waitFor();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+    }
+
+
+    public interface CleanupAgent {
+        public void cleanup();
+    }
+
+    public static void runAgent(final Configuration config, final List<String> appArgList, final boolean finalRun) {
         ProcessBuilder processBuilder =
                 new ProcessBuilder(appArgList.toArray(new String[appArgList.size()]));
         String logOutputString = config.log_output;
@@ -173,7 +252,7 @@ public class Main {
             processBuilder.redirectOutput(new File(actualOutFile));
         }
         try {
-            StringBuilder commandMsg = new StringBuilder();
+            final StringBuilder commandMsg = new StringBuilder();
             commandMsg.append("Executing command: \n");
             commandMsg.append("   ");
             for (String arg : appArgList) {
@@ -184,7 +263,19 @@ public class Main {
                 }
             }
             config.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
-            Process process = processBuilder.start();
+            final Process process = processBuilder.start();
+            Thread cleanupAgent = new Thread() {
+                @Override
+                public void run() {
+                    process.destroy();
+                    if (finalRun) {
+                       config.logger.report("Warning: Logging interrupted by user. \n" +
+                               "Please run the following command to resume prediction:" +
+                       commandMsg.toString(), Logger.MSGTYPE.INFO);
+                    }
+                }
+            };
+            Runtime.getRuntime().addShutdownHook(cleanupAgent);
             if (logToScreen) {
                 Util.redirectOutput(process.getErrorStream(), System.err);
                 Util.redirectOutput(process.getInputStream(), System.out);
@@ -195,6 +286,7 @@ public class Main {
             Util.redirectInput(process.getOutputStream(), System.in);
 
             process.waitFor();
+            Runtime.getRuntime().removeShutdownHook(cleanupAgent);
         } catch (IOException e) {
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -206,7 +298,22 @@ public class Main {
     }
 
     public static String getBasePath() {
-        String path = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getAbsolutePath();
+        CodeSource codeSource = Main.class.getProtectionDomain().getCodeSource();
+        String path;
+        if (codeSource == null) {
+            path = ClassLoader.getSystemClassLoader().getResource(Main.class.getName().replace('.','/') + ".class").toString();
+            path = path.substring(path.indexOf("file:"), path.indexOf('!'));
+            URL url = null;
+            try {
+                url = new URL(path);
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+            path = url.getPath();
+        } else {
+            path = codeSource.getLocation().getPath();
+        }
+        path = new File(path).getAbsolutePath();
         try {
             String decodedPath = URLDecoder.decode(path, "UTF-8");
             File parent = new File(decodedPath).getParentFile().getParentFile();

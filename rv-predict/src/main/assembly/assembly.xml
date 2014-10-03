@@ -19,12 +19,11 @@
             <useAllReactorProjects>true</useAllReactorProjects>
             <includes>
                 <include>com.runtimeverification.rvpredict:rv-predict-agent</include>
-                <include>com.runtimeverification.rvpredict:rv-predict-engine</include>
             </includes>
             <binaries>
                 <attachmentClassifier>jar-with-dependencies</attachmentClassifier>
                 <outputDirectory>/lib</outputDirectory>
-                <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
+                <outputFileNameMapping>rv-predict.jar</outputFileNameMapping>
                 <unpack>false</unpack>
                 <dependencySets>
                     <dependencySet>

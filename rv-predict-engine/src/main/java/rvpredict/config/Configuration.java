@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package config;
+package rvpredict.config;
 
 import com.beust.jcommander.*;
 import rvpredict.engine.main.Main;
@@ -45,6 +45,10 @@ import java.util.*;
  */
 public class Configuration {
 
+    public static final String LOGGING_PHASE_COMPLETED = "Logging phase completed.";
+    public static final String TRACE_LOGGED_IN = "\tTrace logged in: ";
+    public static final String INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE = "Instrumented execution to record the trace";
+    private JCommander jCommander;
     public static int stackSize = 1024;
 
     // Copyright (c) 2013-2014 K Team. All Rights Reserved.
@@ -97,6 +101,12 @@ public class Configuration {
     public static final String NO = "no";
     @Parameter(description="<java_command_line>")
     public List<String> command_line;
+
+    public String[] getArgs() {
+        return args;
+    }
+
+    String[] args;
 
     public final static String opt_only_log = "--log";
     @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1000")
@@ -164,9 +174,7 @@ public class Configuration {
 //    @Parameter(names = opt_constraint_outdir, description = "constraint file directory", hidden = true)
     public String constraint_outdir;
 
-    public final static String opt_table_name = "--table";
-//    @Parameter(names = opt_table_name, description = "Name of the table storing the log", hidden = true)
-    public String tableName = null;
+    public String tableName = "main";
 
     final static String opt_smt_solver = "--solver";
     @Parameter(names = opt_smt_solver, description = "Solver command to use (SMT-LIB v1.2)", hidden = true, descriptionKey = "2050")
@@ -214,15 +222,16 @@ public class Configuration {
 //    public boolean javaSeparator;
 
 
-    public void parseArguments(String[] args) {
+    public void parseArguments(String[] args, boolean checkJava) {
+        this.args = args;
         String pathSeparator = System.getProperty("path.separator");
         String fileSeparator = System.getProperty("file.separator");
-        JCommander jc = new JCommander(this);
-        jc.setProgramName(PROGRAM_NAME);
+        jCommander = new JCommander(this);
+        jCommander.setProgramName(PROGRAM_NAME);
 
         // Collect all parameter names.  It would be nice if JCommander provided this directly.
         Set<String> options = new HashSet<String>();
-        for (ParameterDescription parameterDescription : jc.getParameters()) {
+        for (ParameterDescription parameterDescription : jCommander.getParameters()) {
             for (String name : parameterDescription.getParameter().names()) {
                 options.add(name);
             }
@@ -244,7 +253,7 @@ public class Configuration {
 
         // get all rv-predict arguments and (potentially) the first unnamed program arguments
         try {
-            jc.parse(rvArgs);
+            jCommander.parse(rvArgs);
         } catch (ParameterException e) {
             System.err.println("Error: Cannot parse command line arguments.");
             System.err.println(e.getMessage());
@@ -296,16 +305,16 @@ public class Configuration {
         }
 
         if (help) {
-            usage(jc);
+            usage();
             System.exit(0);
         }
 
         List<String> argList = Arrays.asList(Arrays.copyOfRange(args, max, args.length));
         if (command_line == null) { // otherwise the java command has already started
             command_line = new ArrayList<String>(argList);
-            if (command_line.isEmpty() && log) {
+            if (command_line.isEmpty() && log && checkJava) {
                 System.err.println("Error: Java command line is empty.");
-                usage(jc);
+                usage();
                 System.exit(1);
             }
         } else {
@@ -322,7 +331,7 @@ public class Configuration {
         System.exit(1);
     }
 
-    public void usage(JCommander jc) {
+    public void usage() {
 /*
 -- can be used as a terminator for the rv-predict specific options.
 The remaining arguments are what one would pass to the java executable to
@@ -338,7 +347,7 @@ be used explicitly for disambiguation.
 
         // computing names maximum length
         int max_option_length = 0;
-        for (ParameterDescription parameterDescription : jc.getParameters()) {
+        for (ParameterDescription parameterDescription : jCommander.getParameters()) {
             if (parameterDescription.getNames().length() > max_option_length) {
                 max_option_length = parameterDescription.getNames().length();
             }
@@ -347,7 +356,7 @@ be used explicitly for disambiguation.
         // Computing usage
         max_option_length++;
         String usageHeader = "Usage: " + PROGRAM_NAME + " [rv_predict_options] [--] [java_options] "
-                + jc.getMainParameterDescription() + "\n";
+                + jCommander.getMainParameterDescription() + "\n";
         String usage = usageHeader
                 + "  Options:";
         String shortUsage = usageHeader
@@ -358,7 +367,7 @@ be used explicitly for disambiguation.
         int spacesBeforeCnt;
         int spacesAfterCnt;
         String description;
-        for (ParameterDescription parameterDescription : jc.getParameters()) {
+        for (ParameterDescription parameterDescription : jCommander.getParameters()) {
             Parameter parameter = parameterDescription.getParameter().getParameter();
             String descriptionKey = parameter.descriptionKey();
             description = "\n";

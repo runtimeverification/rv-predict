@@ -4,4 +4,4 @@ if [ -z "$RV_OPTS" ];
   then export RV_OPTS="-Xms64m -Xmx1024m -Xss32m"
 fi
 
-java $RV_OPTS -cp "$(dirname "$0")/../lib/rv-predict-engine.jar" rvpredict.engine.main.GUIMain "$(dirname "$0")/.."
+java $RV_OPTS -cp "$(dirname "$0")/../lib/rv-predict.jar" rvpredict.engine.main.GUIMain "$(dirname "$0")/.."

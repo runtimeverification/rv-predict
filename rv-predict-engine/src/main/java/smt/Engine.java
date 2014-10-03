@@ -45,18 +45,15 @@ import trace.WriteNode;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Stack;
 import java.util.Vector;
-import java.util.Map.Entry;
 
 import property.EREProperty;
-import config.Configuration;
+import rvpredict.config.Configuration;
 
 /**
  * The engine for constraint construction and solving.

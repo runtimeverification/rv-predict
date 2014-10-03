@@ -57,6 +57,13 @@ To invoke RV-Predict on the Account class, simply replace
 
     rv-predict -cp examples/basic.jar account.Account
 
+If preferring RV-Predict's agent mode, the similar command would be:
+
+ .. code-block:: none
+
+    java -javaagent:<rvPath>/lib/rv-predict.jar -cp examples/basic.jar account.Account
+
+
 As previously, a complete execution output of the Account class is generated,
 most probably not exhibiting the data-race either.  Nevertheless, this output
 is followed by the RV-Predict analysis of the observed execution which shows

@@ -520,7 +520,7 @@ public class DBEngine {
 	protected void connectDB(String directory) throws Exception
 	{
 		Class.forName("rvpredict.h2.Driver");
-        conn  = DriverManager.getConnection("jdbc:h2:"+directory+"/"+dbname);
+        conn  = DriverManager.getConnection("jdbc:h2:"+directory+"/"+dbname + ";DB_CLOSE_ON_EXIT=FALSE");
         //conn.setAutoCommit(true);
 	}
 	

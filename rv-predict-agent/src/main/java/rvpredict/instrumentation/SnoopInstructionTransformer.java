@@ -1,14 +1,15 @@
 package rvpredict.instrumentation;
 
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.ParameterException;
-
+import rvpredict.config.Configuration;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 
 import rvpredict.config.Config;
+import rvpredict.engine.main.Main;
+import rvpredict.logging.DBEngine;
 import rvpredict.logging.RecordRT;
+import rvpredict.util.Logger;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -19,23 +20,22 @@ import java.util.Arrays;
 public class SnoopInstructionTransformer implements ClassFileTransformer {
 
     public static void premain(String agentArgs, Instrumentation inst) {
+        if (agentArgs == null) {
+            agentArgs = "";
+        }
         if (agentArgs.startsWith("\"")) {
             assert agentArgs.endsWith("\"") : "Argument must be quoted";
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
+        final Config config = Config.instance;
+        final Configuration commandLine = config.commandLine;
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        Config config = Config.instance;
-        JCommander jc = new JCommander(config);
-        jc.setProgramName(Config.PROGRAM_NAME);
-        try {
-            jc.parse(args);
-        } catch (ParameterException e) {
-            System.err.println("Error: Cannot parse command line arguments.");
-            System.err.println(e.getMessage());
-            System.exit(1);
-        }
-        if (Config.additionalExcludes != null) {
-            String[] excludes = Config.additionalExcludes.replace('.','/').split(",");
+        commandLine.parseArguments(args, false);
+
+        final boolean logOutput = commandLine.log_output.equalsIgnoreCase(Configuration.YES);
+        commandLine.logger.report(Main.center("Log dir: " + commandLine.outdir), Logger.MSGTYPE.INFO);
+        if (commandLine.additionalExcludes != null) {
+            String[] excludes = commandLine.additionalExcludes.replace('.','/').split(",");
             if (config.excludeList == null) {
                 config.excludeList = excludes;
             } else {
@@ -46,8 +46,8 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             }
             System.out.println("Excluding: " + Arrays.toString(config.excludeList));
         }
-        if (Config.additionalIncludes != null) {
-            String[] includes = Config.additionalIncludes.replace('.','/').split(",");
+        if (commandLine.additionalIncludes != null) {
+            String[] includes = commandLine.additionalIncludes.replace('.','/').split(",");
             if (config.includeList == null) {
                 config.includeList = includes;
             } else {
@@ -60,12 +60,39 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             System.out.println("Including: " + Arrays.toString(config.includeList));
         }
 
+        final DBEngine db = new DBEngine(commandLine.outdir, commandLine.tableName);
+        try {
+            db.dropAll();
+        } catch (Exception e) {
+            commandLine.logger.report("Unexpected error while cleaning up the database:\n" +
+                    e.getMessage(), Logger.MSGTYPE.ERROR);
+            System.exit(1);
+        }
+//        db.closeDB();
 		//initialize RecordRT first
         RecordRT.init();
         
 		inst.addTransformer(new SnoopInstructionTransformer());
-		
-	}
+        final boolean inLogger = true;
+        final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
+            @Override
+            public void cleanup() {
+                if (inLogger) {
+                    Config.shutDown = true;
+                    GlobalStateForInstrumentation.instance.saveMetaData(db);
+                    db.closeDB();
+                }
+            }
+        };
+        Thread predict = Main.getPredictionThread(commandLine, cleanupAgent, commandLine.predict);
+        Runtime.getRuntime().addShutdownHook(predict);
+
+        if (commandLine.predict) {
+            if (logOutput) {
+                commandLine.logger.report(Main.center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE), Logger.MSGTYPE.INFO);
+            }
+        }
+    }
 
     public byte[] transform(ClassLoader loader,String cname, Class<?> c, ProtectionDomain d, byte[] cbuf)
             throws IllegalClassFormatException {

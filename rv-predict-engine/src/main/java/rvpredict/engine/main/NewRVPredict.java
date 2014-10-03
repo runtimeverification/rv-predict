@@ -26,12 +26,11 @@ package rvpredict.engine.main; /************************************************
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
 
 import property.EREProperty;
-import config.Configuration;
+import rvpredict.config.Configuration;
 import rvpredict.util.Logger;
 import smt.EngineSMTLIB1;
 import smt.Engine;
@@ -63,23 +62,31 @@ import db.DBEngine;
  */
 public class NewRVPredict {
 
-	private static HashSet<IViolation> violations= new HashSet<IViolation>();
-	private static HashSet<IViolation> potentialviolations= new HashSet<IViolation>();
-	private static Configuration config;
+	private HashSet<IViolation> violations= new HashSet<IViolation>();
+	private HashSet<IViolation> potentialviolations= new HashSet<IViolation>();
+	private Configuration config;
 	private static boolean detectRace = true;
 	private static boolean detectAtomicityViolation = false;
 	private static boolean detectDeadlock = false;
 	private static boolean detectProperty = false;
-    private static Logger logger;
+    private Logger logger;
+    private HashMap<Integer, String> sharedVarIdSigMap;
+    private HashMap<Integer, String> volatileAddresses;
+    private HashMap<Integer, String> stmtIdSigMap;
+    private HashMap<Long, String> threadIdNameMap;
+    private long totalTraceLength;
+    private DBEngine dbEngine;
+    private TraceInfo traceInfo;
+    private long startTime;
 
 
-	/**
+    /**
 	 * Deadlock detection method. Not used in race detection.
 	 * @param engine
 	 * @param trace
 	 * @param schedule_prefix
 	 */
-	private static void detectDeadlock(Engine engine,Trace trace,Vector<String> schedule_prefix)
+	private void detectDeadlock(Engine engine,Trace trace,Vector<String> schedule_prefix)
 	{
 		HashMap<Long,HashMap<String,Vector<LockPair>>> threadIndexedLockPairs 
 			= trace.getThreadIndexedLockPairs();
@@ -191,7 +198,7 @@ public class NewRVPredict {
 		else
 			return schedule;
 	}
-	private static void detectDeadlockProperty(Engine engine, Trace trace, EREProperty property,
+	private void detectDeadlockProperty(Engine engine, Trace trace, EREProperty property,
 			Vector<String> schedule_prefix)
 	{		
 		Vector<ReadNode> readNodes_rw = trace.getAllReadNodes();
@@ -260,7 +267,7 @@ public class NewRVPredict {
 		}
 		
 	}
-	private static void detectProperty(Engine engine, Trace trace, EREProperty property,
+	private void detectProperty(Engine engine, Trace trace, EREProperty property,
 			Vector<String> schedule_prefix)
 	{		
 		Vector<ReadNode> readNodes_rw = trace.getAllReadNodes();
@@ -325,7 +332,7 @@ public class NewRVPredict {
 	 * @param trace
 	 * @param schedule_prefix
 	 */
-	private static void detectRace(Engine engine, Trace trace, Vector<String> schedule_prefix)
+	private void detectRace(Engine engine, Trace trace, Vector<String> schedule_prefix)
 	{
 		//implement potentialraces to be exact match
 		
@@ -818,7 +825,7 @@ public class NewRVPredict {
 	 * @param trace
 	 * @param schedule_prefix
 	 */
-	private static void detectAtomicityViolation(Engine engine, Trace trace,Vector<String> schedule_prefix)
+	private void detectAtomicityViolation(Engine engine, Trace trace,Vector<String> schedule_prefix)
 	{
 	
 		HashMap<String,HashMap<Long,Vector<IMemNode>>> indexedThreadReadWriteNodes 
@@ -943,47 +950,17 @@ public class NewRVPredict {
 	 */
 	public static void main(String[] args) {
         Configuration config = new Configuration();
-        config.parseArguments(args);
+        config.parseArguments(args, true);
         config.outdir="./log";
-        run(config);
+        NewRVPredict predictor = new NewRVPredict();
+        predictor.initPredict(config);
+        predictor.addHooks();
+        predictor.run();
     }
 
-    public static void run(Configuration conf) {
-        config = conf;
-        logger = config.logger;
-
+    public void run() {
         try{
-			
-			//Now let's start predict analysis
-			long start_time = System.currentTimeMillis();
 
-			//db engine is used for interacting with database
-			DBEngine db = new DBEngine(config.outdir, config.tableName);
-
-			//load all the metadata in the application
-			HashMap<Integer, String> sharedVarIdSigMap = db.getVarSigIdMap();
-			HashMap<Integer, String> volatileAddresses = db.getVolatileAddresses();
-			HashMap<Integer, String> stmtIdSigMap = db.getStmtSigIdMap();
-			HashMap<Long,String> threadIdNameMap = db.getThreadIdNameMap();
-
-			TraceInfo info = new TraceInfo(sharedVarIdSigMap,volatileAddresses,stmtIdSigMap,threadIdNameMap);
-			
-			//the total number of events in the trace
-			long TOTAL_TRACE_LENGTH = db.getTraceSize();
-
-			ExecutionInfoTask task = new ExecutionInfoTask(start_time,info,TOTAL_TRACE_LENGTH);
-			//register a shutdown hook to store runtime statistics
-			Runtime.getRuntime().addShutdownHook(task);
-			
-			//set a timer to timeout in a configured period
-			Timer timer = new Timer();
-			timer.schedule(new TimerTask(){
-					public void run()
-					{
-						logger.report("\n******* Timeout "+config.timeout+" seconds ******", Logger.MSGTYPE.REAL);//report it
-						System.exit(0);
-					}},config.timeout*1000);
-			
 			//this is used to maintain the schedule in the previous windows
 			Vector<String> schedule_prefix = new Vector<String>();
 
@@ -994,15 +971,15 @@ public class NewRVPredict {
 			HashMap<String,String> initialWriteValueMap = new HashMap<String,String>();
 			
 			//process the trace window by window
-			for(int round =0;round*config.window_size<TOTAL_TRACE_LENGTH;round++)
+			for(int round =0;round*config.window_size< totalTraceLength;round++)
 			{
 				long index_start = round*config.window_size+1;
 				long index_end = (round+1)*config.window_size;
-				//if(TOTAL_TRACE_LENGTH>config.window_size)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+TOTAL_TRACE_LENGTH+" ******************\n");
+				//if(totalTraceLength>rvpredict.config.window_size)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+totalTraceLength+" ******************\n");
 				
 				
 				//load trace
-				Trace trace = db.getTrace(index_start,index_end,info);
+				Trace trace = dbEngine.getTrace(index_start, index_end, traceInfo);
 								
 				//starting from the second window, the initial value map becomes
 				//the last write map in the last window
@@ -1051,7 +1028,7 @@ public class NewRVPredict {
 						EREProperty property = engine.getProperty();
 						if(property==null)
 						{
-							HashMap<String,Integer> map = db.getProperty();	
+							HashMap<String,Integer> map = dbEngine.getProperty();
 							property = engine.initProperty(map,trace);
 						}
 						if(property.getPropertySize()==8)
@@ -1068,7 +1045,7 @@ public class NewRVPredict {
 				
 				//append the schedule in the current trace to schedule_prefix
 				//which maybe used in the next window for generating racey schedules
-				if(!config.noschedule&&(round+1)*config.window_size<TOTAL_TRACE_LENGTH)
+				if(!config.noschedule&&(round+1)*config.window_size< totalTraceLength)
 					schedule_prefix.addAll(getTraceSchedule(trace));
 			}
 			
@@ -1079,8 +1056,8 @@ public class NewRVPredict {
 				int size = violations.size();
 				if(size>0)
 				{
-					db.createScheduleTable();
-					db.saveSchedulesToDB(violations);			
+					dbEngine.createScheduleTable();
+					dbEngine.saveSchedulesToDB(violations);
 				}
 			}
 		}
@@ -1097,8 +1074,50 @@ public class NewRVPredict {
 		
 		
 	}
-	
-	/**
+
+    public void initPredict(Configuration conf) {
+        config = conf;
+        logger = config.logger;
+
+        //Now let's start predict analysis
+        startTime = System.currentTimeMillis();
+
+        //db engine is used for interacting with database
+        dbEngine = new DBEngine(config.outdir, config.tableName);
+
+        //load all the metadata in the application
+        sharedVarIdSigMap = dbEngine.getVarSigIdMap();
+        volatileAddresses = dbEngine.getVolatileAddresses();
+        stmtIdSigMap = dbEngine.getStmtSigIdMap();
+        threadIdNameMap = dbEngine.getThreadIdNameMap();
+
+        //the total number of events in the trace
+        totalTraceLength = 0;
+        try {
+            totalTraceLength = dbEngine.getTraceSize();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        traceInfo = new TraceInfo(sharedVarIdSigMap, volatileAddresses, stmtIdSigMap, threadIdNameMap);
+    }
+
+    public void addHooks() {
+        ExecutionInfoTask task = new ExecutionInfoTask(startTime, traceInfo, totalTraceLength);
+        //register a shutdown hook to store runtime statistics
+        Runtime.getRuntime().addShutdownHook(task);
+
+        //set a timer to timeout in a configured period
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask(){
+            public void run()
+            {
+                logger.report("\n******* Timeout "+config.timeout+" seconds ******", Logger.MSGTYPE.REAL);//report it
+                System.exit(0);
+            }},config.timeout*1000);
+    }
+
+    /**
 	 * Return the schedule, i.e., the thread execution order, of the trace
 	 * 
 	 * @param trace
@@ -1114,7 +1133,7 @@ public class NewRVPredict {
 		return fullschedule;
 	}
 	
-	static class ExecutionInfoTask extends Thread
+	class ExecutionInfoTask extends Thread
 	{
 		TraceInfo info;
 		long start_time;

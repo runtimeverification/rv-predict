@@ -35,7 +35,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 
-import config.Configuration;
+import rvpredict.config.Configuration;
 import trace.ReadNode;
 import trace.Trace;
 import trace.TraceInfo;
@@ -199,7 +199,7 @@ public class CPRaceDetect {
 	public static void main(String[] args) {
 
         config = new Configuration();
-        config.parseArguments(args);
+        config.parseArguments(args, true);
 
 		try{
 			

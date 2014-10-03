@@ -1,9 +1,7 @@
-package config;
+package rvpredict.config;
 
 import org.junit.Assert;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 public class ConfigurationTest {
 
@@ -12,7 +10,7 @@ public class ConfigurationTest {
         Configuration configuration = new Configuration();
         configuration.parseArguments(new String[]{
                 "-v", "--", "-h"
-        });
+        }, true);
         Assert.assertTrue(configuration.verbose);
         Assert.assertFalse(configuration.help);
         Assert.assertEquals("Java command line size should be 1", 1, configuration.command_line.size());

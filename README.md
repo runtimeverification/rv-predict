@@ -2,13 +2,17 @@ It is recommended to add RV-Predict/bin to your PATH.
 	
 Invoke `rv-predict` on a class as you would invoke the Java interpreter:
 
-    rv-predict [options] class [args...]        #(to predict races in a class), or
-    rv-predict [options] -jar jarfile [args...] #(to predict races in an executable jar)
+    rv-predict [options] class [args...]        #(predict in a class), or
+    rv-predict [options] -jar jarfile [args...] #(predict in executable jar)
 
 where `[options]` include both RV-Predict and Java specific options.
- 
-Additional documentation can be found online on the 
+
+You can also invoke `rv-predict` as a Java agent:
+
+    java -javaagent:<rvPath>/lib/rv-predict.jar ...
+
+Additional documentation can be found online on the
 [RV-Predict website](http://runtimeverification.com/predict/docs).
 
-For support requests and bug reporting, contact predict@runtimeverification.com
-or visit [Runtime Verification Support](http://runtimeverification.com/support/predict).
+For support and bug reports, contact predict@runtimeverification.com or visit
+[Runtime Verification Support](http://runtimeverification.com/support/predict).

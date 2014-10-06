@@ -15,4 +15,4 @@ Additional documentation can be found online on the
 [RV-Predict website](http://runtimeverification.com/predict/docs).
 
 For support and bug reports, contact predict@runtimeverification.com or visit
-[Runtime Verification Support](http://runtimeverification.com/support/predict).
+[Runtime Verification Support](http://runtimeverification.com/support).

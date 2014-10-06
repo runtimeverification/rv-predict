@@ -8,7 +8,8 @@
     <info>
         <appname>RV-Predict</appname>
         <appversion>@{rvpredict.version}</appversion>
-        <uninstaller path="${INSTALL_PATH}/uninstall" write="no"/>
+        <uninstaller write="no"/>
+        <writeinstallationinformation>false</writeinstallationinformation>
         <run-privileged condition="izpack.windowsinstall|izpack.macinstall" />
     </info>
 

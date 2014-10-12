@@ -33,7 +33,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         commandLine.parseArguments(args, false);
 
         final boolean logOutput = commandLine.log_output.equalsIgnoreCase(Configuration.YES);
-        commandLine.logger.report(Main.center("Log dir: " + commandLine.outdir), Logger.MSGTYPE.INFO);
+        commandLine.logger.report("Log dir: " + commandLine.outdir, Logger.MSGTYPE.INFO);
         if (commandLine.additionalExcludes != null) {
             String[] excludes = commandLine.additionalExcludes.replace('.','/').split(",");
             if (config.excludeList == null) {

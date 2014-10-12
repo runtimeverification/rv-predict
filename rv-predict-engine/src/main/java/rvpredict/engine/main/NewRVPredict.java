@@ -1056,7 +1056,7 @@ public class NewRVPredict {
 				int size = violations.size();
 				if(size>0)
 				{
-					dbEngine.createScheduleTable();
+					dbEngine.createScheduleTable(true);
 					dbEngine.saveSchedulesToDB(violations);
 				}
 			}
@@ -1083,7 +1083,7 @@ public class NewRVPredict {
         startTime = System.currentTimeMillis();
 
         //db engine is used for interacting with database
-        dbEngine = new DBEngine(config.outdir, config.tableName);
+        dbEngine = new DBEngine(config.outdir, config.tableName, null);
 
         //load all the metadata in the application
         sharedVarIdSigMap = dbEngine.getVarSigIdMap();

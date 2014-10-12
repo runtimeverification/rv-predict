@@ -7,7 +7,7 @@ import org.objectweb.asm.ClassWriter;
 
 import rvpredict.config.Config;
 import rvpredict.engine.main.Main;
-import rvpredict.logging.DBEngine;
+import db.DBEngine;
 import rvpredict.logging.RecordRT;
 import rvpredict.util.Logger;
 
@@ -60,7 +60,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             System.out.println("Including: " + Arrays.toString(config.includeList));
         }
 
-        final DBEngine db = new DBEngine(commandLine.outdir, commandLine.tableName);
+        final DBEngine db = new DBEngine(commandLine.outdir, commandLine.tableName, GlobalStateForInstrumentation.instance);
         try {
             db.dropAll();
         } catch (Exception e) {
@@ -78,7 +78,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             @Override
             public void cleanup() {
                 if (inLogger) {
-                    Config.shutDown = true;
+                    DBEngine.shutDown = true;
                     GlobalStateForInstrumentation.instance.saveMetaData(db);
                     db.closeDB();
                 }

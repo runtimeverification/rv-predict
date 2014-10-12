@@ -47,8 +47,6 @@ public class Config {
     public String[] includeList;
     public String logClass;
 
-    public static boolean shutDown = false;
-
     public Config() {
         try {
             Properties properties = new Properties();

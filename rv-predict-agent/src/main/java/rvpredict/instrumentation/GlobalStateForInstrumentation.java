@@ -9,26 +9,27 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.objectweb.asm.ClassReader;
 
 import rvpredict.config.Config;
-import rvpredict.logging.DBEngine;
+import db.DBEngine;
 import rvpredict.logging.RecordRT;
 
-public class GlobalStateForInstrumentation {
+public class GlobalStateForInstrumentation implements rvpredict.util.Metadata {
     public static GlobalStateForInstrumentation instance = new GlobalStateForInstrumentation();
+
     public ConcurrentHashMap<String,Integer> variableIdMap = new ConcurrentHashMap<String,Integer>();
-    public ConcurrentHashMap<String,Integer> unsavedVariableIdMap = new ConcurrentHashMap<String,Integer>();
+    private ConcurrentHashMap<String,Integer> unsavedVariableIdMap = new ConcurrentHashMap<String,Integer>();
     public HashMap<Integer,String> arrayIdMap = new HashMap<Integer,String>();
 
     public HashSet<String> volatileVariables = new HashSet<String>();
-    public ConcurrentHashMap<String,Boolean> unsavedVolatileVariables = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String,Boolean> unsavedVolatileVariables = new ConcurrentHashMap<>();
     public ConcurrentHashMap<String,Integer> stmtSigIdMap = new ConcurrentHashMap<String,Integer>();
-    public ConcurrentHashMap<String,Integer> unsavedStmtSigIdMap = new ConcurrentHashMap<String,Integer>();
+    private ConcurrentHashMap<String,Integer> unsavedStmtSigIdMap = new ConcurrentHashMap<String,Integer>();
     HashSet<String> sharedVariables;
     HashSet<String> sharedArrayLocations;
-    
+
     public boolean isVariableShared(String sig)
     {
-    	if(sharedVariables==null
-    			||sharedVariables.contains(sig))
+        if(sharedVariables==null
+                ||sharedVariables.contains(sig))
     		return true;
     	else
     		return false;
@@ -55,7 +56,7 @@ public class GlobalStateForInstrumentation {
 
     public void saveMetaData(DBEngine db) {
         if(!Config.instance.commandLine.agentOnlySharing)
-            RecordRT.saveMetaData(db, GlobalStateForInstrumentation.instance, Config.instance.verbose);
+            db.saveMetaData(Config.instance.verbose);
         else
         {
             //show arrayId
@@ -100,10 +101,11 @@ public class GlobalStateForInstrumentation {
                 System.out.println("SHARED ARRAY PERCENTAGE: "+sarray_percent);
             }
             //save the sharedvariable to database??
-            RecordRT.saveSharedMetaData(db, sharedVariables,sharedArrayLocations);
+            db.saveSharedMetaData(Config.instance.verbose, sharedVariables, sharedArrayLocations);
         }
     }
 
+    @Override
     public int getVariableId(String sig)
     {
   	  if(variableIdMap.get(sig)==null) {
@@ -111,7 +113,7 @@ public class GlobalStateForInstrumentation {
               if (variableIdMap.get(sig) == null) {
                   int size = variableIdMap.size() + 1;
                   variableIdMap.put(sig, size);
-                  unsavedVariableIdMap.put(sig, size);
+                  getUnsavedVariableIdMap().put(sig, size);
               }
           }
   	  }
@@ -125,7 +127,7 @@ public class GlobalStateForInstrumentation {
             synchronized (volatileVariables) {
                 if (!volatileVariables.contains(sig)) {
                     volatileVariables.add(sig);
-                    unsavedVolatileVariables.put(sig, true);
+                    getUnsavedVolatileVariables().put(sig, true);
                 }
             }
         }
@@ -139,7 +141,7 @@ public class GlobalStateForInstrumentation {
               if(stmtSigIdMap.get(sig)==null) {
                   int size = stmtSigIdMap.size() + 1;
                   stmtSigIdMap.put(sig, size);
-                  unsavedStmtSigIdMap.put(sig, size);
+                  getUnsavedStmtSigIdMap().put(sig, size);
               }
           }
   	  }
@@ -177,5 +179,20 @@ public class GlobalStateForInstrumentation {
 			}
     	}
     	return false;
+    }
+
+    @Override
+    public ConcurrentHashMap<String, Integer> getUnsavedVariableIdMap() {
+        return unsavedVariableIdMap;
+    }
+
+    @Override
+    public ConcurrentHashMap<String, Boolean> getUnsavedVolatileVariables() {
+        return unsavedVolatileVariables;
+    }
+
+    @Override
+    public ConcurrentHashMap<String, Integer> getUnsavedStmtSigIdMap() {
+        return unsavedStmtSigIdMap;
     }
 }

@@ -17,9 +17,9 @@ environment variable.
 Running RV-Predict
 ------------------
 
-RV-Predict can be run both from the command line, as a drop-off
+RV-Predict can be run both from the command line, as a drop in
 replacement for the ``java`` command, and as an agent, to ease
-integration with IDEs and build management tools (e.g., Maven).
+integration with IDEs and build management tools like Maven.
 
 
 Running RV-Predict on the command line
@@ -39,17 +39,21 @@ Running RV-Predict as an agent
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Assuming ``<rvPath>`` is the installation directory for RV-Predict,
-running RV-Predict as an agent along with your Java application simply amounts
-to adding the ``-javaagent:<rvPath>/lib/rv-predict.jar`` option to your Java
-command line.  Passing options to the agent can be done as usual for agents:
+running RV-Predict as an agent along with your Java application simply
+requires adding the ``-javaagent:<rvPath>/lib/rv-predict.jar`` option 
+to your Java command line.
+Passing options to the agent can be done as standard for agents:
 using  ``-javaagent:<rvPath>/lib/rv-predict.jar="<opts>"``, where ``<opts>``
-are RV-Predict options.  Note though that some options related to logging,
-such as ``--with-profile`` would not work, as they require running the
-application twice (for detecting shared locations).
+are RV-Predict options.
+Note though that some options related to logging such as
+``--with-profile`` are not compatible with the agent, as they require 
+executing the application twice (to detect shared locations).
 
 Using the agent with Maven
 ``````````````````````````
-For Maven-based projects which have tests, one can simply run ``mvn test``, after modifying the individual projects ``pom.xml`` to have an element like the following:
+For Maven-based projects which have tests, one can simply run ``mvn test``, 
+after modifying the individual project's ``pom.xml`` to have an element 
+similar to the following:
 
 ::
 
@@ -68,9 +72,11 @@ For Maven-based projects which have tests, one can simply run ``mvn test``, afte
       </plugins>
   </build>
 
-Replace ``${surefire-version}`` with the exact surefire plugin version used by the project (e.g., ``2.16``).
+Replace ``${surefire-version}`` with the exact surefire plugin version 
+used by the project (e.g., ``2.16``).
 
-Adding the ``-javaagent`` option is the only change needed to an existing project and tests can still be run with ``mvn test``, as usual.
+Adding the ``-javaagent`` option is the only change needed to an existing 
+project and tests can still be run with ``mvn test``.
 
 Integration with IDEs
 `````````````````````

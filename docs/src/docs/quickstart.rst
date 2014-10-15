@@ -17,8 +17,15 @@ environment variable.
 Running RV-Predict
 ------------------
 
-RV-Predict is designed as a drop-off replacement for the ``java``
-command line.  It is invoked as follows:
+RV-Predict can be run both from the command line, as a drop in
+replacement for the ``java`` command, and as an agent, to ease
+integration with IDEs and build management tools like Maven.
+
+
+Running RV-Predict on the command line
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+RV-Predict is invoked as follows:
 
 .. code-block:: none
 
@@ -28,8 +35,62 @@ command line.  It is invoked as follows:
 where ``[options]`` include both RV-Predict and Java specific options.
 
 
-Common options
-~~~~~~~~~~~~~~
+Running RV-Predict as an agent
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Assuming ``<rvPath>`` is the installation directory for RV-Predict,
+running RV-Predict as an agent along with your Java application simply
+requires adding the ``-javaagent:<rvPath>/lib/rv-predict.jar`` option 
+to your Java command line.
+Passing options to the agent can be done as standard for agents:
+using  ``-javaagent:<rvPath>/lib/rv-predict.jar="<opts>"``, where ``<opts>``
+are RV-Predict options.
+Note though that some options related to logging such as
+``--with-profile`` are not compatible with the agent, as they require 
+executing the application twice (to detect shared locations).
+
+Using the agent with Maven
+``````````````````````````
+For Maven-based projects which have tests, one can simply run ``mvn test``, 
+after modifying the individual project's ``pom.xml`` to have an element 
+similar to the following:
+
+::
+
+  <build>
+      <plugins>
+          ...
+          <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${surefire-version}</version>
+          <configuration>
+                  <argLine>-javaagent:<rvPath>/lib/rv-predict.jar</argLine>
+          </configuration>
+          </plugin>
+      ...       
+      </plugins>
+  </build>
+
+Replace ``${surefire-version}`` with the exact surefire plugin version 
+used by the project (e.g., ``2.16``).
+
+Adding the ``-javaagent`` option is the only change needed to an existing 
+project and tests can still be run with ``mvn test``.
+
+Integration with IDEs
+`````````````````````
+
+Generic instructions
+  the ``-javaagent`` option needs to be added to the VM options of your Run/Debug Configurations.
+Eclipse
+  From the menu select **Run** -> **Run Configurations** -> (then you select the configuration that you are running) -> select **Arguments** tab -> enter ``-javaagent:<rvPath>/lib/rv-predict.jar`` into the **VM arguments** field.
+IntelliJ IDEA
+  From the menu select **Run** -> **Edit Configurations** -> (then you select the configuration that you are running) -> enter ``-javaagent:<rvPath>/lib/rv-predict.jar`` into the **VM options:** field.
+
+
+Tuning RV-Predict
+-----------------
 
 The list of common options can be obtained by using the ``-h`` or ``--help``
 option when invoking RV-Predict:
@@ -97,10 +158,7 @@ extra options to the Java Virtual Machine running rv-predict (e.g.,  for
 increasing the memory limit).
 
 Enhancing the prediction power
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To be effective, RV-Predict tries to keep a good balance between efficiency 
 and prediction power.  Nevertheless, while the default settings were 
@@ -132,20 +190,6 @@ options for advanced users to tune RV-Predict:
    involves an additional preprocessing step for profiling), it can often bring 
    significant speedups for larger applications, as it drastically reduces the 
    trace size.
-
-Running RV-Predict as an agent
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To ease integration with other tools (e.g., Maven), RV-Predict can be run
-as an agent.
-Assuming ``<rvPath>`` is the installation directory for RV-Predict,
-running RV-Predict as an agent along with your Java application simply amounts
-to adding the ``-javaagent:<rvPath>/lib/rv-predict.jar`` option to your Java
-command line.  Passing options to the agent can be done as usual for agents:
-using  ``-javaagent:<rvPath>/lib/rv-predict.jar="<opts>"``, where ``<opts>``
-are RV-Predict options.  Note though that some options related to logging,
-such as ``--with-profile`` would not work, as they require running the
-application twice (for detecting shared locations).
 
 
 .. _z3: http://z3.codeplex.com

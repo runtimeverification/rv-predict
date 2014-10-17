@@ -22,7 +22,7 @@ replacement for the ``java`` command, and as an agent, to ease
 integration with IDEs and build management tools like Maven.
 
 
-Running RV-Predict on the command line
+On the command line
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 RV-Predict is invoked as follows:
@@ -35,7 +35,7 @@ RV-Predict is invoked as follows:
 where ``[options]`` include both RV-Predict and Java specific options.
 
 
-Running RV-Predict as an agent
+As an agent
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Assuming ``<rvPath>`` is the installation directory for RV-Predict,

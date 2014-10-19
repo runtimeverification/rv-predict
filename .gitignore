@@ -1,4 +1,10 @@
 *.iml
 .idea
-dist
+.metadata
+.recommenders
+.cache
+.project
+.classpath
+.settings/
+*~
 target/

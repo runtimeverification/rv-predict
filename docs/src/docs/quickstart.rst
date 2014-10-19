@@ -49,8 +49,8 @@ Note though that some options related to logging such as
 ``--with-profile`` are not compatible with the agent, as they require 
 executing the application twice (to detect shared locations).
 
-Using the agent with Maven
-``````````````````````````
+Integration with Maven
+``````````````````````
 For Maven-based projects which have tests, one can simply run ``mvn test``, 
 after modifying the individual project's ``pom.xml`` to have an element 
 similar to the following:
@@ -157,8 +157,8 @@ Additionally, the ``RV_OPTS`` environment variable can be used to specify
 extra options to the Java Virtual Machine running rv-predict (e.g.,  for
 increasing the memory limit).
 
-Enhancing the prediction power
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Enhancing prediction power
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To be effective, RV-Predict tries to keep a good balance between efficiency 
 and prediction power.  Nevertheless, while the default settings were 

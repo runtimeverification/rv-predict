@@ -209,7 +209,7 @@ public class CPRaceDetect {
 			initPrinter(config.outdir);
 			
 			//db engine is used for interacting with database
-			DBEngine db = new DBEngine(config.outdir,config.tableName);
+			DBEngine db = new DBEngine(config.outdir,config.tableName, null);
 
 			//load all the metadata in the application
 			HashMap<Integer, String> sharedVarIdSigMap = db.getVarSigIdMap();

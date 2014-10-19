@@ -107,7 +107,7 @@ public class Main {
     private static void checkAndPredict(Configuration config) {
         boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
         DBEngine db;
-        db = new DBEngine(config.outdir, config.tableName);
+        db = new DBEngine(config.outdir, config.tableName, null);
         try {
             if (! db.checkTables()) {
                 config.logger.report("Trace was not recorded properly. ", Logger.MSGTYPE.ERROR);

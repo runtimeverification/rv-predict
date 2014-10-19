@@ -207,7 +207,7 @@ public class HBRaceDetect {
 			initPrinter(config.tableName);
 			
 			//db engine is used for interacting with database
-			DBEngine db = new DBEngine(config.tableName, config.tableName);
+			DBEngine db = new DBEngine(config.tableName, config.tableName, null);
 
 			//load all the metadata in the application
 			HashMap<Integer, String> sharedVarIdSigMap = db.getVarSigIdMap();

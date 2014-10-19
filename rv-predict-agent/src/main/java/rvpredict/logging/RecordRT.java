@@ -33,10 +33,9 @@ import rvpredict.instrumentation.GlobalStateForInstrumentation;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+
+import db.DBEngine;
 
 public final class RecordRT {
 
@@ -110,7 +109,7 @@ public final class RecordRT {
 	public static void initNonSharing(boolean newTable) throws Exception
 	{
 		long tid = Thread.currentThread().getId();
-		db= new DBEngine(Config.instance.commandLine.outdir, Config.instance.commandLine.tableName);
+		db= new DBEngine(Config.instance.commandLine.outdir, Config.instance.commandLine.tableName, GlobalStateForInstrumentation.instance);
 
 		//load sharedvariables and sharedarraylocations
 		GlobalStateForInstrumentation.instance.setSharedArrayLocations(db.loadSharedArrayLocs());
@@ -131,96 +130,8 @@ public final class RecordRT {
 		threadTidIndexMap.put(tid, 1);
 		
 	}
-	public static void saveSharedMetaData(DBEngine db, HashSet<String> sharedVariables,
-                                          HashSet<String> sharedArrayLocations) {
-		
-		try {
-	    	if(Config.instance.verbose)
-	    		System.out.println("====================SHARED VARIABLES===================");
-	    	
-			db.createSharedVarSignatureTable(false);
-			for(String sig: sharedVariables)
-			{
-		    	db.saveSharedVarSignatureToDB(sig);
-		    	if(Config.instance.verbose)
-    			System.out.println(sig);
-			}
 
-	    	if(Config.instance.verbose)
-	    		System.out.println("====================SHARED ARRAY LOCATIONS===================");
-	    	
-			db.createSharedArrayLocTable(false);
-			for(String sig: sharedArrayLocations)
-			{
-		    	  db.saveSharedArrayLocToDB(sig);
-				if(Config.instance.verbose)
-	    			System.out.println(sig);
-			}
-			
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	public static void saveMetaData(DBEngine db, GlobalStateForInstrumentation state,
-                                    boolean isVerbose)
-	{
-        ConcurrentHashMap<String, Integer> variableIdMap = state.unsavedVariableIdMap;
-        ConcurrentHashMap<String, Boolean> volatileVariables = state.unsavedVolatileVariables;
-        ConcurrentHashMap<String, Integer> stmtSigIdMap = state.unsavedStmtSigIdMap;
-		try{
-			//just reuse the connection 
-			
-			//TODO: if db is null or closed, there must be something wrong
-		//save variable - id to database
-		  db.createVarSignatureTable(false);
-          Iterator<Entry<String, Integer>> variableIdMapIter = variableIdMap.entrySet().iterator();
-          while (variableIdMapIter.hasNext()) {
-              Map.Entry<String,Integer> entry = variableIdMapIter.next();
-	    	  String sig = entry.getKey();
-	    	  Integer id = entry.getValue();
-              variableIdMapIter.remove();
-              db.saveVarSignatureToDB(sig, id);
-	    	  if(isVerbose)
-        	  System.out.println("* ["+id+"] "+sig+" *");
-
-    	  }
-	      
-	    //save volatilevariable - id to database
-		  db.createVolatileSignatureTable(false);
-	      Iterator<Entry<String,Boolean>> volatileIt = volatileVariables.entrySet().iterator();
-	      while(volatileIt.hasNext())
-	      {
-	    	  String sig = volatileIt.next().getKey();
-              volatileIt.remove();
-	    	  Integer id = GlobalStateForInstrumentation.instance.variableIdMap.get(sig);
-
-              db.saveVolatileSignatureToDB(sig, id);
-	    	  if(isVerbose)System.out.println("* volatile: ["+id+"] "+sig+" *");
-
-    	  }
-	      //save stmt - id to database
-		  db.createStmtSignatureTable(false);
-
-          Iterator<Entry<String, Integer>> stmtSigIdMapIter = stmtSigIdMap.entrySet().iterator();
-	      while(stmtSigIdMapIter.hasNext())
-	      {
-              Entry<String, Integer> entry = stmtSigIdMapIter.next();
-              stmtSigIdMapIter.remove();
-	    	  String sig = entry.getKey();
-	    	  Integer id = entry.getValue();
-
-              db.saveStmtSignatureToDB(sig, id);
-	    	  //System.out.println("* ["+id+"] "+sig+" *");
-	      }
-	      
-		}catch(Exception e)
-		{
-			e.printStackTrace();
-		}
-	}
-
-  public static  void logBranch(int ID) {
+    public static  void logBranch(int ID) {
 	  
 	  db.saveEventToDB(Thread.currentThread().getId(), ID, "", "", db.tracetypetable[9]);
   }

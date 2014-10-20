@@ -9,36 +9,23 @@
 package rvpredict.engine.main;
 
 import java.io.*;
-
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
-
-import java.net.URL;
-import java.net.URLClassLoader;
-
-import java.awt.Component;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Rectangle;
 import java.awt.EventQueue;
-import java.awt.FlowLayout;
 import java.awt.BorderLayout;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
- 
-import javax.imageio.ImageIO;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.*;
 import javax.swing.text.*;
@@ -96,7 +83,8 @@ public class GUIMain {
   static private void createGUI(final String resourcePath){
       GUIMain.resourcePath = Paths.get(resourcePath).toAbsolutePath().toString();
     EventQueue.invokeLater(new Runnable() {
-      public void run() {
+      @Override
+    public void run() {
         predictB.setIcon(new ImageIcon(getClass().getResource("/images/button-predict.png")));
         killB.setIcon(new ImageIcon(getClass().getResource("/images/button-stop.png")));
         testB.setIcon(new ImageIcon(getClass().getResource("/images/button-check.png")));
@@ -759,6 +747,7 @@ public class GUIMain {
     try{
       JarFile jf = new JarFile(file);
       Manifest manifest = jf.getManifest();
+      jf.close();
       className = manifest.getMainAttributes().getValue("Main-Class");
  
       className = className.replaceAll("[\\/]",".");
@@ -799,6 +788,7 @@ public class GUIMain {
       try{
         rootPath = r.getRootDir();
         className = r.getClassName();
+        r.close();
         if(!className.equals("")){
 
            long timestamp = file.lastModified();
@@ -822,6 +812,11 @@ public class GUIMain {
       } catch (NoMainMethodException e) {
         System.out.println(RED + "  " + file.getName() + " does not contain a main method.");
         rootPath = file.getParent();
+        try {
+            r.close();
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
         return;
       } catch (IOException e){
         System.out.println(RED + "  Could not load specified class file.");
@@ -1049,26 +1044,26 @@ public class GUIMain {
   private void instrument(){
       String tmpDir = mkTempDir();
       tmpDirMap.put(absoluteFileName, tmpDir);
-      if (false) {
-          String cp = rootPath + File.pathSeparator + cpAppend + File.pathSeparator + baseCP;
-
-          System.out.println("*********************************************");
-          System.out.println("* Uninstrumented class found, instrumenting *");
-          System.out.println("*********************************************");
-          System.out.println(GREEN + "  Program will be executed in " + tmpDir + ".\n");
-          String[] cmd = {"java", "-cp", cp, "-Xmx" + heapSize, "rvpredict.instrumentation.Main",
-                  "-app", className, "-d", tmpDir,
-                  "-validate", "-x", "com.google.protobuf", "rvpredict",
-                  "com.ning.compress.lzf", "jdbm", "java"};
-          try {
-              Process p = Runtime.getRuntime().exec(cmd);
-              readSootProcess(p);
-              if (!((p.exitValue() == 0) || v.stopButtonPressed)) killAction();
-              if (v.kill) return;
-          } catch (Exception e) {
-              e.printStackTrace();
-          }
-      }
+//      if (false) {
+//          String cp = rootPath + File.pathSeparator + cpAppend + File.pathSeparator + baseCP;
+//
+//          System.out.println("*********************************************");
+//          System.out.println("* Uninstrumented class found, instrumenting *");
+//          System.out.println("*********************************************");
+//          System.out.println(GREEN + "  Program will be executed in " + tmpDir + ".\n");
+//          String[] cmd = {"java", "-cp", cp, "-Xmx" + heapSize, "rvpredict.instrumentation.Main",
+//                  "-app", className, "-d", tmpDir,
+//                  "-validate", "-x", "com.google.protobuf", "rvpredict",
+//                  "com.ning.compress.lzf", "jdbm", "java"};
+//          try {
+//              Process p = Runtime.getRuntime().exec(cmd);
+//              readSootProcess(p);
+//              if (!((p.exitValue() == 0) || v.stopButtonPressed)) killAction();
+//              if (v.kill) return;
+//          } catch (Exception e) {
+//              e.printStackTrace();
+//          }
+//      }
   }
 
   private String[] createCommand(String cp){
@@ -1209,7 +1204,6 @@ public class GUIMain {
                        + "***************************");
         File rootDir = new File(rootPath);
     try {
-      long time = System.currentTimeMillis();
       Process p  = Runtime.getRuntime().exec(cmd, null, rootDir);
       readExternalProcess(p, BLACK, RED);
       if(p.exitValue() != 0) killAction(); 
@@ -1250,7 +1244,8 @@ public class GUIMain {
     File dir = new File(tmpDirMap.get(absoluteFileName));
     //System.out.println("CLEANING UP");
     File[] fileList = dir.listFiles(new FilenameFilter() {
-         public boolean accept(File dir, String name) {
+         @Override
+        public boolean accept(File dir, String name) {
             return name.endsWith(".rvpf") || name.startsWith("SuperList-");
          }
       });
@@ -1280,8 +1275,6 @@ class JTextPaneOutputStream extends OutputStream {
         doc.remove(0,removeAmt);
       }
       char c = (char) b;
-      String buf = "";
-      boolean n = false;
       switch(c){
         case '\n'          : style = jtp.getStyle("black");  
                              doc.insertString(doc.getLength(), String.valueOf(c), style);

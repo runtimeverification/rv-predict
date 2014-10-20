@@ -32,16 +32,9 @@
 
 package smt;
 
-import java.util.Vector;
-import java.text.DecimalFormat;
-
-import org.w3c.tools.sexpr.Symbol;
-import org.w3c.tools.sexpr.SimpleSExprStream;
-
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.File;
 import java.io.InputStreamReader;
 
@@ -67,8 +60,10 @@ public class SMTLIB1ModelReader
 			BufferedReader br = new BufferedReader(new InputStreamReader(in));
 
 			String result =  br.readLine();
-			if(result.startsWith("(error "))
-				throw new Error("smt file has errors");
+			if(result.startsWith("(error ")) {
+				br.close();
+			    throw new Error("smt file has errors");
+			}
 			//System.out.println("Feasible: " + "sat".equals(result));
 
 			if("sat".equals(result)) {
@@ -108,6 +103,7 @@ public class SMTLIB1ModelReader
 				System.err.println("Solver error: "+result);
 				System.exit(-1);
 			}
+			br.close();
 			return null;
 		}catch(Exception e){
 			//throw new Error(e);

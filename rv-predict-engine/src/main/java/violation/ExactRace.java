@@ -28,10 +28,7 @@
  ******************************************************************************/
 package violation;
 
-import java.util.ArrayList;
-import java.util.Vector;
-
-/**
+/** 
  * Data race violation - exact match
  * 
  * @author jeffhuang

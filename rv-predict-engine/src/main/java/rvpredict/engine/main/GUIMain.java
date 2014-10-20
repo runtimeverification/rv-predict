@@ -83,7 +83,8 @@ public class GUIMain {
   static private void createGUI(final String resourcePath){
       GUIMain.resourcePath = Paths.get(resourcePath).toAbsolutePath().toString();
     EventQueue.invokeLater(new Runnable() {
-      public void run() {
+      @Override
+    public void run() {
         predictB.setIcon(new ImageIcon(getClass().getResource("/images/button-predict.png")));
         killB.setIcon(new ImageIcon(getClass().getResource("/images/button-stop.png")));
         testB.setIcon(new ImageIcon(getClass().getResource("/images/button-check.png")));
@@ -1014,7 +1015,8 @@ public class GUIMain {
 
   //This only difference from readExternalProcess on the error reading.
   //probably refactor
-  private void readSootProcess(Process p) throws InterruptedException {
+  @SuppressWarnings("unused")
+private void readSootProcess(Process p) throws InterruptedException {
     BufferedReader output = new BufferedReader(new InputStreamReader(p.getInputStream()));
     BufferedReader error = new BufferedReader(new InputStreamReader(p.getErrorStream()));
     ProcessOutputReader outputR = new ProcessOutputReader(output, BLACK, false);
@@ -1036,26 +1038,26 @@ public class GUIMain {
   private void instrument(){
       String tmpDir = mkTempDir();
       tmpDirMap.put(absoluteFileName, tmpDir);
-      if (false) {
-          String cp = rootPath + File.pathSeparator + cpAppend + File.pathSeparator + baseCP;
-
-          System.out.println("*********************************************");
-          System.out.println("* Uninstrumented class found, instrumenting *");
-          System.out.println("*********************************************");
-          System.out.println(GREEN + "  Program will be executed in " + tmpDir + ".\n");
-          String[] cmd = {"java", "-cp", cp, "-Xmx" + heapSize, "rvpredict.instrumentation.Main",
-                  "-app", className, "-d", tmpDir,
-                  "-validate", "-x", "com.google.protobuf", "rvpredict",
-                  "com.ning.compress.lzf", "jdbm", "java"};
-          try {
-              Process p = Runtime.getRuntime().exec(cmd);
-              readSootProcess(p);
-              if (!((p.exitValue() == 0) || v.stopButtonPressed)) killAction();
-              if (v.kill) return;
-          } catch (Exception e) {
-              e.printStackTrace();
-          }
-      }
+//      if (false) {
+//          String cp = rootPath + File.pathSeparator + cpAppend + File.pathSeparator + baseCP;
+//
+//          System.out.println("*********************************************");
+//          System.out.println("* Uninstrumented class found, instrumenting *");
+//          System.out.println("*********************************************");
+//          System.out.println(GREEN + "  Program will be executed in " + tmpDir + ".\n");
+//          String[] cmd = {"java", "-cp", cp, "-Xmx" + heapSize, "rvpredict.instrumentation.Main",
+//                  "-app", className, "-d", tmpDir,
+//                  "-validate", "-x", "com.google.protobuf", "rvpredict",
+//                  "com.ning.compress.lzf", "jdbm", "java"};
+//          try {
+//              Process p = Runtime.getRuntime().exec(cmd);
+//              readSootProcess(p);
+//              if (!((p.exitValue() == 0) || v.stopButtonPressed)) killAction();
+//              if (v.kill) return;
+//          } catch (Exception e) {
+//              e.printStackTrace();
+//          }
+//      }
   }
 
   private String[] createCommand(String cp){
@@ -1196,7 +1198,6 @@ public class GUIMain {
                        + "***************************");
         File rootDir = new File(rootPath);
     try {
-      long time = System.currentTimeMillis();
       Process p  = Runtime.getRuntime().exec(cmd, null, rootDir);
       readExternalProcess(p, BLACK, RED);
       if(p.exitValue() != 0) killAction(); 
@@ -1237,7 +1238,8 @@ public class GUIMain {
     File dir = new File(tmpDirMap.get(absoluteFileName));
     //System.out.println("CLEANING UP");
     File[] fileList = dir.listFiles(new FilenameFilter() {
-         public boolean accept(File dir, String name) {
+         @Override
+        public boolean accept(File dir, String name) {
             return name.endsWith(".rvpf") || name.startsWith("SuperList-");
          }
       });
@@ -1267,8 +1269,6 @@ class JTextPaneOutputStream extends OutputStream {
         doc.remove(0,removeAmt);
       }
       char c = (char) b;
-      String buf = "";
-      boolean n = false;
       switch(c){
         case '\n'          : style = jtp.getStyle("black");  
                              doc.insertString(doc.getLength(), String.valueOf(c), style);

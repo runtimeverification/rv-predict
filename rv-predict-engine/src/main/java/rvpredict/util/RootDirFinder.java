@@ -54,11 +54,6 @@ public class RootDirFinder extends URLClassLoader {
     }
   }
 
-  private boolean isWindows(){
-    String os = System.getProperty("os.name").toLowerCase();
-    return (os.indexOf("win") > 0);
-  }
-
   //properly encode valid path characters for URIs... mostly just space
   //is a concern
   private String percentEncode(String s){

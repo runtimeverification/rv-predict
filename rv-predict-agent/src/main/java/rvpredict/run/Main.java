@@ -72,7 +72,7 @@ private static void run(String[] args)
 
 		Class<?> c = Class.forName(appname);
 		
-	    Class[] argTypes = new Class[] { String[].class };
+	    Class<?>[] argTypes = new Class[] { String[].class };
 	    Method main = c.getDeclaredMethod("main", argTypes);
 	   
 	    String[] mainArgs = {};

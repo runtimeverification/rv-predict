@@ -528,7 +528,7 @@ public class Trace {
 					HashSet<Long> rtids = indexedReadThreads.get(addr);
 					if(rtids!=null)
 					{
-						HashSet<Long> set = new HashSet(rtids);
+						HashSet<Long> set = new HashSet<>(rtids);
 						set.addAll(wtids);
 						if(set.size()>1)
 							sharedAddresses.add(addr);

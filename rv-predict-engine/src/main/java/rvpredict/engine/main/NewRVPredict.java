@@ -97,7 +97,7 @@ public class NewRVPredict {
 			if(lockset1.size()>1)
 			for(int j=1;j<threads.length;j++)
 			{
-				Set<String> lockset2 = new HashSet(threadIndexedLockPairs.get(threads[j]).keySet());
+				Set<String> lockset2 = new HashSet<>(threadIndexedLockPairs.get(threads[j]).keySet());
 				lockset2.retainAll(lockset1);
 				if(lockset2.size()>1)
 				{

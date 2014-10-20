@@ -64,7 +64,7 @@ public class SMTLIB2ModelReader
 			if("sat".equals(result)) {
 				//if the constraints are satisfied
 
-				Model model = process((Vector) p.parse());
+				Model model = process((Vector<?>) p.parse());
 				fis.close();
 				return model;
 			}
@@ -106,7 +106,7 @@ public class SMTLIB2ModelReader
 		return new String(cs, 0, i);
 	}
 	
-	private static Model process(Vector root)
+	private static Model process(Vector<?> root)
 	{
 
 		if(!((Symbol) root.elementAt(0)).toString().equals("model"))
@@ -123,7 +123,7 @@ public class SMTLIB2ModelReader
 
 	static private void define_fun(Object obj, Model model)
 	{
-		Vector node = (Vector) obj;
+		Vector<?> node = (Vector<?>) obj;
 		if(!((Symbol) node.elementAt(0)).toString().equals("define-fun"))
 			assert false;
 		String varName = ((Symbol) node.elementAt(1)).toString();
@@ -142,10 +142,10 @@ public class SMTLIB2ModelReader
 			return primValue(paramTypes, t, v);
 		}
 		else if(type instanceof Vector){
-			Object t = ((Vector) type).elementAt(0);
+			Object t = ((Vector<?>) type).elementAt(0);
 			if(t instanceof Symbol){
 				if(((Symbol) t).toString().equals("Array")){
-					Vector value = (Vector) v;
+					Vector<?> value = (Vector<?>) v;
 					if(!("_".equals(((Symbol) value.elementAt(0)).toString())))
 						assert false;
 					if(!("as-array".equals(((Symbol) value.elementAt(1)).toString())))
@@ -169,7 +169,7 @@ public class SMTLIB2ModelReader
 				return ret;
 			}
 			else{
-				Vector value = (Vector) v;
+				Vector<?> value = (Vector<?>) v;
 				String opName = ((Symbol) value.elementAt(0)).toString();
 				if(opName.equals("ite")){
 					Model.Array array = new Model.Array();
@@ -185,11 +185,11 @@ public class SMTLIB2ModelReader
 		return null;
 	}
 	
-	static private void ite(String t, Vector iteExpr, Model.Array array)
+	static private void ite(String t, Vector<?> iteExpr, Model.Array array)
 	{
 		String opName = ((Symbol) iteExpr.elementAt(0)).toString();
 		if(opName.equals("ite")){
-			Vector cond = (Vector) iteExpr.elementAt(1);
+			Vector<?> cond = (Vector<?>) iteExpr.elementAt(1);
 			Object thenVal = iteExpr.elementAt(2);
 			Object elseVal = iteExpr.elementAt(3);
 
@@ -209,7 +209,7 @@ public class SMTLIB2ModelReader
 			}
 			else{
 				//must be another ite
-				ite(t, (Vector) elseVal, array);
+				ite(t, (Vector<?>) elseVal, array);
 			}
 		}
 	}
@@ -221,14 +221,14 @@ public class SMTLIB2ModelReader
 			return (Number) v;
 		}
 		else if(v instanceof Vector){
-			Vector value = (Vector) v;
+			Vector<?> value = (Vector<?>) v;
 			String opName = ((Symbol) value.elementAt(0)).toString();
 			if(opName.equals("-")){
 				//negative number
 				v = value.elementAt(1);
 				if(v instanceof Vector){
 					//negative rational number
-					value = (Vector) v;
+					value = (Vector<?>) v;
 					opName = ((Symbol) value.elementAt(0)).toString();
 					if(opName.equals("/")){
 						Number numerator = (Number) value.elementAt(1);
@@ -285,7 +285,8 @@ public class SMTLIB2ModelReader
 		}
 		else{
 			z3OutFiles = dir.listFiles(new java.io.FileFilter() {
-					public boolean accept(File f) {
+					@Override
+                    public boolean accept(File f) {
 						return f.getName().startsWith("z3out.");
 					}
 				});

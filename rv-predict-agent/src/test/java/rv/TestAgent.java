@@ -1,6 +1,5 @@
 package rv;
 
-import java.io.PrintStream;
 import java.util.Vector;
 
 public class TestAgent {
@@ -8,7 +7,7 @@ public class TestAgent {
 	volatile int x=10,y=100;
 	String str;
 	String val$value;
-	static Object[] o;
+	static Object[] o; 
 	static Object o2;
 	static int[] a;
 	static boolean[] b;
@@ -135,7 +134,7 @@ public class TestAgent {
 			    final String name;
 			    final String[] args;
 			    Size(String name, Vector<String> args) {
-			        this.args = (String[]) args.toArray(new String[0]);
+			        this.args = args.toArray(new String[0]);
 			        this.name = name;
 			      }
 		  }

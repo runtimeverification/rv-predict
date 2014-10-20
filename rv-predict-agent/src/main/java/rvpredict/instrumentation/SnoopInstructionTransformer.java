@@ -34,8 +34,8 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
 
         final boolean logOutput = commandLine.log_output.equalsIgnoreCase(Configuration.YES);
         commandLine.logger.report("Log directory: " + commandLine.outdir, Logger.MSGTYPE.INFO);
-        if (commandLine.additionalExcludes != null) {
-            String[] excludes = commandLine.additionalExcludes.replace('.','/').split(",");
+        if (Configuration.additionalExcludes != null) {
+            String[] excludes = Configuration.additionalExcludes.replace('.','/').split(",");
             if (config.excludeList == null) {
                 config.excludeList = excludes;
             } else {
@@ -46,8 +46,8 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             }
             System.out.println("Excluding: " + Arrays.toString(config.excludeList));
         }
-        if (commandLine.additionalIncludes != null) {
-            String[] includes = commandLine.additionalIncludes.replace('.','/').split(",");
+        if (Configuration.additionalIncludes != null) {
+            String[] includes = Configuration.additionalIncludes.replace('.','/').split(",");
             if (config.includeList == null) {
                 config.includeList = includes;
             } else {
@@ -94,6 +94,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         }
     }
 
+    @Override
     public byte[] transform(ClassLoader loader,String cname, Class<?> c, ProtectionDomain d, byte[] cbuf)
             throws IllegalClassFormatException {
 

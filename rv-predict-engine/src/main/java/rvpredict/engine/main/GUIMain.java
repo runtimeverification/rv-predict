@@ -747,6 +747,7 @@ public class GUIMain {
     try{
       JarFile jf = new JarFile(file);
       Manifest manifest = jf.getManifest();
+      jf.close();
       className = manifest.getMainAttributes().getValue("Main-Class");
  
       className = className.replaceAll("[\\/]",".");
@@ -787,6 +788,7 @@ public class GUIMain {
       try{
         rootPath = r.getRootDir();
         className = r.getClassName();
+        r.close();
         if(!className.equals("")){
 
            long timestamp = file.lastModified();
@@ -810,6 +812,11 @@ public class GUIMain {
       } catch (NoMainMethodException e) {
         System.out.println(RED + "  " + file.getName() + " does not contain a main method.");
         rootPath = file.getParent();
+        try {
+            r.close();
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
         return;
       } catch (IOException e){
         System.out.println(RED + "  Could not load specified class file.");

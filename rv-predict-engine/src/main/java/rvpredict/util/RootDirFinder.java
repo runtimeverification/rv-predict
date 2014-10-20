@@ -101,6 +101,7 @@ public class RootDirFinder extends URLClassLoader {
     try{ 
       System.out.println(f.getRootDir());
       System.out.println(f.getClassName());
+      f.close();
     } catch (Exception e) {
       e.printStackTrace();
     }

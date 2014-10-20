@@ -111,6 +111,7 @@ public class Util {
                         redirect.println(s);
                     }
                 }
+                scanner.close();
             }
         }).start();
     }

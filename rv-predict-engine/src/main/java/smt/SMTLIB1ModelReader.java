@@ -60,8 +60,10 @@ public class SMTLIB1ModelReader
 			BufferedReader br = new BufferedReader(new InputStreamReader(in));
 
 			String result =  br.readLine();
-			if(result.startsWith("(error "))
-				throw new Error("smt file has errors");
+			if(result.startsWith("(error ")) {
+			    br.close();
+			    throw new Error("smt file has errors");
+			}
 			//System.out.println("Feasible: " + "sat".equals(result));
 
 			if("sat".equals(result)) {
@@ -101,6 +103,7 @@ public class SMTLIB1ModelReader
 				System.err.println("Solver error: "+result);
 				System.exit(-1);
 			}
+			br.close();
 			return null;
 		}catch(Exception e){
 			//throw new Error(e);

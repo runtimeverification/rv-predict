@@ -9,36 +9,23 @@
 package rvpredict.engine.main;
 
 import java.io.*;
-
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
-
-import java.net.URL;
-import java.net.URLClassLoader;
-
-import java.awt.Component;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Rectangle;
 import java.awt.EventQueue;
-import java.awt.FlowLayout;
 import java.awt.BorderLayout;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
- 
-import javax.imageio.ImageIO;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.*;
 import javax.swing.text.*;
@@ -295,7 +282,7 @@ public class GUIMain {
         noWrap.setLayout(new BorderLayout());
         noWrap.add(textArea);
         JScrollPane scrollPane = new JScrollPane(noWrap);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         scrollPane.setPreferredSize(new Dimension(1050,450));
         scrollPane.setMinimumSize(new Dimension(1050,450));
 
@@ -337,7 +324,7 @@ public class GUIMain {
         noWrap.setLayout(new BorderLayout());
         noWrap.add(testProgramTextArea);
         scrollPane = new JScrollPane(noWrap);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         scrollPane.setPreferredSize(new Dimension(1050,250));
         scrollPane.setMinimumSize(new Dimension(1050,250));
         scrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE,250));

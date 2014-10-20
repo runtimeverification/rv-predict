@@ -32,16 +32,9 @@
 
 package smt;
 
-import java.util.Vector;
-import java.text.DecimalFormat;
-
-import org.w3c.tools.sexpr.Symbol;
-import org.w3c.tools.sexpr.SimpleSExprStream;
-
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.File;
 import java.io.InputStreamReader;
 

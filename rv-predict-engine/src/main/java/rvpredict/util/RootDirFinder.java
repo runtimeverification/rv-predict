@@ -7,8 +7,6 @@ import java.net.URI;
 import java.io.File;
 import java.io.IOException;
 
-import java.util.ArrayList;
-
 public class RootDirFinder extends URLClassLoader {
   private String rootDir = null;
   private String className = null;

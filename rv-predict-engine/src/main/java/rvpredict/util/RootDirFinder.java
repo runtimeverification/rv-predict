@@ -97,11 +97,9 @@ public class RootDirFinder extends URLClassLoader {
   }
 
   static public void main(String[] args){
-    RootDirFinder f = new RootDirFinder(new File(args[0]));
-    try{ 
+    try ( RootDirFinder f = new RootDirFinder(new File(args[0]))) { 
       System.out.println(f.getRootDir());
       System.out.println(f.getClassName());
-      f.close();
     } catch (Exception e) {
       e.printStackTrace();
     }

@@ -54,15 +54,12 @@ public class SMTLIB1ModelReader
 	 */
 	public static Model read(File file)
 	{
-		try{
-			FileInputStream fis = new FileInputStream(file);	
-			DataInputStream in = new DataInputStream(fis);
-			BufferedReader br = new BufferedReader(new InputStreamReader(in));
-
+        try (FileInputStream fis = new FileInputStream(file);
+                DataInputStream in = new DataInputStream(fis);
+                BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
 			String result =  br.readLine();
 			if(result.startsWith("(error ")) {
-			    br.close();
-			    throw new Error("smt file has errors");
+			    throw new RuntimeException("smt file has errors");
 			}
 			//System.out.println("Feasible: " + "sat".equals(result));
 
@@ -103,7 +100,6 @@ public class SMTLIB1ModelReader
 				System.err.println("Solver error: "+result);
 				System.exit(-1);
 			}
-			br.close();
 			return null;
 		}catch(Exception e){
 			//throw new Error(e);

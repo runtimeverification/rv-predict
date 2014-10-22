@@ -744,10 +744,8 @@ public class GUIMain {
   private static void handleJar(File file){
     cpAppend = file.getAbsolutePath() + File.pathSeparator + cpAppend;
     rootPath = file.getParent();
-    try{
-      JarFile jf = new JarFile(file);
+    try (JarFile jf = new JarFile(file)) {
       Manifest manifest = jf.getManifest();
-      jf.close();
       className = manifest.getMainAttributes().getValue("Main-Class");
  
       className = className.replaceAll("[\\/]",".");
@@ -784,11 +782,9 @@ public class GUIMain {
   
   private static void handleClass(File file){
 
-      RootDirFinder r = new RootDirFinder(file); 
-      try{
+      try (RootDirFinder r = new RootDirFinder(file)) {
         rootPath = r.getRootDir();
         className = r.getClassName();
-        r.close();
         if(!className.equals("")){
 
            long timestamp = file.lastModified();
@@ -812,11 +808,6 @@ public class GUIMain {
       } catch (NoMainMethodException e) {
         System.out.println(RED + "  " + file.getName() + " does not contain a main method.");
         rootPath = file.getParent();
-        try {
-            r.close();
-        } catch (IOException e1) {
-            e1.printStackTrace();
-        }
         return;
       } catch (IOException e){
         System.out.println(RED + "  Could not load specified class file.");
@@ -1045,26 +1036,6 @@ private void readSootProcess(Process p) throws InterruptedException {
   private void instrument(){
       String tmpDir = mkTempDir();
       tmpDirMap.put(absoluteFileName, tmpDir);
-//      if (false) {
-//          String cp = rootPath + File.pathSeparator + cpAppend + File.pathSeparator + baseCP;
-//
-//          System.out.println("*********************************************");
-//          System.out.println("* Uninstrumented class found, instrumenting *");
-//          System.out.println("*********************************************");
-//          System.out.println(GREEN + "  Program will be executed in " + tmpDir + ".\n");
-//          String[] cmd = {"java", "-cp", cp, "-Xmx" + heapSize, "rvpredict.instrumentation.Main",
-//                  "-app", className, "-d", tmpDir,
-//                  "-validate", "-x", "com.google.protobuf", "rvpredict",
-//                  "com.ning.compress.lzf", "jdbm", "java"};
-//          try {
-//              Process p = Runtime.getRuntime().exec(cmd);
-//              readSootProcess(p);
-//              if (!((p.exitValue() == 0) || v.stopButtonPressed)) killAction();
-//              if (v.kill) return;
-//          } catch (Exception e) {
-//              e.printStackTrace();
-//          }
-//      }
   }
 
   private String[] createCommand(String cp){

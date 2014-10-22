@@ -44,11 +44,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
-import java.io.RandomAccessFile;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Files;
-import java.nio.file.FileSystems;
 
 /**
  * Engine for interacting with database.
@@ -112,8 +107,6 @@ public class DBEngine {
     public String propertytablename;
     private String varsigtablename;
     private String sharedarrayloctablename;
-
-    private Path bufferFile;
 
 	//TODO: What if the program does not terminate??
 
@@ -228,18 +221,6 @@ public class DBEngine {
 		sharedvarsigtablename = "sharedvarsig_" + name;
 		scheduletablename = "schedule_" + name;
 		propertytablename = "property_" + name;
-		bufferFile = FileSystems.getDefault().getPath(directory,  "buffer");
-		if (!Files.exists(bufferFile)) {
-			try {
-				RandomAccessFile f = new RandomAccessFile(bufferFile.toString(), "rw");
-				f.write(new byte[1024*1024]);
-				f.close();
-			} catch (Exception e) {
-				System.err.println(e.getMessage());
-				Config.shutDown = true;
-				System.exit(1);
-			}
-		}
 		try {
 			connectDB(directory);
 		} catch (Exception e) {
@@ -250,9 +231,8 @@ public class DBEngine {
     public void closeDB() {
         try {
             conn.createStatement().execute("SHUTDOWN");
-            Files.deleteIfExists(bufferFile);
             //conn.close();
-        } catch (SQLException|IOException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
@@ -651,14 +631,9 @@ public class DBEngine {
 		if (e instanceof SQLException) {
 			SQLException esql = (SQLException) e;
 			if (esql.getErrorCode() == DATABASE_CLOSED) {
-                                try {
-					Files.deleteIfExists(bufferFile);
-					connectDB(Config.instance.commandLine.outdir);
-                                } catch (Exception f) {
-					System.err.println("Not enough space left for logging in " + Config.instance.commandLine.outdir);
-					System.err.println("Please free some space and restart RV-Predict.");
-					Config.shutDown = true;
-                                }
+				System.err.println("Not enough space left for logging in " + Config.instance.commandLine.outdir);
+				System.err.println("Please free some space and restart RV-Predict.");
+				Config.shutDown = true;
 				System.exit(1);
 			}
 		}

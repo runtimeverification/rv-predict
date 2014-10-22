@@ -32,16 +32,18 @@ public class Main {
 
         if (config.log) {
             if (config.command_line.isEmpty()) {
-                config.logger.report("You must provide a class or a jar to run.", Logger.MSGTYPE.ERROR);
+                config.logger.report("You must provide a class or a jar to run.",
+                        Logger.MSGTYPE.ERROR);
                 config.usage();
                 System.exit(1);
             }
             File outdirFile = new File(config.outdir);
-            if(!(outdirFile.exists())) {
+            if (!(outdirFile.exists())) {
                 outdirFile.mkdir();
             } else {
                 if (!outdirFile.isDirectory()) {
-                    config.logger.report(config.outdir + " is not a directory", Logger.MSGTYPE.ERROR);
+                    config.logger.report(config.outdir + " is not a directory",
+                            Logger.MSGTYPE.ERROR);
                     config.usage();
                     System.exit(1);
                 }
@@ -51,16 +53,19 @@ public class Main {
             String basePath = getBasePath();
             String separator = System.getProperty("file.separator");
             String libPath = basePath + separator + "lib" + separator;
-            String rvAgent = libPath + "rv-predict"  + ".jar";
+            String rvAgent = libPath + "rv-predict" + ".jar";
 
-            String sharingAgentOptions = Configuration.opt_only_log + " " + escapeString(config.outdir);
+            String sharingAgentOptions = Configuration.opt_only_log + " "
+                    + escapeString(config.outdir);
             if (Configuration.additionalExcludes != null) {
-                Configuration.additionalExcludes.replaceAll(" ","");
-                sharingAgentOptions += " " + Configuration.opt_exclude + " " + escapeString(Configuration.additionalExcludes);
+                Configuration.additionalExcludes.replaceAll(" ", "");
+                sharingAgentOptions += " " + Configuration.opt_exclude + " "
+                        + escapeString(Configuration.additionalExcludes);
             }
             if (Configuration.additionalIncludes != null) {
                 Configuration.additionalIncludes.replaceAll(" ", "");
-                sharingAgentOptions += " " + Configuration.opt_include + " " + escapeString(Configuration.additionalIncludes);
+                sharingAgentOptions += " " + Configuration.opt_include + " "
+                        + escapeString(Configuration.additionalIncludes);
             }
             String noSharingAgentOptions = sharingAgentOptions;
             sharingAgentOptions += " " + Configuration.opt_sharing_only;
@@ -72,9 +77,13 @@ public class Main {
             if (config.optlog || config.agentOnlySharing) {
                 if (logOutput) {
                     if (config.optlog) {
-                        config.logger.report(center("First pass: Instrumented execution to detect shared variables"), Logger.MSGTYPE.INFO);
+                        config.logger
+                                .report(center("First pass: Instrumented execution to detect shared variables"),
+                                        Logger.MSGTYPE.INFO);
                     } else {
-                        config.logger.report(center("Instrumented execution to detect shared variables"), Logger.MSGTYPE.INFO);
+                        config.logger.report(
+                                center("Instrumented execution to detect shared variables"),
+                                Logger.MSGTYPE.INFO);
 
                     }
                 }
@@ -82,7 +91,9 @@ public class Main {
             } else {
                 appArgList.add("-javaagent:" + rvAgent + "=" + noSharingAgentOptions);
                 if (logOutput) {
-                    config.logger.report(center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE), Logger.MSGTYPE.INFO);
+                    config.logger.report(
+                            center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE),
+                            Logger.MSGTYPE.INFO);
                 }
             }
             appArgList.add("-Xss" + Configuration.stackSize + "m");
@@ -92,7 +103,9 @@ public class Main {
                 runAgent(config, appArgList, false);
                 appArgList.set(agentIds, "-javaagent:" + rvAgent + "=" + noSharingAgentOptions);
                 if (logOutput) {
-                    config.logger.report(center("Second pass: Instrumented execution to record the trace"), Logger.MSGTYPE.INFO);
+                    config.logger.report(
+                            center("Second pass: Instrumented execution to record the trace"),
+                            Logger.MSGTYPE.INFO);
                 }
                 runAgent(config, appArgList, false);
             } else {
@@ -109,27 +122,31 @@ public class Main {
         DBEngine db;
         db = new DBEngine(config.outdir, config.tableName);
         try {
-            if (! db.checkTables()) {
+            if (!db.checkTables()) {
                 config.logger.report("Trace was not recorded properly. ", Logger.MSGTYPE.ERROR);
                 if (config.log) {
                     config.logger.report("Please check the classpath.", Logger.MSGTYPE.ERROR);
                 } else {
-                    config.logger.report("Please run " + Configuration.PROGRAM_NAME + " with " + Configuration.opt_only_log +
-                            " " + config.outdir + " first.", Logger.MSGTYPE.ERROR);
+                    config.logger.report("Please run " + Configuration.PROGRAM_NAME + " with "
+                            + Configuration.opt_only_log + " " + config.outdir + " first.",
+                            Logger.MSGTYPE.ERROR);
                 }
                 System.exit(1);
             }
         } catch (Exception e) {
-            config.logger.report("Unexpected database error while checking whether the trace was recorded.\n" +
-                    e.getMessage(), Logger.MSGTYPE.ERROR);
+            config.logger.report(
+                    "Unexpected database error while checking whether the trace was recorded.\n"
+                            + e.getMessage(), Logger.MSGTYPE.ERROR);
             System.exit(1);
         } finally {
             db.closeDB();
         }
 
         if (config.log && (config.verbose || logOutput)) {
-            config.logger.report(center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
-            config.logger.report(Configuration.TRACE_LOGGED_IN + config.outdir, Logger.MSGTYPE.VERBOSE);
+            config.logger
+                    .report(center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
+            config.logger.report(Configuration.TRACE_LOGGED_IN + config.outdir,
+                    Logger.MSGTYPE.VERBOSE);
         }
 
         if (config.predict) {
@@ -144,7 +161,8 @@ public class Main {
         return Util.center(msg, WIDTH, FILL);
     }
 
-    public static Thread getPredictionThread(final Configuration commandLine, final CleanupAgent cleanupAgent, final boolean predict) {
+    public static Thread getPredictionThread(final Configuration commandLine,
+            final CleanupAgent cleanupAgent, final boolean predict) {
         String[] args = commandLine.getArgs();
         final boolean logOutput = commandLine.log_output.equalsIgnoreCase(Configuration.YES);
         ProcessBuilder processBuilder = null;
@@ -204,8 +222,10 @@ public class Main {
                 cleanupAgent.cleanup();
                 if (predict) {
                     if (commandLine.log && (commandLine.verbose || logOutput)) {
-                        commandLine.logger.report(center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
-                        commandLine.logger.report(Configuration.TRACE_LOGGED_IN + commandLine.outdir, Logger.MSGTYPE.VERBOSE);
+                        commandLine.logger.report(center(Configuration.LOGGING_PHASE_COMPLETED),
+                                Logger.MSGTYPE.INFO);
+                        commandLine.logger.report(Configuration.TRACE_LOGGED_IN
+                                + commandLine.outdir, Logger.MSGTYPE.VERBOSE);
                     }
 
                     Process process = null;
@@ -231,14 +251,14 @@ public class Main {
         };
     }
 
-
     public interface CleanupAgent {
         public void cleanup();
     }
 
-    public static void runAgent(final Configuration config, final List<String> appArgList, final boolean finalRun) {
-        ProcessBuilder processBuilder =
-                new ProcessBuilder(appArgList.toArray(new String[appArgList.size()]));
+    public static void runAgent(final Configuration config, final List<String> appArgList,
+            final boolean finalRun) {
+        ProcessBuilder processBuilder = new ProcessBuilder(appArgList.toArray(new String[appArgList
+                .size()]));
         String logOutputString = config.log_output;
         boolean logToScreen = false;
         String file = null;
@@ -269,9 +289,9 @@ public class Main {
                 public void run() {
                     process.destroy();
                     if (finalRun) {
-                       config.logger.report("Warning: Logging interrupted by user. \n" +
-                               "Please run the following command to resume prediction:" +
-                       commandMsg.toString(), Logger.MSGTYPE.INFO);
+                        config.logger.report("Warning: Logging interrupted by user. \n"
+                                + "Please run the following command to resume prediction:"
+                                + commandMsg.toString(), Logger.MSGTYPE.INFO);
                     }
                 }
             };
@@ -301,7 +321,8 @@ public class Main {
         CodeSource codeSource = Main.class.getProtectionDomain().getCodeSource();
         String path;
         if (codeSource == null) {
-            path = ClassLoader.getSystemClassLoader().getResource(Main.class.getName().replace('.','/') + ".class").toString();
+            path = ClassLoader.getSystemClassLoader()
+                    .getResource(Main.class.getName().replace('.', '/') + ".class").toString();
             path = path.substring(path.indexOf("file:"), path.indexOf('!'));
             URL url = null;
             try {

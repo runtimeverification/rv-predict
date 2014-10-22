@@ -33,14 +33,18 @@ import java.util.Vector;
 
 public interface IViolation {
 
-	public String toString();
-	public boolean equals(Object o);
-	public int hashCode();
-	
-	/**
-	 * add a schedule to the violation
-	 * @param schedule
-	 */
-	public void addSchedule(Vector<String> schedule);
-	public ArrayList<Vector<String>> getSchedules();
+    public String toString();
+
+    public boolean equals(Object o);
+
+    public int hashCode();
+
+    /**
+     * add a schedule to the violation
+     * 
+     * @param schedule
+     */
+    public void addSchedule(Vector<String> schedule);
+
+    public ArrayList<Vector<String>> getSchedules();
 }

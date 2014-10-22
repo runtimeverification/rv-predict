@@ -27,8 +27,7 @@
   The views and conclusions contained in the software and documentation are those
   of the authors and should not be interpreted as representing official policies, 
   either expressed or implied, of the FreeBSD Project.
-*/
-
+ */
 
 package smt;
 
@@ -44,73 +43,65 @@ import java.io.InputStreamReader;
  * @author jeffhuang
  *
  */
-public class SMTLIB1ModelReader
-{
-	/**
-	 * return a model of solution for the output file
-	 * 
-	 * @param file
-	 * @return
-	 */
-	public static Model read(File file)
-	{
+public class SMTLIB1ModelReader {
+    /**
+     * return a model of solution for the output file
+     * 
+     * @param file
+     * @return
+     */
+    public static Model read(File file) {
         try (FileInputStream fis = new FileInputStream(file);
                 DataInputStream in = new DataInputStream(fis);
                 BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
-			String result =  br.readLine();
-			if(result.startsWith("(error ")) {
-			    throw new RuntimeException("smt file has errors");
-			}
-			//System.out.println("Feasible: " + "sat".equals(result));
+            String result = br.readLine();
+            if (result.startsWith("(error ")) {
+                throw new RuntimeException("smt file has errors");
+            }
+            // System.out.println("Feasible: " + "sat".equals(result));
 
-			if("sat".equals(result)) {
-				
-				//if the constraints are satisfied
-				
-				Model model = new Model();
-				
-				//Read File Line By Line
-				while ((result = br.readLine()) != null)   {
+            if ("sat".equals(result)) {
 
-					if(result.startsWith("("))
-					{
-						String[] strs = result.split(" ");
-		
-						String varName = strs[1];
-						String value_str = strs[2];
-						value_str = value_str.replace(")","");
-	
-						Object value = Integer.valueOf(value_str);
-	
-						model.put(varName, value);
-					}
-				}
-				
-				//Close the input stream
-				in.close();
-				
-				return model;
-			}			
-			else if("unsat".equals(result))
-			{
-				//constraint not satisfied
-			}
-			else if(result!=null)
-			{
-				System.err.println("Solver error: "+result);
-				System.exit(-1);
-			}
-			return null;
-		}catch(Exception e){
-			//throw new Error(e);
-			//e.printStackTrace();
-			return null;
-		}
-		catch(Error e){
-			//throw new Error(e);
-			//e.printStackTrace();//don't throw it if it is a NPE
-			return null;
-		}
-	}
+                // if the constraints are satisfied
+
+                Model model = new Model();
+
+                // Read File Line By Line
+                while ((result = br.readLine()) != null) {
+
+                    if (result.startsWith("(")) {
+                        String[] strs = result.split(" ");
+
+                        String varName = strs[1];
+                        String value_str = strs[2];
+                        value_str = value_str.replace(")", "");
+
+                        Object value = Integer.valueOf(value_str);
+
+                        model.put(varName, value);
+                    }
+                }
+
+                // Close the input stream
+                in.close();
+
+                return model;
+            } else if ("unsat".equals(result)) {
+                // constraint not satisfied
+            } else if (result != null) {
+                System.err.println("Solver error: " + result);
+                System.exit(-1);
+            }
+            return null;
+        } catch (Exception e) {
+            // throw new Error(e);
+            // e.printStackTrace();
+            return null;
+        } catch (Error e) {
+            // throw new Error(e);
+            // e.printStackTrace();//don't throw it if it is a NPE
+            return null;
+        }
+    }
 
 }

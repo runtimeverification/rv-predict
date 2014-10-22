@@ -35,7 +35,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         final boolean logOutput = commandLine.log_output.equalsIgnoreCase(Configuration.YES);
         commandLine.logger.report("Log directory: " + commandLine.outdir, Logger.MSGTYPE.INFO);
         if (Configuration.additionalExcludes != null) {
-            String[] excludes = Configuration.additionalExcludes.replace('.','/').split(",");
+            String[] excludes = Configuration.additionalExcludes.replace('.', '/').split(",");
             if (config.excludeList == null) {
                 config.excludeList = excludes;
             } else {
@@ -47,7 +47,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             System.out.println("Excluding: " + Arrays.toString(config.excludeList));
         }
         if (Configuration.additionalIncludes != null) {
-            String[] includes = Configuration.additionalIncludes.replace('.','/').split(",");
+            String[] includes = Configuration.additionalIncludes.replace('.', '/').split(",");
             if (config.includeList == null) {
                 config.includeList = includes;
             } else {
@@ -64,15 +64,16 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         try {
             db.dropAll();
         } catch (Exception e) {
-            commandLine.logger.report("Unexpected error while cleaning up the database:\n" +
-                    e.getMessage(), Logger.MSGTYPE.ERROR);
+            commandLine.logger.report(
+                    "Unexpected error while cleaning up the database:\n" + e.getMessage(),
+                    Logger.MSGTYPE.ERROR);
             System.exit(1);
         }
-//        db.closeDB();
-		//initialize RecordRT first
+        // db.closeDB();
+        // initialize RecordRT first
         RecordRT.init();
-        
-		inst.addTransformer(new SnoopInstructionTransformer());
+
+        inst.addTransformer(new SnoopInstructionTransformer());
         final boolean inLogger = true;
         final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
             @Override
@@ -89,16 +90,18 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
 
         if (commandLine.predict) {
             if (logOutput) {
-                commandLine.logger.report(Main.center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE), Logger.MSGTYPE.INFO);
+                commandLine.logger.report(
+                        Main.center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE),
+                        Logger.MSGTYPE.INFO);
             }
         }
     }
 
-    public byte[] transform(ClassLoader loader,String cname, Class<?> c, ProtectionDomain d, byte[] cbuf)
-            throws IllegalClassFormatException {
+    public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
+            byte[] cbuf) throws IllegalClassFormatException {
 
         boolean toInstrument = true;
-    	String[] tmp = Config.instance.excludeList;
+        String[] tmp = Config.instance.excludeList;
 
         for (int i = 0; i < tmp.length; i++) {
             String s = tmp[i];
@@ -108,52 +111,53 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             }
         }
         tmp = Config.instance.includeList;
-        if(tmp!=null)
-        for (int i = 0; i < tmp.length; i++) {
-            String s = tmp[i];
-            if (cname.startsWith(s)) {
-                toInstrument = true;
-                break;
+        if (tmp != null)
+            for (int i = 0; i < tmp.length; i++) {
+                String s = tmp[i];
+                if (cname.startsWith(s)) {
+                    toInstrument = true;
+                    break;
+                }
             }
-        }
-        
-//		try {
-//			ClassLoader.getSystemClassLoader().getParent().loadClass("java.io.File");
-//			Class cz= Class.forName("java.io.File");
-//			 System.out.println("((((((((((((((( "+cz.toString());
-//		} catch (ClassNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//
-//      System.out.println("((((((((((((((( transform "+cname);
-        //special handle java.io.File
-        if(cname.equals("java/io/File"))
-        	toInstrument = true;
-        
+
+        // try {
+        // ClassLoader.getSystemClassLoader().getParent().loadClass("java.io.File");
+        // Class cz= Class.forName("java.io.File");
+        // System.out.println("((((((((((((((( "+cz.toString());
+        // } catch (ClassNotFoundException e) {
+        // // TODO Auto-generated catch block
+        // e.printStackTrace();
+        // }
+        //
+        // System.out.println("((((((((((((((( transform "+cname);
+        // special handle java.io.File
+        if (cname.equals("java/io/File"))
+            toInstrument = true;
+
         if (toInstrument) {
-        	
-            //System.out.println("((((((((((((((( transform "+cname);
+
+            // System.out.println("((((((((((((((( transform "+cname);
             ClassReader cr = new ClassReader(cbuf);
-            
+
             ClassWriter cw = new ClassWriter(cr, 0);
             ClassVisitor cv = new SnoopInstructionClassAdapter(cw);
-//            ClassVisitor cv = new SnoopInstructionClassAdapter(new TraceClassVisitor(cw,new PrintWriter( System.out )));
+            // ClassVisitor cv = new SnoopInstructionClassAdapter(new
+            // TraceClassVisitor(cw,new PrintWriter( System.out )));
             cr.accept(cv, 0);
 
             byte[] ret = cw.toByteArray();
-//            if(cname.equals("org/dacapo/parser/Config$Size"))
-//            try {
-//                FileOutputStream out = new FileOutputStream("tmp.class");
-//                out.write(ret);
-//                out.close();
-//            } catch(Exception e) {
-//                e.printStackTrace();
-//            }
-            //System.err.println(")))))))))))))) end transform "+cname);
+            // if(cname.equals("org/dacapo/parser/Config$Size"))
+            // try {
+            // FileOutputStream out = new FileOutputStream("tmp.class");
+            // out.write(ret);
+            // out.close();
+            // } catch(Exception e) {
+            // e.printStackTrace();
+            // }
+            // System.err.println(")))))))))))))) end transform "+cname);
             return ret;
         } else {
-            //System.out.println("--------------- skipping "+cname);
+            // System.out.println("--------------- skipping "+cname);
         }
         return cbuf;
     }

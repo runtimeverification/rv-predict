@@ -1,4 +1,6 @@
-package engines; /*******************************************************************************
+package engines;
+
+/*******************************************************************************
  * Copyright (c) 2013 University of Illinois
  * 
  * All rights reserved.
@@ -46,287 +48,255 @@ import violation.Race;
 import db.DBEngine;
 
 /**
- * engines.CPRaceDetect implements the causal-precedes methods for race detection.
+ * engines.CPRaceDetect implements the causal-precedes methods for race
+ * detection.
  * 
  * @author jeffhuang
  *
  */
 public class CPRaceDetect {
 
-	private static Configuration config;
-	private static HashSet<IViolation> races= new HashSet<IViolation>();
-	private static PrintWriter out;
-	private static void initPrinter(String appname)
-	{
-		try{
-		String fname = "result."+(config.window_size/1000)+"k";
-		out = new PrintWriter(new FileWriter(fname,true));
-		out.println("\n------------------ CP: "+appname+" -------------------\n");
-		}catch(Exception e)
-		{
-			e.printStackTrace();
-		}
-	}
-	private static void closePrinter()
-	{
-		if(out!=null)
-			out.close();
-	}	
+    private static Configuration config;
+    private static HashSet<IViolation> races = new HashSet<IViolation>();
+    private static PrintWriter out;
 
-	/**
-	 * traverse all conflicting pairs. For each pair, query the CPEngine
-	 * whether there are reachable or not. If yes, report a race.
-	 * 
-	 * @param engine
-	 * @param trace
-	 */
-	private static void detectRace(CPEngine engine, Trace trace)
-	{
-		Iterator<String> 
-		addrIt =trace.getIndexedThreadReadWriteNodes().keySet().iterator();
-		while(addrIt.hasNext())
-		{
-			
-			String addr = addrIt.next();
-			if(config.novolatile)
-			{
-			//all field addr should contain ".", not true for array access
-			int dotPos = addr.indexOf(".");
-			//continue if volatile
-			if(dotPos>-1&&trace.isAddressVolatile(addr.substring(dotPos+1))) continue;
-			}
-			
-			//get all read nodes on the address
-			Vector<ReadNode> readnodes = trace.getIndexedReadNodes().get(addr);
-			
-			//get all write nodes on the address
-			Vector<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
-			if(writenodes==null||writenodes.size()<1)
-			continue;
-						
-			//System.out.println("***** Checking Data Race *****\n");
-			//check race read-write
-			if(readnodes!=null)
-			for(int i=0;i<readnodes.size();i++)
-			{
-				ReadNode rnode = readnodes.get(i);
-				
-				for(int j=0;j<writenodes.size();j++)
-				{
-					WriteNode wnode = writenodes.get(j);
-					if(rnode.getTid()!=wnode.getTid())
-					{
-						Race race = new Race(trace.getStmtSigIdMap().get(rnode.getID()),
-								trace.getStmtSigIdMap().get(wnode.getID()),rnode.getID(),wnode.getID());
-						
-						if(config.allrace||!races.contains(race))
-						{
-											
-//							if(race.toString().equals("<org.w3c.util.SyncLRUList: void toHead(org.w3c.util.LRUAble)>|$r3 = $r2.<org.w3c.util.LRUNode: org.w3c.util.LRUAble next>|14 - <org.w3c.util.LRUNode: void setNext(org.w3c.util.LRUAble)>|r0.<org.w3c.util.LRUNode: org.w3c.util.LRUAble next> = r1|36"))
-//								System.out.print("");
-							
+    private static void initPrinter(String appname) {
+        try {
+            String fname = "result." + (config.window_size / 1000) + "k";
+            out = new PrintWriter(new FileWriter(fname, true));
+            out.println("\n------------------ CP: " + appname + " -------------------\n");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-							
-							if(engine.isRace(rnode, wnode))
-							{
-								report(race.toString(),MSGTYPE.REAL);
-								//report(rnode.getGID()+"--"+wnode.getGID(),false);
-								if(config.allrace)
-								{
-									ExactRace race2 = new ExactRace(race,(int)rnode.getGID(),(int)wnode.getGID());
-									races.add(race2); 
+    private static void closePrinter() {
+        if (out != null)
+            out.close();
+    }
 
-								}
-								else
-								races.add(race);
-							
-							}
-						
-						}
-					}
-				}
-			}
-				//check race write-write
-				for(int i=0;i<writenodes.size();i++)
-				{
-					WriteNode wnode1 = writenodes.get(i);
-					
-					for(int j=0;j<writenodes.size();j++)
-					{
-						WriteNode wnode2 = writenodes.get(j);
-						if(wnode1.getTid()!=wnode2.getTid())
-						{
-							Race race = new Race(trace.getStmtSigIdMap().get(wnode1.getID()),
-									trace.getStmtSigIdMap().get(wnode2.getID()),wnode1.getID(),wnode2.getID());
-							
-							if(config.allrace||!races.contains(race))
-							{
-								if(engine.isRace(wnode1, wnode2))
-								{
-									report(race.toString(),MSGTYPE.REAL);
-									if(config.allrace)
-									{
-										ExactRace race2 = new ExactRace(race,(int)wnode1.getGID(),(int)wnode2.getGID());
-										races.add(race2); 
+    /**
+     * traverse all conflicting pairs. For each pair, query the CPEngine whether
+     * there are reachable or not. If yes, report a race.
+     * 
+     * @param engine
+     * @param trace
+     */
+    private static void detectRace(CPEngine engine, Trace trace) {
+        Iterator<String> addrIt = trace.getIndexedThreadReadWriteNodes().keySet().iterator();
+        while (addrIt.hasNext()) {
 
-									}
-									else
-										races.add(race); 
-								}
-							}
-						}
-					}
-				}
-		}
-	}
+            String addr = addrIt.next();
+            if (config.novolatile) {
+                // all field addr should contain ".", not true for array access
+                int dotPos = addr.indexOf(".");
+                // continue if volatile
+                if (dotPos > -1 && trace.isAddressVolatile(addr.substring(dotPos + 1)))
+                    continue;
+            }
 
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
+            // get all read nodes on the address
+            Vector<ReadNode> readnodes = trace.getIndexedReadNodes().get(addr);
+
+            // get all write nodes on the address
+            Vector<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
+            if (writenodes == null || writenodes.size() < 1)
+                continue;
+
+            // System.out.println("***** Checking Data Race *****\n");
+            // check race read-write
+            if (readnodes != null)
+                for (int i = 0; i < readnodes.size(); i++) {
+                    ReadNode rnode = readnodes.get(i);
+
+                    for (int j = 0; j < writenodes.size(); j++) {
+                        WriteNode wnode = writenodes.get(j);
+                        if (rnode.getTid() != wnode.getTid()) {
+                            Race race = new Race(trace.getStmtSigIdMap().get(rnode.getID()), trace
+                                    .getStmtSigIdMap().get(wnode.getID()), rnode.getID(),
+                                    wnode.getID());
+
+                            if (config.allrace || !races.contains(race)) {
+
+                                // if(race.toString().equals("<org.w3c.util.SyncLRUList: void toHead(org.w3c.util.LRUAble)>|$r3 = $r2.<org.w3c.util.LRUNode: org.w3c.util.LRUAble next>|14 - <org.w3c.util.LRUNode: void setNext(org.w3c.util.LRUAble)>|r0.<org.w3c.util.LRUNode: org.w3c.util.LRUAble next> = r1|36"))
+                                // System.out.print("");
+
+                                if (engine.isRace(rnode, wnode)) {
+                                    report(race.toString(), MSGTYPE.REAL);
+                                    // report(rnode.getGID()+"--"+wnode.getGID(),false);
+                                    if (config.allrace) {
+                                        ExactRace race2 = new ExactRace(race, (int) rnode.getGID(),
+                                                (int) wnode.getGID());
+                                        races.add(race2);
+
+                                    } else
+                                        races.add(race);
+
+                                }
+
+                            }
+                        }
+                    }
+                }
+            // check race write-write
+            for (int i = 0; i < writenodes.size(); i++) {
+                WriteNode wnode1 = writenodes.get(i);
+
+                for (int j = 0; j < writenodes.size(); j++) {
+                    WriteNode wnode2 = writenodes.get(j);
+                    if (wnode1.getTid() != wnode2.getTid()) {
+                        Race race = new Race(trace.getStmtSigIdMap().get(wnode1.getID()), trace
+                                .getStmtSigIdMap().get(wnode2.getID()), wnode1.getID(),
+                                wnode2.getID());
+
+                        if (config.allrace || !races.contains(race)) {
+                            if (engine.isRace(wnode1, wnode2)) {
+                                report(race.toString(), MSGTYPE.REAL);
+                                if (config.allrace) {
+                                    ExactRace race2 = new ExactRace(race, (int) wnode1.getGID(),
+                                            (int) wnode2.getGID());
+                                    races.add(race2);
+
+                                } else
+                                    races.add(race);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @param args
+     */
+    public static void main(String[] args) {
 
         config = new Configuration();
         config.parseArguments(args, true);
 
-		try{
-			
-			//start predict analysis
-			long start_time = System.currentTimeMillis();
-			//initialize printer
-			initPrinter(config.outdir);
-			
-			//db engine is used for interacting with database
-			DBEngine db = new DBEngine(config.outdir,config.tableName);
+        try {
 
-			//load all the metadata in the application
-			HashMap<Integer, String> sharedVarIdSigMap = db.getVarSigIdMap();
-			HashMap<Integer, String> volatileAddresses = db.getVolatileAddresses();
-			HashMap<Integer, String> stmtIdSigMap = db.getStmtSigIdMap();
-			HashMap<Long,String> threadIdNameMap = db.getThreadIdNameMap();
+            // start predict analysis
+            long start_time = System.currentTimeMillis();
+            // initialize printer
+            initPrinter(config.outdir);
 
-			TraceInfo info = new TraceInfo(sharedVarIdSigMap,volatileAddresses,stmtIdSigMap,threadIdNameMap);
+            // db engine is used for interacting with database
+            DBEngine db = new DBEngine(config.outdir, config.tableName);
 
+            // load all the metadata in the application
+            HashMap<Integer, String> sharedVarIdSigMap = db.getVarSigIdMap();
+            HashMap<Integer, String> volatileAddresses = db.getVolatileAddresses();
+            HashMap<Integer, String> stmtIdSigMap = db.getStmtSigIdMap();
+            HashMap<Long, String> threadIdNameMap = db.getThreadIdNameMap();
 
+            TraceInfo info = new TraceInfo(sharedVarIdSigMap, volatileAddresses, stmtIdSigMap,
+                    threadIdNameMap);
 
-			long TOTAL_TRACE_LENGTH = db.getTraceSize();
+            long TOTAL_TRACE_LENGTH = db.getTraceSize();
 
+            ExecutionInfoTask task = new ExecutionInfoTask(start_time, info, TOTAL_TRACE_LENGTH);
+            // register a shutdown hook to store runtime statistics
+            Runtime.getRuntime().addShutdownHook(task);
 
+            // set a timer to timeout in a configured period
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    report("\n******* Timeout " + config.timeout + " seconds ******", MSGTYPE.REAL);// report
+                                                                                                    // it
+                    System.exit(0);
+                }
+            }, config.timeout * 1000);
 
-			
-			
-			ExecutionInfoTask task = new ExecutionInfoTask(start_time,info,TOTAL_TRACE_LENGTH);
-			//register a shutdown hook to store runtime statistics
-			Runtime.getRuntime().addShutdownHook(task);
-			
-			//set a timer to timeout in a configured period
-			Timer timer = new Timer();
-			timer.schedule(new TimerTask(){
-					@Override
-                    public void run()
-					{
-						report("\n******* Timeout "+config.timeout+" seconds ******",MSGTYPE.REAL);//report it
-						System.exit(0);
-					}},config.timeout*1000);
-			
-			
-			
-			
-			
-			
-			
-			for(int round =0;round*config.window_size<TOTAL_TRACE_LENGTH;round++)
-			{
-				long index_start = round*config.window_size+1;
-				long index_end = (round+1)*config.window_size;
-				//if(TOTAL_TRACE_LENGTH>MAX_LENGTH)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+TOTAL_TRACE_LENGTH+" ******************\n");
-				
-				Trace trace = db.getTrace(index_start,index_end,info);
-					
-				CPEngine engine = new CPEngine(trace);				
-					
-				detectRace(engine,trace);
-				
-			}	
-			
-				
-		}
-		catch(Exception e)
-		  {
-			  e.printStackTrace();
-		  }
-		finally
-		{
-			
-			//terminate
-			System.exit(0);
-		}
+            for (int round = 0; round * config.window_size < TOTAL_TRACE_LENGTH; round++) {
+                long index_start = round * config.window_size + 1;
+                long index_end = (round + 1) * config.window_size;
+                // if(TOTAL_TRACE_LENGTH>MAX_LENGTH)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+TOTAL_TRACE_LENGTH+" ******************\n");
 
-	}
-	
-	
-	static class ExecutionInfoTask extends Thread
-	{
-		TraceInfo info;
-		long start_time;
-		long TOTAL_TRACE_LENGTH;
-		ExecutionInfoTask (long st, TraceInfo info, long size)
-		{
-			this.info = info;
-			this.start_time =st;
-			this.TOTAL_TRACE_LENGTH = size;
-		}
-		
-		@Override
-		public void run() {
-			
-			//Report statistics about the trace and race detection
-			
-            //TODO: query the following information from DB may be expensive
-			
-			//int TOTAL_THREAD_NUMBER = db.getTraceThreadNumber();
-			int TOTAL_THREAD_NUMBER = info.getTraceThreadNumber();
-			//int TOTAL_SHAREDVARIABLE_NUMBER = db.getTraceSharedVariableNumber();
-			int TOTAL_SHAREDVARIABLE_NUMBER = info.getTraceSharedVariableNumber();
-			//int TOTAL_BRANCH_NUMBER = db.getTraceBranchNumber();
-			//int TOTAL_READWRITE_NUMBER = db.getTraceReadWriteNumber();
-			int TOTAL_READWRITE_NUMBER = info.getTraceSharedReadWriteNumber();
-			//int TOTAL_SYNC_NUMBER = db.getTraceSyncNumber();
-			int TOTAL_SYNC_NUMBER = info.getTraceSyncNumber();
-			//int TOTAL_PROPERTY_NUMBER = db.getTracePropertyNumber();
-			
-			report("Trace Size: "+TOTAL_TRACE_LENGTH,MSGTYPE.STATISTICS);
-			report("Total #Threads: "+TOTAL_THREAD_NUMBER,MSGTYPE.STATISTICS);
-			report("Total #SharedVariables: "+TOTAL_SHAREDVARIABLE_NUMBER,MSGTYPE.STATISTICS);
-			report("Total #Read-Writes: "+TOTAL_READWRITE_NUMBER,MSGTYPE.STATISTICS);
-			report("Total #Synchronizations: "+TOTAL_SYNC_NUMBER,MSGTYPE.STATISTICS);
-			report("Total #races: "+races.size(),MSGTYPE.STATISTICS);
-			report("Total Time: "+(System.currentTimeMillis()-start_time)+"ms",MSGTYPE.STATISTICS); 			
-		
-			closePrinter();
-		}
-		
-	}
-	
-	public enum MSGTYPE
-	{
-		REAL,POTENTIAL,STATISTICS
-	}
-	private static void report(String msg, MSGTYPE type)
-	{
-		switch(type)
-		{
-		case REAL:
-			System.err.println(msg);
-			out.println(msg);
-			break;
-		case STATISTICS:
-			System.out.println(msg);
-			out.println(msg);
-			break;
-		case POTENTIAL:
-			break;
-		default: break;
-		}
-	}
-	
+                Trace trace = db.getTrace(index_start, index_end, info);
+
+                CPEngine engine = new CPEngine(trace);
+
+                detectRace(engine, trace);
+
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+
+            // terminate
+            System.exit(0);
+        }
+
+    }
+
+    static class ExecutionInfoTask extends Thread {
+        TraceInfo info;
+        long start_time;
+        long TOTAL_TRACE_LENGTH;
+
+        ExecutionInfoTask(long st, TraceInfo info, long size) {
+            this.info = info;
+            this.start_time = st;
+            this.TOTAL_TRACE_LENGTH = size;
+        }
+
+        @Override
+        public void run() {
+
+            // Report statistics about the trace and race detection
+
+            // TODO: query the following information from DB may be expensive
+
+            // int TOTAL_THREAD_NUMBER = db.getTraceThreadNumber();
+            int TOTAL_THREAD_NUMBER = info.getTraceThreadNumber();
+            // int TOTAL_SHAREDVARIABLE_NUMBER =
+            // db.getTraceSharedVariableNumber();
+            int TOTAL_SHAREDVARIABLE_NUMBER = info.getTraceSharedVariableNumber();
+            // int TOTAL_BRANCH_NUMBER = db.getTraceBranchNumber();
+            // int TOTAL_READWRITE_NUMBER = db.getTraceReadWriteNumber();
+            int TOTAL_READWRITE_NUMBER = info.getTraceSharedReadWriteNumber();
+            // int TOTAL_SYNC_NUMBER = db.getTraceSyncNumber();
+            int TOTAL_SYNC_NUMBER = info.getTraceSyncNumber();
+            // int TOTAL_PROPERTY_NUMBER = db.getTracePropertyNumber();
+
+            report("Trace Size: " + TOTAL_TRACE_LENGTH, MSGTYPE.STATISTICS);
+            report("Total #Threads: " + TOTAL_THREAD_NUMBER, MSGTYPE.STATISTICS);
+            report("Total #SharedVariables: " + TOTAL_SHAREDVARIABLE_NUMBER, MSGTYPE.STATISTICS);
+            report("Total #Read-Writes: " + TOTAL_READWRITE_NUMBER, MSGTYPE.STATISTICS);
+            report("Total #Synchronizations: " + TOTAL_SYNC_NUMBER, MSGTYPE.STATISTICS);
+            report("Total #races: " + races.size(), MSGTYPE.STATISTICS);
+            report("Total Time: " + (System.currentTimeMillis() - start_time) + "ms",
+                    MSGTYPE.STATISTICS);
+
+            closePrinter();
+        }
+
+    }
+
+    public enum MSGTYPE {
+        REAL, POTENTIAL, STATISTICS
+    }
+
+    private static void report(String msg, MSGTYPE type) {
+        switch (type) {
+        case REAL:
+            System.err.println(msg);
+            out.println(msg);
+            break;
+        case STATISTICS:
+            System.out.println(msg);
+            out.println(msg);
+            break;
+        case POTENTIAL:
+            break;
+        default:
+            break;
+        }
+    }
+
 }

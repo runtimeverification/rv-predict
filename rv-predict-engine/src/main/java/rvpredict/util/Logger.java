@@ -13,85 +13,82 @@ public class Logger {
 
     private PrintWriter out;
     Configuration config;
+
     /**
-	 * Initialize the file printer. All race detection statistics are stored
-	 * into the file race-report.txt
-	 *
-	 * @param config
-	 */
-	public Logger(Configuration config)
-	{
+     * Initialize the file printer. All race detection statistics are stored
+     * into the file race-report.txt
+     *
+     * @param config
+     */
+    public Logger(Configuration config) {
         this.config = config;
-		try{
-		String fname = "race-report.txt";
+        try {
+            String fname = "race-report.txt";
 
-        File file = new File(config.outdir);
-        file.mkdirs();
-		out = new PrintWriter(new FileWriter(config.outdir + "/" + fname,true));
+            File file = new File(config.outdir);
+            file.mkdirs();
+            out = new PrintWriter(new FileWriter(config.outdir + "/" + fname, true));
 
-//		String type = "";
-//		if(config.rmm_pso)
-//			type+="pso: ";
-//
-//		if(config.nobranch)
-//			type += "maximal: ";
-//		else if(config.allconsistent)
-//			type += "Said et al.: ";
-//		else if(config.smtlib1)
-//			type += "maximal-branch (yices): ";
-//		else
-//			type += "maximal-branch (z3): ";
-//		out.println("\n------------------ "+type+rvpredict.config.tableName+" -------------------\n");
-		}catch(Exception e)
-		{
-			e.printStackTrace();
-		}
-	}
-	public void closePrinter()
-	{
-		if(out!=null)
-			out.close();
-	}
+            // String type = "";
+            // if(config.rmm_pso)
+            // type+="pso: ";
+            //
+            // if(config.nobranch)
+            // type += "maximal: ";
+            // else if(config.allconsistent)
+            // type += "Said et al.: ";
+            // else if(config.smtlib1)
+            // type += "maximal-branch (yices): ";
+            // else
+            // type += "maximal-branch (z3): ";
+            // out.println("\n------------------ "+type+rvpredict.config.tableName+" -------------------\n");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void closePrinter() {
+        if (out != null)
+            out.close();
+    }
 
     public PrintWriter getPrinter() {
         return out;
     }
 
-    public void report(String msg, MSGTYPE type)
-	{
-		switch(type)
-		{
-		case REAL:
+    public void report(String msg, MSGTYPE type) {
+        switch (type) {
+        case REAL:
         case ERROR:
-			System.err.println(msg);
-			out.println(msg);
-			break;
+            System.err.println(msg);
+            out.println(msg);
+            break;
         case INFO:
-			System.out.println(msg);
+            System.out.println(msg);
             if (config.verbose) {
                 out.println(msg);
             }
-			break;
- 		case STATISTICS:
+            break;
+        case STATISTICS:
             if (config.verbose) {
                 System.out.println(msg);
             }
-			out.println(msg);
-			break;
+            out.println(msg);
+            break;
         case VERBOSE:
             if (config.verbose) {
                 System.out.println(msg);
                 out.println(msg);
             }
             break;
-		case POTENTIAL:
-			break;
-		default: break;
-		}
-	}
+        case POTENTIAL:
+            break;
+        default:
+            break;
+        }
+    }
 
-    public enum MSGTYPE
-    {
-        REAL,POTENTIAL,STATISTICS, INFO, VERBOSE, ERROR
+    public enum MSGTYPE {
+        REAL, POTENTIAL, STATISTICS, INFO, VERBOSE, ERROR
     }
 }

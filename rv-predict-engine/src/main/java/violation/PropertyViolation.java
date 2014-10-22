@@ -37,38 +37,33 @@ import java.util.Vector;
  * @author jeffhuang
  *
  */
-public class PropertyViolation implements IViolation{
+public class PropertyViolation implements IViolation {
 
-	String meta;
-	
-	//the corresponding schedule
-	ArrayList<Vector<String>> schedules;
-	
-	public void addSchedule(Vector<String> schedule)
-	{
-		schedules.add(schedule);
-	}
+    String meta;
 
-	public ArrayList<Vector<String>> getSchedules()
-	{
-		return schedules;
-	}
-//	public Race (String node1,String node2)
-//	{
-//		this.node1 = node1;
-//		this.node2 = node2;
-//	}
-	public PropertyViolation (String str)
-	{
-		this.meta = str;
-	}
-	
-	
-	@Override
-	public String toString()
-	{
-		return meta;
-	}
-	
+    // the corresponding schedule
+    ArrayList<Vector<String>> schedules;
+
+    public void addSchedule(Vector<String> schedule) {
+        schedules.add(schedule);
+    }
+
+    public ArrayList<Vector<String>> getSchedules() {
+        return schedules;
+    }
+
+    // public Race (String node1,String node2)
+    // {
+    // this.node1 = node1;
+    // this.node2 = node2;
+    // }
+    public PropertyViolation(String str) {
+        this.meta = str;
+    }
+
+    @Override
+    public String toString() {
+        return meta;
+    }
 
 }

@@ -44,42 +44,40 @@ import rvpredict.config.Util;
  * @author jeffhuang
  *
  */
-public class SMTTaskRun
-{
-	protected static String SMT = ".smt";
-	protected static String OUT = ".smtout";
-	
-	File outFile,smtFile;
-	protected List<String> CMD;
-	
-	public Model model;
-	public Vector<String> schedule;
-		
-	boolean sat;
+public class SMTTaskRun {
+    protected static String SMT = ".smt";
+    protected static String OUT = ".smtout";
+
+    File outFile, smtFile;
+    protected List<String> CMD;
+
+    public Model model;
+    public Vector<String> schedule;
+
+    boolean sat;
 
     long timeout;
-	
-	public SMTTaskRun(Configuration config, int id)
-	{				
-		try{
-			init(config,id);
-		
-		}catch(IOException e)
-		{
-			System.err.println(e.getMessage());
-		}
-	}
-	/**
-	 * initialize solver configuration
-	 * @param config
-	 * @param id
-	 * @throws IOException
-	 */
-	public void init(Configuration config, int id) throws IOException
-	{		
-		smtFile = Util.newOutFile(config.constraint_outdir,config.tableName +"_"+id+SMT);
-        
-		outFile = Util.newOutFile(config.constraint_outdir,config.tableName +"_"+id+OUT);
+
+    public SMTTaskRun(Configuration config, int id) {
+        try {
+            init(config, id);
+
+        } catch (IOException e) {
+            System.err.println(e.getMessage());
+        }
+    }
+
+    /**
+     * initialize solver configuration
+     * 
+     * @param config
+     * @param id
+     * @throws IOException
+     */
+    public void init(Configuration config, int id) throws IOException {
+        smtFile = Util.newOutFile(config.constraint_outdir, config.tableName + "_" + id + SMT);
+
+        outFile = Util.newOutFile(config.constraint_outdir, config.tableName + "_" + id + OUT);
 
         String[] quotes = config.smt_solver.split("\"");
         boolean inQuote = false;
@@ -95,86 +93,78 @@ public class SMTTaskRun
                 }
 
             }
-            inQuote = ! inQuote;
+            inQuote = !inQuote;
         }
         timeout = config.solver_timeout;
-	}
-	
-	/**
-	 * solve constraint "msg"
-	 * @param msg
-	 */
-	public void sendMessage(String msg)
-	{
-		PrintWriter smtWriter = null;
-		try{
-			smtWriter = Util.newWriter(smtFile, true);
-			smtWriter.println(msg);
-		    smtWriter.close();
-		    
-		    //invoke the solver
-	        exec(outFile, smtFile.getAbsolutePath());
+    }
 
-	        model = SMTLIB1ModelReader.read(outFile);
-	        
-	        if(model!=null)
-	        {
-	        	sat = true;
-	        	schedule = computeSchedule(model);
-	        }
-	        //String z3OutFileName = z3OutFile.getAbsolutePath();
-	        //retrieveResult(z3OutFileName);
-		    
-		}catch(IOException e)
-		{
-			System.err.println(e.getMessage());
+    /**
+     * solve constraint "msg"
+     * 
+     * @param msg
+     */
+    public void sendMessage(String msg) {
+        PrintWriter smtWriter = null;
+        try {
+            smtWriter = Util.newWriter(smtFile, true);
+            smtWriter.println(msg);
+            smtWriter.close();
 
-		}
-	}
-	
-	/**
-	 * Given the model of solution, return the corresponding schedule
-	 * 
-	 * @param model
-	 * @return
-	 */
-	public Vector<String> computeSchedule(Model model) {
-		
-		Vector<String> schedule = new Vector<String>();
-		
-		Iterator<Entry<String,Object>> setIt = model.getMap().entrySet().iterator();
-		while(setIt.hasNext())
-		{
-			Entry<String,Object> entryModel = setIt.next();
-			String op = entryModel.getKey();
-			int order = (Integer)entryModel.getValue();
-						
-			if(schedule.isEmpty())
-				schedule.add(op);
-			else
-			for(int i=0;i<schedule.size();i++)
-			{
-				if(order<(Integer)model.getMap().get(schedule.get(i)))
-				{
-					schedule.insertElementAt(op, i);
-					break;
-				}
-				else if(i==schedule.size()-1)
-				{
-					schedule.add(op);
-					break;
-				}
-				
-			}
-		}
-		
-		return schedule;
-	}
-	
-	public void exec(final File outFile, String file) throws IOException
-	{
+            // invoke the solver
+            exec(outFile, smtFile.getAbsolutePath());
 
-		final List<String> cmds = new ArrayList<String>();
+            model = SMTLIB1ModelReader.read(outFile);
+
+            if (model != null) {
+                sat = true;
+                schedule = computeSchedule(model);
+            }
+            // String z3OutFileName = z3OutFile.getAbsolutePath();
+            // retrieveResult(z3OutFileName);
+
+        } catch (IOException e) {
+            System.err.println(e.getMessage());
+
+        }
+    }
+
+    /**
+     * Given the model of solution, return the corresponding schedule
+     * 
+     * @param model
+     * @return
+     */
+    public Vector<String> computeSchedule(Model model) {
+
+        Vector<String> schedule = new Vector<String>();
+
+        Iterator<Entry<String, Object>> setIt = model.getMap().entrySet().iterator();
+        while (setIt.hasNext()) {
+            Entry<String, Object> entryModel = setIt.next();
+            String op = entryModel.getKey();
+            int order = (Integer) entryModel.getValue();
+
+            if (schedule.isEmpty())
+                schedule.add(op);
+            else
+                for (int i = 0; i < schedule.size(); i++) {
+                    if (order < (Integer) model.getMap().get(schedule.get(i))) {
+                        schedule.insertElementAt(op, i);
+                        break;
+                    } else if (i == schedule.size() - 1) {
+                        schedule.add(op);
+                        break;
+                    }
+
+                }
+        }
+
+        return schedule;
+    }
+
+    public void exec(final File outFile, String file) throws IOException {
+
+        final List<String> cmds = new ArrayList<String>();
         cmds.addAll(CMD);
         cmds.add(file);
 
@@ -184,7 +174,7 @@ public class SMTTaskRun
                 ProcessBuilder processBuilder = new ProcessBuilder(cmds);
                 processBuilder.redirectOutput(outFile);
                 processBuilder.redirectErrorStream(true);
-                
+
                 Process process = processBuilder.start();
                 try {
                     process.waitFor();
@@ -197,22 +187,21 @@ public class SMTTaskRun
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         executorService.execute(task);
         try {
-            //Integer i = 
-            		task.get(timeout, TimeUnit.SECONDS);
-            
-            //if(i!=0) System.err.println("solver error");
-            
-        } catch (ExecutionException e) {
-        	System.err.println(e.getMessage());
-        	System.exit(-1);
+            // Integer i =
+            task.get(timeout, TimeUnit.SECONDS);
 
-        }catch(Exception e)
-        {
-        	System.err.println(e.getMessage());
+            // if(i!=0) System.err.println("solver error");
+
+        } catch (ExecutionException e) {
+            System.err.println(e.getMessage());
+            System.exit(-1);
+
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
             task.cancel(true);
             executorService.shutdown();
         }
-       
+
     }
-	
+
 }

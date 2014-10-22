@@ -40,56 +40,57 @@ import java.util.Scanner;
  */
 public class Util {
 
-	private final static String RV_STR = "rv";
+    private final static String RV_STR = "rv";
 
-	/**
-	 * Create a file "name" under the directory "path"
-	 * 
-	 * @param path
-	 * @param name
-	 * @return
-	 * @throws IOException
-	 */
-	public static File newOutFile(String path, String name) throws IOException {
-		
-		File z3Dir = new File(path);
-		//Here comes the existence check
-		if(!z3Dir.exists())
-			z3Dir.mkdirs();
-		
-		File f = new File(path, name);
-		if(f.exists())
-		{
-		f.delete();
-		}
-	
-		f.createNewFile();
-	
-		return f;
-	}
-	public static PrintWriter newWriter(File file, boolean append) throws IOException {
-	return new PrintWriter(new BufferedWriter(new FileWriter(file, append)));
-	}
-	
-	public static String getTempRVDirectory() {
-		String tempdir = System.getProperty("java.io.tmpdir");
-		
-		
-		String tempRVdir = tempdir + System.getProperty("file.separator")+RV_STR+ System.getProperty("file.separator");
-		
-		File tempFile = new File(tempRVdir);
-		if(!(tempFile.exists()))
-			tempFile.mkdir();
+    /**
+     * Create a file "name" under the directory "path"
+     * 
+     * @param path
+     * @param name
+     * @return
+     * @throws IOException
+     */
+    public static File newOutFile(String path, String name) throws IOException {
 
-		return tempRVdir;
-	}
+        File z3Dir = new File(path);
+        // Here comes the existence check
+        if (!z3Dir.exists())
+            z3Dir.mkdirs();
+
+        File f = new File(path, name);
+        if (f.exists()) {
+            f.delete();
+        }
+
+        f.createNewFile();
+
+        return f;
+    }
+
+    public static PrintWriter newWriter(File file, boolean append) throws IOException {
+        return new PrintWriter(new BufferedWriter(new FileWriter(file, append)));
+    }
+
+    public static String getTempRVDirectory() {
+        String tempdir = System.getProperty("java.io.tmpdir");
+
+        String tempRVdir = tempdir + System.getProperty("file.separator") + RV_STR
+                + System.getProperty("file.separator");
+
+        File tempFile = new File(tempRVdir);
+        if (!(tempFile.exists()))
+            tempFile.mkdir();
+
+        return tempRVdir;
+    }
 
     static String spaces(int i) {
         return chars(i, ' ');
     }
 
     public static String chars(int i, char c) {
-        if (i <= 0) i = 3;
+        if (i <= 0)
+            i = 3;
         char[] spaces = new char[i];
         Arrays.fill(spaces, c);
         return new String(spaces);
@@ -135,7 +136,7 @@ public class Util {
         }).start();
     }
 
-    public static String convertFileToString(File file) throws IOException{
+    public static String convertFileToString(File file) throws IOException {
         FileInputStream fileInputStream = new FileInputStream(file);
         byte[] b = new byte[fileInputStream.available()];
         fileInputStream.read(b);
@@ -144,7 +145,7 @@ public class Util {
         return content;
     }
 
-    public static String convertFileToString(String path) throws IOException{
+    public static String convertFileToString(String path) throws IOException {
         return convertFileToString(new File(path));
     }
 }

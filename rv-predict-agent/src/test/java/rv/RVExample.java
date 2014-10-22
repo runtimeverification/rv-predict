@@ -29,43 +29,38 @@
 package rv;
 
 /**
- * An example to demonstrate a race that can be detected by
- * commuting the order of two synchronization blocks
+ * An example to demonstrate a race that can be detected by commuting the order
+ * of two synchronization blocks
  * 
  * @author jeffhuang
  *
  */
 public class RVExample {
-	static Object lock = new Object();
-	
-	static int x=0;
-	
-	public static void main(String[] args)
-	{
-			MyThread t = new MyThread();
-	
-			t.start();
-			
-			synchronized(lock)
-			{
-				x=0;//race here
-			}
-	}
-	
-	static class MyThread extends Thread
-	{
-		
-		public void run()
-		{
-			
-			synchronized(lock)
-			{
-				x++;
-			}
-			
-			//race here, may throw divide by zero exception
-			System.out.println(1/x);
+    static Object lock = new Object();
 
-		}
-	}
+    static int x = 0;
+
+    public static void main(String[] args) {
+        MyThread t = new MyThread();
+
+        t.start();
+
+        synchronized (lock) {
+            x = 0;// race here
+        }
+    }
+
+    static class MyThread extends Thread {
+
+        public void run() {
+
+            synchronized (lock) {
+                x++;
+            }
+
+            // race here, may throw divide by zero exception
+            System.out.println(1 / x);
+
+        }
+    }
 }

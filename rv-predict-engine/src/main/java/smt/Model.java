@@ -27,7 +27,7 @@
   The views and conclusions contained in the software and documentation are those
   of the authors and should not be interpreted as representing official policies, 
   either expressed or implied, of the FreeBSD Project.
-*/
+ */
 
 package smt;
 
@@ -35,68 +35,59 @@ import java.util.Map;
 import java.util.HashMap;
 
 /**
- * Z3 model of the solution to order variables.
- * THhe model is kept as a map from each order 
- * variable to the corresponding value.
+ * Z3 model of the solution to order variables. THhe model is kept as a map from
+ * each order variable to the corresponding value.
  * 
  * @author jeffhuang
  *
  */
-public class Model
-{
-	Map<String,Object> vals = new HashMap<>();
-	
-	void put(String varName, Object value)
-	{
-		vals.put(varName, value);
-	}
-	public Map<String,Object> getMap()
-	{
-		return vals;
-	}
-	public Object get(String varName)
-	{
-		return vals.get(varName);
-	}
+public class Model {
+    Map<String, Object> vals = new HashMap<>();
 
-	public void print()
-	{
-		for(Map.Entry<String,Object> e : vals.entrySet()){
-			System.out.println(e.getKey() + " " + e.getValue());
-		}
-	}
+    void put(String varName, Object value) {
+        vals.put(varName, value);
+    }
 
-	public static class Array
-	{
-		private Map<Integer,Number> vals = new HashMap<>();
-		private Number defaultVal;
-		
-		void put(Integer index, Number value)
-		{
-			vals.put(index, value);
-		}
-		
-		public Number get(int index)
-		{
-			Number elem = vals.get(index);
-			if(elem != null)
-				return elem;
-			return defaultVal;
-		}
-		
-		void setDefaultValue(Number defaultVal)
-		{
-			this.defaultVal = defaultVal;
-		}
-		
-		public String toString()
-		{
-			StringBuilder buf = new StringBuilder();
-			for(Map.Entry<Integer,Number> e : vals.entrySet()){
-				buf.append("("+e.getKey()+", " + e.getValue()+") ");
-			}
-			buf.append("(?, "+defaultVal+")");
-			return buf.toString();
-		}
-	}
+    public Map<String, Object> getMap() {
+        return vals;
+    }
+
+    public Object get(String varName) {
+        return vals.get(varName);
+    }
+
+    public void print() {
+        for (Map.Entry<String, Object> e : vals.entrySet()) {
+            System.out.println(e.getKey() + " " + e.getValue());
+        }
+    }
+
+    public static class Array {
+        private Map<Integer, Number> vals = new HashMap<>();
+        private Number defaultVal;
+
+        void put(Integer index, Number value) {
+            vals.put(index, value);
+        }
+
+        public Number get(int index) {
+            Number elem = vals.get(index);
+            if (elem != null)
+                return elem;
+            return defaultVal;
+        }
+
+        void setDefaultValue(Number defaultVal) {
+            this.defaultVal = defaultVal;
+        }
+
+        public String toString() {
+            StringBuilder buf = new StringBuilder();
+            for (Map.Entry<Integer, Number> e : vals.entrySet()) {
+                buf.append("(" + e.getKey() + ", " + e.getValue() + ") ");
+            }
+            buf.append("(?, " + defaultVal + ")");
+            return buf.toString();
+        }
+    }
 }

@@ -37,69 +37,63 @@ import java.util.Vector;
  * @author jeffhuang
  *
  */
-public class Race implements IViolation{
+public class Race implements IViolation {
 
-	//not mutable
-	//why hashset has strange behavior??
-	
-	
-	//a pair of conflicting nodes
-	final protected String node1;
-	final protected String node2;
-	protected int hashcode;
-	
-	//the corresponding schedule
-	ArrayList<Vector<String>> schedules =  new ArrayList<Vector<String>>();
-	
-	public void addSchedule(Vector<String> schedule)
-	{
-		schedules.add(schedule);
-	}
+    // not mutable
+    // why hashset has strange behavior??
 
-	public ArrayList<Vector<String>> getSchedules()
-	{
-		return schedules;
-	}
-//	public Race (String node1,String node2)
-//	{
-//		this.node1 = node1;
-//		this.node2 = node2;
-//	}
-	public Race (String node1,String node2, int id1, int id2)
-	{
-		this.node1 = node1;
-		this.node2 = node2;
-		hashcode = id1*id1+id2*id2;
-	}
-	
-	@Override
-	public int hashCode()
-	{
-		//int code = node1.hashCode()+node2.hashCode();
-		//return code;
-		return hashcode;
-	}
-	@Override
-	public boolean equals(Object o)
-	{
-		if(o instanceof Race)
-		{
-			if((((Race) o).node1 == node1
-					&&((Race) o).node2 == node2)
-					||(((Race) o).node1 == node2
-							&&((Race) o).node2 == node1))
-				return true;
-			
-		}
-		
-		return false;
-	}
-	
-	@Override
-	public String toString()
-	{
+    // a pair of conflicting nodes
+    final protected String node1;
+    final protected String node2;
+    protected int hashcode;
+
+    // the corresponding schedule
+    ArrayList<Vector<String>> schedules = new ArrayList<Vector<String>>();
+
+    public void addSchedule(Vector<String> schedule) {
+        schedules.add(schedule);
+    }
+
+    public ArrayList<Vector<String>> getSchedules() {
+        return schedules;
+    }
+
+    // public Race (String node1,String node2)
+    // {
+    // this.node1 = node1;
+    // this.node2 = node2;
+    // }
+    public Race(String node1, String node2, int id1, int id2) {
+        this.node1 = node1;
+        this.node2 = node2;
+        hashcode = id1 * id1 + id2 * id2;
+    }
+
+    @Override
+    public int hashCode() {
+        // int code = node1.hashCode()+node2.hashCode();
+        // return code;
+        return hashcode;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof Race) {
+            if ((((Race) o).node1 == node1 && ((Race) o).node2 == node2)
+                    || (((Race) o).node1 == node2 && ((Race) o).node2 == node1))
+                return true;
+
+        }
+
+        return false;
+    }
+
+    @Override
+    public String toString() {
         // Assuming
-        // String sig_loc = source + "|" + (classname+"|"+methodsignature+"|"+sig_var+"|"+line_cur).replace("/", ".");
+        // String sig_loc = source + "|" +
+        // (classname+"|"+methodsignature+"|"+sig_var+"|"+line_cur).replace("/",
+        // ".");
         Location loc1 = new Location(node1);
         String result = "Race on ";
         if (loc1.varSignature == null) {
@@ -107,18 +101,15 @@ public class Race implements IViolation{
         } else {
             result += "field " + loc1.varSignature;
         }
-        result +=  " between";
+        result += " between";
         if (node1 == node2) {
-            result += " two instances of:\n" +
-                    "\t" + loc1 + "\n";
+            result += " two instances of:\n" + "\t" + loc1 + "\n";
         } else {
             Location loc2 = new Location(node2);
-            result += ":\n" +
-                    "\t" + loc1 + "\n" +
-                    "\t" + loc2 + "\n";
+            result += ":\n" + "\t" + loc1 + "\n" + "\t" + loc2 + "\n";
         }
         return result;
-	}
+    }
 
     class Location {
         String source;
@@ -149,8 +140,5 @@ public class Race implements IViolation{
             return className + "." + methodName + "(" + source + ":" + line + ")";
         }
     }
-
-
-	
 
 }

@@ -29,73 +29,68 @@
 package trace;
 
 /**
- * An abstract representation of an event in the trace. Each event has 
- * a global id (GID) representing their order in the trace,
- * a thread id (tid) representing the identity of their thread,
- * a static syntatic ID (ID) representing their program location,
- * and a corresponding type, e.g., read, write, lock, unlock, etc.
- * For most events except branch events, they also have a corresponding 
- * address attribute "addr" denoting the memory address they access. 
+ * An abstract representation of an event in the trace. Each event has a global
+ * id (GID) representing their order in the trace, a thread id (tid)
+ * representing the identity of their thread, a static syntatic ID (ID)
+ * representing their program location, and a corresponding type, e.g., read,
+ * write, lock, unlock, etc. For most events except branch events, they also
+ * have a corresponding address attribute "addr" denoting the memory address
+ * they access.
  * 
  * @author smhuang
  *
  */
-public abstract class AbstractNode{
-	/**
-	 * There are three kinds of mems: SPE, thread object id, ordinary object id
-	 */
-	/**
+public abstract class AbstractNode {
+    /**
+     * There are three kinds of mems: SPE, thread object id, ordinary object id
+     */
+    /**
 	 * 
 	 */
-	protected long GID;
-	protected int ID;
-	protected long tid;
-	protected TYPE type;
-	
-	public AbstractNode(long GID, long tid, int ID, TYPE type)
-	{
-		this.GID = GID;
-		this.tid = tid;
-		this.ID = ID;
-		this.type = type;
-	}
-	
-	public long getGID()
-	{
-		return GID;
-	}
-	public int getID()
-	{
-		return ID;
-	}
-	public long getTid()
-	{
-		return tid;
-	}
+    protected long GID;
+    protected int ID;
+    protected long tid;
+    protected TYPE type;
 
-	public void setTid(int tid)
-	{
-		this.tid = tid;
-	}
-	public boolean equals(AbstractNode node)
-	{
-		if(this.GID == node.getGID())
-		{
-			return true;
-		}
-		else
-			return false;
-	}
-	public TYPE getType()
-	{
-		return type;
-	}
-	public enum TYPE
-	{
-		INIT,READ,WRITE,LOCK,UNLOCK,WAIT,NOTIFY,START,JOIN,BRANCH,BB,PROPERTY
-	}
-	public String toString()
-	{
-		return GID+": thread "+tid+" "+ID+" "+type;
-	}
+    public AbstractNode(long GID, long tid, int ID, TYPE type) {
+        this.GID = GID;
+        this.tid = tid;
+        this.ID = ID;
+        this.type = type;
+    }
+
+    public long getGID() {
+        return GID;
+    }
+
+    public int getID() {
+        return ID;
+    }
+
+    public long getTid() {
+        return tid;
+    }
+
+    public void setTid(int tid) {
+        this.tid = tid;
+    }
+
+    public boolean equals(AbstractNode node) {
+        if (this.GID == node.getGID()) {
+            return true;
+        } else
+            return false;
+    }
+
+    public TYPE getType() {
+        return type;
+    }
+
+    public enum TYPE {
+        INIT, READ, WRITE, LOCK, UNLOCK, WAIT, NOTIFY, START, JOIN, BRANCH, BB, PROPERTY
+    }
+
+    public String toString() {
+        return GID + ": thread " + tid + " " + ID + " " + type;
+    }
 }

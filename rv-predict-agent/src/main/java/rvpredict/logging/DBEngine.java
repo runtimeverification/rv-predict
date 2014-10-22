@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -27,6 +27,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 package rvpredict.logging;
+
 import rvpredict.config.Config;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
 import rvpredict.h2.jdbc.JdbcSQLException;
@@ -39,55 +40,57 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Engine for interacting with database.
- * 
+ *
  * @author jeffhuang
  *
  */
 public class DBEngine {
 
     protected static long globalEventID = 0;
-    protected static long DBORDER = 0;//handle strange classloader
+    protected static long DBORDER = 0;// handle strange classloader
 
-    //currently we use the h2 database
+    // currently we use the h2 database
     protected final String dbname = "RVDatabase";
     private final int TABLE_NOT_FOUND_ERROR_CODE = 42102;
     private final int DATABASE_CLOSED = 90098;
-	public String appname = "main";
+    public String appname = "main";
 
-    //database schema
-    protected final String[] stmtsigtablecolname = {"SIG", "ID"};
-    protected final String[] stmtsigtablecoltype = {"VARCHAR", "INT"};
+    // database schema
+    protected final String[] stmtsigtablecolname = { "SIG", "ID" };
+    protected final String[] stmtsigtablecoltype = { "VARCHAR", "INT" };
 
-    protected final String[] scheduletablecolname = {"ID", "SIG", "SCHEDULE"};
-    protected final String[] scheduletablecoltype = {"INT", "VARCHAR", "ARRAY"};
+    protected final String[] scheduletablecolname = { "ID", "SIG", "SCHEDULE" };
+    protected final String[] scheduletablecoltype = { "INT", "VARCHAR", "ARRAY" };
 
-    protected final String[] sharedvarsigtablecolname = {"SIG"};
-    protected final String[] sharedvarsigcoltype = {"VARCHAR"};
+    protected final String[] sharedvarsigtablecolname = { "SIG" };
+    protected final String[] sharedvarsigcoltype = { "VARCHAR" };
 
-    protected final String[] sharedarrayloctablecolname = {"SIG"};
-    protected final String[] sharedarrayloccoltype = {"VARCHAR"};
+    protected final String[] sharedarrayloctablecolname = { "SIG" };
+    protected final String[] sharedarrayloccoltype = { "VARCHAR" };
 
-    protected final String[] varsigtablecolname = {"SIG", "ID"};
-    protected final String[] varsigcoltype = {"VARCHAR", "INT"};
+    protected final String[] varsigtablecolname = { "SIG", "ID" };
+    protected final String[] varsigcoltype = { "VARCHAR", "INT" };
 
-    protected final String[] volatilesigtablecolname = {"SIG", "ID"};
-    protected final String[] volatilesigcoltype = {"VARCHAR", "INT"};
+    protected final String[] volatilesigtablecolname = { "SIG", "ID" };
+    protected final String[] volatilesigcoltype = { "VARCHAR", "INT" };
 
-    protected final String[] tracetablecolname = {"GID", "TID", "ID", "ADDR", "VALUE", "TYPE"};
-    protected final String[] tracetablecoltype = {"BIGINT", "BIGINT", "INT", "VARCHAR", "VARCHAR", "TINYINT"};
+    protected final String[] tracetablecolname = { "GID", "TID", "ID", "ADDR", "VALUE", "TYPE" };
+    protected final String[] tracetablecoltype = { "BIGINT", "BIGINT", "INT", "VARCHAR", "VARCHAR",
+            "TINYINT" };
 
-    protected final String[] tidtablecolname = {"TID", "NAME"};
-    protected final String[] tidtablecoltype = {"BIGINT", "VARCHAR"};
+    protected final String[] tidtablecolname = { "TID", "NAME" };
+    protected final String[] tidtablecoltype = { "BIGINT", "VARCHAR" };
 
-    protected final String[] propertytablecolname = {"PROPERTY", "ID"};
-    protected final String[] propertytablecoltype = {"VARCHAR", "INT"};
+    protected final String[] propertytablecolname = { "PROPERTY", "ID" };
+    protected final String[] propertytablecoltype = { "VARCHAR", "INT" };
 
-    //READ,WRITE,LOCK,UNLOCK,WAIT,NOTIFY,START,JOIN,BRANCH,BB
-    public final byte[] tracetypetable = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b'};
+    // READ,WRITE,LOCK,UNLOCK,WAIT,NOTIFY,START,JOIN,BRANCH,BB
+    public final byte[] tracetypetable = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a',
+            'b' };
     protected Connection conn;
     protected PreparedStatement prepStmt;
 
-    protected PreparedStatement prepStmt2;//just for thread id-name
+    protected PreparedStatement prepStmt2;// just for thread id-name
 
     public String tracetablename;
     public String tidtablename;
@@ -100,20 +103,20 @@ public class DBEngine {
     private String varsigtablename;
     private String sharedarrayloctablename;
 
-	//TODO: What if the program does not terminate??
+    // TODO: What if the program does not terminate??
 
-	protected BlockingQueue<Stack<EventItem>> queue;
-	//we can also use our own Stack implementation here
-	protected Stack<EventItem> buffer;
-	protected Object dblock = new Object();
+    protected BlockingQueue<Stack<EventItem>> queue;
+    // we can also use our own Stack implementation here
+    protected Stack<EventItem> buffer;
+    protected Object dblock = new Object();
 
-	protected int BUFFER_THRESHOLD;
-	protected boolean asynchronousLogging;
+    protected int BUFFER_THRESHOLD;
+    protected boolean asynchronousLogging;
 
-	//private final String NO_AUTOCLOSE = ";DB_CLOSE_ON_EXIT=FALSE";//BUGGY in H2, DON'T USE IT
+    // private final String NO_AUTOCLOSE = ";DB_CLOSE_ON_EXIT=FALSE";//BUGGY in
+    // H2, DON'T USE IT
 
-	class EventItem
-	{
+    class EventItem {
         long GID;
         long TID;
         int ID;
@@ -131,77 +134,70 @@ public class DBEngine {
         }
     }
 
-	public void finishLogging()
-	{
-		//should wait for logging thread to finish
-		while(!queue.isEmpty());
+    public void finishLogging() {
+        // should wait for logging thread to finish
+        while (!queue.isEmpty())
+            ;
 
-		saveEventsToDB(buffer);
-		closeDB();
-	}
-	public void saveEventsToDB(Stack<EventItem> stack)
-	{
-		synchronized(dblock)
-		{
-		while(!stack.isEmpty())
-		{
-			EventItem item = stack.pop();
-			//System.out.println(item.GID);
-		try
-		{
-			prepStmt.setLong(1, item.GID);
-			prepStmt.setLong(2, item.TID);
-			prepStmt.setInt(3, item.ID);
-			prepStmt.setString(4, item.ADDR);
-			prepStmt.setString(5, item.VALUE);
-			prepStmt.setByte(6, item.TYPE);
+        saveEventsToDB(buffer);
+        closeDB();
+    }
 
-			prepStmt.execute();
+    public void saveEventsToDB(Stack<EventItem> stack) {
+        synchronized (dblock) {
+            while (!stack.isEmpty()) {
+                EventItem item = stack.pop();
+                // System.out.println(item.GID);
+                try {
+                    prepStmt.setLong(1, item.GID);
+                    prepStmt.setLong(2, item.TID);
+                    prepStmt.setInt(3, item.ID);
+                    prepStmt.setString(4, item.ADDR);
+                    prepStmt.setString(5, item.VALUE);
+                    prepStmt.setByte(6, item.TYPE);
 
-		}catch(Exception e)
-		{
-			e.printStackTrace();
-		}
-		}
-		}
-	}
-	public void startAsynchronousLogging()
-	{
-		asynchronousLogging = true;
+                    prepStmt.execute();
 
-		queue = new LinkedBlockingQueue<Stack<EventItem>>();
-		buffer = new Stack<EventItem>();
-		BUFFER_THRESHOLD = 100000;//TODO: make it configurable
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 
-		Thread t = new Thread(new Runnable()
-		{
+    public void startAsynchronousLogging() {
+        asynchronousLogging = true;
 
-			@Override
-			public void run() {
+        queue = new LinkedBlockingQueue<Stack<EventItem>>();
+        buffer = new Stack<EventItem>();
+        BUFFER_THRESHOLD = 100000;// TODO: make it configurable
 
+        Thread t = new Thread(new Runnable() {
 
-				while(true)
-				{
-					try {
-						Stack<EventItem> stack = queue.take();
-						saveEventsToDB(stack);
+            @Override
+            public void run() {
 
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-			}
+                while (true) {
+                    try {
+                        Stack<EventItem> stack = queue.take();
+                        saveEventsToDB(stack);
 
-		});
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }
 
-		t.setDaemon(true);
+        });
 
-		t.start();
+        t.setDaemon(true);
 
-	}
-	public DBEngine(String directory, String name)
-    {
+        t.start();
+
+    }
+
+    public DBEngine(String directory, String name) {
         appname = name;
         tracetablename = "trace_" + name;
         tidtablename = "tid_" + name;
@@ -218,12 +214,12 @@ public class DBEngine {
         } catch (Exception e) {
             e.printStackTrace();
         }
-	}
+    }
 
     public void closeDB() {
         try {
             conn.createStatement().execute("SHUTDOWN");
-            //conn.close();
+            // conn.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -231,7 +227,8 @@ public class DBEngine {
 
     public void saveProperty(String name, int ID, boolean dropTable) {
         try {
-            if (dropTable) createPropertyTable(true);
+            if (dropTable)
+                createPropertyTable(true);
             String sql_insertdata = "INSERT INTO " + propertytablename + " VALUES (?,?)";
             PreparedStatement prepStmt = conn.prepareStatement(sql_insertdata);
             prepStmt.setString(1, name);
@@ -243,26 +240,28 @@ public class DBEngine {
     }
 
     /**
-     * Drops all relevant tables of the database.  Used for a clean start.
-     * @throws Exception if errors are reported by the sql command
+     * Drops all relevant tables of the database. Used for a clean start.
+     *
+     * @throws Exception
+     *             if errors are reported by the sql command
      */
     public void dropAll() throws Exception {
         Statement stmt = conn.createStatement();
 
         String sql_dropTable;
-        sql_dropTable = "DROP TABLE IF EXISTS "+propertytablename;
+        sql_dropTable = "DROP TABLE IF EXISTS " + propertytablename;
         stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS "+scheduletablename;
+        sql_dropTable = "DROP TABLE IF EXISTS " + scheduletablename;
         stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS "+stmtsigtablename;
+        sql_dropTable = "DROP TABLE IF EXISTS " + stmtsigtablename;
         stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS "+sharedvarsigtablename;
+        sql_dropTable = "DROP TABLE IF EXISTS " + sharedvarsigtablename;
         stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS "+volatilesigtablename;
+        sql_dropTable = "DROP TABLE IF EXISTS " + volatilesigtablename;
         stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS "+tracetablename;
+        sql_dropTable = "DROP TABLE IF EXISTS " + tracetablename;
         stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS "+tidtablename;
+        sql_dropTable = "DROP TABLE IF EXISTS " + tidtablename;
         stmt.execute(sql_dropTable);
         sql_dropTable = "DROP TABLE IF EXISTS " + varsigtablename;
         stmt.execute(sql_dropTable);
@@ -270,6 +269,7 @@ public class DBEngine {
 
     /**
      * Checks that all relevant tables exist.
+     *
      * @throws Exception
      */
     public boolean checkTables() throws SQLException {
@@ -277,15 +277,15 @@ public class DBEngine {
 
         String sql_checkTable;
         try {
-            sql_checkTable = "SELECT COUNT(*) FROM "+stmtsigtablename;
+            sql_checkTable = "SELECT COUNT(*) FROM " + stmtsigtablename;
             stmt.execute(sql_checkTable);
-            sql_checkTable = "SELECT COUNT(*) FROM "+varsigtablename;
+            sql_checkTable = "SELECT COUNT(*) FROM " + varsigtablename;
             stmt.execute(sql_checkTable);
-            sql_checkTable = "SELECT COUNT(*) FROM "+volatilesigtablename;
+            sql_checkTable = "SELECT COUNT(*) FROM " + volatilesigtablename;
             stmt.execute(sql_checkTable);
-            sql_checkTable = "SELECT COUNT(*) FROM "+tracetablename;
+            sql_checkTable = "SELECT COUNT(*) FROM " + tracetablename;
             stmt.execute(sql_checkTable);
-            sql_checkTable = "SELECT COUNT(*) FROM "+tidtablename;
+            sql_checkTable = "SELECT COUNT(*) FROM " + tidtablename;
             stmt.execute(sql_checkTable);
         } catch (SQLException e) {
             if (e.getErrorCode() == TABLE_NOT_FOUND_ERROR_CODE)
@@ -302,9 +302,9 @@ public class DBEngine {
             stmt.execute(sql_dropTable);
         }
 
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + propertytablename + " (" +
-                propertytablecolname[0] + " " + propertytablecoltype[0] + ", " +
-                propertytablecolname[1] + " " + propertytablecoltype[1] + ")";
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + propertytablename + " ("
+                + propertytablecolname[0] + " " + propertytablecoltype[0] + ", "
+                + propertytablecolname[1] + " " + propertytablecoltype[1] + ")";
         stmt.execute(sql_createTable);
 
     }
@@ -316,10 +316,10 @@ public class DBEngine {
             stmt.execute(sql_dropTable);
         }
 
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + scheduletablename + " (" +
-                scheduletablecolname[0] + " " + scheduletablecoltype[0] + " PRIMARY KEY, " +
-                scheduletablecolname[1] + " " + scheduletablecoltype[1] + ", " +
-                scheduletablecolname[2] + " " + scheduletablecoltype[2] + ")";
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + scheduletablename + " ("
+                + scheduletablecolname[0] + " " + scheduletablecoltype[0] + " PRIMARY KEY, "
+                + scheduletablecolname[1] + " " + scheduletablecoltype[1] + ", "
+                + scheduletablecolname[2] + " " + scheduletablecoltype[2] + ")";
         stmt.execute(sql_createTable);
 
         String sql_insertdata = "INSERT INTO " + scheduletablename + " VALUES (?,?,?)";
@@ -333,9 +333,9 @@ public class DBEngine {
             stmt.execute(sql_dropTable);
         }
 
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + stmtsigtablename + " (" +
-                stmtsigtablecolname[0] + " " + stmtsigtablecoltype[0] + " PRIMARY KEY, " +
-                stmtsigtablecolname[1] + " " + stmtsigtablecoltype[1] + ")";
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + stmtsigtablename + " ("
+                + stmtsigtablecolname[0] + " " + stmtsigtablecoltype[0] + " PRIMARY KEY, "
+                + stmtsigtablecolname[1] + " " + stmtsigtablecoltype[1] + ")";
         stmt.execute(sql_createTable);
 
         String sql_insertdata = "INSERT INTO " + stmtsigtablename + " VALUES (?,?)";
@@ -349,9 +349,9 @@ public class DBEngine {
             stmt.execute(sql_dropTable);
         }
 
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + varsigtablename + " (" +
-                varsigtablecolname[0] + " " + varsigcoltype[0] + " PRIMARY KEY, " +
-                varsigtablecolname[1] + " " + varsigcoltype[1] + ")";
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + varsigtablename + " ("
+                + varsigtablecolname[0] + " " + varsigcoltype[0] + " PRIMARY KEY, "
+                + varsigtablecolname[1] + " " + varsigcoltype[1] + ")";
         stmt.execute(sql_createTable);
 
         String sql_insertdata = "INSERT INTO " + varsigtablename + " VALUES (?,?)";
@@ -365,8 +365,8 @@ public class DBEngine {
             stmt.execute(sql_dropTable);
         }
 
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + sharedarrayloctablename + " (" +
-                sharedarrayloctablecolname[0] + " " + sharedarrayloccoltype[0] + ")";
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + sharedarrayloctablename + " ("
+                + sharedarrayloctablecolname[0] + " " + sharedarrayloccoltype[0] + ")";
         stmt.execute(sql_createTable);
 
         String sql_insertdata = "INSERT INTO " + sharedarrayloctablename + " VALUES (?)";
@@ -380,8 +380,8 @@ public class DBEngine {
             stmt.execute(sql_dropTable);
         }
 
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + sharedvarsigtablename + " (" +
-                sharedvarsigtablecolname[0] + " " + sharedvarsigcoltype[0] + ")";
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + sharedvarsigtablename + " ("
+                + sharedvarsigtablecolname[0] + " " + sharedvarsigcoltype[0] + ")";
         stmt.execute(sql_createTable);
 
         String sql_insertdata = "INSERT INTO " + sharedvarsigtablename + " VALUES (?)";
@@ -395,9 +395,9 @@ public class DBEngine {
             stmt.execute(sql_dropTable);
         }
 
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + volatilesigtablename + " (" +
-                volatilesigtablecolname[0] + " " + volatilesigcoltype[0] + " PRIMARY KEY, " +
-                volatilesigtablecolname[1] + " " + volatilesigcoltype[1] + ")";
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + volatilesigtablename + " ("
+                + volatilesigtablecolname[0] + " " + volatilesigcoltype[0] + " PRIMARY KEY, "
+                + volatilesigtablecolname[1] + " " + volatilesigcoltype[1] + ")";
         stmt.execute(sql_createTable);
 
         String sql_insertdata = "INSERT INTO " + volatilesigtablename + " VALUES (?,?)";
@@ -411,22 +411,23 @@ public class DBEngine {
             stmt.execute(sql_dropTable);
         }
 
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + tracetablename + " (" +
-                tracetablecolname[0] + " " + tracetablecoltype[0] + " AUTO_INCREMENT, " +//PRIMARY KEY
-                tracetablecolname[1] + " " + tracetablecoltype[1] + ", " +
-                tracetablecolname[2] + " " + tracetablecoltype[2] + ", " +
-                tracetablecolname[3] + " " + tracetablecoltype[3] + ", " +
-                tracetablecolname[4] + " " + tracetablecoltype[4] + ", " +
-                tracetablecolname[5] + " " + tracetablecoltype[5] + ", " +
-                "PRIMARY KEY (" + tracetablecolname[0] + ")" +
-                ")";
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + tracetablename + " ("
+                + tracetablecolname[0]
+                + " "
+                + tracetablecoltype[0]
+                + " AUTO_INCREMENT, "
+                + // PRIMARY KEY
+                tracetablecolname[1] + " " + tracetablecoltype[1] + ", " + tracetablecolname[2]
+                + " " + tracetablecoltype[2] + ", " + tracetablecolname[3] + " "
+                + tracetablecoltype[3] + ", " + tracetablecolname[4] + " " + tracetablecoltype[4]
+                + ", " + tracetablecolname[5] + " " + tracetablecoltype[5] + ", " + "PRIMARY KEY ("
+                + tracetablecolname[0] + ")" + ")";
         stmt.execute(sql_createTable);
 
-        String sql_insertdata = "INSERT INTO " + tracetablename + " ( " + tracetablecolname[1] + ", " +
-                tracetablecolname[2] + ", " +
-                tracetablecolname[3] + ", " +
-                tracetablecolname[4] + ", " +
-                tracetablecolname[5] + " " + " ) VALUES (?,?,?,?,?)";
+        String sql_insertdata = "INSERT INTO " + tracetablename + " ( " + tracetablecolname[1]
+                + ", " + tracetablecolname[2] + ", " + tracetablecolname[3] + ", "
+                + tracetablecolname[4] + ", " + tracetablecolname[5] + " "
+                + " ) VALUES (?,?,?,?,?)";
         prepStmt = conn.prepareStatement(sql_insertdata);
 
     }
@@ -440,8 +441,9 @@ public class DBEngine {
             stmt.execute(sql_dropTable);
         }
 
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + tidtablename + " (" +
-                tidtablecolname[0] + " " + tidtablecoltype[0] + ", " +//PRIMARY KEY
+        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + tidtablename + " ("
+                + tidtablecolname[0] + " " + tidtablecoltype[0] + ", " + // PRIMARY
+                                                                         // KEY
                 tidtablecolname[1] + " " + tidtablecoltype[1] + ")";
         stmt.execute(sql_createTable);
 
@@ -469,7 +471,8 @@ public class DBEngine {
             prepStmt.execute();
 
         } catch (Exception e) {
-            System.err.println("\nGot exception while trying to save " + "* stmt: ["+id+"] "+sig+" *");
+            System.err.println("\nGot exception while trying to save " + "* stmt: [" + id + "] "
+                    + sig + " *");
             System.err.println(e.getMessage());
         }
     }
@@ -498,7 +501,7 @@ public class DBEngine {
                 sharedArrayLocs.add(SIG);
             }
         } catch (Exception e) {
-            //e.printStackTrace();
+            // e.printStackTrace();
         }
         if (sharedArrayLocs.isEmpty())
             return null;
@@ -519,7 +522,7 @@ public class DBEngine {
                 sharedVariables.add(SIG);
             }
         } catch (Exception e) {
-            //e.printStackTrace();
+            // e.printStackTrace();
         }
         if (sharedVariables.isEmpty())
             return null;
@@ -546,7 +549,8 @@ public class DBEngine {
             prepStmt.execute();
 
         } catch (Exception e) {
-            System.err.println("Got exception while trying to save " + "* ["+id+"] "+sig+" *");
+            System.err.println("Got exception while trying to save " + "* [" + id + "] " + sig
+                    + " *");
             System.err.println(e.getMessage());
         }
     }
@@ -559,71 +563,67 @@ public class DBEngine {
             prepStmt.execute();
 
         } catch (Exception e) {
-            System.err.println("Got exception while trying to save " + "* volatile: ["+id+"] "+sig+" *");
+            System.err.println("Got exception while trying to save " + "* volatile: [" + id + "] "
+                    + sig + " *");
             System.err.println(e.getMessage());
         }
     }
 
-
     public void saveEventToDB(long TID, int ID, String ADDR, String VALUE, byte TYPE) {
-        if (Config.shutDown) return;
+        if (Config.shutDown)
+            return;
         synchronizedSaveEventToDB(TID, ID, ADDR, VALUE, TYPE);
     }
 
-
-	/**
-	 * save an event to database. must be synchronized. 
-	 * otherwise, easy to throw Unique index or primary key violation.
-	 */
-	public synchronized void synchronizedSaveEventToDB(long TID, int ID, String ADDR, String VALUE, byte TYPE)
-	{
+    /**
+     * save an event to database. must be synchronized. otherwise, easy to throw
+     * Unique index or primary key violation.
+     */
+    public synchronized void synchronizedSaveEventToDB(long TID, int ID, String ADDR, String VALUE,
+            byte TYPE) {
 
         PreparedStatement prepStmt = this.prepStmt;
         RecordRT.saveMetaData(this, GlobalStateForInstrumentation.instance, false);
         this.prepStmt = prepStmt;
-		//make true->1. false->0
-		if(VALUE.equals("true"))
-			VALUE="1";
-		if(VALUE.equals("false"))
-			VALUE="0";
-		
-		//globalEventID=globalEventID+1;
-		 //System.out.println(globalEventID+" "+TID+" "+ADDR+" "+VALUE+" "+TYPE);
+        // make true->1. false->0
+        if (VALUE.equals("true"))
+            VALUE = "1";
+        if (VALUE.equals("false"))
+            VALUE = "0";
 
-		try
-		{
-/*			//prepStmt.setLong(1, globalEventID);
-			prepStmt.setLong(2, TID);
-			prepStmt.setInt(3, ID);
-			prepStmt.setString(4, ADDR);
-			prepStmt.setString(5, VALUE);
-			prepStmt.setByte(6, TYPE);
-*/
-			prepStmt.setLong(1, TID);
-			prepStmt.setInt(2, ID);
-			prepStmt.setString(3, ADDR);
-			prepStmt.setString(4, VALUE);
-			prepStmt.setByte(5, TYPE);
-			
-			prepStmt.execute();
+        // globalEventID=globalEventID+1;
+        // System.out.println(globalEventID+" "+TID+" "+ADDR+" "+VALUE+" "+TYPE);
 
+        try {
+            /*
+             * //prepStmt.setLong(1, globalEventID); prepStmt.setLong(2, TID);
+             * prepStmt.setInt(3, ID); prepStmt.setString(4, ADDR);
+             * prepStmt.setString(5, VALUE); prepStmt.setByte(6, TYPE);
+             */
+            prepStmt.setLong(1, TID);
+            prepStmt.setInt(2, ID);
+            prepStmt.setString(3, ADDR);
+            prepStmt.setString(4, VALUE);
+            prepStmt.setByte(5, TYPE);
 
-			
-		}catch(Exception e)
-		{
+            prepStmt.execute();
+
+        } catch (Exception e) {
             checkException(e);
-			if(!"Finalizer".equals(Thread.currentThread().getName()))
-				e.printStackTrace();// avoid finalizer thread
+            if (!"Finalizer".equals(Thread.currentThread().getName()))
+                e.printStackTrace();// avoid finalizer thread
 
-		}
-	}
+        }
+    }
 
     public void checkException(Exception e) {
-        if (Config.shutDown) return;
+        if (Config.shutDown)
+            return;
         if (e instanceof SQLException) {
             SQLException esql = (SQLException) e;
             if (esql.getErrorCode() == DATABASE_CLOSED) {
-                System.err.println("Not enough space left for logging in " + Config.instance.commandLine.outdir);
+                System.err.println("Not enough space left for logging in "
+                        + Config.instance.commandLine.outdir);
                 System.err.println("Please free some space and restart RV-Predict.");
                 Config.shutDown = true;
                 System.exit(1);
@@ -631,24 +631,23 @@ public class DBEngine {
         }
         e.printStackTrace();
     }
-	
-	protected void connectDB(String directory) throws Exception
-	{
-		try{
-			Driver driver = new rvpredict.h2.Driver();
-			String db_url = "jdbc:h2:"+directory+"/"+dbname+";DB_CLOSE_ON_EXIT=FALSE";
-			conn = driver.connect(db_url, null);
-			
-			//conn  = DriverManager.getConnection(db_url);
-	        //conn.setAutoCommit(true);
-	        //check if Database may be already in use
-	        //kill?
-		}catch(Exception e)
-		{
-			e.printStackTrace();
-			//DBORDER++;
-	        //conn  = DriverManager.getConnection("jdbc:h2:"+Util.getUserHomeDirectory()+dbname+DBORDER);//+";AUTO_SERVER=true"
-		}
-	}
+
+    protected void connectDB(String directory) throws Exception {
+        try {
+            Driver driver = new rvpredict.h2.Driver();
+            String db_url = "jdbc:h2:" + directory + "/" + dbname + ";DB_CLOSE_ON_EXIT=FALSE";
+            conn = driver.connect(db_url, null);
+
+            // conn = DriverManager.getConnection(db_url);
+            // conn.setAutoCommit(true);
+            // check if Database may be already in use
+            // kill?
+        } catch (Exception e) {
+            e.printStackTrace();
+            // DBORDER++;
+            // conn =
+            // DriverManager.getConnection("jdbc:h2:"+Util.getUserHomeDirectory()+dbname+DBORDER);//+";AUTO_SERVER=true"
+        }
+    }
 
 }

@@ -27,6 +27,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 package graph;
+
 /*************************************************************************
  *  Compilation:  javac SET.java
  *  Execution:    java SET
@@ -45,23 +46,22 @@ import java.util.TreeSet;
 import java.util.Iterator;
 import java.util.SortedSet;
 
-
-
 /**
- *  The <tt>SET</tt> class represents an ordered set. It assumes that
- *  the elements are <tt>Comparable</tt>.
- *  It supports the usual <em>add</em>, <em>contains</em>, and <em>delete</em>
- *  methods. It also provides ordered methods for finding the <em>minimum</em>,
- *  <em>maximum</em>, <em>floor</em>, and <em>ceiling</em>.
- *  <p>
- *  This implementation uses a balanced binary search tree.
- *  The <em>add</em>, <em>contains</em>, <em>delete</em>, <em>minimum</em>,
- *  <em>maximum</em>, <em>ceiling</em>, and <em>floor</em> methods take
- *  logarithmic time.
- *  <p>
- *  For additional documentation, see <a href="http://introcs.cs.princeton.edu/44st">Section 4.4</a> of
- *  <i>Introduction to Programming in Java: An Interdisciplinary Approach</i> by Robert Sedgewick and Kevin Wayne.
- *  */
+ * The <tt>SET</tt> class represents an ordered set. It assumes that the
+ * elements are <tt>Comparable</tt>. It supports the usual <em>add</em>,
+ * <em>contains</em>, and <em>delete</em> methods. It also provides ordered
+ * methods for finding the <em>minimum</em>, <em>maximum</em>, <em>floor</em>,
+ * and <em>ceiling</em>.
+ * <p>
+ * This implementation uses a balanced binary search tree. The <em>add</em>,
+ * <em>contains</em>, <em>delete</em>, <em>minimum</em>, <em>maximum</em>,
+ * <em>ceiling</em>, and <em>floor</em> methods take logarithmic time.
+ * <p>
+ * For additional documentation, see <a
+ * href="http://introcs.cs.princeton.edu/44st">Section 4.4</a> of
+ * <i>Introduction to Programming in Java: An Interdisciplinary Approach</i> by
+ * Robert Sedgewick and Kevin Wayne.
+ * */
 
 public class SET<Key extends Comparable<Key>> implements Iterable<Key> {
     private TreeSet<Key> set;
@@ -79,7 +79,7 @@ public class SET<Key extends Comparable<Key>> implements Iterable<Key> {
     public boolean isEmpty() {
         return set.isEmpty();
     }
- 
+
     /**
      * Add the key to this set.
      */
@@ -134,20 +134,25 @@ public class SET<Key extends Comparable<Key>> implements Iterable<Key> {
      */
     public Key ceil(Key k) {
         SortedSet<Key> tail = set.tailSet(k);
-        if (tail.isEmpty()) return null;
-        else return tail.first();
+        if (tail.isEmpty())
+            return null;
+        else
+            return tail.first();
     }
 
     /**
      * Return the largest key in this set <= k.
      */
     public Key floor(Key k) {
-        if (set.contains(k)) return k;
+        if (set.contains(k))
+            return k;
 
         // does not include key if present (!)
         SortedSet<Key> head = set.headSet(k);
-        if (head.isEmpty()) return null;
-        else return head.last();
+        if (head.isEmpty())
+            return null;
+        else
+            return head.last();
     }
 
     /**
@@ -155,8 +160,12 @@ public class SET<Key extends Comparable<Key>> implements Iterable<Key> {
      */
     public SET<Key> union(SET<Key> that) {
         SET<Key> c = new SET<Key>();
-        for (Key x : this) { c.add(x); }
-        for (Key x : that) { c.add(x); }
+        for (Key x : this) {
+            c.add(x);
+        }
+        for (Key x : that) {
+            c.add(x);
+        }
         return c;
     }
 
@@ -167,27 +176,27 @@ public class SET<Key extends Comparable<Key>> implements Iterable<Key> {
         SET<Key> c = new SET<Key>();
         if (this.size() < that.size()) {
             for (Key x : this) {
-                if (that.contains(x)) c.add(x);
+                if (that.contains(x))
+                    c.add(x);
             }
-        }
-        else {
+        } else {
             for (Key x : that) {
-                if (this.contains(x)) c.add(x);
+                if (this.contains(x))
+                    c.add(x);
             }
         }
         return c;
     }
 
-   /***********************************************************************
-    * Test routine.
-    **********************************************************************/
+    /***********************************************************************
+     * Test routine.
+     **********************************************************************/
     public static void main(String[] args) {
         SET<String> set = new SET<String>();
 
-
         // insert some keys
         set.add("www.cs.princeton.edu");
-        set.add("www.cs.princeton.edu");    // overwrite old value
+        set.add("www.cs.princeton.edu"); // overwrite old value
         set.add("www.princeton.edu");
         set.add("www.math.princeton.edu");
         set.add("www.yale.edu");
@@ -205,7 +214,6 @@ public class SET<Key extends Comparable<Key>> implements Iterable<Key> {
         set.add("www.cnn.com");
         set.add("www.iitb.ac.in");
 
-
         System.out.println(set.contains("www.cs.princeton.edu"));
         System.out.println(!set.contains("www.harvardsucks.com"));
         System.out.println(set.contains("www.simpsons.com"));
@@ -218,7 +226,6 @@ public class SET<Key extends Comparable<Key>> implements Iterable<Key> {
         System.out.println("floor(www.simpsons.com) = " + set.floor("www.simpsons.com"));
         System.out.println("floor(www.simpsont.com) = " + set.floor("www.simpsont.com"));
         System.out.println();
-
 
         // print out all keys in the set in lexicographic order
         for (String s : set) {

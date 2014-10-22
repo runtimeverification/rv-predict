@@ -28,62 +28,55 @@
  ******************************************************************************/
 package trace;
 
-public class WriteNode extends AbstractNode implements IMemNode
-{
-	private long prevSyncId,prevBranchId;
+public class WriteNode extends AbstractNode implements IMemNode {
+    private long prevSyncId, prevBranchId;
 
-	private String value;
-	private String addr;
-	
-	public WriteNode(long GID, long tid, int ID, String addr, String value, TYPE type)
-	{
-		super(GID, tid, ID, type);
-		this.addr = addr;
-		this.value = value;
-	}
+    private String value;
+    private String addr;
 
-	public String getValue()
-	{
-		return value;
-	}
-	
-	public String getAddr()
-	
-	{
-		return addr;
-	}
+    public WriteNode(long GID, long tid, int ID, String addr, String value, TYPE type) {
+        super(GID, tid, ID, type);
+        this.addr = addr;
+        this.value = value;
+    }
 
-	public String toString()
-	{
-		
-			return GID+": thread "+tid+ " "+ID+" "+addr+" "+value+" "+type;
-	}
-	
-	@Override
-	public long getPrevSyncId() {
-		// TODO Auto-generated method stub
-		return prevSyncId;
-	}
+    public String getValue() {
+        return value;
+    }
 
+    public String getAddr()
 
-	@Override
-	public void setPrevSyncId(long id) {
-		// TODO Auto-generated method stub
-		prevSyncId = id;
-	}
+    {
+        return addr;
+    }
 
+    public String toString() {
 
-	@Override
-	public long getPrevBranchId() {
-		// TODO Auto-generated method stub
-		return prevBranchId;
-	}
+        return GID + ": thread " + tid + " " + ID + " " + addr + " " + value + " " + type;
+    }
 
+    @Override
+    public long getPrevSyncId() {
+        // TODO Auto-generated method stub
+        return prevSyncId;
+    }
 
-	@Override
-	public void setPrevBranchId(long id) {
-		// TODO Auto-generated method stub
-		prevBranchId = id;
-	}
-	
+    @Override
+    public void setPrevSyncId(long id) {
+        // TODO Auto-generated method stub
+        prevSyncId = id;
+    }
+
+    @Override
+    public long getPrevBranchId() {
+        // TODO Auto-generated method stub
+        return prevBranchId;
+    }
+
+    @Override
+    public void setPrevBranchId(long id) {
+        // TODO Auto-generated method stub
+        prevBranchId = id;
+    }
+
 }

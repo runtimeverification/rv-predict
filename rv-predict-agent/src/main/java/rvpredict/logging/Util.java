@@ -32,28 +32,28 @@ import java.io.File;
 
 public class Util {
 
-	private final static String RV_STR = "rv";
-	
-	public static String getUserHomeDirectory() {
-		String homedir = System.getProperty("user.home");
-		if (!(homedir.endsWith("/") || homedir.endsWith("\\"))) {
-			homedir = homedir + System.getProperty("file.separator");
-		}
-		
-		return homedir;
-	}
+    private final static String RV_STR = "rv";
 
-	public static String getTempRVDirectory() {
-		String tempdir = System.getProperty("java.io.tmpdir");
-		
-		
-		String tempRVdir = tempdir + System.getProperty("file.separator")+RV_STR+ System.getProperty("file.separator");
-		
-		File tempFile = new File(tempRVdir);
-		if(!(tempFile.exists()))
-			tempFile.mkdir();
-		
-		return tempRVdir;
-	}
+    public static String getUserHomeDirectory() {
+        String homedir = System.getProperty("user.home");
+        if (!(homedir.endsWith("/") || homedir.endsWith("\\"))) {
+            homedir = homedir + System.getProperty("file.separator");
+        }
+
+        return homedir;
+    }
+
+    public static String getTempRVDirectory() {
+        String tempdir = System.getProperty("java.io.tmpdir");
+
+        String tempRVdir = tempdir + System.getProperty("file.separator") + RV_STR
+                + System.getProperty("file.separator");
+
+        File tempFile = new File(tempRVdir);
+        if (!(tempFile.exists()))
+            tempFile.mkdir();
+
+        return tempRVdir;
+    }
 
 }

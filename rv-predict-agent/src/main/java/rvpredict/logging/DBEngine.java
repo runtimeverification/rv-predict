@@ -29,6 +29,7 @@
 package rvpredict.logging;
 import rvpredict.config.Config;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
+import rvpredict.h2.jdbc.JdbcSQLException;
 
 import java.sql.*;
 import java.util.HashSet;
@@ -50,6 +51,7 @@ public class DBEngine {
     //currently we use the h2 database
     protected final String dbname = "RVDatabase";
     private final int TABLE_NOT_FOUND_ERROR_CODE = 42102;
+    private final int DATABASE_CLOSED = 90098;
 	public String appname = "main";
 
     //database schema
@@ -199,7 +201,7 @@ public class DBEngine {
 
 	}
 	public DBEngine(String directory, String name)
-	{
+    {
         appname = name;
         tracetablename = "trace_" + name;
         tidtablename = "tid_" + name;
@@ -216,12 +218,11 @@ public class DBEngine {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
+	}
 
     public void closeDB() {
         try {
             conn.createStatement().execute("SHUTDOWN");
-
             //conn.close();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -610,12 +611,26 @@ public class DBEngine {
 			
 		}catch(Exception e)
 		{
-			
+            checkException(e);
 			if(!"Finalizer".equals(Thread.currentThread().getName()))
 				e.printStackTrace();// avoid finalizer thread
 
 		}
 	}
+
+    public void checkException(Exception e) {
+        if (Config.shutDown) return;
+        if (e instanceof SQLException) {
+            SQLException esql = (SQLException) e;
+            if (esql.getErrorCode() == DATABASE_CLOSED) {
+                System.err.println("Not enough space left for logging in " + Config.instance.commandLine.outdir);
+                System.err.println("Please free some space and restart RV-Predict.");
+                Config.shutDown = true;
+                System.exit(1);
+            }
+        }
+        e.printStackTrace();
+    }
 	
 	protected void connectDB(String directory) throws Exception
 	{

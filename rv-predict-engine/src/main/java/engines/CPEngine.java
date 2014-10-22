@@ -27,7 +27,6 @@ package engines; /**************************************************************
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 import trace.AbstractNode;
-import trace.IMemNode;
 import trace.ISyncNode;
 import trace.JoinNode;
 import trace.LockNode;
@@ -43,16 +42,12 @@ import trace.AbstractNode.TYPE;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Set;
 import java.util.Stack;
 import java.util.Vector;
-import java.util.Map.Entry;
 
 /**
  * The engine class for causal-precedes (CP) based race detection.
@@ -228,14 +223,14 @@ public class CPEngine
 	
 					if(readaddresses!=null)
 					{
-						readstack.push(new HashSet(readaddresses));	
+						readstack.push(new HashSet<>(readaddresses));	
 						readaddresses.clear();
 					}
 					HashSet<String> writeaddresses = threadCurrentLockRegionWriteAddresses.get(tid);
 					
 					if(writeaddresses!=null)
 					{
-						writestack.push(new HashSet(writeaddresses));	
+						writestack.push(new HashSet<>(writeaddresses));	
 						writeaddresses.clear();
 					}
 					
@@ -320,8 +315,8 @@ public class CPEngine
 							lockWriteAccessedAddresses.put(addr, writeaddrList);
 						
 						}
-						readaddrList.add(new HashSet(readaddresses));
-						writeaddrList.add(new HashSet(writeaddresses));
+						readaddrList.add(new HashSet<>(readaddresses));
+						writeaddrList.add(new HashSet<>(writeaddresses));
 
 						syncNodeList.add(lp);
 						lockEngine.add(((ISyncNode)node).getAddr(),tid,lp);
@@ -433,8 +428,8 @@ public class CPEngine
 						lockWriteAccessedAddresses.put(addr, writeaddrList);
 					
 					}
-					readaddrList.add(new HashSet(readaddresses));
-					writeaddrList.add(new HashSet(writeaddresses));
+					readaddrList.add(new HashSet<>(readaddresses));
+					writeaddrList.add(new HashSet<>(writeaddresses));
 
 					syncNodeList.add(lp);
 					lockEngine.add(((ISyncNode)node).getAddr(),tid,lp);
@@ -487,7 +482,7 @@ public class CPEngine
 							lockAddrNodes.put(addr,syncNodeList);
 						}
 						syncNodeList.add(lp);
-						lockEngine.add(((ISyncNode)node).getAddr(),tid,lp);
+						lockEngine.add(node.getAddr(),tid,lp);
 
 						ArrayList<HashSet<String>> readaddrList = lockReadAccessedAddresses.get(addr);
 						if(readaddrList==null)
@@ -496,9 +491,9 @@ public class CPEngine
 							lockReadAccessedAddresses.put(addr,readaddrList);
 						}
 						if(readaddresses==null)
-							readaddrList.add(new HashSet());
+							readaddrList.add(new HashSet<String>());
 						else
-							readaddrList.add(new HashSet(readaddresses));
+							readaddrList.add(new HashSet<>(readaddresses));
 						
 						ArrayList<HashSet<String>> writeaddrList = lockWriteAccessedAddresses.get(addr);
 						if(writeaddrList==null)
@@ -507,9 +502,9 @@ public class CPEngine
 							lockWriteAccessedAddresses.put(addr,writeaddrList);
 						}
 						if(writeaddresses==null)
-							writeaddrList.add(new HashSet());
+							writeaddrList.add(new HashSet<String>());
 						else
-							writeaddrList.add(new HashSet(writeaddresses));
+							writeaddrList.add(new HashSet<>(writeaddresses));
 						
 						
 					}
@@ -559,8 +554,8 @@ public class CPEngine
 								HashSet<String> lastWriteAddresses,lastWriteAddresses2;
 								if(writeaddrList!=null)
 								{
-									lastWriteAddresses = new HashSet(writeaddrList.get(k1));
-									lastWriteAddresses2 = new HashSet(writeaddrList.get(k1));
+									lastWriteAddresses = new HashSet<>(writeaddrList.get(k1));
+									lastWriteAddresses2 = new HashSet<>(writeaddrList.get(k1));
 
 								}
 								else
@@ -582,7 +577,7 @@ public class CPEngine
 									
 									HashSet<String> lastReadWriteAddresses;
 									if(readaddrList!=null)
-										lastReadWriteAddresses= new HashSet(readaddrList.get(k1));
+										lastReadWriteAddresses= new HashSet<>(readaddrList.get(k1));
 									else
 										lastReadWriteAddresses= new HashSet<String> ();
 									

@@ -22,12 +22,8 @@ public class PackageValidator implements IParameterValidator {
                             " specified as part of the " + name + " option.");
                 }
                 char[] chars = pkgPart.toCharArray();
-                if (!Character.isJavaIdentifierStart(chars[0])) {
-                    throw new ParameterException("Incorrect package component " + pkgPart +
-                            " specified as part of the " + name + " option.");
-                }
                 for (char c : chars) {
-                    if (!Character.isJavaIdentifierPart(chars[0])) {
+                    if (!Character.isJavaIdentifierPart(c)) {
                         throw new ParameterException("Incorrect package component " + pkgPart +
                                 " specified as part of the " + name + " option.");
                     }

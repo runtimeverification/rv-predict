@@ -224,7 +224,6 @@ public class Configuration {
 
     public void parseArguments(String[] args, boolean checkJava) {
         this.args = args;
-        String pathSeparator = System.getProperty("path.separator");
         String fileSeparator = System.getProperty("file.separator");
         jCommander = new JCommander(this);
         jCommander.setProgramName(PROGRAM_NAME);

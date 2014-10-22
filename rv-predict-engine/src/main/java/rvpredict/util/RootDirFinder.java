@@ -7,8 +7,6 @@ import java.net.URI;
 import java.io.File;
 import java.io.IOException;
 
-import java.util.ArrayList;
-
 public class RootDirFinder extends URLClassLoader {
   private String rootDir = null;
   private String className = null;
@@ -56,11 +54,6 @@ public class RootDirFinder extends URLClassLoader {
     }
   }
 
-  private boolean isWindows(){
-    String os = System.getProperty("os.name").toLowerCase();
-    return (os.indexOf("win") > 0);
-  }
-
   //properly encode valid path characters for URIs... mostly just space
   //is a concern
   private String percentEncode(String s){
@@ -104,8 +97,7 @@ public class RootDirFinder extends URLClassLoader {
   }
 
   static public void main(String[] args){
-    RootDirFinder f = new RootDirFinder(new File(args[0]));
-    try{ 
+    try ( RootDirFinder f = new RootDirFinder(new File(args[0]))) { 
       System.out.println(f.getRootDir());
       System.out.println(f.getClassName());
     } catch (Exception e) {

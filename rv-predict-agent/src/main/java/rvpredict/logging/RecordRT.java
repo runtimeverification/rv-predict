@@ -71,6 +71,7 @@ public final class RecordRT {
             readThreadArrayMap = new HashMap<Integer, long[]>();
 
             threadLocalIDSet = new ThreadLocal<HashSet<Integer>>() {
+                @Override
                 protected HashSet<Integer> initialValue() {
 
                     return new HashSet<Integer>();
@@ -78,6 +79,7 @@ public final class RecordRT {
                 }
             };
             threadLocalIDSet2 = new ThreadLocal<HashSet<Integer>>() {
+                @Override
                 protected HashSet<Integer> initialValue() {
 
                     return new HashSet<Integer>();
@@ -210,6 +212,7 @@ public final class RecordRT {
             }
 
         } catch (Exception e) {
+            db.checkException(e);
             e.printStackTrace();
         }
     }

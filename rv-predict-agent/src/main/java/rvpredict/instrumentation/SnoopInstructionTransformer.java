@@ -79,9 +79,15 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             @Override
             public void cleanup() {
                 if (inLogger) {
+                    if (Config.shutDown)
+                        return;
                     Config.shutDown = true;
-                    GlobalStateForInstrumentation.instance.saveMetaData(db);
-                    db.closeDB();
+                    try {
+                        GlobalStateForInstrumentation.instance.saveMetaData(db);
+                        db.closeDB();
+                    } catch (Exception e) {
+                        db.checkException(e);
+                    }
                 }
             }
         };

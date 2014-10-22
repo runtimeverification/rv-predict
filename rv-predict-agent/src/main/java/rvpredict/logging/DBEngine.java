@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -30,6 +30,7 @@ package rvpredict.logging;
 
 import rvpredict.config.Config;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
+import rvpredict.h2.jdbc.JdbcSQLException;
 
 import java.sql.*;
 import java.util.HashSet;
@@ -39,7 +40,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Engine for interacting with database.
- * 
+ *
  * @author jeffhuang
  *
  */
@@ -51,6 +52,7 @@ public class DBEngine {
     // currently we use the h2 database
     protected final String dbname = "RVDatabase";
     private final int TABLE_NOT_FOUND_ERROR_CODE = 42102;
+    private final int DATABASE_CLOSED = 90098;
     public String appname = "main";
 
     // database schema
@@ -217,7 +219,6 @@ public class DBEngine {
     public void closeDB() {
         try {
             conn.createStatement().execute("SHUTDOWN");
-
             // conn.close();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -240,7 +241,7 @@ public class DBEngine {
 
     /**
      * Drops all relevant tables of the database. Used for a clean start.
-     * 
+     *
      * @throws Exception
      *             if errors are reported by the sql command
      */
@@ -268,7 +269,7 @@ public class DBEngine {
 
     /**
      * Checks that all relevant tables exist.
-     * 
+     *
      * @throws Exception
      */
     public boolean checkTables() throws SQLException {
@@ -608,11 +609,27 @@ public class DBEngine {
             prepStmt.execute();
 
         } catch (Exception e) {
-
+            checkException(e);
             if (!"Finalizer".equals(Thread.currentThread().getName()))
                 e.printStackTrace();// avoid finalizer thread
 
         }
+    }
+
+    public void checkException(Exception e) {
+        if (Config.shutDown)
+            return;
+        if (e instanceof SQLException) {
+            SQLException esql = (SQLException) e;
+            if (esql.getErrorCode() == DATABASE_CLOSED) {
+                System.err.println("Not enough space left for logging in "
+                        + Config.instance.commandLine.outdir);
+                System.err.println("Please free some space and restart RV-Predict.");
+                Config.shutDown = true;
+                System.exit(1);
+            }
+        }
+        e.printStackTrace();
     }
 
     protected void connectDB(String directory) throws Exception {

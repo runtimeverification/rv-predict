@@ -29,6 +29,7 @@
 package rvpredict.logging;
 import rvpredict.config.Config;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
+import rvpredict.h2.jdbc.JdbcSQLException;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -43,6 +44,11 @@ import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
+import java.io.RandomAccessFile;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Files;
+import java.nio.file.FileSystems;
 
 /**
  * Engine for interacting with database.
@@ -58,6 +64,7 @@ public class DBEngine {
     //currently we use the h2 database
     protected final String dbname = "RVDatabase";
     private final int TABLE_NOT_FOUND_ERROR_CODE = 42102;
+    private final int DATABASE_CLOSED = 90098;
 	public String appname = "main";
 
     //database schema
@@ -105,6 +112,8 @@ public class DBEngine {
     public String propertytablename;
     private String varsigtablename;
     private String sharedarrayloctablename;
+
+    private Path bufferFile;
 
 	//TODO: What if the program does not terminate??
 
@@ -208,30 +217,42 @@ public class DBEngine {
 	}
 	public DBEngine(String directory, String name)
 	{
-        appname = name;
-        tracetablename = "trace_" + name;
-        tidtablename = "tid_" + name;
-        volatilesigtablename = "volatile_" + name;
-        stmtsigtablename = "stmtsig_" + name;
-        varsigtablename = "varsig_" + name;
+		appname = name;
+		tracetablename = "trace_" + name;
+		tidtablename = "tid_" + name;
+		volatilesigtablename = "volatile_" + name;
+		stmtsigtablename = "stmtsig_" + name;
+		varsigtablename = "varsig_" + name;
 
-        sharedarrayloctablename = "sharedarrayloc_" + name;
-        sharedvarsigtablename = "sharedvarsig_" + name;
-        scheduletablename = "schedule_" + name;
-        propertytablename = "property_" + name;
-        try {
-            connectDB(directory);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+		sharedarrayloctablename = "sharedarrayloc_" + name;
+		sharedvarsigtablename = "sharedvarsig_" + name;
+		scheduletablename = "schedule_" + name;
+		propertytablename = "property_" + name;
+		bufferFile = FileSystems.getDefault().getPath(directory,  "buffer");
+		if (!Files.exists(bufferFile)) {
+			try {
+				RandomAccessFile f = new RandomAccessFile(bufferFile.toString(), "rw");
+				f.write(new byte[1024*1024]);
+				f.close();
+			} catch (Exception e) {
+				System.err.println(e.getMessage());
+				Config.shutDown = true;
+				System.exit(1);
+			}
+		}
+		try {
+			connectDB(directory);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
     public void closeDB() {
         try {
             conn.createStatement().execute("SHUTDOWN");
-
+            Files.deleteIfExists(bufferFile);
             //conn.close();
-        } catch (SQLException e) {
+        } catch (SQLException|IOException e) {
             e.printStackTrace();
         }
     }
@@ -574,7 +595,7 @@ public class DBEngine {
 
     public void saveEventToDB(long TID, int ID, String ADDR, String VALUE, byte TYPE) {
         if (Config.shutDown) return;
-        synchronizedSaveEventToDB(TID, ID, ADDR, VALUE, TYPE);
+            synchronizedSaveEventToDB(TID, ID, ADDR, VALUE, TYPE);
     }
 
 
@@ -618,11 +639,30 @@ public class DBEngine {
 			
 		}catch(Exception e)
 		{
-			
+			checkException(e);
 			if(!"Finalizer".equals(Thread.currentThread().getName()))
 				e.printStackTrace();// avoid finalizer thread
 
 		}
+	}
+
+	public void checkException(Exception e) {
+		if (Config.shutDown) return;
+		if (e instanceof SQLException) {
+			SQLException esql = (SQLException) e;
+			if (esql.getErrorCode() == DATABASE_CLOSED) {
+                                try {
+					Files.deleteIfExists(bufferFile);
+					connectDB(Config.instance.commandLine.outdir);
+                                } catch (Exception f) {
+					System.err.println("Not enough space left for logging in " + Config.instance.commandLine.outdir);
+					System.err.println("Please free some space and restart RV-Predict.");
+					Config.shutDown = true;
+                                }
+				System.exit(1);
+			}
+		}
+		e.printStackTrace();
 	}
 	
 	protected void connectDB(String directory) throws Exception

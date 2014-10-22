@@ -216,6 +216,7 @@ public final class RecordRT {
 	      
 		}catch(Exception e)
 		{
+                        db.checkException(e);
 			e.printStackTrace();
 		}
 	}

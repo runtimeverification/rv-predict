@@ -112,7 +112,7 @@ public class Main {
             if (! db.checkTables()) {
                 config.logger.report("Trace was not recorded properly. ", Logger.MSGTYPE.ERROR);
                 if (config.log) {
-                    config.logger.report("Please check the classpath.", Logger.MSGTYPE.ERROR);
+                    // config.logger.report("Please check the classpath.", Logger.MSGTYPE.ERROR);
                 } else {
                     config.logger.report("Please run " + Configuration.PROGRAM_NAME + " with " + Configuration.opt_only_log +
                             " " + config.outdir + " first.", Logger.MSGTYPE.ERROR);

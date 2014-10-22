@@ -32,18 +32,10 @@ import rvpredict.instrumentation.GlobalStateForInstrumentation;
 import rvpredict.h2.jdbc.JdbcSQLException;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Set;
 import java.util.Stack;
-import java.util.Vector;
-import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Engine for interacting with database.

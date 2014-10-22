@@ -73,19 +73,6 @@ public class HBRaceDetect {
 			out.close();
 	}	
 
-	private static Vector<String> trim(Vector<String> schedule)
-	{
-		if(schedule.size()>100)
-		{
-			Vector<String> s = new Vector<String>();
-			s.add("...");
-			for(int i=schedule.size()-100;i<schedule.size();i++)
-				s.add(schedule.get(i));
-			return s;
-		}
-		else
-			return schedule;
-	}
 	/**
 	 * traverse all conflicting pairs. For each pair, query the CPEngine
 	 * whether there are reachable or not. If yes, report a race.
@@ -232,7 +219,8 @@ public class HBRaceDetect {
 			//set a timer to timeout in a configured period
 			Timer timer = new Timer();
 			timer.schedule(new TimerTask(){
-					public void run()
+					@Override
+                    public void run()
 					{
 						report("\n******* Timeout "+config.timeout+" seconds ******",MSGTYPE.REAL);//report it
 						System.exit(0);

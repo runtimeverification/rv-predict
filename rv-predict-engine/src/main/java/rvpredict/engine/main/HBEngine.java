@@ -27,7 +27,6 @@ package rvpredict.engine.main; /************************************************
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 import trace.AbstractNode;
-import trace.IMemNode;
 import trace.ISyncNode;
 import trace.JoinNode;
 import trace.LockNode;
@@ -43,16 +42,11 @@ import trace.AbstractNode.TYPE;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Set;
 import java.util.Stack;
 import java.util.Vector;
-import java.util.Map.Entry;
 
 /**
  * The engine class for happens-before (HB) based race detection.
@@ -360,7 +354,7 @@ public class HBEngine
 							lockAddrNodes.put(addr,syncNodeList);
 						}
 						syncNodeList.add(lp);
-						lockEngine.add(((ISyncNode)node).getAddr(),tid,lp);
+						lockEngine.add(node.getAddr(),tid,lp);
 						
 					}
 				}

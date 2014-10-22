@@ -53,17 +53,17 @@ public class Main {
             String libPath = basePath + separator + "lib" + separator;
             String rvAgent = libPath + "rv-predict"  + ".jar";
 
-            String sharingAgentOptions = config.opt_only_log + " " + escapeString(config.outdir);
-            if (config.additionalExcludes != null) {
-                config.additionalExcludes.replaceAll(" ","");
-                sharingAgentOptions += " " + Configuration.opt_exclude + " " + escapeString(config.additionalExcludes);
+            String sharingAgentOptions = Configuration.opt_only_log + " " + escapeString(config.outdir);
+            if (Configuration.additionalExcludes != null) {
+                Configuration.additionalExcludes.replaceAll(" ","");
+                sharingAgentOptions += " " + Configuration.opt_exclude + " " + escapeString(Configuration.additionalExcludes);
             }
-            if (config.additionalIncludes != null) {
-                config.additionalIncludes.replaceAll(" ", "");
-                sharingAgentOptions += " " + Configuration.opt_include + " " + escapeString(config.additionalIncludes);
+            if (Configuration.additionalIncludes != null) {
+                Configuration.additionalIncludes.replaceAll(" ", "");
+                sharingAgentOptions += " " + Configuration.opt_include + " " + escapeString(Configuration.additionalIncludes);
             }
             String noSharingAgentOptions = sharingAgentOptions;
-            sharingAgentOptions += " " + config.opt_sharing_only;
+            sharingAgentOptions += " " + Configuration.opt_sharing_only;
 
             List<String> appArgList = new ArrayList<String>();
             appArgList.add(java);

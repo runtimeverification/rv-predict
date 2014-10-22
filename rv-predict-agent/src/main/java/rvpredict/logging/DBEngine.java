@@ -201,23 +201,23 @@ public class DBEngine {
 
 	}
 	public DBEngine(String directory, String name)
-	{
-		appname = name;
-		tracetablename = "trace_" + name;
-		tidtablename = "tid_" + name;
-		volatilesigtablename = "volatile_" + name;
-		stmtsigtablename = "stmtsig_" + name;
-		varsigtablename = "varsig_" + name;
+    {
+        appname = name;
+        tracetablename = "trace_" + name;
+        tidtablename = "tid_" + name;
+        volatilesigtablename = "volatile_" + name;
+        stmtsigtablename = "stmtsig_" + name;
+        varsigtablename = "varsig_" + name;
 
-		sharedarrayloctablename = "sharedarrayloc_" + name;
-		sharedvarsigtablename = "sharedvarsig_" + name;
-		scheduletablename = "schedule_" + name;
-		propertytablename = "property_" + name;
-		try {
-			connectDB(directory);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+        sharedarrayloctablename = "sharedarrayloc_" + name;
+        sharedvarsigtablename = "sharedvarsig_" + name;
+        scheduletablename = "schedule_" + name;
+        propertytablename = "property_" + name;
+        try {
+            connectDB(directory);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 	}
 
     public void closeDB() {
@@ -567,7 +567,7 @@ public class DBEngine {
 
     public void saveEventToDB(long TID, int ID, String ADDR, String VALUE, byte TYPE) {
         if (Config.shutDown) return;
-            synchronizedSaveEventToDB(TID, ID, ADDR, VALUE, TYPE);
+        synchronizedSaveEventToDB(TID, ID, ADDR, VALUE, TYPE);
     }
 
 
@@ -611,26 +611,26 @@ public class DBEngine {
 			
 		}catch(Exception e)
 		{
-			checkException(e);
+            checkException(e);
 			if(!"Finalizer".equals(Thread.currentThread().getName()))
 				e.printStackTrace();// avoid finalizer thread
 
 		}
 	}
 
-	public void checkException(Exception e) {
-		if (Config.shutDown) return;
-		if (e instanceof SQLException) {
-			SQLException esql = (SQLException) e;
-			if (esql.getErrorCode() == DATABASE_CLOSED) {
-				System.err.println("Not enough space left for logging in " + Config.instance.commandLine.outdir);
-				System.err.println("Please free some space and restart RV-Predict.");
-				Config.shutDown = true;
-				System.exit(1);
-			}
-		}
-		e.printStackTrace();
-	}
+    public void checkException(Exception e) {
+        if (Config.shutDown) return;
+        if (e instanceof SQLException) {
+            SQLException esql = (SQLException) e;
+            if (esql.getErrorCode() == DATABASE_CLOSED) {
+                System.err.println("Not enough space left for logging in " + Config.instance.commandLine.outdir);
+                System.err.println("Please free some space and restart RV-Predict.");
+                Config.shutDown = true;
+                System.exit(1);
+            }
+        }
+        e.printStackTrace();
+    }
 	
 	protected void connectDB(String directory) throws Exception
 	{

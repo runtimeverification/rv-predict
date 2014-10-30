@@ -84,7 +84,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                     Config.shutDown = true;
                     try {
                         GlobalStateForInstrumentation.instance.saveMetaData(db);
-                        db.closeDB();
+                        db.finishLogging();
                     } catch (Exception e) {
                         db.checkException(e);
                     }

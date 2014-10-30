@@ -30,13 +30,13 @@ package rvpredict.logging;
 
 import rvpredict.config.Config;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
-import rvpredict.h2.jdbc.JdbcSQLException;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Stack;
-import java.util.concurrent.BlockingQueue;
+import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Engine for interacting with database.
@@ -46,7 +46,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class DBEngine {
 
-    protected static long globalEventID = 0;
+    protected final AtomicLong globalEventID  = new AtomicLong(0);
     protected static long DBORDER = 0;// handle strange classloader
 
     // currently we use the h2 database
@@ -89,6 +89,7 @@ public class DBEngine {
             'b' };
     protected Connection conn;
     protected PreparedStatement prepStmt;
+    private PreparedStatement traceTablePrepStmt;
 
     protected PreparedStatement prepStmt2;// just for thread id-name
 
@@ -105,27 +106,30 @@ public class DBEngine {
 
     // TODO: What if the program does not terminate??
 
-    protected BlockingQueue<Stack<EventItem>> queue;
+    protected LinkedBlockingQueue<List<EventItem>> queue;
     // we can also use our own Stack implementation here
-    protected Stack<EventItem> buffer;
+    protected ArrayList<EventItem> buffer;
     protected Object dblock = new Object();
 
     protected int BUFFER_THRESHOLD;
     protected boolean asynchronousLogging;
 
+    public void saveCurrentEventsToDB() {
+        queue.add(buffer);
+        buffer = new ArrayList<>(BUFFER_THRESHOLD);
+    }
+
     // private final String NO_AUTOCLOSE = ";DB_CLOSE_ON_EXIT=FALSE";//BUGGY in
     // H2, DON'T USE IT
 
     class EventItem {
-        long GID;
         long TID;
         int ID;
         String ADDR;
         String VALUE;
         byte TYPE;
 
-        EventItem(long gid, long tid, int sid, String addr, String value, byte type) {
-            this.GID = gid;
+        EventItem(long tid, int sid, String addr, String value, byte type) {
             this.TID = tid;
             this.ID = sid;
             this.ADDR = addr;
@@ -143,20 +147,19 @@ public class DBEngine {
         closeDB();
     }
 
-    public void saveEventsToDB(Stack<EventItem> stack) {
+    public void saveEventsToDB(List<EventItem> stack) {
         synchronized (dblock) {
-            while (!stack.isEmpty()) {
-                EventItem item = stack.pop();
+            for (EventItem item : stack) {
+                if (Config.shutDown) break;
                 // System.out.println(item.GID);
                 try {
-                    prepStmt.setLong(1, item.GID);
-                    prepStmt.setLong(2, item.TID);
-                    prepStmt.setInt(3, item.ID);
-                    prepStmt.setString(4, item.ADDR);
-                    prepStmt.setString(5, item.VALUE);
-                    prepStmt.setByte(6, item.TYPE);
+                    traceTablePrepStmt.setLong(1, item.TID);
+                    traceTablePrepStmt.setInt(2, item.ID);
+                    traceTablePrepStmt.setString(3, item.ADDR);
+                    traceTablePrepStmt.setString(4, item.VALUE);
+                    traceTablePrepStmt.setByte(5, item.TYPE);
 
-                    prepStmt.execute();
+                    traceTablePrepStmt.execute();
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -166,11 +169,8 @@ public class DBEngine {
     }
 
     public void startAsynchronousLogging() {
-        asynchronousLogging = true;
-
-        queue = new LinkedBlockingQueue<Stack<EventItem>>();
-        buffer = new Stack<EventItem>();
-        BUFFER_THRESHOLD = 100000;// TODO: make it configurable
+        queue = new LinkedBlockingQueue<>();
+        buffer = new ArrayList<>(BUFFER_THRESHOLD);
 
         Thread t = new Thread(new Runnable() {
 
@@ -179,8 +179,10 @@ public class DBEngine {
 
                 while (true) {
                     try {
-                        Stack<EventItem> stack = queue.take();
+                        List<EventItem> stack = queue.take();
                         saveEventsToDB(stack);
+                        if (Config.shutDown) continue;
+                        RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance, false);
 
                     } catch (InterruptedException e) {
                         // TODO Auto-generated catch block
@@ -198,6 +200,7 @@ public class DBEngine {
     }
 
     public DBEngine(String directory, String name) {
+        BUFFER_THRESHOLD = Config.instance.commandLine.window_size;
         appname = name;
         tracetablename = "trace_" + name;
         tidtablename = "tid_" + name;
@@ -214,6 +217,7 @@ public class DBEngine {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        startAsynchronousLogging();
     }
 
     public void closeDB() {
@@ -428,7 +432,7 @@ public class DBEngine {
                 + ", " + tracetablecolname[2] + ", " + tracetablecolname[3] + ", "
                 + tracetablecolname[4] + ", " + tracetablecolname[5] + " "
                 + " ) VALUES (?,?,?,?,?)";
-        prepStmt = conn.prepareStatement(sql_insertdata);
+        traceTablePrepStmt = conn.prepareStatement(sql_insertdata);
 
     }
 
@@ -582,41 +586,16 @@ public class DBEngine {
     public synchronized void synchronizedSaveEventToDB(long TID, int ID, String ADDR, String VALUE,
             byte TYPE) {
 
-        globalEventID++;
-        if (globalEventID % Config.instance.commandLine.window_size == 0) {
-            PreparedStatement prepStmt = this.prepStmt;
-            RecordRT.saveMetaData(this, GlobalStateForInstrumentation.instance, false);
-            this.prepStmt = prepStmt;
-        }
+        if (buffer.size() == BUFFER_THRESHOLD) {
 
-        // make true->1. false->0
-        if (VALUE.equals("true"))
-            VALUE = "1";
-        if (VALUE.equals("false"))
-            VALUE = "0";
+            saveCurrentEventsToDB();
+        } else {
+            if (VALUE.equals("true"))
+                VALUE = "1";
+            if (VALUE.equals("false"))
+                VALUE = "0";
 
-        // globalEventID=globalEventID+1;
-        // System.out.println(globalEventID+" "+TID+" "+ADDR+" "+VALUE+" "+TYPE);
-
-        try {
-            /*
-             * //prepStmt.setLong(1, globalEventID); prepStmt.setLong(2, TID);
-             * prepStmt.setInt(3, ID); prepStmt.setString(4, ADDR);
-             * prepStmt.setString(5, VALUE); prepStmt.setByte(6, TYPE);
-             */
-            prepStmt.setLong(1, TID);
-            prepStmt.setInt(2, ID);
-            prepStmt.setString(3, ADDR);
-            prepStmt.setString(4, VALUE);
-            prepStmt.setByte(5, TYPE);
-
-            prepStmt.execute();
-
-        } catch (Exception e) {
-            checkException(e);
-            if (!"Finalizer".equals(Thread.currentThread().getName()))
-                e.printStackTrace();// avoid finalizer thread
-
+            buffer.add(new EventItem(TID,ID,ADDR,VALUE,TYPE));
         }
     }
 

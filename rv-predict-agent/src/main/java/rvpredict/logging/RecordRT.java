@@ -162,58 +162,60 @@ public final class RecordRT {
 
     public static void saveMetaData(DBEngine db, GlobalStateForInstrumentation state,
             boolean isVerbose) {
-        ConcurrentHashMap<String, Integer> variableIdMap = state.unsavedVariableIdMap;
-        ConcurrentHashMap<String, Boolean> volatileVariables = state.unsavedVolatileVariables;
-        ConcurrentHashMap<String, Integer> stmtSigIdMap = state.unsavedStmtSigIdMap;
-        try {
-            // just reuse the connection
+        synchronized (db) {
+            ConcurrentHashMap<String, Integer> variableIdMap = state.unsavedVariableIdMap;
+            ConcurrentHashMap<String, Boolean> volatileVariables = state.unsavedVolatileVariables;
+            ConcurrentHashMap<String, Integer> stmtSigIdMap = state.unsavedStmtSigIdMap;
+            try {
+                // just reuse the connection
 
-            // TODO: if db is null or closed, there must be something wrong
-            // save variable - id to database
-            db.createVarSignatureTable(false);
-            Iterator<Entry<String, Integer>> variableIdMapIter = variableIdMap.entrySet()
-                    .iterator();
-            while (variableIdMapIter.hasNext()) {
-                Map.Entry<String, Integer> entry = variableIdMapIter.next();
-                String sig = entry.getKey();
-                Integer id = entry.getValue();
-                variableIdMapIter.remove();
-                db.saveVarSignatureToDB(sig, id);
-                if (isVerbose)
-                    System.out.println("* [" + id + "] " + sig + " *");
+                // TODO: if db is null or closed, there must be something wrong
+                // save variable - id to database
+                db.createVarSignatureTable(false);
+                Iterator<Entry<String, Integer>> variableIdMapIter = variableIdMap.entrySet()
+                        .iterator();
+                while (variableIdMapIter.hasNext()) {
+                    Map.Entry<String, Integer> entry = variableIdMapIter.next();
+                    String sig = entry.getKey();
+                    Integer id = entry.getValue();
+                    variableIdMapIter.remove();
+                    db.saveVarSignatureToDB(sig, id);
+                    if (isVerbose)
+                        System.out.println("* [" + id + "] " + sig + " *");
 
+                }
+
+                // save volatilevariable - id to database
+                db.createVolatileSignatureTable(false);
+                Iterator<Entry<String, Boolean>> volatileIt = volatileVariables.entrySet().iterator();
+                while (volatileIt.hasNext()) {
+                    String sig = volatileIt.next().getKey();
+                    volatileIt.remove();
+                    Integer id = GlobalStateForInstrumentation.instance.variableIdMap.get(sig);
+
+                    db.saveVolatileSignatureToDB(sig, id);
+                    if (isVerbose)
+                        System.out.println("* volatile: [" + id + "] " + sig + " *");
+
+                }
+                // save stmt - id to database
+                db.createStmtSignatureTable(false);
+
+                Iterator<Entry<String, Integer>> stmtSigIdMapIter = stmtSigIdMap.entrySet().iterator();
+                while (stmtSigIdMapIter.hasNext()) {
+                    Entry<String, Integer> entry = stmtSigIdMapIter.next();
+                    stmtSigIdMapIter.remove();
+                    String sig = entry.getKey();
+                    Integer id = entry.getValue();
+
+                    db.saveStmtSignatureToDB(sig, id);
+                    // System.out.println("* ["+id+"] "+sig+" *");
+                }
+
+            } catch (Exception e) {
+                db.checkException(e);
+                e.printStackTrace();
             }
-
-            // save volatilevariable - id to database
-            db.createVolatileSignatureTable(false);
-            Iterator<Entry<String, Boolean>> volatileIt = volatileVariables.entrySet().iterator();
-            while (volatileIt.hasNext()) {
-                String sig = volatileIt.next().getKey();
-                volatileIt.remove();
-                Integer id = GlobalStateForInstrumentation.instance.variableIdMap.get(sig);
-
-                db.saveVolatileSignatureToDB(sig, id);
-                if (isVerbose)
-                    System.out.println("* volatile: [" + id + "] " + sig + " *");
-
-            }
-            // save stmt - id to database
-            db.createStmtSignatureTable(false);
-
-            Iterator<Entry<String, Integer>> stmtSigIdMapIter = stmtSigIdMap.entrySet().iterator();
-            while (stmtSigIdMapIter.hasNext()) {
-                Entry<String, Integer> entry = stmtSigIdMapIter.next();
-                stmtSigIdMapIter.remove();
-                String sig = entry.getKey();
-                Integer id = entry.getValue();
-
-                db.saveStmtSignatureToDB(sig, id);
-                // System.out.println("* ["+id+"] "+sig+" *");
-            }
-
-        } catch (Exception e) {
-            db.checkException(e);
-            e.printStackTrace();
         }
     }
 

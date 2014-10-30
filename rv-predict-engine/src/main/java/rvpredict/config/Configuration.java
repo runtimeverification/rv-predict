@@ -145,7 +145,7 @@ public class Configuration {
     final static String opt_max_len = "--maxlen";
     final static String default_max_len = "1000";
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
-    public long window_size = 1000;
+    public int window_size = 1000;
 
     // final static String opt_no_schedule = "--noschedule";
     // @Parameter(names=opt_no_schedule, description = "not report schedule",

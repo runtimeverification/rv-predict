@@ -582,9 +582,13 @@ public class DBEngine {
     public synchronized void synchronizedSaveEventToDB(long TID, int ID, String ADDR, String VALUE,
             byte TYPE) {
 
-        PreparedStatement prepStmt = this.prepStmt;
-        RecordRT.saveMetaData(this, GlobalStateForInstrumentation.instance, false);
-        this.prepStmt = prepStmt;
+        globalEventID++;
+        if (globalEventID % Config.instance.commandLine.window_size == 0) {
+            PreparedStatement prepStmt = this.prepStmt;
+            RecordRT.saveMetaData(this, GlobalStateForInstrumentation.instance, false);
+            this.prepStmt = prepStmt;
+        }
+
         // make true->1. false->0
         if (VALUE.equals("true"))
             VALUE = "1";

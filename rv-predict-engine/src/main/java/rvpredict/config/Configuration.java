@@ -49,6 +49,7 @@ public class Configuration {
     public static final String INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE = "Instrumented execution to record the trace";
     private JCommander jCommander;
     public static int stackSize = 1024;
+    public static int heapSize = 1024;
 
     // Copyright (c) 2013-2014 K Team. All Rights Reserved.
     public enum OS {

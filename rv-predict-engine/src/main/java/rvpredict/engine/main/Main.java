@@ -97,6 +97,7 @@ public class Main {
                 }
             }
             appArgList.add("-Xss" + Configuration.stackSize + "m");
+            appArgList.add("-Xmx" + Configuration.heapSize + "m");
             appArgList.addAll(config.command_line);
 
             if (config.optlog) {

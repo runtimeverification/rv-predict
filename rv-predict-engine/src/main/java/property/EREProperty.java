@@ -153,7 +153,7 @@ public class EREProperty {
                     return true;
                 else {
                     for (int i = 0; i < list.size(); i++)
-                        if (list.get(i).getTid() == tid)
+                        if (list.get(i).getTID() == tid)
                             return false;
 
                     return true;

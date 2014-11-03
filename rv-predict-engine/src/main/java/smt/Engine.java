@@ -240,7 +240,7 @@ public class Engine {
                     }
 
                 } else if (node instanceof LockNode) {
-                    long tid = node.getTid();
+                    long tid = node.getTID();
 
                     Stack<ISyncNode> stack = threadSyncStack.get(tid);
                     if (stack == null) {
@@ -250,7 +250,7 @@ public class Engine {
 
                     stack.push(node);
                 } else if (node instanceof UnlockNode) {
-                    long tid = node.getTid();
+                    long tid = node.getTID();
                     Stack<ISyncNode> stack = threadSyncStack.get(tid);
 
                     // assert(stack.size()>0);//this is possible when segmented
@@ -273,7 +273,7 @@ public class Engine {
                         stack.pop();// handle reentrant lock here
 
                 } else if (node instanceof WaitNode) {
-                    long tid = node.getTid();
+                    long tid = node.getTID();
 
                     // assert(matchNotifyNode!=null);this is also possible when
                     // segmented
@@ -286,7 +286,7 @@ public class Engine {
                         try {
                             // TODO: handle OutofBounds
                             try {
-                                while (trace.getFullTrace().get(nodeIndex).getTid() != tid)
+                                while (trace.getFullTrace().get(nodeIndex).getTID() != tid)
                                     nodeIndex++;
                             } catch (Exception e) {
                                 // if we arrive here, it means the wait node is
@@ -346,7 +346,7 @@ public class Engine {
                     ISyncNode node = stack.firstElement();
                     LockPair lp = new LockPair(node, null);
                     lockPairs.add(lp);
-                    lockEngine.add(node.getAddr(), node.getTid(), lp);
+                    lockEngine.add(node.getAddr(), node.getTID(), lp);
                 }
             }
 
@@ -382,7 +382,7 @@ public class Engine {
             if (lp1.unlock != null)
                 var_lp1_b = makeVariable(lp1.unlock.getGID());
 
-            long lp1_tid = lp1.lock.getTid();
+            long lp1_tid = lp1.lock.getTID();
             LockPair lp1_pre = lastLockPairMap.get(lp1_tid);
 
             ArrayList<LockPair> flexLockPairs = new ArrayList<LockPair>();
@@ -393,12 +393,12 @@ public class Engine {
             for (int j = 0; j < lockPairs.size(); j++) {
                 LockPair lp = lockPairs.get(j);
                 if (lp.lock != null) {
-                    if (lp.lock.getTid() != lp1_tid
+                    if (lp.lock.getTID() != lp1_tid
                             && !canReach((AbstractNode) lp1.lock, (AbstractNode) lp.lock)) {
                         flexLockPairs.add(lp);
                     }
                 } else if (lp.unlock != null) {
-                    if (lp.unlock.getTid() != lp1_tid
+                    if (lp.unlock.getTID() != lp1_tid
                             && !canReach((AbstractNode) lp1.lock, (AbstractNode) lp.unlock)) {
                         flexLockPairs.add(lp);
                     }
@@ -443,7 +443,7 @@ public class Engine {
                 }
 
             }
-            lastLockPairMap.put(lp1.lock.getTid(), lp1);
+            lastLockPairMap.put(lp1.lock.getTID(), lp1);
 
         }
 
@@ -488,7 +488,7 @@ public class Engine {
             for (int j = 0; j < writenodes.size(); j++) {
                 WriteNode wnode = writenodes.get(j);
                 if (wnode.getValue().equals(rnode.getValue()) && !canReach(rnode, wnode)) {
-                    if (wnode.getTid() != rnode.getTid())
+                    if (wnode.getTID() != rnode.getTID())
                         writenodes_value_match.add(wnode);
                     else {
                         if (preNode == null
@@ -600,7 +600,7 @@ public class Engine {
 
                     for (int k = 0; k < writenodes.size(); k++) {
                         WriteNode wnode3 = writenodes.get(k);
-                        if (wnode3.getTid() != rnode.getTid() && !canReach(rnode, wnode3)) {
+                        if (wnode3.getTID() != rnode.getTID() && !canReach(rnode, wnode3)) {
                             String var_w3 = makeVariable(wnode3.getGID());
 
                             String cons_e = "(> " + var_w3 + " " + var_r + ")";
@@ -629,7 +629,7 @@ public class Engine {
         long gid2 = node2.getGID();
         long gid3 = node3.getGID();
 
-        return lockEngine.isAtomic(node1.getTid(), gid1, gid2, node3.getTid(), gid3);
+        return lockEngine.isAtomic(node1.getTID(), gid1, gid2, node3.getTID(), gid3);
 
     }
 
@@ -644,7 +644,7 @@ public class Engine {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
 
-        return lockEngine.hasCommonLock(node1.getTid(), gid1, node2.getTid(), gid2);
+        return lockEngine.hasCommonLock(node1.getTID(), gid1, node2.getTID(), gid2);
 
     }
 
@@ -936,7 +936,7 @@ public class Engine {
                             ArrayList<PropertyNode> list = prevIt.next();
                             if (!list.contains(node)
                                     && (!property.hasThreadBinding(k) || property
-                                            .hasCorrectThreadBinding(k, node.getTid(), list))) {
+                                            .hasCorrectThreadBinding(k, node.getTID(), list))) {
                                 ArrayList<PropertyNode> newlist = new ArrayList<PropertyNode>(list);
                                 newlist.add(node);
                                 nodelist_now.add(newlist);

@@ -38,8 +38,8 @@ public class InitNode extends AbstractNode {
     private String value;
     private String addr;
 
-    public InitNode(long GID, long tid, int ID, String addr, String value, TYPE type) {
-        super(GID, tid, ID, type);
+    public InitNode(long GID, long tid, int ID, String addr, String value) {
+        super(GID, tid, ID, AbstractNode.TYPE.INIT);
         this.addr = addr;
         this.value = value;
     }
@@ -48,15 +48,13 @@ public class InitNode extends AbstractNode {
         return value;
     }
 
-    public String getAddr()
-
-    {
+    public String getAddr() {
         return addr;
     }
 
+    @Override
     public String toString() {
-
-        return GID + ": thread " + tid + " " + ID + " " + addr + " " + value + " " + type;
+        return globalId + ": thread " + threadId + " " + synId + " " + addr + " " + value + " " + type;
     }
 
 }

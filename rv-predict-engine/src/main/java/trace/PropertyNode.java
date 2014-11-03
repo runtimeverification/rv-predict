@@ -31,8 +31,8 @@ package trace;
 public class PropertyNode extends AbstractNode {
     private String object_addr;
 
-    public PropertyNode(long GID, long tid, int ID, String addr, TYPE type) {
-        super(GID, tid, ID, type);
+    public PropertyNode(long GID, long tid, int ID, String addr) {
+        super(GID, tid, ID, AbstractNode.TYPE.PROPERTY);
         this.object_addr = addr;
     }
 
@@ -40,7 +40,8 @@ public class PropertyNode extends AbstractNode {
         return object_addr;
     }
 
+    @Override
     public String toString() {
-        return GID + ": thread " + tid + " " + ID + " " + object_addr + " " + type;
+        return globalId + ": thread " + threadId + " " + synId + " " + object_addr + " " + type;
     }
 }

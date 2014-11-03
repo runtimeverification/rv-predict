@@ -34,7 +34,7 @@ public interface ISyncNode {
 
     public long getGID();
 
-    public long getTid();
+    public long getTID();
 
     public int getID();
 

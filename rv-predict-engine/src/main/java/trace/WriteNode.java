@@ -34,8 +34,8 @@ public class WriteNode extends AbstractNode implements IMemNode {
     private String value;
     private String addr;
 
-    public WriteNode(long GID, long tid, int ID, String addr, String value, TYPE type) {
-        super(GID, tid, ID, type);
+    public WriteNode(long GID, long tid, int ID, String addr, String value) {
+        super(GID, tid, ID, AbstractNode.TYPE.WRITE);
         this.addr = addr;
         this.value = value;
     }
@@ -44,38 +44,28 @@ public class WriteNode extends AbstractNode implements IMemNode {
         return value;
     }
 
-    public String getAddr()
-
-    {
+    @Override
+    public String getAddr() {
         return addr;
     }
 
+    @Override
     public String toString() {
-
-        return GID + ": thread " + tid + " " + ID + " " + addr + " " + value + " " + type;
+        return globalId + ": thread " + threadId + " " + synId + " " + addr + " " + value + " " + type;
     }
 
     @Override
     public long getPrevSyncId() {
-        // TODO Auto-generated method stub
         return prevSyncId;
     }
 
     @Override
-    public void setPrevSyncId(long id) {
-        // TODO Auto-generated method stub
-        prevSyncId = id;
-    }
-
-    @Override
     public long getPrevBranchId() {
-        // TODO Auto-generated method stub
         return prevBranchId;
     }
 
     @Override
     public void setPrevBranchId(long id) {
-        // TODO Auto-generated method stub
         prevBranchId = id;
     }
 

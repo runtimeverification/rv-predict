@@ -30,8 +30,8 @@ package trace;
 
 public class BranchNode extends AbstractNode {
 
-    public BranchNode(long GID, long tid, int ID, TYPE type) {
-        super(GID, tid, ID, type);
+    public BranchNode(long GID, long tid, int ID) {
+        super(GID, tid, ID, AbstractNode.TYPE.BRANCH);
     }
 
 }

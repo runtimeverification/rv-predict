@@ -212,7 +212,7 @@ public class Trace {
     public Vector<ReadNode> getDependentReadNodes(IMemNode rnode, boolean nobranch) {
 
         Vector<ReadNode> readnodes = new Vector<ReadNode>();
-        long tid = rnode.getTid();
+        long tid = rnode.getTID();
         long POS = rnode.getGID() - 1;
         if (!nobranch) {
             long pos = -1;
@@ -258,7 +258,7 @@ public class Trace {
         rawfulltrace.add(node);
         if (node instanceof IMemNode) {
             String addr = ((IMemNode) node).getAddr();
-            Long tid = node.getTid();
+            Long tid = node.getTID();
 
             if (node instanceof ReadNode) {
                 HashSet<Long> set = indexedReadThreads.get(addr);
@@ -284,7 +284,7 @@ public class Trace {
      * @param node
      */
     private void addNode(AbstractNode node) {
-        Long tid = node.getTid();
+        Long tid = node.getTID();
         threads.add(tid);
 
         if (node instanceof BBNode) {
@@ -316,7 +316,7 @@ public class Trace {
 
             fulltrace.add(node);
 
-            nodeGIDTidMap.put(node.getGID(), node.getTid());
+            nodeGIDTidMap.put(node.getGID(), node.getTID());
 
             Vector<AbstractNode> threadNodes = threadNodesMap.get(tid);
             if (threadNodes == null) {

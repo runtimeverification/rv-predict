@@ -32,17 +32,19 @@ public class NotifyNode extends AbstractNode implements ISyncNode {
 
     private String sig_addr;
 
+    @Override
     public String getAddr() {
         return sig_addr;
     }
 
-    public NotifyNode(long GID, long tid, int ID, String addr, TYPE type) {
-        super(GID, tid, ID, type);
+    public NotifyNode(long GID, long tid, int ID, String addr) {
+        super(GID, tid, ID, AbstractNode.TYPE.NOTIFY);
         this.sig_addr = addr;
     }
 
+    @Override
     public String toString() {
-        return GID + ": thread " + tid + " " + ID + " " + sig_addr + " " + type;
+        return globalId + ": thread " + threadId + " " + synId + " " + sig_addr + " " + type;
     }
 
 }

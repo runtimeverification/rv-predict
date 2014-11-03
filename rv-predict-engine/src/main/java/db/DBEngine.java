@@ -704,40 +704,40 @@ public class DBEngine {
 
             switch (TYPE) {
             case '0':
-                node = new InitNode(GID, TID, ID, ADDR, VALUE, AbstractNode.TYPE.INIT);
+                node = new InitNode(GID, TID, ID, ADDR, VALUE);
                 break;
             case '1':
-                node = new ReadNode(GID, TID, ID, ADDR, VALUE, AbstractNode.TYPE.READ);
+                node = new ReadNode(GID, TID, ID, ADDR, VALUE);
                 break;
             case '2':
-                node = new WriteNode(GID, TID, ID, ADDR, VALUE, AbstractNode.TYPE.WRITE);
+                node = new WriteNode(GID, TID, ID, ADDR, VALUE);
                 break;
             case '3':
-                node = new LockNode(GID, TID, ID, ADDR, AbstractNode.TYPE.LOCK);
+                node = new LockNode(GID, TID, ID, ADDR);
                 break;
             case '4':
-                node = new UnlockNode(GID, TID, ID, ADDR, AbstractNode.TYPE.UNLOCK);
+                node = new UnlockNode(GID, TID, ID, ADDR);
                 break;
             case '5':
-                node = new WaitNode(GID, TID, ID, ADDR, AbstractNode.TYPE.WAIT);
+                node = new WaitNode(GID, TID, ID, ADDR);
                 break;
             case '6':
-                node = new NotifyNode(GID, TID, ID, ADDR, AbstractNode.TYPE.NOTIFY);
+                node = new NotifyNode(GID, TID, ID, ADDR);
                 break;
             case '7':
-                node = new StartNode(GID, TID, ID, ADDR, AbstractNode.TYPE.START);
+                node = new StartNode(GID, TID, ID, ADDR);
                 break;
             case '8':
-                node = new JoinNode(GID, TID, ID, ADDR, AbstractNode.TYPE.JOIN);
+                node = new JoinNode(GID, TID, ID, ADDR);
                 break;
             case '9':
-                node = new BranchNode(GID, TID, ID, AbstractNode.TYPE.BRANCH);
+                node = new BranchNode(GID, TID, ID);
                 break;
             case 'a':
-                node = new BBNode(GID, TID, ID, AbstractNode.TYPE.BB);
+                node = new BBNode(GID, TID, ID);
                 break;
             case 'b':
-                node = new PropertyNode(GID, TID, ID, ADDR, AbstractNode.TYPE.PROPERTY);
+                node = new PropertyNode(GID, TID, ID, ADDR);
                 break;
 
             default:

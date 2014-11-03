@@ -109,7 +109,7 @@ public class HBRaceDetect {
 
                     for (int j = 0; j < writenodes.size(); j++) {
                         WriteNode wnode = writenodes.get(j);
-                        if (rnode.getTid() != wnode.getTid()) {
+                        if (rnode.getTID() != wnode.getTID()) {
                             Race race = new Race(trace.getStmtSigIdMap().get(rnode.getID()), trace
                                     .getStmtSigIdMap().get(wnode.getID()), rnode.getID(),
                                     wnode.getID());
@@ -142,7 +142,7 @@ public class HBRaceDetect {
 
                 for (int j = 0; j < writenodes.size(); j++) {
                     WriteNode wnode2 = writenodes.get(j);
-                    if (wnode1.getTid() != wnode2.getTid()) {
+                    if (wnode1.getTID() != wnode2.getTID()) {
                         Race race = new Race(trace.getStmtSigIdMap().get(wnode1.getID()), trace
                                 .getStmtSigIdMap().get(wnode2.getID()), wnode1.getID(),
                                 wnode2.getID());

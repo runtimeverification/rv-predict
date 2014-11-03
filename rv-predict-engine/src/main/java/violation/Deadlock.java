@@ -28,25 +28,12 @@
  ******************************************************************************/
 package violation;
 
-import java.util.ArrayList;
-import java.util.Vector;
+public class Deadlock extends AbstractViolation {
 
-public class Deadlock implements IViolation {
-
-    String node1;
-    String node2;
-    String node3;
-    String node4;
-
-    ArrayList<Vector<String>> schedules = new ArrayList<Vector<String>>();
-
-    public void addSchedule(Vector<String> schedule) {
-        schedules.add(schedule);
-    }
-
-    public ArrayList<Vector<String>> getSchedules() {
-        return schedules;
-    }
+    private String node1;
+    private String node2;
+    private String node3;
+    private String node4;
 
     public Deadlock(String node1, String node2, String node3, String node4) {
         this.node1 = node1;

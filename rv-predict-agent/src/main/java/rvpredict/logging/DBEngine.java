@@ -30,10 +30,8 @@ package rvpredict.logging;
 
 import rvpredict.config.Config;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
-import rvpredict.h2.jdbc.JdbcSQLException;
-
 import java.sql.*;
-import java.util.HashSet;
+import java.util.HashSet; 
 import java.util.Stack;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;

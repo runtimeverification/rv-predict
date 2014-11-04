@@ -88,8 +88,8 @@ public class NewRVPredict {
      * @param trace
      * @param schedule_prefix
      */
-    private void detectDeadlock(Engine engine, Trace trace, Vector<String> schedule_prefix) {
-        HashMap<Long, HashMap<String, Vector<LockPair>>> threadIndexedLockPairs = trace
+    private void detectDeadlock(Engine engine, Trace trace, List<String> schedule_prefix) {
+        HashMap<Long, HashMap<String, List<LockPair>>> threadIndexedLockPairs = trace
                 .getThreadIndexedLockPairs();
         Object[] threads = threadIndexedLockPairs.keySet().toArray();
         for (int i = 0; i < threads.length - 1; i++) {
@@ -100,18 +100,18 @@ public class NewRVPredict {
                             .keySet());
                     lockset2.retainAll(lockset1);
                     if (lockset2.size() > 1) {
-                        HashMap<String, Vector<LockPair>> indexedLockpairs1 = threadIndexedLockPairs
+                        HashMap<String, List<LockPair>> indexedLockpairs1 = threadIndexedLockPairs
                                 .get(threads[i]);
-                        HashMap<String, Vector<LockPair>> indexedLockpairs2 = threadIndexedLockPairs
+                        HashMap<String, List<LockPair>> indexedLockpairs2 = threadIndexedLockPairs
                                 .get(threads[j]);
                         Object[] addrs = lockset2.toArray();
                         for (int k1 = 0; k1 < addrs.length - 1; k1++) {
-                            Vector<LockPair> vlp1a = indexedLockpairs1.get(addrs[k1]);
-                            Vector<LockPair> vlp2a = indexedLockpairs2.get(addrs[k1]);
+                            List<LockPair> vlp1a = indexedLockpairs1.get(addrs[k1]);
+                            List<LockPair> vlp2a = indexedLockpairs2.get(addrs[k1]);
 
                             for (int k2 = 1; k2 < addrs.length; k2++) {
-                                Vector<LockPair> vlp1b = indexedLockpairs1.get(addrs[k2]);
-                                Vector<LockPair> vlp2b = indexedLockpairs2.get(addrs[k2]);
+                                List<LockPair> vlp1b = indexedLockpairs1.get(addrs[k2]);
+                                List<LockPair> vlp2b = indexedLockpairs2.get(addrs[k2]);
 
                                 for (int i1 = 0; i1 < vlp1a.size(); i1++) {
                                     LockPair lp1a = vlp1a.get(i1);
@@ -149,7 +149,7 @@ public class NewRVPredict {
 
                                                 if (!violations.contains(deadlock)) {
                                                     if (engine.isDeadlock(lp1a, lp2b, lp1b, lp2a)) {
-                                                        Vector<String> schedule = engine
+                                                        List<String> schedule = engine
                                                                 .getSchedule(lp1b.lock.getGID(),
                                                                         trace.getNodeGIDTIdMap(),
                                                                         trace.getThreadIdNameMap());
@@ -188,9 +188,9 @@ public class NewRVPredict {
      * @param schedule
      * @return
      */
-    private static Vector<String> trim(Vector<String> schedule) {
+    private static List<String> trim(List<String> schedule) {
         if (schedule.size() > 100) {
-            Vector<String> s = new Vector<String>();
+            List<String> s = new ArrayList<>();
             s.add("...");
             for (int i = schedule.size() - 100; i < schedule.size(); i++)
                 s.add(schedule.get(i));
@@ -200,28 +200,28 @@ public class NewRVPredict {
     }
 
     private void detectDeadlockProperty(Engine engine, Trace trace, EREProperty property,
-            Vector<String> schedule_prefix) {
-        Vector<ReadNode> readNodes_rw = trace.getAllReadNodes();
+            List<String> schedule_prefix) {
+        List<ReadNode> readNodes_rw = trace.getAllReadNodes();
         StringBuilder sb_rw = engine.constructCausalReadWriteConstraintsOptimized(-1, readNodes_rw,
                 trace.getIndexedWriteNodes(), trace.getInitialWriteValueMap());
 
-        HashMap<String, HashMap<Integer, Vector<PropertyNode>>> propertyMonitors = trace
+        HashMap<String, HashMap<Integer, List<PropertyNode>>> propertyMonitors = trace
                 .getPropertyMonitors();
 
-        HashMap<Integer, Vector<PropertyNode>> indexedPropertyNodeMap = new HashMap<Integer, Vector<PropertyNode>>();
+        HashMap<Integer, List<PropertyNode>> indexedPropertyNodeMap = new HashMap<Integer, List<PropertyNode>>();
 
         Iterator<String> monitorIt = propertyMonitors.keySet().iterator();
         while (monitorIt.hasNext()) {
             String addr = monitorIt.next();
 
-            HashMap<Integer, Vector<PropertyNode>> m = propertyMonitors.get(addr);
+            HashMap<Integer, List<PropertyNode>> m = propertyMonitors.get(addr);
             Iterator<Integer> mIt = m.keySet().iterator();
             while (mIt.hasNext()) {
                 Integer i = mIt.next();
 
-                Vector<PropertyNode> v = indexedPropertyNodeMap.get(i);
+                List<PropertyNode> v = indexedPropertyNodeMap.get(i);
                 if (v == null) {
-                    v = new Vector<PropertyNode>();
+                    v = new ArrayList<>();
                     indexedPropertyNodeMap.put(i, v);
                 }
                 v.addAll(m.get(i));
@@ -261,18 +261,18 @@ public class NewRVPredict {
     }
 
     private void detectProperty(Engine engine, Trace trace, EREProperty property,
-            Vector<String> schedule_prefix) {
-        Vector<ReadNode> readNodes_rw = trace.getAllReadNodes();
+            List<String> schedule_prefix) {
+        List<ReadNode> readNodes_rw = trace.getAllReadNodes();
         StringBuilder sb_rw = engine.constructCausalReadWriteConstraintsOptimized(-1, readNodes_rw,
                 trace.getIndexedWriteNodes(), trace.getInitialWriteValueMap());
 
-        HashMap<String, HashMap<Integer, Vector<PropertyNode>>> propertyMonitors = trace
+        HashMap<String, HashMap<Integer, List<PropertyNode>>> propertyMonitors = trace
                 .getPropertyMonitors();
 
         Iterator<String> monitorIt = propertyMonitors.keySet().iterator();
         while (monitorIt.hasNext()) {
             String addr = monitorIt.next();
-            HashMap<Integer, Vector<PropertyNode>> indexedPropertyNodeMap = propertyMonitors
+            HashMap<Integer, List<PropertyNode>> indexedPropertyNodeMap = propertyMonitors
                     .get(addr);
 
             // make sure the monitor is complete
@@ -316,7 +316,7 @@ public class NewRVPredict {
      * @param trace
      * @param schedule_prefix
      */
-    private void detectRace(Engine engine, Trace trace, Vector<String> schedule_prefix) {
+    private void detectRace(Engine engine, Trace trace, List<String> schedule_prefix) {
         // implement potentialraces to be exact match
 
         // sometimes we choose an un-optimized way to implement things faster,
@@ -337,10 +337,10 @@ public class NewRVPredict {
             }
 
             // get all read nodes on the address
-            Vector<ReadNode> readnodes = trace.getIndexedReadNodes().get(addr);
+            List<ReadNode> readnodes = trace.getIndexedReadNodes().get(addr);
 
             // get all write nodes on the address
-            Vector<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
+            List<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
 
             // skip if there is no write events to the address
             if (writenodes == null || writenodes.size() < 1)
@@ -349,7 +349,7 @@ public class NewRVPredict {
             {
                 // check if local variable
                 int size_all = trace.getIndexedThreadReadWriteNodes().get(addr)
-                        .get(writenodes.firstElement().getTID()).size();
+                        .get(writenodes.get(0).getTID()).size();
                 int size_write = writenodes.size();
                 int size_read = 0;
                 if (readnodes != null)
@@ -363,12 +363,12 @@ public class NewRVPredict {
             // because we add branch operations before their operations
             if (config.optrace && !addr.contains("_")) {
                 // read/write-> set of read/write
-                HashMap<Long, Vector<IMemNode>> threadrwnodes = trace
+                HashMap<Long, List<IMemNode>> threadrwnodes = trace
                         .getIndexedThreadReadWriteNodes().get(addr);
                 Iterator<Long> tidIt = threadrwnodes.keySet().iterator();
                 while (tidIt.hasNext()) {
                     Long tid = tidIt.next();
-                    Vector<IMemNode> mnodes = threadrwnodes.get(tid);
+                    List<IMemNode> mnodes = threadrwnodes.get(tid);
                     if (mnodes.size() < 2)
                         continue;
                     IMemNode mnode_cur = mnodes.get(0);
@@ -380,7 +380,7 @@ public class NewRVPredict {
                         IMemNode mnode = mnodes.get(k);
                         if (mnode.getPrevBranchId() < mnode_cur.getGID()) {
                             // check sync id
-                            Vector<AbstractNode> nodes = trace.getThreadNodesMap().get(tid);
+                            List<AbstractNode> nodes = trace.getThreadNodesMap().get(tid);
                             int index_end = nodes.indexOf(mnode);
                             int index = index_end - 1;
                             boolean shouldAdd = true;
@@ -480,7 +480,7 @@ public class NewRVPredict {
                                                          // consistency used by
                                                          // the Said approach
                                 {
-                                    Vector<ReadNode> readNodes_rw = trace.getAllReadNodes();
+                                    List<ReadNode> readNodes_rw = trace.getAllReadNodes();
                                     sb = engine.constructCausalReadWriteConstraintsOptimized(
                                             rnode.getGID(), readNodes_rw,
                                             trace.getIndexedWriteNodes(),
@@ -497,9 +497,9 @@ public class NewRVPredict {
                                     // otherwise, only the read nodes that
                                     // before the most recent branch nodes
                                     // before rnode/wnode are considered
-                                    Vector<ReadNode> readNodes_r = trace.getDependentReadNodes(
+                                    List<ReadNode> readNodes_r = trace.getDependentReadNodes(
                                             rnode, config.nobranch);
-                                    Vector<ReadNode> readNodes_w = trace.getDependentReadNodes(
+                                    List<ReadNode> readNodes_w = trace.getDependentReadNodes(
                                             wnode, config.nobranch);
 
                                     // construct the optimized read-write
@@ -568,12 +568,12 @@ public class NewRVPredict {
 
                                     // for race, there are two schedules:
                                     // rnode before or after wnode
-                                    Vector<String> schedule_a = engine.getSchedule(rnode.getGID(),
+                                    List<String> schedule_a = engine.getSchedule(rnode.getGID(),
                                             trace.getNodeGIDTIdMap(), trace.getThreadIdNameMap());
                                     schedule_a.add(trace.getThreadIdNameMap().get(
                                             trace.getNodeGIDTIdMap().get(wnode.getGID())));
 
-                                    Vector<String> schedule_b = new Vector<String>(schedule_a);
+                                    List<String> schedule_b = new ArrayList<String>(schedule_a);
 
                                     String str1 = schedule_b.remove(schedule_b.size() - 1);
 
@@ -690,15 +690,15 @@ public class NewRVPredict {
 
                                 StringBuilder sb;
                                 if (config.allconsistent) {
-                                    Vector<ReadNode> readNodes_ww = trace.getAllReadNodes();
+                                    List<ReadNode> readNodes_ww = trace.getAllReadNodes();
                                     sb = engine.constructCausalReadWriteConstraintsOptimized(-1,
                                             readNodes_ww, trace.getIndexedWriteNodes(),
                                             trace.getInitialWriteValueMap());
                                 } else {
                                     // get dependent nodes of rnode and wnode
-                                    Vector<ReadNode> readNodes_w1 = trace.getDependentReadNodes(
+                                    List<ReadNode> readNodes_w1 = trace.getDependentReadNodes(
                                             wnode1, config.nobranch);
-                                    Vector<ReadNode> readNodes_w2 = trace.getDependentReadNodes(
+                                    List<ReadNode> readNodes_w2 = trace.getDependentReadNodes(
                                             wnode2, config.nobranch);
 
                                     StringBuilder sb1 = engine
@@ -753,12 +753,12 @@ public class NewRVPredict {
                                     if (config.noschedule)
                                         continue;
 
-                                    Vector<String> schedule_a = engine.getSchedule(wnode1.getGID(),
+                                    List<String> schedule_a = engine.getSchedule(wnode1.getGID(),
                                             trace.getNodeGIDTIdMap(), trace.getThreadIdNameMap());
                                     schedule_a.add(trace.getThreadIdNameMap().get(
                                             trace.getNodeGIDTIdMap().get(wnode2.getGID())));
 
-                                    Vector<String> schedule_b = new Vector<String>(schedule_a);
+                                    List<String> schedule_b = new ArrayList<String>(schedule_a);
 
                                     String str1 = schedule_b.remove(schedule_b.size() - 1);
                                     int pos = schedule_b.size() - 1;
@@ -839,32 +839,32 @@ public class NewRVPredict {
      * @param trace
      * @param schedule_prefix
      */
-    private void detectAtomicityViolation(Engine engine, Trace trace, Vector<String> schedule_prefix) {
+    private void detectAtomicityViolation(Engine engine, Trace trace, List<String> schedule_prefix) {
 
-        HashMap<String, HashMap<Long, Vector<IMemNode>>> indexedThreadReadWriteNodes = trace
+        HashMap<String, HashMap<Long, List<IMemNode>>> indexedThreadReadWriteNodes = trace
                 .getIndexedThreadReadWriteNodes();
-        Iterator<Entry<String, Vector<ReadNode>>> entryIt = trace.getIndexedReadNodes().entrySet()
+        Iterator<Entry<String, List<ReadNode>>> entryIt = trace.getIndexedReadNodes().entrySet()
                 .iterator();
         while (entryIt.hasNext()) {
-            Entry<String, Vector<ReadNode>> entry = entryIt.next();
+            Entry<String, List<ReadNode>> entry = entryIt.next();
             String addr = entry.getKey();
 
             // get all write nodes on the address
-            Vector<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
+            List<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
             if (writenodes == null || writenodes.size() < 1)
                 continue;
 
             // check atomicity-violation all nodes
-            HashMap<Long, Vector<IMemNode>> threadReadWriteNodes = indexedThreadReadWriteNodes
+            HashMap<Long, List<IMemNode>> threadReadWriteNodes = indexedThreadReadWriteNodes
                     .get(addr);
 
             Object[] threads = threadReadWriteNodes.keySet().toArray();
 
             for (int i = 0; i < threads.length - 1; i++)
                 for (int j = i + 1; j < threads.length; j++) {
-                    Vector<IMemNode> rwnodes1 = threadReadWriteNodes.get(threads[i]);
+                    List<IMemNode> rwnodes1 = threadReadWriteNodes.get(threads[i]);
 
-                    Vector<IMemNode> rwnodes2 = threadReadWriteNodes.get(threads[j]);
+                    List<IMemNode> rwnodes2 = threadReadWriteNodes.get(threads[j]);
 
                     if (rwnodes1 != null & rwnodes2 != null && rwnodes1.size() > 1) {
                         for (int k = 0; k < rwnodes1.size() - 1; k++) {
@@ -906,11 +906,11 @@ public class NewRVPredict {
                                         }
 
                                         // get dependent read nodes
-                                        Vector<ReadNode> readNodes_1 = trace.getDependentReadNodes(
+                                        List<ReadNode> readNodes_1 = trace.getDependentReadNodes(
                                                 node1, config.nobranch);
-                                        Vector<ReadNode> readNodes_2 = trace.getDependentReadNodes(
+                                        List<ReadNode> readNodes_2 = trace.getDependentReadNodes(
                                                 node2, config.nobranch);
-                                        Vector<ReadNode> readNodes_3 = trace.getDependentReadNodes(
+                                        List<ReadNode> readNodes_3 = trace.getDependentReadNodes(
                                                 node3, config.nobranch);
 
                                         StringBuilder sb1 = engine
@@ -940,7 +940,7 @@ public class NewRVPredict {
                                             if (config.noschedule)
                                                 continue;
 
-                                            Vector<String> schedule = engine.getSchedule(
+                                            List<String> schedule = engine.getSchedule(
                                                     node3.getGID(), trace.getNodeGIDTIdMap(),
                                                     trace.getThreadIdNameMap());
 
@@ -987,7 +987,7 @@ public class NewRVPredict {
         try {
 
             // this is used to maintain the schedule in the previous windows
-            Vector<String> schedule_prefix = new Vector<String>();
+            List<String> schedule_prefix = new ArrayList<>();
 
             // z3 engine is used for interacting with constraints
             Engine engine = new EngineSMTLIB1(config);
@@ -1128,6 +1128,7 @@ public class NewRVPredict {
         // set a timer to timeout in a configured period
         Timer timer = new Timer();
         timer.schedule(new TimerTask() {
+            @Override
             public void run() {
                 logger.report("\n******* Timeout " + config.timeout + " seconds ******",
                         Logger.MSGTYPE.REAL);// report it
@@ -1142,9 +1143,9 @@ public class NewRVPredict {
      * @param trace
      * @return
      */
-    private static Vector<String> getTraceSchedule(Trace trace) {
+    private static List<String> getTraceSchedule(Trace trace) {
 
-        Vector<String> fullschedule = new Vector<String>();
+        List<String> fullschedule = new ArrayList<>();
 
         for (int k = 0; k < trace.getFullTrace().size(); k++)
             fullschedule.add(trace.getThreadIdNameMap().get(trace.getFullTrace().get(k).getTID()));

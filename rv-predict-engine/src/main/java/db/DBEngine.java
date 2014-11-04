@@ -34,7 +34,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Stack;
-import java.util.Vector;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -867,13 +867,13 @@ public class DBEngine {
         while (violationIt.hasNext()) {
 
             IViolation violation = violationIt.next();
-            List<Vector<String>> schedules = violation.getSchedules();
+            List<List<String>> schedules = violation.getSchedules();
 
-            Iterator<Vector<String>> scheduleIt = schedules.iterator();
+            Iterator<List<String>> scheduleIt = schedules.iterator();
 
             while (scheduleIt.hasNext()) {
                 i++;
-                Vector<String> schedule = scheduleIt.next();
+                List<String> schedule = scheduleIt.next();
                 try {
                     prepStmt.setInt(1, i);
                     prepStmt.setString(2, violation.toString());

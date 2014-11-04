@@ -49,7 +49,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Stack;
-import java.util.Vector;
+import java.util.List;
 import java.util.Map.Entry;
 
 import rvpredict.config.Configuration;
@@ -65,7 +65,7 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public void declareVariables(Vector<AbstractNode> trace) {
+    public void declareVariables(List<AbstractNode> trace) {
         CONS_SETLOGIC = ":logic QF_IDL\n";
 
         CONS_DECLARE = new StringBuilder(":extrafuns (\n");
@@ -92,13 +92,13 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public void addIntraThreadConstraints(HashMap<Long, Vector<AbstractNode>> map) {
+    public void addIntraThreadConstraints(HashMap<Long, List<AbstractNode>> map) {
         // create reachability engine
         reachEngine = new ReachabilityEngine();
 
-        Iterator<Vector<AbstractNode>> mapIt = map.values().iterator();
+        Iterator<List<AbstractNode>> mapIt = map.values().iterator();
         while (mapIt.hasNext()) {
-            Vector<AbstractNode> nodes = mapIt.next();
+            List<AbstractNode> nodes = mapIt.next();
             long lastGID = nodes.get(0).getGID();
             String lastVar = makeVariable(lastGID);
             for (int i = 1; i < nodes.size(); i++) {
@@ -117,15 +117,15 @@ public class EngineSMTLIB1 extends Engine {
 
     @Override
     public void addPSOIntraThreadConstraints(
-            HashMap<String, HashMap<Long, Vector<IMemNode>>> indexedMap) {
+            HashMap<String, HashMap<Long, List<IMemNode>>> indexedMap) {
 
-        Iterator<HashMap<Long, Vector<IMemNode>>> mapIt1 = indexedMap.values().iterator();
+        Iterator<HashMap<Long, List<IMemNode>>> mapIt1 = indexedMap.values().iterator();
         while (mapIt1.hasNext()) {
-            HashMap<Long, Vector<IMemNode>> map = mapIt1.next();
+            HashMap<Long, List<IMemNode>> map = mapIt1.next();
 
-            Iterator<Vector<IMemNode>> mapIt2 = map.values().iterator();
+            Iterator<List<IMemNode>> mapIt2 = map.values().iterator();
             while (mapIt2.hasNext()) {
-                Vector<IMemNode> nodes = mapIt2.next();
+                List<IMemNode> nodes = mapIt2.next();
                 long lastGID = nodes.get(0).getGID();
                 String lastVar = makeVariable(lastGID);
                 for (int i = 1; i < nodes.size(); i++) {
@@ -147,17 +147,17 @@ public class EngineSMTLIB1 extends Engine {
     // the order constraints between wait/notify/fork/join/lock/unlock
     @Override
     public void addSynchronizationConstraints(Trace trace,
-            HashMap<String, Vector<ISyncNode>> syncNodesMap,
+            HashMap<String, List<ISyncNode>> syncNodesMap,
             HashMap<Long, AbstractNode> firstNodes, HashMap<Long, AbstractNode> lastNodes) {
         lockEngine = new LockSetEngine();// construct a new lockset for this
                                          // segment
 
         // thread first node - last node
-        Iterator<Vector<ISyncNode>> mapIt = syncNodesMap.values().iterator();
+        Iterator<List<ISyncNode>> mapIt = syncNodesMap.values().iterator();
         while (mapIt.hasNext()) {
-            Vector<ISyncNode> nodes = mapIt.next();
+            List<ISyncNode> nodes = mapIt.next();
 
-            Vector<LockPair> lockPairs = new Vector<LockPair>();
+            List<LockPair> lockPairs = new ArrayList<>();
 
             HashMap<Long, Stack<ISyncNode>> threadSyncStack = new HashMap<Long, Stack<ISyncNode>>();
             NotifyNode matchNotifyNode = null;
@@ -306,7 +306,7 @@ public class EngineSMTLIB1 extends Engine {
 
     }
 
-    private String constructLockConstraintsOptimized(Vector<LockPair> lockPairs) {
+    private String constructLockConstraintsOptimized(List<LockPair> lockPairs) {
         String CONS_LOCK = "";
 
         // obtain each thread's last lockpair
@@ -395,15 +395,15 @@ public class EngineSMTLIB1 extends Engine {
 
     }
 
-    public void addReadWriteConstraints(HashMap<String, Vector<ReadNode>> indexedReadNodes,
-            HashMap<String, Vector<WriteNode>> indexedWriteNodes) {
+    public void addReadWriteConstraints(HashMap<String, List<ReadNode>> indexedReadNodes,
+            HashMap<String, List<WriteNode>> indexedWriteNodes) {
         CONS_ASSERT.append(constructReadWriteConstraints(indexedReadNodes, indexedWriteNodes));
     }
 
     // TODO: NEED to handle the feasibility of new added write nodes
     @Override
     public StringBuilder constructCausalReadWriteConstraintsOptimized(long rgid,
-            Vector<ReadNode> readNodes, HashMap<String, Vector<WriteNode>> indexedWriteNodes,
+            List<ReadNode> readNodes, HashMap<String, List<WriteNode>> indexedWriteNodes,
             HashMap<String, String> initValueMap) {
         StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
 
@@ -415,7 +415,7 @@ public class EngineSMTLIB1 extends Engine {
                 continue;
 
             // get all write nodes on the address
-            Vector<WriteNode> writenodes = indexedWriteNodes.get(rnode.getAddr());
+            List<WriteNode> writenodes = indexedWriteNodes.get(rnode.getAddr());
             // no write to array field?
             // Yes, it could be: java.io.PrintStream out
             if (writenodes == null || writenodes.size() < 1)//
@@ -424,7 +424,7 @@ public class EngineSMTLIB1 extends Engine {
             WriteNode preNode = null;//
 
             // get all write nodes on the address & write the same value
-            Vector<WriteNode> writenodes_value_match = new Vector<WriteNode>();
+            List<WriteNode> writenodes_value_match = new ArrayList<>();
             for (int j = 0; j < writenodes.size(); j++) {
                 WriteNode wnode = writenodes.get(j);
                 if (wnode.getValue().equals(rnode.getValue()) && !canReach(rnode, wnode)) {
@@ -558,21 +558,21 @@ public class EngineSMTLIB1 extends Engine {
 
     // does not consider value and causal dependence
     private static String constructReadWriteConstraints(
-            HashMap<String, Vector<ReadNode>> indexedReadNodes,
-            HashMap<String, Vector<WriteNode>> indexedWriteNodes) {
+            HashMap<String, List<ReadNode>> indexedReadNodes,
+            HashMap<String, List<WriteNode>> indexedWriteNodes) {
 
         String CONS_RW = "";
 
-        Iterator<Entry<String, Vector<ReadNode>>> entryIt = indexedReadNodes.entrySet().iterator();
+        Iterator<Entry<String, List<ReadNode>>> entryIt = indexedReadNodes.entrySet().iterator();
         while (entryIt.hasNext()) {
-            Entry<String, Vector<ReadNode>> entry = entryIt.next();
+            Entry<String, List<ReadNode>> entry = entryIt.next();
             String addr = entry.getKey();
 
             // get all read nodes on the address
-            Vector<ReadNode> readnodes = entry.getValue();
+            List<ReadNode> readnodes = entry.getValue();
 
             // get all write nodes on the address
-            Vector<WriteNode> writenodes = indexedWriteNodes.get(addr);
+            List<WriteNode> writenodes = indexedWriteNodes.get(addr);
 
             // no write to array field?
             // Yes, it could be: java.io.PrintStream out
@@ -701,17 +701,17 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     public static void testConstructReadWriteConstraints() {
-        HashMap<String, Vector<ReadNode>> indexedReadNodes = new HashMap<String, Vector<ReadNode>>();
+        HashMap<String, List<ReadNode>> indexedReadNodes = new HashMap<String, List<ReadNode>>();
 
-        HashMap<String, Vector<WriteNode>> indexedWriteNodes = new HashMap<String, Vector<WriteNode>>();
+        HashMap<String, List<WriteNode>> indexedWriteNodes = new HashMap<String, List<WriteNode>>();
 
-        Vector<WriteNode> writeNodes = new Vector<WriteNode>();
+        List<WriteNode> writeNodes = new ArrayList<>();
         writeNodes.add(new WriteNode(1, 1, 1, "s", "0"));
         writeNodes.add(new WriteNode(2, 2, 3, "s", "0"));
         writeNodes.add(new WriteNode(3, 3, 5, "s", "1"));
         writeNodes.add(new WriteNode(4, 4, 7, "s", "1"));
 
-        Vector<ReadNode> readNodes = new Vector<ReadNode>();
+        List<ReadNode> readNodes = new ArrayList<>();
         readNodes.add(new ReadNode(5, 1, 2, "s", "0"));
         readNodes.add(new ReadNode(6, 2, 4, "s", "0"));
         readNodes.add(new ReadNode(7, 3, 6, "s", "1"));
@@ -729,10 +729,10 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public Vector<String> getSchedule(long endGID, HashMap<Long, Long> nodeGIDTidMap,
+    public List<String> getSchedule(long endGID, HashMap<Long, Long> nodeGIDTidMap,
             HashMap<Long, String> threadIdNameMap) {
 
-        Vector<String> schedule = new Vector<String>();
+        List<String> schedule = new ArrayList<>();
         for (int i = 0; i < task.schedule.size(); i++) {
             String xi = task.schedule.get(i);
             long gid = Long.valueOf(xi.substring(1));

@@ -35,7 +35,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.Vector;
+import java.util.List;
 
 import rvpredict.config.Configuration;
 import trace.ReadNode;
@@ -96,10 +96,10 @@ public class CPRaceDetect {
             }
 
             // get all read nodes on the address
-            Vector<ReadNode> readnodes = trace.getIndexedReadNodes().get(addr);
+            List<ReadNode> readnodes = trace.getIndexedReadNodes().get(addr);
 
             // get all write nodes on the address
-            Vector<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
+            List<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
             if (writenodes == null || writenodes.size() < 1)
                 continue;
 

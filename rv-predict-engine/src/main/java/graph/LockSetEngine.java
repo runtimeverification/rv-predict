@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Vector;
+import java.util.List;
 
 import trace.LockNode;
 import trace.LockPair;
@@ -44,13 +44,13 @@ import trace.LockPair;
  *
  */
 public class LockSetEngine {
-    Vector<LockNode> locktrace;
+    List<LockNode> locktrace;
     int n_type = 0;
     int N = 0;
     Map<Integer, Integer> lock_types = new HashMap<Integer, Integer>();
     Map<Integer, Integer> type_locks = new HashMap<Integer, Integer>();
 
-    Vector<Object> lock_index = new Vector<Object>();
+    List<Object> lock_index = new ArrayList<>();
 
     private HashMap<String, HashMap<Long, ArrayList<LockPair>>> indexedThreadLockMaps = new HashMap<String, HashMap<Long, ArrayList<LockPair>>>();
 

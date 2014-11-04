@@ -52,7 +52,7 @@ public class SMTTaskRun {
     protected List<String> CMD;
 
     public Model model;
-    public Vector<String> schedule;
+    public List<String> schedule;
 
     boolean sat;
 
@@ -134,9 +134,9 @@ public class SMTTaskRun {
      * @param model
      * @return
      */
-    public Vector<String> computeSchedule(Model model) {
+    public List<String> computeSchedule(Model model) {
 
-        Vector<String> schedule = new Vector<String>();
+        List<String> schedule = new ArrayList<>();
 
         Iterator<Entry<String, Object>> setIt = model.getMap().entrySet().iterator();
         while (setIt.hasNext()) {
@@ -149,7 +149,7 @@ public class SMTTaskRun {
             else
                 for (int i = 0; i < schedule.size(); i++) {
                     if (order < (Integer) model.getMap().get(schedule.get(i))) {
-                        schedule.insertElementAt(op, i);
+                        schedule.add(i, op);
                         break;
                     } else if (i == schedule.size() - 1) {
                         schedule.add(op);

@@ -47,7 +47,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Stack;
-import java.util.Vector;
+import java.util.List;
 
 /**
  * The engine class for happens-before (HB) based race detection. It maintains
@@ -79,10 +79,10 @@ public class HBEngine {
      * 
      * @param map
      */
-    private void addIntraThreadEdge(HashMap<Long, Vector<AbstractNode>> map) {
-        Iterator<Vector<AbstractNode>> mapIt = map.values().iterator();
+    private void addIntraThreadEdge(HashMap<Long, List<AbstractNode>> map) {
+        Iterator<List<AbstractNode>> mapIt = map.values().iterator();
         while (mapIt.hasNext()) {
-            Vector<AbstractNode> nodes = mapIt.next();
+            List<AbstractNode> nodes = mapIt.next();
             long lastGID = nodes.get(0).getGID();
             for (int i = 1; i < nodes.size(); i++) {
                 long thisGID = nodes.get(i).getGID();
@@ -121,7 +121,7 @@ public class HBEngine {
         // during recording
         // should after wait, before notify
         // after lock, before unlock
-        Vector<AbstractNode> nodes = trace.getFullTrace();
+        List<AbstractNode> nodes = trace.getFullTrace();
         for (int i = 0; i < nodes.size(); i++) {
             AbstractNode node = nodes.get(i);
             long thisGID = node.getGID();

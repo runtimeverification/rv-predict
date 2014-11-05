@@ -36,11 +36,6 @@ package violation;
  */
 public class ExactRace extends Race {
 
-    // public Race (String node1,String node2)
-    // {
-    // this.node1 = node1;
-    // this.node2 = node2;
-    // }
     public ExactRace(String node1, String node2, int gid1, int gid2) {
         super(node1, node2, gid1, gid2);
     }

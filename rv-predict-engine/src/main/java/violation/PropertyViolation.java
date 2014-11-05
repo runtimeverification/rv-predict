@@ -28,42 +28,39 @@
  ******************************************************************************/
 package violation;
 
-import java.util.ArrayList;
-import java.util.Vector;
-
 /**
  * Property violation
  * 
  * @author jeffhuang
  *
  */
-public class PropertyViolation implements IViolation {
+public class PropertyViolation extends AbstractViolation {
 
-    String meta;
+    private final String meta;
 
-    // the corresponding schedule
-    ArrayList<Vector<String>> schedules;
-
-    public void addSchedule(Vector<String> schedule) {
-        schedules.add(schedule);
-    }
-
-    public ArrayList<Vector<String>> getSchedules() {
-        return schedules;
-    }
-
-    // public Race (String node1,String node2)
-    // {
-    // this.node1 = node1;
-    // this.node2 = node2;
-    // }
     public PropertyViolation(String str) {
+        assert str != null;
         this.meta = str;
     }
 
     @Override
     public String toString() {
         return meta;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof PropertyViolation)) {
+            return false;
+        }
+        
+        PropertyViolation propViolation = (PropertyViolation) o;
+        return meta.equals(propViolation.meta);
+    }
+
+    @Override
+    public int hashCode() {
+        return meta.hashCode();
     }
 
 }

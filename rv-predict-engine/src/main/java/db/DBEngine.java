@@ -29,10 +29,10 @@
 package db;
 
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Stack;
 import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
@@ -867,7 +867,7 @@ public class DBEngine {
         while (violationIt.hasNext()) {
 
             IViolation violation = violationIt.next();
-            ArrayList<Vector<String>> schedules = violation.getSchedules();
+            List<Vector<String>> schedules = violation.getSchedules();
 
             Iterator<Vector<String>> scheduleIt = schedules.iterator();
 

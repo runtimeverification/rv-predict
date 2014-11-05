@@ -28,41 +28,23 @@
  ******************************************************************************/
 package violation;
 
-import java.util.ArrayList;
-import java.util.Vector;
-
 /**
  * Data race violation
  * 
  * @author jeffhuang
  *
  */
-public class Race implements IViolation {
+public class Race extends AbstractViolation {
 
     // not mutable
     // why hashset has strange behavior??
 
     // a pair of conflicting nodes
-    final protected String node1;
-    final protected String node2;
-    protected int hashcode;
+    protected final String node1;
+    protected final String node2;
+    protected final int hashcode;
 
-    // the corresponding schedule
-    ArrayList<Vector<String>> schedules = new ArrayList<Vector<String>>();
-
-    public void addSchedule(Vector<String> schedule) {
-        schedules.add(schedule);
-    }
-
-    public ArrayList<Vector<String>> getSchedules() {
-        return schedules;
-    }
-
-    // public Race (String node1,String node2)
-    // {
-    // this.node1 = node1;
-    // this.node2 = node2;
-    // }
+    // TODO(YilongL): hashCode depends on ids yet equals checks nodes; this seems seriously wrong
     public Race(String node1, String node2, int id1, int id2) {
         this.node1 = node1;
         this.node2 = node2;
@@ -111,7 +93,7 @@ public class Race implements IViolation {
         return result;
     }
 
-    class Location {
+    private class Location {
         String source;
         String className;
         String methodName;

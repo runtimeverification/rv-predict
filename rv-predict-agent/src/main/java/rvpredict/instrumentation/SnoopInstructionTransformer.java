@@ -78,17 +78,8 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
             @Override
             public void cleanup() {
-                if (inLogger) {
-                    if (Config.shutDown)
-                        return;
-                    Config.shutDown = true;
-                    try {
-                        GlobalStateForInstrumentation.instance.saveMetaData(db);
-                        db.finishLogging();
-                    } catch (Exception e) {
-                        db.checkException(e);
-                    }
-                }
+                System.out.println("Finishing logging.");
+                db.finishLogging();
             }
         };
         Thread predict = Main.getPredictionThread(commandLine, cleanupAgent, commandLine.predict);

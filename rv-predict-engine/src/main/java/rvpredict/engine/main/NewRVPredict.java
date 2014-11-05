@@ -52,7 +52,7 @@ import violation.ExactRace;
 import violation.IViolation;
 import violation.PropertyViolation;
 import violation.Race;
-import db.DBEngine;
+import rvpredict.db.DBEngine;
 
 /**
  * The NewRVPredict class implements our new race detection algorithm based on
@@ -1170,21 +1170,14 @@ public class NewRVPredict {
 
             // TODO: query the following information from DB may be expensive
 
-            // int TOTAL_THREAD_NUMBER = db.getTraceThreadNumber();
             int TOTAL_THREAD_NUMBER = info.getTraceThreadNumber();
-            // int TOTAL_SHAREDVARIABLE_NUMBER =
-            // db.getTraceSharedVariableNumber();
             int TOTAL_SHAREDVARIABLE_NUMBER = info.getTraceSharedVariableNumber();
-            // int TOTAL_BRANCH_NUMBER = db.getTraceBranchNumber();
             int TOTAL_BRANCH_NUMBER = info.getTraceBranchNumber();
-            // int TOTAL_READWRITE_NUMBER = db.getTraceReadWriteNumber();
             int TOTAL_SHAREDREADWRITE_NUMBER = info.getTraceSharedReadWriteNumber();
             int TOTAL_LOCALREADWRITE_NUMBER = info.getTraceLocalReadWriteNumber();
             int TOTAL_INITWRITE_NUMBER = info.getTraceInitWriteNumber();
 
-            // int TOTAL_SYNC_NUMBER = db.getTraceSyncNumber();
             int TOTAL_SYNC_NUMBER = info.getTraceSyncNumber();
-            // int TOTAL_PROPERTY_NUMBER = db.getTracePropertyNumber();
             int TOTAL_PROPERTY_NUMBER = info.getTracePropertyNumber();
 
             if (violations.size() == 0)

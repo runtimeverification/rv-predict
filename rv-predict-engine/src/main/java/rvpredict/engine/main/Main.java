@@ -3,7 +3,7 @@ package rvpredict.engine.main;
 import org.apache.tools.ant.util.JavaEnvUtils;
 import rvpredict.config.Configuration;
 import rvpredict.config.Util;
-import db.DBEngine;
+import rvpredict.db.DBEngine;
 import rvpredict.util.Logger;
 
 import java.io.File;
@@ -97,7 +97,7 @@ public class Main {
                 }
             }
             appArgList.add("-Xss" + Configuration.stackSize + "m");
-            appArgList.add("-Xmx" + Configuration.heapSize + "m");
+//            appArgList.add("-Xmx" + Configuration.heapSize + "m");
             appArgList.addAll(config.command_line);
 
             if (config.optlog) {

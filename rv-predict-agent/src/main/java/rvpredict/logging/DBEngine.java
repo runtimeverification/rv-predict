@@ -28,15 +28,20 @@
  ******************************************************************************/
 package rvpredict.logging;
 
+import rvpredict.db.EventItem;
 import rvpredict.config.Config;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
 
+import java.io.*;
+import java.nio.file.Paths;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Engine for interacting with database.
@@ -46,13 +51,14 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class DBEngine {
 
-    protected final AtomicLong globalEventID  = new AtomicLong(0);
+    protected final static AtomicLong globalEventID  = new AtomicLong(0);
     protected static long DBORDER = 0;// handle strange classloader
 
     // currently we use the h2 database
     protected final String dbname = "RVDatabase";
     private final int TABLE_NOT_FOUND_ERROR_CODE = 42102;
     private final int DATABASE_CLOSED = 90098;
+    private final String directory;
     public String appname = "main";
 
     // database schema
@@ -122,32 +128,36 @@ public class DBEngine {
     // private final String NO_AUTOCLOSE = ";DB_CLOSE_ON_EXIT=FALSE";//BUGGY in
     // H2, DON'T USE IT
 
-    class EventItem {
-        long TID;
-        int ID;
-        String ADDR;
-        String VALUE;
-        byte TYPE;
-
-        EventItem(long tid, int sid, String addr, String value, byte type) {
-            this.TID = tid;
-            this.ID = sid;
-            this.ADDR = addr;
-            this.VALUE = value;
-            this.TYPE = type;
-        }
-    }
-
     public void finishLogging() {
-        // should wait for logging thread to finish
-        while (!queue.isEmpty())
-            ;
-
+        try {
+            loggingThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Saving final events.");
         saveEventsToDB(buffer);
+        RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance, false);
+        System.out.println("done.");
         closeDB();
     }
 
     public void saveEventsToDB(List<EventItem> stack) {
+        if (stack.isEmpty()) {
+            System.out.println("Nothing left to save..");
+            return;
+        } else System.out.println("Saving " + stack.size() + " events");
+
+
+        try {
+            traceOS = new ObjectOutputStream(
+                    new GZIPOutputStream(
+                            new FileOutputStream(Paths.get(directory, stack.get(0).GID+"trace.gz").toFile())));
+            traceOS.writeObject(stack);
+            traceOS.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        if(true) return;
         synchronized (dblock) {
             for (EventItem item : stack) {
                 if (Config.shutDown) break;
@@ -168,20 +178,30 @@ public class DBEngine {
         }
     }
 
+    GZIPOutputStream zipOutputStream;
+    ObjectOutputStream traceOS;
+    Thread loggingThread;
     public void startAsynchronousLogging() {
+
         queue = new LinkedBlockingQueue<>();
         buffer = new ArrayList<>(BUFFER_THRESHOLD);
 
-        Thread t = new Thread(new Runnable() {
+        loggingThread = new Thread(new Runnable() {
 
             @Override
             public void run() {
 
                 while (true) {
                     try {
-                        List<EventItem> stack = queue.take();
+                        if (queue.size() % 10 == 0) System.out.println(queue.size());
+                        List<EventItem> stack = queue.poll(1, TimeUnit.SECONDS);
+                        if (stack == null) {
+                            if (isLastThread() && queue.size() == 0) {
+                                break;
+                            } else continue;
+                        }
+                        System.out.println("Retrieved one stack from queue. Size: " + stack.size());
                         saveEventsToDB(stack);
-                        if (Config.shutDown) continue;
                         RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance, false);
 
                     } catch (InterruptedException e) {
@@ -191,16 +211,41 @@ public class DBEngine {
                 }
             }
 
+            ThreadGroup root = null;
+            private boolean isLastThread() {
+                if (root == null) {
+                    root = Thread.currentThread().getThreadGroup();
+                    while (root.getParent() != null) {
+                        root = root.getParent();
+                    }
+                }
+                int estimatedThreadsSize = root.activeCount();
+                int retrievedThreadsSize;
+                Thread[] threads;
+                do {
+                    estimatedThreadsSize *= 2;
+                    threads = new Thread[estimatedThreadsSize];
+                    retrievedThreadsSize = root.enumerate(threads);
+                } while (retrievedThreadsSize == estimatedThreadsSize);
+                int nonDaemonThreads = 0;
+                for (Thread thread : threads) {
+                    if ( thread != null && !thread.isDaemon() && thread.isAlive() && !thread.isInterrupted()) {
+                        nonDaemonThreads++;
+                    }
+                    if (nonDaemonThreads > 3) return false;
+                }
+                return true;
+            }
+
         });
 
-        t.setDaemon(true);
-
-        t.start();
+        loggingThread.start();
 
     }
 
     public DBEngine(String directory, String name) {
-        BUFFER_THRESHOLD = Config.instance.commandLine.window_size;
+        BUFFER_THRESHOLD = 10*Config.instance.commandLine.window_size;
+        this.directory = directory;
         appname = name;
         tracetablename = "trace_" + name;
         tidtablename = "tid_" + name;
@@ -595,7 +640,7 @@ public class DBEngine {
             if (VALUE.equals("false"))
                 VALUE = "0";
 
-            buffer.add(new EventItem(TID,ID,ADDR,VALUE,TYPE));
+            buffer.add(new EventItem(DBEngine.globalEventID.incrementAndGet(), TID,ID,ADDR,VALUE,TYPE));
         }
     }
 

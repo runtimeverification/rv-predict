@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package db;
+package rvpredict.db;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -49,6 +49,7 @@ import violation.IViolation;
  */
 public class DBEngine {
 
+    private final String directory;
     protected long globalEventID = 0;
 
     // currently we use the h2 database
@@ -87,7 +88,7 @@ public class DBEngine {
 
     protected PreparedStatement prepStmt2;// just for thread id-name
 
-    public String tracetablename;
+//    public String tracetablename;
     public String tidtablename;
     public String stmtsigtablename;
     public String sharedvarsigtablename;
@@ -107,6 +108,7 @@ public class DBEngine {
 
     protected int BUFFER_THRESHOLD;
     protected boolean asynchronousLogging;
+    private TraceCache traceCache=null;
 
     // private final String NO_AUTOCLOSE = ";DB_CLOSE_ON_EXIT=FALSE";//BUGGY in
     // H2, DON'T USE IT
@@ -194,7 +196,8 @@ public class DBEngine {
 
     public DBEngine(String directory, String name) {
         appname = name;
-        tracetablename = "trace_" + name;
+        this.directory = directory;
+//        tracetablename = "trace_" + name;
         tidtablename = "tid_" + name;
         volatilesigtablename = "volatile_" + name;
         stmtsigtablename = "stmtsig_" + name;
@@ -252,8 +255,8 @@ public class DBEngine {
         stmt.execute(sql_dropTable);
         sql_dropTable = "DROP TABLE IF EXISTS " + volatilesigtablename;
         stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS " + tracetablename;
-        stmt.execute(sql_dropTable);
+//        sql_dropTable = "DROP TABLE IF EXISTS " + tracetablename;
+//        stmt.execute(sql_dropTable);
         sql_dropTable = "DROP TABLE IF EXISTS " + tidtablename;
         stmt.execute(sql_dropTable);
     }
@@ -278,8 +281,8 @@ public class DBEngine {
             stmt.execute(sql_dropTable);
             sql_dropTable = "SELECT COUNT(*) FROM " + volatilesigtablename;
             stmt.execute(sql_dropTable);
-            sql_dropTable = "SELECT COUNT(*) FROM " + tracetablename;
-            stmt.execute(sql_dropTable);
+//            sql_dropTable = "SELECT COUNT(*) FROM " + tracetablename;
+//            stmt.execute(sql_dropTable);
             sql_dropTable = "SELECT COUNT(*) FROM " + tidtablename;
             stmt.execute(sql_dropTable);
         } catch (SQLException e) {
@@ -364,24 +367,24 @@ public class DBEngine {
         prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
-    public void createTraceTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + tracetablename;
-
-        Statement stmt = conn.createStatement();
-        stmt.execute(sql_dropTable);
-
-        String sql_createTable = "CREATE TABLE " + tracetablename + " (" + tracetablecolname[0]
-                + " " + tracetablecoltype[0] + " PRIMARY KEY, " + tracetablecolname[1] + " "
-                + tracetablecoltype[1] + ", " + tracetablecolname[2] + " " + tracetablecoltype[2]
-                + ", " + tracetablecolname[3] + " " + tracetablecoltype[3] + ", "
-                + tracetablecolname[4] + " " + tracetablecoltype[4] + ", " + tracetablecolname[5]
-                + " " + tracetablecoltype[5] + ")";
-        stmt.execute(sql_createTable);
-
-        String sql_insertdata = "INSERT INTO " + tracetablename + " VALUES (?,?,?,?,?,?)";
-        prepStmt = conn.prepareStatement(sql_insertdata);
-
-    }
+//    public void createTraceTable() throws Exception {
+//        String sql_dropTable = "DROP TABLE IF EXISTS " + tracetablename;
+//
+//        Statement stmt = conn.createStatement();
+//        stmt.execute(sql_dropTable);
+//
+//        String sql_createTable = "CREATE TABLE " + tracetablename + " (" + tracetablecolname[0]
+//                + " " + tracetablecoltype[0] + " PRIMARY KEY, " + tracetablecolname[1] + " "
+//                + tracetablecoltype[1] + ", " + tracetablecolname[2] + " " + tracetablecoltype[2]
+//                + ", " + tracetablecolname[3] + " " + tracetablecoltype[3] + ", "
+//                + tracetablecolname[4] + " " + tracetablecoltype[4] + ", " + tracetablecolname[5]
+//                + " " + tracetablecoltype[5] + ")";
+//        stmt.execute(sql_createTable);
+//
+//        String sql_insertdata = "INSERT INTO " + tracetablename + " VALUES (?,?,?,?,?,?)";
+//        prepStmt = conn.prepareStatement(sql_insertdata);
+//
+//    }
 
     public void createThreadIdTable() throws Exception {
         String sql_dropTable = "DROP TABLE IF EXISTS " + tidtablename;
@@ -580,83 +583,9 @@ public class DBEngine {
         return map;
     }
 
-    public int getTraceThreadNumber() throws Exception {
-        int number = 0;
-        String sql_select = "SELECT COUNT(DISTINCT " + tracetablecolname[1] + ") FROM "
-                + tracetablename;
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(sql_select);
-        if (rs.next())
-            number = rs.getInt(1);
-        return number;
-    }
-
-    public int getTraceSharedVariableNumber() throws Exception {
-        int number = 0;
-        String sql_select = "SELECT COUNT(DISTINCT " + tracetablecolname[3] + ") FROM "
-                + tracetablename;
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(sql_select);
-        if (rs.next())
-            number = rs.getInt(1);
-        return number;
-    }
-
-    public int getTraceBranchNumber() throws Exception {
-        int number = 0;
-        String sql_select = "SELECT COUNT(*) FROM " + tracetablename + " WHERE "
-                + tracetablecolname[5] + " = " + tracetypetable[9];
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(sql_select);
-        if (rs.next())
-            number = rs.getInt(1);
-        return number;
-    }
-
-    public int getTraceReadWriteNumber() throws Exception {
-        int number = 0;
-        String sql_select = "SELECT COUNT(*) FROM " + tracetablename + " WHERE "
-                + tracetablecolname[5] + " in (" + tracetypetable[1] + ", " + tracetypetable[2]
-                + ")";
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(sql_select);
-        if (rs.next())
-            number = rs.getInt(1);
-        return number;
-    }
-
-    public int getTraceSyncNumber() throws Exception {
-        int number = 0;
-        String sql_select = "SELECT COUNT(*) FROM " + tracetablename + " WHERE "
-                + tracetablecolname[5] + " > " + tracetypetable[1] + " AND " + tracetablecolname[5]
-                + " < " + tracetypetable[8];
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(sql_select);
-        if (rs.next())
-            number = rs.getInt(1);
-        return number;
-    }
-
-    public int getTracePropertyNumber() throws Exception {
-        int number = 0;
-        String sql_select = "SELECT COUNT(*) FROM " + tracetablename + " WHERE "
-                + tracetablecolname[5] + " = " + tracetypetable[11];
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(sql_select);
-        if (rs.next())
-            number = rs.getInt(1);
-        return number;
-    }
-
     public long getTraceSize() throws Exception {
-        long size = 0;
-
-        String sql_select = "SELECT COUNT(*) FROM " + tracetablename;
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(sql_select);
-        if (rs.next())
-            size = rs.getLong(1);
-        return size;
+        if (traceCache == null) traceCache = new TraceCache(directory);
+        return traceCache.getTraceSize();
     }
 
     /**
@@ -678,28 +607,39 @@ public class DBEngine {
      * @throws Exception
      */
     public Trace getTrace(long min, long max, TraceInfo info) throws Exception {
-        String sql_select = "SELECT * FROM " + tracetablename;
-        if (max > min)
-            sql_select += " WHERE GID BETWEEN '" + min + "' AND '" + max + "'";
-        sql_select += " ORDER BY GID";
-
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(sql_select);
-
+        if (traceCache == null) traceCache = new TraceCache(directory);
         Trace trace = new Trace(info);
         AbstractNode node = null;
+        for (long index = min; index <= max; index++) {
+            rvpredict.db.EventItem eventItem = traceCache.getEvent(index);
+
+//        }
+//        String sql_select = "SELECT * FROM " + tracetablename;
+//        if (max > min)
+//            sql_select += " WHERE GID BETWEEN '" + min + "' AND '" + max + "'";
+//        sql_select += " ORDER BY GID";
+//
+//        Statement stmt = conn.createStatement();
+//        ResultSet rs = stmt.executeQuery(sql_select);
+
         // int NUM_CS = 0;
         // long lastTID = -1;
         // Fetch each row from the result set
-        while (rs.next()) {
+//        while (rs.next()) {
             // Get the data from the row using the column index
-            long GID = rs.getLong(1);
-            long TID = rs.getLong(2);
-            int ID = rs.getInt(3);
-            String ADDR = rs.getString(4);
-            String VALUE = rs.getString(5);
-            byte TYPE = rs.getByte(6);
+//            long GID = rs.getLong(1);
+//            long TID = rs.getLong(2);
+//            int ID = rs.getInt(3);
+//            String ADDR = rs.getString(4);
+//            String VALUE = rs.getString(5);
+//            byte TYPE = rs.getByte(6);
 
+            long GID = eventItem.GID;
+            long TID = eventItem.TID;
+            int ID = eventItem.ID;
+            String ADDR = eventItem.ADDR;
+            String VALUE = eventItem.VALUE;
+            byte TYPE = eventItem.TYPE;
             // System.out.println(GID+" "+TID+" "+ADDR+" "+VALUE+" "+TYPE);
 
             switch (TYPE) {
@@ -772,21 +712,21 @@ public class DBEngine {
                 db.saveStmtSignatureToDB("a.b", 2);
             }
 
-            db.createTraceTable();
-            {
-                db.saveEventToDB(1l, 1, "abc", "1", db.tracetypetable[1]);
-                db.saveEventToDB(1, 2, "ac", "21", db.tracetypetable[2]);
-                db.saveEventToDB(1, 3, "ac", "24", db.tracetypetable[3]);
-                db.saveEventToDB(1, 4, "ac", "324", db.tracetypetable[4]);
-                db.saveEventToDB(1, 5, "ac", "1324", db.tracetypetable[5]);
-                db.saveEventToDB(2, 6, "ac", "24", db.tracetypetable[5]);
-                db.saveEventToDB(2, 7, "ac", "1324", db.tracetypetable[6]);
-                db.saveEventToDB(3, 8, "ac", "34", db.tracetypetable[7]);
-                db.saveEventToDB(4, 9, "ac", "14", db.tracetypetable[8]);
-                db.saveEventToDB(4, 10, "ac", "14", db.tracetypetable[9]);
-
-                db.closeDB();
-            }
+//            db.createTraceTable();
+//            {
+//                db.saveEventToDB(1l, 1, "abc", "1", db.tracetypetable[1]);
+//                db.saveEventToDB(1, 2, "ac", "21", db.tracetypetable[2]);
+//                db.saveEventToDB(1, 3, "ac", "24", db.tracetypetable[3]);
+//                db.saveEventToDB(1, 4, "ac", "324", db.tracetypetable[4]);
+//                db.saveEventToDB(1, 5, "ac", "1324", db.tracetypetable[5]);
+//                db.saveEventToDB(2, 6, "ac", "24", db.tracetypetable[5]);
+//                db.saveEventToDB(2, 7, "ac", "1324", db.tracetypetable[6]);
+//                db.saveEventToDB(3, 8, "ac", "34", db.tracetypetable[7]);
+//                db.saveEventToDB(4, 9, "ac", "14", db.tracetypetable[8]);
+//                db.saveEventToDB(4, 10, "ac", "14", db.tracetypetable[9]);
+//
+//            }
+            db.closeDB();
 
         } catch (Exception e) {
             e.printStackTrace();

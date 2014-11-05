@@ -49,7 +49,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Stack;
-import java.util.Vector;
+import java.util.List;
 import java.util.Map.Entry;
 
 import rvpredict.config.Configuration;
@@ -64,7 +64,8 @@ public class EngineSMTLIB1 extends Engine {
         CONS_BENCHNAME = "(benchmark " + config.tableName + ".smt\n";
     }
 
-    public void declareVariables(Vector<AbstractNode> trace) {
+    @Override
+    public void declareVariables(List<AbstractNode> trace) {
         CONS_SETLOGIC = ":logic QF_IDL\n";
 
         CONS_DECLARE = new StringBuilder(":extrafuns (\n");
@@ -90,13 +91,14 @@ public class EngineSMTLIB1 extends Engine {
 
     }
 
-    public void addIntraThreadConstraints(HashMap<Long, Vector<AbstractNode>> map) {
+    @Override
+    public void addIntraThreadConstraints(HashMap<Long, List<AbstractNode>> map) {
         // create reachability engine
         reachEngine = new ReachabilityEngine();
 
-        Iterator<Vector<AbstractNode>> mapIt = map.values().iterator();
+        Iterator<List<AbstractNode>> mapIt = map.values().iterator();
         while (mapIt.hasNext()) {
-            Vector<AbstractNode> nodes = mapIt.next();
+            List<AbstractNode> nodes = mapIt.next();
             long lastGID = nodes.get(0).getGID();
             String lastVar = makeVariable(lastGID);
             for (int i = 1; i < nodes.size(); i++) {
@@ -113,16 +115,17 @@ public class EngineSMTLIB1 extends Engine {
         }
     }
 
+    @Override
     public void addPSOIntraThreadConstraints(
-            HashMap<String, HashMap<Long, Vector<IMemNode>>> indexedMap) {
+            HashMap<String, HashMap<Long, List<IMemNode>>> indexedMap) {
 
-        Iterator<HashMap<Long, Vector<IMemNode>>> mapIt1 = indexedMap.values().iterator();
+        Iterator<HashMap<Long, List<IMemNode>>> mapIt1 = indexedMap.values().iterator();
         while (mapIt1.hasNext()) {
-            HashMap<Long, Vector<IMemNode>> map = mapIt1.next();
+            HashMap<Long, List<IMemNode>> map = mapIt1.next();
 
-            Iterator<Vector<IMemNode>> mapIt2 = map.values().iterator();
+            Iterator<List<IMemNode>> mapIt2 = map.values().iterator();
             while (mapIt2.hasNext()) {
-                Vector<IMemNode> nodes = mapIt2.next();
+                List<IMemNode> nodes = mapIt2.next();
                 long lastGID = nodes.get(0).getGID();
                 String lastVar = makeVariable(lastGID);
                 for (int i = 1; i < nodes.size(); i++) {
@@ -142,18 +145,19 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     // the order constraints between wait/notify/fork/join/lock/unlock
+    @Override
     public void addSynchronizationConstraints(Trace trace,
-            HashMap<String, Vector<ISyncNode>> syncNodesMap,
+            HashMap<String, List<ISyncNode>> syncNodesMap,
             HashMap<Long, AbstractNode> firstNodes, HashMap<Long, AbstractNode> lastNodes) {
         lockEngine = new LockSetEngine();// construct a new lockset for this
                                          // segment
 
         // thread first node - last node
-        Iterator<Vector<ISyncNode>> mapIt = syncNodesMap.values().iterator();
+        Iterator<List<ISyncNode>> mapIt = syncNodesMap.values().iterator();
         while (mapIt.hasNext()) {
-            Vector<ISyncNode> nodes = mapIt.next();
+            List<ISyncNode> nodes = mapIt.next();
 
-            Vector<LockPair> lockPairs = new Vector<LockPair>();
+            List<LockPair> lockPairs = new ArrayList<>();
 
             HashMap<Long, Stack<ISyncNode>> threadSyncStack = new HashMap<Long, Stack<ISyncNode>>();
             NotifyNode matchNotifyNode = null;
@@ -192,7 +196,7 @@ public class EngineSMTLIB1 extends Engine {
                     }
 
                 } else if (node instanceof LockNode) {
-                    long tid = node.getTid();
+                    long tid = node.getTID();
 
                     Stack<ISyncNode> stack = threadSyncStack.get(tid);
                     if (stack == null) {
@@ -202,7 +206,7 @@ public class EngineSMTLIB1 extends Engine {
 
                     stack.push(node);
                 } else if (node instanceof UnlockNode) {
-                    long tid = node.getTid();
+                    long tid = node.getTID();
                     Stack<ISyncNode> stack = threadSyncStack.get(tid);
 
                     // assert(stack.size()>0);//this is possible when segmented
@@ -226,7 +230,7 @@ public class EngineSMTLIB1 extends Engine {
                         stack.pop();// handle reentrant lock here
 
                 } else if (node instanceof WaitNode) {
-                    long tid = node.getTid();
+                    long tid = node.getTID();
 
                     // assert(matchNotifyNode!=null);this is also possible when
                     // segmented
@@ -239,7 +243,7 @@ public class EngineSMTLIB1 extends Engine {
                         try {
                             // TODO: handle OutofBounds
                             try {
-                                while (trace.getFullTrace().get(nodeIndex).getTid() != tid)
+                                while (trace.getFullTrace().get(nodeIndex).getTID() != tid)
                                     nodeIndex++;
                             } catch (Exception e) {
                                 // if we arrive here, it means the wait node is
@@ -293,7 +297,7 @@ public class EngineSMTLIB1 extends Engine {
                     ISyncNode node = stack.firstElement();
                     LockPair lp = new LockPair(node, null);
                     lockPairs.add(lp);
-                    lockEngine.add(node.getAddr(), node.getTid(), lp);
+                    lockEngine.add(node.getAddr(), node.getTID(), lp);
                 }
             }
 
@@ -302,7 +306,7 @@ public class EngineSMTLIB1 extends Engine {
 
     }
 
-    private String constructLockConstraintsOptimized(Vector<LockPair> lockPairs) {
+    private String constructLockConstraintsOptimized(List<LockPair> lockPairs) {
         String CONS_LOCK = "";
 
         // obtain each thread's last lockpair
@@ -321,7 +325,7 @@ public class EngineSMTLIB1 extends Engine {
             if (lp1.unlock != null)
                 var_lp1_b = makeVariable(lp1.unlock.getGID());
 
-            long lp1_tid = lp1.lock.getTid();
+            long lp1_tid = lp1.lock.getTID();
             LockPair lp1_pre = lastLockPairMap.get(lp1_tid);
 
             /*
@@ -337,12 +341,12 @@ public class EngineSMTLIB1 extends Engine {
             for (int j = 0; j < lockPairs.size(); j++) {
                 LockPair lp = lockPairs.get(j);
                 if (lp.lock != null) {
-                    if (lp.lock.getTid() != lp1_tid
+                    if (lp.lock.getTID() != lp1_tid
                             && !canReach((AbstractNode) lp1.lock, (AbstractNode) lp.lock)) {
                         flexLockPairs.add(lp);
                     }
                 } else if (lp.unlock != null) {
-                    if (lp.unlock.getTid() != lp1_tid
+                    if (lp.unlock.getTID() != lp1_tid
                             && !canReach((AbstractNode) lp1.lock, (AbstractNode) lp.unlock)) {
                         flexLockPairs.add(lp);
                     }
@@ -383,7 +387,7 @@ public class EngineSMTLIB1 extends Engine {
                 CONS_LOCK += cons_b;
 
             }
-            lastLockPairMap.put(lp1.lock.getTid(), lp1);
+            lastLockPairMap.put(lp1.lock.getTID(), lp1);
 
         }
 
@@ -391,14 +395,15 @@ public class EngineSMTLIB1 extends Engine {
 
     }
 
-    public void addReadWriteConstraints(HashMap<String, Vector<ReadNode>> indexedReadNodes,
-            HashMap<String, Vector<WriteNode>> indexedWriteNodes) {
+    public void addReadWriteConstraints(HashMap<String, List<ReadNode>> indexedReadNodes,
+            HashMap<String, List<WriteNode>> indexedWriteNodes) {
         CONS_ASSERT.append(constructReadWriteConstraints(indexedReadNodes, indexedWriteNodes));
     }
 
     // TODO: NEED to handle the feasibility of new added write nodes
+    @Override
     public StringBuilder constructCausalReadWriteConstraintsOptimized(long rgid,
-            Vector<ReadNode> readNodes, HashMap<String, Vector<WriteNode>> indexedWriteNodes,
+            List<ReadNode> readNodes, HashMap<String, List<WriteNode>> indexedWriteNodes,
             HashMap<String, String> initValueMap) {
         StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
 
@@ -410,7 +415,7 @@ public class EngineSMTLIB1 extends Engine {
                 continue;
 
             // get all write nodes on the address
-            Vector<WriteNode> writenodes = indexedWriteNodes.get(rnode.getAddr());
+            List<WriteNode> writenodes = indexedWriteNodes.get(rnode.getAddr());
             // no write to array field?
             // Yes, it could be: java.io.PrintStream out
             if (writenodes == null || writenodes.size() < 1)//
@@ -419,11 +424,11 @@ public class EngineSMTLIB1 extends Engine {
             WriteNode preNode = null;//
 
             // get all write nodes on the address & write the same value
-            Vector<WriteNode> writenodes_value_match = new Vector<WriteNode>();
+            List<WriteNode> writenodes_value_match = new ArrayList<>();
             for (int j = 0; j < writenodes.size(); j++) {
                 WriteNode wnode = writenodes.get(j);
                 if (wnode.getValue().equals(rnode.getValue()) && !canReach(rnode, wnode)) {
-                    if (wnode.getTid() != rnode.getTid())
+                    if (wnode.getTID() != rnode.getTID())
                         writenodes_value_match.add(wnode);
                     else {
                         if (preNode == null
@@ -533,7 +538,7 @@ public class EngineSMTLIB1 extends Engine {
 
                     for (int k = 0; k < writenodes.size(); k++) {
                         WriteNode wnode3 = writenodes.get(k);
-                        if (wnode3.getTid() != rnode.getTid() && !canReach(rnode, wnode3)) {
+                        if (wnode3.getTID() != rnode.getTID() && !canReach(rnode, wnode3)) {
                             String var_w3 = makeVariable(wnode3.getGID());
 
                             String cons_e = "(> " + var_w3 + " " + var_r + ")\n";
@@ -553,21 +558,21 @@ public class EngineSMTLIB1 extends Engine {
 
     // does not consider value and causal dependence
     private static String constructReadWriteConstraints(
-            HashMap<String, Vector<ReadNode>> indexedReadNodes,
-            HashMap<String, Vector<WriteNode>> indexedWriteNodes) {
+            HashMap<String, List<ReadNode>> indexedReadNodes,
+            HashMap<String, List<WriteNode>> indexedWriteNodes) {
 
         String CONS_RW = "";
 
-        Iterator<Entry<String, Vector<ReadNode>>> entryIt = indexedReadNodes.entrySet().iterator();
+        Iterator<Entry<String, List<ReadNode>>> entryIt = indexedReadNodes.entrySet().iterator();
         while (entryIt.hasNext()) {
-            Entry<String, Vector<ReadNode>> entry = entryIt.next();
+            Entry<String, List<ReadNode>> entry = entryIt.next();
             String addr = entry.getKey();
 
             // get all read nodes on the address
-            Vector<ReadNode> readnodes = entry.getValue();
+            List<ReadNode> readnodes = entry.getValue();
 
             // get all write nodes on the address
-            Vector<WriteNode> writenodes = indexedWriteNodes.get(addr);
+            List<WriteNode> writenodes = indexedWriteNodes.get(addr);
 
             // no write to array field?
             // Yes, it could be: java.io.PrintStream out
@@ -634,23 +639,26 @@ public class EngineSMTLIB1 extends Engine {
         return CONS_RW;
     }
 
+    @Override
     public boolean isAtomic(IMemNode node1, IMemNode node2, IMemNode node3) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
         long gid3 = node3.getGID();
 
-        return lockEngine.isAtomic(node1.getTid(), gid1, gid2, node3.getTid(), gid3);
+        return lockEngine.isAtomic(node1.getTID(), gid1, gid2, node3.getTID(), gid3);
 
     }
 
+    @Override
     public boolean hasCommonLock(IMemNode node1, IMemNode node2) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
 
-        return lockEngine.hasCommonLock(node1.getTid(), gid1, node2.getTid(), gid2);
+        return lockEngine.hasCommonLock(node1.getTID(), gid1, node2.getTID(), gid2);
 
     }
 
+    @Override
     public boolean canReach(AbstractNode node1, AbstractNode node2) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
@@ -659,6 +667,7 @@ public class EngineSMTLIB1 extends Engine {
 
     }
 
+    @Override
     public boolean isRace(AbstractNode node1, AbstractNode node2, StringBuilder casualConstraint) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
@@ -692,21 +701,21 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     public static void testConstructReadWriteConstraints() {
-        HashMap<String, Vector<ReadNode>> indexedReadNodes = new HashMap<String, Vector<ReadNode>>();
+        HashMap<String, List<ReadNode>> indexedReadNodes = new HashMap<String, List<ReadNode>>();
 
-        HashMap<String, Vector<WriteNode>> indexedWriteNodes = new HashMap<String, Vector<WriteNode>>();
+        HashMap<String, List<WriteNode>> indexedWriteNodes = new HashMap<String, List<WriteNode>>();
 
-        Vector<WriteNode> writeNodes = new Vector<WriteNode>();
-        writeNodes.add(new WriteNode(1, 1, 1, "s", "0", AbstractNode.TYPE.WRITE));
-        writeNodes.add(new WriteNode(2, 2, 3, "s", "0", AbstractNode.TYPE.WRITE));
-        writeNodes.add(new WriteNode(3, 3, 5, "s", "1", AbstractNode.TYPE.WRITE));
-        writeNodes.add(new WriteNode(4, 4, 7, "s", "1", AbstractNode.TYPE.WRITE));
+        List<WriteNode> writeNodes = new ArrayList<>();
+        writeNodes.add(new WriteNode(1, 1, 1, "s", "0"));
+        writeNodes.add(new WriteNode(2, 2, 3, "s", "0"));
+        writeNodes.add(new WriteNode(3, 3, 5, "s", "1"));
+        writeNodes.add(new WriteNode(4, 4, 7, "s", "1"));
 
-        Vector<ReadNode> readNodes = new Vector<ReadNode>();
-        readNodes.add(new ReadNode(5, 1, 2, "s", "0", AbstractNode.TYPE.READ));
-        readNodes.add(new ReadNode(6, 2, 4, "s", "0", AbstractNode.TYPE.READ));
-        readNodes.add(new ReadNode(7, 3, 6, "s", "1", AbstractNode.TYPE.READ));
-        readNodes.add(new ReadNode(8, 4, 8, "s", "1", AbstractNode.TYPE.READ));
+        List<ReadNode> readNodes = new ArrayList<>();
+        readNodes.add(new ReadNode(5, 1, 2, "s", "0"));
+        readNodes.add(new ReadNode(6, 2, 4, "s", "0"));
+        readNodes.add(new ReadNode(7, 3, 6, "s", "1"));
+        readNodes.add(new ReadNode(8, 4, 8, "s", "1"));
 
         indexedWriteNodes.put("s", writeNodes);
         indexedReadNodes.put("s", readNodes);
@@ -719,10 +728,11 @@ public class EngineSMTLIB1 extends Engine {
         testConstructReadWriteConstraints();
     }
 
-    public Vector<String> getSchedule(long endGID, HashMap<Long, Long> nodeGIDTidMap,
+    @Override
+    public List<String> getSchedule(long endGID, HashMap<Long, Long> nodeGIDTidMap,
             HashMap<Long, String> threadIdNameMap) {
 
-        Vector<String> schedule = new Vector<String>();
+        List<String> schedule = new ArrayList<>();
         for (int i = 0; i < task.schedule.size(); i++) {
             String xi = task.schedule.get(i);
             long gid = Long.valueOf(xi.substring(1));

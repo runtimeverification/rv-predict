@@ -95,7 +95,6 @@ public class DBEngine {
             'b' };
     protected Connection conn;
     protected PreparedStatement prepStmt;
-    private PreparedStatement traceTablePrepStmt;
 
     protected PreparedStatement prepStmt2;// just for thread id-name
 
@@ -157,28 +156,8 @@ public class DBEngine {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        if(true) return;
-        synchronized (dblock) {
-            for (EventItem item : stack) {
-                if (Config.shutDown) break;
-                // System.out.println(item.GID);
-                try {
-                    traceTablePrepStmt.setLong(1, item.TID);
-                    traceTablePrepStmt.setInt(2, item.ID);
-                    traceTablePrepStmt.setString(3, item.ADDR);
-                    traceTablePrepStmt.setString(4, item.VALUE);
-                    traceTablePrepStmt.setByte(5, item.TYPE);
-
-                    traceTablePrepStmt.execute();
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
     }
 
-    GZIPOutputStream zipOutputStream;
     ObjectOutputStream traceOS;
     Thread loggingThread;
     public void startAsynchronousLogging() {
@@ -477,7 +456,7 @@ public class DBEngine {
                 + ", " + tracetablecolname[2] + ", " + tracetablecolname[3] + ", "
                 + tracetablecolname[4] + ", " + tracetablecolname[5] + " "
                 + " ) VALUES (?,?,?,?,?)";
-        traceTablePrepStmt = conn.prepareStatement(sql_insertdata);
+        prepStmt = conn.prepareStatement(sql_insertdata);
 
     }
 

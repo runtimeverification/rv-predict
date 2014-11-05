@@ -29,12 +29,12 @@
 package rvpredict.db;
 
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Stack;
-import java.util.Vector;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -644,40 +644,40 @@ public class DBEngine {
 
             switch (TYPE) {
             case '0':
-                node = new InitNode(GID, TID, ID, ADDR, VALUE, AbstractNode.TYPE.INIT);
+                node = new InitNode(GID, TID, ID, ADDR, VALUE);
                 break;
             case '1':
-                node = new ReadNode(GID, TID, ID, ADDR, VALUE, AbstractNode.TYPE.READ);
+                node = new ReadNode(GID, TID, ID, ADDR, VALUE);
                 break;
             case '2':
-                node = new WriteNode(GID, TID, ID, ADDR, VALUE, AbstractNode.TYPE.WRITE);
+                node = new WriteNode(GID, TID, ID, ADDR, VALUE);
                 break;
             case '3':
-                node = new LockNode(GID, TID, ID, ADDR, AbstractNode.TYPE.LOCK);
+                node = new LockNode(GID, TID, ID, ADDR);
                 break;
             case '4':
-                node = new UnlockNode(GID, TID, ID, ADDR, AbstractNode.TYPE.UNLOCK);
+                node = new UnlockNode(GID, TID, ID, ADDR);
                 break;
             case '5':
-                node = new WaitNode(GID, TID, ID, ADDR, AbstractNode.TYPE.WAIT);
+                node = new WaitNode(GID, TID, ID, ADDR);
                 break;
             case '6':
-                node = new NotifyNode(GID, TID, ID, ADDR, AbstractNode.TYPE.NOTIFY);
+                node = new NotifyNode(GID, TID, ID, ADDR);
                 break;
             case '7':
-                node = new StartNode(GID, TID, ID, ADDR, AbstractNode.TYPE.START);
+                node = new StartNode(GID, TID, ID, ADDR);
                 break;
             case '8':
-                node = new JoinNode(GID, TID, ID, ADDR, AbstractNode.TYPE.JOIN);
+                node = new JoinNode(GID, TID, ID, ADDR);
                 break;
             case '9':
-                node = new BranchNode(GID, TID, ID, AbstractNode.TYPE.BRANCH);
+                node = new BranchNode(GID, TID, ID);
                 break;
             case 'a':
-                node = new BBNode(GID, TID, ID, AbstractNode.TYPE.BB);
+                node = new BBNode(GID, TID, ID);
                 break;
             case 'b':
-                node = new PropertyNode(GID, TID, ID, ADDR, AbstractNode.TYPE.PROPERTY);
+                node = new PropertyNode(GID, TID, ID, ADDR);
                 break;
 
             default:
@@ -807,13 +807,13 @@ public class DBEngine {
         while (violationIt.hasNext()) {
 
             IViolation violation = violationIt.next();
-            ArrayList<Vector<String>> schedules = violation.getSchedules();
+            List<List<String>> schedules = violation.getSchedules();
 
-            Iterator<Vector<String>> scheduleIt = schedules.iterator();
+            Iterator<List<String>> scheduleIt = schedules.iterator();
 
             while (scheduleIt.hasNext()) {
                 i++;
-                Vector<String> schedule = scheduleIt.next();
+                List<String> schedule = scheduleIt.next();
                 try {
                     prepStmt.setInt(1, i);
                     prepStmt.setString(2, violation.toString());

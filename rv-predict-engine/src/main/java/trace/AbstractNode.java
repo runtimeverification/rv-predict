@@ -31,7 +31,7 @@ package trace;
 /**
  * An abstract representation of an event in the trace. Each event has a global
  * id (GID) representing their order in the trace, a thread id (tid)
- * representing the identity of their thread, a static syntatic ID (ID)
+ * representing the identity of their thread, a static syntactic ID (ID)
  * representing their program location, and a corresponding type, e.g., read,
  * write, lock, unlock, etc. For most events except branch events, they also
  * have a corresponding address attribute "addr" denoting the memory address
@@ -41,56 +41,56 @@ package trace;
  *
  */
 public abstract class AbstractNode {
+    
+    public enum TYPE {
+        INIT, READ, WRITE, LOCK, UNLOCK, WAIT, NOTIFY, START, JOIN, BRANCH, BASIC_BLOCK, PROPERTY
+    }
+
     /**
      * There are three kinds of mems: SPE, thread object id, ordinary object id
      */
     /**
 	 * 
 	 */
-    protected long GID;
-    protected int ID;
-    protected long tid;
-    protected TYPE type;
+    protected final long globalId;
+    protected final long threadId;
+    protected final int synId;
+    protected final TYPE type;
 
-    public AbstractNode(long GID, long tid, int ID, TYPE type) {
-        this.GID = GID;
-        this.tid = tid;
-        this.ID = ID;
+    public AbstractNode(long globalId, long threadId, int synId, TYPE type) {
+        this.globalId = globalId;
+        this.threadId = threadId;
+        this.synId = synId;
         this.type = type;
     }
 
     public long getGID() {
-        return GID;
+        return globalId;
+    }
+
+    public long getTID() {
+        return threadId;
     }
 
     public int getID() {
-        return ID;
-    }
-
-    public long getTid() {
-        return tid;
-    }
-
-    public void setTid(int tid) {
-        this.tid = tid;
-    }
-
-    public boolean equals(AbstractNode node) {
-        if (this.GID == node.getGID()) {
-            return true;
-        } else
-            return false;
+        return synId;
     }
 
     public TYPE getType() {
         return type;
     }
 
-    public enum TYPE {
-        INIT, READ, WRITE, LOCK, UNLOCK, WAIT, NOTIFY, START, JOIN, BRANCH, BB, PROPERTY
+    // TODO(YilongL): this is simply wrong... and no one is calling this method...
+    public boolean equals(AbstractNode node) {
+        if (this.globalId == node.getGID()) {
+            return true;
+        } else
+            return false;
     }
 
+
+    @Override
     public String toString() {
-        return GID + ": thread " + tid + " " + ID + " " + type;
+        return globalId + ": thread " + threadId + " " + synId + " " + type;
     }
 }

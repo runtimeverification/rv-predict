@@ -28,23 +28,17 @@
  ******************************************************************************/
 package violation;
 
-import java.util.ArrayList;
-import java.util.Vector;
+import java.util.List;
+import java.util.List;
 
 public interface IViolation {
-
-    public String toString();
-
-    public boolean equals(Object o);
-
-    public int hashCode();
 
     /**
      * add a schedule to the violation
      * 
      * @param schedule
      */
-    public void addSchedule(Vector<String> schedule);
+    void addSchedule(List<String> schedule);
 
-    public ArrayList<Vector<String>> getSchedules();
+    List<List<String>> getSchedules();
 }

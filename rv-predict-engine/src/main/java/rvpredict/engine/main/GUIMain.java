@@ -647,9 +647,9 @@ public class GUIMain {
                             + "<li> Trace Slicing - Traces are sliced so that only relevant events are included.  This produces a more relaxed causal model that "
                             + "is able to find more violations.&nbsp;&nbsp<br />"
                             + "Slicing must traverse events in reverse, which is why events are emitted in reverse.&nbsp;&nbsp;</li>"
-                            + "<li> Vector Clocking - the trace slices are vector clocked so that a causal ordering may be applied to them.  "
+                            + "<li> List Clocking - the trace slices are List clocked so that a causal ordering may be applied to them.  "
                             + "This process proceeds in reverse.</li>"
-                            + "<li> Prediction - the various prediction algorithms (currently only data race detection) are performed on the reversed, vector clocked, "
+                            + "<li> Prediction - the various prediction algorithms (currently only data race detection) are performed on the reversed, List clocked, "
                             + "trace</li></ul>");
                     aboutTxt.setEditable(false);
                     about.add(aboutTxt);

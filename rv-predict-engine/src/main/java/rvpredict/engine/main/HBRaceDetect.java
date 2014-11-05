@@ -35,7 +35,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.Vector;
+import java.util.List;
 
 import rvpredict.config.Configuration;
 import trace.ReadNode;
@@ -94,10 +94,10 @@ public class HBRaceDetect {
                     continue;
             }
             // get all read nodes on the address
-            Vector<ReadNode> readnodes = trace.getIndexedReadNodes().get(addr);
+            List<ReadNode> readnodes = trace.getIndexedReadNodes().get(addr);
 
             // get all write nodes on the address
-            Vector<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
+            List<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
             if (writenodes == null || writenodes.size() < 1)
                 continue;
 
@@ -109,7 +109,7 @@ public class HBRaceDetect {
 
                     for (int j = 0; j < writenodes.size(); j++) {
                         WriteNode wnode = writenodes.get(j);
-                        if (rnode.getTid() != wnode.getTid()) {
+                        if (rnode.getTID() != wnode.getTID()) {
                             Race race = new Race(trace.getStmtSigIdMap().get(rnode.getID()), trace
                                     .getStmtSigIdMap().get(wnode.getID()), rnode.getID(),
                                     wnode.getID());
@@ -142,7 +142,7 @@ public class HBRaceDetect {
 
                 for (int j = 0; j < writenodes.size(); j++) {
                     WriteNode wnode2 = writenodes.get(j);
-                    if (wnode1.getTid() != wnode2.getTid()) {
+                    if (wnode1.getTID() != wnode2.getTID()) {
                         Race race = new Race(trace.getStmtSigIdMap().get(wnode1.getID()), trace
                                 .getStmtSigIdMap().get(wnode2.getID()), wnode1.getID(),
                                 wnode2.getID());

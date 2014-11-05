@@ -40,7 +40,6 @@ import trace.Trace;
 import trace.UnlockNode;
 import trace.WaitNode;
 import trace.WriteNode;
-import trace.AbstractNode.TYPE;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
@@ -49,7 +48,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Stack;
-import java.util.Vector;
+import java.util.List;
 
 /**
  * The engine class for causal-precedes (CP) based race detection. It maintains
@@ -81,10 +80,10 @@ public class CPEngine {
      * 
      * @param map
      */
-    private void addIntraThreadEdge(HashMap<Long, Vector<AbstractNode>> map) {
-        Iterator<Vector<AbstractNode>> mapIt = map.values().iterator();
+    private void addIntraThreadEdge(HashMap<Long, List<AbstractNode>> map) {
+        Iterator<List<AbstractNode>> mapIt = map.values().iterator();
         while (mapIt.hasNext()) {
-            Vector<AbstractNode> nodes = mapIt.next();
+            List<AbstractNode> nodes = mapIt.next();
             long lastGID = nodes.get(0).getGID();
             for (int i = 1; i < nodes.size(); i++) {
                 long thisGID = nodes.get(i).getGID();
@@ -132,7 +131,7 @@ public class CPEngine {
         // during recording
         // should after wait, before notify
         // after lock, before unlock
-        Vector<AbstractNode> nodes = trace.getFullTrace();
+        List<AbstractNode> nodes = trace.getFullTrace();
         for (int i = 0; i < nodes.size(); i++) {
             AbstractNode node = nodes.get(i);
             long thisGID = node.getGID();
@@ -166,10 +165,10 @@ public class CPEngine {
                 }
                 addressLastReadMap.put(addr, (ReadNode) node);
 
-                HashSet<String> addresses = threadCurrentLockRegionReadAddresses.get(node.getTid());
+                HashSet<String> addresses = threadCurrentLockRegionReadAddresses.get(node.getTID());
                 if (addresses == null) {
                     addresses = new HashSet<String>();
-                    threadCurrentLockRegionReadAddresses.put(node.getTid(), addresses);
+                    threadCurrentLockRegionReadAddresses.put(node.getTID(), addresses);
                 }
                 addresses.add(addr);
             } else if (node instanceof WriteNode) {
@@ -185,14 +184,14 @@ public class CPEngine {
                 addressLastWriteMap.put(addr, (WriteNode) node);
 
                 HashSet<String> addresses = threadCurrentLockRegionWriteAddresses
-                        .get(node.getTid());
+                        .get(node.getTID());
                 if (addresses == null) {
                     addresses = new HashSet<String>();
-                    threadCurrentLockRegionWriteAddresses.put(node.getTid(), addresses);
+                    threadCurrentLockRegionWriteAddresses.put(node.getTID(), addresses);
                 }
                 addresses.add(addr);
             } else if (node instanceof LockNode) {
-                long tid = node.getTid();
+                long tid = node.getTID();
 
                 Stack<HashSet<String>> readstack = threadReadAccessAddrStack.get(tid);
                 if (readstack == null) {
@@ -226,7 +225,7 @@ public class CPEngine {
                 syncstack.push(((LockNode) node));
 
             } else if (node instanceof UnlockNode) {
-                long tid = node.getTid();
+                long tid = node.getTID();
 
                 Stack<ISyncNode> syncstack = threadSyncStack.get(tid);
 
@@ -242,7 +241,7 @@ public class CPEngine {
                     AbstractNode firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
-                            ((UnlockNode) node).getAddr(), TYPE.LOCK);
+                            ((UnlockNode) node).getAddr());
                     lp = new LockPair(fake_node, (ISyncNode) node);
                 } else {
                     lp = new LockPair(syncstack.pop(), (ISyncNode) node);
@@ -302,7 +301,7 @@ public class CPEngine {
                 }
 
             } else if (node instanceof WaitNode) {
-                long tid = node.getTid();
+                long tid = node.getTID();
 
                 // assert(matchNotifyNode!=null);this is also possible when
                 // segmented
@@ -314,7 +313,7 @@ public class CPEngine {
                     try {
                         // TODO: handle OutofBounds
                         try {
-                            while (trace.getFullTrace().get(nodeIndex).getTid() != tid)
+                            while (trace.getFullTrace().get(nodeIndex).getTID() != tid)
                                 nodeIndex++;
                         } catch (Exception e) {
                             // if we arrive here, it means the wait node is the
@@ -347,7 +346,7 @@ public class CPEngine {
                     AbstractNode firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
-                            ((WaitNode) node).getAddr(), TYPE.LOCK);
+                            ((WaitNode) node).getAddr());
                     lp = new LockPair(fake_node, (ISyncNode) node);
                 } else
                     lp = new LockPair(syncstack.pop(), ((WaitNode) node));
@@ -414,7 +413,7 @@ public class CPEngine {
                 while (stack.size() > 0) {
                     ISyncNode node = stack.remove(0);
                     UnlockNode fake_node = new UnlockNode(fake_gid, tid, lastnode.getID(),
-                            node.getAddr(), TYPE.UNLOCK);
+                            node.getAddr());
 
                     LockPair lp = new LockPair(node, fake_node);
 
@@ -522,7 +521,7 @@ public class CPEngine {
 
                             if (addCPEdge) {
                                 ISyncNode lastnode = syncNodeList.get(k1).unlock;
-                                if (lastnode != null && lastnode.getTid() != lp.lock.getTid()) {
+                                if (lastnode != null && lastnode.getTID() != lp.lock.getTID()) {
                                     long gid1 = lastnode.getGID();
 
                                     reachEngine.addEdge(gid1, gid2);
@@ -554,7 +553,7 @@ public class CPEngine {
         long gid2 = node2.getGID();
 
         // lockset algorithm
-        if (lockEngine.hasCommonLock(node1.getTid(), gid1, node2.getTid(), gid2))
+        if (lockEngine.hasCommonLock(node1.getTID(), gid1, node2.getTID(), gid2))
             return false;
 
         if (gid1 > gid2) {

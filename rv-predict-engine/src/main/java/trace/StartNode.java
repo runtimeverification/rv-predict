@@ -32,12 +32,13 @@ public class StartNode extends AbstractNode implements ISyncNode {
 
     private String tid_child;
 
+    @Override
     public String getAddr() {
         return tid_child;
     }
 
-    public StartNode(long GID, long tid, int ID, String addr, TYPE type) {
-        super(GID, tid, ID, type);
+    public StartNode(long GID, long tid, int ID, String addr) {
+        super(GID, tid, ID, AbstractNode.TYPE.START);
         tid_child = addr;
     }
 

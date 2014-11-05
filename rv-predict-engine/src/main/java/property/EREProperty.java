@@ -6,7 +6,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Stack;
-import java.util.Vector;
+import java.util.List;
 
 import trace.PropertyNode;
 import trace.Trace;
@@ -121,12 +121,12 @@ public class EREProperty {
 
         if (!id_begins.isEmpty()) {
             // get a map for paired nodes
-            HashMap<Long, Vector<PropertyNode>> threadPropertyNodes = trace
+            HashMap<Long, List<PropertyNode>> threadPropertyNodes = trace
                     .getThreadPropertyNodes();
             Iterator<Long> tidIt = threadPropertyNodes.keySet().iterator();
             while (tidIt.hasNext()) {
                 Long tid = tidIt.next();
-                Vector<PropertyNode> nodes = threadPropertyNodes.get(tid);
+                List<PropertyNode> nodes = threadPropertyNodes.get(tid);
                 Stack<PropertyNode> stack = new Stack<PropertyNode>();
                 for (int k = 0; k < nodes.size(); k++) {
                     PropertyNode node = nodes.get(k);
@@ -153,7 +153,7 @@ public class EREProperty {
                     return true;
                 else {
                     for (int i = 0; i < list.size(); i++)
-                        if (list.get(i).getTid() == tid)
+                        if (list.get(i).getTID() == tid)
                             return false;
 
                     return true;

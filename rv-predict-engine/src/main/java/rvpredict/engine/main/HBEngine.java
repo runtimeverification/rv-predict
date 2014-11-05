@@ -40,7 +40,6 @@ import trace.Trace;
 import trace.UnlockNode;
 import trace.WaitNode;
 import trace.WriteNode;
-import trace.AbstractNode.TYPE;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
@@ -48,7 +47,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Stack;
-import java.util.Vector;
+import java.util.List;
 
 /**
  * The engine class for happens-before (HB) based race detection. It maintains
@@ -80,10 +79,10 @@ public class HBEngine {
      * 
      * @param map
      */
-    private void addIntraThreadEdge(HashMap<Long, Vector<AbstractNode>> map) {
-        Iterator<Vector<AbstractNode>> mapIt = map.values().iterator();
+    private void addIntraThreadEdge(HashMap<Long, List<AbstractNode>> map) {
+        Iterator<List<AbstractNode>> mapIt = map.values().iterator();
         while (mapIt.hasNext()) {
-            Vector<AbstractNode> nodes = mapIt.next();
+            List<AbstractNode> nodes = mapIt.next();
             long lastGID = nodes.get(0).getGID();
             for (int i = 1; i < nodes.size(); i++) {
                 long thisGID = nodes.get(i).getGID();
@@ -122,7 +121,7 @@ public class HBEngine {
         // during recording
         // should after wait, before notify
         // after lock, before unlock
-        Vector<AbstractNode> nodes = trace.getFullTrace();
+        List<AbstractNode> nodes = trace.getFullTrace();
         for (int i = 0; i < nodes.size(); i++) {
             AbstractNode node = nodes.get(i);
             long thisGID = node.getGID();
@@ -169,7 +168,7 @@ public class HBEngine {
                 addressLastWriteMap.put(addr, (WriteNode) node);
 
             } else if (node instanceof LockNode) {
-                long tid = node.getTid();
+                long tid = node.getTID();
 
                 Stack<ISyncNode> syncstack = threadSyncStack.get(tid);
                 if (syncstack == null) {
@@ -179,7 +178,7 @@ public class HBEngine {
                 syncstack.push(((LockNode) node));
 
             } else if (node instanceof UnlockNode) {
-                long tid = node.getTid();
+                long tid = node.getTID();
 
                 Stack<ISyncNode> syncstack = threadSyncStack.get(tid);
 
@@ -195,7 +194,7 @@ public class HBEngine {
                     AbstractNode firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
-                            ((UnlockNode) node).getAddr(), TYPE.LOCK);
+                            ((UnlockNode) node).getAddr());
                     lp = new LockPair(fake_node, (ISyncNode) node);
                 } else {
                     lp = new LockPair(syncstack.pop(), (ISyncNode) node);
@@ -220,7 +219,7 @@ public class HBEngine {
                 lockEngine.add(((ISyncNode) node).getAddr(), tid, lp);
 
             } else if (node instanceof WaitNode) {
-                long tid = node.getTid();
+                long tid = node.getTID();
 
                 // assert(matchNotifyNode!=null);this is also possible when
                 // segmented
@@ -232,7 +231,7 @@ public class HBEngine {
                     try {
                         // TODO: handle OutofBounds
                         try {
-                            while (trace.getFullTrace().get(nodeIndex).getTid() != tid)
+                            while (trace.getFullTrace().get(nodeIndex).getTID() != tid)
                                 nodeIndex++;
                         } catch (Exception e) {
                             // if we arrive here, it means the wait node is the
@@ -265,7 +264,7 @@ public class HBEngine {
                     AbstractNode firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
-                            ((WaitNode) node).getAddr(), TYPE.LOCK);
+                            ((WaitNode) node).getAddr());
                     lp = new LockPair(fake_node, (ISyncNode) node);
                 } else
                     lp = new LockPair(syncstack.pop(), ((WaitNode) node));
@@ -302,7 +301,7 @@ public class HBEngine {
             while (stack.size() > 0) {
                 ISyncNode node = stack.remove(0);
                 UnlockNode fake_node = new UnlockNode(fake_gid, tid, lastnode.getID(),
-                        node.getAddr(), TYPE.UNLOCK);
+                        node.getAddr());
 
                 LockPair lp = new LockPair(node, fake_node);
 
@@ -356,7 +355,7 @@ public class HBEngine {
         long gid2 = node2.getGID();
 
         // lockset algorithm
-        if (lockEngine.hasCommonLock(node1.getTid(), gid1, node2.getTid(), gid2))
+        if (lockEngine.hasCommonLock(node1.getTID(), gid1, node2.getTID(), gid2))
             return false;
 
         if (gid1 > gid2) {

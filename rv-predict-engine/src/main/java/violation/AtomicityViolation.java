@@ -28,32 +28,13 @@
  ******************************************************************************/
 package violation;
 
-import java.util.ArrayList;
-import java.util.Vector;
+public class AtomicityViolation extends AbstractViolation {
 
-public class AtomicityViolation implements IViolation {
+    private String node1;
+    private String node2;
+    private String node3;
+    private int hashcode;
 
-    String node1;
-    String node2;
-    String node3;
-    int hashcode;
-
-    ArrayList<Vector<String>> schedules = new ArrayList<Vector<String>>();
-
-    public void addSchedule(Vector<String> schedule) {
-        schedules.add(schedule);
-    }
-
-    public ArrayList<Vector<String>> getSchedules() {
-        return schedules;
-    }
-
-    // public AtomicityViolation (String node1,String node2, String node3)
-    // {
-    // this.node1 = node1;
-    // this.node2 = node2;
-    // this.node3 = node3;
-    // }
     public AtomicityViolation(String node1, String node2, String node3, int id1, int id2, int id3) {
         this.node1 = node1;
         this.node2 = node2;

@@ -32,12 +32,13 @@ public class JoinNode extends AbstractNode implements ISyncNode {
 
     private String tid_join;
 
+    @Override
     public String getAddr() {
         return tid_join;
     }
 
-    public JoinNode(long GID, long tid, int ID, String addr, TYPE type) {
-        super(GID, tid, ID, type);
+    public JoinNode(long GID, long tid, int ID, String addr) {
+        super(GID, tid, ID, AbstractNode.TYPE.JOIN);
         tid_join = addr;
     }
 

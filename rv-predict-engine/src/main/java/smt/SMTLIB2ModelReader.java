@@ -31,7 +31,7 @@
 
 package smt;
 
-import java.util.Vector;
+import java.util.List;
 import java.text.DecimalFormat;
 import org.w3c.tools.sexpr.Symbol;
 import org.w3c.tools.sexpr.SimpleSExprStream;
@@ -61,7 +61,7 @@ public class SMTLIB2ModelReader {
             if ("sat".equals(result)) {
                 // if the constraints are satisfied
 
-                Model model = process((Vector<?>) p.parse());
+                Model model = process((List<?>) p.parse());
                 fis.close();
                 return model;
             } else if ("unsat".equals(result)) {
@@ -98,28 +98,28 @@ public class SMTLIB2ModelReader {
         return new String(cs, 0, i);
     }
 
-    private static Model process(Vector<?> root) {
+    private static Model process(List<?> root) {
 
-        if (!((Symbol) root.elementAt(0)).toString().equals("model"))
+        if (!((Symbol) root.get(0)).toString().equals("model"))
             assert false;
 
         Model model = new Model();
 
         int size = root.size();
         for (int i = 1; i < size; i++)
-            define_fun(root.elementAt(i), model);
+            define_fun(root.get(i), model);
 
         return model;
     }
 
     static private void define_fun(Object obj, Model model) {
-        Vector<?> node = (Vector<?>) obj;
-        if (!((Symbol) node.elementAt(0)).toString().equals("define-fun"))
+        List<?> node = (List<?>) obj;
+        if (!((Symbol) node.get(0)).toString().equals("define-fun"))
             assert false;
-        String varName = ((Symbol) node.elementAt(1)).toString();
+        String varName = ((Symbol) node.get(1)).toString();
         // System.out.print(varName + " ");
 
-        Object value = value(node.elementAt(2), node.elementAt(3), node.elementAt(4));
+        Object value = value(node.get(2), node.get(3), node.get(4));
         // System.out.println(value);
 
         model.put(varName, value);
@@ -129,16 +129,16 @@ public class SMTLIB2ModelReader {
         if (type instanceof Symbol) {
             String t = ((Symbol) type).toString();
             return primValue(paramTypes, t, v);
-        } else if (type instanceof Vector) {
-            Object t = ((Vector<?>) type).elementAt(0);
+        } else if (type instanceof List) {
+            Object t = ((List<?>) type).get(0);
             if (t instanceof Symbol) {
                 if (((Symbol) t).toString().equals("Array")) {
-                    Vector<?> value = (Vector<?>) v;
-                    if (!("_".equals(((Symbol) value.elementAt(0)).toString())))
+                    List<?> value = (List<?>) v;
+                    if (!("_".equals(((Symbol) value.get(0)).toString())))
                         assert false;
-                    if (!("as-array".equals(((Symbol) value.elementAt(1)).toString())))
+                    if (!("as-array".equals(((Symbol) value.get(1)).toString())))
                         assert false;
-                    return ((Symbol) value.elementAt(2)).toString();
+                    return ((Symbol) value.get(2)).toString();
                 } else
                     assert false;
             } else
@@ -153,8 +153,8 @@ public class SMTLIB2ModelReader {
             if (ret != null) {
                 return ret;
             } else {
-                Vector<?> value = (Vector<?>) v;
-                String opName = ((Symbol) value.elementAt(0)).toString();
+                List<?> value = (List<?>) v;
+                String opName = ((Symbol) value.get(0)).toString();
                 if (opName.equals("ite")) {
                     Model.Array array = new Model.Array();
                     ite(t, value, array);
@@ -167,17 +167,17 @@ public class SMTLIB2ModelReader {
         return null;
     }
 
-    static private void ite(String t, Vector<?> iteExpr, Model.Array array) {
-        String opName = ((Symbol) iteExpr.elementAt(0)).toString();
+    static private void ite(String t, List<?> iteExpr, Model.Array array) {
+        String opName = ((Symbol) iteExpr.get(0)).toString();
         if (opName.equals("ite")) {
-            Vector<?> cond = (Vector<?>) iteExpr.elementAt(1);
-            Object thenVal = iteExpr.elementAt(2);
-            Object elseVal = iteExpr.elementAt(3);
+            List<?> cond = (List<?>) iteExpr.get(1);
+            Object thenVal = iteExpr.get(2);
+            Object elseVal = iteExpr.get(3);
 
             // find the index
             Integer index = null;
-            if (((Symbol) cond.elementAt(0)).toString().equals("=")) {
-                index = (Integer) number("Int", cond.elementAt(2));
+            if (((Symbol) cond.get(0)).toString().equals("=")) {
+                index = (Integer) number("Int", cond.get(2));
             } else
                 assert false;
 
@@ -188,7 +188,7 @@ public class SMTLIB2ModelReader {
                 array.setDefaultValue(num);
             } else {
                 // must be another ite
-                ite(t, (Vector<?>) elseVal, array);
+                ite(t, (List<?>) elseVal, array);
             }
         }
     }
@@ -197,19 +197,19 @@ public class SMTLIB2ModelReader {
         if (v instanceof Number) {
             // positive number
             return (Number) v;
-        } else if (v instanceof Vector) {
-            Vector<?> value = (Vector<?>) v;
-            String opName = ((Symbol) value.elementAt(0)).toString();
+        } else if (v instanceof List) {
+            List<?> value = (List<?>) v;
+            String opName = ((Symbol) value.get(0)).toString();
             if (opName.equals("-")) {
                 // negative number
-                v = value.elementAt(1);
-                if (v instanceof Vector) {
+                v = value.get(1);
+                if (v instanceof List) {
                     // negative rational number
-                    value = (Vector<?>) v;
-                    opName = ((Symbol) value.elementAt(0)).toString();
+                    value = (List<?>) v;
+                    opName = ((Symbol) value.get(0)).toString();
                     if (opName.equals("/")) {
-                        Number numerator = (Number) value.elementAt(1);
-                        Number denominator = (Number) value.elementAt(2);
+                        Number numerator = (Number) value.get(1);
+                        Number denominator = (Number) value.get(2);
                         return fromRational(false, numerator, denominator);
                     } else
                         assert false;
@@ -225,8 +225,8 @@ public class SMTLIB2ModelReader {
                     // System.out.println(v);
                 }
             } else if (opName.equals("/")) {
-                Number numerator = (Number) value.elementAt(1);
-                Number denominator = (Number) value.elementAt(2);
+                Number numerator = (Number) value.get(1);
+                Number denominator = (Number) value.get(2);
                 return fromRational(true, numerator, denominator);
             }
             return null;

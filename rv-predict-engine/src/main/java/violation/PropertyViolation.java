@@ -39,6 +39,7 @@ public class PropertyViolation extends AbstractViolation {
     private final String meta;
 
     public PropertyViolation(String str) {
+        assert str != null;
         this.meta = str;
     }
 

@@ -349,7 +349,7 @@ public class NewRVPredict {
             {
                 // check if local variable
                 int size_all = trace.getIndexedThreadReadWriteNodes().get(addr)
-                        .get(writenodes.firstElement().getTid()).size();
+                        .get(writenodes.firstElement().getTID()).size();
                 int size_write = writenodes.size();
                 int size_read = 0;
                 if (readnodes != null)
@@ -429,7 +429,7 @@ public class NewRVPredict {
                         WriteNode wnode = writenodes.get(j);// write
 
                         // check read and write are by different threads
-                        if (rnode.getTid() != wnode.getTid()) {
+                        if (rnode.getTID() != wnode.getTID()) {
                             // create a potential race
                             Race race = new Race(trace.getStmtSigIdMap().get(rnode.getID()), trace
                                     .getStmtSigIdMap().get(wnode.getID()), rnode.getID(),
@@ -667,7 +667,7 @@ public class NewRVPredict {
 
                     for (int j = 0; j != i && j < writenodes.size(); j++) {
                         WriteNode wnode2 = writenodes.get(j);
-                        if (wnode1.getTid() != wnode2.getTid()) {
+                        if (wnode1.getTID() != wnode2.getTID()) {
                             Race race = new Race(trace.getStmtSigIdMap().get(wnode1.getID()), trace
                                     .getStmtSigIdMap().get(wnode2.getID()), wnode1.getID(),
                                     wnode2.getID());
@@ -1147,7 +1147,7 @@ public class NewRVPredict {
         Vector<String> fullschedule = new Vector<String>();
 
         for (int k = 0; k < trace.getFullTrace().size(); k++)
-            fullschedule.add(trace.getThreadIdNameMap().get(trace.getFullTrace().get(k).getTid()));
+            fullschedule.add(trace.getThreadIdNameMap().get(trace.getFullTrace().get(k).getTID()));
 
         return fullschedule;
     }

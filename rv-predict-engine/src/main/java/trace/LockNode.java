@@ -33,24 +33,22 @@ public class LockNode extends AbstractNode implements ISyncNode {
                      // rwnode depends on
     private String lock_addr;
 
-    public LockNode(long GID, long tid, int ID, String addr, TYPE type) {
-        super(GID, tid, ID, type);
+    public LockNode(long GID, long tid, int ID, String addr) {
+        super(GID, tid, ID, AbstractNode.TYPE.LOCK);
         this.lock_addr = addr;
-    }
-
-    public void setDid(long did) {
-        this.did = did;
     }
 
     public long getDid() {
         return did;
     }
 
+    @Override
     public String getAddr() {
         return lock_addr;
     }
 
+    @Override
     public String toString() {
-        return GID + ": thread " + tid + " " + lock_addr + " " + type;
+        return globalId + ": thread " + threadId + " " + lock_addr + " " + type;
     }
 }

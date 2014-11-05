@@ -42,7 +42,7 @@ public interface IMemNode {
 
     public long getGID();
 
-    public long getTid();
+    public long getTID();
 
     public TYPE getType();
 
@@ -50,10 +50,10 @@ public interface IMemNode {
 
     public long getPrevSyncId();
 
-    public void setPrevSyncId(long id);
-
     public long getPrevBranchId();
 
+    // TODO(YilongL): it's bad to make these nodes mutable
+    @Deprecated
     public void setPrevBranchId(long id);
 
 }

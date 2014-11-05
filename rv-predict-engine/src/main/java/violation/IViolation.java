@@ -29,7 +29,7 @@
 package violation;
 
 import java.util.List;
-import java.util.Vector;
+import java.util.List;
 
 public interface IViolation {
 
@@ -38,7 +38,7 @@ public interface IViolation {
      * 
      * @param schedule
      */
-    void addSchedule(Vector<String> schedule);
+    void addSchedule(List<String> schedule);
 
-    List<Vector<String>> getSchedules();
+    List<List<String>> getSchedules();
 }

@@ -1,6 +1,7 @@
 package rv;
 
-import java.util.Vector;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TestAgent {
 
@@ -101,7 +102,7 @@ public class TestAgent {
     public synchronized int m() {
 
         TestAgent t = new TestAgent("m");
-        Size sz = new Size("x", new Vector<String>());
+        Size sz = new Size("x", new ArrayList<String>());
         t.str = sz.name;
         this.x = t.y + 1;
         int r = z;
@@ -131,7 +132,7 @@ public class TestAgent {
         final String name;
         final String[] args;
 
-        Size(String name, Vector<String> args) {
+        Size(String name, List<String> args) {
             this.args = args.toArray(new String[0]);
             this.name = name;
         }

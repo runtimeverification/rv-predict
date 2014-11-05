@@ -50,7 +50,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Stack;
-import java.util.Vector;
+import java.util.List;
 
 import property.EREProperty;
 import rvpredict.config.Configuration;
@@ -91,7 +91,7 @@ public class Engine {
      * 
      * @param trace
      */
-    public void declareVariables(Vector<AbstractNode> trace) {
+    public void declareVariables(List<AbstractNode> trace) {
         CONS_SETLOGIC = "(set-logic QF_IDL)\n";// use integer difference logic
         CONS_DECLARE = new StringBuilder("");
         CONS_ASSERT = new StringBuilder("");
@@ -120,13 +120,13 @@ public class Engine {
      * 
      * @param map
      */
-    public void addIntraThreadConstraints(HashMap<Long, Vector<AbstractNode>> map) {
+    public void addIntraThreadConstraints(HashMap<Long, List<AbstractNode>> map) {
         // create reachability engine
         reachEngine = new ReachabilityEngine();
 
-        Iterator<Vector<AbstractNode>> mapIt = map.values().iterator();
+        Iterator<List<AbstractNode>> mapIt = map.values().iterator();
         while (mapIt.hasNext()) {
-            Vector<AbstractNode> nodes = mapIt.next();
+            List<AbstractNode> nodes = mapIt.next();
             long lastGID = nodes.get(0).getGID();
             String lastVar = makeVariable(lastGID);
             for (int i = 1; i < nodes.size(); i++) {
@@ -151,15 +151,15 @@ public class Engine {
      * @param indexedMap
      */
     public void addPSOIntraThreadConstraints(
-            HashMap<String, HashMap<Long, Vector<IMemNode>>> indexedMap) {
+            HashMap<String, HashMap<Long, List<IMemNode>>> indexedMap) {
 
-        Iterator<HashMap<Long, Vector<IMemNode>>> mapIt1 = indexedMap.values().iterator();
+        Iterator<HashMap<Long, List<IMemNode>>> mapIt1 = indexedMap.values().iterator();
         while (mapIt1.hasNext()) {
-            HashMap<Long, Vector<IMemNode>> map = mapIt1.next();
+            HashMap<Long, List<IMemNode>> map = mapIt1.next();
 
-            Iterator<Vector<IMemNode>> mapIt2 = map.values().iterator();
+            Iterator<List<IMemNode>> mapIt2 = map.values().iterator();
             while (mapIt2.hasNext()) {
-                Vector<IMemNode> nodes = mapIt2.next();
+                List<IMemNode> nodes = mapIt2.next();
                 long lastGID = nodes.get(0).getGID();
                 String lastVar = makeVariable(lastGID);
                 for (int i = 1; i < nodes.size(); i++) {
@@ -188,17 +188,17 @@ public class Engine {
      * @param lastNodes
      */
     public void addSynchronizationConstraints(Trace trace,
-            HashMap<String, Vector<ISyncNode>> syncNodesMap,
+            HashMap<String, List<ISyncNode>> syncNodesMap,
             HashMap<Long, AbstractNode> firstNodes, HashMap<Long, AbstractNode> lastNodes) {
         // construct a new lockset for this segment
         lockEngine = new LockSetEngine();
 
         // thread first node - last node
-        Iterator<Vector<ISyncNode>> mapIt = syncNodesMap.values().iterator();
+        Iterator<List<ISyncNode>> mapIt = syncNodesMap.values().iterator();
         while (mapIt.hasNext()) {
-            Vector<ISyncNode> nodes = mapIt.next();
+            List<ISyncNode> nodes = mapIt.next();
 
-            Vector<LockPair> lockPairs = new Vector<LockPair>();
+            List<LockPair> lockPairs = new ArrayList<>();
 
             HashMap<Long, Stack<ISyncNode>> threadSyncStack = new HashMap<Long, Stack<ISyncNode>>();
             NotifyNode matchNotifyNode = null;
@@ -363,7 +363,7 @@ public class Engine {
      * @param lockPairs
      * @return
      */
-    private String constructLockConstraintsOptimized(Vector<LockPair> lockPairs) {
+    private String constructLockConstraintsOptimized(List<LockPair> lockPairs) {
         String CONS_LOCK = "";
 
         // obtain each thread's last lockpair
@@ -461,7 +461,7 @@ public class Engine {
      */
     // TODO: NEED to handle the feasibility of new added write nodes
     public StringBuilder constructCausalReadWriteConstraintsOptimized(long rgid,
-            Vector<ReadNode> readNodes, HashMap<String, Vector<WriteNode>> indexedWriteNodes,
+            List<ReadNode> readNodes, HashMap<String, List<WriteNode>> indexedWriteNodes,
             HashMap<String, String> initValueMap) {
         StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
 
@@ -475,7 +475,7 @@ public class Engine {
                 continue;
 
             // get all write nodes on the address
-            Vector<WriteNode> writenodes = indexedWriteNodes.get(rnode.getAddr());
+            List<WriteNode> writenodes = indexedWriteNodes.get(rnode.getAddr());
             // no write to array field?
             // Yes, it could be: java.io.PrintStream out
             if (writenodes == null || writenodes.size() < 1)//
@@ -484,7 +484,7 @@ public class Engine {
             WriteNode preNode = null;//
 
             // get all write nodes on the address & write the same value
-            Vector<WriteNode> writenodes_value_match = new Vector<WriteNode>();
+            List<WriteNode> writenodes_value_match = new ArrayList<>();
             for (int j = 0; j < writenodes.size(); j++) {
                 WriteNode wnode = writenodes.get(j);
                 if (wnode.getValue().equals(rnode.getValue()) && !canReach(rnode, wnode)) {
@@ -843,10 +843,10 @@ public class Engine {
 
     }
 
-    public Vector<String> getSchedule(long endGID, HashMap<Long, Long> nodeGIDTidMap,
+    public List<String> getSchedule(long endGID, HashMap<Long, Long> nodeGIDTidMap,
             HashMap<Long, String> threadIdNameMap) {
 
-        Vector<String> schedule = new Vector<String>();
+        List<String> schedule = new ArrayList<>();
         for (int i = 0; i < task.schedule.size(); i++) {
             String xi = task.schedule.get(i);
             long gid = Long.valueOf(xi.substring(1));
@@ -892,7 +892,7 @@ public class Engine {
      * @return
      */
     public HashSet<ArrayList<PropertyNode>> constructPropertyInstances(EREProperty property,
-            HashMap<Integer, Vector<PropertyNode>> indexedPropertyNodeMap) {
+            HashMap<Integer, List<PropertyNode>> indexedPropertyNodeMap) {
 
         int SIZE = property.getPropertySize();
 
@@ -921,7 +921,7 @@ public class Engine {
 
             } else {
 
-                Vector<PropertyNode> pnodes = indexedPropertyNodeMap.get(o);
+                List<PropertyNode> pnodes = indexedPropertyNodeMap.get(o);
 
                 for (int i = 0; i < pnodes.size(); i++) {
                     PropertyNode node = pnodes.get(i);

@@ -2,9 +2,11 @@
 <!-- Copyright (c) 2014 Runtime Verification Inc. All Rights Reserved. -->
 <tests>
     <test name="ftpserver.jar">
+    	<runs value="5" />
         <arg key="-jar" value="ftpserver.jar" />
     </test>
     <test name="demo.Example">
+    	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="demo.Example" />
         <rvarg key="--include" value="a.b" />
@@ -13,10 +15,12 @@
         <arg key="-jar" value="SpringExample.jar" />
     </test>
     <test name="account.Account">
+    	<runs value="3" />
         <arg key="-cp" value="basic.jar" />
         <arg value="account.Account" />
     </test>
     <test name="array.Test">
+    	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="array.Test" />
     </test>
@@ -31,30 +35,37 @@
     </test>
 -->
     <test name="airlinetickets.Airlinetickets">
+       	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="airlinetickets.Airlinetickets" />
     </test>
     <test name="boundedbuffer.BoundedBuffer">
+      	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="boundedbuffer.BoundedBuffer" />
     </test>
     <test name="mergesort.MergeSort">
+    	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="mergesort.MergeSort" />
     </test>
     <test name="critical.Critical">
+    	<runs value="20" />
         <arg key="-cp" value="basic.jar" />
         <arg value="critical.Critical" />
     </test>
     <test name="bufwriter.BufWriter">
+    	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="bufwriter.BufWriter" />
     </test>
     <test name="bubblesort.BubbleSort">
+    	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="bubblesort.BubbleSort" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA">
+    	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />
     </test>
@@ -63,6 +74,7 @@
         <arg value="benchmarks.JGFMonteCarloBenchSizeA" />
     </test>
     <test name="benchmarks.JGFMolDynBenchSizeA">
+    	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="benchmarks.JGFMolDynBenchSizeA" />
     </test>

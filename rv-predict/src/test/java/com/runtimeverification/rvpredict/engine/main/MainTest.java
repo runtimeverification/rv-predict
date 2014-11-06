@@ -72,7 +72,7 @@ public class MainTest {
     public void testTest() throws Exception {
         String[] args = new String[this.args.size()];
         this.args.toArray(args);
-        helper.testCommand("tests/" + name, true, args);
+        helper.testCommand("tests/" + name, args);
     }
 
     // The method bellow creates the set of parameter instances to be used as seeds by

@@ -1352,28 +1352,35 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor implements Opco
         }
 
     }
-    // no branch
-    /*
-     * public void visitJumpInsn(int opcode, Label label) { String sig_loc =
-     * (classname+"|"+methodsignature+"|"+line_cur).replace("/", "."); int ID =
-     * GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
-     * 
-     * switch (opcode) { case IFEQ://branch case IFNE: case IFLT: case IFGE:
-     * case IFGT: case IFLE: case IF_ICMPEQ: case IF_ICMPNE: case IF_ICMPLT:
-     * case IF_ICMPGE: case IF_ICMPGT: case IF_ICMPLE: case IF_ACMPEQ: case
-     * IF_ACMPNE: case IFNULL: case IFNONNULL: addBipushInsn(mv,ID);
-     * mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
-     * Config.instance.LOG_BRANCH, Config.instance.DESC_LOG_BRANCH); default:
-     * mv.visitJumpInsn(opcode, label);break; } }
-     * 
-     * public void visitTableSwitchInsn(int min, int max, Label dflt, Label...
-     * labels) { String sig_loc =
-     * (classname+"|"+methodsignature+"|"+line_cur).replace("/", "."); int ID =
-     * GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
-     * addBipushInsn(mv,ID); mv.visitMethodInsn(INVOKESTATIC,
-     * Config.instance.logClass, Config.instance.LOG_BRANCH,
-     * Config.instance.DESC_LOG_BRANCH);
-     * 
-     * mv.visitTableSwitchInsn(min, max, dflt, labels); }
-     */
+
+    public void visitJumpInsn(int opcode, Label label) {
+        if (!Config.instance.commandLine.branch) return;
+        String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+        int ID = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+
+        switch (opcode) {
+            case IFEQ://branch
+            case IFNE: case IFLT: case IFGE:
+            case IFGT: case IFLE: case IF_ICMPEQ: case IF_ICMPNE: case IF_ICMPLT:
+            case IF_ICMPGE: case IF_ICMPGT: case IF_ICMPLE: case IF_ACMPEQ:
+            case IF_ACMPNE: case IFNULL: case IFNONNULL:
+                addBipushInsn(mv,ID);
+                mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                        Config.instance.LOG_BRANCH, Config.instance.DESC_LOG_BRANCH);
+            default:
+                mv.visitJumpInsn(opcode, label);
+                break;
+        }
+    }
+
+    public void visitTableSwitchInsn(int min, int max, Label dflt, Label... labels) {
+        if (!Config.instance.commandLine.branch) return;
+        String sig_loc = (classname+"|"+methodsignature+"|"+line_cur).replace("/", ".");
+        int ID = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+        addBipushInsn(mv,ID);
+        mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass, Config.instance.LOG_BRANCH,
+                Config.instance.DESC_LOG_BRANCH);
+
+        mv.visitTableSwitchInsn(min, max, dflt, labels);
+    }
 }

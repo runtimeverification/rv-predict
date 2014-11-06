@@ -153,9 +153,9 @@ public class Configuration {
     // ok, let's make noschedule by default
     public boolean noschedule = true;
 
-    final static String opt_no_branch = "--nobranch";
-    @Parameter(names = opt_no_branch, description = "Use no branch model", hidden = true, descriptionKey = "2020")
-    public boolean nobranch;
+    final static String opt_branch = "--branch";
+    @Parameter(names = opt_branch, description = "Use the branch model", hidden = true, descriptionKey = "2020")
+    public boolean branch;
 
     final static String opt_no_volatile = "--novolatile";
     @Parameter(names = opt_no_volatile, description = "Exclude volatile variables", hidden = true, descriptionKey = "2030")

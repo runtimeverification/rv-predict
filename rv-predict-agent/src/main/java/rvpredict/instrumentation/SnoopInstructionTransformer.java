@@ -6,6 +6,7 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 
 import rvpredict.config.Config;
+import rvpredict.db.TraceCache;
 import rvpredict.engine.main.Main;
 import rvpredict.logging.DBEngine;
 import rvpredict.logging.RecordRT;
@@ -63,6 +64,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         final DBEngine db = new DBEngine(commandLine.outdir, commandLine.tableName);
         try {
             db.dropAll();
+            TraceCache.removeTraceFiles(commandLine.outdir);
         } catch (Exception e) {
             commandLine.logger.report(
                     "Unexpected error while cleaning up the database:\n" + e.getMessage(),
@@ -73,6 +75,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         // initialize RecordRT first
         RecordRT.init();
 
+        db.startAsynchronousLogging();
         inst.addTransformer(new SnoopInstructionTransformer());
         final boolean inLogger = true;
         final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {

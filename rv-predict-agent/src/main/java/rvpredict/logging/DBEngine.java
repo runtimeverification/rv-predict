@@ -111,13 +111,12 @@ public class DBEngine {
 
     // TODO: What if the program does not terminate??
 
-    protected LinkedBlockingQueue<List<EventItem>> queue;
+    protected static LinkedBlockingQueue<List<EventItem>> queue;
     // we can also use our own Stack implementation here
-    protected ArrayList<EventItem> buffer;
+    protected static ArrayList<EventItem> buffer;
     protected Object dblock = new Object();
 
     protected int BUFFER_THRESHOLD;
-    protected boolean asynchronousLogging;
 
     public void saveCurrentEventsToDB() {
         queue.add(buffer);
@@ -129,23 +128,20 @@ public class DBEngine {
 
     public void finishLogging() {
         try {
+            shutdown = true;
             loggingThread.join();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        System.out.println("Saving final events.");
         saveEventsToDB(buffer);
         RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance, false);
-        System.out.println("done.");
         closeDB();
     }
 
     public void saveEventsToDB(List<EventItem> stack) {
         if (stack.isEmpty()) {
-            System.out.println("Nothing left to save..");
             return;
-        } else System.out.println("Saving " + stack.size() + " events");
-
+        }
 
         try {
             traceOS = new ObjectOutputStream(
@@ -160,6 +156,7 @@ public class DBEngine {
 
     ObjectOutputStream traceOS;
     Thread loggingThread;
+    boolean shutdown = false;
     public void startAsynchronousLogging() {
 
         queue = new LinkedBlockingQueue<>();
@@ -175,11 +172,10 @@ public class DBEngine {
                         if (queue.size() % 10 == 0) System.out.println(queue.size());
                         List<EventItem> stack = queue.poll(1, TimeUnit.SECONDS);
                         if (stack == null) {
-                            if (isLastThread() && queue.size() == 0) {
+                            if (shutdown && queue.size() == 0) {
                                 break;
                             } else continue;
                         }
-                        System.out.println("Retrieved one stack from queue. Size: " + stack.size());
                         saveEventsToDB(stack);
                         RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance, false);
 
@@ -190,33 +186,9 @@ public class DBEngine {
                 }
             }
 
-            ThreadGroup root = null;
-            private boolean isLastThread() {
-                if (root == null) {
-                    root = Thread.currentThread().getThreadGroup();
-                    while (root.getParent() != null) {
-                        root = root.getParent();
-                    }
-                }
-                int estimatedThreadsSize = root.activeCount();
-                int retrievedThreadsSize;
-                Thread[] threads;
-                do {
-                    estimatedThreadsSize *= 2;
-                    threads = new Thread[estimatedThreadsSize];
-                    retrievedThreadsSize = root.enumerate(threads);
-                } while (retrievedThreadsSize == estimatedThreadsSize);
-                int nonDaemonThreads = 0;
-                for (Thread thread : threads) {
-                    if ( thread != null && !thread.isDaemon() && thread.isAlive() && !thread.isInterrupted()) {
-                        nonDaemonThreads++;
-                    }
-                    if (nonDaemonThreads > 3) return false;
-                }
-                return true;
-            }
-
         });
+
+        loggingThread.setDaemon(true);
 
         loggingThread.start();
 
@@ -241,7 +213,6 @@ public class DBEngine {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        startAsynchronousLogging();
     }
 
     public void closeDB() {

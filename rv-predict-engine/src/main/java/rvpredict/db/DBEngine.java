@@ -612,6 +612,7 @@ public class DBEngine {
         AbstractNode node = null;
         for (long index = min; index <= max; index++) {
             rvpredict.db.EventItem eventItem = traceCache.getEvent(index);
+            if (eventItem == null) break;
 
 //        }
 //        String sql_select = "SELECT * FROM " + tracetablename;

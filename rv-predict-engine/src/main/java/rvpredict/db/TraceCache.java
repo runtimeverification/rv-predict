@@ -5,6 +5,7 @@ import org.apache.tools.ant.DirectoryScanner;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
@@ -24,12 +25,7 @@ public class TraceCache {
 
     public TraceCache(String directory) {
         this.directory = directory;
-        DirectoryScanner scanner = new DirectoryScanner();
-        scanner.setIncludes(new String[]{"*" + TRACE_SUFFIX});
-        scanner.setBasedir(directory);
-        scanner.setCaseSensitive(false);
-        scanner.scan();
-        String[] files = scanner.getIncludedFiles();
+        String[] files = getTraceFiles(directory);
         indexes = new long[files.length];
         int i = 0;
         for (String file : files) {
@@ -38,6 +34,25 @@ public class TraceCache {
         Arrays.sort(indexes);
         rebaseCache(indexes[indexes.length - 1]);
         traceSize = startIndex + cache.size() - 1;
+    }
+
+    static String[] getTraceFiles(String directory) {
+        DirectoryScanner scanner = new DirectoryScanner();
+        scanner.setIncludes(new String[]{"*" + TRACE_SUFFIX});
+        scanner.setBasedir(directory);
+        scanner.setCaseSensitive(false);
+        scanner.scan();
+        return scanner.getIncludedFiles();
+    }
+
+    public static void removeTraceFiles(String directory) {
+        for (String fname : getTraceFiles(directory)) {
+            try {
+                Files.delete(Paths.get(directory, fname));
+            } catch (IOException e) {
+                System.err.println("Cannot delete trace file " + fname + "from dir. " + directory);
+            }
+        }
     }
 
     public long getTraceSize() {
@@ -76,7 +91,7 @@ public class TraceCache {
         }
         startIndex = indexes[i];
         long offset = index - startIndex;
-        if (offset > cache.size()) return -1;
+        if (offset >= cache.size()) return -1;
         return (int) offset;
     }
 

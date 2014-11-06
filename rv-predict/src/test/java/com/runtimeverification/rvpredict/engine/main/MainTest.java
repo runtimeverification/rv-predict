@@ -50,13 +50,15 @@ public class MainTest {
     private static String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
     private static List<String> rvArgList = Arrays.asList(new String[]{java, "-cp", rvPredictJar,
             "rvpredict.engine.main.Main"});
-    TestHelper helper;
-    String name;
-    List<String> args;
+    private final TestHelper helper;
+    private final String name;
+    private final int numOfRuns;
+    private final List<String> args;
 
 
-    public MainTest(String name, String specPath, List<String> rvArguments, List<String> arguments) {
+    public MainTest(String name, String specPath, int numOfRuns, List<String> rvArguments, List<String> arguments) {
         this.name = name;
+        this.numOfRuns = numOfRuns;
         helper = new TestHelper(specPath);
         args = new ArrayList<>(rvArgList);
         args.addAll(rvArguments);
@@ -72,7 +74,7 @@ public class MainTest {
     public void testTest() throws Exception {
         String[] args = new String[this.args.size()];
         this.args.toArray(args);
-        helper.testCommand("tests/" + name, args);
+        helper.testCommand("tests/" + name, numOfRuns, args);
     }
 
     // The method bellow creates the set of parameter instances to be used as seeds by
@@ -94,19 +96,27 @@ public class MainTest {
                     String name = test.getAttribute("name");
                     List<String> arguments = new ArrayList<>();
                     List<String> rvarguments = new ArrayList<>();
+                    int numOfRuns = getNumOfRuns(test);
                     processArguments(rvarguments, test.getElementsByTagName("rvarg"));
                     processArguments(arguments, test.getElementsByTagName("arg"));
-                    data.add(new Object[]{ name, examplesPath, rvarguments, arguments});
+                    data.add(new Object[]{ name, examplesPath, numOfRuns, rvarguments, arguments});
                 }
             }
-        } catch (ParserConfigurationException e) {
-            e.printStackTrace();
-        } catch (SAXException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (ParserConfigurationException | SAXException | IOException e) {
             e.printStackTrace();
         }
         return data;
+    }
+
+    private static int getNumOfRuns(Element test) {
+        NodeList nodeList = test.getElementsByTagName("runs");
+        if (nodeList.getLength() == 0) {
+            return 1;
+        }
+        
+        assert nodeList.getLength() == 1;
+        Node node = nodeList.item(0);
+        return Integer.parseInt(((Element) node).getAttribute("value"));
     }
 
     private static void processArguments(List<String> arguments, NodeList args) {

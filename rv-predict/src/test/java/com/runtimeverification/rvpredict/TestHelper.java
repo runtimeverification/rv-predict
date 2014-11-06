@@ -35,13 +35,20 @@ public class TestHelper {
     }
 
     /**
-     * Execute command, tests return code and potentially checks standard and error output against expected content
-     * in files if {@code expectedFilePrefix} not null.
-     * @param expectedFilePrefix the prefix for the expected files, or null if output is not checked.
-     * @param regex
-     *@param command  list of arguments describing the system command to be executed.  @throws Exception
+     * Execute command, tests return code and potentially checks standard and
+     * error output against expected content in files if
+     * {@code expectedFilePrefix} not null.
+     * 
+     * @param expectedFilePrefix
+     *            the prefix for the expected files, or null if output is not
+     *            checked.
+     * @param numOfRuns
+     *            test this command up to a certain number of runs
+     * @param command
+     *            list of arguments describing the system command to be
+     *            executed. @throws Exception
      */
-    public void testCommand(String expectedFilePrefix, String... command) throws Exception {
+    public void testCommand(String expectedFilePrefix, int numOfRuns, String... command) throws Exception {
         ProcessBuilder processBuilder = new ProcessBuilder(command).inheritIO();
         processBuilder.directory(basePathFile);
         String testsPrefix;
@@ -54,7 +61,7 @@ public class TestHelper {
         /* run the command up to a certain number of times and gather the outputs */
         StringBuilder aggregatedOut = new StringBuilder();
         StringBuilder aggregatedErr = new StringBuilder();
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < numOfRuns; i++) {
             if (expectedFilePrefix != null) {
                 testsPrefix = basePath.toString() + "/" + expectedFilePrefix;
                 expectedOutFile = new File(testsPrefix + ".expected.out");

@@ -143,7 +143,6 @@ public class Configuration {
     public boolean rmm_pso;
 
     final static String opt_max_len = "--maxlen";
-    final static String default_max_len = "1000";
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
     public long window_size = 1000;
 

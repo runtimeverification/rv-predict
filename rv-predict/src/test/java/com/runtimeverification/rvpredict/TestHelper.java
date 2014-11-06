@@ -87,7 +87,7 @@ public class TestHelper {
         String expectedPatterns = Util.convertFileToString(expectedFile);
         String actualText = Util.convertFileToString(actualFile);
         for (String pattern : expectedPatterns.split("(\n|\r)")) {
-            Matcher m = Pattern.compile(pattern, Pattern.MULTILINE).matcher(actualText);
+            Matcher m = Pattern.compile(pattern).matcher(actualText);
             Assert.assertTrue(String.format("Expected result to match regular expression:" +
                         "%n%s%n%nbut found:%n%s%n", pattern, actualText),m.find());
         }

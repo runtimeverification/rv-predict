@@ -46,8 +46,13 @@ public class Race extends AbstractViolation {
 
     // TODO(YilongL): hashCode depends on ids yet equals checks nodes; this seems seriously wrong
     public Race(String node1, String node2, int id1, int id2) {
-        this.node1 = node1;
-        this.node2 = node2;
+        if (node1.compareTo(node2) < 0) {
+            this.node1 = node1;
+            this.node2 = node2;
+        } else {
+            this.node1 = node2;
+            this.node2 = node1;
+        }
         hashcode = id1 * id1 + id2 * id2;
     }
 

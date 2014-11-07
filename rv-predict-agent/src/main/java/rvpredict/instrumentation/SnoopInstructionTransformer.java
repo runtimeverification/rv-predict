@@ -81,7 +81,6 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
             @Override
             public void cleanup() {
-                System.out.println("Finishing logging.");
                 db.finishLogging();
             }
         };

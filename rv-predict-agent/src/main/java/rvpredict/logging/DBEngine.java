@@ -108,7 +108,9 @@ public class DBEngine {
     public void finishLogging() {
         try {
             shutdown = true;
+            System.out.print("Done executing. Flushing log buffers to disk.");
             loggingThread.join();
+            System.out.println(" done.");
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -160,7 +162,6 @@ public class DBEngine {
 
                 while (true) {
                     try {
-                        if (queue.size() > 0 && queue.size() % 10 == 0) System.out.println(queue.size());
                         List<EventItem> stack = queue.poll(1, TimeUnit.SECONDS);
                         if (stack == null) {
                             if (shutdown && queue.size() == 0) {
@@ -168,6 +169,7 @@ public class DBEngine {
                             } else continue;
                         }
                         saveEventsToDB(stack);
+                        if (shutdown && queue.size()%10 == 0) System.out.print('.');
 
                     } catch (InterruptedException e) {
                         // TODO Auto-generated catch block

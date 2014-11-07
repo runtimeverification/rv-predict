@@ -2,15 +2,12 @@ package rvpredict.db;
 
 import org.apache.tools.ant.DirectoryScanner;
 
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.zip.GZIPInputStream;
 
 /**
  * Created by Traian on 04.11.2014.
@@ -80,13 +77,18 @@ public class TraceCache {
         }
         String fname = indexes[i] + TRACE_SUFFIX;
         try {
-            ObjectInputStream gzipInputStream = new ObjectInputStream(
+            DataInputStream inputStream = new DataInputStream(
                     new BufferedInputStream( new FileInputStream(Paths.get(directory, fname).toFile())));
-            cache = (List<EventItem>) gzipInputStream.readObject();
+            cache = new ArrayList<>();
+            while (true) {
+                try {
+                    cache.add(EventItem.fromStream(inputStream));
+                } catch (EOFException _) {
+                    break;
+                }
+            }
+            inputStream.close();
         } catch (IOException e) {
-            e.printStackTrace();
-            return -1;
-        } catch (ClassNotFoundException e) {
             e.printStackTrace();
             return -1;
         }

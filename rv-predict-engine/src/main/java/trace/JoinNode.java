@@ -30,14 +30,14 @@ package trace;
 
 public class JoinNode extends AbstractNode implements ISyncNode {
 
-    private String tid_join;
+    private long tid_join;
 
     @Override
     public String getAddr() {
-        return tid_join;
+        return "" + tid_join;
     }
 
-    public JoinNode(long GID, long tid, int ID, String addr) {
+    public JoinNode(long GID, long tid, int ID, long addr) {
         super(GID, tid, ID, AbstractNode.TYPE.JOIN);
         tid_join = addr;
     }

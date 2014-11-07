@@ -31,10 +31,7 @@ package rvpredict.logging;
 import rvpredict.config.Config;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -112,14 +109,6 @@ public final class RecordRT {
         GlobalStateForInstrumentation.instance.setSharedArrayLocations(db.loadSharedArrayLocs());
         GlobalStateForInstrumentation.instance.setSharedVariables(db.loadSharedVariables());
 
-        db.createTraceTable(newTable);
-
-        // create table for storing thread id to unique identifier map
-        db.createThreadIdTable(newTable);
-
-        if (newTable)
-            db.saveThreadTidNameToDB(tid, MAIN_NAME);
-
         GlobalStateForInstrumentation.instance.registerThreadName(tid, MAIN_NAME);
 
         threadTidIndexMap = new HashMap<Long, Integer>();
@@ -157,116 +146,96 @@ public final class RecordRT {
         }
     }
 
-    public static void saveMetaData(DBEngine db, GlobalStateForInstrumentation state,
-            boolean isVerbose) {
-        synchronized (db) {
+    public static void saveMetaData(DBEngine db, GlobalStateForInstrumentation state) {
             ConcurrentHashMap<Long, String> threadTidMap = state.unsavedThreadTidNameMap;
             ConcurrentHashMap<String, Integer> variableIdMap = state.unsavedVariableIdMap;
             ConcurrentHashMap<String, Boolean> volatileVariables = state.unsavedVolatileVariables;
             ConcurrentHashMap<String, Integer> stmtSigIdMap = state.unsavedStmtSigIdMap;
-            try {
                 // just reuse the connection
 
                 // TODO: if db is null or closed, there must be something wrong
-                db.createThreadIdTable(false);
                 Iterator<Entry<Long, String>> threadIdNameIter = threadTidMap.entrySet().iterator();
+                List<Entry<Long,String>> threadTidList = new ArrayList<>(threadTidMap.size());
                 while (threadIdNameIter.hasNext()) {
                     Map.Entry<Long,String> entry = threadIdNameIter.next();
-                    Long tid = entry.getKey();
-                    String name = entry.getValue();
-                    threadIdNameIter.remove();
-                    db.saveThreadTidNameToDB(tid, name);
+                    threadTidList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
                 }
+                db.saveObject(threadTidList);
                 // save variable - id to database
-                db.createVarSignatureTable(false);
                 Iterator<Entry<String, Integer>> variableIdMapIter = variableIdMap.entrySet()
                         .iterator();
+                List<Entry<String, Integer>> variableIdList = new ArrayList<>(variableIdMap.size());
                 while (variableIdMapIter.hasNext()) {
                     Map.Entry<String, Integer> entry = variableIdMapIter.next();
-                    String sig = entry.getKey();
-                    Integer id = entry.getValue();
                     variableIdMapIter.remove();
-                    db.saveVarSignatureToDB(sig, id);
-                    if (isVerbose)
-                        System.out.println("* [" + id + "] " + sig + " *");
-
+                    variableIdList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
                 }
+                db.saveObject(variableIdList);
 
                 // save volatilevariable - id to database
-                db.createVolatileSignatureTable(false);
+
+                List<Entry<String, Integer>> volatileVarList = new ArrayList<>(volatileVariables.size());
                 Iterator<Entry<String, Boolean>> volatileIt = volatileVariables.entrySet().iterator();
                 while (volatileIt.hasNext()) {
                     String sig = volatileIt.next().getKey();
                     volatileIt.remove();
                     Integer id = GlobalStateForInstrumentation.instance.variableIdMap.get(sig);
-
-                    db.saveVolatileSignatureToDB(sig, id);
-                    if (isVerbose)
-                        System.out.println("* volatile: [" + id + "] " + sig + " *");
-
+                    volatileVarList.add(new AbstractMap.SimpleEntry<>(sig,id));
                 }
+                db.saveObject(volatileVarList);
                 // save stmt - id to database
-                db.createStmtSignatureTable(false);
 
+                List<Entry<String, Integer>> stmtSigIdList = new ArrayList<>(stmtSigIdMap.size());
                 Iterator<Entry<String, Integer>> stmtSigIdMapIter = stmtSigIdMap.entrySet().iterator();
                 while (stmtSigIdMapIter.hasNext()) {
                     Entry<String, Integer> entry = stmtSigIdMapIter.next();
+                    stmtSigIdList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
                     stmtSigIdMapIter.remove();
-                    String sig = entry.getKey();
-                    Integer id = entry.getValue();
-
-                    db.saveStmtSignatureToDB(sig, id);
                     // System.out.println("* ["+id+"] "+sig+" *");
                 }
-
-            } catch (Exception e) {
-                db.checkException(e);
-                e.printStackTrace();
-            }
-        }
+                db.saveObject(stmtSigIdList);
     }
 
     public static void logBranch(int ID) {
 
-        db.saveEventToDB(Thread.currentThread().getId(), ID, "", "", db.tracetypetable[9]);
+        db.saveEventToDB(Thread.currentThread().getId(), ID, 0, 0, 0, db.tracetypetable[9]);
     }
 
     public static void logBasicBlock(int ID) {
-        db.saveEventToDB(Thread.currentThread().getId(), ID, "", "", db.tracetypetable[10]);
+        db.saveEventToDB(Thread.currentThread().getId(), ID, 0, 0, 0, db.tracetypetable[10]);
     }
 
     public static void logWait(int ID, final Object o) {
         long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, "" + System.identityHashCode(o), "", db.tracetypetable[5]);
+        db.saveEventToDB(tid, ID, System.identityHashCode(o), 0, 0, db.tracetypetable[5]);
 
     }
 
     public static void logNotify(int ID, final Object o) {
         long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, "" + System.identityHashCode(o), "", db.tracetypetable[6]);
+        db.saveEventToDB(tid, ID, System.identityHashCode(o), 0, 0, db.tracetypetable[6]);
 
     }
 
     public static void logStaticSyncLock(int ID, int SID) {
         long tid = Thread.currentThread().getId();
-        String addr = "" + SID;
-        db.saveEventToDB(tid, ID, addr, "", db.tracetypetable[3]);
+        db.saveEventToDB(tid, ID, SID, 0, 0, db.tracetypetable[3]);
     }
 
     public static void logStaticSyncUnlock(int ID, int SID) {
         long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, "" + SID, "", db.tracetypetable[4]);
+        db.saveEventToDB(tid, ID, SID, 0, 0, db.tracetypetable[4]);
     }
 
     public static void logLock(int ID, final Object lock) {
 
         long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, "" + System.identityHashCode(lock), "", db.tracetypetable[3]);
+        db.saveEventToDB(tid, ID, System.identityHashCode(lock), 0, 0, db.tracetypetable[3]);
     }
 
     public static void logUnlock(int ID, final Object lock) {
         long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, "" + System.identityHashCode(lock), "", db.tracetypetable[4]);
+        db.saveEventToDB(tid, ID, System.identityHashCode(lock), 0, 0, db.tracetypetable[4]);
     }
 
     public static void logFileAcc(String name, boolean write) {
@@ -358,16 +327,12 @@ public final class RecordRT {
             // make it as a branch event
 
             int hashcode_o = System.identityHashCode(o);
+            db.saveEventToDB(tid, ID, o == null ? 0 : hashcode_o, -SID,
+                    longOfObject(v),
+                    write ? db.tracetypetable[2] : db.tracetypetable[1]);
             if (!isPrim(v)) {
-                db.saveEventToDB(tid, ID, o == null ? "_." + SID : hashcode_o + "_." + SID,
-                        isPrim(v) ? v + "" : System.identityHashCode(v) + "_",
-                        write ? db.tracetypetable[2] : db.tracetypetable[1]);
-
                 logBranch(-1);
-            } else
-                db.saveEventToDB(tid, ID, o == null ? "." + SID : hashcode_o + "." + SID,
-                        isPrim(v) ? v + "" : System.identityHashCode(v) + "_",
-                        write ? db.tracetypetable[2] : db.tracetypetable[1]);
+            }
 
         }
 
@@ -377,8 +342,8 @@ public final class RecordRT {
 
         try {
             long tid = Thread.currentThread().getId();
-            db.saveEventToDB(tid, ID, o == null ? "." + index : System.identityHashCode(o) + "."
-                    + index, isPrim(v) ? v + "" : System.identityHashCode(v) + "",
+            db.saveEventToDB(tid, ID, o == null ? 0 : System.identityHashCode(o),
+                    index, longOfObject(v),
                     db.tracetypetable[0]);
         } catch (Exception e) {
             e.printStackTrace();
@@ -457,9 +422,8 @@ public final class RecordRT {
     public static void logArrayAcc(int ID, final Object o, int index, final Object v,
             final boolean write) {
         long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, System.identityHashCode(o) + "_" + index, isPrim(v) ? v + ""
-                : System.identityHashCode(v) + "_", write ? db.tracetypetable[2]
-                : db.tracetypetable[1]);
+        db.saveEventToDB(tid, ID, System.identityHashCode(o), index, longOfObject(v),
+                write ? db.tracetypetable[2] : db.tracetypetable[1]);
     }
 
     private static boolean isPrim(Object o) {
@@ -469,6 +433,18 @@ public final class RecordRT {
             return true;
 
         return false;
+    }
+
+    private static long longOfObject(Object o) {
+        if (o instanceof Integer) return (Integer) o;
+        if (o instanceof Long) return (Long) o;
+        if (o instanceof Byte) return (Byte) o;
+        if (o instanceof Boolean) return ((Boolean) o).booleanValue() ? 1 : 0;
+        if (o instanceof Float) return Float.floatToRawIntBits((Float) o);
+        if (o instanceof Double) return Double.doubleToRawLongBits((Double) o);
+        if (o instanceof Short) return (Short) o;
+        if (o instanceof Character) return ((Character) o);
+        return System.identityHashCode(o);
     }
 
     /**
@@ -508,15 +484,13 @@ public final class RecordRT {
         index++;
         threadTidIndexMap.put(tid, index);
 
-        db.saveThreadTidNameToDB(tid_t, name);
-
-        db.saveEventToDB(tid, ID, "" + tid_t, "", db.tracetypetable[7]);
+        db.saveEventToDB(tid, ID, tid_t, 0, 0, db.tracetypetable[7]);
 
     }
 
     public static void logJoin(int ID, final Object o) {
 
-        db.saveEventToDB(Thread.currentThread().getId(), ID, "" + ((Thread) o).getId(), "",
+        db.saveEventToDB(Thread.currentThread().getId(), ID, ((Thread) o).getId(), 0, 0,
                 db.tracetypetable[8]);
 
     }

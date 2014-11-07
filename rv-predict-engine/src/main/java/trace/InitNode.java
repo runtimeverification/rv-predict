@@ -35,26 +35,28 @@ package trace;
  *
  */
 public class InitNode extends AbstractNode {
-    private String value;
-    private String addr;
+    private long value;
+    private long objectHashCode;
+    private long index;
 
-    public InitNode(long GID, long tid, int ID, String addr, String value) {
+    public InitNode(long GID, long tid, int ID, long objectHashCode, long index, long value) {
         super(GID, tid, ID, AbstractNode.TYPE.INIT);
-        this.addr = addr;
+        this.objectHashCode = objectHashCode;
+        this.index = index;
         this.value = value;
     }
 
-    public String getValue() {
+    public long getValue() {
         return value;
     }
 
     public String getAddr() {
-        return addr;
+        return (objectHashCode == 0 ? "." : objectHashCode + ".") + index;
     }
 
     @Override
     public String toString() {
-        return globalId + ": thread " + threadId + " " + synId + " " + addr + " " + value + " " + type;
+        return globalId + ": thread " + threadId + " " + synId + " " + objectHashCode + " " + index + " " + value + " " + type;
     }
 
 }

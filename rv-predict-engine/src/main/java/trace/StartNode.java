@@ -30,14 +30,14 @@ package trace;
 
 public class StartNode extends AbstractNode implements ISyncNode {
 
-    private String tid_child;
+    private long tid_child;
 
     @Override
     public String getAddr() {
-        return tid_child;
+        return "" + tid_child;
     }
 
-    public StartNode(long GID, long tid, int ID, String addr) {
+    public StartNode(long GID, long tid, int ID, long addr) {
         super(GID, tid, ID, AbstractNode.TYPE.START);
         tid_child = addr;
     }

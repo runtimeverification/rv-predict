@@ -184,10 +184,11 @@ public class HBRaceDetect {
             DBEngine db = new DBEngine(config.tableName, config.tableName);
 
             // load all the metadata in the application
-            HashMap<Integer, String> sharedVarIdSigMap = db.getVarSigIdMap();
-            HashMap<Integer, String> volatileAddresses = db.getVolatileAddresses();
-            HashMap<Integer, String> stmtIdSigMap = db.getStmtSigIdMap();
-            HashMap<Long, String> threadIdNameMap = db.getThreadIdNameMap();
+            HashMap<Integer, String> sharedVarIdSigMap = new HashMap<>();
+            HashMap<Integer, String> volatileAddresses = new HashMap<>();
+            HashMap<Integer, String> stmtIdSigMap = new HashMap<>();
+            HashMap<Long, String> threadIdNameMap = new HashMap<>();
+            db.getMetadata(threadIdNameMap,sharedVarIdSigMap,volatileAddresses,stmtIdSigMap);
 
             TraceInfo info = new TraceInfo(sharedVarIdSigMap, volatileAddresses, stmtIdSigMap,
                     threadIdNameMap);

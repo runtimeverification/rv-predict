@@ -30,14 +30,18 @@ package trace;
 
 public class WaitNode extends AbstractNode implements ISyncNode {
 
-    private String sig_addr;
-
-    @Override
-    public String getAddr() {
+    public long getSigAddr() {
         return sig_addr;
     }
 
-    public WaitNode(long GID, long tid, int ID, String addr) {
+    private long sig_addr;
+
+    @Override
+    public String getAddr() {
+        return "" + sig_addr;
+    }
+
+    public WaitNode(long GID, long tid, int ID, long addr) {
         super(GID, tid, ID, AbstractNode.TYPE.WAIT);
         this.sig_addr = addr;
     }

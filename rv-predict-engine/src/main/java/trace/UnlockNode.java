@@ -30,12 +30,22 @@ package trace;
 
 public class UnlockNode extends AbstractNode implements ISyncNode {
     private long did;// this is the ID of the event from the same thread the
-                     // rwnode depends on
-    private String lock_addr;
+
+    public long getLockAddr() {
+        return lock_addr;
+    }
+
+    // rwnode depends on
+    private long lock_addr;
+
+    public UnlockNode(long GID, long tid, int ID, long addr) {
+        super(GID, tid, ID, AbstractNode.TYPE.UNLOCK);
+        this.lock_addr = addr;
+    }
 
     public UnlockNode(long GID, long tid, int ID, String addr) {
         super(GID, tid, ID, AbstractNode.TYPE.UNLOCK);
-        this.lock_addr = addr;
+        this.lock_addr = Long.valueOf(addr);
     }
 
     public void setDid(long did) {
@@ -48,7 +58,7 @@ public class UnlockNode extends AbstractNode implements ISyncNode {
 
     @Override
     public String getAddr() {
-        return lock_addr;
+        return "" + lock_addr;
     }
 
     @Override

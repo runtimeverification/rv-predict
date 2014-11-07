@@ -31,27 +31,30 @@ package trace;
 public class ReadNode extends AbstractNode implements IMemNode {
     private long prevSyncId, prevBranchId;
 
-    private String value;
-    private String addr;
+    private long objectHashCode;
+    private long index;
+    private long value;
 
-    public ReadNode(long GID, long tid, int ID, String addr, String value) {
+    public ReadNode(long GID, long tid, int ID, long objectHashCode, long index, long value) {
         super(GID, tid, ID, AbstractNode.TYPE.READ);
-        this.addr = addr;
+        this.objectHashCode = objectHashCode;
+        this.index = index;
         this.value = value;
     }
 
-    public String getValue() {
+    public long getValue() {
         return value;
     }
 
     @Override
     public String getAddr() {
-        return addr;
+        return (objectHashCode == 0 ? "_" : objectHashCode + "_") +
+                (index < 0 ? "." + -index : index);
     }
 
     @Override
     public String toString() {
-        return globalId + ": thread " + threadId + " " + synId + " " + addr + " " + value + " " + type;
+        return globalId + ": thread " + threadId + " " + synId + " " + objectHashCode + " " + index + " " + value + " " + type;
     }
 
     @Override

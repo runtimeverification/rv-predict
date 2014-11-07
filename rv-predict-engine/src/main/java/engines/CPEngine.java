@@ -241,7 +241,7 @@ public class CPEngine {
                     AbstractNode firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
-                            ((UnlockNode) node).getAddr());
+                            ((UnlockNode) node).getLockAddr());
                     lp = new LockPair(fake_node, (ISyncNode) node);
                 } else {
                     lp = new LockPair(syncstack.pop(), (ISyncNode) node);
@@ -346,7 +346,7 @@ public class CPEngine {
                     AbstractNode firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
-                            ((WaitNode) node).getAddr());
+                            ((WaitNode) node).getSigAddr());
                     lp = new LockPair(fake_node, (ISyncNode) node);
                 } else
                     lp = new LockPair(syncstack.pop(), ((WaitNode) node));

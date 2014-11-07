@@ -72,10 +72,10 @@ public class NewRVPredict {
     private static boolean detectDeadlock = false;
     private static boolean detectProperty = false;
     private Logger logger;
-    private HashMap<Integer, String> sharedVarIdSigMap;
-    private HashMap<Integer, String> volatileAddresses;
-    private HashMap<Integer, String> stmtIdSigMap;
-    private HashMap<Long, String> threadIdNameMap;
+    private HashMap<Integer, String> sharedVarIdSigMap = new HashMap<>();
+    private HashMap<Integer, String> volatileAddresses = new HashMap<>();
+    private HashMap<Integer, String> stmtIdSigMap = new HashMap<>();
+    private HashMap<Long, String> threadIdNameMap = new HashMap<>();
     private long totalTraceLength;
     private DBEngine dbEngine;
     private TraceInfo traceInfo;
@@ -993,7 +993,7 @@ public class NewRVPredict {
             Engine engine = new EngineSMTLIB1(config);
 
             // map from memory address to the initial value
-            HashMap<String, String> initialWriteValueMap = new HashMap<String, String>();
+            HashMap<String, Long> initialWriteValueMap = new HashMap<>();
 
             // process the trace window by window
             for (int round = 0; round * config.window_size < totalTraceLength; round++) {
@@ -1103,10 +1103,7 @@ public class NewRVPredict {
         dbEngine = new DBEngine(config.outdir, config.tableName);
 
         // load all the metadata in the application
-        sharedVarIdSigMap = dbEngine.getVarSigIdMap();
-        volatileAddresses = dbEngine.getVolatileAddresses();
-        stmtIdSigMap = dbEngine.getStmtSigIdMap();
-        threadIdNameMap = dbEngine.getThreadIdNameMap();
+        dbEngine.getMetadata(threadIdNameMap, sharedVarIdSigMap, volatileAddresses, stmtIdSigMap);
 
         // the total number of events in the trace
         totalTraceLength = 0;

@@ -30,14 +30,14 @@ package trace;
 
 public class NotifyNode extends AbstractNode implements ISyncNode {
 
-    private String sig_addr;
+    private long sig_addr;
 
     @Override
     public String getAddr() {
-        return sig_addr;
+        return "" + sig_addr;
     }
 
-    public NotifyNode(long GID, long tid, int ID, String addr) {
+    public NotifyNode(long GID, long tid, int ID, long addr) {
         super(GID, tid, ID, AbstractNode.TYPE.NOTIFY);
         this.sig_addr = addr;
     }

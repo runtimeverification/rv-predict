@@ -60,8 +60,8 @@ public class GlobalStateForInstrumentation {
 
     public void saveMetaData(DBEngine db) {
         if (!Config.instance.commandLine.agentOnlySharing)
-            RecordRT.saveMetaData(db, GlobalStateForInstrumentation.instance,
-                    Config.instance.verbose);
+            RecordRT.saveMetaData(db, GlobalStateForInstrumentation.instance
+            );
         else {
             // show arrayId
             HashSet<Integer> sharedArrayIds = new HashSet<Integer>();

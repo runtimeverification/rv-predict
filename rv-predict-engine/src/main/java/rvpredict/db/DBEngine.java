@@ -28,15 +28,11 @@
  ******************************************************************************/
 package rvpredict.db;
 
+import java.io.*;
+import java.nio.file.Paths;
 import java.sql.*;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
+import java.util.*;
 import java.util.List;
-import java.util.Stack;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import trace.*;
 import violation.IViolation;
@@ -57,38 +53,12 @@ public class DBEngine {
     private final int TABLE_NOT_FOUND_ERROR_CODE = 42102;
     public String appname = "main";
 
-    // database schema
-    protected final String[] stmtsigtablecolname = { "SIG", "ID" };
-    protected final String[] stmtsigtablecoltype = { "VARCHAR", "INT" };
-
     protected final String[] scheduletablecolname = { "ID", "SIG", "SCHEDULE" };
     protected final String[] scheduletablecoltype = { "INT", "VARCHAR", "ARRAY" };
 
-    protected final String[] sharedvarsigtablecolname = { "SIG", "ID" };
-    protected final String[] sharedvarsigcoltype = { "VARCHAR", "INT" };
-
-    protected final String[] volatilesigtablecolname = { "SIG", "ID" };
-    protected final String[] volatilesigcoltype = { "VARCHAR", "INT" };
-
-    protected final String[] tracetablecolname = { "GID", "TID", "ID", "ADDR", "VALUE", "TYPE" };
-    protected final String[] tracetablecoltype = { "BIGINT", "BIGINT", "INT", "VARCHAR", "VARCHAR",
-            "TINYINT" };
-
-    protected final String[] tidtablecolname = { "TID", "NAME" };
-    protected final String[] tidtablecoltype = { "BIGINT", "VARCHAR" };
-
-    protected final String[] propertytablecolname = { "PROPERTY", "ID" };
-    protected final String[] propertytablecoltype = { "VARCHAR", "INT" };
-
-    // READ,WRITE,LOCK,UNLOCK,WAIT,NOTIFY,START,JOIN,BRANCH,BB
-    public final byte[] tracetypetable = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a',
-            'b' };
     protected Connection conn;
     protected PreparedStatement prepStmt;
 
-    protected PreparedStatement prepStmt2;// just for thread id-name
-
-//    public String tracetablename;
     public String tidtablename;
     public String stmtsigtablename;
     public String sharedvarsigtablename;
@@ -97,102 +67,45 @@ public class DBEngine {
     public String scheduletablename;
     public String propertytablename;
 
-    private String varsigtablename;
-
-    // TODO: What if the program does not terminate??
-
-    protected BlockingQueue<Stack<EventItem>> queue;
-    // we can also use our own Stack implementation here
-    protected Stack<EventItem> buffer;
-    protected Object dblock = new Object();
-
-    protected int BUFFER_THRESHOLD;
-    protected boolean asynchronousLogging;
     private TraceCache traceCache=null;
+
+    public void getMetadata(Map<Long, String> threadIdNameMap, Map<Integer, String> sharedVarIdSigMap, Map<Integer, String> volatileAddresses, Map<Integer, String> stmtIdSigMap) {
+        try {
+            ObjectInputStream metadataIS = new ObjectInputStream(
+                    new BufferedInputStream(
+                            new FileInputStream(Paths.get(directory, "metadata.bin").toFile())));
+            while(true) {
+                List<Map.Entry<Long, String>> threadTidList;
+                try {
+                    threadTidList = (List<Map.Entry<Long, String>>) metadataIS.readObject();
+                } catch (EOFException _) { break;} // EOF should only happen for threadTid
+                for (Map.Entry<Long,String> entry : threadTidList) {
+                   threadIdNameMap.put(entry.getKey(), entry.getValue());
+                }
+                List<Map.Entry<String, Integer>> variableIdList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
+                for (Map.Entry<String, Integer> entry : variableIdList) {
+                    sharedVarIdSigMap.put(entry.getValue(), entry.getKey());
+                }
+                List<Map.Entry<String, Integer>> volatileVarList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
+                for (Map.Entry<String, Integer> entry : volatileVarList) {
+                    volatileAddresses.put(entry.getValue(), entry.getKey());
+                }
+                List<Map.Entry<String, Integer>> stmtSigIdList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
+                for (Map.Entry<String, Integer> entry : stmtSigIdList) {
+                    stmtIdSigMap.put(entry.getValue(), entry.getKey());
+                }
+
+            }
+        }
+        catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+
+    }
 
     // private final String NO_AUTOCLOSE = ";DB_CLOSE_ON_EXIT=FALSE";//BUGGY in
     // H2, DON'T USE IT
-
-    class EventItem {
-        long GID;
-        long TID;
-        int ID;
-        String ADDR;
-        String VALUE;
-        byte TYPE;
-
-        EventItem(long gid, long tid, int sid, String addr, String value, byte type) {
-            this.GID = gid;
-            this.TID = tid;
-            this.ID = sid;
-            this.ADDR = addr;
-            this.VALUE = value;
-            this.TYPE = type;
-        }
-    }
-
-    public void finishLogging() {
-        // should wait for logging thread to finish
-        while (!queue.isEmpty())
-            ;
-
-        saveEventsToDB(buffer);
-        closeDB();
-    }
-
-    public void saveEventsToDB(Stack<EventItem> stack) {
-        synchronized (dblock) {
-            while (!stack.isEmpty()) {
-                EventItem item = stack.pop();
-                // System.out.println(item.GID);
-                try {
-                    prepStmt.setLong(1, item.GID);
-                    prepStmt.setLong(2, item.TID);
-                    prepStmt.setInt(3, item.ID);
-                    prepStmt.setString(4, item.ADDR);
-                    prepStmt.setString(5, item.VALUE);
-                    prepStmt.setByte(6, item.TYPE);
-
-                    prepStmt.execute();
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    public void startAsynchronousLogging() {
-        asynchronousLogging = true;
-
-        queue = new LinkedBlockingQueue<Stack<EventItem>>();
-        buffer = new Stack<EventItem>();
-        BUFFER_THRESHOLD = 100000;// TODO: make it configurable
-
-        Thread t = new Thread(new Runnable() {
-
-            @Override
-            public void run() {
-
-                while (true) {
-                    try {
-                        Stack<EventItem> stack = queue.take();
-                        saveEventsToDB(stack);
-
-                    } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                }
-            }
-
-        });
-
-        t.setDaemon(true);
-
-        t.start();
-
-    }
 
     public DBEngine(String directory, String name) {
         appname = name;
@@ -202,7 +115,6 @@ public class DBEngine {
         volatilesigtablename = "volatile_" + name;
         stmtsigtablename = "stmtsig_" + name;
         sharedvarsigtablename = "sharedvarsig_" + name;
-        varsigtablename = "varsig_" + name;
 
         scheduletablename = "schedule_" + name;
         propertytablename = "property_" + name;
@@ -221,52 +133,13 @@ public class DBEngine {
         }
     }
 
-    public void saveProperty(String name, int ID, boolean dropTable) {
-        try {
-            if (dropTable)
-                createPropertyTable();
-            String sql_insertdata = "INSERT INTO " + propertytablename + " VALUES (?,?)";
-            PreparedStatement prepStmt = conn.prepareStatement(sql_insertdata);
-            prepStmt.setString(1, name);
-            prepStmt.setInt(2, ID);
-            prepStmt.execute();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Drops all relevant tables of the database. Used for a clean start.
-     * 
-     * @throws Exception
-     *             if errors are reported by the sql command
-     */
-    public void dropAll() throws Exception {
-        Statement stmt = conn.createStatement();
-
-        String sql_dropTable;
-        sql_dropTable = "DROP TABLE IF EXISTS " + propertytablename;
-        stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS " + scheduletablename;
-        stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS " + stmtsigtablename;
-        stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS " + sharedvarsigtablename;
-        stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS " + volatilesigtablename;
-        stmt.execute(sql_dropTable);
-//        sql_dropTable = "DROP TABLE IF EXISTS " + tracetablename;
-//        stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS " + tidtablename;
-        stmt.execute(sql_dropTable);
-    }
-
     /**
      * Checks that all relevant tables exist.
      * 
      * @throws Exception
      */
     public boolean checkTables() throws SQLException {
+        if (true) return true;
         Statement stmt = conn.createStatement();
 
         String sql_dropTable;
@@ -275,12 +148,12 @@ public class DBEngine {
         // sql_dropTable = "SELECT COUNT(*) FROM "+scheduletablename;
         // stmt.execute(sql_dropTable);
         try {
-            sql_dropTable = "SELECT COUNT(*) FROM " + stmtsigtablename;
-            stmt.execute(sql_dropTable);
-            sql_dropTable = "SELECT COUNT(*) FROM " + varsigtablename;
-            stmt.execute(sql_dropTable);
-            sql_dropTable = "SELECT COUNT(*) FROM " + volatilesigtablename;
-            stmt.execute(sql_dropTable);
+//            sql_dropTable = "SELECT COUNT(*) FROM " + stmtsigtablename;
+//            stmt.execute(sql_dropTable);
+//            sql_dropTable = "SELECT COUNT(*) FROM " + varsigtablename;
+//            stmt.execute(sql_dropTable);
+//            sql_dropTable = "SELECT COUNT(*) FROM " + volatilesigtablename;
+//            stmt.execute(sql_dropTable);
 //            sql_dropTable = "SELECT COUNT(*) FROM " + tracetablename;
 //            stmt.execute(sql_dropTable);
             sql_dropTable = "SELECT COUNT(*) FROM " + tidtablename;
@@ -291,19 +164,6 @@ public class DBEngine {
             throw e;
         }
         return true;
-    }
-
-    public void createPropertyTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + propertytablename;
-
-        Statement stmt = conn.createStatement();
-        stmt.execute(sql_dropTable);
-
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + propertytablename + " ("
-                + propertytablecolname[0] + " " + propertytablecoltype[0] + ", "
-                + propertytablecolname[1] + " " + propertytablecoltype[1] + ")";
-        stmt.execute(sql_createTable);
-
     }
 
     public void createScheduleTable() throws Exception {
@@ -322,265 +182,11 @@ public class DBEngine {
         prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
-    public void createStmtSignatureTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + stmtsigtablename;
-        String sql_insertdata = "INSERT INTO " + stmtsigtablename + " VALUES (?,?)";
-
-        Statement stmt = conn.createStatement();
-        stmt.execute(sql_dropTable);
-
-        String sql_createTable = "CREATE TABLE " + stmtsigtablename + " (" + stmtsigtablecolname[0]
-                + " " + stmtsigtablecoltype[0] + " PRIMARY KEY, " + stmtsigtablecolname[1] + " "
-                + stmtsigtablecoltype[1] + ")";
-        stmt.execute(sql_createTable);
-
-        prepStmt = conn.prepareStatement(sql_insertdata);
-    }
-
-    public void createSharedVarSignatureTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + sharedvarsigtablename;
-        String sql_insertdata = "INSERT INTO " + sharedvarsigtablename + " VALUES (?,?)";
-
-        Statement stmt = conn.createStatement();
-        stmt.execute(sql_dropTable);
-
-        String sql_createTable = "CREATE TABLE " + sharedvarsigtablename + " ("
-                + sharedvarsigtablecolname[0] + " " + sharedvarsigcoltype[0] + " PRIMARY KEY, "
-                + sharedvarsigtablecolname[1] + " " + sharedvarsigcoltype[1] + ")";
-        stmt.execute(sql_createTable);
-
-        prepStmt = conn.prepareStatement(sql_insertdata);
-    }
-
-    public void createVolatileSignatureTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + volatilesigtablename;
-        String sql_insertdata = "INSERT INTO " + volatilesigtablename + " VALUES (?,?)";
-
-        Statement stmt = conn.createStatement();
-        stmt.execute(sql_dropTable);
-
-        String sql_createTable = "CREATE TABLE " + volatilesigtablename + " ("
-                + volatilesigtablecolname[0] + " " + volatilesigcoltype[0] + " PRIMARY KEY, "
-                + volatilesigtablecolname[1] + " " + volatilesigcoltype[1] + ")";
-        stmt.execute(sql_createTable);
-
-        prepStmt = conn.prepareStatement(sql_insertdata);
-    }
-
-//    public void createTraceTable() throws Exception {
-//        String sql_dropTable = "DROP TABLE IF EXISTS " + tracetablename;
-//
-//        Statement stmt = conn.createStatement();
-//        stmt.execute(sql_dropTable);
-//
-//        String sql_createTable = "CREATE TABLE " + tracetablename + " (" + tracetablecolname[0]
-//                + " " + tracetablecoltype[0] + " PRIMARY KEY, " + tracetablecolname[1] + " "
-//                + tracetablecoltype[1] + ", " + tracetablecolname[2] + " " + tracetablecoltype[2]
-//                + ", " + tracetablecolname[3] + " " + tracetablecoltype[3] + ", "
-//                + tracetablecolname[4] + " " + tracetablecoltype[4] + ", " + tracetablecolname[5]
-//                + " " + tracetablecoltype[5] + ")";
-//        stmt.execute(sql_createTable);
-//
-//        String sql_insertdata = "INSERT INTO " + tracetablename + " VALUES (?,?,?,?,?,?)";
-//        prepStmt = conn.prepareStatement(sql_insertdata);
-//
-//    }
-
-    public void createThreadIdTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + tidtablename;
-
-        Statement stmt = conn.createStatement();
-        stmt.execute(sql_dropTable);
-
-        String sql_createTable = "CREATE TABLE " + tidtablename + " (" + tidtablecolname[0] + " "
-                + tidtablecoltype[0] + " PRIMARY KEY, " + tidtablecolname[1] + " "
-                + tidtablecoltype[1] + ")";
-        stmt.execute(sql_createTable);
-
-        String sql_insertdata = "INSERT INTO " + tidtablename + " VALUES (?,?)";
-        prepStmt2 = conn.prepareStatement(sql_insertdata);
-    }
-
-    public void saveThreadTidNameToDB(long id, String name) {
-        try {
-            prepStmt2.setLong(1, id);
-            prepStmt2.setString(2, name);
-
-            prepStmt2.execute();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void saveStmtSignatureToDB(String sig, int id) {
-        try {
-            prepStmt.setString(1, sig);
-            prepStmt.setInt(2, id);
-
-            prepStmt.execute();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void saveSharedVarSignatureToDB(String sig, int id) {
-        try {
-            prepStmt.setString(1, sig);
-            prepStmt.setInt(2, id);
-
-            prepStmt.execute();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void saveVolatileSignatureToDB(String sig, int id) {
-        try {
-            prepStmt.setString(1, sig);
-            prepStmt.setInt(2, id);
-
-            prepStmt.execute();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * save an event to database. must be synchronized. otherwise, easy to throw
-     * Unique index or primary key violation.
-     */
-    public synchronized void saveEventToDB(long TID, int ID, String ADDR, String VALUE, byte TYPE) {
-        // make true->1. false->0
-        if (VALUE.equals("true"))
-            VALUE = "1";
-        if (VALUE.equals("false"))
-            VALUE = "0";
-
-        globalEventID = globalEventID + 1;
-
-        // if(globalEventID%1000000==0)
-        // System.out.println("logging the "+globalEventID+"th event...");
-
-        if (asynchronousLogging) {
-            EventItem item = new EventItem(globalEventID, TID, ID, ADDR, VALUE, TYPE);
-            if (buffer.size() == BUFFER_THRESHOLD) {
-                queue.add(buffer);
-                buffer = new Stack<EventItem>();
-            } else {
-                buffer.add(item);
-            }
-        } else {
-            try {
-
-                prepStmt.setLong(1, globalEventID);
-                prepStmt.setLong(2, TID);
-                prepStmt.setInt(3, ID);
-                prepStmt.setString(4, ADDR);
-                prepStmt.setString(5, VALUE);
-                prepStmt.setByte(6, TYPE);
-
-                prepStmt.execute();
-
-                // if(ADDR.length()>0&&ADDR.charAt(ADDR.length()-1)=='3')
-                // System.out.println(globalEventID+" "+TID+" "+ADDR+" "+VALUE+" "+TYPE);
-
-            } catch (Exception e) {
-                // e.printStackTrace();
-            }
-        }
-    }
-
     protected void connectDB(String directory) throws Exception {
         Class.forName("rvpredict.h2.Driver");
         conn = DriverManager.getConnection("jdbc:h2:" + directory + "/" + dbname
                 + ";DB_CLOSE_ON_EXIT=FALSE");
         // conn.setAutoCommit(true);
-    }
-
-    public HashMap<Long, String> getThreadIdNameMap() {
-        HashMap<Long, String> map = new HashMap<Long, String>();
-
-        try {
-            String sql_select = "SELECT * FROM " + tidtablename;
-
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql_select);
-            while (rs.next()) {
-                // Get the data from the row using the column index
-                Long tid = rs.getLong(1);
-                String name = rs.getString(2);
-
-                // System.out.println(ID+"-"+SIG);
-                map.put(tid, name);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return map;
-    }
-
-    public HashMap<Integer, String> getVolatileAddresses() {
-        HashMap<Integer, String> map = new HashMap<Integer, String>();
-        try {
-            String sql_select = "SELECT * FROM " + volatilesigtablename;
-
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql_select);
-            while (rs.next()) {
-                // Get the data from the row using the column index
-                String SIG = rs.getString(1);
-                Integer ID = rs.getInt(2);
-                // System.out.println(ID+"-"+SIG);
-                map.put(ID, SIG);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return map;
-    }
-
-    public HashMap<Integer, String> getVarSigIdMap() {
-        HashMap<Integer, String> map = new HashMap<Integer, String>();
-        try {
-            String sql_select = "SELECT * FROM " + varsigtablename;
-
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql_select);
-            while (rs.next()) {
-                // Get the data from the row using the column index
-                String SIG = rs.getString(1);
-                Integer ID = rs.getInt(2);
-                // System.out.println(ID+"-"+SIG);
-                map.put(ID, SIG);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return map;
-    }
-
-    public HashMap<Integer, String> getStmtSigIdMap() {
-        HashMap<Integer, String> map = new HashMap<Integer, String>();
-        try {
-            String sql_select = "SELECT * FROM " + stmtsigtablename;
-
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql_select);
-            while (rs.next()) {
-                // Get the data from the row using the column index
-                String SIG = rs.getString(1);
-                Integer ID = rs.getInt(2);
-                // System.out.println(ID+"-"+SIG);
-                map.put(ID, SIG);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return map;
     }
 
     public long getTraceSize() throws Exception {
@@ -614,62 +220,41 @@ public class DBEngine {
             rvpredict.db.EventItem eventItem = traceCache.getEvent(index);
             if (eventItem == null) break;
 
-//        }
-//        String sql_select = "SELECT * FROM " + tracetablename;
-//        if (max > min)
-//            sql_select += " WHERE GID BETWEEN '" + min + "' AND '" + max + "'";
-//        sql_select += " ORDER BY GID";
-//
-//        Statement stmt = conn.createStatement();
-//        ResultSet rs = stmt.executeQuery(sql_select);
-
-        // int NUM_CS = 0;
-        // long lastTID = -1;
-        // Fetch each row from the result set
-//        while (rs.next()) {
-            // Get the data from the row using the column index
-//            long GID = rs.getLong(1);
-//            long TID = rs.getLong(2);
-//            int ID = rs.getInt(3);
-//            String ADDR = rs.getString(4);
-//            String VALUE = rs.getString(5);
-//            byte TYPE = rs.getByte(6);
-
             long GID = eventItem.GID;
             long TID = eventItem.TID;
             int ID = eventItem.ID;
-            String ADDR = eventItem.ADDR;
-            String VALUE = eventItem.VALUE;
+            long ADDRL = eventItem.ADDRL;
+            long ADDRR = eventItem.ADDRR;
+            long VALUE = eventItem.VALUE;
             byte TYPE = eventItem.TYPE;
-            // System.out.println(GID+" "+TID+" "+ADDR+" "+VALUE+" "+TYPE);
 
             switch (TYPE) {
             case '0':
-                node = new InitNode(GID, TID, ID, ADDR, VALUE);
+                node = new InitNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
                 break;
             case '1':
-                node = new ReadNode(GID, TID, ID, ADDR, VALUE);
+                node = new ReadNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
                 break;
             case '2':
-                node = new WriteNode(GID, TID, ID, ADDR, VALUE);
+                node = new WriteNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
                 break;
             case '3':
-                node = new LockNode(GID, TID, ID, ADDR);
+                node = new LockNode(GID, TID, ID, ADDRL);
                 break;
             case '4':
-                node = new UnlockNode(GID, TID, ID, ADDR);
+                node = new UnlockNode(GID, TID, ID, ADDRL);
                 break;
             case '5':
-                node = new WaitNode(GID, TID, ID, ADDR);
+                node = new WaitNode(GID, TID, ID, ADDRL);
                 break;
             case '6':
-                node = new NotifyNode(GID, TID, ID, ADDR);
+                node = new NotifyNode(GID, TID, ID, ADDRL);
                 break;
             case '7':
-                node = new StartNode(GID, TID, ID, ADDR);
+                node = new StartNode(GID, TID, ID, ADDRL);
                 break;
             case '8':
-                node = new JoinNode(GID, TID, ID, ADDR);
+                node = new JoinNode(GID, TID, ID, ADDRL);
                 break;
             case '9':
                 node = new BranchNode(GID, TID, ID);
@@ -677,9 +262,9 @@ public class DBEngine {
             case 'a':
                 node = new BBNode(GID, TID, ID);
                 break;
-            case 'b':
-                node = new PropertyNode(GID, TID, ID, ADDR);
-                break;
+//            case 'b':
+//                node = new PropertyNode(GID, TID, ID, ADDR);
+//                break;
 
             default:
                 break;
@@ -687,52 +272,11 @@ public class DBEngine {
 
             trace.addRawNode(node);
 
-            // if(TID!=lastTID)
-            // NUM_CS++;
-            // lastTID=TID;
         }
 
         trace.finishedLoading();
-        // System.out.println("Context Switches: "+NUM_CS);
 
         return trace;
-    }
-
-    private void test() {
-        try {
-            DBEngine db = new DBEngine("a.b.c.test", "name");
-            db.createSharedVarSignatureTable();
-            {
-                db.saveStmtSignatureToDB("a", 1);
-                db.saveStmtSignatureToDB("a.b", 2);
-            }
-
-            db.createStmtSignatureTable();
-            {
-                db.saveStmtSignatureToDB("abc", 1);
-                db.saveStmtSignatureToDB("a.b", 2);
-            }
-
-//            db.createTraceTable();
-//            {
-//                db.saveEventToDB(1l, 1, "abc", "1", db.tracetypetable[1]);
-//                db.saveEventToDB(1, 2, "ac", "21", db.tracetypetable[2]);
-//                db.saveEventToDB(1, 3, "ac", "24", db.tracetypetable[3]);
-//                db.saveEventToDB(1, 4, "ac", "324", db.tracetypetable[4]);
-//                db.saveEventToDB(1, 5, "ac", "1324", db.tracetypetable[5]);
-//                db.saveEventToDB(2, 6, "ac", "24", db.tracetypetable[5]);
-//                db.saveEventToDB(2, 7, "ac", "1324", db.tracetypetable[6]);
-//                db.saveEventToDB(3, 8, "ac", "34", db.tracetypetable[7]);
-//                db.saveEventToDB(4, 9, "ac", "14", db.tracetypetable[8]);
-//                db.saveEventToDB(4, 10, "ac", "14", db.tracetypetable[9]);
-//
-//            }
-            db.closeDB();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
     }
 
     public int getScheduleSize() {

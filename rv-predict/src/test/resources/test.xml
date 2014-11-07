@@ -15,12 +15,10 @@
         <arg key="-jar" value="SpringExample.jar" />
     </test>
     <test name="account.Account">
-    	<runs value="3" />
         <arg key="-cp" value="basic.jar" />
         <arg value="account.Account" />
     </test>
     <test name="array.Test">
-    	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="array.Test" />
     </test>
@@ -40,7 +38,7 @@
         <arg value="airlinetickets.Airlinetickets" />
     </test>
     <test name="boundedbuffer.BoundedBuffer">
-      	<runs value="5" />
+      	<runs value="10" />
         <arg key="-cp" value="basic.jar" />
         <arg value="boundedbuffer.BoundedBuffer" />
     </test>

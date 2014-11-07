@@ -63,8 +63,10 @@ public class TestHelper {
         
         // compile regex patterns
         List<Pattern> expectedPatterns = new ArrayList<>();
-        for (String pattern : Util.convertFileToString(new File(testsPrefix + ".expected.out")).split("(\n|\r)")) {
-            expectedPatterns.add(Pattern.compile(pattern));
+        for (String regex : Util.convertFileToString(new File(testsPrefix + ".expected.out")).split("(\n|\r)")) {
+            if (!regex.isEmpty()) {
+                expectedPatterns.add(Pattern.compile(regex));
+            }
         }
         
         ProcessBuilder processBuilder = new ProcessBuilder(command).inheritIO();

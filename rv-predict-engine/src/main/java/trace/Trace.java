@@ -210,12 +210,12 @@ public class Trace {
     }
 
     // TODO: NEED to include the dependent nodes from other threads
-    public List<ReadNode> getDependentReadNodes(IMemNode rnode, boolean nobranch) {
+    public List<ReadNode> getDependentReadNodes(IMemNode rnode, boolean branch) {
 
         List<ReadNode> readnodes = new ArrayList<>();
         long tid = rnode.getTID();
         long POS = rnode.getGID() - 1;
-        if (!nobranch) {
+        if (branch) {
             long pos = -1;
             List<BranchNode> branchNodes = threadBranchNodes.get(tid);
             if (branchNodes != null)

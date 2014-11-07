@@ -498,9 +498,9 @@ public class NewRVPredict {
                                     // before the most recent branch nodes
                                     // before rnode/wnode are considered
                                     List<ReadNode> readNodes_r = trace.getDependentReadNodes(
-                                            rnode, config.nobranch);
+                                            rnode, config.branch);
                                     List<ReadNode> readNodes_w = trace.getDependentReadNodes(
-                                            wnode, config.nobranch);
+                                            wnode, config.branch);
 
                                     // construct the optimized read-write
                                     // constraints ensuring the feasibility of
@@ -697,9 +697,9 @@ public class NewRVPredict {
                                 } else {
                                     // get dependent nodes of rnode and wnode
                                     List<ReadNode> readNodes_w1 = trace.getDependentReadNodes(
-                                            wnode1, config.nobranch);
+                                            wnode1, config.branch);
                                     List<ReadNode> readNodes_w2 = trace.getDependentReadNodes(
-                                            wnode2, config.nobranch);
+                                            wnode2, config.branch);
 
                                     StringBuilder sb1 = engine
                                             .constructCausalReadWriteConstraintsOptimized(-1,
@@ -907,11 +907,11 @@ public class NewRVPredict {
 
                                         // get dependent read nodes
                                         List<ReadNode> readNodes_1 = trace.getDependentReadNodes(
-                                                node1, config.nobranch);
+                                                node1, config.branch);
                                         List<ReadNode> readNodes_2 = trace.getDependentReadNodes(
-                                                node2, config.nobranch);
+                                                node2, config.branch);
                                         List<ReadNode> readNodes_3 = trace.getDependentReadNodes(
-                                                node3, config.nobranch);
+                                                node3, config.branch);
 
                                         StringBuilder sb1 = engine
                                                 .constructCausalReadWriteConstraintsOptimized(

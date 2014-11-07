@@ -40,8 +40,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class RecordRT {
 
-    // can be computed during offline analysis
-    static HashMap<Long, String> threadTidNameMap;
     static HashMap<Long, Integer> threadTidIndexMap;
     public static HashSet<Integer> sharedVariableIds;
     public static HashSet<Integer> sharedArrayIds;
@@ -119,11 +117,10 @@ public final class RecordRT {
         // create table for storing thread id to unique identifier map
         db.createThreadIdTable(newTable);
 
-        threadTidNameMap = new HashMap<Long, String>();
         if (newTable)
             db.saveThreadTidNameToDB(tid, MAIN_NAME);
 
-        threadTidNameMap.put(tid, MAIN_NAME);
+        GlobalStateForInstrumentation.instance.registerThreadName(tid, MAIN_NAME);
 
         threadTidIndexMap = new HashMap<Long, Integer>();
         threadTidIndexMap.put(tid, 1);
@@ -163,6 +160,7 @@ public final class RecordRT {
     public static void saveMetaData(DBEngine db, GlobalStateForInstrumentation state,
             boolean isVerbose) {
         synchronized (db) {
+            ConcurrentHashMap<Long, String> threadTidMap = state.unsavedThreadTidNameMap;
             ConcurrentHashMap<String, Integer> variableIdMap = state.unsavedVariableIdMap;
             ConcurrentHashMap<String, Boolean> volatileVariables = state.unsavedVolatileVariables;
             ConcurrentHashMap<String, Integer> stmtSigIdMap = state.unsavedStmtSigIdMap;
@@ -170,6 +168,15 @@ public final class RecordRT {
                 // just reuse the connection
 
                 // TODO: if db is null or closed, there must be something wrong
+                db.createThreadIdTable(false);
+                Iterator<Entry<Long, String>> threadIdNameIter = threadTidMap.entrySet().iterator();
+                while (threadIdNameIter.hasNext()) {
+                    Map.Entry<Long,String> entry = threadIdNameIter.next();
+                    Long tid = entry.getKey();
+                    String name = entry.getValue();
+                    threadIdNameIter.remove();
+                    db.saveThreadTidNameToDB(tid, name);
+                }
                 // save variable - id to database
                 db.createVarSignatureTable(false);
                 Iterator<Entry<String, Integer>> variableIdMapIter = variableIdMap.entrySet()
@@ -479,13 +486,13 @@ public final class RecordRT {
         Thread t = (Thread) o;
         long tid_t = t.getId();
 
-        String name = threadTidNameMap.get(tid);
+        String name = GlobalStateForInstrumentation.instance.threadTidNameMap.get(tid);
         // it's possible that name is NULL, because this thread is started from
         // library: e.g., AWT-EventQueue-0
         if (name == null) {
             name = Thread.currentThread().getName();
             threadTidIndexMap.put(tid, 1);
-            threadTidNameMap.put(tid, name);
+            GlobalStateForInstrumentation.instance.registerThreadName(tid, name);
         }
 
         int index = threadTidIndexMap.get(tid);
@@ -495,7 +502,7 @@ public final class RecordRT {
         else
             name = name + "." + index;
 
-        threadTidNameMap.put(tid_t, name);
+        GlobalStateForInstrumentation.instance.registerThreadName(tid_t, name);
         threadTidIndexMap.put(tid_t, 1);
 
         index++;

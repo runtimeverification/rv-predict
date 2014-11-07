@@ -2,6 +2,7 @@ package rvpredict.db;
 
 import org.apache.tools.ant.DirectoryScanner;
 
+import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -15,7 +16,7 @@ import java.util.zip.GZIPInputStream;
  * Created by Traian on 04.11.2014.
  */
 public class TraceCache {
-    public static final String TRACE_SUFFIX = "trace.gz";
+    public static final String TRACE_SUFFIX = "trace.bin";
     public static final int TRACE_SUFFIX_LENGTH = TRACE_SUFFIX.length();
     private final String directory;
     long[] indexes;
@@ -80,7 +81,7 @@ public class TraceCache {
         String fname = indexes[i] + TRACE_SUFFIX;
         try {
             ObjectInputStream gzipInputStream = new ObjectInputStream(
-                    new GZIPInputStream( new FileInputStream(Paths.get(directory, fname).toFile())));
+                    new BufferedInputStream( new FileInputStream(Paths.get(directory, fname).toFile())));
             cache = (List<EventItem>) gzipInputStream.readObject();
         } catch (IOException e) {
             e.printStackTrace();

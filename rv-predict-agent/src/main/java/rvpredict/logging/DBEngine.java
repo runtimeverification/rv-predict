@@ -30,6 +30,7 @@ package rvpredict.logging;
 
 import rvpredict.db.EventItem;
 import rvpredict.config.Config;
+import rvpredict.db.TraceCache;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
 
 import java.io.*;
@@ -41,7 +42,6 @@ import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.zip.GZIPOutputStream;
 
 /**
  * Engine for interacting with database.
@@ -65,9 +65,6 @@ public class DBEngine {
     protected final String[] stmtsigtablecolname = { "SIG", "ID" };
     protected final String[] stmtsigtablecoltype = { "VARCHAR", "INT" };
 
-    protected final String[] scheduletablecolname = { "ID", "SIG", "SCHEDULE" };
-    protected final String[] scheduletablecoltype = { "INT", "VARCHAR", "ARRAY" };
-
     protected final String[] sharedvarsigtablecolname = { "SIG" };
     protected final String[] sharedvarsigcoltype = { "VARCHAR" };
 
@@ -87,16 +84,11 @@ public class DBEngine {
     protected final String[] tidtablecolname = { "TID", "NAME" };
     protected final String[] tidtablecoltype = { "BIGINT", "VARCHAR" };
 
-    protected final String[] propertytablecolname = { "PROPERTY", "ID" };
-    protected final String[] propertytablecoltype = { "VARCHAR", "INT" };
-
     // READ,WRITE,LOCK,UNLOCK,WAIT,NOTIFY,START,JOIN,BRANCH,BB
     public final byte[] tracetypetable = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a',
             'b' };
     protected Connection conn;
     protected PreparedStatement prepStmt;
-
-    protected PreparedStatement prepStmt2;// just for thread id-name
 
     public String tracetablename;
     public String tidtablename;
@@ -145,8 +137,8 @@ public class DBEngine {
 
         try {
             traceOS = new ObjectOutputStream(
-                    new GZIPOutputStream(
-                            new FileOutputStream(Paths.get(directory, stack.get(0).GID+"trace.gz").toFile())));
+                    new BufferedOutputStream(
+                            new FileOutputStream(Paths.get(directory, stack.get(0).GID + TraceCache.TRACE_SUFFIX).toFile())));
             traceOS.writeObject(stack);
             traceOS.close();
         } catch (IOException e) {
@@ -224,20 +216,6 @@ public class DBEngine {
         }
     }
 
-    public void saveProperty(String name, int ID, boolean dropTable) {
-        try {
-            if (dropTable)
-                createPropertyTable(true);
-            String sql_insertdata = "INSERT INTO " + propertytablename + " VALUES (?,?)";
-            PreparedStatement prepStmt = conn.prepareStatement(sql_insertdata);
-            prepStmt.setString(1, name);
-            prepStmt.setInt(2, ID);
-            prepStmt.execute();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     /**
      * Drops all relevant tables of the database. Used for a clean start.
      *
@@ -264,65 +242,6 @@ public class DBEngine {
         stmt.execute(sql_dropTable);
         sql_dropTable = "DROP TABLE IF EXISTS " + varsigtablename;
         stmt.execute(sql_dropTable);
-    }
-
-    /**
-     * Checks that all relevant tables exist.
-     *
-     * @throws Exception
-     */
-    public boolean checkTables() throws SQLException {
-        Statement stmt = conn.createStatement();
-
-        String sql_checkTable;
-        try {
-            sql_checkTable = "SELECT COUNT(*) FROM " + stmtsigtablename;
-            stmt.execute(sql_checkTable);
-            sql_checkTable = "SELECT COUNT(*) FROM " + varsigtablename;
-            stmt.execute(sql_checkTable);
-            sql_checkTable = "SELECT COUNT(*) FROM " + volatilesigtablename;
-            stmt.execute(sql_checkTable);
-            sql_checkTable = "SELECT COUNT(*) FROM " + tracetablename;
-            stmt.execute(sql_checkTable);
-            sql_checkTable = "SELECT COUNT(*) FROM " + tidtablename;
-            stmt.execute(sql_checkTable);
-        } catch (SQLException e) {
-            if (e.getErrorCode() == TABLE_NOT_FOUND_ERROR_CODE)
-                return false;
-            throw e;
-        }
-        return true;
-    }
-
-    public void createPropertyTable(boolean newTable) throws Exception {
-        Statement stmt = conn.createStatement();
-        if (newTable) {
-            String sql_dropTable = "DROP TABLE IF EXISTS " + propertytablename;
-            stmt.execute(sql_dropTable);
-        }
-
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + propertytablename + " ("
-                + propertytablecolname[0] + " " + propertytablecoltype[0] + ", "
-                + propertytablecolname[1] + " " + propertytablecoltype[1] + ")";
-        stmt.execute(sql_createTable);
-
-    }
-
-    public void createScheduleTable(boolean newTable) throws Exception {
-        Statement stmt = conn.createStatement();
-        if (newTable) {
-            String sql_dropTable = "DROP TABLE IF EXISTS " + scheduletablename;
-            stmt.execute(sql_dropTable);
-        }
-
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + scheduletablename + " ("
-                + scheduletablecolname[0] + " " + scheduletablecoltype[0] + " PRIMARY KEY, "
-                + scheduletablecolname[1] + " " + scheduletablecoltype[1] + ", "
-                + scheduletablecolname[2] + " " + scheduletablecoltype[2] + ")";
-        stmt.execute(sql_createTable);
-
-        String sql_insertdata = "INSERT INTO " + scheduletablename + " VALUES (?,?,?)";
-        prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
     public void createStmtSignatureTable(boolean newTable) throws Exception {
@@ -447,15 +366,15 @@ public class DBEngine {
         stmt.execute(sql_createTable);
 
         String sql_insertdata = "INSERT INTO " + tidtablename + " VALUES (?,?)";
-        prepStmt2 = conn.prepareStatement(sql_insertdata);
+        prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
     public void saveThreadTidNameToDB(long id, String name) {
         try {
-            prepStmt2.setLong(1, id);
-            prepStmt2.setString(2, name);
+            prepStmt.setLong(1, id);
+            prepStmt.setString(2, name);
 
-            prepStmt2.execute();
+            prepStmt.execute();
 
         } catch (Exception e) {
             e.printStackTrace();

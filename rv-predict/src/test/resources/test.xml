@@ -6,7 +6,6 @@
         <arg key="-jar" value="ftpserver.jar" />
     </test>
     <test name="demo.Example">
-    	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="demo.Example" />
         <rvarg key="--include" value="a.b" />

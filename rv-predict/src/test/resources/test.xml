@@ -2,6 +2,7 @@
 <!-- Copyright (c) 2014 Runtime Verification Inc. All Rights Reserved. -->
 <tests>
     <test name="ftpserver.jar">
+    	<runs value="10" />
         <arg key="-jar" value="ftpserver.jar" />
     </test>
     <test name="demo.Example">
@@ -31,18 +32,22 @@
     </test>
 -->
     <test name="airlinetickets.Airlinetickets">
+       	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="airlinetickets.Airlinetickets" />
     </test>
     <test name="boundedbuffer.BoundedBuffer">
+      	<runs value="10" />
         <arg key="-cp" value="basic.jar" />
         <arg value="boundedbuffer.BoundedBuffer" />
     </test>
     <test name="mergesort.MergeSort">
+    	<runs value="30" />
         <arg key="-cp" value="basic.jar" />
         <arg value="mergesort.MergeSort" />
     </test>
     <test name="critical.Critical">
+    	<runs value="60" />
         <arg key="-cp" value="basic.jar" />
         <arg value="critical.Critical" />
     </test>
@@ -51,10 +56,12 @@
         <arg value="bufwriter.BufWriter" />
     </test>
     <test name="bubblesort.BubbleSort">
+    	<runs value="10" />
         <arg key="-cp" value="basic.jar" />
         <arg value="bubblesort.BubbleSort" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA">
+    	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />
     </test>
@@ -63,6 +70,7 @@
         <arg value="benchmarks.JGFMonteCarloBenchSizeA" />
     </test>
     <test name="benchmarks.JGFMolDynBenchSizeA">
+    	<runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="benchmarks.JGFMolDynBenchSizeA" />
     </test>

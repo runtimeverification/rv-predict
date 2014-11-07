@@ -1,1 +1,41 @@
-^Race on\s
+(?s)(.*)Race on field org.apache.mina.core.filterchain.DefaultIoFilterChain\$EntryImpl.nextEntry between:(\s)*org.apache.mina.core.filterchain.DefaultIoFilterChain\$EntryImpl.access\$300\(DefaultIoFilterChain.java:741\)(\s)*org.apache.mina.core.filterchain.DefaultIoFilterChain\$EntryImpl.access\$302\(DefaultIoFilterChain.java:741\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.filterchain.DefaultIoFilterChain\$EntryImpl.nextEntry between two instances of:(\s)*org.apache.mina.core.filterchain.DefaultIoFilterChain\$EntryImpl.access\$302\(DefaultIoFilterChain.java:741\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.session.AbstractIoSession.attributes between:(\s)*org.apache.mina.core.session.AbstractIoSession.setAttribute\(AbstractIoSession.java:482\)(\s)*org.apache.mina.core.session.AbstractIoSession.setAttributeMap\(AbstractIoSession.java:552\)(.*)
+
+(?s)(.*)Race on field org.apache.log4j.Category.repository between:(\s)*org.apache.log4j.Category.isDebugEnabled\(Category.java:734\)(\s)*org.apache.log4j.Category.setHierarchy\(Category.java:947\)(.*)
+
+(?s)(.*)Race on field org.apache.log4j.Category.repository between:(\s)*org.apache.log4j.Category.log\(Category.java:852\)(\s)*org.apache.log4j.Category.setHierarchy\(Category.java:947\)(.*)
+
+(?s)(.*)Race on field org.apache.log4j.Category.repository between:(\s)*org.apache.log4j.Category.callAppenders\(Category.java:215\)(\s)*org.apache.log4j.Category.setHierarchy\(Category.java:947\)(.*)
+
+(?s)(.*)Race on field org.apache.log4j.Category.parent between:(\s)*org.apache.log4j.Category.getEffectiveLevel\(Category.java:442\)(\s)*org.apache.log4j.Hierarchy.updateParents\(Hierarchy.java:538\)(.*)
+
+(?s)(.*)Race on field org.apache.log4j.Category.parent between:(\s)*org.apache.log4j.Category.callAppenders\(Category.java:202\)(\s)*org.apache.log4j.Hierarchy.updateParents\(Hierarchy.java:538\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.service.IoServiceListenerSupport.largestManagedSessionCount between:(\s)*org.apache.mina.core.service.IoServiceListenerSupport.fireSessionCreated\(IoServiceListenerSupport.java:185\)(\s)*org.apache.mina.core.service.IoServiceListenerSupport.fireSessionCreated\(IoServiceListenerSupport.java:186\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.service.IoServiceListenerSupport.cumulativeManagedSessionCount between two instances of:(\s)*org.apache.mina.core.service.IoServiceListenerSupport.fireSessionCreated\(IoServiceListenerSupport.java:188\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.buffer.IoBuffer.allocator between:(\s)*org.apache.mina.core.buffer.IoBuffer.allocate\(IoBuffer.java:218\)(\s)*org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.buffer.IoBuffer.allocator between:(\s)*org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:167\)(\s)*org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.buffer.IoBuffer.allocator between two instances of:(\s)*org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.service.IoServiceStatistics.lastReadTime between:(\s)*org.apache.mina.core.service.IoServiceStatistics.increaseReadBytes\(IoServiceStatistics.java:318\)(\s)*org.apache.mina.core.service.IoServiceStatistics.increaseReadMessages\(IoServiceStatistics.java:327\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.service.IoServiceStatistics.lastWriteTime between:(\s)*org.apache.mina.core.service.IoServiceStatistics.increaseWrittenBytes\(IoServiceStatistics.java:336\)(\s)*org.apache.mina.core.service.IoServiceStatistics.increaseWrittenMessages\(IoServiceStatistics.java:345\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.service.IoServiceStatistics.lastReadTime between two instances of:(\s)*org.apache.mina.core.service.IoServiceStatistics.increaseReadMessages\(IoServiceStatistics.java:327\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.service.IoServiceStatistics.lastWriteTime between two instances of:(\s)*org.apache.mina.core.service.IoServiceStatistics.increaseWrittenBytes\(IoServiceStatistics.java:336\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.service.IoServiceStatistics.lastWriteTime between two instances of:(\s)*org.apache.mina.core.service.IoServiceStatistics.increaseWrittenMessages\(IoServiceStatistics.java:345\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.service.IoServiceStatistics.lastReadTime between two instances of:(\s)*org.apache.mina.core.service.IoServiceStatistics.increaseReadBytes\(IoServiceStatistics.java:318\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.buffer.AbstractIoBuffer.mark between two instances of:(\s)*org.apache.mina.core.buffer.AbstractIoBuffer.mark\(AbstractIoBuffer.java:402\)(.*)
+
+(?s)(.*)Race on field org.apache.mina.core.future.DefaultIoFuture.ready between:(\s)*org.apache.mina.core.future.DefaultIoFuture.await0\(DefaultIoFuture.java:196\)(\s)*org.apache.mina.core.future.DefaultIoFuture.setValue\(DefaultIoFuture.java:284\)(.*)

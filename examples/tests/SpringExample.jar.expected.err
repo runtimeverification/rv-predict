@@ -1,1 +1,1 @@
-^Race on\s
+(?s)(.*)Race on field HelloWorld.x between:(\s)*HelloWorld\$MyThread.run\(HelloWorld.java:40\)(\s)*HelloWorld.printHello\(HelloWorld.java:23\)(.*)

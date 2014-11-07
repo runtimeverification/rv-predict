@@ -562,15 +562,15 @@ public class Engine {
 
                 cons_b += cons_b_end;
 
-                long rValue = rnode.getValue();
-                long initValue = initValueMap.get(rnode.getAddr());
+                Long rValue = rnode.getValue();
+                Long initValue = initValueMap.get(rnode.getAddr());
 
                 // it's possible that we don't have initial value for static
                 // variable
                 // so we allow init value to be zero or null? -- null is turned
                 // into 0 by System.identityHashCode
                 boolean allowMatchInit = true;
-                if (initValue == 0) {
+                if (initValue == null) {
                     for (int j = 0; j < writenodes_value_match.size(); j++) {
                         if (writenodes_value_match.get(j).getGID() < rnode.getGID()) {
                             allowMatchInit = false;
@@ -579,8 +579,8 @@ public class Engine {
                     }
                 }
 
-                if (initValue == 0 && allowMatchInit || initValue != 0
-                        && rValue == initValue) {
+                if (initValue == null && allowMatchInit || initValue != null
+                        && rValue.longValue() == initValue.longValue()) {
                     if (cons_a.length() > 0) {
                         cons_a += cons_a_end + "\n";
                         CONS_CAUSAL_RW
@@ -592,10 +592,10 @@ public class Engine {
 
             } else {
                 // make sure it reads the initial write
-                long rValue = rnode.getValue();
-                long initValue = initValueMap.get(rnode.getAddr());
+                Long rValue = rnode.getValue();
+                Long initValue = initValueMap.get(rnode.getAddr());
 
-                if (initValue != 0 && rValue == initValue) {
+                if (initValue != null && rValue.longValue() == initValue.longValue()) {
                     String var_r = makeVariable(rnode.getGID());
 
                     for (int k = 0; k < writenodes.size(); k++) {

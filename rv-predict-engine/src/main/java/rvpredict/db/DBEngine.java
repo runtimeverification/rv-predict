@@ -226,43 +226,43 @@ public class DBEngine {
             long ADDRL = eventItem.ADDRL;
             long ADDRR = eventItem.ADDRR;
             long VALUE = eventItem.VALUE;
-            byte TYPE = eventItem.TYPE;
+            AbstractNode.TYPE TYPE = eventItem.TYPE;
 
             switch (TYPE) {
-            case '0':
+            case INIT:
                 node = new InitNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
                 break;
-            case '1':
+            case READ:
                 node = new ReadNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
                 break;
-            case '2':
+            case WRITE:
                 node = new WriteNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
                 break;
-            case '3':
+            case LOCK:
                 node = new LockNode(GID, TID, ID, ADDRL);
                 break;
-            case '4':
+            case UNLOCK:
                 node = new UnlockNode(GID, TID, ID, ADDRL);
                 break;
-            case '5':
+            case WAIT:
                 node = new WaitNode(GID, TID, ID, ADDRL);
                 break;
-            case '6':
+            case NOTIFY:
                 node = new NotifyNode(GID, TID, ID, ADDRL);
                 break;
-            case '7':
+            case START:
                 node = new StartNode(GID, TID, ID, ADDRL);
                 break;
-            case '8':
+            case JOIN:
                 node = new JoinNode(GID, TID, ID, ADDRL);
                 break;
-            case '9':
+            case BRANCH:
                 node = new BranchNode(GID, TID, ID);
                 break;
-            case 'a':
+            case BASIC_BLOCK:
                 node = new BBNode(GID, TID, ID);
                 break;
-//            case 'b':
+//            case PROPERTY:
 //                node = new PropertyNode(GID, TID, ID, ADDR);
 //                break;
 

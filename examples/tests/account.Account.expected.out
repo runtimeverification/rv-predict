@@ -1,0 +1,7 @@
+(?s)(.*)Race on field account.BankAccount.Balance between:(\s)*account.Account.Service\(Account.java:97\)(\s)*account.Account.go\(Account.java:67\)(.*)
+
+(?s)(.*)Race on field account.Account.Bank_Total between two instances of:(\s)*account.Account.Service\(Account.java:98\)(.*)
+
+(?s)(.*)Race on field account.Account.Bank_Total between:(\s)*account.Account.Service\(Account.java:98\)(\s)*account.Account.checkResult\(Account.java:75\)(.*)
+
+(?s)(.*)Race on field account.Account.Bank_Total between:(\s)*account.Account.Service\(Account.java:98\)(\s)*account.Account.checkResult\(Account.java:76\)(.*)

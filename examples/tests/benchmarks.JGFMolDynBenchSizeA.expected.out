@@ -1,0 +1,3 @@
+(?s)(.*)Race on an array access between:(\s)*benchmarks.moldyn.TournamentBarrier.DoBarrier\(TournamentBarrier.java:76\)(\s)*benchmarks.moldyn.TournamentBarrier.DoBarrier\(TournamentBarrier.java:78\)(.*)
+
+(?s)(.*)Race on an array access between:(\s)*benchmarks.moldyn.TournamentBarrier.DoBarrier\(TournamentBarrier.java:65\)(\s)*benchmarks.moldyn.TournamentBarrier.DoBarrier\(TournamentBarrier.java:76\)(.*)

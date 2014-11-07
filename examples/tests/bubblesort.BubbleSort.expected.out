@@ -1,0 +1,11 @@
+(?s)(.*)Race on an array access between:(\s)*bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:63\)(\s)*bubblesort.OneBubble.run\(OneBubble.java:51\)(.*)
+
+(?s)(.*)Race on an array access between:(\s)*bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:64\)(\s)*bubblesort.OneBubble.run\(OneBubble.java:51\)(.*)
+
+(?s)(.*)Race on an array access between:(\s)*bubblesort.BubbleSortImpl.PrintArray\(BubbleSortImpl.java:99\)(\s)*bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:63\)(.*)
+
+(?s)(.*)Race on an array access between:(\s)*bubblesort.BubbleSortImpl.PrintArray\(BubbleSortImpl.java:99\)(\s)*bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:64\)(.*)
+
+(?s)(.*)Race on an array access between:(\s)*bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:64\)(\s)*bubblesort.Reporter.IndicateBug\(Reporter.java:126\)(.*)
+
+(?s)(.*)Race on an array access between:(\s)*bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:63\)(\s)*bubblesort.Reporter.IndicateBug\(Reporter.java:126\)(.*)

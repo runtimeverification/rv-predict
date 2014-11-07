@@ -1,0 +1,3 @@
+(?s)(.*)Race on field bufwriter.SyncWriter.flag between:(\s)*bufwriter.SyncWriter.run\(SyncWriter.java:27\)(\s)*bufwriter.SyncWriter.stopWriter\(SyncWriter.java:18\)(.*)
+
+(?s)(.*)Race on field bufwriter.Checker.flag between:(\s)*bufwriter.Checker.run\(Checker.java:26\)(\s)*bufwriter.Checker.stopChecker\(Checker.java:17\)(.*)

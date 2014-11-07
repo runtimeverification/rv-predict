@@ -1,1 +1,0 @@
-(?s)(.*)Race on an array access between:(\s)*array.Test\$MyThread.run\(Test.java:35\)(\s)*array.Test.main\(Test.java:25\)(.*)

@@ -1,1 +1,5 @@
-^Race on\s
+(?s)(.*)Race on an array access between:(\s)*benchmarks.raytracer.TournamentBarrier.DoBarrier\(TournamentBarrier.java:76\)(\s)*benchmarks.raytracer.TournamentBarrier.DoBarrier\(TournamentBarrier.java:78\)(.*)
+
+(?s)(.*)Race on an array access between:(\s)*benchmarks.raytracer.TournamentBarrier.DoBarrier\(TournamentBarrier.java:65\)(\s)*benchmarks.raytracer.TournamentBarrier.DoBarrier\(TournamentBarrier.java:76\)(.*)
+
+(?s)(.*)Race on field benchmarks.raytracer.JGFRayTracerBench.checksum1 between:(\s)*benchmarks.raytracer.RayTracerRunner.run\(JGFRayTracerBench.java:176\)(\s)*benchmarks.raytracer.RayTracerRunner.run0\(JGFRayTracerBench.java:205\)(.*)

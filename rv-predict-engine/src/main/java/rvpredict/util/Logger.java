@@ -58,11 +58,11 @@ public class Logger {
 
     public void report(String msg, MSGTYPE type) {
         switch (type) {
-        case REAL:
         case ERROR:
             System.err.println(msg);
             out.println(msg);
             break;
+        case REAL:
         case INFO:
             System.out.println(msg);
             if (config.verbose) {

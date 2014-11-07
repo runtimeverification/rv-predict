@@ -2,7 +2,7 @@
 <!-- Copyright (c) 2014 Runtime Verification Inc. All Rights Reserved. -->
 <tests>
     <test name="ftpserver.jar">
-    	<runs value="10" />
+    	<runs value="20" />
         <arg key="-jar" value="ftpserver.jar" />
     </test>
     <test name="demo.Example">
@@ -47,7 +47,6 @@
         <arg value="mergesort.MergeSort" />
     </test>
     <test name="critical.Critical">
-    	<runs value="60" />
         <arg key="-cp" value="basic.jar" />
         <arg value="critical.Critical" />
     </test>

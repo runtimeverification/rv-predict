@@ -1,0 +1,5 @@
+(?s)(.*)Race on field critical.Critical.turn between:(\s)*critical.Section.run\(Critical.java:51\)(\s)*critical.Section.run\(Critical.java:60\)(.*)
+
+(?s)(.*)Race on field critical.Critical.turn between:(\s)*critical.Section.run\(Critical.java:49\)(\s)*critical.Section.run\(Critical.java:62\)(.*)
+
+(?s)(.*)Race on field critical.Critical.turn between:(\s)*critical.Section.run\(Critical.java:49\)(\s)*critical.Section.run\(Critical.java:60\)(.*)

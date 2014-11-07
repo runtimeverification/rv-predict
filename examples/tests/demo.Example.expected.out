@@ -1,0 +1,1 @@
+(?s)(.*)Race on field demo.Example.x between:(\s)*demo.Example\$MyThread.run\(Example.java:68\)(\s)*demo.Example.main\(Example.java:51\)(.*)

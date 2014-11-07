@@ -1,0 +1,9 @@
+(?s)(.*)Race on field mergesort.MSort.m_iCurrentThreadsAlive between two instances of:(\s)*mergesort.MSort.DecreaseThreadCounter\(MSort.java:41\)(.*)
+
+(?s)(.*)Race on field mergesort.MSort.m_iCurrentThreadsAlive between:(\s)*mergesort.MSort.AvailableThreadsState\(MSort.java:48\)(\s)*mergesort.MSort.DecreaseThreadCounter\(MSort.java:41\)(.*)
+
+(?s)(.*)Race on field mergesort.MSort.m_iCurrentThreadsAlive between:(\s)*mergesort.MSort.AvailableThreadsState\(MSort.java:48\)(\s)*mergesort.MSort.IncreaseThreadCounter\(MSort.java:32\)(.*)
+
+(?s)(.*)Race on field mergesort.MSort.m_iCurrentThreadsAlive between:(\s)*mergesort.MSort.DecreaseThreadCounter\(MSort.java:41\)(\s)*mergesort.MSort.IncreaseThreadCounter\(MSort.java:32\)(.*)
+
+(?s)(.*)Race on field mergesort.MSort.m_iCurrentThreadsAlive between two instances of:(\s)*mergesort.MSort.IncreaseThreadCounter\(MSort.java:32\)(.*)

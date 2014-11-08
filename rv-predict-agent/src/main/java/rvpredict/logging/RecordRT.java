@@ -55,7 +55,8 @@ public final class RecordRT {
     // engine for storing events into database
     static DBEngine db;
 
-    public static void init() {
+    public static void init(DBEngine db) {
+        RecordRT.db = db;
         if (Config.instance.commandLine.agentOnlySharing) {
             sharedVariableIds = new HashSet<Integer>();
             writeThreadMap = new HashMap<Integer, Long>();
@@ -104,7 +105,6 @@ public final class RecordRT {
      */
     public static void initNonSharing(boolean newTable) throws Exception {
         long tid = Thread.currentThread().getId();
-        db = new DBEngine(Config.instance.commandLine.outdir, Config.instance.commandLine.tableName);
 
         // load sharedvariables and sharedarraylocations
         GlobalStateForInstrumentation.instance.setSharedArrayLocations(db.loadSharedArrayLocs());

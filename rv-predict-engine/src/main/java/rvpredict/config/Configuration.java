@@ -133,6 +133,10 @@ public class Configuration {
     @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables", hidden = true, descriptionKey = "1040")
     public boolean agentOnlySharing;
 
+    public final static String opt_asynchronous = "--async";
+    @Parameter(names = opt_asynchronous, description = "Record trace asynchronously", hidden = true, descriptionKey = "1050")
+    public boolean async;
+
     public final static String opt_only_predict = "--predict";
     @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "2000")
     public String predict_dir = null;

@@ -61,7 +61,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             System.out.println("Including: " + Arrays.toString(config.includeList));
         }
 
-        final DBEngine db = new DBEngine(commandLine.outdir, commandLine.tableName);
+        final DBEngine db = new DBEngine(commandLine.outdir, commandLine.tableName, commandLine.async);
         try {
             db.dropAll();
             TraceCache.removeTraceFiles(commandLine.outdir);
@@ -73,11 +73,9 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         }
         // db.closeDB();
         // initialize RecordRT first
-        RecordRT.init();
+        RecordRT.init(db);
 
-        db.startAsynchronousLogging();
         inst.addTransformer(new SnoopInstructionTransformer());
-        final boolean inLogger = true;
         final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
             @Override
             public void cleanup() {

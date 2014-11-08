@@ -69,15 +69,7 @@ public class DBEngine {
     protected Connection conn;
     protected PreparedStatement prepStmt;
 
-    public String tracetablename;
-    public String tidtablename;
-    public String stmtsigtablename;
     public String sharedvarsigtablename;
-    public String volatilesigtablename;
-
-    public String scheduletablename;
-    public String propertytablename;
-    private String varsigtablename;
     private String sharedarrayloctablename;
 
     // TODO: What if the program does not terminate??
@@ -87,6 +79,7 @@ public class DBEngine {
     protected static ArrayList<EventItem> buffer;
 
     protected int BUFFER_THRESHOLD;
+    private boolean asynchronousLogging;
 
     public void saveCurrentEventsToDB() {
         queue.add(buffer);
@@ -97,17 +90,21 @@ public class DBEngine {
     // H2, DON'T USE IT
 
     public void finishLogging() {
-        try {
-            shutdown = true;
-            System.out.print("Done executing. Flushing log buffers to disk.");
-            loggingThread.join();
-            System.out.println(" done.");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        shutdown = true;
+        if (asynchronousLogging) {
+            try {
+                System.out.print("Done executing. Flushing log buffers to disk.");
+                loggingThread.join();
+                System.out.println(" done.");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            saveEventsToDB(buffer);
         }
-        saveEventsToDB(buffer);
         try {
+            RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance);
             metadataOS.close();
+            traceOS.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -138,13 +135,6 @@ public class DBEngine {
 
         queue = new LinkedBlockingQueue<>();
         buffer = new ArrayList<>(BUFFER_THRESHOLD);
-        try {
-            metadataOS = new ObjectOutputStream(
-                    new BufferedOutputStream(
-                            new FileOutputStream(Paths.get(directory, "metadata.bin").toFile())));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         loggingThread = new Thread(new Runnable() {
 
@@ -177,23 +167,29 @@ public class DBEngine {
 
     }
 
-    public DBEngine(String directory, String name) {
+    public DBEngine(String directory, String name, boolean asynchronousLogging) {
         BUFFER_THRESHOLD = 10*Config.instance.commandLine.window_size;
         this.directory = directory;
+        this.asynchronousLogging = asynchronousLogging;
         appname = name;
-        tracetablename = "trace_" + name;
-        tidtablename = "tid_" + name;
-        volatilesigtablename = "volatile_" + name;
-        stmtsigtablename = "stmtsig_" + name;
-        varsigtablename = "varsig_" + name;
-
         sharedarrayloctablename = "sharedarrayloc_" + name;
         sharedvarsigtablename = "sharedvarsig_" + name;
-        scheduletablename = "schedule_" + name;
-        propertytablename = "property_" + name;
         try {
             connectDB(directory);
         } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            metadataOS = new ObjectOutputStream(
+                    new BufferedOutputStream(
+                            new FileOutputStream(Paths.get(directory, "metadata.bin").toFile())));
+            if (asynchronousLogging) {
+                startAsynchronousLogging();
+            } else {
+                traceOS =  new DataOutputStream(new BufferedOutputStream(
+                        new FileOutputStream(Paths.get(directory, 1 + TraceCache.TRACE_SUFFIX).toFile())));
+            }
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -217,21 +213,9 @@ public class DBEngine {
         Statement stmt = conn.createStatement();
 
         String sql_dropTable;
-        sql_dropTable = "DROP TABLE IF EXISTS " + propertytablename;
-        stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS " + scheduletablename;
-        stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS " + stmtsigtablename;
-        stmt.execute(sql_dropTable);
         sql_dropTable = "DROP TABLE IF EXISTS " + sharedvarsigtablename;
         stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS " + volatilesigtablename;
-        stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS " + tracetablename;
-        stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS " + tidtablename;
-        stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS " + varsigtablename;
+        sql_dropTable = "DROP TABLE IF EXISTS " + sharedarrayloctablename;
         stmt.execute(sql_dropTable);
     }
 
@@ -329,24 +313,33 @@ public class DBEngine {
         }
     }
 
-    public void saveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE, AbstractNode.TYPE TYPE) {
-        if (Config.shutDown)
-            return;
-        synchronizedSaveEventToDB(TID, ID, ADDRL, ADDRR, VALUE, TYPE);
-    }
-
     /**
-     * save an event to database. must be synchronized. otherwise, easy to throw
-     * Unique index or primary key violation.
+     * save an event to database. must be synchronized. otherwise, races when writing to file might occur for
+     * synchronous logging.
      */
-    public synchronized void synchronizedSaveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE,
-            AbstractNode.TYPE TYPE) {
+    public synchronized  void saveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE, AbstractNode.TYPE TYPE) {
 
-        if (buffer.size() == BUFFER_THRESHOLD) {
-
-            saveCurrentEventsToDB();
+        EventItem e = new EventItem(DBEngine.globalEventID.incrementAndGet(), TID, ID, ADDRL, ADDRR, VALUE, TYPE);
+        if (asynchronousLogging) {
+            if (buffer.size() >= BUFFER_THRESHOLD) {
+                saveCurrentEventsToDB();
+            }
+            buffer.add(e);
         } else {
-            buffer.add(new EventItem(DBEngine.globalEventID.incrementAndGet(), TID,ID,ADDRL, ADDRR,VALUE,TYPE));
+            if (shutdown) return;
+            try {
+                if (e.GID % BUFFER_THRESHOLD == 0) {
+                    traceOS.close();
+                    RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance);
+                    traceOS =  new DataOutputStream(new BufferedOutputStream(
+                            new FileOutputStream(Paths.get(directory, e.GID + TraceCache.TRACE_SUFFIX).toFile())));
+                }
+                e.toStream(traceOS);
+            } catch (FileNotFoundException e1) {
+                e1.printStackTrace();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
         }
     }
 

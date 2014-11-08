@@ -182,13 +182,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     @Override
-    public void visitMethodInsn(int opcode, String owner, String name, String desc) {
+    public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
 
         switch (opcode) {
         case INVOKEVIRTUAL:
             if (config.commandLine.agentOnlySharing
                     || !GlobalStateForInstrumentation.instance.isThreadClass(owner))
-                mv.visitMethodInsn(opcode, owner, name, desc);
+                mv.visitMethodInsn(opcode, owner, name, desc, itf);
             else {
                 String sig_loc = source + "|"
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
@@ -204,14 +204,14 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_START,
                             DESC_LOG_THREAD_START, false);
 
-                    mv.visitMethodInsn(opcode, owner, name, desc);
+                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 } else if (name.equals("join") && desc.equals("()V")) {
                     crntMaxIndex++;
                     int index = crntMaxIndex;
                     mv.visitInsn(DUP);
                     mv.visitVarInsn(ASTORE, index);
 
-                    mv.visitMethodInsn(opcode, owner, name, desc);
+                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
 
                     addBipushInsn(ID);
                     mv.visitVarInsn(ALOAD, index);
@@ -229,7 +229,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_WAIT, DESC_LOG_WAIT,
                             false);
 
-                    mv.visitMethodInsn(opcode, owner, name, desc);
+                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 } else if (name.equals("wait") && desc.equals("()V")) {
                     crntMaxIndex++;
                     int index = crntMaxIndex;
@@ -241,7 +241,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_WAIT, DESC_LOG_WAIT,
                             false);
 
-                    mv.visitMethodInsn(opcode, owner, name, desc);
+                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 } else if ((name.equals("notify") || name.equals("notifyAll"))
                         && desc.equals("()V")) {
                     crntMaxIndex++;
@@ -254,9 +254,9 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_NOTIFY, DESC_LOG_NOTIFY,
                             false);
 
-                    mv.visitMethodInsn(opcode, owner, name, desc);
+                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 } else
-                    mv.visitMethodInsn(opcode, owner, name, desc);
+                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
 
             }
 
@@ -264,7 +264,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case INVOKESPECIAL:
         case INVOKESTATIC:
         case INVOKEINTERFACE:
-            mv.visitMethodInsn(opcode, owner, name, desc);
+            mv.visitMethodInsn(opcode, owner, name, desc, itf);
             break;
         default:
             System.err.println("Unknown method invocation opcode " + opcode);

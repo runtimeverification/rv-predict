@@ -12,6 +12,17 @@ import rvpredict.config.Config;
 
 public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
+    private static final String DESC_INT    =   Type.INT_TYPE.getDescriptor();
+    private static final String DESC_LONG   =   Type.LONG_TYPE.getDescriptor();
+    private static final String DESC_BOOL   =   Type.BOOLEAN_TYPE.getDescriptor();
+    private static final String DESC_BYTE   =   Type.BYTE_TYPE.getDescriptor();
+    private static final String DESC_SHORT  =   Type.SHORT_TYPE.getDescriptor();
+    private static final String DESC_CHAR   =   Type.CHAR_TYPE.getDescriptor();
+    private static final String DESC_FLOAT  =   Type.FLOAT_TYPE.getDescriptor();
+    private static final String DESC_DOUBLE =   Type.DOUBLE_TYPE.getDescriptor();
+    private static final String DESC_ARRAY  =   "[";
+    private static final String DESC_OBJECT =   "L";
+
     private static final String INTEGER_INTERNAL_NAME   =   Type.getInternalName(Integer.class);
     private static final String BOOLEAN_INTERNAL_NAME   =   Type.getInternalName(Boolean.class);
     private static final String CHARACTER_INTERNAL_NAME =   Type.getInternalName(Character.class);
@@ -118,21 +129,21 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void storeValue(String desc, int index) {
-        if (desc.startsWith("L") || desc.startsWith("[")) {
+        if (desc.startsWith(DESC_OBJECT) || desc.startsWith(DESC_ARRAY)) {
             mv.visitInsn(DUP);
             mv.visitVarInsn(ASTORE, index);
-        } else if (desc.startsWith("I") || desc.startsWith("B") || desc.startsWith("S")
-                || desc.startsWith("Z") || desc.startsWith("C")) {
+        } else if (desc.startsWith(DESC_INT) || desc.startsWith(DESC_BYTE) || desc.startsWith(DESC_SHORT)
+                || desc.startsWith(DESC_BOOL) || desc.startsWith(DESC_CHAR)) {
             mv.visitInsn(DUP);
             mv.visitVarInsn(ISTORE, index);
-        } else if (desc.startsWith("J")) {
+        } else if (desc.startsWith(DESC_LONG)) {
             mv.visitInsn(DUP2);
             mv.visitVarInsn(LSTORE, index);
             crntMaxIndex++;
-        } else if (desc.startsWith("F")) {
+        } else if (desc.startsWith(DESC_FLOAT)) {
             mv.visitInsn(DUP);
             mv.visitVarInsn(FSTORE, index);
-        } else if (desc.startsWith("D")) {
+        } else if (desc.startsWith(DESC_DOUBLE)) {
             mv.visitInsn(DUP2);
             mv.visitVarInsn(DSTORE, index);
             crntMaxIndex++;
@@ -141,44 +152,44 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void loadValue(String desc, int index) {
-        if (desc.startsWith("L") || desc.startsWith("["))
+        if (desc.startsWith(DESC_OBJECT) || desc.startsWith(DESC_ARRAY))
             mv.visitVarInsn(ALOAD, index);
-        else if (desc.startsWith("I")) {
+        else if (desc.startsWith(DESC_INT)) {
             // convert int to object?
             mv.visitVarInsn(ILOAD, index);
             mv.visitMethodInsn(INVOKESTATIC, INTEGER_INTERNAL_NAME, METHOD_VALUEOF,
                     DESC_INTEGER_VALUEOF, false);
-        } else if (desc.startsWith("B")) {
+        } else if (desc.startsWith(DESC_BYTE)) {
             // convert int to object?
             mv.visitVarInsn(ILOAD, index);
             mv.visitMethodInsn(INVOKESTATIC, BYTE_INTERNAL_NAME, METHOD_VALUEOF, DESC_BYTE_VALUEOF,
                     false);
-        } else if (desc.startsWith("S")) {
+        } else if (desc.startsWith(DESC_SHORT)) {
             // convert int to object?
             mv.visitVarInsn(ILOAD, index);
             mv.visitMethodInsn(INVOKESTATIC, SHORT_INTERNAL_NAME, METHOD_VALUEOF,
                     DESC_SHORT_VALUEOF, false);
-        } else if (desc.startsWith("Z")) {
+        } else if (desc.startsWith(DESC_BOOL)) {
             // convert int to object?
             mv.visitVarInsn(ILOAD, index);
             mv.visitMethodInsn(INVOKESTATIC, BOOLEAN_INTERNAL_NAME, METHOD_VALUEOF,
                     DESC_BOOLEAN_VALUEOF, false);
-        } else if (desc.startsWith("C")) {
+        } else if (desc.startsWith(DESC_CHAR)) {
             // convert int to object?
             mv.visitVarInsn(ILOAD, index);
             mv.visitMethodInsn(INVOKESTATIC, CHARACTER_INTERNAL_NAME, METHOD_VALUEOF,
                     DESC_CHAR_VALUEOF, false);
-        } else if (desc.startsWith("J")) {
+        } else if (desc.startsWith(DESC_LONG)) {
             // convert int to object?
             mv.visitVarInsn(LLOAD, index);
             mv.visitMethodInsn(INVOKESTATIC, LONG_INTERNAL_NAME, METHOD_VALUEOF, DESC_LONG_VALUEOF,
                     false);
-        } else if (desc.startsWith("F")) {
+        } else if (desc.startsWith(DESC_FLOAT)) {
             // convert int to object?
             mv.visitVarInsn(FLOAD, index);
             mv.visitMethodInsn(INVOKESTATIC, FLOAT_INTERNAL_NAME, METHOD_VALUEOF,
                     DESC_FLOAT_VALUEOF, false);
-        } else if (desc.startsWith("D")) {
+        } else if (desc.startsWith(DESC_DOUBLE)) {
             // convert int to object?
             mv.visitVarInsn(DLOAD, index);
             mv.visitMethodInsn(INVOKESTATIC, DOUBLE_INTERNAL_NAME, METHOD_VALUEOF,
@@ -508,7 +519,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 int index2;
-                if (desc.startsWith("D")) {
+                if (desc.startsWith(DESC_DOUBLE)) {
                     mv.visitVarInsn(DSTORE, index1);
                     crntMaxIndex++;// double
                     crntMaxIndex++;
@@ -516,7 +527,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitInsn(DUP);
                     mv.visitVarInsn(ASTORE, index2);
                     mv.visitVarInsn(DLOAD, index1);
-                } else if (desc.startsWith("J")) {
+                } else if (desc.startsWith(DESC_LONG)) {
                     mv.visitVarInsn(LSTORE, index1);
                     crntMaxIndex++;// long
                     crntMaxIndex++;
@@ -524,21 +535,21 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitInsn(DUP);
                     mv.visitVarInsn(ASTORE, index2);
                     mv.visitVarInsn(LLOAD, index1);
-                } else if (desc.startsWith("F")) {
+                } else if (desc.startsWith(DESC_FLOAT)) {
                     mv.visitVarInsn(FSTORE, index1);
                     crntMaxIndex++;// float
                     index2 = crntMaxIndex;
                     mv.visitInsn(DUP);
                     mv.visitVarInsn(ASTORE, index2);
                     mv.visitVarInsn(FLOAD, index1);
-                } else if (desc.startsWith("[")) {
+                } else if (desc.startsWith(DESC_ARRAY)) {
                     mv.visitVarInsn(ASTORE, index1);
                     crntMaxIndex++;// ref or array
                     index2 = crntMaxIndex;
                     mv.visitInsn(DUP);
                     mv.visitVarInsn(ASTORE, index2);
                     mv.visitVarInsn(ALOAD, index1);
-                } else if (desc.startsWith("L")) {
+                } else if (desc.startsWith(DESC_OBJECT)) {
                     mv.visitVarInsn(ASTORE, index1);
                     crntMaxIndex++;// ref or array
                     index2 = crntMaxIndex;

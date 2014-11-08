@@ -32,7 +32,6 @@ import rvpredict.db.EventItem;
 import rvpredict.config.Config;
 import rvpredict.db.TraceCache;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
-import trace.AbstractNode;
 
 import java.io.*;
 import java.nio.file.Paths;
@@ -66,10 +65,28 @@ public class DBEngine {
     protected final String[] sharedarrayloctablecolname = { "SIG" };
     protected final String[] sharedarrayloccoltype = { "VARCHAR" };
 
+    protected final String[] tracetablecolname = { "GID", "TID", "ID", "ADDR", "VALUE", "TYPE" };
+    protected final String[] tracetablecoltype = { "BIGINT", "BIGINT", "INT", "VARCHAR", "VARCHAR",
+            "TINYINT" };
+
+    protected final String[] tidtablecolname = { "TID", "NAME" };
+    protected final String[] tidtablecoltype = { "BIGINT", "VARCHAR" };
+
+    // READ,WRITE,LOCK,UNLOCK,WAIT,NOTIFY,START,JOIN,BRANCH,BB
+    public final byte[] tracetypetable = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a',
+            'b' };
     protected Connection conn;
     protected PreparedStatement prepStmt;
 
+    public String tracetablename;
+    public String tidtablename;
+    public String stmtsigtablename;
     public String sharedvarsigtablename;
+    public String volatilesigtablename;
+
+    public String scheduletablename;
+    public String propertytablename;
+    private String varsigtablename;
     private String sharedarrayloctablename;
 
     // TODO: What if the program does not terminate??
@@ -173,9 +190,16 @@ public class DBEngine {
         BUFFER_THRESHOLD = 10*Config.instance.commandLine.window_size;
         this.directory = directory;
         appname = name;
+        tracetablename = "trace_" + name;
+        tidtablename = "tid_" + name;
+        volatilesigtablename = "volatile_" + name;
+        stmtsigtablename = "stmtsig_" + name;
+        varsigtablename = "varsig_" + name;
 
         sharedarrayloctablename = "sharedarrayloc_" + name;
         sharedvarsigtablename = "sharedvarsig_" + name;
+        scheduletablename = "schedule_" + name;
+        propertytablename = "property_" + name;
         try {
             connectDB(directory);
         } catch (Exception e) {
@@ -202,9 +226,21 @@ public class DBEngine {
         Statement stmt = conn.createStatement();
 
         String sql_dropTable;
-        sql_dropTable = "DROP TABLE IF EXISTS " + sharedarrayloctablename;
+        sql_dropTable = "DROP TABLE IF EXISTS " + propertytablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS " + scheduletablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS " + stmtsigtablename;
         stmt.execute(sql_dropTable);
         sql_dropTable = "DROP TABLE IF EXISTS " + sharedvarsigtablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS " + volatilesigtablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS " + tracetablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS " + tidtablename;
+        stmt.execute(sql_dropTable);
+        sql_dropTable = "DROP TABLE IF EXISTS " + varsigtablename;
         stmt.execute(sql_dropTable);
     }
 
@@ -302,14 +338,21 @@ public class DBEngine {
         }
     }
 
-    /**
-     * save an event to database.
-     */
-    public void saveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE, AbstractNode.TYPE TYPE) {
+    public void saveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE, byte TYPE) {
         if (Config.shutDown)
             return;
+        synchronizedSaveEventToDB(TID, ID, ADDRL, ADDRR, VALUE, TYPE);
+    }
 
-        if (buffer.size() >= BUFFER_THRESHOLD) {
+    /**
+     * save an event to database. must be synchronized. otherwise, easy to throw
+     * Unique index or primary key violation.
+     */
+    public synchronized void synchronizedSaveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE,
+            byte TYPE) {
+
+        if (buffer.size() == BUFFER_THRESHOLD) {
+
             saveCurrentEventsToDB();
         } else {
             buffer.add(new EventItem(DBEngine.globalEventID.incrementAndGet(), TID,ID,ADDRL, ADDRR,VALUE,TYPE));

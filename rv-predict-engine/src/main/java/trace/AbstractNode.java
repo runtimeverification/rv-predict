@@ -43,42 +43,7 @@ package trace;
 public abstract class AbstractNode {
     
     public enum TYPE {
-        INIT, READ, WRITE, LOCK, UNLOCK, WAIT, NOTIFY, START, JOIN, BRANCH, BASIC_BLOCK, PROPERTY;
-
-        public static TYPE of(byte b) {
-            switch (b) {
-                case 0: return INIT;
-                case 1: return READ;
-                case 2: return WRITE;
-                case 3: return LOCK;
-                case 4: return UNLOCK;
-                case 5: return WAIT;
-                case 6: return NOTIFY;
-                case 7: return START;
-                case 8: return JOIN;
-                case 9: return BRANCH;
-                case 10: return BASIC_BLOCK;
-                default: return PROPERTY;
-            }
-        }
-
-        public byte toByte() {
-            switch (this) {
-                case INIT: return 0;
-                case READ: return 1;
-                case WRITE: return 2;
-                case LOCK: return 3;
-                case UNLOCK: return 4;
-                case WAIT: return 5;
-                case NOTIFY: return 6;
-                case START: return 7;
-                case JOIN: return 8;
-                case BRANCH: return 9;
-                case BASIC_BLOCK: return 10;
-                case PROPERTY: return 11;
-            }
-            return -1;
-        }
+        INIT, READ, WRITE, LOCK, UNLOCK, WAIT, NOTIFY, START, JOIN, BRANCH, BASIC_BLOCK, PROPERTY
     }
 
     /**

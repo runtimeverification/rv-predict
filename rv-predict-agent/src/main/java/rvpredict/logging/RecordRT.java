@@ -30,7 +30,6 @@ package rvpredict.logging;
 
 import rvpredict.config.Config;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
-import trace.AbstractNode;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -199,44 +198,44 @@ public final class RecordRT {
 
     public static void logBranch(int ID) {
 
-        db.saveEventToDB(Thread.currentThread().getId(), ID, 0, 0, 0, AbstractNode.TYPE.BRANCH);
+        db.saveEventToDB(Thread.currentThread().getId(), ID, 0, 0, 0, db.tracetypetable[9]);
     }
 
     public static void logBasicBlock(int ID) {
-        db.saveEventToDB(Thread.currentThread().getId(), ID, 0, 0, 0, AbstractNode.TYPE.BASIC_BLOCK);
+        db.saveEventToDB(Thread.currentThread().getId(), ID, 0, 0, 0, db.tracetypetable[10]);
     }
 
     public static void logWait(int ID, final Object o) {
         long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, System.identityHashCode(o), 0, 0, AbstractNode.TYPE.WAIT);
+        db.saveEventToDB(tid, ID, System.identityHashCode(o), 0, 0, db.tracetypetable[5]);
 
     }
 
     public static void logNotify(int ID, final Object o) {
         long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, System.identityHashCode(o), 0, 0, AbstractNode.TYPE.NOTIFY);
+        db.saveEventToDB(tid, ID, System.identityHashCode(o), 0, 0, db.tracetypetable[6]);
 
     }
 
     public static void logStaticSyncLock(int ID, int SID) {
         long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, SID, 0, 0, AbstractNode.TYPE.LOCK);
+        db.saveEventToDB(tid, ID, SID, 0, 0, db.tracetypetable[3]);
     }
 
     public static void logStaticSyncUnlock(int ID, int SID) {
         long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, SID, 0, 0, AbstractNode.TYPE.UNLOCK);
+        db.saveEventToDB(tid, ID, SID, 0, 0, db.tracetypetable[4]);
     }
 
     public static void logLock(int ID, final Object lock) {
 
         long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, System.identityHashCode(lock), 0, 0, AbstractNode.TYPE.LOCK);
+        db.saveEventToDB(tid, ID, System.identityHashCode(lock), 0, 0, db.tracetypetable[3]);
     }
 
     public static void logUnlock(int ID, final Object lock) {
         long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, System.identityHashCode(lock), 0, 0, AbstractNode.TYPE.UNLOCK);
+        db.saveEventToDB(tid, ID, System.identityHashCode(lock), 0, 0, db.tracetypetable[4]);
     }
 
     public static void logFileAcc(String name, boolean write) {
@@ -330,7 +329,7 @@ public final class RecordRT {
             int hashcode_o = System.identityHashCode(o);
             db.saveEventToDB(tid, ID, o == null ? 0 : hashcode_o, -SID,
                     longOfObject(v),
-                    write ? AbstractNode.TYPE.WRITE : AbstractNode.TYPE.READ);
+                    write ? db.tracetypetable[2] : db.tracetypetable[1]);
             if (!isPrim(v)) {
                 logBranch(-1);
             }
@@ -345,7 +344,7 @@ public final class RecordRT {
             long tid = Thread.currentThread().getId();
             db.saveEventToDB(tid, ID, o == null ? 0 : System.identityHashCode(o),
                     index, longOfObject(v),
-                    AbstractNode.TYPE.INIT);
+                    db.tracetypetable[0]);
         } catch (Exception e) {
             e.printStackTrace();
             if (db == null)
@@ -424,7 +423,7 @@ public final class RecordRT {
             final boolean write) {
         long tid = Thread.currentThread().getId();
         db.saveEventToDB(tid, ID, System.identityHashCode(o), index, longOfObject(v),
-                write ? AbstractNode.TYPE.WRITE : AbstractNode.TYPE.READ);
+                write ? db.tracetypetable[2] : db.tracetypetable[1]);
     }
 
     private static boolean isPrim(Object o) {
@@ -485,14 +484,14 @@ public final class RecordRT {
         index++;
         threadTidIndexMap.put(tid, index);
 
-        db.saveEventToDB(tid, ID, tid_t, 0, 0, AbstractNode.TYPE.START);
+        db.saveEventToDB(tid, ID, tid_t, 0, 0, db.tracetypetable[7]);
 
     }
 
     public static void logJoin(int ID, final Object o) {
 
         db.saveEventToDB(Thread.currentThread().getId(), ID, ((Thread) o).getId(), 0, 0,
-                AbstractNode.TYPE.JOIN);
+                db.tracetypetable[8]);
 
     }
 

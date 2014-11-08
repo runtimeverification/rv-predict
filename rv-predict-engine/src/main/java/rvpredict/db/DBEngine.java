@@ -34,7 +34,7 @@ import java.sql.*;
 import java.util.*;
 import java.util.List;
 
-import trace.*;
+import rvpredict.trace.*;
 import violation.IViolation;
 
 /**
@@ -226,7 +226,7 @@ public class DBEngine {
             long ADDRL = eventItem.ADDRL;
             long ADDRR = eventItem.ADDRR;
             long VALUE = eventItem.VALUE;
-            byte TYPE = eventItem.TYPE;
+            byte TYPE = eventItem.TYPE.toByte();
 
             switch (TYPE) {
             case '0':

@@ -38,10 +38,10 @@ import java.util.TimerTask;
 import java.util.List;
 
 import rvpredict.config.Configuration;
-import trace.ReadNode;
-import trace.Trace;
-import trace.TraceInfo;
-import trace.WriteNode;
+import rvpredict.trace.ReadNode;
+import rvpredict.trace.Trace;
+import rvpredict.trace.TraceInfo;
+import rvpredict.trace.WriteNode;
 import violation.ExactRace;
 import violation.IViolation;
 import violation.Race;

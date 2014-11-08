@@ -1,5 +1,7 @@
 package rvpredict.db;
 
+import rvpredict.trace.AbstractNode;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,9 +16,9 @@ public class EventItem {
     public long ADDRL;
     public long ADDRR;
     public long VALUE;
-    public byte TYPE;
+    public AbstractNode.TYPE TYPE;
 
-    public EventItem(long gid, long tid, int sid, long addrl, long addrr, long value, byte type) {
+    public EventItem(long gid, long tid, int sid, long addrl, long addrr, long value, AbstractNode.TYPE type) {
         this.GID = gid;
         this.TID = tid;
         this.ID = sid;
@@ -33,7 +35,7 @@ public class EventItem {
         stream.writeLong(ADDRL);
         stream.writeLong(ADDRR);
         stream.writeLong(VALUE);
-        stream.writeByte(TYPE);
+        stream.writeByte(TYPE.toByte());
     }
 
     public static EventItem fromStream(DataInputStream stream) throws IOException {
@@ -44,7 +46,7 @@ public class EventItem {
                 stream.readLong(),
                 stream.readLong(),
                 stream.readLong(),
-                stream.readByte());
+                AbstractNode.TYPE.valueOf(stream.readByte()));
 
     }
 }

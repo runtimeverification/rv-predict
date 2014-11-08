@@ -26,18 +26,34 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
+
+import rvpredict.trace.AbstractNode.TYPE;
 
 /**
- * Basic block node -- used for tracking thread execution path.
+ * a common interface for read and write events.
  * 
  * @author jeffhuang
  *
  */
-public class BBNode extends AbstractNode {
+public interface IMemNode {
 
-    public BBNode(long GID, long tid, int ID) {
-        super(GID, tid, ID, AbstractNode.TYPE.BASIC_BLOCK);
-    }
+    public String getAddr();
+
+    public long getGID();
+
+    public long getTID();
+
+    public TYPE getType();
+
+    public int getID();
+
+    public long getPrevSyncId();
+
+    public long getPrevBranchId();
+
+    // TODO(YilongL): it's bad to make these nodes mutable
+    @Deprecated
+    public void setPrevBranchId(long id);
 
 }

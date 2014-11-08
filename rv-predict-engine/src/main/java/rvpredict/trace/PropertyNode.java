@@ -26,29 +26,22 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
-public class LockNode extends AbstractNode implements ISyncNode {
-    private long did;// this is the ID of the event from the same thread the
-                     // rwnode depends on
-    private long lock_addr;
+public class PropertyNode extends AbstractNode {
+    private String object_addr;
 
-    public LockNode(long GID, long tid, int ID, long addr) {
-        super(GID, tid, ID, AbstractNode.TYPE.LOCK);
-        this.lock_addr = addr;
+    public PropertyNode(long GID, long tid, int ID, String addr) {
+        super(GID, tid, ID, AbstractNode.TYPE.PROPERTY);
+        this.object_addr = addr;
     }
 
-    public long getDid() {
-        return did;
-    }
-
-    @Override
     public String getAddr() {
-        return "" + lock_addr;
+        return object_addr;
     }
 
     @Override
     public String toString() {
-        return globalId + ": thread " + threadId + " " + lock_addr + " " + type;
+        return globalId + ": thread " + threadId + " " + synId + " " + object_addr + " " + type;
     }
 }

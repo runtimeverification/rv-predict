@@ -26,17 +26,21 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
-public class ReadNode extends AbstractNode implements IMemNode {
-    private long prevSyncId, prevBranchId;
-
+/**
+ * initial write node for some memory location.
+ * 
+ * @author jeffhuang
+ *
+ */
+public class InitNode extends AbstractNode {
+    private long value;
     private long objectHashCode;
     private long index;
-    private long value;
 
-    public ReadNode(long GID, long tid, int ID, long objectHashCode, long index, long value) {
-        super(GID, tid, ID, AbstractNode.TYPE.READ);
+    public InitNode(long GID, long tid, int ID, long objectHashCode, long index, long value) {
+        super(GID, tid, ID, AbstractNode.TYPE.INIT);
         this.objectHashCode = objectHashCode;
         this.index = index;
         this.value = value;
@@ -46,30 +50,13 @@ public class ReadNode extends AbstractNode implements IMemNode {
         return value;
     }
 
-    @Override
     public String getAddr() {
-        return (objectHashCode == 0 ? "_" : objectHashCode + "_") +
-                (index < 0 ? "." + -index : index);
+        return (objectHashCode == 0 ? "." : objectHashCode + ".") + index;
     }
 
     @Override
     public String toString() {
         return globalId + ": thread " + threadId + " " + synId + " " + objectHashCode + " " + index + " " + value + " " + type;
-    }
-
-    @Override
-    public long getPrevSyncId() {
-        return prevSyncId;
-    }
-
-    @Override
-    public long getPrevBranchId() {
-        return prevBranchId;
-    }
-
-    @Override
-    public void setPrevBranchId(long id) {
-        prevBranchId = id;
     }
 
 }

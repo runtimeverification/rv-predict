@@ -26,34 +26,28 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
-import trace.AbstractNode.TYPE;
+public class WaitNode extends AbstractNode implements ISyncNode {
 
-/**
- * a common interface for read and write events.
- * 
- * @author jeffhuang
- *
- */
-public interface IMemNode {
+    public long getSigAddr() {
+        return sig_addr;
+    }
 
-    public String getAddr();
+    private long sig_addr;
 
-    public long getGID();
+    @Override
+    public String getAddr() {
+        return "" + sig_addr;
+    }
 
-    public long getTID();
+    public WaitNode(long GID, long tid, int ID, long addr) {
+        super(GID, tid, ID, AbstractNode.TYPE.WAIT);
+        this.sig_addr = addr;
+    }
 
-    public TYPE getType();
-
-    public int getID();
-
-    public long getPrevSyncId();
-
-    public long getPrevBranchId();
-
-    // TODO(YilongL): it's bad to make these nodes mutable
-    @Deprecated
-    public void setPrevBranchId(long id);
-
+    @Override
+    public String toString() {
+        return globalId + ": thread " + threadId + " " + synId + " " + sig_addr + " " + type;
+    }
 }

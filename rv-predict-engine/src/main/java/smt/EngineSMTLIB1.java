@@ -28,19 +28,19 @@
  ******************************************************************************/
 package smt;
 
-import trace.AbstractNode;
-import trace.IMemNode;
-import trace.ISyncNode;
-import trace.JoinNode;
-import trace.LockNode;
-import trace.LockPair;
-import trace.NotifyNode;
-import trace.ReadNode;
-import trace.StartNode;
-import trace.Trace;
-import trace.UnlockNode;
-import trace.WaitNode;
-import trace.WriteNode;
+import rvpredict.trace.AbstractNode;
+import rvpredict.trace.IMemNode;
+import rvpredict.trace.ISyncNode;
+import rvpredict.trace.JoinNode;
+import rvpredict.trace.LockNode;
+import rvpredict.trace.LockPair;
+import rvpredict.trace.NotifyNode;
+import rvpredict.trace.ReadNode;
+import rvpredict.trace.StartNode;
+import rvpredict.trace.Trace;
+import rvpredict.trace.UnlockNode;
+import rvpredict.trace.WaitNode;
+import rvpredict.trace.WriteNode;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 

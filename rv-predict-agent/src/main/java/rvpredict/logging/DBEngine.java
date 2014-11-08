@@ -32,6 +32,7 @@ import rvpredict.db.EventItem;
 import rvpredict.config.Config;
 import rvpredict.db.TraceCache;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
+import rvpredict.trace.AbstractNode;
 
 import java.io.*;
 import java.nio.file.Paths;
@@ -65,16 +66,6 @@ public class DBEngine {
     protected final String[] sharedarrayloctablecolname = { "SIG" };
     protected final String[] sharedarrayloccoltype = { "VARCHAR" };
 
-    protected final String[] tracetablecolname = { "GID", "TID", "ID", "ADDR", "VALUE", "TYPE" };
-    protected final String[] tracetablecoltype = { "BIGINT", "BIGINT", "INT", "VARCHAR", "VARCHAR",
-            "TINYINT" };
-
-    protected final String[] tidtablecolname = { "TID", "NAME" };
-    protected final String[] tidtablecoltype = { "BIGINT", "VARCHAR" };
-
-    // READ,WRITE,LOCK,UNLOCK,WAIT,NOTIFY,START,JOIN,BRANCH,BB
-    public final byte[] tracetypetable = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a',
-            'b' };
     protected Connection conn;
     protected PreparedStatement prepStmt;
 
@@ -338,7 +329,7 @@ public class DBEngine {
         }
     }
 
-    public void saveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE, byte TYPE) {
+    public void saveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE, AbstractNode.TYPE TYPE) {
         if (Config.shutDown)
             return;
         synchronizedSaveEventToDB(TID, ID, ADDRL, ADDRR, VALUE, TYPE);
@@ -349,7 +340,7 @@ public class DBEngine {
      * Unique index or primary key violation.
      */
     public synchronized void synchronizedSaveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE,
-            byte TYPE) {
+            AbstractNode.TYPE TYPE) {
 
         if (buffer.size() == BUFFER_THRESHOLD) {
 

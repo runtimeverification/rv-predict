@@ -26,37 +26,18 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
 /**
- * initial write node for some memory location.
+ * Basic block node -- used for tracking thread execution path.
  * 
  * @author jeffhuang
  *
  */
-public class InitNode extends AbstractNode {
-    private long value;
-    private long objectHashCode;
-    private long index;
+public class BBNode extends AbstractNode {
 
-    public InitNode(long GID, long tid, int ID, long objectHashCode, long index, long value) {
-        super(GID, tid, ID, AbstractNode.TYPE.INIT);
-        this.objectHashCode = objectHashCode;
-        this.index = index;
-        this.value = value;
-    }
-
-    public long getValue() {
-        return value;
-    }
-
-    public String getAddr() {
-        return (objectHashCode == 0 ? "." : objectHashCode + ".") + index;
-    }
-
-    @Override
-    public String toString() {
-        return globalId + ": thread " + threadId + " " + synId + " " + objectHashCode + " " + index + " " + value + " " + type;
+    public BBNode(long GID, long tid, int ID) {
+        super(GID, tid, ID, AbstractNode.TYPE.BASIC_BLOCK);
     }
 
 }

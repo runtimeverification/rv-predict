@@ -26,16 +26,25 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
-public interface ISyncNode {
+public class NotifyNode extends AbstractNode implements ISyncNode {
 
-    public String getAddr();
+    private long sig_addr;
 
-    public long getGID();
+    @Override
+    public String getAddr() {
+        return "" + sig_addr;
+    }
 
-    public long getTID();
+    public NotifyNode(long GID, long tid, int ID, long addr) {
+        super(GID, tid, ID, AbstractNode.TYPE.NOTIFY);
+        this.sig_addr = addr;
+    }
 
-    public int getID();
+    @Override
+    public String toString() {
+        return globalId + ": thread " + threadId + " " + synId + " " + sig_addr + " " + type;
+    }
 
 }

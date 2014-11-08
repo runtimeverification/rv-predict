@@ -8,8 +8,8 @@ import java.util.Map.Entry;
 import java.util.Stack;
 import java.util.List;
 
-import trace.PropertyNode;
-import trace.Trace;
+import rvpredict.trace.PropertyNode;
+import rvpredict.trace.Trace;
 
 public class EREProperty {
 

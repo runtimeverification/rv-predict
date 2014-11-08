@@ -26,43 +26,16 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
-public class UnlockNode extends AbstractNode implements ISyncNode {
-    private long did;// this is the ID of the event from the same thread the
+public interface ISyncNode {
 
-    public long getLockAddr() {
-        return lock_addr;
-    }
+    public String getAddr();
 
-    // rwnode depends on
-    private long lock_addr;
+    public long getGID();
 
-    public UnlockNode(long GID, long tid, int ID, long addr) {
-        super(GID, tid, ID, AbstractNode.TYPE.UNLOCK);
-        this.lock_addr = addr;
-    }
+    public long getTID();
 
-    public UnlockNode(long GID, long tid, int ID, String addr) {
-        super(GID, tid, ID, AbstractNode.TYPE.UNLOCK);
-        this.lock_addr = Long.valueOf(addr);
-    }
+    public int getID();
 
-    public void setDid(long did) {
-        this.did = did;
-    }
-
-    public long getDid() {
-        return did;
-    }
-
-    @Override
-    public String getAddr() {
-        return "" + lock_addr;
-    }
-
-    @Override
-    public String toString() {
-        return globalId + ": thread " + threadId + " " + lock_addr + " " + type;
-    }
 }

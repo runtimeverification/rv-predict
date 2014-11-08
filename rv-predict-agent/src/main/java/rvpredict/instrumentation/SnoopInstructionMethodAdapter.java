@@ -2,45 +2,14 @@ package rvpredict.instrumentation;
 
 import static org.objectweb.asm.Opcodes.*;
 import static rvpredict.config.Config.*;
+import static rvpredict.instrumentation.Utility.*;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-
 import rvpredict.config.Config;
 
 public class SnoopInstructionMethodAdapter extends MethodVisitor {
-
-    private static final String DESC_INT    =   Type.INT_TYPE.getDescriptor();
-    private static final String DESC_LONG   =   Type.LONG_TYPE.getDescriptor();
-    private static final String DESC_BOOL   =   Type.BOOLEAN_TYPE.getDescriptor();
-    private static final String DESC_BYTE   =   Type.BYTE_TYPE.getDescriptor();
-    private static final String DESC_SHORT  =   Type.SHORT_TYPE.getDescriptor();
-    private static final String DESC_CHAR   =   Type.CHAR_TYPE.getDescriptor();
-    private static final String DESC_FLOAT  =   Type.FLOAT_TYPE.getDescriptor();
-    private static final String DESC_DOUBLE =   Type.DOUBLE_TYPE.getDescriptor();
-    private static final String DESC_ARRAY  =   "[";
-    private static final String DESC_OBJECT =   "L";
-
-    private static final String INTEGER_INTERNAL_NAME   =   Type.getInternalName(Integer.class);
-    private static final String BOOLEAN_INTERNAL_NAME   =   Type.getInternalName(Boolean.class);
-    private static final String CHARACTER_INTERNAL_NAME =   Type.getInternalName(Character.class);
-    private static final String SHORT_INTERNAL_NAME     =   Type.getInternalName(Short.class);
-    private static final String BYTE_INTERNAL_NAME      =   Type.getInternalName(Byte.class);
-    private static final String LONG_INTERNAL_NAME      =   Type.getInternalName(Long.class);
-    private static final String FLOAT_INTERNAL_NAME     =   Type.getInternalName(Float.class);
-    private static final String DOUBLE_INTERNAL_NAME    =   Type.getInternalName(Double.class);
-
-    private static final String METHOD_VALUEOF           =  "valueOf";
-    private static final String DESC_INTEGER_VALUEOF    =   "(I)Ljava/lang/Integer;";
-    private static final String DESC_BOOLEAN_VALUEOF    =   "(Z)Ljava/lang/Boolean;";
-    private static final String DESC_BYTE_VALUEOF       =   "(B)Ljava/lang/Byte;";
-    private static final String DESC_SHORT_VALUEOF      =   "(S)Ljava/lang/Short;";
-    private static final String DESC_CHAR_VALUEOF       =   "(C)Ljava/lang/Character;";
-    private static final String DESC_LONG_VALUEOF       =   "(J)Ljava/lang/Long;";
-    private static final String DESC_FLOAT_VALUEOF      =   "(F)Ljava/lang/Float;";
-    private static final String DESC_DOUBLE_VALUEOF     =   "(D)Ljava/lang/Double;";
 
     boolean isInit, isSynchronized, isStatic;
     String classname;
@@ -82,8 +51,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         // System.out.println("method: "+methodname);
     }
     
-    private static final int[] ICONST_X = {ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, ICONST_5 }; 
-
     /**
      * Private helper method that adds a {@code bipush} instruction which pushes
      * a byte onto the stack as an integer value.
@@ -129,32 +96,24 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void storeValue(String desc, int index) {
-        if (desc.startsWith(DESC_OBJECT) || desc.startsWith(DESC_ARRAY)) {
+        String prefix = desc.substring(0, 1);
+        int opcode = STORE_OPCODES.get(prefix);
+        if (SINGLE_WORD_TYPE_DESCS.contains(prefix)) {
             mv.visitInsn(DUP);
-            mv.visitVarInsn(ASTORE, index);
-        } else if (desc.startsWith(DESC_INT) || desc.startsWith(DESC_BYTE) || desc.startsWith(DESC_SHORT)
-                || desc.startsWith(DESC_BOOL) || desc.startsWith(DESC_CHAR)) {
-            mv.visitInsn(DUP);
-            mv.visitVarInsn(ISTORE, index);
-        } else if (desc.startsWith(DESC_LONG)) {
+            mv.visitVarInsn(opcode, index);
+        } else if (DOUBLE_WORDS_TYPE_DESCS.contains(prefix)) {
             mv.visitInsn(DUP2);
-            mv.visitVarInsn(LSTORE, index);
+            mv.visitVarInsn(opcode, index);
             crntMaxIndex++;
-        } else if (desc.startsWith(DESC_FLOAT)) {
-            mv.visitInsn(DUP);
-            mv.visitVarInsn(FSTORE, index);
-        } else if (desc.startsWith(DESC_DOUBLE)) {
-            mv.visitInsn(DUP2);
-            mv.visitVarInsn(DSTORE, index);
-            crntMaxIndex++;
+        } else {
+            assert false : "Unknown type descriptor: " + desc;
         }
-
     }
 
     private void loadValue(String desc, int index) {
         if (desc.startsWith(DESC_OBJECT) || desc.startsWith(DESC_ARRAY))
             mv.visitVarInsn(ALOAD, index);
-        else if (desc.startsWith(DESC_INT)) {
+        else if (desc.startsWith(Utility.DESC_INT)) {
             // convert int to object?
             mv.visitVarInsn(ILOAD, index);
             mv.visitMethodInsn(INVOKESTATIC, INTEGER_INTERNAL_NAME, METHOD_VALUEOF,

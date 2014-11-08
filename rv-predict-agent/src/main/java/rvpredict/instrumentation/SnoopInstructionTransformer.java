@@ -61,10 +61,10 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             System.out.println("Including: " + Arrays.toString(config.includeList));
         }
 
+        TraceCache.removeTraceFiles(commandLine.outdir);
         final DBEngine db = new DBEngine(commandLine.outdir, commandLine.tableName, commandLine.async);
         try {
             db.dropAll();
-            TraceCache.removeTraceFiles(commandLine.outdir);
         } catch (Exception e) {
             commandLine.logger.report(
                     "Unexpected error while cleaning up the database:\n" + e.getMessage(),

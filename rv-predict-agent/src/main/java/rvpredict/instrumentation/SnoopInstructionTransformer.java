@@ -19,6 +19,12 @@ import java.util.Arrays;
 
 public class SnoopInstructionTransformer implements ClassFileTransformer {
 
+    private final Config config;
+    
+    public SnoopInstructionTransformer(Config config) {
+        this.config = config;
+    }
+
     public static void premain(String agentArgs, Instrumentation inst) {
         if (agentArgs == null) {
             agentArgs = "";
@@ -73,7 +79,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         // initialize RecordRT first
         RecordRT.init();
 
-        inst.addTransformer(new SnoopInstructionTransformer());
+        inst.addTransformer(new SnoopInstructionTransformer(config));
         final boolean inLogger = true;
         final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
             @Override
@@ -103,11 +109,12 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         }
     }
 
+    @Override
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
 
         boolean toInstrument = true;
-        String[] tmp = Config.instance.excludeList;
+        String[] tmp = config.excludeList;
 
         for (int i = 0; i < tmp.length; i++) {
             String s = tmp[i];
@@ -116,7 +123,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                 break;
             }
         }
-        tmp = Config.instance.includeList;
+        tmp = config.includeList;
         if (tmp != null)
             for (int i = 0; i < tmp.length; i++) {
                 String s = tmp[i];
@@ -146,7 +153,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             ClassReader cr = new ClassReader(cbuf);
 
             ClassWriter cw = new ClassWriter(cr, 0);
-            ClassVisitor cv = new SnoopInstructionClassAdapter(cw);
+            ClassVisitor cv = new SnoopInstructionClassAdapter(cw, config);
             // ClassVisitor cv = new SnoopInstructionClassAdapter(new
             // TraceClassVisitor(cw,new PrintWriter( System.out )));
             cr.accept(cv, 0);

@@ -36,6 +36,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     String methodname;
     String methodsignature;
     
+    private final Config config;
+    
     /**
      * current max index of local variables
      */
@@ -44,7 +46,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     public SnoopInstructionMethodAdapter(MethodVisitor mv, String source, String cname,
             String mname, String msignature, boolean isInit, boolean isSynchronized,
-            boolean isStatic, int argSize) {
+            boolean isStatic, int argSize, Config config) {
         super(Opcodes.ASM5, mv);
         this.source = source == null ? "Unknown" : source;
         this.classname = cname;
@@ -53,9 +55,10 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         this.isInit = isInit;
         this.isSynchronized = isSynchronized;
         this.isStatic = isStatic;
+        this.config = config;
 
         crntMaxIndex = argSize + 1;
-        if (Config.instance.verbose)
+        if (config.verbose)
             System.out.println("method: " + methodname);
 
         // DEBUG
@@ -183,7 +186,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
         switch (opcode) {
         case INVOKEVIRTUAL:
-            if (Config.instance.commandLine.agentOnlySharing
+            if (config.commandLine.agentOnlySharing
                     || !GlobalStateForInstrumentation.instance.isThreadClass(owner))
                 mv.visitMethodInsn(opcode, owner, name, desc);
             else {
@@ -198,7 +201,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitVarInsn(ASTORE, index);
                     addBipushInsn(ID);
                     mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_THREAD_START, DESC_LOG_THREAD_START);
 
                     mv.visitMethodInsn(opcode, owner, name, desc);
@@ -212,7 +215,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(ID);
                     mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_THREAD_JOIN, DESC_LOG_THREAD_JOIN);
 
                 } else if (name.equals("wait") && desc.equals("()V")) {
@@ -223,7 +226,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(ID);
                     mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_WAIT, DESC_LOG_WAIT);
 
                     mv.visitMethodInsn(opcode, owner, name, desc);
@@ -235,7 +238,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(ID);
                     mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_WAIT, DESC_LOG_WAIT);
 
                     mv.visitMethodInsn(opcode, owner, name, desc);
@@ -248,7 +251,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(ID);
                     mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_NOTIFY, DESC_LOG_NOTIFY);
 
                     mv.visitMethodInsn(opcode, owner, name, desc);
@@ -286,12 +289,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             mv.visitFieldInsn(opcode, owner, name, desc);
             if (!isInit) {
 
-                if (Config.instance.commandLine.agentOnlySharing) {
+                if (config.commandLine.agentOnlySharing) {
                     addBipushInsn(ID);
                     // mv.visitInsn(ACONST_NULL);
                     addBipushInsn(SID);
                     addBipushInsn(0);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS_DETECT_SHARING);
                 } else if (GlobalStateForInstrumentation.instance.isVariableShared(sig_var)) {
@@ -306,13 +309,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     addBipushInsn(SID);
                     loadValue(desc, index);
                     addBipushInsn(0);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
                 }
             }
             break;
         case PUTSTATIC:
-            if (Config.instance.commandLine.agentOnlySharing) {
+            if (config.commandLine.agentOnlySharing) {
                 mv.visitFieldInsn(opcode, owner, name, desc);
 
                 if (!isInit) {
@@ -321,7 +324,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     addBipushInsn(SID);
 
                     addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS_DETECT_SHARING);
                 }
@@ -338,12 +341,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 loadValue(desc, index);
 
                 if (isInit)
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS);//
                 else {
                     addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);//
                 }
             } else
@@ -352,7 +355,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         case GETFIELD:
             if (!isInit) {
-                if (Config.instance.commandLine.agentOnlySharing) {
+                if (config.commandLine.agentOnlySharing) {
                     // maxindex_cur++;
                     // int index1 = maxindex_cur;
                     // mv.visitInsn(DUP);
@@ -366,7 +369,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(0);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS_DETECT_SHARING);
                 } else if (GlobalStateForInstrumentation.instance.isVariableShared(sig_var)) {
@@ -389,7 +392,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(0);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
                 } else
                     mv.visitFieldInsn(opcode, owner, name, desc);
@@ -419,7 +422,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             // mv.visitFieldInsn(opcode, owner, name, desc);break;
             // }
 
-            if (Config.instance.commandLine.agentOnlySharing) {
+            if (config.commandLine.agentOnlySharing) {
                 if (!isInit) {
                     // maxindex_cur++;
                     // int index1 = maxindex_cur;
@@ -489,7 +492,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     addBipushInsn(SID);
 
                     addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS_DETECT_SHARING);
                 } else
@@ -557,13 +560,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 loadValue(desc, index1);
 
                 if (isInit)
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS);//
                 else {
                     addBipushInsn(1);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
                 }
             } else
@@ -618,7 +621,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
                 int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 
-                if (Config.instance.commandLine.agentOnlySharing) {
+                if (config.commandLine.agentOnlySharing) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -634,7 +637,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(0);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
                 } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
@@ -658,7 +661,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(0);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
                 } else
                     mv.visitInsn(opcode);
@@ -677,7 +680,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
                 int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 
-                if (Config.instance.commandLine.agentOnlySharing) {
+                if (config.commandLine.agentOnlySharing) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -693,7 +696,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(0);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
                 } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
@@ -719,7 +722,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(0);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
                 } else
                     mv.visitInsn(opcode);
@@ -732,7 +735,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
                 int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 
-                if (Config.instance.commandLine.agentOnlySharing) {
+                if (config.commandLine.agentOnlySharing) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -748,7 +751,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(0);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
                 } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
@@ -774,7 +777,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(0);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
                 } else
                     mv.visitInsn(opcode);
@@ -788,7 +791,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
                 int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 
-                if (Config.instance.commandLine.agentOnlySharing) {
+                if (config.commandLine.agentOnlySharing) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -804,7 +807,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(0);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
                 } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
@@ -831,7 +834,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(0);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
                 } else
                     mv.visitInsn(opcode);
@@ -844,7 +847,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
                 int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 
-                if (Config.instance.commandLine.agentOnlySharing) {
+                if (config.commandLine.agentOnlySharing) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -860,7 +863,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(0);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
                 } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
@@ -887,7 +890,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(0);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
                 } else
                     mv.visitInsn(opcode);
@@ -899,7 +902,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
             int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 
-            if (Config.instance.commandLine.agentOnlySharing) {
+            if (config.commandLine.agentOnlySharing) {
                 if (!isInit) {
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -923,7 +926,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(1);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
                 } else
@@ -952,13 +955,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 mv.visitVarInsn(ALOAD, index1);
 
                 if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS);
 
                 } else {
                     addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
                 }
             } else
@@ -973,7 +976,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
             int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 
-            if (Config.instance.commandLine.agentOnlySharing) {
+            if (config.commandLine.agentOnlySharing) {
                 if (!isInit) {
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -997,7 +1000,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(1);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
                 } else
@@ -1026,13 +1029,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 convertPrimitiveToObject(opcode);
 
                 if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS);
 
                 } else {
                     addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
                 }
             } else
@@ -1044,7 +1047,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
             int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 
-            if (Config.instance.commandLine.agentOnlySharing) {
+            if (config.commandLine.agentOnlySharing) {
                 if (!isInit) {
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -1068,7 +1071,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(1);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
                 } else
@@ -1097,13 +1100,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 convertPrimitiveToObject(opcode);
 
                 if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS);
 
                 } else {
                     addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
                 }
             } else
@@ -1115,7 +1118,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
             int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 
-            if (Config.instance.commandLine.agentOnlySharing) {
+            if (config.commandLine.agentOnlySharing) {
                 if (!isInit) {
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -1139,7 +1142,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(1);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
                 } else
@@ -1168,13 +1171,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 convertPrimitiveToObject(opcode);
 
                 if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS);
 
                 } else {
                     addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
                 }
             } else
@@ -1186,7 +1189,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
             int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
 
-            if (Config.instance.commandLine.agentOnlySharing) {
+            if (config.commandLine.agentOnlySharing) {
                 if (!isInit) {
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -1210,7 +1213,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     addBipushInsn(1);
 
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING);
                 } else
@@ -1239,13 +1242,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 convertPrimitiveToObject(opcode);
 
                 if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS);
 
                 } else {
                     addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
                 }
             } else
@@ -1253,7 +1256,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         }
         case MONITORENTER: {
-            if (!Config.instance.commandLine.agentOnlySharing) {
+            if (!config.commandLine.agentOnlySharing) {
                 String sig_loc = source + "|"
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
                 int ID = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
@@ -1265,14 +1268,14 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 mv.visitInsn(opcode);
                 addBipushInsn(ID);
                 mv.visitVarInsn(ALOAD, index);
-                mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                         LOG_LOCK_INSTANCE, DESC_LOG_LOCK_INSTANCE);
             } else
                 mv.visitInsn(opcode);
             break;
         }
         case MONITOREXIT: {
-            if (!Config.instance.commandLine.agentOnlySharing) {
+            if (!config.commandLine.agentOnlySharing) {
                 String sig_loc = source + "|"
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
                 int ID = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
@@ -1283,7 +1286,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 mv.visitVarInsn(ASTORE, index);// objectref
                 addBipushInsn(ID);
                 mv.visitVarInsn(ALOAD, index);
-                mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                         LOG_UNLOCK_INSTANCE,
                         DESC_LOG_UNLOCK_INSTANCE);
             }
@@ -1297,7 +1300,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case ARETURN:
         case RETURN:
         case ATHROW:
-            if (isSynchronized && !Config.instance.commandLine.agentOnlySharing) {
+            if (isSynchronized && !config.commandLine.agentOnlySharing) {
                 String sig_loc = source + "|"
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
                 int ID = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
@@ -1309,12 +1312,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     String sig_var = (classname + ".0").replace("/", ".");
                     int SID = GlobalStateForInstrumentation.instance.getVariableId(sig_var);
                     addBipushInsn(SID);
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_UNLOCK_STATIC,
                             DESC_LOG_UNLOCK_STATIC);
                 } else {
                     mv.visitVarInsn(ALOAD, 0);// the this objectref
-                    mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                    mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                             LOG_UNLOCK_INSTANCE,
                             DESC_LOG_UNLOCK_INSTANCE);
                 }
@@ -1331,7 +1334,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     public void visitCode() {
         mv.visitCode();
 
-        if (isSynchronized && !Config.instance.commandLine.agentOnlySharing) {
+        if (isSynchronized && !config.commandLine.agentOnlySharing) {
             String sig_loc = source + "|"
                     + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
             int ID = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
@@ -1343,11 +1346,11 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 String sig_var = (classname + ".0").replace("/", ".");
                 int SID = GlobalStateForInstrumentation.instance.getVariableId(sig_var);
                 addBipushInsn(SID);
-                mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                         LOG_LOCK_STATIC, DESC_LOG_LOCK_STATIC);
             } else {
                 mv.visitVarInsn(ALOAD, 0);// the this objectref
-                mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass,
                         LOG_LOCK_INSTANCE, DESC_LOG_LOCK_INSTANCE);
             }
         }
@@ -1363,8 +1366,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      * case IFGT: case IFLE: case IF_ICMPEQ: case IF_ICMPNE: case IF_ICMPLT:
      * case IF_ICMPGE: case IF_ICMPGT: case IF_ICMPLE: case IF_ACMPEQ: case
      * IF_ACMPNE: case IFNULL: case IFNONNULL: addBipushInsn(mv,ID);
-     * mv.visitMethodInsn(INVOKESTATIC, Config.instance.logClass,
-     * Config.instance.LOG_BRANCH, Config.instance.DESC_LOG_BRANCH); default:
+     * mv.visitMethodInsn(INVOKESTATIC, config.logClass,
+     * config.LOG_BRANCH, config.DESC_LOG_BRANCH); default:
      * mv.visitJumpInsn(opcode, label);break; } }
      * 
      * public void visitTableSwitchInsn(int min, int max, Label dflt, Label...
@@ -1372,8 +1375,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      * (classname+"|"+methodsignature+"|"+line_cur).replace("/", "."); int ID =
      * GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
      * addBipushInsn(mv,ID); mv.visitMethodInsn(INVOKESTATIC,
-     * Config.instance.logClass, Config.instance.LOG_BRANCH,
-     * Config.instance.DESC_LOG_BRANCH);
+     * config.logClass, config.LOG_BRANCH,
+     * config.DESC_LOG_BRANCH);
      * 
      * mv.visitTableSwitchInsn(min, max, dflt, labels); }
      */

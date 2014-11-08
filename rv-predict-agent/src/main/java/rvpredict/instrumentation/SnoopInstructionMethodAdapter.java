@@ -76,18 +76,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         crntMaxIndex = Math.max(localVarIdx, crntMaxIndex);
 
         switch (opcode) {
-        case LSTORE:
-        case DSTORE:
-        case LLOAD:
-        case DLOAD:
+        case LSTORE: case DSTORE: case LLOAD: case DLOAD:
+            /* double words load/store opcodes */
             crntMaxIndex = Math.max(crntMaxIndex, localVarIdx + 1);
-        case ISTORE:
-        case FSTORE:
-        case ASTORE:
-        case ILOAD:
-        case FLOAD:
-        case ALOAD:
+        case ISTORE: case FSTORE: case ASTORE: case ILOAD: case FLOAD: case ALOAD: 
         case RET:
+            /* single word load/store and ret opcodes */
             mv.visitVarInsn(opcode, localVarIdx);
             break;
         default:
@@ -154,7 +148,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             mv.visitMethodInsn(INVOKESTATIC, DOUBLE_INTERNAL_NAME, METHOD_VALUEOF,
                     DESC_DOUBLE_VALUEOF, false);
         }
-
     }
 
     @Override
@@ -249,10 +242,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             mv.visitMethodInsn(opcode, owner, name, desc, itf);
             break;
         default:
-            System.err.println("Unknown method invocation opcode " + opcode);
-            System.exit(1);
+            assert false : "Unknown method invocation opcode " + opcode;
         }
-
     }
 
     @Override

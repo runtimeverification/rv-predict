@@ -302,14 +302,21 @@ public class DBEngine {
         }
     }
 
-    /**
-     * save an event to database.
-     */
     public void saveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE, AbstractNode.TYPE TYPE) {
         if (Config.shutDown)
             return;
+        synchronizedSaveEventToDB(TID, ID, ADDRL, ADDRR, VALUE, TYPE);
+    }
+
+    /**
+     * save an event to database. must be synchronized. otherwise, easy to throw
+     * Unique index or primary key violation.
+     */
+    public void synchronizedSaveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE,
+            AbstractNode.TYPE TYPE) {
 
         if (buffer.size() >= BUFFER_THRESHOLD) {
+
             saveCurrentEventsToDB();
         } else {
             buffer.add(new EventItem(DBEngine.globalEventID.incrementAndGet(), TID,ID,ADDRL, ADDRR,VALUE,TYPE));

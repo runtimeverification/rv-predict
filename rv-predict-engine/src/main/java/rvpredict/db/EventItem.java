@@ -10,13 +10,6 @@ import java.io.IOException;
 * Created by Traian on 04.11.2014.
 */
 public class EventItem {
-    private final long gid;
-    private final long tid;
-    private final int id;
-    private final long addrl;
-    private final long addrr;
-    private final long value;
-    private final AbstractNode.TYPE type;
     public long GID;
     public long TID;
     public int ID;
@@ -26,13 +19,13 @@ public class EventItem {
     public AbstractNode.TYPE TYPE;
 
     public EventItem(long gid, long tid, int id, long addrl, long addrr, long value, AbstractNode.TYPE type) {
-        this.gid = gid;
-        this.tid = tid;
-        this.id = id;
-        this.addrl = addrl;
-        this.addrr = addrr;
-        this.value = value;
-        this.type = type;
+        this.GID = gid;
+        this.TID = tid;
+        this.ID = id;
+        this.ADDRL = addrl;
+        this.ADDRR = addrr;
+        this.VALUE = value;
+        this.TYPE = type;
     }
 
     public void toStream(DataOutputStream stream) throws IOException {

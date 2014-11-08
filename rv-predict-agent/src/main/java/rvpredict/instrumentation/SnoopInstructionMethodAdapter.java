@@ -6,29 +6,30 @@ import static rvpredict.config.Config.*;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 
 import rvpredict.config.Config;
 
 public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
-    final static String CLASS_INTEGER = "java/lang/Integer";
-    final static String CLASS_BOOLEAN = "java/lang/Boolean";
-    final static String CLASS_CHAR = "java/lang/Character";
-    final static String CLASS_SHORT = "java/lang/Short";
-    final static String CLASS_BYTE = "java/lang/Byte";
-    final static String CLASS_LONG = "java/lang/Long";
-    final static String CLASS_FLOAT = "java/lang/Float";
-    final static String CLASS_DOUBLE = "java/lang/Double";
+    private static final String INTEGER_INTERNAL_NAME   =   Type.getInternalName(Integer.class);
+    private static final String BOOLEAN_INTERNAL_NAME   =   Type.getInternalName(Boolean.class);
+    private static final String CHARACTER_INTERNAL_NAME =   Type.getInternalName(Character.class);
+    private static final String SHORT_INTERNAL_NAME     =   Type.getInternalName(Short.class);
+    private static final String BYTE_INTERNAL_NAME      =   Type.getInternalName(Byte.class);
+    private static final String LONG_INTERNAL_NAME      =   Type.getInternalName(Long.class);
+    private static final String FLOAT_INTERNAL_NAME     =   Type.getInternalName(Float.class);
+    private static final String DOUBLE_INTERNAL_NAME    =   Type.getInternalName(Double.class);
 
-    final static String METHOD_VALUEOF = "valueOf";
-    final static String DESC_INTEGER_VALUEOF = "(I)Ljava/lang/Integer;";
-    final static String DESC_BOOLEAN_VALUEOF = "(Z)Ljava/lang/Boolean;";
-    final static String DESC_BYTE_VALUEOF = "(B)Ljava/lang/Byte;";
-    final static String DESC_SHORT_VALUEOF = "(S)Ljava/lang/Short;";
-    final static String DESC_CHAR_VALUEOF = "(C)Ljava/lang/Character;";
-    final static String DESC_LONG_VALUEOF = "(J)Ljava/lang/Long;";
-    final static String DESC_FLOAT_VALUEOF = "(F)Ljava/lang/Float;";
-    final static String DESC_DOUBLE_VALUEOF = "(D)Ljava/lang/Double;";
+    private static final String METHOD_VALUEOF           =  "valueOf";
+    private static final String DESC_INTEGER_VALUEOF    =   "(I)Ljava/lang/Integer;";
+    private static final String DESC_BOOLEAN_VALUEOF    =   "(Z)Ljava/lang/Boolean;";
+    private static final String DESC_BYTE_VALUEOF       =   "(B)Ljava/lang/Byte;";
+    private static final String DESC_SHORT_VALUEOF      =   "(S)Ljava/lang/Short;";
+    private static final String DESC_CHAR_VALUEOF       =   "(C)Ljava/lang/Character;";
+    private static final String DESC_LONG_VALUEOF       =   "(J)Ljava/lang/Long;";
+    private static final String DESC_FLOAT_VALUEOF      =   "(F)Ljava/lang/Float;";
+    private static final String DESC_DOUBLE_VALUEOF     =   "(D)Ljava/lang/Double;";
 
     boolean isInit, isSynchronized, isStatic;
     String classname;
@@ -145,35 +146,43 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         else if (desc.startsWith("I")) {
             // convert int to object?
             mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_INTEGER, METHOD_VALUEOF, DESC_INTEGER_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, INTEGER_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_INTEGER_VALUEOF, false);
         } else if (desc.startsWith("B")) {
             // convert int to object?
             mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_BYTE, METHOD_VALUEOF, DESC_BYTE_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, BYTE_INTERNAL_NAME, METHOD_VALUEOF, DESC_BYTE_VALUEOF,
+                    false);
         } else if (desc.startsWith("S")) {
             // convert int to object?
             mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_SHORT, METHOD_VALUEOF, DESC_SHORT_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, SHORT_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_SHORT_VALUEOF, false);
         } else if (desc.startsWith("Z")) {
             // convert int to object?
             mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_BOOLEAN, METHOD_VALUEOF, DESC_BOOLEAN_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, BOOLEAN_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_BOOLEAN_VALUEOF, false);
         } else if (desc.startsWith("C")) {
             // convert int to object?
             mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_CHAR, METHOD_VALUEOF, DESC_CHAR_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, CHARACTER_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_CHAR_VALUEOF, false);
         } else if (desc.startsWith("J")) {
             // convert int to object?
             mv.visitVarInsn(LLOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_LONG, METHOD_VALUEOF, DESC_LONG_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, LONG_INTERNAL_NAME, METHOD_VALUEOF, DESC_LONG_VALUEOF,
+                    false);
         } else if (desc.startsWith("F")) {
             // convert int to object?
             mv.visitVarInsn(FLOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_FLOAT, METHOD_VALUEOF, DESC_FLOAT_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, FLOAT_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_FLOAT_VALUEOF, false);
         } else if (desc.startsWith("D")) {
             // convert int to object?
             mv.visitVarInsn(DLOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_DOUBLE, METHOD_VALUEOF, DESC_DOUBLE_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, DOUBLE_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_DOUBLE_VALUEOF, false);
         }
 
     }
@@ -579,31 +588,38 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         switch (opcode) {
         case IALOAD:
         case IASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_INTEGER, METHOD_VALUEOF, DESC_INTEGER_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, INTEGER_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_INTEGER_VALUEOF, false);
             break;
         case BALOAD:
         case BASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_BOOLEAN, METHOD_VALUEOF, DESC_BOOLEAN_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, BOOLEAN_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_BOOLEAN_VALUEOF, false);
             break;
         case CALOAD:
         case CASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_CHAR, METHOD_VALUEOF, DESC_CHAR_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, CHARACTER_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_CHAR_VALUEOF, false);
             break;
         case DALOAD:
         case DASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_DOUBLE, METHOD_VALUEOF, DESC_DOUBLE_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, DOUBLE_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_DOUBLE_VALUEOF, false);
             break;
         case FALOAD:
         case FASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_FLOAT, METHOD_VALUEOF, DESC_FLOAT_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, FLOAT_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_FLOAT_VALUEOF, false);
             break;
         case LALOAD:
         case LASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_LONG, METHOD_VALUEOF, DESC_LONG_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, LONG_INTERNAL_NAME, METHOD_VALUEOF, DESC_LONG_VALUEOF,
+                    false);
             break;
         case SALOAD:
         case SASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, CLASS_SHORT, METHOD_VALUEOF, DESC_SHORT_VALUEOF, false);
+            mv.visitMethodInsn(INVOKESTATIC, SHORT_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_SHORT_VALUEOF, false);
             break;
         }
     }

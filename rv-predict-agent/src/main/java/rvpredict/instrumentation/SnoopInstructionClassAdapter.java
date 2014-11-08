@@ -12,12 +12,16 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
 
     private final Config config;
     
+    private final GlobalStateForInstrumentation globalState;
+    
     private String classname;
     private String source;
 
-    public SnoopInstructionClassAdapter(ClassVisitor cv, Config config) {
+    public SnoopInstructionClassAdapter(ClassVisitor cv, Config config,
+            GlobalStateForInstrumentation globalState) {
         super(Opcodes.ASM5, cv);
         this.config = config;
+        this.globalState = globalState;
     }
 
     @Override
@@ -83,7 +87,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
             // Opcodes.ACC_STATIC)>0));
             mv = new SnoopInstructionMethodAdapter(mv, source, classname, name, name + desc,
                     name.equals("<init>") || name.equals("<clinit>"), isSynchronized, isStatic,
-                    length, config);
+                    length, config, globalState);
 
         }
 

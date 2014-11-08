@@ -1,6 +1,7 @@
 package rvpredict.instrumentation;
 
 import rvpredict.config.Configuration;
+
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -20,9 +21,11 @@ import java.util.Arrays;
 public class SnoopInstructionTransformer implements ClassFileTransformer {
 
     private final Config config;
+    private final GlobalStateForInstrumentation globalState;
     
-    public SnoopInstructionTransformer(Config config) {
+    public SnoopInstructionTransformer(Config config, GlobalStateForInstrumentation globalState) {
         this.config = config;
+        this.globalState = globalState;
     }
 
     public static void premain(String agentArgs, Instrumentation inst) {
@@ -34,6 +37,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
         final Config config = Config.instance;
+        final GlobalStateForInstrumentation globalState = GlobalStateForInstrumentation.instance;
         final Configuration commandLine = config.commandLine;
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         commandLine.parseArguments(args, false);
@@ -79,7 +83,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         // initialize RecordRT first
         RecordRT.init();
 
-        inst.addTransformer(new SnoopInstructionTransformer(config));
+        inst.addTransformer(new SnoopInstructionTransformer(config, globalState));
         final boolean inLogger = true;
         final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
             @Override
@@ -89,7 +93,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                         return;
                     Config.shutDown = true;
                     try {
-                        GlobalStateForInstrumentation.instance.saveMetaData(db);
+                        globalState.saveMetaData(db);
                         db.closeDB();
                     } catch (Exception e) {
                         db.checkException(e);
@@ -153,7 +157,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             ClassReader cr = new ClassReader(cbuf);
 
             ClassWriter cw = new ClassWriter(cr, 0);
-            ClassVisitor cv = new SnoopInstructionClassAdapter(cw, config);
+            ClassVisitor cv = new SnoopInstructionClassAdapter(cw, config, globalState);
             // ClassVisitor cv = new SnoopInstructionClassAdapter(new
             // TraceClassVisitor(cw,new PrintWriter( System.out )));
             cr.accept(cv, 0);

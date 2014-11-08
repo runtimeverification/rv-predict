@@ -38,6 +38,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     
     private final Config config;
     
+    private final GlobalStateForInstrumentation globalState;
+    
     /**
      * current max index of local variables
      */
@@ -46,7 +48,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     public SnoopInstructionMethodAdapter(MethodVisitor mv, String source, String cname,
             String mname, String msignature, boolean isInit, boolean isSynchronized,
-            boolean isStatic, int argSize, Config config) {
+            boolean isStatic, int argSize, Config config, GlobalStateForInstrumentation globalState) {
         super(Opcodes.ASM5, mv);
         this.source = source == null ? "Unknown" : source;
         this.classname = cname;
@@ -56,6 +58,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         this.isSynchronized = isSynchronized;
         this.isStatic = isStatic;
         this.config = config;
+        this.globalState = globalState;
 
         crntMaxIndex = argSize + 1;
         if (config.verbose)
@@ -187,12 +190,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         switch (opcode) {
         case INVOKEVIRTUAL:
             if (config.commandLine.agentOnlySharing
-                    || !GlobalStateForInstrumentation.instance.isThreadClass(owner))
+                    || !globalState.isThreadClass(owner))
                 mv.visitMethodInsn(opcode, owner, name, desc, itf);
             else {
                 String sig_loc = source + "|"
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+                int ID = globalState.getLocationId(sig_loc);
 
                 if (name.equals("start") && desc.equals("()V")) {
                     crntMaxIndex++;
@@ -278,12 +281,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
         // signature + line number
         String sig_var = (owner + "." + name).replace("/", ".");
-        int SID = GlobalStateForInstrumentation.instance.getVariableId(sig_var);
+        int SID = globalState.getVariableId(sig_var);
         String sig_loc = source
                 + "|"
                 + (classname + "|" + methodsignature + "|" + sig_var + "|" + crntLineNum).replace("/",
                         ".");
-        int ID = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+        int ID = globalState.getLocationId(sig_loc);
         switch (opcode) {
         case GETSTATIC:
             mv.visitFieldInsn(opcode, owner, name, desc);
@@ -296,7 +299,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     addBipushInsn(0);
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
-                } else if (GlobalStateForInstrumentation.instance.isVariableShared(sig_var)) {
+                } else if (globalState.isVariableShared(sig_var)) {
 
                     crntMaxIndex++;
 
@@ -327,7 +330,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                             DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
                 }
 
-            } else if (GlobalStateForInstrumentation.instance.isVariableShared(sig_var)) {
+            } else if (globalState.isVariableShared(sig_var)) {
                 crntMaxIndex++;
                 int index = crntMaxIndex;
                 storeValue(desc, index);
@@ -368,7 +371,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
-                } else if (GlobalStateForInstrumentation.instance.isVariableShared(sig_var)) {
+                } else if (globalState.isVariableShared(sig_var)) {
 
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -492,7 +495,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                             DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
                 } else
                     mv.visitFieldInsn(opcode, owner, name, desc);
-            } else if (GlobalStateForInstrumentation.instance.isVariableShared(sig_var)) {
+            } else if (globalState.isVariableShared(sig_var)) {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 int index2;
@@ -613,7 +616,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             if (!isInit) {
                 String sig_loc = source + "|"
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+                int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (config.commandLine.agentOnlySharing) {
                     mv.visitInsn(DUP2);
@@ -633,7 +636,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
+                } else if (globalState.shouldInstrumentArray(sig_loc)) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -671,7 +674,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             if (!isInit) {
                 String sig_loc = source + "|"
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+                int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (config.commandLine.agentOnlySharing) {
                     mv.visitInsn(DUP2);
@@ -691,7 +694,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
+                } else if (globalState.shouldInstrumentArray(sig_loc)) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -725,7 +728,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             if (!isInit) {
                 String sig_loc = source + "|"
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+                int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (config.commandLine.agentOnlySharing) {
                     mv.visitInsn(DUP2);
@@ -745,7 +748,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
+                } else if (globalState.shouldInstrumentArray(sig_loc)) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -780,7 +783,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             if (!isInit) {
                 String sig_loc = source + "|"
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+                int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (config.commandLine.agentOnlySharing) {
                     mv.visitInsn(DUP2);
@@ -800,7 +803,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
+                } else if (globalState.shouldInstrumentArray(sig_loc)) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -835,7 +838,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             if (!isInit) {
                 String sig_loc = source + "|"
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+                int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (config.commandLine.agentOnlySharing) {
                     mv.visitInsn(DUP2);
@@ -855,7 +858,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
+                } else if (globalState.shouldInstrumentArray(sig_loc)) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -889,7 +892,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case AASTORE: {
             String sig_loc = source + "|"
                     + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-            int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+            int ID = globalState.getArrayLocationId(sig_loc);
 
             if (config.commandLine.agentOnlySharing) {
                 if (!isInit) {
@@ -920,7 +923,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 } else
                     mv.visitInsn(opcode);
 
-            } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
+            } else if (globalState.shouldInstrumentArray(sig_loc)) {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 mv.visitVarInsn(ASTORE, index1);
@@ -960,7 +963,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case IASTORE: {
             String sig_loc = source + "|"
                     + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-            int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+            int ID = globalState.getArrayLocationId(sig_loc);
 
             if (config.commandLine.agentOnlySharing) {
                 if (!isInit) {
@@ -990,7 +993,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
                 } else
                     mv.visitInsn(opcode);
-            } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
+            } else if (globalState.shouldInstrumentArray(sig_loc)) {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 mv.visitVarInsn(ISTORE, index1);
@@ -1028,7 +1031,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case FASTORE: {
             String sig_loc = source + "|"
                     + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-            int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+            int ID = globalState.getArrayLocationId(sig_loc);
 
             if (config.commandLine.agentOnlySharing) {
                 if (!isInit) {
@@ -1058,7 +1061,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
                 } else
                     mv.visitInsn(opcode);
-            } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
+            } else if (globalState.shouldInstrumentArray(sig_loc)) {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 mv.visitVarInsn(FSTORE, index1);
@@ -1096,7 +1099,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case DASTORE: {
             String sig_loc = source + "|"
                     + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-            int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+            int ID = globalState.getArrayLocationId(sig_loc);
 
             if (config.commandLine.agentOnlySharing) {
                 if (!isInit) {
@@ -1126,7 +1129,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
                 } else
                     mv.visitInsn(opcode);
-            } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
+            } else if (globalState.shouldInstrumentArray(sig_loc)) {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 mv.visitVarInsn(DSTORE, index1);
@@ -1164,7 +1167,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case LASTORE: {
             String sig_loc = source + "|"
                     + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-            int ID = GlobalStateForInstrumentation.instance.getArrayLocationId(sig_loc);
+            int ID = globalState.getArrayLocationId(sig_loc);
 
             if (config.commandLine.agentOnlySharing) {
                 if (!isInit) {
@@ -1194,7 +1197,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                             DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
                 } else
                     mv.visitInsn(opcode);
-            } else if (GlobalStateForInstrumentation.instance.shouldInstrumentArray(sig_loc)) {
+            } else if (globalState.shouldInstrumentArray(sig_loc)) {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 mv.visitVarInsn(LSTORE, index1);
@@ -1233,7 +1236,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             if (!config.commandLine.agentOnlySharing) {
                 String sig_loc = source + "|"
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+                int ID = globalState.getLocationId(sig_loc);
 
                 mv.visitInsn(DUP);
                 crntMaxIndex++;
@@ -1252,7 +1255,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             if (!config.commandLine.agentOnlySharing) {
                 String sig_loc = source + "|"
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+                int ID = globalState.getLocationId(sig_loc);
 
                 mv.visitInsn(DUP);
                 crntMaxIndex++;
@@ -1276,14 +1279,14 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             if (isSynchronized && !config.commandLine.agentOnlySharing) {
                 String sig_loc = source + "|"
                         + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+                int ID = globalState.getLocationId(sig_loc);
 
                 addBipushInsn(ID);
 
                 if (isStatic) {
                     // signature + line number
                     String sig_var = (classname + ".0").replace("/", ".");
-                    int SID = GlobalStateForInstrumentation.instance.getVariableId(sig_var);
+                    int SID = globalState.getVariableId(sig_var);
                     addBipushInsn(SID);
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK_STATIC,
                             DESC_LOG_UNLOCK_STATIC, false);
@@ -1308,14 +1311,14 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         if (isSynchronized && !config.commandLine.agentOnlySharing) {
             String sig_loc = source + "|"
                     + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-            int ID = GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+            int ID = globalState.getLocationId(sig_loc);
 
             addBipushInsn(ID);
 
             if (isStatic) {
                 // signature + line number
                 String sig_var = (classname + ".0").replace("/", ".");
-                int SID = GlobalStateForInstrumentation.instance.getVariableId(sig_var);
+                int SID = globalState.getVariableId(sig_var);
                 addBipushInsn(SID);
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK_STATIC,
                         DESC_LOG_LOCK_STATIC, false);
@@ -1331,7 +1334,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     /*
      * public void visitJumpInsn(int opcode, Label label) { String sig_loc =
      * (classname+"|"+methodsignature+"|"+line_cur).replace("/", "."); int ID =
-     * GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+     * globalState.getLocationId(sig_loc);
      * 
      * switch (opcode) { case IFEQ://branch case IFNE: case IFLT: case IFGE:
      * case IFGT: case IFLE: case IF_ICMPEQ: case IF_ICMPNE: case IF_ICMPLT:
@@ -1344,7 +1347,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      * public void visitTableSwitchInsn(int min, int max, Label dflt, Label...
      * labels) { String sig_loc =
      * (classname+"|"+methodsignature+"|"+line_cur).replace("/", "."); int ID =
-     * GlobalStateForInstrumentation.instance.getLocationId(sig_loc);
+     * globalState.getLocationId(sig_loc);
      * addBipushInsn(mv,ID); mv.visitMethodInsn(INVOKESTATIC,
      * config.logClass, config.LOG_BRANCH,
      * config.DESC_LOG_BRANCH);

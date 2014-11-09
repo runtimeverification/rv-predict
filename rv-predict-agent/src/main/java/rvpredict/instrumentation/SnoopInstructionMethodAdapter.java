@@ -128,81 +128,49 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         mv.visitLineNumber(line, start);
     }
 
+    private void prepareLoggingThreadEvents(int ID) {
+        crntMaxIndex++;
+        int index = crntMaxIndex;
+        mv.visitInsn(DUP);
+        mv.visitVarInsn(ASTORE, index);
+        addBipushInsn(ID);
+        mv.visitVarInsn(ALOAD, index);
+    }
+
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-
-        switch (opcode) {
-        case INVOKEVIRTUAL:
-            if (config.commandLine.agentOnlySharing || !isThreadClass(owner)) {
-                mv.visitMethodInsn(opcode, owner, name, desc, itf);
-            } else {
-                String sig_loc = source + "|"
+        if (opcode == INVOKEVIRTUAL) {
+            if (isThreadClass(owner) && !config.commandLine.agentOnlySharing) {
+                String sigAndLoc = source + "|"
                         + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
-                int ID = globalState.getLocationId(sig_loc);
-
-                if (name.equals("start") && desc.equals("()V")) {
-                    crntMaxIndex++;
-                    int index = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index);
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_START,
-                            DESC_LOG_THREAD_START, false);
-
-                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
-                } else if (name.equals("join") && desc.equals("()V")) {
-                    crntMaxIndex++;
-                    int index = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index);
-
-                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_JOIN,
-                            DESC_LOG_THREAD_JOIN, false);
-
-                } else if (name.equals("wait") && desc.equals("()V")) {
-                    crntMaxIndex++;
-                    int index = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_WAIT, DESC_LOG_WAIT,
-                            false);
-
-                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
-                } else if ((name.equals("notify") || name.equals("notifyAll"))
-                        && desc.equals("()V")) {
-                    crntMaxIndex++;
-                    int index = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_NOTIFY, DESC_LOG_NOTIFY,
-                            false);
-
-                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
-                } else
-                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
-
+                int ID = globalState.getLocationId(sigAndLoc);
+                if (desc.equals("()V")) {
+                    switch (name) {
+                    case "start":
+                        prepareLoggingThreadEvents(ID);
+                        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_START,
+                                DESC_LOG_THREAD_START, false);
+                        break;
+                    case "join":
+                        prepareLoggingThreadEvents(ID);
+                        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_JOIN,
+                                DESC_LOG_THREAD_JOIN, false);
+                        break;
+                    case "wait":
+                        prepareLoggingThreadEvents(ID);
+                        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_WAIT, DESC_LOG_WAIT,
+                                false);
+                        break;
+                    case "notify":
+                    case "notifyAll":
+                        prepareLoggingThreadEvents(ID);
+                        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_NOTIFY,
+                                DESC_LOG_NOTIFY, false);
+                    }
+                }
             }
-
-            break;
-        case INVOKESPECIAL:
-        case INVOKESTATIC:
-        case INVOKEINTERFACE:
-            mv.visitMethodInsn(opcode, owner, name, desc, itf);
-            break;
-        default:
-            assert false : "Unknown method invocation opcode " + opcode;
         }
+        mv.visitMethodInsn(opcode, owner, name, desc, itf);
     }
 
     @Override

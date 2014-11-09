@@ -10,13 +10,21 @@ import rvpredict.config.Config;
 
 public class SnoopInstructionClassAdapter extends ClassVisitor {
 
+    private final Config config;
+    
+    private final GlobalStateForInstrumentation globalState;
+    
     private String classname;
     private String source;
 
-    public SnoopInstructionClassAdapter(ClassVisitor cv) {
+    public SnoopInstructionClassAdapter(ClassVisitor cv, Config config,
+            GlobalStateForInstrumentation globalState) {
         super(Opcodes.ASM5, cv);
+        this.config = config;
+        this.globalState = globalState;
     }
 
+    @Override
     public void visit(int version, int access, String name, String signature, String superName,
             String[] interfaces) {
         if (cv != null) {
@@ -24,7 +32,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
         }
 
         classname = name;
-        if (Config.instance.verbose)
+        if (config.verbose)
             System.out.println("classname: " + classname);
     }
 
@@ -36,6 +44,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
         }
     }
 
+    @Override
     public FieldVisitor visitField(int access, String name, String desc, String signature,
             Object value) {
         String sig_var = (classname + "." + name).replace("/", ".");
@@ -51,6 +60,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
         return null;
     }
 
+    @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature,
             String[] exceptions) {
         boolean isSynchronized = false;
@@ -77,7 +87,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
             // Opcodes.ACC_STATIC)>0));
             mv = new SnoopInstructionMethodAdapter(mv, source, classname, name, name + desc,
                     name.equals("<init>") || name.equals("<clinit>"), isSynchronized, isStatic,
-                    length);
+                    length, config, globalState);
 
         }
 

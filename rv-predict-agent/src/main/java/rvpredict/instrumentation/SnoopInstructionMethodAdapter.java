@@ -177,18 +177,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                             false);
 
                     mv.visitMethodInsn(opcode, owner, name, desc, itf);
-                } else if (name.equals("wait") && desc.equals("()V")) {
-                    crntMaxIndex++;
-                    int index = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_WAIT, DESC_LOG_WAIT,
-                            false);
-
-                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 } else if ((name.equals("notify") || name.equals("notifyAll"))
                         && desc.equals("()V")) {
                     crntMaxIndex++;

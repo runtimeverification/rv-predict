@@ -1,6 +1,10 @@
 package rvpredict.instrumentation;
 
 import static org.objectweb.asm.Opcodes.*;
+
+import java.io.IOException;
+
+import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 
@@ -29,7 +33,7 @@ public class Utility {
     public static final String FLOAT_INTERNAL_NAME     =   Type.getInternalName(Float.class);
     public static final String DOUBLE_INTERNAL_NAME    =   Type.getInternalName(Double.class);
 
-    public static final String METHOD_VALUEOF           =  "valueOf";
+    public static final String METHOD_VALUEOF          =  "valueOf";
     public static final String DESC_INTEGER_VALUEOF    =   "(I)Ljava/lang/Integer;";
     public static final String DESC_BOOLEAN_VALUEOF    =   "(Z)Ljava/lang/Boolean;";
     public static final String DESC_BYTE_VALUEOF       =   "(B)Ljava/lang/Byte;";
@@ -39,14 +43,14 @@ public class Utility {
     public static final String DESC_FLOAT_VALUEOF      =   "(F)Ljava/lang/Float;";
     public static final String DESC_DOUBLE_VALUEOF     =   "(D)Ljava/lang/Double;";
 
-    public static final int[] ICONST_X = {ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, ICONST_5 }; 
+    public static final int[] ICONST_X = {ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, ICONST_5 };
 
     public static final ImmutableSet<String> SINGLE_WORD_TYPE_DESCS = ImmutableSet.of(
             DESC_INT, DESC_BYTE, DESC_SHORT, DESC_BOOL, DESC_CHAR, DESC_FLOAT, DESC_OBJECT, DESC_ARRAY);
-    
+
     public static final ImmutableSet<String> DOUBLE_WORDS_TYPE_DESCS = ImmutableSet.of(
             DESC_DOUBLE, DESC_LONG);
-    
+
     public static final ImmutableMap<String, Integer> STORE_OPCODES = ImmutableMap.<String, Integer>builder()
             .put(DESC_INT,    ISTORE)
             .put(DESC_BYTE,   ISTORE)
@@ -76,7 +80,7 @@ public class Utility {
     public static boolean isPrimitiveTypeDesc(String desc) {
         return !desc.startsWith(DESC_ARRAY) && !desc.startsWith(DESC_OBJECT);
     }
-    
+
     public static void addPrimitive2ObjectConv(MethodVisitor mv, int aloadOpCode) {
         String desc;
         switch (aloadOpCode) {
@@ -116,7 +120,7 @@ public class Utility {
             mv.visitMethodInsn(INVOKESTATIC, INTEGER_INTERNAL_NAME, METHOD_VALUEOF,
                     DESC_INTEGER_VALUEOF, false);
         } else if (desc.startsWith(DESC_BYTE)) {
-            mv.visitMethodInsn(INVOKESTATIC, BYTE_INTERNAL_NAME, METHOD_VALUEOF, 
+            mv.visitMethodInsn(INVOKESTATIC, BYTE_INTERNAL_NAME, METHOD_VALUEOF,
                     DESC_BYTE_VALUEOF, false);
         } else if (desc.startsWith(DESC_SHORT)) {
             mv.visitMethodInsn(INVOKESTATIC, SHORT_INTERNAL_NAME, METHOD_VALUEOF,
@@ -128,7 +132,7 @@ public class Utility {
             mv.visitMethodInsn(INVOKESTATIC, CHARACTER_INTERNAL_NAME, METHOD_VALUEOF,
                     DESC_CHAR_VALUEOF, false);
         } else if (desc.startsWith(DESC_LONG)) {
-            mv.visitMethodInsn(INVOKESTATIC, LONG_INTERNAL_NAME, METHOD_VALUEOF, 
+            mv.visitMethodInsn(INVOKESTATIC, LONG_INTERNAL_NAME, METHOD_VALUEOF,
                     DESC_LONG_VALUEOF, false);
         } else if (desc.startsWith(DESC_FLOAT)) {
             mv.visitMethodInsn(INVOKESTATIC, FLOAT_INTERNAL_NAME, METHOD_VALUEOF,
@@ -139,6 +143,22 @@ public class Utility {
         } else {
             assert false : "Expected primitive type descriptor; but found: " + desc;
         }
+    }
+
+    public static boolean isThreadClass(String className) {
+        while (className != null && !className.equals("java/lang/Object")) {
+            if (className.equals("java/lang/Thread")) {
+                return true;
+            }
+
+            try {
+                className = new ClassReader(className).getSuperName();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+        return false;
     }
 
 }

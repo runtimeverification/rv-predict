@@ -133,10 +133,9 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
         switch (opcode) {
         case INVOKEVIRTUAL:
-            if (config.commandLine.agentOnlySharing
-                    || !globalState.isThreadClass(owner))
+            if (config.commandLine.agentOnlySharing || !isThreadClass(owner)) {
                 mv.visitMethodInsn(opcode, owner, name, desc, itf);
-            else {
+            } else {
                 String sig_loc = source + "|"
                         + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
                 int ID = globalState.getLocationId(sig_loc);

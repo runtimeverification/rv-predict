@@ -1,6 +1,7 @@
 package rvpredict.instrumentation;
 
 import static org.objectweb.asm.Opcodes.*;
+import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 
 import com.google.common.collect.ImmutableMap;
@@ -41,13 +42,13 @@ public class Utility {
     public static final int[] ICONST_X = {ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, ICONST_5 }; 
 
     public static final ImmutableSet<String> SINGLE_WORD_TYPE_DESCS = ImmutableSet.of(
-            Utility.DESC_INT, DESC_BYTE, DESC_SHORT, DESC_BOOL, DESC_CHAR, DESC_FLOAT, DESC_OBJECT, DESC_ARRAY);
+            DESC_INT, DESC_BYTE, DESC_SHORT, DESC_BOOL, DESC_CHAR, DESC_FLOAT, DESC_OBJECT, DESC_ARRAY);
     
     public static final ImmutableSet<String> DOUBLE_WORDS_TYPE_DESCS = ImmutableSet.of(
             DESC_DOUBLE, DESC_LONG);
     
     public static final ImmutableMap<String, Integer> STORE_OPCODES = ImmutableMap.<String, Integer>builder()
-            .put(Utility.DESC_INT,    ISTORE)
+            .put(DESC_INT,    ISTORE)
             .put(DESC_BYTE,   ISTORE)
             .put(DESC_SHORT,  ISTORE)
             .put(DESC_BOOL,   ISTORE)
@@ -60,7 +61,7 @@ public class Utility {
             .build();
 
     public static final ImmutableMap<String, Integer> LOAD_OPCODES = ImmutableMap.<String, Integer>builder()
-            .put(Utility.DESC_INT,    ILOAD)
+            .put(DESC_INT,    ILOAD)
             .put(DESC_BYTE,   ILOAD)
             .put(DESC_SHORT,  ILOAD)
             .put(DESC_BOOL,   ILOAD)
@@ -71,5 +72,73 @@ public class Utility {
             .put(DESC_FLOAT,  FLOAD)
             .put(DESC_DOUBLE, DLOAD)
             .build();
+
+    public static boolean isPrimitiveTypeDesc(String desc) {
+        return !desc.startsWith(DESC_ARRAY) && !desc.startsWith(DESC_OBJECT);
+    }
+    
+    public static void addPrimitive2ObjectConv(MethodVisitor mv, int aloadOpCode) {
+        String desc;
+        switch (aloadOpCode) {
+        case IALOAD: case IASTORE:
+            desc = DESC_INT;
+            break;
+        case BALOAD: case BASTORE:
+            // TODO(YilongL): is it a latent bug since we cannot tell from the
+            // opcode that whether JVM is loading/storing a byte or a boolean
+            desc = DESC_BOOL;
+            break;
+        case CALOAD: case CASTORE:
+            desc = DESC_CHAR;
+            break;
+        case DALOAD: case DASTORE:
+            desc = DESC_DOUBLE;
+            break;
+        case FALOAD: case FASTORE:
+            desc = DESC_FLOAT;
+            break;
+        case LALOAD: case LASTORE:
+            desc = DESC_LONG;
+            break;
+        case SALOAD: case SASTORE:
+            desc = DESC_SHORT;
+            break;
+        default:
+            desc = null;
+            assert false : "Expected an array load opcode; but found: " + aloadOpCode;
+        }
+
+        addPrimitive2ObjectConv(mv, desc);
+    }
+
+    public static void addPrimitive2ObjectConv(MethodVisitor mv, String desc) {
+        if (desc.startsWith(DESC_INT)) {
+            mv.visitMethodInsn(INVOKESTATIC, INTEGER_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_INTEGER_VALUEOF, false);
+        } else if (desc.startsWith(DESC_BYTE)) {
+            mv.visitMethodInsn(INVOKESTATIC, BYTE_INTERNAL_NAME, METHOD_VALUEOF, 
+                    DESC_BYTE_VALUEOF, false);
+        } else if (desc.startsWith(DESC_SHORT)) {
+            mv.visitMethodInsn(INVOKESTATIC, SHORT_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_SHORT_VALUEOF, false);
+        } else if (desc.startsWith(DESC_BOOL)) {
+            mv.visitMethodInsn(INVOKESTATIC, BOOLEAN_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_BOOLEAN_VALUEOF, false);
+        } else if (desc.startsWith(DESC_CHAR)) {
+            mv.visitMethodInsn(INVOKESTATIC, CHARACTER_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_CHAR_VALUEOF, false);
+        } else if (desc.startsWith(DESC_LONG)) {
+            mv.visitMethodInsn(INVOKESTATIC, LONG_INTERNAL_NAME, METHOD_VALUEOF, 
+                    DESC_LONG_VALUEOF, false);
+        } else if (desc.startsWith(DESC_FLOAT)) {
+            mv.visitMethodInsn(INVOKESTATIC, FLOAT_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_FLOAT_VALUEOF, false);
+        } else if (desc.startsWith(DESC_DOUBLE)) {
+            mv.visitMethodInsn(INVOKESTATIC, DOUBLE_INTERNAL_NAME, METHOD_VALUEOF,
+                    DESC_DOUBLE_VALUEOF, false);
+        } else {
+            assert false : "Expected primitive type descriptor; but found: " + desc;
+        }
+    }
 
 }

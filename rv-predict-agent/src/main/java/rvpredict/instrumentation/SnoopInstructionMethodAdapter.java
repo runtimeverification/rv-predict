@@ -105,48 +105,10 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void loadValue(String desc, int index) {
-        if (desc.startsWith(DESC_OBJECT) || desc.startsWith(DESC_ARRAY))
-            mv.visitVarInsn(ALOAD, index);
-        else if (desc.startsWith(Utility.DESC_INT)) {
-            // convert int to object?
-            mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, INTEGER_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_INTEGER_VALUEOF, false);
-        } else if (desc.startsWith(DESC_BYTE)) {
-            // convert int to object?
-            mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, BYTE_INTERNAL_NAME, METHOD_VALUEOF, DESC_BYTE_VALUEOF,
-                    false);
-        } else if (desc.startsWith(DESC_SHORT)) {
-            // convert int to object?
-            mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, SHORT_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_SHORT_VALUEOF, false);
-        } else if (desc.startsWith(DESC_BOOL)) {
-            // convert int to object?
-            mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, BOOLEAN_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_BOOLEAN_VALUEOF, false);
-        } else if (desc.startsWith(DESC_CHAR)) {
-            // convert int to object?
-            mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, CHARACTER_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_CHAR_VALUEOF, false);
-        } else if (desc.startsWith(DESC_LONG)) {
-            // convert int to object?
-            mv.visitVarInsn(LLOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, LONG_INTERNAL_NAME, METHOD_VALUEOF, DESC_LONG_VALUEOF,
-                    false);
-        } else if (desc.startsWith(DESC_FLOAT)) {
-            // convert int to object?
-            mv.visitVarInsn(FLOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, FLOAT_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_FLOAT_VALUEOF, false);
-        } else if (desc.startsWith(DESC_DOUBLE)) {
-            // convert int to object?
-            mv.visitVarInsn(DLOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, DOUBLE_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_DOUBLE_VALUEOF, false);
+        String prefix = desc.substring(0, 1);
+        mv.visitVarInsn(LOAD_OPCODES.get(prefix), index);
+        if (isPrimitiveTypeDesc(desc)) {
+            addPrimitive2ObjectConv(mv, desc);
         }
     }
 
@@ -544,47 +506,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             System.exit(1);
         }
     }
-
-    private void convertPrimitiveToObject(int opcode) {
-        switch (opcode) {
-        case IALOAD:
-        case IASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, INTEGER_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_INTEGER_VALUEOF, false);
-            break;
-        case BALOAD:
-        case BASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, BOOLEAN_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_BOOLEAN_VALUEOF, false);
-            break;
-        case CALOAD:
-        case CASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, CHARACTER_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_CHAR_VALUEOF, false);
-            break;
-        case DALOAD:
-        case DASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, DOUBLE_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_DOUBLE_VALUEOF, false);
-            break;
-        case FALOAD:
-        case FASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, FLOAT_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_FLOAT_VALUEOF, false);
-            break;
-        case LALOAD:
-        case LASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, LONG_INTERNAL_NAME, METHOD_VALUEOF, DESC_LONG_VALUEOF,
-                    false);
-            break;
-        case SALOAD:
-        case SASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, SHORT_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_SHORT_VALUEOF, false);
-            break;
-        }
-    }
-
+    
     @Override
     public void visitInsn(int opcode) {
 
@@ -690,7 +612,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitVarInsn(ILOAD, index1);
                     mv.visitVarInsn(ILOAD, index3);
 
-                    convertPrimitiveToObject(opcode);
+                    addPrimitive2ObjectConv(mv, opcode);
 
                     addBipushInsn(0);
 
@@ -744,7 +666,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitVarInsn(ILOAD, index1);
                     mv.visitVarInsn(FLOAD, index3);
 
-                    convertPrimitiveToObject(opcode);
+                    addPrimitive2ObjectConv(mv, opcode);
 
                     addBipushInsn(0);
 
@@ -800,7 +722,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitVarInsn(ILOAD, index1);
                     mv.visitVarInsn(DLOAD, index3);
 
-                    convertPrimitiveToObject(opcode);
+                    addPrimitive2ObjectConv(mv, opcode);
 
                     addBipushInsn(0);
 
@@ -855,7 +777,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitVarInsn(ILOAD, index1);
                     mv.visitVarInsn(LLOAD, index3);
 
-                    convertPrimitiveToObject(opcode);
+                    addPrimitive2ObjectConv(mv, opcode);
 
                     addBipushInsn(0);
 
@@ -991,7 +913,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
                 mv.visitVarInsn(ILOAD, index1);
-                convertPrimitiveToObject(opcode);
+                addPrimitive2ObjectConv(mv, opcode);
 
                 if (isInit) {
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
@@ -1059,7 +981,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
                 mv.visitVarInsn(FLOAD, index1);
-                convertPrimitiveToObject(opcode);
+                addPrimitive2ObjectConv(mv, opcode);
 
                 if (isInit) {
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
@@ -1127,7 +1049,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
                 mv.visitVarInsn(DLOAD, index1);
-                convertPrimitiveToObject(opcode);
+                addPrimitive2ObjectConv(mv, opcode);
 
                 if (isInit) {
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
@@ -1195,7 +1117,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
                 mv.visitVarInsn(LLOAD, index1);
-                convertPrimitiveToObject(opcode);
+                addPrimitive2ObjectConv(mv, opcode);
 
                 if (isInit) {
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,

@@ -114,12 +114,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         mv.visitLineNumber(line, start);
     }
 
-    private void prepareLoggingThreadEvents(int ID) {
+    private void prepareLoggingThreadEvents() {
+        int sid = getCrntStmtSID();
         crntMaxIndex++;
         int index = crntMaxIndex;
         mv.visitInsn(DUP);
         mv.visitVarInsn(ASTORE, index);
-        addPushConstInsn(mv, ID);
+        addPushConstInsn(mv, sid);
         mv.visitVarInsn(ALOAD, index);
     }
 
@@ -127,12 +128,10 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
         if (opcode == INVOKEVIRTUAL) {
             if (isThreadClass(owner)) {
-                String sigAndLoc = getSignaturePlusLoc();
-                int ID = globalState.getLocationId(sigAndLoc);
                 if (desc.equals("()V")) {
                     switch (name) {
                     case "start":
-                        prepareLoggingThreadEvents(ID);
+                        prepareLoggingThreadEvents();
                         mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_START,
                                 DESC_LOG_THREAD_START, false);
                         break;
@@ -141,6 +140,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                          * logged after they return, the code here is kind of
                          * ad-hoc. We definitely need more general way to handle
                          * such case. */
+                        int sid = getCrntStmtSID();
+
                         crntMaxIndex++;
                         int index = crntMaxIndex;
                         mv.visitInsn(DUP);
@@ -148,19 +149,19 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                         mv.visitMethodInsn(opcode, owner, name, desc, itf);
 
-                        addPushConstInsn(mv, ID);
+                        addPushConstInsn(mv, sid);
                         mv.visitVarInsn(ALOAD, index);
                         mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_JOIN,
                                 DESC_LOG_THREAD_JOIN, false);
                         return;
                     case "wait":
-                        prepareLoggingThreadEvents(ID);
+                        prepareLoggingThreadEvents();
                         mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_WAIT, DESC_LOG_WAIT,
                                 false);
                         break;
                     case "notify":
                     case "notifyAll":
-                        prepareLoggingThreadEvents(ID);
+                        prepareLoggingThreadEvents();
                         mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_NOTIFY,
                                 DESC_LOG_NOTIFY, false);
                     }
@@ -364,7 +365,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         switch (opcode) {
         case AALOAD:
             if (!isInit) {
-                String sig_loc = getSignaturePlusLoc();
+                String sig_loc = computeStmtSig();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (globalState.shouldInstrumentArray(sig_loc)) {
@@ -403,7 +404,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case SALOAD:
         case IALOAD:
             if (!isInit) {
-                String sig_loc = getSignaturePlusLoc();
+                String sig_loc = computeStmtSig();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (globalState.shouldInstrumentArray(sig_loc)) {
@@ -438,7 +439,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         case FALOAD:
             if (!isInit) {
-                String sig_loc = getSignaturePlusLoc();
+                String sig_loc = computeStmtSig();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (globalState.shouldInstrumentArray(sig_loc)) {
@@ -474,7 +475,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         case DALOAD:
             if (!isInit) {
-                String sig_loc = getSignaturePlusLoc();
+                String sig_loc = computeStmtSig();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (globalState.shouldInstrumentArray(sig_loc)) {
@@ -510,7 +511,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         case LALOAD:
             if (!isInit) {
-                String sig_loc = getSignaturePlusLoc();
+                String sig_loc = computeStmtSig();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (globalState.shouldInstrumentArray(sig_loc)) {
@@ -545,7 +546,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 mv.visitInsn(opcode);
             break;
         case AASTORE: {
-            String sig_loc = getSignaturePlusLoc();
+            String sig_loc = computeStmtSig();
             int ID = globalState.getArrayLocationId(sig_loc);
 
             if (globalState.shouldInstrumentArray(sig_loc)) {
@@ -586,7 +587,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case CASTORE:
         case SASTORE:
         case IASTORE: {
-            String sig_loc = getSignaturePlusLoc();
+            String sig_loc = computeStmtSig();
             int ID = globalState.getArrayLocationId(sig_loc);
 
             if (globalState.shouldInstrumentArray(sig_loc)) {
@@ -625,7 +626,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         }
         case FASTORE: {
-            String sig_loc = getSignaturePlusLoc();
+            String sig_loc = computeStmtSig();
             int ID = globalState.getArrayLocationId(sig_loc);
 
             if (globalState.shouldInstrumentArray(sig_loc)) {
@@ -664,7 +665,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         }
         case DASTORE: {
-            String sig_loc = getSignaturePlusLoc();
+            String sig_loc = computeStmtSig();
             int ID = globalState.getArrayLocationId(sig_loc);
 
             if (globalState.shouldInstrumentArray(sig_loc)) {
@@ -703,7 +704,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         }
         case LASTORE: {
-            String sig_loc = getSignaturePlusLoc();
+            String sig_loc = computeStmtSig();
             int ID = globalState.getArrayLocationId(sig_loc);
 
             if (globalState.shouldInstrumentArray(sig_loc)) {
@@ -742,8 +743,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         }
         case MONITORENTER: {
-            String sig_loc = getSignaturePlusLoc();
-            int ID = globalState.getLocationId(sig_loc);
+            int ID = getCrntStmtSID();
 
             mv.visitInsn(DUP);
             crntMaxIndex++;
@@ -757,8 +757,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         }
         case MONITOREXIT: {
-            String sig_loc = getSignaturePlusLoc();
-            int ID = globalState.getLocationId(sig_loc);
+            int ID = getCrntStmtSID();
 
             mv.visitInsn(DUP);
             crntMaxIndex++;
@@ -779,8 +778,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case RETURN:
         case ATHROW:
             if (isSynchronized) {
-                String sig_loc = getSignaturePlusLoc();
-                int ID = globalState.getLocationId(sig_loc);
+                int ID = getCrntStmtSID();
 
                 addPushConstInsn(mv, ID);
 
@@ -810,10 +808,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         mv.visitCode();
 
         if (isSynchronized) {
-            String sig_loc = getSignaturePlusLoc();
-            int ID = globalState.getLocationId(sig_loc);
-
-            addPushConstInsn(mv, ID); // <=== GLOBAL ID???
+            addPushConstInsn(mv, getCrntStmtSID());
 
             if (isStatic) {
                 // signature + line number
@@ -823,7 +818,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK_STATIC,
                         DESC_LOG_LOCK_STATIC, false);
             } else {
-                mv.visitVarInsn(ALOAD, 0);// the this objectref
+                mv.visitVarInsn(ALOAD, 0);
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK_INSTANCE,
                         DESC_LOG_LOCK_INSTANCE, false);
             }
@@ -855,8 +850,20 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      * mv.visitTableSwitchInsn(min, max, dflt, labels); }
      */
 
-    private String getSignaturePlusLoc() {
-        return source + "|"
-                + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+    /**
+     * @return a unique integer representing the syntactic identifier of the
+     *         current statement in the instrumented program
+     */
+    private int getCrntStmtSID() {
+        return globalState.getLocationId(computeStmtSig());
+    }
+
+    /**
+     * @return a unique string representing the signature of a statement in the
+     *         instrumented program
+     */
+    private String computeStmtSig() {
+        // TODO(YilongL): is the replace really necessary?
+        return String.format("%s|%s|%s|%s", source, className, signature, crntLineNum).replace("/", ".");
     }
 }

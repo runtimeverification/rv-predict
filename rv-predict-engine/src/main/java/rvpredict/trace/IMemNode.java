@@ -28,8 +28,6 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-import rvpredict.trace.AbstractNode.TYPE;
-
 /**
  * a common interface for read and write events.
  * 
@@ -44,7 +42,7 @@ public interface IMemNode {
 
     public long getTID();
 
-    public TYPE getType();
+    public EventType getType();
 
     public int getID();
 

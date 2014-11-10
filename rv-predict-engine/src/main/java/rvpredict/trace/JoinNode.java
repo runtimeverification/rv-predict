@@ -38,7 +38,7 @@ public class JoinNode extends AbstractNode implements ISyncNode {
     }
 
     public JoinNode(long GID, long tid, int ID, long addr) {
-        super(GID, tid, ID, AbstractNode.TYPE.JOIN);
+        super(GID, tid, ID, EventType.JOIN);
         tid_join = addr;
     }
 

@@ -40,7 +40,7 @@ public class InitNode extends AbstractNode {
     private long index;
 
     public InitNode(long GID, long tid, int ID, long objectHashCode, long index, long value) {
-        super(GID, tid, ID, AbstractNode.TYPE.INIT);
+        super(GID, tid, ID, EventType.INIT);
         this.objectHashCode = objectHashCode;
         this.index = index;
         this.value = value;

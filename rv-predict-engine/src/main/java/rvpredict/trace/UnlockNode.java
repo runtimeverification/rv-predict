@@ -39,12 +39,12 @@ public class UnlockNode extends AbstractNode implements ISyncNode {
     private long lock_addr;
 
     public UnlockNode(long GID, long tid, int ID, long addr) {
-        super(GID, tid, ID, AbstractNode.TYPE.UNLOCK);
+        super(GID, tid, ID, EventType.UNLOCK);
         this.lock_addr = addr;
     }
 
     public UnlockNode(long GID, long tid, int ID, String addr) {
-        super(GID, tid, ID, AbstractNode.TYPE.UNLOCK);
+        super(GID, tid, ID, EventType.UNLOCK);
         this.lock_addr = Long.valueOf(addr);
     }
 

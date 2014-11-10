@@ -110,7 +110,6 @@ public class DBEngine {
     public DBEngine(String directory, String name) {
         appname = name;
         this.directory = directory;
-//        tracetablename = "trace_" + name;
         tidtablename = "tid_" + name;
         volatilesigtablename = "volatile_" + name;
         stmtsigtablename = "stmtsig_" + name;
@@ -118,11 +117,7 @@ public class DBEngine {
 
         scheduletablename = "schedule_" + name;
         propertytablename = "property_" + name;
-        try {
-            connectDB(directory);
-        } catch (Exception e) {
-            System.err.println(e.getMessage());
-        }
+        connectDB(directory);
     }
 
     public void closeDB() {
@@ -134,36 +129,11 @@ public class DBEngine {
     }
 
     /**
-     * Checks that all relevant tables exist.
-     * 
-     * @throws Exception
+     * Checks that the trace was recorded properly
+     * TODO: design and implement some proper checks.
      */
-    public boolean checkTables() throws SQLException {
-        if (true) return true;
-        Statement stmt = conn.createStatement();
-
-        String sql_dropTable;
-        // sql_dropTable = "SELECT COUNT(*) FROM "+propertytablename;
-        // stmt.execute(sql_dropTable);
-        // sql_dropTable = "SELECT COUNT(*) FROM "+scheduletablename;
-        // stmt.execute(sql_dropTable);
-        try {
-//            sql_dropTable = "SELECT COUNT(*) FROM " + stmtsigtablename;
-//            stmt.execute(sql_dropTable);
-//            sql_dropTable = "SELECT COUNT(*) FROM " + varsigtablename;
-//            stmt.execute(sql_dropTable);
-//            sql_dropTable = "SELECT COUNT(*) FROM " + volatilesigtablename;
-//            stmt.execute(sql_dropTable);
-//            sql_dropTable = "SELECT COUNT(*) FROM " + tracetablename;
-//            stmt.execute(sql_dropTable);
-            sql_dropTable = "SELECT COUNT(*) FROM " + tidtablename;
-            stmt.execute(sql_dropTable);
-        } catch (SQLException e) {
-            if (e.getErrorCode() == TABLE_NOT_FOUND_ERROR_CODE)
-                return false;
-            throw e;
-        }
-        return true;
+    public boolean checkLog() {
+       return true;
     }
 
     public void createScheduleTable() throws Exception {
@@ -182,26 +152,27 @@ public class DBEngine {
         prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
-    protected void connectDB(String directory) throws Exception {
-        Class.forName("rvpredict.h2.Driver");
-        conn = DriverManager.getConnection("jdbc:h2:" + directory + "/" + dbname
-                + ";DB_CLOSE_ON_EXIT=FALSE");
-        // conn.setAutoCommit(true);
+    protected void connectDB(String directory) {
+        try {
+            Class.forName("rvpredict.h2.Driver");
+        } catch (ClassNotFoundException e) {
+            System.err.println("Error: cannot locate h2 database driver.  This should not happen.");
+            e.printStackTrace();
+            System.exit(1);
+        }
+        try{
+            conn = DriverManager.getConnection("jdbc:h2:" + directory + "/" + dbname
+                    + ";DB_CLOSE_ON_EXIT=FALSE");
+        }  catch (SQLException e) {
+            System.err.println("Errors when connecting to the database.  Exiting.");
+            e.printStackTrace();
+            System.exit(1);
+        } // conn.setAutoCommit(true);
     }
 
     public long getTraceSize() throws Exception {
         if (traceCache == null) traceCache = new TraceCache(directory);
         return traceCache.getTraceSize();
-    }
-
-    /**
-     * load all trace
-     * 
-     * @return
-     * @throws Exception
-     */
-    public Trace getTrace(TraceInfo info) throws Exception {
-        return getTrace(1, 0, info);
     }
 
     /**
@@ -214,19 +185,20 @@ public class DBEngine {
      */
     public Trace getTrace(long min, long max, TraceInfo info) throws Exception {
         if (traceCache == null) traceCache = new TraceCache(directory);
+        long traceSize = traceCache.traceSize;
+        assert min <= traceSize : "This method should only be called with a valid min value";
+        if (max > traceSize) max = traceSize; // resetting max to trace size.
         Trace trace = new Trace(info);
         AbstractNode node = null;
         for (long index = min; index <= max; index++) {
             rvpredict.db.EventItem eventItem = traceCache.getEvent(index);
-            if (eventItem == null) break;
-
             long GID = eventItem.GID;
             long TID = eventItem.TID;
             int ID = eventItem.ID;
             long ADDRL = eventItem.ADDRL;
             long ADDRR = eventItem.ADDRR;
             long VALUE = eventItem.VALUE;
-            AbstractNode.TYPE TYPE = eventItem.TYPE;
+            EventType TYPE = eventItem.TYPE;
 
             switch (TYPE) {
             case INIT:
@@ -290,7 +262,7 @@ public class DBEngine {
                 return rs.getInt(1);
 
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
         return 0;
@@ -308,7 +280,7 @@ public class DBEngine {
 
                 return schedule;
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
         return null;
@@ -332,7 +304,7 @@ public class DBEngine {
             }
             return map;
 
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
         return null;
@@ -369,7 +341,7 @@ public class DBEngine {
 
                     prepStmt.execute();
 
-                } catch (Exception e) {
+                } catch (SQLException e) {
                     e.printStackTrace();
                 }
             }

@@ -192,10 +192,10 @@ public class CPRaceDetect {
             HashMap<Long, String> threadIdNameMap = new HashMap<>();
             db.getMetadata(threadIdNameMap,sharedVarIdSigMap,volatileAddresses,stmtIdSigMap);
 
+            long TOTAL_TRACE_LENGTH = db.getTraceSize();
+
             TraceInfo info = new TraceInfo(sharedVarIdSigMap, volatileAddresses, stmtIdSigMap,
                     threadIdNameMap);
-
-            long TOTAL_TRACE_LENGTH = db.getTraceSize();
 
             ExecutionInfoTask task = new ExecutionInfoTask(start_time, info, TOTAL_TRACE_LENGTH);
             // register a shutdown hook to store runtime statistics

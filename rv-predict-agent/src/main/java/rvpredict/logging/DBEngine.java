@@ -32,7 +32,7 @@ import rvpredict.db.EventItem;
 import rvpredict.config.Config;
 import rvpredict.db.TraceCache;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
-import rvpredict.trace.AbstractNode;
+import rvpredict.trace.EventType;
 
 import java.io.*;
 import java.nio.file.Paths;
@@ -52,34 +52,32 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class DBEngine {
 
-    protected final static AtomicLong globalEventID  = new AtomicLong(0);
+    private static final AtomicLong globalEventID  = new AtomicLong(0);
 
-    // currently we use the h2 database
-    protected final String dbname = "RVDatabase";
+    private static final String DB_NAME = "RVDatabase";
     private final String directory;
-    public String appname = "main";
 
     // database schema
-    protected final String[] sharedvarsigtablecolname = { "SIG" };
-    protected final String[] sharedvarsigcoltype = { "VARCHAR" };
+    private static final String[] SHARED_VAR_SIG_TABLE_COL_NAME = { "SIG" };
+    private static final String[] SHARED_VAR_SIG_COL_TYPE = { "VARCHAR" };
 
-    protected final String[] sharedarrayloctablecolname = { "SIG" };
-    protected final String[] sharedarrayloccoltype = { "VARCHAR" };
+    private static final String[] SHARED_ARRAY_LOC_TABLE_COLNAME = { "SIG" };
+    private static final String[] SHARED_ARRAY_LOC_COL_TYPE = { "VARCHAR" };
 
-    protected Connection conn;
-    protected PreparedStatement prepStmt;
+    private Connection conn;
+    private PreparedStatement prepStmt;
 
-    public String sharedvarsigtablename;
-    private String sharedarrayloctablename;
+    private final String sharedvarsigtablename;
+    private final String sharedarrayloctablename;
 
     // TODO: What if the program does not terminate??
 
-    protected static LinkedBlockingQueue<List<EventItem>> queue;
+    private static LinkedBlockingQueue<List<EventItem>> queue;
     // we can also use our own Stack implementation here
-    protected static ArrayList<EventItem> buffer;
+    private static ArrayList<EventItem> buffer;
 
-    protected int BUFFER_THRESHOLD;
-    private boolean asynchronousLogging;
+    private final int BUFFER_THRESHOLD;
+    private final boolean asynchronousLogging;
 
     public void saveCurrentEventsToDB() {
         queue.add(buffer);
@@ -171,7 +169,6 @@ public class DBEngine {
         BUFFER_THRESHOLD = 10*Config.instance.commandLine.window_size;
         this.directory = directory;
         this.asynchronousLogging = asynchronousLogging;
-        appname = name;
         sharedarrayloctablename = "sharedarrayloc_" + name;
         sharedvarsigtablename = "sharedvarsig_" + name;
         try {
@@ -227,7 +224,7 @@ public class DBEngine {
         }
 
         String sql_createTable = "CREATE TABLE IF NOT EXISTS " + sharedarrayloctablename + " ("
-                + sharedarrayloctablecolname[0] + " " + sharedarrayloccoltype[0] + ")";
+                + SHARED_ARRAY_LOC_TABLE_COLNAME[0] + " " + SHARED_ARRAY_LOC_COL_TYPE[0] + ")";
         stmt.execute(sql_createTable);
 
         String sql_insertdata = "INSERT INTO " + sharedarrayloctablename + " VALUES (?)";
@@ -242,7 +239,7 @@ public class DBEngine {
         }
 
         String sql_createTable = "CREATE TABLE IF NOT EXISTS " + sharedvarsigtablename + " ("
-                + sharedvarsigtablecolname[0] + " " + sharedvarsigcoltype[0] + ")";
+                + SHARED_VAR_SIG_TABLE_COL_NAME[0] + " " + SHARED_VAR_SIG_COL_TYPE[0] + ")";
         stmt.execute(sql_createTable);
 
         String sql_insertdata = "INSERT INTO " + sharedvarsigtablename + " VALUES (?)";
@@ -317,7 +314,7 @@ public class DBEngine {
      * save an event to database. must be synchronized. otherwise, races when writing to file might occur for
      * synchronous logging.
      */
-    public synchronized  void saveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE, AbstractNode.TYPE TYPE) {
+    public synchronized  void saveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE, EventType TYPE) {
 
         EventItem e = new EventItem(DBEngine.globalEventID.incrementAndGet(), TID, ID, ADDRL, ADDRR, VALUE, TYPE);
         if (asynchronousLogging) {
@@ -343,10 +340,10 @@ public class DBEngine {
         }
     }
 
-    protected void connectDB(String directory) throws Exception {
+    private void connectDB(String directory) throws Exception {
         try {
             Driver driver = new rvpredict.h2.Driver();
-            String db_url = "jdbc:h2:" + directory + "/" + dbname + ";DB_CLOSE_ON_EXIT=FALSE";
+            String db_url = "jdbc:h2:" + directory + "/" + DB_NAME + ";DB_CLOSE_ON_EXIT=FALSE";
             conn = driver.connect(db_url, null);
 
             // conn = DriverManager.getConnection(db_url);

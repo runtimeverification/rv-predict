@@ -36,7 +36,7 @@ public class ReadNode extends AbstractNode implements IMemNode {
     private long value;
 
     public ReadNode(long GID, long tid, int ID, long objectHashCode, long index, long value) {
-        super(GID, tid, ID, AbstractNode.TYPE.READ);
+        super(GID, tid, ID, EventType.READ);
         this.objectHashCode = objectHashCode;
         this.index = index;
         this.value = value;

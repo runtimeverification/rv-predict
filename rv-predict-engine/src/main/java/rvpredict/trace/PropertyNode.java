@@ -32,7 +32,7 @@ public class PropertyNode extends AbstractNode {
     private String object_addr;
 
     public PropertyNode(long GID, long tid, int ID, String addr) {
-        super(GID, tid, ID, AbstractNode.TYPE.PROPERTY);
+        super(GID, tid, ID, EventType.PROPERTY);
         this.object_addr = addr;
     }
 

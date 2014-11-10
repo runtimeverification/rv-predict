@@ -36,7 +36,7 @@ public class WriteNode extends AbstractNode implements IMemNode {
     private long index;
 
     public WriteNode(long GID, long tid, int ID, long objectHashCode, long index, long value) {
-        super(GID, tid, ID, AbstractNode.TYPE.WRITE);
+        super(GID, tid, ID, EventType.WRITE);
         this.objectHashCode = objectHashCode;
         this.index = index;
         this.value = value;

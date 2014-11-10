@@ -34,7 +34,7 @@ public class LockNode extends AbstractNode implements ISyncNode {
     private long lock_addr;
 
     public LockNode(long GID, long tid, int ID, long addr) {
-        super(GID, tid, ID, AbstractNode.TYPE.LOCK);
+        super(GID, tid, ID, EventType.LOCK);
         this.lock_addr = addr;
     }
 

@@ -38,7 +38,7 @@ public class StartNode extends AbstractNode implements ISyncNode {
     }
 
     public StartNode(long GID, long tid, int ID, long addr) {
-        super(GID, tid, ID, AbstractNode.TYPE.START);
+        super(GID, tid, ID, EventType.START);
         tid_child = addr;
     }
 

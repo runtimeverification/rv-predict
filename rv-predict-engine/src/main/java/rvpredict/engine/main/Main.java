@@ -96,7 +96,7 @@ public class Main {
                             Logger.MSGTYPE.INFO);
                 }
             }
-            appArgList.add("-Xss" + Configuration.stackSize + "m");
+            appArgList.add("-Xss" + Configuration.STACK_SIZE + "m");
 //            appArgList.add("-Xmx" + Configuration.heapSize + "m");
             appArgList.addAll(config.command_line);
 
@@ -123,7 +123,7 @@ public class Main {
         DBEngine db;
         db = new DBEngine(config.outdir, config.tableName);
         try {
-            if (!db.checkTables()) {
+            if (!db.checkLog()) {
                 config.logger.report("Trace was not recorded properly. ", Logger.MSGTYPE.ERROR);
                 if (config.log) {
                     // config.logger.report("Please check the classpath.",

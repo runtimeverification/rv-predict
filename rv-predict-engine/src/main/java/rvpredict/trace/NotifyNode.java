@@ -38,7 +38,7 @@ public class NotifyNode extends AbstractNode implements ISyncNode {
     }
 
     public NotifyNode(long GID, long tid, int ID, long addr) {
-        super(GID, tid, ID, AbstractNode.TYPE.NOTIFY);
+        super(GID, tid, ID, EventType.NOTIFY);
         this.sig_addr = addr;
     }
 

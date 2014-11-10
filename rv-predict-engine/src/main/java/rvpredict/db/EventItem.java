@@ -1,14 +1,15 @@
 package rvpredict.db;
 
-import rvpredict.trace.AbstractNode;
+import rvpredict.trace.EventType;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
-* Created by Traian on 04.11.2014.
-*/
+ * Class for representing an event as it is recorded in the log
+ * @author TraianSF
+ */
 public class EventItem {
     public long GID;
     public long TID;
@@ -16,12 +17,22 @@ public class EventItem {
     public long ADDRL;
     public long ADDRR;
     public long VALUE;
-    public AbstractNode.TYPE TYPE;
+    public EventType TYPE;
 
-    public EventItem(long gid, long tid, int sid, long addrl, long addrr, long value, AbstractNode.TYPE type) {
+    /**
+     * Constructor of the EventItem class
+     * @param gid global identifier / primary key of the event
+     * @param tid thread identifier primary key (see {@link rvpredict.trace.TraceInfo#threadIdNamemap})
+     * @param id object identifier
+     * @param addrl location identifier (see {@link }
+     * @param addrr
+     * @param value
+     * @param type
+     */
+    public EventItem(long gid, long tid, int id, long addrl, long addrr, long value, EventType type) {
         this.GID = gid;
         this.TID = tid;
-        this.ID = sid;
+        this.ID = id;
         this.ADDRL = addrl;
         this.ADDRR = addrr;
         this.VALUE = value;
@@ -35,7 +46,7 @@ public class EventItem {
         stream.writeLong(ADDRL);
         stream.writeLong(ADDRR);
         stream.writeLong(VALUE);
-        stream.writeByte(TYPE.toByte());
+        stream.writeByte(TYPE.ordinal());
     }
 
     public static EventItem fromStream(DataInputStream stream) throws IOException {
@@ -46,7 +57,7 @@ public class EventItem {
                 stream.readLong(),
                 stream.readLong(),
                 stream.readLong(),
-                AbstractNode.TYPE.valueOf(stream.readByte()));
+                EventType.values()[stream.readByte()]);
 
     }
 }

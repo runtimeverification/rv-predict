@@ -42,7 +42,7 @@ public class WaitNode extends AbstractNode implements ISyncNode {
     }
 
     public WaitNode(long GID, long tid, int ID, long addr) {
-        super(GID, tid, ID, AbstractNode.TYPE.WAIT);
+        super(GID, tid, ID, EventType.WAIT);
         this.sig_addr = addr;
     }
 

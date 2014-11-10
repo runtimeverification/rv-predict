@@ -45,7 +45,7 @@ import rvpredict.trace.ReadNode;
 import rvpredict.trace.Trace;
 import rvpredict.trace.TraceInfo;
 import rvpredict.trace.WriteNode;
-import rvpredict.trace.AbstractNode.TYPE;
+import rvpredict.trace.EventType;
 import violation.AtomicityViolation;
 import violation.Deadlock;
 import violation.ExactRace;
@@ -875,8 +875,8 @@ public class NewRVPredict {
                             for (int m = 0; m < rwnodes2.size(); m++) {
                                 IMemNode node3 = rwnodes2.get(m);
 
-                                if (node1.getType() == TYPE.WRITE || node2.getType() == TYPE.WRITE
-                                        || node3.getType() == TYPE.WRITE) {
+                                if (node1.getType() == EventType.WRITE || node2.getType() == EventType.WRITE
+                                        || node3.getType() == EventType.WRITE) {
                                     AtomicityViolation av = new AtomicityViolation(trace
                                             .getStmtSigIdMap().get(node1.getID()), trace
                                             .getStmtSigIdMap().get(node3.getID()), trace

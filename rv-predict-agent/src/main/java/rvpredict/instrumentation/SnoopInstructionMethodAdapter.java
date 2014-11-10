@@ -799,8 +799,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     @Override
     public void visitCode() {
-        mv.visitCode();
-
         if (isSynchronized) {
             /* Add a runtime library callback to log {@code LOCK} event for synchronized method. */
             addPushConstInsn(mv, getCrntStmtSID());
@@ -812,6 +810,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK,
                     DESC_LOG_LOCK, false);
         }
+
+        mv.visitCode();
     }
 
     // no branch

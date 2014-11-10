@@ -161,4 +161,23 @@ public class Utility {
         return false;
     }
 
+    /**
+     * Private helper method that adds a instruction which pushes a constant
+     * value onto the operand stack.
+     *
+     * @param value
+     *            the constant value to be pushed to the stack
+     */
+    public static void addPushConstInsn(MethodVisitor mv, int value) {
+        if ((0 <= value) && (value <= 5)) {
+            mv.visitInsn(ICONST_X[value]);
+        } else if ((Byte.MIN_VALUE <= value) && (value <= Byte.MAX_VALUE)) {
+            mv.visitIntInsn(BIPUSH, value);
+        } else if ((Short.MIN_VALUE <= value) && (value <= Short.MAX_VALUE)) {
+            mv.visitIntInsn(SIPUSH, value);
+        } else {
+            mv.visitLdcInsn(new Integer(value));
+        }
+    }
+
 }

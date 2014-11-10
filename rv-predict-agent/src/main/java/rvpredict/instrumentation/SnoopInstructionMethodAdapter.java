@@ -62,21 +62,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         }
     }
 
-    /**
-     * Private helper method that adds a {@code bipush} instruction which pushes
-     * a byte onto the stack as an integer value.
-     *
-     * @param value the value to be pushed to the stack
-     */
-    private void addBipushInsn(int value) {
-        // TODO(YilongL): why not `byte value'? bad method name or latent bug?
-        if ((0 <= value) && (value <= 5)) {
-            mv.visitInsn(ICONST_X[value]);
-        } else {
-            mv.visitLdcInsn(new Integer(value));
-        }
-    }
-
     @Override
     public void visitMaxs(int maxStack, int maxLocals) {
         mv.visitMaxs(maxStack + 5, crntMaxIndex + 2);// may change to ...
@@ -134,7 +119,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         int index = crntMaxIndex;
         mv.visitInsn(DUP);
         mv.visitVarInsn(ASTORE, index);
-        addBipushInsn(ID);
+        addPushConstInsn(mv, ID);
         mv.visitVarInsn(ALOAD, index);
     }
 
@@ -163,7 +148,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                         mv.visitMethodInsn(opcode, owner, name, desc, itf);
 
-                        addBipushInsn(ID);
+                        addPushConstInsn(mv, ID);
                         mv.visitVarInsn(ALOAD, index);
                         mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_JOIN,
                                 DESC_LOG_THREAD_JOIN, false);
@@ -207,11 +192,11 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     int index = crntMaxIndex;
                     storeValue(desc, index);
 
-                    addBipushInsn(ID);
+                    addPushConstInsn(mv, ID);
                     mv.visitInsn(ACONST_NULL);
-                    addBipushInsn(SID);
+                    addPushConstInsn(mv, SID);
                     loadValue(desc, index);
-                    addBipushInsn(0);
+                    addPushConstInsn(mv, 0);
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS, false);
                 }
@@ -224,16 +209,16 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 storeValue(desc, index);
 
                 mv.visitFieldInsn(opcode, owner, name, desc);
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitInsn(ACONST_NULL);
-                addBipushInsn(SID);
+                addPushConstInsn(mv, SID);
                 loadValue(desc, index);
 
                 if (isInit)
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS, false);
                 else {
-                    addBipushInsn(1);
+                    addPushConstInsn(mv, 1);
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS, false);
                 }
@@ -256,12 +241,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     int index2 = crntMaxIndex;
                     storeValue(desc, index2);
 
-                    addBipushInsn(ID);
+                    addPushConstInsn(mv, ID);
                     mv.visitVarInsn(ALOAD, index1);
-                    addBipushInsn(SID);
+                    addPushConstInsn(mv, SID);
                     loadValue(desc, index2);
 
-                    addBipushInsn(0);
+                    addPushConstInsn(mv, 0);
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS, false);
@@ -350,16 +335,16 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                 mv.visitFieldInsn(opcode, owner, name, desc);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index2);
-                addBipushInsn(SID);
+                addPushConstInsn(mv, SID);
                 loadValue(desc, index1);
 
                 if (isInit)
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS, false);
                 else {
-                    addBipushInsn(1);
+                    addPushConstInsn(mv, 1);
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS, false);
@@ -396,12 +381,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     int index3 = crntMaxIndex;
                     mv.visitVarInsn(ASTORE, index3);
 
-                    addBipushInsn(ID);
+                    addPushConstInsn(mv, ID);
                     mv.visitVarInsn(ALOAD, index2);
                     mv.visitVarInsn(ILOAD, index1);
                     mv.visitVarInsn(ALOAD, index3);
 
-                    addBipushInsn(0);
+                    addPushConstInsn(mv, 0);
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS, false);
@@ -435,14 +420,14 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     int index3 = crntMaxIndex;
                     mv.visitVarInsn(ISTORE, index3);
 
-                    addBipushInsn(ID);
+                    addPushConstInsn(mv, ID);
                     mv.visitVarInsn(ALOAD, index2);
                     mv.visitVarInsn(ILOAD, index1);
                     mv.visitVarInsn(ILOAD, index3);
 
                     addPrimitive2ObjectConv(mv, opcode);
 
-                    addBipushInsn(0);
+                    addPushConstInsn(mv, 0);
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS, false);
@@ -470,14 +455,14 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     int index3 = crntMaxIndex;
                     mv.visitVarInsn(FSTORE, index3);
 
-                    addBipushInsn(ID);
+                    addPushConstInsn(mv, ID);
                     mv.visitVarInsn(ALOAD, index2);
                     mv.visitVarInsn(ILOAD, index1);
                     mv.visitVarInsn(FLOAD, index3);
 
                     addPrimitive2ObjectConv(mv, opcode);
 
-                    addBipushInsn(0);
+                    addPushConstInsn(mv, 0);
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS, false);
@@ -507,14 +492,14 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitVarInsn(DSTORE, index3);
                     crntMaxIndex++;
 
-                    addBipushInsn(ID);
+                    addPushConstInsn(mv, ID);
                     mv.visitVarInsn(ALOAD, index2);
                     mv.visitVarInsn(ILOAD, index1);
                     mv.visitVarInsn(DLOAD, index3);
 
                     addPrimitive2ObjectConv(mv, opcode);
 
-                    addBipushInsn(0);
+                    addPushConstInsn(mv, 0);
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS, false);
@@ -543,14 +528,14 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitVarInsn(LSTORE, index3);
                     crntMaxIndex++;
 
-                    addBipushInsn(ID);
+                    addPushConstInsn(mv, ID);
                     mv.visitVarInsn(ALOAD, index2);
                     mv.visitVarInsn(ILOAD, index1);
                     mv.visitVarInsn(LLOAD, index3);
 
                     addPrimitive2ObjectConv(mv, opcode);
 
-                    addBipushInsn(0);
+                    addPushConstInsn(mv, 0);
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS, false);
@@ -580,7 +565,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
                 mv.visitVarInsn(ALOAD, index1);
@@ -589,7 +574,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS, false);
                 } else {
-                    addBipushInsn(1);
+                    addPushConstInsn(mv, 1);
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS, false);
                 }
@@ -621,7 +606,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
                 mv.visitVarInsn(ILOAD, index1);
@@ -631,7 +616,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS, false);
                 } else {
-                    addBipushInsn(1);
+                    addPushConstInsn(mv, 1);
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS, false);
                 }
@@ -660,7 +645,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
                 mv.visitVarInsn(FLOAD, index1);
@@ -670,7 +655,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS, false);
                 } else {
-                    addBipushInsn(1);
+                    addPushConstInsn(mv, 1);
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS, false);
                 }
@@ -699,7 +684,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
                 mv.visitVarInsn(DLOAD, index1);
@@ -709,7 +694,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS, false);
                 } else {
-                    addBipushInsn(1);
+                    addPushConstInsn(mv, 1);
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS, false);
                 }
@@ -738,7 +723,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
                 mv.visitVarInsn(LLOAD, index1);
@@ -748,7 +733,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS, false);
                 } else {
-                    addBipushInsn(1);
+                    addPushConstInsn(mv, 1);
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                             DESC_LOG_ARRAY_ACCESS, false);
                 }
@@ -765,7 +750,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             int index = crntMaxIndex;
             mv.visitVarInsn(ASTORE, index);// objectref
             mv.visitInsn(opcode);
-            addBipushInsn(ID);
+            addPushConstInsn(mv, ID);
             mv.visitVarInsn(ALOAD, index);
             mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK_INSTANCE,
                     DESC_LOG_LOCK_INSTANCE, false);
@@ -779,7 +764,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             crntMaxIndex++;
             int index = crntMaxIndex;
             mv.visitVarInsn(ASTORE, index);// objectref
-            addBipushInsn(ID);
+            addPushConstInsn(mv, ID);
             mv.visitVarInsn(ALOAD, index);
             mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK_INSTANCE,
                     DESC_LOG_UNLOCK_INSTANCE, false);
@@ -797,13 +782,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getLocationId(sig_loc);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
 
                 if (isStatic) {
                     // signature + line number
                     String sig_var = (className + ".0").replace("/", ".");
                     int SID = globalState.getVariableId(sig_var);
-                    addBipushInsn(SID);
+                    addPushConstInsn(mv, SID);
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK_STATIC,
                             DESC_LOG_UNLOCK_STATIC, false);
                 } else {
@@ -828,13 +813,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             String sig_loc = getSignaturePlusLoc();
             int ID = globalState.getLocationId(sig_loc);
 
-            addBipushInsn(ID);
+            addPushConstInsn(mv, ID); // <=== GLOBAL ID???
 
             if (isStatic) {
                 // signature + line number
                 String sig_var = (className + ".0").replace("/", ".");
                 int SID = globalState.getVariableId(sig_var);
-                addBipushInsn(SID);
+                addPushConstInsn(mv, SID);
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK_STATIC,
                         DESC_LOG_LOCK_STATIC, false);
             } else {

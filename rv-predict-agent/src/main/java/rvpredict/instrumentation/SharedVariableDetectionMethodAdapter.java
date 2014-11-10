@@ -59,21 +59,6 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
         }
     }
 
-    /**
-     * Private helper method that adds a {@code bipush} instruction which pushes
-     * a byte onto the stack as an integer value.
-     *
-     * @param value the value to be pushed to the stack
-     */
-    private void addBipushInsn(int value) {
-        // TODO(YilongL): why not `byte value'? bad method name or latent bug?
-        if ((0 <= value) && (value <= 5)) {
-            mv.visitInsn(ICONST_X[value]);
-        } else {
-            mv.visitLdcInsn(new Integer(value));
-        }
-    }
-
     @Override
     public void visitMaxs(int maxStack, int maxLocals) {
         mv.visitMaxs(maxStack + 5, crntMaxIndex + 2);// may change to ...
@@ -119,10 +104,10 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
             mv.visitFieldInsn(opcode, owner, name, desc);
             if (!isInit) {
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 // mv.visitInsn(ACONST_NULL);
-                addBipushInsn(SID);
-                addBipushInsn(0);
+                addPushConstInsn(mv, SID);
+                addPushConstInsn(mv, 0);
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                         DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
             }
@@ -131,11 +116,11 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
             mv.visitFieldInsn(opcode, owner, name, desc);
 
             if (!isInit) {
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 // mv.visitInsn(ACONST_NULL);
-                addBipushInsn(SID);
+                addPushConstInsn(mv, SID);
 
-                addBipushInsn(1);
+                addPushConstInsn(mv, 1);
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                         DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
             }
@@ -145,11 +130,11 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
             if (!isInit) {
                 mv.visitFieldInsn(opcode, owner, name, desc);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 // mv.visitVarInsn(ALOAD, index1);
-                addBipushInsn(SID);
+                addPushConstInsn(mv, SID);
 
-                addBipushInsn(0);
+                addPushConstInsn(mv, 0);
 
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                         DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
@@ -236,11 +221,11 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
 
                 mv.visitFieldInsn(opcode, owner, name, desc);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 // mv.visitVarInsn(ALOAD, index2);
-                addBipushInsn(SID);
+                addPushConstInsn(mv, SID);
 
-                addBipushInsn(1);
+                addPushConstInsn(mv, 1);
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                         DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
             } else
@@ -270,11 +255,11 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
                 mv.visitVarInsn(ASTORE, index2);
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index2);
                 mv.visitVarInsn(ILOAD, index1);
 
-                addBipushInsn(0);
+                addPushConstInsn(mv, 0);
 
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                         DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
@@ -301,11 +286,11 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
                 mv.visitVarInsn(ASTORE, index2);
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index2);
                 mv.visitVarInsn(ILOAD, index1);
 
-                addBipushInsn(0);
+                addPushConstInsn(mv, 0);
 
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                         DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
@@ -326,11 +311,11 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
                 mv.visitVarInsn(ASTORE, index2);
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index2);
                 mv.visitVarInsn(ILOAD, index1);
 
-                addBipushInsn(0);
+                addPushConstInsn(mv, 0);
 
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                         DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
@@ -352,11 +337,11 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
                 mv.visitVarInsn(ASTORE, index2);
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index2);
                 mv.visitVarInsn(ILOAD, index1);
 
-                addBipushInsn(0);
+                addPushConstInsn(mv, 0);
 
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                         DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
@@ -377,11 +362,11 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
                 mv.visitVarInsn(ASTORE, index2);
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index2);
                 mv.visitVarInsn(ILOAD, index1);
 
-                addBipushInsn(0);
+                addPushConstInsn(mv, 0);
 
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                         DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
@@ -409,11 +394,11 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
 
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
 
-                addBipushInsn(1);
+                addPushConstInsn(mv, 1);
 
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                         DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
@@ -445,11 +430,11 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
 
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
 
-                addBipushInsn(1);
+                addPushConstInsn(mv, 1);
 
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                         DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
@@ -478,11 +463,11 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
 
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
 
-                addBipushInsn(1);
+                addPushConstInsn(mv, 1);
 
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                         DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
@@ -511,11 +496,11 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
 
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
 
-                addBipushInsn(1);
+                addPushConstInsn(mv, 1);
 
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                         DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
@@ -544,11 +529,11 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
 
                 mv.visitInsn(opcode);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index3);
                 mv.visitVarInsn(ILOAD, index2);
 
-                addBipushInsn(1);
+                addPushConstInsn(mv, 1);
 
                 mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                         DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);

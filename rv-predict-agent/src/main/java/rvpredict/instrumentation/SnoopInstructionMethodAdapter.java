@@ -152,10 +152,22 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                                 DESC_LOG_THREAD_START, false);
                         break;
                     case "join":
-                        prepareLoggingThreadEvents(ID);
+                        /* TODO(YilongL): Since calls to thread join must be
+                         * logged after they return, the code here is kind of
+                         * ad-hoc. We definitely need more general way to handle
+                         * such case. */
+                        crntMaxIndex++;
+                        int index = crntMaxIndex;
+                        mv.visitInsn(DUP);
+                        mv.visitVarInsn(ASTORE, index);
+
+                        mv.visitMethodInsn(opcode, owner, name, desc, itf);
+
+                        addBipushInsn(ID);
+                        mv.visitVarInsn(ALOAD, index);
                         mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_JOIN,
                                 DESC_LOG_THREAD_JOIN, false);
-                        break;
+                        return;
                     case "wait":
                         prepareLoggingThreadEvents(ID);
                         mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_WAIT, DESC_LOG_WAIT,

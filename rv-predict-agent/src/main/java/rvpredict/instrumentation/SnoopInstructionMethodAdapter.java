@@ -141,7 +141,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
         if (opcode == INVOKEVIRTUAL) {
-            if (isThreadClass(owner) && !config.commandLine.agentOnlySharing) {
+            if (isThreadClass(owner)) {
                 String sigAndLoc = getSignaturePlusLoc();
                 int ID = globalState.getLocationId(sigAndLoc);
                 if (desc.equals("()V")) {
@@ -200,15 +200,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case GETSTATIC:
             mv.visitFieldInsn(opcode, owner, name, desc);
             if (!isInit) {
-
-                if (config.commandLine.agentOnlySharing) {
-                    addBipushInsn(ID);
-                    // mv.visitInsn(ACONST_NULL);
-                    addBipushInsn(SID);
-                    addBipushInsn(0);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                            DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.isVariableShared(sig_var)) {
+                if (globalState.isVariableShared(sig_var)) {
 
                     crntMaxIndex++;
 
@@ -226,20 +218,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             }
             break;
         case PUTSTATIC:
-            if (config.commandLine.agentOnlySharing) {
-                mv.visitFieldInsn(opcode, owner, name, desc);
-
-                if (!isInit) {
-                    addBipushInsn(ID);
-                    // mv.visitInsn(ACONST_NULL);
-                    addBipushInsn(SID);
-
-                    addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                            DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
-                }
-
-            } else if (globalState.isVariableShared(sig_var)) {
+            if (globalState.isVariableShared(sig_var)) {
                 crntMaxIndex++;
                 int index = crntMaxIndex;
                 storeValue(desc, index);
@@ -264,23 +243,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         case GETFIELD:
             if (!isInit) {
-                if (config.commandLine.agentOnlySharing) {
-                    // maxindex_cur++;
-                    // int index1 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index1);
-
-                    mv.visitFieldInsn(opcode, owner, name, desc);
-
-                    addBipushInsn(ID);
-                    // mv.visitVarInsn(ALOAD, index1);
-                    addBipushInsn(SID);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                            DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.isVariableShared(sig_var)) {
+                if (globalState.isVariableShared(sig_var)) {
 
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -330,81 +293,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             // mv.visitFieldInsn(opcode, owner, name, desc);break;
             // }
 
-            if (config.commandLine.agentOnlySharing) {
-                if (!isInit) {
-                    // maxindex_cur++;
-                    // int index1 = maxindex_cur;
-                    // int index2;
-                    // if(desc.startsWith("D"))
-                    // {
-                    // mv.visitVarInsn(DSTORE, index1);
-                    // maxindex_cur++;//double
-                    // maxindex_cur++;
-                    // index2 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index2);
-                    // mv.visitVarInsn(DLOAD, index1);
-                    // }
-                    // else if(desc.startsWith("J"))
-                    // {
-                    // mv.visitVarInsn(LSTORE, index1);
-                    // maxindex_cur++;//long
-                    // maxindex_cur++;
-                    // index2 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index2);
-                    // mv.visitVarInsn(LLOAD, index1);
-                    // }
-                    // else if(desc.startsWith("F"))
-                    // {
-                    // mv.visitVarInsn(FSTORE, index1);
-                    // maxindex_cur++;//float
-                    // index2 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index2);
-                    // mv.visitVarInsn(FLOAD, index1);
-                    // }
-                    // else if(desc.startsWith("["))
-                    // {
-                    // mv.visitVarInsn(ASTORE, index1);
-                    // maxindex_cur++;//ref or array
-                    // index2 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index2);
-                    // mv.visitVarInsn(ALOAD, index1);
-                    // }
-                    // else if(desc.startsWith("L"))
-                    // {
-                    // mv.visitVarInsn(ASTORE, index1);
-                    // maxindex_cur++;//ref or array
-                    // index2 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index2);
-                    // mv.visitVarInsn(ALOAD, index1);
-                    //
-                    // }
-                    // else
-                    // {
-                    // mv.visitVarInsn(ISTORE, index1);
-                    // maxindex_cur++;//integer,char,short,boolean
-                    // index2 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index2);
-                    // mv.visitVarInsn(ILOAD, index1);
-                    // }
-
-                    mv.visitFieldInsn(opcode, owner, name, desc);
-
-                    addBipushInsn(ID);
-                    // mv.visitVarInsn(ALOAD, index2);
-                    addBipushInsn(SID);
-
-                    addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                            DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
-                } else
-                    mv.visitFieldInsn(opcode, owner, name, desc);
-            } else if (globalState.isVariableShared(sig_var)) {
+            if (globalState.isVariableShared(sig_var)) {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 int index2;
@@ -493,25 +382,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
-                if (config.commandLine.agentOnlySharing) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.shouldInstrumentArray(sig_loc)) {
+                if (globalState.shouldInstrumentArray(sig_loc)) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -550,25 +421,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
-                if (config.commandLine.agentOnlySharing) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.shouldInstrumentArray(sig_loc)) {
+                if (globalState.shouldInstrumentArray(sig_loc)) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -603,25 +456,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
-                if (config.commandLine.agentOnlySharing) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.shouldInstrumentArray(sig_loc)) {
+                if (globalState.shouldInstrumentArray(sig_loc)) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -657,25 +492,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
-                if (config.commandLine.agentOnlySharing) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.shouldInstrumentArray(sig_loc)) {
+                if (globalState.shouldInstrumentArray(sig_loc)) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -711,25 +528,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
-                if (config.commandLine.agentOnlySharing) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.shouldInstrumentArray(sig_loc)) {
+                if (globalState.shouldInstrumentArray(sig_loc)) {
                     mv.visitInsn(DUP2);
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -764,36 +563,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             String sig_loc = getSignaturePlusLoc();
             int ID = globalState.getArrayLocationId(sig_loc);
 
-            if (config.commandLine.agentOnlySharing) {
-                if (!isInit) {
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index2);
-
-                    mv.visitInsn(DUP);
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index3);// arrayref
-                    mv.visitVarInsn(ILOAD, index2);// index
-                    mv.visitVarInsn(ALOAD, index1);// value
-
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index3);
-                    mv.visitVarInsn(ILOAD, index2);
-
-                    addBipushInsn(1);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else
-                    mv.visitInsn(opcode);
-
-            } else if (globalState.shouldInstrumentArray(sig_loc)) {
+            if (globalState.shouldInstrumentArray(sig_loc)) {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 mv.visitVarInsn(ASTORE, index1);
@@ -834,35 +604,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             String sig_loc = getSignaturePlusLoc();
             int ID = globalState.getArrayLocationId(sig_loc);
 
-            if (config.commandLine.agentOnlySharing) {
-                if (!isInit) {
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index2);
-
-                    mv.visitInsn(DUP);
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index3);// arrayref
-                    mv.visitVarInsn(ILOAD, index2);// index
-                    mv.visitVarInsn(ILOAD, index1);// value
-
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index3);
-                    mv.visitVarInsn(ILOAD, index2);
-
-                    addBipushInsn(1);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else if (globalState.shouldInstrumentArray(sig_loc)) {
+            if (globalState.shouldInstrumentArray(sig_loc)) {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 mv.visitVarInsn(ISTORE, index1);
@@ -901,35 +643,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             String sig_loc = getSignaturePlusLoc();
             int ID = globalState.getArrayLocationId(sig_loc);
 
-            if (config.commandLine.agentOnlySharing) {
-                if (!isInit) {
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(FSTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index2);
-
-                    mv.visitInsn(DUP);
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index3);// arrayref
-                    mv.visitVarInsn(ILOAD, index2);// index
-                    mv.visitVarInsn(FLOAD, index1);// value
-
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index3);
-                    mv.visitVarInsn(ILOAD, index2);
-
-                    addBipushInsn(1);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else if (globalState.shouldInstrumentArray(sig_loc)) {
+            if (globalState.shouldInstrumentArray(sig_loc)) {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 mv.visitVarInsn(FSTORE, index1);
@@ -968,35 +682,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             String sig_loc = getSignaturePlusLoc();
             int ID = globalState.getArrayLocationId(sig_loc);
 
-            if (config.commandLine.agentOnlySharing) {
-                if (!isInit) {
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(DSTORE, index1);
-                    crntMaxIndex++;
-                    mv.visitInsn(DUP2);// dup arrayref and index
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index2);// index
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index3);// arrayref
-
-                    mv.visitVarInsn(DLOAD, index1);// double value
-
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index3);
-                    mv.visitVarInsn(ILOAD, index2);
-
-                    addBipushInsn(1);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else if (globalState.shouldInstrumentArray(sig_loc)) {
+            if (globalState.shouldInstrumentArray(sig_loc)) {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 mv.visitVarInsn(DSTORE, index1);
@@ -1035,35 +721,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             String sig_loc = getSignaturePlusLoc();
             int ID = globalState.getArrayLocationId(sig_loc);
 
-            if (config.commandLine.agentOnlySharing) {
-                if (!isInit) {
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(LSTORE, index1);
-                    crntMaxIndex++;
-                    mv.visitInsn(DUP2);// dup arrayref and index
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index2);// index
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index3);// arrayref
-
-                    mv.visitVarInsn(LLOAD, index1);// double value
-
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index3);
-                    mv.visitVarInsn(ILOAD, index2);
-
-                    addBipushInsn(1);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else if (globalState.shouldInstrumentArray(sig_loc)) {
+            if (globalState.shouldInstrumentArray(sig_loc)) {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 mv.visitVarInsn(LSTORE, index1);
@@ -1099,37 +757,32 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         }
         case MONITORENTER: {
-            if (!config.commandLine.agentOnlySharing) {
-                String sig_loc = getSignaturePlusLoc();
-                int ID = globalState.getLocationId(sig_loc);
+            String sig_loc = getSignaturePlusLoc();
+            int ID = globalState.getLocationId(sig_loc);
 
-                mv.visitInsn(DUP);
-                crntMaxIndex++;
-                int index = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index);// objectref
-                mv.visitInsn(opcode);
-                addBipushInsn(ID);
-                mv.visitVarInsn(ALOAD, index);
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK_INSTANCE,
-                        DESC_LOG_LOCK_INSTANCE, false);
-            } else
-                mv.visitInsn(opcode);
+            mv.visitInsn(DUP);
+            crntMaxIndex++;
+            int index = crntMaxIndex;
+            mv.visitVarInsn(ASTORE, index);// objectref
+            mv.visitInsn(opcode);
+            addBipushInsn(ID);
+            mv.visitVarInsn(ALOAD, index);
+            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK_INSTANCE,
+                    DESC_LOG_LOCK_INSTANCE, false);
             break;
         }
         case MONITOREXIT: {
-            if (!config.commandLine.agentOnlySharing) {
-                String sig_loc = getSignaturePlusLoc();
-                int ID = globalState.getLocationId(sig_loc);
+            String sig_loc = getSignaturePlusLoc();
+            int ID = globalState.getLocationId(sig_loc);
 
-                mv.visitInsn(DUP);
-                crntMaxIndex++;
-                int index = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index);// objectref
-                addBipushInsn(ID);
-                mv.visitVarInsn(ALOAD, index);
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK_INSTANCE,
-                        DESC_LOG_UNLOCK_INSTANCE, false);
-            }
+            mv.visitInsn(DUP);
+            crntMaxIndex++;
+            int index = crntMaxIndex;
+            mv.visitVarInsn(ASTORE, index);// objectref
+            addBipushInsn(ID);
+            mv.visitVarInsn(ALOAD, index);
+            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK_INSTANCE,
+                    DESC_LOG_UNLOCK_INSTANCE, false);
             mv.visitInsn(opcode);
             break;
         }
@@ -1140,7 +793,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case ARETURN:
         case RETURN:
         case ATHROW:
-            if (isSynchronized && !config.commandLine.agentOnlySharing) {
+            if (isSynchronized) {
                 String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getLocationId(sig_loc);
 
@@ -1171,7 +824,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     public void visitCode() {
         mv.visitCode();
 
-        if (isSynchronized && !config.commandLine.agentOnlySharing) {
+        if (isSynchronized) {
             String sig_loc = getSignaturePlusLoc();
             int ID = globalState.getLocationId(sig_loc);
 

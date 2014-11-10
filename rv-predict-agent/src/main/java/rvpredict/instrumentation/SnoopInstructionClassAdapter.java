@@ -72,8 +72,13 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
                 if (args[i] == Type.DOUBLE_TYPE || args[i] == Type.LONG_TYPE)
                     length++;
             }
-            mv = new SnoopInstructionMethodAdapter(mv, source, classname, name, name + desc,
-                    access, length, config, globalState);
+            if (config.commandLine.agentOnlySharing) {
+                mv = new SharedVariableDetectionMethodAdapter(mv, source, classname, name, name
+                        + desc, access, length, config, globalState);
+            } else {
+                mv = new SnoopInstructionMethodAdapter(mv, source, classname, name, name + desc,
+                        access, length, config, globalState);
+            }
         }
         return mv;
     }

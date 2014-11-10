@@ -24,8 +24,8 @@ public class EventItem {
      * @param gid global identifier / primary key of the event
      * @param tid thread identifier primary key (see {@link rvpredict.trace.TraceInfo#threadIdNamemap})
      * @param id object identifier
-     * @param addrl location identifier (see {@link }
-     * @param addrr
+     * @param addrl statement location identifier (see {@link rvpredict.trace.TraceInfo#stmtIdSigMap})
+     * @param addrr index (for arrays)
      * @param value
      * @param type
      */

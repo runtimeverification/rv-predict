@@ -1,6 +1,7 @@
 package rvpredict.instrumentation;
 
 import rvpredict.config.Configuration;
+
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -20,6 +21,14 @@ import java.util.Arrays;
 
 public class SnoopInstructionTransformer implements ClassFileTransformer {
 
+    private final Config config;
+    private final GlobalStateForInstrumentation globalState;
+    
+    public SnoopInstructionTransformer(Config config, GlobalStateForInstrumentation globalState) {
+        this.config = config;
+        this.globalState = globalState;
+    }
+
     public static void premain(String agentArgs, Instrumentation inst) {
         if (agentArgs == null) {
             agentArgs = "";
@@ -29,6 +38,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
         final Config config = Config.instance;
+        final GlobalStateForInstrumentation globalState = GlobalStateForInstrumentation.instance;
         final Configuration commandLine = config.commandLine;
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         commandLine.parseArguments(args, false);
@@ -77,12 +87,12 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         // initialize RecordRT first
         RecordRT.init(db);
 
-        inst.addTransformer(new SnoopInstructionTransformer());
+        inst.addTransformer(new SnoopInstructionTransformer(config, globalState));
         final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
             @Override
             public void cleanup() {
                 db.finishLogging();
-            }
+                    }
         };
         Thread predict = Main.getPredictionThread(commandLine, cleanupAgent, commandLine.predict);
         Runtime.getRuntime().addShutdownHook(predict);
@@ -96,11 +106,12 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         }
     }
 
+    @Override
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
 
         boolean toInstrument = true;
-        String[] tmp = Config.instance.excludeList;
+        String[] tmp = config.excludeList;
 
         for (int i = 0; i < tmp.length; i++) {
             String s = tmp[i];
@@ -109,7 +120,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                 break;
             }
         }
-        tmp = Config.instance.includeList;
+        tmp = config.includeList;
         if (tmp != null)
             for (int i = 0; i < tmp.length; i++) {
                 String s = tmp[i];
@@ -139,7 +150,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             ClassReader cr = new ClassReader(cbuf);
 
             ClassWriter cw = new ClassWriter(cr, 0);
-            ClassVisitor cv = new SnoopInstructionClassAdapter(cw);
+            ClassVisitor cv = new SnoopInstructionClassAdapter(cw, config, globalState);
             // ClassVisitor cv = new SnoopInstructionClassAdapter(new
             // TraceClassVisitor(cw,new PrintWriter( System.out )));
             cr.accept(cv, 0);

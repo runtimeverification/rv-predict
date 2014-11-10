@@ -7,6 +7,7 @@ import static rvpredict.instrumentation.Utility.*;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 
 import rvpredict.config.Config;
 
@@ -752,8 +753,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             mv.visitInsn(opcode);
             addPushConstInsn(mv, ID);
             mv.visitVarInsn(ALOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK_INSTANCE,
-                    DESC_LOG_LOCK_INSTANCE, false);
+            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK,
+                    DESC_LOG_LOCK, false);
             break;
         }
         case MONITOREXIT: {
@@ -765,8 +766,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             mv.visitVarInsn(ASTORE, index);// objectref
             addPushConstInsn(mv, ID);
             mv.visitVarInsn(ALOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK_INSTANCE,
-                    DESC_LOG_UNLOCK_INSTANCE, false);
+            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK,
+                    DESC_LOG_UNLOCK, false);
             mv.visitInsn(opcode);
             break;
         }
@@ -778,22 +779,15 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case RETURN:
         case ATHROW:
             if (isSynchronized) {
-                int ID = getCrntStmtSID();
-
-                addPushConstInsn(mv, ID);
-
+                /* Add a runtime library callback to log {@code UNLOCK} event for synchronized method. */
+                addPushConstInsn(mv, getCrntStmtSID());
                 if (isStatic) {
-                    // signature + line number
-                    String sig_var = (className + ".0").replace("/", ".");
-                    int SID = globalState.getVariableId(sig_var);
-                    addPushConstInsn(mv, SID);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK_STATIC,
-                            DESC_LOG_UNLOCK_STATIC, false);
+                    mv.visitLdcInsn(Type.getObjectType(className));
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);// the this objectref
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK_INSTANCE,
-                            DESC_LOG_UNLOCK_INSTANCE, false);
+                    mv.visitVarInsn(ALOAD, 0);
                 }
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK,
+                        DESC_LOG_UNLOCK, false);
             }
             mv.visitInsn(opcode);
             break;
@@ -808,20 +802,15 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         mv.visitCode();
 
         if (isSynchronized) {
+            /* Add a runtime library callback to log {@code LOCK} event for synchronized method. */
             addPushConstInsn(mv, getCrntStmtSID());
-
             if (isStatic) {
-                // signature + line number
-                String sig_var = (className + ".0").replace("/", ".");
-                int SID = globalState.getVariableId(sig_var);
-                addPushConstInsn(mv, SID);
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK_STATIC,
-                        DESC_LOG_LOCK_STATIC, false);
+                mv.visitLdcInsn(Type.getObjectType(className));
             } else {
                 mv.visitVarInsn(ALOAD, 0);
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK_INSTANCE,
-                        DESC_LOG_LOCK_INSTANCE, false);
             }
+            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK,
+                    DESC_LOG_LOCK, false);
         }
     }
 

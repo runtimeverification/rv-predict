@@ -162,8 +162,8 @@ public class Utility {
     }
 
     /**
-     * Private helper method that adds a instruction which pushes a constant
-     * value onto the operand stack.
+     * Helper method that adds a instruction which pushes a constant value onto
+     * the operand stack.
      *
      * @param value
      *            the constant value to be pushed to the stack

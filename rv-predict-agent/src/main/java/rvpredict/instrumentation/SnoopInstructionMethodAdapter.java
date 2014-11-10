@@ -7,6 +7,7 @@ import static rvpredict.instrumentation.Utility.*;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+
 import rvpredict.config.Config;
 
 public class SnoopInstructionMethodAdapter extends MethodVisitor {
@@ -141,8 +142,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
         if (opcode == INVOKEVIRTUAL) {
             if (isThreadClass(owner) && !config.commandLine.agentOnlySharing) {
-                String sigAndLoc = source + "|"
-                        + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+                String sigAndLoc = getSignaturePlusLoc();
                 int ID = globalState.getLocationId(sigAndLoc);
                 if (desc.equals("()V")) {
                     switch (name) {
@@ -478,8 +478,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         switch (opcode) {
         case AALOAD:
             if (!isInit) {
-                String sig_loc = source + "|"
-                        + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+                String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (config.commandLine.agentOnlySharing) {
@@ -536,8 +535,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case SALOAD:
         case IALOAD:
             if (!isInit) {
-                String sig_loc = source + "|"
-                        + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+                String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (config.commandLine.agentOnlySharing) {
@@ -590,8 +588,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         case FALOAD:
             if (!isInit) {
-                String sig_loc = source + "|"
-                        + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+                String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (config.commandLine.agentOnlySharing) {
@@ -645,8 +642,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         case DALOAD:
             if (!isInit) {
-                String sig_loc = source + "|"
-                        + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+                String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (config.commandLine.agentOnlySharing) {
@@ -700,8 +696,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         case LALOAD:
             if (!isInit) {
-                String sig_loc = source + "|"
-                        + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+                String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getArrayLocationId(sig_loc);
 
                 if (config.commandLine.agentOnlySharing) {
@@ -754,8 +749,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 mv.visitInsn(opcode);
             break;
         case AASTORE: {
-            String sig_loc = source + "|"
-                    + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+            String sig_loc = getSignaturePlusLoc();
             int ID = globalState.getArrayLocationId(sig_loc);
 
             if (config.commandLine.agentOnlySharing) {
@@ -825,8 +819,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case CASTORE:
         case SASTORE:
         case IASTORE: {
-            String sig_loc = source + "|"
-                    + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+            String sig_loc = getSignaturePlusLoc();
             int ID = globalState.getArrayLocationId(sig_loc);
 
             if (config.commandLine.agentOnlySharing) {
@@ -893,8 +886,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         }
         case FASTORE: {
-            String sig_loc = source + "|"
-                    + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+            String sig_loc = getSignaturePlusLoc();
             int ID = globalState.getArrayLocationId(sig_loc);
 
             if (config.commandLine.agentOnlySharing) {
@@ -961,8 +953,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         }
         case DASTORE: {
-            String sig_loc = source + "|"
-                    + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+            String sig_loc = getSignaturePlusLoc();
             int ID = globalState.getArrayLocationId(sig_loc);
 
             if (config.commandLine.agentOnlySharing) {
@@ -1029,8 +1020,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         }
         case LASTORE: {
-            String sig_loc = source + "|"
-                    + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+            String sig_loc = getSignaturePlusLoc();
             int ID = globalState.getArrayLocationId(sig_loc);
 
             if (config.commandLine.agentOnlySharing) {
@@ -1098,8 +1088,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         }
         case MONITORENTER: {
             if (!config.commandLine.agentOnlySharing) {
-                String sig_loc = source + "|"
-                        + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+                String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getLocationId(sig_loc);
 
                 mv.visitInsn(DUP);
@@ -1117,8 +1106,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         }
         case MONITOREXIT: {
             if (!config.commandLine.agentOnlySharing) {
-                String sig_loc = source + "|"
-                        + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+                String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getLocationId(sig_loc);
 
                 mv.visitInsn(DUP);
@@ -1141,8 +1129,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case RETURN:
         case ATHROW:
             if (isSynchronized && !config.commandLine.agentOnlySharing) {
-                String sig_loc = source + "|"
-                        + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+                String sig_loc = getSignaturePlusLoc();
                 int ID = globalState.getLocationId(sig_loc);
 
                 addBipushInsn(ID);
@@ -1173,8 +1160,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         mv.visitCode();
 
         if (isSynchronized && !config.commandLine.agentOnlySharing) {
-            String sig_loc = source + "|"
-                    + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+            String sig_loc = getSignaturePlusLoc();
             int ID = globalState.getLocationId(sig_loc);
 
             addBipushInsn(ID);
@@ -1192,8 +1178,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                         DESC_LOG_LOCK_INSTANCE, false);
             }
         }
-
     }
+
     // no branch
     /*
      * public void visitJumpInsn(int opcode, Label label) { String sig_loc =
@@ -1218,4 +1204,9 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      *
      * mv.visitTableSwitchInsn(min, max, dflt, labels); }
      */
+
+    private String getSignaturePlusLoc() {
+        return source + "|"
+                + (className + "|" + signature + "|" + crntLineNum).replace("/", ".");
+    }
 }

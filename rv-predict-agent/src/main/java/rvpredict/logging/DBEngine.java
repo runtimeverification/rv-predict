@@ -30,6 +30,7 @@ package rvpredict.logging;
 
 import rvpredict.db.EventItem;
 import rvpredict.config.Config;
+import rvpredict.db.EventOutputStream;
 import rvpredict.db.TraceCache;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
 import rvpredict.trace.EventType;
@@ -113,10 +114,10 @@ public class DBEngine {
         assert !stack.isEmpty() : "stack should not be empty here as we're saving metadata, too";
 
         try {
-            traceOS =  new DataOutputStream(new BufferedOutputStream(
+            traceOS =  new EventOutputStream(new BufferedOutputStream(
                     new FileOutputStream(Paths.get(directory, stack.get(0).GID + TraceCache.TRACE_SUFFIX).toFile())));
             for (EventItem eventItem : stack) {
-                eventItem.toStream(traceOS);
+                traceOS.writeEvent(eventItem);
             }
             RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance);
             traceOS.close();
@@ -125,7 +126,7 @@ public class DBEngine {
         }
     }
 
-    DataOutputStream traceOS;
+    EventOutputStream traceOS;
     ObjectOutputStream metadataOS;
     Thread loggingThread;
     boolean shutdown = false;
@@ -183,7 +184,7 @@ public class DBEngine {
             if (asynchronousLogging) {
                 startAsynchronousLogging();
             } else {
-                traceOS =  new DataOutputStream(new BufferedOutputStream(
+                traceOS =  new EventOutputStream(new BufferedOutputStream(
                         new FileOutputStream(Paths.get(directory, 1 + TraceCache.TRACE_SUFFIX).toFile())));
             }
         } catch (IOException e) {
@@ -328,10 +329,10 @@ public class DBEngine {
                 if (e.GID % BUFFER_THRESHOLD == 0) {
                     traceOS.close();
                     RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance);
-                    traceOS =  new DataOutputStream(new BufferedOutputStream(
+                    traceOS =  new EventOutputStream(new BufferedOutputStream(
                             new FileOutputStream(Paths.get(directory, e.GID + TraceCache.TRACE_SUFFIX).toFile())));
                 }
-                e.toStream(traceOS);
+                traceOS.writeEvent(e);
             } catch (FileNotFoundException e1) {
                 e1.printStackTrace();
             } catch (IOException e1) {

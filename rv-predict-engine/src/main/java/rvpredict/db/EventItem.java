@@ -2,22 +2,18 @@ package rvpredict.db;
 
 import rvpredict.trace.EventType;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-
 /**
  * Class for representing an event as it is recorded in the log
  * @author TraianSF
  */
 public class EventItem {
-    public long GID;
-    public long TID;
-    public int ID;
-    public long ADDRL;
-    public long ADDRR;
-    public long VALUE;
-    public EventType TYPE;
+    public final long GID;
+    public final long TID;
+    public final int ID;
+    public final long ADDRL;
+    public final long ADDRR;
+    public final long VALUE;
+    public final EventType TYPE;
 
     /**
      * Constructor of the EventItem class
@@ -26,8 +22,8 @@ public class EventItem {
      * @param id object identifier
      * @param addrl statement location identifier (see {@link rvpredict.trace.TraceInfo#stmtIdSigMap})
      * @param addrr index (for arrays)
-     * @param value
-     * @param type
+     * @param value value for events carrying a value
+     * @param type type of event
      */
     public EventItem(long gid, long tid, int id, long addrl, long addrr, long value, EventType type) {
         this.GID = gid;
@@ -37,27 +33,5 @@ public class EventItem {
         this.ADDRR = addrr;
         this.VALUE = value;
         this.TYPE = type;
-    }
-
-    public void toStream(DataOutputStream stream) throws IOException {
-        stream.writeLong(GID);
-        stream.writeLong(TID);
-        stream.writeInt(ID);
-        stream.writeLong(ADDRL);
-        stream.writeLong(ADDRR);
-        stream.writeLong(VALUE);
-        stream.writeByte(TYPE.ordinal());
-    }
-
-    public static EventItem fromStream(DataInputStream stream) throws IOException {
-        return new EventItem(
-                stream.readLong(),
-                stream.readLong(),
-                stream.readInt(),
-                stream.readLong(),
-                stream.readLong(),
-                stream.readLong(),
-                EventType.values()[stream.readByte()]);
-
     }
 }

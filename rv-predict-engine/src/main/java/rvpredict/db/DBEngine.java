@@ -185,7 +185,7 @@ public class DBEngine {
      */
     public Trace getTrace(long min, long max, TraceInfo info) throws Exception {
         if (traceCache == null) traceCache = new TraceCache(directory);
-        long traceSize = traceCache.traceSize;
+        long traceSize = traceCache.getTraceSize();
         assert min <= traceSize : "This method should only be called with a valid min value";
         if (max > traceSize) max = traceSize; // resetting max to trace size.
         Trace trace = new Trace(info);

@@ -86,18 +86,36 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         }
     }
 
-    private void storeValue(String desc, int index) {
+    /**
+     * Stores the top value from the operand stack to the local variable array.
+     *
+     * @param desc
+     *            the type descriptor of the value to store
+     * @return the local variable index that stores the value
+     */
+    private int storeValue(String desc) {
+        int localVarIdx = ++crntMaxIndex;
         int opcode = Type.getType(desc).getOpcode(ISTORE);
         if (isSingleWordTypeDesc(desc)) {
             mv.visitInsn(DUP);
-            mv.visitVarInsn(opcode, index);
+            mv.visitVarInsn(opcode, localVarIdx);
         } else {
             mv.visitInsn(DUP2);
-            mv.visitVarInsn(opcode, index);
+            mv.visitVarInsn(opcode, localVarIdx);
             crntMaxIndex++;
         }
+        return localVarIdx;
     }
 
+    /**
+     * Loads the value from the local variable array, boxes it, and puts it on
+     * top of the operand stack.
+     *
+     * @param desc
+     *            the type descriptor of the value to load
+     * @param index
+     *            the local variable index that has the value
+     */
     private void loadValue(String desc, int index) {
         mv.visitVarInsn(Type.getType(desc).getOpcode(ILOAD), index);
         if (isPrimitiveTypeDesc(desc)) {
@@ -188,11 +206,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             mv.visitFieldInsn(opcode, owner, name, desc);
             if (!isInit) {
                 if (globalState.isVariableShared(sig_var)) {
-
-                    crntMaxIndex++;
-
-                    int index = crntMaxIndex;
-                    storeValue(desc, index);
+                    int index = storeValue(desc);
 
                     addPushConstInsn(mv, ID);
                     mv.visitInsn(ACONST_NULL);
@@ -206,9 +220,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         case PUTSTATIC:
             if (globalState.isVariableShared(sig_var)) {
-                crntMaxIndex++;
-                int index = crntMaxIndex;
-                storeValue(desc, index);
+                int index = storeValue(desc);
 
                 mv.visitFieldInsn(opcode, owner, name, desc);
                 addPushConstInsn(mv, ID);
@@ -239,9 +251,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     mv.visitFieldInsn(opcode, owner, name, desc);
 
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    storeValue(desc, index2);
+                    int index2 = storeValue(desc);
 
                     addPushConstInsn(mv, ID);
                     mv.visitVarInsn(ALOAD, index1);

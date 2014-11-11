@@ -51,6 +51,8 @@ public class Utility {
     public static final ImmutableSet<String> DOUBLE_WORDS_TYPE_DESCS = ImmutableSet.of(
             DESC_DOUBLE, DESC_LONG);
 
+    // use Type#getOpcodes instead
+    @Deprecated
     public static final ImmutableMap<String, Integer> STORE_OPCODES = ImmutableMap.<String, Integer>builder()
             .put(DESC_INT,    ISTORE)
             .put(DESC_BYTE,   ISTORE)
@@ -64,6 +66,8 @@ public class Utility {
             .put(DESC_DOUBLE, DSTORE)
             .build();
 
+    // use Type#getOpcodes instead
+    @Deprecated
     public static final ImmutableMap<String, Integer> LOAD_OPCODES = ImmutableMap.<String, Integer>builder()
             .put(DESC_INT,    ILOAD)
             .put(DESC_BYTE,   ILOAD)
@@ -79,6 +83,14 @@ public class Utility {
 
     public static boolean isPrimitiveTypeDesc(String desc) {
         return !desc.startsWith(DESC_ARRAY) && !desc.startsWith(DESC_OBJECT);
+    }
+
+    public static boolean isSingleWordTypeDesc(String desc) {
+        return !desc.startsWith(DESC_LONG) && !desc.startsWith(DESC_DOUBLE);
+    }
+
+    public static boolean isDoubleWordTypeDesc(String desc) {
+        return desc.startsWith(DESC_LONG) || desc.startsWith(DESC_DOUBLE);
     }
 
     public static void addPrimitive2ObjectConv(MethodVisitor mv, int aloadOpCode) {

@@ -362,387 +362,15 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     @Override
     public void visitInsn(int opcode) {
-
         switch (opcode) {
-        case AALOAD:
-            if (!isInit) {
-                String sig_loc = computeStmtSig();
-                int ID = globalState.getArrayLocationId(sig_loc);
-
-                if (globalState.shouldInstrumentArray(sig_loc)) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-                    mv.visitInsn(DUP);
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index3);
-
-                    addPushConstInsn(mv, ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-                    mv.visitVarInsn(ALOAD, index3);
-
-                    addPushConstInsn(mv, 0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                } else
-                    mv.visitInsn(opcode);
-
-            } else
-                mv.visitInsn(opcode);
-
+        case AALOAD: case BALOAD: case CALOAD: case SALOAD:
+        case IALOAD: case FALOAD: case DALOAD: case LALOAD:
+            instrumentArrayLoad(opcode);
             break;
-
-        case BALOAD:
-        case CALOAD:
-        case SALOAD:
-        case IALOAD:
-            if (!isInit) {
-                String sig_loc = computeStmtSig();
-                int ID = globalState.getArrayLocationId(sig_loc);
-
-                if (globalState.shouldInstrumentArray(sig_loc)) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-                    mv.visitInsn(DUP);
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index3);
-
-                    addPushConstInsn(mv, ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-                    mv.visitVarInsn(ILOAD, index3);
-
-                    addPrimitive2ObjectConv(mv, opcode);
-
-                    addPushConstInsn(mv, 0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else
-                mv.visitInsn(opcode);
+        case AASTORE: case BASTORE: case CASTORE: case SASTORE:
+        case IASTORE: case FASTORE: case DASTORE: case LASTORE:
+            instrumentArrayStore(opcode);
             break;
-        case FALOAD:
-            if (!isInit) {
-                String sig_loc = computeStmtSig();
-                int ID = globalState.getArrayLocationId(sig_loc);
-
-                if (globalState.shouldInstrumentArray(sig_loc)) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-                    mv.visitInsn(DUP);
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(FSTORE, index3);
-
-                    addPushConstInsn(mv, ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-                    mv.visitVarInsn(FLOAD, index3);
-
-                    addPrimitive2ObjectConv(mv, opcode);
-
-                    addPushConstInsn(mv, 0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else
-                mv.visitInsn(opcode);
-
-            break;
-        case DALOAD:
-            if (!isInit) {
-                String sig_loc = computeStmtSig();
-                int ID = globalState.getArrayLocationId(sig_loc);
-
-                if (globalState.shouldInstrumentArray(sig_loc)) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-                    mv.visitInsn(DUP2);// double
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(DSTORE, index3);
-                    crntMaxIndex++;
-
-                    addPushConstInsn(mv, ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-                    mv.visitVarInsn(DLOAD, index3);
-
-                    addPrimitive2ObjectConv(mv, opcode);
-
-                    addPushConstInsn(mv, 0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else
-                mv.visitInsn(opcode);
-            break;
-        case LALOAD:
-            if (!isInit) {
-                String sig_loc = computeStmtSig();
-                int ID = globalState.getArrayLocationId(sig_loc);
-
-                if (globalState.shouldInstrumentArray(sig_loc)) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-                    mv.visitInsn(DUP2);// long
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(LSTORE, index3);
-                    crntMaxIndex++;
-
-                    addPushConstInsn(mv, ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-                    mv.visitVarInsn(LLOAD, index3);
-
-                    addPrimitive2ObjectConv(mv, opcode);
-
-                    addPushConstInsn(mv, 0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else
-                mv.visitInsn(opcode);
-            break;
-        case AASTORE: {
-            String sig_loc = computeStmtSig();
-            int ID = globalState.getArrayLocationId(sig_loc);
-
-            if (globalState.shouldInstrumentArray(sig_loc)) {
-                crntMaxIndex++;
-                int index1 = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index1);
-                crntMaxIndex++;
-                int index2 = crntMaxIndex;
-                mv.visitVarInsn(ISTORE, index2);
-
-                mv.visitInsn(DUP);
-                crntMaxIndex++;
-                int index3 = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index3);// arrayref
-                mv.visitVarInsn(ILOAD, index2);// index
-                mv.visitVarInsn(ALOAD, index1);// value
-
-                mv.visitInsn(opcode);
-
-                addPushConstInsn(mv, ID);
-                mv.visitVarInsn(ALOAD, index3);
-                mv.visitVarInsn(ILOAD, index2);
-                mv.visitVarInsn(ALOAD, index1);
-
-                if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                            DESC_LOG_INIT_WRITE_ACCESS, false);
-                } else {
-                    addPushConstInsn(mv, 1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                }
-            } else
-                mv.visitInsn(opcode);
-            break;
-        }
-        case BASTORE:
-        case CASTORE:
-        case SASTORE:
-        case IASTORE: {
-            String sig_loc = computeStmtSig();
-            int ID = globalState.getArrayLocationId(sig_loc);
-
-            if (globalState.shouldInstrumentArray(sig_loc)) {
-                crntMaxIndex++;
-                int index1 = crntMaxIndex;
-                mv.visitVarInsn(ISTORE, index1);
-                crntMaxIndex++;
-                int index2 = crntMaxIndex;
-                mv.visitVarInsn(ISTORE, index2);
-
-                mv.visitInsn(DUP);
-                crntMaxIndex++;
-                int index3 = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index3);// arrayref
-                mv.visitVarInsn(ILOAD, index2);// index
-                mv.visitVarInsn(ILOAD, index1);// value
-
-                mv.visitInsn(opcode);
-
-                addPushConstInsn(mv, ID);
-                mv.visitVarInsn(ALOAD, index3);
-                mv.visitVarInsn(ILOAD, index2);
-                mv.visitVarInsn(ILOAD, index1);
-                addPrimitive2ObjectConv(mv, opcode);
-
-                if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                            DESC_LOG_INIT_WRITE_ACCESS, false);
-                } else {
-                    addPushConstInsn(mv, 1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                }
-            } else
-                mv.visitInsn(opcode);
-            break;
-        }
-        case FASTORE: {
-            String sig_loc = computeStmtSig();
-            int ID = globalState.getArrayLocationId(sig_loc);
-
-            if (globalState.shouldInstrumentArray(sig_loc)) {
-                crntMaxIndex++;
-                int index1 = crntMaxIndex;
-                mv.visitVarInsn(FSTORE, index1);
-                crntMaxIndex++;
-                int index2 = crntMaxIndex;
-                mv.visitVarInsn(ISTORE, index2);
-
-                mv.visitInsn(DUP);
-                crntMaxIndex++;
-                int index3 = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index3);// arrayref
-                mv.visitVarInsn(ILOAD, index2);// index
-                mv.visitVarInsn(FLOAD, index1);// value
-
-                mv.visitInsn(opcode);
-
-                addPushConstInsn(mv, ID);
-                mv.visitVarInsn(ALOAD, index3);
-                mv.visitVarInsn(ILOAD, index2);
-                mv.visitVarInsn(FLOAD, index1);
-                addPrimitive2ObjectConv(mv, opcode);
-
-                if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                            DESC_LOG_INIT_WRITE_ACCESS, false);
-                } else {
-                    addPushConstInsn(mv, 1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                }
-            } else
-                mv.visitInsn(opcode);
-            break;
-        }
-        case DASTORE: {
-            String sig_loc = computeStmtSig();
-            int ID = globalState.getArrayLocationId(sig_loc);
-
-            if (globalState.shouldInstrumentArray(sig_loc)) {
-                crntMaxIndex++;
-                int index1 = crntMaxIndex;
-                mv.visitVarInsn(DSTORE, index1);
-                crntMaxIndex++;
-                mv.visitInsn(DUP2);// dup arrayref and index
-                crntMaxIndex++;
-                int index2 = crntMaxIndex;
-                mv.visitVarInsn(ISTORE, index2);// index
-                crntMaxIndex++;
-                int index3 = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index3);// arrayref
-
-                mv.visitVarInsn(DLOAD, index1);// double value
-
-                mv.visitInsn(opcode);
-
-                addPushConstInsn(mv, ID);
-                mv.visitVarInsn(ALOAD, index3);
-                mv.visitVarInsn(ILOAD, index2);
-                mv.visitVarInsn(DLOAD, index1);
-                addPrimitive2ObjectConv(mv, opcode);
-
-                if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                            DESC_LOG_INIT_WRITE_ACCESS, false);
-                } else {
-                    addPushConstInsn(mv, 1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                }
-            } else
-                mv.visitInsn(opcode);
-            break;
-        }
-        case LASTORE: {
-            String sig_loc = computeStmtSig();
-            int ID = globalState.getArrayLocationId(sig_loc);
-
-            if (globalState.shouldInstrumentArray(sig_loc)) {
-                crntMaxIndex++;
-                int index1 = crntMaxIndex;
-                mv.visitVarInsn(LSTORE, index1);
-                crntMaxIndex++;
-                mv.visitInsn(DUP2);// dup arrayref and index
-                crntMaxIndex++;
-                int index2 = crntMaxIndex;
-                mv.visitVarInsn(ISTORE, index2);// index
-                crntMaxIndex++;
-                int index3 = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index3);// arrayref
-
-                mv.visitVarInsn(LLOAD, index1);// double value
-
-                mv.visitInsn(opcode);
-
-                addPushConstInsn(mv, ID);
-                mv.visitVarInsn(ALOAD, index3);
-                mv.visitVarInsn(ILOAD, index2);
-                mv.visitVarInsn(LLOAD, index1);
-                addPrimitive2ObjectConv(mv, opcode);
-
-                if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                            DESC_LOG_INIT_WRITE_ACCESS, false);
-                } else {
-                    addPushConstInsn(mv, 1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                }
-            } else
-                mv.visitInsn(opcode);
-            break;
-        }
         case MONITORENTER: {
             int ID = getCrntStmtSID();
 
@@ -771,13 +399,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             mv.visitInsn(opcode);
             break;
         }
-        case IRETURN:
-        case LRETURN:
-        case FRETURN:
-        case DRETURN:
-        case ARETURN:
-        case RETURN:
-        case ATHROW:
+        case IRETURN: case LRETURN: case FRETURN: case DRETURN:
+        case ARETURN: case RETURN: case ATHROW:
             if (isSynchronized) {
                 /* Add a runtime library callback to log {@code UNLOCK} event for synchronized method. */
                 addPushConstInsn(mv, getCrntStmtSID());
@@ -795,6 +418,129 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             mv.visitInsn(opcode);
             break;
         }
+    }
+
+    private void instrumentArrayLoad(int arrayLoadOpcode) {
+        String typeDesc = getTypeDesc(arrayLoadOpcode);
+
+        if (!isInit) {
+            String sig_loc = computeStmtSig();
+            int ID = globalState.getArrayLocationId(sig_loc);
+
+            if (globalState.shouldInstrumentArray(sig_loc)) {
+                mv.visitInsn(DUP2);
+                crntMaxIndex++;
+                int index1 = crntMaxIndex;
+                mv.visitVarInsn(ISTORE, index1);
+                crntMaxIndex++;
+                int index2 = crntMaxIndex;
+                mv.visitVarInsn(ASTORE, index2);
+                mv.visitInsn(arrayLoadOpcode);
+                if (isSingleWordTypeDesc(typeDesc)) {
+                    mv.visitInsn(DUP);
+                } else {
+                    mv.visitInsn(DUP2);
+                }
+                crntMaxIndex++;
+                int index3 = crntMaxIndex;
+                mv.visitVarInsn(Type.getType(typeDesc).getOpcode(ISTORE), index3);
+                if (isDoubleWordTypeDesc(typeDesc)) {
+                    crntMaxIndex++;
+                }
+
+                addPushConstInsn(mv, ID);
+                mv.visitVarInsn(ALOAD, index2);
+                mv.visitVarInsn(ILOAD, index1);
+                mv.visitVarInsn(Type.getType(typeDesc).getOpcode(ILOAD), index3);
+
+                if (isPrimitiveTypeDesc(typeDesc)) {
+                    addPrimitive2ObjectConv(mv, arrayLoadOpcode);
+                }
+
+                addPushConstInsn(mv, 0);
+
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
+                        DESC_LOG_ARRAY_ACCESS, false);
+            } else
+                mv.visitInsn(arrayLoadOpcode);
+        } else {
+            mv.visitInsn(arrayLoadOpcode);
+        }
+    }
+
+    private void instrumentArrayStore(int arrayStoreOpcode) {
+        String typeDesc = getTypeDesc(arrayStoreOpcode);
+
+        String sig_loc = computeStmtSig();
+        int ID = globalState.getArrayLocationId(sig_loc);
+
+        if (globalState.shouldInstrumentArray(sig_loc)) {
+            crntMaxIndex++;
+            int index1 = crntMaxIndex;
+            mv.visitVarInsn(Type.getType(typeDesc).getOpcode(ISTORE), index1);
+            crntMaxIndex++;
+            if (isDoubleWordTypeDesc(typeDesc)) {
+                mv.visitInsn(DUP2);
+                crntMaxIndex++;
+            }
+            int index2 = crntMaxIndex;
+            mv.visitVarInsn(ISTORE, index2);
+
+            if (isSingleWordTypeDesc(typeDesc)) {
+                mv.visitInsn(DUP);
+            }
+            crntMaxIndex++;
+            int index3 = crntMaxIndex;
+            mv.visitVarInsn(ASTORE, index3);// arrayref
+            if (isSingleWordTypeDesc(typeDesc)) {
+                mv.visitVarInsn(ILOAD, index2);// index
+            }
+            mv.visitVarInsn(Type.getType(typeDesc).getOpcode(ILOAD), index1);// value
+
+            mv.visitInsn(arrayStoreOpcode);
+
+            addPushConstInsn(mv, ID);
+            mv.visitVarInsn(ALOAD, index3);
+            mv.visitVarInsn(ILOAD, index2);
+            mv.visitVarInsn(Type.getType(typeDesc).getOpcode(ILOAD), index1);
+            if (isPrimitiveTypeDesc(typeDesc)) {
+                addPrimitive2ObjectConv(mv, arrayStoreOpcode);
+            }
+
+            if (isInit) {
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
+                        DESC_LOG_INIT_WRITE_ACCESS, false);
+            } else {
+                addPushConstInsn(mv, 1);
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
+                        DESC_LOG_ARRAY_ACCESS, false);
+            }
+        } else {
+            mv.visitInsn(arrayStoreOpcode);
+        }
+    }
+
+    private String getTypeDesc(int arrayLoadOrStoreOpcode) {
+        // TODO(YilongL): extract this switch to a utility method or map? but
+        // what about BASTORE/BALOAD?
+        String typeDesc;
+        switch (arrayLoadOrStoreOpcode) {
+        case AALOAD: case AASTORE:
+            typeDesc = "Ljava/lang/Object;"; break;
+        case BALOAD: case CALOAD: case SALOAD: case IALOAD:
+        case BASTORE: case CASTORE: case SASTORE: case IASTORE:
+            typeDesc = DESC_INT; break;
+        case LALOAD: case LASTORE:
+            typeDesc = DESC_LONG; break;
+        case FALOAD: case FASTORE:
+            typeDesc = DESC_FLOAT; break;
+        case DALOAD: case DASTORE:
+            typeDesc = DESC_DOUBLE; break;
+        default:
+            typeDesc = null;
+            assert false;
+        }
+        return typeDesc;
     }
 
     @Override

@@ -112,13 +112,18 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void prepareLoggingThreadEvents() {
-        int sid = getCrntStmtSID();
-        crntMaxIndex++;
-        int index = crntMaxIndex;
+        /* Precondition: the next instruction must be `invokevirtual` and there
+         * is no argument for the method */
+        // TODO(YilongL): this method is quite restricted since it requires
+        // the virtual function we are logging to have zero arguments
+
+        // <stack>... objectref </stack>
+        int index = ++crntMaxIndex;
         mv.visitInsn(DUP);
-        mv.visitVarInsn(ASTORE, index);
-        addPushConstInsn(mv, sid);
+        mv.visitVarInsn(ASTORE, index); // jvm_local_vars[index] = objectref
+        addPushConstInsn(mv, getCrntStmtSID());
         mv.visitVarInsn(ALOAD, index);
+        // <stack>... objectref sid objectref </stack>
     }
 
     @Override
@@ -139,8 +144,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                          * such case. */
                         int sid = getCrntStmtSID();
 
-                        crntMaxIndex++;
-                        int index = crntMaxIndex;
+                        int index = ++crntMaxIndex;
                         mv.visitInsn(DUP);
                         mv.visitVarInsn(ASTORE, index);
 

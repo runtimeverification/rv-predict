@@ -417,56 +417,61 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void instrumentArrayLoad(int arrayLoadOpcode) {
-        boolean isElemSingleWord = isElementSingleWord(arrayLoadOpcode);
-        if (!isInit) {
-            String sig_loc = computeStmtSig();
-            int ID = globalState.getArrayLocationId(sig_loc);
-
-            if (globalState.shouldInstrumentArray(sig_loc)) {
-                mv.visitInsn(DUP2);
-                crntMaxIndex++;
-                int index1 = crntMaxIndex;
-                mv.visitVarInsn(ISTORE, index1);
-                crntMaxIndex++;
-                int index2 = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index2);
-                mv.visitInsn(arrayLoadOpcode);
-                if (isElemSingleWord) {
-                    mv.visitInsn(DUP);
-                } else {
-                    mv.visitInsn(DUP2);
-                }
-                crntMaxIndex++;
-                int index3 = crntMaxIndex;
-                mv.visitVarInsn(getElementStoreOpcode(arrayLoadOpcode), index3);
-                if (!isElemSingleWord) {
-                    crntMaxIndex++;
-                }
-
-                addPushConstInsn(mv, ID);
-                mv.visitVarInsn(ALOAD, index2);
-                mv.visitVarInsn(ILOAD, index1);
-                mv.visitVarInsn(getElementLoadOpcode(arrayLoadOpcode), index3);
-
-                if (arrayLoadOpcode != AALOAD) {
-                    addPrimitive2ObjectConv(mv, arrayLoadOpcode);
-                }
-
-                addPushConstInsn(mv, 0);
-
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                        DESC_LOG_ARRAY_ACCESS, false);
-            } else
-                mv.visitInsn(arrayLoadOpcode);
-        } else {
+        String stmtSig = getCrntStmtSig();
+        if (isInit || !globalState.shouldInstrumentArray(stmtSig)) {
             mv.visitInsn(arrayLoadOpcode);
+            return;
         }
+
+        boolean isElemSingleWord = isElementSingleWord(arrayLoadOpcode);
+        int sid = getArrayLocSID(stmtSig);
+
+        // <stack>... arrayref index </stack>
+        mv.visitInsn(DUP2);
+        // <stack>... arrayref index arrayref index </stack>
+        int localVarIdx1 = ++crntMaxIndex;
+        mv.visitVarInsn(ISTORE, localVarIdx1); // jvm_local_vars[localVarIdx1] = index
+        int localVarIdx2 = ++crntMaxIndex;
+        mv.visitVarInsn(ASTORE, localVarIdx2); // jvm_local_vars[localVarIdx2] = arrayref
+        // <stack>... arrayref index </stack>
+        mv.visitInsn(arrayLoadOpcode);
+        // <stack>... value </stack>, where `value` could be one word or two words
+        if (isElemSingleWord) {
+            mv.visitInsn(DUP);
+        } else {
+            mv.visitInsn(DUP2);
+        }
+        // <stack>... value value </stack>
+        int localVarIdx3 = ++crntMaxIndex;
+        if (!isElemSingleWord) {
+            crntMaxIndex++;
+        }
+        mv.visitVarInsn(getElementStoreOpcode(arrayLoadOpcode), localVarIdx3); // jvm_local_vars[localVarIdx3] = value
+        // <stack>... value </stack>
+
+        addPushConstInsn(mv, sid);
+        mv.visitVarInsn(ALOAD, localVarIdx2);
+        mv.visitVarInsn(ILOAD, localVarIdx1);
+        mv.visitVarInsn(getElementLoadOpcode(arrayLoadOpcode), localVarIdx3);
+        // <stack>... value ID arrayref index value </stack>
+
+        if (arrayLoadOpcode != AALOAD) {
+            addPrimitive2ObjectConv(mv, arrayLoadOpcode);
+        }
+        // <stack>... value ID arrayref index valueObjRef </stack>
+
+        addPushConstInsn(mv, 0);
+        // <stack>... value ID arrayref index valueObjRef false </stack>
+
+        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
+                DESC_LOG_ARRAY_ACCESS, false);
+        // <stack>... value </stack>
     }
 
     private void instrumentArrayStore(int arrayStoreOpcode) {
         boolean isElemSingleWord = isElementSingleWord(arrayStoreOpcode);
 
-        String sig_loc = computeStmtSig();
+        String sig_loc = getCrntStmtSig();
         int ID = globalState.getArrayLocationId(sig_loc);
 
         if (globalState.shouldInstrumentArray(sig_loc)) {
@@ -562,14 +567,25 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      *         current statement in the instrumented program
      */
     private int getCrntStmtSID() {
-        return globalState.getLocationId(computeStmtSig());
+        return globalState.getLocationId(getCrntStmtSig());
     }
 
     /**
-     * @return a unique string representing the signature of a statement in the
-     *         instrumented program
+     * TODO(YilongL):
+     * {@link GlobalStateForInstrumentation#getArrayLocationId(String)} doesn't
+     * look right to me because it calls {@code getLocationId} inside. A poor
+     * design of API at least.
      */
-    private String computeStmtSig() {
+    @Deprecated
+    private int getArrayLocSID(String stmtSig) {
+        return globalState.getArrayLocationId(stmtSig);
+    }
+
+    /**
+     * @return a unique string representing the signature of the current
+     *         statement in the instrumented program
+     */
+    private String getCrntStmtSig() {
         // TODO(YilongL): is the replace really necessary?
         return String.format("%s|%s|%s|%s", source, className, signature, crntLineNum).replace("/", ".");
     }

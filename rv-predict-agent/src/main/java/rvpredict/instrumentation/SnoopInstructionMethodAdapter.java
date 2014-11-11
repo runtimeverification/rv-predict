@@ -86,43 +86,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         }
     }
 
-    /**
-     * Stores the top value from the operand stack to the local variable array.
-     *
-     * @param desc
-     *            the type descriptor of the value to store
-     * @return the local variable index that stores the value
-     */
-    private int storeValue(String desc) {
-        int localVarIdx = ++crntMaxIndex;
-        int opcode = Type.getType(desc).getOpcode(ISTORE);
-        if (isSingleWordTypeDesc(desc)) {
-            mv.visitInsn(DUP);
-            mv.visitVarInsn(opcode, localVarIdx);
-        } else {
-            mv.visitInsn(DUP2);
-            mv.visitVarInsn(opcode, localVarIdx);
-            crntMaxIndex++;
-        }
-        return localVarIdx;
-    }
-
-    /**
-     * Loads the value from the local variable array, boxes it, and puts it on
-     * top of the operand stack.
-     *
-     * @param desc
-     *            the type descriptor of the value to load
-     * @param index
-     *            the local variable index that has the value
-     */
-    private void loadValue(String desc, int index) {
-        mv.visitVarInsn(Type.getType(desc).getOpcode(ILOAD), index);
-        if (isPrimitiveTypeDesc(desc)) {
-            addPrimitive2ObjectConv(mv, desc);
-        }
-    }
-
     @Override
     public void visitLineNumber(int line, Label start) {
         crntLineNum = line;
@@ -136,9 +99,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         // the virtual function we are logging to have zero arguments
 
         // <stack>... objectref </stack>
-        int index = ++crntMaxIndex;
-        mv.visitInsn(DUP);
-        mv.visitVarInsn(ASTORE, index); // jvm_local_vars[index] = objectref
+        int index = dupThenAStore(); // jvm_local_vars[index] = objectref
         addPushConstInsn(mv, getCrntStmtSID());
         mv.visitVarInsn(ALOAD, index);
         // <stack>... objectref sid objectref </stack>
@@ -162,9 +123,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                          * such case. */
                         int sid = getCrntStmtSID();
 
-                        int index = ++crntMaxIndex;
-                        mv.visitInsn(DUP);
-                        mv.visitVarInsn(ASTORE, index);
+                        int index = dupThenAStore();
 
                         mv.visitMethodInsn(opcode, owner, name, desc, itf);
 
@@ -206,7 +165,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             mv.visitFieldInsn(opcode, owner, name, desc);
             if (!isInit) {
                 if (globalState.isVariableShared(sig_var)) {
-                    int index = storeValue(desc);
+                    int index = dupThenStoreValue(desc);
 
                     addPushConstInsn(mv, ID);
                     mv.visitInsn(ACONST_NULL);
@@ -220,7 +179,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         case PUTSTATIC:
             if (globalState.isVariableShared(sig_var)) {
-                int index = storeValue(desc);
+                int index = dupThenStoreValue(desc);
 
                 mv.visitFieldInsn(opcode, owner, name, desc);
                 addPushConstInsn(mv, ID);
@@ -251,7 +210,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                     mv.visitFieldInsn(opcode, owner, name, desc);
 
-                    int index2 = storeValue(desc);
+                    int index2 = dupThenStoreValue(desc);
 
                     addPushConstInsn(mv, ID);
                     mv.visitVarInsn(ALOAD, index1);
@@ -384,9 +343,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case MONITORENTER: {
             int sid = getCrntStmtSID();
             // <stack>... objectref </stack>
-            mv.visitInsn(DUP);
-            int index = ++crntMaxIndex; // jvm_local_vars[index] = objectref
-            mv.visitVarInsn(ASTORE, index);
+            int index = dupThenAStore(); // jvm_local_vars[index] = objectref
             // <stack>... objectref </stack>
             mv.visitInsn(opcode);
             // <stack>... </stack>
@@ -400,9 +357,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case MONITOREXIT: {
             int sid = getCrntStmtSID();
             // <stack>... objectref </stack>
-            mv.visitInsn(DUP);
-            int index = ++crntMaxIndex;
-            mv.visitVarInsn(ASTORE, index); // jvm_local_vars[index] = objectref
+            int index = dupThenAStore(); // jvm_local_vars[index] = objectref
             // <stack>... objectref </stack>
             addPushConstInsn(mv, sid);
             mv.visitVarInsn(ALOAD, index);
@@ -447,10 +402,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         // <stack>... arrayref index </stack>
         mv.visitInsn(DUP2);
         // <stack>... arrayref index arrayref index </stack>
-        int localVarIdx1 = ++crntMaxIndex;
-        mv.visitVarInsn(ISTORE, localVarIdx1); // jvm_local_vars[localVarIdx1] = index
-        int localVarIdx2 = ++crntMaxIndex;
-        mv.visitVarInsn(ASTORE, localVarIdx2); // jvm_local_vars[localVarIdx2] = arrayref
+        int localVarIdx1 = istore(); // jvm_local_vars[localVarIdx1] = index
+        int localVarIdx2 = astore(); // jvm_local_vars[localVarIdx2] = arrayref
         // <stack>... arrayref index </stack>
         mv.visitInsn(arrayLoadOpcode);
         // <stack>... value </stack>, where `value` could be one word or two words
@@ -505,11 +458,9 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         // <stack>... arrayref index </stack>
         mv.visitInsn(DUP2);
         // <stack>... arrayref index arrayref index </stack>
-        int localVarIdx2 = ++crntMaxIndex;
-        mv.visitVarInsn(ISTORE, localVarIdx2); // jvm_local_vars[localVarIdx2] = index
+        int localVarIdx2 = istore(); // jvm_local_vars[localVarIdx2] = index
         // <stack>... arrayref index arrayref </stack>
-        int localVarIdx3 = ++crntMaxIndex;
-        mv.visitVarInsn(ASTORE, localVarIdx3); // jvm_local_vars[localVarIdx3] = arrayref
+        int localVarIdx3 = astore(); // jvm_local_vars[localVarIdx3] = arrayref
         // <stack>... arrayref index </stack>
         mv.visitVarInsn(getElementLoadOpcode(arrayStoreOpcode), localVarIdx1);
         // <stack>... arrayref index value </stack>
@@ -577,6 +528,63 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      *
      * mv.visitTableSwitchInsn(min, max, dflt, labels); }
      */
+
+    /**
+     * Duplicates and then stores the top value from the operand stack to the
+     * local variable array.
+     *
+     * @param desc
+     *            the type descriptor of the value to store
+     * @return the local variable index that stores the value
+     */
+    private int dupThenStoreValue(String desc) {
+        int localVarIdx = ++crntMaxIndex;
+        int opcode = Type.getType(desc).getOpcode(ISTORE);
+        if (isSingleWordTypeDesc(desc)) {
+            mv.visitInsn(DUP);
+            mv.visitVarInsn(opcode, localVarIdx);
+        } else {
+            mv.visitInsn(DUP2);
+            mv.visitVarInsn(opcode, localVarIdx);
+            crntMaxIndex++;
+        }
+        return localVarIdx;
+    }
+
+    private int dupThenAStore() {
+        int localVarIdx = ++crntMaxIndex;
+        mv.visitInsn(DUP);
+        mv.visitVarInsn(ASTORE, localVarIdx);
+        return localVarIdx;
+    }
+
+    private int astore() {
+        int localVarIdx = ++crntMaxIndex;
+        mv.visitVarInsn(ASTORE, localVarIdx);
+        return localVarIdx;
+    }
+
+    private int istore() {
+        int localVarIdx = ++crntMaxIndex;
+        mv.visitVarInsn(ISTORE, localVarIdx);
+        return localVarIdx;
+    }
+
+    /**
+     * Loads the value from the local variable array, boxes it, and puts it on
+     * top of the operand stack.
+     *
+     * @param desc
+     *            the type descriptor of the value to load
+     * @param index
+     *            the local variable index that has the value
+     */
+    private void loadValue(String desc, int index) {
+        mv.visitVarInsn(Type.getType(desc).getOpcode(ILOAD), index);
+        if (isPrimitiveTypeDesc(desc)) {
+            addPrimitive2ObjectConv(mv, desc);
+        }
+    }
 
     /**
      * @return a unique integer representing the syntactic identifier of the

@@ -48,22 +48,17 @@ public class DBEngine {
     private final String directory;
 
     // currently we use the h2 database
-    protected final String dbname = "RVDatabase";
+    private final String dbname = "RVDatabase";
     public String appname = "main";
 
-    protected final String[] scheduletablecolname = { "ID", "SIG", "SCHEDULE" };
-    protected final String[] scheduletablecoltype = { "INT", "VARCHAR", "ARRAY" };
+    private final String[] scheduletablecolname = { "ID", "SIG", "SCHEDULE" };
+    private final String[] scheduletablecoltype = { "INT", "VARCHAR", "ARRAY" };
 
-    protected Connection conn;
-    protected PreparedStatement prepStmt;
+    private Connection conn;
+    private PreparedStatement prepStmt;
 
-    public String tidtablename;
-    public String stmtsigtablename;
-    public String sharedvarsigtablename;
-    public String volatilesigtablename;
-
-    public String scheduletablename;
-    public String propertytablename;
+    private final String scheduletablename;
+    private final String propertytablename;
 
     private TraceCache traceCache=null;
 
@@ -108,10 +103,6 @@ public class DBEngine {
     public DBEngine(String directory, String name) {
         appname = name;
         this.directory = directory;
-        tidtablename = "tid_" + name;
-        volatilesigtablename = "volatile_" + name;
-        stmtsigtablename = "stmtsig_" + name;
-        sharedvarsigtablename = "sharedvarsig_" + name;
 
         scheduletablename = "schedule_" + name;
         propertytablename = "property_" + name;
@@ -150,7 +141,7 @@ public class DBEngine {
         prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
-    protected void connectDB(String directory) {
+    private void connectDB(String directory) {
         try {
             Class.forName("rvpredict.h2.Driver");
         } catch (ClassNotFoundException e) {

@@ -151,177 +151,124 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
+        String varSig = (owner + "." + name).replace("/", ".");
+        if (!globalState.isVariableShared(varSig)) {
+            mv.visitFieldInsn(opcode, owner, name, desc);
+            return;
+        }
 
-        // signature + line number
-        String sig_var = (owner + "." + name).replace("/", ".");
-        int SID = globalState.getVariableId(sig_var);
+        int sid = globalState.getVariableId(varSig);
         String sig_loc = source
                 + "|"
-                + (className + "|" + signature + "|" + sig_var + "|" + crntLineNum).replace("/",
+                + (className + "|" + signature + "|" + varSig + "|" + crntLineNum).replace("/",
                         ".");
         int ID = globalState.getLocationId(sig_loc);
+
+        int localVarIdx;
+        int localVarIdx2;
         switch (opcode) {
         case GETSTATIC:
-            mv.visitFieldInsn(opcode, owner, name, desc);
-            if (!isInit) {
-                if (globalState.isVariableShared(sig_var)) {
-                    int index = dupThenStoreValue(desc);
-
-                    addPushConstInsn(mv, ID);
-                    mv.visitInsn(ACONST_NULL);
-                    addPushConstInsn(mv, SID);
-                    loadValue(desc, index);
-                    addPushConstInsn(mv, 0);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                            DESC_LOG_FIELD_ACCESS, false);
-                }
+            if (isInit) {
+                mv.visitFieldInsn(opcode, owner, name, desc);
+                return;
             }
+
+            // <stack>... </stack>
+            mv.visitFieldInsn(opcode, owner, name, desc);
+            // <stack>... value </stack>
+            localVarIdx = dupThenStoreValue(desc); // jvm_local_vars[localVarIdx] = value
+            // <stack>... value </stack>
+            addPushConstInsn(mv, ID);
+            mv.visitInsn(ACONST_NULL);
+            addPushConstInsn(mv, sid);
+            loadThenBoxValue(desc, localVarIdx);
+            addPushConstInsn(mv, 0);
+            // <stack>... value ID null sid value false </stack>
+            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
+                    DESC_LOG_FIELD_ACCESS, false);
+            // <stack>... value </stack>
             break;
         case PUTSTATIC:
-            if (globalState.isVariableShared(sig_var)) {
-                int index = dupThenStoreValue(desc);
+            // <stack>... value </stack>
+            localVarIdx = dupThenStoreValue(desc); // jvm_local_vars[localVarIdx] = value
+            // <stack>... value </stack>
+            mv.visitFieldInsn(opcode, owner, name, desc);
+            // <stack>... </stack>
+            addPushConstInsn(mv, ID);
+            mv.visitInsn(ACONST_NULL);
+            addPushConstInsn(mv, sid);
+            loadThenBoxValue(desc, localVarIdx);
+            // <stack>... ID null sid value </stack>
 
-                mv.visitFieldInsn(opcode, owner, name, desc);
-                addPushConstInsn(mv, ID);
-                mv.visitInsn(ACONST_NULL);
-                addPushConstInsn(mv, SID);
-                loadValue(desc, index);
-
-                if (isInit)
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                            DESC_LOG_INIT_WRITE_ACCESS, false);
-                else {
-                    addPushConstInsn(mv, 1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                            DESC_LOG_FIELD_ACCESS, false);
-                }
-            } else
-                mv.visitFieldInsn(opcode, owner, name, desc);
-
+            if (isInit)
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
+                        DESC_LOG_INIT_WRITE_ACCESS, false);
+            else {
+                addPushConstInsn(mv, 1);
+                // <stack>... ID null sid value false </stack>
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
+                        DESC_LOG_FIELD_ACCESS, false);
+            }
             break;
         case GETFIELD:
-            if (!isInit) {
-                if (globalState.isVariableShared(sig_var)) {
-
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index1);
-
-                    mv.visitFieldInsn(opcode, owner, name, desc);
-
-                    int index2 = dupThenStoreValue(desc);
-
-                    addPushConstInsn(mv, ID);
-                    mv.visitVarInsn(ALOAD, index1);
-                    addPushConstInsn(mv, SID);
-                    loadValue(desc, index2);
-
-                    addPushConstInsn(mv, 0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                            DESC_LOG_FIELD_ACCESS, false);
-                } else
-                    mv.visitFieldInsn(opcode, owner, name, desc);
-            } else
+            if (isInit) {
                 mv.visitFieldInsn(opcode, owner, name, desc);
+                return;
+            }
 
+            // <stack>... objectref </stack>
+            localVarIdx = dupThenAStore(); // jvm_local_vars[localVarIdx] = objectref
+            mv.visitFieldInsn(opcode, owner, name, desc);
+            // <stack>... value </stack>
+            localVarIdx2 = dupThenStoreValue(desc); // jvm_local_vars[localVarIdx2] = value
+            // <stack>... value </stack>
+            addPushConstInsn(mv, ID);
+            mv.visitVarInsn(ALOAD, localVarIdx);
+            addPushConstInsn(mv, sid);
+            loadThenBoxValue(desc, localVarIdx2);
+            addPushConstInsn(mv, 0);
+            // <stack>... value ID objectref sid value false </stack>
+            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
+                    DESC_LOG_FIELD_ACCESS, false);
+            // <stack>... value </stack>
             break;
-
         case PUTFIELD:
-            if (name.startsWith("this$"))// inner class
-            {
+            // TODO(YilongL): why don't we instrument inner class fields?
+            if (name.startsWith("this$")) { // inner class
                 mv.visitFieldInsn(opcode, owner, name, desc);
                 break;
             }
 
-            if (className.contains("$") && name.startsWith("val$"))// strange
-                                                                   // class
-            {
+            // TODO(YilongL): what is this?
+            if (className.contains("$") && name.startsWith("val$")) { // strange class
                 mv.visitFieldInsn(opcode, owner, name, desc);
                 break;
             }
 
-            // if(classname.equals("org/eclipse/osgi/framework/eventmgr/CopyOnWriteIdentityMap$Snapshot$EntrySet")
-            // &&methodname.equals("<init>"))
-            // {
-            // System.out.println(owner+" "+name+" "+desc);
-            // mv.visitFieldInsn(opcode, owner, name, desc);break;
-            // }
-
-            if (globalState.isVariableShared(sig_var)) {
-                crntMaxIndex++;
-                int index1 = crntMaxIndex;
-                int index2;
-                if (desc.startsWith(DESC_DOUBLE)) {
-                    mv.visitVarInsn(DSTORE, index1);
-                    crntMaxIndex++;// double
-                    crntMaxIndex++;
-                    index2 = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitVarInsn(DLOAD, index1);
-                } else if (desc.startsWith(DESC_LONG)) {
-                    mv.visitVarInsn(LSTORE, index1);
-                    crntMaxIndex++;// long
-                    crntMaxIndex++;
-                    index2 = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitVarInsn(LLOAD, index1);
-                } else if (desc.startsWith(DESC_FLOAT)) {
-                    mv.visitVarInsn(FSTORE, index1);
-                    crntMaxIndex++;// float
-                    index2 = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitVarInsn(FLOAD, index1);
-                } else if (desc.startsWith(DESC_ARRAY_PREFIX)) {
-                    mv.visitVarInsn(ASTORE, index1);
-                    crntMaxIndex++;// ref or array
-                    index2 = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitVarInsn(ALOAD, index1);
-                } else if (desc.startsWith(DESC_OBJECT_PREFIX)) {
-                    mv.visitVarInsn(ASTORE, index1);
-                    crntMaxIndex++;// ref or array
-                    index2 = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitVarInsn(ALOAD, index1);
-
-                    // if(classname.equals("org/dacapo/parser/Config$Size")
-                    // &&methodname.equals("<init>"))
-                    // System.out.println("index1: "+
-                    // index1+" index2: "+index2);
-                } else {
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;// integer,char,short,boolean
-                    index2 = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-                }
-
-                mv.visitFieldInsn(opcode, owner, name, desc);
-
-                addPushConstInsn(mv, ID);
-                mv.visitVarInsn(ALOAD, index2);
-                addPushConstInsn(mv, SID);
-                loadValue(desc, index1);
-
-                if (isInit)
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                            DESC_LOG_INIT_WRITE_ACCESS, false);
-                else {
-                    addPushConstInsn(mv, 1);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                            DESC_LOG_FIELD_ACCESS, false);
-                }
-            } else
-                mv.visitFieldInsn(opcode, owner, name, desc);
+            // <stack>... objectref value </stack>
+            localVarIdx = storeValue(desc); // jvm_local_vars[localVarIdx] = value
+            // <stack>... objectref </stack>
+            localVarIdx2 = dupThenAStore(); // jvm_local_vars[localVarIdx2] = objectref
+            // <stack>... objectref </stack>
+            loadValue(desc, localVarIdx);
+            // <stack>... objectref value </stack>
+            mv.visitFieldInsn(opcode, owner, name, desc);
+            // <stack>... </stack>
+            addPushConstInsn(mv, ID);
+            mv.visitVarInsn(ALOAD, localVarIdx2);
+            addPushConstInsn(mv, sid);
+            loadThenBoxValue(desc, localVarIdx);
+            // <stack>... ID objectref sid value </stack>
+            if (isInit)
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
+                        DESC_LOG_INIT_WRITE_ACCESS, false);
+            else {
+                addPushConstInsn(mv, 1);
+                // <stack>... ID objectref sid value true </stack>
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
+                        DESC_LOG_FIELD_ACCESS, false);
+            }
+            // <stack>... </stack>
             break;
         default:
             System.err.println("Unknown field access opcode " + opcode);
@@ -530,6 +477,23 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      */
 
     /**
+     * Stores the top value from the operand stack to the local variable array.
+     *
+     * @param desc
+     *            the type descriptor of the value to store
+     * @return the local variable index that stores the value
+     */
+    private int storeValue(String desc) {
+        int localVarIdx = ++crntMaxIndex;
+        int opcode = Type.getType(desc).getOpcode(ISTORE);
+        mv.visitVarInsn(opcode, localVarIdx);
+        if (isDoubleWordTypeDesc(desc)) {
+            crntMaxIndex++;
+        }
+        return localVarIdx;
+    }
+
+    /**
      * Duplicates and then stores the top value from the operand stack to the
      * local variable array.
      *
@@ -579,11 +543,24 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      * @param index
      *            the local variable index that has the value
      */
-    private void loadValue(String desc, int index) {
-        mv.visitVarInsn(Type.getType(desc).getOpcode(ILOAD), index);
+    private void loadThenBoxValue(String desc, int index) {
+        loadValue(desc, index);
         if (isPrimitiveTypeDesc(desc)) {
             addPrimitive2ObjectConv(mv, desc);
         }
+    }
+
+    /**
+     * Loads the value from the local variable array and puts it on top of the
+     * operand stack.
+     *
+     * @param desc
+     *            the type descriptor of the value to load
+     * @param index
+     *            the local variable index that has the value
+     */
+    private void loadValue(String desc, int index) {
+        mv.visitVarInsn(Type.getType(desc).getOpcode(ILOAD), index);
     }
 
     /**

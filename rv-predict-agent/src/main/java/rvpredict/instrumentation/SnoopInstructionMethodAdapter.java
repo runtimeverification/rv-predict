@@ -453,15 +453,15 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         mv.visitVarInsn(ALOAD, localVarIdx2);
         mv.visitVarInsn(ILOAD, localVarIdx1);
         mv.visitVarInsn(getElementLoadOpcode(arrayLoadOpcode), localVarIdx3);
-        // <stack>... value ID arrayref index value </stack>
+        // <stack>... value sid arrayref index value </stack>
 
         if (arrayLoadOpcode != AALOAD) {
             addPrimitive2ObjectConv(mv, arrayLoadOpcode);
         }
-        // <stack>... value ID arrayref index valueObjRef </stack>
+        // <stack>... value sid arrayref index valueObjRef </stack>
 
         addPushConstInsn(mv, 0);
-        // <stack>... value ID arrayref index valueObjRef false </stack>
+        // <stack>... value sid arrayref index valueObjRef false </stack>
 
         mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
                 DESC_LOG_ARRAY_ACCESS, false);
@@ -469,55 +469,53 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void instrumentArrayStore(int arrayStoreOpcode) {
-        boolean isElemSingleWord = isElementSingleWord(arrayStoreOpcode);
-
-        String sig_loc = getCrntStmtSig();
-        int ID = globalState.getArrayLocationId(sig_loc);
-
-        if (globalState.shouldInstrumentArray(sig_loc)) {
-            crntMaxIndex++;
-            int index1 = crntMaxIndex;
-            mv.visitVarInsn(getElementStoreOpcode(arrayStoreOpcode), index1);
-            crntMaxIndex++;
-            if (!isElemSingleWord) {
-                mv.visitInsn(DUP2);
-                crntMaxIndex++;
-            }
-            int index2 = crntMaxIndex;
-            mv.visitVarInsn(ISTORE, index2);
-
-            if (isElemSingleWord) {
-                mv.visitInsn(DUP);
-            }
-            crntMaxIndex++;
-            int index3 = crntMaxIndex;
-            mv.visitVarInsn(ASTORE, index3);// arrayref
-            if (isElemSingleWord) {
-                mv.visitVarInsn(ILOAD, index2);// index
-            }
-            mv.visitVarInsn(getElementLoadOpcode(arrayStoreOpcode), index1);// value
-
+        String stmtSig = getCrntStmtSig();
+        if (!globalState.shouldInstrumentArray(stmtSig)) {
             mv.visitInsn(arrayStoreOpcode);
-
-            addPushConstInsn(mv, ID);
-            mv.visitVarInsn(ALOAD, index3);
-            mv.visitVarInsn(ILOAD, index2);
-            mv.visitVarInsn(getElementLoadOpcode(arrayStoreOpcode), index1);
-            if (arrayStoreOpcode != AASTORE) {
-                addPrimitive2ObjectConv(mv, arrayStoreOpcode);
-            }
-
-            if (isInit) {
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                        DESC_LOG_INIT_WRITE_ACCESS, false);
-            } else {
-                addPushConstInsn(mv, 1);
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                        DESC_LOG_ARRAY_ACCESS, false);
-            }
-        } else {
-            mv.visitInsn(arrayStoreOpcode);
+            return;
         }
+
+        boolean isElemSingleWord = isElementSingleWord(arrayStoreOpcode);
+        int sid = getArrayLocSID(stmtSig);
+
+        // <stack>... arrayref index value </stack>, where value could be one word or two words
+        int localVarIdx1 = ++crntMaxIndex;
+        mv.visitVarInsn(getElementStoreOpcode(arrayStoreOpcode), localVarIdx1); // jvm_local_vars[localVarIdx1] = value
+        if (!isElemSingleWord) {
+            crntMaxIndex++;
+        }
+        // <stack>... arrayref index </stack>
+        mv.visitInsn(DUP2);
+        // <stack>... arrayref index arrayref index </stack>
+        int localVarIdx2 = ++crntMaxIndex;
+        mv.visitVarInsn(ISTORE, localVarIdx2); // jvm_local_vars[localVarIdx2] = index
+        // <stack>... arrayref index arrayref </stack>
+        int localVarIdx3 = ++crntMaxIndex;
+        mv.visitVarInsn(ASTORE, localVarIdx3); // jvm_local_vars[localVarIdx3] = arrayref
+        // <stack>... arrayref index </stack>
+        mv.visitVarInsn(getElementLoadOpcode(arrayStoreOpcode), localVarIdx1);
+        // <stack>... arrayref index value </stack>
+        mv.visitInsn(arrayStoreOpcode);
+        // <stack>... </stack>
+        addPushConstInsn(mv, sid);
+        mv.visitVarInsn(ALOAD, localVarIdx3);
+        mv.visitVarInsn(ILOAD, localVarIdx2);
+        mv.visitVarInsn(getElementLoadOpcode(arrayStoreOpcode), localVarIdx1);
+        // <stack>... sid arrayref index value </stack>
+        if (arrayStoreOpcode != AASTORE) {
+            addPrimitive2ObjectConv(mv, arrayStoreOpcode);
+        }
+        // <stack>... sid arrayref index valueObjRef </stack>
+        if (isInit) {
+            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
+                    DESC_LOG_INIT_WRITE_ACCESS, false);
+        } else {
+            addPushConstInsn(mv, 1);
+            // <stack>... sid arrayref index valueObjRef true </stack>
+            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
+                    DESC_LOG_ARRAY_ACCESS, false);
+        }
+        // <stack>... </stack>
     }
 
     @Override

@@ -417,8 +417,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void instrumentArrayLoad(int arrayLoadOpcode) {
-        String typeDesc = getTypeDesc(arrayLoadOpcode);
-
+        boolean isElemSingleWord = isElementSingleWord(arrayLoadOpcode);
         if (!isInit) {
             String sig_loc = computeStmtSig();
             int ID = globalState.getArrayLocationId(sig_loc);
@@ -432,24 +431,24 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 int index2 = crntMaxIndex;
                 mv.visitVarInsn(ASTORE, index2);
                 mv.visitInsn(arrayLoadOpcode);
-                if (isSingleWordTypeDesc(typeDesc)) {
+                if (isElemSingleWord) {
                     mv.visitInsn(DUP);
                 } else {
                     mv.visitInsn(DUP2);
                 }
                 crntMaxIndex++;
                 int index3 = crntMaxIndex;
-                mv.visitVarInsn(Type.getType(typeDesc).getOpcode(ISTORE), index3);
-                if (isDoubleWordTypeDesc(typeDesc)) {
+                mv.visitVarInsn(getElementStoreOpcode(arrayLoadOpcode), index3);
+                if (!isElemSingleWord) {
                     crntMaxIndex++;
                 }
 
                 addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index2);
                 mv.visitVarInsn(ILOAD, index1);
-                mv.visitVarInsn(Type.getType(typeDesc).getOpcode(ILOAD), index3);
+                mv.visitVarInsn(getElementLoadOpcode(arrayLoadOpcode), index3);
 
-                if (isPrimitiveTypeDesc(typeDesc)) {
+                if (arrayLoadOpcode != AALOAD) {
                     addPrimitive2ObjectConv(mv, arrayLoadOpcode);
                 }
 
@@ -465,7 +464,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void instrumentArrayStore(int arrayStoreOpcode) {
-        String typeDesc = getTypeDesc(arrayStoreOpcode);
+        boolean isElemSingleWord = isElementSingleWord(arrayStoreOpcode);
 
         String sig_loc = computeStmtSig();
         int ID = globalState.getArrayLocationId(sig_loc);
@@ -473,33 +472,33 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         if (globalState.shouldInstrumentArray(sig_loc)) {
             crntMaxIndex++;
             int index1 = crntMaxIndex;
-            mv.visitVarInsn(Type.getType(typeDesc).getOpcode(ISTORE), index1);
+            mv.visitVarInsn(getElementStoreOpcode(arrayStoreOpcode), index1);
             crntMaxIndex++;
-            if (isDoubleWordTypeDesc(typeDesc)) {
+            if (!isElemSingleWord) {
                 mv.visitInsn(DUP2);
                 crntMaxIndex++;
             }
             int index2 = crntMaxIndex;
             mv.visitVarInsn(ISTORE, index2);
 
-            if (isSingleWordTypeDesc(typeDesc)) {
+            if (isElemSingleWord) {
                 mv.visitInsn(DUP);
             }
             crntMaxIndex++;
             int index3 = crntMaxIndex;
             mv.visitVarInsn(ASTORE, index3);// arrayref
-            if (isSingleWordTypeDesc(typeDesc)) {
+            if (isElemSingleWord) {
                 mv.visitVarInsn(ILOAD, index2);// index
             }
-            mv.visitVarInsn(Type.getType(typeDesc).getOpcode(ILOAD), index1);// value
+            mv.visitVarInsn(getElementLoadOpcode(arrayStoreOpcode), index1);// value
 
             mv.visitInsn(arrayStoreOpcode);
 
             addPushConstInsn(mv, ID);
             mv.visitVarInsn(ALOAD, index3);
             mv.visitVarInsn(ILOAD, index2);
-            mv.visitVarInsn(Type.getType(typeDesc).getOpcode(ILOAD), index1);
-            if (isPrimitiveTypeDesc(typeDesc)) {
+            mv.visitVarInsn(getElementLoadOpcode(arrayStoreOpcode), index1);
+            if (arrayStoreOpcode != AASTORE) {
                 addPrimitive2ObjectConv(mv, arrayStoreOpcode);
             }
 
@@ -514,29 +513,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         } else {
             mv.visitInsn(arrayStoreOpcode);
         }
-    }
-
-    private String getTypeDesc(int arrayLoadOrStoreOpcode) {
-        // TODO(YilongL): extract this switch to a utility method or map? but
-        // what about BASTORE/BALOAD?
-        String typeDesc;
-        switch (arrayLoadOrStoreOpcode) {
-        case AALOAD: case AASTORE:
-            typeDesc = "Ljava/lang/Object;"; break;
-        case BALOAD: case CALOAD: case SALOAD: case IALOAD:
-        case BASTORE: case CASTORE: case SASTORE: case IASTORE:
-            typeDesc = DESC_INT; break;
-        case LALOAD: case LASTORE:
-            typeDesc = DESC_LONG; break;
-        case FALOAD: case FASTORE:
-            typeDesc = DESC_FLOAT; break;
-        case DALOAD: case DASTORE:
-            typeDesc = DESC_DOUBLE; break;
-        default:
-            typeDesc = null;
-            assert false;
-        }
-        return typeDesc;
     }
 
     @Override

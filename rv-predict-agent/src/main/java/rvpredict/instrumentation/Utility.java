@@ -55,6 +55,54 @@ public class Utility {
         return desc.startsWith(DESC_LONG) || desc.startsWith(DESC_DOUBLE);
     }
 
+    public static int getElementLoadOpcode(int arrayLoadOrStoreOpcode) {
+        switch (arrayLoadOrStoreOpcode) {
+        case AALOAD: case AASTORE:
+            return ALOAD;
+        case BALOAD: case CALOAD: case SALOAD: case IALOAD:
+        case BASTORE: case CASTORE: case SASTORE: case IASTORE:
+            return ILOAD;
+        case LALOAD: case LASTORE:
+            return LLOAD;
+        case FALOAD: case FASTORE:
+            return FLOAD;
+        case DALOAD: case DASTORE:
+            return DLOAD;
+        default:
+            assert false : "Expected xALOAD or xASTORE opcode; but found: " + arrayLoadOrStoreOpcode;
+            return -1;
+        }
+    }
+
+    public static int getElementStoreOpcode(int arrayLoadOrStoreOpcode) {
+        switch (arrayLoadOrStoreOpcode) {
+        case AALOAD: case AASTORE:
+            return ASTORE;
+        case BALOAD: case CALOAD: case SALOAD: case IALOAD:
+        case BASTORE: case CASTORE: case SASTORE: case IASTORE:
+            return ISTORE;
+        case LALOAD: case LASTORE:
+            return LSTORE;
+        case FALOAD: case FASTORE:
+            return FSTORE;
+        case DALOAD: case DASTORE:
+            return DSTORE;
+        default:
+            assert false : "Expected xALOAD or xASTORE opcode; but found: " + arrayLoadOrStoreOpcode;
+            return -1;
+        }
+    }
+
+    public static boolean isElementSingleWord(int arrayLoadOrStoreOpcode) {
+        switch (arrayLoadOrStoreOpcode) {
+        case LALOAD: case LASTORE:
+        case DALOAD: case DASTORE:
+            return false;
+        default:
+            return true;
+        }
+    }
+
     public static void addPrimitive2ObjectConv(MethodVisitor mv, int aloadOpCode) {
         String desc;
         switch (aloadOpCode) {

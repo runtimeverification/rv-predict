@@ -87,23 +87,19 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void storeValue(String desc, int index) {
-        String prefix = desc.substring(0, 1);
-        int opcode = STORE_OPCODES.get(prefix);
-        if (SINGLE_WORD_TYPE_DESCS.contains(prefix)) {
+        int opcode = Type.getType(desc).getOpcode(ISTORE);
+        if (isSingleWordTypeDesc(desc)) {
             mv.visitInsn(DUP);
             mv.visitVarInsn(opcode, index);
-        } else if (DOUBLE_WORDS_TYPE_DESCS.contains(prefix)) {
+        } else {
             mv.visitInsn(DUP2);
             mv.visitVarInsn(opcode, index);
             crntMaxIndex++;
-        } else {
-            assert false : "Unknown type descriptor: " + desc;
         }
     }
 
     private void loadValue(String desc, int index) {
-        String prefix = desc.substring(0, 1);
-        mv.visitVarInsn(LOAD_OPCODES.get(prefix), index);
+        mv.visitVarInsn(Type.getType(desc).getOpcode(ILOAD), index);
         if (isPrimitiveTypeDesc(desc)) {
             addPrimitive2ObjectConv(mv, desc);
         }
@@ -307,14 +303,14 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitInsn(DUP);
                     mv.visitVarInsn(ASTORE, index2);
                     mv.visitVarInsn(FLOAD, index1);
-                } else if (desc.startsWith(DESC_ARRAY)) {
+                } else if (desc.startsWith(DESC_ARRAY_PREFIX)) {
                     mv.visitVarInsn(ASTORE, index1);
                     crntMaxIndex++;// ref or array
                     index2 = crntMaxIndex;
                     mv.visitInsn(DUP);
                     mv.visitVarInsn(ASTORE, index2);
                     mv.visitVarInsn(ALOAD, index1);
-                } else if (desc.startsWith(DESC_OBJECT)) {
+                } else if (desc.startsWith(DESC_OBJECT_PREFIX)) {
                     mv.visitVarInsn(ASTORE, index1);
                     crntMaxIndex++;// ref or array
                     index2 = crntMaxIndex;

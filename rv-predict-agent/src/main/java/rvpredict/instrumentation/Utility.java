@@ -8,9 +8,6 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-
 public class Utility {
 
     public static final String DESC_INT    =   Type.INT_TYPE.getDescriptor();
@@ -21,8 +18,9 @@ public class Utility {
     public static final String DESC_CHAR   =   Type.CHAR_TYPE.getDescriptor();
     public static final String DESC_FLOAT  =   Type.FLOAT_TYPE.getDescriptor();
     public static final String DESC_DOUBLE =   Type.DOUBLE_TYPE.getDescriptor();
-    public static final String DESC_ARRAY  =   "[";
-    public static final String DESC_OBJECT =   "L";
+
+    public static final String DESC_ARRAY_PREFIX    =   "[";
+    public static final String DESC_OBJECT_PREFIX   =   "L";
 
     public static final String INTEGER_INTERNAL_NAME   =   Type.getInternalName(Integer.class);
     public static final String BOOLEAN_INTERNAL_NAME   =   Type.getInternalName(Boolean.class);
@@ -45,44 +43,8 @@ public class Utility {
 
     public static final int[] ICONST_X = {ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, ICONST_5 };
 
-    public static final ImmutableSet<String> SINGLE_WORD_TYPE_DESCS = ImmutableSet.of(
-            DESC_INT, DESC_BYTE, DESC_SHORT, DESC_BOOL, DESC_CHAR, DESC_FLOAT, DESC_OBJECT, DESC_ARRAY);
-
-    public static final ImmutableSet<String> DOUBLE_WORDS_TYPE_DESCS = ImmutableSet.of(
-            DESC_DOUBLE, DESC_LONG);
-
-    // use Type#getOpcodes instead
-    @Deprecated
-    public static final ImmutableMap<String, Integer> STORE_OPCODES = ImmutableMap.<String, Integer>builder()
-            .put(DESC_INT,    ISTORE)
-            .put(DESC_BYTE,   ISTORE)
-            .put(DESC_SHORT,  ISTORE)
-            .put(DESC_BOOL,   ISTORE)
-            .put(DESC_CHAR,   ISTORE)
-            .put(DESC_OBJECT, ASTORE)
-            .put(DESC_ARRAY,  ASTORE)
-            .put(DESC_LONG,   LSTORE)
-            .put(DESC_FLOAT,  FSTORE)
-            .put(DESC_DOUBLE, DSTORE)
-            .build();
-
-    // use Type#getOpcodes instead
-    @Deprecated
-    public static final ImmutableMap<String, Integer> LOAD_OPCODES = ImmutableMap.<String, Integer>builder()
-            .put(DESC_INT,    ILOAD)
-            .put(DESC_BYTE,   ILOAD)
-            .put(DESC_SHORT,  ILOAD)
-            .put(DESC_BOOL,   ILOAD)
-            .put(DESC_CHAR,   ILOAD)
-            .put(DESC_OBJECT, ALOAD)
-            .put(DESC_ARRAY,  ALOAD)
-            .put(DESC_LONG,   LLOAD)
-            .put(DESC_FLOAT,  FLOAD)
-            .put(DESC_DOUBLE, DLOAD)
-            .build();
-
     public static boolean isPrimitiveTypeDesc(String desc) {
-        return !desc.startsWith(DESC_ARRAY) && !desc.startsWith(DESC_OBJECT);
+        return !desc.startsWith(DESC_ARRAY_PREFIX) && !desc.startsWith(DESC_OBJECT_PREFIX);
     }
 
     public static boolean isSingleWordTypeDesc(String desc) {

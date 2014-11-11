@@ -28,20 +28,20 @@
  ******************************************************************************/
 package smt;
 
-import trace.AbstractNode;
-import trace.IMemNode;
-import trace.ISyncNode;
-import trace.JoinNode;
-import trace.LockNode;
-import trace.LockPair;
-import trace.NotifyNode;
-import trace.PropertyNode;
-import trace.ReadNode;
-import trace.StartNode;
-import trace.Trace;
-import trace.UnlockNode;
-import trace.WaitNode;
-import trace.WriteNode;
+import rvpredict.trace.AbstractNode;
+import rvpredict.trace.IMemNode;
+import rvpredict.trace.ISyncNode;
+import rvpredict.trace.JoinNode;
+import rvpredict.trace.LockNode;
+import rvpredict.trace.LockPair;
+import rvpredict.trace.NotifyNode;
+import rvpredict.trace.PropertyNode;
+import rvpredict.trace.ReadNode;
+import rvpredict.trace.StartNode;
+import rvpredict.trace.Trace;
+import rvpredict.trace.UnlockNode;
+import rvpredict.trace.WaitNode;
+import rvpredict.trace.WriteNode;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
@@ -462,7 +462,7 @@ public class Engine {
     // TODO: NEED to handle the feasibility of new added write nodes
     public StringBuilder constructCausalReadWriteConstraintsOptimized(long rgid,
             List<ReadNode> readNodes, HashMap<String, List<WriteNode>> indexedWriteNodes,
-            HashMap<String, String> initValueMap) {
+            HashMap<String, Long> initValueMap) {
         StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
 
         // for every read node in the set
@@ -487,7 +487,7 @@ public class Engine {
             List<WriteNode> writenodes_value_match = new ArrayList<>();
             for (int j = 0; j < writenodes.size(); j++) {
                 WriteNode wnode = writenodes.get(j);
-                if (wnode.getValue().equals(rnode.getValue()) && !canReach(rnode, wnode)) {
+                if (wnode.getValue() == rnode.getValue() && !canReach(rnode, wnode)) {
                     if (wnode.getTID() != rnode.getTID())
                         writenodes_value_match.add(wnode);
                     else {
@@ -562,15 +562,15 @@ public class Engine {
 
                 cons_b += cons_b_end;
 
-                String rValue = rnode.getValue();
-                String initValue = initValueMap.get(rnode.getAddr());
+                long rValue = rnode.getValue();
+                long initValue = initValueMap.get(rnode.getAddr());
 
                 // it's possible that we don't have initial value for static
                 // variable
                 // so we allow init value to be zero or null? -- null is turned
                 // into 0 by System.identityHashCode
                 boolean allowMatchInit = true;
-                if (initValue == null) {
+                if (initValue == 0) {
                     for (int j = 0; j < writenodes_value_match.size(); j++) {
                         if (writenodes_value_match.get(j).getGID() < rnode.getGID()) {
                             allowMatchInit = false;
@@ -579,8 +579,8 @@ public class Engine {
                     }
                 }
 
-                if (initValue == null && allowMatchInit || initValue != null
-                        && rValue.equals(initValue)) {
+                if (initValue == 0 && allowMatchInit || initValue != 0
+                        && rValue == initValue) {
                     if (cons_a.length() > 0) {
                         cons_a += cons_a_end + "\n";
                         CONS_CAUSAL_RW
@@ -592,10 +592,10 @@ public class Engine {
 
             } else {
                 // make sure it reads the initial write
-                String rValue = rnode.getValue();
-                String initValue = initValueMap.get(rnode.getAddr());
+                long rValue = rnode.getValue();
+                long initValue = initValueMap.get(rnode.getAddr());
 
-                if (initValue != null && rValue.equals(initValue)) {
+                if (initValue != 0 && rValue == initValue) {
                     String var_r = makeVariable(rnode.getGID());
 
                     for (int k = 0; k < writenodes.size(); k++) {

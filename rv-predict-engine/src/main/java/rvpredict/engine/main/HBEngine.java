@@ -28,18 +28,18 @@ package rvpredict.engine.main;
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-import trace.AbstractNode;
-import trace.ISyncNode;
-import trace.JoinNode;
-import trace.LockNode;
-import trace.LockPair;
-import trace.NotifyNode;
-import trace.ReadNode;
-import trace.StartNode;
-import trace.Trace;
-import trace.UnlockNode;
-import trace.WaitNode;
-import trace.WriteNode;
+import rvpredict.trace.AbstractNode;
+import rvpredict.trace.ISyncNode;
+import rvpredict.trace.JoinNode;
+import rvpredict.trace.LockNode;
+import rvpredict.trace.LockPair;
+import rvpredict.trace.NotifyNode;
+import rvpredict.trace.ReadNode;
+import rvpredict.trace.StartNode;
+import rvpredict.trace.Trace;
+import rvpredict.trace.UnlockNode;
+import rvpredict.trace.WaitNode;
+import rvpredict.trace.WriteNode;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
@@ -194,7 +194,7 @@ public class HBEngine {
                     AbstractNode firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
-                            ((UnlockNode) node).getAddr());
+                            ((UnlockNode) node).getLockAddr());
                     lp = new LockPair(fake_node, (ISyncNode) node);
                 } else {
                     lp = new LockPair(syncstack.pop(), (ISyncNode) node);
@@ -264,7 +264,7 @@ public class HBEngine {
                     AbstractNode firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
-                            ((WaitNode) node).getAddr());
+                            ((WaitNode) node).getSigAddr());
                     lp = new LockPair(fake_node, (ISyncNode) node);
                 } else
                     lp = new LockPair(syncstack.pop(), ((WaitNode) node));

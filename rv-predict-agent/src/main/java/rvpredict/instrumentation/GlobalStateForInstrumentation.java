@@ -14,16 +14,24 @@ import rvpredict.logging.RecordRT;
 
 public class GlobalStateForInstrumentation {
     public static GlobalStateForInstrumentation instance = new GlobalStateForInstrumentation();
-    public ConcurrentHashMap<String, Integer> variableIdMap = new ConcurrentHashMap<String, Integer>();
-    public ConcurrentHashMap<String, Integer> unsavedVariableIdMap = new ConcurrentHashMap<String, Integer>();
-    public HashMap<Integer, String> arrayIdMap = new HashMap<Integer, String>();
+    // can be computed during offline analysis
+    public ConcurrentHashMap<Long, String> threadTidNameMap = new ConcurrentHashMap<>();
+    public ConcurrentHashMap<Long, String> unsavedThreadTidNameMap = new ConcurrentHashMap<>();
+    public ConcurrentHashMap<String, Integer> variableIdMap = new ConcurrentHashMap<>();
+    public ConcurrentHashMap<String, Integer> unsavedVariableIdMap = new ConcurrentHashMap<>();
+    public HashMap<Integer, String> arrayIdMap = new HashMap<>();
 
-    public HashSet<String> volatileVariables = new HashSet<String>();
+    public HashSet<String> volatileVariables = new HashSet<>();
     public ConcurrentHashMap<String, Boolean> unsavedVolatileVariables = new ConcurrentHashMap<>();
-    public ConcurrentHashMap<String, Integer> stmtSigIdMap = new ConcurrentHashMap<String, Integer>();
-    public ConcurrentHashMap<String, Integer> unsavedStmtSigIdMap = new ConcurrentHashMap<String, Integer>();
+    public ConcurrentHashMap<String, Integer> stmtSigIdMap = new ConcurrentHashMap<>();
+    public ConcurrentHashMap<String, Integer> unsavedStmtSigIdMap = new ConcurrentHashMap<>();
     HashSet<String> sharedVariables;
     HashSet<String> sharedArrayLocations;
+
+    public void registerThreadName(long tid, String name) {
+        threadTidNameMap.put(tid, name);
+        unsavedThreadTidNameMap.put(tid, name);
+    }
 
     public boolean isVariableShared(String sig) {
         if (sharedVariables == null || sharedVariables.contains(sig))
@@ -52,8 +60,8 @@ public class GlobalStateForInstrumentation {
 
     public void saveMetaData(DBEngine db) {
         if (!Config.instance.commandLine.agentOnlySharing)
-            RecordRT.saveMetaData(db, GlobalStateForInstrumentation.instance,
-                    Config.instance.verbose);
+            RecordRT.saveMetaData(db, GlobalStateForInstrumentation.instance
+            );
         else {
             // show arrayId
             HashSet<Integer> sharedArrayIds = new HashSet<Integer>();

@@ -26,47 +26,20 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
-public class WriteNode extends AbstractNode implements IMemNode {
-    private long prevSyncId, prevBranchId;
+public class StartNode extends AbstractNode implements ISyncNode {
 
-    private String value;
-    private String addr;
-
-    public WriteNode(long GID, long tid, int ID, String addr, String value) {
-        super(GID, tid, ID, AbstractNode.TYPE.WRITE);
-        this.addr = addr;
-        this.value = value;
-    }
-
-    public String getValue() {
-        return value;
-    }
+    private long tid_child;
 
     @Override
     public String getAddr() {
-        return addr;
+        return "" + tid_child;
     }
 
-    @Override
-    public String toString() {
-        return globalId + ": thread " + threadId + " " + synId + " " + addr + " " + value + " " + type;
-    }
-
-    @Override
-    public long getPrevSyncId() {
-        return prevSyncId;
-    }
-
-    @Override
-    public long getPrevBranchId() {
-        return prevBranchId;
-    }
-
-    @Override
-    public void setPrevBranchId(long id) {
-        prevBranchId = id;
+    public StartNode(long GID, long tid, int ID, long addr) {
+        super(GID, tid, ID, EventType.START);
+        tid_child = addr;
     }
 
 }

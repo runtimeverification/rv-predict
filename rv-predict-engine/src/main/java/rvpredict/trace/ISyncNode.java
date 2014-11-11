@@ -26,14 +26,16 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
-public class SignalPair {
-    AbstractNode n1;
-    AbstractNode n2;
+public interface ISyncNode {
 
-    SignalPair(AbstractNode n1, AbstractNode n2) {
-        this.n1 = n1;
-        this.n2 = n2;
-    }
+    public String getAddr();
+
+    public long getGID();
+
+    public long getTID();
+
+    public int getID();
+
 }

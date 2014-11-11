@@ -26,18 +26,29 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
-/**
- * Basic block node -- used for tracking thread execution path.
- * 
- * @author jeffhuang
- *
- */
-public class BBNode extends AbstractNode {
+public class LockNode extends AbstractNode implements ISyncNode {
+    private long did;// this is the ID of the event from the same thread the
+                     // rwnode depends on
+    private long lock_addr;
 
-    public BBNode(long GID, long tid, int ID) {
-        super(GID, tid, ID, AbstractNode.TYPE.BASIC_BLOCK);
+    public LockNode(long GID, long tid, int ID, long addr) {
+        super(GID, tid, ID, EventType.LOCK);
+        this.lock_addr = addr;
     }
 
+    public long getDid() {
+        return did;
+    }
+
+    @Override
+    public String getAddr() {
+        return "" + lock_addr;
+    }
+
+    @Override
+    public String toString() {
+        return globalId + ": thread " + threadId + " " + lock_addr + " " + type;
+    }
 }

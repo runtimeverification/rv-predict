@@ -7,6 +7,7 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 
 import rvpredict.config.Config;
+import rvpredict.db.TraceCache;
 import rvpredict.engine.main.Main;
 import rvpredict.logging.DBEngine;
 import rvpredict.logging.RecordRT;
@@ -70,36 +71,28 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             System.out.println("Including: " + Arrays.toString(config.includeList));
         }
 
-        final DBEngine db = new DBEngine(commandLine.outdir, commandLine.tableName);
-        try {
-            db.dropAll();
-        } catch (Exception e) {
-            commandLine.logger.report(
-                    "Unexpected error while cleaning up the database:\n" + e.getMessage(),
-                    Logger.MSGTYPE.ERROR);
-            System.exit(1);
+        TraceCache.removeTraceFiles(commandLine.outdir);
+        final DBEngine db = new DBEngine(commandLine.outdir, commandLine.tableName, commandLine.async);
+        if (commandLine.agentOnlySharing) {
+            try {
+                db.dropAll();
+            } catch (Exception e) {
+                commandLine.logger.report(
+                        "Unexpected error while cleaning up the database:\n" + e.getMessage(),
+                        Logger.MSGTYPE.ERROR);
+                System.exit(1);
+            }
         }
         // db.closeDB();
         // initialize RecordRT first
-        RecordRT.init();
+        RecordRT.init(db);
 
         inst.addTransformer(new SnoopInstructionTransformer(config, globalState));
-        final boolean inLogger = true;
         final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
             @Override
             public void cleanup() {
-                if (inLogger) {
-                    if (Config.shutDown)
-                        return;
-                    Config.shutDown = true;
-                    try {
-                        globalState.saveMetaData(db);
-                        db.closeDB();
-                    } catch (Exception e) {
-                        db.checkException(e);
+                db.finishLogging();
                     }
-                }
-            }
         };
         Thread predict = Main.getPredictionThread(commandLine, cleanupAgent, commandLine.predict);
         Runtime.getRuntime().addShutdownHook(predict);

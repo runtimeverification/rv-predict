@@ -26,24 +26,37 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
-public class WaitNode extends AbstractNode implements ISyncNode {
+/**
+ * initial write node for some memory location.
+ * 
+ * @author jeffhuang
+ *
+ */
+public class InitNode extends AbstractNode {
+    private long value;
+    private long objectHashCode;
+    private long index;
 
-    private String sig_addr;
-
-    @Override
-    public String getAddr() {
-        return sig_addr;
+    public InitNode(long GID, long tid, int ID, long objectHashCode, long index, long value) {
+        super(GID, tid, ID, EventType.INIT);
+        this.objectHashCode = objectHashCode;
+        this.index = index;
+        this.value = value;
     }
 
-    public WaitNode(long GID, long tid, int ID, String addr) {
-        super(GID, tid, ID, AbstractNode.TYPE.WAIT);
-        this.sig_addr = addr;
+    public long getValue() {
+        return value;
+    }
+
+    public String getAddr() {
+        return (objectHashCode == 0 ? "." : objectHashCode + ".") + index;
     }
 
     @Override
     public String toString() {
-        return globalId + ": thread " + threadId + " " + synId + " " + sig_addr + " " + type;
+        return globalId + ": thread " + threadId + " " + synId + " " + objectHashCode + " " + index + " " + value + " " + type;
     }
+
 }

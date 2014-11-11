@@ -48,7 +48,7 @@ public class Configuration {
     public static final String TRACE_LOGGED_IN = "\tTrace logged in: ";
     public static final String INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE = "Instrumented execution to record the trace";
     private JCommander jCommander;
-    public static int stackSize = 1024;
+    public static final int STACK_SIZE = 1024;
 
     // Copyright (c) 2013-2014 K Team. All Rights Reserved.
     public enum OS {
@@ -132,6 +132,10 @@ public class Configuration {
     @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables", hidden = true, descriptionKey = "1040")
     public boolean agentOnlySharing;
 
+    public final static String opt_asynchronous = "--async";
+    @Parameter(names = opt_asynchronous, description = "Record trace asynchronously", hidden = true, descriptionKey = "1050")
+    public boolean async;
+
     public final static String opt_only_predict = "--predict";
     @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "2000")
     public String predict_dir = null;
@@ -144,7 +148,7 @@ public class Configuration {
 
     final static String opt_max_len = "--maxlen";
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
-    public long window_size = 1000;
+    public int window_size = 1000;
 
     // final static String opt_no_schedule = "--noschedule";
     // @Parameter(names=opt_no_schedule, description = "not report schedule",

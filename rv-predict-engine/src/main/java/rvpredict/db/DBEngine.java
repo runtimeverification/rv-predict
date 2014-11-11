@@ -46,11 +46,9 @@ import violation.IViolation;
 public class DBEngine {
 
     private final String directory;
-    protected long globalEventID = 0;
 
     // currently we use the h2 database
     protected final String dbname = "RVDatabase";
-    private final int TABLE_NOT_FOUND_ERROR_CODE = 42102;
     public String appname = "main";
 
     protected final String[] scheduletablecolname = { "ID", "SIG", "SCHEDULE" };

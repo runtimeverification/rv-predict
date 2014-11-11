@@ -117,8 +117,9 @@ public class Util {
         }).start();
     }
 
-    public static void redirectInput(final OutputStream inputStream, final InputStream redirect) {
-        new Thread(new Runnable() {
+    public static Thread redirectInput(final OutputStream inputStream, final InputStream redirect) {
+        final BufferedInputStream bufferedInputStream = new BufferedInputStream(redirect);
+        Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
                 if (redirect != null) {
@@ -133,7 +134,10 @@ public class Util {
                     }
                 }
             }
-        }).start();
+        });
+        thread.setDaemon(true);
+        thread.start();
+        return thread;
     }
 
     public static String convertFileToString(File file) throws IOException {

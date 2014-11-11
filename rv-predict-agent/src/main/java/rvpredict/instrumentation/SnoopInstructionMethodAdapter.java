@@ -372,30 +372,34 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             instrumentArrayStore(opcode);
             break;
         case MONITORENTER: {
-            int ID = getCrntStmtSID();
-
+            int sid = getCrntStmtSID();
+            // <stack>... objectref </stack>
             mv.visitInsn(DUP);
-            crntMaxIndex++;
-            int index = crntMaxIndex;
-            mv.visitVarInsn(ASTORE, index);// objectref
+            int index = ++crntMaxIndex; // jvm_local_vars[index] = objectref
+            mv.visitVarInsn(ASTORE, index);
+            // <stack>... objectref </stack>
             mv.visitInsn(opcode);
-            addPushConstInsn(mv, ID);
+            // <stack>... </stack>
+            addPushConstInsn(mv, sid);
             mv.visitVarInsn(ALOAD, index);
+            // <stack>... sid objectref </stack>
             mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK,
                     DESC_LOG_LOCK, false);
             break;
         }
         case MONITOREXIT: {
-            int ID = getCrntStmtSID();
-
+            int sid = getCrntStmtSID();
+            // <stack>... objectref </stack>
             mv.visitInsn(DUP);
-            crntMaxIndex++;
-            int index = crntMaxIndex;
-            mv.visitVarInsn(ASTORE, index);// objectref
-            addPushConstInsn(mv, ID);
+            int index = ++crntMaxIndex;
+            mv.visitVarInsn(ASTORE, index); // jvm_local_vars[index] = objectref
+            // <stack>... objectref </stack>
+            addPushConstInsn(mv, sid);
             mv.visitVarInsn(ALOAD, index);
+            // <stack>... objectref sid objectref </stack>
             mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK,
                     DESC_LOG_UNLOCK, false);
+            // <stack>... objectref </stack>
             mv.visitInsn(opcode);
             break;
         }

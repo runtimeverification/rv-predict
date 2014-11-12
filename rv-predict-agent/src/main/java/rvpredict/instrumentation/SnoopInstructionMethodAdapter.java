@@ -7,62 +7,59 @@ import static rvpredict.instrumentation.Utility.*;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+
 import rvpredict.config.Config;
 
 public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
-    boolean isInit, isSynchronized, isStatic;
-    String classname;
-    String source;
-    String methodname;
-    String methodsignature;
-    
+    private final String className;
+    private final String source;
+    private final String methodName;
+    private final String signature;
+
+    /**
+     * Specifies whether the visited method is an initialization method.
+     */
+    private final boolean isInit;
+
+    /**
+     * Specifies whether the visited method is synchronized.
+     */
+    private final boolean isSynchronized;
+
+    /**
+     * Specifies whether the visited method is static.
+     */
+    private final boolean isStatic;
+
     private final Config config;
-    
+
     private final GlobalStateForInstrumentation globalState;
-    
+
     /**
      * current max index of local variables
      */
     private int crntMaxIndex;
     private int crntLineNum;
 
-    public SnoopInstructionMethodAdapter(MethodVisitor mv, String source, String cname,
-            String mname, String msignature, boolean isInit, boolean isSynchronized,
-            boolean isStatic, int argSize, Config config, GlobalStateForInstrumentation globalState) {
+    public SnoopInstructionMethodAdapter(MethodVisitor mv, String source, String className,
+            String methodName, String signature, int access, int argSize, Config config,
+            GlobalStateForInstrumentation globalState) {
         super(Opcodes.ASM5, mv);
         this.source = source == null ? "Unknown" : source;
-        this.classname = cname;
-        this.methodname = mname;
-        this.methodsignature = msignature;
-        this.isInit = isInit;
-        this.isSynchronized = isSynchronized;
-        this.isStatic = isStatic;
+        this.className = className;
+        this.methodName = methodName;
+        this.signature = signature;
+        this.isInit = "<init>".equals(methodName) || "<clinit>".equals(methodName);
+        this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
+        this.isStatic = (access & ACC_STATIC) != 0;
         this.config = config;
         this.globalState = globalState;
 
         crntMaxIndex = argSize + 1;
-        if (config.verbose)
-            System.out.println("method: " + methodname);
-
-        // DEBUG
-        // if(classname.equals("org/dacapo/harness/CommandLineArgs")
-        // &&methodname.equals("<init>"))
-        // System.out.println("method: "+methodname);
-    }
-    
-    /**
-     * Private helper method that adds a {@code bipush} instruction which pushes
-     * a byte onto the stack as an integer value.
-     * 
-     * @param value the value to be pushed to the stack
-     */
-    private void addBipushInsn(int value) {
-        // TODO(YilongL): why not `byte value'? bad method name or latent bug?
-        if ((0 <= value) && (value <= 5)) {
-            mv.visitInsn(ICONST_X[value]);
-        } else {
-            mv.visitLdcInsn(new Integer(value));
+        if (config.verbose) {
+            System.out.println("method: " + this.methodName);
         }
     }
 
@@ -79,7 +76,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case LSTORE: case DSTORE: case LLOAD: case DLOAD:
             /* double words load/store opcodes */
             crntMaxIndex = Math.max(crntMaxIndex, localVarIdx + 1);
-        case ISTORE: case FSTORE: case ASTORE: case ILOAD: case FLOAD: case ALOAD: 
+        case ISTORE: case FSTORE: case ASTORE: case ILOAD: case FLOAD: case ALOAD:
         case RET:
             /* single word load/store and ret opcodes */
             mv.visitVarInsn(opcode, localVarIdx);
@@ -90,63 +87,21 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void storeValue(String desc, int index) {
-        String prefix = desc.substring(0, 1);
-        int opcode = STORE_OPCODES.get(prefix);
-        if (SINGLE_WORD_TYPE_DESCS.contains(prefix)) {
+        int opcode = Type.getType(desc).getOpcode(ISTORE);
+        if (isSingleWordTypeDesc(desc)) {
             mv.visitInsn(DUP);
             mv.visitVarInsn(opcode, index);
-        } else if (DOUBLE_WORDS_TYPE_DESCS.contains(prefix)) {
+        } else {
             mv.visitInsn(DUP2);
             mv.visitVarInsn(opcode, index);
             crntMaxIndex++;
-        } else {
-            assert false : "Unknown type descriptor: " + desc;
         }
     }
 
     private void loadValue(String desc, int index) {
-        if (desc.startsWith(DESC_OBJECT) || desc.startsWith(DESC_ARRAY))
-            mv.visitVarInsn(ALOAD, index);
-        else if (desc.startsWith(Utility.DESC_INT)) {
-            // convert int to object?
-            mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, INTEGER_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_INTEGER_VALUEOF, false);
-        } else if (desc.startsWith(DESC_BYTE)) {
-            // convert int to object?
-            mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, BYTE_INTERNAL_NAME, METHOD_VALUEOF, DESC_BYTE_VALUEOF,
-                    false);
-        } else if (desc.startsWith(DESC_SHORT)) {
-            // convert int to object?
-            mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, SHORT_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_SHORT_VALUEOF, false);
-        } else if (desc.startsWith(DESC_BOOL)) {
-            // convert int to object?
-            mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, BOOLEAN_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_BOOLEAN_VALUEOF, false);
-        } else if (desc.startsWith(DESC_CHAR)) {
-            // convert int to object?
-            mv.visitVarInsn(ILOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, CHARACTER_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_CHAR_VALUEOF, false);
-        } else if (desc.startsWith(DESC_LONG)) {
-            // convert int to object?
-            mv.visitVarInsn(LLOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, LONG_INTERNAL_NAME, METHOD_VALUEOF, DESC_LONG_VALUEOF,
-                    false);
-        } else if (desc.startsWith(DESC_FLOAT)) {
-            // convert int to object?
-            mv.visitVarInsn(FLOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, FLOAT_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_FLOAT_VALUEOF, false);
-        } else if (desc.startsWith(DESC_DOUBLE)) {
-            // convert int to object?
-            mv.visitVarInsn(DLOAD, index);
-            mv.visitMethodInsn(INVOKESTATIC, DOUBLE_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_DOUBLE_VALUEOF, false);
+        mv.visitVarInsn(Type.getType(desc).getOpcode(ILOAD), index);
+        if (isPrimitiveTypeDesc(desc)) {
+            addPrimitive2ObjectConv(mv, desc);
         }
     }
 
@@ -156,94 +111,61 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         mv.visitLineNumber(line, start);
     }
 
+    private void prepareLoggingThreadEvents() {
+        int sid = getCrntStmtSID();
+        crntMaxIndex++;
+        int index = crntMaxIndex;
+        mv.visitInsn(DUP);
+        mv.visitVarInsn(ASTORE, index);
+        addPushConstInsn(mv, sid);
+        mv.visitVarInsn(ALOAD, index);
+    }
+
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+        if (opcode == INVOKEVIRTUAL) {
+            if (isThreadClass(owner)) {
+                if (desc.equals("()V")) {
+                    switch (name) {
+                    case "start":
+                        prepareLoggingThreadEvents();
+                        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_START,
+                                DESC_LOG_THREAD_START, false);
+                        break;
+                    case "join":
+                        /* TODO(YilongL): Since calls to thread join must be
+                         * logged after they return, the code here is kind of
+                         * ad-hoc. We definitely need more general way to handle
+                         * such case. */
+                        int sid = getCrntStmtSID();
 
-        switch (opcode) {
-        case INVOKEVIRTUAL:
-            if (config.commandLine.agentOnlySharing
-                    || !globalState.isThreadClass(owner))
-                mv.visitMethodInsn(opcode, owner, name, desc, itf);
-            else {
-                String sig_loc = source + "|"
-                        + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = globalState.getLocationId(sig_loc);
+                        crntMaxIndex++;
+                        int index = crntMaxIndex;
+                        mv.visitInsn(DUP);
+                        mv.visitVarInsn(ASTORE, index);
 
-                if (name.equals("start") && desc.equals("()V")) {
-                    crntMaxIndex++;
-                    int index = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index);
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_START,
-                            DESC_LOG_THREAD_START, false);
+                        mv.visitMethodInsn(opcode, owner, name, desc, itf);
 
-                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
-                } else if (name.equals("join") && desc.equals("()V")) {
-                    crntMaxIndex++;
-                    int index = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index);
-
-                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_JOIN,
-                            DESC_LOG_THREAD_JOIN, false);
-
-                } else if (name.equals("wait") && desc.equals("()V")) {
-                    crntMaxIndex++;
-                    int index = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_WAIT, DESC_LOG_WAIT,
-                            false);
-
-                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
-                } else if (name.equals("wait") && desc.equals("()V")) {
-                    crntMaxIndex++;
-                    int index = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_WAIT, DESC_LOG_WAIT,
-                            false);
-
-                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
-                } else if ((name.equals("notify") || name.equals("notifyAll"))
-                        && desc.equals("()V")) {
-                    crntMaxIndex++;
-                    int index = crntMaxIndex;
-                    mv.visitInsn(DUP);
-                    mv.visitVarInsn(ASTORE, index);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_NOTIFY, DESC_LOG_NOTIFY,
-                            false);
-
-                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
-                } else
-                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
-
+                        addPushConstInsn(mv, sid);
+                        mv.visitVarInsn(ALOAD, index);
+                        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_JOIN,
+                                DESC_LOG_THREAD_JOIN, false);
+                        return;
+                    case "wait":
+                        prepareLoggingThreadEvents();
+                        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_WAIT, DESC_LOG_WAIT,
+                                false);
+                        break;
+                    case "notify":
+                    case "notifyAll":
+                        prepareLoggingThreadEvents();
+                        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_NOTIFY,
+                                DESC_LOG_NOTIFY, false);
+                    }
+                }
             }
-
-            break;
-        case INVOKESPECIAL:
-        case INVOKESTATIC:
-        case INVOKEINTERFACE:
-            mv.visitMethodInsn(opcode, owner, name, desc, itf);
-            break;
-        default:
-            assert false : "Unknown method invocation opcode " + opcode;
         }
+        mv.visitMethodInsn(opcode, owner, name, desc, itf);
     }
 
     @Override
@@ -254,68 +176,47 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         int SID = globalState.getVariableId(sig_var);
         String sig_loc = source
                 + "|"
-                + (classname + "|" + methodsignature + "|" + sig_var + "|" + crntLineNum).replace("/",
+                + (className + "|" + signature + "|" + sig_var + "|" + crntLineNum).replace("/",
                         ".");
         int ID = globalState.getLocationId(sig_loc);
         switch (opcode) {
         case GETSTATIC:
             mv.visitFieldInsn(opcode, owner, name, desc);
             if (!isInit) {
-
-                if (config.commandLine.agentOnlySharing) {
-                    addBipushInsn(ID);
-                    // mv.visitInsn(ACONST_NULL);
-                    addBipushInsn(SID);
-                    addBipushInsn(0);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                            DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.isVariableShared(sig_var)) {
+                if (globalState.isVariableShared(sig_var)) {
 
                     crntMaxIndex++;
 
                     int index = crntMaxIndex;
                     storeValue(desc, index);
 
-                    addBipushInsn(ID);
+                    addPushConstInsn(mv, ID);
                     mv.visitInsn(ACONST_NULL);
-                    addBipushInsn(SID);
+                    addPushConstInsn(mv, SID);
                     loadValue(desc, index);
-                    addBipushInsn(0);
+                    addPushConstInsn(mv, 0);
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS, false);
                 }
             }
             break;
         case PUTSTATIC:
-            if (config.commandLine.agentOnlySharing) {
-                mv.visitFieldInsn(opcode, owner, name, desc);
-
-                if (!isInit) {
-                    addBipushInsn(ID);
-                    // mv.visitInsn(ACONST_NULL);
-                    addBipushInsn(SID);
-
-                    addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                            DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
-                }
-
-            } else if (globalState.isVariableShared(sig_var)) {
+            if (globalState.isVariableShared(sig_var)) {
                 crntMaxIndex++;
                 int index = crntMaxIndex;
                 storeValue(desc, index);
 
                 mv.visitFieldInsn(opcode, owner, name, desc);
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitInsn(ACONST_NULL);
-                addBipushInsn(SID);
+                addPushConstInsn(mv, SID);
                 loadValue(desc, index);
 
                 if (isInit)
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS, false);
                 else {
-                    addBipushInsn(1);
+                    addPushConstInsn(mv, 1);
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS, false);
                 }
@@ -325,23 +226,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             break;
         case GETFIELD:
             if (!isInit) {
-                if (config.commandLine.agentOnlySharing) {
-                    // maxindex_cur++;
-                    // int index1 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index1);
-
-                    mv.visitFieldInsn(opcode, owner, name, desc);
-
-                    addBipushInsn(ID);
-                    // mv.visitVarInsn(ALOAD, index1);
-                    addBipushInsn(SID);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                            DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.isVariableShared(sig_var)) {
+                if (globalState.isVariableShared(sig_var)) {
 
                     crntMaxIndex++;
                     int index1 = crntMaxIndex;
@@ -354,12 +239,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     int index2 = crntMaxIndex;
                     storeValue(desc, index2);
 
-                    addBipushInsn(ID);
+                    addPushConstInsn(mv, ID);
                     mv.visitVarInsn(ALOAD, index1);
-                    addBipushInsn(SID);
+                    addPushConstInsn(mv, SID);
                     loadValue(desc, index2);
 
-                    addBipushInsn(0);
+                    addPushConstInsn(mv, 0);
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS, false);
@@ -377,7 +262,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 break;
             }
 
-            if (classname.contains("$") && name.startsWith("val$"))// strange
+            if (className.contains("$") && name.startsWith("val$"))// strange
                                                                    // class
             {
                 mv.visitFieldInsn(opcode, owner, name, desc);
@@ -391,81 +276,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             // mv.visitFieldInsn(opcode, owner, name, desc);break;
             // }
 
-            if (config.commandLine.agentOnlySharing) {
-                if (!isInit) {
-                    // maxindex_cur++;
-                    // int index1 = maxindex_cur;
-                    // int index2;
-                    // if(desc.startsWith("D"))
-                    // {
-                    // mv.visitVarInsn(DSTORE, index1);
-                    // maxindex_cur++;//double
-                    // maxindex_cur++;
-                    // index2 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index2);
-                    // mv.visitVarInsn(DLOAD, index1);
-                    // }
-                    // else if(desc.startsWith("J"))
-                    // {
-                    // mv.visitVarInsn(LSTORE, index1);
-                    // maxindex_cur++;//long
-                    // maxindex_cur++;
-                    // index2 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index2);
-                    // mv.visitVarInsn(LLOAD, index1);
-                    // }
-                    // else if(desc.startsWith("F"))
-                    // {
-                    // mv.visitVarInsn(FSTORE, index1);
-                    // maxindex_cur++;//float
-                    // index2 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index2);
-                    // mv.visitVarInsn(FLOAD, index1);
-                    // }
-                    // else if(desc.startsWith("["))
-                    // {
-                    // mv.visitVarInsn(ASTORE, index1);
-                    // maxindex_cur++;//ref or array
-                    // index2 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index2);
-                    // mv.visitVarInsn(ALOAD, index1);
-                    // }
-                    // else if(desc.startsWith("L"))
-                    // {
-                    // mv.visitVarInsn(ASTORE, index1);
-                    // maxindex_cur++;//ref or array
-                    // index2 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index2);
-                    // mv.visitVarInsn(ALOAD, index1);
-                    //
-                    // }
-                    // else
-                    // {
-                    // mv.visitVarInsn(ISTORE, index1);
-                    // maxindex_cur++;//integer,char,short,boolean
-                    // index2 = maxindex_cur;
-                    // mv.visitInsn(DUP);
-                    // mv.visitVarInsn(ASTORE, index2);
-                    // mv.visitVarInsn(ILOAD, index1);
-                    // }
-
-                    mv.visitFieldInsn(opcode, owner, name, desc);
-
-                    addBipushInsn(ID);
-                    // mv.visitVarInsn(ALOAD, index2);
-                    addBipushInsn(SID);
-
-                    addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                            DESC_LOG_FIELD_ACCESS_DETECT_SHARING, false);
-                } else
-                    mv.visitFieldInsn(opcode, owner, name, desc);
-            } else if (globalState.isVariableShared(sig_var)) {
+            if (globalState.isVariableShared(sig_var)) {
                 crntMaxIndex++;
                 int index1 = crntMaxIndex;
                 int index2;
@@ -492,14 +303,14 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     mv.visitInsn(DUP);
                     mv.visitVarInsn(ASTORE, index2);
                     mv.visitVarInsn(FLOAD, index1);
-                } else if (desc.startsWith(DESC_ARRAY)) {
+                } else if (desc.startsWith(DESC_ARRAY_PREFIX)) {
                     mv.visitVarInsn(ASTORE, index1);
                     crntMaxIndex++;// ref or array
                     index2 = crntMaxIndex;
                     mv.visitInsn(DUP);
                     mv.visitVarInsn(ASTORE, index2);
                     mv.visitVarInsn(ALOAD, index1);
-                } else if (desc.startsWith(DESC_OBJECT)) {
+                } else if (desc.startsWith(DESC_OBJECT_PREFIX)) {
                     mv.visitVarInsn(ASTORE, index1);
                     crntMaxIndex++;// ref or array
                     index2 = crntMaxIndex;
@@ -522,16 +333,16 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                 mv.visitFieldInsn(opcode, owner, name, desc);
 
-                addBipushInsn(ID);
+                addPushConstInsn(mv, ID);
                 mv.visitVarInsn(ALOAD, index2);
-                addBipushInsn(SID);
+                addPushConstInsn(mv, SID);
                 loadValue(desc, index1);
 
                 if (isInit)
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
                             DESC_LOG_INIT_WRITE_ACCESS, false);
                 else {
-                    addBipushInsn(1);
+                    addPushConstInsn(mv, 1);
 
                     mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
                             DESC_LOG_FIELD_ACCESS, false);
@@ -545,733 +356,57 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         }
     }
 
-    private void convertPrimitiveToObject(int opcode) {
-        switch (opcode) {
-        case IALOAD:
-        case IASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, INTEGER_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_INTEGER_VALUEOF, false);
-            break;
-        case BALOAD:
-        case BASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, BOOLEAN_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_BOOLEAN_VALUEOF, false);
-            break;
-        case CALOAD:
-        case CASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, CHARACTER_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_CHAR_VALUEOF, false);
-            break;
-        case DALOAD:
-        case DASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, DOUBLE_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_DOUBLE_VALUEOF, false);
-            break;
-        case FALOAD:
-        case FASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, FLOAT_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_FLOAT_VALUEOF, false);
-            break;
-        case LALOAD:
-        case LASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, LONG_INTERNAL_NAME, METHOD_VALUEOF, DESC_LONG_VALUEOF,
-                    false);
-            break;
-        case SALOAD:
-        case SASTORE:
-            mv.visitMethodInsn(INVOKESTATIC, SHORT_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_SHORT_VALUEOF, false);
-            break;
-        }
-    }
-
     @Override
     public void visitInsn(int opcode) {
-
         switch (opcode) {
-        case AALOAD:
-            if (!isInit) {
-                String sig_loc = source + "|"
-                        + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = globalState.getArrayLocationId(sig_loc);
-
-                if (config.commandLine.agentOnlySharing) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.shouldInstrumentArray(sig_loc)) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-                    mv.visitInsn(DUP);
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index3);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-                    mv.visitVarInsn(ALOAD, index3);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                } else
-                    mv.visitInsn(opcode);
-
-            } else
-                mv.visitInsn(opcode);
-
+        case AALOAD: case BALOAD: case CALOAD: case SALOAD:
+        case IALOAD: case FALOAD: case DALOAD: case LALOAD:
+            instrumentArrayLoad(opcode);
             break;
-
-        case BALOAD:
-        case CALOAD:
-        case SALOAD:
-        case IALOAD:
-            if (!isInit) {
-                String sig_loc = source + "|"
-                        + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = globalState.getArrayLocationId(sig_loc);
-
-                if (config.commandLine.agentOnlySharing) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.shouldInstrumentArray(sig_loc)) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-                    mv.visitInsn(DUP);
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index3);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-                    mv.visitVarInsn(ILOAD, index3);
-
-                    convertPrimitiveToObject(opcode);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else
-                mv.visitInsn(opcode);
+        case AASTORE: case BASTORE: case CASTORE: case SASTORE:
+        case IASTORE: case FASTORE: case DASTORE: case LASTORE:
+            instrumentArrayStore(opcode);
             break;
-        case FALOAD:
-            if (!isInit) {
-                String sig_loc = source + "|"
-                        + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = globalState.getArrayLocationId(sig_loc);
-
-                if (config.commandLine.agentOnlySharing) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.shouldInstrumentArray(sig_loc)) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-                    mv.visitInsn(DUP);
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(FSTORE, index3);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-                    mv.visitVarInsn(FLOAD, index3);
-
-                    convertPrimitiveToObject(opcode);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else
-                mv.visitInsn(opcode);
-
-            break;
-        case DALOAD:
-            if (!isInit) {
-                String sig_loc = source + "|"
-                        + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = globalState.getArrayLocationId(sig_loc);
-
-                if (config.commandLine.agentOnlySharing) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.shouldInstrumentArray(sig_loc)) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-                    mv.visitInsn(DUP2);// double
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(DSTORE, index3);
-                    crntMaxIndex++;
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-                    mv.visitVarInsn(DLOAD, index3);
-
-                    convertPrimitiveToObject(opcode);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else
-                mv.visitInsn(opcode);
-            break;
-        case LALOAD:
-            if (!isInit) {
-                String sig_loc = source + "|"
-                        + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = globalState.getArrayLocationId(sig_loc);
-
-                if (config.commandLine.agentOnlySharing) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else if (globalState.shouldInstrumentArray(sig_loc)) {
-                    mv.visitInsn(DUP2);
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index2);
-                    mv.visitInsn(opcode);
-                    mv.visitInsn(DUP2);// long
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(LSTORE, index3);
-                    crntMaxIndex++;
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index2);
-                    mv.visitVarInsn(ILOAD, index1);
-                    mv.visitVarInsn(LLOAD, index3);
-
-                    convertPrimitiveToObject(opcode);
-
-                    addBipushInsn(0);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else
-                mv.visitInsn(opcode);
-            break;
-        case AASTORE: {
-            String sig_loc = source + "|"
-                    + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-            int ID = globalState.getArrayLocationId(sig_loc);
-
-            if (config.commandLine.agentOnlySharing) {
-                if (!isInit) {
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index2);
-
-                    mv.visitInsn(DUP);
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index3);// arrayref
-                    mv.visitVarInsn(ILOAD, index2);// index
-                    mv.visitVarInsn(ALOAD, index1);// value
-
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index3);
-                    mv.visitVarInsn(ILOAD, index2);
-
-                    addBipushInsn(1);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else
-                    mv.visitInsn(opcode);
-
-            } else if (globalState.shouldInstrumentArray(sig_loc)) {
-                crntMaxIndex++;
-                int index1 = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index1);
-                crntMaxIndex++;
-                int index2 = crntMaxIndex;
-                mv.visitVarInsn(ISTORE, index2);
-
-                mv.visitInsn(DUP);
-                crntMaxIndex++;
-                int index3 = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index3);// arrayref
-                mv.visitVarInsn(ILOAD, index2);// index
-                mv.visitVarInsn(ALOAD, index1);// value
-
-                mv.visitInsn(opcode);
-
-                addBipushInsn(ID);
-                mv.visitVarInsn(ALOAD, index3);
-                mv.visitVarInsn(ILOAD, index2);
-                mv.visitVarInsn(ALOAD, index1);
-
-                if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                            DESC_LOG_INIT_WRITE_ACCESS, false);
-                } else {
-                    addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                }
-            } else
-                mv.visitInsn(opcode);
-            break;
-        }
-        case BASTORE:
-        case CASTORE:
-        case SASTORE:
-        case IASTORE: {
-            String sig_loc = source + "|"
-                    + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-            int ID = globalState.getArrayLocationId(sig_loc);
-
-            if (config.commandLine.agentOnlySharing) {
-                if (!isInit) {
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index2);
-
-                    mv.visitInsn(DUP);
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index3);// arrayref
-                    mv.visitVarInsn(ILOAD, index2);// index
-                    mv.visitVarInsn(ILOAD, index1);// value
-
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index3);
-                    mv.visitVarInsn(ILOAD, index2);
-
-                    addBipushInsn(1);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else if (globalState.shouldInstrumentArray(sig_loc)) {
-                crntMaxIndex++;
-                int index1 = crntMaxIndex;
-                mv.visitVarInsn(ISTORE, index1);
-                crntMaxIndex++;
-                int index2 = crntMaxIndex;
-                mv.visitVarInsn(ISTORE, index2);
-
-                mv.visitInsn(DUP);
-                crntMaxIndex++;
-                int index3 = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index3);// arrayref
-                mv.visitVarInsn(ILOAD, index2);// index
-                mv.visitVarInsn(ILOAD, index1);// value
-
-                mv.visitInsn(opcode);
-
-                addBipushInsn(ID);
-                mv.visitVarInsn(ALOAD, index3);
-                mv.visitVarInsn(ILOAD, index2);
-                mv.visitVarInsn(ILOAD, index1);
-                convertPrimitiveToObject(opcode);
-
-                if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                            DESC_LOG_INIT_WRITE_ACCESS, false);
-                } else {
-                    addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                }
-            } else
-                mv.visitInsn(opcode);
-            break;
-        }
-        case FASTORE: {
-            String sig_loc = source + "|"
-                    + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-            int ID = globalState.getArrayLocationId(sig_loc);
-
-            if (config.commandLine.agentOnlySharing) {
-                if (!isInit) {
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(FSTORE, index1);
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index2);
-
-                    mv.visitInsn(DUP);
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index3);// arrayref
-                    mv.visitVarInsn(ILOAD, index2);// index
-                    mv.visitVarInsn(FLOAD, index1);// value
-
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index3);
-                    mv.visitVarInsn(ILOAD, index2);
-
-                    addBipushInsn(1);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else if (globalState.shouldInstrumentArray(sig_loc)) {
-                crntMaxIndex++;
-                int index1 = crntMaxIndex;
-                mv.visitVarInsn(FSTORE, index1);
-                crntMaxIndex++;
-                int index2 = crntMaxIndex;
-                mv.visitVarInsn(ISTORE, index2);
-
-                mv.visitInsn(DUP);
-                crntMaxIndex++;
-                int index3 = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index3);// arrayref
-                mv.visitVarInsn(ILOAD, index2);// index
-                mv.visitVarInsn(FLOAD, index1);// value
-
-                mv.visitInsn(opcode);
-
-                addBipushInsn(ID);
-                mv.visitVarInsn(ALOAD, index3);
-                mv.visitVarInsn(ILOAD, index2);
-                mv.visitVarInsn(FLOAD, index1);
-                convertPrimitiveToObject(opcode);
-
-                if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                            DESC_LOG_INIT_WRITE_ACCESS, false);
-                } else {
-                    addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                }
-            } else
-                mv.visitInsn(opcode);
-            break;
-        }
-        case DASTORE: {
-            String sig_loc = source + "|"
-                    + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-            int ID = globalState.getArrayLocationId(sig_loc);
-
-            if (config.commandLine.agentOnlySharing) {
-                if (!isInit) {
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(DSTORE, index1);
-                    crntMaxIndex++;
-                    mv.visitInsn(DUP2);// dup arrayref and index
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index2);// index
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index3);// arrayref
-
-                    mv.visitVarInsn(DLOAD, index1);// double value
-
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index3);
-                    mv.visitVarInsn(ILOAD, index2);
-
-                    addBipushInsn(1);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else if (globalState.shouldInstrumentArray(sig_loc)) {
-                crntMaxIndex++;
-                int index1 = crntMaxIndex;
-                mv.visitVarInsn(DSTORE, index1);
-                crntMaxIndex++;
-                mv.visitInsn(DUP2);// dup arrayref and index
-                crntMaxIndex++;
-                int index2 = crntMaxIndex;
-                mv.visitVarInsn(ISTORE, index2);// index
-                crntMaxIndex++;
-                int index3 = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index3);// arrayref
-
-                mv.visitVarInsn(DLOAD, index1);// double value
-
-                mv.visitInsn(opcode);
-
-                addBipushInsn(ID);
-                mv.visitVarInsn(ALOAD, index3);
-                mv.visitVarInsn(ILOAD, index2);
-                mv.visitVarInsn(DLOAD, index1);
-                convertPrimitiveToObject(opcode);
-
-                if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                            DESC_LOG_INIT_WRITE_ACCESS, false);
-                } else {
-                    addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                }
-            } else
-                mv.visitInsn(opcode);
-            break;
-        }
-        case LASTORE: {
-            String sig_loc = source + "|"
-                    + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-            int ID = globalState.getArrayLocationId(sig_loc);
-
-            if (config.commandLine.agentOnlySharing) {
-                if (!isInit) {
-                    crntMaxIndex++;
-                    int index1 = crntMaxIndex;
-                    mv.visitVarInsn(LSTORE, index1);
-                    crntMaxIndex++;
-                    mv.visitInsn(DUP2);// dup arrayref and index
-                    crntMaxIndex++;
-                    int index2 = crntMaxIndex;
-                    mv.visitVarInsn(ISTORE, index2);// index
-                    crntMaxIndex++;
-                    int index3 = crntMaxIndex;
-                    mv.visitVarInsn(ASTORE, index3);// arrayref
-
-                    mv.visitVarInsn(LLOAD, index1);// double value
-
-                    mv.visitInsn(opcode);
-
-                    addBipushInsn(ID);
-                    mv.visitVarInsn(ALOAD, index3);
-                    mv.visitVarInsn(ILOAD, index2);
-
-                    addBipushInsn(1);
-
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS_DETECT_SHARING, false);
-                } else
-                    mv.visitInsn(opcode);
-            } else if (globalState.shouldInstrumentArray(sig_loc)) {
-                crntMaxIndex++;
-                int index1 = crntMaxIndex;
-                mv.visitVarInsn(LSTORE, index1);
-                crntMaxIndex++;
-                mv.visitInsn(DUP2);// dup arrayref and index
-                crntMaxIndex++;
-                int index2 = crntMaxIndex;
-                mv.visitVarInsn(ISTORE, index2);// index
-                crntMaxIndex++;
-                int index3 = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index3);// arrayref
-
-                mv.visitVarInsn(LLOAD, index1);// double value
-
-                mv.visitInsn(opcode);
-
-                addBipushInsn(ID);
-                mv.visitVarInsn(ALOAD, index3);
-                mv.visitVarInsn(ILOAD, index2);
-                mv.visitVarInsn(LLOAD, index1);
-                convertPrimitiveToObject(opcode);
-
-                if (isInit) {
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                            DESC_LOG_INIT_WRITE_ACCESS, false);
-                } else {
-                    addBipushInsn(1);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                            DESC_LOG_ARRAY_ACCESS, false);
-                }
-            } else
-                mv.visitInsn(opcode);
-            break;
-        }
         case MONITORENTER: {
-            if (!config.commandLine.agentOnlySharing) {
-                String sig_loc = source + "|"
-                        + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = globalState.getLocationId(sig_loc);
+            int ID = getCrntStmtSID();
 
-                mv.visitInsn(DUP);
-                crntMaxIndex++;
-                int index = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index);// objectref
-                mv.visitInsn(opcode);
-                addBipushInsn(ID);
-                mv.visitVarInsn(ALOAD, index);
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK_INSTANCE,
-                        DESC_LOG_LOCK_INSTANCE, false);
-            } else
-                mv.visitInsn(opcode);
+            mv.visitInsn(DUP);
+            crntMaxIndex++;
+            int index = crntMaxIndex;
+            mv.visitVarInsn(ASTORE, index);// objectref
+            mv.visitInsn(opcode);
+            addPushConstInsn(mv, ID);
+            mv.visitVarInsn(ALOAD, index);
+            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK,
+                    DESC_LOG_LOCK, false);
             break;
         }
         case MONITOREXIT: {
-            if (!config.commandLine.agentOnlySharing) {
-                String sig_loc = source + "|"
-                        + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = globalState.getLocationId(sig_loc);
+            int ID = getCrntStmtSID();
 
-                mv.visitInsn(DUP);
-                crntMaxIndex++;
-                int index = crntMaxIndex;
-                mv.visitVarInsn(ASTORE, index);// objectref
-                addBipushInsn(ID);
-                mv.visitVarInsn(ALOAD, index);
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK_INSTANCE,
-                        DESC_LOG_UNLOCK_INSTANCE, false);
-            }
+            mv.visitInsn(DUP);
+            crntMaxIndex++;
+            int index = crntMaxIndex;
+            mv.visitVarInsn(ASTORE, index);// objectref
+            addPushConstInsn(mv, ID);
+            mv.visitVarInsn(ALOAD, index);
+            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK,
+                    DESC_LOG_UNLOCK, false);
             mv.visitInsn(opcode);
             break;
         }
-        case IRETURN:
-        case LRETURN:
-        case FRETURN:
-        case DRETURN:
-        case ARETURN:
-        case RETURN:
-        case ATHROW:
-            if (isSynchronized && !config.commandLine.agentOnlySharing) {
-                String sig_loc = source + "|"
-                        + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-                int ID = globalState.getLocationId(sig_loc);
-
-                addBipushInsn(ID);
-
+        case IRETURN: case LRETURN: case FRETURN: case DRETURN:
+        case ARETURN: case RETURN: case ATHROW:
+            if (isSynchronized) {
+                /* Add a runtime library callback to log {@code UNLOCK} event for synchronized method. */
+                addPushConstInsn(mv, getCrntStmtSID());
                 if (isStatic) {
-                    // signature + line number
-                    String sig_var = (classname + ".0").replace("/", ".");
-                    int SID = globalState.getVariableId(sig_var);
-                    addBipushInsn(SID);
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK_STATIC,
-                            DESC_LOG_UNLOCK_STATIC, false);
+                    mv.visitLdcInsn(Type.getObjectType(className));
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);// the this objectref
-                    mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK_INSTANCE,
-                            DESC_LOG_UNLOCK_INSTANCE, false);
+                    mv.visitVarInsn(ALOAD, 0);
                 }
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK,
+                        DESC_LOG_UNLOCK, false);
             }
             mv.visitInsn(opcode);
             break;
@@ -1281,38 +416,128 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         }
     }
 
+    private void instrumentArrayLoad(int arrayLoadOpcode) {
+        boolean isElemSingleWord = isElementSingleWord(arrayLoadOpcode);
+        if (!isInit) {
+            String sig_loc = computeStmtSig();
+            int ID = globalState.getArrayLocationId(sig_loc);
+
+            if (globalState.shouldInstrumentArray(sig_loc)) {
+                mv.visitInsn(DUP2);
+                crntMaxIndex++;
+                int index1 = crntMaxIndex;
+                mv.visitVarInsn(ISTORE, index1);
+                crntMaxIndex++;
+                int index2 = crntMaxIndex;
+                mv.visitVarInsn(ASTORE, index2);
+                mv.visitInsn(arrayLoadOpcode);
+                if (isElemSingleWord) {
+                    mv.visitInsn(DUP);
+                } else {
+                    mv.visitInsn(DUP2);
+                }
+                crntMaxIndex++;
+                int index3 = crntMaxIndex;
+                mv.visitVarInsn(getElementStoreOpcode(arrayLoadOpcode), index3);
+                if (!isElemSingleWord) {
+                    crntMaxIndex++;
+                }
+
+                addPushConstInsn(mv, ID);
+                mv.visitVarInsn(ALOAD, index2);
+                mv.visitVarInsn(ILOAD, index1);
+                mv.visitVarInsn(getElementLoadOpcode(arrayLoadOpcode), index3);
+
+                if (arrayLoadOpcode != AALOAD) {
+                    addPrimitive2ObjectConv(mv, arrayLoadOpcode);
+                }
+
+                addPushConstInsn(mv, 0);
+
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
+                        DESC_LOG_ARRAY_ACCESS, false);
+            } else
+                mv.visitInsn(arrayLoadOpcode);
+        } else {
+            mv.visitInsn(arrayLoadOpcode);
+        }
+    }
+
+    private void instrumentArrayStore(int arrayStoreOpcode) {
+        boolean isElemSingleWord = isElementSingleWord(arrayStoreOpcode);
+
+        String sig_loc = computeStmtSig();
+        int ID = globalState.getArrayLocationId(sig_loc);
+
+        if (globalState.shouldInstrumentArray(sig_loc)) {
+            crntMaxIndex++;
+            int index1 = crntMaxIndex;
+            mv.visitVarInsn(getElementStoreOpcode(arrayStoreOpcode), index1);
+            crntMaxIndex++;
+            if (!isElemSingleWord) {
+                mv.visitInsn(DUP2);
+                crntMaxIndex++;
+            }
+            int index2 = crntMaxIndex;
+            mv.visitVarInsn(ISTORE, index2);
+
+            if (isElemSingleWord) {
+                mv.visitInsn(DUP);
+            }
+            crntMaxIndex++;
+            int index3 = crntMaxIndex;
+            mv.visitVarInsn(ASTORE, index3);// arrayref
+            if (isElemSingleWord) {
+                mv.visitVarInsn(ILOAD, index2);// index
+            }
+            mv.visitVarInsn(getElementLoadOpcode(arrayStoreOpcode), index1);// value
+
+            mv.visitInsn(arrayStoreOpcode);
+
+            addPushConstInsn(mv, ID);
+            mv.visitVarInsn(ALOAD, index3);
+            mv.visitVarInsn(ILOAD, index2);
+            mv.visitVarInsn(getElementLoadOpcode(arrayStoreOpcode), index1);
+            if (arrayStoreOpcode != AASTORE) {
+                addPrimitive2ObjectConv(mv, arrayStoreOpcode);
+            }
+
+            if (isInit) {
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
+                        DESC_LOG_INIT_WRITE_ACCESS, false);
+            } else {
+                addPushConstInsn(mv, 1);
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
+                        DESC_LOG_ARRAY_ACCESS, false);
+            }
+        } else {
+            mv.visitInsn(arrayStoreOpcode);
+        }
+    }
+
     @Override
     public void visitCode() {
-        mv.visitCode();
-
-        if (isSynchronized && !config.commandLine.agentOnlySharing) {
-            String sig_loc = source + "|"
-                    + (classname + "|" + methodsignature + "|" + crntLineNum).replace("/", ".");
-            int ID = globalState.getLocationId(sig_loc);
-
-            addBipushInsn(ID);
-
+        if (isSynchronized) {
+            /* Add a runtime library callback to log {@code LOCK} event for synchronized method. */
+            addPushConstInsn(mv, getCrntStmtSID());
             if (isStatic) {
-                // signature + line number
-                String sig_var = (classname + ".0").replace("/", ".");
-                int SID = globalState.getVariableId(sig_var);
-                addBipushInsn(SID);
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK_STATIC,
-                        DESC_LOG_LOCK_STATIC, false);
+                mv.visitLdcInsn(Type.getObjectType(className));
             } else {
-                mv.visitVarInsn(ALOAD, 0);// the this objectref
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK_INSTANCE,
-                        DESC_LOG_LOCK_INSTANCE, false);
+                mv.visitVarInsn(ALOAD, 0);
             }
+            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK,
+                    DESC_LOG_LOCK, false);
         }
 
+        mv.visitCode();
     }
+
     // no branch
     /*
      * public void visitJumpInsn(int opcode, Label label) { String sig_loc =
      * (classname+"|"+methodsignature+"|"+line_cur).replace("/", "."); int ID =
      * globalState.getLocationId(sig_loc);
-     * 
+     *
      * switch (opcode) { case IFEQ://branch case IFNE: case IFLT: case IFGE:
      * case IFGT: case IFLE: case IF_ICMPEQ: case IF_ICMPNE: case IF_ICMPLT:
      * case IF_ICMPGE: case IF_ICMPGT: case IF_ICMPLE: case IF_ACMPEQ: case
@@ -1320,7 +545,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      * mv.visitMethodInsn(INVOKESTATIC, config.logClass,
      * config.LOG_BRANCH, config.DESC_LOG_BRANCH); default:
      * mv.visitJumpInsn(opcode, label);break; } }
-     * 
+     *
      * public void visitTableSwitchInsn(int min, int max, Label dflt, Label...
      * labels) { String sig_loc =
      * (classname+"|"+methodsignature+"|"+line_cur).replace("/", "."); int ID =
@@ -1328,7 +553,24 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      * addBipushInsn(mv,ID); mv.visitMethodInsn(INVOKESTATIC,
      * config.logClass, config.LOG_BRANCH,
      * config.DESC_LOG_BRANCH);
-     * 
+     *
      * mv.visitTableSwitchInsn(min, max, dflt, labels); }
      */
+
+    /**
+     * @return a unique integer representing the syntactic identifier of the
+     *         current statement in the instrumented program
+     */
+    private int getCrntStmtSID() {
+        return globalState.getLocationId(computeStmtSig());
+    }
+
+    /**
+     * @return a unique string representing the signature of a statement in the
+     *         instrumented program
+     */
+    private String computeStmtSig() {
+        // TODO(YilongL): is the replace really necessary?
+        return String.format("%s|%s|%s|%s", source, className, signature, crntLineNum).replace("/", ".");
+    }
 }

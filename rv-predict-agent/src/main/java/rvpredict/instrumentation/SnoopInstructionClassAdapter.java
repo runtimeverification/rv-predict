@@ -11,9 +11,9 @@ import rvpredict.config.Config;
 public class SnoopInstructionClassAdapter extends ClassVisitor {
 
     private final Config config;
-    
+
     private final GlobalStateForInstrumentation globalState;
-    
+
     private String classname;
     private String source;
 
@@ -63,34 +63,23 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature,
             String[] exceptions) {
-        boolean isSynchronized = false;
-        boolean isStatic = false;
-
-        if ((access & Opcodes.ACC_SYNCHRONIZED) != 0)
-            isSynchronized = true;
-        if ((access & Opcodes.ACC_STATIC) != 0)
-            isStatic = true;
-
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
 
         if (mv != null) {
-
-            // if(signature==null)
-            // signature = name+desc;
             Type[] args = Type.getArgumentTypes(desc);
             int length = args.length;
             for (int i = 0; i < args.length; i++) {
                 if (args[i] == Type.DOUBLE_TYPE || args[i] == Type.LONG_TYPE)
                     length++;
             }
-            // System.out.println("******************* "+((access &
-            // Opcodes.ACC_STATIC)>0));
-            mv = new SnoopInstructionMethodAdapter(mv, source, classname, name, name + desc,
-                    name.equals("<init>") || name.equals("<clinit>"), isSynchronized, isStatic,
-                    length, config, globalState);
-
+            if (config.commandLine.agentOnlySharing) {
+                mv = new SharedVariableDetectionMethodAdapter(mv, source, classname, name, name
+                        + desc, access, length, config, globalState);
+            } else {
+                mv = new SnoopInstructionMethodAdapter(mv, source, classname, name, name + desc,
+                        access, length, config, globalState);
+            }
         }
-
         return mv;
     }
 }

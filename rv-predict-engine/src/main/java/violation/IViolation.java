@@ -29,8 +29,7 @@
 package violation;
 
 import java.util.List;
-import java.util.List;
-
+ 
 public interface IViolation {
 
     /**

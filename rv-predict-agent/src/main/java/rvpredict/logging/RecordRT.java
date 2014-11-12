@@ -188,40 +188,28 @@ public final class RecordRT {
     }
 
     public static void logBranch(int ID) {
-        db.saveEventToDB(Thread.currentThread().getId(), ID, 0, 0, 0, EventType.BRANCH);
+        db.saveEvent(EventType.BRANCH, ID, 0, 0, 0);
     }
 
     public static void logBasicBlock(int ID) {
-        db.saveEventToDB(Thread.currentThread().getId(), ID, 0, 0, 0, EventType.BASIC_BLOCK);
+        db.saveEvent(EventType.BASIC_BLOCK, ID, 0, 0, 0);
     }
 
     public static void logWait(int ID, final Object o) {
-        long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, System.identityHashCode(o), 0, 0, EventType.WAIT);
+        db.saveEvent(EventType.WAIT, ID, System.identityHashCode(o), 0, 0);
 
     }
 
     public static void logNotify(int ID, final Object o) {
-        long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, System.identityHashCode(o), 0, 0, EventType.NOTIFY);
+        db.saveEvent(EventType.NOTIFY, ID, System.identityHashCode(o), 0, 0);
     }
 
     public static void logLock(int ID, final Object lock) {
-        long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, System.identityHashCode(lock), 0, 0, EventType.LOCK);
+        db.saveEvent(EventType.LOCK, ID, System.identityHashCode(lock), 0, 0);
     }
 
     public static void logUnlock(int ID, final Object lock) {
-        long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, System.identityHashCode(lock), 0, 0, EventType.UNLOCK);
-    }
-
-    public static void logFileAcc(String name, boolean write) {
-        long tid = Thread.currentThread().getId();
-        String str = "write";
-        if (!write)
-            str = "read";
-        System.out.println("Thread " + tid + " " + str + " to file " + name);
+        db.saveEvent(EventType.UNLOCK, ID, System.identityHashCode(lock), 0, 0);
     }
 
     /**
@@ -262,8 +250,7 @@ public final class RecordRT {
                     }
                 }
 
-                if (write)// write
-                {
+                if (write) {
                     if (readThreadMap.containsKey(SID)) {
                         long[] readThreads = readThreadMap.get(SID);
                         if (readThreads != null
@@ -274,8 +261,7 @@ public final class RecordRT {
                     }
 
                     writeThreadMap.put(SID, tid);
-                } else// read
-                {
+                } else {
                     long[] readThreads = readThreadMap.get(SID);
 
                     if (readThreads == null) {
@@ -294,24 +280,20 @@ public final class RecordRT {
 
     public static void logFieldAcc(int ID, final Object o, int SID, final Object v,
             final boolean write) {
-        long tid = Thread.currentThread().getId();
         // shared object reference variable deference
         // make it as a branch event
 
         int hashcode_o = System.identityHashCode(o);
-        db.saveEventToDB(tid, ID, o == null ? 0 : hashcode_o, -SID,
-                longOfObject(v),
-                write ? EventType.WRITE : EventType.READ);
+        db.saveEvent(write ? EventType.WRITE : EventType.READ, ID, o == null ? 0 : hashcode_o, -SID,
+                longOfObject(v));
         if (!isPrim(v)) {
             logBranch(-1);
         }
     }
 
     public static void logInitialWrite(int ID, final Object o, int index, final Object v) {
-        long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, o == null ? 0 : System.identityHashCode(o),
-                index, longOfObject(v),
-                EventType.INIT);
+        db.saveEvent(EventType.INIT, ID, o == null ? 0 : System.identityHashCode(o),
+                index, longOfObject(v));
     }
 
     public static void logArrayAcc(int ID, final Object o, int index, final boolean write) {
@@ -382,9 +364,7 @@ public final class RecordRT {
 
     public static void logArrayAcc(int ID, final Object o, int index, final Object v,
             final boolean write) {
-        long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, System.identityHashCode(o), index, longOfObject(v),
-                write ? EventType.WRITE : EventType.READ);
+        db.saveEvent(write ? EventType.WRITE : EventType.READ, ID, System.identityHashCode(o), index, longOfObject(v));
     }
 
     private static boolean isPrim(Object o) {
@@ -445,13 +425,11 @@ public final class RecordRT {
         index++;
         threadTidIndexMap.put(tid, index);
 
-        db.saveEventToDB(tid, ID, tid_t, 0, 0, EventType.START);
-
+        db.saveEvent(EventType.START, ID, tid_t, 0, 0);
     }
 
     public static void logJoin(int ID, final Object o) {
-        db.saveEventToDB(Thread.currentThread().getId(), ID, ((Thread) o).getId(), 0, 0,
-                EventType.JOIN);
+        db.saveEvent(EventType.JOIN, ID, ((Thread) o).getId(), 0, 0);
     }
 
 }

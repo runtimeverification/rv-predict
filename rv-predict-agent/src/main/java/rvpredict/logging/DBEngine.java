@@ -312,11 +312,11 @@ public class DBEngine {
     }
 
     /**
-     * save an event to database. must be synchronized. otherwise, races when writing to file might occur for
-     * synchronous logging.
+     * save an event to database. must be synchronized. otherwise, races when
+     * writing to file might occur for synchronous logging.
      */
-    public synchronized  void saveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE, EventType TYPE) {
-
+    public synchronized void saveEvent(EventType TYPE, int ID, long ADDRL, long ADDRR, long VALUE) {
+        long TID = Thread.currentThread().getId();
         EventItem e = new EventItem(DBEngine.globalEventID.incrementAndGet(), TID, ID, ADDRL, ADDRR, VALUE, TYPE);
         if (asynchronousLogging) {
             if (buffer.size() >= BUFFER_THRESHOLD) {

@@ -73,7 +73,7 @@ public class DBEngine {
                     threadTidList = (List<Map.Entry<Long, String>>) metadataIS.readObject();
                 } catch (EOFException _) { break;} // EOF should only happen for threadTid
                 for (Map.Entry<Long,String> entry : threadTidList) {
-                   threadIdNameMap.put(entry.getKey(), entry.getValue());
+                    threadIdNameMap.put(entry.getKey(), entry.getValue());
                 }
                 List<Map.Entry<String, Integer>> variableIdList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
                 for (Map.Entry<String, Integer> entry : variableIdList) {
@@ -122,7 +122,7 @@ public class DBEngine {
      * TODO: design and implement some proper checks.
      */
     public boolean checkLog() {
-       return true;
+        return true;
     }
 
     public void createScheduleTable() throws Exception {
@@ -190,46 +190,46 @@ public class DBEngine {
             EventType TYPE = eventItem.TYPE;
 
             switch (TYPE) {
-            case INIT:
-                node = new InitNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
-                break;
-            case READ:
-                node = new ReadNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
-                break;
-            case WRITE:
-                node = new WriteNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
-                break;
-            case LOCK:
-                node = new LockNode(GID, TID, ID, ADDRL);
-                break;
-            case UNLOCK:
-                node = new UnlockNode(GID, TID, ID, ADDRL);
-                break;
-            case WAIT:
-                node = new WaitNode(GID, TID, ID, ADDRL);
-                break;
-            case NOTIFY:
-                node = new NotifyNode(GID, TID, ID, ADDRL);
-                break;
-            case START:
-                node = new StartNode(GID, TID, ID, ADDRL);
-                break;
-            case JOIN:
-                node = new JoinNode(GID, TID, ID, ADDRL);
-                break;
-            case BRANCH:
-                node = new BranchNode(GID, TID, ID);
-                break;
-            case BASIC_BLOCK:
-                node = new BBNode(GID, TID, ID);
-                break;
-            case PROPERTY:
-                node = new PropertyNode(GID, TID, ID, "" + ADDRL);
-                break;
+                case INIT:
+                    node = new InitNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
+                    break;
+                case READ:
+                    node = new ReadNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
+                    break;
+                case WRITE:
+                    node = new WriteNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
+                    break;
+                case LOCK:
+                    node = new LockNode(GID, TID, ID, ADDRL);
+                    break;
+                case UNLOCK:
+                    node = new UnlockNode(GID, TID, ID, ADDRL);
+                    break;
+                case WAIT:
+                    node = new WaitNode(GID, TID, ID, ADDRL);
+                    break;
+                case NOTIFY:
+                    node = new NotifyNode(GID, TID, ID, ADDRL);
+                    break;
+                case START:
+                    node = new StartNode(GID, TID, ID, ADDRL);
+                    break;
+                case JOIN:
+                    node = new JoinNode(GID, TID, ID, ADDRL);
+                    break;
+                case BRANCH:
+                    node = new BranchNode(GID, TID, ID);
+                    break;
+                case BASIC_BLOCK:
+                    node = new BBNode(GID, TID, ID);
+                    break;
+                case PROPERTY:
+                    node = new PropertyNode(GID, TID, ID, "" + ADDRL);
+                    break;
 
-            default:
-                System.out.println(TYPE);
-                break;
+                default:
+                    System.out.println(TYPE);
+                    break;
             }
 
             trace.addRawNode(node);

@@ -13,10 +13,8 @@ public class Config {
     public static final String LOG_FIELD_ACCESS = "logFieldAcc";
     public static final String LOG_INIT_WRITE_ACCESS = "logInitialWrite";
     public static final String LOG_ARRAY_ACCESS = "logArrayAcc";
-    public static final String LOG_LOCK_INSTANCE = "logLock";
-    public static final String LOG_LOCK_STATIC = "logStaticSyncLock";
-    public static final String LOG_UNLOCK_INSTANCE = "logUnlock";
-    public static final String LOG_UNLOCK_STATIC = "logStaticSyncUnlock";
+    public static final String LOG_LOCK = "logLock";
+    public static final String LOG_UNLOCK = "logUnlock";
     public static final String LOG_BRANCH = "logBranch";
     public static final String LOG_THREAD_START = "logStart";
     public static final String LOG_THREAD_JOIN = "logJoin";
@@ -30,10 +28,8 @@ public class Config {
     public static final String DESC_LOG_ARRAY_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;Z)V";
     public static final String DESC_LOG_ARRAY_ACCESS_DETECT_SHARING = "(ILjava/lang/Object;IZ)V";
 
-    public static final String DESC_LOG_LOCK_INSTANCE = "(ILjava/lang/Object;)V";
-    public static final String DESC_LOG_LOCK_STATIC = "(II)V";
-    public static final String DESC_LOG_UNLOCK_INSTANCE = "(ILjava/lang/Object;)V";
-    public static final String DESC_LOG_UNLOCK_STATIC = "(II)V";
+    public static final String DESC_LOG_LOCK = "(ILjava/lang/Object;)V";
+    public static final String DESC_LOG_UNLOCK = "(ILjava/lang/Object;)V";
     public static final String DESC_LOG_BRANCH = "(I)V";
     public static final String DESC_LOG_THREAD_START = "(ILjava/lang/Object;)V";
     public static final String DESC_LOG_THREAD_JOIN = "(ILjava/lang/Object;)V";

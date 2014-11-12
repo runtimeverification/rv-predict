@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -100,7 +100,7 @@ public final class RecordRT {
 
     /**
      * initialize the database engine
-     * 
+     *
      * @throws Exception
      */
     public static void initNonSharing(boolean newTable) throws Exception {
@@ -218,18 +218,7 @@ public final class RecordRT {
 
     }
 
-    public static void logStaticSyncLock(int ID, int SID) {
-        long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, SID, 0, 0, EventType.LOCK);
-    }
-
-    public static void logStaticSyncUnlock(int ID, int SID) {
-        long tid = Thread.currentThread().getId();
-        db.saveEventToDB(tid, ID, SID, 0, 0, EventType.UNLOCK);
-    }
-
     public static void logLock(int ID, final Object lock) {
-
         long tid = Thread.currentThread().getId();
         db.saveEventToDB(tid, ID, System.identityHashCode(lock), 0, 0, EventType.LOCK);
     }
@@ -251,7 +240,7 @@ public final class RecordRT {
     /**
      * detect shared variables -- two conditions 1. the address is accessed by
      * more than two threads 2. at least one of them is a write
-     * 
+     *
      * @param ID
      *            -- shared variable id
      * @param SID
@@ -454,7 +443,7 @@ public final class RecordRT {
      * unique identifier, i.e, name, is a concatenation of the name of the
      * parent thread with the order of children threads forked by the parent
      * thread.
-     * 
+     *
      * @param ID
      * @param o
      */

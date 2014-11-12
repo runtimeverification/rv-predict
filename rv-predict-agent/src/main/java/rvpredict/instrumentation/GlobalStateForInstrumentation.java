@@ -1,12 +1,9 @@
 package rvpredict.instrumentation;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.objectweb.asm.ClassReader;
 
 import rvpredict.config.Config;
 import rvpredict.logging.DBEngine;
@@ -155,24 +152,5 @@ public class GlobalStateForInstrumentation {
 
     public String getArrayLocationSig(int id) {
         return arrayIdMap.get(id);
-    }
-
-    public boolean isThreadClass(String cname) {
-        while (!cname.equals("java/lang/Object")) {
-            if (cname.equals("java/lang/Thread"))
-                return true;
-
-            try {
-                ClassReader cr = new ClassReader(cname);
-                cname = cr.getSuperName();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                // e.printStackTrace();
-                // //if class can not find
-                // System.out.println("Class "+cname+" can not find!");
-                return false;
-            }
-        }
-        return false;
     }
 }

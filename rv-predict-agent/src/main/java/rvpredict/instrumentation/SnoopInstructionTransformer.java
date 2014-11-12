@@ -23,7 +23,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
 
     private final Config config;
     private final GlobalStateForInstrumentation globalState;
-    
+
     public SnoopInstructionTransformer(Config config, GlobalStateForInstrumentation globalState) {
         this.config = config;
         this.globalState = globalState;
@@ -130,23 +130,12 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                 }
             }
 
-        // try {
-        // ClassLoader.getSystemClassLoader().getParent().loadClass("java.io.File");
-        // Class cz= Class.forName("java.io.File");
-        // System.out.println("((((((((((((((( "+cz.toString());
-        // } catch (ClassNotFoundException e) {
-        // // TODO Auto-generated catch block
-        // e.printStackTrace();
-        // }
-        //
-        // System.out.println("((((((((((((((( transform "+cname);
+        // TODO(YilongL): we need a more general mechanism
         // special handle java.io.File
         if (cname.equals("java/io/File"))
             toInstrument = true;
 
         if (toInstrument) {
-
-            // System.out.println("((((((((((((((( transform "+cname);
             ClassReader cr = new ClassReader(cbuf);
 
             ClassWriter cw = new ClassWriter(cr, 0);
@@ -156,18 +145,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             cr.accept(cv, 0);
 
             byte[] ret = cw.toByteArray();
-            // if(cname.equals("org/dacapo/parser/Config$Size"))
-            // try {
-            // FileOutputStream out = new FileOutputStream("tmp.class");
-            // out.write(ret);
-            // out.close();
-            // } catch(Exception e) {
-            // e.printStackTrace();
-            // }
-            // System.err.println(")))))))))))))) end transform "+cname);
             return ret;
-        } else {
-            // System.out.println("--------------- skipping "+cname);
         }
         return cbuf;
     }

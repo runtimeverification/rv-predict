@@ -192,5 +192,46 @@ options for advanced users to tune RV-Predict:
    trace size.
 
 
+Problems running RV-Predict?
+----------------------------
+
+We list below some possible issues occurring when using RV-Predict and ways to
+address them.  For any unlisted issue you might experience, please use the
+`RV Support Center`_.
+
+Program does not seem to terminate
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Problem
+  The execution of the program takes too long when run using RV-Predict
+
+Reason
+  It could be due to the overhead required by logging, or due to a
+  deadlock condition triggered by the logged program.
+
+Advice
+  You can stop the program at any time and run the prediction phase on the
+  already logged trace using the ``--predict`` option with the directory in which
+  the trace was logged (printed by RV-Predict when the logging was started).
+
+Stack overflow error
+~~~~~~~~~~~~~~~~~~~~
+
+Problem
+  I'm getting an unexpected *Stack Overflow* exception and a huge stack
+  trace when running my program with RV-Predict.
+
+Reason
+  Because the execution trace is done through a Java Agent, the code logging the
+  execution runs as part of the logged application itself.  Hence, the
+  call stack of the logging code adds on top of the call stack of the logged process.
+
+Advice
+  Try increasing the stack size of the logged program by passing the ``-Xss``
+  option to RV-Predict.
+
+
+
 .. _z3: http://z3.codeplex.com
 .. _RV-Predict website: http://runtimeverification.com/predict
+.. _RV Support Center: https://runtimeverification.com/support/

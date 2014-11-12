@@ -96,7 +96,6 @@ public class Main {
                             Logger.MSGTYPE.INFO);
                 }
             }
-            appArgList.add("-Xss" + Configuration.stackSize + "m");
             appArgList.addAll(config.command_line);
 
             if (config.optlog) {

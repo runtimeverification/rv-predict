@@ -113,8 +113,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     switch (name) {
                     case "start":
                         prepareLoggingThreadEvents();
-                        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_START,
-                                DESC_LOG_THREAD_START, false);
+                        addLoggingCallBack(LOG_THREAD_START, DESC_LOG_THREAD_START);
                         break;
                     case "join":
                         /* TODO(YilongL): Since calls to thread join must be
@@ -129,19 +128,16 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
                         addPushConstInsn(mv, sid);
                         mv.visitVarInsn(ALOAD, index);
-                        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_THREAD_JOIN,
-                                DESC_LOG_THREAD_JOIN, false);
+                        addLoggingCallBack(LOG_THREAD_JOIN, DESC_LOG_THREAD_JOIN);
                         return;
                     case "wait":
                         prepareLoggingThreadEvents();
-                        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_WAIT, DESC_LOG_WAIT,
-                                false);
+                        addLoggingCallBack(LOG_WAIT, DESC_LOG_WAIT);
                         break;
                     case "notify":
                     case "notifyAll":
                         prepareLoggingThreadEvents();
-                        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_NOTIFY,
-                                DESC_LOG_NOTIFY, false);
+                        addLoggingCallBack(LOG_NOTIFY, DESC_LOG_NOTIFY);
                     }
                 }
             }
@@ -184,8 +180,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             loadThenBoxValue(desc, localVarIdx);
             addPushConstInsn(mv, 0);
             // <stack>... value ID null sid value false </stack>
-            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                    DESC_LOG_FIELD_ACCESS, false);
+            addLoggingCallBack(LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
             // <stack>... value </stack>
             break;
         case PUTSTATIC:
@@ -201,13 +196,11 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             // <stack>... ID null sid value </stack>
 
             if (isInit)
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                        DESC_LOG_INIT_WRITE_ACCESS, false);
+                addLoggingCallBack(LOG_INIT_WRITE_ACCESS, DESC_LOG_INIT_WRITE_ACCESS);
             else {
                 addPushConstInsn(mv, 1);
                 // <stack>... ID null sid value false </stack>
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                        DESC_LOG_FIELD_ACCESS, false);
+                addLoggingCallBack(LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
             }
             break;
         case GETFIELD:
@@ -228,8 +221,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             loadThenBoxValue(desc, localVarIdx2);
             addPushConstInsn(mv, 0);
             // <stack>... value ID objectref sid value false </stack>
-            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                    DESC_LOG_FIELD_ACCESS, false);
+            addLoggingCallBack(LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
             // <stack>... value </stack>
             break;
         case PUTFIELD:
@@ -260,13 +252,11 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             loadThenBoxValue(desc, localVarIdx);
             // <stack>... ID objectref sid value </stack>
             if (isInit)
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                        DESC_LOG_INIT_WRITE_ACCESS, false);
+                addLoggingCallBack(LOG_INIT_WRITE_ACCESS, DESC_LOG_INIT_WRITE_ACCESS);
             else {
                 addPushConstInsn(mv, 1);
                 // <stack>... ID objectref sid value true </stack>
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_FIELD_ACCESS,
-                        DESC_LOG_FIELD_ACCESS, false);
+                addLoggingCallBack(LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
             }
             // <stack>... </stack>
             break;
@@ -297,8 +287,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             addPushConstInsn(mv, sid);
             mv.visitVarInsn(ALOAD, index);
             // <stack>... sid objectref </stack>
-            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK,
-                    DESC_LOG_LOCK, false);
+            addLoggingCallBack(LOG_LOCK, DESC_LOG_LOCK);
             break;
         }
         case MONITOREXIT: {
@@ -309,8 +298,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             addPushConstInsn(mv, sid);
             mv.visitVarInsn(ALOAD, index);
             // <stack>... objectref sid objectref </stack>
-            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK,
-                    DESC_LOG_UNLOCK, false);
+            addLoggingCallBack(LOG_UNLOCK, DESC_LOG_UNLOCK);
             // <stack>... objectref </stack>
             mv.visitInsn(opcode);
             break;
@@ -325,8 +313,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 } else {
                     mv.visitVarInsn(ALOAD, 0);
                 }
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_UNLOCK,
-                        DESC_LOG_UNLOCK, false);
+                addLoggingCallBack(LOG_UNLOCK, DESC_LOG_UNLOCK);
             }
             mv.visitInsn(opcode);
             break;
@@ -381,8 +368,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         addPushConstInsn(mv, 0);
         // <stack>... value sid arrayref index valueObjRef false </stack>
 
-        mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                DESC_LOG_ARRAY_ACCESS, false);
+        addLoggingCallBack(LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
         // <stack>... value </stack>
     }
 
@@ -423,13 +409,11 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         }
         // <stack>... sid arrayref index valueObjRef </stack>
         if (isInit) {
-            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_INIT_WRITE_ACCESS,
-                    DESC_LOG_INIT_WRITE_ACCESS, false);
+            addLoggingCallBack(LOG_INIT_WRITE_ACCESS, DESC_LOG_INIT_WRITE_ACCESS);
         } else {
             addPushConstInsn(mv, 1);
             // <stack>... sid arrayref index valueObjRef true </stack>
-            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_ARRAY_ACCESS,
-                    DESC_LOG_ARRAY_ACCESS, false);
+            addLoggingCallBack(LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
         }
         // <stack>... </stack>
     }
@@ -444,8 +428,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             } else {
                 mv.visitVarInsn(ALOAD, 0);
             }
-            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_LOCK,
-                    DESC_LOG_LOCK, false);
+            addLoggingCallBack(LOG_LOCK, DESC_LOG_LOCK);
         }
 
         mv.visitCode();
@@ -456,8 +439,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         if (config.commandLine.branch) {
             if (opcode != JSR && opcode != GOTO) {
                 addPushConstInsn(mv, getCrntStmtSID());
-                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_BRANCH,
-                        DESC_LOG_BRANCH, false);
+                addLoggingCallBack(LOG_BRANCH, DESC_LOG_BRANCH);
             }
         }
         mv.visitJumpInsn(opcode, label);
@@ -467,9 +449,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     public void visitTableSwitchInsn(int min, int max, Label dflt, Label... labels) {
         if (config.commandLine.branch) {
             addPushConstInsn(mv, getCrntStmtSID());
-            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_BRANCH, DESC_LOG_BRANCH, false);
+            addLoggingCallBack(LOG_BRANCH, DESC_LOG_BRANCH);
         }
         mv.visitTableSwitchInsn(min, max, dflt, labels);
+    }
+
+    private void addLoggingCallBack(String methodName, String methodDescriptor) {
+        mv.visitMethodInsn(INVOKESTATIC, config.logClass, methodName, methodDescriptor, false);
     }
 
     /**

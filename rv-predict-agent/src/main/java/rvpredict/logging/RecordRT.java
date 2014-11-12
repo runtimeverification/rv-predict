@@ -38,34 +38,34 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class RecordRT {
 
-    static HashMap<Long, Integer> threadTidIndexMap;
+    private static HashMap<Long, Integer> threadTidIndexMap;
     public static HashSet<Integer> sharedVariableIds;
     public static HashSet<Integer> sharedArrayIds;
-    static HashMap<Integer, Long> writeThreadMap;
-    static HashMap<Integer, long[]> readThreadMap;
+    private static HashMap<Integer, Long> writeThreadMap;
+    private static HashMap<Integer, long[]> readThreadMap;
     public static HashMap<Integer, HashSet<Integer>> arrayIdsMap;
 
-    static HashMap<Integer, Long> writeThreadArrayMap;
-    static HashMap<Integer, long[]> readThreadArrayMap;
-    final static String MAIN_NAME = "0";
+    private static HashMap<Integer, Long> writeThreadArrayMap;
+    private static HashMap<Integer, long[]> readThreadArrayMap;
+    private final static String MAIN_NAME = "0";
 
     static ThreadLocal<HashSet<Integer>> threadLocalIDSet;
     static ThreadLocal<HashSet<Integer>> threadLocalIDSet2;
 
     // engine for storing events into database
-    static DBEngine db;
+    private static DBEngine db;
 
     public static void init(DBEngine db) {
         RecordRT.db = db;
         if (Config.instance.commandLine.agentOnlySharing) {
-            sharedVariableIds = new HashSet<Integer>();
-            writeThreadMap = new HashMap<Integer, Long>();
-            readThreadMap = new HashMap<Integer, long[]>();
+            sharedVariableIds = new HashSet<>();
+            writeThreadMap = new HashMap<>();
+            readThreadMap = new HashMap<>();
 
-            sharedArrayIds = new HashSet<Integer>();
-            arrayIdsMap = new HashMap<Integer, HashSet<Integer>>();
-            writeThreadArrayMap = new HashMap<Integer, Long>();
-            readThreadArrayMap = new HashMap<Integer, long[]>();
+            sharedArrayIds = new HashSet<>();
+            arrayIdsMap = new HashMap<>();
+            writeThreadArrayMap = new HashMap<>();
+            readThreadArrayMap = new HashMap<>();
 
             threadLocalIDSet = new ThreadLocal<HashSet<Integer>>() {
                 @Override
@@ -84,17 +84,7 @@ public final class RecordRT {
                 }
             };
         } else {
-            // appname = "org.eclipse.equinox.launcher.Main";
-            try {
-
-                // StackTraceElement[] stack = Thread.currentThread
-                // ().getStackTrace ();
-                // StackTraceElement main = stack[stack.length - 1];
-
-                initNonSharing(false);
-            } catch (Exception e) {
-                // e.printStackTrace();
-            }
+            initNonSharing(false);
         }
     }
 
@@ -103,7 +93,7 @@ public final class RecordRT {
      *
      * @throws Exception
      */
-    public static void initNonSharing(boolean newTable) throws Exception {
+    public static void initNonSharing(boolean newTable) {
         long tid = Thread.currentThread().getId();
 
         // load sharedvariables and sharedarraylocations
@@ -148,57 +138,56 @@ public final class RecordRT {
     }
 
     public static void saveMetaData(DBEngine db, GlobalStateForInstrumentation state) {
-            ConcurrentHashMap<Long, String> threadTidMap = state.unsavedThreadTidNameMap;
-            ConcurrentHashMap<String, Integer> variableIdMap = state.unsavedVariableIdMap;
-            ConcurrentHashMap<String, Boolean> volatileVariables = state.unsavedVolatileVariables;
-            ConcurrentHashMap<String, Integer> stmtSigIdMap = state.unsavedStmtSigIdMap;
-                // just reuse the connection
+        ConcurrentHashMap<Long, String> threadTidMap = state.unsavedThreadTidNameMap;
+        ConcurrentHashMap<String, Integer> variableIdMap = state.unsavedVariableIdMap;
+        ConcurrentHashMap<String, Boolean> volatileVariables = state.unsavedVolatileVariables;
+        ConcurrentHashMap<String, Integer> stmtSigIdMap = state.unsavedStmtSigIdMap;
+        // just reuse the connection
 
-                // TODO: if db is null or closed, there must be something wrong
-                Iterator<Entry<Long, String>> threadIdNameIter = threadTidMap.entrySet().iterator();
-                List<Entry<Long,String>> threadTidList = new ArrayList<>(threadTidMap.size());
-                while (threadIdNameIter.hasNext()) {
-                    Map.Entry<Long,String> entry = threadIdNameIter.next();
-                    threadTidList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
-                }
-                db.saveObject(threadTidList);
-                // save variable - id to database
-                Iterator<Entry<String, Integer>> variableIdMapIter = variableIdMap.entrySet()
-                        .iterator();
-                List<Entry<String, Integer>> variableIdList = new ArrayList<>(variableIdMap.size());
-                while (variableIdMapIter.hasNext()) {
-                    Map.Entry<String, Integer> entry = variableIdMapIter.next();
-                    variableIdMapIter.remove();
-                    variableIdList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
-                }
-                db.saveObject(variableIdList);
+        // TODO: if db is null or closed, there must be something wrong
+        Iterator<Entry<Long, String>> threadIdNameIter = threadTidMap.entrySet().iterator();
+        List<Entry<Long,String>> threadTidList = new ArrayList<>(threadTidMap.size());
+        while (threadIdNameIter.hasNext()) {
+            Map.Entry<Long,String> entry = threadIdNameIter.next();
+            threadTidList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
+        }
+        db.saveObject(threadTidList);
+        // save variable - id to database
+        Iterator<Entry<String, Integer>> variableIdMapIter = variableIdMap.entrySet()
+                .iterator();
+        List<Entry<String, Integer>> variableIdList = new ArrayList<>(variableIdMap.size());
+        while (variableIdMapIter.hasNext()) {
+            Map.Entry<String, Integer> entry = variableIdMapIter.next();
+            variableIdMapIter.remove();
+            variableIdList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
+        }
+        db.saveObject(variableIdList);
 
-                // save volatilevariable - id to database
+        // save volatilevariable - id to database
 
-                List<Entry<String, Integer>> volatileVarList = new ArrayList<>(volatileVariables.size());
-                Iterator<Entry<String, Boolean>> volatileIt = volatileVariables.entrySet().iterator();
-                while (volatileIt.hasNext()) {
-                    String sig = volatileIt.next().getKey();
-                    volatileIt.remove();
-                    Integer id = GlobalStateForInstrumentation.instance.variableIdMap.get(sig);
-                    volatileVarList.add(new AbstractMap.SimpleEntry<>(sig,id));
-                }
-                db.saveObject(volatileVarList);
-                // save stmt - id to database
+        List<Entry<String, Integer>> volatileVarList = new ArrayList<>(volatileVariables.size());
+        Iterator<Entry<String, Boolean>> volatileIt = volatileVariables.entrySet().iterator();
+        while (volatileIt.hasNext()) {
+            String sig = volatileIt.next().getKey();
+            volatileIt.remove();
+            Integer id = GlobalStateForInstrumentation.instance.variableIdMap.get(sig);
+            volatileVarList.add(new AbstractMap.SimpleEntry<>(sig,id));
+        }
+        db.saveObject(volatileVarList);
+        // save stmt - id to database
 
-                List<Entry<String, Integer>> stmtSigIdList = new ArrayList<>(stmtSigIdMap.size());
-                Iterator<Entry<String, Integer>> stmtSigIdMapIter = stmtSigIdMap.entrySet().iterator();
-                while (stmtSigIdMapIter.hasNext()) {
-                    Entry<String, Integer> entry = stmtSigIdMapIter.next();
-                    stmtSigIdList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
-                    stmtSigIdMapIter.remove();
-                    // System.out.println("* ["+id+"] "+sig+" *");
-                }
-                db.saveObject(stmtSigIdList);
+        List<Entry<String, Integer>> stmtSigIdList = new ArrayList<>(stmtSigIdMap.size());
+        Iterator<Entry<String, Integer>> stmtSigIdMapIter = stmtSigIdMap.entrySet().iterator();
+        while (stmtSigIdMapIter.hasNext()) {
+            Entry<String, Integer> entry = stmtSigIdMapIter.next();
+            stmtSigIdList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
+            stmtSigIdMapIter.remove();
+            // System.out.println("* ["+id+"] "+sig+" *");
+        }
+        db.saveObject(stmtSigIdList);
     }
 
     public static void logBranch(int ID) {
-
         db.saveEventToDB(Thread.currentThread().getId(), ID, 0, 0, 0, EventType.BRANCH);
     }
 
@@ -215,7 +204,6 @@ public final class RecordRT {
     public static void logNotify(int ID, final Object o) {
         long tid = Thread.currentThread().getId();
         db.saveEventToDB(tid, ID, System.identityHashCode(o), 0, 0, EventType.NOTIFY);
-
     }
 
     public static void logLock(int ID, final Object lock) {
@@ -233,7 +221,6 @@ public final class RecordRT {
         String str = "write";
         if (!write)
             str = "read";
-
         System.out.println("Thread " + tid + " " + str + " to file " + name);
     }
 
@@ -250,58 +237,55 @@ public final class RecordRT {
      */
     public static void logFieldAcc(int ID, int SID, final boolean write) {
         long tid = Thread.currentThread().getId();
+        if (!threadLocalIDSet.get().contains(ID)) {
+            if (threadLocalIDSet2.get().contains(ID))
+                threadLocalIDSet.get().add(ID);
+            else
+                threadLocalIDSet2.get().add(ID);
 
-        {
-            if (!threadLocalIDSet.get().contains(ID)) {
-                if (threadLocalIDSet2.get().contains(ID))
-                    threadLocalIDSet.get().add(ID);
-                else
-                    threadLocalIDSet2.get().add(ID);
+            // o is not used...
 
-                // o is not used...
+            // instance-based approach consumes too much memory
 
-                // instance-based approach consumes too much memory
+            // String sig =
+            // o==null?"."+SID:System.identityHashCode(o)+"."+SID;
 
-                // String sig =
-                // o==null?"."+SID:System.identityHashCode(o)+"."+SID;
-
-                if (Config.instance.verbose) {
-                    String readOrWrite = (write ? " write" : " read");
-                    System.out.println("Thread " + tid + " " + readOrWrite + " variable " + SID);
+            if (Config.instance.verbose) {
+                String readOrWrite = (write ? " write" : " read");
+                System.out.println("Thread " + tid + " " + readOrWrite + " variable " + SID);
+            }
+            if (!sharedVariableIds.contains(SID)) {
+                if (writeThreadMap.containsKey(SID)) {
+                    if (writeThreadMap.get(SID) != tid) {
+                        sharedVariableIds.add(SID);
+                        return;
+                    }
                 }
-                if (!sharedVariableIds.contains(SID)) {
-                    if (writeThreadMap.containsKey(SID)) {
-                        if (writeThreadMap.get(SID) != tid) {
+
+                if (write)// write
+                {
+                    if (readThreadMap.containsKey(SID)) {
+                        long[] readThreads = readThreadMap.get(SID);
+                        if (readThreads != null
+                                && (readThreads[0] != tid || (readThreads[1] > 0 && readThreads[1] != tid))) {
                             sharedVariableIds.add(SID);
                             return;
                         }
                     }
 
-                    if (write)// write
-                    {
-                        if (readThreadMap.containsKey(SID)) {
-                            long[] readThreads = readThreadMap.get(SID);
-                            if (readThreads != null
-                                    && (readThreads[0] != tid || (readThreads[1] > 0 && readThreads[1] != tid))) {
-                                sharedVariableIds.add(SID);
-                                return;
-                            }
-                        }
+                    writeThreadMap.put(SID, tid);
+                } else// read
+                {
+                    long[] readThreads = readThreadMap.get(SID);
 
-                        writeThreadMap.put(SID, tid);
-                    } else// read
-                    {
-                        long[] readThreads = readThreadMap.get(SID);
+                    if (readThreads == null) {
+                        readThreads = new long[2];
+                        readThreads[0] = tid;
+                        readThreadMap.put(SID, readThreads);
+                    } else {
+                        if (readThreads[0] != tid)
+                            readThreads[1] = tid;
 
-                        if (readThreads == null) {
-                            readThreads = new long[2];
-                            readThreads[0] = tid;
-                            readThreadMap.put(SID, readThreads);
-                        } else {
-                            if (readThreads[0] != tid)
-                                readThreads[1] = tid;
-
-                        }
                     }
                 }
             }
@@ -311,36 +295,23 @@ public final class RecordRT {
     public static void logFieldAcc(int ID, final Object o, int SID, final Object v,
             final boolean write) {
         long tid = Thread.currentThread().getId();
-        {
+        // shared object reference variable deference
+        // make it as a branch event
 
-            // shared object reference variable deference
-            // make it as a branch event
-
-            int hashcode_o = System.identityHashCode(o);
-            db.saveEventToDB(tid, ID, o == null ? 0 : hashcode_o, -SID,
-                    longOfObject(v),
-                    write ? EventType.WRITE : EventType.READ);
-            if (!isPrim(v)) {
-                logBranch(-1);
-            }
-
+        int hashcode_o = System.identityHashCode(o);
+        db.saveEventToDB(tid, ID, o == null ? 0 : hashcode_o, -SID,
+                longOfObject(v),
+                write ? EventType.WRITE : EventType.READ);
+        if (!isPrim(v)) {
+            logBranch(-1);
         }
-
     }
 
     public static void logInitialWrite(int ID, final Object o, int index, final Object v) {
-
-        try {
-            long tid = Thread.currentThread().getId();
-            db.saveEventToDB(tid, ID, o == null ? 0 : System.identityHashCode(o),
-                    index, longOfObject(v),
-                    EventType.INIT);
-        } catch (Exception e) {
-            e.printStackTrace();
-            if (db == null)
-                System.out.println("DB is null in logInitialWrite - appname is ");
-        }
-
+        long tid = Thread.currentThread().getId();
+        db.saveEventToDB(tid, ID, o == null ? 0 : System.identityHashCode(o),
+                index, longOfObject(v),
+                EventType.INIT);
     }
 
     public static void logArrayAcc(int ID, final Object o, int index, final boolean write) {
@@ -479,10 +450,8 @@ public final class RecordRT {
     }
 
     public static void logJoin(int ID, final Object o) {
-
         db.saveEventToDB(Thread.currentThread().getId(), ID, ((Thread) o).getId(), 0, 0,
                 EventType.JOIN);
-
     }
 
 }

@@ -2,20 +2,20 @@ package rvpredict.engine.main;
 
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -58,7 +58,7 @@ import rvpredict.db.DBEngine;
  * The NewRVPredict class implements our new race detection algorithm based on
  * constraint solving. The events in the trace are loaded and processed window
  * by window with a configurable window size.
- * 
+ *
  * @author jeffhuang
  *
  */
@@ -83,7 +83,7 @@ public class NewRVPredict {
 
     /**
      * Deadlock detection method. Not used in race detection.
-     * 
+     *
      * @param engine
      * @param trace
      * @param schedule_prefix
@@ -184,7 +184,7 @@ public class NewRVPredict {
 
     /**
      * Trim the schedule to show the last 100 only entries
-     * 
+     *
      * @param schedule
      * @return
      */
@@ -311,7 +311,7 @@ public class NewRVPredict {
      * schedule. Otherwise, a potential race is reported. We call it a potential
      * race but not a false race because it might be a real data race in another
      * trace.
-     * 
+     *
      * @param engine
      * @param trace
      * @param schedule_prefix
@@ -498,9 +498,9 @@ public class NewRVPredict {
                                     // before the most recent branch nodes
                                     // before rnode/wnode are considered
                                     List<ReadNode> readNodes_r = trace.getDependentReadNodes(
-                                            rnode, config.nobranch);
+                                            rnode, config.branch);
                                     List<ReadNode> readNodes_w = trace.getDependentReadNodes(
-                                            wnode, config.nobranch);
+                                            wnode, config.branch);
 
                                     // construct the optimized read-write
                                     // constraints ensuring the feasibility of
@@ -697,9 +697,9 @@ public class NewRVPredict {
                                 } else {
                                     // get dependent nodes of rnode and wnode
                                     List<ReadNode> readNodes_w1 = trace.getDependentReadNodes(
-                                            wnode1, config.nobranch);
+                                            wnode1, config.branch);
                                     List<ReadNode> readNodes_w2 = trace.getDependentReadNodes(
-                                            wnode2, config.nobranch);
+                                            wnode2, config.branch);
 
                                     StringBuilder sb1 = engine
                                             .constructCausalReadWriteConstraintsOptimized(-1,
@@ -834,7 +834,7 @@ public class NewRVPredict {
 
     /**
      * Detect atomicty violations. Not used for race detection.
-     * 
+     *
      * @param engine
      * @param trace
      * @param schedule_prefix
@@ -907,11 +907,11 @@ public class NewRVPredict {
 
                                         // get dependent read nodes
                                         List<ReadNode> readNodes_1 = trace.getDependentReadNodes(
-                                                node1, config.nobranch);
+                                                node1, config.branch);
                                         List<ReadNode> readNodes_2 = trace.getDependentReadNodes(
-                                                node2, config.nobranch);
+                                                node2, config.branch);
                                         List<ReadNode> readNodes_3 = trace.getDependentReadNodes(
-                                                node3, config.nobranch);
+                                                node3, config.branch);
 
                                         StringBuilder sb1 = engine
                                                 .constructCausalReadWriteConstraintsOptimized(
@@ -970,7 +970,7 @@ public class NewRVPredict {
 
     /**
      * The input is the application name and the optional options
-     * 
+     *
      * @param args
      */
     public static void main(String[] args) {
@@ -1136,7 +1136,7 @@ public class NewRVPredict {
 
     /**
      * Return the schedule, i.e., the thread execution order, of the trace
-     * 
+     *
      * @param trace
      * @return
      */

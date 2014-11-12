@@ -451,30 +451,26 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         mv.visitCode();
     }
 
-    // no branch
-    /*
-     * public void visitJumpInsn(int opcode, Label label) { String sig_loc =
-     * (classname+"|"+methodsignature+"|"+line_cur).replace("/", "."); int ID =
-     * globalState.getLocationId(sig_loc);
-     *
-     * switch (opcode) { case IFEQ://branch case IFNE: case IFLT: case IFGE:
-     * case IFGT: case IFLE: case IF_ICMPEQ: case IF_ICMPNE: case IF_ICMPLT:
-     * case IF_ICMPGE: case IF_ICMPGT: case IF_ICMPLE: case IF_ACMPEQ: case
-     * IF_ACMPNE: case IFNULL: case IFNONNULL: addBipushInsn(mv,ID);
-     * mv.visitMethodInsn(INVOKESTATIC, config.logClass,
-     * config.LOG_BRANCH, config.DESC_LOG_BRANCH); default:
-     * mv.visitJumpInsn(opcode, label);break; } }
-     *
-     * public void visitTableSwitchInsn(int min, int max, Label dflt, Label...
-     * labels) { String sig_loc =
-     * (classname+"|"+methodsignature+"|"+line_cur).replace("/", "."); int ID =
-     * globalState.getLocationId(sig_loc);
-     * addBipushInsn(mv,ID); mv.visitMethodInsn(INVOKESTATIC,
-     * config.logClass, config.LOG_BRANCH,
-     * config.DESC_LOG_BRANCH);
-     *
-     * mv.visitTableSwitchInsn(min, max, dflt, labels); }
-     */
+    @Override
+    public void visitJumpInsn(int opcode, Label label) {
+        if (config.commandLine.branch) {
+            if (opcode != JSR && opcode != GOTO) {
+                addPushConstInsn(mv, getCrntStmtSID());
+                mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_BRANCH,
+                        DESC_LOG_BRANCH, false);
+            }
+        }
+        mv.visitJumpInsn(opcode, label);
+    }
+
+    @Override
+    public void visitTableSwitchInsn(int min, int max, Label dflt, Label... labels) {
+        if (config.commandLine.branch) {
+            addPushConstInsn(mv, getCrntStmtSID());
+            mv.visitMethodInsn(INVOKESTATIC, config.logClass, LOG_BRANCH, DESC_LOG_BRANCH, false);
+        }
+        mv.visitTableSwitchInsn(min, max, dflt, labels);
+    }
 
     /**
      * Stores the top value from the operand stack to the local variable array.

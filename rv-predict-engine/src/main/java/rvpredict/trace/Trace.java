@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -40,7 +40,7 @@ import java.util.List;
  * Representation of the execution trace. Each event is created as a node with a
  * corresponding type. Events are indexed by their thread Id, Type, and memory
  * address.
- * 
+ *
  * @author jeffhuang
  *
  */
@@ -107,7 +107,7 @@ public class Trace {
 
     /**
      * return true if sharedAddresses is not empty
-     * 
+     *
      * @return
      */
     public boolean mayRace() {
@@ -210,12 +210,12 @@ public class Trace {
     }
 
     // TODO: NEED to include the dependent nodes from other threads
-    public List<ReadNode> getDependentReadNodes(IMemNode rnode, boolean nobranch) {
+    public List<ReadNode> getDependentReadNodes(IMemNode rnode, boolean branch) {
 
         List<ReadNode> readnodes = new ArrayList<>();
         long tid = rnode.getTID();
         long POS = rnode.getGID() - 1;
-        if (!nobranch) {
+        if (branch) {
             long pos = -1;
             List<BranchNode> branchNodes = threadBranchNodes.get(tid);
             if (branchNodes != null)
@@ -252,7 +252,7 @@ public class Trace {
 
     /**
      * add a new event to the trace in the order of its appearance
-     * 
+     *
      * @param node
      */
     public void addRawNode(AbstractNode node) {
@@ -281,7 +281,7 @@ public class Trace {
 
     /**
      * add a new filtered event to the trace in the order of its appearance
-     * 
+     *
      * @param node
      */
     private void addNode(AbstractNode node) {

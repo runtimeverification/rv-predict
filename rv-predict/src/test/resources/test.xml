@@ -44,7 +44,7 @@
     </test>
     <test name="mergesort.MergeSort">
     	<runs value="30" />
-        <rvarg key="--maxlen" value="4000" />
+        <rvarg key="--maxlen" value="3000" />
         <arg key="-cp" value="basic.jar" />
         <arg value="mergesort.MergeSort" />
     </test>
@@ -63,7 +63,7 @@
         <arg value="bubblesort.BubbleSort" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA">
-    	<runs value="5" />
+    	<runs value="10" />
         <rvarg key="--maxlen" value="3000" />
         <arg key="-cp" value="basic.jar" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />

@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -48,7 +48,6 @@ public class Configuration {
     public static final String TRACE_LOGGED_IN = "\tTrace logged in: ";
     public static final String INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE = "Instrumented execution to record the trace";
     private JCommander jCommander;
-    public static final int STACK_SIZE = 1024;
 
     // Copyright (c) 2013-2014 K Team. All Rights Reserved.
     public enum OS {
@@ -352,7 +351,7 @@ public class Configuration {
          * executable to execute the class/jar The -- option is only required in
          * the less frequent case when some of the java or program options used
          * have the same name as some of the rv-predict options (including --).
-         * 
+         *
          * Moreover, in the unlikely case when the program takes as options -cp
          * or -jar and is run as a class (i.e., not using -jar) then the java
          * -cp option must be used explicitly for disambiguation.

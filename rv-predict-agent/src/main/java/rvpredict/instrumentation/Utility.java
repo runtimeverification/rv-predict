@@ -168,6 +168,10 @@ public class Utility {
     }
 
     public static boolean isThreadClass(String className) {
+        if (className.startsWith(DESC_ARRAY_PREFIX)) {
+            return false;
+        }
+
         while (className != null && !className.equals("java/lang/Object")) {
             if (className.equals("java/lang/Thread")) {
                 return true;

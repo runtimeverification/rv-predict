@@ -64,6 +64,7 @@
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA">
     	<runs value="5" />
+        <rvarg key="--maxlen" value="2000" />
         <arg key="-cp" value="basic.jar" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />
     </test>

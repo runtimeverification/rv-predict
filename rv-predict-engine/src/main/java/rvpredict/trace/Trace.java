@@ -76,9 +76,8 @@ public class Trace {
     HashMap<Long, HashMap<String, List<LockPair>>> threadIndexedLockPairs = new HashMap<Long, HashMap<String, List<LockPair>>>();
     HashMap<Long, Stack<ISyncNode>> threadSyncStack = new HashMap<Long, Stack<ISyncNode>>();
 
-    // per thread branch nodes and basicblock nodes
+    // per thread branch nodes
     HashMap<Long, List<BranchNode>> threadBranchNodes = new HashMap<Long, List<BranchNode>>();
-    HashMap<Long, List<BBNode>> threadBBNodes = new HashMap<Long, List<BBNode>>();
 
     // per thead synchronization nodes
     HashMap<String, List<ISyncNode>> syncNodesMap = new HashMap<String, List<ISyncNode>>();
@@ -288,16 +287,7 @@ public class Trace {
         Long tid = node.getTID();
         threads.add(tid);
 
-        if (node instanceof BBNode) {
-            // basicblock node
-
-            List<BBNode> bbnodes = threadBBNodes.get(tid);
-            if (bbnodes == null) {
-                bbnodes = new ArrayList<>();
-                threadBBNodes.put(tid, bbnodes);
-            }
-            bbnodes.add((BBNode) node);
-        } else if (node instanceof BranchNode) {
+        if (node instanceof BranchNode) {
             // branch node
             info.incrementBranchNumber();
 

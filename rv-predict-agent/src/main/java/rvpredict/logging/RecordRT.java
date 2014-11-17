@@ -191,13 +191,8 @@ public final class RecordRT {
         db.saveEvent(EventType.BRANCH, ID, 0, 0, 0);
     }
 
-    public static void logBasicBlock(int ID) {
-        db.saveEvent(EventType.BASIC_BLOCK, ID, 0, 0, 0);
-    }
-
     public static void logWait(int ID, final Object o) {
         db.saveEvent(EventType.WAIT, ID, System.identityHashCode(o), 0, 0);
-
     }
 
     public static void logNotify(int ID, final Object o) {

@@ -3,7 +3,6 @@ package asm;
 import java.io.IOException;
 
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -13,14 +12,13 @@ import org.objectweb.asm.Opcodes;
 
 public class MethodWriterTest {
 
-    @Ignore("ASM Bug: http://forge.ow2.org/tracker/?func=detail&aid=317547&group_id=23&atid=100023")
     @Test
     public void test() throws IOException {
         ClassReader cr = new ClassReader(ClassB.class.getName());
         ClassWriter cw = new ClassWriter(cr, 0);
         StringBuilder resultBuilder = new StringBuilder();
         cr.accept(new MyClassVisitor(Opcodes.ASM5, cw, resultBuilder), 0);
-        Assert.assertEquals("asm/ClassB|asm/ClassA|asm/ClassB|asm/ClassB|asm/ClassB|asm/ClassA|",
+        Assert.assertEquals("asm/ClassB|asm/ClassA|asm/ClassB|asm/ClassA|asm/ClassB|asm/ClassA|",
                 resultBuilder.toString());
     }
 

@@ -32,6 +32,7 @@ import rvpredict.config.Config;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
 import rvpredict.trace.EventType;
 
+import java.sql.SQLException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -115,6 +116,7 @@ public final class RecordRT {
                 System.out.println("====================SHARED VARIABLES===================");
 
             db.createSharedVarSignatureTable(false);
+
             for (String sig : sharedVariables) {
                 db.saveSharedVarSignatureToDB(sig);
                 if (Config.instance.verbose)
@@ -130,9 +132,7 @@ public final class RecordRT {
                 if (Config.instance.verbose)
                     System.out.println(sig);
             }
-
-        } catch (Exception e) {
-            // TODO Auto-generated catch block
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
@@ -187,24 +187,66 @@ public final class RecordRT {
         db.saveObject(stmtSigIdList);
     }
 
-    public static void logBranch(int ID) {
-        db.saveEvent(EventType.BRANCH, ID, 0, 0, 0);
+    /**
+     * Logs the {@code BRANCH} event produced by jmp or tableswitch
+     * instructions.
+     *
+     * @param locId
+     *            the location identifier of the event
+     */
+    public static void logBranch(int locId) {
+        db.saveEvent(EventType.BRANCH, locId);
     }
 
-    public static void logWait(int ID, final Object o) {
-        db.saveEvent(EventType.WAIT, ID, System.identityHashCode(o), 0, 0);
+    /**
+     * Logs the {@code WAIT} event produced by invoking {@code object.wait()}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param object
+     *            the {@code Object} whose {@code wait()} method is invoked
+     */
+    public static void logWait(int locId, Object object) {
+        db.saveEvent(EventType.WAIT, locId, System.identityHashCode(object));
     }
 
-    public static void logNotify(int ID, final Object o) {
-        db.saveEvent(EventType.NOTIFY, ID, System.identityHashCode(o), 0, 0);
+    /**
+     * Logs the {@code NOTIFY} event produced by invoking
+     * {@code object.notify()}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param object
+     *            the {@code Object} whose {@code notify()} method is invoked
+     */
+    public static void logNotify(int locId, Object object) {
+        db.saveEvent(EventType.NOTIFY, locId, System.identityHashCode(object));
     }
 
-    public static void logLock(int ID, final Object lock) {
-        db.saveEvent(EventType.LOCK, ID, System.identityHashCode(lock), 0, 0);
+    /**
+     * Logs the {@code LOCK} event produced by entering block synchronized with
+     * {@code object}'s intrinsic lock.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param object
+     *            the {@code Object} whose intrinsic lock is acquired
+     */
+    public static void logLock(int locId, Object object) {
+        db.saveEvent(EventType.LOCK, locId, System.identityHashCode(object));
     }
 
-    public static void logUnlock(int ID, final Object lock) {
-        db.saveEvent(EventType.UNLOCK, ID, System.identityHashCode(lock), 0, 0);
+    /**
+     * Logs the {@code UNLOCK} event produced by exiting block synchronized with
+     * {@code object}'s intrinsic lock.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param object
+     *            the {@code Object} whose intrinsic lock is released
+     */
+    public static void logUnlock(int locId, Object object) {
+        db.saveEvent(EventType.UNLOCK, locId, System.identityHashCode(object));
     }
 
     /**
@@ -273,22 +315,51 @@ public final class RecordRT {
         }
     }
 
-    public static void logFieldAcc(int ID, final Object o, int SID, final Object v,
-            final boolean write) {
-        // shared object reference variable deference
-        // make it as a branch event
-
-        int hashcode_o = System.identityHashCode(o);
-        db.saveEvent(write ? EventType.WRITE : EventType.READ, ID, o == null ? 0 : hashcode_o, -SID,
-                longOfObject(v));
-        if (!isPrim(v)) {
+    /**
+     * Logs the {@code READ/WRITE} event produced by field access.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param object
+     *            the owner object of the field; {@code null} when accessing static fields
+     * @param variableId
+     *            the variable identifier of the field
+     * @param value
+     *            the value written by the write access or the value read by the
+     *            read access
+     * @param isWrite
+     *            specifies if it is a write access
+     */
+    public static void logFieldAcc(int locId, Object object, int variableId, Object value,
+            boolean isWrite) {
+        db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
+                object == null ? 0 : System.identityHashCode(object), -variableId,
+                objectToLong(value));
+        if (!isPrimitiveWrapper(value)) {
+            // TODO(YilongL): what does it mean?
+            // shared object reference variable deference
+            // make it as a branch event
             logBranch(-1);
         }
     }
 
-    public static void logInitialWrite(int ID, final Object o, int index, final Object v) {
-        db.saveEvent(EventType.INIT, ID, o == null ? 0 : System.identityHashCode(o),
-                index, longOfObject(v));
+    /**
+     * Logs the {@code INIT} event produced by initializing a field or an array
+     * element.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param object
+     *            the array or the owner object of the field; {@code null} when
+     *            initializing static field
+     * @param arrayIndexOrVarId
+     *            the array index or the variable identifier
+     * @param value
+     *            the initial value of the field or the element
+     */
+    public static void logInitialWrite(int locId, Object object, int arrayIndexOrVarId, Object value) {
+        db.saveEvent(EventType.INIT, locId, object == null ? 0 : System.identityHashCode(object),
+                arrayIndexOrVarId, objectToLong(value));
     }
 
     public static void logArrayAcc(int ID, final Object o, int index, final boolean write) {
@@ -357,74 +428,102 @@ public final class RecordRT {
         }
     }
 
-    public static void logArrayAcc(int ID, final Object o, int index, final Object v,
-            final boolean write) {
-        db.saveEvent(write ? EventType.WRITE : EventType.READ, ID, System.identityHashCode(o), index, longOfObject(v));
-    }
-
-    private static boolean isPrim(Object o) {
-        if (o instanceof Integer || o instanceof Long || o instanceof Byte || o instanceof Boolean
-                || o instanceof Float || o instanceof Double || o instanceof Short
-                || o instanceof Character)
-            return true;
-
-        return false;
-    }
-
-    private static long longOfObject(Object o) {
-        if (o instanceof Integer) return (Integer) o;
-        if (o instanceof Long) return (Long) o;
-        if (o instanceof Byte) return (Byte) o;
-        if (o instanceof Boolean) return ((Boolean) o).booleanValue() ? 1 : 0;
-        if (o instanceof Float) return Float.floatToRawIntBits((Float) o);
-        if (o instanceof Double) return Double.doubleToRawLongBits((Double) o);
-        if (o instanceof Short) return (Short) o;
-        if (o instanceof Character) return ((Character) o);
-        return System.identityHashCode(o);
+    /**
+     * Logs the {@code READ/WRITE} event produced by array access.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param array
+     *            the array to access
+     * @param index
+     *            the array index
+     * @param value
+     *            the value written by the write access or the value read by the
+     *            read access
+     * @param isWrite
+     *            specifies if it is a write access
+     */
+    public static void logArrayAcc(int locId, Object array, int index, Object value, boolean isWrite) {
+        db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
+                System.identityHashCode(array), index, objectToLong(value));
     }
 
     /**
+     * Logs the {@code START} event produced by invoking {@code thread.start()}.
+     *
      * When starting a new thread, a consistent unique identifier of the thread
      * is created, and stored into a map with the thread id as the key. The
      * unique identifier, i.e, name, is a concatenation of the name of the
      * parent thread with the order of children threads forked by the parent
      * thread.
      *
-     * @param ID
-     * @param o
+     * @param locId
+     *            the location identifier of the event
+     * @param thread
+     *            the {@code Thread} object whose {@code start()} method is
+     *            invoked
      */
-    public static void logStart(int ID, final Object o) {
-        long tid = Thread.currentThread().getId();
-        Thread t = (Thread) o;
-        long tid_t = t.getId();
+    public static void logStart(int locId, Object thread) {
+        long crntThreadId = Thread.currentThread().getId();
+        long newThreadId = ((Thread) thread).getId();
 
-        String name = GlobalStateForInstrumentation.instance.threadTidNameMap.get(tid);
+        String name = GlobalStateForInstrumentation.instance.threadTidNameMap.get(crntThreadId);
         // it's possible that name is NULL, because this thread is started from
         // library: e.g., AWT-EventQueue-0
         if (name == null) {
             name = Thread.currentThread().getName();
-            threadTidIndexMap.put(tid, 1);
-            GlobalStateForInstrumentation.instance.registerThreadName(tid, name);
+            threadTidIndexMap.put(crntThreadId, 1);
+            GlobalStateForInstrumentation.instance.registerThreadName(crntThreadId, name);
         }
 
-        int index = threadTidIndexMap.get(tid);
+        int index = threadTidIndexMap.get(crntThreadId);
 
         if (name.equals(MAIN_NAME))
             name = "" + index;
         else
             name = name + "." + index;
 
-        GlobalStateForInstrumentation.instance.registerThreadName(tid_t, name);
-        threadTidIndexMap.put(tid_t, 1);
+        GlobalStateForInstrumentation.instance.registerThreadName(newThreadId, name);
+        threadTidIndexMap.put(newThreadId, 1);
 
         index++;
-        threadTidIndexMap.put(tid, index);
+        threadTidIndexMap.put(crntThreadId, index);
 
-        db.saveEvent(EventType.START, ID, tid_t, 0, 0);
+        db.saveEvent(EventType.START, locId, newThreadId);
     }
 
-    public static void logJoin(int ID, final Object o) {
-        db.saveEvent(EventType.JOIN, ID, ((Thread) o).getId(), 0, 0);
+    /**
+     * Logs the {@code JOIN} event produced by invoking {@code thread.join()}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param thread
+     *            the {@code Thread} object whose {@code join()} method is
+     *            invoked
+     */
+    public static void logJoin(int locId, Object thread) {
+        db.saveEvent(EventType.JOIN, locId, ((Thread) thread).getId());
+    }
+
+    private static boolean isPrimitiveWrapper(Object o) {
+        /* YilongL: we do not use guava's `Primitives.isWrapperType' to
+         * implement this method here in the runtime library because the
+         * agent will try to instrument the guava class */
+        return o instanceof Integer || o instanceof Long || o instanceof Byte
+                || o instanceof Boolean || o instanceof Float || o instanceof Double
+                || o instanceof Short || o instanceof Character;
+    }
+
+    private static long objectToLong(Object o) {
+        if (o instanceof Boolean) return ((Boolean) o).booleanValue() ? 1 : 0;
+        if (o instanceof Byte) return (Byte) o;
+        if (o instanceof Character) return ((Character) o);
+        if (o instanceof Short) return (Short) o;
+        if (o instanceof Integer) return (Integer) o;
+        if (o instanceof Long) return (Long) o;
+        if (o instanceof Float) return Float.floatToRawIntBits((Float) o);
+        if (o instanceof Double) return Double.doubleToRawLongBits((Double) o);
+        return System.identityHashCode(o);
     }
 
 }

@@ -217,7 +217,7 @@ public class DBEngine {
         stmt.execute(sql_dropTable);
     }
 
-    public void createSharedArrayLocTable(boolean newTable) throws Exception {
+    public void createSharedArrayLocTable(boolean newTable) throws SQLException {
         Statement stmt = conn.createStatement();
         if (newTable) {
             String sql_dropTable = "DROP TABLE IF EXISTS " + sharedarrayloctablename;
@@ -232,7 +232,7 @@ public class DBEngine {
         prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
-    public void createSharedVarSignatureTable(boolean newTable) throws Exception {
+    public void createSharedVarSignatureTable(boolean newTable) throws SQLException  {
         Statement stmt = conn.createStatement();
         if (newTable) {
             String sql_dropTable = "DROP TABLE IF EXISTS " + sharedvarsigtablename;
@@ -339,6 +339,14 @@ public class DBEngine {
                 e1.printStackTrace();
             }
         }
+    }
+
+    public void saveEvent(EventType eventType, int locId, long arg) {
+        saveEvent(eventType, locId, arg, 0, 0);
+    }
+
+    public void saveEvent(EventType eventType, int locId) {
+        saveEvent(eventType, locId, 0, 0, 0);
     }
 
     private void connectDB(String directory) throws Exception {

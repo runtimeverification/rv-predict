@@ -28,14 +28,20 @@
  ******************************************************************************/
 package rvpredict.logging;
 
+import java.sql.SQLException;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+
 import rvpredict.config.Config;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
 import rvpredict.trace.EventType;
-
-import java.sql.SQLException;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
 
 public final class RecordRT {
 
@@ -333,8 +339,7 @@ public final class RecordRT {
     public static void logFieldAcc(int locId, Object object, int variableId, Object value,
             boolean isWrite) {
         db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
-                object == null ? 0 : System.identityHashCode(object), -variableId,
-                objectToLong(value));
+                System.identityHashCode(object), -variableId, objectToLong(value));
         if (!isPrimitiveWrapper(value)) {
             // TODO(YilongL): what does it mean?
             // shared object reference variable deference
@@ -358,8 +363,8 @@ public final class RecordRT {
      *            the initial value of the field or the element
      */
     public static void logInitialWrite(int locId, Object object, int arrayIndexOrVarId, Object value) {
-        db.saveEvent(EventType.INIT, locId, object == null ? 0 : System.identityHashCode(object),
-                arrayIndexOrVarId, objectToLong(value));
+        db.saveEvent(EventType.INIT, locId, System.identityHashCode(object), arrayIndexOrVarId,
+                objectToLong(value));
     }
 
     public static void logArrayAcc(int ID, final Object o, int index, final boolean write) {
@@ -506,9 +511,7 @@ public final class RecordRT {
     }
 
     private static boolean isPrimitiveWrapper(Object o) {
-        /* YilongL: we do not use guava's `Primitives.isWrapperType' to
-         * implement this method here in the runtime library because the
-         * agent will try to instrument the guava class */
+        /* YilongL: we do not use guava's `Primitives.isWrapperType' because o could be null */
         return o instanceof Integer || o instanceof Long || o instanceof Byte
                 || o instanceof Boolean || o instanceof Float || o instanceof Double
                 || o instanceof Short || o instanceof Character;

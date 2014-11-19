@@ -144,8 +144,8 @@ public final class RecordRT {
     }
 
     public static void saveMetaData(DBEngine db, GlobalStateForInstrumentation state) {
-        ConcurrentHashMap<Long, String> threadTidMap = state.threadTidNameMap;
-        ConcurrentHashMap<String, Integer> variableIdMap = state.variableIdMap;
+        ConcurrentHashMap<Long, String> threadTidMap = state.threadIdToName;
+        ConcurrentHashMap<String, Integer> variableIdMap = state.varSigToId;
         Set<String> volatileVariables = state.volatileVariables;
         ConcurrentHashMap<String, Integer> stmtSigIdMap = state.stmtSigIdMap;
         // just reuse the connection
@@ -176,7 +176,7 @@ public final class RecordRT {
         while (volatileIt.hasNext()) {
             String sig = volatileIt.next();
             volatileIt.remove();
-            Integer id = GlobalStateForInstrumentation.instance.variableIdMap.get(sig);
+            Integer id = GlobalStateForInstrumentation.instance.varSigToId.get(sig);
             volatileVarList.add(new AbstractMap.SimpleEntry<>(sig,id));
         }
         db.saveObject(volatileVarList);
@@ -472,7 +472,7 @@ public final class RecordRT {
         long crntThreadId = Thread.currentThread().getId();
         long newThreadId = ((Thread) thread).getId();
 
-        String name = GlobalStateForInstrumentation.instance.threadTidNameMap.get(crntThreadId);
+        String name = GlobalStateForInstrumentation.instance.threadIdToName.get(crntThreadId);
         // it's possible that name is NULL, because this thread is started from
         // library: e.g., AWT-EventQueue-0
         if (name == null) {

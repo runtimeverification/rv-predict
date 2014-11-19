@@ -9,8 +9,8 @@ public class GlobalStateForInstrumentation {
     public static GlobalStateForInstrumentation instance = new GlobalStateForInstrumentation();
 
     // can be computed during offline analysis
-    public final ConcurrentHashMap<Long, String> threadTidNameMap = new ConcurrentHashMap<>();
-    public final ConcurrentHashMap<String, Integer> variableIdMap = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<Long, String> threadIdToName = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<String, Integer> varSigToId = new ConcurrentHashMap<>();
     public final ConcurrentHashMap<Integer, String> arrayIdMap = new ConcurrentHashMap<>();
 
     public final Set<String> volatileVariables = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
@@ -19,7 +19,7 @@ public class GlobalStateForInstrumentation {
     private HashSet<String> sharedArrayLocations;
 
     public void registerThreadName(long tid, String name) {
-        threadTidNameMap.put(tid, name);
+        threadIdToName.put(tid, name);
     }
 
     public boolean isVariableShared(String sig) {
@@ -41,13 +41,13 @@ public class GlobalStateForInstrumentation {
     public int getVariableId(String sig) {
         /* YilongL: the following double-checked locking is correct because
          * variableIdMap is a ConcurrentHashMap */
-        Integer variableId = variableIdMap.get(sig);
+        Integer variableId = varSigToId.get(sig);
         if (variableId == null) {
-            synchronized (variableIdMap) {
-                variableId = variableIdMap.get(sig);
+            synchronized (varSigToId) {
+                variableId = varSigToId.get(sig);
                 if (variableId == null) {
-                    variableId = variableIdMap.size() + 1;
-                    variableIdMap.put(sig, variableId);
+                    variableId = varSigToId.size() + 1;
+                    varSigToId.put(sig, variableId);
                 }
             }
         }

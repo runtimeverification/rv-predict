@@ -2,7 +2,7 @@
 <!-- Copyright (c) 2014 Runtime Verification Inc. All Rights Reserved. -->
 <tests>
     <test name="ftpserver.jar">
-      	<runs value="64" />
+      	<runs value="128" />
         <arg key="-jar" value="ftpserver.jar" />
     </test>
     <test name="demo.Example">
@@ -55,7 +55,7 @@
         <arg value="bufwriter.BufWriter" />
     </test>
     <test name="bubblesort.BubbleSort">
-        <runs value="32" />
+        <runs value="64" />
         <arg key="-cp" value="basic.jar" />
         <arg value="bubblesort.BubbleSort" />
     </test>

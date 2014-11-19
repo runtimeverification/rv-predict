@@ -37,6 +37,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import rvpredict.config.Config;
@@ -144,10 +145,10 @@ public final class RecordRT {
     }
 
     public static void saveMetaData(DBEngine db, GlobalStateForInstrumentation state) {
-        ConcurrentHashMap<Long, String> threadTidMap = state.unsavedThreadTidNameMap;
-        ConcurrentHashMap<String, Integer> variableIdMap = state.unsavedVariableIdMap;
-        ConcurrentHashMap<String, Boolean> volatileVariables = state.unsavedVolatileVariables;
-        ConcurrentHashMap<String, Integer> stmtSigIdMap = state.unsavedStmtSigIdMap;
+        ConcurrentHashMap<Long, String> threadTidMap = state.threadTidNameMap;
+        ConcurrentHashMap<String, Integer> variableIdMap = state.variableIdMap;
+        Set<String> volatileVariables = state.volatileVariables;
+        ConcurrentHashMap<String, Integer> stmtSigIdMap = state.stmtSigIdMap;
         // just reuse the connection
 
         // TODO: if db is null or closed, there must be something wrong
@@ -172,9 +173,9 @@ public final class RecordRT {
         // save volatilevariable - id to database
 
         List<Entry<String, Integer>> volatileVarList = new ArrayList<>(volatileVariables.size());
-        Iterator<Entry<String, Boolean>> volatileIt = volatileVariables.entrySet().iterator();
+        Iterator<String> volatileIt = volatileVariables.iterator();
         while (volatileIt.hasNext()) {
-            String sig = volatileIt.next().getKey();
+            String sig = volatileIt.next();
             volatileIt.remove();
             Integer id = GlobalStateForInstrumentation.instance.variableIdMap.get(sig);
             volatileVarList.add(new AbstractMap.SimpleEntry<>(sig,id));

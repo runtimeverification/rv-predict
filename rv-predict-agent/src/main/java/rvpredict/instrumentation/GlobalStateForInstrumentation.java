@@ -1,8 +1,10 @@
 package rvpredict.instrumentation;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import rvpredict.config.Config;
@@ -13,21 +15,16 @@ public class GlobalStateForInstrumentation {
     public static GlobalStateForInstrumentation instance = new GlobalStateForInstrumentation();
     // can be computed during offline analysis
     public ConcurrentHashMap<Long, String> threadTidNameMap = new ConcurrentHashMap<>();
-    public ConcurrentHashMap<Long, String> unsavedThreadTidNameMap = new ConcurrentHashMap<>();
     public ConcurrentHashMap<String, Integer> variableIdMap = new ConcurrentHashMap<>();
-    public ConcurrentHashMap<String, Integer> unsavedVariableIdMap = new ConcurrentHashMap<>();
     public HashMap<Integer, String> arrayIdMap = new HashMap<>();
 
-    public HashSet<String> volatileVariables = new HashSet<>();
-    public ConcurrentHashMap<String, Boolean> unsavedVolatileVariables = new ConcurrentHashMap<>();
+    public Set<String> volatileVariables = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     public ConcurrentHashMap<String, Integer> stmtSigIdMap = new ConcurrentHashMap<>();
-    public ConcurrentHashMap<String, Integer> unsavedStmtSigIdMap = new ConcurrentHashMap<>();
     HashSet<String> sharedVariables;
     HashSet<String> sharedArrayLocations;
 
     public void registerThreadName(long tid, String name) {
         threadTidNameMap.put(tid, name);
-        unsavedThreadTidNameMap.put(tid, name);
     }
 
     public boolean isVariableShared(String sig) {
@@ -108,7 +105,6 @@ public class GlobalStateForInstrumentation {
                 if (variableIdMap.get(sig) == null) {
                     int size = variableIdMap.size() + 1;
                     variableIdMap.put(sig, size);
-                    unsavedVariableIdMap.put(sig, size);
                 }
             }
         }
@@ -122,7 +118,6 @@ public class GlobalStateForInstrumentation {
             synchronized (volatileVariables) {
                 if (!volatileVariables.contains(sig)) {
                     volatileVariables.add(sig);
-                    unsavedVolatileVariables.put(sig, true);
                 }
             }
         }
@@ -134,7 +129,6 @@ public class GlobalStateForInstrumentation {
                 if (stmtSigIdMap.get(sig) == null) {
                     int size = stmtSigIdMap.size() + 1;
                     stmtSigIdMap.put(sig, size);
-                    unsavedStmtSigIdMap.put(sig, size);
                 }
             }
         }

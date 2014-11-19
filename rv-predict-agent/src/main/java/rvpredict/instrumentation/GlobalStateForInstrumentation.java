@@ -5,31 +5,29 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.google.common.collect.Sets;
-
 public class GlobalStateForInstrumentation {
     public static GlobalStateForInstrumentation instance = new GlobalStateForInstrumentation();
 
     // can be computed during offline analysis
-    public ConcurrentHashMap<Long, String> threadTidNameMap = new ConcurrentHashMap<>();
-    public ConcurrentHashMap<String, Integer> variableIdMap = new ConcurrentHashMap<>();
-    public ConcurrentHashMap<Integer, String> arrayIdMap = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<Long, String> threadTidNameMap = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<String, Integer> variableIdMap = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<Integer, String> arrayIdMap = new ConcurrentHashMap<>();
 
-    public Set<String> volatileVariables = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
-    public ConcurrentHashMap<String, Integer> stmtSigIdMap = new ConcurrentHashMap<>();
-    private HashSet<String> sharedVariables = Sets.newHashSet();
-    private HashSet<String> sharedArrayLocations = Sets.newHashSet();
+    public final Set<String> volatileVariables = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    public final ConcurrentHashMap<String, Integer> stmtSigIdMap = new ConcurrentHashMap<>();
+    private HashSet<String> sharedVariables;
+    private HashSet<String> sharedArrayLocations;
 
     public void registerThreadName(long tid, String name) {
         threadTidNameMap.put(tid, name);
     }
 
     public boolean isVariableShared(String sig) {
-        return sharedVariables.contains(sig);
+        return sharedVariables == null || sharedVariables.contains(sig);
     }
 
     public boolean shouldInstrumentArray(String loc) {
-        return sharedArrayLocations.contains(loc);
+        return sharedArrayLocations == null || sharedArrayLocations.contains(loc);
     }
 
     public void setSharedArrayLocations(HashSet<String> locs) {

@@ -99,7 +99,6 @@ public final class RecordRT {
     /**
      * initialize the database engine
      *
-     * @throws Exception
      */
     public static void initNonSharing(boolean newTable) {
         long tid = Thread.currentThread().getId();

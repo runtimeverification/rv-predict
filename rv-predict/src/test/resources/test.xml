@@ -55,7 +55,7 @@
         <arg value="bufwriter.BufWriter" />
     </test>
     <test name="bubblesort.BubbleSort">
-        <runs value="16" />
+        <runs value="32" />
         <arg key="-cp" value="basic.jar" />
         <arg value="bubblesort.BubbleSort" />
     </test>

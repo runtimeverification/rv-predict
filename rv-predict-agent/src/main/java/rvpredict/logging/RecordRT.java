@@ -28,7 +28,6 @@
  ******************************************************************************/
 package rvpredict.logging;
 
-import java.sql.SQLException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -111,36 +110,6 @@ public final class RecordRT {
 
         threadTidIndexMap = new HashMap<Long, Integer>();
         threadTidIndexMap.put(tid, 1);
-
-    }
-
-    public static void saveSharedMetaData(DBEngine db, HashSet<String> sharedVariables,
-            HashSet<String> sharedArrayLocations) {
-
-        try {
-            if (Config.instance.verbose)
-                System.out.println("====================SHARED VARIABLES===================");
-
-            db.createSharedVarSignatureTable(false);
-
-            for (String sig : sharedVariables) {
-                db.saveSharedVarSignatureToDB(sig);
-                if (Config.instance.verbose)
-                    System.out.println(sig);
-            }
-
-            if (Config.instance.verbose)
-                System.out.println("====================SHARED ARRAY LOCATIONS===================");
-
-            db.createSharedArrayLocTable(false);
-            for (String sig : sharedArrayLocations) {
-                db.saveSharedArrayLocToDB(sig);
-                if (Config.instance.verbose)
-                    System.out.println(sig);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
     }
 
     public static void saveMetaData(DBEngine db, GlobalStateForInstrumentation state) {

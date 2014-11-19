@@ -58,15 +58,7 @@ public class DBEngine {
     private static final String DB_NAME = "RVDatabase";
     private final String directory;
 
-    // database schema
-    private static final String[] SHARED_VAR_SIG_TABLE_COL_NAME = { "SIG" };
-    private static final String[] SHARED_VAR_SIG_COL_TYPE = { "VARCHAR" };
-
-    private static final String[] SHARED_ARRAY_LOC_TABLE_COLNAME = { "SIG" };
-    private static final String[] SHARED_ARRAY_LOC_COL_TYPE = { "VARCHAR" };
-
     private Connection conn;
-    private PreparedStatement prepStmt;
 
     private final String sharedvarsigtablename;
     private final String sharedarrayloctablename;
@@ -217,47 +209,6 @@ public class DBEngine {
         stmt.execute(sql_dropTable);
     }
 
-    public void createSharedArrayLocTable(boolean newTable) throws SQLException {
-        Statement stmt = conn.createStatement();
-        if (newTable) {
-            String sql_dropTable = "DROP TABLE IF EXISTS " + sharedarrayloctablename;
-            stmt.execute(sql_dropTable);
-        }
-
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + sharedarrayloctablename + " ("
-                + SHARED_ARRAY_LOC_TABLE_COLNAME[0] + " " + SHARED_ARRAY_LOC_COL_TYPE[0] + ")";
-        stmt.execute(sql_createTable);
-
-        String sql_insertdata = "INSERT INTO " + sharedarrayloctablename + " VALUES (?)";
-        prepStmt = conn.prepareStatement(sql_insertdata);
-    }
-
-    public void createSharedVarSignatureTable(boolean newTable) throws SQLException  {
-        Statement stmt = conn.createStatement();
-        if (newTable) {
-            String sql_dropTable = "DROP TABLE IF EXISTS " + sharedvarsigtablename;
-            stmt.execute(sql_dropTable);
-        }
-
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + sharedvarsigtablename + " ("
-                + SHARED_VAR_SIG_TABLE_COL_NAME[0] + " " + SHARED_VAR_SIG_COL_TYPE[0] + ")";
-        stmt.execute(sql_createTable);
-
-        String sql_insertdata = "INSERT INTO " + sharedvarsigtablename + " VALUES (?)";
-        prepStmt = conn.prepareStatement(sql_insertdata);
-    }
-
-    public void saveSharedArrayLocToDB(String sig) {
-        try {
-            prepStmt.setString(1, sig);
-
-            prepStmt.execute();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     public HashSet<String> loadSharedArrayLocs() {
         HashSet<String> sharedArrayLocs = new HashSet<String>();
         try {
@@ -298,17 +249,6 @@ public class DBEngine {
             return null;
         else
             return sharedVariables;
-    }
-
-    public void saveSharedVarSignatureToDB(String sig) {
-        try {
-            prepStmt.setString(1, sig);
-
-            prepStmt.execute();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     /**

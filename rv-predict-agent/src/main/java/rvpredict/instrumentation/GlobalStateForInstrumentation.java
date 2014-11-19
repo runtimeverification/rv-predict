@@ -1,11 +1,12 @@
 package rvpredict.instrumentation;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.google.common.collect.Sets;
 
 import rvpredict.config.Config;
 import rvpredict.logging.DBEngine;
@@ -13,32 +14,27 @@ import rvpredict.logging.RecordRT;
 
 public class GlobalStateForInstrumentation {
     public static GlobalStateForInstrumentation instance = new GlobalStateForInstrumentation();
+
     // can be computed during offline analysis
     public ConcurrentHashMap<Long, String> threadTidNameMap = new ConcurrentHashMap<>();
     public ConcurrentHashMap<String, Integer> variableIdMap = new ConcurrentHashMap<>();
-    public HashMap<Integer, String> arrayIdMap = new HashMap<>();
+    public ConcurrentHashMap<Integer, String> arrayIdMap = new ConcurrentHashMap<>();
 
     public Set<String> volatileVariables = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     public ConcurrentHashMap<String, Integer> stmtSigIdMap = new ConcurrentHashMap<>();
-    HashSet<String> sharedVariables;
-    HashSet<String> sharedArrayLocations;
+    private HashSet<String> sharedVariables = Sets.newHashSet();
+    private HashSet<String> sharedArrayLocations = Sets.newHashSet();
 
     public void registerThreadName(long tid, String name) {
         threadTidNameMap.put(tid, name);
     }
 
     public boolean isVariableShared(String sig) {
-        if (sharedVariables == null || sharedVariables.contains(sig))
-            return true;
-        else
-            return false;
+        return sharedVariables.contains(sig);
     }
 
     public boolean shouldInstrumentArray(String loc) {
-        if (sharedArrayLocations == null || sharedArrayLocations.contains(loc))
-            return true;
-        else
-            return false;
+        return sharedArrayLocations.contains(loc);
     }
 
     public void setSharedArrayLocations(HashSet<String> locs) {
@@ -47,9 +43,6 @@ public class GlobalStateForInstrumentation {
 
     public void setSharedVariables(HashSet<String> locs) {
         this.sharedVariables = locs;
-    }
-
-    public GlobalStateForInstrumentation() {
     }
 
     public void saveMetaData(DBEngine db) {

@@ -11,10 +11,9 @@ public class GlobalStateForInstrumentation {
     // can be computed during offline analysis
     public final ConcurrentHashMap<Long, String> threadIdToName = new ConcurrentHashMap<>();
     public final ConcurrentHashMap<String, Integer> varSigToId = new ConcurrentHashMap<>();
-    public final ConcurrentHashMap<Integer, String> arrayIdMap = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
 
     public final Set<String> volatileVariables = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
-    public final ConcurrentHashMap<String, Integer> stmtSigIdMap = new ConcurrentHashMap<>();
     private HashSet<String> sharedVariables;
     private HashSet<String> sharedArrayLocations;
 
@@ -60,29 +59,17 @@ public class GlobalStateForInstrumentation {
     }
 
     public int getLocationId(String sig) {
-        Integer locId = stmtSigIdMap.get(sig);
+        Integer locId = stmtSigToLocId.get(sig);
         if (locId == null) {
-            synchronized (stmtSigIdMap) {
-                locId = stmtSigIdMap.get(sig);
+            synchronized (stmtSigToLocId) {
+                locId = stmtSigToLocId.get(sig);
                 if (locId == null) {
-                    locId = stmtSigIdMap.size() + 1;
-                    stmtSigIdMap.put(sig, locId);
+                    locId = stmtSigToLocId.size() + 1;
+                    stmtSigToLocId.put(sig, locId);
                 }
             }
         }
 
         return locId;
-    }
-
-    public int getArrayLocationId(String sig) {
-        int id = getLocationId(sig);
-
-        arrayIdMap.put(id, sig);
-
-        return id;
-    }
-
-    public String getArrayLocationSig(int id) {
-        return arrayIdMap.get(id);
     }
 }

@@ -147,7 +147,7 @@ public final class RecordRT {
         ConcurrentHashMap<Long, String> threadTidMap = state.threadIdToName;
         ConcurrentHashMap<String, Integer> variableIdMap = state.varSigToId;
         Set<String> volatileVariables = state.volatileVariables;
-        ConcurrentHashMap<String, Integer> stmtSigIdMap = state.stmtSigIdMap;
+        ConcurrentHashMap<String, Integer> stmtSigIdMap = state.stmtSigToLocId;
         // just reuse the connection
 
         // TODO: if db is null or closed, there must be something wrong
@@ -390,11 +390,6 @@ public final class RecordRT {
                 arrayIdsMap.put(sig, ids);
             }
             ids.add(ID);
-            if (Config.instance.verbose) {
-                String readOrWrite = (write ? " write" : " read");
-                System.out.println("Thread " + tid + " " + readOrWrite + " array "
-                        + GlobalStateForInstrumentation.instance.getArrayLocationSig(ID));
-            }
             if (!sharedArrayIds.contains(sig)) {
                 if (writeThreadArrayMap.containsKey(sig)) {
                     if (writeThreadArrayMap.get(sig) != tid) {

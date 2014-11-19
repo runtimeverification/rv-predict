@@ -28,16 +28,8 @@
  ******************************************************************************/
 package rvpredict.logging;
 
-import java.util.AbstractMap;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import rvpredict.config.Config;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
@@ -110,56 +102,6 @@ public final class RecordRT {
 
         threadTidIndexMap = new HashMap<Long, Integer>();
         threadTidIndexMap.put(tid, 1);
-    }
-
-    public static void saveMetaData(DBEngine db, GlobalStateForInstrumentation state) {
-        ConcurrentHashMap<Long, String> threadTidMap = state.threadIdToName;
-        ConcurrentHashMap<String, Integer> variableIdMap = state.varSigToId;
-        Set<String> volatileVariables = state.volatileVariables;
-        ConcurrentHashMap<String, Integer> stmtSigIdMap = state.stmtSigToLocId;
-        // just reuse the connection
-
-        // TODO: if db is null or closed, there must be something wrong
-        Iterator<Entry<Long, String>> threadIdNameIter = threadTidMap.entrySet().iterator();
-        List<Entry<Long,String>> threadTidList = new ArrayList<>(threadTidMap.size());
-        while (threadIdNameIter.hasNext()) {
-            Map.Entry<Long,String> entry = threadIdNameIter.next();
-            threadTidList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
-        }
-        db.saveObject(threadTidList);
-        // save variable - id to database
-        Iterator<Entry<String, Integer>> variableIdMapIter = variableIdMap.entrySet()
-                .iterator();
-        List<Entry<String, Integer>> variableIdList = new ArrayList<>(variableIdMap.size());
-        while (variableIdMapIter.hasNext()) {
-            Map.Entry<String, Integer> entry = variableIdMapIter.next();
-            variableIdMapIter.remove();
-            variableIdList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
-        }
-        db.saveObject(variableIdList);
-
-        // save volatilevariable - id to database
-
-        List<Entry<String, Integer>> volatileVarList = new ArrayList<>(volatileVariables.size());
-        Iterator<String> volatileIt = volatileVariables.iterator();
-        while (volatileIt.hasNext()) {
-            String sig = volatileIt.next();
-            volatileIt.remove();
-            Integer id = GlobalStateForInstrumentation.instance.varSigToId.get(sig);
-            volatileVarList.add(new AbstractMap.SimpleEntry<>(sig,id));
-        }
-        db.saveObject(volatileVarList);
-        // save stmt - id to database
-
-        List<Entry<String, Integer>> stmtSigIdList = new ArrayList<>(stmtSigIdMap.size());
-        Iterator<Entry<String, Integer>> stmtSigIdMapIter = stmtSigIdMap.entrySet().iterator();
-        while (stmtSigIdMapIter.hasNext()) {
-            Entry<String, Integer> entry = stmtSigIdMapIter.next();
-            stmtSigIdList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
-            stmtSigIdMapIter.remove();
-            // System.out.println("* ["+id+"] "+sig+" *");
-        }
-        db.saveObject(stmtSigIdList);
     }
 
     /**

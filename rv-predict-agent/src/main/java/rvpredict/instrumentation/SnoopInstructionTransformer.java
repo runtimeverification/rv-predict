@@ -72,7 +72,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         }
 
         TraceCache.removeTraceFiles(commandLine.outdir);
-        final DBEngine db = new DBEngine(commandLine.outdir, commandLine.tableName, commandLine.async);
+        final DBEngine db = new DBEngine(globalState, commandLine.outdir, commandLine.tableName, commandLine.async);
         if (commandLine.agentOnlySharing) {
             try {
                 db.dropAll();

@@ -38,9 +38,15 @@ import rvpredict.trace.EventType;
 import java.io.*;
 import java.nio.file.Paths;
 import java.sql.*;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -72,6 +78,8 @@ public class DBEngine {
     private final int BUFFER_THRESHOLD;
     private final boolean asynchronousLogging;
 
+    private final GlobalStateForInstrumentation globalState;
+
     public void saveCurrentEventsToDB() {
         queue.add(buffer);
         buffer = new ArrayList<>(BUFFER_THRESHOLD);
@@ -93,7 +101,7 @@ public class DBEngine {
             saveEventsToDB(buffer);
         }
         try {
-            RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance);
+            saveMetaData();
             metadataOS.close();
             traceOS.close();
         } catch (IOException e) {
@@ -111,7 +119,7 @@ public class DBEngine {
             for (EventItem eventItem : stack) {
                 traceOS.writeEvent(eventItem);
             }
-            RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance);
+            saveMetaData();
             traceOS.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -122,6 +130,7 @@ public class DBEngine {
     ObjectOutputStream metadataOS;
     Thread loggingThread;
     boolean shutdown = false;
+
     public void startAsynchronousLogging() {
 
         queue = new LinkedBlockingQueue<>();
@@ -158,8 +167,9 @@ public class DBEngine {
 
     }
 
-    public DBEngine(String directory, String name, boolean asynchronousLogging) {
+    public DBEngine(GlobalStateForInstrumentation globalState, String directory, String name, boolean asynchronousLogging) {
         BUFFER_THRESHOLD = 10*Config.instance.commandLine.window_size;
+        this.globalState = globalState;
         this.directory = directory;
         this.asynchronousLogging = asynchronousLogging;
         sharedarrayloctablename = "sharedarrayloc_" + name;
@@ -268,7 +278,7 @@ public class DBEngine {
             try {
                 if (e.GID % BUFFER_THRESHOLD == 0) {
                     traceOS.close();
-                    RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance);
+                    saveMetaData();
                     traceOS =  new EventOutputStream(new BufferedOutputStream(
                             new FileOutputStream(Paths.get(directory, e.GID + TraceCache.TRACE_SUFFIX).toFile())));
                 }
@@ -313,5 +323,55 @@ public class DBEngine {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void saveMetaData() {
+        ConcurrentHashMap<Long, String> threadTidMap = globalState.threadIdToName;
+        ConcurrentHashMap<String, Integer> variableIdMap = globalState.varSigToId;
+        Set<String> volatileVariables = globalState.volatileVariables;
+        ConcurrentHashMap<String, Integer> stmtSigIdMap = globalState.stmtSigToLocId;
+        // just reuse the connection
+
+        // TODO: if db is null or closed, there must be something wrong
+        Iterator<Entry<Long, String>> threadIdNameIter = threadTidMap.entrySet().iterator();
+        List<Entry<Long,String>> threadTidList = new ArrayList<>(threadTidMap.size());
+        while (threadIdNameIter.hasNext()) {
+            Map.Entry<Long,String> entry = threadIdNameIter.next();
+            threadTidList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
+        }
+        saveObject(threadTidList);
+        // save variable - id to database
+        Iterator<Entry<String, Integer>> variableIdMapIter = variableIdMap.entrySet()
+                .iterator();
+        List<Entry<String, Integer>> variableIdList = new ArrayList<>(variableIdMap.size());
+        while (variableIdMapIter.hasNext()) {
+            Map.Entry<String, Integer> entry = variableIdMapIter.next();
+            variableIdMapIter.remove();
+            variableIdList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
+        }
+        saveObject(variableIdList);
+
+        // save volatilevariable - id to database
+
+        List<Entry<String, Integer>> volatileVarList = new ArrayList<>(volatileVariables.size());
+        Iterator<String> volatileIt = volatileVariables.iterator();
+        while (volatileIt.hasNext()) {
+            String sig = volatileIt.next();
+            volatileIt.remove();
+            Integer id = GlobalStateForInstrumentation.instance.varSigToId.get(sig);
+            volatileVarList.add(new AbstractMap.SimpleEntry<>(sig,id));
+        }
+        saveObject(volatileVarList);
+        // save stmt - id to database
+
+        List<Entry<String, Integer>> stmtSigIdList = new ArrayList<>(stmtSigIdMap.size());
+        Iterator<Entry<String, Integer>> stmtSigIdMapIter = stmtSigIdMap.entrySet().iterator();
+        while (stmtSigIdMapIter.hasNext()) {
+            Entry<String, Integer> entry = stmtSigIdMapIter.next();
+            stmtSigIdList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
+            stmtSigIdMapIter.remove();
+            // System.out.println("* ["+id+"] "+sig+" *");
+        }
+        saveObject(stmtSigIdList);
     }
 }

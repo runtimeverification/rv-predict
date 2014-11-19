@@ -93,40 +93,39 @@ public class GlobalStateForInstrumentation {
     }
 
     public int getVariableId(String sig) {
-        if (variableIdMap.get(sig) == null) {
+        /* YilongL: the following double-checked locking is correct because
+         * variableIdMap is a ConcurrentHashMap */
+        Integer variableId = variableIdMap.get(sig);
+        if (variableId == null) {
             synchronized (variableIdMap) {
-                if (variableIdMap.get(sig) == null) {
-                    int size = variableIdMap.size() + 1;
-                    variableIdMap.put(sig, size);
+                variableId = variableIdMap.get(sig);
+                if (variableId == null) {
+                    variableId = variableIdMap.size() + 1;
+                    variableIdMap.put(sig, variableId);
                 }
             }
         }
-        int sid = variableIdMap.get(sig);
 
-        return sid;
+        return variableId;
     }
 
     public void addVolatileVariable(String sig) {
-        if (!volatileVariables.contains(sig)) {
-            synchronized (volatileVariables) {
-                if (!volatileVariables.contains(sig)) {
-                    volatileVariables.add(sig);
-                }
-            }
-        }
+        volatileVariables.add(sig);
     }
 
     public int getLocationId(String sig) {
-        if (stmtSigIdMap.get(sig) == null) {
+        Integer locId = stmtSigIdMap.get(sig);
+        if (locId == null) {
             synchronized (stmtSigIdMap) {
-                if (stmtSigIdMap.get(sig) == null) {
-                    int size = stmtSigIdMap.size() + 1;
-                    stmtSigIdMap.put(sig, size);
+                locId = stmtSigIdMap.get(sig);
+                if (locId == null) {
+                    locId = stmtSigIdMap.size() + 1;
+                    stmtSigIdMap.put(sig, locId);
                 }
             }
         }
 
-        return stmtSigIdMap.get(sig);
+        return locId;
     }
 
     public int getArrayLocationId(String sig) {

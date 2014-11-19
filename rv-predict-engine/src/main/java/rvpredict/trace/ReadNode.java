@@ -26,34 +26,50 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
-import trace.AbstractNode.TYPE;
+public class ReadNode extends AbstractNode implements IMemNode {
+    private long prevSyncId, prevBranchId;
 
-/**
- * a common interface for read and write events.
- * 
- * @author jeffhuang
- *
- */
-public interface IMemNode {
+    private long objectHashCode;
+    private long index;
+    private long value;
 
-    public String getAddr();
+    public ReadNode(long GID, long tid, int ID, long objectHashCode, long index, long value) {
+        super(GID, tid, ID, EventType.READ);
+        this.objectHashCode = objectHashCode;
+        this.index = index;
+        this.value = value;
+    }
 
-    public long getGID();
+    public long getValue() {
+        return value;
+    }
 
-    public long getTID();
+    @Override
+    public String getAddr() {
+        return (objectHashCode == 0 ? "_" : objectHashCode + "_") +
+                (index < 0 ? "." + -index : index);
+    }
 
-    public TYPE getType();
+    @Override
+    public String toString() {
+        return globalId + ": thread " + threadId + " " + synId + " " + objectHashCode + " " + index + " " + value + " " + type;
+    }
 
-    public int getID();
+    @Override
+    public long getPrevSyncId() {
+        return prevSyncId;
+    }
 
-    public long getPrevSyncId();
+    @Override
+    public long getPrevBranchId() {
+        return prevBranchId;
+    }
 
-    public long getPrevBranchId();
-
-    // TODO(YilongL): it's bad to make these nodes mutable
-    @Deprecated
-    public void setPrevBranchId(long id);
+    @Override
+    public void setPrevBranchId(long id) {
+        prevBranchId = id;
+    }
 
 }

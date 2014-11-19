@@ -34,8 +34,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.List;
 
-import trace.LockNode;
-import trace.LockPair;
+import rvpredict.trace.LockNode;
+import rvpredict.trace.LockPair;
 
 /**
  * Engine for computing the Lockset algorithm

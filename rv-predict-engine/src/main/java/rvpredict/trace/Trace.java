@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -95,7 +95,7 @@ public class Trace {
     HashMap<Long, List<PropertyNode>> threadPropertyNodes = new HashMap<Long, List<PropertyNode>>();
 
     // per address initial write value
-    HashMap<String, String> initialWriteValueMap = new HashMap<String, String>();
+    HashMap<String, Long> initialWriteValueMap = new HashMap<>();
 
     TraceInfo info;
 
@@ -122,11 +122,11 @@ public class Trace {
         return sharedAddresses;
     }
 
-    public HashMap<String, String> getInitialWriteValueMap() {
+    public HashMap<String, Long> getInitialWriteValueMap() {
         return initialWriteValueMap;
     }
 
-    public void setInitialWriteValueMap(HashMap<String, String> map) {
+    public void setInitialWriteValueMap(HashMap<String, Long> map) {
         initialWriteValueMap = map;
     }
 
@@ -188,7 +188,7 @@ public class Trace {
         return indexedThreadReadWriteNodes;
     }
 
-    public void saveLastWriteValues(HashMap<String, String> valueMap) {
+    public void saveLastWriteValues(HashMap<String, Long> valueMap) {
 
         Iterator<String> addrIt = indexedWriteNodes.keySet().iterator();
         while (addrIt.hasNext()) {

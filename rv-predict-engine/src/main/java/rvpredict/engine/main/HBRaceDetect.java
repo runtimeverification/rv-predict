@@ -38,14 +38,14 @@ import java.util.TimerTask;
 import java.util.List;
 
 import rvpredict.config.Configuration;
-import trace.ReadNode;
-import trace.Trace;
-import trace.TraceInfo;
-import trace.WriteNode;
+import rvpredict.trace.ReadNode;
+import rvpredict.trace.Trace;
+import rvpredict.trace.TraceInfo;
+import rvpredict.trace.WriteNode;
 import violation.ExactRace;
 import violation.IViolation;
 import violation.Race;
-import db.DBEngine;
+import rvpredict.db.DBEngine;
 
 /**
  * HBRaceDetect implements the happens-before methods for race detection.
@@ -184,10 +184,11 @@ public class HBRaceDetect {
             DBEngine db = new DBEngine(config.tableName, config.tableName);
 
             // load all the metadata in the application
-            HashMap<Integer, String> sharedVarIdSigMap = db.getVarSigIdMap();
-            HashMap<Integer, String> volatileAddresses = db.getVolatileAddresses();
-            HashMap<Integer, String> stmtIdSigMap = db.getStmtSigIdMap();
-            HashMap<Long, String> threadIdNameMap = db.getThreadIdNameMap();
+            HashMap<Integer, String> sharedVarIdSigMap = new HashMap<>();
+            HashMap<Integer, String> volatileAddresses = new HashMap<>();
+            HashMap<Integer, String> stmtIdSigMap = new HashMap<>();
+            HashMap<Long, String> threadIdNameMap = new HashMap<>();
+            db.getMetadata(threadIdNameMap,sharedVarIdSigMap,volatileAddresses,stmtIdSigMap);
 
             TraceInfo info = new TraceInfo(sharedVarIdSigMap, volatileAddresses, stmtIdSigMap,
                     threadIdNameMap);
@@ -250,17 +251,10 @@ public class HBRaceDetect {
 
             // TODO: query the following information from DB may be expensive
 
-            // int TOTAL_THREAD_NUMBER = db.getTraceThreadNumber();
             int TOTAL_THREAD_NUMBER = info.getTraceThreadNumber();
-            // int TOTAL_SHAREDVARIABLE_NUMBER =
-            // db.getTraceSharedVariableNumber();
             int TOTAL_SHAREDVARIABLE_NUMBER = info.getTraceSharedVariableNumber();
-            // int TOTAL_BRANCH_NUMBER = db.getTraceBranchNumber();
-            // int TOTAL_READWRITE_NUMBER = db.getTraceReadWriteNumber();
             int TOTAL_READWRITE_NUMBER = info.getTraceSharedReadWriteNumber();
-            // int TOTAL_SYNC_NUMBER = db.getTraceSyncNumber();
             int TOTAL_SYNC_NUMBER = info.getTraceSyncNumber();
-            // int TOTAL_PROPERTY_NUMBER = db.getTracePropertyNumber();
 
             report("Trace Size: " + TOTAL_TRACE_LENGTH, MSGTYPE.STATISTICS);
             report("Total #Threads: " + TOTAL_THREAD_NUMBER, MSGTYPE.STATISTICS);

@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
 /**
  * An abstract representation of an event in the trace. Each event has a global
@@ -41,10 +41,6 @@ package trace;
  *
  */
 public abstract class AbstractNode {
-    
-    public enum TYPE {
-        INIT, READ, WRITE, LOCK, UNLOCK, WAIT, NOTIFY, START, JOIN, BRANCH, BASIC_BLOCK, PROPERTY
-    }
 
     /**
      * There are three kinds of mems: SPE, thread object id, ordinary object id
@@ -55,9 +51,9 @@ public abstract class AbstractNode {
     protected final long globalId;
     protected final long threadId;
     protected final int synId;
-    protected final TYPE type;
+    protected final EventType type;
 
-    public AbstractNode(long globalId, long threadId, int synId, TYPE type) {
+    public AbstractNode(long globalId, long threadId, int synId, EventType type) {
         this.globalId = globalId;
         this.threadId = threadId;
         this.synId = synId;
@@ -76,7 +72,7 @@ public abstract class AbstractNode {
         return synId;
     }
 
-    public TYPE getType() {
+    public EventType getType() {
         return type;
     }
 

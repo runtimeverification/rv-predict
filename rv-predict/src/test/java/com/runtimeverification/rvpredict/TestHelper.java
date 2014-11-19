@@ -10,6 +10,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import com.google.common.base.Joiner;
 import rvpredict.config.Util;
 
 import org.junit.Assert;
@@ -94,7 +95,8 @@ public class TestHelper {
             }
         }
         
-        Assert.assertTrue("Unable to match regular expressions: " + expectedPatterns,
+        Assert.assertTrue("Unable to match regular expressions: \n\t" +
+                        Joiner.on("\n\t").skipNulls().join(expectedPatterns),
                 expectedPatterns.isEmpty());
     }
 

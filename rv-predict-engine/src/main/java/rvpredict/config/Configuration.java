@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -131,6 +131,10 @@ public class Configuration {
     @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables", hidden = true, descriptionKey = "1040")
     public boolean agentOnlySharing;
 
+    public final static String opt_asynchronous = "--async";
+    @Parameter(names = opt_asynchronous, description = "Record trace asynchronously", hidden = true, descriptionKey = "1050")
+    public boolean async;
+
     public final static String opt_only_predict = "--predict";
     @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "2000")
     public String predict_dir = null;
@@ -143,7 +147,7 @@ public class Configuration {
 
     final static String opt_max_len = "--maxlen";
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
-    public long window_size = 1000;
+    public int window_size = 1000;
 
     // final static String opt_no_schedule = "--noschedule";
     // @Parameter(names=opt_no_schedule, description = "not report schedule",
@@ -347,7 +351,7 @@ public class Configuration {
          * executable to execute the class/jar The -- option is only required in
          * the less frequent case when some of the java or program options used
          * have the same name as some of the rv-predict options (including --).
-         * 
+         *
          * Moreover, in the unlikely case when the program takes as options -cp
          * or -jar and is run as a class (i.e., not using -jar) then the java
          * -cp option must be used explicitly for disambiguation.

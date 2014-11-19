@@ -36,23 +36,23 @@ import rvpredict.config.Configuration;
 import rvpredict.util.Logger;
 import smt.EngineSMTLIB1;
 import smt.Engine;
-import trace.AbstractNode;
-import trace.IMemNode;
-import trace.ISyncNode;
-import trace.LockPair;
-import trace.PropertyNode;
-import trace.ReadNode;
-import trace.Trace;
-import trace.TraceInfo;
-import trace.WriteNode;
-import trace.AbstractNode.TYPE;
+import rvpredict.trace.AbstractNode;
+import rvpredict.trace.IMemNode;
+import rvpredict.trace.ISyncNode;
+import rvpredict.trace.LockPair;
+import rvpredict.trace.PropertyNode;
+import rvpredict.trace.ReadNode;
+import rvpredict.trace.Trace;
+import rvpredict.trace.TraceInfo;
+import rvpredict.trace.WriteNode;
+import rvpredict.trace.EventType;
 import violation.AtomicityViolation;
 import violation.Deadlock;
 import violation.ExactRace;
 import violation.IViolation;
 import violation.PropertyViolation;
 import violation.Race;
-import db.DBEngine;
+import rvpredict.db.DBEngine;
 
 /**
  * The NewRVPredict class implements our new race detection algorithm based on
@@ -72,10 +72,10 @@ public class NewRVPredict {
     private static boolean detectDeadlock = false;
     private static boolean detectProperty = false;
     private Logger logger;
-    private HashMap<Integer, String> sharedVarIdSigMap;
-    private HashMap<Integer, String> volatileAddresses;
-    private HashMap<Integer, String> stmtIdSigMap;
-    private HashMap<Long, String> threadIdNameMap;
+    private HashMap<Integer, String> sharedVarIdSigMap = new HashMap<>();
+    private HashMap<Integer, String> volatileAddresses = new HashMap<>();
+    private HashMap<Integer, String> stmtIdSigMap = new HashMap<>();
+    private HashMap<Long, String> threadIdNameMap = new HashMap<>();
     private long totalTraceLength;
     private DBEngine dbEngine;
     private TraceInfo traceInfo;
@@ -875,8 +875,8 @@ public class NewRVPredict {
                             for (int m = 0; m < rwnodes2.size(); m++) {
                                 IMemNode node3 = rwnodes2.get(m);
 
-                                if (node1.getType() == TYPE.WRITE || node2.getType() == TYPE.WRITE
-                                        || node3.getType() == TYPE.WRITE) {
+                                if (node1.getType() == EventType.WRITE || node2.getType() == EventType.WRITE
+                                        || node3.getType() == EventType.WRITE) {
                                     AtomicityViolation av = new AtomicityViolation(trace
                                             .getStmtSigIdMap().get(node1.getID()), trace
                                             .getStmtSigIdMap().get(node3.getID()), trace
@@ -993,7 +993,7 @@ public class NewRVPredict {
             Engine engine = new EngineSMTLIB1(config);
 
             // map from memory address to the initial value
-            HashMap<String, String> initialWriteValueMap = new HashMap<String, String>();
+            HashMap<String, Long> initialWriteValueMap = new HashMap<>();
 
             // process the trace window by window
             for (int round = 0; round * config.window_size < totalTraceLength; round++) {
@@ -1103,10 +1103,7 @@ public class NewRVPredict {
         dbEngine = new DBEngine(config.outdir, config.tableName);
 
         // load all the metadata in the application
-        sharedVarIdSigMap = dbEngine.getVarSigIdMap();
-        volatileAddresses = dbEngine.getVolatileAddresses();
-        stmtIdSigMap = dbEngine.getStmtSigIdMap();
-        threadIdNameMap = dbEngine.getThreadIdNameMap();
+        dbEngine.getMetadata(threadIdNameMap, sharedVarIdSigMap, volatileAddresses, stmtIdSigMap);
 
         // the total number of events in the trace
         totalTraceLength = 0;
@@ -1171,21 +1168,14 @@ public class NewRVPredict {
 
             // TODO: query the following information from DB may be expensive
 
-            // int TOTAL_THREAD_NUMBER = db.getTraceThreadNumber();
             int TOTAL_THREAD_NUMBER = info.getTraceThreadNumber();
-            // int TOTAL_SHAREDVARIABLE_NUMBER =
-            // db.getTraceSharedVariableNumber();
             int TOTAL_SHAREDVARIABLE_NUMBER = info.getTraceSharedVariableNumber();
-            // int TOTAL_BRANCH_NUMBER = db.getTraceBranchNumber();
             int TOTAL_BRANCH_NUMBER = info.getTraceBranchNumber();
-            // int TOTAL_READWRITE_NUMBER = db.getTraceReadWriteNumber();
             int TOTAL_SHAREDREADWRITE_NUMBER = info.getTraceSharedReadWriteNumber();
             int TOTAL_LOCALREADWRITE_NUMBER = info.getTraceLocalReadWriteNumber();
             int TOTAL_INITWRITE_NUMBER = info.getTraceInitWriteNumber();
 
-            // int TOTAL_SYNC_NUMBER = db.getTraceSyncNumber();
             int TOTAL_SYNC_NUMBER = info.getTraceSyncNumber();
-            // int TOTAL_PROPERTY_NUMBER = db.getTracePropertyNumber();
             int TOTAL_PROPERTY_NUMBER = info.getTracePropertyNumber();
 
             if (violations.size() == 0)

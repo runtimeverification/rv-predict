@@ -26,35 +26,32 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package trace;
+package rvpredict.trace;
 
 /**
- * initial write node for some memory location.
+ * a common interface for read and write events.
  * 
  * @author jeffhuang
  *
  */
-public class InitNode extends AbstractNode {
-    private String value;
-    private String addr;
+public interface IMemNode {
 
-    public InitNode(long GID, long tid, int ID, String addr, String value) {
-        super(GID, tid, ID, AbstractNode.TYPE.INIT);
-        this.addr = addr;
-        this.value = value;
-    }
+    public String getAddr();
 
-    public String getValue() {
-        return value;
-    }
+    public long getGID();
 
-    public String getAddr() {
-        return addr;
-    }
+    public long getTID();
 
-    @Override
-    public String toString() {
-        return globalId + ": thread " + threadId + " " + synId + " " + addr + " " + value + " " + type;
-    }
+    public EventType getType();
+
+    public int getID();
+
+    public long getPrevSyncId();
+
+    public long getPrevBranchId();
+
+    // TODO(YilongL): it's bad to make these nodes mutable
+    @Deprecated
+    public void setPrevBranchId(long id);
 
 }

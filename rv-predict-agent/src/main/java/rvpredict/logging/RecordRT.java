@@ -38,18 +38,18 @@ import rvpredict.trace.EventType;
 public final class RecordRT {
 
     private static HashMap<Long, Integer> threadTidIndexMap;
-    public static HashSet<Integer> sharedVariableIds;
-    public static HashSet<Integer> sharedArrayIds;
+    private static HashSet<Integer> sharedVariableIds;
+    private static HashSet<Integer> sharedArrayIds;
     private static HashMap<Integer, Long> writeThreadMap;
     private static HashMap<Integer, long[]> readThreadMap;
-    public static HashMap<Integer, HashSet<Integer>> arrayIdsMap;
+    private static HashMap<Integer, HashSet<Integer>> arrayIdsMap;
 
     private static HashMap<Integer, Long> writeThreadArrayMap;
     private static HashMap<Integer, long[]> readThreadArrayMap;
     private final static String MAIN_NAME = "0";
 
-    static ThreadLocal<HashSet<Integer>> threadLocalIDSet;
-    static ThreadLocal<HashSet<Integer>> threadLocalIDSet2;
+    private static ThreadLocal<HashSet<Integer>> threadLocalIDSet;
+    private static ThreadLocal<HashSet<Integer>> threadLocalIDSet2;
 
     // engine for storing events into database
     private static DBEngine db;

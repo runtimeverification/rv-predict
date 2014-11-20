@@ -34,8 +34,14 @@ package rvpredict.trace;
  */
 public interface MemoryAccessEvent extends Event {
 
+    /**
+     * Returns the accessed memory address in the event.
+     */
     public String getAddr();
 
+    /**
+     * Returns the value read or written in the access.
+     */
     public long getValue();
 
     public long getPrevBranchId();

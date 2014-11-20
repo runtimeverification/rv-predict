@@ -28,7 +28,7 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class LockNode extends AbstractNode implements SyncEvent {
+public class LockNode extends AbstractEvent implements SyncEvent {
     private long did;// this is the ID of the event from the same thread the
                      // rwnode depends on
     private long lock_addr;
@@ -49,6 +49,6 @@ public class LockNode extends AbstractNode implements SyncEvent {
 
     @Override
     public String toString() {
-        return globalId + ": thread " + threadId + " " + lock_addr + " " + type;
+        return GID + ": thread " + TID + " " + lock_addr + " " + type;
     }
 }

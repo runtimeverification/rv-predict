@@ -28,7 +28,7 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class WaitNode extends AbstractNode implements SyncEvent {
+public class WaitNode extends AbstractEvent implements SyncEvent {
 
     public long getSigAddr() {
         return sig_addr;
@@ -48,6 +48,6 @@ public class WaitNode extends AbstractNode implements SyncEvent {
 
     @Override
     public String toString() {
-        return globalId + ": thread " + threadId + " " + synId + " " + sig_addr + " " + type;
+        return GID + ": thread " + TID + " " + ID + " " + sig_addr + " " + type;
     }
 }

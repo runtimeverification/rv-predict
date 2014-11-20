@@ -36,7 +36,7 @@ import rvpredict.config.Configuration;
 import rvpredict.util.Logger;
 import smt.EngineSMTLIB1;
 import smt.Engine;
-import rvpredict.trace.AbstractNode;
+import rvpredict.trace.AbstractEvent;
 import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.SyncEvent;
 import rvpredict.trace.LockPair;
@@ -380,12 +380,12 @@ public class NewRVPredict {
                         MemoryAccessEvent mnode = mnodes.get(k);
                         if (mnode.getPrevBranchId() < mnode_cur.getGID()) {
                             // check sync id
-                            List<AbstractNode> nodes = trace.getThreadNodesMap().get(tid);
+                            List<AbstractEvent> nodes = trace.getThreadNodesMap().get(tid);
                             int index_end = nodes.indexOf(mnode);
                             int index = index_end - 1;
                             boolean shouldAdd = true;
                             for (; index > index_cur; index--) {
-                                AbstractNode node = nodes.get(index);
+                                AbstractEvent node = nodes.get(index);
                                 if (node instanceof SyncEvent) {
                                     shouldAdd = false;
                                     break;
@@ -896,12 +896,12 @@ public class NewRVPredict {
                                             continue;
 
                                         if (node3.getGID() < node1.getGID()) {
-                                            if (engine.canReach((AbstractNode) node3,
-                                                    (AbstractNode) node1))
+                                            if (engine.canReach((AbstractEvent) node3,
+                                                    (AbstractEvent) node1))
                                                 continue;
                                         } else if (node3.getGID() > node2.getGID()) {
-                                            if (engine.canReach((AbstractNode) node2,
-                                                    (AbstractNode) node3))
+                                            if (engine.canReach((AbstractEvent) node2,
+                                                    (AbstractEvent) node3))
                                                 continue;
                                         }
 

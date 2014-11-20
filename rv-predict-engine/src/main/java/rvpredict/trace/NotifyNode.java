@@ -28,7 +28,7 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class NotifyNode extends AbstractNode implements SyncEvent {
+public class NotifyNode extends AbstractEvent implements SyncEvent {
 
     private long sig_addr;
 
@@ -44,7 +44,7 @@ public class NotifyNode extends AbstractNode implements SyncEvent {
 
     @Override
     public String toString() {
-        return globalId + ": thread " + threadId + " " + synId + " " + sig_addr + " " + type;
+        return GID + ": thread " + TID + " " + ID + " " + sig_addr + " " + type;
     }
 
 }

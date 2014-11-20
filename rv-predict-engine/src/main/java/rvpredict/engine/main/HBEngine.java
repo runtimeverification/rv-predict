@@ -28,7 +28,7 @@ package rvpredict.engine.main;
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-import rvpredict.trace.AbstractNode;
+import rvpredict.trace.AbstractEvent;
 import rvpredict.trace.SyncEvent;
 import rvpredict.trace.JoinNode;
 import rvpredict.trace.LockNode;
@@ -79,10 +79,10 @@ public class HBEngine {
      * 
      * @param map
      */
-    private void addIntraThreadEdge(HashMap<Long, List<AbstractNode>> map) {
-        Iterator<List<AbstractNode>> mapIt = map.values().iterator();
+    private void addIntraThreadEdge(HashMap<Long, List<AbstractEvent>> map) {
+        Iterator<List<AbstractEvent>> mapIt = map.values().iterator();
         while (mapIt.hasNext()) {
-            List<AbstractNode> nodes = mapIt.next();
+            List<AbstractEvent> nodes = mapIt.next();
             long lastGID = nodes.get(0).getGID();
             for (int i = 1; i < nodes.size(); i++) {
                 long thisGID = nodes.get(i).getGID();
@@ -108,8 +108,8 @@ public class HBEngine {
      * @param firstNodes
      * @param lastNodes
      */
-    private void addHBEdges(Trace trace, HashMap<Long, AbstractNode> firstNodes,
-            HashMap<Long, AbstractNode> lastNodes) {
+    private void addHBEdges(Trace trace, HashMap<Long, AbstractEvent> firstNodes,
+            HashMap<Long, AbstractEvent> lastNodes) {
         HashMap<String, WriteNode> addressLastWriteMap = new HashMap<String, WriteNode>();
         HashMap<String, ReadNode> addressLastReadMap = new HashMap<String, ReadNode>();
 
@@ -121,9 +121,9 @@ public class HBEngine {
         // during recording
         // should after wait, before notify
         // after lock, before unlock
-        List<AbstractNode> nodes = trace.getFullTrace();
+        List<AbstractEvent> nodes = trace.getFullTrace();
         for (int i = 0; i < nodes.size(); i++) {
-            AbstractNode node = nodes.get(i);
+            AbstractEvent node = nodes.get(i);
             long thisGID = node.getGID();
 
             // add first node
@@ -131,7 +131,7 @@ public class HBEngine {
             if (node instanceof StartNode) {
                 long tid = Long.valueOf(((StartNode) node).getAddr());
 
-                AbstractNode fnode = firstNodes.get(tid);
+                AbstractEvent fnode = firstNodes.get(tid);
                 if (fnode != null) {
                     long fGID = fnode.getGID();
                     reachEngine.addEdge(thisGID, fGID);
@@ -139,7 +139,7 @@ public class HBEngine {
                 }
             } else if (node instanceof JoinNode) {
                 long tid = Long.valueOf(((JoinNode) node).getAddr());
-                AbstractNode lnode = lastNodes.get(tid);
+                AbstractEvent lnode = lastNodes.get(tid);
                 if (lnode != null) {
                     long lGID = lnode.getGID();
                     reachEngine.addEdge(lGID, thisGID);
@@ -191,7 +191,7 @@ public class HBEngine {
                 if (syncstack.isEmpty()) {
                     // lp = new LockPair(null,(ISyncNode)node);
                     // make it non-null
-                    AbstractNode firstnode = firstNodes.get(tid);
+                    AbstractEvent firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
                             ((UnlockNode) node).getLockAddr());
@@ -261,7 +261,7 @@ public class HBEngine {
                 if (syncstack.isEmpty()) {
                     // lp = new LockPair(null,((WaitNode) node));
 
-                    AbstractNode firstnode = firstNodes.get(tid);
+                    AbstractEvent firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
                             ((WaitNode) node).getSigAddr());
@@ -295,7 +295,7 @@ public class HBEngine {
 
             Stack<SyncEvent> stack = threadSyncStack.get(tid);
 
-            AbstractNode lastnode = lastNodes.get(tid);
+            AbstractEvent lastnode = lastNodes.get(tid);
             long fake_gid = lastnode.getGID();
 
             while (stack.size() > 0) {
@@ -350,7 +350,7 @@ public class HBEngine {
      * @param node2
      * @return
      */
-    public boolean isRace(AbstractNode node1, AbstractNode node2) {
+    public boolean isRace(AbstractEvent node1, AbstractEvent node2) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
 

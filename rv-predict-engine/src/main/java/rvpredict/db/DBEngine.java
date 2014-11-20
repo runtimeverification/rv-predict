@@ -178,7 +178,7 @@ public class DBEngine {
         assert min <= traceSize : "This method should only be called with a valid min value";
         if (max > traceSize) max = traceSize; // resetting max to trace size.
         Trace trace = new Trace(info);
-        AbstractNode node = null;
+        AbstractEvent node = null;
         for (long index = min; index <= max; index++) {
             rvpredict.db.EventItem eventItem = traceCache.getEvent(index);
             long GID = eventItem.GID;

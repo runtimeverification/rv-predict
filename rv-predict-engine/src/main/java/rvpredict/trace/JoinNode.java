@@ -28,7 +28,7 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class JoinNode extends AbstractNode implements SyncEvent {
+public class JoinNode extends AbstractEvent implements SyncEvent {
 
     private long tid_join;
 

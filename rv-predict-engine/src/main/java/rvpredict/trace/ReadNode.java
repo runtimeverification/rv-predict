@@ -28,7 +28,7 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class ReadNode extends AbstractNode implements MemoryAccessEvent {
+public class ReadNode extends AbstractEvent implements MemoryAccessEvent {
 
     private long prevBranchId;
 
@@ -56,7 +56,7 @@ public class ReadNode extends AbstractNode implements MemoryAccessEvent {
 
     @Override
     public String toString() {
-        return globalId + ": thread " + threadId + " " + synId + " " + objectHashCode + " " + index + " " + value + " " + type;
+        return GID + ": thread " + TID + " " + ID + " " + objectHashCode + " " + index + " " + value + " " + type;
     }
 
     @Override

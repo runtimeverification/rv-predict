@@ -28,7 +28,7 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class StartNode extends AbstractNode implements SyncEvent {
+public class StartNode extends AbstractEvent implements SyncEvent {
 
     private long tid_child;
 

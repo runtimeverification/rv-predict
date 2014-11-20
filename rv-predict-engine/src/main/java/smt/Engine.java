@@ -28,7 +28,7 @@
  ******************************************************************************/
 package smt;
 
-import rvpredict.trace.AbstractNode;
+import rvpredict.trace.AbstractEvent;
 import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.SyncEvent;
 import rvpredict.trace.JoinNode;
@@ -91,7 +91,7 @@ public class Engine {
      * 
      * @param trace
      */
-    public void declareVariables(List<AbstractNode> trace) {
+    public void declareVariables(List<AbstractEvent> trace) {
         CONS_SETLOGIC = "(set-logic QF_IDL)\n";// use integer difference logic
         CONS_DECLARE = new StringBuilder("");
         CONS_ASSERT = new StringBuilder("");
@@ -99,7 +99,7 @@ public class Engine {
         // CONS_ASSERT = "(assert (distinct ";
         int size = trace.size();
         for (int i = 0; i < size; i++) {
-            AbstractNode node = trace.get(i);
+            AbstractEvent node = trace.get(i);
             long GID = node.getGID();
             String var = makeVariable(GID);
 
@@ -120,13 +120,13 @@ public class Engine {
      * 
      * @param map
      */
-    public void addIntraThreadConstraints(HashMap<Long, List<AbstractNode>> map) {
+    public void addIntraThreadConstraints(HashMap<Long, List<AbstractEvent>> map) {
         // create reachability engine
         reachEngine = new ReachabilityEngine();
 
-        Iterator<List<AbstractNode>> mapIt = map.values().iterator();
+        Iterator<List<AbstractEvent>> mapIt = map.values().iterator();
         while (mapIt.hasNext()) {
-            List<AbstractNode> nodes = mapIt.next();
+            List<AbstractEvent> nodes = mapIt.next();
             long lastGID = nodes.get(0).getGID();
             String lastVar = makeVariable(lastGID);
             for (int i = 1; i < nodes.size(); i++) {
@@ -189,7 +189,7 @@ public class Engine {
      */
     public void addSynchronizationConstraints(Trace trace,
             HashMap<String, List<SyncEvent>> syncNodesMap,
-            HashMap<Long, AbstractNode> firstNodes, HashMap<Long, AbstractNode> lastNodes) {
+            HashMap<Long, AbstractEvent> firstNodes, HashMap<Long, AbstractEvent> lastNodes) {
         // construct a new lockset for this segment
         lockEngine = new LockSetEngine();
 
@@ -213,7 +213,7 @@ public class Engine {
                 String var = makeVariable(thisGID);
                 if (node instanceof StartNode) {
                     long tid = Long.valueOf(node.getAddr());
-                    AbstractNode fnode = firstNodes.get(tid);
+                    AbstractEvent fnode = firstNodes.get(tid);
                     if (fnode != null) {
                         long fGID = fnode.getGID();
                         String fvar = makeVariable(fGID);
@@ -227,7 +227,7 @@ public class Engine {
                     }
                 } else if (node instanceof JoinNode) {
                     long tid = Long.valueOf(node.getAddr());
-                    AbstractNode lnode = lastNodes.get(tid);
+                    AbstractEvent lnode = lastNodes.get(tid);
                     if (lnode != null) {
                         long lGID = lnode.getGID();
                         String lvar = makeVariable(lGID);
@@ -394,12 +394,12 @@ public class Engine {
                 LockPair lp = lockPairs.get(j);
                 if (lp.lock != null) {
                     if (lp.lock.getTID() != lp1_tid
-                            && !canReach((AbstractNode) lp1.lock, (AbstractNode) lp.lock)) {
+                            && !canReach((AbstractEvent) lp1.lock, (AbstractEvent) lp.lock)) {
                         flexLockPairs.add(lp);
                     }
                 } else if (lp.unlock != null) {
                     if (lp.unlock.getTID() != lp1_tid
-                            && !canReach((AbstractNode) lp1.lock, (AbstractNode) lp.unlock)) {
+                            && !canReach((AbstractEvent) lp1.lock, (AbstractEvent) lp.unlock)) {
                         flexLockPairs.add(lp);
                     }
                 }
@@ -655,7 +655,7 @@ public class Engine {
      * @param node2
      * @return
      */
-    public boolean canReach(AbstractNode node1, AbstractNode node2) {
+    public boolean canReach(AbstractEvent node1, AbstractEvent node2) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
 
@@ -690,7 +690,7 @@ public class Engine {
      * @param casualConstraint
      * @return
      */
-    public boolean isRace(AbstractNode node1, AbstractNode node2, StringBuilder casualConstraint) {
+    public boolean isRace(AbstractEvent node1, AbstractEvent node2, StringBuilder casualConstraint) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
         //

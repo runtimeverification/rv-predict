@@ -29,64 +29,54 @@
 package rvpredict.trace;
 
 /**
- * An abstract representation of an event in the trace. Each event has a global
- * id (GID) representing their order in the trace, a thread id (tid)
- * representing the identity of their thread, a static syntactic ID (ID)
- * representing their program location, and a corresponding type, e.g., read,
- * write, lock, unlock, etc. For most events except branch events, they also
- * have a corresponding address attribute "addr" denoting the memory address
- * they access.
- *
- * @author smhuang
- *
+ * Base class for all events in the trace.
  */
-public abstract class AbstractNode {
+public abstract class AbstractEvent implements Event {
 
-    /**
-     * There are three kinds of mems: SPE, thread object id, ordinary object id
-     */
-    /**
-	 *
-	 */
-    protected final long globalId;
-    protected final long threadId;
-    protected final int synId;
+    protected final long GID;
+    protected final long TID;
+    protected final int ID;
     protected final EventType type;
 
-    protected AbstractNode(long globalId, long threadId, int synId, EventType type) {
-        this.globalId = globalId;
-        this.threadId = threadId;
-        this.synId = synId;
+    protected AbstractEvent(long GID, long TID, int ID, EventType type) {
+        this.GID = GID;
+        this.TID = TID;
+        this.ID = ID;
         this.type = type;
     }
 
+    @Override
     public long getGID() {
-        return globalId;
+        return GID;
     }
 
+    @Override
     public long getTID() {
-        return threadId;
+        return TID;
     }
 
+    @Override
     public int getID() {
-        return synId;
+        return ID;
     }
 
+    @Override
     public EventType getType() {
         return type;
     }
 
-    // TODO(YilongL): this is simply wrong... and no one is calling this method...
-    public boolean equals(AbstractNode node) {
-        if (this.globalId == node.getGID()) {
-            return true;
-        } else
+    @Override
+    public boolean equals(Object object) {
+        if (!(object instanceof Event)) {
             return false;
+        }
+        Event otherEvent = (Event) object;
+        return getGID() == otherEvent.getGID();
     }
 
 
     @Override
     public String toString() {
-        return globalId + ": thread " + threadId + " " + synId + " " + type;
+        return GID + ": thread " + TID + " " + ID + " " + type;
     }
 }

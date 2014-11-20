@@ -71,13 +71,8 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
                     numOfWords++;
             }
 
-            if (config.commandLine.agentOnlySharing) {
-                mv = new SharedVariableDetectionMethodAdapter(mv, source, className, name, name
-                        + desc, access, numOfWords, config, globalState);
-            } else {
-                mv = new SnoopInstructionMethodAdapter(mv, source, className, version, name, name + desc,
-                        access, numOfWords, config, globalState);
-            }
+            mv = new SnoopInstructionMethodAdapter(mv, source, className, version, name, name
+                    + desc, access, numOfWords, config, globalState);
         }
         return mv;
     }

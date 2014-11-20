@@ -55,6 +55,7 @@ public class Main {
             String libPath = basePath + separator + "lib" + separator;
             String rvAgent = libPath + "rv-predict" + ".jar";
 
+            // TODO(YilongL): there should be only one agentOptions
             String sharingAgentOptions = Configuration.opt_only_log + " "
                     + escapeString(config.outdir);
             if (Configuration.additionalExcludes != null) {
@@ -68,13 +69,12 @@ public class Main {
                         + escapeString(Configuration.additionalIncludes);
             }
             String noSharingAgentOptions = sharingAgentOptions;
-            sharingAgentOptions += " " + Configuration.opt_sharing_only;
 
             List<String> appArgList = new ArrayList<String>();
             appArgList.add(java);
             appArgList.add("-Xbootclasspath/a:" + rvAgent);
             int agentIds = appArgList.size();
-            if (config.optlog || config.agentOnlySharing) {
+            if (config.optlog) {
                 if (logOutput) {
                     if (config.optlog) {
                         config.logger

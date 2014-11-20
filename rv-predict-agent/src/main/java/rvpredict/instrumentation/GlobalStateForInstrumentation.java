@@ -3,7 +3,6 @@ package rvpredict.instrumentation;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,29 +34,10 @@ public class GlobalStateForInstrumentation {
     public final Set<String> volatileVariables = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     public final List<String> unsavedVolatileVariables = new ArrayList<>();
 
-    private HashSet<String> sharedVariables;
-    private HashSet<String> sharedArrayLocations;
-
     public void registerThreadName(long tid, String name) {
         String value = threadIdToName.put(tid, name);
         assert value == null : "Thread Id " + tid + " already used!";
         unsavedThreadIdToName.add(new SimpleEntry<Long, String>(tid, name));
-    }
-
-    public boolean isVariableShared(String sig) {
-        return sharedVariables == null || sharedVariables.contains(sig);
-    }
-
-    public boolean shouldInstrumentArray(String loc) {
-        return sharedArrayLocations == null || sharedArrayLocations.contains(loc);
-    }
-
-    public void setSharedArrayLocations(HashSet<String> locs) {
-        this.sharedArrayLocations = locs;
-    }
-
-    public void setSharedVariables(HashSet<String> locs) {
-        this.sharedVariables = locs;
     }
 
     public int getVariableId(String sig) {

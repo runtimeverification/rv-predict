@@ -29,7 +29,7 @@ package engines;
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 import rvpredict.trace.AbstractNode;
-import rvpredict.trace.ISyncNode;
+import rvpredict.trace.SyncEvent;
 import rvpredict.trace.JoinNode;
 import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
@@ -124,7 +124,7 @@ public class CPEngine {
         HashMap<String, ArrayList<HashSet<String>>> lockWriteAccessedAddresses = new HashMap<String, ArrayList<HashSet<String>>>();
 
         HashMap<String, ArrayList<LockPair>> lockAddrNodes = new HashMap<String, ArrayList<LockPair>>();
-        HashMap<Long, Stack<ISyncNode>> threadSyncStack = new HashMap<Long, Stack<ISyncNode>>();
+        HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
 
         NotifyNode matchNotifyNode = null;
 
@@ -217,9 +217,9 @@ public class CPEngine {
                     writeaddresses.clear();
                 }
 
-                Stack<ISyncNode> syncstack = threadSyncStack.get(tid);
+                Stack<SyncEvent> syncstack = threadSyncStack.get(tid);
                 if (syncstack == null) {
-                    syncstack = new Stack<ISyncNode>();
+                    syncstack = new Stack<SyncEvent>();
                     threadSyncStack.put(tid, syncstack);
                 }
                 syncstack.push(((LockNode) node));
@@ -227,11 +227,11 @@ public class CPEngine {
             } else if (node instanceof UnlockNode) {
                 long tid = node.getTID();
 
-                Stack<ISyncNode> syncstack = threadSyncStack.get(tid);
+                Stack<SyncEvent> syncstack = threadSyncStack.get(tid);
 
                 // assert(stack.size()>0);//this is possible when segmented
                 if (syncstack == null) {
-                    syncstack = new Stack<ISyncNode>();
+                    syncstack = new Stack<SyncEvent>();
                     threadSyncStack.put(tid, syncstack);
                 }
                 LockPair lp = null;
@@ -242,9 +242,9 @@ public class CPEngine {
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
                             ((UnlockNode) node).getLockAddr());
-                    lp = new LockPair(fake_node, (ISyncNode) node);
+                    lp = new LockPair(fake_node, (SyncEvent) node);
                 } else {
-                    lp = new LockPair(syncstack.pop(), (ISyncNode) node);
+                    lp = new LockPair(syncstack.pop(), (SyncEvent) node);
 
                     // filter out re-entrant locks
                     if (syncstack.size() > 0)
@@ -288,7 +288,7 @@ public class CPEngine {
                 writeaddrList.add(new HashSet<>(writeaddresses));
 
                 syncNodeList.add(lp);
-                lockEngine.add(((ISyncNode) node).getAddr(), tid, lp);
+                lockEngine.add(((SyncEvent) node).getAddr(), tid, lp);
 
                 Stack<HashSet<String>> readstack = threadReadAccessAddrStack.get(tid);
                 if (readstack != null && !readstack.isEmpty()) {
@@ -333,10 +333,10 @@ public class CPEngine {
                     matchNotifyNode = null;
                 }
 
-                Stack<ISyncNode> syncstack = threadSyncStack.get(tid);
+                Stack<SyncEvent> syncstack = threadSyncStack.get(tid);
                 // assert(stack.size()>0);
                 if (syncstack == null) {
-                    syncstack = new Stack<ISyncNode>();
+                    syncstack = new Stack<SyncEvent>();
                     threadSyncStack.put(tid, syncstack);
                 }
                 LockPair lp = null;
@@ -347,7 +347,7 @@ public class CPEngine {
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
                             ((WaitNode) node).getSigAddr());
-                    lp = new LockPair(fake_node, (ISyncNode) node);
+                    lp = new LockPair(fake_node, (SyncEvent) node);
                 } else
                     lp = new LockPair(syncstack.pop(), ((WaitNode) node));
 
@@ -386,7 +386,7 @@ public class CPEngine {
                 writeaddrList.add(new HashSet<>(writeaddresses));
 
                 syncNodeList.add(lp);
-                lockEngine.add(((ISyncNode) node).getAddr(), tid, lp);
+                lockEngine.add(((SyncEvent) node).getAddr(), tid, lp);
 
                 syncstack.push(((WaitNode) node));
 
@@ -405,13 +405,13 @@ public class CPEngine {
 
             if (readaddresses != null || writeaddresses != null) {
 
-                Stack<ISyncNode> stack = threadSyncStack.get(tid);
+                Stack<SyncEvent> stack = threadSyncStack.get(tid);
 
                 AbstractNode lastnode = lastNodes.get(tid);
                 long fake_gid = lastnode.getGID();
 
                 while (stack.size() > 0) {
-                    ISyncNode node = stack.remove(0);
+                    SyncEvent node = stack.remove(0);
                     UnlockNode fake_node = new UnlockNode(fake_gid, tid, lastnode.getID(),
                             node.getAddr());
 
@@ -520,7 +520,7 @@ public class CPEngine {
                             }
 
                             if (addCPEdge) {
-                                ISyncNode lastnode = syncNodeList.get(k1).unlock;
+                                SyncEvent lastnode = syncNodeList.get(k1).unlock;
                                 if (lastnode != null && lastnode.getTID() != lp.lock.getTID()) {
                                     long gid1 = lastnode.getGID();
 

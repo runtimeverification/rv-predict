@@ -28,7 +28,7 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class UnlockNode extends AbstractNode implements ISyncNode {
+public class UnlockNode extends AbstractNode implements SyncEvent {
     private long did;// this is the ID of the event from the same thread the
 
     public long getLockAddr() {

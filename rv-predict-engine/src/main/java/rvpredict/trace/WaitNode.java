@@ -28,7 +28,7 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class WaitNode extends AbstractNode implements ISyncNode {
+public class WaitNode extends AbstractNode implements SyncEvent {
 
     public long getSigAddr() {
         return sig_addr;

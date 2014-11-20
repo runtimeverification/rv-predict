@@ -37,8 +37,8 @@ import rvpredict.util.Logger;
 import smt.EngineSMTLIB1;
 import smt.Engine;
 import rvpredict.trace.AbstractNode;
-import rvpredict.trace.IMemNode;
-import rvpredict.trace.ISyncNode;
+import rvpredict.trace.MemoryAccessEvent;
+import rvpredict.trace.SyncEvent;
 import rvpredict.trace.LockPair;
 import rvpredict.trace.PropertyNode;
 import rvpredict.trace.ReadNode;
@@ -358,26 +358,26 @@ public class NewRVPredict {
                     continue;
             }
             // find equivalent reads and writes by the same thread
-            HashMap<IMemNode, HashSet<IMemNode>> equiMap = new HashMap<IMemNode, HashSet<IMemNode>>();
+            HashMap<MemoryAccessEvent, HashSet<MemoryAccessEvent>> equiMap = new HashMap<MemoryAccessEvent, HashSet<MemoryAccessEvent>>();
             // skip non-primitive and array variables?
             // because we add branch operations before their operations
             if (config.optrace && !addr.contains("_")) {
                 // read/write-> set of read/write
-                HashMap<Long, List<IMemNode>> threadrwnodes = trace
+                HashMap<Long, List<MemoryAccessEvent>> threadrwnodes = trace
                         .getIndexedThreadReadWriteNodes().get(addr);
                 Iterator<Long> tidIt = threadrwnodes.keySet().iterator();
                 while (tidIt.hasNext()) {
                     Long tid = tidIt.next();
-                    List<IMemNode> mnodes = threadrwnodes.get(tid);
+                    List<MemoryAccessEvent> mnodes = threadrwnodes.get(tid);
                     if (mnodes.size() < 2)
                         continue;
-                    IMemNode mnode_cur = mnodes.get(0);
-                    HashSet<IMemNode> equiset = null;
+                    MemoryAccessEvent mnode_cur = mnodes.get(0);
+                    HashSet<MemoryAccessEvent> equiset = null;
 
                     int index_cur = trace.getThreadNodesMap().get(tid).indexOf(mnode_cur);
 
                     for (int k = 1; k < mnodes.size(); k++) {
-                        IMemNode mnode = mnodes.get(k);
+                        MemoryAccessEvent mnode = mnodes.get(k);
                         if (mnode.getPrevBranchId() < mnode_cur.getGID()) {
                             // check sync id
                             List<AbstractNode> nodes = trace.getThreadNodesMap().get(tid);
@@ -386,14 +386,14 @@ public class NewRVPredict {
                             boolean shouldAdd = true;
                             for (; index > index_cur; index--) {
                                 AbstractNode node = nodes.get(index);
-                                if (node instanceof ISyncNode) {
+                                if (node instanceof SyncEvent) {
                                     shouldAdd = false;
                                     break;
                                 }
                             }
                             if (shouldAdd) {
                                 if (equiset == null)
-                                    equiset = new HashSet<IMemNode>();
+                                    equiset = new HashSet<MemoryAccessEvent>();
 
                                 equiset.add(mnode);
 
@@ -535,21 +535,21 @@ public class NewRVPredict {
                                         violations.add(race);
 
                                     if (equiMap.containsKey(rnode) || equiMap.containsKey(wnode)) {
-                                        HashSet<IMemNode> nodes1 = new HashSet<IMemNode>();
+                                        HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
                                         nodes1.add(rnode);
                                         if (equiMap.get(rnode) != null)
                                             nodes1.addAll(equiMap.get(rnode));
-                                        HashSet<IMemNode> nodes2 = new HashSet<IMemNode>();
+                                        HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
                                         nodes2.add(wnode);
                                         if (equiMap.get(wnode) != null)
                                             nodes2.addAll(equiMap.get(wnode));
 
-                                        for (Iterator<IMemNode> nodesIt1 = nodes1.iterator(); nodesIt1
+                                        for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
                                                 .hasNext();) {
-                                            IMemNode node1 = nodesIt1.next();
-                                            for (Iterator<IMemNode> nodesIt2 = nodes2.iterator(); nodesIt2
+                                            MemoryAccessEvent node1 = nodesIt1.next();
+                                            for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
                                                     .hasNext();) {
-                                                IMemNode node2 = nodesIt2.next();
+                                                MemoryAccessEvent node2 = nodesIt2.next();
                                                 Race r = new Race(trace.getStmtSigIdMap().get(
                                                         node1.getID()), trace.getStmtSigIdMap()
                                                         .get(node2.getID()), node1.getID(),
@@ -624,21 +624,21 @@ public class NewRVPredict {
                                                 Logger.MSGTYPE.POTENTIAL);
 
                                     if (equiMap.containsKey(rnode) || equiMap.containsKey(wnode)) {
-                                        HashSet<IMemNode> nodes1 = new HashSet<IMemNode>();
+                                        HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
                                         nodes1.add(rnode);
                                         if (equiMap.get(rnode) != null)
                                             nodes1.addAll(equiMap.get(rnode));
-                                        HashSet<IMemNode> nodes2 = new HashSet<IMemNode>();
+                                        HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
                                         nodes2.add(wnode);
                                         if (equiMap.get(wnode) != null)
                                             nodes2.addAll(equiMap.get(wnode));
 
-                                        for (Iterator<IMemNode> nodesIt1 = nodes1.iterator(); nodesIt1
+                                        for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
                                                 .hasNext();) {
-                                            IMemNode node1 = nodesIt1.next();
-                                            for (Iterator<IMemNode> nodesIt2 = nodes2.iterator(); nodesIt2
+                                            MemoryAccessEvent node1 = nodesIt1.next();
+                                            for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
                                                     .hasNext();) {
-                                                IMemNode node2 = nodesIt2.next();
+                                                MemoryAccessEvent node2 = nodesIt2.next();
 
                                                 ExactRace r = new ExactRace(trace.getStmtSigIdMap()
                                                         .get(node1.getID()), trace
@@ -724,21 +724,21 @@ public class NewRVPredict {
                                         violations.add(race);
 
                                     if (equiMap.containsKey(wnode1) || equiMap.containsKey(wnode2)) {
-                                        HashSet<IMemNode> nodes1 = new HashSet<IMemNode>();
+                                        HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
                                         nodes1.add(wnode1);
                                         if (equiMap.get(wnode1) != null)
                                             nodes1.addAll(equiMap.get(wnode1));
-                                        HashSet<IMemNode> nodes2 = new HashSet<IMemNode>();
+                                        HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
                                         nodes2.add(wnode2);
                                         if (equiMap.get(wnode2) != null)
                                             nodes2.addAll(equiMap.get(wnode2));
 
-                                        for (Iterator<IMemNode> nodesIt1 = nodes1.iterator(); nodesIt1
+                                        for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
                                                 .hasNext();) {
-                                            IMemNode node1 = nodesIt1.next();
-                                            for (Iterator<IMemNode> nodesIt2 = nodes2.iterator(); nodesIt2
+                                            MemoryAccessEvent node1 = nodesIt1.next();
+                                            for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
                                                     .hasNext();) {
-                                                IMemNode node2 = nodesIt2.next();
+                                                MemoryAccessEvent node2 = nodesIt2.next();
                                                 Race r = new Race(trace.getStmtSigIdMap().get(
                                                         node1.getID()), trace.getStmtSigIdMap()
                                                         .get(node2.getID()), node1.getID(),
@@ -797,21 +797,21 @@ public class NewRVPredict {
                                                 Logger.MSGTYPE.POTENTIAL);
 
                                     if (equiMap.containsKey(wnode1) || equiMap.containsKey(wnode2)) {
-                                        HashSet<IMemNode> nodes1 = new HashSet<IMemNode>();
+                                        HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
                                         nodes1.add(wnode1);
                                         if (equiMap.get(wnode1) != null)
                                             nodes1.addAll(equiMap.get(wnode1));
-                                        HashSet<IMemNode> nodes2 = new HashSet<IMemNode>();
+                                        HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
                                         nodes2.add(wnode2);
                                         if (equiMap.get(wnode2) != null)
                                             nodes2.addAll(equiMap.get(wnode2));
 
-                                        for (Iterator<IMemNode> nodesIt1 = nodes1.iterator(); nodesIt1
+                                        for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
                                                 .hasNext();) {
-                                            IMemNode node1 = nodesIt1.next();
-                                            for (Iterator<IMemNode> nodesIt2 = nodes2.iterator(); nodesIt2
+                                            MemoryAccessEvent node1 = nodesIt1.next();
+                                            for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
                                                     .hasNext();) {
-                                                IMemNode node2 = nodesIt2.next();
+                                                MemoryAccessEvent node2 = nodesIt2.next();
                                                 ExactRace r = new ExactRace(trace.getStmtSigIdMap()
                                                         .get(node1.getID()), trace
                                                         .getStmtSigIdMap().get(node2.getID()),
@@ -841,7 +841,7 @@ public class NewRVPredict {
      */
     private void detectAtomicityViolation(Engine engine, Trace trace, List<String> schedule_prefix) {
 
-        HashMap<String, HashMap<Long, List<IMemNode>>> indexedThreadReadWriteNodes = trace
+        HashMap<String, HashMap<Long, List<MemoryAccessEvent>>> indexedThreadReadWriteNodes = trace
                 .getIndexedThreadReadWriteNodes();
         Iterator<Entry<String, List<ReadNode>>> entryIt = trace.getIndexedReadNodes().entrySet()
                 .iterator();
@@ -855,25 +855,25 @@ public class NewRVPredict {
                 continue;
 
             // check atomicity-violation all nodes
-            HashMap<Long, List<IMemNode>> threadReadWriteNodes = indexedThreadReadWriteNodes
+            HashMap<Long, List<MemoryAccessEvent>> threadReadWriteNodes = indexedThreadReadWriteNodes
                     .get(addr);
 
             Object[] threads = threadReadWriteNodes.keySet().toArray();
 
             for (int i = 0; i < threads.length - 1; i++)
                 for (int j = i + 1; j < threads.length; j++) {
-                    List<IMemNode> rwnodes1 = threadReadWriteNodes.get(threads[i]);
+                    List<MemoryAccessEvent> rwnodes1 = threadReadWriteNodes.get(threads[i]);
 
-                    List<IMemNode> rwnodes2 = threadReadWriteNodes.get(threads[j]);
+                    List<MemoryAccessEvent> rwnodes2 = threadReadWriteNodes.get(threads[j]);
 
                     if (rwnodes1 != null & rwnodes2 != null && rwnodes1.size() > 1) {
                         for (int k = 0; k < rwnodes1.size() - 1; k++) {
                             // require atomic region specification
-                            IMemNode node1 = rwnodes1.get(k);
-                            IMemNode node2 = rwnodes1.get(k + 1);
+                            MemoryAccessEvent node1 = rwnodes1.get(k);
+                            MemoryAccessEvent node2 = rwnodes1.get(k + 1);
 
                             for (int m = 0; m < rwnodes2.size(); m++) {
-                                IMemNode node3 = rwnodes2.get(m);
+                                MemoryAccessEvent node3 = rwnodes2.get(m);
 
                                 if (node1.getType() == EventType.WRITE || node2.getType() == EventType.WRITE
                                         || node3.getType() == EventType.WRITE) {

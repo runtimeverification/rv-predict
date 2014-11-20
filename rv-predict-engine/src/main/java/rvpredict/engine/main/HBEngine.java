@@ -29,7 +29,7 @@ package rvpredict.engine.main;
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 import rvpredict.trace.AbstractNode;
-import rvpredict.trace.ISyncNode;
+import rvpredict.trace.SyncEvent;
 import rvpredict.trace.JoinNode;
 import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
@@ -114,7 +114,7 @@ public class HBEngine {
         HashMap<String, ReadNode> addressLastReadMap = new HashMap<String, ReadNode>();
 
         HashMap<String, ArrayList<LockPair>> lockAddrNodes = new HashMap<String, ArrayList<LockPair>>();
-        HashMap<Long, Stack<ISyncNode>> threadSyncStack = new HashMap<Long, Stack<ISyncNode>>();
+        HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
 
         NotifyNode matchNotifyNode = null;
 
@@ -170,9 +170,9 @@ public class HBEngine {
             } else if (node instanceof LockNode) {
                 long tid = node.getTID();
 
-                Stack<ISyncNode> syncstack = threadSyncStack.get(tid);
+                Stack<SyncEvent> syncstack = threadSyncStack.get(tid);
                 if (syncstack == null) {
-                    syncstack = new Stack<ISyncNode>();
+                    syncstack = new Stack<SyncEvent>();
                     threadSyncStack.put(tid, syncstack);
                 }
                 syncstack.push(((LockNode) node));
@@ -180,11 +180,11 @@ public class HBEngine {
             } else if (node instanceof UnlockNode) {
                 long tid = node.getTID();
 
-                Stack<ISyncNode> syncstack = threadSyncStack.get(tid);
+                Stack<SyncEvent> syncstack = threadSyncStack.get(tid);
 
                 // assert(stack.size()>0);//this is possible when segmented
                 if (syncstack == null) {
-                    syncstack = new Stack<ISyncNode>();
+                    syncstack = new Stack<SyncEvent>();
                     threadSyncStack.put(tid, syncstack);
                 }
                 LockPair lp = null;
@@ -195,9 +195,9 @@ public class HBEngine {
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
                             ((UnlockNode) node).getLockAddr());
-                    lp = new LockPair(fake_node, (ISyncNode) node);
+                    lp = new LockPair(fake_node, (SyncEvent) node);
                 } else {
-                    lp = new LockPair(syncstack.pop(), (ISyncNode) node);
+                    lp = new LockPair(syncstack.pop(), (SyncEvent) node);
 
                     // filter out re-entrant locks
                     if (syncstack.size() > 0)
@@ -216,7 +216,7 @@ public class HBEngine {
                 }
 
                 syncNodeList.add(lp);
-                lockEngine.add(((ISyncNode) node).getAddr(), tid, lp);
+                lockEngine.add(((SyncEvent) node).getAddr(), tid, lp);
 
             } else if (node instanceof WaitNode) {
                 long tid = node.getTID();
@@ -251,10 +251,10 @@ public class HBEngine {
                     matchNotifyNode = null;
                 }
 
-                Stack<ISyncNode> syncstack = threadSyncStack.get(tid);
+                Stack<SyncEvent> syncstack = threadSyncStack.get(tid);
                 // assert(stack.size()>0);
                 if (syncstack == null) {
-                    syncstack = new Stack<ISyncNode>();
+                    syncstack = new Stack<SyncEvent>();
                     threadSyncStack.put(tid, syncstack);
                 }
                 LockPair lp = null;
@@ -265,7 +265,7 @@ public class HBEngine {
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
                             ((WaitNode) node).getSigAddr());
-                    lp = new LockPair(fake_node, (ISyncNode) node);
+                    lp = new LockPair(fake_node, (SyncEvent) node);
                 } else
                     lp = new LockPair(syncstack.pop(), ((WaitNode) node));
 
@@ -279,7 +279,7 @@ public class HBEngine {
                 }
 
                 syncNodeList.add(lp);
-                lockEngine.add(((ISyncNode) node).getAddr(), tid, lp);
+                lockEngine.add(((SyncEvent) node).getAddr(), tid, lp);
 
                 syncstack.push(((WaitNode) node));
 
@@ -293,13 +293,13 @@ public class HBEngine {
         while (tidIt.hasNext()) {
             Long tid = tidIt.next();
 
-            Stack<ISyncNode> stack = threadSyncStack.get(tid);
+            Stack<SyncEvent> stack = threadSyncStack.get(tid);
 
             AbstractNode lastnode = lastNodes.get(tid);
             long fake_gid = lastnode.getGID();
 
             while (stack.size() > 0) {
-                ISyncNode node = stack.remove(0);
+                SyncEvent node = stack.remove(0);
                 UnlockNode fake_node = new UnlockNode(fake_gid, tid, lastnode.getID(),
                         node.getAddr());
 

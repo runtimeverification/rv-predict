@@ -29,8 +29,8 @@
 package smt;
 
 import rvpredict.trace.AbstractNode;
-import rvpredict.trace.IMemNode;
-import rvpredict.trace.ISyncNode;
+import rvpredict.trace.MemoryAccessEvent;
+import rvpredict.trace.SyncEvent;
 import rvpredict.trace.JoinNode;
 import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
@@ -117,15 +117,15 @@ public class EngineSMTLIB1 extends Engine {
 
     @Override
     public void addPSOIntraThreadConstraints(
-            HashMap<String, HashMap<Long, List<IMemNode>>> indexedMap) {
+            HashMap<String, HashMap<Long, List<MemoryAccessEvent>>> indexedMap) {
 
-        Iterator<HashMap<Long, List<IMemNode>>> mapIt1 = indexedMap.values().iterator();
+        Iterator<HashMap<Long, List<MemoryAccessEvent>>> mapIt1 = indexedMap.values().iterator();
         while (mapIt1.hasNext()) {
-            HashMap<Long, List<IMemNode>> map = mapIt1.next();
+            HashMap<Long, List<MemoryAccessEvent>> map = mapIt1.next();
 
-            Iterator<List<IMemNode>> mapIt2 = map.values().iterator();
+            Iterator<List<MemoryAccessEvent>> mapIt2 = map.values().iterator();
             while (mapIt2.hasNext()) {
-                List<IMemNode> nodes = mapIt2.next();
+                List<MemoryAccessEvent> nodes = mapIt2.next();
                 long lastGID = nodes.get(0).getGID();
                 String lastVar = makeVariable(lastGID);
                 for (int i = 1; i < nodes.size(); i++) {
@@ -147,19 +147,19 @@ public class EngineSMTLIB1 extends Engine {
     // the order constraints between wait/notify/fork/join/lock/unlock
     @Override
     public void addSynchronizationConstraints(Trace trace,
-            HashMap<String, List<ISyncNode>> syncNodesMap,
+            HashMap<String, List<SyncEvent>> syncNodesMap,
             HashMap<Long, AbstractNode> firstNodes, HashMap<Long, AbstractNode> lastNodes) {
         lockEngine = new LockSetEngine();// construct a new lockset for this
                                          // segment
 
         // thread first node - last node
-        Iterator<List<ISyncNode>> mapIt = syncNodesMap.values().iterator();
+        Iterator<List<SyncEvent>> mapIt = syncNodesMap.values().iterator();
         while (mapIt.hasNext()) {
-            List<ISyncNode> nodes = mapIt.next();
+            List<SyncEvent> nodes = mapIt.next();
 
             List<LockPair> lockPairs = new ArrayList<>();
 
-            HashMap<Long, Stack<ISyncNode>> threadSyncStack = new HashMap<Long, Stack<ISyncNode>>();
+            HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
             NotifyNode matchNotifyNode = null;
 
             // during recording
@@ -167,7 +167,7 @@ public class EngineSMTLIB1 extends Engine {
             // after lock, before unlock
 
             for (int i = 0; i < nodes.size(); i++) {
-                ISyncNode node = nodes.get(i);
+                SyncEvent node = nodes.get(i);
                 long thisGID = node.getGID();
                 String var = makeVariable(thisGID);
                 if (node instanceof StartNode) {
@@ -198,20 +198,20 @@ public class EngineSMTLIB1 extends Engine {
                 } else if (node instanceof LockNode) {
                     long tid = node.getTID();
 
-                    Stack<ISyncNode> stack = threadSyncStack.get(tid);
+                    Stack<SyncEvent> stack = threadSyncStack.get(tid);
                     if (stack == null) {
-                        stack = new Stack<ISyncNode>();
+                        stack = new Stack<SyncEvent>();
                         threadSyncStack.put(tid, stack);
                     }
 
                     stack.push(node);
                 } else if (node instanceof UnlockNode) {
                     long tid = node.getTID();
-                    Stack<ISyncNode> stack = threadSyncStack.get(tid);
+                    Stack<SyncEvent> stack = threadSyncStack.get(tid);
 
                     // assert(stack.size()>0);//this is possible when segmented
                     if (stack == null) {
-                        stack = new Stack<ISyncNode>();
+                        stack = new Stack<SyncEvent>();
                         threadSyncStack.put(tid, stack);
                     }
 
@@ -267,10 +267,10 @@ public class EngineSMTLIB1 extends Engine {
                         matchNotifyNode = null;
                     }
 
-                    Stack<ISyncNode> stack = threadSyncStack.get(tid);
+                    Stack<SyncEvent> stack = threadSyncStack.get(tid);
                     // assert(stack.size()>0);
                     if (stack == null) {
-                        stack = new Stack<ISyncNode>();
+                        stack = new Stack<SyncEvent>();
                         threadSyncStack.put(tid, stack);
                     }
                     if (stack.isEmpty())
@@ -288,13 +288,13 @@ public class EngineSMTLIB1 extends Engine {
             }
 
             // check threadSyncStack
-            Iterator<Stack<ISyncNode>> stackIt = threadSyncStack.values().iterator();
+            Iterator<Stack<SyncEvent>> stackIt = threadSyncStack.values().iterator();
             while (stackIt.hasNext()) {
-                Stack<ISyncNode> stack = stackIt.next();
+                Stack<SyncEvent> stack = stackIt.next();
                 if (stack.size() > 0)// handle reentrant lock here, only pop the
                                      // first locking node
                 {
-                    ISyncNode node = stack.firstElement();
+                    SyncEvent node = stack.firstElement();
                     LockPair lp = new LockPair(node, null);
                     lockPairs.add(lp);
                     lockEngine.add(node.getAddr(), node.getTID(), lp);
@@ -640,7 +640,7 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public boolean isAtomic(IMemNode node1, IMemNode node2, IMemNode node3) {
+    public boolean isAtomic(MemoryAccessEvent node1, MemoryAccessEvent node2, MemoryAccessEvent node3) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
         long gid3 = node3.getGID();
@@ -650,7 +650,7 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public boolean hasCommonLock(IMemNode node1, IMemNode node2) {
+    public boolean hasCommonLock(MemoryAccessEvent node1, MemoryAccessEvent node2) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
 

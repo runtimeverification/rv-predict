@@ -28,7 +28,7 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class NotifyNode extends AbstractNode implements ISyncNode {
+public class NotifyNode extends AbstractNode implements SyncEvent {
 
     private long sig_addr;
 

@@ -29,11 +29,11 @@
 package rvpredict.trace;
 
 public class LockPair {
-    public ISyncNode lock;
-    public ISyncNode unlock;
+    public SyncEvent lock;
+    public SyncEvent unlock;
 
     // make be wait node
-    public LockPair(ISyncNode lock, ISyncNode unlock) {
+    public LockPair(SyncEvent lock, SyncEvent unlock) {
         this.lock = lock;
         this.unlock = unlock;
     }

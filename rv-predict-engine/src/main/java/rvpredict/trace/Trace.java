@@ -74,20 +74,20 @@ public class Trace {
 
     // per thread per lock lock/unlock pair
     HashMap<Long, HashMap<String, List<LockPair>>> threadIndexedLockPairs = new HashMap<Long, HashMap<String, List<LockPair>>>();
-    HashMap<Long, Stack<ISyncNode>> threadSyncStack = new HashMap<Long, Stack<ISyncNode>>();
+    HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
 
     // per thread branch nodes
     HashMap<Long, List<BranchNode>> threadBranchNodes = new HashMap<Long, List<BranchNode>>();
 
     // per thead synchronization nodes
-    HashMap<String, List<ISyncNode>> syncNodesMap = new HashMap<String, List<ISyncNode>>();
+    HashMap<String, List<SyncEvent>> syncNodesMap = new HashMap<String, List<SyncEvent>>();
 
     // per address read and write nodes
     HashMap<String, List<ReadNode>> indexedReadNodes = new HashMap<String, List<ReadNode>>();
     HashMap<String, List<WriteNode>> indexedWriteNodes = new HashMap<String, List<WriteNode>>();
 
     // per address map from thread id to read/write nodes
-    HashMap<String, HashMap<Long, List<IMemNode>>> indexedThreadReadWriteNodes = new HashMap<String, HashMap<Long, List<IMemNode>>>();
+    HashMap<String, HashMap<Long, List<MemoryAccessEvent>>> indexedThreadReadWriteNodes = new HashMap<String, HashMap<Long, List<MemoryAccessEvent>>>();
 
     // per type per address property node map
     HashMap<String, HashMap<Integer, List<PropertyNode>>> propertyMonitors = new HashMap<String, HashMap<Integer, List<PropertyNode>>>();
@@ -167,7 +167,7 @@ public class Trace {
         return threadNodesMap;
     }
 
-    public HashMap<String, List<ISyncNode>> getSyncNodesMap() {
+    public HashMap<String, List<SyncEvent>> getSyncNodesMap() {
         return syncNodesMap;
     }
 
@@ -183,7 +183,7 @@ public class Trace {
         return indexedWriteNodes;
     }
 
-    public HashMap<String, HashMap<Long, List<IMemNode>>> getIndexedThreadReadWriteNodes() {
+    public HashMap<String, HashMap<Long, List<MemoryAccessEvent>>> getIndexedThreadReadWriteNodes() {
         return indexedThreadReadWriteNodes;
     }
 
@@ -209,7 +209,7 @@ public class Trace {
     }
 
     // TODO: NEED to include the dependent nodes from other threads
-    public List<ReadNode> getDependentReadNodes(IMemNode rnode, boolean branch) {
+    public List<ReadNode> getDependentReadNodes(MemoryAccessEvent rnode, boolean branch) {
 
         List<ReadNode> readnodes = new ArrayList<>();
         long tid = rnode.getTID();
@@ -256,8 +256,8 @@ public class Trace {
      */
     public void addRawNode(AbstractNode node) {
         rawfulltrace.add(node);
-        if (node instanceof IMemNode) {
-            String addr = ((IMemNode) node).getAddr();
+        if (node instanceof MemoryAccessEvent) {
+            String addr = ((MemoryAccessEvent) node).getAddr();
             Long tid = node.getTID();
 
             if (node instanceof ReadNode) {
@@ -355,20 +355,20 @@ public class Trace {
                 }
 
                 pnodes.add(pnode);
-            } else if (node instanceof IMemNode) {
+            } else if (node instanceof MemoryAccessEvent) {
                 info.incrementSharedReadWriteNumber();
 
-                IMemNode mnode = (IMemNode) node;
+                MemoryAccessEvent mnode = (MemoryAccessEvent) node;
 
                 String addr = mnode.getAddr();
 
-                HashMap<Long, List<IMemNode>> threadReadWriteNodes = indexedThreadReadWriteNodes
+                HashMap<Long, List<MemoryAccessEvent>> threadReadWriteNodes = indexedThreadReadWriteNodes
                         .get(addr);
                 if (threadReadWriteNodes == null) {
-                    threadReadWriteNodes = new HashMap<Long, List<IMemNode>>();
+                    threadReadWriteNodes = new HashMap<Long, List<MemoryAccessEvent>>();
                     indexedThreadReadWriteNodes.put(addr, threadReadWriteNodes);
                 }
-                List<IMemNode> rwnodes = threadReadWriteNodes.get(tid);
+                List<MemoryAccessEvent> rwnodes = threadReadWriteNodes.get(tid);
                 if (rwnodes == null) {
                     rwnodes = new ArrayList<>();
                     threadReadWriteNodes.put(tid, rwnodes);
@@ -398,23 +398,23 @@ public class Trace {
                     }
                     writeNodes.add((WriteNode) node);
                 }
-            } else if (node instanceof ISyncNode) {
+            } else if (node instanceof SyncEvent) {
                 // synchronization nodes
                 info.incrementSyncNumber();
 
-                String addr = ((ISyncNode) node).getAddr();
-                List<ISyncNode> syncNodes = syncNodesMap.get(addr);
+                String addr = ((SyncEvent) node).getAddr();
+                List<SyncEvent> syncNodes = syncNodesMap.get(addr);
                 if (syncNodes == null) {
                     syncNodes = new ArrayList<>();
                     syncNodesMap.put(addr, syncNodes);
                 }
 
-                syncNodes.add((ISyncNode) node);
+                syncNodes.add((SyncEvent) node);
 
                 if (node instanceof LockNode) {
-                    Stack<ISyncNode> stack = threadSyncStack.get(tid);
+                    Stack<SyncEvent> stack = threadSyncStack.get(tid);
                     if (stack == null) {
-                        stack = new Stack<ISyncNode>();
+                        stack = new Stack<SyncEvent>();
                         threadSyncStack.put(tid, stack);
                     }
 
@@ -432,9 +432,9 @@ public class Trace {
                         indexedLockpairs.put(addr, lockpairs);
                     }
 
-                    Stack<ISyncNode> stack = threadSyncStack.get(tid);
+                    Stack<SyncEvent> stack = threadSyncStack.get(tid);
                     if (stack == null) {
-                        stack = new Stack<ISyncNode>();
+                        stack = new Stack<SyncEvent>();
                         threadSyncStack.put(tid, stack);
                     }
                     // assert(stack.size()>0); //this is possible when segmented
@@ -479,8 +479,8 @@ public class Trace {
         // add trace
         for (int i = 0; i < rawfulltrace.size(); i++) {
             AbstractNode node = rawfulltrace.get(i);
-            if (node instanceof IMemNode) {
-                String addr = ((IMemNode) node).getAddr();
+            if (node instanceof MemoryAccessEvent) {
+                String addr = ((MemoryAccessEvent) node).getAddr();
                 if (sharedAddresses.contains(addr))
                     addNode(node);
                 else
@@ -513,11 +513,11 @@ public class Trace {
      */
     private void checkSyncStack() {
         // check threadSyncStack - only to handle when segmented
-        Iterator<Entry<Long, Stack<ISyncNode>>> entryIt = threadSyncStack.entrySet().iterator();
+        Iterator<Entry<Long, Stack<SyncEvent>>> entryIt = threadSyncStack.entrySet().iterator();
         while (entryIt.hasNext()) {
-            Entry<Long, Stack<ISyncNode>> entry = entryIt.next();
+            Entry<Long, Stack<SyncEvent>> entry = entryIt.next();
             Long tid = entry.getKey();
-            Stack<ISyncNode> stack = entry.getValue();
+            Stack<SyncEvent> stack = entry.getValue();
 
             if (!stack.isEmpty()) {
                 HashMap<String, List<LockPair>> indexedLockpairs = threadIndexedLockPairs
@@ -528,7 +528,7 @@ public class Trace {
                 }
 
                 while (!stack.isEmpty()) {
-                    ISyncNode syncnode = stack.pop();// lock or wait
+                    SyncEvent syncnode = stack.pop();// lock or wait
 
                     List<LockPair> lockpairs = indexedLockpairs.get(syncnode.getAddr());
                     if (lockpairs == null) {

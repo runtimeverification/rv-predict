@@ -55,7 +55,7 @@ public class Main {
             String libPath = basePath + separator + "lib" + separator;
             String rvAgent = libPath + "rv-predict" + ".jar";
 
-            // TODO(YilongL): there should be only one agentOptions
+            // TODO(Traian): there should be only one agentOptions
             String sharingAgentOptions = Configuration.opt_only_log + " "
                     + escapeString(config.outdir);
             if (Configuration.additionalExcludes != null) {

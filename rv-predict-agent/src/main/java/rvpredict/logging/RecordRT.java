@@ -39,11 +39,13 @@ public final class RecordRT {
 
     private static DBEngine db;
 
+    // TODO(YilongL): move this method out of the runtime library
     public static void init(DBEngine db) {
         RecordRT.db = db;
         initNonSharing();
     }
 
+    // TODO(YilongL): move this method out of the runtime library
     public static void initNonSharing() {
         long tid = Thread.currentThread().getId();
 

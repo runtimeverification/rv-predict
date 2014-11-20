@@ -34,12 +34,12 @@ import rvpredict.trace.JoinNode;
 import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
 import rvpredict.trace.NotifyNode;
-import rvpredict.trace.ReadNode;
+import rvpredict.trace.ReadEvent;
 import rvpredict.trace.StartNode;
 import rvpredict.trace.Trace;
 import rvpredict.trace.UnlockNode;
 import rvpredict.trace.WaitNode;
-import rvpredict.trace.WriteNode;
+import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
@@ -110,8 +110,8 @@ public class HBEngine {
      */
     private void addHBEdges(Trace trace, HashMap<Long, AbstractEvent> firstNodes,
             HashMap<Long, AbstractEvent> lastNodes) {
-        HashMap<String, WriteNode> addressLastWriteMap = new HashMap<String, WriteNode>();
-        HashMap<String, ReadNode> addressLastReadMap = new HashMap<String, ReadNode>();
+        HashMap<String, WriteEvent> addressLastWriteMap = new HashMap<String, WriteEvent>();
+        HashMap<String, ReadEvent> addressLastReadMap = new HashMap<String, ReadEvent>();
 
         HashMap<String, ArrayList<LockPair>> lockAddrNodes = new HashMap<String, ArrayList<LockPair>>();
         HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
@@ -146,26 +146,26 @@ public class HBEngine {
 
                 }
 
-            } else if (node instanceof ReadNode) {
+            } else if (node instanceof ReadEvent) {
 
-                String addr = ((ReadNode) node).getAddr();
-                WriteNode wnode = addressLastWriteMap.get(addr);
+                String addr = ((ReadEvent) node).getAddr();
+                WriteEvent wnode = addressLastWriteMap.get(addr);
                 if (wnode != null) {
                     reachEngine.addEdge(wnode.getGID(), node.getGID());
                 }
-                addressLastReadMap.put(addr, (ReadNode) node);
+                addressLastReadMap.put(addr, (ReadEvent) node);
 
-            } else if (node instanceof WriteNode) {
-                String addr = ((WriteNode) node).getAddr();
-                WriteNode wnode = addressLastWriteMap.get(addr);
+            } else if (node instanceof WriteEvent) {
+                String addr = ((WriteEvent) node).getAddr();
+                WriteEvent wnode = addressLastWriteMap.get(addr);
                 if (wnode != null) {
                     reachEngine.addEdge(wnode.getGID(), node.getGID());
                 }
-                ReadNode rnode = addressLastReadMap.get(addr);
+                ReadEvent rnode = addressLastReadMap.get(addr);
                 if (rnode != null) {
                     reachEngine.addEdge(rnode.getGID(), node.getGID());
                 }
-                addressLastWriteMap.put(addr, (WriteNode) node);
+                addressLastWriteMap.put(addr, (WriteEvent) node);
 
             } else if (node instanceof LockNode) {
                 long tid = node.getTID();

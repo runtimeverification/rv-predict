@@ -41,10 +41,10 @@ import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.SyncEvent;
 import rvpredict.trace.LockPair;
 import rvpredict.trace.PropertyNode;
-import rvpredict.trace.ReadNode;
+import rvpredict.trace.ReadEvent;
 import rvpredict.trace.Trace;
 import rvpredict.trace.TraceInfo;
-import rvpredict.trace.WriteNode;
+import rvpredict.trace.WriteEvent;
 import rvpredict.trace.EventType;
 import violation.AtomicityViolation;
 import violation.Deadlock;
@@ -201,7 +201,7 @@ public class NewRVPredict {
 
     private void detectDeadlockProperty(Engine engine, Trace trace, EREProperty property,
             List<String> schedule_prefix) {
-        List<ReadNode> readNodes_rw = trace.getAllReadNodes();
+        List<ReadEvent> readNodes_rw = trace.getAllReadNodes();
         StringBuilder sb_rw = engine.constructCausalReadWriteConstraintsOptimized(-1, readNodes_rw,
                 trace.getIndexedWriteNodes(), trace.getInitialWriteValueMap());
 
@@ -262,7 +262,7 @@ public class NewRVPredict {
 
     private void detectProperty(Engine engine, Trace trace, EREProperty property,
             List<String> schedule_prefix) {
-        List<ReadNode> readNodes_rw = trace.getAllReadNodes();
+        List<ReadEvent> readNodes_rw = trace.getAllReadNodes();
         StringBuilder sb_rw = engine.constructCausalReadWriteConstraintsOptimized(-1, readNodes_rw,
                 trace.getIndexedWriteNodes(), trace.getInitialWriteValueMap());
 
@@ -337,10 +337,10 @@ public class NewRVPredict {
             }
 
             // get all read nodes on the address
-            List<ReadNode> readnodes = trace.getIndexedReadNodes().get(addr);
+            List<ReadEvent> readnodes = trace.getIndexedReadNodes().get(addr);
 
             // get all write nodes on the address
-            List<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
+            List<WriteEvent> writenodes = trace.getIndexedWriteNodes().get(addr);
 
             // skip if there is no write events to the address
             if (writenodes == null || writenodes.size() < 1)
@@ -421,12 +421,12 @@ public class NewRVPredict {
             // check read-write conflict
             if (readnodes != null)
                 for (int i = 0; i < readnodes.size(); i++) {
-                    ReadNode rnode = readnodes.get(i);// read
+                    ReadEvent rnode = readnodes.get(i);// read
                     // if(rnode.getGID()==3105224)//3101799
                     // System.out.println("");
 
                     for (int j = 0; j < writenodes.size(); j++) {
-                        WriteNode wnode = writenodes.get(j);// write
+                        WriteEvent wnode = writenodes.get(j);// write
 
                         // check read and write are by different threads
                         if (rnode.getTID() != wnode.getTID()) {
@@ -480,7 +480,7 @@ public class NewRVPredict {
                                                          // consistency used by
                                                          // the Said approach
                                 {
-                                    List<ReadNode> readNodes_rw = trace.getAllReadNodes();
+                                    List<ReadEvent> readNodes_rw = trace.getAllReadNodes();
                                     sb = engine.constructCausalReadWriteConstraintsOptimized(
                                             rnode.getGID(), readNodes_rw,
                                             trace.getIndexedWriteNodes(),
@@ -497,9 +497,9 @@ public class NewRVPredict {
                                     // otherwise, only the read nodes that
                                     // before the most recent branch nodes
                                     // before rnode/wnode are considered
-                                    List<ReadNode> readNodes_r = trace.getDependentReadNodes(
+                                    List<ReadEvent> readNodes_r = trace.getDependentReadNodes(
                                             rnode, config.branch);
-                                    List<ReadNode> readNodes_w = trace.getDependentReadNodes(
+                                    List<ReadEvent> readNodes_w = trace.getDependentReadNodes(
                                             wnode, config.branch);
 
                                     // construct the optimized read-write
@@ -663,10 +663,10 @@ public class NewRVPredict {
                 for (int i = 0; i < writenodes.size(); i++)// skip the initial
                                                            // write node
                 {
-                    WriteNode wnode1 = writenodes.get(i);
+                    WriteEvent wnode1 = writenodes.get(i);
 
                     for (int j = 0; j != i && j < writenodes.size(); j++) {
-                        WriteNode wnode2 = writenodes.get(j);
+                        WriteEvent wnode2 = writenodes.get(j);
                         if (wnode1.getTID() != wnode2.getTID()) {
                             Race race = new Race(trace.getStmtSigIdMap().get(wnode1.getID()), trace
                                     .getStmtSigIdMap().get(wnode2.getID()), wnode1.getID(),
@@ -690,15 +690,15 @@ public class NewRVPredict {
 
                                 StringBuilder sb;
                                 if (config.allconsistent) {
-                                    List<ReadNode> readNodes_ww = trace.getAllReadNodes();
+                                    List<ReadEvent> readNodes_ww = trace.getAllReadNodes();
                                     sb = engine.constructCausalReadWriteConstraintsOptimized(-1,
                                             readNodes_ww, trace.getIndexedWriteNodes(),
                                             trace.getInitialWriteValueMap());
                                 } else {
                                     // get dependent nodes of rnode and wnode
-                                    List<ReadNode> readNodes_w1 = trace.getDependentReadNodes(
+                                    List<ReadEvent> readNodes_w1 = trace.getDependentReadNodes(
                                             wnode1, config.branch);
-                                    List<ReadNode> readNodes_w2 = trace.getDependentReadNodes(
+                                    List<ReadEvent> readNodes_w2 = trace.getDependentReadNodes(
                                             wnode2, config.branch);
 
                                     StringBuilder sb1 = engine
@@ -843,14 +843,14 @@ public class NewRVPredict {
 
         HashMap<String, HashMap<Long, List<MemoryAccessEvent>>> indexedThreadReadWriteNodes = trace
                 .getIndexedThreadReadWriteNodes();
-        Iterator<Entry<String, List<ReadNode>>> entryIt = trace.getIndexedReadNodes().entrySet()
+        Iterator<Entry<String, List<ReadEvent>>> entryIt = trace.getIndexedReadNodes().entrySet()
                 .iterator();
         while (entryIt.hasNext()) {
-            Entry<String, List<ReadNode>> entry = entryIt.next();
+            Entry<String, List<ReadEvent>> entry = entryIt.next();
             String addr = entry.getKey();
 
             // get all write nodes on the address
-            List<WriteNode> writenodes = trace.getIndexedWriteNodes().get(addr);
+            List<WriteEvent> writenodes = trace.getIndexedWriteNodes().get(addr);
             if (writenodes == null || writenodes.size() < 1)
                 continue;
 
@@ -906,11 +906,11 @@ public class NewRVPredict {
                                         }
 
                                         // get dependent read nodes
-                                        List<ReadNode> readNodes_1 = trace.getDependentReadNodes(
+                                        List<ReadEvent> readNodes_1 = trace.getDependentReadNodes(
                                                 node1, config.branch);
-                                        List<ReadNode> readNodes_2 = trace.getDependentReadNodes(
+                                        List<ReadEvent> readNodes_2 = trace.getDependentReadNodes(
                                                 node2, config.branch);
-                                        List<ReadNode> readNodes_3 = trace.getDependentReadNodes(
+                                        List<ReadEvent> readNodes_3 = trace.getDependentReadNodes(
                                                 node3, config.branch);
 
                                         StringBuilder sb1 = engine

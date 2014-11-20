@@ -35,12 +35,12 @@ import rvpredict.trace.JoinNode;
 import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
 import rvpredict.trace.NotifyNode;
-import rvpredict.trace.ReadNode;
+import rvpredict.trace.ReadEvent;
 import rvpredict.trace.StartNode;
 import rvpredict.trace.Trace;
 import rvpredict.trace.UnlockNode;
 import rvpredict.trace.WaitNode;
-import rvpredict.trace.WriteNode;
+import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
@@ -395,38 +395,38 @@ public class EngineSMTLIB1 extends Engine {
 
     }
 
-    public void addReadWriteConstraints(HashMap<String, List<ReadNode>> indexedReadNodes,
-            HashMap<String, List<WriteNode>> indexedWriteNodes) {
+    public void addReadWriteConstraints(HashMap<String, List<ReadEvent>> indexedReadNodes,
+            HashMap<String, List<WriteEvent>> indexedWriteNodes) {
         CONS_ASSERT.append(constructReadWriteConstraints(indexedReadNodes, indexedWriteNodes));
     }
 
     // TODO: NEED to handle the feasibility of new added write nodes
     @Override
     public StringBuilder constructCausalReadWriteConstraintsOptimized(long rgid,
-            List<ReadNode> readNodes, HashMap<String, List<WriteNode>> indexedWriteNodes,
+            List<ReadEvent> readNodes, HashMap<String, List<WriteEvent>> indexedWriteNodes,
             HashMap<String, Long> initValueMap) {
         StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
 
         for (int i = 0; i < readNodes.size(); i++) {
 
-            ReadNode rnode = readNodes.get(i);
+            ReadEvent rnode = readNodes.get(i);
             // filter out itself --
             if (rgid == rnode.getGID())
                 continue;
 
             // get all write nodes on the address
-            List<WriteNode> writenodes = indexedWriteNodes.get(rnode.getAddr());
+            List<WriteEvent> writenodes = indexedWriteNodes.get(rnode.getAddr());
             // no write to array field?
             // Yes, it could be: java.io.PrintStream out
             if (writenodes == null || writenodes.size() < 1)//
                 continue;
 
-            WriteNode preNode = null;//
+            WriteEvent preNode = null;//
 
             // get all write nodes on the address & write the same value
-            List<WriteNode> writenodes_value_match = new ArrayList<>();
+            List<WriteEvent> writenodes_value_match = new ArrayList<>();
             for (int j = 0; j < writenodes.size(); j++) {
-                WriteNode wnode = writenodes.get(j);
+                WriteEvent wnode = writenodes.get(j);
                 if (wnode.getValue() == rnode.getValue() && !canReach(rnode, wnode)) {
                     if (wnode.getTID() != rnode.getTID())
                         writenodes_value_match.add(wnode);
@@ -456,7 +456,7 @@ public class EngineSMTLIB1 extends Engine {
                 // make sure all the nodes that x depends on read the same value
 
                 for (int j = 0; j < writenodes_value_match.size(); j++) {
-                    WriteNode wnode1 = writenodes_value_match.get(j);
+                    WriteEvent wnode1 = writenodes_value_match.get(j);
                     String var_w1 = makeVariable(wnode1.getGID());
 
                     String cons_b_ = "(> " + var_r + " " + var_w1 + ")\n";
@@ -465,7 +465,7 @@ public class EngineSMTLIB1 extends Engine {
                     String cons_c_end = "";
                     String last_cons_d = null;
                     for (int k = 0; k < writenodes.size(); k++) {
-                        WriteNode wnode2 = writenodes.get(k);
+                        WriteEvent wnode2 = writenodes.get(k);
                         if (!writenodes_value_match.contains(wnode2) && !canReach(wnode2, wnode1)
                                 && !canReach(rnode, wnode2)) {
                             String var_w2 = makeVariable(wnode2.getGID());
@@ -537,7 +537,7 @@ public class EngineSMTLIB1 extends Engine {
                     String var_r = makeVariable(rnode.getGID());
 
                     for (int k = 0; k < writenodes.size(); k++) {
-                        WriteNode wnode3 = writenodes.get(k);
+                        WriteEvent wnode3 = writenodes.get(k);
                         if (wnode3.getTID() != rnode.getTID() && !canReach(rnode, wnode3)) {
                             String var_w3 = makeVariable(wnode3.getGID());
 
@@ -558,21 +558,21 @@ public class EngineSMTLIB1 extends Engine {
 
     // does not consider value and causal dependence
     private static String constructReadWriteConstraints(
-            HashMap<String, List<ReadNode>> indexedReadNodes,
-            HashMap<String, List<WriteNode>> indexedWriteNodes) {
+            HashMap<String, List<ReadEvent>> indexedReadNodes,
+            HashMap<String, List<WriteEvent>> indexedWriteNodes) {
 
         String CONS_RW = "";
 
-        Iterator<Entry<String, List<ReadNode>>> entryIt = indexedReadNodes.entrySet().iterator();
+        Iterator<Entry<String, List<ReadEvent>>> entryIt = indexedReadNodes.entrySet().iterator();
         while (entryIt.hasNext()) {
-            Entry<String, List<ReadNode>> entry = entryIt.next();
+            Entry<String, List<ReadEvent>> entry = entryIt.next();
             String addr = entry.getKey();
 
             // get all read nodes on the address
-            List<ReadNode> readnodes = entry.getValue();
+            List<ReadEvent> readnodes = entry.getValue();
 
             // get all write nodes on the address
-            List<WriteNode> writenodes = indexedWriteNodes.get(addr);
+            List<WriteEvent> writenodes = indexedWriteNodes.get(addr);
 
             // no write to array field?
             // Yes, it could be: java.io.PrintStream out
@@ -580,7 +580,7 @@ public class EngineSMTLIB1 extends Engine {
                 continue;
 
             for (int i = 0; i < readnodes.size(); i++) {
-                ReadNode rnode = readnodes.get(i);
+                ReadEvent rnode = readnodes.get(i);
                 String var_r = makeVariable(rnode.getGID());
 
                 String cons_a = "";
@@ -592,7 +592,7 @@ public class EngineSMTLIB1 extends Engine {
 
                 // we start from j=1 to exclude the initial write
                 for (int j = 1; j < writenodes.size(); j++) {
-                    WriteNode wnode1 = writenodes.get(j);
+                    WriteEvent wnode1 = writenodes.get(j);
                     {
                         String var_w1 = makeVariable(wnode1.getGID());
 
@@ -606,7 +606,7 @@ public class EngineSMTLIB1 extends Engine {
 
                         for (int k = 1; k < writenodes.size(); k++) {
                             if (j != k) {
-                                WriteNode wnode2 = writenodes.get(k);
+                                WriteEvent wnode2 = writenodes.get(k);
                                 String var_w2 = makeVariable(wnode2.getGID());
 
                                 String cons_d = "(and " + "(or (> " + var_w2 + " " + var_r + ")"
@@ -701,21 +701,21 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     public static void testConstructReadWriteConstraints() {
-        HashMap<String, List<ReadNode>> indexedReadNodes = new HashMap<String, List<ReadNode>>();
+        HashMap<String, List<ReadEvent>> indexedReadNodes = new HashMap<String, List<ReadEvent>>();
 
-        HashMap<String, List<WriteNode>> indexedWriteNodes = new HashMap<String, List<WriteNode>>();
+        HashMap<String, List<WriteEvent>> indexedWriteNodes = new HashMap<String, List<WriteEvent>>();
 
-        List<WriteNode> writeNodes = new ArrayList<>();
-        writeNodes.add(new WriteNode(1, 1, 1, 1, 1, 0));
-        writeNodes.add(new WriteNode(2, 2, 3, 1, 1, 0));
-        writeNodes.add(new WriteNode(3, 3, 5, 1, 1, 1));
-        writeNodes.add(new WriteNode(4, 4, 7, 1, 1, 1));
+        List<WriteEvent> writeNodes = new ArrayList<>();
+        writeNodes.add(new WriteEvent(1, 1, 1, 1, 1, 0));
+        writeNodes.add(new WriteEvent(2, 2, 3, 1, 1, 0));
+        writeNodes.add(new WriteEvent(3, 3, 5, 1, 1, 1));
+        writeNodes.add(new WriteEvent(4, 4, 7, 1, 1, 1));
 
-        List<ReadNode> readNodes = new ArrayList<>();
-        readNodes.add(new ReadNode(5, 1, 2, 1, 1, 0));
-        readNodes.add(new ReadNode(6, 2, 4, 1, 1, 0));
-        readNodes.add(new ReadNode(7, 3, 6, 1, 1, 1));
-        readNodes.add(new ReadNode(8, 4, 8, 1, 1, 1));
+        List<ReadEvent> readNodes = new ArrayList<>();
+        readNodes.add(new ReadEvent(5, 1, 2, 1, 1, 0));
+        readNodes.add(new ReadEvent(6, 2, 4, 1, 1, 0));
+        readNodes.add(new ReadEvent(7, 3, 6, 1, 1, 1));
+        readNodes.add(new ReadEvent(8, 4, 8, 1, 1, 1));
 
         indexedWriteNodes.put("s", writeNodes);
         indexedReadNodes.put("s", readNodes);

@@ -28,44 +28,16 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class WriteNode extends AbstractEvent implements MemoryAccessEvent {
-    private long prevBranchId;
+public class ReadEvent extends MemoryAccessEvent {
 
-    private long value;
-    private long objectHashCode;
-    private long index;
-
-    public WriteNode(long GID, long tid, int ID, long objectHashCode, long index, long value) {
-        super(GID, tid, ID, EventType.WRITE);
-        this.objectHashCode = objectHashCode;
-        this.index = index;
-        this.value = value;
-    }
-
-    @Override
-    public long getValue() {
-        return value;
+    public ReadEvent(long GID, long tid, int ID, long objectHashCode, long index, long value) {
+        super(GID, tid, ID, EventType.READ, objectHashCode, index, value);
     }
 
     @Override
     public String getAddr() {
         return (objectHashCode == 0 ? "_" : objectHashCode + "_") +
                 (index < 0 ? "." + -index : index);
-    }
-
-    @Override
-    public String toString() {
-        return GID + ": thread " + TID + " " + ID + " " + objectHashCode + " " + index + " " + value + " " + type;
-    }
-
-    @Override
-    public long getPrevBranchId() {
-        return prevBranchId;
-    }
-
-    @Override
-    public void setPrevBranchId(long id) {
-        prevBranchId = id;
     }
 
 }

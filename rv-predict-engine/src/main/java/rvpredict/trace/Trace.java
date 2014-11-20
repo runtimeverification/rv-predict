@@ -83,8 +83,8 @@ public class Trace {
     HashMap<String, List<SyncEvent>> syncNodesMap = new HashMap<String, List<SyncEvent>>();
 
     // per address read and write nodes
-    HashMap<String, List<ReadNode>> indexedReadNodes = new HashMap<String, List<ReadNode>>();
-    HashMap<String, List<WriteNode>> indexedWriteNodes = new HashMap<String, List<WriteNode>>();
+    HashMap<String, List<ReadEvent>> indexedReadNodes = new HashMap<String, List<ReadEvent>>();
+    HashMap<String, List<WriteEvent>> indexedWriteNodes = new HashMap<String, List<WriteEvent>>();
 
     // per address map from thread id to read/write nodes
     HashMap<String, HashMap<Long, List<MemoryAccessEvent>>> indexedThreadReadWriteNodes = new HashMap<String, HashMap<Long, List<MemoryAccessEvent>>>();
@@ -102,7 +102,7 @@ public class Trace {
         this.info = info;
     }
 
-    List<ReadNode> allReadNodes;
+    List<ReadEvent> allReadNodes;
 
     /**
      * return true if sharedAddresses is not empty
@@ -175,11 +175,11 @@ public class Trace {
         return threadIndexedLockPairs;
     }
 
-    public HashMap<String, List<ReadNode>> getIndexedReadNodes() {
+    public HashMap<String, List<ReadEvent>> getIndexedReadNodes() {
         return indexedReadNodes;
     }
 
-    public HashMap<String, List<WriteNode>> getIndexedWriteNodes() {
+    public HashMap<String, List<WriteEvent>> getIndexedWriteNodes() {
         return indexedWriteNodes;
     }
 
@@ -196,10 +196,10 @@ public class Trace {
         }
     }
 
-    public List<ReadNode> getAllReadNodes() {
+    public List<ReadEvent> getAllReadNodes() {
         if (allReadNodes == null) {
             allReadNodes = new ArrayList<>();
-            Iterator<List<ReadNode>> it = indexedReadNodes.values().iterator();
+            Iterator<List<ReadEvent>> it = indexedReadNodes.values().iterator();
             while (it.hasNext()) {
                 allReadNodes.addAll(it.next());
             }
@@ -209,9 +209,9 @@ public class Trace {
     }
 
     // TODO: NEED to include the dependent nodes from other threads
-    public List<ReadNode> getDependentReadNodes(MemoryAccessEvent rnode, boolean branch) {
+    public List<ReadEvent> getDependentReadNodes(MemoryAccessEvent rnode, boolean branch) {
 
-        List<ReadNode> readnodes = new ArrayList<>();
+        List<ReadEvent> readnodes = new ArrayList<>();
         long tid = rnode.getTID();
         long POS = rnode.getGID() - 1;
         if (branch) {
@@ -240,8 +240,8 @@ public class Trace {
                 if (node.getGID() > POS)
                     break;
                 else {
-                    if (node instanceof ReadNode)
-                        readnodes.add((ReadNode) node);
+                    if (node instanceof ReadEvent)
+                        readnodes.add((ReadEvent) node);
                 }
             }
         }
@@ -260,7 +260,7 @@ public class Trace {
             String addr = ((MemoryAccessEvent) node).getAddr();
             Long tid = node.getTID();
 
-            if (node instanceof ReadNode) {
+            if (node instanceof ReadEvent) {
                 HashSet<Long> set = indexedReadThreads.get(addr);
                 if (set == null) {
                     set = new HashSet<Long>();
@@ -297,10 +297,10 @@ public class Trace {
                 threadBranchNodes.put(tid, branchnodes);
             }
             branchnodes.add((BranchNode) node);
-        } else if (node instanceof InitNode) {
+        } else if (node instanceof InitEvent) {
             // initial write node
 
-            initialWriteValueMap.put(((InitNode) node).getAddr(), ((InitNode) node).getValue());
+            initialWriteValueMap.put(((InitEvent) node).getAddr(), ((InitEvent) node).getValue());
             info.incrementInitWriteNumber();
         } else {
             // all critical nodes -- read/write/synchronization events
@@ -380,23 +380,23 @@ public class Trace {
                 if (branchnodes != null)
                     mnode.setPrevBranchId(branchnodes.get(branchnodes.size() - 1).getGID());
 
-                if (node instanceof ReadNode) {
+                if (node instanceof ReadEvent) {
 
-                    List<ReadNode> readNodes = indexedReadNodes.get(addr);
+                    List<ReadEvent> readNodes = indexedReadNodes.get(addr);
                     if (readNodes == null) {
                         readNodes = new ArrayList<>();
                         indexedReadNodes.put(addr, readNodes);
                     }
-                    readNodes.add((ReadNode) node);
+                    readNodes.add((ReadEvent) node);
 
                 } else // write node
                 {
-                    List<WriteNode> writeNodes = indexedWriteNodes.get(addr);
+                    List<WriteEvent> writeNodes = indexedWriteNodes.get(addr);
                     if (writeNodes == null) {
                         writeNodes = new ArrayList<>();
                         indexedWriteNodes.put(addr, writeNodes);
                     }
-                    writeNodes.add((WriteNode) node);
+                    writeNodes.add((WriteEvent) node);
                 }
             } else if (node instanceof SyncEvent) {
                 // synchronization nodes

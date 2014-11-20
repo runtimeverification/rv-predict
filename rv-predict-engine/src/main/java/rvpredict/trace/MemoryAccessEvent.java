@@ -32,20 +32,46 @@ package rvpredict.trace;
  * Interface for read and write events.
  *
  */
-public interface MemoryAccessEvent extends Event {
+public abstract class MemoryAccessEvent extends AbstractEvent {
+
+    protected final long value;
+    protected final long objectHashCode;
+    protected final long index;
+
+    protected long prevBranchId = -1;
+
+    protected MemoryAccessEvent(long GID, long TID, int ID, EventType type, long objectHashCode,
+            long index, long value) {
+        super(GID, TID, ID, type);
+        this.objectHashCode = objectHashCode;
+        this.index = index;
+        this.value = value;
+    }
 
     /**
-     * Returns the accessed memory address in the event.
+     * Returns {@code String} representation of the accessed memory address in the event.
      */
-    public String getAddr();
+    // TODO(YilongL): normalize address representation of memory access events
+    public abstract String getAddr();
 
     /**
      * Returns the value read or written in the access.
      */
-    public long getValue();
+    public final long getValue() {
+        return value;
+    }
 
-    public long getPrevBranchId();
+    public long getPrevBranchId() {
+        return prevBranchId;
+    }
 
-    public void setPrevBranchId(long id);
+    public void setPrevBranchId(long id) {
+        prevBranchId = id;
+    }
+
+    @Override
+    public final String toString() {
+        return GID + ": thread " + TID + " " + ID + " " + objectHashCode + " " + index + " " + value + " " + type;
+    }
 
 }

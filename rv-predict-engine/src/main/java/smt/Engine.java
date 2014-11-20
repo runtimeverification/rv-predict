@@ -36,12 +36,12 @@ import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
 import rvpredict.trace.NotifyNode;
 import rvpredict.trace.PropertyNode;
-import rvpredict.trace.ReadNode;
+import rvpredict.trace.ReadEvent;
 import rvpredict.trace.StartNode;
 import rvpredict.trace.Trace;
 import rvpredict.trace.UnlockNode;
 import rvpredict.trace.WaitNode;
-import rvpredict.trace.WriteNode;
+import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
@@ -461,32 +461,32 @@ public class Engine {
      */
     // TODO: NEED to handle the feasibility of new added write nodes
     public StringBuilder constructCausalReadWriteConstraintsOptimized(long rgid,
-            List<ReadNode> readNodes, HashMap<String, List<WriteNode>> indexedWriteNodes,
+            List<ReadEvent> readNodes, HashMap<String, List<WriteEvent>> indexedWriteNodes,
             HashMap<String, Long> initValueMap) {
         StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
 
         // for every read node in the set
         // make sure it is matched with a write written the same value
         for (int i = 0; i < readNodes.size(); i++) {
-            ReadNode rnode = readNodes.get(i);
+            ReadEvent rnode = readNodes.get(i);
 
             // filter out itself --
             if (rgid == rnode.getGID())
                 continue;
 
             // get all write nodes on the address
-            List<WriteNode> writenodes = indexedWriteNodes.get(rnode.getAddr());
+            List<WriteEvent> writenodes = indexedWriteNodes.get(rnode.getAddr());
             // no write to array field?
             // Yes, it could be: java.io.PrintStream out
             if (writenodes == null || writenodes.size() < 1)//
                 continue;
 
-            WriteNode preNode = null;//
+            WriteEvent preNode = null;//
 
             // get all write nodes on the address & write the same value
-            List<WriteNode> writenodes_value_match = new ArrayList<>();
+            List<WriteEvent> writenodes_value_match = new ArrayList<>();
             for (int j = 0; j < writenodes.size(); j++) {
-                WriteNode wnode = writenodes.get(j);
+                WriteEvent wnode = writenodes.get(j);
                 if (wnode.getValue() == rnode.getValue() && !canReach(rnode, wnode)) {
                     if (wnode.getTID() != rnode.getTID())
                         writenodes_value_match.add(wnode);
@@ -516,7 +516,7 @@ public class Engine {
                 // make sure all the nodes that x depends on read the same value
 
                 for (int j = 0; j < writenodes_value_match.size(); j++) {
-                    WriteNode wnode1 = writenodes_value_match.get(j);
+                    WriteEvent wnode1 = writenodes_value_match.get(j);
                     String var_w1 = makeVariable(wnode1.getGID());
 
                     String cons_b_ = "(> " + var_r + " " + var_w1 + ")\n";
@@ -525,7 +525,7 @@ public class Engine {
                     String cons_c_end = "";
                     String last_cons_d = null;
                     for (int k = 0; k < writenodes.size(); k++) {
-                        WriteNode wnode2 = writenodes.get(k);
+                        WriteEvent wnode2 = writenodes.get(k);
                         if (!writenodes_value_match.contains(wnode2) && !canReach(wnode2, wnode1)
                                 && !canReach(rnode, wnode2)) {
                             String var_w2 = makeVariable(wnode2.getGID());
@@ -599,7 +599,7 @@ public class Engine {
                     String var_r = makeVariable(rnode.getGID());
 
                     for (int k = 0; k < writenodes.size(); k++) {
-                        WriteNode wnode3 = writenodes.get(k);
+                        WriteEvent wnode3 = writenodes.get(k);
                         if (wnode3.getTID() != rnode.getTID() && !canReach(rnode, wnode3)) {
                             String var_w3 = makeVariable(wnode3.getGID());
 

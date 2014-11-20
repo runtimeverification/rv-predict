@@ -28,45 +28,28 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class ReadNode extends AbstractEvent implements MemoryAccessEvent {
+/**
+ * Initialization event.
+ */
+public class InitEvent extends MemoryAccessEvent {
 
-    private long prevBranchId;
-
-    private long objectHashCode;
-    private long index;
-    private long value;
-
-    public ReadNode(long GID, long tid, int ID, long objectHashCode, long index, long value) {
-        super(GID, tid, ID, EventType.READ);
-        this.objectHashCode = objectHashCode;
-        this.index = index;
-        this.value = value;
-    }
-
-    @Override
-    public long getValue() {
-        return value;
+    public InitEvent(long GID, long tid, int ID, long objectHashCode, long index, long value) {
+        super(GID, tid, ID, EventType.INIT, objectHashCode, index, value);
     }
 
     @Override
     public String getAddr() {
-        return (objectHashCode == 0 ? "_" : objectHashCode + "_") +
-                (index < 0 ? "." + -index : index);
-    }
-
-    @Override
-    public String toString() {
-        return GID + ": thread " + TID + " " + ID + " " + objectHashCode + " " + index + " " + value + " " + type;
+        return (objectHashCode == 0 ? "." : objectHashCode + ".") + index;
     }
 
     @Override
     public long getPrevBranchId() {
-        return prevBranchId;
+        throw new UnsupportedOperationException("Illegal operation for INIT event.");
     }
 
     @Override
     public void setPrevBranchId(long id) {
-        prevBranchId = id;
+        throw new UnsupportedOperationException("Illegal operation for INIT event.");
     }
 
 }

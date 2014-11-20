@@ -34,12 +34,12 @@ import rvpredict.trace.JoinNode;
 import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
 import rvpredict.trace.NotifyNode;
-import rvpredict.trace.ReadNode;
+import rvpredict.trace.ReadEvent;
 import rvpredict.trace.StartNode;
 import rvpredict.trace.Trace;
 import rvpredict.trace.UnlockNode;
 import rvpredict.trace.WaitNode;
-import rvpredict.trace.WriteNode;
+import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
@@ -112,8 +112,8 @@ public class CPEngine {
      */
     private void addCPEdges(Trace trace, HashMap<Long, AbstractEvent> firstNodes,
             HashMap<Long, AbstractEvent> lastNodes) {
-        HashMap<String, WriteNode> addressLastWriteMap = new HashMap<String, WriteNode>();
-        HashMap<String, ReadNode> addressLastReadMap = new HashMap<String, ReadNode>();
+        HashMap<String, WriteEvent> addressLastWriteMap = new HashMap<String, WriteEvent>();
+        HashMap<String, ReadEvent> addressLastReadMap = new HashMap<String, ReadEvent>();
 
         HashMap<Long, HashSet<String>> threadCurrentLockRegionReadAddresses = new HashMap<Long, HashSet<String>>();
         HashMap<Long, HashSet<String>> threadCurrentLockRegionWriteAddresses = new HashMap<Long, HashSet<String>>();
@@ -156,14 +156,14 @@ public class CPEngine {
 
                 }
 
-            } else if (node instanceof ReadNode) {
+            } else if (node instanceof ReadEvent) {
 
-                String addr = ((ReadNode) node).getAddr();
-                WriteNode wnode = addressLastWriteMap.get(addr);
+                String addr = ((ReadEvent) node).getAddr();
+                WriteEvent wnode = addressLastWriteMap.get(addr);
                 if (wnode != null) {
                     reachEngine.addEdge(wnode.getGID(), node.getGID());
                 }
-                addressLastReadMap.put(addr, (ReadNode) node);
+                addressLastReadMap.put(addr, (ReadEvent) node);
 
                 HashSet<String> addresses = threadCurrentLockRegionReadAddresses.get(node.getTID());
                 if (addresses == null) {
@@ -171,17 +171,17 @@ public class CPEngine {
                     threadCurrentLockRegionReadAddresses.put(node.getTID(), addresses);
                 }
                 addresses.add(addr);
-            } else if (node instanceof WriteNode) {
-                String addr = ((WriteNode) node).getAddr();
-                WriteNode wnode = addressLastWriteMap.get(addr);
+            } else if (node instanceof WriteEvent) {
+                String addr = ((WriteEvent) node).getAddr();
+                WriteEvent wnode = addressLastWriteMap.get(addr);
                 if (wnode != null) {
                     reachEngine.addEdge(wnode.getGID(), node.getGID());
                 }
-                ReadNode rnode = addressLastReadMap.get(addr);
+                ReadEvent rnode = addressLastReadMap.get(addr);
                 if (rnode != null) {
                     reachEngine.addEdge(rnode.getGID(), node.getGID());
                 }
-                addressLastWriteMap.put(addr, (WriteNode) node);
+                addressLastWriteMap.put(addr, (WriteEvent) node);
 
                 HashSet<String> addresses = threadCurrentLockRegionWriteAddresses
                         .get(node.getTID());

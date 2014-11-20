@@ -191,13 +191,13 @@ public class DBEngine {
 
             switch (TYPE) {
                 case INIT:
-                    node = new InitNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
+                    node = new InitEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
                     break;
                 case READ:
-                    node = new ReadNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
+                    node = new ReadEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
                     break;
                 case WRITE:
-                    node = new WriteNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
+                    node = new WriteEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
                     break;
                 case LOCK:
                     node = new LockNode(GID, TID, ID, ADDRL);

@@ -14,12 +14,14 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
 
     private final GlobalStateForInstrumentation globalState;
 
-    private String classname;
+    private String className;
     private String source;
 
     public SnoopInstructionClassAdapter(ClassVisitor cv, Config config,
             GlobalStateForInstrumentation globalState) {
         super(Opcodes.ASM5, cv);
+        assert cv != null;
+
         this.config = config;
         this.globalState = globalState;
     }
@@ -27,37 +29,30 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
     @Override
     public void visit(int version, int access, String name, String signature, String superName,
             String[] interfaces) {
-        if (cv != null) {
-            cv.visit(version, access, name, signature, superName, interfaces);
-        }
-
-        classname = name;
-        if (config.verbose)
-            System.out.println("classname: " + classname);
+        className = name;
+        cv.visit(version, access, name, signature, superName, interfaces);
     }
 
     @Override
     public void visitSource(String source, String debug) {
         this.source = source;
-        if (cv != null) {
-            cv.visitSource(source, debug);
-        }
+        cv.visitSource(source, debug);
     }
 
     @Override
     public FieldVisitor visitField(int access, String name, String desc, String signature,
             Object value) {
-        String sig_var = (classname + "." + name).replace("/", ".");
-        GlobalStateForInstrumentation.instance.getVariableId(sig_var);
+        /* TODO(YilongL): add comments about what is special about `final`,
+         * `volatile`, and `static` w.r.t. instrumentation */
+
+        String sig_var = (className + "." + name).replace("/", ".");
+        globalState.getVariableId(sig_var);
         // Opcodes.ACC_FINAL
-        if ((access & Opcodes.ACC_VOLATILE) != 0) {// volatile
-            GlobalStateForInstrumentation.instance.addVolatileVariable(sig_var);
+        if ((access & Opcodes.ACC_VOLATILE) != 0) { // volatile
+            globalState.addVolatileVariable(sig_var);
         }
 
-        if (cv != null) {
-            return cv.visitField(access, name, desc, signature, value);
-        }
-        return null;
+        return cv.visitField(access, name, desc, signature, value);
     }
 
     @Override
@@ -67,17 +62,18 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
 
         if (mv != null) {
             Type[] args = Type.getArgumentTypes(desc);
-            int length = args.length;
+            int numOfWords = args.length;
             for (int i = 0; i < args.length; i++) {
                 if (args[i] == Type.DOUBLE_TYPE || args[i] == Type.LONG_TYPE)
-                    length++;
+                    numOfWords++;
             }
+
             if (config.commandLine.agentOnlySharing) {
-                mv = new SharedVariableDetectionMethodAdapter(mv, source, classname, name, name
-                        + desc, access, length, config, globalState);
+                mv = new SharedVariableDetectionMethodAdapter(mv, source, className, name, name
+                        + desc, access, numOfWords, config, globalState);
             } else {
-                mv = new SnoopInstructionMethodAdapter(mv, source, classname, name, name + desc,
-                        access, length, config, globalState);
+                mv = new SnoopInstructionMethodAdapter(mv, source, className, name, name + desc,
+                        access, numOfWords, config, globalState);
             }
         }
         return mv;

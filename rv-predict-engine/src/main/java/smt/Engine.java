@@ -38,7 +38,6 @@ import rvpredict.trace.PropertyNode;
 import rvpredict.trace.ReadEvent;
 import rvpredict.trace.Trace;
 import rvpredict.trace.UnlockNode;
-import rvpredict.trace.WaitNode;
 import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
@@ -270,7 +269,7 @@ public class Engine {
                     } else
                         stack.pop();// handle reentrant lock here
 
-                } else if (node instanceof WaitNode) {
+                } else if (node.getType().equals(EventType.WAIT)) {
                     long tid = node.getTID();
 
                     // assert(matchNotifyNode!=null);this is also possible when

@@ -36,7 +36,6 @@ import rvpredict.trace.LockPair;
 import rvpredict.trace.ReadEvent;
 import rvpredict.trace.Trace;
 import rvpredict.trace.UnlockNode;
-import rvpredict.trace.WaitNode;
 import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
@@ -216,7 +215,7 @@ public class HBEngine {
                 syncNodeList.add(lp);
                 lockEngine.add(((SyncEvent) node).getSyncObject(), tid, lp);
 
-            } else if (node instanceof WaitNode) {
+            } else if (node.getType().equals(EventType.WAIT)) {
                 long tid = node.getTID();
 
                 // assert(matchNotifyNode!=null);this is also possible when
@@ -262,12 +261,12 @@ public class HBEngine {
                     AbstractEvent firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
-                            ((WaitNode) node).getSyncObject());
+                            ((SyncEvent) node).getSyncObject());
                     lp = new LockPair(fake_node, (SyncEvent) node);
                 } else
-                    lp = new LockPair(syncstack.pop(), ((WaitNode) node));
+                    lp = new LockPair(syncstack.pop(), ((SyncEvent) node));
 
-                long addr = ((WaitNode) node).getSyncObject();
+                long addr = ((SyncEvent) node).getSyncObject();
 
                 ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
                 if (syncNodeList == null) {
@@ -279,7 +278,7 @@ public class HBEngine {
                 syncNodeList.add(lp);
                 lockEngine.add(((SyncEvent) node).getSyncObject(), tid, lp);
 
-                syncstack.push(((WaitNode) node));
+                syncstack.push(((SyncEvent) node));
 
             } else if (node.getType().equals(EventType.NOTIFY)) {
                 matchNotifyNode = (SyncEvent) node;

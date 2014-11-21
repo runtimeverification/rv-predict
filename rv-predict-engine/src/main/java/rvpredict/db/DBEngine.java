@@ -206,7 +206,7 @@ public class DBEngine {
                     node = new UnlockNode(GID, TID, ID, ADDRL);
                     break;
                 case WAIT:
-                    node = new WaitNode(GID, TID, ID, ADDRL);
+                    node = new SyncEvent(GID, TID, ID, EventType.WAIT, ADDRL);
                     break;
                 case NOTIFY:
                     node = new SyncEvent(GID, TID, ID, EventType.NOTIFY, ADDRL);

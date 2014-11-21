@@ -38,15 +38,12 @@ import rvpredict.trace.EventType;
 import java.io.*;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -110,7 +107,7 @@ public class DBEngine {
         closeDB();
     }
 
-    public void saveEventsToDB(List<EventItem> stack) {
+    private void saveEventsToDB(List<EventItem> stack) {
         assert !stack.isEmpty() : "stack should not be empty here as we're saving metadata, too";
 
         try {
@@ -131,7 +128,7 @@ public class DBEngine {
     Thread loggingThread;
     boolean shutdown = false;
 
-    public void startAsynchronousLogging() {
+    private void startAsynchronousLogging() {
 
         queue = new LinkedBlockingQueue<>();
         buffer = new ArrayList<>(BUFFER_THRESHOLD);
@@ -194,7 +191,7 @@ public class DBEngine {
         }
     }
 
-    public void closeDB() {
+    private void closeDB() {
         try {
             conn.createStatement().execute("SHUTDOWN");
             // conn.close();
@@ -265,6 +262,7 @@ public class DBEngine {
      * save an event to database. must be synchronized. otherwise, races when
      * writing to file might occur for synchronous logging.
      */
+    // TODO(YilongL): why synchronize this method? too slow!
     public synchronized void saveEvent(EventType TYPE, int ID, long ADDRL, long ADDRR, long VALUE) {
         long TID = Thread.currentThread().getId();
         EventItem e = new EventItem(DBEngine.globalEventID.incrementAndGet(), TID, ID, ADDRL, ADDRR, VALUE, TYPE);
@@ -317,7 +315,7 @@ public class DBEngine {
         }
     }
 
-    public void saveObject(Object threadTidList) {
+    private void saveObject(Object threadTidList) {
         try {
             metadataOS.writeObject(threadTidList);
         } catch (IOException e) {
@@ -326,50 +324,44 @@ public class DBEngine {
     }
 
     public void saveMetaData() {
-        ConcurrentHashMap<Long, String> threadTidMap = globalState.threadIdToName;
-        ConcurrentHashMap<String, Integer> variableIdMap = globalState.varSigToId;
-        Set<String> volatileVariables = globalState.volatileVariables;
-        ConcurrentHashMap<String, Integer> stmtSigIdMap = globalState.stmtSigToLocId;
-
-        Iterator<Entry<Long, String>> threadIdNameIter = threadTidMap.entrySet().iterator();
-        List<Entry<Long,String>> threadTidList = new ArrayList<>(threadTidMap.size());
-        while (threadIdNameIter.hasNext()) {
-            Map.Entry<Long,String> entry = threadIdNameIter.next();
-            threadTidList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
+        /* save <threadId, name> pairs */
+        List<Entry<Long,String>> threadIdNamePairs = new ArrayList<>(globalState.unsavedStmtSigToLocId.size());
+        Iterator<Entry<Long, String>> iter = globalState.unsavedThreadIdToName.iterator();
+        while (iter.hasNext()) {
+            threadIdNamePairs.add(iter.next());
+            iter.remove();
         }
-        saveObject(threadTidList);
-        // save variable - id to database
-        Iterator<Entry<String, Integer>> variableIdMapIter = variableIdMap.entrySet()
-                .iterator();
-        List<Entry<String, Integer>> variableIdList = new ArrayList<>(variableIdMap.size());
-        while (variableIdMapIter.hasNext()) {
-            Map.Entry<String, Integer> entry = variableIdMapIter.next();
-            variableIdMapIter.remove();
-            variableIdList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
-        }
-        saveObject(variableIdList);
+        saveObject(threadIdNamePairs);
 
-        // save volatilevariable - id to database
+        /* save <variable, id> pairs */
+        synchronized (globalState.varSigToId) {
+            // TODO(YilongL): I want to write the following but I couldn't
+            // because DBEngine#getMetadata assumes certain order of the
+            // saved objects
+//            if (!globalState.unsavedVarSigToId.isEmpty()) {
+//                saveObject(globalState.unsavedVarSigToId);
+//                globalState.unsavedVarSigToId.clear();
+//            }
 
-        List<Entry<String, Integer>> volatileVarList = new ArrayList<>(volatileVariables.size());
-        Iterator<String> volatileIt = volatileVariables.iterator();
-        while (volatileIt.hasNext()) {
-            String sig = volatileIt.next();
-            volatileIt.remove();
-            Integer id = GlobalStateForInstrumentation.instance.varSigToId.get(sig);
-            volatileVarList.add(new AbstractMap.SimpleEntry<>(sig,id));
+            saveObject(globalState.unsavedVarSigToId);
+            globalState.unsavedVarSigToId.clear();
         }
-        saveObject(volatileVarList);
-        // save stmt - id to database
 
-        List<Entry<String, Integer>> stmtSigIdList = new ArrayList<>(stmtSigIdMap.size());
-        Iterator<Entry<String, Integer>> stmtSigIdMapIter = stmtSigIdMap.entrySet().iterator();
-        while (stmtSigIdMapIter.hasNext()) {
-            Entry<String, Integer> entry = stmtSigIdMapIter.next();
-            stmtSigIdList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
-            stmtSigIdMapIter.remove();
-            // System.out.println("* ["+id+"] "+sig+" *");
+        /* save <volatileVariable, Id> pairs */
+        synchronized (globalState.volatileVariables) {
+            // TODO(YilongL): volatileVariable Id should be constructed when
+            // reading metadata in backend; not here
+            List<Entry<String, Integer>> volatileVarIdPairs = new ArrayList<>(globalState.unsavedVolatileVariables.size());
+            for (String var : globalState.unsavedVolatileVariables) {
+                volatileVarIdPairs.add(new SimpleEntry<>(var, globalState.varSigToId.get(var)));
+            }
+            saveObject(volatileVarIdPairs);
         }
-        saveObject(stmtSigIdList);
+
+        /* save <StmtSig, LocId> pairs */
+        synchronized (globalState.stmtSigToLocId) {
+            saveObject(globalState.unsavedStmtSigToLocId);
+            globalState.unsavedStmtSigToLocId.clear();
+        }
     }
 }

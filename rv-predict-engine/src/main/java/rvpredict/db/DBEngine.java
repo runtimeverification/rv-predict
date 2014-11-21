@@ -212,7 +212,7 @@ public class DBEngine {
                     node = new SyncEvent(GID, TID, ID, EventType.NOTIFY, ADDRL);
                     break;
                 case START:
-                    node = new StartNode(GID, TID, ID, ADDRL);
+                    node = new SyncEvent(GID, TID, ID, EventType.START, ADDRL);
                     break;
                 case JOIN:
                     node = new SyncEvent(GID, TID, ID, EventType.JOIN, ADDRL);

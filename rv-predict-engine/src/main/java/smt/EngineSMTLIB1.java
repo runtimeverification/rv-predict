@@ -35,7 +35,6 @@ import rvpredict.trace.SyncEvent;
 import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
 import rvpredict.trace.ReadEvent;
-import rvpredict.trace.StartNode;
 import rvpredict.trace.Trace;
 import rvpredict.trace.UnlockNode;
 import rvpredict.trace.WaitNode;
@@ -169,7 +168,7 @@ public class EngineSMTLIB1 extends Engine {
                 SyncEvent node = nodes.get(i);
                 long thisGID = node.getGID();
                 String var = makeVariable(thisGID);
-                if (node instanceof StartNode) {
+                if (node.getType().equals(EventType.START)) {
                     long tid = Long.valueOf(node.getSyncObject());
                     AbstractEvent fnode = firstNodes.get(tid);
                     if (fnode != null) {

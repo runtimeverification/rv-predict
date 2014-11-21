@@ -35,7 +35,6 @@ import rvpredict.trace.SyncEvent;
 import rvpredict.trace.LockPair;
 import rvpredict.trace.ReadEvent;
 import rvpredict.trace.Trace;
-import rvpredict.trace.UnlockNode;
 import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
@@ -201,7 +200,7 @@ public class EngineSMTLIB1 extends Engine {
                     }
 
                     stack.push(node);
-                } else if (node instanceof UnlockNode) {
+                } else if (node.getType().equals(EventType.UNLOCK)) {
                     long tid = node.getTID();
                     Stack<SyncEvent> stack = threadSyncStack.get(tid);
 

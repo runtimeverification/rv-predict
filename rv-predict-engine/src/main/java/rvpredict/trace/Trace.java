@@ -419,7 +419,7 @@ public class Trace {
                     }
 
                     stack.push((SyncEvent) node);
-                } else if (node instanceof UnlockNode) {
+                } else if (node.getType().equals(EventType.UNLOCK)) {
                     HashMap<Long, List<LockPair>> indexedLockpairs = threadIndexedLockPairs
                             .get(tid);
                     if (indexedLockpairs == null) {
@@ -439,9 +439,9 @@ public class Trace {
                     }
                     // assert(stack.size()>0); //this is possible when segmented
                     if (stack.size() == 0)
-                        lockpairs.add(new LockPair(null, (UnlockNode) node));
+                        lockpairs.add(new LockPair(null, (SyncEvent) node));
                     else if (stack.size() == 1)
-                        lockpairs.add(new LockPair(stack.pop(), (UnlockNode) node));
+                        lockpairs.add(new LockPair(stack.pop(), (SyncEvent) node));
                     else
                         stack.pop();// handle reentrant lock
                 }

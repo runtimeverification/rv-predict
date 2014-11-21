@@ -34,7 +34,6 @@ import rvpredict.trace.SyncEvent;
 import rvpredict.trace.LockPair;
 import rvpredict.trace.ReadEvent;
 import rvpredict.trace.Trace;
-import rvpredict.trace.UnlockNode;
 import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
@@ -173,7 +172,7 @@ public class HBEngine {
                 }
                 syncstack.push(((SyncEvent) node));
 
-            } else if (node instanceof UnlockNode) {
+            } else if (node.getType().equals(EventType.UNLOCK)) {
                 long tid = node.getTID();
 
                 Stack<SyncEvent> syncstack = threadSyncStack.get(tid);
@@ -190,19 +189,19 @@ public class HBEngine {
                     AbstractEvent firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     SyncEvent fake_node = new SyncEvent(fake_gid, tid, firstnode.getID(), EventType.LOCK,
-                            ((UnlockNode) node).getSyncObject());
+                            ((SyncEvent) node).getSyncObject());
                     lp = new LockPair(fake_node, (SyncEvent) node);
                 } else {
                     lp = new LockPair(syncstack.pop(), (SyncEvent) node);
 
                     // filter out re-entrant locks
                     if (syncstack.size() > 0)
-                        if (((UnlockNode) node).getSyncObject() == syncstack.get(0).getSyncObject()) {
+                        if (((SyncEvent) node).getSyncObject() == syncstack.get(0).getSyncObject()) {
                             continue;
                         }
                 }
 
-                long addr = ((UnlockNode) node).getSyncObject();
+                long addr = ((SyncEvent) node).getSyncObject();
 
                 ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
                 if (syncNodeList == null) {
@@ -296,7 +295,7 @@ public class HBEngine {
 
             while (stack.size() > 0) {
                 SyncEvent node = stack.remove(0);
-                UnlockNode fake_node = new UnlockNode(fake_gid, tid, lastnode.getID(),
+                SyncEvent fake_node = new SyncEvent(fake_gid, tid, lastnode.getID(), EventType.UNLOCK,
                         node.getSyncObject());
 
                 LockPair lp = new LockPair(node, fake_node);

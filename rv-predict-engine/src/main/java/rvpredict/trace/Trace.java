@@ -411,14 +411,14 @@ public class Trace {
 
                 syncNodes.add((SyncEvent) node);
 
-                if (node instanceof LockNode) {
+                if (node.getType().equals(EventType.LOCK)) {
                     Stack<SyncEvent> stack = threadSyncStack.get(tid);
                     if (stack == null) {
                         stack = new Stack<SyncEvent>();
                         threadSyncStack.put(tid, stack);
                     }
 
-                    stack.push((LockNode) node);
+                    stack.push((SyncEvent) node);
                 } else if (node instanceof UnlockNode) {
                     HashMap<Long, List<LockPair>> indexedLockpairs = threadIndexedLockPairs
                             .get(tid);

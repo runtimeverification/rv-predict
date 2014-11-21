@@ -32,7 +32,6 @@ import rvpredict.trace.AbstractEvent;
 import rvpredict.trace.EventType;
 import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.SyncEvent;
-import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
 import rvpredict.trace.PropertyNode;
 import rvpredict.trace.ReadEvent;
@@ -236,7 +235,7 @@ public class Engine {
 
                     }
 
-                } else if (node instanceof LockNode) {
+                } else if (node.getType().equals(EventType.LOCK)) {
                     long tid = node.getTID();
 
                     Stack<SyncEvent> stack = threadSyncStack.get(tid);

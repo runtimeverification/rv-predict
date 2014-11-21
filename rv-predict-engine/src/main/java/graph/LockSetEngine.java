@@ -34,8 +34,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.List;
 
-import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
+import rvpredict.trace.SyncEvent;
 
 /**
  * Engine for computing the Lockset algorithm
@@ -44,7 +44,7 @@ import rvpredict.trace.LockPair;
  *
  */
 public class LockSetEngine {
-    List<LockNode> locktrace;
+    List<SyncEvent> locktrace;
     int n_type = 0;
     int N = 0;
     Map<Integer, Integer> lock_types = new HashMap<Integer, Integer>();

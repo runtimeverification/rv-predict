@@ -200,10 +200,10 @@ public class DBEngine {
                     node = new WriteEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
                     break;
                 case LOCK:
-                    node = new LockNode(GID, TID, ID, ADDRL);
+                    node = new SyncEvent(GID, TID, ID, EventType.LOCK, ADDRL);
                     break;
                 case UNLOCK:
-                    node = new UnlockNode(GID, TID, ID, ADDRL);
+                    node = new SyncEvent(GID, TID, ID, EventType.UNLOCK, ADDRL);
                     break;
                 case WAIT:
                     node = new SyncEvent(GID, TID, ID, EventType.WAIT, ADDRL);

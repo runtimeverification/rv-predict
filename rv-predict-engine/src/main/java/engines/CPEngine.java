@@ -31,7 +31,6 @@ package engines;
 import rvpredict.trace.AbstractEvent;
 import rvpredict.trace.EventType;
 import rvpredict.trace.SyncEvent;
-import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
 import rvpredict.trace.ReadEvent;
 import rvpredict.trace.Trace;
@@ -187,7 +186,7 @@ public class CPEngine {
                     threadCurrentLockRegionWriteAddresses.put(node.getTID(), addresses);
                 }
                 addresses.add(addr);
-            } else if (node instanceof LockNode) {
+            } else if (node.getType().equals(EventType.LOCK)) {
                 long tid = node.getTID();
 
                 Stack<HashSet<String>> readstack = threadReadAccessAddrStack.get(tid);
@@ -219,7 +218,7 @@ public class CPEngine {
                     syncstack = new Stack<SyncEvent>();
                     threadSyncStack.put(tid, syncstack);
                 }
-                syncstack.push(((LockNode) node));
+                syncstack.push(((SyncEvent) node));
 
             } else if (node instanceof UnlockNode) {
                 long tid = node.getTID();
@@ -237,7 +236,7 @@ public class CPEngine {
                     // make it non-null
                     AbstractEvent firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
-                    LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
+                    SyncEvent fake_node = new SyncEvent(fake_gid, tid, firstnode.getID(), EventType.LOCK,
                             ((UnlockNode) node).getSyncObject());
                     lp = new LockPair(fake_node, (SyncEvent) node);
                 } else {
@@ -342,7 +341,7 @@ public class CPEngine {
 
                     AbstractEvent firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
-                    LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
+                    SyncEvent fake_node = new SyncEvent(fake_gid, tid, firstnode.getID(), EventType.LOCK,
                             ((SyncEvent) node).getSyncObject());
                     lp = new LockPair(fake_node, (SyncEvent) node);
                 } else

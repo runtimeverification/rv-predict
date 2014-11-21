@@ -18,6 +18,7 @@ public class Utility {
     public static final String DESC_CHAR   =   Type.CHAR_TYPE.getDescriptor();
     public static final String DESC_FLOAT  =   Type.FLOAT_TYPE.getDescriptor();
     public static final String DESC_DOUBLE =   Type.DOUBLE_TYPE.getDescriptor();
+    public static final String DESC_CLASS  =   "Ljava/lang/Class;";
 
     public static final String DESC_ARRAY_PREFIX    =   "[";
     public static final String DESC_OBJECT_PREFIX   =   "L";

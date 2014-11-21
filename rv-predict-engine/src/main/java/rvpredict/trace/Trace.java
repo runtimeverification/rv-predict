@@ -402,7 +402,7 @@ public class Trace {
                 // synchronization nodes
                 info.incrementSyncNumber();
 
-                String addr = ((SyncEvent) node).getAddr();
+                String addr = ((SyncEvent) node).getSyncObject();
                 List<SyncEvent> syncNodes = syncNodesMap.get(addr);
                 if (syncNodes == null) {
                     syncNodes = new ArrayList<>();
@@ -530,10 +530,10 @@ public class Trace {
                 while (!stack.isEmpty()) {
                     SyncEvent syncnode = stack.pop();// lock or wait
 
-                    List<LockPair> lockpairs = indexedLockpairs.get(syncnode.getAddr());
+                    List<LockPair> lockpairs = indexedLockpairs.get(syncnode.getSyncObject());
                     if (lockpairs == null) {
                         lockpairs = new ArrayList<>();
-                        indexedLockpairs.put(syncnode.getAddr(), lockpairs);
+                        indexedLockpairs.put(syncnode.getSyncObject(), lockpairs);
                     }
 
                     lockpairs.add(new LockPair(syncnode, null));

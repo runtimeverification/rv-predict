@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -28,27 +28,14 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class LockNode extends AbstractEvent implements SyncEvent {
-    private long did;// this is the ID of the event from the same thread the
-                     // rwnode depends on
-    private long lock_addr;
+public class LockNode extends SyncEvent {
 
-    public LockNode(long GID, long tid, int ID, long addr) {
-        super(GID, tid, ID, EventType.LOCK);
-        this.lock_addr = addr;
+    public LockNode(long GID, long TID, int ID, long objectRef) {
+        super(GID, TID, ID, EventType.LOCK, objectRef);
     }
 
-    public long getDid() {
-        return did;
+    public LockNode(long GID, long TID, int ID, String objectRef) {
+        super(GID, TID, ID, EventType.LOCK, Long.valueOf(objectRef));
     }
 
-    @Override
-    public String getAddr() {
-        return "" + lock_addr;
-    }
-
-    @Override
-    public String toString() {
-        return GID + ": thread " + TID + " " + lock_addr + " " + type;
-    }
 }

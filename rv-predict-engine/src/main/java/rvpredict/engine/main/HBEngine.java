@@ -2,20 +2,20 @@ package rvpredict.engine.main;
 
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -53,7 +53,7 @@ import java.util.List;
  * The engine class for happens-before (HB) based race detection. It maintains
  * the HB edge between events and answers reachability inquiries between
  * conflicting events.
- * 
+ *
  * @author jeffhuang
  *
  */
@@ -76,7 +76,7 @@ public class HBEngine {
 
     /**
      * add program order CP edges
-     * 
+     *
      * @param map
      */
     private void addIntraThreadEdge(HashMap<Long, List<AbstractEvent>> map) {
@@ -100,7 +100,7 @@ public class HBEngine {
      * regions are simply added as it is. To ensure the soundness for all
      * detected races, we also include the HB edges for write/write, write/read,
      * read/write.
-     * 
+     *
      * TODO: need to distinguish reads and writes for checking conflicting lock
      * regions
      *
@@ -129,7 +129,7 @@ public class HBEngine {
             // add first node
 
             if (node instanceof StartNode) {
-                long tid = Long.valueOf(((StartNode) node).getAddr());
+                long tid = Long.valueOf(((StartNode) node).getSyncObject());
 
                 AbstractEvent fnode = firstNodes.get(tid);
                 if (fnode != null) {
@@ -138,7 +138,7 @@ public class HBEngine {
 
                 }
             } else if (node instanceof JoinNode) {
-                long tid = Long.valueOf(((JoinNode) node).getAddr());
+                long tid = Long.valueOf(((JoinNode) node).getSyncObject());
                 AbstractEvent lnode = lastNodes.get(tid);
                 if (lnode != null) {
                     long lGID = lnode.getGID();
@@ -194,19 +194,19 @@ public class HBEngine {
                     AbstractEvent firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
-                            ((UnlockNode) node).getLockAddr());
+                            ((UnlockNode) node).getSyncObject());
                     lp = new LockPair(fake_node, (SyncEvent) node);
                 } else {
                     lp = new LockPair(syncstack.pop(), (SyncEvent) node);
 
                     // filter out re-entrant locks
                     if (syncstack.size() > 0)
-                        if (((UnlockNode) node).getAddr().equals(syncstack.get(0).getAddr())) {
+                        if (((UnlockNode) node).getSyncObject().equals(syncstack.get(0).getSyncObject())) {
                             continue;
                         }
                 }
 
-                String addr = ((UnlockNode) node).getAddr();
+                String addr = ((UnlockNode) node).getSyncObject();
 
                 ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
                 if (syncNodeList == null) {
@@ -216,7 +216,7 @@ public class HBEngine {
                 }
 
                 syncNodeList.add(lp);
-                lockEngine.add(((SyncEvent) node).getAddr(), tid, lp);
+                lockEngine.add(((SyncEvent) node).getSyncObject(), tid, lp);
 
             } else if (node instanceof WaitNode) {
                 long tid = node.getTID();
@@ -264,12 +264,12 @@ public class HBEngine {
                     AbstractEvent firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
                     LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
-                            ((WaitNode) node).getSigAddr());
+                            ((WaitNode) node).getSyncObject());
                     lp = new LockPair(fake_node, (SyncEvent) node);
                 } else
                     lp = new LockPair(syncstack.pop(), ((WaitNode) node));
 
-                String addr = ((WaitNode) node).getAddr();
+                String addr = ((WaitNode) node).getSyncObject();
 
                 ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
                 if (syncNodeList == null) {
@@ -279,7 +279,7 @@ public class HBEngine {
                 }
 
                 syncNodeList.add(lp);
-                lockEngine.add(((SyncEvent) node).getAddr(), tid, lp);
+                lockEngine.add(((SyncEvent) node).getSyncObject(), tid, lp);
 
                 syncstack.push(((WaitNode) node));
 
@@ -301,11 +301,11 @@ public class HBEngine {
             while (stack.size() > 0) {
                 SyncEvent node = stack.remove(0);
                 UnlockNode fake_node = new UnlockNode(fake_gid, tid, lastnode.getID(),
-                        node.getAddr());
+                        node.getSyncObject());
 
                 LockPair lp = new LockPair(node, fake_node);
 
-                String addr = node.getAddr();
+                String addr = node.getSyncObject();
 
                 ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
 
@@ -314,7 +314,7 @@ public class HBEngine {
                     lockAddrNodes.put(addr, syncNodeList);
                 }
                 syncNodeList.add(lp);
-                lockEngine.add(node.getAddr(), tid, lp);
+                lockEngine.add(node.getSyncObject(), tid, lp);
 
             }
         }
@@ -345,7 +345,7 @@ public class HBEngine {
      * return true if node1 and node2 have no common lock, and are not reachable
      * by all the indirect HB edges excluding the possible direct HB edge
      * between node1 and node2
-     * 
+     *
      * @param node1
      * @param node2
      * @return

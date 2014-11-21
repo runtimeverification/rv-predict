@@ -32,8 +32,29 @@ package rvpredict.trace;
  * Interface for synchronization events.
  *
  */
-public interface SyncEvent extends Event {
+public abstract class SyncEvent extends AbstractEvent {
 
-    public String getAddr();
+    protected final long syncObject;
+
+    protected SyncEvent(long GID, long TID, int ID, EventType type, long syncObject) {
+        super(GID, TID, ID, type);
+        this.syncObject = syncObject;
+    }
+
+    /**
+     * Returns the string representation of the synchronization object involved
+     * in the event.
+     *
+     * @see {@link rvpredict.logging.RecordRT} for the specific object involved
+     *      in each event
+     */
+    public final String getSyncObject() {
+        return syncObject + "";
+    }
+
+    @Override
+    public final String toString() {
+        return GID + ": thread " + TID + " " + ID + " " + syncObject + " " + type;
+    }
 
 }

@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -28,23 +28,10 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class NotifyNode extends AbstractEvent implements SyncEvent {
+public class NotifyNode extends SyncEvent {
 
-    private long sig_addr;
-
-    @Override
-    public String getAddr() {
-        return "" + sig_addr;
-    }
-
-    public NotifyNode(long GID, long tid, int ID, long addr) {
-        super(GID, tid, ID, EventType.NOTIFY);
-        this.sig_addr = addr;
-    }
-
-    @Override
-    public String toString() {
-        return GID + ": thread " + TID + " " + ID + " " + sig_addr + " " + type;
+    public NotifyNode(long GID, long TID, int ID, long objectRef) {
+        super(GID, TID, ID, EventType.NOTIFY, objectRef);
     }
 
 }

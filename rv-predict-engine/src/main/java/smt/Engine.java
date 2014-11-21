@@ -212,7 +212,7 @@ public class Engine {
                 long thisGID = node.getGID();
                 String var = makeVariable(thisGID);
                 if (node instanceof StartNode) {
-                    long tid = Long.valueOf(node.getAddr());
+                    long tid = Long.valueOf(node.getSyncObject());
                     AbstractEvent fnode = firstNodes.get(tid);
                     if (fnode != null) {
                         long fGID = fnode.getGID();
@@ -226,7 +226,7 @@ public class Engine {
 
                     }
                 } else if (node instanceof JoinNode) {
-                    long tid = Long.valueOf(node.getAddr());
+                    long tid = Long.valueOf(node.getSyncObject());
                     AbstractEvent lnode = lastNodes.get(tid);
                     if (lnode != null) {
                         long lGID = lnode.getGID();
@@ -263,12 +263,12 @@ public class Engine {
                     if (stack.isEmpty()) {
                         LockPair lp = new LockPair(null, node);
                         lockPairs.add(lp);
-                        lockEngine.add(node.getAddr(), tid, lp);
+                        lockEngine.add(node.getSyncObject(), tid, lp);
                     } else if (stack.size() == 1) {
                         LockPair lp = new LockPair(stack.pop(), node);
                         lockPairs.add(lp);
 
-                        lockEngine.add(node.getAddr(), tid, lp);
+                        lockEngine.add(node.getSyncObject(), tid, lp);
                     } else
                         stack.pop();// handle reentrant lock here
 
@@ -346,7 +346,7 @@ public class Engine {
                     SyncEvent node = stack.firstElement();
                     LockPair lp = new LockPair(node, null);
                     lockPairs.add(lp);
-                    lockEngine.add(node.getAddr(), node.getTID(), lp);
+                    lockEngine.add(node.getSyncObject(), node.getTID(), lp);
                 }
             }
 

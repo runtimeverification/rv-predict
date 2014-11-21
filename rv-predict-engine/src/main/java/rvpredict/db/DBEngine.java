@@ -209,7 +209,7 @@ public class DBEngine {
                     node = new WaitNode(GID, TID, ID, ADDRL);
                     break;
                 case NOTIFY:
-                    node = new NotifyNode(GID, TID, ID, ADDRL);
+                    node = new SyncEvent(GID, TID, ID, EventType.NOTIFY, ADDRL);
                     break;
                 case START:
                     node = new StartNode(GID, TID, ID, ADDRL);

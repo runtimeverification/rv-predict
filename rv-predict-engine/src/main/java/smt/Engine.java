@@ -34,7 +34,6 @@ import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.SyncEvent;
 import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
-import rvpredict.trace.NotifyNode;
 import rvpredict.trace.PropertyNode;
 import rvpredict.trace.ReadEvent;
 import rvpredict.trace.StartNode;
@@ -201,7 +200,7 @@ public class Engine {
             List<LockPair> lockPairs = new ArrayList<>();
 
             HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
-            NotifyNode matchNotifyNode = null;
+            SyncEvent matchNotifyNode = null;
 
             // during recording
             // should after wait, before notify
@@ -331,8 +330,8 @@ public class Engine {
 
                     stack.push(node);
 
-                } else if (node instanceof NotifyNode) {
-                    matchNotifyNode = (NotifyNode) node;
+                } else if (node.getType().equals(EventType.NOTIFY)) {
+                    matchNotifyNode = node;
                 }
             }
 

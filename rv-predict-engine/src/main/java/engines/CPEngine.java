@@ -29,8 +29,8 @@ package engines;
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 import rvpredict.trace.AbstractEvent;
+import rvpredict.trace.EventType;
 import rvpredict.trace.SyncEvent;
-import rvpredict.trace.JoinNode;
 import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
 import rvpredict.trace.NotifyNode;
@@ -147,8 +147,8 @@ public class CPEngine {
                     reachEngine.addEdge(thisGID, fGID);
 
                 }
-            } else if (node instanceof JoinNode) {
-                long tid = Long.valueOf(((JoinNode) node).getSyncObject());
+            } else if (node.getType().equals(EventType.JOIN)) {
+                long tid = ((SyncEvent) node).getSyncObject();
                 AbstractEvent lnode = lastNodes.get(tid);
                 if (lnode != null) {
                     long lGID = lnode.getGID();

@@ -32,11 +32,11 @@ package rvpredict.trace;
  * Interface for synchronization events.
  *
  */
-public abstract class SyncEvent extends AbstractEvent {
+public class SyncEvent extends AbstractEvent {
 
     protected final long syncObject;
 
-    protected SyncEvent(long GID, long TID, int ID, EventType type, long syncObject) {
+    public SyncEvent(long GID, long TID, int ID, EventType type, long syncObject) {
         super(GID, TID, ID, type);
         this.syncObject = syncObject;
     }

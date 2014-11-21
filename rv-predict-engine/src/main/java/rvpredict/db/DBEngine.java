@@ -215,7 +215,7 @@ public class DBEngine {
                     node = new StartNode(GID, TID, ID, ADDRL);
                     break;
                 case JOIN:
-                    node = new JoinNode(GID, TID, ID, ADDRL);
+                    node = new SyncEvent(GID, TID, ID, EventType.JOIN, ADDRL);
                     break;
                 case BRANCH:
                     node = new BranchNode(GID, TID, ID);

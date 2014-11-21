@@ -29,9 +29,9 @@
 package smt;
 
 import rvpredict.trace.AbstractEvent;
+import rvpredict.trace.EventType;
 import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.SyncEvent;
-import rvpredict.trace.JoinNode;
 import rvpredict.trace.LockNode;
 import rvpredict.trace.LockPair;
 import rvpredict.trace.NotifyNode;
@@ -183,7 +183,7 @@ public class EngineSMTLIB1 extends Engine {
                         reachEngine.addEdge(thisGID, fGID);
 
                     }
-                } else if (node instanceof JoinNode) {
+                } else if (node.getType().equals(EventType.JOIN)) {
                     long tid = Long.valueOf(node.getSyncObject());
                     AbstractEvent lnode = lastNodes.get(tid);
                     if (lnode != null) {

@@ -113,8 +113,8 @@ public class HBEngine {
         HashMap<String, WriteEvent> addressLastWriteMap = new HashMap<String, WriteEvent>();
         HashMap<String, ReadEvent> addressLastReadMap = new HashMap<String, ReadEvent>();
 
-        HashMap<String, ArrayList<LockPair>> lockAddrNodes = new HashMap<String, ArrayList<LockPair>>();
-        HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
+        HashMap<Long, ArrayList<LockPair>> lockAddrNodes = new HashMap<>();
+        HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<>();
 
         NotifyNode matchNotifyNode = null;
 
@@ -201,12 +201,12 @@ public class HBEngine {
 
                     // filter out re-entrant locks
                     if (syncstack.size() > 0)
-                        if (((UnlockNode) node).getSyncObject().equals(syncstack.get(0).getSyncObject())) {
+                        if (((UnlockNode) node).getSyncObject() == syncstack.get(0).getSyncObject()) {
                             continue;
                         }
                 }
 
-                String addr = ((UnlockNode) node).getSyncObject();
+                long addr = ((UnlockNode) node).getSyncObject();
 
                 ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
                 if (syncNodeList == null) {
@@ -269,7 +269,7 @@ public class HBEngine {
                 } else
                     lp = new LockPair(syncstack.pop(), ((WaitNode) node));
 
-                String addr = ((WaitNode) node).getSyncObject();
+                long addr = ((WaitNode) node).getSyncObject();
 
                 ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
                 if (syncNodeList == null) {
@@ -305,7 +305,7 @@ public class HBEngine {
 
                 LockPair lp = new LockPair(node, fake_node);
 
-                String addr = node.getSyncObject();
+                long addr = node.getSyncObject();
 
                 ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
 
@@ -321,9 +321,9 @@ public class HBEngine {
 
         // add HB edge between lock regions
 
-        Iterator<String> addrIt = lockAddrNodes.keySet().iterator();
+        Iterator<Long> addrIt = lockAddrNodes.keySet().iterator();
         while (addrIt.hasNext()) {
-            String addr = addrIt.next();
+            long addr = addrIt.next();
 
             ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
             for (int k = 0; k < syncNodeList.size() - 1; k++) {

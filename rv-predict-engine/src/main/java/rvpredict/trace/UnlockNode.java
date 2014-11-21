@@ -34,8 +34,4 @@ public class UnlockNode extends SyncEvent {
         super(GID, tid, ID, EventType.UNLOCK, addr);
     }
 
-    public UnlockNode(long GID, long tid, int ID, String addr) {
-        super(GID, tid, ID, EventType.UNLOCK, Long.valueOf(addr));
-    }
-
 }

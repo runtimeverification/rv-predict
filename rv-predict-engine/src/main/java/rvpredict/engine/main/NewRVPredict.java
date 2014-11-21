@@ -89,20 +89,20 @@ public class NewRVPredict {
      * @param schedule_prefix
      */
     private void detectDeadlock(Engine engine, Trace trace, List<String> schedule_prefix) {
-        HashMap<Long, HashMap<String, List<LockPair>>> threadIndexedLockPairs = trace
+        HashMap<Long, HashMap<Long, List<LockPair>>> threadIndexedLockPairs = trace
                 .getThreadIndexedLockPairs();
         Object[] threads = threadIndexedLockPairs.keySet().toArray();
         for (int i = 0; i < threads.length - 1; i++) {
-            Set<String> lockset1 = threadIndexedLockPairs.get(threads[i]).keySet();
+            Set<Long> lockset1 = threadIndexedLockPairs.get(threads[i]).keySet();
             if (lockset1.size() > 1)
                 for (int j = 1; j < threads.length; j++) {
-                    Set<String> lockset2 = new HashSet<>(threadIndexedLockPairs.get(threads[j])
+                    Set<Long> lockset2 = new HashSet<>(threadIndexedLockPairs.get(threads[j])
                             .keySet());
                     lockset2.retainAll(lockset1);
                     if (lockset2.size() > 1) {
-                        HashMap<String, List<LockPair>> indexedLockpairs1 = threadIndexedLockPairs
+                        HashMap<Long, List<LockPair>> indexedLockpairs1 = threadIndexedLockPairs
                                 .get(threads[i]);
-                        HashMap<String, List<LockPair>> indexedLockpairs2 = threadIndexedLockPairs
+                        HashMap<Long, List<LockPair>> indexedLockpairs2 = threadIndexedLockPairs
                                 .get(threads[j]);
                         Object[] addrs = lockset2.toArray();
                         for (int k1 = 0; k1 < addrs.length - 1; k1++) {
@@ -896,12 +896,12 @@ public class NewRVPredict {
                                             continue;
 
                                         if (node3.getGID() < node1.getGID()) {
-                                            if (engine.canReach((AbstractEvent) node3,
-                                                    (AbstractEvent) node1))
+                                            if (engine.canReach(node3,
+                                                    node1))
                                                 continue;
                                         } else if (node3.getGID() > node2.getGID()) {
-                                            if (engine.canReach((AbstractEvent) node2,
-                                                    (AbstractEvent) node3))
+                                            if (engine.canReach(node2,
+                                                    node3))
                                                 continue;
                                         }
 

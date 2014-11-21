@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -57,7 +57,7 @@ import rvpredict.config.Configuration;
 
 /**
  * The engine for constraint construction and solving.
- * 
+ *
  * @author jeffhuang
  *
  */
@@ -88,7 +88,7 @@ public class Engine {
 
     /**
      * declare an order variable for each event in the trace
-     * 
+     *
      * @param trace
      */
     public void declareVariables(List<AbstractEvent> trace) {
@@ -117,7 +117,7 @@ public class Engine {
 
     /**
      * add program order constraints
-     * 
+     *
      * @param map
      */
     public void addIntraThreadConstraints(HashMap<Long, List<AbstractEvent>> map) {
@@ -147,7 +147,7 @@ public class Engine {
 
     /**
      * add intra-thread order constraint for POS memory model
-     * 
+     *
      * @param indexedMap
      */
     public void addPSOIntraThreadConstraints(
@@ -181,14 +181,14 @@ public class Engine {
 
     /**
      * the order constraints between wait/notify/fork/join/lock/unlock
-     * 
+     *
      * @param trace
      * @param syncNodesMap
      * @param firstNodes
      * @param lastNodes
      */
     public void addSynchronizationConstraints(Trace trace,
-            HashMap<String, List<SyncEvent>> syncNodesMap,
+            HashMap<Long, List<SyncEvent>> syncNodesMap,
             HashMap<Long, AbstractEvent> firstNodes, HashMap<Long, AbstractEvent> lastNodes) {
         // construct a new lockset for this segment
         lockEngine = new LockSetEngine();
@@ -359,7 +359,7 @@ public class Engine {
     /**
      * lock/unlock constraints Make sure no two regions on the same lock can
      * interleave.
-     * 
+     *
      * @param lockPairs
      * @return
      */
@@ -394,12 +394,12 @@ public class Engine {
                 LockPair lp = lockPairs.get(j);
                 if (lp.lock != null) {
                     if (lp.lock.getTID() != lp1_tid
-                            && !canReach((AbstractEvent) lp1.lock, (AbstractEvent) lp.lock)) {
+                            && !canReach(lp1.lock, lp.lock)) {
                         flexLockPairs.add(lp);
                     }
                 } else if (lp.unlock != null) {
                     if (lp.unlock.getTID() != lp1_tid
-                            && !canReach((AbstractEvent) lp1.lock, (AbstractEvent) lp.unlock)) {
+                            && !canReach(lp1.lock, lp.unlock)) {
                         flexLockPairs.add(lp);
                     }
                 }
@@ -453,7 +453,7 @@ public class Engine {
 
     /**
      * return the read-write constraints
-     * 
+     *
      * @param readNodes
      * @param indexedWriteNodes
      * @param initValueMap
@@ -618,7 +618,7 @@ public class Engine {
 
     /**
      * return true if the lockset of node1 and node2 overlaps with that of node3
-     * 
+     *
      * @param node1
      * @param node2
      * @param node3
@@ -635,7 +635,7 @@ public class Engine {
 
     /**
      * return true if node1 and node2 has a common lock
-     * 
+     *
      * @param node1
      * @param node2
      * @return
@@ -650,7 +650,7 @@ public class Engine {
 
     /**
      * return true if node1 can reach node2 from the ordering relation
-     * 
+     *
      * @param node1
      * @param node2
      * @return
@@ -665,7 +665,7 @@ public class Engine {
 
     /**
      * return true if the solver return a solution to the constraints
-     * 
+     *
      * @param node1
      * @param node2
      * @param casualConstraint
@@ -684,7 +684,7 @@ public class Engine {
 
     /**
      * return true if the solver return a solution to the constraints
-     * 
+     *
      * @param node1
      * @param node2
      * @param casualConstraint
@@ -886,7 +886,7 @@ public class Engine {
     /**
      * Construct the property constraints. The constraints for different
      * monitors are disjuncted.
-     * 
+     *
      * @param properties
      * @param trace
      * @return

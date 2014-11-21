@@ -120,10 +120,10 @@ public class CPEngine {
         HashMap<Long, Stack<HashSet<String>>> threadReadAccessAddrStack = new HashMap<Long, Stack<HashSet<String>>>();
         HashMap<Long, Stack<HashSet<String>>> threadWriteAccessAddrStack = new HashMap<Long, Stack<HashSet<String>>>();
 
-        HashMap<String, ArrayList<HashSet<String>>> lockReadAccessedAddresses = new HashMap<String, ArrayList<HashSet<String>>>();
-        HashMap<String, ArrayList<HashSet<String>>> lockWriteAccessedAddresses = new HashMap<String, ArrayList<HashSet<String>>>();
+        HashMap<Long, ArrayList<HashSet<String>>> lockReadAccessedAddresses = new HashMap<>();
+        HashMap<Long, ArrayList<HashSet<String>>> lockWriteAccessedAddresses = new HashMap<>();
 
-        HashMap<String, ArrayList<LockPair>> lockAddrNodes = new HashMap<String, ArrayList<LockPair>>();
+        HashMap<Long, ArrayList<LockPair>> lockAddrNodes = new HashMap<>();
         HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
 
         NotifyNode matchNotifyNode = null;
@@ -248,7 +248,7 @@ public class CPEngine {
 
                     // filter out re-entrant locks
                     if (syncstack.size() > 0)
-                        if (((UnlockNode) node).getSyncObject().equals(syncstack.get(0).getSyncObject())) {
+                        if (((UnlockNode) node).getSyncObject() == syncstack.get(0).getSyncObject()) {
                             continue;
                         }
                 }
@@ -264,7 +264,7 @@ public class CPEngine {
                     threadCurrentLockRegionWriteAddresses.put(tid, writeaddresses);
                 }
 
-                String addr = ((UnlockNode) node).getSyncObject();
+                long addr = ((UnlockNode) node).getSyncObject();
 
                 ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
                 if (syncNodeList == null) {
@@ -362,7 +362,7 @@ public class CPEngine {
                     threadCurrentLockRegionWriteAddresses.put(tid, writeaddresses);
                 }
 
-                String addr = ((WaitNode) node).getSyncObject();
+                long addr = ((WaitNode) node).getSyncObject();
 
                 ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
                 if (syncNodeList == null) {
@@ -417,7 +417,7 @@ public class CPEngine {
 
                     LockPair lp = new LockPair(node, fake_node);
 
-                    String addr = node.getSyncObject();
+                    long addr = node.getSyncObject();
 
                     ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
 
@@ -457,9 +457,9 @@ public class CPEngine {
         // conflicting
         // accesses.
 
-        Iterator<String> addrIt = lockReadAccessedAddresses.keySet().iterator();
+        Iterator<Long> addrIt = lockReadAccessedAddresses.keySet().iterator();
         while (addrIt.hasNext()) {
-            String addr = addrIt.next();
+            long addr = addrIt.next();
 
             ArrayList<HashSet<String>> readaddrList = lockReadAccessedAddresses.get(addr);
             ArrayList<HashSet<String>> writeaddrList = lockWriteAccessedAddresses.get(addr);

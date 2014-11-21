@@ -73,14 +73,14 @@ public class Trace {
     HashMap<Long, AbstractEvent> threadLastNodeMap = new HashMap<Long, AbstractEvent>();
 
     // per thread per lock lock/unlock pair
-    HashMap<Long, HashMap<String, List<LockPair>>> threadIndexedLockPairs = new HashMap<Long, HashMap<String, List<LockPair>>>();
+    HashMap<Long, HashMap<Long, List<LockPair>>> threadIndexedLockPairs = new HashMap<>();
     HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
 
     // per thread branch nodes
     HashMap<Long, List<BranchNode>> threadBranchNodes = new HashMap<Long, List<BranchNode>>();
 
     // per thead synchronization nodes
-    HashMap<String, List<SyncEvent>> syncNodesMap = new HashMap<String, List<SyncEvent>>();
+    HashMap<Long, List<SyncEvent>> syncNodesMap = new HashMap<>();
 
     // per address read and write nodes
     HashMap<String, List<ReadEvent>> indexedReadNodes = new HashMap<String, List<ReadEvent>>();
@@ -167,11 +167,11 @@ public class Trace {
         return threadNodesMap;
     }
 
-    public HashMap<String, List<SyncEvent>> getSyncNodesMap() {
+    public HashMap<Long, List<SyncEvent>> getSyncNodesMap() {
         return syncNodesMap;
     }
 
-    public HashMap<Long, HashMap<String, List<LockPair>>> getThreadIndexedLockPairs() {
+    public HashMap<Long, HashMap<Long, List<LockPair>>> getThreadIndexedLockPairs() {
         return threadIndexedLockPairs;
     }
 
@@ -402,7 +402,7 @@ public class Trace {
                 // synchronization nodes
                 info.incrementSyncNumber();
 
-                String addr = ((SyncEvent) node).getSyncObject();
+                long addr = ((SyncEvent) node).getSyncObject();
                 List<SyncEvent> syncNodes = syncNodesMap.get(addr);
                 if (syncNodes == null) {
                     syncNodes = new ArrayList<>();
@@ -420,10 +420,10 @@ public class Trace {
 
                     stack.push((LockNode) node);
                 } else if (node instanceof UnlockNode) {
-                    HashMap<String, List<LockPair>> indexedLockpairs = threadIndexedLockPairs
+                    HashMap<Long, List<LockPair>> indexedLockpairs = threadIndexedLockPairs
                             .get(tid);
                     if (indexedLockpairs == null) {
-                        indexedLockpairs = new HashMap<String, List<LockPair>>();
+                        indexedLockpairs = new HashMap<>();
                         threadIndexedLockPairs.put(tid, indexedLockpairs);
                     }
                     List<LockPair> lockpairs = indexedLockpairs.get(addr);
@@ -520,10 +520,10 @@ public class Trace {
             Stack<SyncEvent> stack = entry.getValue();
 
             if (!stack.isEmpty()) {
-                HashMap<String, List<LockPair>> indexedLockpairs = threadIndexedLockPairs
+                HashMap<Long, List<LockPair>> indexedLockpairs = threadIndexedLockPairs
                         .get(tid);
                 if (indexedLockpairs == null) {
-                    indexedLockpairs = new HashMap<String, List<LockPair>>();
+                    indexedLockpairs = new HashMap<>();
                     threadIndexedLockPairs.put(tid, indexedLockpairs);
                 }
 

@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -39,7 +39,7 @@ import rvpredict.trace.LockPair;
 
 /**
  * Engine for computing the Lockset algorithm
- * 
+ *
  * @author jeffhuang
  *
  */
@@ -52,9 +52,9 @@ public class LockSetEngine {
 
     List<Object> lock_index = new ArrayList<>();
 
-    private HashMap<String, HashMap<Long, ArrayList<LockPair>>> indexedThreadLockMaps = new HashMap<String, HashMap<Long, ArrayList<LockPair>>>();
+    private HashMap<Long, HashMap<Long, ArrayList<LockPair>>> indexedThreadLockMaps = new HashMap<>();
 
-    public void add(String addr, long tid, LockPair lp) {
+    public void add(long addr, long tid, LockPair lp) {
         // TODO Auto-generated method stub
         HashMap<Long, ArrayList<LockPair>> threadlockmap = indexedThreadLockMaps.get(addr);
         if (threadlockmap == null) {
@@ -84,9 +84,9 @@ public class LockSetEngine {
 
     // NOTE: it's possible two lockpairs overlap, because we skipped wait nodes
     public boolean hasCommonLock(long tid1, long gid1, long tid2, long gid2) {
-        Iterator<String> keyIt = indexedThreadLockMaps.keySet().iterator();
+        Iterator<Long> keyIt = indexedThreadLockMaps.keySet().iterator();
         while (keyIt.hasNext()) {
-            String key = keyIt.next();
+            long key = keyIt.next();
             HashMap<Long, ArrayList<LockPair>> threadlockmap = indexedThreadLockMaps.get(key);
             ArrayList<LockPair> lockpairs1 = threadlockmap.get(tid1);
             ArrayList<LockPair> lockpairs2 = threadlockmap.get(tid2);

@@ -34,8 +34,4 @@ public class LockNode extends SyncEvent {
         super(GID, TID, ID, EventType.LOCK, objectRef);
     }
 
-    public LockNode(long GID, long TID, int ID, String objectRef) {
-        super(GID, TID, ID, EventType.LOCK, Long.valueOf(objectRef));
-    }
-
 }

@@ -17,6 +17,8 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
     private String className;
     private String source;
 
+    private int version;
+
     public SnoopInstructionClassAdapter(ClassVisitor cv, Config config,
             GlobalStateForInstrumentation globalState) {
         super(Opcodes.ASM5, cv);
@@ -30,6 +32,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
     public void visit(int version, int access, String name, String signature, String superName,
             String[] interfaces) {
         className = name;
+        this.version = version;
         cv.visit(version, access, name, signature, superName, interfaces);
     }
 
@@ -72,7 +75,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
                 mv = new SharedVariableDetectionMethodAdapter(mv, source, className, name, name
                         + desc, access, numOfWords, config, globalState);
             } else {
-                mv = new SnoopInstructionMethodAdapter(mv, source, className, name, name + desc,
+                mv = new SnoopInstructionMethodAdapter(mv, source, className, version, name, name + desc,
                         access, numOfWords, config, globalState);
             }
         }

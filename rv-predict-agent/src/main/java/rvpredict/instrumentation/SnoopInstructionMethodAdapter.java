@@ -14,6 +14,7 @@ import rvpredict.config.Config;
 public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     private final String className;
+    private final int version;
     private final String source;
     private final String methodName;
     private final String signature;
@@ -44,11 +45,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     private int crntLineNum;
 
     public SnoopInstructionMethodAdapter(MethodVisitor mv, String source, String className,
-            String methodName, String signature, int access, int argSize, Config config,
-            GlobalStateForInstrumentation globalState) {
+            int version, String methodName, String signature, int access, int argSize,
+            Config config, GlobalStateForInstrumentation globalState) {
         super(Opcodes.ASM5, mv);
         this.source = source == null ? "Unknown" : source;
         this.className = className;
+        this.version = version;
         this.methodName = methodName;
         this.signature = signature;
         this.isInit = "<init>".equals(methodName) || "<clinit>".equals(methodName);
@@ -309,7 +311,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 /* Add a runtime library callback to log {@code UNLOCK} event for synchronized method. */
                 addPushConstInsn(mv, getCrntStmtSID());
                 if (isStatic) {
-                    mv.visitLdcInsn(Type.getObjectType(className));
+                    loadClassLiteral();
                 } else {
                     mv.visitVarInsn(ALOAD, 0);
                 }
@@ -424,7 +426,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             /* Add a runtime library callback to log {@code LOCK} event for synchronized method. */
             addPushConstInsn(mv, getCrntStmtSID());
             if (isStatic) {
-                mv.visitLdcInsn(Type.getObjectType(className));
+                loadClassLiteral();
             } else {
                 mv.visitVarInsn(ALOAD, 0);
             }
@@ -544,6 +546,29 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     private void loadValue(String desc, int index) {
         mv.visitVarInsn(Type.getType(desc).getOpcode(ILOAD), index);
     }
+
+    private void loadClassLiteral() {
+        /* before Java 5 the bytecode for loading class literal is quite cumbersome */
+        if (version < 49) {
+            /* `class$` is a special method generated to compute class literal */
+            String fieldName = "class$" + className.replace('/', '$');
+            mv.visitFieldInsn(GETSTATIC, className, fieldName, DESC_CLASS);
+            Label l0 = new Label();
+            mv.visitJumpInsn(IFNONNULL, l0);
+            mv.visitLdcInsn(className.replace('/', '.'));
+            mv.visitMethodInsn(INVOKESTATIC, className, "class$", String.format("(%s)%s", DESC_STRING, DESC_CLASS), false);
+            mv.visitInsn(DUP);
+            mv.visitFieldInsn(PUTSTATIC, className, fieldName, DESC_CLASS);
+            Label l1 = new Label();
+            mv.visitJumpInsn(GOTO, l1);
+            mv.visitLabel(l0);
+            mv.visitFieldInsn(GETSTATIC, className, fieldName, DESC_CLASS);
+            mv.visitLabel(l1);
+        } else {
+            mv.visitLdcInsn(Type.getObjectType(className));
+        }
+    }
+
 
     /**
      * @return a unique integer representing the syntactic identifier of the

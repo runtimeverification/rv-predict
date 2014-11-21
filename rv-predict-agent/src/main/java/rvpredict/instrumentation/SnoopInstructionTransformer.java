@@ -5,6 +5,7 @@ import rvpredict.config.Configuration;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.util.CheckClassAdapter;
 
 import rvpredict.config.Config;
 import rvpredict.db.TraceCache;
@@ -139,9 +140,8 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             ClassReader cr = new ClassReader(cbuf);
 
             ClassWriter cw = new ClassWriter(cr, 0);
-            ClassVisitor cv = new SnoopInstructionClassAdapter(cw, config, globalState);
-            // ClassVisitor cv = new SnoopInstructionClassAdapter(new
-            // TraceClassVisitor(cw,new PrintWriter( System.out )));
+            ClassVisitor instrumentor = new SnoopInstructionClassAdapter(cw, config, globalState);
+            CheckClassAdapter cv = new CheckClassAdapter(instrumentor);
             cr.accept(cv, 0);
 
             byte[] ret = cw.toByteArray();

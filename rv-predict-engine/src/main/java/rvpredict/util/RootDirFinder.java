@@ -6,6 +6,8 @@ import java.net.URI;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class RootDirFinder extends URLClassLoader {
     private String rootDir = null;
@@ -78,14 +80,14 @@ public class RootDirFinder extends URLClassLoader {
         return ret;
     }
 
-    public String getRootDir() throws IOException, NoMainMethodException {
+    public Path getRootDir() throws IOException, NoMainMethodException {
         if (!mainMethod) {
             throw new NoMainMethodException();
         }
         if (rootDir == null) {
             throw new IOException("could not find root directory, is this a valid java class file?");
         }
-        return rootDir;
+        return Paths.get(rootDir);
     }
 
     public String getClassName() throws IOException, NoMainMethodException {

@@ -38,7 +38,7 @@
                     </descriptorRefs>
                     <archive>
                         <manifest>
-                            <mainClass>rvpredict.engine.main.Main</mainClass>
+                            <mainClass>rvpredict.engine.main.GUIMain</mainClass>
                         </manifest>
                         <manifestEntries>
                             <Premain-Class>rvpredict.instrumentation.SnoopInstructionTransformer</Premain-Class>

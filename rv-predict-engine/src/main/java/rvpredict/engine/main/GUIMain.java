@@ -9,7 +9,9 @@
 package rvpredict.engine.main;
 
 import java.io.*;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.jar.JarFile;
@@ -52,7 +54,7 @@ public class GUIMain {
 
     static private JFrame f;
     static private JTextPane textArea, testProgramTextArea;
-    static private String rootPath = null;
+    static private Path rootPath = null;
     static private String commandArgs = "";
     static private String cpAppend = (System.getenv("CLASSPATH") == null) ? "" : System
             .getenv("CLASSPATH");
@@ -65,7 +67,7 @@ public class GUIMain {
     static final private JButton testB = new JButton();
     static final private JButton killB = new JButton();
     static PrintStream stream, testStream;
-    private static String resourcePath;
+    private static Path jarPath;
     private boolean kill = false;
     static private boolean instrument = true;
     private boolean stopButtonPressed = true;
@@ -75,12 +77,17 @@ public class GUIMain {
             mainClassItem, classPathItem, aboutItem, helpItem;
 
     public static void main(String[] args) {
-        rootPath = Paths.get(args[0]).toAbsolutePath().toString();
-        createGUI(args[0]);
+        try {
+            jarPath = Paths.get(GUIMain.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+        rootPath = jarPath.getParent().getParent();
+        createGUI();
     }
 
-    static private void createGUI(final String resourcePath) {
-        GUIMain.resourcePath = Paths.get(resourcePath).toAbsolutePath().toString();
+    static private void createGUI() {
         EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -682,7 +689,7 @@ public class GUIMain {
         f.add(chooser);
 
         if (rootPath != null)
-            chooser.setCurrentDirectory(new File(rootPath));
+            chooser.setCurrentDirectory(rootPath.toFile());
 
         int retVal = chooser.showSaveDialog(f);
         if (retVal == JFileChooser.APPROVE_OPTION) {
@@ -725,7 +732,7 @@ public class GUIMain {
                 "class", "jar");
         chooser.setFileFilter(filter);
         if (rootPath != null)
-            chooser.setCurrentDirectory(new File(rootPath));
+            chooser.setCurrentDirectory(rootPath.toFile());
         f.add(chooser);
 
         int retVal = chooser.showOpenDialog(f);
@@ -750,7 +757,7 @@ public class GUIMain {
 
     private static void handleJar(File file) {
         cpAppend = file.getAbsolutePath() + File.pathSeparator + cpAppend;
-        rootPath = file.getParent();
+        rootPath = file.toPath().getParent();
         try (JarFile jf = new JarFile(file)) {
             Manifest manifest = jf.getManifest();
             className = manifest.getMainAttributes().getValue("Main-Class");
@@ -774,7 +781,7 @@ public class GUIMain {
                 modifiedMap.put(absoluteFileName, timestamp);
             }
 
-            String stars = mkXStr(rootPath.length(), "*");
+            String stars = mkXStr(rootPath.toString().length(), "*");
             System.out.println("*********************************" + stars);
             System.out.println("* Current main application class file: " + className + " *");
             System.out.println("*********************************" + stars);
@@ -813,13 +820,13 @@ public class GUIMain {
             }
         } catch (NoMainMethodException e) {
             System.out.println(RED + "  " + file.getName() + " does not contain a main method.");
-            rootPath = file.getParent();
+            rootPath = file.toPath().getParent();
             return;
         } catch (IOException e) {
             System.out.println(RED + "  Could not load specified class file.");
             System.out.println(RED
                     + "    Are you sure that it is a class file and in the proper directory?");
-            rootPath = file.getParent();
+            rootPath = file.toPath().getParent();
             return;
         }
         printAllInfo();
@@ -829,9 +836,10 @@ public class GUIMain {
     private static void printAllInfo() {
         String stars;
         String spaces;
-        if (rootPath.length() > className.length()) {
-            stars = mkXStr(rootPath.length(), "*");
-            spaces = mkXStr(rootPath.length() - className.length(), " ");
+        int rootPathLength = rootPath.toString().length();
+        if (rootPathLength > className.length()) {
+            stars = mkXStr(rootPathLength, "*");
+            spaces = mkXStr(rootPathLength - className.length(), " ");
             System.out.println("*****************************************" + stars);
             System.out.println("* Current application root directory:  " + rootPath + " *");
             System.out.println("* Current main application class file: " + className + spaces
@@ -840,7 +848,7 @@ public class GUIMain {
             printInfo();
         } else {
             stars = mkXStr(className.length(), "*");
-            spaces = mkXStr(className.length() - rootPath.length(), " ");
+            spaces = mkXStr(className.length() - rootPathLength, " ");
             System.out.println("*****************************************" + stars);
             System.out
                     .println("* Current application root directory:  " + rootPath + spaces + " *");
@@ -1100,7 +1108,7 @@ public class GUIMain {
 
         try {
             long time = System.currentTimeMillis();
-            Process p = Runtime.getRuntime().exec(cmd, null, new File(rootPath));
+            Process p = Runtime.getRuntime().exec(cmd, null, rootPath.toFile());
             System.setOut(testStream);
             readExternalProcess(p, BLACK, RED);
             System.out.println("");
@@ -1123,7 +1131,7 @@ public class GUIMain {
     }
 
     private void runProgram() {
-        File rootDir = new File(rootPath);
+        File rootDir = rootPath.toFile();
         // String cp = tmpDir.getAbsolutePath() + File.pathSeparator + baseCP
         // + File.pathSeparator + rootPath + File.pathSeparator + cpAppend;
         //
@@ -1165,7 +1173,7 @@ public class GUIMain {
         String[] cmd = createCommand(cp);
 
         List<String> cmdList = new ArrayList<String>(Arrays.asList(new String[] { "java",
-                "-Xmx" + heapSize, "-cp", resourcePath + "/lib/rv-predict-engine.jar",
+                "-Xmx" + heapSize, "-cp", jarPath.toString(),
                 "rvpredict.engine.main.Main", mode, tmpDirMap.get(absoluteFileName) }));
         cmd[0] = "--";
 
@@ -1186,7 +1194,7 @@ public class GUIMain {
         System.out.println("\n**************************************************"
                 + "**************************************************"
                 + "***************************");
-        File rootDir = new File(rootPath);
+        File rootDir = rootPath.toFile();
         try {
             Process p = Runtime.getRuntime().exec(cmd, null, rootDir);
             readExternalProcess(p, BLACK, RED);

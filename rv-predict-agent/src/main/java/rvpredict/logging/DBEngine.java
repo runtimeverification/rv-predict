@@ -330,9 +330,7 @@ public class DBEngine {
         ConcurrentHashMap<String, Integer> variableIdMap = globalState.varSigToId;
         Set<String> volatileVariables = globalState.volatileVariables;
         ConcurrentHashMap<String, Integer> stmtSigIdMap = globalState.stmtSigToLocId;
-        // just reuse the connection
 
-        // TODO: if db is null or closed, there must be something wrong
         Iterator<Entry<Long, String>> threadIdNameIter = threadTidMap.entrySet().iterator();
         List<Entry<Long,String>> threadTidList = new ArrayList<>(threadTidMap.size());
         while (threadIdNameIter.hasNext()) {

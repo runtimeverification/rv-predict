@@ -39,7 +39,7 @@ public class GlobalStateForInstrumentation {
 
     public int getVariableId(String sig) {
         /* YilongL: the following double-checked locking is correct because
-         * variableIdMap is a ConcurrentHashMap */
+         * varSigToId is a ConcurrentHashMap */
         Integer variableId = varSigToId.get(sig);
         if (variableId == null) {
             synchronized (varSigToId) {

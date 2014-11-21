@@ -556,7 +556,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             Label l0 = new Label();
             mv.visitJumpInsn(IFNONNULL, l0);
             mv.visitLdcInsn(className.replace('/', '.'));
-            mv.visitMethodInsn(INVOKESTATIC, className, "class$", "(Ljava/lang/String;)Ljava/lang/Class;", false);
+            mv.visitMethodInsn(INVOKESTATIC, className, "class$", String.format("(%s)%s", DESC_STRING, DESC_CLASS), false);
             mv.visitInsn(DUP);
             mv.visitFieldInsn(PUTSTATIC, className, fieldName, DESC_CLASS);
             Label l1 = new Label();

@@ -220,10 +220,6 @@ public class DBEngine {
                 case BRANCH:
                     node = new BranchNode(GID, TID, ID);
                     break;
-                case PROPERTY:
-                    node = new PropertyNode(GID, TID, ID, "" + ADDRL);
-                    break;
-
                 default:
                     System.out.println(TYPE);
                     break;

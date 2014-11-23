@@ -33,7 +33,6 @@ import rvpredict.trace.EventType;
 import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.SyncEvent;
 import rvpredict.trace.LockPair;
-import rvpredict.trace.PropertyNode;
 import rvpredict.trace.ReadEvent;
 import rvpredict.trace.Trace;
 import rvpredict.trace.WriteEvent;
@@ -42,12 +41,10 @@ import graph.ReachabilityEngine;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Stack;
 import java.util.List;
 
-import property.EREProperty;
 import rvpredict.config.Configuration;
 
 /**
@@ -853,121 +850,6 @@ public class Engine {
         }
 
         return schedule;
-    }
-
-    public String constructPropertyConstraint(ArrayList<PropertyNode> pi, boolean isParallel) {
-        String CONS = "";
-        String CONS_END = "";
-        String CMP = "< ";
-        if (isParallel)
-            CMP = "= ";
-
-        String lastVar = makeVariable(pi.get(0).getGID());
-        for (int i = 1; i < pi.size(); i++) {
-            PropertyNode node = pi.get(i);
-            String var = makeVariable(node.getGID());
-            if (i + 1 < pi.size()) {
-                CONS += "(and (" + CMP + lastVar + " " + var + ")\n";
-                CONS_END += ")";
-            } else {
-                CONS += "(" + CMP + lastVar + " " + var + ")";
-            }
-            lastVar = var;
-        }
-
-        return CONS + CONS_END + "\n";
-    }
-
-    /**
-     * Construct the property constraints. The constraints for different
-     * monitors are disjuncted.
-     *
-     * @param properties
-     * @param trace
-     * @return
-     */
-    public HashSet<ArrayList<PropertyNode>> constructPropertyInstances(EREProperty property,
-            HashMap<Integer, List<PropertyNode>> indexedPropertyNodeMap) {
-
-        int SIZE = property.getPropertySize();
-
-        ArrayList<Integer> properties = property.getPropertyList();
-
-        HashSet<ArrayList<PropertyNode>> nodelist_ = null;
-
-        for (int k = 0; k < SIZE; k++) {
-            Integer o = properties.get(k);
-            HashSet<ArrayList<PropertyNode>> nodelist_now = new HashSet<ArrayList<PropertyNode>>();
-
-            if (property.isPaired(k)) {
-                Integer index = property.getPairedID(k);
-
-                Iterator<ArrayList<PropertyNode>> prevIt = nodelist_.iterator();
-                while (prevIt.hasNext()) {
-                    ArrayList<PropertyNode> list = prevIt.next();
-                    PropertyNode node = property.getPairedNode(list.get(index));
-                    if (node != null) {
-
-                        ArrayList<PropertyNode> newlist = new ArrayList<PropertyNode>(list);
-                        newlist.add(node);
-                        nodelist_now.add(newlist);
-                    }
-                }
-
-            } else {
-
-                List<PropertyNode> pnodes = indexedPropertyNodeMap.get(o);
-
-                for (int i = 0; i < pnodes.size(); i++) {
-                    PropertyNode node = pnodes.get(i);
-                    if (nodelist_ == null) {
-                        ArrayList<PropertyNode> list = new ArrayList<PropertyNode>();
-                        list.add(node);
-
-                        nodelist_now.add(list);
-                    } else {
-                        Iterator<ArrayList<PropertyNode>> prevIt = nodelist_.iterator();
-                        while (prevIt.hasNext()) {
-                            ArrayList<PropertyNode> list = prevIt.next();
-                            if (!list.contains(node)
-                                    && (!property.hasThreadBinding(k) || property
-                                            .hasCorrectThreadBinding(k, node.getTID(), list))) {
-                                ArrayList<PropertyNode> newlist = new ArrayList<PropertyNode>(list);
-                                newlist.add(node);
-                                nodelist_now.add(newlist);
-                            }
-                        }
-                    }
-                }
-
-            }
-            nodelist_ = nodelist_now;
-
-        }
-
-        return nodelist_;
-
-    }
-
-    private EREProperty property;
-
-    public EREProperty getProperty() {
-        return property;
-    }
-
-    public EREProperty initProperty(HashMap<String, Integer> map, Trace trace) {
-        String name = "";
-        Iterator<String> nameIt = map.keySet().iterator();
-        while (nameIt.hasNext()) {
-            name = nameIt.next();
-            Integer ID = map.get(name);
-            if (ID == -1) {
-                property = new EREProperty(name, map, trace);
-                break;
-            }
-        }
-
-        return property;
     }
 
 }

@@ -89,10 +89,6 @@ public class Trace {
     // per address map from thread id to read/write nodes
     HashMap<String, HashMap<Long, List<MemoryAccessEvent>>> indexedThreadReadWriteNodes = new HashMap<String, HashMap<Long, List<MemoryAccessEvent>>>();
 
-    // per type per address property node map
-    HashMap<String, HashMap<Integer, List<PropertyNode>>> propertyMonitors = new HashMap<String, HashMap<Integer, List<PropertyNode>>>();
-    HashMap<Long, List<PropertyNode>> threadPropertyNodes = new HashMap<Long, List<PropertyNode>>();
-
     // per address initial write value
     HashMap<String, Long> initialWriteValueMap = new HashMap<>();
 
@@ -145,14 +141,6 @@ public class Trace {
 
     public HashMap<Long, String> getThreadIdNameMap() {
         return info.getThreadIdNameMap();
-    }
-
-    public HashMap<String, HashMap<Integer, List<PropertyNode>>> getPropertyMonitors() {
-        return propertyMonitors;
-    }
-
-    public HashMap<Long, List<PropertyNode>> getThreadPropertyNodes() {
-        return threadPropertyNodes;
     }
 
     public HashMap<Long, AbstractEvent> getThreadFirstNodeMap() {
@@ -321,41 +309,7 @@ public class Trace {
 
             // TODO: Optimize it -- no need to update it every time
             threadLastNodeMap.put(tid, node);
-            if (node instanceof PropertyNode
-            // &&node.getTid()!=1
-            ) {
-                info.incrementPropertyNumber();
-
-                PropertyNode pnode = (PropertyNode) node;
-                // System.out.println(node);
-                {
-                    // add to per thread property nodes
-                    List<PropertyNode> nodes = threadPropertyNodes.get(tid);
-                    if (nodes == null) {
-                        nodes = new ArrayList<>();
-                        threadPropertyNodes.put(tid, nodes);
-                    }
-                    nodes.add(pnode);
-                }
-
-                int ID = pnode.getID();
-                String addr = pnode.getAddr();
-
-                HashMap<Integer, List<PropertyNode>> indexedPropertyNodeMap = propertyMonitors
-                        .get(addr);
-                if (indexedPropertyNodeMap == null) {
-                    indexedPropertyNodeMap = new HashMap<Integer, List<PropertyNode>>();
-                    propertyMonitors.put(addr, indexedPropertyNodeMap);
-                }
-
-                List<PropertyNode> pnodes = indexedPropertyNodeMap.get(ID);
-                if (pnodes == null) {
-                    pnodes = new ArrayList<>();
-                    indexedPropertyNodeMap.put(ID, pnodes);
-                }
-
-                pnodes.add(pnode);
-            } else if (node instanceof MemoryAccessEvent) {
+            if (node instanceof MemoryAccessEvent) {
                 info.incrementSharedReadWriteNumber();
 
                 MemoryAccessEvent mnode = (MemoryAccessEvent) node;

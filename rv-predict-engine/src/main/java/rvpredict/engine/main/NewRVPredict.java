@@ -29,9 +29,6 @@ package rvpredict.engine.main;
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 import java.util.*;
-import java.util.Map.Entry;
-
-import property.EREProperty;
 import rvpredict.config.Configuration;
 import rvpredict.util.Logger;
 import smt.EngineSMTLIB1;
@@ -39,18 +36,12 @@ import smt.Engine;
 import rvpredict.trace.AbstractEvent;
 import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.SyncEvent;
-import rvpredict.trace.LockPair;
-import rvpredict.trace.PropertyNode;
 import rvpredict.trace.ReadEvent;
 import rvpredict.trace.Trace;
 import rvpredict.trace.TraceInfo;
 import rvpredict.trace.WriteEvent;
-import rvpredict.trace.EventType;
-import violation.AtomicityViolation;
-import violation.Deadlock;
 import violation.ExactRace;
 import violation.IViolation;
-import violation.PropertyViolation;
 import violation.Race;
 import rvpredict.db.DBEngine;
 
@@ -68,9 +59,6 @@ public class NewRVPredict {
     private HashSet<IViolation> potentialviolations = new HashSet<IViolation>();
     private Configuration config;
     private static boolean detectRace = true;
-    private static boolean detectAtomicityViolation = false;
-    private static boolean detectDeadlock = false;
-    private static boolean detectProperty = false;
     private Logger logger;
     private HashMap<Integer, String> sharedVarIdSigMap = new HashMap<>();
     private HashMap<Integer, String> volatileAddresses = new HashMap<>();
@@ -80,107 +68,6 @@ public class NewRVPredict {
     private DBEngine dbEngine;
     private TraceInfo traceInfo;
     private long startTime;
-
-    /**
-     * Deadlock detection method. Not used in race detection.
-     *
-     * @param engine
-     * @param trace
-     * @param schedule_prefix
-     */
-    private void detectDeadlock(Engine engine, Trace trace, List<String> schedule_prefix) {
-        HashMap<Long, HashMap<Long, List<LockPair>>> threadIndexedLockPairs = trace
-                .getThreadIndexedLockPairs();
-        Object[] threads = threadIndexedLockPairs.keySet().toArray();
-        for (int i = 0; i < threads.length - 1; i++) {
-            Set<Long> lockset1 = threadIndexedLockPairs.get(threads[i]).keySet();
-            if (lockset1.size() > 1)
-                for (int j = 1; j < threads.length; j++) {
-                    Set<Long> lockset2 = new HashSet<>(threadIndexedLockPairs.get(threads[j])
-                            .keySet());
-                    lockset2.retainAll(lockset1);
-                    if (lockset2.size() > 1) {
-                        HashMap<Long, List<LockPair>> indexedLockpairs1 = threadIndexedLockPairs
-                                .get(threads[i]);
-                        HashMap<Long, List<LockPair>> indexedLockpairs2 = threadIndexedLockPairs
-                                .get(threads[j]);
-                        Object[] addrs = lockset2.toArray();
-                        for (int k1 = 0; k1 < addrs.length - 1; k1++) {
-                            List<LockPair> vlp1a = indexedLockpairs1.get(addrs[k1]);
-                            List<LockPair> vlp2a = indexedLockpairs2.get(addrs[k1]);
-
-                            for (int k2 = 1; k2 < addrs.length; k2++) {
-                                List<LockPair> vlp1b = indexedLockpairs1.get(addrs[k2]);
-                                List<LockPair> vlp2b = indexedLockpairs2.get(addrs[k2]);
-
-                                for (int i1 = 0; i1 < vlp1a.size(); i1++) {
-                                    LockPair lp1a = vlp1a.get(i1);
-                                    for (int i2 = 0; i2 < vlp2a.size(); i2++) {
-                                        LockPair lp2a = vlp2a.get(i2);
-                                        for (int i3 = 0; i3 < vlp1b.size(); i3++) {
-                                            LockPair lp1b = vlp1b.get(i3);
-                                            for (int i4 = 0; i4 < vlp2b.size(); i4++) {
-                                                LockPair lp2b = vlp2b.get(i4);
-
-                                                if (lp1a.lock == null
-                                                        || (lp1b.lock != null && lp1a.lock.getGID() > lp1b.lock
-                                                                .getGID())) {
-                                                    LockPair templp = lp1b;
-                                                    lp1b = lp1a;
-                                                    lp1a = templp;
-                                                }
-
-                                                if (lp2b.lock == null
-                                                        || (lp2a.lock != null && lp2b.lock.getGID() > lp2a.lock
-                                                                .getGID())) {
-                                                    LockPair templp = lp2a;
-                                                    lp2a = lp2b;
-                                                    lp2b = templp;
-                                                }
-
-                                                Deadlock deadlock = new Deadlock(trace
-                                                        .getStmtSigIdMap().get(lp1a.lock.getID()),
-                                                        trace.getStmtSigIdMap().get(
-                                                                lp2b.lock.getID()), trace
-                                                                .getStmtSigIdMap().get(
-                                                                        lp1b.lock.getID()), trace
-                                                                .getStmtSigIdMap().get(
-                                                                        lp2a.lock.getID()));
-
-                                                if (!violations.contains(deadlock)) {
-                                                    if (engine.isDeadlock(lp1a, lp2b, lp1b, lp2a)) {
-                                                        List<String> schedule = engine
-                                                                .getSchedule(lp1b.lock.getGID(),
-                                                                        trace.getNodeGIDTIdMap(),
-                                                                        trace.getThreadIdNameMap());
-
-                                                        schedule.addAll(0, schedule_prefix);
-
-                                                        deadlock.addSchedule(schedule);
-
-                                                        violations.add(deadlock);
-
-                                                        logger.report("Deadlock : " + deadlock,
-                                                                Logger.MSGTYPE.REAL);
-
-                                                        logger.report("Schedule: " + trim(schedule)
-                                                                + "\n", Logger.MSGTYPE.REAL);
-                                                    }
-                                                }
-
-                                            }
-                                        }
-                                    }
-                                }
-
-                            }
-
-                        }
-
-                    }
-                }
-        }
-    }
 
     /**
      * Trim the schedule to show the last 100 only entries
@@ -197,111 +84,6 @@ public class NewRVPredict {
             return s;
         } else
             return schedule;
-    }
-
-    private void detectDeadlockProperty(Engine engine, Trace trace, EREProperty property,
-            List<String> schedule_prefix) {
-        List<ReadEvent> readNodes_rw = trace.getAllReadNodes();
-        StringBuilder sb_rw = engine.constructCausalReadWriteConstraintsOptimized(-1, readNodes_rw,
-                trace.getIndexedWriteNodes(), trace.getInitialWriteValueMap());
-
-        HashMap<String, HashMap<Integer, List<PropertyNode>>> propertyMonitors = trace
-                .getPropertyMonitors();
-
-        HashMap<Integer, List<PropertyNode>> indexedPropertyNodeMap = new HashMap<Integer, List<PropertyNode>>();
-
-        Iterator<String> monitorIt = propertyMonitors.keySet().iterator();
-        while (monitorIt.hasNext()) {
-            String addr = monitorIt.next();
-
-            HashMap<Integer, List<PropertyNode>> m = propertyMonitors.get(addr);
-            Iterator<Integer> mIt = m.keySet().iterator();
-            while (mIt.hasNext()) {
-                Integer i = mIt.next();
-
-                List<PropertyNode> v = indexedPropertyNodeMap.get(i);
-                if (v == null) {
-                    v = new ArrayList<>();
-                    indexedPropertyNodeMap.put(i, v);
-                }
-                v.addAll(m.get(i));
-            }
-
-            // make sure the monitor is complete
-        }
-
-        if (indexedPropertyNodeMap.keySet().size() < property.getSize())
-            return;
-
-        // HashSet<ArrayList<PropertyNode>> piset =
-        // engine.constructPropertyInstances(property,indexedPropertyNodeMap);
-
-        // Iterator<ArrayList<PropertyNode>> piIt = piset.iterator();
-
-        // while(piIt.hasNext())
-        {
-            // ArrayList<PropertyNode> pi = piIt.next();
-
-            // String cons =
-            // engine.constructPropertyConstraint(pi,property.isParallel());
-
-            String cons = "(and (< x333 x452) " + "(and (< x452 342) " + "(< x342 x458)))";
-
-            StringBuilder sb = new StringBuilder("(assert\n" + cons + ")\n");
-            PropertyViolation pv = new PropertyViolation(cons);
-            if (engine.isPropertySatisfied(sb.append(sb_rw))) {
-                violations.add(pv);
-                logger.report("Property " + pv + " Satisfied!", Logger.MSGTYPE.REAL);
-            } else {
-                potentialviolations.add(pv);
-            }
-
-        }
-
-    }
-
-    private void detectProperty(Engine engine, Trace trace, EREProperty property,
-            List<String> schedule_prefix) {
-        List<ReadEvent> readNodes_rw = trace.getAllReadNodes();
-        StringBuilder sb_rw = engine.constructCausalReadWriteConstraintsOptimized(-1, readNodes_rw,
-                trace.getIndexedWriteNodes(), trace.getInitialWriteValueMap());
-
-        HashMap<String, HashMap<Integer, List<PropertyNode>>> propertyMonitors = trace
-                .getPropertyMonitors();
-
-        Iterator<String> monitorIt = propertyMonitors.keySet().iterator();
-        while (monitorIt.hasNext()) {
-            String addr = monitorIt.next();
-            HashMap<Integer, List<PropertyNode>> indexedPropertyNodeMap = propertyMonitors
-                    .get(addr);
-
-            // make sure the monitor is complete
-
-            if (indexedPropertyNodeMap.keySet().size() < property.getSize())
-                continue;
-
-            HashSet<ArrayList<PropertyNode>> piset = engine.constructPropertyInstances(property,
-                    indexedPropertyNodeMap);
-
-            Iterator<ArrayList<PropertyNode>> piIt = piset.iterator();
-
-            while (piIt.hasNext()) {
-                ArrayList<PropertyNode> pi = piIt.next();
-                String cons = engine.constructPropertyConstraint(pi, property.isParallel());
-
-                StringBuilder sb = new StringBuilder("(assert\n" + cons + ")\n");
-                PropertyViolation pv = new PropertyViolation(pi.toString());
-                if (engine.isPropertySatisfied(sb.append(sb_rw))) {
-                    violations.add(pv);
-                    logger.report("Property " + pv + " Satisfied!", Logger.MSGTYPE.REAL);
-                } else {
-                    potentialviolations.add(pv);
-                }
-
-            }
-
-        }
-
     }
 
     /**
@@ -833,142 +615,6 @@ public class NewRVPredict {
     }
 
     /**
-     * Detect atomicty violations. Not used for race detection.
-     *
-     * @param engine
-     * @param trace
-     * @param schedule_prefix
-     */
-    private void detectAtomicityViolation(Engine engine, Trace trace, List<String> schedule_prefix) {
-
-        HashMap<String, HashMap<Long, List<MemoryAccessEvent>>> indexedThreadReadWriteNodes = trace
-                .getIndexedThreadReadWriteNodes();
-        Iterator<Entry<String, List<ReadEvent>>> entryIt = trace.getIndexedReadNodes().entrySet()
-                .iterator();
-        while (entryIt.hasNext()) {
-            Entry<String, List<ReadEvent>> entry = entryIt.next();
-            String addr = entry.getKey();
-
-            // get all write nodes on the address
-            List<WriteEvent> writenodes = trace.getIndexedWriteNodes().get(addr);
-            if (writenodes == null || writenodes.size() < 1)
-                continue;
-
-            // check atomicity-violation all nodes
-            HashMap<Long, List<MemoryAccessEvent>> threadReadWriteNodes = indexedThreadReadWriteNodes
-                    .get(addr);
-
-            Object[] threads = threadReadWriteNodes.keySet().toArray();
-
-            for (int i = 0; i < threads.length - 1; i++)
-                for (int j = i + 1; j < threads.length; j++) {
-                    List<MemoryAccessEvent> rwnodes1 = threadReadWriteNodes.get(threads[i]);
-
-                    List<MemoryAccessEvent> rwnodes2 = threadReadWriteNodes.get(threads[j]);
-
-                    if (rwnodes1 != null & rwnodes2 != null && rwnodes1.size() > 1) {
-                        for (int k = 0; k < rwnodes1.size() - 1; k++) {
-                            // require atomic region specification
-                            MemoryAccessEvent node1 = rwnodes1.get(k);
-                            MemoryAccessEvent node2 = rwnodes1.get(k + 1);
-
-                            for (int m = 0; m < rwnodes2.size(); m++) {
-                                MemoryAccessEvent node3 = rwnodes2.get(m);
-
-                                if (node1.getType() == EventType.WRITE || node2.getType() == EventType.WRITE
-                                        || node3.getType() == EventType.WRITE) {
-                                    AtomicityViolation av = new AtomicityViolation(trace
-                                            .getStmtSigIdMap().get(node1.getID()), trace
-                                            .getStmtSigIdMap().get(node3.getID()), trace
-                                            .getStmtSigIdMap().get(node2.getID()), node1.getID(),
-                                            node2.getID(), node3.getID());
-
-                                    if (!violations.contains(av))// &&!potentialviolations.contains(av)
-                                    {
-
-                                        // it's possible that av is true in the
-                                        // original execution
-                                        // no need to model its constraints
-                                        // TODO: optimize it!
-
-                                        // TODO: Need to check lock-history
-                                        if (engine.isAtomic(node1, node2, node3))
-                                            continue;
-
-                                        if (node3.getGID() < node1.getGID()) {
-                                            if (engine.canReach(node3,
-                                                    node1))
-                                                continue;
-                                        } else if (node3.getGID() > node2.getGID()) {
-                                            if (engine.canReach(node2,
-                                                    node3))
-                                                continue;
-                                        }
-
-                                        // get dependent read nodes
-                                        List<ReadEvent> readNodes_1 = trace.getDependentReadNodes(
-                                                node1, config.branch);
-                                        List<ReadEvent> readNodes_2 = trace.getDependentReadNodes(
-                                                node2, config.branch);
-                                        List<ReadEvent> readNodes_3 = trace.getDependentReadNodes(
-                                                node3, config.branch);
-
-                                        StringBuilder sb1 = engine
-                                                .constructCausalReadWriteConstraintsOptimized(
-                                                        node1.getGID(), readNodes_1,
-                                                        trace.getIndexedWriteNodes(),
-                                                        trace.getInitialWriteValueMap());
-                                        StringBuilder sb2 = engine
-                                                .constructCausalReadWriteConstraintsOptimized(
-                                                        node2.getGID(), readNodes_2,
-                                                        trace.getIndexedWriteNodes(),
-                                                        trace.getInitialWriteValueMap());
-                                        StringBuilder sb3 = engine
-                                                .constructCausalReadWriteConstraintsOptimized(
-                                                        node3.getGID(), readNodes_3,
-                                                        trace.getIndexedWriteNodes(),
-                                                        trace.getInitialWriteValueMap());
-
-                                        if (engine.isAtomicityViolation(node1, node2, node3, sb1,
-                                                sb2, sb3)) {
-
-                                            logger.report("Atomicity Violation: " + av,
-                                                    Logger.MSGTYPE.REAL);
-
-                                            violations.add(av);
-
-                                            if (config.noschedule)
-                                                continue;
-
-                                            List<String> schedule = engine.getSchedule(
-                                                    node3.getGID(), trace.getNodeGIDTIdMap(),
-                                                    trace.getThreadIdNameMap());
-
-                                            schedule.addAll(0, schedule_prefix);
-
-                                            av.addSchedule(schedule);
-                                            logger.report("Schedule: " + trim(schedule) + "\n",
-                                                    Logger.MSGTYPE.REAL);
-                                        } else {
-                                            // if we arrive here, it means we
-                                            // find a case where
-                                            // lockset+happens-before could
-                                            // produce false positive
-                                            logger.report("Potential Atomicity Violation: " + av
-                                                    + "\n", Logger.MSGTYPE.POTENTIAL);
-                                            potentialviolations.add(av);
-
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-        }
-    }
-
-    /**
      * The input is the application name and the optional options
      *
      * @param args
@@ -1034,33 +680,8 @@ public class NewRVPredict {
                     // engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
                     // engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
 
-                    if (detectRace)// detecting races
-                    {
+                    if (detectRace) {
                         detectRace(engine, trace, schedule_prefix);
-                    }
-                    if (detectAtomicityViolation)// detecting atomicity
-                                                 // violations
-                    {
-                        detectAtomicityViolation(engine, trace, schedule_prefix);
-                    }
-                    if (detectDeadlock)// when detecting deadlocks, make sure
-                                       // the lock constraints of the rest
-                                       // unlock nodes are disabled
-                    {
-                        detectDeadlock(engine, trace, schedule_prefix);
-                    }
-                    if (detectProperty && trace.getPropertyMonitors().size() > 0) {
-
-                        EREProperty property = engine.getProperty();
-                        if (property == null) {
-                            HashMap<String, Integer> map = dbEngine.getProperty();
-                            property = engine.initProperty(map, trace);
-                        }
-                        if (property.getPropertySize() == 8)
-                            detectDeadlockProperty(engine, trace, property, schedule_prefix);
-                        else
-                            detectProperty(engine, trace, property, schedule_prefix);
-
                     }
                 }
                 // get last write value from the current trace

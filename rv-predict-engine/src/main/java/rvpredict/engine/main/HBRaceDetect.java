@@ -2,20 +2,20 @@ package rvpredict.engine.main;
 
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -29,6 +29,7 @@ package rvpredict.engine.main;
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -49,7 +50,7 @@ import rvpredict.db.DBEngine;
 
 /**
  * HBRaceDetect implements the happens-before methods for race detection.
- * 
+ *
  * @author jeffhuang
  *
  */
@@ -60,13 +61,13 @@ public class HBRaceDetect {
     private static PrintWriter out;
 
     private static void initPrinter(String appname) {
+        String fname = "result." + (config.window_size / 1000) + "k";
         try {
-            String fname = "result." + (config.window_size / 1000) + "k";
             out = new PrintWriter(new FileWriter(fname, true));
-            out.println("\n------------------ HB: " + appname + " -------------------\n");
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
+        out.println("\n------------------ HB: " + appname + " -------------------\n");
     }
 
     private static void closePrinter() {
@@ -77,7 +78,7 @@ public class HBRaceDetect {
     /**
      * traverse all conflicting pairs. For each pair, query the CPEngine whether
      * there are reachable or not. If yes, report a race.
-     * 
+     *
      * @param engine
      * @param trace
      */
@@ -173,64 +174,53 @@ public class HBRaceDetect {
         config = new Configuration();
         config.parseArguments(args, true);
 
-        try {
+        // start predict analysis
+        long start_time = System.currentTimeMillis();
+        // initialize printer
+        initPrinter(config.tableName);
 
-            // start predict analysis
-            long start_time = System.currentTimeMillis();
-            // initialize printer
-            initPrinter(config.tableName);
+        // db engine is used for interacting with database
+        DBEngine db = new DBEngine(config.tableName, config.tableName);
 
-            // db engine is used for interacting with database
-            DBEngine db = new DBEngine(config.tableName, config.tableName);
+        // load all the metadata in the application
+        HashMap<Integer, String> sharedVarIdSigMap = new HashMap<>();
+        HashMap<Integer, String> volatileAddresses = new HashMap<>();
+        HashMap<Integer, String> stmtIdSigMap = new HashMap<>();
+        HashMap<Long, String> threadIdNameMap = new HashMap<>();
+        db.getMetadata(threadIdNameMap,sharedVarIdSigMap,volatileAddresses,stmtIdSigMap);
 
-            // load all the metadata in the application
-            HashMap<Integer, String> sharedVarIdSigMap = new HashMap<>();
-            HashMap<Integer, String> volatileAddresses = new HashMap<>();
-            HashMap<Integer, String> stmtIdSigMap = new HashMap<>();
-            HashMap<Long, String> threadIdNameMap = new HashMap<>();
-            db.getMetadata(threadIdNameMap,sharedVarIdSigMap,volatileAddresses,stmtIdSigMap);
+        TraceInfo info = new TraceInfo(sharedVarIdSigMap, volatileAddresses, stmtIdSigMap,
+                threadIdNameMap);
 
-            TraceInfo info = new TraceInfo(sharedVarIdSigMap, volatileAddresses, stmtIdSigMap,
-                    threadIdNameMap);
+        long TOTAL_TRACE_LENGTH = db.getTraceSize();
 
-            long TOTAL_TRACE_LENGTH = db.getTraceSize();
+        ExecutionInfoTask task = new ExecutionInfoTask(start_time, info, TOTAL_TRACE_LENGTH);
+        // register a shutdown hook to store runtime statistics
+        Runtime.getRuntime().addShutdownHook(task);
 
-            ExecutionInfoTask task = new ExecutionInfoTask(start_time, info, TOTAL_TRACE_LENGTH);
-            // register a shutdown hook to store runtime statistics
-            Runtime.getRuntime().addShutdownHook(task);
-
-            // set a timer to timeout in a configured period
-            Timer timer = new Timer();
-            timer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    report("\n******* Timeout " + config.timeout + " seconds ******", MSGTYPE.REAL);// report
-                                                                                                    // it
-                    System.exit(0);
-                }
-            }, config.timeout * 1000);
-
-            for (int round = 0; round * config.window_size < TOTAL_TRACE_LENGTH; round++) {
-                long index_start = round * config.window_size + 1;
-                long index_end = (round + 1) * config.window_size;
-                // if(TOTAL_TRACE_LENGTH>MAX_LENGTH)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+TOTAL_TRACE_LENGTH+" ******************\n");
-
-                Trace trace = db.getTrace(index_start, index_end, info);
-
-                HBEngine engine = new HBEngine(trace);
-
-                detectRace(engine, trace);
-
+        // set a timer to timeout in a configured period
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                report("\n******* Timeout " + config.timeout + " seconds ******", MSGTYPE.REAL);// report
+                // it
+                System.exit(0);
             }
+        }, config.timeout * 1000);
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
+        for (int round = 0; round * config.window_size < TOTAL_TRACE_LENGTH; round++) {
+            long index_start = round * config.window_size + 1;
+            long index_end = (round + 1) * config.window_size;
+            // if(TOTAL_TRACE_LENGTH>MAX_LENGTH)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+TOTAL_TRACE_LENGTH+" ******************\n");
 
-            // terminate
-            System.exit(0);
+            Trace trace = db.getTrace(index_start, index_end, info);
+
+            HBEngine engine = new HBEngine(trace);
+
+            detectRace(engine, trace);
+
         }
-
     }
 
     static class ExecutionInfoTask extends Thread {

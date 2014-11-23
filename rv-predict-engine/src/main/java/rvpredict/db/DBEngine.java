@@ -159,7 +159,7 @@ public class DBEngine {
         } // conn.setAutoCommit(true);
     }
 
-    public long getTraceSize() throws Exception {
+    public long getTraceSize() {
         if (traceCache == null) traceCache = new TraceCache(directory);
         return traceCache.getTraceSize();
     }
@@ -172,7 +172,7 @@ public class DBEngine {
      * @return
      * @throws Exception
      */
-    public Trace getTrace(long min, long max, TraceInfo info) throws Exception {
+    public Trace getTrace(long min, long max, TraceInfo info) {
         if (traceCache == null) traceCache = new TraceCache(directory);
         long traceSize = traceCache.getTraceSize();
         assert min <= traceSize : "This method should only be called with a valid min value";

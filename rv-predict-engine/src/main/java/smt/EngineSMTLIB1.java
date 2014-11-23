@@ -29,6 +29,7 @@
 package smt;
 
 import rvpredict.trace.AbstractEvent;
+import rvpredict.trace.Event;
 import rvpredict.trace.EventType;
 import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.SyncEvent;
@@ -43,6 +44,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Stack;
 import java.util.List;
 import java.util.Map.Entry;
@@ -87,13 +89,13 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public void addIntraThreadConstraints(HashMap<Long, List<AbstractEvent>> map) {
+    public void addIntraThreadConstraints(Map<Long, List<Event>> map) {
         // create reachability engine
         reachEngine = new ReachabilityEngine();
 
-        Iterator<List<AbstractEvent>> mapIt = map.values().iterator();
+        Iterator<List<Event>> mapIt = map.values().iterator();
         while (mapIt.hasNext()) {
-            List<AbstractEvent> nodes = mapIt.next();
+            List<Event> nodes = mapIt.next();
             long lastGID = nodes.get(0).getGID();
             String lastVar = makeVariable(lastGID);
             for (int i = 1; i < nodes.size(); i++) {

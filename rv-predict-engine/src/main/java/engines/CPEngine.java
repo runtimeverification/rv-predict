@@ -29,6 +29,7 @@ package engines;
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 import rvpredict.trace.AbstractEvent;
+import rvpredict.trace.Event;
 import rvpredict.trace.EventType;
 import rvpredict.trace.SyncEvent;
 import rvpredict.trace.LockPair;
@@ -42,6 +43,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Stack;
 import java.util.List;
 
@@ -64,7 +66,7 @@ public class CPEngine {
                                                            // segment
 
     CPEngine(Trace trace) {
-        addIntraThreadEdge(trace.getThreadNodesMap());
+        addIntraThreadEdge(trace.getThreadIdToEventsMap());
 
         // TODO: ensure lockset algorithm??
         addCPEdges(trace, trace.getThreadFirstNodeMap(), trace.getThreadLastNodeMap());
@@ -75,10 +77,10 @@ public class CPEngine {
      *
      * @param map
      */
-    private void addIntraThreadEdge(HashMap<Long, List<AbstractEvent>> map) {
-        Iterator<List<AbstractEvent>> mapIt = map.values().iterator();
+    private void addIntraThreadEdge(Map<Long, List<Event>> map) {
+        Iterator<List<Event>> mapIt = map.values().iterator();
         while (mapIt.hasNext()) {
-            List<AbstractEvent> nodes = mapIt.next();
+            List<Event> nodes = mapIt.next();
             long lastGID = nodes.get(0).getGID();
             for (int i = 1; i < nodes.size(); i++) {
                 long thisGID = nodes.get(i).getGID();

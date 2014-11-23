@@ -29,6 +29,7 @@ package rvpredict.engine.main;
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 import rvpredict.trace.AbstractEvent;
+import rvpredict.trace.Event;
 import rvpredict.trace.EventType;
 import rvpredict.trace.SyncEvent;
 import rvpredict.trace.LockPair;
@@ -39,6 +40,7 @@ import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Stack;
@@ -54,38 +56,30 @@ import java.util.List;
  */
 public class HBEngine {
 
-    private ReachabilityEngine reachEngine = new ReachabilityEngine();// TODO:
-                                                                      // do
-                                                                      // segmentation
-                                                                      // on this
+    private ReachabilityEngine reachEngine = new ReachabilityEngine();
+
     private LockSetEngine lockEngine = new LockSetEngine();// construct a new
                                                            // lockset for this
                                                            // segment
 
-    HBEngine(Trace trace) {
-        addIntraThreadEdge(trace.getThreadNodesMap());
+    public HBEngine(Trace trace) {
+        addIntraThreadEdges(trace.getAllThreadEvents());
 
         // TODO: ensure lockset algorithm??
         addHBEdges(trace, trace.getThreadFirstNodeMap(), trace.getThreadLastNodeMap());
     }
 
     /**
-     * add program order CP edges
-     *
-     * @param map
+     * Adds program order HB edges.
      */
-    private void addIntraThreadEdge(HashMap<Long, List<AbstractEvent>> map) {
-        Iterator<List<AbstractEvent>> mapIt = map.values().iterator();
-        while (mapIt.hasNext()) {
-            List<AbstractEvent> nodes = mapIt.next();
-            long lastGID = nodes.get(0).getGID();
-            for (int i = 1; i < nodes.size(); i++) {
-                long thisGID = nodes.get(i).getGID();
-
-                reachEngine.addEdge(lastGID, thisGID);
-
-                lastGID = thisGID;
-
+    private void addIntraThreadEdges(Collection<List<Event>> allThreadEvents) {
+        for (List<Event> events : allThreadEvents) {
+            long prevGID = -1;
+            for (Event e : events) {
+                if (prevGID != -1) {
+                    reachEngine.addEdge(prevGID, e.getGID());
+                }
+                prevGID = e.getGID();
             }
         }
     }
@@ -345,7 +339,7 @@ public class HBEngine {
      * @param node2
      * @return
      */
-    public boolean isRace(AbstractEvent node1, AbstractEvent node2) {
+    public boolean isRace(Event node1, Event node2) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
 

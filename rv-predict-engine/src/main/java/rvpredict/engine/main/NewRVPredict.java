@@ -29,11 +29,12 @@ package rvpredict.engine.main;
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 import java.util.*;
+
 import rvpredict.config.Configuration;
 import rvpredict.util.Logger;
 import smt.EngineSMTLIB1;
 import smt.Engine;
-import rvpredict.trace.AbstractEvent;
+import rvpredict.trace.Event;
 import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.SyncEvent;
 import rvpredict.trace.ReadEvent;
@@ -156,18 +157,18 @@ public class NewRVPredict {
                     MemoryAccessEvent mnode_cur = mnodes.get(0);
                     HashSet<MemoryAccessEvent> equiset = null;
 
-                    int index_cur = trace.getThreadNodesMap().get(tid).indexOf(mnode_cur);
+                    int index_cur = trace.getThreadIdToEventsMap().get(tid).indexOf(mnode_cur);
 
                     for (int k = 1; k < mnodes.size(); k++) {
                         MemoryAccessEvent mnode = mnodes.get(k);
                         if (mnode.getPrevBranchId() < mnode_cur.getGID()) {
                             // check sync id
-                            List<AbstractEvent> nodes = trace.getThreadNodesMap().get(tid);
+                            List<Event> nodes = trace.getThreadIdToEventsMap().get(tid);
                             int index_end = nodes.indexOf(mnode);
                             int index = index_end - 1;
                             boolean shouldAdd = true;
                             for (; index > index_cur; index--) {
-                                AbstractEvent node = nodes.get(index);
+                                Event node = nodes.get(index);
                                 if (node instanceof SyncEvent) {
                                     shouldAdd = false;
                                     break;
@@ -191,7 +192,7 @@ public class NewRVPredict {
                             }
                         } else {
                             if (k < mnodes.size() - 1) {
-                                index_cur = trace.getThreadNodesMap().get(tid).indexOf(mnode);
+                                index_cur = trace.getThreadIdToEventsMap().get(tid).indexOf(mnode);
                                 mnode_cur = mnode;
                                 equiset = null;
                             }
@@ -667,7 +668,7 @@ public class NewRVPredict {
                     if (config.rmm_pso)// TODO: add intra order between sync
                         engine.addPSOIntraThreadConstraints(trace.getIndexedThreadReadWriteNodes());
                     else
-                        engine.addIntraThreadConstraints(trace.getThreadNodesMap());
+                        engine.addIntraThreadConstraints(trace.getThreadIdToEventsMap());
 
                     // 3. order for locks, signals, fork/joins
                     engine.addSynchronizationConstraints(trace, trace.getSyncNodesMap(),

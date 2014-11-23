@@ -29,9 +29,11 @@
 package rvpredict.trace;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Stack;
 import java.util.List;
@@ -66,7 +68,7 @@ public class Trace {
     HashMap<Long, Long> nodeGIDTidMap = new HashMap<Long, Long>();
 
     // per thread node map
-    HashMap<Long, List<AbstractEvent>> threadNodesMap = new HashMap<Long, List<AbstractEvent>>();
+    HashMap<Long, List<Event>> threadNodesMap = new HashMap<>();
 
     // the first node and last node map of each thread
     HashMap<Long, AbstractEvent> threadFirstNodeMap = new HashMap<Long, AbstractEvent>();
@@ -151,8 +153,13 @@ public class Trace {
         return threadLastNodeMap;
     }
 
-    public HashMap<Long, List<AbstractEvent>> getThreadNodesMap() {
+    @Deprecated
+    public Map<Long, List<Event>> getThreadIdToEventsMap() {
         return threadNodesMap;
+    }
+
+    public Collection<List<Event>> getAllThreadEvents() {
+        return threadNodesMap.values();
     }
 
     public HashMap<Long, List<SyncEvent>> getSyncNodesMap() {
@@ -218,13 +225,13 @@ public class Trace {
         }
 
         if (POS >= 0) {
-            List<AbstractEvent> nodes = threadNodesMap.get(tid);// TODO:
+            List<Event> nodes = threadNodesMap.get(tid);// TODO:
                                                                  // optimize
                                                                  // here to
                                                                  // check only
                                                                  // READ node
             for (int i = 0; i < nodes.size(); i++) {
-                AbstractEvent node = nodes.get(i);
+                Event node = nodes.get(i);
                 if (node.getGID() > POS)
                     break;
                 else {
@@ -297,7 +304,7 @@ public class Trace {
 
             nodeGIDTidMap.put(node.getGID(), node.getTID());
 
-            List<AbstractEvent> threadNodes = threadNodesMap.get(tid);
+            List<Event> threadNodes = threadNodesMap.get(tid);
             if (threadNodes == null) {
                 threadNodes = new ArrayList<>();
                 threadNodesMap.put(tid, threadNodes);

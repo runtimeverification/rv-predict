@@ -103,63 +103,6 @@ public class LockSetEngine {
         return false;
     }
 
-    public boolean isAtomic(long tid1, long gid1a, long gid1b, long tid2, long gid2) {
-        Iterator<HashMap<Long, ArrayList<LockPair>>> threadlockmapIt = indexedThreadLockMaps
-                .values().iterator();
-        while (threadlockmapIt.hasNext()) {
-            HashMap<Long, ArrayList<LockPair>> threadlockmap = threadlockmapIt.next();
-            ArrayList<LockPair> lockpairs1 = threadlockmap.get(tid1);
-            ArrayList<LockPair> lockpairs2 = threadlockmap.get(tid2);
-            if (lockpairs1 != null && lockpairs2 != null) {
-                boolean hasLock2 = matchAnyLockPair(lockpairs2, gid2);
-                if (hasLock2) {
-                    boolean hasLock1 = matchAnyLockPair(lockpairs1, gid1a, gid1b);
-                    if (hasLock1)
-                        return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private boolean matchAnyLockPair(ArrayList<LockPair> lockpair, long gida, long gidb) {
-        int s, e, mid;
-
-        s = 0;
-        e = lockpair.size() - 1;
-        while (s <= e) {
-            mid = (s + e) / 2;
-
-            LockPair lp = lockpair.get(mid);
-
-            if (lp.lock == null) {
-                if (gidb < lp.unlock.getGID())
-                    return true;
-                else {
-                    s = mid + 1;
-                }
-            } else if (lp.unlock == null) {
-                if (gida > lp.lock.getGID())
-                    return true;
-                else {
-                    e = mid - 1;
-                }
-            } else {
-                if (gida > lp.unlock.getGID())
-                    s = mid + 1;
-                else if (gidb < lp.lock.getGID())
-                    e = mid - 1;
-                else if (lp.lock.getGID() < gida && gidb < lp.unlock.getGID())
-                    return true;
-                else
-                    return false;
-            }
-        }
-
-        return false;
-    }
-
     private boolean matchAnyLockPair(ArrayList<LockPair> lockpair, long gid) {
         int s, e, mid;
 

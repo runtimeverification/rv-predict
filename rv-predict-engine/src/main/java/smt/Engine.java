@@ -611,23 +611,6 @@ public class Engine {
     }
 
     /**
-     * return true if the lockset of node1 and node2 overlaps with that of node3
-     *
-     * @param node1
-     * @param node2
-     * @param node3
-     * @return
-     */
-    public boolean isAtomic(MemoryAccessEvent node1, MemoryAccessEvent node2, MemoryAccessEvent node3) {
-        long gid1 = node1.getGID();
-        long gid2 = node2.getGID();
-        long gid3 = node3.getGID();
-
-        return lockEngine.isAtomic(node1.getTID(), gid1, gid2, node3.getTID(), gid3);
-
-    }
-
-    /**
      * return true if node1 and node2 has a common lock
      *
      * @param node1
@@ -655,25 +638,6 @@ public class Engine {
 
         return reachEngine.canReach(gid1, gid2);
 
-    }
-
-    /**
-     * return true if the solver return a solution to the constraints
-     *
-     * @param node1
-     * @param node2
-     * @param casualConstraint
-     * @return
-     */
-    public boolean isPropertySatisfied(StringBuilder propertyConstraint) {
-
-        id++;
-        task = new SMTTaskRun(config, id);
-        StringBuilder msg = new StringBuilder(CONS_SETLOGIC).append(CONS_DECLARE)
-                .append(CONS_ASSERT).append(propertyConstraint).append(CONS_GETMODEL);
-        task.sendMessage(msg.toString());
-
-        return task.sat;
     }
 
     /**
@@ -714,127 +678,6 @@ public class Engine {
         task.sendMessage(msg.toString());
 
         return task.sat;
-    }
-
-    public boolean isAtomicityViolation(MemoryAccessEvent node1, MemoryAccessEvent node2, MemoryAccessEvent node3,
-            StringBuilder casualConstraint1, StringBuilder casualConstraint2,
-            StringBuilder casualConstraint3) {
-
-        long gid1 = node1.getGID();
-        long gid2 = node2.getGID();
-        long gid3 = node3.getGID();
-
-        // if(gid2<gid1)
-        // {
-        // if(reachEngine.canReach(gid2, gid1))
-        // return false;
-        // }
-        // else if(gid2>gid3)
-        // {
-        // if(reachEngine.canReach(gid3, gid2))
-        // return false;
-        // }
-
-        String var1 = makeVariable(gid1);
-        String var2 = makeVariable(gid2);
-        String var3 = makeVariable(gid3);
-
-        // not global order
-        String QUERY = "(assert (and (<= " + var1 + " " + var3 + ")\n" + "(<= " + var3 + " " + var2
-                + ")" + "))\n\n";
-
-        id++;
-        task = new SMTTaskRun(config, id);
-        StringBuilder msg = new StringBuilder(CONS_DECLARE).append(CONS_ASSERT)
-                .append(casualConstraint1).append(casualConstraint2).append(casualConstraint3)
-                .append(QUERY).append(CONS_GETMODEL);
-        task.sendMessage(msg.toString());
-
-        return task.sat;
-    }
-
-    public boolean isAtomicityViolation(MemoryAccessEvent node1, MemoryAccessEvent node2, MemoryAccessEvent node3) {
-
-        String var1 = makeVariable(node1.getGID());
-        String var2 = makeVariable(node2.getGID());
-        String var3 = makeVariable(node3.getGID());
-
-        // not global order
-        String QUERY = "(assert (and (<= " + var1 + " " + var3 + ")\n" + "(<= " + var3 + " " + var2
-                + ")" + "))\n\n";
-
-        id++;
-        task = new SMTTaskRun(config, id);
-        StringBuilder msg = new StringBuilder(CONS_DECLARE).append(CONS_ASSERT).append(QUERY)
-                .append(CONS_GETMODEL);
-        task.sendMessage(msg.toString());
-
-        return task.sat;
-    }
-
-    public boolean isDeadlock(LockPair lp1, LockPair lp2, LockPair lp3, LockPair lp4) {
-
-        String var1a = "";
-        String var1b = "";
-        String var2a = "";
-        String var2b = "";
-        String var3a = "";
-        String var3b = "";
-        String var4a = "";
-        String var4b = "";
-
-        if (lp1.lock != null)
-            var1a = makeVariable(lp1.lock.getGID());
-        if (lp1.unlock != null)
-            var1b = makeVariable(lp1.unlock.getGID());
-
-        if (lp2.lock != null)
-            var2a = makeVariable(lp2.lock.getGID());
-        else
-            return false;// lp2.lock must be here
-
-        if (lp2.unlock != null)
-            var2b = makeVariable(lp2.unlock.getGID());
-
-        if (lp3.lock != null)
-            var3a = makeVariable(lp3.lock.getGID());
-        else
-            return false;// lp3.lock must be here
-        if (lp3.unlock != null)
-            var3b = makeVariable(lp3.unlock.getGID());
-        else
-            return false;// lp3.unlock must be here
-
-        if (lp4.lock != null)
-            var4a = makeVariable(lp4.lock.getGID());
-        else
-            return false;// lp4.lock must be here
-        if (lp4.unlock != null)
-            var4b = makeVariable(lp4.unlock.getGID());
-        else
-            return false;// lp4.unlock must be here
-
-        String QUERY = "";
-
-        if (lp1.lock != null)
-            QUERY += "(assert (< " + var1a + " " + var2a + "))\n";
-
-        QUERY += "(assert (< " + var2a + " " + var3a + "))\n";
-
-        if (lp1.unlock != null)
-            QUERY += "(assert (< " + var3b + " " + var1b + "))\n";
-
-        if (lp2.unlock != null)
-            QUERY += "(assert (< " + var4b + " " + var2b + "))\n";
-
-        id++;
-        task = new SMTTaskRun(config, id);
-        StringBuilder msg = new StringBuilder(CONS_DECLARE).append(CONS_ASSERT).append(QUERY)
-                .append(CONS_GETMODEL);
-        task.sendMessage(msg.toString());
-
-        return task.sat;
-
     }
 
     public List<String> getSchedule(long endGID, HashMap<Long, Long> nodeGIDTidMap,

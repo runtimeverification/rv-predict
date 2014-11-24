@@ -637,16 +637,6 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public boolean isAtomic(MemoryAccessEvent node1, MemoryAccessEvent node2, MemoryAccessEvent node3) {
-        long gid1 = node1.getGID();
-        long gid2 = node2.getGID();
-        long gid3 = node3.getGID();
-
-        return lockEngine.isAtomic(node1.getTID(), gid1, gid2, node3.getTID(), gid3);
-
-    }
-
-    @Override
     public boolean hasCommonLock(MemoryAccessEvent node1, MemoryAccessEvent node2) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();

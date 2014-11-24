@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -28,19 +28,14 @@
  ******************************************************************************/
 package smt;
 
-import rvpredict.trace.AbstractNode;
-import rvpredict.trace.IMemNode;
-import rvpredict.trace.ISyncNode;
-import rvpredict.trace.JoinNode;
-import rvpredict.trace.LockNode;
+import rvpredict.trace.AbstractEvent;
+import rvpredict.trace.EventType;
+import rvpredict.trace.MemoryAccessEvent;
+import rvpredict.trace.SyncEvent;
 import rvpredict.trace.LockPair;
-import rvpredict.trace.NotifyNode;
-import rvpredict.trace.ReadNode;
-import rvpredict.trace.StartNode;
+import rvpredict.trace.ReadEvent;
 import rvpredict.trace.Trace;
-import rvpredict.trace.UnlockNode;
-import rvpredict.trace.WaitNode;
-import rvpredict.trace.WriteNode;
+import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
@@ -65,7 +60,7 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public void declareVariables(List<AbstractNode> trace) {
+    public void declareVariables(List<AbstractEvent> trace) {
         CONS_SETLOGIC = ":logic QF_IDL\n";
 
         CONS_DECLARE = new StringBuilder(":extrafuns (\n");
@@ -75,7 +70,7 @@ public class EngineSMTLIB1 extends Engine {
         // CONS_ASSERT = "(assert (distinct ";
         int size = trace.size();
         for (int i = 0; i < size; i++) {
-            AbstractNode node = trace.get(i);
+            AbstractEvent node = trace.get(i);
             long GID = node.getGID();
             String var = makeVariable(GID);
 
@@ -92,13 +87,13 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public void addIntraThreadConstraints(HashMap<Long, List<AbstractNode>> map) {
+    public void addIntraThreadConstraints(HashMap<Long, List<AbstractEvent>> map) {
         // create reachability engine
         reachEngine = new ReachabilityEngine();
 
-        Iterator<List<AbstractNode>> mapIt = map.values().iterator();
+        Iterator<List<AbstractEvent>> mapIt = map.values().iterator();
         while (mapIt.hasNext()) {
-            List<AbstractNode> nodes = mapIt.next();
+            List<AbstractEvent> nodes = mapIt.next();
             long lastGID = nodes.get(0).getGID();
             String lastVar = makeVariable(lastGID);
             for (int i = 1; i < nodes.size(); i++) {
@@ -117,15 +112,15 @@ public class EngineSMTLIB1 extends Engine {
 
     @Override
     public void addPSOIntraThreadConstraints(
-            HashMap<String, HashMap<Long, List<IMemNode>>> indexedMap) {
+            HashMap<String, HashMap<Long, List<MemoryAccessEvent>>> indexedMap) {
 
-        Iterator<HashMap<Long, List<IMemNode>>> mapIt1 = indexedMap.values().iterator();
+        Iterator<HashMap<Long, List<MemoryAccessEvent>>> mapIt1 = indexedMap.values().iterator();
         while (mapIt1.hasNext()) {
-            HashMap<Long, List<IMemNode>> map = mapIt1.next();
+            HashMap<Long, List<MemoryAccessEvent>> map = mapIt1.next();
 
-            Iterator<List<IMemNode>> mapIt2 = map.values().iterator();
+            Iterator<List<MemoryAccessEvent>> mapIt2 = map.values().iterator();
             while (mapIt2.hasNext()) {
-                List<IMemNode> nodes = mapIt2.next();
+                List<MemoryAccessEvent> nodes = mapIt2.next();
                 long lastGID = nodes.get(0).getGID();
                 String lastVar = makeVariable(lastGID);
                 for (int i = 1; i < nodes.size(); i++) {
@@ -147,32 +142,32 @@ public class EngineSMTLIB1 extends Engine {
     // the order constraints between wait/notify/fork/join/lock/unlock
     @Override
     public void addSynchronizationConstraints(Trace trace,
-            HashMap<String, List<ISyncNode>> syncNodesMap,
-            HashMap<Long, AbstractNode> firstNodes, HashMap<Long, AbstractNode> lastNodes) {
+            HashMap<Long, List<SyncEvent>> syncNodesMap,
+            HashMap<Long, AbstractEvent> firstNodes, HashMap<Long, AbstractEvent> lastNodes) {
         lockEngine = new LockSetEngine();// construct a new lockset for this
                                          // segment
 
         // thread first node - last node
-        Iterator<List<ISyncNode>> mapIt = syncNodesMap.values().iterator();
+        Iterator<List<SyncEvent>> mapIt = syncNodesMap.values().iterator();
         while (mapIt.hasNext()) {
-            List<ISyncNode> nodes = mapIt.next();
+            List<SyncEvent> nodes = mapIt.next();
 
             List<LockPair> lockPairs = new ArrayList<>();
 
-            HashMap<Long, Stack<ISyncNode>> threadSyncStack = new HashMap<Long, Stack<ISyncNode>>();
-            NotifyNode matchNotifyNode = null;
+            HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
+            SyncEvent matchNotifyNode = null;
 
             // during recording
             // should after wait, before notify
             // after lock, before unlock
 
             for (int i = 0; i < nodes.size(); i++) {
-                ISyncNode node = nodes.get(i);
+                SyncEvent node = nodes.get(i);
                 long thisGID = node.getGID();
                 String var = makeVariable(thisGID);
-                if (node instanceof StartNode) {
-                    long tid = Long.valueOf(node.getAddr());
-                    AbstractNode fnode = firstNodes.get(tid);
+                if (node.getType().equals(EventType.START)) {
+                    long tid = Long.valueOf(node.getSyncObject());
+                    AbstractEvent fnode = firstNodes.get(tid);
                     if (fnode != null) {
                         long fGID = fnode.getGID();
                         String fvar = makeVariable(fGID);
@@ -183,9 +178,9 @@ public class EngineSMTLIB1 extends Engine {
                         reachEngine.addEdge(thisGID, fGID);
 
                     }
-                } else if (node instanceof JoinNode) {
-                    long tid = Long.valueOf(node.getAddr());
-                    AbstractNode lnode = lastNodes.get(tid);
+                } else if (node.getType().equals(EventType.JOIN)) {
+                    long tid = Long.valueOf(node.getSyncObject());
+                    AbstractEvent lnode = lastNodes.get(tid);
                     if (lnode != null) {
                         long lGID = lnode.getGID();
                         String lvar = makeVariable(lGID);
@@ -195,23 +190,23 @@ public class EngineSMTLIB1 extends Engine {
 
                     }
 
-                } else if (node instanceof LockNode) {
+                } else if (node.getType().equals(EventType.LOCK)) {
                     long tid = node.getTID();
 
-                    Stack<ISyncNode> stack = threadSyncStack.get(tid);
+                    Stack<SyncEvent> stack = threadSyncStack.get(tid);
                     if (stack == null) {
-                        stack = new Stack<ISyncNode>();
+                        stack = new Stack<SyncEvent>();
                         threadSyncStack.put(tid, stack);
                     }
 
                     stack.push(node);
-                } else if (node instanceof UnlockNode) {
+                } else if (node.getType().equals(EventType.UNLOCK)) {
                     long tid = node.getTID();
-                    Stack<ISyncNode> stack = threadSyncStack.get(tid);
+                    Stack<SyncEvent> stack = threadSyncStack.get(tid);
 
                     // assert(stack.size()>0);//this is possible when segmented
                     if (stack == null) {
-                        stack = new Stack<ISyncNode>();
+                        stack = new Stack<SyncEvent>();
                         threadSyncStack.put(tid, stack);
                     }
 
@@ -220,16 +215,16 @@ public class EngineSMTLIB1 extends Engine {
                     if (stack.isEmpty()) {
                         LockPair lp = new LockPair(null, node);
                         lockPairs.add(lp);
-                        lockEngine.add(node.getAddr(), tid, lp);
+                        lockEngine.add(node.getSyncObject(), tid, lp);
                     } else if (stack.size() == 1) {
                         LockPair lp = new LockPair(stack.pop(), node);
                         lockPairs.add(lp);
 
-                        lockEngine.add(node.getAddr(), tid, lp);
+                        lockEngine.add(node.getSyncObject(), tid, lp);
                     } else
                         stack.pop();// handle reentrant lock here
 
-                } else if (node instanceof WaitNode) {
+                } else if (node.getType().equals(EventType.WAIT)) {
                     long tid = node.getTID();
 
                     // assert(matchNotifyNode!=null);this is also possible when
@@ -267,10 +262,10 @@ public class EngineSMTLIB1 extends Engine {
                         matchNotifyNode = null;
                     }
 
-                    Stack<ISyncNode> stack = threadSyncStack.get(tid);
+                    Stack<SyncEvent> stack = threadSyncStack.get(tid);
                     // assert(stack.size()>0);
                     if (stack == null) {
-                        stack = new Stack<ISyncNode>();
+                        stack = new Stack<SyncEvent>();
                         threadSyncStack.put(tid, stack);
                     }
                     if (stack.isEmpty())
@@ -282,22 +277,22 @@ public class EngineSMTLIB1 extends Engine {
 
                     stack.push(node);
 
-                } else if (node instanceof NotifyNode) {
-                    matchNotifyNode = (NotifyNode) node;
+                } else if (node.getType().equals(EventType.NOTIFY)) {
+                    matchNotifyNode = node;
                 }
             }
 
             // check threadSyncStack
-            Iterator<Stack<ISyncNode>> stackIt = threadSyncStack.values().iterator();
+            Iterator<Stack<SyncEvent>> stackIt = threadSyncStack.values().iterator();
             while (stackIt.hasNext()) {
-                Stack<ISyncNode> stack = stackIt.next();
+                Stack<SyncEvent> stack = stackIt.next();
                 if (stack.size() > 0)// handle reentrant lock here, only pop the
                                      // first locking node
                 {
-                    ISyncNode node = stack.firstElement();
+                    SyncEvent node = stack.firstElement();
                     LockPair lp = new LockPair(node, null);
                     lockPairs.add(lp);
-                    lockEngine.add(node.getAddr(), node.getTID(), lp);
+                    lockEngine.add(node.getSyncObject(), node.getTID(), lp);
                 }
             }
 
@@ -342,12 +337,12 @@ public class EngineSMTLIB1 extends Engine {
                 LockPair lp = lockPairs.get(j);
                 if (lp.lock != null) {
                     if (lp.lock.getTID() != lp1_tid
-                            && !canReach((AbstractNode) lp1.lock, (AbstractNode) lp.lock)) {
+                            && !canReach(lp1.lock, lp.lock)) {
                         flexLockPairs.add(lp);
                     }
                 } else if (lp.unlock != null) {
                     if (lp.unlock.getTID() != lp1_tid
-                            && !canReach((AbstractNode) lp1.lock, (AbstractNode) lp.unlock)) {
+                            && !canReach(lp1.lock, lp.unlock)) {
                         flexLockPairs.add(lp);
                     }
                 }
@@ -395,38 +390,38 @@ public class EngineSMTLIB1 extends Engine {
 
     }
 
-    public void addReadWriteConstraints(HashMap<String, List<ReadNode>> indexedReadNodes,
-            HashMap<String, List<WriteNode>> indexedWriteNodes) {
+    public void addReadWriteConstraints(HashMap<String, List<ReadEvent>> indexedReadNodes,
+            HashMap<String, List<WriteEvent>> indexedWriteNodes) {
         CONS_ASSERT.append(constructReadWriteConstraints(indexedReadNodes, indexedWriteNodes));
     }
 
     // TODO: NEED to handle the feasibility of new added write nodes
     @Override
     public StringBuilder constructCausalReadWriteConstraintsOptimized(long rgid,
-            List<ReadNode> readNodes, HashMap<String, List<WriteNode>> indexedWriteNodes,
+            List<ReadEvent> readNodes, HashMap<String, List<WriteEvent>> indexedWriteNodes,
             HashMap<String, Long> initValueMap) {
         StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
 
         for (int i = 0; i < readNodes.size(); i++) {
 
-            ReadNode rnode = readNodes.get(i);
+            ReadEvent rnode = readNodes.get(i);
             // filter out itself --
             if (rgid == rnode.getGID())
                 continue;
 
             // get all write nodes on the address
-            List<WriteNode> writenodes = indexedWriteNodes.get(rnode.getAddr());
+            List<WriteEvent> writenodes = indexedWriteNodes.get(rnode.getAddr());
             // no write to array field?
             // Yes, it could be: java.io.PrintStream out
             if (writenodes == null || writenodes.size() < 1)//
                 continue;
 
-            WriteNode preNode = null;//
+            WriteEvent preNode = null;//
 
             // get all write nodes on the address & write the same value
-            List<WriteNode> writenodes_value_match = new ArrayList<>();
+            List<WriteEvent> writenodes_value_match = new ArrayList<>();
             for (int j = 0; j < writenodes.size(); j++) {
-                WriteNode wnode = writenodes.get(j);
+                WriteEvent wnode = writenodes.get(j);
                 if (wnode.getValue() == rnode.getValue() && !canReach(rnode, wnode)) {
                     if (wnode.getTID() != rnode.getTID())
                         writenodes_value_match.add(wnode);
@@ -456,7 +451,7 @@ public class EngineSMTLIB1 extends Engine {
                 // make sure all the nodes that x depends on read the same value
 
                 for (int j = 0; j < writenodes_value_match.size(); j++) {
-                    WriteNode wnode1 = writenodes_value_match.get(j);
+                    WriteEvent wnode1 = writenodes_value_match.get(j);
                     String var_w1 = makeVariable(wnode1.getGID());
 
                     String cons_b_ = "(> " + var_r + " " + var_w1 + ")\n";
@@ -465,7 +460,7 @@ public class EngineSMTLIB1 extends Engine {
                     String cons_c_end = "";
                     String last_cons_d = null;
                     for (int k = 0; k < writenodes.size(); k++) {
-                        WriteNode wnode2 = writenodes.get(k);
+                        WriteEvent wnode2 = writenodes.get(k);
                         if (!writenodes_value_match.contains(wnode2) && !canReach(wnode2, wnode1)
                                 && !canReach(rnode, wnode2)) {
                             String var_w2 = makeVariable(wnode2.getGID());
@@ -537,7 +532,7 @@ public class EngineSMTLIB1 extends Engine {
                     String var_r = makeVariable(rnode.getGID());
 
                     for (int k = 0; k < writenodes.size(); k++) {
-                        WriteNode wnode3 = writenodes.get(k);
+                        WriteEvent wnode3 = writenodes.get(k);
                         if (wnode3.getTID() != rnode.getTID() && !canReach(rnode, wnode3)) {
                             String var_w3 = makeVariable(wnode3.getGID());
 
@@ -558,21 +553,21 @@ public class EngineSMTLIB1 extends Engine {
 
     // does not consider value and causal dependence
     private static String constructReadWriteConstraints(
-            HashMap<String, List<ReadNode>> indexedReadNodes,
-            HashMap<String, List<WriteNode>> indexedWriteNodes) {
+            HashMap<String, List<ReadEvent>> indexedReadNodes,
+            HashMap<String, List<WriteEvent>> indexedWriteNodes) {
 
         String CONS_RW = "";
 
-        Iterator<Entry<String, List<ReadNode>>> entryIt = indexedReadNodes.entrySet().iterator();
+        Iterator<Entry<String, List<ReadEvent>>> entryIt = indexedReadNodes.entrySet().iterator();
         while (entryIt.hasNext()) {
-            Entry<String, List<ReadNode>> entry = entryIt.next();
+            Entry<String, List<ReadEvent>> entry = entryIt.next();
             String addr = entry.getKey();
 
             // get all read nodes on the address
-            List<ReadNode> readnodes = entry.getValue();
+            List<ReadEvent> readnodes = entry.getValue();
 
             // get all write nodes on the address
-            List<WriteNode> writenodes = indexedWriteNodes.get(addr);
+            List<WriteEvent> writenodes = indexedWriteNodes.get(addr);
 
             // no write to array field?
             // Yes, it could be: java.io.PrintStream out
@@ -580,7 +575,7 @@ public class EngineSMTLIB1 extends Engine {
                 continue;
 
             for (int i = 0; i < readnodes.size(); i++) {
-                ReadNode rnode = readnodes.get(i);
+                ReadEvent rnode = readnodes.get(i);
                 String var_r = makeVariable(rnode.getGID());
 
                 String cons_a = "";
@@ -592,7 +587,7 @@ public class EngineSMTLIB1 extends Engine {
 
                 // we start from j=1 to exclude the initial write
                 for (int j = 1; j < writenodes.size(); j++) {
-                    WriteNode wnode1 = writenodes.get(j);
+                    WriteEvent wnode1 = writenodes.get(j);
                     {
                         String var_w1 = makeVariable(wnode1.getGID());
 
@@ -606,7 +601,7 @@ public class EngineSMTLIB1 extends Engine {
 
                         for (int k = 1; k < writenodes.size(); k++) {
                             if (j != k) {
-                                WriteNode wnode2 = writenodes.get(k);
+                                WriteEvent wnode2 = writenodes.get(k);
                                 String var_w2 = makeVariable(wnode2.getGID());
 
                                 String cons_d = "(and " + "(or (> " + var_w2 + " " + var_r + ")"
@@ -640,7 +635,7 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public boolean isAtomic(IMemNode node1, IMemNode node2, IMemNode node3) {
+    public boolean isAtomic(MemoryAccessEvent node1, MemoryAccessEvent node2, MemoryAccessEvent node3) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
         long gid3 = node3.getGID();
@@ -650,7 +645,7 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public boolean hasCommonLock(IMemNode node1, IMemNode node2) {
+    public boolean hasCommonLock(MemoryAccessEvent node1, MemoryAccessEvent node2) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
 
@@ -659,7 +654,7 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public boolean canReach(AbstractNode node1, AbstractNode node2) {
+    public boolean canReach(AbstractEvent node1, AbstractEvent node2) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
 
@@ -668,7 +663,7 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public boolean isRace(AbstractNode node1, AbstractNode node2, StringBuilder casualConstraint) {
+    public boolean isRace(AbstractEvent node1, AbstractEvent node2, StringBuilder casualConstraint) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
         //
@@ -701,21 +696,21 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     public static void testConstructReadWriteConstraints() {
-        HashMap<String, List<ReadNode>> indexedReadNodes = new HashMap<String, List<ReadNode>>();
+        HashMap<String, List<ReadEvent>> indexedReadNodes = new HashMap<String, List<ReadEvent>>();
 
-        HashMap<String, List<WriteNode>> indexedWriteNodes = new HashMap<String, List<WriteNode>>();
+        HashMap<String, List<WriteEvent>> indexedWriteNodes = new HashMap<String, List<WriteEvent>>();
 
-        List<WriteNode> writeNodes = new ArrayList<>();
-        writeNodes.add(new WriteNode(1, 1, 1, 1, 1, 0));
-        writeNodes.add(new WriteNode(2, 2, 3, 1, 1, 0));
-        writeNodes.add(new WriteNode(3, 3, 5, 1, 1, 1));
-        writeNodes.add(new WriteNode(4, 4, 7, 1, 1, 1));
+        List<WriteEvent> writeNodes = new ArrayList<>();
+        writeNodes.add(new WriteEvent(1, 1, 1, 1, 1, 0));
+        writeNodes.add(new WriteEvent(2, 2, 3, 1, 1, 0));
+        writeNodes.add(new WriteEvent(3, 3, 5, 1, 1, 1));
+        writeNodes.add(new WriteEvent(4, 4, 7, 1, 1, 1));
 
-        List<ReadNode> readNodes = new ArrayList<>();
-        readNodes.add(new ReadNode(5, 1, 2, 1, 1, 0));
-        readNodes.add(new ReadNode(6, 2, 4, 1, 1, 0));
-        readNodes.add(new ReadNode(7, 3, 6, 1, 1, 1));
-        readNodes.add(new ReadNode(8, 4, 8, 1, 1, 1));
+        List<ReadEvent> readNodes = new ArrayList<>();
+        readNodes.add(new ReadEvent(5, 1, 2, 1, 1, 0));
+        readNodes.add(new ReadEvent(6, 2, 4, 1, 1, 0));
+        readNodes.add(new ReadEvent(7, 3, 6, 1, 1, 1));
+        readNodes.add(new ReadEvent(8, 4, 8, 1, 1, 1));
 
         indexedWriteNodes.put("s", writeNodes);
         indexedReadNodes.put("s", readNodes);

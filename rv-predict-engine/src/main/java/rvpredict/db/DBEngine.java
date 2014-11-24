@@ -178,7 +178,7 @@ public class DBEngine {
         assert min <= traceSize : "This method should only be called with a valid min value";
         if (max > traceSize) max = traceSize; // resetting max to trace size.
         Trace trace = new Trace(info);
-        AbstractNode node = null;
+        AbstractEvent node = null;
         for (long index = min; index <= max; index++) {
             rvpredict.db.EventItem eventItem = traceCache.getEvent(index);
             long GID = eventItem.GID;
@@ -191,31 +191,31 @@ public class DBEngine {
 
             switch (TYPE) {
                 case INIT:
-                    node = new InitNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
+                    node = new InitEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
                     break;
                 case READ:
-                    node = new ReadNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
+                    node = new ReadEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
                     break;
                 case WRITE:
-                    node = new WriteNode(GID, TID, ID, ADDRL, ADDRR, VALUE);
+                    node = new WriteEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
                     break;
                 case LOCK:
-                    node = new LockNode(GID, TID, ID, ADDRL);
+                    node = new SyncEvent(GID, TID, ID, EventType.LOCK, ADDRL);
                     break;
                 case UNLOCK:
-                    node = new UnlockNode(GID, TID, ID, ADDRL);
+                    node = new SyncEvent(GID, TID, ID, EventType.UNLOCK, ADDRL);
                     break;
                 case WAIT:
-                    node = new WaitNode(GID, TID, ID, ADDRL);
+                    node = new SyncEvent(GID, TID, ID, EventType.WAIT, ADDRL);
                     break;
                 case NOTIFY:
-                    node = new NotifyNode(GID, TID, ID, ADDRL);
+                    node = new SyncEvent(GID, TID, ID, EventType.NOTIFY, ADDRL);
                     break;
                 case START:
-                    node = new StartNode(GID, TID, ID, ADDRL);
+                    node = new SyncEvent(GID, TID, ID, EventType.START, ADDRL);
                     break;
                 case JOIN:
-                    node = new JoinNode(GID, TID, ID, ADDRL);
+                    node = new SyncEvent(GID, TID, ID, EventType.JOIN, ADDRL);
                     break;
                 case BRANCH:
                     node = new BranchNode(GID, TID, ID);

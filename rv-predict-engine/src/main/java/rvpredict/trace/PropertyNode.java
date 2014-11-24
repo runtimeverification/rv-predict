@@ -28,7 +28,7 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class PropertyNode extends AbstractNode {
+public class PropertyNode extends AbstractEvent {
     private String object_addr;
 
     public PropertyNode(long GID, long tid, int ID, String addr) {
@@ -42,6 +42,6 @@ public class PropertyNode extends AbstractNode {
 
     @Override
     public String toString() {
-        return globalId + ": thread " + threadId + " " + synId + " " + object_addr + " " + type;
+        return GID + ": thread " + TID + " " + ID + " " + object_addr + " " + type;
     }
 }

@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -29,34 +29,32 @@
 package rvpredict.trace;
 
 /**
- * initial write node for some memory location.
- * 
- * @author jeffhuang
+ * Interface for synchronization events.
  *
  */
-public class InitNode extends AbstractNode {
-    private long value;
-    private long objectHashCode;
-    private long index;
+public class SyncEvent extends AbstractEvent {
 
-    public InitNode(long GID, long tid, int ID, long objectHashCode, long index, long value) {
-        super(GID, tid, ID, EventType.INIT);
-        this.objectHashCode = objectHashCode;
-        this.index = index;
-        this.value = value;
+    protected final long syncObject;
+
+    public SyncEvent(long GID, long TID, int ID, EventType type, long syncObject) {
+        super(GID, TID, ID, type);
+        this.syncObject = syncObject;
     }
 
-    public long getValue() {
-        return value;
-    }
-
-    public String getAddr() {
-        return (objectHashCode == 0 ? "." : objectHashCode + ".") + index;
+    /**
+     * Returns the {@code long} representation of the synchronization object involved
+     * in the event.
+     *
+     * @see {@link rvpredict.logging.RecordRT} for the specific object involved
+     *      in each event
+     */
+    public final long getSyncObject() {
+        return syncObject;
     }
 
     @Override
-    public String toString() {
-        return globalId + ": thread " + threadId + " " + synId + " " + objectHashCode + " " + index + " " + value + " " + type;
+    public final String toString() {
+        return GID + ": thread " + TID + " " + ID + " " + syncObject + " " + type;
     }
 
 }

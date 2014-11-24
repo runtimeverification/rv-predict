@@ -28,7 +28,7 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class BranchNode extends AbstractNode {
+public class BranchNode extends AbstractEvent {
 
     public BranchNode(long GID, long tid, int ID) {
         super(GID, tid, ID, EventType.BRANCH);

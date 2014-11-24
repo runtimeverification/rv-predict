@@ -2,20 +2,20 @@ package engines;
 
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -28,18 +28,13 @@ package engines;
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-import rvpredict.trace.AbstractNode;
-import rvpredict.trace.ISyncNode;
-import rvpredict.trace.JoinNode;
-import rvpredict.trace.LockNode;
+import rvpredict.trace.AbstractEvent;
+import rvpredict.trace.EventType;
+import rvpredict.trace.SyncEvent;
 import rvpredict.trace.LockPair;
-import rvpredict.trace.NotifyNode;
-import rvpredict.trace.ReadNode;
-import rvpredict.trace.StartNode;
+import rvpredict.trace.ReadEvent;
 import rvpredict.trace.Trace;
-import rvpredict.trace.UnlockNode;
-import rvpredict.trace.WaitNode;
-import rvpredict.trace.WriteNode;
+import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
@@ -54,7 +49,7 @@ import java.util.List;
  * The engine class for causal-precedes (CP) based race detection. It maintains
  * the CP edge between events and answers reachability inquiries between
  * conflicting events.
- * 
+ *
  * @author jeffhuang
  *
  */
@@ -77,13 +72,13 @@ public class CPEngine {
 
     /**
      * add program order CP edges
-     * 
+     *
      * @param map
      */
-    private void addIntraThreadEdge(HashMap<Long, List<AbstractNode>> map) {
-        Iterator<List<AbstractNode>> mapIt = map.values().iterator();
+    private void addIntraThreadEdge(HashMap<Long, List<AbstractEvent>> map) {
+        Iterator<List<AbstractEvent>> mapIt = map.values().iterator();
         while (mapIt.hasNext()) {
-            List<AbstractNode> nodes = mapIt.next();
+            List<AbstractEvent> nodes = mapIt.next();
             long lastGID = nodes.get(0).getGID();
             for (int i = 1; i < nodes.size(); i++) {
                 long thisGID = nodes.get(i).getGID();
@@ -102,7 +97,7 @@ public class CPEngine {
      * conflicting accesses inside To ensure the soundness for all detected
      * races, we also include the CP edges for write/write, write/read,
      * read/write.
-     * 
+     *
      * TODO: need to distinguish reads and writes for checking conflicting lock
      * regions
      *
@@ -110,60 +105,60 @@ public class CPEngine {
      * @param firstNodes
      * @param lastNodes
      */
-    private void addCPEdges(Trace trace, HashMap<Long, AbstractNode> firstNodes,
-            HashMap<Long, AbstractNode> lastNodes) {
-        HashMap<String, WriteNode> addressLastWriteMap = new HashMap<String, WriteNode>();
-        HashMap<String, ReadNode> addressLastReadMap = new HashMap<String, ReadNode>();
+    private void addCPEdges(Trace trace, HashMap<Long, AbstractEvent> firstNodes,
+            HashMap<Long, AbstractEvent> lastNodes) {
+        HashMap<String, WriteEvent> addressLastWriteMap = new HashMap<String, WriteEvent>();
+        HashMap<String, ReadEvent> addressLastReadMap = new HashMap<String, ReadEvent>();
 
         HashMap<Long, HashSet<String>> threadCurrentLockRegionReadAddresses = new HashMap<Long, HashSet<String>>();
         HashMap<Long, HashSet<String>> threadCurrentLockRegionWriteAddresses = new HashMap<Long, HashSet<String>>();
         HashMap<Long, Stack<HashSet<String>>> threadReadAccessAddrStack = new HashMap<Long, Stack<HashSet<String>>>();
         HashMap<Long, Stack<HashSet<String>>> threadWriteAccessAddrStack = new HashMap<Long, Stack<HashSet<String>>>();
 
-        HashMap<String, ArrayList<HashSet<String>>> lockReadAccessedAddresses = new HashMap<String, ArrayList<HashSet<String>>>();
-        HashMap<String, ArrayList<HashSet<String>>> lockWriteAccessedAddresses = new HashMap<String, ArrayList<HashSet<String>>>();
+        HashMap<Long, ArrayList<HashSet<String>>> lockReadAccessedAddresses = new HashMap<>();
+        HashMap<Long, ArrayList<HashSet<String>>> lockWriteAccessedAddresses = new HashMap<>();
 
-        HashMap<String, ArrayList<LockPair>> lockAddrNodes = new HashMap<String, ArrayList<LockPair>>();
-        HashMap<Long, Stack<ISyncNode>> threadSyncStack = new HashMap<Long, Stack<ISyncNode>>();
+        HashMap<Long, ArrayList<LockPair>> lockAddrNodes = new HashMap<>();
+        HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
 
-        NotifyNode matchNotifyNode = null;
+        SyncEvent matchNotifyNode = null;
 
         // during recording
         // should after wait, before notify
         // after lock, before unlock
-        List<AbstractNode> nodes = trace.getFullTrace();
+        List<AbstractEvent> nodes = trace.getFullTrace();
         for (int i = 0; i < nodes.size(); i++) {
-            AbstractNode node = nodes.get(i);
+            AbstractEvent node = nodes.get(i);
             long thisGID = node.getGID();
 
             // add first node
 
-            if (node instanceof StartNode) {
-                long tid = Long.valueOf(((StartNode) node).getAddr());
+            if (node.getType().equals(EventType.START)) {
+                long tid = ((SyncEvent) node).getSyncObject();
 
-                AbstractNode fnode = firstNodes.get(tid);
+                AbstractEvent fnode = firstNodes.get(tid);
                 if (fnode != null) {
                     long fGID = fnode.getGID();
                     reachEngine.addEdge(thisGID, fGID);
 
                 }
-            } else if (node instanceof JoinNode) {
-                long tid = Long.valueOf(((JoinNode) node).getAddr());
-                AbstractNode lnode = lastNodes.get(tid);
+            } else if (node.getType().equals(EventType.JOIN)) {
+                long tid = ((SyncEvent) node).getSyncObject();
+                AbstractEvent lnode = lastNodes.get(tid);
                 if (lnode != null) {
                     long lGID = lnode.getGID();
                     reachEngine.addEdge(lGID, thisGID);
 
                 }
 
-            } else if (node instanceof ReadNode) {
+            } else if (node instanceof ReadEvent) {
 
-                String addr = ((ReadNode) node).getAddr();
-                WriteNode wnode = addressLastWriteMap.get(addr);
+                String addr = ((ReadEvent) node).getAddr();
+                WriteEvent wnode = addressLastWriteMap.get(addr);
                 if (wnode != null) {
                     reachEngine.addEdge(wnode.getGID(), node.getGID());
                 }
-                addressLastReadMap.put(addr, (ReadNode) node);
+                addressLastReadMap.put(addr, (ReadEvent) node);
 
                 HashSet<String> addresses = threadCurrentLockRegionReadAddresses.get(node.getTID());
                 if (addresses == null) {
@@ -171,17 +166,17 @@ public class CPEngine {
                     threadCurrentLockRegionReadAddresses.put(node.getTID(), addresses);
                 }
                 addresses.add(addr);
-            } else if (node instanceof WriteNode) {
-                String addr = ((WriteNode) node).getAddr();
-                WriteNode wnode = addressLastWriteMap.get(addr);
+            } else if (node instanceof WriteEvent) {
+                String addr = ((WriteEvent) node).getAddr();
+                WriteEvent wnode = addressLastWriteMap.get(addr);
                 if (wnode != null) {
                     reachEngine.addEdge(wnode.getGID(), node.getGID());
                 }
-                ReadNode rnode = addressLastReadMap.get(addr);
+                ReadEvent rnode = addressLastReadMap.get(addr);
                 if (rnode != null) {
                     reachEngine.addEdge(rnode.getGID(), node.getGID());
                 }
-                addressLastWriteMap.put(addr, (WriteNode) node);
+                addressLastWriteMap.put(addr, (WriteEvent) node);
 
                 HashSet<String> addresses = threadCurrentLockRegionWriteAddresses
                         .get(node.getTID());
@@ -190,7 +185,7 @@ public class CPEngine {
                     threadCurrentLockRegionWriteAddresses.put(node.getTID(), addresses);
                 }
                 addresses.add(addr);
-            } else if (node instanceof LockNode) {
+            } else if (node.getType().equals(EventType.LOCK)) {
                 long tid = node.getTID();
 
                 Stack<HashSet<String>> readstack = threadReadAccessAddrStack.get(tid);
@@ -217,38 +212,38 @@ public class CPEngine {
                     writeaddresses.clear();
                 }
 
-                Stack<ISyncNode> syncstack = threadSyncStack.get(tid);
+                Stack<SyncEvent> syncstack = threadSyncStack.get(tid);
                 if (syncstack == null) {
-                    syncstack = new Stack<ISyncNode>();
+                    syncstack = new Stack<SyncEvent>();
                     threadSyncStack.put(tid, syncstack);
                 }
-                syncstack.push(((LockNode) node));
+                syncstack.push(((SyncEvent) node));
 
-            } else if (node instanceof UnlockNode) {
+            } else if (node.getType().equals(EventType.UNLOCK)) {
                 long tid = node.getTID();
 
-                Stack<ISyncNode> syncstack = threadSyncStack.get(tid);
+                Stack<SyncEvent> syncstack = threadSyncStack.get(tid);
 
                 // assert(stack.size()>0);//this is possible when segmented
                 if (syncstack == null) {
-                    syncstack = new Stack<ISyncNode>();
+                    syncstack = new Stack<SyncEvent>();
                     threadSyncStack.put(tid, syncstack);
                 }
                 LockPair lp = null;
                 if (syncstack.isEmpty()) {
                     // lp = new LockPair(null,(ISyncNode)node);
                     // make it non-null
-                    AbstractNode firstnode = firstNodes.get(tid);
+                    AbstractEvent firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
-                    LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
-                            ((UnlockNode) node).getLockAddr());
-                    lp = new LockPair(fake_node, (ISyncNode) node);
+                    SyncEvent fake_node = new SyncEvent(fake_gid, tid, firstnode.getID(), EventType.LOCK,
+                            ((SyncEvent) node).getSyncObject());
+                    lp = new LockPair(fake_node, (SyncEvent) node);
                 } else {
-                    lp = new LockPair(syncstack.pop(), (ISyncNode) node);
+                    lp = new LockPair(syncstack.pop(), (SyncEvent) node);
 
                     // filter out re-entrant locks
                     if (syncstack.size() > 0)
-                        if (((UnlockNode) node).getAddr().equals(syncstack.get(0).getAddr())) {
+                        if (((SyncEvent) node).getSyncObject() == syncstack.get(0).getSyncObject()) {
                             continue;
                         }
                 }
@@ -264,7 +259,7 @@ public class CPEngine {
                     threadCurrentLockRegionWriteAddresses.put(tid, writeaddresses);
                 }
 
-                String addr = ((UnlockNode) node).getAddr();
+                long addr = ((SyncEvent) node).getSyncObject();
 
                 ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
                 if (syncNodeList == null) {
@@ -288,7 +283,7 @@ public class CPEngine {
                 writeaddrList.add(new HashSet<>(writeaddresses));
 
                 syncNodeList.add(lp);
-                lockEngine.add(((ISyncNode) node).getAddr(), tid, lp);
+                lockEngine.add(((SyncEvent) node).getSyncObject(), tid, lp);
 
                 Stack<HashSet<String>> readstack = threadReadAccessAddrStack.get(tid);
                 if (readstack != null && !readstack.isEmpty()) {
@@ -300,7 +295,7 @@ public class CPEngine {
                     writeaddresses.addAll(writestack.pop());
                 }
 
-            } else if (node instanceof WaitNode) {
+            } else if (node.getType().equals(EventType.WAIT)) {
                 long tid = node.getTID();
 
                 // assert(matchNotifyNode!=null);this is also possible when
@@ -333,23 +328,23 @@ public class CPEngine {
                     matchNotifyNode = null;
                 }
 
-                Stack<ISyncNode> syncstack = threadSyncStack.get(tid);
+                Stack<SyncEvent> syncstack = threadSyncStack.get(tid);
                 // assert(stack.size()>0);
                 if (syncstack == null) {
-                    syncstack = new Stack<ISyncNode>();
+                    syncstack = new Stack<SyncEvent>();
                     threadSyncStack.put(tid, syncstack);
                 }
                 LockPair lp = null;
                 if (syncstack.isEmpty()) {
                     // lp = new LockPair(null,((WaitNode) node));
 
-                    AbstractNode firstnode = firstNodes.get(tid);
+                    AbstractEvent firstnode = firstNodes.get(tid);
                     long fake_gid = firstnode.getGID();
-                    LockNode fake_node = new LockNode(fake_gid, tid, firstnode.getID(),
-                            ((WaitNode) node).getSigAddr());
-                    lp = new LockPair(fake_node, (ISyncNode) node);
+                    SyncEvent fake_node = new SyncEvent(fake_gid, tid, firstnode.getID(), EventType.LOCK,
+                            ((SyncEvent) node).getSyncObject());
+                    lp = new LockPair(fake_node, (SyncEvent) node);
                 } else
-                    lp = new LockPair(syncstack.pop(), ((WaitNode) node));
+                    lp = new LockPair(syncstack.pop(), ((SyncEvent) node));
 
                 HashSet<String> readaddresses = threadCurrentLockRegionReadAddresses.get(tid);
                 if (readaddresses == null) {
@@ -362,7 +357,7 @@ public class CPEngine {
                     threadCurrentLockRegionWriteAddresses.put(tid, writeaddresses);
                 }
 
-                String addr = ((WaitNode) node).getAddr();
+                long addr = ((SyncEvent) node).getSyncObject();
 
                 ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
                 if (syncNodeList == null) {
@@ -386,12 +381,12 @@ public class CPEngine {
                 writeaddrList.add(new HashSet<>(writeaddresses));
 
                 syncNodeList.add(lp);
-                lockEngine.add(((ISyncNode) node).getAddr(), tid, lp);
+                lockEngine.add(((SyncEvent) node).getSyncObject(), tid, lp);
 
-                syncstack.push(((WaitNode) node));
+                syncstack.push(((SyncEvent) node));
 
-            } else if (node instanceof NotifyNode) {
-                matchNotifyNode = (NotifyNode) node;
+            } else if (node.getType().equals(EventType.NOTIFY)) {
+                matchNotifyNode = (SyncEvent) node;
             }
         }
 
@@ -405,19 +400,19 @@ public class CPEngine {
 
             if (readaddresses != null || writeaddresses != null) {
 
-                Stack<ISyncNode> stack = threadSyncStack.get(tid);
+                Stack<SyncEvent> stack = threadSyncStack.get(tid);
 
-                AbstractNode lastnode = lastNodes.get(tid);
+                AbstractEvent lastnode = lastNodes.get(tid);
                 long fake_gid = lastnode.getGID();
 
                 while (stack.size() > 0) {
-                    ISyncNode node = stack.remove(0);
-                    UnlockNode fake_node = new UnlockNode(fake_gid, tid, lastnode.getID(),
-                            node.getAddr());
+                    SyncEvent node = stack.remove(0);
+                    SyncEvent fake_node = new SyncEvent(fake_gid, tid, lastnode.getID(), EventType.UNLOCK,
+                            node.getSyncObject());
 
                     LockPair lp = new LockPair(node, fake_node);
 
-                    String addr = node.getAddr();
+                    long addr = node.getSyncObject();
 
                     ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
 
@@ -426,7 +421,7 @@ public class CPEngine {
                         lockAddrNodes.put(addr, syncNodeList);
                     }
                     syncNodeList.add(lp);
-                    lockEngine.add(node.getAddr(), tid, lp);
+                    lockEngine.add(node.getSyncObject(), tid, lp);
 
                     ArrayList<HashSet<String>> readaddrList = lockReadAccessedAddresses.get(addr);
                     if (readaddrList == null) {
@@ -457,9 +452,9 @@ public class CPEngine {
         // conflicting
         // accesses.
 
-        Iterator<String> addrIt = lockReadAccessedAddresses.keySet().iterator();
+        Iterator<Long> addrIt = lockReadAccessedAddresses.keySet().iterator();
         while (addrIt.hasNext()) {
-            String addr = addrIt.next();
+            long addr = addrIt.next();
 
             ArrayList<HashSet<String>> readaddrList = lockReadAccessedAddresses.get(addr);
             ArrayList<HashSet<String>> writeaddrList = lockWriteAccessedAddresses.get(addr);
@@ -520,7 +515,7 @@ public class CPEngine {
                             }
 
                             if (addCPEdge) {
-                                ISyncNode lastnode = syncNodeList.get(k1).unlock;
+                                SyncEvent lastnode = syncNodeList.get(k1).unlock;
                                 if (lastnode != null && lastnode.getTID() != lp.lock.getTID()) {
                                     long gid1 = lastnode.getGID();
 
@@ -543,12 +538,12 @@ public class CPEngine {
      * return true if node1 and node2 have no common lock, and are not reachable
      * by all the indirect CP edges excluding the possible direct CP edge
      * between node1 and node2
-     * 
+     *
      * @param node1
      * @param node2
      * @return
      */
-    public boolean isRace(AbstractNode node1, AbstractNode node2) {
+    public boolean isRace(AbstractEvent node1, AbstractEvent node2) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
 

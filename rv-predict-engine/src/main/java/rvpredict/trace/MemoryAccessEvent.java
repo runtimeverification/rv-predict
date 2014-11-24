@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -28,26 +28,50 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class WaitNode extends AbstractNode implements ISyncNode {
+/**
+ * Interface for read and write events.
+ *
+ */
+public abstract class MemoryAccessEvent extends AbstractEvent {
 
-    public long getSigAddr() {
-        return sig_addr;
+    protected final long value;
+    protected final long objectHashCode;
+    protected final long index;
+
+    protected long prevBranchId = -1;
+
+    protected MemoryAccessEvent(long GID, long TID, int ID, EventType type, long objectHashCode,
+            long index, long value) {
+        super(GID, TID, ID, type);
+        this.objectHashCode = objectHashCode;
+        this.index = index;
+        this.value = value;
     }
 
-    private long sig_addr;
+    /**
+     * Returns {@code String} representation of the accessed memory address in the event.
+     */
+    // TODO(YilongL): normalize address representation of memory access events
+    public abstract String getAddr();
+
+    /**
+     * Returns the value read or written in the access.
+     */
+    public final long getValue() {
+        return value;
+    }
+
+    public long getPrevBranchId() {
+        return prevBranchId;
+    }
+
+    public void setPrevBranchId(long id) {
+        prevBranchId = id;
+    }
 
     @Override
-    public String getAddr() {
-        return "" + sig_addr;
+    public final String toString() {
+        return GID + ": thread " + TID + " " + ID + " " + objectHashCode + " " + index + " " + value + " " + type;
     }
 
-    public WaitNode(long GID, long tid, int ID, long addr) {
-        super(GID, tid, ID, EventType.WAIT);
-        this.sig_addr = addr;
-    }
-
-    @Override
-    public String toString() {
-        return globalId + ": thread " + threadId + " " + synId + " " + sig_addr + " " + type;
-    }
 }

@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -28,27 +28,16 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class LockNode extends AbstractNode implements ISyncNode {
-    private long did;// this is the ID of the event from the same thread the
-                     // rwnode depends on
-    private long lock_addr;
+public class WriteEvent extends MemoryAccessEvent {
 
-    public LockNode(long GID, long tid, int ID, long addr) {
-        super(GID, tid, ID, EventType.LOCK);
-        this.lock_addr = addr;
-    }
-
-    public long getDid() {
-        return did;
+    public WriteEvent(long GID, long tid, int ID, long objectHashCode, long index, long value) {
+        super(GID, tid, ID, EventType.WRITE, objectHashCode, index, value);
     }
 
     @Override
     public String getAddr() {
-        return "" + lock_addr;
+        return (objectHashCode == 0 ? "_" : objectHashCode + "_")
+                + (index < 0 ? "." + -index : index);
     }
 
-    @Override
-    public String toString() {
-        return globalId + ": thread " + threadId + " " + lock_addr + " " + type;
-    }
 }

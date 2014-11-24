@@ -28,6 +28,6 @@
  ******************************************************************************/
 package violation;
 
-public interface IViolation {
+public interface Violation {
 
 }

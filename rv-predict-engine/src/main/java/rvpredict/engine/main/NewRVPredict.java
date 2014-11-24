@@ -42,7 +42,7 @@ import rvpredict.trace.Trace;
 import rvpredict.trace.TraceInfo;
 import rvpredict.trace.WriteEvent;
 import violation.ExactRace;
-import violation.IViolation;
+import violation.Violation;
 import violation.Race;
 import rvpredict.db.DBEngine;
 
@@ -56,8 +56,8 @@ import rvpredict.db.DBEngine;
  */
 public class NewRVPredict {
 
-    private HashSet<IViolation> violations = new HashSet<IViolation>();
-    private HashSet<IViolation> potentialviolations = new HashSet<IViolation>();
+    private HashSet<Violation> violations = new HashSet<Violation>();
+    private HashSet<Violation> potentialviolations = new HashSet<Violation>();
     private Configuration config;
     private static boolean detectRace = true;
     private Logger logger;

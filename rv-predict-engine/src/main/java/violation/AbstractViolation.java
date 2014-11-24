@@ -1,6 +1,6 @@
 package violation;
 
-public abstract class AbstractViolation implements IViolation {
+public abstract class AbstractViolation implements Violation {
 
     @Override
     public abstract String toString();

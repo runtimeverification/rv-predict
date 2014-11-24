@@ -326,14 +326,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void instrumentArrayLoad(int arrayLoadOpcode) {
-        String stmtSig = getCrntStmtSig();
-        if (isInit || !globalState.shouldInstrumentArray(stmtSig)) {
+        if (isInit || !globalState.shouldInstrumentArray(getCrntStmtSig())) {
             mv.visitInsn(arrayLoadOpcode);
             return;
         }
 
         boolean isElemSingleWord = isElementSingleWord(arrayLoadOpcode);
-        int sid = getArrayLocSID(stmtSig);
+        int sid = getCrntStmtSID();
 
         // <stack>... arrayref index </stack>
         mv.visitInsn(DUP2);
@@ -375,14 +374,13 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void instrumentArrayStore(int arrayStoreOpcode) {
-        String stmtSig = getCrntStmtSig();
-        if (!globalState.shouldInstrumentArray(stmtSig)) {
+        if (!globalState.shouldInstrumentArray(getCrntStmtSig())) {
             mv.visitInsn(arrayStoreOpcode);
             return;
         }
 
         boolean isElemSingleWord = isElementSingleWord(arrayStoreOpcode);
-        int sid = getArrayLocSID(stmtSig);
+        int sid = getCrntStmtSID();
 
         // <stack>... arrayref index value </stack>, where value could be one word or two words
         int localVarIdx1 = ++crntMaxIndex;
@@ -576,17 +574,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      */
     private int getCrntStmtSID() {
         return globalState.getLocationId(getCrntStmtSig());
-    }
-
-    /**
-     * TODO(YilongL):
-     * {@link GlobalStateForInstrumentation#getArrayLocationId(String)} doesn't
-     * look right to me because it calls {@code getLocationId} inside. A poor
-     * design of API at least.
-     */
-    @Deprecated
-    private int getArrayLocSID(String stmtSig) {
-        return globalState.getArrayLocationId(stmtSig);
     }
 
     /**

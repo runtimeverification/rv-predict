@@ -40,7 +40,10 @@ import java.nio.file.Paths;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -58,15 +61,7 @@ public class DBEngine {
     private static final String DB_NAME = "RVDatabase";
     private final String directory;
 
-    // database schema
-    private static final String[] SHARED_VAR_SIG_TABLE_COL_NAME = { "SIG" };
-    private static final String[] SHARED_VAR_SIG_COL_TYPE = { "VARCHAR" };
-
-    private static final String[] SHARED_ARRAY_LOC_TABLE_COLNAME = { "SIG" };
-    private static final String[] SHARED_ARRAY_LOC_COL_TYPE = { "VARCHAR" };
-
     private Connection conn;
-    private PreparedStatement prepStmt;
 
     private final String sharedvarsigtablename;
     private final String sharedarrayloctablename;
@@ -79,6 +74,8 @@ public class DBEngine {
 
     private final int BUFFER_THRESHOLD;
     private final boolean asynchronousLogging;
+
+    private final GlobalStateForInstrumentation globalState;
 
     public void saveCurrentEventsToDB() {
         queue.add(buffer);
@@ -101,7 +98,7 @@ public class DBEngine {
             saveEventsToDB(buffer);
         }
         try {
-            RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance);
+            saveMetaData();
             metadataOS.close();
             traceOS.close();
         } catch (IOException e) {
@@ -110,7 +107,7 @@ public class DBEngine {
         closeDB();
     }
 
-    public void saveEventsToDB(List<EventItem> stack) {
+    private void saveEventsToDB(List<EventItem> stack) {
         assert !stack.isEmpty() : "stack should not be empty here as we're saving metadata, too";
 
         try {
@@ -119,7 +116,7 @@ public class DBEngine {
             for (EventItem eventItem : stack) {
                 traceOS.writeEvent(eventItem);
             }
-            RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance);
+            saveMetaData();
             traceOS.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -130,7 +127,8 @@ public class DBEngine {
     ObjectOutputStream metadataOS;
     Thread loggingThread;
     boolean shutdown = false;
-    public void startAsynchronousLogging() {
+
+    private void startAsynchronousLogging() {
 
         queue = new LinkedBlockingQueue<>();
         buffer = new ArrayList<>(BUFFER_THRESHOLD);
@@ -166,8 +164,9 @@ public class DBEngine {
 
     }
 
-    public DBEngine(String directory, String name, boolean asynchronousLogging) {
+    public DBEngine(GlobalStateForInstrumentation globalState, String directory, String name, boolean asynchronousLogging) {
         BUFFER_THRESHOLD = 10*Config.instance.commandLine.window_size;
+        this.globalState = globalState;
         this.directory = directory;
         this.asynchronousLogging = asynchronousLogging;
         sharedarrayloctablename = "sharedarrayloc_" + name;
@@ -192,7 +191,7 @@ public class DBEngine {
         }
     }
 
-    public void closeDB() {
+    private void closeDB() {
         try {
             conn.createStatement().execute("SHUTDOWN");
             // conn.close();
@@ -215,47 +214,6 @@ public class DBEngine {
         stmt.execute(sql_dropTable);
         sql_dropTable = "DROP TABLE IF EXISTS " + sharedarrayloctablename;
         stmt.execute(sql_dropTable);
-    }
-
-    public void createSharedArrayLocTable(boolean newTable) throws Exception {
-        Statement stmt = conn.createStatement();
-        if (newTable) {
-            String sql_dropTable = "DROP TABLE IF EXISTS " + sharedarrayloctablename;
-            stmt.execute(sql_dropTable);
-        }
-
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + sharedarrayloctablename + " ("
-                + SHARED_ARRAY_LOC_TABLE_COLNAME[0] + " " + SHARED_ARRAY_LOC_COL_TYPE[0] + ")";
-        stmt.execute(sql_createTable);
-
-        String sql_insertdata = "INSERT INTO " + sharedarrayloctablename + " VALUES (?)";
-        prepStmt = conn.prepareStatement(sql_insertdata);
-    }
-
-    public void createSharedVarSignatureTable(boolean newTable) throws Exception {
-        Statement stmt = conn.createStatement();
-        if (newTable) {
-            String sql_dropTable = "DROP TABLE IF EXISTS " + sharedvarsigtablename;
-            stmt.execute(sql_dropTable);
-        }
-
-        String sql_createTable = "CREATE TABLE IF NOT EXISTS " + sharedvarsigtablename + " ("
-                + SHARED_VAR_SIG_TABLE_COL_NAME[0] + " " + SHARED_VAR_SIG_COL_TYPE[0] + ")";
-        stmt.execute(sql_createTable);
-
-        String sql_insertdata = "INSERT INTO " + sharedvarsigtablename + " VALUES (?)";
-        prepStmt = conn.prepareStatement(sql_insertdata);
-    }
-
-    public void saveSharedArrayLocToDB(String sig) {
-        try {
-            prepStmt.setString(1, sig);
-
-            prepStmt.execute();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     public HashSet<String> loadSharedArrayLocs() {
@@ -300,23 +258,13 @@ public class DBEngine {
             return sharedVariables;
     }
 
-    public void saveSharedVarSignatureToDB(String sig) {
-        try {
-            prepStmt.setString(1, sig);
-
-            prepStmt.execute();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     /**
-     * save an event to database. must be synchronized. otherwise, races when writing to file might occur for
-     * synchronous logging.
+     * save an event to database. must be synchronized. otherwise, races when
+     * writing to file might occur for synchronous logging.
      */
-    public synchronized  void saveEventToDB(long TID, int ID, long ADDRL, long ADDRR, long VALUE, EventType TYPE) {
-
+    // TODO(YilongL): why synchronize this method? too slow!
+    public synchronized void saveEvent(EventType TYPE, int ID, long ADDRL, long ADDRR, long VALUE) {
+        long TID = Thread.currentThread().getId();
         EventItem e = new EventItem(DBEngine.globalEventID.incrementAndGet(), TID, ID, ADDRL, ADDRR, VALUE, TYPE);
         if (asynchronousLogging) {
             if (buffer.size() >= BUFFER_THRESHOLD) {
@@ -328,7 +276,7 @@ public class DBEngine {
             try {
                 if (e.GID % BUFFER_THRESHOLD == 0) {
                     traceOS.close();
-                    RecordRT.saveMetaData(DBEngine.this, GlobalStateForInstrumentation.instance);
+                    saveMetaData();
                     traceOS =  new EventOutputStream(new BufferedOutputStream(
                             new FileOutputStream(Paths.get(directory, e.GID + TraceCache.TRACE_SUFFIX).toFile())));
                 }
@@ -339,6 +287,14 @@ public class DBEngine {
                 e1.printStackTrace();
             }
         }
+    }
+
+    public void saveEvent(EventType eventType, int locId, long arg) {
+        saveEvent(eventType, locId, arg, 0, 0);
+    }
+
+    public void saveEvent(EventType eventType, int locId) {
+        saveEvent(eventType, locId, 0, 0, 0);
     }
 
     private void connectDB(String directory) throws Exception {
@@ -359,11 +315,53 @@ public class DBEngine {
         }
     }
 
-    public void saveObject(Object threadTidList) {
+    private void saveObject(Object threadTidList) {
         try {
             metadataOS.writeObject(threadTidList);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public void saveMetaData() {
+        /* save <threadId, name> pairs */
+        List<Entry<Long,String>> threadIdNamePairs = new ArrayList<>(globalState.unsavedStmtSigToLocId.size());
+        Iterator<Entry<Long, String>> iter = globalState.unsavedThreadIdToName.iterator();
+        while (iter.hasNext()) {
+            threadIdNamePairs.add(iter.next());
+            iter.remove();
+        }
+        saveObject(threadIdNamePairs);
+
+        /* save <variable, id> pairs */
+        synchronized (globalState.varSigToId) {
+            // TODO(YilongL): I want to write the following but I couldn't
+            // because DBEngine#getMetadata assumes certain order of the
+            // saved objects
+//            if (!globalState.unsavedVarSigToId.isEmpty()) {
+//                saveObject(globalState.unsavedVarSigToId);
+//                globalState.unsavedVarSigToId.clear();
+//            }
+
+            saveObject(globalState.unsavedVarSigToId);
+            globalState.unsavedVarSigToId.clear();
+        }
+
+        /* save <volatileVariable, Id> pairs */
+        synchronized (globalState.volatileVariables) {
+            // TODO(YilongL): volatileVariable Id should be constructed when
+            // reading metadata in backend; not here
+            List<Entry<String, Integer>> volatileVarIdPairs = new ArrayList<>(globalState.unsavedVolatileVariables.size());
+            for (String var : globalState.unsavedVolatileVariables) {
+                volatileVarIdPairs.add(new SimpleEntry<>(var, globalState.varSigToId.get(var)));
+            }
+            saveObject(volatileVarIdPairs);
+        }
+
+        /* save <StmtSig, LocId> pairs */
+        synchronized (globalState.stmtSigToLocId) {
+            saveObject(globalState.unsavedStmtSigToLocId);
+            globalState.unsavedStmtSigToLocId.clear();
         }
     }
 }

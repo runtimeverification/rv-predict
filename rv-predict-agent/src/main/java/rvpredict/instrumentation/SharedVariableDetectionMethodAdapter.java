@@ -244,7 +244,7 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
         case AALOAD:
             if (!isInit) {
                 String sig_loc = getSignaturePlusLoc();
-                int ID = globalState.getArrayLocationId(sig_loc);
+                int ID = globalState.getLocationId(sig_loc);
 
                 mv.visitInsn(DUP2);
                 crntMaxIndex++;
@@ -275,7 +275,7 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
         case IALOAD:
             if (!isInit) {
                 String sig_loc = getSignaturePlusLoc();
-                int ID = globalState.getArrayLocationId(sig_loc);
+                int ID = globalState.getLocationId(sig_loc);
 
                 mv.visitInsn(DUP2);
                 crntMaxIndex++;
@@ -300,7 +300,7 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
         case FALOAD:
             if (!isInit) {
                 String sig_loc = getSignaturePlusLoc();
-                int ID = globalState.getArrayLocationId(sig_loc);
+                int ID = globalState.getLocationId(sig_loc);
 
                 mv.visitInsn(DUP2);
                 crntMaxIndex++;
@@ -326,7 +326,7 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
         case DALOAD:
             if (!isInit) {
                 String sig_loc = getSignaturePlusLoc();
-                int ID = globalState.getArrayLocationId(sig_loc);
+                int ID = globalState.getLocationId(sig_loc);
 
                 mv.visitInsn(DUP2);
                 crntMaxIndex++;
@@ -351,7 +351,7 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
         case LALOAD:
             if (!isInit) {
                 String sig_loc = getSignaturePlusLoc();
-                int ID = globalState.getArrayLocationId(sig_loc);
+                int ID = globalState.getLocationId(sig_loc);
 
                 mv.visitInsn(DUP2);
                 crntMaxIndex++;
@@ -375,7 +375,7 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
             break;
         case AASTORE: {
             String sig_loc = getSignaturePlusLoc();
-            int ID = globalState.getArrayLocationId(sig_loc);
+            int ID = globalState.getLocationId(sig_loc);
 
             if (!isInit) {
                 crntMaxIndex++;
@@ -411,7 +411,7 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
         case SASTORE:
         case IASTORE: {
             String sig_loc = getSignaturePlusLoc();
-            int ID = globalState.getArrayLocationId(sig_loc);
+            int ID = globalState.getLocationId(sig_loc);
 
             if (!isInit) {
                 crntMaxIndex++;
@@ -444,7 +444,7 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
         }
         case FASTORE: {
             String sig_loc = getSignaturePlusLoc();
-            int ID = globalState.getArrayLocationId(sig_loc);
+            int ID = globalState.getLocationId(sig_loc);
 
             if (!isInit) {
                 crntMaxIndex++;
@@ -477,7 +477,7 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
         }
         case DASTORE: {
             String sig_loc = getSignaturePlusLoc();
-            int ID = globalState.getArrayLocationId(sig_loc);
+            int ID = globalState.getLocationId(sig_loc);
 
             if (!isInit) {
                 crntMaxIndex++;
@@ -510,7 +510,7 @@ public class SharedVariableDetectionMethodAdapter extends MethodVisitor {
         }
         case LASTORE: {
             String sig_loc = getSignaturePlusLoc();
-            int ID = globalState.getArrayLocationId(sig_loc);
+            int ID = globalState.getLocationId(sig_loc);
 
             if (!isInit) {
                 crntMaxIndex++;

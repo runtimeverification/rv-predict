@@ -30,6 +30,7 @@ package rvpredict.trace;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
 
 /**
  * This class keeps the information associated with the trace such as the trace
@@ -63,11 +64,11 @@ public class TraceInfo {
         return stmtIdSigMap;
     }
 
-    public void addSharedAddresses(HashSet<String> s) {
+    public void addSharedAddresses(Set<String> s) {
         sharedAddresses.addAll(s);
     }
 
-    public void addThreads(HashSet<Long> s) {
+    public void addThreads(Set<Long> s) {
         threads.addAll(s);
     }
 

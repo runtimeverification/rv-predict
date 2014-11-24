@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -131,7 +132,7 @@ public class NewRVPredict {
             // because we add branch operations before their operations
             if (config.optrace && !addr.contains("_")) {
                 // read/write-> set of read/write
-                HashMap<Long, List<MemoryAccessEvent>> threadrwnodes = trace
+                Map<Long, List<MemoryAccessEvent>> threadrwnodes = trace
                         .getIndexedThreadReadWriteNodes().get(addr);
                 Iterator<Long> tidIt = threadrwnodes.keySet().iterator();
                 while (tidIt.hasNext()) {
@@ -529,7 +530,7 @@ public class NewRVPredict {
         Engine engine = new EngineSMTLIB1(config);
 
         // map from memory address to the initial value
-        HashMap<String, Long> initialWriteValueMap = new HashMap<>();
+        Map<String, Long> initialWriteValueMap = new HashMap<>();
 
         // process the trace window by window
         for (int round = 0; round * config.window_size < totalTraceLength; round++) {

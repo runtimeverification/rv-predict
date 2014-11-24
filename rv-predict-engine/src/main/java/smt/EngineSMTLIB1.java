@@ -114,11 +114,11 @@ public class EngineSMTLIB1 extends Engine {
 
     @Override
     public void addPSOIntraThreadConstraints(
-            HashMap<String, HashMap<Long, List<MemoryAccessEvent>>> indexedMap) {
+            Map<String, Map<Long, List<MemoryAccessEvent>>> indexedMap) {
 
-        Iterator<HashMap<Long, List<MemoryAccessEvent>>> mapIt1 = indexedMap.values().iterator();
+        Iterator<Map<Long, List<MemoryAccessEvent>>> mapIt1 = indexedMap.values().iterator();
         while (mapIt1.hasNext()) {
-            HashMap<Long, List<MemoryAccessEvent>> map = mapIt1.next();
+            Map<Long, List<MemoryAccessEvent>> map = mapIt1.next();
 
             Iterator<List<MemoryAccessEvent>> mapIt2 = map.values().iterator();
             while (mapIt2.hasNext()) {
@@ -144,8 +144,8 @@ public class EngineSMTLIB1 extends Engine {
     // the order constraints between wait/notify/fork/join/lock/unlock
     @Override
     public void addSynchronizationConstraints(Trace trace,
-            HashMap<Long, List<SyncEvent>> syncNodesMap,
-            HashMap<Long, AbstractEvent> firstNodes, HashMap<Long, AbstractEvent> lastNodes) {
+            Map<Long, List<SyncEvent>> syncNodesMap,
+            Map<Long, Event> firstNodes, Map<Long, Event> lastNodes) {
         lockEngine = new LockSetEngine();// construct a new lockset for this
                                          // segment
 
@@ -169,7 +169,7 @@ public class EngineSMTLIB1 extends Engine {
                 String var = makeVariable(thisGID);
                 if (node.getType().equals(EventType.START)) {
                     long tid = Long.valueOf(node.getSyncObject());
-                    AbstractEvent fnode = firstNodes.get(tid);
+                    Event fnode = firstNodes.get(tid);
                     if (fnode != null) {
                         long fGID = fnode.getGID();
                         String fvar = makeVariable(fGID);
@@ -182,7 +182,7 @@ public class EngineSMTLIB1 extends Engine {
                     }
                 } else if (node.getType().equals(EventType.JOIN)) {
                     long tid = Long.valueOf(node.getSyncObject());
-                    AbstractEvent lnode = lastNodes.get(tid);
+                    Event lnode = lastNodes.get(tid);
                     if (lnode != null) {
                         long lGID = lnode.getGID();
                         String lvar = makeVariable(lGID);
@@ -396,8 +396,8 @@ public class EngineSMTLIB1 extends Engine {
     // TODO: NEED to handle the feasibility of new added write nodes
     @Override
     public StringBuilder constructCausalReadWriteConstraintsOptimized(long rgid,
-            List<ReadEvent> readNodes, HashMap<String, List<WriteEvent>> indexedWriteNodes,
-            HashMap<String, Long> initValueMap) {
+            List<ReadEvent> readNodes, Map<String, List<WriteEvent>> indexedWriteNodes,
+            Map<String, Long> initValueMap) {
         StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
 
         for (int i = 0; i < readNodes.size(); i++) {

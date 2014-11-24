@@ -128,9 +128,9 @@ public class CPEngine {
         // during recording
         // should after wait, before notify
         // after lock, before unlock
-        List<AbstractEvent> nodes = trace.getFullTrace();
+        List<Event> nodes = trace.getFullTrace();
         for (int i = 0; i < nodes.size(); i++) {
-            AbstractEvent node = nodes.get(i);
+            Event node = nodes.get(i);
             long thisGID = node.getGID();
 
             // add first node

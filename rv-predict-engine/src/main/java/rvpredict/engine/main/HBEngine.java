@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Stack;
 import java.util.List;
 
@@ -51,28 +52,26 @@ import java.util.List;
  * the HB edge between events and answers reachability inquiries between
  * conflicting events.
  *
- * @author jeffhuang
- *
  */
 public class HBEngine {
 
-    private ReachabilityEngine reachEngine = new ReachabilityEngine();
+    private final ReachabilityEngine reachEngine = new ReachabilityEngine();
 
-    private LockSetEngine lockEngine = new LockSetEngine();// construct a new
+    private final LockSetEngine lockEngine = new LockSetEngine();// construct a new
                                                            // lockset for this
                                                            // segment
 
     public HBEngine(Trace trace) {
-        addIntraThreadEdges(trace.getAllThreadEvents());
+        initIntraThreadHBEdges(trace.getAllThreadEvents());
 
         // TODO: ensure lockset algorithm??
-        addHBEdges(trace, trace.getThreadFirstNodeMap(), trace.getThreadLastNodeMap());
+        initInterThreadHBEdges(trace);
     }
 
     /**
      * Adds program order HB edges.
      */
-    private void addIntraThreadEdges(Collection<List<Event>> allThreadEvents) {
+    private void initIntraThreadHBEdges(Collection<List<Event>> allThreadEvents) {
         for (List<Event> events : allThreadEvents) {
             long prevGID = -1;
             for (Event e : events) {
@@ -92,112 +91,96 @@ public class HBEngine {
      *
      * TODO: need to distinguish reads and writes for checking conflicting lock
      * regions
-     *
-     * @param trace
-     * @param firstNodes
-     * @param lastNodes
      */
-    private void addHBEdges(Trace trace, HashMap<Long, AbstractEvent> firstNodes,
-            HashMap<Long, AbstractEvent> lastNodes) {
-        HashMap<String, WriteEvent> addressLastWriteMap = new HashMap<String, WriteEvent>();
-        HashMap<String, ReadEvent> addressLastReadMap = new HashMap<String, ReadEvent>();
+    private void initInterThreadHBEdges(Trace trace) {
+        Map<String, Long> addrToLastWrtGID = new HashMap<>();
 
-        HashMap<Long, ArrayList<LockPair>> lockAddrNodes = new HashMap<>();
-        HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<>();
+        Map<Long, List<LockPair>> lockAddrNodes = new HashMap<>();
+        Map<Long, Stack<SyncEvent>> threadIdToLockStack = new HashMap<>();
 
         SyncEvent matchNotifyNode = null;
 
         // during recording
         // should after wait, before notify
         // after lock, before unlock
-        List<AbstractEvent> nodes = trace.getFullTrace();
-        for (int i = 0; i < nodes.size(); i++) {
-            AbstractEvent node = nodes.get(i);
-            long thisGID = node.getGID();
+        List<Event> nodes = trace.getFullTrace();
+        for (Event crntEvent : nodes) {
+            long crntGID = crntEvent.getGID();
+            long crntTID = crntEvent.getTID();
 
             // add first node
-
-            if (node.getType().equals(EventType.START)) {
-                long tid = ((SyncEvent) node).getSyncObject();
-
-                AbstractEvent fnode = firstNodes.get(tid);
-                if (fnode != null) {
-                    long fGID = fnode.getGID();
-                    reachEngine.addEdge(thisGID, fGID);
-
+            switch (crntEvent.getType()) {
+            case START: {
+                long tid = ((SyncEvent) crntEvent).getSyncObject();
+                Event fstEvent = trace.getFirstEvent(tid);
+                if (fstEvent != null) {
+                    reachEngine.addEdge(crntGID, fstEvent.getGID());
                 }
-            } else if (node.getType().equals(EventType.JOIN)) {
-                long tid = ((SyncEvent) node).getSyncObject();
-                AbstractEvent lnode = lastNodes.get(tid);
-                if (lnode != null) {
-                    long lGID = lnode.getGID();
-                    reachEngine.addEdge(lGID, thisGID);
-
+                break;
+            }
+            case JOIN: {
+                long tid = ((SyncEvent) crntEvent).getSyncObject();
+                Event lstEvent = trace.getLastEvent(tid);
+                if (lstEvent != null) {
+                    reachEngine.addEdge(lstEvent.getGID(), crntGID);
                 }
-
-            } else if (node instanceof ReadEvent) {
-
-                String addr = ((ReadEvent) node).getAddr();
-                WriteEvent wnode = addressLastWriteMap.get(addr);
-                if (wnode != null) {
-                    reachEngine.addEdge(wnode.getGID(), node.getGID());
+                break;
+            }
+            case READ: {
+                String addr = ((ReadEvent) crntEvent).getAddr();
+                Long lastWrtGID = addrToLastWrtGID.get(addr);
+                if (lastWrtGID != null) {
+                    reachEngine.addEdge(lastWrtGID, crntGID);
                 }
-                addressLastReadMap.put(addr, (ReadEvent) node);
-
-            } else if (node instanceof WriteEvent) {
-                String addr = ((WriteEvent) node).getAddr();
-                WriteEvent wnode = addressLastWriteMap.get(addr);
-                if (wnode != null) {
-                    reachEngine.addEdge(wnode.getGID(), node.getGID());
+                break;
+            }
+            case WRITE: {
+                String addr = ((WriteEvent) crntEvent).getAddr();
+                Long lastWrtGID = addrToLastWrtGID.get(addr);
+                if (lastWrtGID != null) {
+                    reachEngine.addEdge(lastWrtGID, crntGID);
                 }
-                ReadEvent rnode = addressLastReadMap.get(addr);
-                if (rnode != null) {
-                    reachEngine.addEdge(rnode.getGID(), node.getGID());
+                addrToLastWrtGID.put(addr, ((WriteEvent) crntEvent).getGID());
+                break;
+            }
+            case LOCK: {
+                Stack<SyncEvent> lockStack = threadIdToLockStack.get(crntTID);
+                if (lockStack == null) {
+                    lockStack = new Stack<>();
+                    threadIdToLockStack.put(crntTID, lockStack);
                 }
-                addressLastWriteMap.put(addr, (WriteEvent) node);
+                lockStack.push(((SyncEvent) crntEvent));
+                break;
+            }
+            case UNLOCK: {
+                Stack<SyncEvent> syncstack = threadIdToLockStack.get(crntTID);
 
-            } else if (node.getType().equals(EventType.LOCK)) {
-                long tid = node.getTID();
-
-                Stack<SyncEvent> syncstack = threadSyncStack.get(tid);
                 if (syncstack == null) {
                     syncstack = new Stack<SyncEvent>();
-                    threadSyncStack.put(tid, syncstack);
-                }
-                syncstack.push(((SyncEvent) node));
-
-            } else if (node.getType().equals(EventType.UNLOCK)) {
-                long tid = node.getTID();
-
-                Stack<SyncEvent> syncstack = threadSyncStack.get(tid);
-
-                // assert(stack.size()>0);//this is possible when segmented
-                if (syncstack == null) {
-                    syncstack = new Stack<SyncEvent>();
-                    threadSyncStack.put(tid, syncstack);
+                    threadIdToLockStack.put(crntTID, syncstack);
                 }
                 LockPair lp = null;
                 if (syncstack.isEmpty()) {
                     // lp = new LockPair(null,(ISyncNode)node);
                     // make it non-null
-                    AbstractEvent firstnode = firstNodes.get(tid);
+                    AbstractEvent firstnode = trace.getThreadFirstNodeMap().get(crntTID);
                     long fake_gid = firstnode.getGID();
-                    SyncEvent fake_node = new SyncEvent(fake_gid, tid, firstnode.getID(), EventType.LOCK,
-                            ((SyncEvent) node).getSyncObject());
-                    lp = new LockPair(fake_node, (SyncEvent) node);
+                    SyncEvent fake_node = new SyncEvent(fake_gid, crntTID, firstnode.getID(), EventType.LOCK,
+                            ((SyncEvent) crntEvent).getSyncObject());
+                    lp = new LockPair(fake_node, (SyncEvent) crntEvent);
                 } else {
-                    lp = new LockPair(syncstack.pop(), (SyncEvent) node);
+                    lp = new LockPair(syncstack.pop(), (SyncEvent) crntEvent);
 
                     // filter out re-entrant locks
                     if (syncstack.size() > 0)
-                        if (((SyncEvent) node).getSyncObject() == syncstack.get(0).getSyncObject()) {
+                        if (((SyncEvent) crntEvent).getSyncObject() == syncstack.get(0).getSyncObject()) {
                             continue;
                         }
                 }
 
-                long addr = ((SyncEvent) node).getSyncObject();
+                long addr = ((SyncEvent) crntEvent).getSyncObject();
 
-                ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
+                List<LockPair> syncNodeList = lockAddrNodes.get(addr);
                 if (syncNodeList == null) {
                     syncNodeList = new ArrayList<LockPair>();
                     lockAddrNodes.put(addr, syncNodeList);
@@ -205,28 +188,27 @@ public class HBEngine {
                 }
 
                 syncNodeList.add(lp);
-                lockEngine.add(((SyncEvent) node).getSyncObject(), tid, lp);
-
-            } else if (node.getType().equals(EventType.WAIT)) {
-                long tid = node.getTID();
-
+                lockEngine.add(((SyncEvent) crntEvent).getSyncObject(), crntTID, lp);
+                break;
+            }
+            case WAIT: {
                 // assert(matchNotifyNode!=null);this is also possible when
                 // segmented
                 if (matchNotifyNode != null) {
                     long notifyGID = matchNotifyNode.getGID();
 
-                    int nodeIndex = trace.getFullTrace().indexOf(node) + 1;
+                    int nodeIndex = trace.getFullTrace().indexOf(crntEvent) + 1;
 
                     try {
                         // TODO: handle OutofBounds
                         try {
-                            while (trace.getFullTrace().get(nodeIndex).getTID() != tid)
+                            while (trace.getFullTrace().get(nodeIndex).getTID() != crntTID)
                                 nodeIndex++;
                         } catch (Exception e) {
                             // if we arrive here, it means the wait node is the
                             // last node of the corresponding thread
                             // so add an order from notify to wait instead
-                            nodeIndex = trace.getFullTrace().indexOf(node);
+                            nodeIndex = trace.getFullTrace().indexOf(crntEvent);
                         }
                         long waitNextGID = trace.getFullTrace().get(nodeIndex).getGID();
 
@@ -240,27 +222,27 @@ public class HBEngine {
                     matchNotifyNode = null;
                 }
 
-                Stack<SyncEvent> syncstack = threadSyncStack.get(tid);
+                Stack<SyncEvent> syncstack = threadIdToLockStack.get(crntTID);
                 // assert(stack.size()>0);
                 if (syncstack == null) {
                     syncstack = new Stack<SyncEvent>();
-                    threadSyncStack.put(tid, syncstack);
+                    threadIdToLockStack.put(crntTID, syncstack);
                 }
                 LockPair lp = null;
                 if (syncstack.isEmpty()) {
                     // lp = new LockPair(null,((WaitNode) node));
 
-                    AbstractEvent firstnode = firstNodes.get(tid);
+                    AbstractEvent firstnode = trace.getThreadFirstNodeMap().get(crntTID);
                     long fake_gid = firstnode.getGID();
-                    SyncEvent fake_node = new SyncEvent(fake_gid, tid, firstnode.getID(), EventType.LOCK,
-                            ((SyncEvent) node).getSyncObject());
-                    lp = new LockPair(fake_node, (SyncEvent) node);
+                    SyncEvent fake_node = new SyncEvent(fake_gid, crntTID, firstnode.getID(), EventType.LOCK,
+                            ((SyncEvent) crntEvent).getSyncObject());
+                    lp = new LockPair(fake_node, (SyncEvent) crntEvent);
                 } else
-                    lp = new LockPair(syncstack.pop(), ((SyncEvent) node));
+                    lp = new LockPair(syncstack.pop(), ((SyncEvent) crntEvent));
 
-                long addr = ((SyncEvent) node).getSyncObject();
+                long addr = ((SyncEvent) crntEvent).getSyncObject();
 
-                ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
+                List<LockPair> syncNodeList = lockAddrNodes.get(addr);
                 if (syncNodeList == null) {
                     syncNodeList = new ArrayList<LockPair>();
                     lockAddrNodes.put(addr, syncNodeList);
@@ -268,23 +250,28 @@ public class HBEngine {
                 }
 
                 syncNodeList.add(lp);
-                lockEngine.add(((SyncEvent) node).getSyncObject(), tid, lp);
+                lockEngine.add(((SyncEvent) crntEvent).getSyncObject(), crntTID, lp);
 
-                syncstack.push(((SyncEvent) node));
-
-            } else if (node.getType().equals(EventType.NOTIFY)) {
-                matchNotifyNode = (SyncEvent) node;
+                syncstack.push(((SyncEvent) crntEvent));
+                break;
+            }
+            case NOTIFY: {
+                matchNotifyNode = (SyncEvent) crntEvent;
+                break;
+            }
+            default:
+                break;
             }
         }
 
         // process the last lock node
-        Iterator<Long> tidIt = threadSyncStack.keySet().iterator();
+        Iterator<Long> tidIt = threadIdToLockStack.keySet().iterator();
         while (tidIt.hasNext()) {
             Long tid = tidIt.next();
 
-            Stack<SyncEvent> stack = threadSyncStack.get(tid);
+            Stack<SyncEvent> stack = threadIdToLockStack.get(tid);
 
-            AbstractEvent lastnode = lastNodes.get(tid);
+            AbstractEvent lastnode = trace.getThreadLastNodeMap().get(tid);
             long fake_gid = lastnode.getGID();
 
             while (stack.size() > 0) {
@@ -296,7 +283,7 @@ public class HBEngine {
 
                 long addr = node.getSyncObject();
 
-                ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
+                List<LockPair> syncNodeList = lockAddrNodes.get(addr);
 
                 if (syncNodeList == null) {
                     syncNodeList = new ArrayList<LockPair>();
@@ -314,7 +301,7 @@ public class HBEngine {
         while (addrIt.hasNext()) {
             long addr = addrIt.next();
 
-            ArrayList<LockPair> syncNodeList = lockAddrNodes.get(addr);
+            List<LockPair> syncNodeList = lockAddrNodes.get(addr);
             for (int k = 0; k < syncNodeList.size() - 1; k++) {
                 LockPair lp = syncNodeList.get(k);
                 LockPair lp2 = syncNodeList.get(k + 1);
@@ -335,17 +322,18 @@ public class HBEngine {
      * by all the indirect HB edges excluding the possible direct HB edge
      * between node1 and node2
      *
-     * @param node1
-     * @param node2
+     * @param event1
+     * @param event2
      * @return
      */
-    public boolean isRace(Event node1, Event node2) {
-        long gid1 = node1.getGID();
-        long gid2 = node2.getGID();
+    public boolean isRace(Event event1, Event event2) {
+        long gid1 = event1.getGID();
+        long gid2 = event2.getGID();
 
         // lockset algorithm
-        if (lockEngine.hasCommonLock(node1.getTID(), gid1, node2.getTID(), gid2))
+        if (lockEngine.hasCommonLock(event1.getTID(), gid1, event2.getTID(), gid2)) {
             return false;
+        }
 
         if (gid1 > gid2) {
             long t = gid1;

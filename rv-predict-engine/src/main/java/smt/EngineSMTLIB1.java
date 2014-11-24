@@ -62,7 +62,7 @@ public class EngineSMTLIB1 extends Engine {
     }
 
     @Override
-    public void declareVariables(List<AbstractEvent> trace) {
+    public void declareVariables(List<Event> trace) {
         CONS_SETLOGIC = ":logic QF_IDL\n";
 
         CONS_DECLARE = new StringBuilder(":extrafuns (\n");
@@ -72,7 +72,7 @@ public class EngineSMTLIB1 extends Engine {
         // CONS_ASSERT = "(assert (distinct ";
         int size = trace.size();
         for (int i = 0; i < size; i++) {
-            AbstractEvent node = trace.get(i);
+            Event node = trace.get(i);
             long GID = node.getGID();
             String var = makeVariable(GID);
 

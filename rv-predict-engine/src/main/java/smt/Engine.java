@@ -85,7 +85,7 @@ public class Engine {
      *
      * @param trace
      */
-    public void declareVariables(List<AbstractEvent> trace) {
+    public void declareVariables(List<Event> trace) {
         CONS_SETLOGIC = "(set-logic QF_IDL)\n";// use integer difference logic
         CONS_DECLARE = new StringBuilder("");
         CONS_ASSERT = new StringBuilder("");
@@ -93,7 +93,7 @@ public class Engine {
         // CONS_ASSERT = "(assert (distinct ";
         int size = trace.size();
         for (int i = 0; i < size; i++) {
-            AbstractEvent node = trace.get(i);
+            Event node = trace.get(i);
             long GID = node.getGID();
             String var = makeVariable(GID);
 

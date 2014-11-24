@@ -62,7 +62,7 @@ public class Trace {
     HashSet<Long> threads = new HashSet<Long>();
 
     // fulltrace represents all the critical events in the global order
-    List<AbstractEvent> fulltrace = new ArrayList<>();
+    List<Event> fulltrace = new ArrayList<>();
 
     // keep a node GID to tid Map, used for generating schedules
     HashMap<Long, Long> nodeGIDTidMap = new HashMap<Long, Long>();
@@ -71,8 +71,8 @@ public class Trace {
     HashMap<Long, List<Event>> threadNodesMap = new HashMap<>();
 
     // the first node and last node map of each thread
-    HashMap<Long, AbstractEvent> threadFirstNodeMap = new HashMap<Long, AbstractEvent>();
-    HashMap<Long, AbstractEvent> threadLastNodeMap = new HashMap<Long, AbstractEvent>();
+    HashMap<Long, AbstractEvent> threadFirstNodeMap = new HashMap<>();
+    HashMap<Long, AbstractEvent> threadLastNodeMap = new HashMap<>();
 
     // per thread per lock lock/unlock pair
     HashMap<Long, HashMap<Long, List<LockPair>>> threadIndexedLockPairs = new HashMap<>();
@@ -111,7 +111,7 @@ public class Trace {
         return !sharedAddresses.isEmpty();
     }
 
-    public List<AbstractEvent> getFullTrace() {
+    public List<Event> getFullTrace() {
         return fulltrace;
     }
 
@@ -145,12 +145,38 @@ public class Trace {
         return info.getThreadIdNameMap();
     }
 
+    @Deprecated
     public HashMap<Long, AbstractEvent> getThreadFirstNodeMap() {
         return threadFirstNodeMap;
     }
 
+    /**
+     * Returns the first event of a specific thread in the trace.
+     *
+     * @param threadId
+     *            the thread ID
+     * @return the first event of the given thread or {@code null} if there is
+     *         no such thread
+     */
+    public Event getFirstEvent(long threadId) {
+        return threadFirstNodeMap.get(threadId);
+    }
+
+    @Deprecated
     public HashMap<Long, AbstractEvent> getThreadLastNodeMap() {
         return threadLastNodeMap;
+    }
+
+    /**
+     * Returns the last event of a specific thread in the trace.
+     *
+     * @param threadId
+     *            the thread ID
+     * @return the last event of the given thread or {@code null} if there is
+     *         no such thread
+     */
+    public Event getLastEvent(long threadId) {
+        return threadLastNodeMap.get(threadId);
     }
 
     @Deprecated

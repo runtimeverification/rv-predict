@@ -28,23 +28,28 @@ package rvpredict.engine.main;
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import rvpredict.config.Configuration;
-import rvpredict.util.Logger;
-import smt.EngineSMTLIB1;
-import smt.Engine;
+import rvpredict.db.DBEngine;
 import rvpredict.trace.Event;
 import rvpredict.trace.MemoryAccessEvent;
-import rvpredict.trace.SyncEvent;
 import rvpredict.trace.ReadEvent;
+import rvpredict.trace.SyncEvent;
 import rvpredict.trace.Trace;
 import rvpredict.trace.TraceInfo;
 import rvpredict.trace.WriteEvent;
+import rvpredict.util.Logger;
+import smt.Engine;
+import smt.EngineSMTLIB1;
 import violation.ExactRace;
-import violation.Violation;
 import violation.Race;
-import rvpredict.db.DBEngine;
+import violation.Violation;
 
 /**
  * The NewRVPredict class implements our new race detection algorithm based on

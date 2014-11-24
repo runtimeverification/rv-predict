@@ -29,7 +29,6 @@
 package rvpredict.trace;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -112,10 +111,6 @@ public class Trace {
         return fulltrace;
     }
 
-    public HashSet<String> getSharedVariables() {
-        return sharedAddresses;
-    }
-
     public HashMap<String, Long> getInitialWriteValueMap() {
         return initialWriteValueMap;
     }
@@ -124,69 +119,24 @@ public class Trace {
         initialWriteValueMap = map;
     }
 
-    public HashMap<Integer, String> getSharedVarIdMap() {
-
-        return info.getSharedVarIdMap();
-    }
-
     public HashMap<Integer, String> getStmtSigIdMap() {
-
         return info.getStmtSigIdMap();
     }
 
-    public HashMap<Long, String> getThreadIdNameMap() {
-        return info.getThreadIdNameMap();
-    }
-
-    @Deprecated
     public HashMap<Long, AbstractEvent> getThreadFirstNodeMap() {
         return threadFirstNodeMap;
     }
 
-    /**
-     * Returns the first event of a specific thread in the trace.
-     *
-     * @param threadId
-     *            the thread ID
-     * @return the first event of the given thread or {@code null} if there is
-     *         no such thread
-     */
-    public Event getFirstEvent(long threadId) {
-        return threadFirstNodeMap.get(threadId);
-    }
-
-    @Deprecated
     public HashMap<Long, AbstractEvent> getThreadLastNodeMap() {
         return threadLastNodeMap;
     }
 
-    /**
-     * Returns the last event of a specific thread in the trace.
-     *
-     * @param threadId
-     *            the thread ID
-     * @return the last event of the given thread or {@code null} if there is
-     *         no such thread
-     */
-    public Event getLastEvent(long threadId) {
-        return threadLastNodeMap.get(threadId);
-    }
-
-    @Deprecated
     public Map<Long, List<Event>> getThreadIdToEventsMap() {
         return threadNodesMap;
     }
 
-    public Collection<List<Event>> getAllThreadEvents() {
-        return threadNodesMap.values();
-    }
-
     public HashMap<Long, List<SyncEvent>> getSyncNodesMap() {
         return syncNodesMap;
-    }
-
-    public HashMap<Long, HashMap<Long, List<LockPair>>> getThreadIndexedLockPairs() {
-        return threadIndexedLockPairs;
     }
 
     public HashMap<String, List<ReadEvent>> getIndexedReadNodes() {
@@ -202,7 +152,6 @@ public class Trace {
     }
 
     public void saveLastWriteValues(HashMap<String, Long> valueMap) {
-
         Iterator<String> addrIt = indexedWriteNodes.keySet().iterator();
         while (addrIt.hasNext()) {
             String addr = addrIt.next();
@@ -480,10 +429,6 @@ public class Trace {
 
     }
 
-    public List<AbstractEvent> getRawFullTrace() {
-        return rawfulltrace;
-    }
-
     /**
      * compute the lock/unlock pairs because we analyze the trace window by
      * window, lock/unlock may not be in the same window, so we may have null
@@ -521,7 +466,6 @@ public class Trace {
     }
 
     public boolean isAddressVolatile(String addr) {
-
         return info.isAddressVolatile(addr);
     }
 

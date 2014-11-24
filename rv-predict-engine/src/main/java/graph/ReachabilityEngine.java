@@ -97,60 +97,55 @@ public class ReachabilityEngine {
     }
 
     public boolean canReach(long i1, long i2) {
-        try {
-            // must have corresponding real id
+        // must have corresponding real id
 
-            // what if idMap does not contain id?
+        // what if idMap does not contain id?
 
-            i1 = idMap.get(i1);
-            i2 = idMap.get(i2);
+        i1 = idMap.get(i1);
+        i2 = idMap.get(i2);
 
-            // return reachmx[i1][i2];
-            long SIG = i1 * M + i2;
-            if (cachedNoReachSet.contains(SIG))
-                return false;
-            else if (hasEdge(i1, i2))
-                return true;
-            else {
-                // DFS - without cache
-                java.util.ArrayDeque<Long> stack = new java.util.ArrayDeque<Long>();
-                HashSet<Long> visitedNodes = new HashSet<Long>();
-                stack.push(i1);
+        // return reachmx[i1][i2];
+        long SIG = i1 * M + i2;
+        if (cachedNoReachSet.contains(SIG))
+            return false;
+        else if (hasEdge(i1, i2))
+            return true;
+        else {
+            // DFS - without cache
+            java.util.ArrayDeque<Long> stack = new java.util.ArrayDeque<Long>();
+            HashSet<Long> visitedNodes = new HashSet<Long>();
+            stack.push(i1);
 
-                while (!stack.isEmpty()) {
+            while (!stack.isEmpty()) {
 
-                    long i1_ = stack.pop();
+                long i1_ = stack.pop();
 
-                    visitedNodes.add(i1_);
+                visitedNodes.add(i1_);
 
-                    if (!hasEdge(i1, i1_))
-                        addInternalEdge(i1, i1_);
+                if (!hasEdge(i1, i1_))
+                    addInternalEdge(i1, i1_);
 
-                    if (i1_ == i2) {
+                if (i1_ == i2) {
+                    return true;
+                } else {
+                    if (hasEdge(i1_, i2)) {
+                        addInternalEdge(i1, i2);
                         return true;
                     } else {
-                        if (hasEdge(i1_, i2)) {
-                            addInternalEdge(i1, i2);
-                            return true;
-                        } else {
-                            Iterator<Long> sIter = edgeSetMap.get(i1_).iterator();
-                            while (sIter.hasNext()) {
-                                long i1__ = sIter.next();
-                                // System.out.print("DEBUG: "+i1+" "+i1_+" "+
-                                // i1__+"\n");
-                                long sig = i1__ * M + i2;
-                                if (!visitedNodes.contains(i1__) && !cachedNoReachSet.contains(sig))
-                                    stack.push(i1__);
-                            }
+                        Iterator<Long> sIter = edgeSetMap.get(i1_).iterator();
+                        while (sIter.hasNext()) {
+                            long i1__ = sIter.next();
+                            // System.out.print("DEBUG: "+i1+" "+i1_+" "+
+                            // i1__+"\n");
+                            long sig = i1__ * M + i2;
+                            if (!visitedNodes.contains(i1__) && !cachedNoReachSet.contains(sig))
+                                stack.push(i1__);
                         }
                     }
                 }
-
-                cachedNoReachSet.add(SIG);
-                return false;
             }
 
-        } catch (Exception e) {
+            cachedNoReachSet.add(SIG);
             return false;
         }
     }

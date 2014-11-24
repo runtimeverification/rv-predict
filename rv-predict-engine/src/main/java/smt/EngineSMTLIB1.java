@@ -237,28 +237,24 @@ public class EngineSMTLIB1 extends Engine {
 
                         int nodeIndex = trace.getFullTrace().indexOf(node) + 1;
 
+                        // TODO: handle OutofBounds
                         try {
-                            // TODO: handle OutofBounds
-                            try {
-                                while (trace.getFullTrace().get(nodeIndex).getTID() != tid)
-                                    nodeIndex++;
-                            } catch (Exception e) {
-                                // if we arrive here, it means the wait node is
-                                // the last node of the corresponding thread
-                                // so add an order from notify to wait instead
-                                nodeIndex = trace.getFullTrace().indexOf(node);
-                            }
-                            long waitNextGID = trace.getFullTrace().get(nodeIndex).getGID();
-                            var = makeVariable(waitNextGID);
-
-                            CONS_ASSERT.append("(< ").append(notifyVar).append(" ").append(var)
-                                    .append(")\n");
-
-                            reachEngine.addEdge(notifyGID, waitNextGID);
-
+                            while (trace.getFullTrace().get(nodeIndex).getTID() != tid)
+                                nodeIndex++;
                         } catch (Exception e) {
-                            e.printStackTrace();
+                            // TODO(YilongL): c'mon! this code is so stupid
+                            // if we arrive here, it means the wait node is
+                            // the last node of the corresponding thread
+                            // so add an order from notify to wait instead
+                            nodeIndex = trace.getFullTrace().indexOf(node);
                         }
+                        long waitNextGID = trace.getFullTrace().get(nodeIndex).getGID();
+                        var = makeVariable(waitNextGID);
+
+                        CONS_ASSERT.append("(< ").append(notifyVar).append(" ").append(var)
+                        .append(")\n");
+
+                        reachEngine.addEdge(notifyGID, waitNextGID);
 
                         // clear notifyNode
                         matchNotifyNode = null;

@@ -159,7 +159,7 @@ public class SMTTaskRun {
             System.err.println(e.getMessage());
             System.exit(-1);
 
-        } catch (Exception e) {
+        } catch (InterruptedException | TimeoutException e) {
             System.err.println(e.getMessage());
             task.cancel(true);
             executorService.shutdown();

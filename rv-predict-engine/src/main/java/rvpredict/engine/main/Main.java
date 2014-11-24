@@ -120,26 +120,18 @@ public class Main {
         boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
         DBEngine db;
         db = new DBEngine(config.outdir, config.tableName);
-        try {
-            if (!db.checkLog()) {
-                config.logger.report("Trace was not recorded properly. ", Logger.MSGTYPE.ERROR);
-                if (config.log) {
-                    // config.logger.report("Please check the classpath.",
-                    // Logger.MSGTYPE.ERROR);
-                } else {
-                    config.logger.report("Please run " + Configuration.PROGRAM_NAME + " with "
-                            + Configuration.opt_only_log + " " + config.outdir + " first.",
-                            Logger.MSGTYPE.ERROR);
-                }
-                System.exit(1);
+        if (!db.checkLog()) {
+            config.logger.report("Trace was not recorded properly. ", Logger.MSGTYPE.ERROR);
+            if (config.log) {
+                // config.logger.report("Please check the classpath.",
+                // Logger.MSGTYPE.ERROR);
+            } else {
+                config.logger.report("Please run " + Configuration.PROGRAM_NAME + " with "
+                        + Configuration.opt_only_log + " " + config.outdir + " first.",
+                        Logger.MSGTYPE.ERROR);
             }
-        } catch (Exception e) {
-            config.logger.report(
-                    "Unexpected database error while checking whether the trace was recorded.\n"
-                            + e.getMessage(), Logger.MSGTYPE.ERROR);
-            System.exit(1);
-        } finally {
             db.closeDB();
+            System.exit(1);
         }
 
         if (config.log && (config.verbose || logOutput)) {

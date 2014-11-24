@@ -59,7 +59,6 @@ public class NewRVPredict {
     private HashSet<Violation> violations = new HashSet<Violation>();
     private HashSet<Violation> potentialviolations = new HashSet<Violation>();
     private Configuration config;
-    private static boolean detectRace = true;
     private Logger logger;
     private HashMap<Integer, String> sharedVarIdSigMap = new HashMap<>();
     private HashMap<Integer, String> volatileAddresses = new HashMap<>();
@@ -521,68 +520,59 @@ public class NewRVPredict {
     }
 
     public void run() {
-        try {
-            // z3 engine is used for interacting with constraints
-            Engine engine = new EngineSMTLIB1(config);
+        // z3 engine is used for interacting with constraints
+        Engine engine = new EngineSMTLIB1(config);
 
-            // map from memory address to the initial value
-            HashMap<String, Long> initialWriteValueMap = new HashMap<>();
+        // map from memory address to the initial value
+        HashMap<String, Long> initialWriteValueMap = new HashMap<>();
 
-            // process the trace window by window
-            for (int round = 0; round * config.window_size < totalTraceLength; round++) {
-                long index_start = round * config.window_size + 1;
-                long index_end = (round + 1) * config.window_size;
-                // if(totalTraceLength>rvpredict.config.window_size)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+totalTraceLength+" ******************\n");
+        // process the trace window by window
+        for (int round = 0; round * config.window_size < totalTraceLength; round++) {
+            long index_start = round * config.window_size + 1;
+            long index_end = (round + 1) * config.window_size;
+            // if(totalTraceLength>rvpredict.config.window_size)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+totalTraceLength+" ******************\n");
 
-                // load trace
-                Trace trace = dbEngine.getTrace(index_start, index_end, traceInfo);
+            // load trace
+            Trace trace = dbEngine.getTrace(index_start, index_end, traceInfo);
 
-                // starting from the second window, the initial value map
-                // becomes
-                // the last write map in the last window
-                if (round > 0)
-                    trace.setInitialWriteValueMap(initialWriteValueMap);
+            // starting from the second window, the initial value map
+            // becomes
+            // the last write map in the last window
+            if (round > 0)
+                trace.setInitialWriteValueMap(initialWriteValueMap);
 
-                // OPT: if #sv==0 or #shared rw ==0 continue
-                if (trace.mayRace()) {
-                    // Now, construct the constraints
+            // OPT: if #sv==0 or #shared rw ==0 continue
+            if (trace.mayRace()) {
+                // Now, construct the constraints
 
-                    // 1. declare all variables
-                    engine.declareVariables(trace.getFullTrace());
-                    // 2. intra-thread order for all nodes, excluding branches
-                    // and basic block transitions
-                    if (config.rmm_pso)// TODO: add intra order between sync
-                        engine.addPSOIntraThreadConstraints(trace.getIndexedThreadReadWriteNodes());
-                    else
-                        engine.addIntraThreadConstraints(trace.getThreadIdToEventsMap());
+                // 1. declare all variables
+                engine.declareVariables(trace.getFullTrace());
+                // 2. intra-thread order for all nodes, excluding branches
+                // and basic block transitions
+                if (config.rmm_pso)// TODO: add intra order between sync
+                    engine.addPSOIntraThreadConstraints(trace.getIndexedThreadReadWriteNodes());
+                else
+                    engine.addIntraThreadConstraints(trace.getThreadIdToEventsMap());
 
-                    // 3. order for locks, signals, fork/joins
-                    engine.addSynchronizationConstraints(trace, trace.getSyncNodesMap(),
-                            trace.getThreadFirstNodeMap(), trace.getThreadLastNodeMap());
+                // 3. order for locks, signals, fork/joins
+                engine.addSynchronizationConstraints(trace, trace.getSyncNodesMap(),
+                        trace.getThreadFirstNodeMap(), trace.getThreadLastNodeMap());
 
-                    // 4. match read-write
-                    // This is only used for constructing all read-write
-                    // consistency constraints
+                // 4. match read-write
+                // This is only used for constructing all read-write
+                // consistency constraints
 
-                    // engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
-                    // engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
+                // engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
+                // engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
 
-                    if (detectRace) {
-                        detectRace(engine, trace);
-                    }
-                }
-                // get last write value from the current trace
-                // as the initial value for the next round
-                initialWriteValueMap = trace.getInitialWriteValueMap();
-                trace.saveLastWriteValues(initialWriteValueMap);
+                detectRace(engine, trace);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            // terminate
-            System.exit(0);
+            // get last write value from the current trace
+            // as the initial value for the next round
+            initialWriteValueMap = trace.getInitialWriteValueMap();
+            trace.saveLastWriteValues(initialWriteValueMap);
         }
-
+        System.exit(0);
     }
 
     public void initPredict(Configuration conf) {
@@ -600,11 +590,7 @@ public class NewRVPredict {
 
         // the total number of events in the trace
         totalTraceLength = 0;
-        try {
-            totalTraceLength = dbEngine.getTraceSize();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        totalTraceLength = dbEngine.getTraceSize();
 
         traceInfo = new TraceInfo(sharedVarIdSigMap, volatileAddresses, stmtIdSigMap,
                 threadIdNameMap);

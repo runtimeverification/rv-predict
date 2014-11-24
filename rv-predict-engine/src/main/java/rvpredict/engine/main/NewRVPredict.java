@@ -71,35 +71,16 @@ public class NewRVPredict {
     private long startTime;
 
     /**
-     * Trim the schedule to show the last 100 only entries
-     *
-     * @param schedule
-     * @return
-     */
-    private static List<String> trim(List<String> schedule) {
-        if (schedule.size() > 100) {
-            List<String> s = new ArrayList<>();
-            s.add("...");
-            for (int i = schedule.size() - 100; i < schedule.size(); i++)
-                s.add(schedule.get(i));
-            return s;
-        } else
-            return schedule;
-    }
-
-    /**
      * Race detection method. For every pair of conflicting data accesses, the
      * corresponding race constraint is generated and solved by a solver. If the
-     * solver returns a solution, we report a real data race and generate a racy
-     * schedule. Otherwise, a potential race is reported. We call it a potential
-     * race but not a false race because it might be a real data race in another
-     * trace.
+     * solver returns a solution, we report a real data race. Otherwise, a
+     * potential race is reported. We call it a potential race but not a false
+     * race because it might be a real data race in another trace.
      *
      * @param engine
      * @param trace
-     * @param schedule_prefix
      */
-    private void detectRace(Engine engine, Trace trace, List<String> schedule_prefix) {
+    private void detectRace(Engine engine, Trace trace) {
         // implement potentialraces to be exact match
 
         // sometimes we choose an un-optimized way to implement things faster,
@@ -343,58 +324,6 @@ public class NewRVPredict {
                                             }
                                         }
                                     }
-
-                                    if (config.noschedule)
-                                        continue;
-
-                                    // generate the corresponding racey schedule
-
-                                    // for race, there are two schedules:
-                                    // rnode before or after wnode
-                                    List<String> schedule_a = engine.getSchedule(rnode.getGID(),
-                                            trace.getNodeGIDTIdMap(), trace.getThreadIdNameMap());
-                                    schedule_a.add(trace.getThreadIdNameMap().get(
-                                            trace.getNodeGIDTIdMap().get(wnode.getGID())));
-
-                                    List<String> schedule_b = new ArrayList<String>(schedule_a);
-
-                                    String str1 = schedule_b.remove(schedule_b.size() - 1);
-
-                                    // Due to identical solution to events by
-                                    // other threads
-                                    // rnode may not be immediately before
-                                    // wnode,
-                                    // in such a case, we find rnode first and
-                                    // then move it to after wnode
-                                    int pos = schedule_b.size() - 1;
-                                    String str2 = schedule_b.remove(pos);
-                                    while (str1 == str2) {
-                                        pos--;
-                                        schedule_b.add(str2);
-                                        str2 = schedule_b.remove(pos);
-                                    }
-
-                                    schedule_b.add(str1);
-                                    schedule_b.add(str2);
-
-                                    schedule_a.addAll(0, schedule_prefix);
-                                    schedule_b.addAll(0, schedule_prefix);
-
-                                    // add the schedules to the race
-                                    if (rnode.getGID() < wnode.getGID()) {
-                                        race.addSchedule(schedule_a);
-                                        race.addSchedule(schedule_b);
-                                    } else {
-                                        race.addSchedule(schedule_b);
-                                        race.addSchedule(schedule_a);
-                                    }
-
-                                    // report the schedules
-                                    logger.report("Schedule_a: " + trim(schedule_a),
-                                            Logger.MSGTYPE.REAL);
-                                    logger.report("Schedule_b: " + trim(schedule_b) + "\n",
-                                            Logger.MSGTYPE.REAL);
-
                                 } else {
                                     // report potential races
 
@@ -532,45 +461,6 @@ public class NewRVPredict {
                                             }
                                         }
                                     }
-
-                                    if (config.noschedule)
-                                        continue;
-
-                                    List<String> schedule_a = engine.getSchedule(wnode1.getGID(),
-                                            trace.getNodeGIDTIdMap(), trace.getThreadIdNameMap());
-                                    schedule_a.add(trace.getThreadIdNameMap().get(
-                                            trace.getNodeGIDTIdMap().get(wnode2.getGID())));
-
-                                    List<String> schedule_b = new ArrayList<String>(schedule_a);
-
-                                    String str1 = schedule_b.remove(schedule_b.size() - 1);
-                                    int pos = schedule_b.size() - 1;
-                                    String str2 = schedule_b.remove(pos);
-                                    while (str1 == str2) {
-                                        pos--;
-                                        schedule_b.add(str2);
-                                        str2 = schedule_b.remove(pos);
-                                    }
-
-                                    schedule_b.add(str1);
-                                    schedule_b.add(str2);
-
-                                    schedule_a.addAll(0, schedule_prefix);
-                                    schedule_b.addAll(0, schedule_prefix);
-
-                                    if (wnode1.getGID() < wnode2.getGID()) {
-                                        race.addSchedule(schedule_a);
-                                        race.addSchedule(schedule_b);
-                                    } else {
-                                        race.addSchedule(schedule_b);
-                                        race.addSchedule(schedule_a);
-                                    }
-
-                                    logger.report("Schedule_a: " + trim(schedule_a),
-                                            Logger.MSGTYPE.REAL);
-                                    logger.report("Schedule_b: " + trim(schedule_b) + "\n",
-                                            Logger.MSGTYPE.REAL);
-
                                 } else {
                                     // if we arrive here, it means we find a
                                     // case where lockset+happens-before could
@@ -632,10 +522,6 @@ public class NewRVPredict {
 
     public void run() {
         try {
-
-            // this is used to maintain the schedule in the previous windows
-            List<String> schedule_prefix = new ArrayList<>();
-
             // z3 engine is used for interacting with constraints
             Engine engine = new EngineSMTLIB1(config);
 
@@ -682,28 +568,13 @@ public class NewRVPredict {
                     // engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
 
                     if (detectRace) {
-                        detectRace(engine, trace, schedule_prefix);
+                        detectRace(engine, trace);
                     }
                 }
                 // get last write value from the current trace
                 // as the initial value for the next round
                 initialWriteValueMap = trace.getInitialWriteValueMap();
                 trace.saveLastWriteValues(initialWriteValueMap);
-
-                // append the schedule in the current trace to schedule_prefix
-                // which maybe used in the next window for generating racey
-                // schedules
-                if (!config.noschedule && (round + 1) * config.window_size < totalTraceLength)
-                    schedule_prefix.addAll(getTraceSchedule(trace));
-            }
-
-            if (!config.noschedule) {
-                // save schedules to db
-                int size = violations.size();
-                if (size > 0) {
-                    dbEngine.createScheduleTable();
-                    dbEngine.saveSchedulesToDB(violations);
-                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -754,22 +625,6 @@ public class NewRVPredict {
                 System.exit(0);
             }
         }, config.timeout * 1000);
-    }
-
-    /**
-     * Return the schedule, i.e., the thread execution order, of the trace
-     *
-     * @param trace
-     * @return
-     */
-    private static List<String> getTraceSchedule(Trace trace) {
-
-        List<String> fullschedule = new ArrayList<>();
-
-        for (int k = 0; k < trace.getFullTrace().size(); k++)
-            fullschedule.add(trace.getThreadIdNameMap().get(trace.getFullTrace().get(k).getTID()));
-
-        return fullschedule;
     }
 
     class ExecutionInfoTask extends Thread {
@@ -826,7 +681,6 @@ public class NewRVPredict {
                         Logger.MSGTYPE.STATISTICS);
                 logger.report("Total Time: " + (System.currentTimeMillis() - start_time) + "ms",
                         Logger.MSGTYPE.STATISTICS);
-                // System.out.println("Total #Schedules: "+size_schedule);
             }
 
             logger.closePrinter();

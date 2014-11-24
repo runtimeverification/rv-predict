@@ -35,7 +35,6 @@ import java.util.*;
 import java.util.List;
 
 import rvpredict.trace.*;
-import violation.IViolation;
 
 /**
  * Engine for interacting with database.
@@ -51,14 +50,7 @@ public class DBEngine {
     private final String dbname = "RVDatabase";
     public String appname = "main";
 
-    private final String[] scheduletablecolname = { "ID", "SIG", "SCHEDULE" };
-    private final String[] scheduletablecoltype = { "INT", "VARCHAR", "ARRAY" };
-
     private Connection conn;
-    private PreparedStatement prepStmt;
-
-    private final String scheduletablename;
-    private final String propertytablename;
 
     private TraceCache traceCache=null;
 
@@ -104,8 +96,6 @@ public class DBEngine {
         appname = name;
         this.directory = directory;
 
-        scheduletablename = "schedule_" + name;
-        propertytablename = "property_" + name;
         connectDB(directory);
     }
 
@@ -123,22 +113,6 @@ public class DBEngine {
      */
     public boolean checkLog() {
         return true;
-    }
-
-    public void createScheduleTable() throws Exception {
-        String sql_dropTable = "DROP TABLE IF EXISTS " + scheduletablename;
-        String sql_insertdata = "INSERT INTO " + scheduletablename + " VALUES (?,?,?)";
-
-        Statement stmt = conn.createStatement();
-        stmt.execute(sql_dropTable);
-
-        String sql_createTable = "CREATE TABLE " + scheduletablename + " ("
-                + scheduletablecolname[0] + " " + scheduletablecoltype[0] + " PRIMARY KEY, "
-                + scheduletablecolname[1] + " " + scheduletablecoltype[1] + ", "
-                + scheduletablecolname[2] + " " + scheduletablecoltype[2] + ")";
-        stmt.execute(sql_createTable);
-
-        prepStmt = conn.prepareStatement(sql_insertdata);
     }
 
     private void connectDB(String directory) {
@@ -232,105 +206,6 @@ public class DBEngine {
         trace.finishedLoading();
 
         return trace;
-    }
-
-    public int getScheduleSize() {
-        try {
-            String sql_select = "SELECT COUNT(*) FROM " + scheduletablename;
-
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql_select);
-            if (rs.next()) {
-                return rs.getInt(1);
-
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return 0;
-    }
-
-    public Object[] getSchedule(int id) {
-        try {
-            String sql_select = "SELECT * FROM " + scheduletablename + " WHERE ID=" + id;
-
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql_select);
-            if (rs.next()) {
-                Object o = rs.getObject(3);
-                Object[] schedule = (Object[]) o;
-
-                return schedule;
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    public HashMap<String, Integer> getProperty() {
-        try {
-            String sql_select = "SELECT * FROM " + propertytablename;
-
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql_select);
-            HashMap<String, Integer> map = new HashMap<String, Integer>();
-
-            while (rs.next()) {
-
-                String name = rs.getString(1);
-                Integer id = rs.getInt(2);
-
-                map.put(name, id);
-
-            }
-            return map;
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    /**
-     * Save schedules for each violation to database. The schedule is identified
-     * by a unique order.
-     *
-     * @param violations
-     * @return
-     */
-    public int saveSchedulesToDB(HashSet<IViolation> violations) {
-
-        Iterator<IViolation> violationIt = violations.iterator();
-
-        int i = 0;
-        while (violationIt.hasNext()) {
-
-            IViolation violation = violationIt.next();
-            List<List<String>> schedules = violation.getSchedules();
-
-            Iterator<List<String>> scheduleIt = schedules.iterator();
-
-            while (scheduleIt.hasNext()) {
-                i++;
-                List<String> schedule = scheduleIt.next();
-                try {
-                    prepStmt.setInt(1, i);
-                    prepStmt.setString(2, violation.toString());
-                    // Array aArray = conn.createArrayOf("VARCHAR",
-                    // schedule.toArray());
-                    prepStmt.setObject(3, schedule.toArray());
-
-                    prepStmt.execute();
-
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        return i;
-
     }
 
 }

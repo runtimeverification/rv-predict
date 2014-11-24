@@ -715,22 +715,4 @@ public class EngineSMTLIB1 extends Engine {
         testConstructReadWriteConstraints();
     }
 
-    @Override
-    public List<String> getSchedule(long endGID, HashMap<Long, Long> nodeGIDTidMap,
-            HashMap<Long, String> threadIdNameMap) {
-
-        List<String> schedule = new ArrayList<>();
-        for (int i = 0; i < task.schedule.size(); i++) {
-            String xi = task.schedule.get(i);
-            long gid = Long.valueOf(xi.substring(1));
-            long tid = nodeGIDTidMap.get(gid);
-            String name = threadIdNameMap.get(tid);
-            schedule.add(name);
-            if (gid == endGID)
-                break;
-        }
-
-        return schedule;
-    }
-
 }

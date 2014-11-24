@@ -64,9 +64,6 @@ public class Trace {
     // fulltrace represents all the critical events in the global order
     List<Event> fulltrace = new ArrayList<>();
 
-    // keep a node GID to tid Map, used for generating schedules
-    HashMap<Long, Long> nodeGIDTidMap = new HashMap<Long, Long>();
-
     // per thread node map
     HashMap<Long, List<Event>> threadNodesMap = new HashMap<>();
 
@@ -125,10 +122,6 @@ public class Trace {
 
     public void setInitialWriteValueMap(HashMap<String, Long> map) {
         initialWriteValueMap = map;
-    }
-
-    public HashMap<Long, Long> getNodeGIDTIdMap() {
-        return nodeGIDTidMap;
     }
 
     public HashMap<Integer, String> getSharedVarIdMap() {
@@ -327,8 +320,6 @@ public class Trace {
             // all critical nodes -- read/write/synchronization events
 
             fulltrace.add(node);
-
-            nodeGIDTidMap.put(node.getGID(), node.getTID());
 
             List<Event> threadNodes = threadNodesMap.get(tid);
             if (threadNodes == null) {

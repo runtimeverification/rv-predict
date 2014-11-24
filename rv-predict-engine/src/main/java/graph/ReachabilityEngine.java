@@ -96,13 +96,17 @@ public class ReachabilityEngine {
         return s.contains(i2);
     }
 
-    public boolean canReach(long i1, long i2) {
+    public boolean canReach(Long i1, Long i2) {
         // must have corresponding real id
 
         // what if idMap does not contain id?
 
         i1 = idMap.get(i1);
         i2 = idMap.get(i2);
+        if (i1 == null || i2 == null) {
+            // TODO(YilongL): this is a hack to patch the already broken code
+            return false;
+        }
 
         // return reachmx[i1][i2];
         long SIG = i1 * M + i2;

@@ -61,7 +61,7 @@ public class Main {
             // }
 
             // initialize the recording data structures
-            RecordRT.initNonSharing(true);
+            RecordRT.initNonSharing();
             String appname = args[0];
 
             Class<?> c = Class.forName(appname);

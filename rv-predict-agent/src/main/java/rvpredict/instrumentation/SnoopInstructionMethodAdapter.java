@@ -150,11 +150,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
         String varSig = (owner + "." + name).replace("/", ".");
-        if (!globalState.isVariableShared(varSig)) {
-            mv.visitFieldInsn(opcode, owner, name, desc);
-            return;
-        }
-
         int sid = globalState.getVariableId(varSig);
         String sig_loc = source
                 + "|"
@@ -326,7 +321,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void instrumentArrayLoad(int arrayLoadOpcode) {
-        if (isInit || !globalState.shouldInstrumentArray(getCrntStmtSig())) {
+        if (isInit) {
             mv.visitInsn(arrayLoadOpcode);
             return;
         }
@@ -374,11 +369,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     private void instrumentArrayStore(int arrayStoreOpcode) {
-        if (!globalState.shouldInstrumentArray(getCrntStmtSig())) {
-            mv.visitInsn(arrayStoreOpcode);
-            return;
-        }
-
         boolean isElemSingleWord = isElementSingleWord(arrayStoreOpcode);
         int sid = getCrntStmtSID();
 

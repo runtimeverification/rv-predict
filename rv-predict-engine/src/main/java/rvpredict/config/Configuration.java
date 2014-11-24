@@ -127,10 +127,6 @@ public class Configuration {
     @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude", hidden = true, descriptionKey = "1030")
     public static String additionalExcludes;
 
-    public final static String opt_sharing_only = "--detectSharingOnly";
-    @Parameter(names = opt_sharing_only, description = "Run agent only to detect shared variables", hidden = true, descriptionKey = "1040")
-    public boolean agentOnlySharing;
-
     public final static String opt_asynchronous = "--async";
     @Parameter(names = opt_asynchronous, description = "Record trace asynchronously", hidden = true, descriptionKey = "1050")
     public boolean async;

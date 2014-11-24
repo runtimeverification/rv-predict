@@ -39,7 +39,6 @@ import java.io.*;
 import java.nio.file.Paths;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.AbstractMap.SimpleEntry;
@@ -214,48 +213,6 @@ public class DBEngine {
         stmt.execute(sql_dropTable);
         sql_dropTable = "DROP TABLE IF EXISTS " + sharedarrayloctablename;
         stmt.execute(sql_dropTable);
-    }
-
-    public HashSet<String> loadSharedArrayLocs() {
-        HashSet<String> sharedArrayLocs = new HashSet<String>();
-        try {
-            String sql_select = "SELECT * FROM " + sharedarrayloctablename;
-
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql_select);
-            while (rs.next()) {
-                // Get the data from the row using the column index
-                String SIG = rs.getString(1);
-                sharedArrayLocs.add(SIG);
-            }
-        } catch (Exception e) {
-            // e.printStackTrace();
-        }
-        if (sharedArrayLocs.isEmpty())
-            return null;
-        else
-            return sharedArrayLocs;
-    }
-
-    public HashSet<String> loadSharedVariables() {
-        HashSet<String> sharedVariables = new HashSet<String>();
-        try {
-            String sql_select = "SELECT * FROM " + sharedvarsigtablename;
-
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql_select);
-            while (rs.next()) {
-                // Get the data from the row using the column index
-                String SIG = rs.getString(1);
-                sharedVariables.add(SIG);
-            }
-        } catch (Exception e) {
-            // e.printStackTrace();
-        }
-        if (sharedVariables.isEmpty())
-            return null;
-        else
-            return sharedVariables;
     }
 
     /**

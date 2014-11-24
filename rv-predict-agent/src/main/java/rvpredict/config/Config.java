@@ -22,11 +22,9 @@ public class Config {
     public static final String LOG_NOTIFY = "logNotify";
 
     public static final String DESC_LOG_FIELD_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;Z)V";
-    public static final String DESC_LOG_FIELD_ACCESS_DETECT_SHARING = "(IIZ)V";
 
     public static final String DESC_LOG_INIT_WRITE_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;)V";
     public static final String DESC_LOG_ARRAY_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;Z)V";
-    public static final String DESC_LOG_ARRAY_ACCESS_DETECT_SHARING = "(ILjava/lang/Object;IZ)V";
 
     public static final String DESC_LOG_LOCK = "(ILjava/lang/Object;)V";
     public static final String DESC_LOG_UNLOCK = "(ILjava/lang/Object;)V";

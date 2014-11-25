@@ -717,7 +717,7 @@ public class GUIMain {
                 PrintStream ps = new PrintStream(fos);
                 ps.print(textArea.getText());
                 ps.close();
-            } catch (Exception e) {
+            } catch (FileNotFoundException e) {
                 JOptionPane.showMessageDialog(null, "Cannot write file", "Cannot Write File",
                         JOptionPane.WARNING_MESSAGE);
                 e.printStackTrace();
@@ -968,7 +968,7 @@ public class GUIMain {
                         synchronized (System.out) {
                             System.out.println(color + line);
                         }
-            } catch (Exception e) {
+            } catch (IOException e) {
                 // This exception actually happens occasionally when we have to
                 // destroy the process, so we just ignore it
                 // e.printStackTrace();
@@ -1005,7 +1005,7 @@ public class GUIMain {
                         }
                     }
                 }
-            } catch (Exception e) {
+            } catch (IOException e) {
                 e.printStackTrace();
                 System.exit(1);
             }
@@ -1125,7 +1125,7 @@ public class GUIMain {
             System.out.println("********************************" + stars);
             System.out.println("* Finished Testing Program " + YELLOW + "[" + t + "s] *");
             System.out.println("********************************" + stars + "\n");
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -1163,7 +1163,7 @@ public class GUIMain {
             System.out.println("* Finished Running Instrumented Program " + YELLOW + "[" + t
                     + "s] *");
             System.out.println("*********************************************" + stars + "\n");
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -1202,7 +1202,7 @@ public class GUIMain {
                 killAction();
             if (v.kill)
                 return;
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
         if (v.kill)
@@ -1303,7 +1303,7 @@ class JTextPaneOutputStream extends OutputStream {
                 doc.insertString(doc.getLength(), String.valueOf(c), style);
                 return;
             }
-        } catch (Exception e) {
+        } catch (BadLocationException e) {
             e.printStackTrace();
             System.exit(1);
         }

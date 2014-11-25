@@ -145,12 +145,6 @@ public class Configuration {
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
     public int window_size = 1000;
 
-    // final static String opt_no_schedule = "--noschedule";
-    // @Parameter(names=opt_no_schedule, description = "not report schedule",
-    // hidden = true)
-    // ok, let's make noschedule by default
-    public boolean noschedule = true;
-
     @Parameter(names = "--branch", description = "Use the branch model", hidden = true, descriptionKey = "2020")
     public boolean branch;
 
@@ -188,7 +182,7 @@ public class Configuration {
     public long solver_memory = 8000;
 
     final static String opt_timeout = "--timeout";
-    @Parameter(names = opt_timeout, description = "Rv-predict timeout in seconds", hidden = true, descriptionKey = "2070")
+    @Parameter(names = opt_timeout, description = "RV-Predict timeout in seconds", hidden = true, descriptionKey = "2070")
     public long timeout = 3600;
 
     // final static String opt_smtlib1 = "--smtlib1";

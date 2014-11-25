@@ -170,11 +170,8 @@ public class DBEngine {
         this.asynchronousLogging = asynchronousLogging;
         sharedarrayloctablename = "sharedarrayloc_" + name;
         sharedvarsigtablename = "sharedvarsig_" + name;
-        try {
-            connectDB(directory);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        connectDB(directory);
+
         try {
             metadataOS = new ObjectOutputStream(
                     new BufferedOutputStream(
@@ -201,11 +198,10 @@ public class DBEngine {
 
     /**
      * Drops all relevant tables of the database. Used for a clean start.
+     * @throws SQLException
      *
-     * @throws Exception
-     *             if errors are reported by the sql command
      */
-    public void dropAll() throws Exception {
+    public void dropAll() throws SQLException {
         Statement stmt = conn.createStatement();
 
         String sql_dropTable;
@@ -254,7 +250,7 @@ public class DBEngine {
         saveEvent(eventType, locId, 0, 0, 0);
     }
 
-    private void connectDB(String directory) throws Exception {
+    private void connectDB(String directory) {
         try {
             Driver driver = new rvpredict.h2.Driver();
             String db_url = "jdbc:h2:" + directory + "/" + DB_NAME + ";DB_CLOSE_ON_EXIT=FALSE";
@@ -264,7 +260,7 @@ public class DBEngine {
             // conn.setAutoCommit(true);
             // check if Database may be already in use
             // kill?
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
             // DBORDER++;
             // conn =

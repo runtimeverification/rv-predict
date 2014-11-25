@@ -5,5 +5,5 @@ package rvpredict.trace;
 * @author TraianSF
 */
 public enum EventType {
-    INIT, READ, WRITE, LOCK, UNLOCK, WAIT, NOTIFY, START, JOIN, BRANCH, PROPERTY;
+    INIT, READ, WRITE, LOCK, UNLOCK, WAIT, NOTIFY, START, JOIN, BRANCH;
 }

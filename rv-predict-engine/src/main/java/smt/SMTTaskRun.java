@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -32,7 +32,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.concurrent.*;
 
 import rvpredict.config.Configuration;
@@ -40,7 +39,7 @@ import rvpredict.config.Util;
 
 /**
  * Constraint solving with Z3 solver
- * 
+ *
  * @author jeffhuang
  *
  */
@@ -52,7 +51,6 @@ public class SMTTaskRun {
     protected List<String> CMD;
 
     public Model model;
-    public List<String> schedule;
 
     boolean sat;
 
@@ -69,7 +67,7 @@ public class SMTTaskRun {
 
     /**
      * initialize solver configuration
-     * 
+     *
      * @param config
      * @param id
      * @throws IOException
@@ -100,7 +98,7 @@ public class SMTTaskRun {
 
     /**
      * solve constraint "msg"
-     * 
+     *
      * @param msg
      */
     public void sendMessage(String msg) {
@@ -117,7 +115,6 @@ public class SMTTaskRun {
 
             if (model != null) {
                 sat = true;
-                schedule = computeSchedule(model);
             }
             // String z3OutFileName = z3OutFile.getAbsolutePath();
             // retrieveResult(z3OutFileName);
@@ -126,40 +123,6 @@ public class SMTTaskRun {
             System.err.println(e.getMessage());
 
         }
-    }
-
-    /**
-     * Given the model of solution, return the corresponding schedule
-     * 
-     * @param model
-     * @return
-     */
-    public List<String> computeSchedule(Model model) {
-
-        List<String> schedule = new ArrayList<>();
-
-        Iterator<Entry<String, Object>> setIt = model.getMap().entrySet().iterator();
-        while (setIt.hasNext()) {
-            Entry<String, Object> entryModel = setIt.next();
-            String op = entryModel.getKey();
-            int order = (Integer) entryModel.getValue();
-
-            if (schedule.isEmpty())
-                schedule.add(op);
-            else
-                for (int i = 0; i < schedule.size(); i++) {
-                    if (order < (Integer) model.getMap().get(schedule.get(i))) {
-                        schedule.add(i, op);
-                        break;
-                    } else if (i == schedule.size() - 1) {
-                        schedule.add(op);
-                        break;
-                    }
-
-                }
-        }
-
-        return schedule;
     }
 
     public void exec(final File outFile, String file) throws IOException {
@@ -196,7 +159,7 @@ public class SMTTaskRun {
             System.err.println(e.getMessage());
             System.exit(-1);
 
-        } catch (Exception e) {
+        } catch (InterruptedException | TimeoutException e) {
             System.err.println(e.getMessage());
             task.cancel(true);
             executorService.shutdown();

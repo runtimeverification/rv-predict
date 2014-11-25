@@ -1,9 +1,10 @@
 package rvpredict.util;
 
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URLClassLoader;
 import java.net.URL;
 import java.net.URI;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -34,7 +35,7 @@ public class RootDirFinder extends URLClassLoader {
             pathPrefix += pathArr[i] + File.separator;
             try {
                 addURL(new URI(prefix).toURL());
-            } catch (Exception e) {
+            } catch (URISyntaxException | MalformedURLException e) {
                 e.printStackTrace();
                 System.exit(1);
             }
@@ -104,7 +105,7 @@ public class RootDirFinder extends URLClassLoader {
         try (RootDirFinder f = new RootDirFinder(new File(args[0]))) {
             System.out.println(f.getRootDir());
             System.out.println(f.getClassName());
-        } catch (Exception e) {
+        } catch (IOException | NoMainMethodException e) {
             e.printStackTrace();
         }
     }

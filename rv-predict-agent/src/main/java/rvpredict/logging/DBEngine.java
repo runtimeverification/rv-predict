@@ -31,7 +31,6 @@ package rvpredict.logging;
 import rvpredict.db.EventItem;
 import rvpredict.config.Config;
 import rvpredict.db.EventOutputStream;
-import rvpredict.db.TraceCache;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
 import rvpredict.trace.EventType;
 
@@ -99,7 +98,6 @@ public class DBEngine {
         try {
             saveMetaData();
             metadataOS.close();
-            traceOS.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -110,8 +108,7 @@ public class DBEngine {
         assert !stack.isEmpty() : "stack should not be empty here as we're saving metadata, too";
 
         try {
-            traceOS =  new EventOutputStream(new BufferedOutputStream(
-                    new FileOutputStream(Paths.get(directory, stack.get(0).GID + TraceCache.TRACE_SUFFIX).toFile())));
+            EventOutputStream traceOS = (newTraceOs(stack.get(0).GID));
             for (EventItem eventItem : stack) {
                 traceOS.writeEvent(eventItem);
             }
@@ -122,7 +119,21 @@ public class DBEngine {
         }
     }
 
-    EventOutputStream traceOS;
+    private final ThreadLocalEventStream threadLocalTraceOS;
+
+    private EventOutputStream getTraceOS() {
+       return threadLocalTraceOS.get();
+    }
+    private EventOutputStream newThreadLocalTraceOS(long gid) {
+        EventOutputStream traceOS = newTraceOs(gid);
+        threadLocalTraceOS.set(traceOS);
+        return traceOS;
+    }
+
+    private EventOutputStream newTraceOs(long gid) {
+        return threadLocalTraceOS.getNewTraceOs(gid);
+    }
+
     ObjectOutputStream metadataOS;
     Thread loggingThread;
     boolean shutdown = false;
@@ -167,6 +178,7 @@ public class DBEngine {
         BUFFER_THRESHOLD = 10*Config.instance.commandLine.window_size;
         this.globalState = globalState;
         this.directory = directory;
+        threadLocalTraceOS = new ThreadLocalEventStream(directory);
         this.asynchronousLogging = asynchronousLogging;
         sharedarrayloctablename = "sharedarrayloc_" + name;
         sharedvarsigtablename = "sharedvarsig_" + name;
@@ -181,9 +193,6 @@ public class DBEngine {
                             new FileOutputStream(Paths.get(directory, "metadata.bin").toFile())));
             if (asynchronousLogging) {
                 startAsynchronousLogging();
-            } else {
-                traceOS =  new EventOutputStream(new BufferedOutputStream(
-                        new FileOutputStream(Paths.get(directory, 1 + TraceCache.TRACE_SUFFIX).toFile())));
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -220,22 +229,25 @@ public class DBEngine {
      * writing to file might occur for synchronous logging.
      */
     // TODO(YilongL): why synchronize this method? too slow!
-    public synchronized void saveEvent(EventType TYPE, int ID, long ADDRL, long ADDRR, long VALUE) {
+    public void saveEvent(EventType TYPE, int ID, long ADDRL, long ADDRR, long VALUE) {
         long TID = Thread.currentThread().getId();
         EventItem e = new EventItem(DBEngine.globalEventID.incrementAndGet(), TID, ID, ADDRL, ADDRR, VALUE, TYPE);
         if (asynchronousLogging) {
-            if (buffer.size() >= BUFFER_THRESHOLD) {
-                saveCurrentEventsToDB();
+            synchronized (buffer) {
+                if (buffer.size() >= BUFFER_THRESHOLD) {
+                    saveCurrentEventsToDB();
+                }
+                buffer.add(e);
             }
-            buffer.add(e);
         } else {
             if (shutdown) return;
             try {
-                if (e.GID % BUFFER_THRESHOLD == 0) {
+                EventOutputStream traceOS = getTraceOS();
+                long eventsWritten = traceOS.getEventsWrittenCount();
+                if (eventsWritten % BUFFER_THRESHOLD == 0) {
                     traceOS.close();
                     saveMetaData();
-                    traceOS =  new EventOutputStream(new BufferedOutputStream(
-                            new FileOutputStream(Paths.get(directory, e.GID + TraceCache.TRACE_SUFFIX).toFile())));
+                    traceOS = newThreadLocalTraceOS(e.GID);
                 }
                 traceOS.writeEvent(e);
             } catch (FileNotFoundException e1) {

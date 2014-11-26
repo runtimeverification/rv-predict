@@ -10,6 +10,7 @@ import java.io.OutputStream;
  *
  */
 public class EventOutputStream extends DataOutputStream {
+
     /**
      * Creates a new event output stream to write events to the specified
      * underlying output stream. The counter <code>written</code> is
@@ -21,6 +22,7 @@ public class EventOutputStream extends DataOutputStream {
      */
     public EventOutputStream(OutputStream out) {
         super(out);
+        eventsWrittenCount = 0;
     }
 
     /**
@@ -41,5 +43,12 @@ public class EventOutputStream extends DataOutputStream {
         writeLong(event.ADDRR);
         writeLong(event.VALUE);
         writeByte(event.TYPE.ordinal());
+        eventsWrittenCount++;
     }
+
+    public long getEventsWrittenCount() {
+        return eventsWrittenCount;
+    }
+
+    private long eventsWrittenCount;
 }

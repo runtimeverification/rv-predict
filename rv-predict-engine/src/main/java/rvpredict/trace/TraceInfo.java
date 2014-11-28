@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -30,11 +30,12 @@ package rvpredict.trace;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
 
 /**
  * This class keeps the information associated with the trace such as the trace
  * statistics, shared variable signature, etc.
- * 
+ *
  * @author jeffhuang
  *
  */
@@ -59,40 +60,27 @@ public class TraceInfo {
         threadIdNamemap = threadIdNameMap2;
     }
 
-    public HashMap<Integer, String> getSharedVarIdMap() {
-
-        return sharedVarIdSigMap;
-    }
-
     public HashMap<Integer, String> getStmtSigIdMap() {
-
         return stmtIdSigMap;
     }
 
-    public HashMap<Long, String> getThreadIdNameMap() {
-        return threadIdNamemap;
-    }
-
-    public void addSharedAddresses(HashSet<String> s) {
+    public void addSharedAddresses(Set<String> s) {
         sharedAddresses.addAll(s);
     }
 
-    public void addThreads(HashSet<Long> s) {
+    public void addThreads(Set<Long> s) {
         threads.addAll(s);
     }
 
     public int getTraceThreadNumber() {
-        // TODO Auto-generated method stub
         return threads.size();
     }
 
     public int getTraceSharedVariableNumber() {
-        // TODO Auto-generated method stub
         return sharedAddresses.size();
     }
 
     public boolean isAddressVolatile(String addr) {
-
         return volatileAddresses.containsKey(Integer.valueOf(addr));
     }
 
@@ -106,10 +94,6 @@ public class TraceInfo {
 
     public void incrementSyncNumber() {
         num_sync++;
-    }
-
-    public void incrementPropertyNumber() {
-        num_prop++;
     }
 
     public void incrementLocalReadWriteNumber() {

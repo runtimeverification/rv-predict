@@ -32,7 +32,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.Stack;
 import java.util.List;
 
@@ -47,62 +49,55 @@ import java.util.List;
 public class Trace {
 
     // rawfulltrace represents all the raw events in the global order
-    List<AbstractEvent> rawfulltrace = new ArrayList<>();
+    private final List<Event> rawfulltrace = new ArrayList<>();
 
     // indexed by address, the set of read/write threads
     // used to prune away local data accesses
-    HashMap<String, HashSet<Long>> indexedReadThreads = new HashMap<String, HashSet<Long>>();
-    HashMap<String, HashSet<Long>> indexedWriteThreads = new HashMap<String, HashSet<Long>>();
+    private final Map<String, Set<Long>> indexedReadThreads = new HashMap<>();
+    private final Map<String, Set<Long>> indexedWriteThreads = new HashMap<>();
 
     // the set of shared memory locations
-    HashSet<String> sharedAddresses = new HashSet<String>();
+    private final Set<String> sharedAddresses = new HashSet<>();
     // the set of threads
-    HashSet<Long> threads = new HashSet<Long>();
+    private final Set<Long> threads = new HashSet<>();
 
     // fulltrace represents all the critical events in the global order
-    List<AbstractEvent> fulltrace = new ArrayList<>();
-
-    // keep a node GID to tid Map, used for generating schedules
-    HashMap<Long, Long> nodeGIDTidMap = new HashMap<Long, Long>();
+    private final List<Event> fulltrace = new ArrayList<>();
 
     // per thread node map
-    HashMap<Long, List<AbstractEvent>> threadNodesMap = new HashMap<Long, List<AbstractEvent>>();
+    private final Map<Long, List<Event>> threadNodesMap = new HashMap<>();
 
     // the first node and last node map of each thread
-    HashMap<Long, AbstractEvent> threadFirstNodeMap = new HashMap<Long, AbstractEvent>();
-    HashMap<Long, AbstractEvent> threadLastNodeMap = new HashMap<Long, AbstractEvent>();
+    private final Map<Long, Event> threadFirstNodeMap = new HashMap<>();
+    private final Map<Long, Event> threadLastNodeMap = new HashMap<>();
 
     // per thread per lock lock/unlock pair
-    HashMap<Long, HashMap<Long, List<LockPair>>> threadIndexedLockPairs = new HashMap<>();
-    HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
+    private final Map<Long, Map<Long, List<LockPair>>> threadIndexedLockPairs = new HashMap<>();
+    private final Map<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<>();
 
     // per thread branch nodes
-    HashMap<Long, List<BranchNode>> threadBranchNodes = new HashMap<Long, List<BranchNode>>();
+    private final Map<Long, List<BranchNode>> threadBranchNodes = new HashMap<>();
 
     // per thead synchronization nodes
-    HashMap<Long, List<SyncEvent>> syncNodesMap = new HashMap<>();
+    private final Map<Long, List<SyncEvent>> syncNodesMap = new HashMap<>();
 
     // per address read and write nodes
-    HashMap<String, List<ReadEvent>> indexedReadNodes = new HashMap<String, List<ReadEvent>>();
-    HashMap<String, List<WriteEvent>> indexedWriteNodes = new HashMap<String, List<WriteEvent>>();
+    private final Map<String, List<ReadEvent>> indexedReadNodes = new HashMap<>();
+    private final Map<String, List<WriteEvent>> indexedWriteNodes = new HashMap<>();
 
     // per address map from thread id to read/write nodes
-    HashMap<String, HashMap<Long, List<MemoryAccessEvent>>> indexedThreadReadWriteNodes = new HashMap<String, HashMap<Long, List<MemoryAccessEvent>>>();
-
-    // per type per address property node map
-    HashMap<String, HashMap<Integer, List<PropertyNode>>> propertyMonitors = new HashMap<String, HashMap<Integer, List<PropertyNode>>>();
-    HashMap<Long, List<PropertyNode>> threadPropertyNodes = new HashMap<Long, List<PropertyNode>>();
+    private final Map<String, Map<Long, List<MemoryAccessEvent>>> indexedThreadReadWriteNodes = new HashMap<>();
 
     // per address initial write value
-    HashMap<String, Long> initialWriteValueMap = new HashMap<>();
+    private Map<String, Long> initialWriteValueMap = new HashMap<>();
 
-    TraceInfo info;
+    private List<ReadEvent> allReadNodes;
+
+    private final TraceInfo info;
 
     public Trace(TraceInfo info) {
         this.info = info;
     }
-
-    List<ReadEvent> allReadNodes;
 
     /**
      * return true if sharedAddresses is not empty
@@ -113,82 +108,51 @@ public class Trace {
         return !sharedAddresses.isEmpty();
     }
 
-    public List<AbstractEvent> getFullTrace() {
+    public List<Event> getFullTrace() {
         return fulltrace;
     }
 
-    public HashSet<String> getSharedVariables() {
-        return sharedAddresses;
-    }
-
-    public HashMap<String, Long> getInitialWriteValueMap() {
+    public Map<String, Long> getInitialWriteValueMap() {
         return initialWriteValueMap;
     }
 
-    public void setInitialWriteValueMap(HashMap<String, Long> map) {
+    public void setInitialWriteValueMap(Map<String, Long> map) {
         initialWriteValueMap = map;
     }
 
-    public HashMap<Long, Long> getNodeGIDTIdMap() {
-        return nodeGIDTidMap;
-    }
-
-    public HashMap<Integer, String> getSharedVarIdMap() {
-
-        return info.getSharedVarIdMap();
-    }
-
     public HashMap<Integer, String> getStmtSigIdMap() {
-
         return info.getStmtSigIdMap();
     }
 
-    public HashMap<Long, String> getThreadIdNameMap() {
-        return info.getThreadIdNameMap();
-    }
-
-    public HashMap<String, HashMap<Integer, List<PropertyNode>>> getPropertyMonitors() {
-        return propertyMonitors;
-    }
-
-    public HashMap<Long, List<PropertyNode>> getThreadPropertyNodes() {
-        return threadPropertyNodes;
-    }
-
-    public HashMap<Long, AbstractEvent> getThreadFirstNodeMap() {
+    public Map<Long, Event> getThreadFirstNodeMap() {
         return threadFirstNodeMap;
     }
 
-    public HashMap<Long, AbstractEvent> getThreadLastNodeMap() {
+    public Map<Long, Event> getThreadLastNodeMap() {
         return threadLastNodeMap;
     }
 
-    public HashMap<Long, List<AbstractEvent>> getThreadNodesMap() {
+    public Map<Long, List<Event>> getThreadIdToEventsMap() {
         return threadNodesMap;
     }
 
-    public HashMap<Long, List<SyncEvent>> getSyncNodesMap() {
+    public Map<Long, List<SyncEvent>> getSyncNodesMap() {
         return syncNodesMap;
     }
 
-    public HashMap<Long, HashMap<Long, List<LockPair>>> getThreadIndexedLockPairs() {
-        return threadIndexedLockPairs;
-    }
-
-    public HashMap<String, List<ReadEvent>> getIndexedReadNodes() {
+    public Map<String, List<ReadEvent>> getIndexedReadNodes() {
         return indexedReadNodes;
     }
 
-    public HashMap<String, List<WriteEvent>> getIndexedWriteNodes() {
+    public Map<String, List<WriteEvent>> getIndexedWriteNodes() {
         return indexedWriteNodes;
     }
 
-    public HashMap<String, HashMap<Long, List<MemoryAccessEvent>>> getIndexedThreadReadWriteNodes() {
+    public Map<String, Map<Long, List<MemoryAccessEvent>>> getIndexedThreadReadWriteNodes() {
         return indexedThreadReadWriteNodes;
     }
 
-    public void saveLastWriteValues(HashMap<String, Long> valueMap) {
-
+    public void saveLastWriteValues(Map<String, Long> valueMap) {
         Iterator<String> addrIt = indexedWriteNodes.keySet().iterator();
         while (addrIt.hasNext()) {
             String addr = addrIt.next();
@@ -230,13 +194,13 @@ public class Trace {
         }
 
         if (POS >= 0) {
-            List<AbstractEvent> nodes = threadNodesMap.get(tid);// TODO:
+            List<Event> nodes = threadNodesMap.get(tid);// TODO:
                                                                  // optimize
                                                                  // here to
                                                                  // check only
                                                                  // READ node
             for (int i = 0; i < nodes.size(); i++) {
-                AbstractEvent node = nodes.get(i);
+                Event node = nodes.get(i);
                 if (node.getGID() > POS)
                     break;
                 else {
@@ -261,14 +225,14 @@ public class Trace {
             Long tid = node.getTID();
 
             if (node instanceof ReadEvent) {
-                HashSet<Long> set = indexedReadThreads.get(addr);
+                Set<Long> set = indexedReadThreads.get(addr);
                 if (set == null) {
                     set = new HashSet<Long>();
                     indexedReadThreads.put(addr, set);
                 }
                 set.add(tid);
             } else {
-                HashSet<Long> set = indexedWriteThreads.get(addr);
+                Set<Long> set = indexedWriteThreads.get(addr);
                 if (set == null) {
                     set = new HashSet<Long>();
                     indexedWriteThreads.put(addr, set);
@@ -283,7 +247,7 @@ public class Trace {
      *
      * @param node
      */
-    private void addNode(AbstractEvent node) {
+    private void addNode(Event node) {
         Long tid = node.getTID();
         threads.add(tid);
 
@@ -307,9 +271,7 @@ public class Trace {
 
             fulltrace.add(node);
 
-            nodeGIDTidMap.put(node.getGID(), node.getTID());
-
-            List<AbstractEvent> threadNodes = threadNodesMap.get(tid);
+            List<Event> threadNodes = threadNodesMap.get(tid);
             if (threadNodes == null) {
                 threadNodes = new ArrayList<>();
                 threadNodesMap.put(tid, threadNodes);
@@ -321,48 +283,14 @@ public class Trace {
 
             // TODO: Optimize it -- no need to update it every time
             threadLastNodeMap.put(tid, node);
-            if (node instanceof PropertyNode
-            // &&node.getTid()!=1
-            ) {
-                info.incrementPropertyNumber();
-
-                PropertyNode pnode = (PropertyNode) node;
-                // System.out.println(node);
-                {
-                    // add to per thread property nodes
-                    List<PropertyNode> nodes = threadPropertyNodes.get(tid);
-                    if (nodes == null) {
-                        nodes = new ArrayList<>();
-                        threadPropertyNodes.put(tid, nodes);
-                    }
-                    nodes.add(pnode);
-                }
-
-                int ID = pnode.getID();
-                String addr = pnode.getAddr();
-
-                HashMap<Integer, List<PropertyNode>> indexedPropertyNodeMap = propertyMonitors
-                        .get(addr);
-                if (indexedPropertyNodeMap == null) {
-                    indexedPropertyNodeMap = new HashMap<Integer, List<PropertyNode>>();
-                    propertyMonitors.put(addr, indexedPropertyNodeMap);
-                }
-
-                List<PropertyNode> pnodes = indexedPropertyNodeMap.get(ID);
-                if (pnodes == null) {
-                    pnodes = new ArrayList<>();
-                    indexedPropertyNodeMap.put(ID, pnodes);
-                }
-
-                pnodes.add(pnode);
-            } else if (node instanceof MemoryAccessEvent) {
+            if (node instanceof MemoryAccessEvent) {
                 info.incrementSharedReadWriteNumber();
 
                 MemoryAccessEvent mnode = (MemoryAccessEvent) node;
 
                 String addr = mnode.getAddr();
 
-                HashMap<Long, List<MemoryAccessEvent>> threadReadWriteNodes = indexedThreadReadWriteNodes
+                Map<Long, List<MemoryAccessEvent>> threadReadWriteNodes = indexedThreadReadWriteNodes
                         .get(addr);
                 if (threadReadWriteNodes == null) {
                     threadReadWriteNodes = new HashMap<Long, List<MemoryAccessEvent>>();
@@ -420,7 +348,7 @@ public class Trace {
 
                     stack.push((SyncEvent) node);
                 } else if (node.getType().equals(EventType.UNLOCK)) {
-                    HashMap<Long, List<LockPair>> indexedLockpairs = threadIndexedLockPairs
+                    Map<Long, List<LockPair>> indexedLockpairs = threadIndexedLockPairs
                             .get(tid);
                     if (indexedLockpairs == null) {
                         indexedLockpairs = new HashMap<>();
@@ -459,13 +387,13 @@ public class Trace {
         addrs.addAll(indexedWriteThreads.keySet());
         for (Iterator<String> addrIt = addrs.iterator(); addrIt.hasNext();) {
             String addr = addrIt.next();
-            HashSet<Long> wtids = indexedWriteThreads.get(addr);
+            Set<Long> wtids = indexedWriteThreads.get(addr);
             if (wtids != null && wtids.size() > 0) {
                 if (wtids.size() > 1) {
                     sharedAddresses.add(addr);
 
                 } else {
-                    HashSet<Long> rtids = indexedReadThreads.get(addr);
+                    Set<Long> rtids = indexedReadThreads.get(addr);
                     if (rtids != null) {
                         HashSet<Long> set = new HashSet<>(rtids);
                         set.addAll(wtids);
@@ -478,7 +406,7 @@ public class Trace {
 
         // add trace
         for (int i = 0; i < rawfulltrace.size(); i++) {
-            AbstractEvent node = rawfulltrace.get(i);
+            Event node = rawfulltrace.get(i);
             if (node instanceof MemoryAccessEvent) {
                 String addr = ((MemoryAccessEvent) node).getAddr();
                 if (sharedAddresses.contains(addr))
@@ -502,10 +430,6 @@ public class Trace {
 
     }
 
-    public List<AbstractEvent> getRawFullTrace() {
-        return rawfulltrace;
-    }
-
     /**
      * compute the lock/unlock pairs because we analyze the trace window by
      * window, lock/unlock may not be in the same window, so we may have null
@@ -520,7 +444,7 @@ public class Trace {
             Stack<SyncEvent> stack = entry.getValue();
 
             if (!stack.isEmpty()) {
-                HashMap<Long, List<LockPair>> indexedLockpairs = threadIndexedLockPairs
+                Map<Long, List<LockPair>> indexedLockpairs = threadIndexedLockPairs
                         .get(tid);
                 if (indexedLockpairs == null) {
                     indexedLockpairs = new HashMap<>();
@@ -543,7 +467,6 @@ public class Trace {
     }
 
     public boolean isAddressVolatile(String addr) {
-
         return info.isAddressVolatile(addr);
     }
 

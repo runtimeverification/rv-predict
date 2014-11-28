@@ -110,14 +110,16 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
         if (opcode == INVOKEVIRTUAL) {
-            if (isThreadClass(owner)) {
-                if (desc.equals("()V")) {
-                    switch (name) {
-                    case "start":
+            if (desc.equals("()V")) {
+                switch (name) {
+                case "start":
+                    if (isThreadClass(owner)) {
                         prepareLoggingThreadEvents();
                         addLoggingCallBack(LOG_THREAD_START, DESC_LOG_THREAD_START);
-                        break;
-                    case "join":
+                    }
+                    break;
+                case "join":
+                    if (isThreadClass(owner)) {
                         /* TODO(YilongL): Since calls to thread join must be
                          * logged after they return, the code here is kind of
                          * ad-hoc. We definitely need more general way to handle
@@ -131,16 +133,16 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                         addPushConstInsn(mv, sid);
                         mv.visitVarInsn(ALOAD, index);
                         addLoggingCallBack(LOG_THREAD_JOIN, DESC_LOG_THREAD_JOIN);
-                        return;
-                    case "wait":
-                        prepareLoggingThreadEvents();
-                        addLoggingCallBack(LOG_WAIT, DESC_LOG_WAIT);
-                        break;
-                    case "notify":
-                    case "notifyAll":
-                        prepareLoggingThreadEvents();
-                        addLoggingCallBack(LOG_NOTIFY, DESC_LOG_NOTIFY);
                     }
+                    return;
+                case "wait":
+                    prepareLoggingThreadEvents();
+                    addLoggingCallBack(LOG_WAIT, DESC_LOG_WAIT);
+                    break;
+                case "notify":
+                case "notifyAll":
+                    prepareLoggingThreadEvents();
+                    addLoggingCallBack(LOG_NOTIFY, DESC_LOG_NOTIFY);
                 }
             }
         }

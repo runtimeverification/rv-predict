@@ -3,7 +3,6 @@ package rvpredict.instrumentation;
 import static org.objectweb.asm.Opcodes.*;
 
 import java.io.IOException;
-
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
@@ -182,7 +181,7 @@ public class Utility {
             try {
                 className = new ClassReader(className).getSuperName();
             } catch (IOException e) {
-                e.printStackTrace();
+                System.err.println("ASM ClassReader: unable to read " + className);
                 return false;
             }
         }

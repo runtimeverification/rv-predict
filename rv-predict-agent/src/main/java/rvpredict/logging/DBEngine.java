@@ -74,6 +74,7 @@ public class DBEngine {
     private final boolean asynchronousLogging;
 
     private final GlobalStateForInstrumentation globalState;
+    private final Thread metadataLoggingThread;
 
     public void saveCurrentEventsToDB() {
         queue.add(buffer);
@@ -88,7 +89,7 @@ public class DBEngine {
         if (asynchronousLogging) {
             try {
                 System.out.print("Done executing. Flushing log buffers to disk.");
-                loggingThread.join();
+                asynchronousLoggingThread.join();
                 System.out.println(" done.");
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -96,9 +97,19 @@ public class DBEngine {
             saveEventsToDB(buffer);
         }
         try {
-            saveMetaData();
-            metadataOS.close();
-        } catch (IOException e) {
+            synchronized (metadataOS) {
+                metadataOS.notify();
+            }
+            metadataLoggingThread.join();
+            for (EventOutputStream stream : threadLocalTraceOS.getStreamsMap().values()) {
+                try {
+                    stream.flush();
+                } catch (IOException e) {
+                    // TODO(TraianSF) We can probably safely ignore file errors at this (shutdown) stage
+                    e.printStackTrace();
+                }
+            }
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
         closeDB();
@@ -112,18 +123,19 @@ public class DBEngine {
             for (EventItem eventItem : stack) {
                 traceOS.writeEvent(eventItem);
             }
-            saveMetaData();
             traceOS.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
+        metadataOS.notify();
     }
 
     private final ThreadLocalEventStream threadLocalTraceOS;
 
     private EventOutputStream getTraceOS() {
-       return threadLocalTraceOS.get();
+        return threadLocalTraceOS.get();
     }
+
     private EventOutputStream newThreadLocalTraceOS(long gid) {
         EventOutputStream traceOS = newTraceOs(gid);
         threadLocalTraceOS.set(traceOS);
@@ -134,16 +146,16 @@ public class DBEngine {
         return threadLocalTraceOS.getNewTraceOs(gid);
     }
 
-    ObjectOutputStream metadataOS;
-    Thread loggingThread;
-    boolean shutdown = false;
+    private final ObjectOutputStream metadataOS;
+    private final Thread asynchronousLoggingThread;
+    private boolean shutdown = false;
 
-    private void startAsynchronousLogging() {
+    private Thread startAsynchronousLogging() {
 
         queue = new LinkedBlockingQueue<>();
         buffer = new ArrayList<>(BUFFER_THRESHOLD);
 
-        loggingThread = new Thread(new Runnable() {
+        Thread loggingThread = new Thread(new Runnable() {
 
             @Override
             public void run() {
@@ -171,6 +183,7 @@ public class DBEngine {
         loggingThread.setDaemon(true);
 
         loggingThread.start();
+        return loggingThread;
 
     }
 
@@ -187,23 +200,52 @@ public class DBEngine {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        metadataOS = createMetadataOS(directory);
+        metadataLoggingThread = startMetadataLogging();
+        asynchronousLoggingThread = asynchronousLogging ? startAsynchronousLogging() : null;
+    }
+
+    Thread startMetadataLogging() {
+        Thread metadataLoggingThread = new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+
+                while (!shutdown) {
+                    try {
+                        synchronized (metadataOS) {
+                            metadataOS.wait(60000);
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    saveMetaData();
+                }
+            }
+
+        });
+
+        metadataLoggingThread.setDaemon(true);
+
+        metadataLoggingThread.start();
+        return metadataLoggingThread;
+    }
+
+    private ObjectOutputStream createMetadataOS(String directory) {
         try {
-            metadataOS = new ObjectOutputStream(
+            return new ObjectOutputStream(
                     new BufferedOutputStream(
                             new FileOutputStream(Paths.get(directory, "metadata.bin").toFile())));
-            if (asynchronousLogging) {
-                startAsynchronousLogging();
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return null;
     }
 
     private void closeDB() {
         try {
-            conn.createStatement().execute("SHUTDOWN");
-            // conn.close();
-        } catch (SQLException e) {
+            metadataOS.close();
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -229,27 +271,30 @@ public class DBEngine {
      * writing to file might occur for synchronous logging.
      */
     // TODO(YilongL): why synchronize this method? too slow!
-    public void saveEvent(EventType TYPE, int ID, long ADDRL, long ADDRR, long VALUE) {
-        long TID = Thread.currentThread().getId();
-        EventItem e = new EventItem(DBEngine.globalEventID.incrementAndGet(), TID, ID, ADDRL, ADDRR, VALUE, TYPE);
+    public void saveEvent(EventType eventType, int id, long addrl, long addrr, long value) {
+        long tid = Thread.currentThread().getId();
+        long gid = DBEngine.globalEventID.incrementAndGet();
+        EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
         if (asynchronousLogging) {
+            buffer.add(e);
             synchronized (buffer) {
                 if (buffer.size() >= BUFFER_THRESHOLD) {
                     saveCurrentEventsToDB();
                 }
-                buffer.add(e);
             }
         } else {
             if (shutdown) return;
             try {
                 EventOutputStream traceOS = getTraceOS();
+                traceOS.writeEvent(e);
                 long eventsWritten = traceOS.getEventsWrittenCount();
                 if (eventsWritten % BUFFER_THRESHOLD == 0) {
                     traceOS.close();
-                    saveMetaData();
-                    traceOS = newThreadLocalTraceOS(e.GID);
+                    newThreadLocalTraceOS(1 + e.GID);
+                    synchronized (metadataLoggingThread) {
+                        metadataLoggingThread.notify();
+                    }
                 }
-                traceOS.writeEvent(e);
             } catch (FileNotFoundException e1) {
                 e1.printStackTrace();
             } catch (IOException e1) {

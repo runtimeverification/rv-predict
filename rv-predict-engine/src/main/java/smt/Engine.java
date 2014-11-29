@@ -47,6 +47,8 @@ import java.util.Map;
 import java.util.Stack;
 import java.util.List;
 
+import com.google.common.collect.Table;
+
 import rvpredict.config.Configuration;
 
 /**
@@ -55,7 +57,7 @@ import rvpredict.config.Configuration;
  * @author jeffhuang
  *
  */
-public class Engine {
+public abstract class Engine {
     protected int id = 0;// constraint id
     protected SMTTaskRun task;
 
@@ -114,64 +116,15 @@ public class Engine {
      *
      * @param map
      */
-    public void addIntraThreadConstraints(Map<Long, List<Event>> map) {
-        // create reachability engine
-        reachEngine = new ReachabilityEngine();
-
-        Iterator<List<Event>> mapIt = map.values().iterator();
-        while (mapIt.hasNext()) {
-            List<Event> nodes = mapIt.next();
-            long lastGID = nodes.get(0).getGID();
-            String lastVar = makeVariable(lastGID);
-            for (int i = 1; i < nodes.size(); i++) {
-                long thisGID = nodes.get(i).getGID();
-                String var = makeVariable(thisGID);
-                CONS_ASSERT.append("(assert (< ").append(lastVar).append(" ").append(var)
-                        .append("))\n");
-
-                // the order is added to reachability engine for quick testing
-                reachEngine.addEdge(lastGID, thisGID);
-
-                lastGID = thisGID;
-                lastVar = var;
-
-            }
-        }
-    }
+    public abstract void addIntraThreadConstraints(Map<Long, List<Event>> map);
 
     /**
      * add intra-thread order constraint for POS memory model
      *
      * @param indexedMap
      */
-    public void addPSOIntraThreadConstraints(
-            Map<String, Map<Long, List<MemoryAccessEvent>>> indexedMap) {
-
-        Iterator<Map<Long, List<MemoryAccessEvent>>> mapIt1 = indexedMap.values().iterator();
-        while (mapIt1.hasNext()) {
-            Map<Long, List<MemoryAccessEvent>> map = mapIt1.next();
-
-            Iterator<List<MemoryAccessEvent>> mapIt2 = map.values().iterator();
-            while (mapIt2.hasNext()) {
-                List<MemoryAccessEvent> nodes = mapIt2.next();
-                long lastGID = nodes.get(0).getGID();
-                String lastVar = makeVariable(lastGID);
-                for (int i = 1; i < nodes.size(); i++) {
-                    long thisGID = nodes.get(i).getGID();
-                    String var = makeVariable(thisGID);
-                    CONS_ASSERT.append("(assert (< ").append(lastVar).append(" ").append(var)
-                            .append("))\n");
-
-                    reachEngine.addEdge(lastGID, thisGID);
-
-                    lastGID = thisGID;
-                    lastVar = var;
-
-                }
-            }
-        }
-
-    }
+    public abstract void addPSOIntraThreadConstraints(
+            Table<String, Long, List<MemoryAccessEvent>> memAccessEventsTbl);
 
     /**
      * the order constraints between wait/notify/fork/join/lock/unlock

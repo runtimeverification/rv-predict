@@ -49,6 +49,8 @@ import java.util.Stack;
 import java.util.List;
 import java.util.Map.Entry;
 
+import com.google.common.collect.Table;
+
 import rvpredict.config.Configuration;
 
 public class EngineSMTLIB1 extends Engine {
@@ -114,31 +116,21 @@ public class EngineSMTLIB1 extends Engine {
 
     @Override
     public void addPSOIntraThreadConstraints(
-            Map<String, Map<Long, List<MemoryAccessEvent>>> indexedMap) {
+            Table<String, Long, List<MemoryAccessEvent>> memAccessEventsTbl) {
+        for (List<MemoryAccessEvent> nodes : memAccessEventsTbl.values()) {
+            long lastGID = nodes.get(0).getGID();
+            String lastVar = makeVariable(lastGID);
+            for (int i = 1; i < nodes.size(); i++) {
+                long thisGID = nodes.get(i).getGID();
+                String var = makeVariable(thisGID);
+                CONS_ASSERT.append("(< ").append(lastVar).append(" ").append(var).append(")\n");
 
-        Iterator<Map<Long, List<MemoryAccessEvent>>> mapIt1 = indexedMap.values().iterator();
-        while (mapIt1.hasNext()) {
-            Map<Long, List<MemoryAccessEvent>> map = mapIt1.next();
+                reachEngine.addEdge(lastGID, thisGID);
 
-            Iterator<List<MemoryAccessEvent>> mapIt2 = map.values().iterator();
-            while (mapIt2.hasNext()) {
-                List<MemoryAccessEvent> nodes = mapIt2.next();
-                long lastGID = nodes.get(0).getGID();
-                String lastVar = makeVariable(lastGID);
-                for (int i = 1; i < nodes.size(); i++) {
-                    long thisGID = nodes.get(i).getGID();
-                    String var = makeVariable(thisGID);
-                    CONS_ASSERT.append("(< ").append(lastVar).append(" ").append(var).append(")\n");
-
-                    reachEngine.addEdge(lastGID, thisGID);
-
-                    lastGID = thisGID;
-                    lastVar = var;
-
-                }
+                lastGID = thisGID;
+                lastVar = var;
             }
         }
-
     }
 
     // the order constraints between wait/notify/fork/join/lock/unlock

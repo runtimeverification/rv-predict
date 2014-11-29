@@ -92,7 +92,7 @@ public class NewRVPredict {
         // easier
         // e.g., here we use check, but still enumerate read/write
 
-        Iterator<String> addrIt = trace.getIndexedThreadReadWriteNodes().keySet().iterator();
+        Iterator<String> addrIt = trace.getMemAccessEventsTable().rowKeySet().iterator();
         while (addrIt.hasNext()) {
             // the dynamic memory location
             String addr = addrIt.next();
@@ -117,8 +117,8 @@ public class NewRVPredict {
 
             {
                 // check if local variable
-                int size_all = trace.getIndexedThreadReadWriteNodes().get(addr)
-                        .get(writenodes.get(0).getTID()).size();
+                int size_all = trace.getMemAccessEventsTable()
+                        .get(addr, writenodes.get(0).getTID()).size();
                 int size_write = writenodes.size();
                 int size_read = 0;
                 if (readnodes != null)
@@ -131,13 +131,11 @@ public class NewRVPredict {
             // skip non-primitive and array variables?
             // because we add branch operations before their operations
             if (config.optrace && !addr.contains("_")) {
-                // read/write-> set of read/write
-                Map<Long, List<MemoryAccessEvent>> threadrwnodes = trace
-                        .getIndexedThreadReadWriteNodes().get(addr);
-                Iterator<Long> tidIt = threadrwnodes.keySet().iterator();
-                while (tidIt.hasNext()) {
-                    Long tid = tidIt.next();
-                    List<MemoryAccessEvent> mnodes = threadrwnodes.get(tid);
+                for (Map.Entry<Long, List<MemoryAccessEvent>> entry : trace
+                        .getMemAccessEventsTable().row(addr).entrySet()) {
+                    long tid = entry.getKey();
+                    List<MemoryAccessEvent> mnodes = entry.getValue();
+
                     if (mnodes.size() < 2)
                         continue;
                     MemoryAccessEvent mnode_cur = mnodes.get(0);
@@ -556,7 +554,7 @@ public class NewRVPredict {
                 // 2. intra-thread order for all nodes, excluding branches
                 // and basic block transitions
                 if (config.rmm_pso)// TODO: add intra order between sync
-                    engine.addPSOIntraThreadConstraints(trace.getIndexedThreadReadWriteNodes());
+                    engine.addPSOIntraThreadConstraints(trace.getMemAccessEventsTable());
                 else
                     engine.addIntraThreadConstraints(trace.getThreadIdToEventsMap());
 

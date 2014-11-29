@@ -38,6 +38,10 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.List;
 
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Table;
+
 /**
  * Representation of the execution trace. Each event is created as a node with a
  * corresponding type. Events are indexed by their thread Id, Type, and memory
@@ -85,8 +89,10 @@ public class Trace {
     private final Map<String, List<ReadEvent>> indexedReadNodes = new HashMap<>();
     private final Map<String, List<WriteEvent>> indexedWriteNodes = new HashMap<>();
 
-    // per address map from thread id to read/write nodes
-    private final Map<String, Map<Long, List<MemoryAccessEvent>>> indexedThreadReadWriteNodes = new HashMap<>();
+    /**
+     * Lists of {@code MemoryAccessEvent}'s indexed by address and thread ID.
+     */
+    private final Table<String, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
 
     // per address initial write value
     private Map<String, Long> initialWriteValueMap = new HashMap<>();
@@ -148,8 +154,8 @@ public class Trace {
         return indexedWriteNodes;
     }
 
-    public Map<String, Map<Long, List<MemoryAccessEvent>>> getIndexedThreadReadWriteNodes() {
-        return indexedThreadReadWriteNodes;
+    public Table<String, Long, List<MemoryAccessEvent>> getMemAccessEventsTable() {
+        return memAccessEventsTbl;
     }
 
     public void saveLastWriteValues(Map<String, Long> valueMap) {
@@ -287,21 +293,14 @@ public class Trace {
                 info.incrementSharedReadWriteNumber();
 
                 MemoryAccessEvent mnode = (MemoryAccessEvent) node;
-
                 String addr = mnode.getAddr();
 
-                Map<Long, List<MemoryAccessEvent>> threadReadWriteNodes = indexedThreadReadWriteNodes
-                        .get(addr);
-                if (threadReadWriteNodes == null) {
-                    threadReadWriteNodes = new HashMap<Long, List<MemoryAccessEvent>>();
-                    indexedThreadReadWriteNodes.put(addr, threadReadWriteNodes);
+                List<MemoryAccessEvent> memAccessEvents = memAccessEventsTbl.get(addr, tid);
+                if (memAccessEvents == null) {
+                    memAccessEvents = Lists.newArrayList();
+                    memAccessEventsTbl.put(addr, tid, memAccessEvents);
                 }
-                List<MemoryAccessEvent> rwnodes = threadReadWriteNodes.get(tid);
-                if (rwnodes == null) {
-                    rwnodes = new ArrayList<>();
-                    threadReadWriteNodes.put(tid, rwnodes);
-                }
-                rwnodes.add(mnode);
+                memAccessEvents.add(mnode);
 
                 // set previous branch node and sync node
                 List<BranchNode> branchnodes = threadBranchNodes.get(tid);

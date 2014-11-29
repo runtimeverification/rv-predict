@@ -46,7 +46,6 @@ import rvpredict.trace.Trace;
 import rvpredict.trace.TraceInfo;
 import rvpredict.trace.WriteEvent;
 import rvpredict.util.Logger;
-import smt.Engine;
 import smt.EngineSMTLIB1;
 import violation.ExactRace;
 import violation.Race;
@@ -85,7 +84,7 @@ public class NewRVPredict {
      * @param engine
      * @param trace
      */
-    private void detectRace(Engine engine, Trace trace) {
+    private void detectRace(EngineSMTLIB1 engine, Trace trace) {
         // implement potentialraces to be exact match
 
         // sometimes we choose an un-optimized way to implement things faster,
@@ -525,7 +524,7 @@ public class NewRVPredict {
 
     public void run() {
         // z3 engine is used for interacting with constraints
-        Engine engine = new EngineSMTLIB1(config);
+        EngineSMTLIB1 engine = new EngineSMTLIB1(config);
 
         // map from memory address to the initial value
         Map<String, Long> initialWriteValueMap = new HashMap<>();

@@ -116,50 +116,48 @@ public class NewRVPredict {
             Map<MemoryAccessEvent, Set<MemoryAccessEvent>> equiMap = new HashMap<>();
             // skip non-primitive and array variables?
             // because we add branch operations before their operations
-            if (addr.contains("_")) {
-                for (Entry<Long, List<MemoryAccessEvent>> entry : trace
-                        .getMemAccessEventsTable().row(addr).entrySet()) {
-                    // TODO(YilongL): the extensive use of List#indexOf could be a performance problem later
+            for (Entry<Long, List<MemoryAccessEvent>> entry : trace
+                    .getMemAccessEventsTable().row(addr).entrySet()) {
+                // TODO(YilongL): the extensive use of List#indexOf could be a performance problem later
 
-                    long crntTID = entry.getKey();
-                    List<MemoryAccessEvent> memAccEvents = entry.getValue();
+                long crntTID = entry.getKey();
+                List<MemoryAccessEvent> memAccEvents = entry.getValue();
 
-                    MemoryAccessEvent memAcc1 = memAccEvents.get(0);
+                MemoryAccessEvent memAcc1 = memAccEvents.get(0);
 
-                    // the index of event `memAcc1' in current thread
-                    int memAcc1Idx = trace.getThreadEvents(crntTID).indexOf(memAcc1);
+                // the index of event `memAcc1' in current thread
+                int memAcc1Idx = trace.getThreadEvents(crntTID).indexOf(memAcc1);
 
-                    for (int k = 1; k < memAccEvents.size(); k++) {
-                        MemoryAccessEvent memAcc2 = memAccEvents.get(k);
-                        List<Event> crntThrdEvents = trace.getThreadEvents(crntTID);
-                        int memAcc2Idx = crntThrdEvents.indexOf(memAcc2);
+                for (int k = 1; k < memAccEvents.size(); k++) {
+                    MemoryAccessEvent memAcc2 = memAccEvents.get(k);
+                    List<Event> crntThrdEvents = trace.getThreadEvents(crntTID);
+                    int memAcc2Idx = crntThrdEvents.indexOf(memAcc2);
 
-                        boolean newEquiMemAccBlk = true;
-                        if (memAcc2.getPrevBranchGID() < memAcc1.getGID()) {
-                            /* there is no branch event between `memAcc1' and `memAcc2' */
-                            boolean noSyncEvent = true;
-                            for (int i = memAcc2Idx - 1; i > memAcc1Idx; i--) {
-                                if (crntThrdEvents.get(i) instanceof SyncEvent) {
-                                    noSyncEvent = false;
-                                    break;
-                                }
-                            }
-
-                            if (noSyncEvent) {
-                                Set<MemoryAccessEvent> set = equiMap.get(memAcc1);
-                                if (set == null) {
-                                    set = Sets.newHashSet();
-                                    equiMap.put(memAcc1, set);
-                                }
-                                set.add(memAcc2);
-                                newEquiMemAccBlk = false;
+                    boolean newEquiMemAccBlk = true;
+                    if (memAcc2.getPrevBranchGID() < memAcc1.getGID()) {
+                        /* there is no branch event between `memAcc1' and `memAcc2' */
+                        boolean noSyncEvent = true;
+                        for (int i = memAcc2Idx - 1; i > memAcc1Idx; i--) {
+                            if (crntThrdEvents.get(i) instanceof SyncEvent) {
+                                noSyncEvent = false;
+                                break;
                             }
                         }
 
-                        if (newEquiMemAccBlk) {
-                            memAcc1 = memAcc2;
-                            memAcc1Idx = memAcc2Idx;
+                        if (noSyncEvent) {
+                            Set<MemoryAccessEvent> set = equiMap.get(memAcc1);
+                            if (set == null) {
+                                set = Sets.newHashSet();
+                                equiMap.put(memAcc1, set);
+                            }
+                            set.add(memAcc2);
+                            newEquiMemAccBlk = false;
                         }
+                    }
+
+                    if (newEquiMemAccBlk) {
+                        memAcc1 = memAcc2;
+                        memAcc1Idx = memAcc2Idx;
                     }
                 }
             }

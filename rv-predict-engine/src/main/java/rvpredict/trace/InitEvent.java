@@ -31,25 +31,30 @@ package rvpredict.trace;
 /**
  * Initialization event.
  */
-public class InitEvent extends MemoryAccessEvent {
+public class InitEvent extends AbstractEvent {
+
+    private final long value;
+    private final long objectHashCode;
+    private final long index;
 
     public InitEvent(long GID, long tid, int ID, long objectHashCode, long index, long value) {
-        super(GID, tid, ID, EventType.INIT, objectHashCode, index, value);
+        super(GID, tid, ID, EventType.INIT);
+        this.objectHashCode = objectHashCode;
+        this.index = index;
+        this.value = value;
     }
 
-    @Override
     public String getAddr() {
         return (objectHashCode == 0 ? "." : objectHashCode + ".") + index;
     }
 
-    @Override
-    public long getPrevBranchGID() {
-        throw new UnsupportedOperationException("Illegal operation for INIT event.");
+    public long getValue() {
+        return value;
     }
 
     @Override
-    public void setPrevBranchGID(long id) {
-        throw new UnsupportedOperationException("Illegal operation for INIT event.");
+    public String toString() {
+        return GID + ": thread " + TID + " " + ID + " " + objectHashCode + " " + index + " " + value + " " + type;
     }
 
 }

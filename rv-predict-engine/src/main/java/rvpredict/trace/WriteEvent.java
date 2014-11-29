@@ -34,9 +34,4 @@ public class WriteEvent extends MemoryAccessEvent {
         super(GID, tid, ID, EventType.WRITE, objectHashCode, index, value);
     }
 
-    @Override
-    public String getAddr() {
-        return (objectHashCode == 0 ? "_" : objectHashCode + "_") + Math.abs(index);
-    }
-
 }

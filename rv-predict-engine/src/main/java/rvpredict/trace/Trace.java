@@ -320,7 +320,6 @@ public class Trace {
                     mnode.setPrevBranchGID(branchnodes.get(branchnodes.size() - 1).getGID());
 
                 if (node instanceof ReadEvent) {
-
                     List<ReadEvent> readNodes = addrToReadEvents.get(addr);
                     if (readNodes == null) {
                         readNodes = new ArrayList<>();
@@ -328,8 +327,7 @@ public class Trace {
                     }
                     readNodes.add((ReadEvent) node);
 
-                } else // write node
-                {
+                } else {
                     List<WriteEvent> writeNodes = addrToWriteEvents.get(addr);
                     if (writeNodes == null) {
                         writeNodes = new ArrayList<>();

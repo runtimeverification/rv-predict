@@ -505,11 +505,8 @@ public class NewRVPredict {
     }
 
     public void run() {
-        // z3 engine is used for interacting with constraints
         EngineSMTLIB1 engine = new EngineSMTLIB1(config);
-
-        // map from memory address to the initial value
-        Map<String, Long> initialWriteValueMap = new HashMap<>();
+        Map<String, Long> initValues = new HashMap<>();
 
         // process the trace window by window
         for (int round = 0; round * config.window_size < totalTraceLength; round++) {
@@ -518,13 +515,7 @@ public class NewRVPredict {
             // if(totalTraceLength>rvpredict.config.window_size)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+totalTraceLength+" ******************\n");
 
             // load trace
-            Trace trace = dbEngine.getTrace(index_start, index_end, traceInfo);
-
-            // starting from the second window, the initial value map
-            // becomes
-            // the last write map in the last window
-            if (round > 0)
-                trace.setInitialWriteValueMap(initialWriteValueMap);
+            Trace trace = dbEngine.getTrace(index_start, index_end, initValues, traceInfo);
 
             // OPT: if #sv==0 or #shared rw ==0 continue
             if (trace.mayRace()) {
@@ -552,10 +543,10 @@ public class NewRVPredict {
 
                 detectRace(engine, trace);
             }
-            // get last write value from the current trace
-            // as the initial value for the next round
-            initialWriteValueMap = trace.getInitialWriteValueMap();
-            trace.saveLastWriteValues(initialWriteValueMap);
+
+            /* use the final values of the current window as the initial values
+             * of the next window */
+            initValues = trace.getFinalValues();
         }
         System.exit(0);
     }

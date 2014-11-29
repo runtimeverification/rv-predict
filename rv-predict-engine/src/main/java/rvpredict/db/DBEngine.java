@@ -123,11 +123,11 @@ public class DBEngine {
      * @param max index where the trace segment to be read should end
      * @return a {@link rvpredict.trace.Trace} representing the trace segment read
      */
-    public Trace getTrace(long min, long max, TraceInfo info) {
+    public Trace getTrace(long min, long max, Map<String, Long> initValues, TraceInfo info) {
         long traceSize = traceCache.getTraceSize();
         assert min <= traceSize : "This method should only be called with a valid min value";
         if (max > traceSize) max = traceSize; // resetting max to trace size.
-        Trace trace = new Trace(info);
+        Trace trace = new Trace(initValues, info);
         AbstractEvent node = null;
         for (long index = min; index <= max; index++) {
             rvpredict.db.EventItem eventItem = traceCache.getEvent(index);

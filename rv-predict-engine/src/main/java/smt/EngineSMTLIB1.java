@@ -520,7 +520,7 @@ public class EngineSMTLIB1 {
                 cons_b += cons_b_end;
 
                 Long rValue = rnode.getValue();
-                Long initValue = trace.getInitialWriteValueMap().get(rnode.getAddr());
+                Long initValue = trace.getInitValueOf(rnode.getAddr());
 
                 // it's possible that we don't have initial value for static
                 // variable
@@ -548,7 +548,7 @@ public class EngineSMTLIB1 {
             } else {
                 // make sure it reads the initial write
                 Long rValue = rnode.getValue();
-                Long initValue = trace.getInitialWriteValueMap().get(rnode.getAddr());
+                Long initValue = trace.getInitValueOf(rnode.getAddr());
 
                 if (initValue != null && rValue.equals(initValue)) {
                     String var_r = makeVariable(rnode.getGID());

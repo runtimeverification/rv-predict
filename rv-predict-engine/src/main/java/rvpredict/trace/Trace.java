@@ -86,12 +86,12 @@ public class Trace {
     private final Map<Long, List<SyncEvent>> syncNodesMap = new HashMap<>();
 
     /**
-     * Read events indexed by address.
+     * Read events on each address.
      */
     private final Map<String, List<ReadEvent>> addrToReadEvents = new HashMap<>();
 
     /**
-     * Write events indexed by address.
+     * Write events on each address.
      */
     private final Map<String, List<WriteEvent>> addrToWriteEvents = new HashMap<>();
 
@@ -100,14 +100,18 @@ public class Trace {
      */
     private final Table<String, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
 
-    // per address initial write value
-    private Map<String, Long> initialWriteValueMap = new HashMap<>();
+    /**
+     * Initial value of each address.
+     */
+    private final Map<String, Long> initValues;
 
     private List<ReadEvent> allReadNodes;
 
     private final TraceInfo info;
 
-    public Trace(TraceInfo info) {
+    public Trace(Map<String, Long> initValues, TraceInfo info) {
+        assert initValues != null && info != null;
+        this.initValues = initValues;
         this.info = info;
     }
 
@@ -124,12 +128,8 @@ public class Trace {
         return fulltrace;
     }
 
-    public Map<String, Long> getInitialWriteValueMap() {
-        return initialWriteValueMap;
-    }
-
-    public void setInitialWriteValueMap(Map<String, Long> map) {
-        initialWriteValueMap = map;
+    public Long getInitValueOf(String addr) {
+        return initValues.get(addr);
     }
 
     public HashMap<Integer, String> getStmtSigIdMap() {
@@ -166,12 +166,13 @@ public class Trace {
         return memAccessEventsTbl;
     }
 
-    public void saveLastWriteValues(Map<String, Long> valueMap) {
-        Iterator<String> addrIt = addrToWriteEvents.keySet().iterator();
-        while (addrIt.hasNext()) {
-            String addr = addrIt.next();
-            valueMap.put(addr, addrToWriteEvents.get(addr).get(addrToWriteEvents.get(addr).size() - 1).getValue());
+    public Map<String, Long> getFinalValues() {
+        Map<String, Long> finalValues = new HashMap<>(initValues);
+        for (String addr : addrToWriteEvents.keySet()) {
+            List<WriteEvent> writeEvents = addrToWriteEvents.get(addr);
+            finalValues.put(addr, writeEvents.get(writeEvents.size() - 1).getValue());
         }
+        return finalValues;
     }
 
     public List<ReadEvent> getAllReadNodes() {
@@ -277,8 +278,7 @@ public class Trace {
             branchnodes.add((BranchNode) node);
         } else if (node instanceof InitEvent) {
             // initial write node
-
-            initialWriteValueMap.put(((InitEvent) node).getAddr(), ((InitEvent) node).getValue());
+            initValues.put(((InitEvent) node).getAddr(), ((InitEvent) node).getValue());
             info.incrementInitWriteNumber();
         } else {
             // all critical nodes -- read/write/synchronization events

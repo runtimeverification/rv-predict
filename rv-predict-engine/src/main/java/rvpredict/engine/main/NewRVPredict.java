@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -66,7 +67,7 @@ public class NewRVPredict {
     private Configuration config;
     private Logger logger;
     private HashMap<Integer, String> sharedVarIdSigMap = new HashMap<>();
-    private HashMap<Integer, String> volatileAddresses = new HashMap<>();
+    private Set<Integer> volatileFieldIds = new HashSet<>();
     private HashMap<Integer, String> stmtIdSigMap = new HashMap<>();
     private HashMap<Long, String> threadIdNameMap = new HashMap<>();
     private long totalTraceLength;
@@ -90,18 +91,10 @@ public class NewRVPredict {
         // sometimes we choose an un-optimized way to implement things faster,
         // easier
         // e.g., here we use check, but still enumerate read/write
-
-        Iterator<String> addrIt = trace.getMemAccessEventsTable().rowKeySet().iterator();
-        while (addrIt.hasNext()) {
-            // the dynamic memory location
-            String addr = addrIt.next();
-
-            if (config.novolatile) {
-                // all field addr should contain ".", not true for array access
-                int dotPos = addr.indexOf(".");
-                // continue if volatile
-                if (dotPos > -1 && trace.isAddressVolatile(addr.substring(dotPos + 1)))
-                    continue;
+        for (String addr : trace.getMemAccessEventsTable().rowKeySet()) {
+            /* exclude volatile variable */
+            if (config.novolatile && trace.isVolatileAddr(addr)) {
+                continue;
             }
 
             // get all read nodes on the address
@@ -589,13 +582,13 @@ public class NewRVPredict {
         dbEngine = new DBEngine(config.outdir);
 
         // load all the metadata in the application
-        dbEngine.getMetadata(threadIdNameMap, sharedVarIdSigMap, volatileAddresses, stmtIdSigMap);
+        dbEngine.getMetadata(threadIdNameMap, sharedVarIdSigMap, volatileFieldIds, stmtIdSigMap);
 
         // the total number of events in the trace
         totalTraceLength = 0;
         totalTraceLength = dbEngine.getTraceSize();
 
-        traceInfo = new TraceInfo(sharedVarIdSigMap, volatileAddresses, stmtIdSigMap,
+        traceInfo = new TraceInfo(sharedVarIdSigMap, volatileFieldIds, stmtIdSigMap,
                 threadIdNameMap);
     }
 

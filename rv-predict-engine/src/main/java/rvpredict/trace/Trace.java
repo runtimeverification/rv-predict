@@ -465,8 +465,12 @@ public class Trace {
         }
     }
 
-    public boolean isAddressVolatile(String addr) {
-        return info.isAddressVolatile(addr);
+    // TODO(YilongL): add javadoc; addr seems to be some abstract address, e.g.
+    // "_.1", built when reading the trace; figure out what happens and improve it
+    public boolean isVolatileAddr(String addr) {
+        // all field addr should contain ".", not true for array access
+        int dotPos = addr.indexOf(".");
+        return dotPos != -1 && info.isVolatileAddr(Integer.valueOf(addr.substring(dotPos + 1)));
     }
 
 }

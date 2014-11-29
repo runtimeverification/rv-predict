@@ -54,7 +54,7 @@ public class DBEngine {
      * @param volatileAddresses  map giving locations for volatile variables
      * @param stmtIdSigMap  map giving signature/location information for events
      */
-    public void getMetadata(Map<Long, String> threadIdNameMap, Map<Integer, String> sharedVarIdSigMap, Map<Integer, String> volatileAddresses, Map<Integer, String> stmtIdSigMap) {
+    public void getMetadata(Map<Long, String> threadIdNameMap, Map<Integer, String> sharedVarIdSigMap, Set<Integer> volatileFieldIds, Map<Integer, String> stmtIdSigMap) {
         try {
             while(true) {
                 List<Map.Entry<Long, String>> threadTidList;
@@ -70,7 +70,7 @@ public class DBEngine {
                 }
                 List<Map.Entry<String, Integer>> volatileVarList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
                 for (Map.Entry<String, Integer> entry : volatileVarList) {
-                    volatileAddresses.put(entry.getValue(), entry.getKey());
+                    volatileFieldIds.add(entry.getValue());
                 }
                 List<Map.Entry<String, Integer>> stmtSigIdList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
                 for (Map.Entry<String, Integer> entry : stmtSigIdList) {
@@ -176,7 +176,6 @@ public class DBEngine {
             }
 
             trace.addRawNode(node);
-
         }
 
         trace.finishedLoading();

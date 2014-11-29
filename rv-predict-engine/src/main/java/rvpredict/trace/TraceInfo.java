@@ -45,17 +45,17 @@ public class TraceInfo {
     HashMap<Long, String> threadIdNamemap;
     HashMap<Integer, String> sharedVarIdSigMap;
     HashMap<Integer, String> stmtIdSigMap;
-    HashMap<Integer, String> volatileAddresses;
+    private final Set<Integer> volatileFieldIds;
 
     HashSet<String> sharedAddresses = new HashSet<String>();
     HashSet<Long> threads = new HashSet<Long>();
     int num_br, num_sync, num_rw_shared, num_rw_local, num_w_init, num_prop;
 
     public TraceInfo(HashMap<Integer, String> sharedVarIdSigMap2,
-            HashMap<Integer, String> volatileAddresses2, HashMap<Integer, String> stmtIdSigMap2,
+            Set<Integer> volatileFieldIds, HashMap<Integer, String> stmtIdSigMap2,
             HashMap<Long, String> threadIdNameMap2) {
         sharedVarIdSigMap = sharedVarIdSigMap2;
-        volatileAddresses = volatileAddresses2;
+        this.volatileFieldIds = volatileFieldIds;
         stmtIdSigMap = stmtIdSigMap2;
         threadIdNamemap = threadIdNameMap2;
     }
@@ -80,8 +80,8 @@ public class TraceInfo {
         return sharedAddresses.size();
     }
 
-    public boolean isAddressVolatile(String addr) {
-        return volatileAddresses.containsKey(Integer.valueOf(addr));
+    public boolean isVolatileAddr(int varId) {
+        return volatileFieldIds.contains(varId);
     }
 
     public void incrementBranchNumber() {

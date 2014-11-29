@@ -85,9 +85,15 @@ public class Trace {
     // per thead synchronization nodes
     private final Map<Long, List<SyncEvent>> syncNodesMap = new HashMap<>();
 
-    // per address read and write nodes
-    private final Map<String, List<ReadEvent>> indexedReadNodes = new HashMap<>();
-    private final Map<String, List<WriteEvent>> indexedWriteNodes = new HashMap<>();
+    /**
+     * Read events indexed by address.
+     */
+    private final Map<String, List<ReadEvent>> addrToReadEvents = new HashMap<>();
+
+    /**
+     * Write events indexed by address.
+     */
+    private final Map<String, List<WriteEvent>> addrToWriteEvents = new HashMap<>();
 
     /**
      * Lists of {@code MemoryAccessEvent}'s indexed by address and thread ID.
@@ -146,12 +152,14 @@ public class Trace {
         return syncNodesMap;
     }
 
-    public Map<String, List<ReadEvent>> getIndexedReadNodes() {
-        return indexedReadNodes;
+    public List<ReadEvent> getReadEventsOn(String addr) {
+        List<ReadEvent> events = addrToReadEvents.get(addr);
+        return events == null ? Lists.<ReadEvent>newArrayList() : events;
     }
 
-    public Map<String, List<WriteEvent>> getIndexedWriteNodes() {
-        return indexedWriteNodes;
+    public List<WriteEvent> getWriteEventsOn(String addr) {
+        List<WriteEvent> events = addrToWriteEvents.get(addr);
+        return events == null ? Lists.<WriteEvent>newArrayList() : events;
     }
 
     public Table<String, Long, List<MemoryAccessEvent>> getMemAccessEventsTable() {
@@ -159,17 +167,17 @@ public class Trace {
     }
 
     public void saveLastWriteValues(Map<String, Long> valueMap) {
-        Iterator<String> addrIt = indexedWriteNodes.keySet().iterator();
+        Iterator<String> addrIt = addrToWriteEvents.keySet().iterator();
         while (addrIt.hasNext()) {
             String addr = addrIt.next();
-            valueMap.put(addr, indexedWriteNodes.get(addr).get(indexedWriteNodes.get(addr).size() - 1).getValue());
+            valueMap.put(addr, addrToWriteEvents.get(addr).get(addrToWriteEvents.get(addr).size() - 1).getValue());
         }
     }
 
     public List<ReadEvent> getAllReadNodes() {
         if (allReadNodes == null) {
             allReadNodes = new ArrayList<>();
-            Iterator<List<ReadEvent>> it = indexedReadNodes.values().iterator();
+            Iterator<List<ReadEvent>> it = addrToReadEvents.values().iterator();
             while (it.hasNext()) {
                 allReadNodes.addAll(it.next());
             }
@@ -309,19 +317,19 @@ public class Trace {
 
                 if (node instanceof ReadEvent) {
 
-                    List<ReadEvent> readNodes = indexedReadNodes.get(addr);
+                    List<ReadEvent> readNodes = addrToReadEvents.get(addr);
                     if (readNodes == null) {
                         readNodes = new ArrayList<>();
-                        indexedReadNodes.put(addr, readNodes);
+                        addrToReadEvents.put(addr, readNodes);
                     }
                     readNodes.add((ReadEvent) node);
 
                 } else // write node
                 {
-                    List<WriteEvent> writeNodes = indexedWriteNodes.get(addr);
+                    List<WriteEvent> writeNodes = addrToWriteEvents.get(addr);
                     if (writeNodes == null) {
                         writeNodes = new ArrayList<>();
-                        indexedWriteNodes.put(addr, writeNodes);
+                        addrToWriteEvents.put(addr, writeNodes);
                     }
                     writeNodes.add((WriteEvent) node);
                 }

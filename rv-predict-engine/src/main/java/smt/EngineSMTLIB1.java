@@ -421,8 +421,7 @@ public class EngineSMTLIB1 {
      */
     // TODO: NEED to handle the feasibility of new added write nodes
     public StringBuilder constructCausalReadWriteConstraintsOptimized(long rgid,
-            List<ReadEvent> readNodes, Map<String, List<WriteEvent>> indexedWriteNodes,
-            Map<String, Long> initValueMap) {
+            List<ReadEvent> readNodes, Trace trace) {
         StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
 
         for (int i = 0; i < readNodes.size(); i++) {
@@ -433,7 +432,7 @@ public class EngineSMTLIB1 {
                 continue;
 
             // get all write nodes on the address
-            List<WriteEvent> writenodes = indexedWriteNodes.get(rnode.getAddr());
+            List<WriteEvent> writenodes = trace.getWriteEventsOn(rnode.getAddr());
             // no write to array field?
             // Yes, it could be: java.io.PrintStream out
             if (writenodes == null || writenodes.size() < 1)//
@@ -521,7 +520,7 @@ public class EngineSMTLIB1 {
                 cons_b += cons_b_end;
 
                 Long rValue = rnode.getValue();
-                Long initValue = initValueMap.get(rnode.getAddr());
+                Long initValue = trace.getInitialWriteValueMap().get(rnode.getAddr());
 
                 // it's possible that we don't have initial value for static
                 // variable
@@ -549,7 +548,7 @@ public class EngineSMTLIB1 {
             } else {
                 // make sure it reads the initial write
                 Long rValue = rnode.getValue();
-                Long initValue = initValueMap.get(rnode.getAddr());
+                Long initValue = trace.getInitialWriteValueMap().get(rnode.getAddr());
 
                 if (initValue != null && rValue.equals(initValue)) {
                     String var_r = makeVariable(rnode.getGID());

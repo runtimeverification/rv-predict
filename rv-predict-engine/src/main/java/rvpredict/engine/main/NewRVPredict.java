@@ -97,27 +97,22 @@ public class NewRVPredict {
                 continue;
             }
 
-            // get all read nodes on the address
-            List<ReadEvent> readnodes = trace.getIndexedReadNodes().get(addr);
+            List<ReadEvent> readEvents = trace.getReadEventsOn(addr);
+            List<WriteEvent> writeEvents = trace.getWriteEventsOn(addr);
+            if (writeEvents.isEmpty()) {
+                continue;
+            }
 
-            // get all write nodes on the address
-            List<WriteEvent> writenodes = trace.getIndexedWriteNodes().get(addr);
-
-            // skip if there is no write events to the address
-            if (writenodes == null || writenodes.size() < 1)
+            // check if local variable
+            int size_all = trace.getMemAccessEventsTable()
+                    .get(addr, writeEvents.get(0).getTID()).size();
+            int size_write = writeEvents.size();
+            int size_read = 0;
+            if (readEvents != null)
+                size_read = readEvents.size();
+            if (size_all == size_write + size_read)
                 continue;
 
-            {
-                // check if local variable
-                int size_all = trace.getMemAccessEventsTable()
-                        .get(addr, writenodes.get(0).getTID()).size();
-                int size_write = writenodes.size();
-                int size_read = 0;
-                if (readnodes != null)
-                    size_read = readnodes.size();
-                if (size_all == size_write + size_read)
-                    continue;
-            }
             // find equivalent reads and writes by the same thread
             HashMap<MemoryAccessEvent, HashSet<MemoryAccessEvent>> equiMap = new HashMap<MemoryAccessEvent, HashSet<MemoryAccessEvent>>();
             // skip non-primitive and array variables?
@@ -178,14 +173,14 @@ public class NewRVPredict {
             }
 
             // check read-write conflict
-            if (readnodes != null)
-                for (int i = 0; i < readnodes.size(); i++) {
-                    ReadEvent rnode = readnodes.get(i);// read
+            if (readEvents != null)
+                for (int i = 0; i < readEvents.size(); i++) {
+                    ReadEvent rnode = readEvents.get(i);// read
                     // if(rnode.getGID()==3105224)//3101799
                     // System.out.println("");
 
-                    for (int j = 0; j < writenodes.size(); j++) {
-                        WriteEvent wnode = writenodes.get(j);// write
+                    for (int j = 0; j < writeEvents.size(); j++) {
+                        WriteEvent wnode = writeEvents.get(j);// write
 
                         // check read and write are by different threads
                         if (rnode.getTID() != wnode.getTID()) {
@@ -242,8 +237,7 @@ public class NewRVPredict {
                                     List<ReadEvent> readNodes_rw = trace.getAllReadNodes();
                                     sb = engine.constructCausalReadWriteConstraintsOptimized(
                                             rnode.getGID(), readNodes_rw,
-                                            trace.getIndexedWriteNodes(),
-                                            trace.getInitialWriteValueMap());
+                                            trace);
                                 } else {
 
                                     // the following builds the constraints for
@@ -267,12 +261,10 @@ public class NewRVPredict {
                                     StringBuilder sb1 = engine
                                             .constructCausalReadWriteConstraintsOptimized(
                                                     rnode.getGID(), readNodes_r,
-                                                    trace.getIndexedWriteNodes(),
-                                                    trace.getInitialWriteValueMap());
+                                                    trace);
                                     StringBuilder sb2 = engine
                                             .constructCausalReadWriteConstraintsOptimized(-1,
-                                                    readNodes_w, trace.getIndexedWriteNodes(),
-                                                    trace.getInitialWriteValueMap());
+                                                    readNodes_w, trace);
                                     // conjunct them
                                     sb = sb1.append(sb2);
                                 }
@@ -366,14 +358,14 @@ public class NewRVPredict {
                     }
                 }
             // check race write-write
-            if (writenodes.size() > 1)
-                for (int i = 0; i < writenodes.size(); i++)// skip the initial
+            if (writeEvents.size() > 1)
+                for (int i = 0; i < writeEvents.size(); i++)// skip the initial
                                                            // write node
                 {
-                    WriteEvent wnode1 = writenodes.get(i);
+                    WriteEvent wnode1 = writeEvents.get(i);
 
-                    for (int j = 0; j != i && j < writenodes.size(); j++) {
-                        WriteEvent wnode2 = writenodes.get(j);
+                    for (int j = 0; j != i && j < writeEvents.size(); j++) {
+                        WriteEvent wnode2 = writeEvents.get(j);
                         if (wnode1.getTID() != wnode2.getTID()) {
                             Race race = new Race(trace.getStmtSigIdMap().get(wnode1.getID()), trace
                                     .getStmtSigIdMap().get(wnode2.getID()), wnode1.getID(),
@@ -399,8 +391,7 @@ public class NewRVPredict {
                                 if (config.allconsistent) {
                                     List<ReadEvent> readNodes_ww = trace.getAllReadNodes();
                                     sb = engine.constructCausalReadWriteConstraintsOptimized(-1,
-                                            readNodes_ww, trace.getIndexedWriteNodes(),
-                                            trace.getInitialWriteValueMap());
+                                            readNodes_ww, trace);
                                 } else {
                                     // get dependent nodes of rnode and wnode
                                     List<ReadEvent> readNodes_w1 = trace.getDependentReadNodes(
@@ -410,12 +401,10 @@ public class NewRVPredict {
 
                                     StringBuilder sb1 = engine
                                             .constructCausalReadWriteConstraintsOptimized(-1,
-                                                    readNodes_w1, trace.getIndexedWriteNodes(),
-                                                    trace.getInitialWriteValueMap());
+                                                    readNodes_w1, trace);
                                     StringBuilder sb2 = engine
                                             .constructCausalReadWriteConstraintsOptimized(-1,
-                                                    readNodes_w2, trace.getIndexedWriteNodes(),
-                                                    trace.getInitialWriteValueMap());
+                                                    readNodes_w2, trace);
                                     sb = sb1.append(sb2);
                                 }
                                 // TODO: NEED to ensure that the other

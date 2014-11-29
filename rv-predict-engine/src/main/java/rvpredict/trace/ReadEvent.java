@@ -36,8 +36,7 @@ public class ReadEvent extends MemoryAccessEvent {
 
     @Override
     public String getAddr() {
-        return (objectHashCode == 0 ? "_" : objectHashCode + "_") +
-                (index < 0 ? "." + -index : index);
+        return (objectHashCode == 0 ? "_" : objectHashCode + "_") + Math.abs(index);
     }
 
 }

@@ -43,12 +43,12 @@ public class InitEvent extends MemoryAccessEvent {
     }
 
     @Override
-    public long getPrevBranchId() {
+    public long getPrevBranchGID() {
         throw new UnsupportedOperationException("Illegal operation for INIT event.");
     }
 
     @Override
-    public void setPrevBranchId(long id) {
+    public void setPrevBranchGID(long id) {
         throw new UnsupportedOperationException("Illegal operation for INIT event.");
     }
 

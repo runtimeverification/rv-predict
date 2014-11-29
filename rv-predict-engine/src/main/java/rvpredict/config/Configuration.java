@@ -190,12 +190,6 @@ public class Configuration {
     // "use constraint format SMT-LIB v1.2", hidden = true)
     public boolean smtlib1 = true;
 
-    final static String opt_optrace = "--optrace";
-    // @Parameter(names = opt_optrace, description = "optimize race detection",
-    // hidden = true)
-    // by default optrace is true
-    public boolean optrace = true;
-
     public final static String opt_outdir = "--dir";
     @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")
     public String outdir = null;

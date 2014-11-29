@@ -38,6 +38,8 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import com.google.common.collect.Sets;
+
 import rvpredict.config.Configuration;
 import rvpredict.db.DBEngine;
 import rvpredict.trace.Event;
@@ -114,56 +116,49 @@ public class NewRVPredict {
             Map<MemoryAccessEvent, Set<MemoryAccessEvent>> equiMap = new HashMap<>();
             // skip non-primitive and array variables?
             // because we add branch operations before their operations
-            if (config.optrace && !addr.contains("_")) {
+            if (addr.contains("_")) {
                 for (Entry<Long, List<MemoryAccessEvent>> entry : trace
                         .getMemAccessEventsTable().row(addr).entrySet()) {
-                    long tid = entry.getKey();
-                    List<MemoryAccessEvent> mnodes = entry.getValue();
+                    // TODO(YilongL): the extensive use of List#indexOf could be a performance problem later
 
-                    if (mnodes.size() < 2)
-                        continue;
-                    MemoryAccessEvent mnode_cur = mnodes.get(0);
-                    HashSet<MemoryAccessEvent> equiset = null;
+                    long crntTID = entry.getKey();
+                    List<MemoryAccessEvent> memAccEvents = entry.getValue();
 
-                    int index_cur = trace.getThreadIdToEventsMap().get(tid).indexOf(mnode_cur);
+                    MemoryAccessEvent memAcc1 = memAccEvents.get(0);
 
-                    for (int k = 1; k < mnodes.size(); k++) {
-                        MemoryAccessEvent mnode = mnodes.get(k);
-                        if (mnode.getPrevBranchId() < mnode_cur.getGID()) {
-                            // check sync id
-                            List<Event> nodes = trace.getThreadIdToEventsMap().get(tid);
-                            int index_end = nodes.indexOf(mnode);
-                            int index = index_end - 1;
-                            boolean shouldAdd = true;
-                            for (; index > index_cur; index--) {
-                                Event node = nodes.get(index);
-                                if (node instanceof SyncEvent) {
-                                    shouldAdd = false;
+                    // the index of event `memAcc1' in current thread
+                    int memAcc1Idx = trace.getThreadEvents(crntTID).indexOf(memAcc1);
+
+                    for (int k = 1; k < memAccEvents.size(); k++) {
+                        MemoryAccessEvent memAcc2 = memAccEvents.get(k);
+                        List<Event> crntThrdEvents = trace.getThreadEvents(crntTID);
+                        int memAcc2Idx = crntThrdEvents.indexOf(memAcc2);
+
+                        boolean newEquiMemAccBlk = true;
+                        if (memAcc2.getPrevBranchGID() < memAcc1.getGID()) {
+                            /* there is no branch event between `memAcc1' and `memAcc2' */
+                            boolean noSyncEvent = true;
+                            for (int i = memAcc2Idx - 1; i > memAcc1Idx; i--) {
+                                if (crntThrdEvents.get(i) instanceof SyncEvent) {
+                                    noSyncEvent = false;
                                     break;
                                 }
                             }
-                            if (shouldAdd) {
-                                if (equiset == null)
-                                    equiset = new HashSet<MemoryAccessEvent>();
 
-                                equiset.add(mnode);
-
-                                if (!equiMap.containsKey(mnode_cur))
-                                    equiMap.put(mnode_cur, equiset);
-
-                            } else {
-                                if (k < mnodes.size() - 1) {
-                                    index_cur = index;
-                                    mnode_cur = mnode;
-                                    equiset = null;
+                            if (noSyncEvent) {
+                                Set<MemoryAccessEvent> set = equiMap.get(memAcc1);
+                                if (set == null) {
+                                    set = Sets.newHashSet();
+                                    equiMap.put(memAcc1, set);
                                 }
+                                set.add(memAcc2);
+                                newEquiMemAccBlk = false;
                             }
-                        } else {
-                            if (k < mnodes.size() - 1) {
-                                index_cur = trace.getThreadIdToEventsMap().get(tid).indexOf(mnode);
-                                mnode_cur = mnode;
-                                equiset = null;
-                            }
+                        }
+
+                        if (newEquiMemAccBlk) {
+                            memAcc1 = memAcc2;
+                            memAcc1Idx = memAcc2Idx;
                         }
                     }
                 }

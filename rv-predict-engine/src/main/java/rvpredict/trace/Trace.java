@@ -144,6 +144,10 @@ public class Trace {
         return threadLastNodeMap;
     }
 
+    public List<Event> getThreadEvents(long threadId) {
+        return threadNodesMap.get(threadId);
+    }
+
     public Map<Long, List<Event>> getThreadIdToEventsMap() {
         return threadNodesMap;
     }
@@ -313,7 +317,7 @@ public class Trace {
                 // set previous branch node and sync node
                 List<BranchNode> branchnodes = threadBranchNodes.get(tid);
                 if (branchnodes != null)
-                    mnode.setPrevBranchId(branchnodes.get(branchnodes.size() - 1).getGID());
+                    mnode.setPrevBranchGID(branchnodes.get(branchnodes.size() - 1).getGID());
 
                 if (node instanceof ReadEvent) {
 

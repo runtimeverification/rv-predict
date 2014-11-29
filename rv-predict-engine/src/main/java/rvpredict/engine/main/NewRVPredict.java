@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -99,26 +100,22 @@ public class NewRVPredict {
 
             List<ReadEvent> readEvents = trace.getReadEventsOn(addr);
             List<WriteEvent> writeEvents = trace.getWriteEventsOn(addr);
+            /* skip if there is no write event */
             if (writeEvents.isEmpty()) {
                 continue;
             }
 
-            // check if local variable
-            int size_all = trace.getMemAccessEventsTable()
-                    .get(addr, writeEvents.get(0).getTID()).size();
-            int size_write = writeEvents.size();
-            int size_read = 0;
-            if (readEvents != null)
-                size_read = readEvents.size();
-            if (size_all == size_write + size_read)
+            /* skip if there is only one thread */
+            if (trace.getMemAccessEventsTable().row(addr).size() == 1) {
                 continue;
+            }
 
             // find equivalent reads and writes by the same thread
-            HashMap<MemoryAccessEvent, HashSet<MemoryAccessEvent>> equiMap = new HashMap<MemoryAccessEvent, HashSet<MemoryAccessEvent>>();
+            Map<MemoryAccessEvent, Set<MemoryAccessEvent>> equiMap = new HashMap<>();
             // skip non-primitive and array variables?
             // because we add branch operations before their operations
             if (config.optrace && !addr.contains("_")) {
-                for (Map.Entry<Long, List<MemoryAccessEvent>> entry : trace
+                for (Entry<Long, List<MemoryAccessEvent>> entry : trace
                         .getMemAccessEventsTable().row(addr).entrySet()) {
                     long tid = entry.getKey();
                     List<MemoryAccessEvent> mnodes = entry.getValue();

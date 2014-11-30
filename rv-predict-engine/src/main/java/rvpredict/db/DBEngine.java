@@ -31,7 +31,6 @@ package rvpredict.db;
 import java.io.*;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.List;
 
 import rvpredict.trace.*;
 
@@ -43,7 +42,6 @@ import rvpredict.trace.*;
  */
 public class DBEngine {
     public static final String METADATA_BIN = "metadata.bin";
-    private final String directory;
     private final TraceCache traceCache;
     private final ObjectInputStream metadataIS;
 
@@ -54,37 +52,31 @@ public class DBEngine {
      * @param volatileAddresses  map giving locations for volatile variables
      * @param stmtIdSigMap  map giving signature/location information for events
      */
-    public void getMetadata(Map<Long, String> threadIdNameMap, Map<Integer, String> sharedVarIdSigMap, Set<Integer> volatileFieldIds, Map<Integer, String> stmtIdSigMap) {
+    @SuppressWarnings("unchecked")
+    public void getMetadata(Set<Integer> volatileFieldIds, Map<Integer, String> stmtIdSigMap) {
         try {
-            while(true) {
-                List<Map.Entry<Long, String>> threadTidList;
+            while (true) {
+                List<Map.Entry<String, Integer>> volatileVarList;
                 try {
-                    threadTidList = (List<Map.Entry<Long, String>>) metadataIS.readObject();
-                } catch (EOFException _) { break;} // EOF should only happen for threadTid
-                for (Map.Entry<Long,String> entry : threadTidList) {
-                    threadIdNameMap.put(entry.getKey(), entry.getValue());
+                    volatileVarList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
+                } catch (EOFException e) {
+                    break;
                 }
-                List<Map.Entry<String, Integer>> variableIdList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
-                for (Map.Entry<String, Integer> entry : variableIdList) {
-                    sharedVarIdSigMap.put(entry.getValue(), entry.getKey());
-                }
-                List<Map.Entry<String, Integer>> volatileVarList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
                 for (Map.Entry<String, Integer> entry : volatileVarList) {
                     volatileFieldIds.add(entry.getValue());
                 }
-                List<Map.Entry<String, Integer>> stmtSigIdList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
+                List<Map.Entry<String, Integer>> stmtSigIdList = (List<Map.Entry<String, Integer>>) metadataIS
+                        .readObject();
                 for (Map.Entry<String, Integer> entry : stmtSigIdList) {
                     stmtIdSigMap.put(entry.getValue(), entry.getKey());
                 }
             }
-        }
-        catch (IOException | ClassNotFoundException e) {
+        } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
     }
 
     public DBEngine(String directory) {
-        this.directory = directory;
         traceCache = new TraceCache(directory);
         ObjectInputStream metadataIS = null;
         try {

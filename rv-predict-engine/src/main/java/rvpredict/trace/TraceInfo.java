@@ -28,8 +28,8 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -42,25 +42,20 @@ import java.util.Set;
 public class TraceInfo {
 
     // metadata
-    HashMap<Long, String> threadIdNamemap;
-    HashMap<Integer, String> sharedVarIdSigMap;
-    HashMap<Integer, String> stmtIdSigMap;
+    private final Map<Integer, String> stmtIdSigMap;
     private final Set<Integer> volatileFieldIds;
 
     HashSet<String> sharedAddresses = new HashSet<String>();
     HashSet<Long> threads = new HashSet<Long>();
     int num_br, num_sync, num_rw_shared, num_rw_local, num_w_init, num_prop;
 
-    public TraceInfo(HashMap<Integer, String> sharedVarIdSigMap2,
-            Set<Integer> volatileFieldIds, HashMap<Integer, String> stmtIdSigMap2,
-            HashMap<Long, String> threadIdNameMap2) {
-        sharedVarIdSigMap = sharedVarIdSigMap2;
+    public TraceInfo(Set<Integer> volatileFieldIds,
+            Map<Integer, String> stmtIdSigMap) {
         this.volatileFieldIds = volatileFieldIds;
-        stmtIdSigMap = stmtIdSigMap2;
-        threadIdNamemap = threadIdNameMap2;
+        this.stmtIdSigMap = stmtIdSigMap;
     }
 
-    public HashMap<Integer, String> getStmtSigIdMap() {
+    public Map<Integer, String> getStmtSigIdMap() {
         return stmtIdSigMap;
     }
 

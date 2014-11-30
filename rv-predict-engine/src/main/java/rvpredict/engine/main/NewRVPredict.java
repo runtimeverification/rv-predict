@@ -69,10 +69,6 @@ public class NewRVPredict {
     private HashSet<Violation> potentialviolations = new HashSet<Violation>();
     private Configuration config;
     private Logger logger;
-    private HashMap<Integer, String> sharedVarIdSigMap = new HashMap<>();
-    private Set<Integer> volatileFieldIds = new HashSet<>();
-    private HashMap<Integer, String> stmtIdSigMap = new HashMap<>();
-    private HashMap<Long, String> threadIdNameMap = new HashMap<>();
     private long totalTraceLength;
     private DBEngine dbEngine;
     private TraceInfo traceInfo;
@@ -335,6 +331,9 @@ public class NewRVPredict {
     }
 
     public void initPredict(Configuration conf) {
+        Set<Integer> volatileFieldIds = new HashSet<>();
+        Map<Integer, String> stmtIdSigMap = new HashMap<>();
+
         config = conf;
         logger = config.logger;
 
@@ -345,14 +344,13 @@ public class NewRVPredict {
         dbEngine = new DBEngine(config.outdir);
 
         // load all the metadata in the application
-        dbEngine.getMetadata(threadIdNameMap, sharedVarIdSigMap, volatileFieldIds, stmtIdSigMap);
+        dbEngine.getMetadata(volatileFieldIds, stmtIdSigMap);
 
         // the total number of events in the trace
         totalTraceLength = 0;
         totalTraceLength = dbEngine.getTraceSize();
 
-        traceInfo = new TraceInfo(sharedVarIdSigMap, volatileFieldIds, stmtIdSigMap,
-                threadIdNameMap);
+        traceInfo = new TraceInfo(volatileFieldIds, stmtIdSigMap);
     }
 
     public void addHooks() {

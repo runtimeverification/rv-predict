@@ -37,7 +37,6 @@ import rvpredict.trace.EventType;
 import java.io.*;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Map.Entry;
@@ -198,29 +197,6 @@ public class DBEngine {
      * Flush un-previously-saved metadata to disk.
      */
     public void saveMetaData() {
-        /* save <threadId, name> pairs */
-        List<Entry<Long,String>> threadIdNamePairs = new ArrayList<>(globalState.unsavedStmtSigToLocId.size());
-        Iterator<Entry<Long, String>> iter = globalState.unsavedThreadIdToName.iterator();
-        while (iter.hasNext()) {
-            threadIdNamePairs.add(iter.next());
-            iter.remove();
-        }
-        saveObject(threadIdNamePairs);
-
-        /* save <variable, id> pairs */
-        synchronized (globalState.varSigToId) {
-            // TODO(YilongL): I want to write the following but I couldn't
-            // because DBEngine#getMetadata assumes certain order of the
-            // saved objects
-//            if (!globalState.unsavedVarSigToId.isEmpty()) {
-//                saveObject(globalState.unsavedVarSigToId);
-//                globalState.unsavedVarSigToId.clear();
-//            }
-
-            saveObject(globalState.unsavedVarSigToId);
-            globalState.unsavedVarSigToId.clear();
-        }
-
         /* save <volatileVariable, Id> pairs */
         synchronized (globalState.volatileVariables) {
             // TODO(YilongL): volatileVariable Id should be constructed when

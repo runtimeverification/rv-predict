@@ -132,7 +132,7 @@ public class Trace {
         return initValues.get(addr);
     }
 
-    public HashMap<Integer, String> getStmtSigIdMap() {
+    public Map<Integer, String> getStmtSigIdMap() {
         return info.getStmtSigIdMap();
     }
 

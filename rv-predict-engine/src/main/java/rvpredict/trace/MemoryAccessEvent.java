@@ -38,8 +38,6 @@ public abstract class MemoryAccessEvent extends AbstractEvent {
     protected final long objectHashCode;
     protected final long index;
 
-    protected long prevBranchGID = -1;
-
     protected MemoryAccessEvent(long GID, long TID, int ID, EventType type, long objectHashCode,
             long index, long value) {
         super(GID, TID, ID, type);
@@ -61,14 +59,6 @@ public abstract class MemoryAccessEvent extends AbstractEvent {
      */
     public final long getValue() {
         return value;
-    }
-
-    public long getPrevBranchGID() {
-        return prevBranchGID;
-    }
-
-    public void setPrevBranchGID(long prevBranchGID) {
-        this.prevBranchGID = prevBranchGID;
     }
 
     @Override

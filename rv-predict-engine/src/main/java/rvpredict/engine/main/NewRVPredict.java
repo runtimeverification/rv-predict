@@ -38,14 +38,12 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
-
+import com.google.common.collect.Lists;
 import rvpredict.config.Configuration;
 import rvpredict.db.DBEngine;
 import rvpredict.trace.Event;
 import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.ReadEvent;
-import rvpredict.trace.SyncEvent;
 import rvpredict.trace.Trace;
 import rvpredict.trace.TraceInfo;
 import rvpredict.trace.WriteEvent;
@@ -146,7 +144,7 @@ public class NewRVPredict {
             }
 
             // find equivalent reads and writes by the same thread
-            Map<MemoryAccessEvent, Set<MemoryAccessEvent>> equiMap = new HashMap<>();
+            Map<MemoryAccessEvent, List<MemoryAccessEvent>> equiMap = new HashMap<>();
             // skip non-primitive and array variables?
             // because we add branch operations before their operations
             for (Entry<Long, List<MemoryAccessEvent>> entry : trace
@@ -156,39 +154,26 @@ public class NewRVPredict {
                 long crntTID = entry.getKey();
                 List<MemoryAccessEvent> memAccEvents = entry.getValue();
 
+                List<Event> crntThrdEvents = trace.getThreadEvents(crntTID);
+
                 MemoryAccessEvent memAcc1 = memAccEvents.get(0);
-
-                // the index of event `memAcc1' in current thread
-                int memAcc1Idx = trace.getThreadEvents(crntTID).indexOf(memAcc1);
-
-                for (int k = 1; k < memAccEvents.size(); k++) {
-                    MemoryAccessEvent memAcc2 = memAccEvents.get(k);
-                    List<Event> crntThrdEvents = trace.getThreadEvents(crntTID);
+                int memAcc1Idx = crntThrdEvents.indexOf(memAcc1);
+                for (MemoryAccessEvent memAcc2 : memAccEvents.subList(1, memAccEvents.size())) {
                     int memAcc2Idx = crntThrdEvents.indexOf(memAcc2);
 
-                    boolean newEquiMemAccBlk = true;
-                    if (memAcc2.getPrevBranchGID() < memAcc1.getGID()) {
-                        /* there is no branch event between `memAcc1' and `memAcc2' */
-                        boolean noSyncEvent = true;
-                        for (int i = memAcc2Idx - 1; i > memAcc1Idx; i--) {
-                            if (crntThrdEvents.get(i) instanceof SyncEvent) {
-                                noSyncEvent = false;
-                                break;
-                            }
-                        }
-
-                        if (noSyncEvent) {
-                            Set<MemoryAccessEvent> set = equiMap.get(memAcc1);
-                            if (set == null) {
-                                set = Sets.newHashSet();
-                                equiMap.put(memAcc1, set);
-                            }
-                            set.add(memAcc2);
-                            newEquiMemAccBlk = false;
-                        }
+                    boolean memAccOnly = true;
+                    for (Event e : crntThrdEvents.subList(memAcc1Idx + 1, memAcc2Idx)) {
+                        memAccOnly = memAccOnly && (e instanceof MemoryAccessEvent);
                     }
 
-                    if (newEquiMemAccBlk) {
+                    if (memAccOnly) {
+                        List<MemoryAccessEvent> blk = equiMap.get(memAcc1);
+                        if (blk == null) {
+                            blk = Lists.newArrayList();
+                            equiMap.put(memAcc1, blk);
+                        }
+                        blk.add(memAcc2);
+                    } else {
                         memAcc1 = memAcc2;
                         memAcc1Idx = memAcc2Idx;
                     }

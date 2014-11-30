@@ -321,11 +321,6 @@ public class Trace {
                 }
                 memAccessEvents.add(mnode);
 
-                // set previous branch node and sync node
-                List<BranchNode> branchnodes = threadBranchNodes.get(tid);
-                if (branchnodes != null)
-                    mnode.setPrevBranchGID(branchnodes.get(branchnodes.size() - 1).getGID());
-
                 if (node instanceof ReadEvent) {
                     List<ReadEvent> readNodes = addrToReadEvents.get(addr);
                     if (readNodes == null) {

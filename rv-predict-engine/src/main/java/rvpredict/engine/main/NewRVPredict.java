@@ -162,176 +162,128 @@ public class NewRVPredict {
                 }
             }
 
-            // check read-write conflict
-            if (readEvents != null)
-                for (int i = 0; i < readEvents.size(); i++) {
-                    ReadEvent rnode = readEvents.get(i);// read
-                    // if(rnode.getGID()==3105224)//3101799
-                    // System.out.println("");
+            /* check read-write conflict */
+            for (ReadEvent readEvent : readEvents) {
+                for (WriteEvent writeEvent : writeEvents) {
+                    if (readEvent.getTID() == writeEvent.getTID()) {
+                        continue;
+                    }
 
-                    for (int j = 0; j < writeEvents.size(); j++) {
-                        WriteEvent wnode = writeEvents.get(j);// write
+                    Race race = new Race(trace.getStmtSigIdMap().get(readEvent.getID()), trace
+                            .getStmtSigIdMap().get(writeEvent.getID()), readEvent.getID(),
+                            writeEvent.getID());
+                    ExactRace race2 = new ExactRace(race, (int) readEvent.getGID(),
+                            (int) writeEvent.getGID());
 
-                        // check read and write are by different threads
-                        if (rnode.getTID() != wnode.getTID()) {
-                            // create a potential race
-                            Race race = new Race(trace.getStmtSigIdMap().get(rnode.getID()), trace
-                                    .getStmtSigIdMap().get(wnode.getID()), rnode.getID(),
-                                    wnode.getID());
-                            ExactRace race2 = new ExactRace(race, (int) rnode.getGID(),
-                                    (int) wnode.getGID());
-                            // skip redundant races with the same signature,
-                            // i.e., from same program locations
-                            if (!violations.contains(race)
-                                    && !potentialviolations.contains(race2))// may
-                                                                            // miss
-                                                                            // real
-                                                                            // violation
-                                                                            // with
-                                                                            // the
-                                                                            // same
-                                                                            // signature
-                            {
+                    if (violations.contains(race) || potentialviolations.contains(race2)) {
+                        continue;
+                    }
 
-                                // Quick check first: lockset algorithm + weak
-                                // HB
+                    /* not a race if the two events hold a common lock */
+                    if (engine.hasCommonLock(readEvent, writeEvent)) {
+                        continue;
+                    }
 
-                                // lockset algorithm
-                                if (engine.hasCommonLock(rnode, wnode))
-                                    continue;
+                    /* not a race if the two events are in a happens-before relation */
+                    if (readEvent.getGID() < writeEvent.getGID()
+                            && engine.canReach(readEvent, writeEvent)
+                            || readEvent.getGID() > writeEvent.getGID()
+                            && engine.canReach(writeEvent, readEvent)) {
+                        continue;
+                    }
 
-                                // weak HB check
-                                // a simple reachability analysis to reduce the
-                                // solver invocations
-                                if (rnode.getGID() < wnode.getGID()) {
-                                    if (engine.canReach(rnode, wnode))
-                                        continue;
-                                } else {
-                                    if (engine.canReach(wnode, rnode))
-                                        continue;
+                    /* start building constraints for MCM */
+                    List<ReadEvent> readNodes_r = trace.getDependentReadNodes(
+                            readEvent, config.branch);
+                    List<ReadEvent> readNodes_w = trace.getDependentReadNodes(
+                            writeEvent, config.branch);
+
+                    StringBuilder sb1 = engine
+                            .constructCausalReadWriteConstraintsOptimized(
+                                    readEvent.getGID(), readNodes_r,
+                                    trace);
+                    StringBuilder sb2 = engine
+                            .constructCausalReadWriteConstraintsOptimized(-1,
+                                    readNodes_w, trace);
+                    // conjunct them
+                    StringBuilder sb = sb1.append(sb2);
+
+
+                    // query the engine to check rnode/wnode forms a
+                    // race or not
+                    if (engine.isRace(readEvent, writeEvent, sb)) {
+                        logger.report(race.toString(), Logger.MSGTYPE.REAL);
+                        violations.add(race);
+
+                        if (equiMap.containsKey(readEvent) || equiMap.containsKey(writeEvent)) {
+                            HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
+                            nodes1.add(readEvent);
+                            if (equiMap.get(readEvent) != null)
+                                nodes1.addAll(equiMap.get(readEvent));
+                            HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
+                            nodes2.add(writeEvent);
+                            if (equiMap.get(writeEvent) != null)
+                                nodes2.addAll(equiMap.get(writeEvent));
+
+                            for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
+                                    .hasNext();) {
+                                MemoryAccessEvent node1 = nodesIt1.next();
+                                for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
+                                        .hasNext();) {
+                                    MemoryAccessEvent node2 = nodesIt2.next();
+                                    Race r = new Race(trace.getStmtSigIdMap().get(
+                                            node1.getID()), trace.getStmtSigIdMap()
+                                            .get(node2.getID()), node1.getID(),
+                                            node2.getID());
+                                    if (violations.add(r))
+                                        logger.report(r.toString(), Logger.MSGTYPE.REAL);
+
                                 }
+                            }
+                        }
+                    } else {
+                        // report potential races
 
-                                // if(race.toString().equals("<mergesort.MSort: void DecreaseThreadCounter()>|$i0 = <mergesort.MSort: int m_iCurrentThreadsAlive>|41 - <mergesort.MSort: void DecreaseThreadCounter()>|<mergesort.MSort: int m_iCurrentThreadsAlive> = $i1|41"))
-                                // System.out.print("");
+                        // if we arrive here, it means we find a
+                        // case where
+                        // lockset+happens-before could produce
+                        // false positive
+                        if (potentialviolations.add(race2))
+                            logger.report("Potential " + race2,
+                                    Logger.MSGTYPE.POTENTIAL);
 
-                                // If the race passes the quick check, we build
-                                // constraints
-                                // for it and determine if it is race by solving
-                                // the constraints
+                        if (equiMap.containsKey(readEvent) || equiMap.containsKey(writeEvent)) {
+                            HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
+                            nodes1.add(readEvent);
+                            if (equiMap.get(readEvent) != null)
+                                nodes1.addAll(equiMap.get(readEvent));
+                            HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
+                            nodes2.add(writeEvent);
+                            if (equiMap.get(writeEvent) != null)
+                                nodes2.addAll(equiMap.get(writeEvent));
 
-                                StringBuilder sb;
-                                    // the following builds the constraints for
-                                    // maximal causal model
+                            for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
+                                    .hasNext();) {
+                                MemoryAccessEvent node1 = nodesIt1.next();
+                                for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
+                                        .hasNext();) {
+                                    MemoryAccessEvent node2 = nodesIt2.next();
 
-                                    // get dependent nodes of rnode and wnode
-                                    // if w/o branch information, then all read
-                                    // nodes that happen-before rnode/wnode are
-                                    // considered
-                                    // otherwise, only the read nodes that
-                                    // before the most recent branch nodes
-                                    // before rnode/wnode are considered
-                                    List<ReadEvent> readNodes_r = trace.getDependentReadNodes(
-                                            rnode, config.branch);
-                                    List<ReadEvent> readNodes_w = trace.getDependentReadNodes(
-                                            wnode, config.branch);
-
-                                    // construct the optimized read-write
-                                    // constraints ensuring the feasibility of
-                                    // rnode and wnode
-                                    StringBuilder sb1 = engine
-                                            .constructCausalReadWriteConstraintsOptimized(
-                                                    rnode.getGID(), readNodes_r,
-                                                    trace);
-                                    StringBuilder sb2 = engine
-                                            .constructCausalReadWriteConstraintsOptimized(-1,
-                                                    readNodes_w, trace);
-                                    // conjunct them
-                                    sb = sb1.append(sb2);
-
-                                // if(race.toString().equals("<benchmarks.raytracer.TournamentBarrier: void DoBarrier(int)>|$z3 = $r2[$i7]|65 - <benchmarks.raytracer.TournamentBarrier: void DoBarrier(int)>|$r3[i0] = z0|76"))
-                                // System.out.print("");
-
-                                // query the engine to check rnode/wnode forms a
-                                // race or not
-                                if (engine.isRace(rnode, wnode, sb)) {
-                                    // real race found
-
-                                    logger.report(race.toString(), Logger.MSGTYPE.REAL);// report
-                                                                                        // it
-                                    violations.add(race);
-
-                                    if (equiMap.containsKey(rnode) || equiMap.containsKey(wnode)) {
-                                        HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
-                                        nodes1.add(rnode);
-                                        if (equiMap.get(rnode) != null)
-                                            nodes1.addAll(equiMap.get(rnode));
-                                        HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
-                                        nodes2.add(wnode);
-                                        if (equiMap.get(wnode) != null)
-                                            nodes2.addAll(equiMap.get(wnode));
-
-                                        for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
-                                                .hasNext();) {
-                                            MemoryAccessEvent node1 = nodesIt1.next();
-                                            for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
-                                                    .hasNext();) {
-                                                MemoryAccessEvent node2 = nodesIt2.next();
-                                                Race r = new Race(trace.getStmtSigIdMap().get(
-                                                        node1.getID()), trace.getStmtSigIdMap()
-                                                        .get(node2.getID()), node1.getID(),
-                                                        node2.getID());
-                                                if (violations.add(r))
-                                                    logger.report(r.toString(), Logger.MSGTYPE.REAL);
-
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    // report potential races
-
-                                    // if we arrive here, it means we find a
-                                    // case where
-                                    // lockset+happens-before could produce
-                                    // false positive
-                                    if (potentialviolations.add(race2))
-                                        logger.report("Potential " + race2,
+                                    ExactRace r = new ExactRace(trace.getStmtSigIdMap()
+                                            .get(node1.getID()), trace
+                                            .getStmtSigIdMap().get(node2.getID()),
+                                            (int) node1.getGID(), (int) node2.getGID());
+                                    if (potentialviolations.add(r))
+                                        logger.report("Potential " + r,
                                                 Logger.MSGTYPE.POTENTIAL);
 
-                                    if (equiMap.containsKey(rnode) || equiMap.containsKey(wnode)) {
-                                        HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
-                                        nodes1.add(rnode);
-                                        if (equiMap.get(rnode) != null)
-                                            nodes1.addAll(equiMap.get(rnode));
-                                        HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
-                                        nodes2.add(wnode);
-                                        if (equiMap.get(wnode) != null)
-                                            nodes2.addAll(equiMap.get(wnode));
-
-                                        for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
-                                                .hasNext();) {
-                                            MemoryAccessEvent node1 = nodesIt1.next();
-                                            for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
-                                                    .hasNext();) {
-                                                MemoryAccessEvent node2 = nodesIt2.next();
-
-                                                ExactRace r = new ExactRace(trace.getStmtSigIdMap()
-                                                        .get(node1.getID()), trace
-                                                        .getStmtSigIdMap().get(node2.getID()),
-                                                        (int) node1.getGID(), (int) node2.getGID());
-                                                if (potentialviolations.add(r))
-                                                    logger.report("Potential " + r,
-                                                            Logger.MSGTYPE.POTENTIAL);
-
-                                            }
-                                        }
-                                    }
-
                                 }
-
                             }
                         }
                     }
                 }
+            }
+
             // check race write-write
             if (writeEvents.size() > 1)
                 for (int i = 0; i < writeEvents.size(); i++)// skip the initial

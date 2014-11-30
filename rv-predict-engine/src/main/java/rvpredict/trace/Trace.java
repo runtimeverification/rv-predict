@@ -191,6 +191,13 @@ public class Trace {
         return allReadNodes;
     }
 
+    // get dependent nodes of rnode and wnode
+    // if w/o branch information, then all read
+    // nodes that happen-before rnode/wnode are
+    // considered
+    // otherwise, only the read nodes that
+    // before the most recent branch nodes
+    // before rnode/wnode are considered
     // TODO: NEED to include the dependent nodes from other threads
     public List<ReadEvent> getDependentReadNodes(MemoryAccessEvent rnode, boolean branch) {
 

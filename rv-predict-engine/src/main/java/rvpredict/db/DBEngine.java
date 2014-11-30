@@ -56,14 +56,10 @@ public class DBEngine {
     public void getMetadata(Set<Integer> volatileFieldIds, Map<Integer, String> stmtIdSigMap) {
         try {
             while (true) {
-                List<Map.Entry<String, Integer>> volatileVarList;
                 try {
-                    volatileVarList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
+                    volatileFieldIds.addAll((Collection<Integer>) metadataIS.readObject());
                 } catch (EOFException e) {
                     break;
-                }
-                for (Map.Entry<String, Integer> entry : volatileVarList) {
-                    volatileFieldIds.add(entry.getValue());
                 }
                 List<Map.Entry<String, Integer>> stmtSigIdList = (List<Map.Entry<String, Integer>>) metadataIS
                         .readObject();

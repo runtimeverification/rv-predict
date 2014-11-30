@@ -1,5 +1,3 @@
-package rvpredict.engine.main;
-
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
  *
@@ -28,8 +26,11 @@ package rvpredict.engine.main;
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
+package rvpredict.engine.main;
+
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -37,8 +38,9 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+
 import rvpredict.config.Configuration;
 import rvpredict.db.DBEngine;
 import rvpredict.trace.Event;
@@ -49,7 +51,6 @@ import rvpredict.trace.TraceInfo;
 import rvpredict.trace.WriteEvent;
 import rvpredict.util.Logger;
 import smt.EngineSMTLIB1;
-import violation.ExactRace;
 import violation.Race;
 import violation.Violation;
 
@@ -131,10 +132,8 @@ public class NewRVPredict {
                 continue;
             }
 
-            List<ReadEvent> readEvents = trace.getReadEventsOn(addr);
-            List<WriteEvent> writeEvents = trace.getWriteEventsOn(addr);
             /* skip if there is no write event */
-            if (writeEvents.isEmpty()) {
+            if (trace.getWriteEventsOn(addr).isEmpty()) {
                 continue;
             }
 
@@ -144,7 +143,8 @@ public class NewRVPredict {
             }
 
             // find equivalent reads and writes by the same thread
-            Map<MemoryAccessEvent, List<MemoryAccessEvent>> equiMap = new HashMap<>();
+            Map<MemoryAccessEvent, List<MemoryAccessEvent>> equivMap = new LinkedHashMap<>();
+
             // skip non-primitive and array variables?
             // because we add branch operations before their operations
             for (Entry<Long, List<MemoryAccessEvent>> entry : trace
@@ -156,69 +156,77 @@ public class NewRVPredict {
 
                 List<Event> crntThrdEvents = trace.getThreadEvents(crntTID);
 
-                MemoryAccessEvent memAcc1 = memAccEvents.get(0);
-                int memAcc1Idx = crntThrdEvents.indexOf(memAcc1);
-                for (MemoryAccessEvent memAcc2 : memAccEvents.subList(1, memAccEvents.size())) {
-                    int memAcc2Idx = crntThrdEvents.indexOf(memAcc2);
+                // first memory access event of a block
+                MemoryAccessEvent fstMemAcc = memAccEvents.get(0);
+                int fstMemAccIdx = crntThrdEvents.indexOf(fstMemAcc);
+                equivMap.put(fstMemAcc, Lists.newArrayList(fstMemAcc));
+
+                int prevMemAccIdx = fstMemAccIdx;
+                for (MemoryAccessEvent crntMemAcc : memAccEvents.subList(1, memAccEvents.size())) {
+                    int crntMemAccIdx = crntThrdEvents.indexOf(crntMemAcc);
 
                     boolean memAccOnly = true;
-                    for (Event e : crntThrdEvents.subList(memAcc1Idx + 1, memAcc2Idx)) {
+                    for (Event e : crntThrdEvents.subList(prevMemAccIdx + 1, crntMemAccIdx)) {
                         memAccOnly = memAccOnly && (e instanceof MemoryAccessEvent);
                     }
 
                     if (memAccOnly) {
-                        List<MemoryAccessEvent> blk = equiMap.get(memAcc1);
-                        if (blk == null) {
-                            blk = Lists.newArrayList();
-                            equiMap.put(memAcc1, blk);
-                        }
-                        blk.add(memAcc2);
+                        equivMap.get(fstMemAcc).add(crntMemAcc);
                     } else {
-                        memAcc1 = memAcc2;
-                        memAcc1Idx = memAcc2Idx;
+                        fstMemAcc = crntMemAcc;
+                        fstMemAccIdx = crntMemAccIdx;
+                        equivMap.put(fstMemAcc, Lists.newArrayList(fstMemAcc));
                     }
+                    prevMemAccIdx = crntMemAccIdx;
                 }
             }
 
             /* check conflicting pairs */
-            for (MemoryAccessEvent memAccEvent : Iterables.concat(readEvents, writeEvents)) {
-                for (WriteEvent writeEvent : writeEvents) {
-                    if (memAccEvent == writeEvent || memAccEvent.getTID() == writeEvent.getTID()) {
+            for (MemoryAccessEvent fst : equivMap.keySet()) {
+                for (MemoryAccessEvent snd : equivMap.keySet()) {
+                    if (fst.getTID() < snd.getTID()) {
                         continue;
                     }
 
-                    Race race = new Race(trace.getStmtSigIdMap().get(memAccEvent.getID()), trace
-                            .getStmtSigIdMap().get(writeEvent.getID()), memAccEvent.getID(),
-                            writeEvent.getID());
-                    ExactRace race2 = new ExactRace(race, (int) memAccEvent.getGID(),
-                            (int) writeEvent.getGID());
-
-                    if (violations.contains(race) || potentialviolations.contains(race2)) {
+                    /* skip if all potential data races are already known */
+                    Set<Race> potentialRaces = Sets.newHashSet();
+                    for (MemoryAccessEvent e1 : equivMap.get(fst)) {
+                        for (MemoryAccessEvent e2 : equivMap.get(snd)) {
+                            if (e1 instanceof WriteEvent || e2 instanceof WriteEvent) {
+                                potentialRaces.add(new Race(trace.getStmtSigIdMap().get(e1.getID()),
+                                        trace.getStmtSigIdMap().get(e2.getID()), e1.getID(),
+                                        e2.getID()));
+                            }
+                        }
+                    }
+                    if (violations.containsAll(potentialRaces)) {
+                        /* YilongL: note that this could lead to miss of data
+                         * races if their signatures are the same */
                         continue;
                     }
 
                     /* not a race if the two events hold a common lock */
-                    if (engine.hasCommonLock(memAccEvent, writeEvent)) {
+                    if (engine.hasCommonLock(fst, snd)) {
                         continue;
                     }
 
-                    /* not a race if the two events are in a happens-before relation */
-                    if (memAccEvent.getGID() < writeEvent.getGID()
-                            && engine.canReach(memAccEvent, writeEvent)
-                            || memAccEvent.getGID() > writeEvent.getGID()
-                            && engine.canReach(writeEvent, memAccEvent)) {
+                    /* not a race if one event happens-before the other */
+                    if (fst.getGID() < snd.getGID()
+                            && engine.canReach(fst, snd)
+                            || fst.getGID() > snd.getGID()
+                            && engine.canReach(snd, fst)) {
                         continue;
                     }
 
                     /* start building constraints for MCM */
                     List<ReadEvent> readNodes_r = trace.getDependentReadNodes(
-                            memAccEvent, config.branch);
+                            fst, config.branch);
                     List<ReadEvent> readNodes_w = trace.getDependentReadNodes(
-                            writeEvent, config.branch);
+                            snd, config.branch);
 
                     StringBuilder sb1 = engine
                             .constructCausalReadWriteConstraintsOptimized(
-                                    memAccEvent.getGID(), readNodes_r,
+                                    fst.getGID(), readNodes_r,
                                     trace);
                     StringBuilder sb2 = engine
                             .constructCausalReadWriteConstraintsOptimized(-1,
@@ -226,62 +234,10 @@ public class NewRVPredict {
                     StringBuilder sb = sb1.append(sb2);
 
 
-                    if (engine.isRace(memAccEvent, writeEvent, sb)) {
-                        logger.report(race.toString(), Logger.MSGTYPE.REAL);
-                        violations.add(race);
-
-                        if (equiMap.containsKey(memAccEvent) || equiMap.containsKey(writeEvent)) {
-                            Set<MemoryAccessEvent> nodes1 = new HashSet<>();
-                            nodes1.add(memAccEvent);
-                            if (equiMap.get(memAccEvent) != null) {
-                                nodes1.addAll(equiMap.get(memAccEvent));
-                            }
-
-
-                            Set<MemoryAccessEvent> nodes2 = new HashSet<>();
-                            nodes2.add(writeEvent);
-                            if (equiMap.get(writeEvent) != null) {
-                                nodes2.addAll(equiMap.get(writeEvent));
-                            }
-
-                            for (MemoryAccessEvent e1 : nodes1) {
-                                for (MemoryAccessEvent e2 : nodes2) {
-                                    Race r = new Race(trace.getStmtSigIdMap().get(e1.getID()),
-                                            trace.getStmtSigIdMap().get(e2.getID()), e1.getID(),
-                                            e2.getID());
-                                    if (violations.add(r)) {
-                                        logger.report(r.toString(), Logger.MSGTYPE.REAL);
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        if (potentialviolations.add(race2)) {
-                            logger.report("Potential " + race2, Logger.MSGTYPE.POTENTIAL);
-                        }
-
-                        if (equiMap.containsKey(memAccEvent) || equiMap.containsKey(writeEvent)) {
-                            Set<MemoryAccessEvent> nodes1 = new HashSet<>();
-                            nodes1.add(memAccEvent);
-                            if (equiMap.get(memAccEvent) != null) {
-                                nodes1.addAll(equiMap.get(memAccEvent));
-                            }
-
-                            Set<MemoryAccessEvent> nodes2 = new HashSet<>();
-                            nodes2.add(writeEvent);
-                            if (equiMap.get(writeEvent) != null) {
-                                nodes2.addAll(equiMap.get(writeEvent));
-                            }
-
-                            for (MemoryAccessEvent e1 : nodes1) {
-                                for (MemoryAccessEvent e2 : nodes2) {
-                                    ExactRace r = new ExactRace(trace.getStmtSigIdMap().get(
-                                            e1.getID()), trace.getStmtSigIdMap().get(e2.getID()),
-                                            (int) e1.getGID(), (int) e2.getGID());
-                                    if (potentialviolations.add(r)) {
-                                        logger.report("Potential " + r, Logger.MSGTYPE.POTENTIAL);
-                                    }
-                                }
+                    if (engine.isRace(fst, snd, sb)) {
+                        for (Race r : potentialRaces) {
+                            if (violations.add(r)) {
+                                logger.report(r.toString(), Logger.MSGTYPE.REAL);
                             }
                         }
                     }

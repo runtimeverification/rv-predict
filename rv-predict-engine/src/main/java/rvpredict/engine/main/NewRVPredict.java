@@ -182,7 +182,7 @@ public class NewRVPredict {
                                     (int) wnode.getGID());
                             // skip redundant races with the same signature,
                             // i.e., from same program locations
-                            if (config.allrace || !violations.contains(race)
+                            if (!violations.contains(race)
                                     && !potentialviolations.contains(race2))// may
                                                                             // miss
                                                                             // real
@@ -220,16 +220,6 @@ public class NewRVPredict {
                                 // the constraints
 
                                 StringBuilder sb;
-                                if (config.allconsistent)// all read-write
-                                                         // consistency used by
-                                                         // the Said approach
-                                {
-                                    List<ReadEvent> readNodes_rw = trace.getAllReadNodes();
-                                    sb = engine.constructCausalReadWriteConstraintsOptimized(
-                                            rnode.getGID(), readNodes_rw,
-                                            trace);
-                                } else {
-
                                     // the following builds the constraints for
                                     // maximal causal model
 
@@ -257,7 +247,6 @@ public class NewRVPredict {
                                                     readNodes_w, trace);
                                     // conjunct them
                                     sb = sb1.append(sb2);
-                                }
 
                                 // if(race.toString().equals("<benchmarks.raytracer.TournamentBarrier: void DoBarrier(int)>|$z3 = $r2[$i7]|65 - <benchmarks.raytracer.TournamentBarrier: void DoBarrier(int)>|$r3[i0] = z0|76"))
                                 // System.out.print("");
@@ -269,11 +258,7 @@ public class NewRVPredict {
 
                                     logger.report(race.toString(), Logger.MSGTYPE.REAL);// report
                                                                                         // it
-                                    if (config.allrace)
-                                        violations.add(race2);// save it to
-                                                              // violations
-                                    else
-                                        violations.add(race);
+                                    violations.add(race);
 
                                     if (equiMap.containsKey(rnode) || equiMap.containsKey(wnode)) {
                                         HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
@@ -363,7 +348,7 @@ public class NewRVPredict {
                             ExactRace race2 = new ExactRace(race, (int) wnode1.getGID(),
                                     (int) wnode2.getGID());
 
-                            if (config.allrace || !violations.contains(race)
+                            if (!violations.contains(race)
                                     && !potentialviolations.contains(race2))//
                             {
                                 if (engine.hasCommonLock(wnode1, wnode2))
@@ -378,11 +363,6 @@ public class NewRVPredict {
                                 }
 
                                 StringBuilder sb;
-                                if (config.allconsistent) {
-                                    List<ReadEvent> readNodes_ww = trace.getAllReadNodes();
-                                    sb = engine.constructCausalReadWriteConstraintsOptimized(-1,
-                                            readNodes_ww, trace);
-                                } else {
                                     // get dependent nodes of rnode and wnode
                                     List<ReadEvent> readNodes_w1 = trace.getDependentReadNodes(
                                             wnode1, config.branch);
@@ -396,18 +376,13 @@ public class NewRVPredict {
                                             .constructCausalReadWriteConstraintsOptimized(-1,
                                                     readNodes_w2, trace);
                                     sb = sb1.append(sb2);
-                                }
                                 // TODO: NEED to ensure that the other
                                 // non-dependent nodes by other threads are not
                                 // included
                                 if (engine.isRace(wnode1, wnode2, sb)) {
                                     logger.report(race.toString(), Logger.MSGTYPE.REAL);
 
-                                    if (config.allrace)
-                                        violations.add(race2);// save it to
-                                                              // violations
-                                    else
-                                        violations.add(race);
+                                    violations.add(race);
 
                                     if (equiMap.containsKey(wnode1) || equiMap.containsKey(wnode2)) {
                                         HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();

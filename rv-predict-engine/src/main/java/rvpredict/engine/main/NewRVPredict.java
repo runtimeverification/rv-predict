@@ -65,14 +65,51 @@ import violation.Violation;
  */
 public class NewRVPredict {
 
-    private HashSet<Violation> violations = new HashSet<Violation>();
-    private HashSet<Violation> potentialviolations = new HashSet<Violation>();
-    private Configuration config;
-    private Logger logger;
-    private long totalTraceLength;
-    private DBEngine dbEngine;
-    private TraceInfo traceInfo;
-    private long startTime;
+    private final HashSet<Violation> violations = new HashSet<Violation>();
+    private final HashSet<Violation> potentialviolations = new HashSet<Violation>();
+    private final Configuration config;
+    private final Logger logger;
+    private final long totalTraceLength;
+    private final DBEngine dbEngine;
+    private final TraceInfo traceInfo;
+
+    public NewRVPredict(Configuration config) {
+        this.config = config;
+        logger = config.logger;
+
+        long startTime = System.currentTimeMillis();
+
+        dbEngine = new DBEngine(config.outdir);
+
+        // load all the metadata in the application
+        Set<Integer> volatileFieldIds = new HashSet<>();
+        Map<Integer, String> stmtIdSigMap = new HashMap<>();
+        dbEngine.getMetadata(volatileFieldIds, stmtIdSigMap);
+
+        // the total number of events in the trace
+        totalTraceLength = dbEngine.getTraceSize();
+
+        traceInfo = new TraceInfo(volatileFieldIds, stmtIdSigMap);
+
+        addHooks(startTime);
+    }
+
+    private void addHooks(long startTime) {
+        // register a shutdown hook to store runtime statistics
+        Runtime.getRuntime().addShutdownHook(
+                new ExecutionInfoTask(startTime, traceInfo, totalTraceLength));
+
+        // set a timer to timeout in a configured period
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                logger.report("\n******* Timeout " + config.timeout + " seconds ******",
+                        Logger.MSGTYPE.REAL);// report it
+                System.exit(0);
+            }
+        }, config.timeout * 1000);
+    }
 
     /**
      * Race detection method. For every pair of conflicting data accesses, the
@@ -277,9 +314,7 @@ public class NewRVPredict {
         Configuration config = new Configuration();
         config.parseArguments(args, true);
         config.outdir = "./log";
-        NewRVPredict predictor = new NewRVPredict();
-        predictor.initPredict(config);
-        predictor.addHooks();
+        NewRVPredict predictor = new NewRVPredict(config);
         predictor.run();
     }
 
@@ -328,46 +363,6 @@ public class NewRVPredict {
             initValues = trace.getFinalValues();
         }
         System.exit(0);
-    }
-
-    public void initPredict(Configuration conf) {
-        Set<Integer> volatileFieldIds = new HashSet<>();
-        Map<Integer, String> stmtIdSigMap = new HashMap<>();
-
-        config = conf;
-        logger = config.logger;
-
-        // Now let's start predict analysis
-        startTime = System.currentTimeMillis();
-
-        // db engine is used for interacting with database
-        dbEngine = new DBEngine(config.outdir);
-
-        // load all the metadata in the application
-        dbEngine.getMetadata(volatileFieldIds, stmtIdSigMap);
-
-        // the total number of events in the trace
-        totalTraceLength = 0;
-        totalTraceLength = dbEngine.getTraceSize();
-
-        traceInfo = new TraceInfo(volatileFieldIds, stmtIdSigMap);
-    }
-
-    public void addHooks() {
-        ExecutionInfoTask task = new ExecutionInfoTask(startTime, traceInfo, totalTraceLength);
-        // register a shutdown hook to store runtime statistics
-        Runtime.getRuntime().addShutdownHook(task);
-
-        // set a timer to timeout in a configured period
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                logger.report("\n******* Timeout " + config.timeout + " seconds ******",
-                        Logger.MSGTYPE.REAL);// report it
-                System.exit(0);
-            }
-        }, config.timeout * 1000);
     }
 
     class ExecutionInfoTask extends Thread {

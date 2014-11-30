@@ -30,7 +30,6 @@ package rvpredict.engine.main;
  ******************************************************************************/
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -38,6 +37,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
 import rvpredict.config.Configuration;
@@ -162,17 +162,17 @@ public class NewRVPredict {
                 }
             }
 
-            /* check read-write conflict */
-            for (ReadEvent readEvent : readEvents) {
+            /* check conflicting pairs */
+            for (MemoryAccessEvent memAccEvent : Iterables.concat(readEvents, writeEvents)) {
                 for (WriteEvent writeEvent : writeEvents) {
-                    if (readEvent.getTID() == writeEvent.getTID()) {
+                    if (memAccEvent == writeEvent || memAccEvent.getTID() == writeEvent.getTID()) {
                         continue;
                     }
 
-                    Race race = new Race(trace.getStmtSigIdMap().get(readEvent.getID()), trace
-                            .getStmtSigIdMap().get(writeEvent.getID()), readEvent.getID(),
+                    Race race = new Race(trace.getStmtSigIdMap().get(memAccEvent.getID()), trace
+                            .getStmtSigIdMap().get(writeEvent.getID()), memAccEvent.getID(),
                             writeEvent.getID());
-                    ExactRace race2 = new ExactRace(race, (int) readEvent.getGID(),
+                    ExactRace race2 = new ExactRace(race, (int) memAccEvent.getGID(),
                             (int) writeEvent.getGID());
 
                     if (violations.contains(race) || potentialviolations.contains(race2)) {
@@ -180,27 +180,27 @@ public class NewRVPredict {
                     }
 
                     /* not a race if the two events hold a common lock */
-                    if (engine.hasCommonLock(readEvent, writeEvent)) {
+                    if (engine.hasCommonLock(memAccEvent, writeEvent)) {
                         continue;
                     }
 
                     /* not a race if the two events are in a happens-before relation */
-                    if (readEvent.getGID() < writeEvent.getGID()
-                            && engine.canReach(readEvent, writeEvent)
-                            || readEvent.getGID() > writeEvent.getGID()
-                            && engine.canReach(writeEvent, readEvent)) {
+                    if (memAccEvent.getGID() < writeEvent.getGID()
+                            && engine.canReach(memAccEvent, writeEvent)
+                            || memAccEvent.getGID() > writeEvent.getGID()
+                            && engine.canReach(writeEvent, memAccEvent)) {
                         continue;
                     }
 
                     /* start building constraints for MCM */
                     List<ReadEvent> readNodes_r = trace.getDependentReadNodes(
-                            readEvent, config.branch);
+                            memAccEvent, config.branch);
                     List<ReadEvent> readNodes_w = trace.getDependentReadNodes(
                             writeEvent, config.branch);
 
                     StringBuilder sb1 = engine
                             .constructCausalReadWriteConstraintsOptimized(
-                                    readEvent.getGID(), readNodes_r,
+                                    memAccEvent.getGID(), readNodes_r,
                                     trace);
                     StringBuilder sb2 = engine
                             .constructCausalReadWriteConstraintsOptimized(-1,
@@ -208,15 +208,15 @@ public class NewRVPredict {
                     StringBuilder sb = sb1.append(sb2);
 
 
-                    if (engine.isRace(readEvent, writeEvent, sb)) {
+                    if (engine.isRace(memAccEvent, writeEvent, sb)) {
                         logger.report(race.toString(), Logger.MSGTYPE.REAL);
                         violations.add(race);
 
-                        if (equiMap.containsKey(readEvent) || equiMap.containsKey(writeEvent)) {
+                        if (equiMap.containsKey(memAccEvent) || equiMap.containsKey(writeEvent)) {
                             Set<MemoryAccessEvent> nodes1 = new HashSet<>();
-                            nodes1.add(readEvent);
-                            if (equiMap.get(readEvent) != null) {
-                                nodes1.addAll(equiMap.get(readEvent));
+                            nodes1.add(memAccEvent);
+                            if (equiMap.get(memAccEvent) != null) {
+                                nodes1.addAll(equiMap.get(memAccEvent));
                             }
 
 
@@ -229,7 +229,7 @@ public class NewRVPredict {
                             for (MemoryAccessEvent e1 : nodes1) {
                                 for (MemoryAccessEvent e2 : nodes2) {
                                     Race r = new Race(trace.getStmtSigIdMap().get(e1.getID()),
-                                            trace.getStmtSigIdMap().get(e2.getID()), e2.getID(),
+                                            trace.getStmtSigIdMap().get(e2.getID()), e1.getID(),
                                             e2.getID());
                                     if (violations.add(r)) {
                                         logger.report(r.toString(), Logger.MSGTYPE.REAL);
@@ -242,11 +242,11 @@ public class NewRVPredict {
                             logger.report("Potential " + race2, Logger.MSGTYPE.POTENTIAL);
                         }
 
-                        if (equiMap.containsKey(readEvent) || equiMap.containsKey(writeEvent)) {
+                        if (equiMap.containsKey(memAccEvent) || equiMap.containsKey(writeEvent)) {
                             Set<MemoryAccessEvent> nodes1 = new HashSet<>();
-                            nodes1.add(readEvent);
-                            if (equiMap.get(readEvent) != null) {
-                                nodes1.addAll(equiMap.get(readEvent));
+                            nodes1.add(memAccEvent);
+                            if (equiMap.get(memAccEvent) != null) {
+                                nodes1.addAll(equiMap.get(memAccEvent));
                             }
 
                             Set<MemoryAccessEvent> nodes2 = new HashSet<>();
@@ -269,126 +269,6 @@ public class NewRVPredict {
                     }
                 }
             }
-
-            // check race write-write
-            if (writeEvents.size() > 1)
-                for (int i = 0; i < writeEvents.size(); i++)// skip the initial
-                                                           // write node
-                {
-                    WriteEvent wnode1 = writeEvents.get(i);
-
-                    for (int j = 0; j != i && j < writeEvents.size(); j++) {
-                        WriteEvent wnode2 = writeEvents.get(j);
-                        if (wnode1.getTID() != wnode2.getTID()) {
-                            Race race = new Race(trace.getStmtSigIdMap().get(wnode1.getID()), trace
-                                    .getStmtSigIdMap().get(wnode2.getID()), wnode1.getID(),
-                                    wnode2.getID());
-                            ExactRace race2 = new ExactRace(race, (int) wnode1.getGID(),
-                                    (int) wnode2.getGID());
-
-                            if (!violations.contains(race)
-                                    && !potentialviolations.contains(race2))//
-                            {
-                                if (engine.hasCommonLock(wnode1, wnode2))
-                                    continue;
-
-                                if (wnode1.getGID() < wnode2.getGID()) {
-                                    if (engine.canReach(wnode1, wnode2))
-                                        continue;
-                                } else {
-                                    if (engine.canReach(wnode2, wnode1))
-                                        continue;
-                                }
-
-                                StringBuilder sb;
-                                    // get dependent nodes of rnode and wnode
-                                    List<ReadEvent> readNodes_w1 = trace.getDependentReadNodes(
-                                            wnode1, config.branch);
-                                    List<ReadEvent> readNodes_w2 = trace.getDependentReadNodes(
-                                            wnode2, config.branch);
-
-                                    StringBuilder sb1 = engine
-                                            .constructCausalReadWriteConstraintsOptimized(-1,
-                                                    readNodes_w1, trace);
-                                    StringBuilder sb2 = engine
-                                            .constructCausalReadWriteConstraintsOptimized(-1,
-                                                    readNodes_w2, trace);
-                                    sb = sb1.append(sb2);
-                                // TODO: NEED to ensure that the other
-                                // non-dependent nodes by other threads are not
-                                // included
-                                if (engine.isRace(wnode1, wnode2, sb)) {
-                                    logger.report(race.toString(), Logger.MSGTYPE.REAL);
-
-                                    violations.add(race);
-
-                                    if (equiMap.containsKey(wnode1) || equiMap.containsKey(wnode2)) {
-                                        HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
-                                        nodes1.add(wnode1);
-                                        if (equiMap.get(wnode1) != null)
-                                            nodes1.addAll(equiMap.get(wnode1));
-                                        HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
-                                        nodes2.add(wnode2);
-                                        if (equiMap.get(wnode2) != null)
-                                            nodes2.addAll(equiMap.get(wnode2));
-
-                                        for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
-                                                .hasNext();) {
-                                            MemoryAccessEvent node1 = nodesIt1.next();
-                                            for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
-                                                    .hasNext();) {
-                                                MemoryAccessEvent node2 = nodesIt2.next();
-                                                Race r = new Race(trace.getStmtSigIdMap().get(
-                                                        node1.getID()), trace.getStmtSigIdMap()
-                                                        .get(node2.getID()), node1.getID(),
-                                                        node2.getID());
-                                                if (violations.add(r))
-                                                    logger.report(r.toString(), Logger.MSGTYPE.REAL);
-
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    // if we arrive here, it means we find a
-                                    // case where lockset+happens-before could
-                                    // produce false positive
-                                    if (potentialviolations.add(race2))
-                                        logger.report("Potential " + race2,
-                                                Logger.MSGTYPE.POTENTIAL);
-
-                                    if (equiMap.containsKey(wnode1) || equiMap.containsKey(wnode2)) {
-                                        HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
-                                        nodes1.add(wnode1);
-                                        if (equiMap.get(wnode1) != null)
-                                            nodes1.addAll(equiMap.get(wnode1));
-                                        HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
-                                        nodes2.add(wnode2);
-                                        if (equiMap.get(wnode2) != null)
-                                            nodes2.addAll(equiMap.get(wnode2));
-
-                                        for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
-                                                .hasNext();) {
-                                            MemoryAccessEvent node1 = nodesIt1.next();
-                                            for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
-                                                    .hasNext();) {
-                                                MemoryAccessEvent node2 = nodesIt2.next();
-                                                ExactRace r = new ExactRace(trace.getStmtSigIdMap()
-                                                        .get(node1.getID()), trace
-                                                        .getStmtSigIdMap().get(node2.getID()),
-                                                        (int) node1.getGID(), (int) node2.getGID());
-                                                if (potentialviolations.add(r))
-                                                    logger.report("Potential " + r,
-                                                            Logger.MSGTYPE.POTENTIAL);
-
-                                            }
-                                        }
-                                    }
-
-                                }
-                            }
-                        }
-                    }
-                }
         }
     }
 

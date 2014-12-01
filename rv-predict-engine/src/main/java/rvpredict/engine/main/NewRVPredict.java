@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -142,11 +143,8 @@ public class NewRVPredict {
                 continue;
             }
 
-            // find equivalent reads and writes by the same thread
-            Map<MemoryAccessEvent, List<MemoryAccessEvent>> equivMap = new LinkedHashMap<>();
-
-            // skip non-primitive and array variables?
-            // because we add branch operations before their operations
+            /* group equivalent reads and writes into memory access blocks */
+            Map<MemoryAccessEvent, List<MemoryAccessEvent>> equivAccBlk = new LinkedHashMap<>();
             for (Entry<Long, List<MemoryAccessEvent>> entry : trace
                     .getMemAccessEventsTable().row(addr).entrySet()) {
                 // TODO(YilongL): the extensive use of List#indexOf could be a performance problem later
@@ -156,42 +154,54 @@ public class NewRVPredict {
 
                 List<Event> crntThrdEvents = trace.getThreadEvents(crntTID);
 
-                // first memory access event of a block
-                MemoryAccessEvent fstMemAcc = memAccEvents.get(0);
-                int fstMemAccIdx = crntThrdEvents.indexOf(fstMemAcc);
-                equivMap.put(fstMemAcc, Lists.newArrayList(fstMemAcc));
+                ListIterator<MemoryAccessEvent> iter = memAccEvents.listIterator();
+                while (iter.hasNext()) {
+                    MemoryAccessEvent memAcc = iter.next();
+                    equivAccBlk.put(memAcc, Lists.newArrayList(memAcc));
+                    if (memAcc instanceof WriteEvent) {
+                        int prevMemAccIdx = crntThrdEvents.indexOf(memAcc);
 
-                int prevMemAccIdx = fstMemAccIdx;
-                for (MemoryAccessEvent crntMemAcc : memAccEvents.subList(1, memAccEvents.size())) {
-                    int crntMemAccIdx = crntThrdEvents.indexOf(crntMemAcc);
+                        while (iter.hasNext()) {
+                            MemoryAccessEvent crntMemAcc = iter.next();
+                            int crntMemAccIdx = crntThrdEvents.indexOf(crntMemAcc);
 
-                    boolean memAccOnly = true;
-                    for (Event e : crntThrdEvents.subList(prevMemAccIdx + 1, crntMemAccIdx)) {
-                        memAccOnly = memAccOnly && (e instanceof MemoryAccessEvent);
+                            /* ends the block if there is sync/branch event in between */
+                            boolean memAccOnly = true;
+                            for (Event e : crntThrdEvents.subList(prevMemAccIdx + 1, crntMemAccIdx)) {
+                                memAccOnly = memAccOnly && (e instanceof MemoryAccessEvent);
+                            }
+                            if (!memAccOnly) {
+                                iter.previous();
+                                break;
+                            }
+
+                            equivAccBlk.get(memAcc).add(crntMemAcc);
+                            if (!config.branch) {
+                                /* YilongL: without logging branch events, we
+                                 * have to be conservative and end the block
+                                 * when a read event is encountered */
+                                if (crntMemAcc instanceof ReadEvent) {
+                                    break;
+                                }
+                            }
+
+                            prevMemAccIdx = crntMemAccIdx;
+                        }
                     }
-
-                    if (memAccOnly) {
-                        equivMap.get(fstMemAcc).add(crntMemAcc);
-                    } else {
-                        fstMemAcc = crntMemAcc;
-                        fstMemAccIdx = crntMemAccIdx;
-                        equivMap.put(fstMemAcc, Lists.newArrayList(fstMemAcc));
-                    }
-                    prevMemAccIdx = crntMemAccIdx;
                 }
             }
 
             /* check conflicting pairs */
-            for (MemoryAccessEvent fst : equivMap.keySet()) {
-                for (MemoryAccessEvent snd : equivMap.keySet()) {
-                    if (fst.getTID() < snd.getTID()) {
+            for (MemoryAccessEvent fst : equivAccBlk.keySet()) {
+                for (MemoryAccessEvent snd : equivAccBlk.keySet()) {
+                    if (fst.getTID() >= snd.getTID()) {
                         continue;
                     }
 
                     /* skip if all potential data races are already known */
                     Set<Race> potentialRaces = Sets.newHashSet();
-                    for (MemoryAccessEvent e1 : equivMap.get(fst)) {
-                        for (MemoryAccessEvent e2 : equivMap.get(snd)) {
+                    for (MemoryAccessEvent e1 : equivAccBlk.get(fst)) {
+                        for (MemoryAccessEvent e2 : equivAccBlk.get(snd)) {
                             if (e1 instanceof WriteEvent || e2 instanceof WriteEvent) {
                                 potentialRaces.add(new Race(trace.getStmtSigIdMap().get(e1.getID()),
                                         trace.getStmtSigIdMap().get(e2.getID()), e1.getID(),

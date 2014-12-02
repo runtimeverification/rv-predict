@@ -44,20 +44,27 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Engine for interacting with database.
+ * Class encapsulating functionality for recording events to disk.
+ * TODO(TraianSF): Maybe we should rename the class now that there is no DB code left.
  *
- * @author jeffhuang
+ * @author TraianSF
  *
  */
 public class DBEngine {
 
     private static final AtomicLong globalEventID  = new AtomicLong(0);
-
     private final int BUFFER_THRESHOLD;
-
     private final GlobalStateForInstrumentation globalState;
     private final Thread metadataLoggingThread;
+    private final ThreadLocalEventStream threadLocalTraceOS;
+    private final ObjectOutputStream metadataOS;
+    private boolean shutdown = false;
 
+
+    /**
+     * Method invoked at the end of the logging task, to insure that
+     * all data is flushed to disk before concluding.
+     */
     public void finishLogging() {
         shutdown = true;
         try {
@@ -83,11 +90,6 @@ public class DBEngine {
         }
     }
 
-    private final ThreadLocalEventStream threadLocalTraceOS;
-
-    private final ObjectOutputStream metadataOS;
-    private boolean shutdown = false;
-
     public DBEngine(GlobalStateForInstrumentation globalState, String directory) {
         BUFFER_THRESHOLD = 10*Config.instance.commandLine.window_size;
         this.globalState = globalState;
@@ -96,7 +98,7 @@ public class DBEngine {
         metadataLoggingThread = startMetadataLogging();
     }
 
-    Thread startMetadataLogging() {
+    private Thread startMetadataLogging() {
         Thread metadataLoggingThread = new Thread(new Runnable() {
 
             @Override
@@ -134,18 +136,30 @@ public class DBEngine {
     }
 
     /**
-     * save an event to database. ThreadLocal
+     * Saves an {@link rvpredict.db.EventItem} to the database.
+     * Each event is saved in a file corresponding to its own thread.
+     *
+     * @see rvpredict.db.EventItem#EventItem(long, long, int, long, long, long, rvpredict.trace.EventType)
+     *      for a more elaborate description of the parameters.
+     * @see java.lang.ThreadLocal
+     *
+     * @param eventType  type of event being recorded
+     * @param id location id of the event
+     * @param addrl  additional information identifying the event
+     * @param addrr additional information identifying the event
+     * @param value data involved in the event
      */
     public void saveEvent(EventType eventType, int id, long addrl, long addrr, long value) {
+        if (shutdown) return;
         long tid = Thread.currentThread().getId();
         long gid = DBEngine.globalEventID.incrementAndGet();
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
-        if (shutdown) return;
         try {
             EventOutputStream traceOS = threadLocalTraceOS.get();
             traceOS.writeEvent(e);
             long eventsWritten = traceOS.getEventsWrittenCount();
             if (eventsWritten % BUFFER_THRESHOLD == 0) {
+                // Flushing events and metadata periodically to allow crash recovery.
                 traceOS.flush();
                 synchronized (metadataLoggingThread) {
                     metadataLoggingThread.notify();
@@ -158,11 +172,19 @@ public class DBEngine {
             }
     }
 
+    /**
+     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, long, long)}
+     * The missing arguments default to 0.
+     */
     public void saveEvent(EventType eventType, int locId, long arg) {
         saveEvent(eventType, locId, arg, 0, 0);
     }
 
-    public void saveEvent(EventType eventType, int locId) {
+    /**
+     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, long, long)}
+     * The missing arguments default to 0.
+     */
+     public void saveEvent(EventType eventType, int locId) {
         saveEvent(eventType, locId, 0, 0, 0);
     }
 
@@ -174,6 +196,9 @@ public class DBEngine {
         }
     }
 
+    /**
+     * Flush un-previously-saved metadata to disk.
+     */
     public void saveMetaData() {
         /* save <threadId, name> pairs */
         List<Entry<Long,String>> threadIdNamePairs = new ArrayList<>(globalState.unsavedStmtSigToLocId.size());

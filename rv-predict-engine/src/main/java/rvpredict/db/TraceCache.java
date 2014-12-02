@@ -8,19 +8,25 @@ import java.nio.file.Paths;
 import java.util.*;
 
 /**
- * Class adding a transparency layer between the prediction engine and the filesystem holding the trace log.
- * A trace log consists from a collection of files, each holding the events corresponding to
- * a thread
- * The file names end with {@link #TRACE_SUFFIX}, having as a prefix the unique id of the thread.
+ * Class adding a transparency layer between the prediction engine and the
+ * filesystem holding the trace log.
+ * A trace log consists from a collection of files, each holding all the events
+ * corresponding to a single thread.
+ * The file names end with {@link #TRACE_SUFFIX}, having as a prefix the unique
+ * id of the thread generating them.
  * @author TraianSF
  */
 public class TraceCache {
+    /**
+     * termination for files holding events
+     */
     public static final String TRACE_SUFFIX = "trace.bin";
-    final Map<Long,Map.Entry<EventInputStream,EventItem>> indexes;
+    private final Map<Long,Map.Entry<EventInputStream,EventItem>> indexes;
     private final long traceSize;
 
     /**
-     * Creates a new cache structure for a trace log in a given directory
+     * Creates a new {@code TraceCahce} structure for a trace log in a given directory.
+     *
      * @param directory  location on filesystem where the trace log can be found
      */
     public TraceCache(String directory) {
@@ -44,7 +50,7 @@ public class TraceCache {
         this.traceSize = traceSize / EventItem.SIZEOF;
     }
 
-    static String[] getTraceFiles(String directory) {
+    private static String[] getTraceFiles(String directory) {
         DirectoryScanner scanner = new DirectoryScanner();
         scanner.setIncludes(new String[]{"*" + TRACE_SUFFIX});
         scanner.setBasedir(directory);
@@ -67,16 +73,23 @@ public class TraceCache {
         }
     }
 
+    /**
+     * Accessor for the {@code traceSize} field.
+     * @return total (over all threads) number of events recorded
+     */
     public long getTraceSize() {
         return traceSize;
     }
 
     /**
-     * Returns the event whose unique identifier in the logged trace is given by {@code index}.
-     * This method assumes the trace is read in sequential order, hence one of the keys
-     * in the {@link #indexes} table is equal to {@code index}.
+     * Returns the event whose unique identifier in the logged
+     * trace is given by {@code index}.
+     * This method assumes the trace is read in sequential order,
+     * hence one of the keys in the {@link #indexes} table is equal
+     * to {@code index}.
+     * Moreover, it is assumed that {@code index < traceSize}.
      * @param index  index of the event to be read
-     * @return the event requested or <code>null</code>
+     * @return the event requested
      */
     public EventItem getEvent(long index) {
         Map.Entry<EventInputStream,EventItem> entry = indexes.remove(index);

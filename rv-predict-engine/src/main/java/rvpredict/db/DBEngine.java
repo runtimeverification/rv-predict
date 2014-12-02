@@ -30,16 +30,15 @@ package rvpredict.db;
 
 import java.io.*;
 import java.nio.file.Paths;
-import java.sql.*;
 import java.util.*;
 import java.util.List;
 
 import rvpredict.trace.*;
 
 /**
- * Engine for interacting with database.
+ * Class for loading traces of events from disk.
  *
- * @author jeffhuang
+ * @author TraianSF
  *
  */
 public class DBEngine {
@@ -48,6 +47,13 @@ public class DBEngine {
 
     private TraceCache traceCache=null;
 
+    /**
+     * Reads the previously saved metadata into the structures given as parameters
+     * @param threadIdNameMap  map associating thread identifiers to thread names
+     * @param sharedVarIdSigMap map giving signatures for the shared variables
+     * @param volatileAddresses  map giving locations for volatile variables
+     * @param stmtIdSigMap  map giving signature/location information for events
+     */
     public void getMetadata(Map<Long, String> threadIdNameMap, Map<Integer, String> sharedVarIdSigMap, Map<Integer, String> volatileAddresses, Map<Integer, String> stmtIdSigMap) {
         try {
             ObjectInputStream metadataIS = new ObjectInputStream(
@@ -93,6 +99,10 @@ public class DBEngine {
         return true;
     }
 
+    /**
+     *
+     * @return total size (in events) of the recorded trace.
+     */
     public long getTraceSize() {
         if (traceCache == null) traceCache = new TraceCache(directory);
         return traceCache.getTraceSize();
@@ -100,11 +110,13 @@ public class DBEngine {
 
     /**
      * load trace from event min to event max
+     * Currently trace is assumed to be read sequentially,
+     * in min-max segments, from beginning to end.
+     * @see rvpredict.db.TraceCache#getEvent(long)
      *
-     * @param min
-     * @param max
-     * @return
-     * @throws Exception
+     * @param min index where the trace segment to be read should start from
+     * @param max index where the trace segment to be read should end
+     * @return a {@link rvpredict.trace.Trace} representing the trace segment read
      */
     public Trace getTrace(long min, long max, TraceInfo info) {
         if (traceCache == null) traceCache = new TraceCache(directory);

@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- * Extension of the DataOutputStream class specialized for Events
+ * Extension of the DataOutputStream class specialized for {@link rvpredict.db.EventItem}
  * @author TraianSF
  *
  */
@@ -26,12 +26,12 @@ public class EventOutputStream extends DataOutputStream {
     }
 
     /**
-     * Writes an <code>EventItem</code> to the underlying output stream.
+     * Writes an {@link rvpredict.db.EventItem} to the underlying output stream.
      *
-     * @param      event   an <code>EventItem</code> to be written.
+     * @param      event   an {@link rvpredict.db.EventItem} to be written.
      *                     If no exception is thrown, the counter
      *                     <code>written</code> is incremented by
-     *                     <code>45</code>.
+     *                     {@link rvpredict.db.EventItem#SIZEOF}.
      * @exception  IOException  if an I/O error occurs.
      * @see        java.io.FilterOutputStream#out
      */

@@ -132,8 +132,8 @@ public class Trace {
         return initValues.get(addr);
     }
 
-    public Map<Integer, String> getStmtSigIdMap() {
-        return info.getStmtSigIdMap();
+    public Map<Integer, String> getLocIdToStmtSigMap() {
+        return info.getLocIdToStmtSigMap();
     }
 
     public Map<Long, Event> getThreadFirstNodeMap() {

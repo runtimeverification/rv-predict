@@ -42,21 +42,20 @@ import java.util.Set;
 public class TraceInfo {
 
     // metadata
-    private final Map<Integer, String> stmtIdSigMap;
+    private final Map<Integer, String> locIdToStmtSig;
     private final Set<Integer> volatileFieldIds;
 
     HashSet<String> sharedAddresses = new HashSet<String>();
     HashSet<Long> threads = new HashSet<Long>();
     int num_br, num_sync, num_rw_shared, num_rw_local, num_w_init, num_prop;
 
-    public TraceInfo(Set<Integer> volatileFieldIds,
-            Map<Integer, String> stmtIdSigMap) {
+    public TraceInfo(Set<Integer> volatileFieldIds, Map<Integer, String> locIdToStmtSig) {
         this.volatileFieldIds = volatileFieldIds;
-        this.stmtIdSigMap = stmtIdSigMap;
+        this.locIdToStmtSig = locIdToStmtSig;
     }
 
-    public Map<Integer, String> getStmtSigIdMap() {
-        return stmtIdSigMap;
+    public Map<Integer, String> getLocIdToStmtSigMap() {
+        return locIdToStmtSig;
     }
 
     public void addSharedAddresses(Set<String> s) {

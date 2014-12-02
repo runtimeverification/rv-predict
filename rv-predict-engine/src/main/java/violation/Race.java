@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -28,51 +28,47 @@
  ******************************************************************************/
 package violation;
 
+import java.util.Map;
+
+import rvpredict.trace.MemoryAccessEvent;
+
 /**
  * Data race violation
- * 
- * @author jeffhuang
  *
  */
 public class Race extends AbstractViolation {
 
-    // not mutable
-    // why hashset has strange behavior??
+    private final int locId1;
+    private final int locId2;
+    private final String stmtSig1;
+    private final String stmtSig2;
 
-    // a pair of conflicting nodes
-    protected final String node1;
-    protected final String node2;
-    protected final int hashcode;
-
-    // TODO(YilongL): hashCode depends on ids yet equals checks nodes; this seems seriously wrong
-    public Race(String node1, String node2, int id1, int id2) {
-        if (node1.compareTo(node2) < 0) {
-            this.node1 = node1;
-            this.node2 = node2;
-        } else {
-            this.node1 = node2;
-            this.node2 = node1;
+    public Race(MemoryAccessEvent e1, MemoryAccessEvent e2, Map<Integer, String> locIdToStmtSig) {
+        if (e1.getID() > e2.getID()) {
+            MemoryAccessEvent tmp = e1;
+            e1 = e2;
+            e2 = tmp;
         }
-        hashcode = id1 * id1 + id2 * id2;
+
+        locId1 = e1.getID();
+        locId2 = e2.getID();
+        stmtSig1 = locIdToStmtSig.get(locId1);
+        stmtSig2 = locIdToStmtSig.get(locId2);
     }
 
     @Override
     public int hashCode() {
-        // int code = node1.hashCode()+node2.hashCode();
-        // return code;
-        return hashcode;
+        return locId1 * 17 + locId2;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (o instanceof Race) {
-            if ((((Race) o).node1 == node1 && ((Race) o).node2 == node2)
-                    || (((Race) o).node1 == node2 && ((Race) o).node2 == node1))
-                return true;
-
+    public boolean equals(Object object) {
+        if (!(object instanceof Race)) {
+            return false;
         }
 
-        return false;
+        Race otherRace = (Race) object;
+        return locId1 == otherRace.locId1 && locId2 == otherRace.locId2;
     }
 
     @Override
@@ -81,6 +77,14 @@ public class Race extends AbstractViolation {
         // String sig_loc = source + "|" +
         // (classname+"|"+methodsignature+"|"+sig_var+"|"+line_cur).replace("/",
         // ".");
+        String node1 = stmtSig1;
+        String node2 = stmtSig2;
+        if (node1.compareTo(node2) > 0) {
+            String tmp = node1;
+            node1 = node2;
+            node2 = tmp;
+        }
+
         Location loc1 = new Location(node1);
         String result = "Race on ";
         if (loc1.varSignature == null) {
@@ -89,7 +93,7 @@ public class Race extends AbstractViolation {
             result += "field " + loc1.varSignature;
         }
         result += " between";
-        if (node1 == node2) {
+        if (node1.equals(node2)) {
             result += " two instances of:\n" + "\t" + loc1 + "\n";
         } else {
             Location loc2 = new Location(node2);

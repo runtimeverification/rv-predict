@@ -53,7 +53,7 @@ public class DBEngine {
      * @param stmtIdSigMap  map giving signature/location information for events
      */
     @SuppressWarnings("unchecked")
-    public void getMetadata(Set<Integer> volatileFieldIds, Map<Integer, String> stmtIdSigMap) {
+    public void getMetadata(Set<Integer> volatileFieldIds, Map<Integer, String> locIdToStmtSig) {
         try {
             while (true) {
                 try {
@@ -64,7 +64,7 @@ public class DBEngine {
                 List<Map.Entry<String, Integer>> stmtSigIdList = (List<Map.Entry<String, Integer>>) metadataIS
                         .readObject();
                 for (Map.Entry<String, Integer> entry : stmtSigIdList) {
-                    stmtIdSigMap.put(entry.getValue(), entry.getKey());
+                    locIdToStmtSig.put(entry.getValue(), entry.getKey());
                 }
             }
         } catch (IOException | ClassNotFoundException e) {

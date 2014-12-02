@@ -83,13 +83,13 @@ public class NewRVPredict {
 
         // load all the metadata in the application
         Set<Integer> volatileFieldIds = new HashSet<>();
-        Map<Integer, String> stmtIdSigMap = new HashMap<>();
-        dbEngine.getMetadata(volatileFieldIds, stmtIdSigMap);
+        Map<Integer, String> locIdToStmtSig = new HashMap<>();
+        dbEngine.getMetadata(volatileFieldIds, locIdToStmtSig);
 
         // the total number of events in the trace
         totalTraceLength = dbEngine.getTraceSize();
 
-        traceInfo = new TraceInfo(volatileFieldIds, stmtIdSigMap);
+        traceInfo = new TraceInfo(volatileFieldIds, locIdToStmtSig);
 
         addHooks(startTime);
     }
@@ -203,9 +203,7 @@ public class NewRVPredict {
                     for (MemoryAccessEvent e1 : equivAccBlk.get(fst)) {
                         for (MemoryAccessEvent e2 : equivAccBlk.get(snd)) {
                             if (e1 instanceof WriteEvent || e2 instanceof WriteEvent) {
-                                potentialRaces.add(new Race(trace.getStmtSigIdMap().get(e1.getID()),
-                                        trace.getStmtSigIdMap().get(e2.getID()), e1.getID(),
-                                        e2.getID()));
+                                potentialRaces.add(new Race(e1, e2, trace.getLocIdToStmtSigMap()));
                             }
                         }
                     }

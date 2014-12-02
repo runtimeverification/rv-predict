@@ -156,7 +156,7 @@ public class DBEngine {
                     node = new SyncEvent(GID, TID, ID, EventType.JOIN, ADDRL);
                     break;
                 case BRANCH:
-                    node = new BranchNode(GID, TID, ID);
+                    node = new BranchEvent(GID, TID, ID);
                     break;
                 default:
                     System.out.println(TYPE);

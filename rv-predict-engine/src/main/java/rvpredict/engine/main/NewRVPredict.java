@@ -227,20 +227,14 @@ public class NewRVPredict {
                     }
 
                     /* start building constraints for MCM */
-                    List<ReadEvent> readNodes_r = trace.getDependentReadNodes(
-                            fst, config.branch);
-                    List<ReadEvent> readNodes_w = trace.getDependentReadNodes(
-                            snd, config.branch);
+                    List<ReadEvent> readDeps1 = trace.getDependentReadEvents(fst, config.branch);
+                    List<ReadEvent> readDeps2 = trace.getDependentReadEvents(snd, config.branch);
 
-                    StringBuilder sb1 = engine
-                            .constructCausalReadWriteConstraintsOptimized(
-                                    fst.getGID(), readNodes_r,
-                                    trace);
-                    StringBuilder sb2 = engine
-                            .constructCausalReadWriteConstraintsOptimized(-1,
-                                    readNodes_w, trace);
+                    StringBuilder sb1 = engine.constructCausalReadWriteConstraints(fst.getGID(),
+                            readDeps1, trace);
+                    StringBuilder sb2 = engine.constructCausalReadWriteConstraints(-1, readDeps2,
+                            trace);
                     StringBuilder sb = sb1.append(sb2);
-
 
                     if (engine.isRace(fst, snd, sb)) {
                         for (Race r : potentialRaces) {

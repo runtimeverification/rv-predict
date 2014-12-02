@@ -420,7 +420,7 @@ public class EngineSMTLIB1 {
      * @return
      */
     // TODO: NEED to handle the feasibility of new added write nodes
-    public StringBuilder constructCausalReadWriteConstraintsOptimized(long rgid,
+    public StringBuilder constructCausalReadWriteConstraints(long rgid,
             List<ReadEvent> readNodes, Trace trace) {
         StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
 

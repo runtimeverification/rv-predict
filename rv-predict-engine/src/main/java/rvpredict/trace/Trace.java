@@ -69,7 +69,7 @@ public class Trace {
     private final List<Event> fulltrace = new ArrayList<>();
 
     // per thread node map
-    private final Map<Long, List<Event>> threadNodesMap = new HashMap<>();
+    private final Map<Long, List<Event>> threadIdToEvents = new HashMap<>();
 
     // the first node and last node map of each thread
     private final Map<Long, Event> threadFirstNodeMap = new HashMap<>();
@@ -80,7 +80,7 @@ public class Trace {
     private final Map<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<>();
 
     // per thread branch nodes
-    private final Map<Long, List<BranchNode>> threadBranchNodes = new HashMap<>();
+    private final Map<Long, List<BranchEvent>> threadIdToBranchEvents = new HashMap<>();
 
     // per thead synchronization nodes
     private final Map<Long, List<SyncEvent>> syncNodesMap = new HashMap<>();
@@ -145,11 +145,16 @@ public class Trace {
     }
 
     public List<Event> getThreadEvents(long threadId) {
-        return threadNodesMap.get(threadId);
+        return threadIdToEvents.get(threadId);
+    }
+
+    public List<BranchEvent> getThreadBranchEvents(long threadId) {
+        List<BranchEvent> events = threadIdToBranchEvents.get(threadId);
+        return events == null ? Lists.<BranchEvent>newArrayList() : events;
     }
 
     public Map<Long, List<Event>> getThreadIdToEventsMap() {
-        return threadNodesMap;
+        return threadIdToEvents;
     }
 
     public Map<Long, List<SyncEvent>> getSyncNodesMap() {
@@ -191,52 +196,40 @@ public class Trace {
         return allReadNodes;
     }
 
-    // get dependent nodes of rnode and wnode
-    // if w/o branch information, then all read
-    // nodes that happen-before rnode/wnode are
-    // considered
-    // otherwise, only the read nodes that
-    // before the most recent branch nodes
-    // before rnode/wnode are considered
+    /**
+     * Gets dependent nodes of a given {@code MemoryAccessEvent}. Without
+     * logging {@code BranchNode}, all read events that happen-before the given
+     * event have to be included conservatively. Otherwise, only the read events
+     * that happen-before the latest branch event are included.
+     */
     // TODO: NEED to include the dependent nodes from other threads
-    public List<ReadEvent> getDependentReadNodes(MemoryAccessEvent rnode, boolean branch) {
+    public List<ReadEvent> getDependentReadEvents(MemoryAccessEvent memAccEvent, boolean branch) {
+        // TODO(YilongL): optimize this method when it becomes a bottleneck
+        List<ReadEvent> readEvents = new ArrayList<>();
 
-        List<ReadEvent> readnodes = new ArrayList<>();
-        long tid = rnode.getTID();
-        long POS = rnode.getGID() - 1;
-        if (branch) {
-            long pos = -1;
-            List<BranchNode> branchNodes = threadBranchNodes.get(tid);
-            if (branchNodes != null)
-                // TODO: improve to log(n) complexity
-                for (int i = 0; i < branchNodes.size(); i++) {
-                    long id = branchNodes.get(i).getGID();
-                    if (id > POS)
-                        break;
-                    else
-                        pos = id;
-                }
-            POS = pos;
-        }
+        long threadId = memAccEvent.getTID();
 
-        if (POS >= 0) {
-            List<Event> nodes = threadNodesMap.get(tid);// TODO:
-                                                                 // optimize
-                                                                 // here to
-                                                                 // check only
-                                                                 // READ node
-            for (int i = 0; i < nodes.size(); i++) {
-                Event node = nodes.get(i);
-                if (node.getGID() > POS)
-                    break;
-                else {
-                    if (node instanceof ReadEvent)
-                        readnodes.add((ReadEvent) node);
-                }
+        BranchEvent prevBranchEvent = null;
+        for (BranchEvent branchEvent : getThreadBranchEvents(threadId)) {
+            if (branchEvent.getGID() < memAccEvent.getGID()) {
+                prevBranchEvent = branchEvent;
+            } else {
+                break;
             }
         }
 
-        return readnodes;
+        Event event = prevBranchEvent == null ? memAccEvent : prevBranchEvent;
+        for (Event e : getThreadEvents(threadId)) {
+            if (e.getGID() > event.getGID()) {
+                break;
+            }
+
+            if (e instanceof ReadEvent) {
+                readEvents.add((ReadEvent) e);
+            }
+        }
+
+        return readEvents;
     }
 
     /**
@@ -277,16 +270,16 @@ public class Trace {
         Long tid = node.getTID();
         threads.add(tid);
 
-        if (node instanceof BranchNode) {
+        if (node instanceof BranchEvent) {
             // branch node
             info.incrementBranchNumber();
 
-            List<BranchNode> branchnodes = threadBranchNodes.get(tid);
+            List<BranchEvent> branchnodes = threadIdToBranchEvents.get(tid);
             if (branchnodes == null) {
                 branchnodes = new ArrayList<>();
-                threadBranchNodes.put(tid, branchnodes);
+                threadIdToBranchEvents.put(tid, branchnodes);
             }
-            branchnodes.add((BranchNode) node);
+            branchnodes.add((BranchEvent) node);
         } else if (node instanceof InitEvent) {
             // initial write node
             initValues.put(((InitEvent) node).getAddr(), ((InitEvent) node).getValue());
@@ -296,10 +289,10 @@ public class Trace {
 
             fulltrace.add(node);
 
-            List<Event> threadNodes = threadNodesMap.get(tid);
+            List<Event> threadNodes = threadIdToEvents.get(tid);
             if (threadNodes == null) {
                 threadNodes = new ArrayList<>();
-                threadNodesMap.put(tid, threadNodes);
+                threadIdToEvents.put(tid, threadNodes);
                 threadFirstNodeMap.put(tid, node);
 
             }

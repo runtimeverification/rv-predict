@@ -7,6 +7,10 @@ import rvpredict.trace.EventType;
  * @author TraianSF
  */
 public class EventItem {
+    /**
+     * constant representing the size of the event item on disk (no. of bytes)
+     */
+    public static final long SIZEOF = 45;
     public final long GID;
     public final long TID;
     public final int ID;

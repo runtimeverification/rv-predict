@@ -5,24 +5,18 @@ import org.apache.tools.ant.DirectoryScanner;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 /**
  * Class adding a transparency layer between the prediction engine and the filesystem holding the trace log.
- * A trace log consists from a collection of files holding segments of the trace.
- * The file names end with {@link #TRACE_SUFFIX}, having as a prefix the unique id of the first event in the
- * segment contained in that file.
+ * A trace log consists from a collection of files, each holding the events corresponding to
+ * a thread
+ * The file names end with {@link #TRACE_SUFFIX}, having as a prefix the unique id of the thread.
  * @author TraianSF
  */
 public class TraceCache {
     public static final String TRACE_SUFFIX = "trace.bin";
-    public static final int TRACE_SUFFIX_LENGTH = TRACE_SUFFIX.length();
-    private final String directory;
-    private final long[] indexes;
-    private List<EventItem> cache;
-    private long startIndex;
+    final Map<Long,Map.Entry<EventInputStream,EventItem>> indexes;
     private final long traceSize;
 
     /**
@@ -30,16 +24,24 @@ public class TraceCache {
      * @param directory  location on filesystem where the trace log can be found
      */
     public TraceCache(String directory) {
-        this.directory = directory;
+        long traceSize = 0;
         String[] files = getTraceFiles(directory);
-        indexes = new long[files.length];
-        int i = 0;
+        indexes = new HashMap<>(files.length);
         for (String file : files) {
-            indexes[i++] = Long.valueOf(file.substring(0, file.length() - TRACE_SUFFIX_LENGTH ));
+            try {
+                File f = Paths.get(directory, file).toFile();
+                traceSize += f.length();
+                EventInputStream inputStream = new EventInputStream(
+                       new BufferedInputStream( new FileInputStream(f)));
+                EventItem event = inputStream.readEvent();
+                indexes.put(event.GID, new AbstractMap.SimpleEntry<>(inputStream,event));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-        Arrays.sort(indexes);
-        rebaseCache(indexes[indexes.length - 1]);
-        traceSize = startIndex + cache.size() - 1;
+        this.traceSize = traceSize / EventItem.SIZEOF;
     }
 
     static String[] getTraceFiles(String directory) {
@@ -70,52 +72,27 @@ public class TraceCache {
     }
 
     /**
-     * Returns the event whose unique identifier in the logged trace is given by <code>index</code>.
-     * If the event is not found in the current cache, the corresponding file containing it will
-     * be loaded from the filesystem
+     * Returns the event whose unique identifier in the logged trace is given by {@code index}.
+     * This method assumes the trace is read in sequential order, hence one of the keys
+     * in the {@link #indexes} table is equal to {@code index}.
      * @param index  index of the event to be read
      * @return the event requested or <code>null</code>
      */
     public EventItem getEvent(long index) {
-        long loffset = index - startIndex;
-        int offset;
-        if (loffset >= cache.size() || loffset < 0) {
-            offset = rebaseCache(index);
-            if (offset < 0) return null;
-        } else {
-            offset = (int) loffset;
-        }
-        return cache.get(offset);
-    }
+        Map.Entry<EventInputStream,EventItem> entry = indexes.remove(index);
 
-    private int rebaseCache(long index) {
-        int i = Arrays.binarySearch(indexes, index);
-        if (i < 0) {
-            i = - i - 2;
-            if (i < 0) return -1;
-        }
-        String fname = indexes[i] + TRACE_SUFFIX;
+        assert entry != null : "Index not (yet) available. Attempting to read events out of order?";
+        EventItem event = entry.getValue();
         try {
-            EventInputStream inputStream = new EventInputStream(
-                    new BufferedInputStream( new FileInputStream(Paths.get(directory, fname).toFile())));
-            cache = new ArrayList<>();
-            while (true) {
-                try {
-                    cache.add(inputStream.readEvent());
-                } catch (EOFException _) {
-                    break;
-                }
-            }
-            inputStream.close();
+            EventItem newEvent = entry.getKey().readEvent();
+            entry.setValue(newEvent);
+            indexes.put(newEvent.GID, entry);
+        } catch (EOFException e) {
+            // EOF is expected.
         } catch (IOException e) {
             e.printStackTrace();
-            return -1;
         }
-        startIndex = indexes[i];
-        long offset = index - startIndex;
-        if (offset >= cache.size()) return -1;
-        return (int) offset;
+        return event;
     }
-
 
 }

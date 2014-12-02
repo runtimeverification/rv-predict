@@ -46,12 +46,6 @@ public class DBEngine {
 
     private final String directory;
 
-    // currently we use the h2 database
-    private final String dbname = "RVDatabase";
-    public String appname = "main";
-
-    private Connection conn;
-
     private TraceCache traceCache=null;
 
     public void getMetadata(Map<Long, String> threadIdNameMap, Map<Integer, String> sharedVarIdSigMap, Map<Integer, String> volatileAddresses, Map<Integer, String> stmtIdSigMap) {
@@ -79,32 +73,16 @@ public class DBEngine {
                 for (Map.Entry<String, Integer> entry : stmtSigIdList) {
                     stmtIdSigMap.put(entry.getValue(), entry.getKey());
                 }
-
             }
         }
         catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
-
-
     }
 
-    // private final String NO_AUTOCLOSE = ";DB_CLOSE_ON_EXIT=FALSE";//BUGGY in
-    // H2, DON'T USE IT
-
-    public DBEngine(String directory, String name) {
-        appname = name;
+    public DBEngine(String directory) {
         this.directory = directory;
 
-        connectDB(directory);
-    }
-
-    public void closeDB() {
-        try {
-            conn.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
     }
 
     /**
@@ -113,24 +91,6 @@ public class DBEngine {
      */
     public boolean checkLog() {
         return true;
-    }
-
-    private void connectDB(String directory) {
-        try {
-            Class.forName("rvpredict.h2.Driver");
-        } catch (ClassNotFoundException e) {
-            System.err.println("Error: cannot locate h2 database driver.  This should not happen.");
-            e.printStackTrace();
-            System.exit(1);
-        }
-        try{
-            conn = DriverManager.getConnection("jdbc:h2:" + directory + "/" + dbname
-                    + ";DB_CLOSE_ON_EXIT=FALSE");
-        }  catch (SQLException e) {
-            System.err.println("Errors when connecting to the database.  Exiting.");
-            e.printStackTrace();
-            System.exit(1);
-        } // conn.setAutoCommit(true);
     }
 
     public long getTraceSize() {

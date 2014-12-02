@@ -26,29 +26,19 @@ public class ThreadLocalEventStream extends ThreadLocal<EventOutputStream> {
 
     @Override
     protected EventOutputStream initialValue() {
-        EventOutputStream newTraceOs = getNewTraceOs(1);
-        streamsMap.put(Thread.currentThread().getId(),newTraceOs);
-        return newTraceOs;
-    }
-
-    @Override
-    public void set(EventOutputStream value) {
-        super.set(value);
-        streamsMap.put(Thread.currentThread().getId(),value);
-    }
-
-    private final String directory;
-
-    public EventOutputStream getNewTraceOs(long gid) {
         try {
-            return new EventOutputStream(new BufferedOutputStream(
+            EventOutputStream newTraceOs = new EventOutputStream(new BufferedOutputStream(
                     new FileOutputStream(Paths.get(directory,
                             Thread.currentThread().getId() + "_"
-                                    + gid + "_"
                                     +TraceCache.TRACE_SUFFIX).toFile())));
+            streamsMap.put(Thread.currentThread().getId(),newTraceOs);
+            return newTraceOs;
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
         return null;
     }
+
+    private final String directory;
+
 }

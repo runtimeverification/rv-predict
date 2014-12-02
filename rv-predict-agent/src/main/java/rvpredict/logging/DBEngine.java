@@ -85,20 +85,6 @@ public class DBEngine {
 
     private final ThreadLocalEventStream threadLocalTraceOS;
 
-    private EventOutputStream getTraceOS() {
-        return threadLocalTraceOS.get();
-    }
-
-    private EventOutputStream newThreadLocalTraceOS(long gid) {
-        EventOutputStream traceOS = newTraceOs(gid);
-        threadLocalTraceOS.set(traceOS);
-        return traceOS;
-    }
-
-    private EventOutputStream newTraceOs(long gid) {
-        return threadLocalTraceOS.getNewTraceOs(gid);
-    }
-
     private final ObjectOutputStream metadataOS;
     private boolean shutdown = false;
 
@@ -156,12 +142,11 @@ public class DBEngine {
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
         if (shutdown) return;
         try {
-            EventOutputStream traceOS = getTraceOS();
+            EventOutputStream traceOS = threadLocalTraceOS.get();
             traceOS.writeEvent(e);
             long eventsWritten = traceOS.getEventsWrittenCount();
             if (eventsWritten % BUFFER_THRESHOLD == 0) {
-                traceOS.close();
-                newThreadLocalTraceOS(1 + e.GID);
+                traceOS.flush();
                 synchronized (metadataLoggingThread) {
                     metadataLoggingThread.notify();
                 }

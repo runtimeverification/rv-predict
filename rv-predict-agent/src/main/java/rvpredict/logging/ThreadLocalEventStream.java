@@ -16,6 +16,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author TraianSF
  */
 public class ThreadLocalEventStream extends ThreadLocal<EventOutputStream> {
+    private final String directory;
+    private final ConcurrentHashMap<Long,EventOutputStream> streamsMap = new ConcurrentHashMap<>();
+
     /**
      * Accessor to the map of streams indexed by thread identifier
      * @return  a map containing all thread-local streams as values indexed by thread id.
@@ -23,8 +26,6 @@ public class ThreadLocalEventStream extends ThreadLocal<EventOutputStream> {
     public ConcurrentHashMap<Long, EventOutputStream> getStreamsMap() {
         return streamsMap;
     }
-
-    private final ConcurrentHashMap<Long,EventOutputStream> streamsMap = new ConcurrentHashMap<>();
 
     /**
      * Class constructor initializing the directory
@@ -49,7 +50,5 @@ public class ThreadLocalEventStream extends ThreadLocal<EventOutputStream> {
         }
         return null;
     }
-
-    private final String directory;
 
 }

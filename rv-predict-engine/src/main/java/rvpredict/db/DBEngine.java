@@ -42,10 +42,10 @@ import rvpredict.trace.*;
  *
  */
 public class DBEngine {
-
+    public static final String METADATA_BIN = "metadata.bin";
     private final String directory;
-
-    private TraceCache traceCache=null;
+    private final TraceCache traceCache;
+    private final ObjectInputStream metadataIS;
 
     /**
      * Reads the previously saved metadata into the structures given as parameters
@@ -56,9 +56,6 @@ public class DBEngine {
      */
     public void getMetadata(Map<Long, String> threadIdNameMap, Map<Integer, String> sharedVarIdSigMap, Map<Integer, String> volatileAddresses, Map<Integer, String> stmtIdSigMap) {
         try {
-            ObjectInputStream metadataIS = new ObjectInputStream(
-                    new BufferedInputStream(
-                            new FileInputStream(Paths.get(directory, "metadata.bin").toFile())));
             while(true) {
                 List<Map.Entry<Long, String>> threadTidList;
                 try {
@@ -88,7 +85,16 @@ public class DBEngine {
 
     public DBEngine(String directory) {
         this.directory = directory;
-
+        traceCache = new TraceCache(directory);
+        ObjectInputStream metadataIS = null;
+        try {
+            metadataIS = new ObjectInputStream(
+                    new BufferedInputStream(
+                            new FileInputStream(Paths.get(directory, METADATA_BIN).toFile())));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        this.metadataIS = metadataIS;
     }
 
     /**
@@ -104,7 +110,6 @@ public class DBEngine {
      * @return total size (in events) of the recorded trace.
      */
     public long getTraceSize() {
-        if (traceCache == null) traceCache = new TraceCache(directory);
         return traceCache.getTraceSize();
     }
 
@@ -119,7 +124,6 @@ public class DBEngine {
      * @return a {@link rvpredict.trace.Trace} representing the trace segment read
      */
     public Trace getTrace(long min, long max, TraceInfo info) {
-        if (traceCache == null) traceCache = new TraceCache(directory);
         long traceSize = traceCache.getTraceSize();
         assert min <= traceSize : "This method should only be called with a valid min value";
         if (max > traceSize) max = traceSize; // resetting max to trace size.

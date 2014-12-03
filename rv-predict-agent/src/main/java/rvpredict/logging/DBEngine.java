@@ -52,14 +52,13 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class DBEngine {
 
-    private static final AtomicLong globalEventID  = new AtomicLong(0);
-    private final int BUFFER_THRESHOLD;
+    private final AtomicLong globalEventID  = new AtomicLong(0);
+    private static final int BUFFER_THRESHOLD = 10000;
     private final GlobalStateForInstrumentation globalState;
     private final Thread metadataLoggingThread;
     private final ThreadLocalEventStream threadLocalTraceOS;
     private final ObjectOutputStream metadataOS;
     private boolean shutdown = false;
-
 
     /**
      * Method invoked at the end of the logging task, to insure that
@@ -91,7 +90,6 @@ public class DBEngine {
     }
 
     public DBEngine(GlobalStateForInstrumentation globalState, String directory) {
-        BUFFER_THRESHOLD = 10*Config.instance.commandLine.window_size;
         this.globalState = globalState;
         threadLocalTraceOS = new ThreadLocalEventStream(directory);
         metadataOS = createMetadataOS(directory);
@@ -128,7 +126,7 @@ public class DBEngine {
         try {
             return new ObjectOutputStream(
                     new BufferedOutputStream(
-                            new FileOutputStream(Paths.get(directory, "metadata.bin").toFile())));
+                            new FileOutputStream(Paths.get(directory, rvpredict.db.DBEngine.METADATA_BIN).toFile())));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -152,7 +150,7 @@ public class DBEngine {
     public void saveEvent(EventType eventType, int id, long addrl, long addrr, long value) {
         if (shutdown) return;
         long tid = Thread.currentThread().getId();
-        long gid = DBEngine.globalEventID.incrementAndGet();
+        long gid = globalEventID.incrementAndGet();
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
         try {
             EventOutputStream traceOS = threadLocalTraceOS.get();

@@ -51,7 +51,7 @@ public final class RecordRT {
 
         GlobalStateForInstrumentation.instance.registerThreadName(tid, MAIN_NAME);
 
-        threadTidIndexMap = new HashMap<Long, Integer>();
+        threadTidIndexMap = new HashMap<>();
         threadTidIndexMap.put(tid, 1);
     }
 

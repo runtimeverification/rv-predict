@@ -34,10 +34,4 @@ public class ReadEvent extends MemoryAccessEvent {
         super(GID, tid, ID, EventType.READ, objectHashCode, index, value);
     }
 
-    @Override
-    public String getAddr() {
-        return (objectHashCode == 0 ? "_" : objectHashCode + "_") +
-                (index < 0 ? "." + -index : index);
-    }
-
 }

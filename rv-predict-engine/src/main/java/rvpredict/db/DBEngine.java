@@ -31,7 +31,6 @@ package rvpredict.db;
 import java.io.*;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.List;
 
 import rvpredict.trace.*;
 
@@ -43,7 +42,6 @@ import rvpredict.trace.*;
  */
 public class DBEngine {
     public static final String METADATA_BIN = "metadata.bin";
-    private final String directory;
     private final TraceCache traceCache;
     private final ObjectInputStream metadataIS;
 
@@ -54,37 +52,27 @@ public class DBEngine {
      * @param volatileAddresses  map giving locations for volatile variables
      * @param stmtIdSigMap  map giving signature/location information for events
      */
-    public void getMetadata(Map<Long, String> threadIdNameMap, Map<Integer, String> sharedVarIdSigMap, Map<Integer, String> volatileAddresses, Map<Integer, String> stmtIdSigMap) {
+    @SuppressWarnings("unchecked")
+    public void getMetadata(Set<Integer> volatileFieldIds, Map<Integer, String> locIdToStmtSig) {
         try {
-            while(true) {
-                List<Map.Entry<Long, String>> threadTidList;
+            while (true) {
                 try {
-                    threadTidList = (List<Map.Entry<Long, String>>) metadataIS.readObject();
-                } catch (EOFException _) { break;} // EOF should only happen for threadTid
-                for (Map.Entry<Long,String> entry : threadTidList) {
-                    threadIdNameMap.put(entry.getKey(), entry.getValue());
+                    volatileFieldIds.addAll((Collection<Integer>) metadataIS.readObject());
+                } catch (EOFException e) {
+                    break;
                 }
-                List<Map.Entry<String, Integer>> variableIdList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
-                for (Map.Entry<String, Integer> entry : variableIdList) {
-                    sharedVarIdSigMap.put(entry.getValue(), entry.getKey());
-                }
-                List<Map.Entry<String, Integer>> volatileVarList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
-                for (Map.Entry<String, Integer> entry : volatileVarList) {
-                    volatileAddresses.put(entry.getValue(), entry.getKey());
-                }
-                List<Map.Entry<String, Integer>> stmtSigIdList = (List<Map.Entry<String, Integer>>) metadataIS.readObject();
+                List<Map.Entry<String, Integer>> stmtSigIdList = (List<Map.Entry<String, Integer>>) metadataIS
+                        .readObject();
                 for (Map.Entry<String, Integer> entry : stmtSigIdList) {
-                    stmtIdSigMap.put(entry.getValue(), entry.getKey());
+                    locIdToStmtSig.put(entry.getValue(), entry.getKey());
                 }
             }
-        }
-        catch (IOException | ClassNotFoundException e) {
+        } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
     }
 
     public DBEngine(String directory) {
-        this.directory = directory;
         traceCache = new TraceCache(directory);
         ObjectInputStream metadataIS = null;
         try {
@@ -123,11 +111,11 @@ public class DBEngine {
      * @param max index where the trace segment to be read should end
      * @return a {@link rvpredict.trace.Trace} representing the trace segment read
      */
-    public Trace getTrace(long min, long max, TraceInfo info) {
+    public Trace getTrace(long min, long max, Map<String, Long> initValues, TraceInfo info) {
         long traceSize = traceCache.getTraceSize();
         assert min <= traceSize : "This method should only be called with a valid min value";
         if (max > traceSize) max = traceSize; // resetting max to trace size.
-        Trace trace = new Trace(info);
+        Trace trace = new Trace(initValues, info);
         AbstractEvent node = null;
         for (long index = min; index <= max; index++) {
             rvpredict.db.EventItem eventItem = traceCache.getEvent(index);
@@ -168,7 +156,7 @@ public class DBEngine {
                     node = new SyncEvent(GID, TID, ID, EventType.JOIN, ADDRL);
                     break;
                 case BRANCH:
-                    node = new BranchNode(GID, TID, ID);
+                    node = new BranchEvent(GID, TID, ID);
                     break;
                 default:
                     System.out.println(TYPE);
@@ -176,7 +164,6 @@ public class DBEngine {
             }
 
             trace.addRawNode(node);
-
         }
 
         trace.finishedLoading();

@@ -28,20 +28,20 @@
  ******************************************************************************/
 package rvpredict.logging;
 
+import java.io.BufferedOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+
 import rvpredict.db.EventItem;
-import rvpredict.config.Config;
 import rvpredict.db.EventOutputStream;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
 import rvpredict.trace.EventType;
-
-import java.io.*;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.AbstractMap.SimpleEntry;
-import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Class encapsulating functionality for recording events to disk.
@@ -198,38 +198,13 @@ public class DBEngine {
      * Flush un-previously-saved metadata to disk.
      */
     public void saveMetaData() {
-        /* save <threadId, name> pairs */
-        List<Entry<Long,String>> threadIdNamePairs = new ArrayList<>(globalState.unsavedStmtSigToLocId.size());
-        Iterator<Entry<Long, String>> iter = globalState.unsavedThreadIdToName.iterator();
-        while (iter.hasNext()) {
-            threadIdNamePairs.add(iter.next());
-            iter.remove();
-        }
-        saveObject(threadIdNamePairs);
-
-        /* save <variable, id> pairs */
-        synchronized (globalState.varSigToId) {
-            // TODO(YilongL): I want to write the following but I couldn't
-            // because DBEngine#getMetadata assumes certain order of the
-            // saved objects
-//            if (!globalState.unsavedVarSigToId.isEmpty()) {
-//                saveObject(globalState.unsavedVarSigToId);
-//                globalState.unsavedVarSigToId.clear();
-//            }
-
-            saveObject(globalState.unsavedVarSigToId);
-            globalState.unsavedVarSigToId.clear();
-        }
-
         /* save <volatileVariable, Id> pairs */
         synchronized (globalState.volatileVariables) {
-            // TODO(YilongL): volatileVariable Id should be constructed when
-            // reading metadata in backend; not here
-            List<Entry<String, Integer>> volatileVarIdPairs = new ArrayList<>(globalState.unsavedVolatileVariables.size());
+            Set<Integer> volatileFieldIds = new HashSet<>(globalState.unsavedVolatileVariables.size());
             for (String var : globalState.unsavedVolatileVariables) {
-                volatileVarIdPairs.add(new SimpleEntry<>(var, globalState.varSigToId.get(var)));
+                volatileFieldIds.add(globalState.varSigToId.get(var));
             }
-            saveObject(volatileVarIdPairs);
+            saveObject(volatileFieldIds);
         }
 
         /* save <StmtSig, LocId> pairs */

@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GlobalStateForInstrumentation {
     public static GlobalStateForInstrumentation instance = new GlobalStateForInstrumentation();
@@ -23,10 +22,8 @@ public class GlobalStateForInstrumentation {
      */
 
     public final ConcurrentHashMap<Long, String> threadIdToName = new ConcurrentHashMap<>();
-    public final ConcurrentLinkedQueue<Map.Entry<Long, String>> unsavedThreadIdToName = new ConcurrentLinkedQueue<>();
 
     public final ConcurrentHashMap<String, Integer> varSigToId = new ConcurrentHashMap<>();
-    public final List<Map.Entry<String, Integer>> unsavedVarSigToId = new ArrayList<>();
 
     public final ConcurrentHashMap<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
     public final List<Map.Entry<String, Integer>> unsavedStmtSigToLocId = new ArrayList<>();
@@ -35,9 +32,7 @@ public class GlobalStateForInstrumentation {
     public final List<String> unsavedVolatileVariables = new ArrayList<>();
 
     public void registerThreadName(long tid, String name) {
-        String value = threadIdToName.put(tid, name);
-        assert value == null : "Thread Id " + tid + " already used!";
-        unsavedThreadIdToName.add(new SimpleEntry<Long, String>(tid, name));
+        threadIdToName.put(tid, name);
     }
 
     public int getVariableId(String sig) {
@@ -50,7 +45,6 @@ public class GlobalStateForInstrumentation {
                 if (variableId == null) {
                     variableId = varSigToId.size() + 1;
                     varSigToId.put(sig, variableId);
-                    unsavedVarSigToId.add(new SimpleEntry<>(sig, variableId));
                 }
             }
         }

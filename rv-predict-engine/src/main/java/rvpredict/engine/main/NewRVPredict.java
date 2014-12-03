@@ -1,5 +1,3 @@
-package rvpredict.engine.main;
-
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
  *
@@ -28,27 +26,32 @@ package rvpredict.engine.main;
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
+package rvpredict.engine.main;
+
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import rvpredict.config.Configuration;
 import rvpredict.db.DBEngine;
 import rvpredict.trace.Event;
 import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.ReadEvent;
-import rvpredict.trace.SyncEvent;
 import rvpredict.trace.Trace;
 import rvpredict.trace.TraceInfo;
 import rvpredict.trace.WriteEvent;
 import rvpredict.util.Logger;
-import smt.Engine;
 import smt.EngineSMTLIB1;
-import violation.ExactRace;
 import violation.Race;
 import violation.Violation;
 
@@ -62,451 +65,200 @@ import violation.Violation;
  */
 public class NewRVPredict {
 
-    private HashSet<Violation> violations = new HashSet<Violation>();
-    private HashSet<Violation> potentialviolations = new HashSet<Violation>();
-    private Configuration config;
-    private Logger logger;
-    private HashMap<Integer, String> sharedVarIdSigMap = new HashMap<>();
-    private HashMap<Integer, String> volatileAddresses = new HashMap<>();
-    private HashMap<Integer, String> stmtIdSigMap = new HashMap<>();
-    private HashMap<Long, String> threadIdNameMap = new HashMap<>();
-    private long totalTraceLength;
-    private DBEngine dbEngine;
-    private TraceInfo traceInfo;
-    private long startTime;
+    private final HashSet<Violation> violations = new HashSet<Violation>();
+    private final HashSet<Violation> potentialviolations = new HashSet<Violation>();
+    private final Configuration config;
+    private final EngineSMTLIB1 engine;
+    private final Logger logger;
+    private final long totalTraceLength;
+    private final DBEngine dbEngine;
+    private final TraceInfo traceInfo;
+
+    public NewRVPredict(Configuration config) {
+        this.config = config;
+        this.engine = new EngineSMTLIB1(config);
+        logger = config.logger;
+
+        long startTime = System.currentTimeMillis();
+
+        dbEngine = new DBEngine(config.outdir);
+
+        // load all the metadata in the application
+        Set<Integer> volatileFieldIds = new HashSet<>();
+        Map<Integer, String> locIdToStmtSig = new HashMap<>();
+        dbEngine.getMetadata(volatileFieldIds, locIdToStmtSig);
+
+        // the total number of events in the trace
+        totalTraceLength = dbEngine.getTraceSize();
+
+        traceInfo = new TraceInfo(volatileFieldIds, locIdToStmtSig);
+
+        addHooks(startTime);
+    }
+
+    private void addHooks(long startTime) {
+        // register a shutdown hook to store runtime statistics
+        Runtime.getRuntime().addShutdownHook(
+                new ExecutionInfoTask(startTime, traceInfo, totalTraceLength));
+
+        // set a timer to timeout in a configured period
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                logger.report("\n******* Timeout " + config.timeout + " seconds ******",
+                        Logger.MSGTYPE.REAL);// report it
+                System.exit(0);
+            }
+        }, config.timeout * 1000);
+    }
 
     /**
-     * Race detection method. For every pair of conflicting data accesses, the
-     * corresponding race constraint is generated and solved by a solver. If the
-     * solver returns a solution, we report a real data race. Otherwise, a
-     * potential race is reported. We call it a potential race but not a false
-     * race because it might be a real data race in another trace.
+     * Detects data races from a given trace.
      *
-     * @param engine
+     * <p>
+     * We analyze memory access events on each shared memory address in the
+     * trace separately. For each shared memory address, enumerate all memory
+     * access pairs on this address and build the data-abstract feasibility for
+     * each of them. Then for each memory access pair, send to the SMT solver
+     * its data-abstract feasibility together with the already built must
+     * happen-before (MHB) constraints and locking constraints. The pair is
+     * reported as a real data race if the solver returns sat.
+     *
+     * <p>
+     * To reduce the expensive calls to the SMT solver, we apply three
+     * optimizations:
+     * <li>Use Lockset + Weak HB algorithm to filter out those memory access
+     * pairs that are obviously not data races.
+     * <li>Group "equivalent" memory access events to a block and consider them
+     * as a single memory access. In short, such block has the property that all
+     * memory access events in it have the same causal HB relation with the
+     * outside events. Therefore, it is sufficient to consider only one event
+     * from each block.
+     *
      * @param trace
+     *            the trace to analyze
      */
-    private void detectRace(Engine engine, Trace trace) {
-        // implement potentialraces to be exact match
-
-        // sometimes we choose an un-optimized way to implement things faster,
-        // easier
-        // e.g., here we use check, but still enumerate read/write
-
-        Iterator<String> addrIt = trace.getIndexedThreadReadWriteNodes().keySet().iterator();
-        while (addrIt.hasNext()) {
-            // the dynamic memory location
-            String addr = addrIt.next();
-
-            if (config.novolatile) {
-                // all field addr should contain ".", not true for array access
-                int dotPos = addr.indexOf(".");
-                // continue if volatile
-                if (dotPos > -1 && trace.isAddressVolatile(addr.substring(dotPos + 1)))
-                    continue;
-            }
-
-            // get all read nodes on the address
-            List<ReadEvent> readnodes = trace.getIndexedReadNodes().get(addr);
-
-            // get all write nodes on the address
-            List<WriteEvent> writenodes = trace.getIndexedWriteNodes().get(addr);
-
-            // skip if there is no write events to the address
-            if (writenodes == null || writenodes.size() < 1)
+    private void detectRace(Trace trace) {
+        /* enumerate each shared memory address in the trace */
+        for (String addr : trace.getMemAccessEventsTable().rowKeySet()) {
+            /* exclude volatile variable */
+            if (config.novolatile && trace.isVolatileAddr(addr)) {
                 continue;
-
-            {
-                // check if local variable
-                int size_all = trace.getIndexedThreadReadWriteNodes().get(addr)
-                        .get(writenodes.get(0).getTID()).size();
-                int size_write = writenodes.size();
-                int size_read = 0;
-                if (readnodes != null)
-                    size_read = readnodes.size();
-                if (size_all == size_write + size_read)
-                    continue;
             }
-            // find equivalent reads and writes by the same thread
-            HashMap<MemoryAccessEvent, HashSet<MemoryAccessEvent>> equiMap = new HashMap<MemoryAccessEvent, HashSet<MemoryAccessEvent>>();
-            // skip non-primitive and array variables?
-            // because we add branch operations before their operations
-            if (config.optrace && !addr.contains("_")) {
-                // read/write-> set of read/write
-                Map<Long, List<MemoryAccessEvent>> threadrwnodes = trace
-                        .getIndexedThreadReadWriteNodes().get(addr);
-                Iterator<Long> tidIt = threadrwnodes.keySet().iterator();
-                while (tidIt.hasNext()) {
-                    Long tid = tidIt.next();
-                    List<MemoryAccessEvent> mnodes = threadrwnodes.get(tid);
-                    if (mnodes.size() < 2)
-                        continue;
-                    MemoryAccessEvent mnode_cur = mnodes.get(0);
-                    HashSet<MemoryAccessEvent> equiset = null;
 
-                    int index_cur = trace.getThreadIdToEventsMap().get(tid).indexOf(mnode_cur);
+            /* skip if there is no write event */
+            if (trace.getWriteEventsOn(addr).isEmpty()) {
+                continue;
+            }
 
-                    for (int k = 1; k < mnodes.size(); k++) {
-                        MemoryAccessEvent mnode = mnodes.get(k);
-                        if (mnode.getPrevBranchId() < mnode_cur.getGID()) {
-                            // check sync id
-                            List<Event> nodes = trace.getThreadIdToEventsMap().get(tid);
-                            int index_end = nodes.indexOf(mnode);
-                            int index = index_end - 1;
-                            boolean shouldAdd = true;
-                            for (; index > index_cur; index--) {
-                                Event node = nodes.get(index);
-                                if (node instanceof SyncEvent) {
-                                    shouldAdd = false;
+            /* skip if there is only one thread */
+            if (trace.getMemAccessEventsTable().row(addr).size() == 1) {
+                continue;
+            }
+
+            /* group equivalent reads and writes into memory access blocks */
+            Map<MemoryAccessEvent, List<MemoryAccessEvent>> equivAccBlk = new LinkedHashMap<>();
+            for (Entry<Long, List<MemoryAccessEvent>> entry : trace
+                    .getMemAccessEventsTable().row(addr).entrySet()) {
+                // TODO(YilongL): the extensive use of List#indexOf could be a performance problem later
+
+                long crntTID = entry.getKey();
+                List<MemoryAccessEvent> memAccEvents = entry.getValue();
+
+                List<Event> crntThrdEvents = trace.getThreadEvents(crntTID);
+
+                ListIterator<MemoryAccessEvent> iter = memAccEvents.listIterator();
+                while (iter.hasNext()) {
+                    MemoryAccessEvent memAcc = iter.next();
+                    equivAccBlk.put(memAcc, Lists.newArrayList(memAcc));
+                    if (memAcc instanceof WriteEvent) {
+                        int prevMemAccIdx = crntThrdEvents.indexOf(memAcc);
+
+                        while (iter.hasNext()) {
+                            MemoryAccessEvent crntMemAcc = iter.next();
+                            int crntMemAccIdx = crntThrdEvents.indexOf(crntMemAcc);
+
+                            /* ends the block if there is sync/branch event in between */
+                            boolean memAccOnly = true;
+                            for (Event e : crntThrdEvents.subList(prevMemAccIdx + 1, crntMemAccIdx)) {
+                                memAccOnly = memAccOnly && (e instanceof MemoryAccessEvent);
+                            }
+                            if (!memAccOnly) {
+                                iter.previous();
+                                break;
+                            }
+
+                            equivAccBlk.get(memAcc).add(crntMemAcc);
+                            if (!config.branch) {
+                                /* YilongL: without logging branch events, we
+                                 * have to be conservative and end the block
+                                 * when a read event is encountered */
+                                if (crntMemAcc instanceof ReadEvent) {
                                     break;
                                 }
                             }
-                            if (shouldAdd) {
-                                if (equiset == null)
-                                    equiset = new HashSet<MemoryAccessEvent>();
 
-                                equiset.add(mnode);
-
-                                if (!equiMap.containsKey(mnode_cur))
-                                    equiMap.put(mnode_cur, equiset);
-
-                            } else {
-                                if (k < mnodes.size() - 1) {
-                                    index_cur = index;
-                                    mnode_cur = mnode;
-                                    equiset = null;
-                                }
-                            }
-                        } else {
-                            if (k < mnodes.size() - 1) {
-                                index_cur = trace.getThreadIdToEventsMap().get(tid).indexOf(mnode);
-                                mnode_cur = mnode;
-                                equiset = null;
-                            }
+                            prevMemAccIdx = crntMemAccIdx;
                         }
                     }
                 }
             }
 
-            // check read-write conflict
-            if (readnodes != null)
-                for (int i = 0; i < readnodes.size(); i++) {
-                    ReadEvent rnode = readnodes.get(i);// read
-                    // if(rnode.getGID()==3105224)//3101799
-                    // System.out.println("");
+            /* check memory access pairs */
+            for (MemoryAccessEvent fst : equivAccBlk.keySet()) {
+                for (MemoryAccessEvent snd : equivAccBlk.keySet()) {
+                    if (fst.getTID() >= snd.getTID()) {
+                        continue;
+                    }
 
-                    for (int j = 0; j < writenodes.size(); j++) {
-                        WriteEvent wnode = writenodes.get(j);// write
+                    /* skip if all potential data races are already known */
+                    Set<Race> potentialRaces = Sets.newHashSet();
+                    for (MemoryAccessEvent e1 : equivAccBlk.get(fst)) {
+                        for (MemoryAccessEvent e2 : equivAccBlk.get(snd)) {
+                            if (e1 instanceof WriteEvent || e2 instanceof WriteEvent) {
+                                potentialRaces.add(new Race(e1, e2, trace.getLocIdToStmtSigMap()));
+                            }
+                        }
+                    }
+                    if (violations.containsAll(potentialRaces)) {
+                        /* YilongL: note that this could lead to miss of data
+                         * races if their signatures are the same */
+                        continue;
+                    }
 
-                        // check read and write are by different threads
-                        if (rnode.getTID() != wnode.getTID()) {
-                            // create a potential race
-                            Race race = new Race(trace.getStmtSigIdMap().get(rnode.getID()), trace
-                                    .getStmtSigIdMap().get(wnode.getID()), rnode.getID(),
-                                    wnode.getID());
-                            ExactRace race2 = new ExactRace(race, (int) rnode.getGID(),
-                                    (int) wnode.getGID());
-                            // skip redundant races with the same signature,
-                            // i.e., from same program locations
-                            if (config.allrace || !violations.contains(race)
-                                    && !potentialviolations.contains(race2))// may
-                                                                            // miss
-                                                                            // real
-                                                                            // violation
-                                                                            // with
-                                                                            // the
-                                                                            // same
-                                                                            // signature
-                            {
+                    /* not a race if the two events hold a common lock */
+                    if (engine.hasCommonLock(fst, snd)) {
+                        continue;
+                    }
 
-                                // Quick check first: lockset algorithm + weak
-                                // HB
+                    /* not a race if one event happens-before the other */
+                    if (fst.getGID() < snd.getGID()
+                            && engine.canReach(fst, snd)
+                            || fst.getGID() > snd.getGID()
+                            && engine.canReach(snd, fst)) {
+                        continue;
+                    }
 
-                                // lockset algorithm
-                                if (engine.hasCommonLock(rnode, wnode))
-                                    continue;
+                    /* start building constraints for MCM */
+                    List<ReadEvent> readDeps1 = trace.getDependentReadEvents(fst, config.branch);
+                    List<ReadEvent> readDeps2 = trace.getDependentReadEvents(snd, config.branch);
 
-                                // weak HB check
-                                // a simple reachability analysis to reduce the
-                                // solver invocations
-                                if (rnode.getGID() < wnode.getGID()) {
-                                    if (engine.canReach(rnode, wnode))
-                                        continue;
-                                } else {
-                                    if (engine.canReach(wnode, rnode))
-                                        continue;
-                                }
+                    StringBuilder sb1 = engine.constructCausalReadWriteConstraints(fst.getGID(),
+                            readDeps1, trace);
+                    StringBuilder sb2 = engine.constructCausalReadWriteConstraints(-1, readDeps2,
+                            trace);
+                    StringBuilder sb = sb1.append(sb2);
 
-                                // if(race.toString().equals("<mergesort.MSort: void DecreaseThreadCounter()>|$i0 = <mergesort.MSort: int m_iCurrentThreadsAlive>|41 - <mergesort.MSort: void DecreaseThreadCounter()>|<mergesort.MSort: int m_iCurrentThreadsAlive> = $i1|41"))
-                                // System.out.print("");
-
-                                // If the race passes the quick check, we build
-                                // constraints
-                                // for it and determine if it is race by solving
-                                // the constraints
-
-                                StringBuilder sb;
-                                if (config.allconsistent)// all read-write
-                                                         // consistency used by
-                                                         // the Said approach
-                                {
-                                    List<ReadEvent> readNodes_rw = trace.getAllReadNodes();
-                                    sb = engine.constructCausalReadWriteConstraintsOptimized(
-                                            rnode.getGID(), readNodes_rw,
-                                            trace.getIndexedWriteNodes(),
-                                            trace.getInitialWriteValueMap());
-                                } else {
-
-                                    // the following builds the constraints for
-                                    // maximal causal model
-
-                                    // get dependent nodes of rnode and wnode
-                                    // if w/o branch information, then all read
-                                    // nodes that happen-before rnode/wnode are
-                                    // considered
-                                    // otherwise, only the read nodes that
-                                    // before the most recent branch nodes
-                                    // before rnode/wnode are considered
-                                    List<ReadEvent> readNodes_r = trace.getDependentReadNodes(
-                                            rnode, config.branch);
-                                    List<ReadEvent> readNodes_w = trace.getDependentReadNodes(
-                                            wnode, config.branch);
-
-                                    // construct the optimized read-write
-                                    // constraints ensuring the feasibility of
-                                    // rnode and wnode
-                                    StringBuilder sb1 = engine
-                                            .constructCausalReadWriteConstraintsOptimized(
-                                                    rnode.getGID(), readNodes_r,
-                                                    trace.getIndexedWriteNodes(),
-                                                    trace.getInitialWriteValueMap());
-                                    StringBuilder sb2 = engine
-                                            .constructCausalReadWriteConstraintsOptimized(-1,
-                                                    readNodes_w, trace.getIndexedWriteNodes(),
-                                                    trace.getInitialWriteValueMap());
-                                    // conjunct them
-                                    sb = sb1.append(sb2);
-                                }
-
-                                // if(race.toString().equals("<benchmarks.raytracer.TournamentBarrier: void DoBarrier(int)>|$z3 = $r2[$i7]|65 - <benchmarks.raytracer.TournamentBarrier: void DoBarrier(int)>|$r3[i0] = z0|76"))
-                                // System.out.print("");
-
-                                // query the engine to check rnode/wnode forms a
-                                // race or not
-                                if (engine.isRace(rnode, wnode, sb)) {
-                                    // real race found
-
-                                    logger.report(race.toString(), Logger.MSGTYPE.REAL);// report
-                                                                                        // it
-                                    if (config.allrace)
-                                        violations.add(race2);// save it to
-                                                              // violations
-                                    else
-                                        violations.add(race);
-
-                                    if (equiMap.containsKey(rnode) || equiMap.containsKey(wnode)) {
-                                        HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
-                                        nodes1.add(rnode);
-                                        if (equiMap.get(rnode) != null)
-                                            nodes1.addAll(equiMap.get(rnode));
-                                        HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
-                                        nodes2.add(wnode);
-                                        if (equiMap.get(wnode) != null)
-                                            nodes2.addAll(equiMap.get(wnode));
-
-                                        for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
-                                                .hasNext();) {
-                                            MemoryAccessEvent node1 = nodesIt1.next();
-                                            for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
-                                                    .hasNext();) {
-                                                MemoryAccessEvent node2 = nodesIt2.next();
-                                                Race r = new Race(trace.getStmtSigIdMap().get(
-                                                        node1.getID()), trace.getStmtSigIdMap()
-                                                        .get(node2.getID()), node1.getID(),
-                                                        node2.getID());
-                                                if (violations.add(r))
-                                                    logger.report(r.toString(), Logger.MSGTYPE.REAL);
-
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    // report potential races
-
-                                    // if we arrive here, it means we find a
-                                    // case where
-                                    // lockset+happens-before could produce
-                                    // false positive
-                                    if (potentialviolations.add(race2))
-                                        logger.report("Potential " + race2,
-                                                Logger.MSGTYPE.POTENTIAL);
-
-                                    if (equiMap.containsKey(rnode) || equiMap.containsKey(wnode)) {
-                                        HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
-                                        nodes1.add(rnode);
-                                        if (equiMap.get(rnode) != null)
-                                            nodes1.addAll(equiMap.get(rnode));
-                                        HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
-                                        nodes2.add(wnode);
-                                        if (equiMap.get(wnode) != null)
-                                            nodes2.addAll(equiMap.get(wnode));
-
-                                        for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
-                                                .hasNext();) {
-                                            MemoryAccessEvent node1 = nodesIt1.next();
-                                            for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
-                                                    .hasNext();) {
-                                                MemoryAccessEvent node2 = nodesIt2.next();
-
-                                                ExactRace r = new ExactRace(trace.getStmtSigIdMap()
-                                                        .get(node1.getID()), trace
-                                                        .getStmtSigIdMap().get(node2.getID()),
-                                                        (int) node1.getGID(), (int) node2.getGID());
-                                                if (potentialviolations.add(r))
-                                                    logger.report("Potential " + r,
-                                                            Logger.MSGTYPE.POTENTIAL);
-
-                                            }
-                                        }
-                                    }
-
-                                }
-
+                    if (engine.isRace(fst, snd, sb)) {
+                        for (Race r : potentialRaces) {
+                            if (violations.add(r)) {
+                                logger.report(r.toString(), Logger.MSGTYPE.REAL);
                             }
                         }
                     }
                 }
-            // check race write-write
-            if (writenodes.size() > 1)
-                for (int i = 0; i < writenodes.size(); i++)// skip the initial
-                                                           // write node
-                {
-                    WriteEvent wnode1 = writenodes.get(i);
-
-                    for (int j = 0; j != i && j < writenodes.size(); j++) {
-                        WriteEvent wnode2 = writenodes.get(j);
-                        if (wnode1.getTID() != wnode2.getTID()) {
-                            Race race = new Race(trace.getStmtSigIdMap().get(wnode1.getID()), trace
-                                    .getStmtSigIdMap().get(wnode2.getID()), wnode1.getID(),
-                                    wnode2.getID());
-                            ExactRace race2 = new ExactRace(race, (int) wnode1.getGID(),
-                                    (int) wnode2.getGID());
-
-                            if (config.allrace || !violations.contains(race)
-                                    && !potentialviolations.contains(race2))//
-                            {
-                                if (engine.hasCommonLock(wnode1, wnode2))
-                                    continue;
-
-                                if (wnode1.getGID() < wnode2.getGID()) {
-                                    if (engine.canReach(wnode1, wnode2))
-                                        continue;
-                                } else {
-                                    if (engine.canReach(wnode2, wnode1))
-                                        continue;
-                                }
-
-                                StringBuilder sb;
-                                if (config.allconsistent) {
-                                    List<ReadEvent> readNodes_ww = trace.getAllReadNodes();
-                                    sb = engine.constructCausalReadWriteConstraintsOptimized(-1,
-                                            readNodes_ww, trace.getIndexedWriteNodes(),
-                                            trace.getInitialWriteValueMap());
-                                } else {
-                                    // get dependent nodes of rnode and wnode
-                                    List<ReadEvent> readNodes_w1 = trace.getDependentReadNodes(
-                                            wnode1, config.branch);
-                                    List<ReadEvent> readNodes_w2 = trace.getDependentReadNodes(
-                                            wnode2, config.branch);
-
-                                    StringBuilder sb1 = engine
-                                            .constructCausalReadWriteConstraintsOptimized(-1,
-                                                    readNodes_w1, trace.getIndexedWriteNodes(),
-                                                    trace.getInitialWriteValueMap());
-                                    StringBuilder sb2 = engine
-                                            .constructCausalReadWriteConstraintsOptimized(-1,
-                                                    readNodes_w2, trace.getIndexedWriteNodes(),
-                                                    trace.getInitialWriteValueMap());
-                                    sb = sb1.append(sb2);
-                                }
-                                // TODO: NEED to ensure that the other
-                                // non-dependent nodes by other threads are not
-                                // included
-                                if (engine.isRace(wnode1, wnode2, sb)) {
-                                    logger.report(race.toString(), Logger.MSGTYPE.REAL);
-
-                                    if (config.allrace)
-                                        violations.add(race2);// save it to
-                                                              // violations
-                                    else
-                                        violations.add(race);
-
-                                    if (equiMap.containsKey(wnode1) || equiMap.containsKey(wnode2)) {
-                                        HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
-                                        nodes1.add(wnode1);
-                                        if (equiMap.get(wnode1) != null)
-                                            nodes1.addAll(equiMap.get(wnode1));
-                                        HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
-                                        nodes2.add(wnode2);
-                                        if (equiMap.get(wnode2) != null)
-                                            nodes2.addAll(equiMap.get(wnode2));
-
-                                        for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
-                                                .hasNext();) {
-                                            MemoryAccessEvent node1 = nodesIt1.next();
-                                            for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
-                                                    .hasNext();) {
-                                                MemoryAccessEvent node2 = nodesIt2.next();
-                                                Race r = new Race(trace.getStmtSigIdMap().get(
-                                                        node1.getID()), trace.getStmtSigIdMap()
-                                                        .get(node2.getID()), node1.getID(),
-                                                        node2.getID());
-                                                if (violations.add(r))
-                                                    logger.report(r.toString(), Logger.MSGTYPE.REAL);
-
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    // if we arrive here, it means we find a
-                                    // case where lockset+happens-before could
-                                    // produce false positive
-                                    if (potentialviolations.add(race2))
-                                        logger.report("Potential " + race2,
-                                                Logger.MSGTYPE.POTENTIAL);
-
-                                    if (equiMap.containsKey(wnode1) || equiMap.containsKey(wnode2)) {
-                                        HashSet<MemoryAccessEvent> nodes1 = new HashSet<MemoryAccessEvent>();
-                                        nodes1.add(wnode1);
-                                        if (equiMap.get(wnode1) != null)
-                                            nodes1.addAll(equiMap.get(wnode1));
-                                        HashSet<MemoryAccessEvent> nodes2 = new HashSet<MemoryAccessEvent>();
-                                        nodes2.add(wnode2);
-                                        if (equiMap.get(wnode2) != null)
-                                            nodes2.addAll(equiMap.get(wnode2));
-
-                                        for (Iterator<MemoryAccessEvent> nodesIt1 = nodes1.iterator(); nodesIt1
-                                                .hasNext();) {
-                                            MemoryAccessEvent node1 = nodesIt1.next();
-                                            for (Iterator<MemoryAccessEvent> nodesIt2 = nodes2.iterator(); nodesIt2
-                                                    .hasNext();) {
-                                                MemoryAccessEvent node2 = nodesIt2.next();
-                                                ExactRace r = new ExactRace(trace.getStmtSigIdMap()
-                                                        .get(node1.getID()), trace
-                                                        .getStmtSigIdMap().get(node2.getID()),
-                                                        (int) node1.getGID(), (int) node2.getGID());
-                                                if (potentialviolations.add(r))
-                                                    logger.report("Potential " + r,
-                                                            Logger.MSGTYPE.POTENTIAL);
-
-                                            }
-                                        }
-                                    }
-
-                                }
-                            }
-                        }
-                    }
-                }
+            }
         }
     }
 
@@ -519,18 +271,12 @@ public class NewRVPredict {
         Configuration config = new Configuration();
         config.parseArguments(args, true);
         config.outdir = "./log";
-        NewRVPredict predictor = new NewRVPredict();
-        predictor.initPredict(config);
-        predictor.addHooks();
+        NewRVPredict predictor = new NewRVPredict(config);
         predictor.run();
     }
 
     public void run() {
-        // z3 engine is used for interacting with constraints
-        Engine engine = new EngineSMTLIB1(config);
-
-        // map from memory address to the initial value
-        Map<String, Long> initialWriteValueMap = new HashMap<>();
+        Map<String, Long> initValues = new HashMap<>();
 
         // process the trace window by window
         for (int round = 0; round * config.window_size < totalTraceLength; round++) {
@@ -539,13 +285,7 @@ public class NewRVPredict {
             // if(totalTraceLength>rvpredict.config.window_size)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+totalTraceLength+" ******************\n");
 
             // load trace
-            Trace trace = dbEngine.getTrace(index_start, index_end, traceInfo);
-
-            // starting from the second window, the initial value map
-            // becomes
-            // the last write map in the last window
-            if (round > 0)
-                trace.setInitialWriteValueMap(initialWriteValueMap);
+            Trace trace = dbEngine.getTrace(index_start, index_end, initValues, traceInfo);
 
             // OPT: if #sv==0 or #shared rw ==0 continue
             if (trace.mayRace()) {
@@ -556,7 +296,7 @@ public class NewRVPredict {
                 // 2. intra-thread order for all nodes, excluding branches
                 // and basic block transitions
                 if (config.rmm_pso)// TODO: add intra order between sync
-                    engine.addPSOIntraThreadConstraints(trace.getIndexedThreadReadWriteNodes());
+                    engine.addPSOIntraThreadConstraints(trace.getMemAccessEventsTable());
                 else
                     engine.addIntraThreadConstraints(trace.getThreadIdToEventsMap());
 
@@ -571,52 +311,14 @@ public class NewRVPredict {
                 // engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
                 // engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
 
-                detectRace(engine, trace);
+                detectRace(trace);
             }
-            // get last write value from the current trace
-            // as the initial value for the next round
-            initialWriteValueMap = trace.getInitialWriteValueMap();
-            trace.saveLastWriteValues(initialWriteValueMap);
+
+            /* use the final values of the current window as the initial values
+             * of the next window */
+            initValues = trace.getFinalValues();
         }
         System.exit(0);
-    }
-
-    public void initPredict(Configuration conf) {
-        config = conf;
-        logger = config.logger;
-
-        // Now let's start predict analysis
-        startTime = System.currentTimeMillis();
-
-        // db engine is used for interacting with database
-        dbEngine = new DBEngine(config.outdir);
-
-        // load all the metadata in the application
-        dbEngine.getMetadata(threadIdNameMap, sharedVarIdSigMap, volatileAddresses, stmtIdSigMap);
-
-        // the total number of events in the trace
-        totalTraceLength = 0;
-        totalTraceLength = dbEngine.getTraceSize();
-
-        traceInfo = new TraceInfo(sharedVarIdSigMap, volatileAddresses, stmtIdSigMap,
-                threadIdNameMap);
-    }
-
-    public void addHooks() {
-        ExecutionInfoTask task = new ExecutionInfoTask(startTime, traceInfo, totalTraceLength);
-        // register a shutdown hook to store runtime statistics
-        Runtime.getRuntime().addShutdownHook(task);
-
-        // set a timer to timeout in a configured period
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                logger.report("\n******* Timeout " + config.timeout + " seconds ******",
-                        Logger.MSGTYPE.REAL);// report it
-                System.exit(0);
-            }
-        }, config.timeout * 1000);
     }
 
     class ExecutionInfoTask extends Thread {

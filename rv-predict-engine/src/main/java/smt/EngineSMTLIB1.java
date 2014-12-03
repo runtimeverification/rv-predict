@@ -40,31 +40,50 @@ import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Stack;
 import java.util.List;
-import java.util.Map.Entry;
+import com.google.common.collect.Table;
 
 import rvpredict.config.Configuration;
 
-public class EngineSMTLIB1 extends Engine {
-    String CONS_BENCHNAME;
-    final String BRACKET_LEFT = "(";
-    final String BRACKET_RIGHT = ")";
+public class EngineSMTLIB1 {
+
+    private int id = 0;// constraint id
+    private SMTTaskRun task;
+
+    private Configuration config;
+
+    private ReachabilityEngine reachEngine;// TODO: do segmentation on this
+    private LockSetEngine lockEngine;
+
+    // constraints below
+    private StringBuilder CONS_DECLARE;
+    private StringBuilder CONS_ASSERT;
+    private static final String CONS_SETLOGIC = ":logic QF_IDL\n";
+
+    private final String CONS_BENCHNAME;
+    private static final String BRACKET_LEFT = "(";
+    private static final String BRACKET_RIGHT = ")";
 
     public EngineSMTLIB1(Configuration config) {
-        super(config);
+        this.config = config;
         CONS_BENCHNAME = "(benchmark " + config.tableName + ".smt\n";
     }
 
-    @Override
-    public void declareVariables(List<Event> trace) {
-        CONS_SETLOGIC = ":logic QF_IDL\n";
+    private static String makeVariable(long GID) {
+        return "x" + GID;
+    }
 
+    /**
+     * declare an order variable for each event in the trace
+     *
+     * @param trace
+     */
+    public void declareVariables(List<Event> trace) {
         CONS_DECLARE = new StringBuilder(":extrafuns (\n");
 
         CONS_ASSERT = new StringBuilder(":formula (and \n");
@@ -88,7 +107,11 @@ public class EngineSMTLIB1 extends Engine {
 
     }
 
-    @Override
+    /**
+     * add program order constraints
+     *
+     * @param map
+     */
     public void addIntraThreadConstraints(Map<Long, List<Event>> map) {
         // create reachability engine
         reachEngine = new ReachabilityEngine();
@@ -112,37 +135,37 @@ public class EngineSMTLIB1 extends Engine {
         }
     }
 
-    @Override
+    /**
+     * add intra-thread order constraint for POS memory model
+     *
+     * @param indexedMap
+     */
     public void addPSOIntraThreadConstraints(
-            Map<String, Map<Long, List<MemoryAccessEvent>>> indexedMap) {
+            Table<String, Long, List<MemoryAccessEvent>> memAccessEventsTbl) {
+        for (List<MemoryAccessEvent> nodes : memAccessEventsTbl.values()) {
+            long lastGID = nodes.get(0).getGID();
+            String lastVar = makeVariable(lastGID);
+            for (int i = 1; i < nodes.size(); i++) {
+                long thisGID = nodes.get(i).getGID();
+                String var = makeVariable(thisGID);
+                CONS_ASSERT.append("(< ").append(lastVar).append(" ").append(var).append(")\n");
 
-        Iterator<Map<Long, List<MemoryAccessEvent>>> mapIt1 = indexedMap.values().iterator();
-        while (mapIt1.hasNext()) {
-            Map<Long, List<MemoryAccessEvent>> map = mapIt1.next();
+                reachEngine.addEdge(lastGID, thisGID);
 
-            Iterator<List<MemoryAccessEvent>> mapIt2 = map.values().iterator();
-            while (mapIt2.hasNext()) {
-                List<MemoryAccessEvent> nodes = mapIt2.next();
-                long lastGID = nodes.get(0).getGID();
-                String lastVar = makeVariable(lastGID);
-                for (int i = 1; i < nodes.size(); i++) {
-                    long thisGID = nodes.get(i).getGID();
-                    String var = makeVariable(thisGID);
-                    CONS_ASSERT.append("(< ").append(lastVar).append(" ").append(var).append(")\n");
-
-                    reachEngine.addEdge(lastGID, thisGID);
-
-                    lastGID = thisGID;
-                    lastVar = var;
-
-                }
+                lastGID = thisGID;
+                lastVar = var;
             }
         }
-
     }
 
-    // the order constraints between wait/notify/fork/join/lock/unlock
-    @Override
+    /**
+     * the order constraints between wait/notify/fork/join/lock/unlock
+     *
+     * @param trace
+     * @param syncNodesMap
+     * @param firstNodes
+     * @param lastNodes
+     */
     public void addSynchronizationConstraints(Trace trace,
             Map<Long, List<SyncEvent>> syncNodesMap,
             Map<Long, Event> firstNodes, Map<Long, Event> lastNodes) {
@@ -388,16 +411,17 @@ public class EngineSMTLIB1 extends Engine {
 
     }
 
-    public void addReadWriteConstraints(HashMap<String, List<ReadEvent>> indexedReadNodes,
-            HashMap<String, List<WriteEvent>> indexedWriteNodes) {
-        CONS_ASSERT.append(constructReadWriteConstraints(indexedReadNodes, indexedWriteNodes));
-    }
-
+    /**
+     * return the read-write constraints
+     *
+     * @param readNodes
+     * @param indexedWriteNodes
+     * @param initValueMap
+     * @return
+     */
     // TODO: NEED to handle the feasibility of new added write nodes
-    @Override
-    public StringBuilder constructCausalReadWriteConstraintsOptimized(long rgid,
-            List<ReadEvent> readNodes, Map<String, List<WriteEvent>> indexedWriteNodes,
-            Map<String, Long> initValueMap) {
+    public StringBuilder constructCausalReadWriteConstraints(long rgid,
+            List<ReadEvent> readNodes, Trace trace) {
         StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
 
         for (int i = 0; i < readNodes.size(); i++) {
@@ -408,7 +432,7 @@ public class EngineSMTLIB1 extends Engine {
                 continue;
 
             // get all write nodes on the address
-            List<WriteEvent> writenodes = indexedWriteNodes.get(rnode.getAddr());
+            List<WriteEvent> writenodes = trace.getWriteEventsOn(rnode.getAddr());
             // no write to array field?
             // Yes, it could be: java.io.PrintStream out
             if (writenodes == null || writenodes.size() < 1)//
@@ -496,7 +520,7 @@ public class EngineSMTLIB1 extends Engine {
                 cons_b += cons_b_end;
 
                 Long rValue = rnode.getValue();
-                Long initValue = initValueMap.get(rnode.getAddr());
+                Long initValue = trace.getInitValueOf(rnode.getAddr());
 
                 // it's possible that we don't have initial value for static
                 // variable
@@ -524,7 +548,7 @@ public class EngineSMTLIB1 extends Engine {
             } else {
                 // make sure it reads the initial write
                 Long rValue = rnode.getValue();
-                Long initValue = initValueMap.get(rnode.getAddr());
+                Long initValue = trace.getInitValueOf(rnode.getAddr());
 
                 if (initValue != null && rValue.equals(initValue)) {
                     String var_r = makeVariable(rnode.getGID());
@@ -549,100 +573,28 @@ public class EngineSMTLIB1 extends Engine {
         return CONS_CAUSAL_RW;
     }
 
-    // does not consider value and causal dependence
-    private static String constructReadWriteConstraints(
-            HashMap<String, List<ReadEvent>> indexedReadNodes,
-            HashMap<String, List<WriteEvent>> indexedWriteNodes) {
-
-        String CONS_RW = "";
-
-        Iterator<Entry<String, List<ReadEvent>>> entryIt = indexedReadNodes.entrySet().iterator();
-        while (entryIt.hasNext()) {
-            Entry<String, List<ReadEvent>> entry = entryIt.next();
-            String addr = entry.getKey();
-
-            // get all read nodes on the address
-            List<ReadEvent> readnodes = entry.getValue();
-
-            // get all write nodes on the address
-            List<WriteEvent> writenodes = indexedWriteNodes.get(addr);
-
-            // no write to array field?
-            // Yes, it could be: java.io.PrintStream out
-            if (writenodes == null || writenodes.size() < 2)
-                continue;
-
-            for (int i = 0; i < readnodes.size(); i++) {
-                ReadEvent rnode = readnodes.get(i);
-                String var_r = makeVariable(rnode.getGID());
-
-                String cons_a = "";
-
-                String cons_a_end = "true";
-
-                String cons_b = "";
-                String cons_b_end = "false";
-
-                // we start from j=1 to exclude the initial write
-                for (int j = 1; j < writenodes.size(); j++) {
-                    WriteEvent wnode1 = writenodes.get(j);
-                    {
-                        String var_w1 = makeVariable(wnode1.getGID());
-
-                        cons_a = "(and (> " + var_w1 + " " + var_r + ")\n" + cons_a;
-                        cons_a_end += ")";
-
-                        String cons_b_ = "(and (> " + var_r + " " + var_w1 + ")\n";
-
-                        String cons_c = "";
-                        String cons_c_end = "true";
-
-                        for (int k = 1; k < writenodes.size(); k++) {
-                            if (j != k) {
-                                WriteEvent wnode2 = writenodes.get(k);
-                                String var_w2 = makeVariable(wnode2.getGID());
-
-                                String cons_d = "(and " + "(or (> " + var_w2 + " " + var_r + ")"
-                                        + " (> " + var_w1 + " " + var_w2 + "))\n";
-
-                                cons_c = cons_d + cons_c;
-                                cons_c_end += ")";
-                            }
-                        }
-
-                        cons_c += cons_c_end;
-
-                        cons_b_ = cons_b_ + cons_c + ")\n";
-
-                        cons_b += "(or " + cons_b_;
-
-                        cons_b_end += ")";
-                    }
-                }
-
-                cons_b += cons_b_end;
-
-                cons_a += cons_a_end + "\n";
-
-                CONS_RW += "(assert \n(or \n" + cons_a + " " + cons_b + "))\n\n";
-            }
-
-        }
-
-        return CONS_RW;
-    }
-
-    @Override
+    /**
+     * return true if node1 and node2 has a common lock
+     *
+     * @param node1
+     * @param node2
+     * @return
+     */
     public boolean hasCommonLock(MemoryAccessEvent node1, MemoryAccessEvent node2) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
 
         return lockEngine.hasCommonLock(node1.getTID(), gid1, node2.getTID(), gid2);
-
     }
 
-    @Override
-    public boolean canReach(AbstractEvent node1, AbstractEvent node2) {
+    /**
+     * return true if node1 can reach node2 from the ordering relation
+     *
+     * @param node1
+     * @param node2
+     * @return
+     */
+    public boolean canReach(Event node1, Event node2) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
 
@@ -650,7 +602,14 @@ public class EngineSMTLIB1 extends Engine {
 
     }
 
-    @Override
+    /**
+     * return true if the solver return a solution to the constraints
+     *
+     * @param node1
+     * @param node2
+     * @param casualConstraint
+     * @return
+     */
     public boolean isRace(AbstractEvent node1, AbstractEvent node2, StringBuilder casualConstraint) {
         long gid1 = node1.getGID();
         long gid2 = node2.getGID();
@@ -681,34 +640,6 @@ public class EngineSMTLIB1 extends Engine {
         task.sendMessage(msg.toString());
 
         return task.sat;
-    }
-
-    public static void testConstructReadWriteConstraints() {
-        HashMap<String, List<ReadEvent>> indexedReadNodes = new HashMap<String, List<ReadEvent>>();
-
-        HashMap<String, List<WriteEvent>> indexedWriteNodes = new HashMap<String, List<WriteEvent>>();
-
-        List<WriteEvent> writeNodes = new ArrayList<>();
-        writeNodes.add(new WriteEvent(1, 1, 1, 1, 1, 0));
-        writeNodes.add(new WriteEvent(2, 2, 3, 1, 1, 0));
-        writeNodes.add(new WriteEvent(3, 3, 5, 1, 1, 1));
-        writeNodes.add(new WriteEvent(4, 4, 7, 1, 1, 1));
-
-        List<ReadEvent> readNodes = new ArrayList<>();
-        readNodes.add(new ReadEvent(5, 1, 2, 1, 1, 0));
-        readNodes.add(new ReadEvent(6, 2, 4, 1, 1, 0));
-        readNodes.add(new ReadEvent(7, 3, 6, 1, 1, 1));
-        readNodes.add(new ReadEvent(8, 4, 8, 1, 1, 1));
-
-        indexedWriteNodes.put("s", writeNodes);
-        indexedReadNodes.put("s", readNodes);
-
-        System.out.println(constructReadWriteConstraints(indexedReadNodes, indexedWriteNodes));
-    }
-
-    public static void main(String[] args) throws IOException {
-        // testConstructLockConstraints();
-        testConstructReadWriteConstraints();
     }
 
 }

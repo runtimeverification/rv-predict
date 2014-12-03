@@ -141,9 +141,7 @@ public class Main {
         }
 
         if (config.predict) {
-            NewRVPredict predictor = new NewRVPredict();
-            predictor.initPredict(config);
-            predictor.addHooks();
+            NewRVPredict predictor = new NewRVPredict(config);
             predictor.run();
         }
     }

@@ -152,15 +152,6 @@ public class Configuration {
     @Parameter(names = opt_no_volatile, description = "Exclude volatile variables", hidden = true, descriptionKey = "2030")
     public boolean novolatile;
 
-    final static String opt_allrace = "--allrace";
-    @Parameter(names = opt_allrace, description = "Check all races", hidden = true, descriptionKey = "2040")
-    public boolean allrace;
-
-    // final static String opt_all_consistent = "--allconsistent";
-    // @Parameter(names = opt_all_consistent, description =
-    // "require all read-write consistent", hidden = true)
-    public boolean allconsistent;
-
     // final static String opt_constraint_outdir = "--outdir";
     // @Parameter(names = opt_constraint_outdir, description =
     // "constraint file directory", hidden = true)
@@ -189,12 +180,6 @@ public class Configuration {
     // @Parameter(names = opt_smtlib1, description =
     // "use constraint format SMT-LIB v1.2", hidden = true)
     public boolean smtlib1 = true;
-
-    final static String opt_optrace = "--optrace";
-    // @Parameter(names = opt_optrace, description = "optimize race detection",
-    // hidden = true)
-    // by default optrace is true
-    public boolean optrace = true;
 
     public final static String opt_outdir = "--dir";
     @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")

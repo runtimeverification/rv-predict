@@ -38,6 +38,10 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.List;
 
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Table;
+
 /**
  * Representation of the execution trace. Each event is created as a node with a
  * corresponding type. Events are indexed by their thread Id, Type, and memory
@@ -65,7 +69,7 @@ public class Trace {
     private final List<Event> fulltrace = new ArrayList<>();
 
     // per thread node map
-    private final Map<Long, List<Event>> threadNodesMap = new HashMap<>();
+    private final Map<Long, List<Event>> threadIdToEvents = new HashMap<>();
 
     // the first node and last node map of each thread
     private final Map<Long, Event> threadFirstNodeMap = new HashMap<>();
@@ -76,26 +80,38 @@ public class Trace {
     private final Map<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<>();
 
     // per thread branch nodes
-    private final Map<Long, List<BranchNode>> threadBranchNodes = new HashMap<>();
+    private final Map<Long, List<BranchEvent>> threadIdToBranchEvents = new HashMap<>();
 
     // per thead synchronization nodes
     private final Map<Long, List<SyncEvent>> syncNodesMap = new HashMap<>();
 
-    // per address read and write nodes
-    private final Map<String, List<ReadEvent>> indexedReadNodes = new HashMap<>();
-    private final Map<String, List<WriteEvent>> indexedWriteNodes = new HashMap<>();
+    /**
+     * Read events on each address.
+     */
+    private final Map<String, List<ReadEvent>> addrToReadEvents = new HashMap<>();
 
-    // per address map from thread id to read/write nodes
-    private final Map<String, Map<Long, List<MemoryAccessEvent>>> indexedThreadReadWriteNodes = new HashMap<>();
+    /**
+     * Write events on each address.
+     */
+    private final Map<String, List<WriteEvent>> addrToWriteEvents = new HashMap<>();
 
-    // per address initial write value
-    private Map<String, Long> initialWriteValueMap = new HashMap<>();
+    /**
+     * Lists of {@code MemoryAccessEvent}'s indexed by address and thread ID.
+     */
+    private final Table<String, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
+
+    /**
+     * Initial value of each address.
+     */
+    private final Map<String, Long> initValues;
 
     private List<ReadEvent> allReadNodes;
 
     private final TraceInfo info;
 
-    public Trace(TraceInfo info) {
+    public Trace(Map<String, Long> initValues, TraceInfo info) {
+        assert initValues != null && info != null;
+        this.initValues = initValues;
         this.info = info;
     }
 
@@ -112,16 +128,12 @@ public class Trace {
         return fulltrace;
     }
 
-    public Map<String, Long> getInitialWriteValueMap() {
-        return initialWriteValueMap;
+    public Long getInitValueOf(String addr) {
+        return initValues.get(addr);
     }
 
-    public void setInitialWriteValueMap(Map<String, Long> map) {
-        initialWriteValueMap = map;
-    }
-
-    public HashMap<Integer, String> getStmtSigIdMap() {
-        return info.getStmtSigIdMap();
+    public Map<Integer, String> getLocIdToStmtSigMap() {
+        return info.getLocIdToStmtSigMap();
     }
 
     public Map<Long, Event> getThreadFirstNodeMap() {
@@ -132,38 +144,50 @@ public class Trace {
         return threadLastNodeMap;
     }
 
+    public List<Event> getThreadEvents(long threadId) {
+        return threadIdToEvents.get(threadId);
+    }
+
+    public List<BranchEvent> getThreadBranchEvents(long threadId) {
+        List<BranchEvent> events = threadIdToBranchEvents.get(threadId);
+        return events == null ? Lists.<BranchEvent>newArrayList() : events;
+    }
+
     public Map<Long, List<Event>> getThreadIdToEventsMap() {
-        return threadNodesMap;
+        return threadIdToEvents;
     }
 
     public Map<Long, List<SyncEvent>> getSyncNodesMap() {
         return syncNodesMap;
     }
 
-    public Map<String, List<ReadEvent>> getIndexedReadNodes() {
-        return indexedReadNodes;
+    public List<ReadEvent> getReadEventsOn(String addr) {
+        List<ReadEvent> events = addrToReadEvents.get(addr);
+        return events == null ? Lists.<ReadEvent>newArrayList() : events;
     }
 
-    public Map<String, List<WriteEvent>> getIndexedWriteNodes() {
-        return indexedWriteNodes;
+    public List<WriteEvent> getWriteEventsOn(String addr) {
+        List<WriteEvent> events = addrToWriteEvents.get(addr);
+        return events == null ? Lists.<WriteEvent>newArrayList() : events;
     }
 
-    public Map<String, Map<Long, List<MemoryAccessEvent>>> getIndexedThreadReadWriteNodes() {
-        return indexedThreadReadWriteNodes;
+    public Table<String, Long, List<MemoryAccessEvent>> getMemAccessEventsTable() {
+        return memAccessEventsTbl;
     }
 
-    public void saveLastWriteValues(Map<String, Long> valueMap) {
-        Iterator<String> addrIt = indexedWriteNodes.keySet().iterator();
-        while (addrIt.hasNext()) {
-            String addr = addrIt.next();
-            valueMap.put(addr, indexedWriteNodes.get(addr).get(indexedWriteNodes.get(addr).size() - 1).getValue());
+    public Map<String, Long> getFinalValues() {
+        Map<String, Long> finalValues = new HashMap<>(initValues);
+        for (String addr : addrToWriteEvents.keySet()) {
+            List<WriteEvent> writeEvents = addrToWriteEvents.get(addr);
+            finalValues.put(addr, writeEvents.get(writeEvents.size() - 1).getValue());
         }
+        return finalValues;
     }
 
     public List<ReadEvent> getAllReadNodes() {
         if (allReadNodes == null) {
             allReadNodes = new ArrayList<>();
-            Iterator<List<ReadEvent>> it = indexedReadNodes.values().iterator();
+            Iterator<List<ReadEvent>> it = addrToReadEvents.values().iterator();
             while (it.hasNext()) {
                 allReadNodes.addAll(it.next());
             }
@@ -172,45 +196,40 @@ public class Trace {
         return allReadNodes;
     }
 
+    /**
+     * Gets dependent nodes of a given {@code MemoryAccessEvent}. Without
+     * logging {@code BranchNode}, all read events that happen-before the given
+     * event have to be included conservatively. Otherwise, only the read events
+     * that happen-before the latest branch event are included.
+     */
     // TODO: NEED to include the dependent nodes from other threads
-    public List<ReadEvent> getDependentReadNodes(MemoryAccessEvent rnode, boolean branch) {
+    public List<ReadEvent> getDependentReadEvents(MemoryAccessEvent memAccEvent, boolean branch) {
+        // TODO(YilongL): optimize this method when it becomes a bottleneck
+        List<ReadEvent> readEvents = new ArrayList<>();
 
-        List<ReadEvent> readnodes = new ArrayList<>();
-        long tid = rnode.getTID();
-        long POS = rnode.getGID() - 1;
-        if (branch) {
-            long pos = -1;
-            List<BranchNode> branchNodes = threadBranchNodes.get(tid);
-            if (branchNodes != null)
-                // TODO: improve to log(n) complexity
-                for (int i = 0; i < branchNodes.size(); i++) {
-                    long id = branchNodes.get(i).getGID();
-                    if (id > POS)
-                        break;
-                    else
-                        pos = id;
-                }
-            POS = pos;
-        }
+        long threadId = memAccEvent.getTID();
 
-        if (POS >= 0) {
-            List<Event> nodes = threadNodesMap.get(tid);// TODO:
-                                                                 // optimize
-                                                                 // here to
-                                                                 // check only
-                                                                 // READ node
-            for (int i = 0; i < nodes.size(); i++) {
-                Event node = nodes.get(i);
-                if (node.getGID() > POS)
-                    break;
-                else {
-                    if (node instanceof ReadEvent)
-                        readnodes.add((ReadEvent) node);
-                }
+        BranchEvent prevBranchEvent = null;
+        for (BranchEvent branchEvent : getThreadBranchEvents(threadId)) {
+            if (branchEvent.getGID() < memAccEvent.getGID()) {
+                prevBranchEvent = branchEvent;
+            } else {
+                break;
             }
         }
 
-        return readnodes;
+        Event event = prevBranchEvent == null ? memAccEvent : prevBranchEvent;
+        for (Event e : getThreadEvents(threadId)) {
+            if (e.getGID() > event.getGID()) {
+                break;
+            }
+
+            if (e instanceof ReadEvent) {
+                readEvents.add((ReadEvent) e);
+            }
+        }
+
+        return readEvents;
     }
 
     /**
@@ -251,30 +270,29 @@ public class Trace {
         Long tid = node.getTID();
         threads.add(tid);
 
-        if (node instanceof BranchNode) {
+        if (node instanceof BranchEvent) {
             // branch node
             info.incrementBranchNumber();
 
-            List<BranchNode> branchnodes = threadBranchNodes.get(tid);
+            List<BranchEvent> branchnodes = threadIdToBranchEvents.get(tid);
             if (branchnodes == null) {
                 branchnodes = new ArrayList<>();
-                threadBranchNodes.put(tid, branchnodes);
+                threadIdToBranchEvents.put(tid, branchnodes);
             }
-            branchnodes.add((BranchNode) node);
+            branchnodes.add((BranchEvent) node);
         } else if (node instanceof InitEvent) {
             // initial write node
-
-            initialWriteValueMap.put(((InitEvent) node).getAddr(), ((InitEvent) node).getValue());
+            initValues.put(((InitEvent) node).getAddr(), ((InitEvent) node).getValue());
             info.incrementInitWriteNumber();
         } else {
             // all critical nodes -- read/write/synchronization events
 
             fulltrace.add(node);
 
-            List<Event> threadNodes = threadNodesMap.get(tid);
+            List<Event> threadNodes = threadIdToEvents.get(tid);
             if (threadNodes == null) {
                 threadNodes = new ArrayList<>();
-                threadNodesMap.put(tid, threadNodes);
+                threadIdToEvents.put(tid, threadNodes);
                 threadFirstNodeMap.put(tid, node);
 
             }
@@ -287,42 +305,28 @@ public class Trace {
                 info.incrementSharedReadWriteNumber();
 
                 MemoryAccessEvent mnode = (MemoryAccessEvent) node;
-
                 String addr = mnode.getAddr();
 
-                Map<Long, List<MemoryAccessEvent>> threadReadWriteNodes = indexedThreadReadWriteNodes
-                        .get(addr);
-                if (threadReadWriteNodes == null) {
-                    threadReadWriteNodes = new HashMap<Long, List<MemoryAccessEvent>>();
-                    indexedThreadReadWriteNodes.put(addr, threadReadWriteNodes);
+                List<MemoryAccessEvent> memAccessEvents = memAccessEventsTbl.get(addr, tid);
+                if (memAccessEvents == null) {
+                    memAccessEvents = Lists.newArrayList();
+                    memAccessEventsTbl.put(addr, tid, memAccessEvents);
                 }
-                List<MemoryAccessEvent> rwnodes = threadReadWriteNodes.get(tid);
-                if (rwnodes == null) {
-                    rwnodes = new ArrayList<>();
-                    threadReadWriteNodes.put(tid, rwnodes);
-                }
-                rwnodes.add(mnode);
-
-                // set previous branch node and sync node
-                List<BranchNode> branchnodes = threadBranchNodes.get(tid);
-                if (branchnodes != null)
-                    mnode.setPrevBranchId(branchnodes.get(branchnodes.size() - 1).getGID());
+                memAccessEvents.add(mnode);
 
                 if (node instanceof ReadEvent) {
-
-                    List<ReadEvent> readNodes = indexedReadNodes.get(addr);
+                    List<ReadEvent> readNodes = addrToReadEvents.get(addr);
                     if (readNodes == null) {
                         readNodes = new ArrayList<>();
-                        indexedReadNodes.put(addr, readNodes);
+                        addrToReadEvents.put(addr, readNodes);
                     }
                     readNodes.add((ReadEvent) node);
 
-                } else // write node
-                {
-                    List<WriteEvent> writeNodes = indexedWriteNodes.get(addr);
+                } else {
+                    List<WriteEvent> writeNodes = addrToWriteEvents.get(addr);
                     if (writeNodes == null) {
                         writeNodes = new ArrayList<>();
-                        indexedWriteNodes.put(addr, writeNodes);
+                        addrToWriteEvents.put(addr, writeNodes);
                     }
                     writeNodes.add((WriteEvent) node);
                 }
@@ -466,8 +470,12 @@ public class Trace {
         }
     }
 
-    public boolean isAddressVolatile(String addr) {
-        return info.isAddressVolatile(addr);
+    // TODO(YilongL): add javadoc; addr seems to be some abstract address, e.g.
+    // "_.1", built when reading the trace; figure out what happens and improve it
+    public boolean isVolatileAddr(String addr) {
+        // all field addr should contain ".", not true for array access
+        int dotPos = addr.indexOf(".");
+        return dotPos != -1 && info.isVolatileAddr(Integer.valueOf(addr.substring(dotPos + 1)));
     }
 
 }

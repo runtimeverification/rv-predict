@@ -38,11 +38,10 @@ public abstract class MemoryAccessEvent extends AbstractEvent {
     protected final long objectHashCode;
     protected final long index;
 
-    protected long prevBranchId = -1;
-
     protected MemoryAccessEvent(long GID, long TID, int ID, EventType type, long objectHashCode,
             long index, long value) {
         super(GID, TID, ID, type);
+        assert type == EventType.READ || type == EventType.WRITE;
         this.objectHashCode = objectHashCode;
         this.index = index;
         this.value = value;
@@ -51,22 +50,15 @@ public abstract class MemoryAccessEvent extends AbstractEvent {
     /**
      * Returns {@code String} representation of the accessed memory address in the event.
      */
-    // TODO(YilongL): normalize address representation of memory access events
-    public abstract String getAddr();
+    public final String getAddr() {
+        return (objectHashCode == 0 ? "_" : objectHashCode + "_") + Math.abs(index);
+    }
 
     /**
      * Returns the value read or written in the access.
      */
     public final long getValue() {
         return value;
-    }
-
-    public long getPrevBranchId() {
-        return prevBranchId;
-    }
-
-    public void setPrevBranchId(long id) {
-        prevBranchId = id;
     }
 
     @Override

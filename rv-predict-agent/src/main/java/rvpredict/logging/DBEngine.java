@@ -31,241 +31,159 @@ package rvpredict.logging;
 import rvpredict.db.EventItem;
 import rvpredict.config.Config;
 import rvpredict.db.EventOutputStream;
-import rvpredict.db.TraceCache;
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
 import rvpredict.trace.EventType;
 
 import java.io.*;
 import java.nio.file.Paths;
-import java.sql.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Map.Entry;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Engine for interacting with database.
+ * Class encapsulating functionality for recording events to disk.
+ * TODO(TraianSF): Maybe we should rename the class now that there is no DB code left.
  *
- * @author jeffhuang
+ * @author TraianSF
  *
  */
 public class DBEngine {
 
-    private static final AtomicLong globalEventID  = new AtomicLong(0);
-
-    private static final String DB_NAME = "RVDatabase";
-    private final String directory;
-
-    private Connection conn;
-
-    private final String sharedvarsigtablename;
-    private final String sharedarrayloctablename;
-
-    // TODO: What if the program does not terminate??
-
-    private static LinkedBlockingQueue<List<EventItem>> queue;
-    // we can also use our own Stack implementation here
-    private static ArrayList<EventItem> buffer;
-
-    private final int BUFFER_THRESHOLD;
-    private final boolean asynchronousLogging;
-
+    private final AtomicLong globalEventID  = new AtomicLong(0);
+    private static final int BUFFER_THRESHOLD = 10000;
     private final GlobalStateForInstrumentation globalState;
+    private final Thread metadataLoggingThread;
+    private final ThreadLocalEventStream threadLocalTraceOS;
+    private final ObjectOutputStream metadataOS;
+    private boolean shutdown = false;
 
-    public void saveCurrentEventsToDB() {
-        queue.add(buffer);
-        buffer = new ArrayList<>(BUFFER_THRESHOLD);
-    }
-
-    // private final String NO_AUTOCLOSE = ";DB_CLOSE_ON_EXIT=FALSE";//BUGGY in
-    // H2, DON'T USE IT
-
+    /**
+     * Method invoked at the end of the logging task, to insure that
+     * all data is flushed to disk before concluding.
+     */
     public void finishLogging() {
         shutdown = true;
-        if (asynchronousLogging) {
-            try {
-                System.out.print("Done executing. Flushing log buffers to disk.");
-                loggingThread.join();
-                System.out.println(" done.");
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+        try {
+            synchronized (metadataOS) {
+                metadataOS.notify();
             }
-            saveEventsToDB(buffer);
+            metadataLoggingThread.join();
+            for (EventOutputStream stream : threadLocalTraceOS.getStreamsMap().values()) {
+                try {
+                    stream.flush();
+                } catch (IOException e) {
+                    // TODO(TraianSF) We can probably safely ignore file errors at this (shutdown) stage
+                    e.printStackTrace();
+                }
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
         try {
-            saveMetaData();
             metadataOS.close();
-            traceOS.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        closeDB();
-    }
-
-    private void saveEventsToDB(List<EventItem> stack) {
-        assert !stack.isEmpty() : "stack should not be empty here as we're saving metadata, too";
-
-        try {
-            traceOS =  new EventOutputStream(new BufferedOutputStream(
-                    new FileOutputStream(Paths.get(directory, stack.get(0).GID + TraceCache.TRACE_SUFFIX).toFile())));
-            for (EventItem eventItem : stack) {
-                traceOS.writeEvent(eventItem);
-            }
-            saveMetaData();
-            traceOS.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    EventOutputStream traceOS;
-    ObjectOutputStream metadataOS;
-    Thread loggingThread;
-    boolean shutdown = false;
+    public DBEngine(GlobalStateForInstrumentation globalState, String directory) {
+        this.globalState = globalState;
+        threadLocalTraceOS = new ThreadLocalEventStream(directory);
+        metadataOS = createMetadataOS(directory);
+        metadataLoggingThread = startMetadataLogging();
+    }
 
-    private void startAsynchronousLogging() {
-
-        queue = new LinkedBlockingQueue<>();
-        buffer = new ArrayList<>(BUFFER_THRESHOLD);
-
-        loggingThread = new Thread(new Runnable() {
+    private Thread startMetadataLogging() {
+        Thread metadataLoggingThread = new Thread(new Runnable() {
 
             @Override
             public void run() {
 
-                while (true) {
+                while (!shutdown) {
                     try {
-                        List<EventItem> stack = queue.poll(1, TimeUnit.SECONDS);
-                        if (stack == null) {
-                            if (shutdown && queue.size() == 0) {
-                                break;
-                            } else continue;
+                        synchronized (metadataOS) {
+                            metadataOS.wait(60000);
                         }
-                        saveEventsToDB(stack);
-                        if (shutdown && queue.size()%10 == 0) System.out.print('.');
-
                     } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
+                    saveMetaData();
                 }
             }
 
         });
 
-        loggingThread.setDaemon(true);
+        metadataLoggingThread.setDaemon(true);
 
-        loggingThread.start();
-
+        metadataLoggingThread.start();
+        return metadataLoggingThread;
     }
 
-    public DBEngine(GlobalStateForInstrumentation globalState, String directory, String name, boolean asynchronousLogging) {
-        BUFFER_THRESHOLD = 10*Config.instance.commandLine.window_size;
-        this.globalState = globalState;
-        this.directory = directory;
-        this.asynchronousLogging = asynchronousLogging;
-        sharedarrayloctablename = "sharedarrayloc_" + name;
-        sharedvarsigtablename = "sharedvarsig_" + name;
-        connectDB(directory);
-
+    private ObjectOutputStream createMetadataOS(String directory) {
         try {
-            metadataOS = new ObjectOutputStream(
+            return new ObjectOutputStream(
                     new BufferedOutputStream(
-                            new FileOutputStream(Paths.get(directory, "metadata.bin").toFile())));
-            if (asynchronousLogging) {
-                startAsynchronousLogging();
-            } else {
-                traceOS =  new EventOutputStream(new BufferedOutputStream(
-                        new FileOutputStream(Paths.get(directory, 1 + TraceCache.TRACE_SUFFIX).toFile())));
-            }
+                            new FileOutputStream(Paths.get(directory, rvpredict.db.DBEngine.METADATA_BIN).toFile())));
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    private void closeDB() {
-        try {
-            conn.createStatement().execute("SHUTDOWN");
-            // conn.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        return null;
     }
 
     /**
-     * Drops all relevant tables of the database. Used for a clean start.
-     * @throws SQLException
+     * Saves an {@link rvpredict.db.EventItem} to the database.
+     * Each event is saved in a file corresponding to its own thread.
      *
+     * @see rvpredict.db.EventItem#EventItem(long, long, int, long, long, long, rvpredict.trace.EventType)
+     *      for a more elaborate description of the parameters.
+     * @see java.lang.ThreadLocal
+     *
+     * @param eventType  type of event being recorded
+     * @param id location id of the event
+     * @param addrl  additional information identifying the event
+     * @param addrr additional information identifying the event
+     * @param value data involved in the event
      */
-    public void dropAll() throws SQLException {
-        Statement stmt = conn.createStatement();
-
-        String sql_dropTable;
-        sql_dropTable = "DROP TABLE IF EXISTS " + sharedvarsigtablename;
-        stmt.execute(sql_dropTable);
-        sql_dropTable = "DROP TABLE IF EXISTS " + sharedarrayloctablename;
-        stmt.execute(sql_dropTable);
+    public void saveEvent(EventType eventType, int id, long addrl, long addrr, long value) {
+        if (shutdown) return;
+        long tid = Thread.currentThread().getId();
+        long gid = globalEventID.incrementAndGet();
+        EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
+        try {
+            EventOutputStream traceOS = threadLocalTraceOS.get();
+            traceOS.writeEvent(e);
+            long eventsWritten = traceOS.getEventsWrittenCount();
+            if (eventsWritten % BUFFER_THRESHOLD == 0) {
+                // Flushing events and metadata periodically to allow crash recovery.
+                traceOS.flush();
+                synchronized (metadataLoggingThread) {
+                    metadataLoggingThread.notify();
+                }
+            }
+        } catch (FileNotFoundException e1) {
+            e1.printStackTrace();
+        } catch (IOException e1) {
+                e1.printStackTrace();
+            }
     }
 
     /**
-     * save an event to database. must be synchronized. otherwise, races when
-     * writing to file might occur for synchronous logging.
+     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, long, long)}
+     * The missing arguments default to 0.
      */
-    // TODO(YilongL): why synchronize this method? too slow!
-    public synchronized void saveEvent(EventType TYPE, int ID, long ADDRL, long ADDRR, long VALUE) {
-        long TID = Thread.currentThread().getId();
-        EventItem e = new EventItem(DBEngine.globalEventID.incrementAndGet(), TID, ID, ADDRL, ADDRR, VALUE, TYPE);
-        if (asynchronousLogging) {
-            if (buffer.size() >= BUFFER_THRESHOLD) {
-                saveCurrentEventsToDB();
-            }
-            buffer.add(e);
-        } else {
-            if (shutdown) return;
-            try {
-                if (e.GID % BUFFER_THRESHOLD == 0) {
-                    traceOS.close();
-                    saveMetaData();
-                    traceOS =  new EventOutputStream(new BufferedOutputStream(
-                            new FileOutputStream(Paths.get(directory, e.GID + TraceCache.TRACE_SUFFIX).toFile())));
-                }
-                traceOS.writeEvent(e);
-            } catch (FileNotFoundException e1) {
-                e1.printStackTrace();
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-        }
-    }
-
     public void saveEvent(EventType eventType, int locId, long arg) {
         saveEvent(eventType, locId, arg, 0, 0);
     }
 
-    public void saveEvent(EventType eventType, int locId) {
+    /**
+     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, long, long)}
+     * The missing arguments default to 0.
+     */
+     public void saveEvent(EventType eventType, int locId) {
         saveEvent(eventType, locId, 0, 0, 0);
-    }
-
-    private void connectDB(String directory) {
-        try {
-            Driver driver = new rvpredict.h2.Driver();
-            String db_url = "jdbc:h2:" + directory + "/" + DB_NAME + ";DB_CLOSE_ON_EXIT=FALSE";
-            conn = driver.connect(db_url, null);
-
-            // conn = DriverManager.getConnection(db_url);
-            // conn.setAutoCommit(true);
-            // check if Database may be already in use
-            // kill?
-        } catch (SQLException e) {
-            e.printStackTrace();
-            // DBORDER++;
-            // conn =
-            // DriverManager.getConnection("jdbc:h2:"+Util.getUserHomeDirectory()+dbname+DBORDER);//+";AUTO_SERVER=true"
-        }
     }
 
     private void saveObject(Object threadTidList) {
@@ -276,6 +194,9 @@ public class DBEngine {
         }
     }
 
+    /**
+     * Flush un-previously-saved metadata to disk.
+     */
     public void saveMetaData() {
         /* save <threadId, name> pairs */
         List<Entry<Long,String>> threadIdNamePairs = new ArrayList<>(globalState.unsavedStmtSigToLocId.size());

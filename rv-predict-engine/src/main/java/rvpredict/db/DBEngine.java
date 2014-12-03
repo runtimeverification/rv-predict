@@ -30,35 +30,32 @@ package rvpredict.db;
 
 import java.io.*;
 import java.nio.file.Paths;
-import java.sql.*;
 import java.util.*;
 import java.util.List;
 
 import rvpredict.trace.*;
 
 /**
- * Engine for interacting with database.
+ * Class for loading traces of events from disk.
  *
- * @author jeffhuang
+ * @author TraianSF
  *
  */
 public class DBEngine {
-
+    public static final String METADATA_BIN = "metadata.bin";
     private final String directory;
+    private final TraceCache traceCache;
+    private final ObjectInputStream metadataIS;
 
-    // currently we use the h2 database
-    private final String dbname = "RVDatabase";
-    public String appname = "main";
-
-    private Connection conn;
-
-    private TraceCache traceCache=null;
-
+    /**
+     * Reads the previously saved metadata into the structures given as parameters
+     * @param threadIdNameMap  map associating thread identifiers to thread names
+     * @param sharedVarIdSigMap map giving signatures for the shared variables
+     * @param volatileAddresses  map giving locations for volatile variables
+     * @param stmtIdSigMap  map giving signature/location information for events
+     */
     public void getMetadata(Map<Long, String> threadIdNameMap, Map<Integer, String> sharedVarIdSigMap, Map<Integer, String> volatileAddresses, Map<Integer, String> stmtIdSigMap) {
         try {
-            ObjectInputStream metadataIS = new ObjectInputStream(
-                    new BufferedInputStream(
-                            new FileInputStream(Paths.get(directory, "metadata.bin").toFile())));
             while(true) {
                 List<Map.Entry<Long, String>> threadTidList;
                 try {
@@ -79,32 +76,25 @@ public class DBEngine {
                 for (Map.Entry<String, Integer> entry : stmtSigIdList) {
                     stmtIdSigMap.put(entry.getValue(), entry.getKey());
                 }
-
             }
         }
         catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
-
-
     }
 
-    // private final String NO_AUTOCLOSE = ";DB_CLOSE_ON_EXIT=FALSE";//BUGGY in
-    // H2, DON'T USE IT
-
-    public DBEngine(String directory, String name) {
-        appname = name;
+    public DBEngine(String directory) {
         this.directory = directory;
-
-        connectDB(directory);
-    }
-
-    public void closeDB() {
+        traceCache = new TraceCache(directory);
+        ObjectInputStream metadataIS = null;
         try {
-            conn.close();
-        } catch (SQLException e) {
+            metadataIS = new ObjectInputStream(
+                    new BufferedInputStream(
+                            new FileInputStream(Paths.get(directory, METADATA_BIN).toFile())));
+        } catch (IOException e) {
             e.printStackTrace();
         }
+        this.metadataIS = metadataIS;
     }
 
     /**
@@ -115,39 +105,25 @@ public class DBEngine {
         return true;
     }
 
-    private void connectDB(String directory) {
-        try {
-            Class.forName("rvpredict.h2.Driver");
-        } catch (ClassNotFoundException e) {
-            System.err.println("Error: cannot locate h2 database driver.  This should not happen.");
-            e.printStackTrace();
-            System.exit(1);
-        }
-        try{
-            conn = DriverManager.getConnection("jdbc:h2:" + directory + "/" + dbname
-                    + ";DB_CLOSE_ON_EXIT=FALSE");
-        }  catch (SQLException e) {
-            System.err.println("Errors when connecting to the database.  Exiting.");
-            e.printStackTrace();
-            System.exit(1);
-        } // conn.setAutoCommit(true);
-    }
-
+    /**
+     *
+     * @return total size (in events) of the recorded trace.
+     */
     public long getTraceSize() {
-        if (traceCache == null) traceCache = new TraceCache(directory);
         return traceCache.getTraceSize();
     }
 
     /**
      * load trace from event min to event max
+     * Currently trace is assumed to be read sequentially,
+     * in min-max segments, from beginning to end.
+     * @see rvpredict.db.TraceCache#getEvent(long)
      *
-     * @param min
-     * @param max
-     * @return
-     * @throws Exception
+     * @param min index where the trace segment to be read should start from
+     * @param max index where the trace segment to be read should end
+     * @return a {@link rvpredict.trace.Trace} representing the trace segment read
      */
     public Trace getTrace(long min, long max, TraceInfo info) {
-        if (traceCache == null) traceCache = new TraceCache(directory);
         long traceSize = traceCache.getTraceSize();
         assert min <= traceSize : "This method should only be called with a valid min value";
         if (max > traceSize) max = traceSize; // resetting max to trace size.

@@ -15,6 +15,23 @@ public class EventItem {
     public final long VALUE;
     public final EventType TYPE;
 
+    public static final long SIZEOF_LONG = 8;
+    public static final long SIZEOF_INT = 4;
+    public static final long SIZEOF_EVENT_TYPE = 1;
+
+    /**
+     * constant representing the size of the event item on disk (no. of bytes).
+     * This should be updated whenever structure of the class is changed.
+     */
+    public static final long SIZEOF
+            = SIZEOF_LONG       //GID
+            + SIZEOF_LONG       //TID
+            + SIZEOF_INT        //ID
+            + SIZEOF_LONG       //ADDRL
+            + SIZEOF_LONG       //ADDRR
+            + SIZEOF_LONG       //VALUE
+            + SIZEOF_EVENT_TYPE //TYPE
+            ;
     /**
      * Constructor of the EventItem class
      * @param gid global identifier / primary key of the event

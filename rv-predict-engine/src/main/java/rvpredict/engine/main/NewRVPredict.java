@@ -589,7 +589,7 @@ public class NewRVPredict {
         startTime = System.currentTimeMillis();
 
         // db engine is used for interacting with database
-        dbEngine = new DBEngine(config.outdir, config.tableName);
+        dbEngine = new DBEngine(config.outdir);
 
         // load all the metadata in the application
         dbEngine.getMetadata(threadIdNameMap, sharedVarIdSigMap, volatileAddresses, stmtIdSigMap);

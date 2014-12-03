@@ -33,7 +33,7 @@ import rvpredict.trace.Event;
 import rvpredict.trace.EventType;
 import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.SyncEvent;
-import rvpredict.trace.LockPair;
+import rvpredict.trace.LockRegion;
 import rvpredict.trace.ReadEvent;
 import rvpredict.trace.Trace;
 import rvpredict.trace.WriteEvent;
@@ -177,7 +177,7 @@ public class EngineSMTLIB1 {
         while (mapIt.hasNext()) {
             List<SyncEvent> nodes = mapIt.next();
 
-            List<LockPair> lockPairs = new ArrayList<>();
+            List<LockRegion> lockPairs = new ArrayList<>();
 
             HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
             SyncEvent matchNotifyNode = null;
@@ -238,11 +238,11 @@ public class EngineSMTLIB1 {
                     // TODO: make sure no nested locks?
 
                     if (stack.isEmpty()) {
-                        LockPair lp = new LockPair(null, node);
+                        LockRegion lp = new LockRegion(null, node);
                         lockPairs.add(lp);
                         lockEngine.add(node.getSyncObject(), tid, lp);
                     } else if (stack.size() == 1) {
-                        LockPair lp = new LockPair(stack.pop(), node);
+                        LockRegion lp = new LockRegion(stack.pop(), node);
                         lockPairs.add(lp);
 
                         lockEngine.add(node.getSyncObject(), tid, lp);
@@ -290,9 +290,9 @@ public class EngineSMTLIB1 {
                         threadSyncStack.put(tid, stack);
                     }
                     if (stack.isEmpty())
-                        lockPairs.add(new LockPair(null, node));
+                        lockPairs.add(new LockRegion(null, node));
                     else if (stack.size() == 1)
-                        lockPairs.add(new LockPair(stack.pop(), node));
+                        lockPairs.add(new LockRegion(stack.pop(), node));
                     else
                         stack.pop();// handle reentrant lock here
 
@@ -311,7 +311,7 @@ public class EngineSMTLIB1 {
                                      // first locking node
                 {
                     SyncEvent node = stack.firstElement();
-                    LockPair lp = new LockPair(node, null);
+                    LockRegion lp = new LockRegion(node, null);
                     lockPairs.add(lp);
                     lockEngine.add(node.getSyncObject(), node.getTID(), lp);
                 }
@@ -322,14 +322,14 @@ public class EngineSMTLIB1 {
 
     }
 
-    private String constructLockConstraintsOptimized(List<LockPair> lockPairs) {
+    private String constructLockConstraintsOptimized(List<LockRegion> lockPairs) {
         String CONS_LOCK = "";
 
         // obtain each thread's last lockpair
-        HashMap<Long, LockPair> lastLockPairMap = new HashMap<Long, LockPair>();
+        HashMap<Long, LockRegion> lastLockPairMap = new HashMap<Long, LockRegion>();
 
         for (int i = 0; i < lockPairs.size(); i++) {
-            LockPair lp1 = lockPairs.get(i);
+            LockRegion lp1 = lockPairs.get(i);
             String var_lp1_a = "";
             String var_lp1_b = "";
 
@@ -342,20 +342,20 @@ public class EngineSMTLIB1 {
                 var_lp1_b = makeVariable(lp1.unlock.getGID());
 
             long lp1_tid = lp1.lock.getTID();
-            LockPair lp1_pre = lastLockPairMap.get(lp1_tid);
+            LockRegion lp1_pre = lastLockPairMap.get(lp1_tid);
 
             /*
              * String var_lp1_pre_b = ""; if(lp1_pre!=null) var_lp1_pre_b =
              * makeVariable(lp1_pre.unlock.getGID());;
              */
 
-            ArrayList<LockPair> flexLockPairs = new ArrayList<LockPair>();
+            ArrayList<LockRegion> flexLockPairs = new ArrayList<LockRegion>();
 
             // find all lps that are from a different thread, and have no
             // happens-after relation with lp1
             // could further optimize by consider lock regions per thread
             for (int j = 0; j < lockPairs.size(); j++) {
-                LockPair lp = lockPairs.get(j);
+                LockRegion lp = lockPairs.get(j);
                 if (lp.lock != null) {
                     if (lp.lock.getTID() != lp1_tid
                             && !canReach(lp1.lock, lp.lock)) {
@@ -370,7 +370,7 @@ public class EngineSMTLIB1 {
             }
 
             for (int j = 0; j < flexLockPairs.size(); j++) {
-                LockPair lp2 = flexLockPairs.get(j);
+                LockRegion lp2 = flexLockPairs.get(j);
 
                 if (lp2.unlock == null || lp2.lock == null && lp1_pre != null)// impossible
                                                                               // to
@@ -574,17 +574,10 @@ public class EngineSMTLIB1 {
     }
 
     /**
-     * return true if node1 and node2 has a common lock
-     *
-     * @param node1
-     * @param node2
-     * @return
+     * Checks if two {@code MemoryAccessEvent} hold a common lock.
      */
-    public boolean hasCommonLock(MemoryAccessEvent node1, MemoryAccessEvent node2) {
-        long gid1 = node1.getGID();
-        long gid2 = node2.getGID();
-
-        return lockEngine.hasCommonLock(node1.getTID(), gid1, node2.getTID(), gid2);
+    public boolean hasCommonLock(MemoryAccessEvent e1, MemoryAccessEvent e2) {
+        return lockEngine.hasCommonLock(e1, e2);
     }
 
     /**

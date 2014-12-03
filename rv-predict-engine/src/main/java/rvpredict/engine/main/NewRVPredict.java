@@ -291,13 +291,6 @@ public class NewRVPredict {
                 engine.addSynchronizationConstraints(trace, trace.getSyncNodesMap(),
                         trace.getThreadFirstNodeMap(), trace.getThreadLastNodeMap());
 
-                // 4. match read-write
-                // This is only used for constructing all read-write
-                // consistency constraints
-
-                // engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
-                // engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
-
                 detectRace(engine, trace);
             }
 

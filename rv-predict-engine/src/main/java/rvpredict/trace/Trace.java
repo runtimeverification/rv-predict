@@ -76,7 +76,7 @@ public class Trace {
     private final Map<Long, Event> threadLastNodeMap = new HashMap<>();
 
     // per thread per lock lock/unlock pair
-    private final Map<Long, Map<Long, List<LockPair>>> threadIndexedLockPairs = new HashMap<>();
+    private final Map<Long, Map<Long, List<LockRegion>>> threadIndexedLockPairs = new HashMap<>();
     private final Map<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<>();
 
     // per thread branch nodes
@@ -352,13 +352,13 @@ public class Trace {
 
                     stack.push((SyncEvent) node);
                 } else if (node.getType().equals(EventType.UNLOCK)) {
-                    Map<Long, List<LockPair>> indexedLockpairs = threadIndexedLockPairs
+                    Map<Long, List<LockRegion>> indexedLockpairs = threadIndexedLockPairs
                             .get(tid);
                     if (indexedLockpairs == null) {
                         indexedLockpairs = new HashMap<>();
                         threadIndexedLockPairs.put(tid, indexedLockpairs);
                     }
-                    List<LockPair> lockpairs = indexedLockpairs.get(addr);
+                    List<LockRegion> lockpairs = indexedLockpairs.get(addr);
                     if (lockpairs == null) {
                         lockpairs = new ArrayList<>();
                         indexedLockpairs.put(addr, lockpairs);
@@ -371,9 +371,9 @@ public class Trace {
                     }
                     // assert(stack.size()>0); //this is possible when segmented
                     if (stack.size() == 0)
-                        lockpairs.add(new LockPair(null, (SyncEvent) node));
+                        lockpairs.add(new LockRegion(null, (SyncEvent) node));
                     else if (stack.size() == 1)
-                        lockpairs.add(new LockPair(stack.pop(), (SyncEvent) node));
+                        lockpairs.add(new LockRegion(stack.pop(), (SyncEvent) node));
                     else
                         stack.pop();// handle reentrant lock
                 }
@@ -448,7 +448,7 @@ public class Trace {
             Stack<SyncEvent> stack = entry.getValue();
 
             if (!stack.isEmpty()) {
-                Map<Long, List<LockPair>> indexedLockpairs = threadIndexedLockPairs
+                Map<Long, List<LockRegion>> indexedLockpairs = threadIndexedLockPairs
                         .get(tid);
                 if (indexedLockpairs == null) {
                     indexedLockpairs = new HashMap<>();
@@ -458,13 +458,13 @@ public class Trace {
                 while (!stack.isEmpty()) {
                     SyncEvent syncnode = stack.pop();// lock or wait
 
-                    List<LockPair> lockpairs = indexedLockpairs.get(syncnode.getSyncObject());
+                    List<LockRegion> lockpairs = indexedLockpairs.get(syncnode.getSyncObject());
                     if (lockpairs == null) {
                         lockpairs = new ArrayList<>();
                         indexedLockpairs.put(syncnode.getSyncObject(), lockpairs);
                     }
 
-                    lockpairs.add(new LockPair(syncnode, null));
+                    lockpairs.add(new LockRegion(syncnode, null));
                 }
             }
         }

@@ -28,12 +28,12 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-public class LockPair {
+public class LockRegion {
     public SyncEvent lock;
     public SyncEvent unlock;
 
     // make be wait node
-    public LockPair(SyncEvent lock, SyncEvent unlock) {
+    public LockRegion(SyncEvent lock, SyncEvent unlock) {
         this.lock = lock;
         this.unlock = unlock;
     }

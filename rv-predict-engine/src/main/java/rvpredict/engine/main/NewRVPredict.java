@@ -112,21 +112,34 @@ public class NewRVPredict {
     }
 
     /**
-     * Race detection method. For every pair of conflicting data accesses, the
-     * corresponding race constraint is generated and solved by a solver. If the
-     * solver returns a solution, we report a real data race. Otherwise, a
-     * potential race is reported. We call it a potential race but not a false
-     * race because it might be a real data race in another trace.
+     * Detects data races from a given trace.
+     *
+     * <p>
+     * We analyze memory access events on each shared memory address in the
+     * trace separately. For each shared memory address, enumerate all memory
+     * access pairs on this address and build the data-abstract feasibility for
+     * each of them. Then for each memory access pair, send to the SMT solver
+     * its data-abstract feasibility together with the already built must
+     * happen-before (MHB) constraints and locking constraints. The pair is
+     * reported as a real data race if the solver returns sat.
+     *
+     * <p>
+     * To reduce the expensive calls to the SMT solver, we apply three
+     * optimizations:
+     * <li>Use Lockset + Weak HB algorithm to filter out those memory access
+     * pairs that are obviously not data races.
+     * <li>Group "equivalent" memory access events to a block and consider them
+     * as a single memory access. In short, such block has the property that all
+     * memory access events in it have the same causal HB relation with the
+     * outside events. Therefore, it is sufficient to consider only one event
+     * from each block.
      *
      * @param cnstrBuilder
      * @param trace
+     *            the trace to analyze
      */
     private void detectRace(SMTConstraintBuilder cnstrBuilder, Trace trace) {
-        // implement potentialraces to be exact match
-
-        // sometimes we choose an un-optimized way to implement things faster,
-        // easier
-        // e.g., here we use check, but still enumerate read/write
+        /* enumerate each shared memory address in the trace */
         for (String addr : trace.getMemAccessEventsTable().rowKeySet()) {
             /* exclude volatile variable */
             if (config.novolatile && trace.isVolatileAddr(addr)) {
@@ -191,7 +204,7 @@ public class NewRVPredict {
                 }
             }
 
-            /* check conflicting pairs */
+            /* check memory access pairs */
             for (MemoryAccessEvent fst : equivAccBlk.keySet()) {
                 for (MemoryAccessEvent snd : equivAccBlk.keySet()) {
                     if (fst.getTID() >= snd.getTID()) {

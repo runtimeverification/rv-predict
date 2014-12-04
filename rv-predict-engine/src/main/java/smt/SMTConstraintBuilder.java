@@ -175,28 +175,13 @@ public class SMTConstraintBuilder {
 
             for (SyncEvent syncEvent : syncEvents) {
                 if (syncEvent.getType().equals(EventType.LOCK)) {
-                    long threadId = syncEvent.getTID();
-
-                    Stack<SyncEvent> lockStack = threadIdToLockStack.get(threadId);
-                    if (lockStack == null) {
-                        lockStack = new Stack<>();
-                        threadIdToLockStack.put(threadId, lockStack);
-                    }
-
-                    lockStack.push(syncEvent);
+                    safeStackMapGet(threadIdToLockStack, syncEvent.getTID()).push(syncEvent);
                 } else if (syncEvent.getType().equals(EventType.UNLOCK)) {
-                    SyncEvent unlockEvent = syncEvent;
-                    long threadId = unlockEvent.getTID();
-
-                    Stack<SyncEvent> lockStack = threadIdToLockStack.get(threadId);
-                    if (lockStack == null) {
-                        lockStack = new Stack<>();
-                        threadIdToLockStack.put(threadId, lockStack);
-                    }
-
+                    Stack<SyncEvent> lockStack = safeStackMapGet(threadIdToLockStack,
+                            syncEvent.getTID());
                     if (lockStack.size() <= 1) {
                         SyncEvent lockEvent = lockStack.isEmpty() ? null : lockStack.pop();
-                        LockRegion lockRegion = new LockRegion(lockEvent, unlockEvent);
+                        LockRegion lockRegion = new LockRegion(lockEvent, syncEvent);
                         lockRegions.add(lockRegion);
                         lockEngine.add(lockRegion);
                     } else {
@@ -219,11 +204,7 @@ public class SMTConstraintBuilder {
                     }
 
                     /* model wait event as two consecutive unlock-lock events */
-                    Stack<SyncEvent> stack = threadIdToLockStack.get(threadId);
-                    if (stack == null) {
-                        stack = new Stack<>();
-                        threadIdToLockStack.put(threadId, stack);
-                    }
+                    Stack<SyncEvent> stack = safeStackMapGet(threadIdToLockStack, threadId);
                     /* unlock */
                     if (stack.size() <= 1) {
                         lockRegions.add(new LockRegion(stack.isEmpty() ? null : stack.pop(), syncEvent));
@@ -233,7 +214,6 @@ public class SMTConstraintBuilder {
                     /* lock */
                     stack.push(syncEvent);
                 } else if (syncEvent.getType().equals(EventType.NOTIFY)) {
-                    assert matchNotifyEvent == null;
                     matchNotifyEvent = syncEvent;
                 }
             }
@@ -550,6 +530,15 @@ public class SMTConstraintBuilder {
         task.sendMessage(msg.toString());
 
         return task.sat;
+    }
+
+    private static <K, E> Stack<E> safeStackMapGet(Map<K, Stack<E>> map, K key) {
+        Stack<E> value = map.get(key);
+        if (value == null) {
+            value = new Stack<>();
+            map.put(key, value);
+        }
+        return value;
     }
 
 }

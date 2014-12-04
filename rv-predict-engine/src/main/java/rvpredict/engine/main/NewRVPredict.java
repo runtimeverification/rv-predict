@@ -279,17 +279,17 @@ public class NewRVPredict {
                 // Now, construct the constraints
 
                 // 1. declare all variables
-                engine.declareVariables(trace.getFullTrace());
+                engine.declareVariables(trace);
                 // 2. intra-thread order for all nodes, excluding branches
                 // and basic block transitions
                 if (config.rmm_pso)// TODO: add intra order between sync
                     engine.addPSOIntraThreadConstraints(trace.getMemAccessEventsTable());
                 else
-                    engine.addIntraThreadConstraints(trace.getThreadIdToEventsMap());
+                    engine.addIntraThreadConstraints(trace);
 
                 // 3. order for locks, signals, fork/joins
                 engine.addMHBConstraints(trace);
-                engine.addSynchronizationConstraints(trace);
+                engine.addLockingConstraints(trace);
 
                 detectRace(engine, trace);
             }

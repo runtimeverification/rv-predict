@@ -66,7 +66,7 @@ public class Trace {
     private final Set<Long> threadIds = new HashSet<>();
 
     // fulltrace represents all the critical events in the global order
-    private final List<Event> fulltrace = new ArrayList<>();
+    private final List<Event> allEvents = new ArrayList<>();
 
     // per thread node map
     private final Map<Long, List<Event>> threadIdToEvents = new HashMap<>();
@@ -127,8 +127,8 @@ public class Trace {
         return !sharedAddresses.isEmpty();
     }
 
-    public List<Event> getFullTrace() {
-        return fulltrace;
+    public List<Event> getAllEvents() {
+        return allEvents;
     }
 
     public Long getInitValueOf(String addr) {
@@ -301,7 +301,7 @@ public class Trace {
         } else {
             // all critical nodes -- read/write/synchronization events
 
-            fulltrace.add(node);
+            allEvents.add(node);
 
             List<Event> threadNodes = threadIdToEvents.get(tid);
             if (threadNodes == null) {

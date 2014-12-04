@@ -66,79 +66,66 @@ public class EngineSMTLIB1 {
     private static final String CONS_SETLOGIC = ":logic QF_IDL\n";
 
     private final String CONS_BENCHNAME;
-    private static final String BRACKET_LEFT = "(";
-    private static final String BRACKET_RIGHT = ")";
 
     public EngineSMTLIB1(Configuration config) {
         this.config = config;
         CONS_BENCHNAME = "(benchmark " + config.tableName + ".smt\n";
     }
 
+    @Deprecated
     private static String makeOrderVariable(long GID) {
         return "o" + GID;
     }
 
-    /**
-     * declare an order variable for each event in the trace
-     *
-     * @param trace
-     */
-    public void declareVariables(List<Event> trace) {
-        CONS_DECLARE = new StringBuilder(":extrafuns (\n");
-
-        CONS_ASSERT = new StringBuilder(":formula (and \n");
-
-        // CONS_ASSERT = "(assert (distinct ";
-        int size = trace.size();
-        for (int i = 0; i < size; i++) {
-            Event node = trace.get(i);
-            long GID = node.getGID();
-            String var = makeOrderVariable(GID);
-
-            CONS_DECLARE.append(BRACKET_LEFT).append(var).append(" Int)\n");
-
-            // CONS_ASSERT.append(var).append(" ");
-
-            // CONS_ASSERT.append("(assert (and (> ").append(var).append(" 0) (< ").append(var)
-            // .append(" ").append(size+1).append(")))\n");
-        }
-
-        CONS_DECLARE.append(BRACKET_RIGHT).append("\n");
-
+    private static String makeOrderVariable(Event event) {
+        return "o" + event.getGID();
     }
 
     /**
-     * add program order constraints
+     * Declares an order variable for each event in a given trace.
      *
-     * @param map
+     * @param trace
+     *            the given trace
      */
-    public void addIntraThreadConstraints(Map<Long, List<Event>> map) {
-        // create reachability engine
+    public void declareVariables(Trace trace) {
+        CONS_DECLARE = new StringBuilder(":extrafuns (\n");
+        CONS_ASSERT = new StringBuilder(":formula (and \n");
+
+        for (Event e : trace.getAllEvents()) {
+            CONS_DECLARE.append(String.format("(%s Int)\n", makeOrderVariable(e)));
+        }
+
+        CONS_DECLARE.append(")\n");
+    }
+
+    /**
+     * Adds intra-thread must happens-before (MHB) constraints of sequential
+     * consistent memory model for a given trace.
+     *
+     * @param trace
+     *            the given trace
+     */
+    public void addIntraThreadConstraints(Trace trace) {
+        // TODO(YilongL): why create a new instance of ReachabilityEngine here?
         reachEngine = new ReachabilityEngine();
 
-        Iterator<List<Event>> mapIt = map.values().iterator();
-        while (mapIt.hasNext()) {
-            List<Event> nodes = mapIt.next();
-            long lastGID = nodes.get(0).getGID();
-            String lastVar = makeOrderVariable(lastGID);
-            for (int i = 1; i < nodes.size(); i++) {
-                long thisGID = nodes.get(i).getGID();
-                String var = makeOrderVariable(thisGID);
-                CONS_ASSERT.append("(< ").append(lastVar).append(" ").append(var).append(")\n");
-
-                reachEngine.addEdge(lastGID, thisGID);
-
-                lastGID = thisGID;
-                lastVar = var;
-
+        for (List<Event> events : trace.getThreadIdToEventsMap().values()) {
+            Event prevEvent = events.get(0);
+            for (Event crntEvent : events.subList(1, events.size())) {
+                CONS_ASSERT.append(String.format("(< %s %s)\n", makeOrderVariable(prevEvent),
+                        makeOrderVariable(crntEvent)));
+                reachEngine.addEdge(prevEvent.getGID(), crntEvent.getGID());
+                prevEvent = crntEvent;
             }
         }
     }
 
     /**
-     * add intra-thread order constraint for POS memory model
+     * Adds intra-thread must happens-before (MHB) constraints of sequential
+     * consistent memory model for a given trace.
      *
-     * @param indexedMap
+     * @param trace
+     *            the given trace
      */
     public void addPSOIntraThreadConstraints(
             Table<String, Long, List<MemoryAccessEvent>> memAccessEventsTbl) {
@@ -160,6 +147,9 @@ public class EngineSMTLIB1 {
 
     /**
      * Adds must happens-before constraints (MHB) for a given trace.
+     *
+     * @param trace
+     *            the given trace
      */
     public void addMHBConstraints(Trace trace) {
         for (List<SyncEvent> startOrJoinEvents : trace.getThreadIdToStartJoinEvents().values()) {
@@ -196,17 +186,14 @@ public class EngineSMTLIB1 {
     }
 
     /**
-     * the order constraints between wait/notify/lock/unlock
+     * Adds lock mutual exclusion constraints for a given trace.
      *
      * @param trace
-     * @param syncNodesMap
-     * @param firstNodes
-     * @param lastNodes
+     *            the given trace
      */
-    public void addSynchronizationConstraints(Trace trace) {
+    public void addLockingConstraints(Trace trace) {
         lockEngine = new LockSetEngine();
 
-        // thread first node - last node
         for (List<SyncEvent> syncEvents : trace.getLockObjToSyncEvents().values()) {
             List<LockRegion> lockRegions = new ArrayList<>();
 
@@ -259,20 +246,20 @@ public class EngineSMTLIB1 {
                         long notifyGID = matchNotifyNode.getGID();
                         String notifyVar = makeOrderVariable(notifyGID);
 
-                        int nodeIndex = trace.getFullTrace().indexOf(syncEvent) + 1;
+                        int nodeIndex = trace.getAllEvents().indexOf(syncEvent) + 1;
 
                         // TODO: handle OutofBounds
                         try {
-                            while (trace.getFullTrace().get(nodeIndex).getTID() != tid)
+                            while (trace.getAllEvents().get(nodeIndex).getTID() != tid)
                                 nodeIndex++;
                         } catch (Exception e) {
                             // TODO(YilongL): c'mon! this code is so stupid
                             // if we arrive here, it means the wait node is
                             // the last node of the corresponding thread
                             // so add an order from notify to wait instead
-                            nodeIndex = trace.getFullTrace().indexOf(syncEvent);
+                            nodeIndex = trace.getAllEvents().indexOf(syncEvent);
                         }
-                        long waitNextGID = trace.getFullTrace().get(nodeIndex).getGID();
+                        long waitNextGID = trace.getAllEvents().get(nodeIndex).getGID();
                         var1 = makeOrderVariable(waitNextGID);
 
                         CONS_ASSERT.append("(< ").append(notifyVar).append(" ").append(var1)
@@ -629,7 +616,7 @@ public class EngineSMTLIB1 {
         cons_assert = cons_assert.replace(var2 + " ", var1 + " ");
         cons_assert = cons_assert.replace(var2 + ")", var1 + ")");
         StringBuilder msg = new StringBuilder(CONS_BENCHNAME).append(CONS_SETLOGIC)
-                .append(CONS_DECLARE).append(cons_assert).append(BRACKET_RIGHT);
+                .append(CONS_DECLARE).append(cons_assert).append(")");
         task.sendMessage(msg.toString());
 
         return task.sat;

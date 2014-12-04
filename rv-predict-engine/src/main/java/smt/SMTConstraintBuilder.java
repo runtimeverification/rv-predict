@@ -171,7 +171,7 @@ public class SMTConstraintBuilder {
         for (List<SyncEvent> syncEvents : trace.getLockObjToSyncEvents().values()) {
             List<LockRegion> lockRegions = Lists.newArrayList();
             Map<Long, Stack<SyncEvent>> threadIdToLockStack = Maps.newHashMap();
-            SyncEvent prevNotifyEvent = null;
+            SyncEvent matchNotifyEvent = null;
 
             for (SyncEvent syncEvent : syncEvents) {
                 if (syncEvent.getType().equals(EventType.LOCK)) {
@@ -204,46 +204,37 @@ public class SMTConstraintBuilder {
                         lockStack.pop();
                     }
                 } else if (syncEvent.getType().equals(EventType.WAIT)) {
-                    long tid = syncEvent.getTID();
+                    long threadId = syncEvent.getTID();
 
-                    if (prevNotifyEvent != null) {
-                        int nodeIndex = trace.getAllEvents().indexOf(syncEvent) + 1;
+                    if (matchNotifyEvent != null) {
+                        List<Event> thrdEvents = trace.getThreadEvents(threadId);
+                        int idx = thrdEvents.indexOf(syncEvent);
+                        Event nextThrdEvent = idx + 1 == thrdEvents.size() ? null : thrdEvents
+                                .get(idx + 1);
 
-                        // TODO: handle OutofBounds
-                        try {
-                            while (trace.getAllEvents().get(nodeIndex).getTID() != tid)
-                                nodeIndex++;
-                        } catch (Exception e) {
-                            // TODO(YilongL): c'mon! this code is so stupid
-                            // if we arrive here, it means the wait node is
-                            // the last node of the corresponding thread
-                            // so add an order from notify to wait instead
-                            nodeIndex = trace.getAllEvents().indexOf(syncEvent);
-                        }
-                        Event waitNext = trace.getAllEvents().get(nodeIndex);
+                        assertHappensBefore(matchNotifyEvent, nextThrdEvent == null ? syncEvent
+                                : nextThrdEvent);
 
-                        assertHappensBefore(prevNotifyEvent, waitNext);
-
-                        prevNotifyEvent = null;
+                        matchNotifyEvent = null;
                     }
 
-                    Stack<SyncEvent> stack = threadIdToLockStack.get(tid);
-                    // assert(stack.size()>0);
+                    /* model wait event as two consecutive unlock-lock events */
+                    Stack<SyncEvent> stack = threadIdToLockStack.get(threadId);
                     if (stack == null) {
-                        stack = new Stack<SyncEvent>();
-                        threadIdToLockStack.put(tid, stack);
+                        stack = new Stack<>();
+                        threadIdToLockStack.put(threadId, stack);
                     }
-                    if (stack.isEmpty())
-                        lockRegions.add(new LockRegion(null, syncEvent));
-                    else if (stack.size() == 1)
-                        lockRegions.add(new LockRegion(stack.pop(), syncEvent));
-                    else
-                        stack.pop();// handle reentrant lock here
-
+                    /* unlock */
+                    if (stack.size() <= 1) {
+                        lockRegions.add(new LockRegion(stack.isEmpty() ? null : stack.pop(), syncEvent));
+                    } else {
+                        stack.pop();
+                    }
+                    /* lock */
                     stack.push(syncEvent);
-
                 } else if (syncEvent.getType().equals(EventType.NOTIFY)) {
-                    prevNotifyEvent = syncEvent;
+                    assert matchNotifyEvent == null;
+                    matchNotifyEvent = syncEvent;
                 }
             }
 

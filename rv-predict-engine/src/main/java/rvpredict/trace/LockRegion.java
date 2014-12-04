@@ -35,8 +35,9 @@ public class LockRegion {
     private final long lockObj;
     private final long threadId;
 
-    // make be wait node
     public LockRegion(SyncEvent lock, SyncEvent unlock) {
+        assert lock.getType().equals(EventType.LOCK) || lock.getType().equals(EventType.WAIT);
+        assert unlock.getType().equals(EventType.UNLOCK) || unlock.getType().equals(EventType.WAIT);
         this.lock = lock;
         this.unlock = unlock;
         if (lock != null) {

@@ -79,9 +79,14 @@ public class Trace {
     private final Map<Long, List<BranchEvent>> threadIdToBranchEvents = new HashMap<>();
 
     /**
-     * Synchronization events regarding each synchronization object.
+     * Start/Join events indexed by the ID of its owner Thread object.
      */
-    private final Map<Long, List<SyncEvent>> syncObjToSyncEvents = new HashMap<>();
+    private final Map<Long, List<SyncEvent>> threadIdToStartJoinEvents = new HashMap<>();
+
+    /**
+     * Wait/Notify/Lock/Unlock events indexed by the involved intrinsic lock object.
+     */
+    private final Map<Long, List<SyncEvent>> lockObjToSyncEvents = new HashMap<>();
 
     /**
      * Read events on each address.
@@ -162,8 +167,12 @@ public class Trace {
         return threadIdToEvents;
     }
 
-    public Map<Long, List<SyncEvent>> getSyncObjToSyncEvents() {
-        return syncObjToSyncEvents;
+    public Map<Long, List<SyncEvent>> getThreadIdToStartJoinEvents() {
+        return threadIdToStartJoinEvents;
+    }
+
+    public Map<Long, List<SyncEvent>> getLockObjToSyncEvents() {
+        return lockObjToSyncEvents;
     }
 
     public List<ReadEvent> getReadEventsOn(String addr) {
@@ -334,49 +343,61 @@ public class Trace {
             } else if (node instanceof SyncEvent) {
                 // synchronization nodes
                 info.incrementSyncNumber();
+                SyncEvent syncEvent = (SyncEvent) node;
 
-                long addr = ((SyncEvent) node).getSyncObject();
-                List<SyncEvent> syncNodes = syncObjToSyncEvents.get(addr);
-                if (syncNodes == null) {
-                    syncNodes = new ArrayList<>();
-                    syncObjToSyncEvents.put(addr, syncNodes);
-                }
-
-                syncNodes.add((SyncEvent) node);
-
-                if (node.getType().equals(EventType.LOCK)) {
-                    Stack<SyncEvent> stack = threadSyncStack.get(tid);
-                    if (stack == null) {
-                        stack = new Stack<SyncEvent>();
-                        threadSyncStack.put(tid, stack);
+                if (syncEvent.getType().equals(EventType.START)
+                        || syncEvent.getType().equals(EventType.JOIN)) {
+                    long threadObj = syncEvent.getSyncObject();
+                    List<SyncEvent> events = threadIdToStartJoinEvents.get(threadObj);
+                    if (events == null) {
+                        events = Lists.newArrayList();
+                        threadIdToStartJoinEvents.put(threadObj, events);
+                    }
+                    events.add(syncEvent);
+                } else {
+                    long syncObj = syncEvent.getSyncObject();
+                    List<SyncEvent> syncEvents = lockObjToSyncEvents.get(syncObj);
+                    if (syncEvents == null) {
+                        syncEvents = new ArrayList<>();
+                        lockObjToSyncEvents.put(syncObj, syncEvents);
                     }
 
-                    stack.push((SyncEvent) node);
-                } else if (node.getType().equals(EventType.UNLOCK)) {
-                    Map<Long, List<LockRegion>> indexedLockpairs = threadIndexedLockPairs
-                            .get(tid);
-                    if (indexedLockpairs == null) {
-                        indexedLockpairs = new HashMap<>();
-                        threadIndexedLockPairs.put(tid, indexedLockpairs);
-                    }
-                    List<LockRegion> lockpairs = indexedLockpairs.get(addr);
-                    if (lockpairs == null) {
-                        lockpairs = new ArrayList<>();
-                        indexedLockpairs.put(addr, lockpairs);
-                    }
+                    syncEvents.add(syncEvent);
 
-                    Stack<SyncEvent> stack = threadSyncStack.get(tid);
-                    if (stack == null) {
-                        stack = new Stack<SyncEvent>();
-                        threadSyncStack.put(tid, stack);
+                    if (syncEvent.getType().equals(EventType.LOCK)) {
+                        Stack<SyncEvent> stack = threadSyncStack.get(tid);
+                        if (stack == null) {
+                            stack = new Stack<SyncEvent>();
+                            threadSyncStack.put(tid, stack);
+                        }
+
+                        stack.push(syncEvent);
+                    } else if (syncEvent.getType().equals(EventType.UNLOCK)) {
+                        Map<Long, List<LockRegion>> indexedLockpairs = threadIndexedLockPairs
+                                .get(tid);
+                        if (indexedLockpairs == null) {
+                            indexedLockpairs = new HashMap<>();
+                            threadIndexedLockPairs.put(tid, indexedLockpairs);
+                        }
+                        List<LockRegion> lockpairs = indexedLockpairs.get(syncObj);
+                        if (lockpairs == null) {
+                            lockpairs = new ArrayList<>();
+                            indexedLockpairs.put(syncObj, lockpairs);
+                        }
+
+                        Stack<SyncEvent> stack = threadSyncStack.get(tid);
+                        if (stack == null) {
+                            stack = new Stack<SyncEvent>();
+                            threadSyncStack.put(tid, stack);
+                        }
+                        // assert(stack.size()>0); //this is possible when segmented
+                        if (stack.size() == 0)
+                            lockpairs.add(new LockRegion(null, syncEvent));
+                        else if (stack.size() == 1)
+                            lockpairs.add(new LockRegion(stack.pop(), syncEvent));
+                        else
+                            stack.pop();// handle reentrant lock
                     }
-                    // assert(stack.size()>0); //this is possible when segmented
-                    if (stack.size() == 0)
-                        lockpairs.add(new LockRegion(null, (SyncEvent) node));
-                    else if (stack.size() == 1)
-                        lockpairs.add(new LockRegion(stack.pop(), (SyncEvent) node));
-                    else
-                        stack.pop();// handle reentrant lock
                 }
             }
         }

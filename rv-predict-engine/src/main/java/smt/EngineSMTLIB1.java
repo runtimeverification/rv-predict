@@ -69,11 +69,6 @@ public class EngineSMTLIB1 {
         CONS_BENCHNAME = "(benchmark " + config.tableName + ".smt\n";
     }
 
-    @Deprecated
-    private static String makeOrderVariable(long GID) {
-        return "o" + GID;
-    }
-
     private static String makeOrderVariable(Event event) {
         return "o" + event.getGID();
     }
@@ -196,9 +191,6 @@ public class EngineSMTLIB1 {
             // after lock, before unlock
 
             for (SyncEvent syncEvent : syncEvents) {
-                long gid1 = syncEvent.getGID();
-                String var1 = makeOrderVariable(gid1);
-
                 if (syncEvent.getType().equals(EventType.LOCK)) {
                     long threadId = syncEvent.getTID();
 
@@ -235,7 +227,7 @@ public class EngineSMTLIB1 {
                     // segmented
                     if (matchNotifyNode != null) {
                         long notifyGID = matchNotifyNode.getGID();
-                        String notifyVar = makeOrderVariable(notifyGID);
+                        String notifyVar = makeOrderVariable(matchNotifyNode);
 
                         int nodeIndex = trace.getAllEvents().indexOf(syncEvent) + 1;
 
@@ -251,7 +243,7 @@ public class EngineSMTLIB1 {
                             nodeIndex = trace.getAllEvents().indexOf(syncEvent);
                         }
                         long waitNextGID = trace.getAllEvents().get(nodeIndex).getGID();
-                        var1 = makeOrderVariable(waitNextGID);
+                        String var1 = makeOrderVariable(trace.getAllEvents().get(nodeIndex));
 
                         CONS_ASSERT.append("(< ").append(notifyVar).append(" ").append(var1)
                         .append(")\n");
@@ -314,10 +306,10 @@ public class EngineSMTLIB1 {
             if (lp1.lock == null)//
                 continue;
             else
-                var_lp1_a = makeOrderVariable(lp1.lock.getGID());
+                var_lp1_a = makeOrderVariable(lp1.lock);
 
             if (lp1.unlock != null)
-                var_lp1_b = makeOrderVariable(lp1.unlock.getGID());
+                var_lp1_b = makeOrderVariable(lp1.unlock);
 
             long lp1_tid = lp1.lock.getTID();
             LockRegion lp1_pre = lastLockPairMap.get(lp1_tid);
@@ -359,10 +351,10 @@ public class EngineSMTLIB1 {
                 String var_lp2_b = "";
                 String var_lp2_a = "";
 
-                var_lp2_b = makeOrderVariable(lp2.unlock.getGID());
+                var_lp2_b = makeOrderVariable(lp2.unlock);
 
                 if (lp2.lock != null)
-                    var_lp2_a = makeOrderVariable(lp2.lock.getGID());
+                    var_lp2_a = makeOrderVariable(lp2.lock);
 
                 String cons_b;
 
@@ -440,7 +432,7 @@ public class EngineSMTLIB1 {
 
                 // TODO: consider the case when preNode is not null
 
-                String var_r = makeOrderVariable(rnode.getGID());
+                String var_r = makeOrderVariable(rnode);
 
                 String cons_a = "";
                 String cons_a_end = "";
@@ -452,7 +444,7 @@ public class EngineSMTLIB1 {
 
                 for (int j = 0; j < writenodes_value_match.size(); j++) {
                     WriteEvent wnode1 = writenodes_value_match.get(j);
-                    String var_w1 = makeOrderVariable(wnode1.getGID());
+                    String var_w1 = makeOrderVariable(wnode1);
 
                     String cons_b_ = "(> " + var_r + " " + var_w1 + ")\n";
 
@@ -463,7 +455,7 @@ public class EngineSMTLIB1 {
                         WriteEvent wnode2 = writenodes.get(k);
                         if (!writenodes_value_match.contains(wnode2) && !canReach(wnode2, wnode1)
                                 && !canReach(rnode, wnode2)) {
-                            String var_w2 = makeOrderVariable(wnode2.getGID());
+                            String var_w2 = makeOrderVariable(wnode2);
 
                             if (last_cons_d != null) {
                                 cons_c += "(and " + last_cons_d;
@@ -529,12 +521,12 @@ public class EngineSMTLIB1 {
                 Long initValue = trace.getInitValueOf(rnode.getAddr());
 
                 if (initValue != null && rValue.equals(initValue)) {
-                    String var_r = makeOrderVariable(rnode.getGID());
+                    String var_r = makeOrderVariable(rnode);
 
                     for (int k = 0; k < writenodes.size(); k++) {
                         WriteEvent wnode3 = writenodes.get(k);
                         if (wnode3.getTID() != rnode.getTID() && !canReach(rnode, wnode3)) {
-                            String var_w3 = makeOrderVariable(wnode3.getGID());
+                            String var_w3 = makeOrderVariable(wnode3);
 
                             String cons_e = "(> " + var_w3 + " " + var_r + ")\n";
                             CONS_CAUSAL_RW.append(cons_e);

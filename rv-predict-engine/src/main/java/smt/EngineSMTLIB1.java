@@ -28,7 +28,6 @@
  ******************************************************************************/
 package smt;
 
-import rvpredict.trace.AbstractEvent;
 import rvpredict.trace.Event;
 import rvpredict.trace.EventType;
 import rvpredict.trace.MemoryAccessEvent;
@@ -46,8 +45,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Stack;
 import java.util.List;
-import com.google.common.collect.Table;
-
 import rvpredict.config.Configuration;
 
 public class EngineSMTLIB1 {
@@ -121,26 +118,20 @@ public class EngineSMTLIB1 {
     }
 
     /**
-     * Adds intra-thread must happens-before (MHB) constraints of sequential
-     * consistent memory model for a given trace.
+     * Adds intra-thread must happens-before (MHB) constraints of relaxed PSO
+     * memory model for a given trace.
      *
      * @param trace
      *            the given trace
      */
-    public void addPSOIntraThreadConstraints(
-            Table<String, Long, List<MemoryAccessEvent>> memAccessEventsTbl) {
-        for (List<MemoryAccessEvent> nodes : memAccessEventsTbl.values()) {
-            long lastGID = nodes.get(0).getGID();
-            String lastVar = makeOrderVariable(lastGID);
-            for (int i = 1; i < nodes.size(); i++) {
-                long thisGID = nodes.get(i).getGID();
-                String var = makeOrderVariable(thisGID);
-                CONS_ASSERT.append("(< ").append(lastVar).append(" ").append(var).append(")\n");
-
-                reachEngine.addEdge(lastGID, thisGID);
-
-                lastGID = thisGID;
-                lastVar = var;
+    public void addPSOIntraThreadConstraints(Trace trace) {
+        for (List<MemoryAccessEvent> nodes : trace.getMemAccessEventsTable().values()) {
+            MemoryAccessEvent prevEvent = nodes.get(0);
+            for (MemoryAccessEvent crntEvent : nodes.subList(1, nodes.size())) {
+                CONS_ASSERT.append(String.format("(< %s %s)\n", makeOrderVariable(prevEvent),
+                        makeOrderVariable(crntEvent)));
+                reachEngine.addEdge(prevEvent.getGID(), crntEvent.getGID());
+                prevEvent = crntEvent;
             }
         }
     }
@@ -155,7 +146,7 @@ public class EngineSMTLIB1 {
         for (List<SyncEvent> startOrJoinEvents : trace.getThreadIdToStartJoinEvents().values()) {
             for (SyncEvent startOrJoinEvent : startOrJoinEvents) {
                 long gid1 = startOrJoinEvent.getGID();
-                String var1 = makeOrderVariable(gid1);
+                String var1 = makeOrderVariable(startOrJoinEvent);
 
                 long threadId = startOrJoinEvent.getSyncObject();
                 if (startOrJoinEvent.getType().equals(EventType.START)) {
@@ -164,7 +155,7 @@ public class EngineSMTLIB1 {
                      * thread is not in the current trace */
                     if (fstThrdEvent != null) {
                         long gid2 = fstThrdEvent.getGID();
-                        String var2 = makeOrderVariable(gid2);
+                        String var2 = makeOrderVariable(fstThrdEvent);
                         CONS_ASSERT.append(String.format("(< %s %s)\n", var1, var2));
                         reachEngine.addEdge(gid1, gid2);
                     }
@@ -174,7 +165,7 @@ public class EngineSMTLIB1 {
                      * to join is not in the current trace */
                     if (lastThrdEvent != null) {
                         long gid2 = lastThrdEvent.getGID();
-                        String var2 = makeOrderVariable(gid2);
+                        String var2 = makeOrderVariable(lastThrdEvent);
                         CONS_ASSERT.append(String.format("(< %s %s)\n", var2, var1));
                         reachEngine.addEdge(gid2, gid1);
                     }
@@ -585,27 +576,14 @@ public class EngineSMTLIB1 {
     /**
      * return true if the solver return a solution to the constraints
      *
-     * @param node1
-     * @param node2
+     * @param e1
+     * @param e2
      * @param casualConstraint
      * @return
      */
-    public boolean isRace(AbstractEvent node1, AbstractEvent node2, StringBuilder casualConstraint) {
-        long gid1 = node1.getGID();
-        long gid2 = node2.getGID();
-        //
-        // if(gid1<gid2)
-        // { if(reachEngine.canReach(gid1, gid2))
-        // return false;
-        // }
-        // else
-        // {
-        // if(reachEngine.canReach(gid2, gid1))
-        // return false;
-        // }
-
-        String var1 = makeOrderVariable(gid1);
-        String var2 = makeOrderVariable(gid2);
+    public boolean isRace(Event e1, Event e2, StringBuilder casualConstraint) {
+        String var1 = makeOrderVariable(e1);
+        String var2 = makeOrderVariable(e2);
 
         // String QUERY = "\n(assert (= "+var1+" "+var2+"))\n\n";
 

@@ -173,7 +173,7 @@ public class EngineSMTLIB1 {
         for (List<SyncEvent> syncEvents : trace.getSyncObjToSyncEvents().values()) {
             List<LockRegion> lockRegions = new ArrayList<>();
 
-            Map<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<>();
+            Map<Long, Stack<SyncEvent>> threadIdToLockStack = new HashMap<>();
             SyncEvent matchNotifyNode = null;
 
             // during recording
@@ -205,39 +205,34 @@ public class EngineSMTLIB1 {
                         reachEngine.addEdge(gid2, gid1);
                     }
                 } else if (syncEvent.getType().equals(EventType.LOCK)) {
-                    long tid = syncEvent.getTID();
+                    long threadId = syncEvent.getTID();
 
-                    Stack<SyncEvent> stack = threadSyncStack.get(tid);
+                    Stack<SyncEvent> stack = threadIdToLockStack.get(threadId);
                     if (stack == null) {
-                        stack = new Stack<SyncEvent>();
-                        threadSyncStack.put(tid, stack);
+                        stack = new Stack<>();
+                        threadIdToLockStack.put(threadId, stack);
                     }
 
                     stack.push(syncEvent);
                 } else if (syncEvent.getType().equals(EventType.UNLOCK)) {
-                    long tid = syncEvent.getTID();
-                    Stack<SyncEvent> stack = threadSyncStack.get(tid);
+                    SyncEvent unlockEvent = syncEvent;
+                    long threadId = unlockEvent.getTID();
 
-                    // assert(stack.size()>0);//this is possible when segmented
+                    Stack<SyncEvent> stack = threadIdToLockStack.get(threadId);
                     if (stack == null) {
                         stack = new Stack<SyncEvent>();
-                        threadSyncStack.put(tid, stack);
+                        threadIdToLockStack.put(threadId, stack);
                     }
 
-                    // TODO: make sure no nested locks?
-
-                    if (stack.isEmpty()) {
-                        LockRegion lp = new LockRegion(null, syncEvent);
-                        lockRegions.add(lp);
-                        lockEngine.add(syncEvent.getSyncObject(), tid, lp);
-                    } else if (stack.size() == 1) {
-                        LockRegion lp = new LockRegion(stack.pop(), syncEvent);
-                        lockRegions.add(lp);
-
-                        lockEngine.add(syncEvent.getSyncObject(), tid, lp);
-                    } else
-                        stack.pop();// handle reentrant lock here
-
+                    if (stack.size() <= 1) {
+                        SyncEvent lockEvent = stack.isEmpty() ? null : stack.pop();
+                        LockRegion lockRegion = new LockRegion(lockEvent, unlockEvent);
+                        lockRegions.add(lockRegion);
+                        lockEngine.add(unlockEvent.getSyncObject(), threadId, lockRegion);
+                    } else {
+                        /* get rid of reentrant lock */
+                        stack.pop();
+                    }
                 } else if (syncEvent.getType().equals(EventType.WAIT)) {
                     long tid = syncEvent.getTID();
 
@@ -272,11 +267,11 @@ public class EngineSMTLIB1 {
                         matchNotifyNode = null;
                     }
 
-                    Stack<SyncEvent> stack = threadSyncStack.get(tid);
+                    Stack<SyncEvent> stack = threadIdToLockStack.get(tid);
                     // assert(stack.size()>0);
                     if (stack == null) {
                         stack = new Stack<SyncEvent>();
-                        threadSyncStack.put(tid, stack);
+                        threadIdToLockStack.put(tid, stack);
                     }
                     if (stack.isEmpty())
                         lockRegions.add(new LockRegion(null, syncEvent));
@@ -293,7 +288,7 @@ public class EngineSMTLIB1 {
             }
 
             // check threadSyncStack
-            Iterator<Stack<SyncEvent>> stackIt = threadSyncStack.values().iterator();
+            Iterator<Stack<SyncEvent>> stackIt = threadIdToLockStack.values().iterator();
             while (stackIt.hasNext()) {
                 Stack<SyncEvent> stack = stackIt.next();
                 if (stack.size() > 0)// handle reentrant lock here, only pop the

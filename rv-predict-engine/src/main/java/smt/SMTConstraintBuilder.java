@@ -47,26 +47,26 @@ import java.util.Stack;
 import java.util.List;
 import rvpredict.config.Configuration;
 
-public class EngineSMTLIB1 {
+public class SMTConstraintBuilder {
 
     private int id = 0;// constraint id
     private SMTTaskRun task;
 
-    private Configuration config;
+    private final Configuration config;
 
-    private ReachabilityEngine reachEngine;// TODO: do segmentation on this
-    private LockSetEngine lockEngine;
+    private final ReachabilityEngine reachEngine = new ReachabilityEngine();
+    private final LockSetEngine lockEngine = new LockSetEngine();
 
     // constraints below
-    private StringBuilder CONS_DECLARE;
-    private StringBuilder CONS_ASSERT;
+    private final StringBuilder smtlibDecl = new StringBuilder(":extrafuns (\n");
+    private final StringBuilder smtlibAssertion = new StringBuilder(":formula (and \n");
     private static final String CONS_SETLOGIC = ":logic QF_IDL\n";
 
-    private final String CONS_BENCHNAME;
+    private final String benchname;
 
-    public EngineSMTLIB1(Configuration config) {
+    public SMTConstraintBuilder(Configuration config) {
         this.config = config;
-        CONS_BENCHNAME = "(benchmark " + config.tableName + ".smt\n";
+        benchname = "(benchmark " + config.tableName + ".smt\n";
     }
 
     private static String makeOrderVariable(Event event) {
@@ -80,14 +80,15 @@ public class EngineSMTLIB1 {
      *            the given trace
      */
     public void declareVariables(Trace trace) {
-        CONS_DECLARE = new StringBuilder(":extrafuns (\n");
-        CONS_ASSERT = new StringBuilder(":formula (and \n");
-
         for (Event e : trace.getAllEvents()) {
-            CONS_DECLARE.append(String.format("(%s Int)\n", makeOrderVariable(e)));
+            smtlibDecl.append(String.format("(%s Int)\n", makeOrderVariable(e)));
         }
+        smtlibDecl.append(")\n");
+    }
 
-        CONS_DECLARE.append(")\n");
+    private void assertHappensBefore(Event e1, Event e2) {
+        smtlibAssertion.append(String.format("(< %s %s)\n", makeOrderVariable(e1),
+                makeOrderVariable(e2)));
     }
 
     /**
@@ -98,14 +99,10 @@ public class EngineSMTLIB1 {
      *            the given trace
      */
     public void addIntraThreadConstraints(Trace trace) {
-        // TODO(YilongL): why create a new instance of ReachabilityEngine here?
-        reachEngine = new ReachabilityEngine();
-
         for (List<Event> events : trace.getThreadIdToEventsMap().values()) {
             Event prevEvent = events.get(0);
             for (Event crntEvent : events.subList(1, events.size())) {
-                CONS_ASSERT.append(String.format("(< %s %s)\n", makeOrderVariable(prevEvent),
-                        makeOrderVariable(crntEvent)));
+                assertHappensBefore(prevEvent, crntEvent);
                 reachEngine.addEdge(prevEvent.getGID(), crntEvent.getGID());
                 prevEvent = crntEvent;
             }
@@ -123,8 +120,7 @@ public class EngineSMTLIB1 {
         for (List<MemoryAccessEvent> nodes : trace.getMemAccessEventsTable().values()) {
             MemoryAccessEvent prevEvent = nodes.get(0);
             for (MemoryAccessEvent crntEvent : nodes.subList(1, nodes.size())) {
-                CONS_ASSERT.append(String.format("(< %s %s)\n", makeOrderVariable(prevEvent),
-                        makeOrderVariable(crntEvent)));
+                assertHappensBefore(prevEvent, crntEvent);
                 reachEngine.addEdge(prevEvent.getGID(), crntEvent.getGID());
                 prevEvent = crntEvent;
             }
@@ -151,7 +147,7 @@ public class EngineSMTLIB1 {
                     if (fstThrdEvent != null) {
                         long gid2 = fstThrdEvent.getGID();
                         String var2 = makeOrderVariable(fstThrdEvent);
-                        CONS_ASSERT.append(String.format("(< %s %s)\n", var1, var2));
+                        smtlibAssertion.append(String.format("(< %s %s)\n", var1, var2));
                         reachEngine.addEdge(gid1, gid2);
                     }
                 } else if (startOrJoinEvent.getType().equals(EventType.JOIN)) {
@@ -161,7 +157,7 @@ public class EngineSMTLIB1 {
                     if (lastThrdEvent != null) {
                         long gid2 = lastThrdEvent.getGID();
                         String var2 = makeOrderVariable(lastThrdEvent);
-                        CONS_ASSERT.append(String.format("(< %s %s)\n", var2, var1));
+                        smtlibAssertion.append(String.format("(< %s %s)\n", var2, var1));
                         reachEngine.addEdge(gid2, gid1);
                     }
                 } else {
@@ -178,8 +174,6 @@ public class EngineSMTLIB1 {
      *            the given trace
      */
     public void addLockingConstraints(Trace trace) {
-        lockEngine = new LockSetEngine();
-
         for (List<SyncEvent> syncEvents : trace.getLockObjToSyncEvents().values()) {
             List<LockRegion> lockRegions = new ArrayList<>();
 
@@ -245,7 +239,7 @@ public class EngineSMTLIB1 {
                         long waitNextGID = trace.getAllEvents().get(nodeIndex).getGID();
                         String var1 = makeOrderVariable(trace.getAllEvents().get(nodeIndex));
 
-                        CONS_ASSERT.append("(< ").append(notifyVar).append(" ").append(var1)
+                        smtlibAssertion.append("(< ").append(notifyVar).append(" ").append(var1)
                         .append(")\n");
 
                         reachEngine.addEdge(notifyGID, waitNextGID);
@@ -288,7 +282,7 @@ public class EngineSMTLIB1 {
                 }
             }
 
-            CONS_ASSERT.append(constructLockConstraintsOptimized(lockRegions));
+            smtlibAssertion.append(constructLockConstraintsOptimized(lockRegions));
         }
     }
 
@@ -582,11 +576,11 @@ public class EngineSMTLIB1 {
         id++;
         task = new SMTTaskRun(config, id);
 
-        String cons_assert = CONS_ASSERT.toString() + casualConstraint.toString() + ")\n";
+        String cons_assert = smtlibAssertion.toString() + casualConstraint.toString() + ")\n";
         cons_assert = cons_assert.replace(var2 + " ", var1 + " ");
         cons_assert = cons_assert.replace(var2 + ")", var1 + ")");
-        StringBuilder msg = new StringBuilder(CONS_BENCHNAME).append(CONS_SETLOGIC)
-                .append(CONS_DECLARE).append(cons_assert).append(")");
+        StringBuilder msg = new StringBuilder(benchname).append(CONS_SETLOGIC)
+                .append(smtlibDecl).append(cons_assert).append(")");
         task.sendMessage(msg.toString());
 
         return task.sat;

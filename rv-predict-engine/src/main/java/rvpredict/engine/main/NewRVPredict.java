@@ -51,7 +51,7 @@ import rvpredict.trace.Trace;
 import rvpredict.trace.TraceInfo;
 import rvpredict.trace.WriteEvent;
 import rvpredict.util.Logger;
-import smt.EngineSMTLIB1;
+import smt.SMTConstraintBuilder;
 import violation.Race;
 import violation.Violation;
 
@@ -118,10 +118,10 @@ public class NewRVPredict {
      * potential race is reported. We call it a potential race but not a false
      * race because it might be a real data race in another trace.
      *
-     * @param engine
+     * @param cnstrBuilder
      * @param trace
      */
-    private void detectRace(EngineSMTLIB1 engine, Trace trace) {
+    private void detectRace(SMTConstraintBuilder cnstrBuilder, Trace trace) {
         // implement potentialraces to be exact match
 
         // sometimes we choose an un-optimized way to implement things faster,
@@ -214,15 +214,15 @@ public class NewRVPredict {
                     }
 
                     /* not a race if the two events hold a common lock */
-                    if (engine.hasCommonLock(fst, snd)) {
+                    if (cnstrBuilder.hasCommonLock(fst, snd)) {
                         continue;
                     }
 
                     /* not a race if one event happens-before the other */
                     if (fst.getGID() < snd.getGID()
-                            && engine.canReach(fst, snd)
+                            && cnstrBuilder.canReach(fst, snd)
                             || fst.getGID() > snd.getGID()
-                            && engine.canReach(snd, fst)) {
+                            && cnstrBuilder.canReach(snd, fst)) {
                         continue;
                     }
 
@@ -230,13 +230,13 @@ public class NewRVPredict {
                     List<ReadEvent> readDeps1 = trace.getDependentReadEvents(fst, config.branch);
                     List<ReadEvent> readDeps2 = trace.getDependentReadEvents(snd, config.branch);
 
-                    StringBuilder sb1 = engine.constructCausalReadWriteConstraints(fst.getGID(),
+                    StringBuilder sb1 = cnstrBuilder.constructCausalReadWriteConstraints(fst.getGID(),
                             readDeps1, trace);
-                    StringBuilder sb2 = engine.constructCausalReadWriteConstraints(-1, readDeps2,
+                    StringBuilder sb2 = cnstrBuilder.constructCausalReadWriteConstraints(-1, readDeps2,
                             trace);
                     StringBuilder sb = sb1.append(sb2);
 
-                    if (engine.isRace(fst, snd, sb)) {
+                    if (cnstrBuilder.isRace(fst, snd, sb)) {
                         for (Race r : potentialRaces) {
                             if (violations.add(r)) {
                                 logger.report(r.toString(), Logger.MSGTYPE.REAL);
@@ -249,37 +249,35 @@ public class NewRVPredict {
     }
 
     public void run() {
-        EngineSMTLIB1 engine = new EngineSMTLIB1(config);
         Map<String, Long> initValues = new HashMap<>();
 
         // process the trace window by window
         for (int round = 0; round * config.window_size < totalTraceLength; round++) {
             long index_start = round * config.window_size + 1;
             long index_end = (round + 1) * config.window_size;
-            // if(totalTraceLength>rvpredict.config.window_size)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+totalTraceLength+" ******************\n");
 
             // load trace
             Trace trace = dbEngine.getTrace(index_start, index_end, initValues, traceInfo);
 
             // OPT: if #sv==0 or #shared rw ==0 continue
             if (trace.mayRace()) {
-                // Now, construct the constraints
+                SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config);
 
                 // 1. declare all variables
-                engine.declareVariables(trace);
+                cnstrBuilder.declareVariables(trace);
                 // 2. intra-thread order for all nodes, excluding branches
                 // and basic block transitions
                 if (config.rmm_pso) {
-                    engine.addPSOIntraThreadConstraints(trace);
+                    cnstrBuilder.addPSOIntraThreadConstraints(trace);
                 } else {
-                    engine.addIntraThreadConstraints(trace);
+                    cnstrBuilder.addIntraThreadConstraints(trace);
                 }
 
                 // 3. order for locks, signals, fork/joins
-                engine.addMHBConstraints(trace);
-                engine.addLockingConstraints(trace);
+                cnstrBuilder.addMHBConstraints(trace);
+                cnstrBuilder.addLockingConstraints(trace);
 
-                detectRace(engine, trace);
+                detectRace(cnstrBuilder, trace);
             }
 
             /* use the final values of the current window as the initial values

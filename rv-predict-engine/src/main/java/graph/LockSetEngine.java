@@ -46,7 +46,9 @@ public class LockSetEngine {
 
     private Table<Long, Long, List<LockRegion>> lockTbl = HashBasedTable.create();
 
-    public void add(long addr, long threadId, LockRegion lockRegion) {
+    public void add(LockRegion lockRegion) {
+        long addr = lockRegion.getLockObj();
+        long threadId = lockRegion.getThreadId();
         List<LockRegion> lockRegions = lockTbl.get(addr, threadId);
         if (lockRegions == null) {
             lockRegions = Lists.newArrayList();
@@ -58,8 +60,8 @@ public class LockSetEngine {
         ListIterator<LockRegion> iter = lockRegions.listIterator(lockRegions.size());
         while (iter.hasPrevious()) {
             LockRegion prevLockRegion = iter.previous();
-            if (lockRegion.lock == null
-                    || (prevLockRegion.lock != null && lockRegion.lock.getGID() < prevLockRegion.lock
+            if (lockRegion.getLock() == null
+                    || (prevLockRegion.getLock() != null && lockRegion.getLock().getGID() < prevLockRegion.getLock()
                             .getGID())) {
                 iter.remove();
             } else {
@@ -97,22 +99,22 @@ public class LockSetEngine {
 
             LockRegion lp = lockpair.get(mid);
 
-            if (lp.lock == null) {
-                if (gid < lp.unlock.getGID())
+            if (lp.getLock() == null) {
+                if (gid < lp.getUnlock().getGID())
                     return true;
                 else {
                     s = mid + 1;
                 }
-            } else if (lp.unlock == null) {
-                if (gid > lp.lock.getGID())
+            } else if (lp.getUnlock() == null) {
+                if (gid > lp.getLock().getGID())
                     return true;
                 else {
                     e = mid - 1;
                 }
             } else {
-                if (gid > lp.unlock.getGID())
+                if (gid > lp.getUnlock().getGID())
                     s = mid + 1;
-                else if (gid < lp.lock.getGID())
+                else if (gid < lp.getLock().getGID())
                     e = mid - 1;
                 else
                     return true;

@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -29,12 +29,38 @@
 package rvpredict.trace;
 
 public class LockRegion {
-    public SyncEvent lock;
-    public SyncEvent unlock;
+    private final SyncEvent lock;
+    private final SyncEvent unlock;
+
+    private final long lockObj;
+    private final long threadId;
 
     // make be wait node
     public LockRegion(SyncEvent lock, SyncEvent unlock) {
         this.lock = lock;
         this.unlock = unlock;
+        if (lock != null) {
+            lockObj = lock.getSyncObject();
+            threadId = lock.getTID();
+        } else {
+            lockObj = unlock.getSyncObject();
+            threadId = unlock.getTID();
+        }
+    }
+
+    public SyncEvent getLock() {
+        return lock;
+    }
+
+    public SyncEvent getUnlock() {
+        return unlock;
+    }
+
+    public long getLockObj() {
+        return lockObj;
+    }
+
+    public long getThreadId() {
+        return threadId;
     }
 }

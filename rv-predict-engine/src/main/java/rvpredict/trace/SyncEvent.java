@@ -34,7 +34,7 @@ package rvpredict.trace;
  */
 public class SyncEvent extends AbstractEvent {
 
-    protected final long syncObject;
+    private final long syncObject;
 
     public SyncEvent(long GID, long TID, int ID, EventType type, long syncObject) {
         super(GID, TID, ID, type);

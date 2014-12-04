@@ -89,6 +89,7 @@ public class SMTConstraintBuilder {
     private void assertHappensBefore(Event e1, Event e2) {
         smtlibAssertion.append(String.format("(< %s %s)\n", makeOrderVariable(e1),
                 makeOrderVariable(e2)));
+        reachEngine.addEdge(e1, e2);
     }
 
     /**
@@ -103,7 +104,6 @@ public class SMTConstraintBuilder {
             Event prevEvent = events.get(0);
             for (Event crntEvent : events.subList(1, events.size())) {
                 assertHappensBefore(prevEvent, crntEvent);
-                reachEngine.addEdge(prevEvent.getGID(), crntEvent.getGID());
                 prevEvent = crntEvent;
             }
         }
@@ -121,7 +121,6 @@ public class SMTConstraintBuilder {
             MemoryAccessEvent prevEvent = nodes.get(0);
             for (MemoryAccessEvent crntEvent : nodes.subList(1, nodes.size())) {
                 assertHappensBefore(prevEvent, crntEvent);
-                reachEngine.addEdge(prevEvent.getGID(), crntEvent.getGID());
                 prevEvent = crntEvent;
             }
         }
@@ -136,29 +135,20 @@ public class SMTConstraintBuilder {
     public void addMHBConstraints(Trace trace) {
         for (List<SyncEvent> startOrJoinEvents : trace.getThreadIdToStartJoinEvents().values()) {
             for (SyncEvent startOrJoinEvent : startOrJoinEvents) {
-                long gid1 = startOrJoinEvent.getGID();
-                String var1 = makeOrderVariable(startOrJoinEvent);
-
                 long threadId = startOrJoinEvent.getSyncObject();
                 if (startOrJoinEvent.getType().equals(EventType.START)) {
                     Event fstThrdEvent = trace.getFirstThreadEvent(threadId);
                     /* YilongL: it's possible that the first event of the new
                      * thread is not in the current trace */
                     if (fstThrdEvent != null) {
-                        long gid2 = fstThrdEvent.getGID();
-                        String var2 = makeOrderVariable(fstThrdEvent);
-                        smtlibAssertion.append(String.format("(< %s %s)\n", var1, var2));
-                        reachEngine.addEdge(gid1, gid2);
+                        assertHappensBefore(startOrJoinEvent, fstThrdEvent);
                     }
                 } else if (startOrJoinEvent.getType().equals(EventType.JOIN)) {
                     Event lastThrdEvent = trace.getLastThreadEvent(threadId);
                     /* YilongL: it's possible that the last event of the thread
                      * to join is not in the current trace */
                     if (lastThrdEvent != null) {
-                        long gid2 = lastThrdEvent.getGID();
-                        String var2 = makeOrderVariable(lastThrdEvent);
-                        smtlibAssertion.append(String.format("(< %s %s)\n", var2, var1));
-                        reachEngine.addEdge(gid2, gid1);
+                        assertHappensBefore(lastThrdEvent, startOrJoinEvent);
                     }
                 } else {
                     assert false : "unexpected event: " + startOrJoinEvent;
@@ -220,7 +210,6 @@ public class SMTConstraintBuilder {
                     // assert(matchNotifyNode!=null);this is also possible when
                     // segmented
                     if (matchNotifyNode != null) {
-                        long notifyGID = matchNotifyNode.getGID();
                         String notifyVar = makeOrderVariable(matchNotifyNode);
 
                         int nodeIndex = trace.getAllEvents().indexOf(syncEvent) + 1;
@@ -236,13 +225,13 @@ public class SMTConstraintBuilder {
                             // so add an order from notify to wait instead
                             nodeIndex = trace.getAllEvents().indexOf(syncEvent);
                         }
-                        long waitNextGID = trace.getAllEvents().get(nodeIndex).getGID();
-                        String var1 = makeOrderVariable(trace.getAllEvents().get(nodeIndex));
+                        Event waitNext = trace.getAllEvents().get(nodeIndex);
+                        String var1 = makeOrderVariable(waitNext);
 
                         smtlibAssertion.append("(< ").append(notifyVar).append(" ").append(var1)
                         .append(")\n");
 
-                        reachEngine.addEdge(notifyGID, waitNextGID);
+                        reachEngine.addEdge(matchNotifyNode, waitNext);
 
                         // clear notifyNode
                         matchNotifyNode = null;

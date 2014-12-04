@@ -24,8 +24,6 @@
 
 (?s)(.*)Race on field org.apache.mina.core.buffer.IoBuffer.allocator between two instances of:(\s)*org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)
 
-(?s)(.*)Race on field org.apache.mina.core.service.IoServiceStatistics.lastReadTime between:(\s)*org.apache.mina.core.service.IoServiceStatistics.increaseReadBytes\(IoServiceStatistics.java:318\)(\s)*org.apache.mina.core.service.IoServiceStatistics.increaseReadMessages\(IoServiceStatistics.java:327\)(.*)
-
 (?s)(.*)Race on field org.apache.mina.core.service.IoServiceStatistics.lastWriteTime between:(\s)*org.apache.mina.core.service.IoServiceStatistics.increaseWrittenBytes\(IoServiceStatistics.java:336\)(\s)*org.apache.mina.core.service.IoServiceStatistics.increaseWrittenMessages\(IoServiceStatistics.java:345\)(.*)
 
 (?s)(.*)Race on field org.apache.mina.core.service.IoServiceStatistics.lastReadTime between two instances of:(\s)*org.apache.mina.core.service.IoServiceStatistics.increaseReadMessages\(IoServiceStatistics.java:327\)(.*)

@@ -248,19 +248,6 @@ public class NewRVPredict {
         }
     }
 
-    /**
-     * The input is the application name and the optional options
-     *
-     * @param args
-     */
-    public static void main(String[] args) {
-        Configuration config = new Configuration();
-        config.parseArguments(args, true);
-        config.outdir = "./log";
-        NewRVPredict predictor = new NewRVPredict(config);
-        predictor.run();
-    }
-
     public void run() {
         EngineSMTLIB1 engine = new EngineSMTLIB1(config);
         Map<String, Long> initValues = new HashMap<>();

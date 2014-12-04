@@ -62,18 +62,14 @@ public class Trace {
 
     // the set of shared memory locations
     private final Set<String> sharedAddresses = new HashSet<>();
-    // the set of threads
-    private final Set<Long> threads = new HashSet<>();
+
+    private final Set<Long> threadIds = new HashSet<>();
 
     // fulltrace represents all the critical events in the global order
     private final List<Event> fulltrace = new ArrayList<>();
 
     // per thread node map
     private final Map<Long, List<Event>> threadIdToEvents = new HashMap<>();
-
-    // the first node and last node map of each thread
-    private final Map<Long, Event> threadFirstNodeMap = new HashMap<>();
-    private final Map<Long, Event> threadLastNodeMap = new HashMap<>();
 
     // per thread per lock lock/unlock pair
     private final Map<Long, Map<Long, List<LockRegion>>> threadIndexedLockPairs = new HashMap<>();
@@ -82,8 +78,10 @@ public class Trace {
     // per thread branch nodes
     private final Map<Long, List<BranchEvent>> threadIdToBranchEvents = new HashMap<>();
 
-    // per thead synchronization nodes
-    private final Map<Long, List<SyncEvent>> syncNodesMap = new HashMap<>();
+    /**
+     * Synchronization events regarding each synchronization object.
+     */
+    private final Map<Long, List<SyncEvent>> syncObjToSyncEvents = new HashMap<>();
 
     /**
      * Read events on each address.
@@ -136,16 +134,23 @@ public class Trace {
         return info.getLocIdToStmtSigMap();
     }
 
-    public Map<Long, Event> getThreadFirstNodeMap() {
-        return threadFirstNodeMap;
+    public Event getFirstThreadEvent(long threadId) {
+        List<Event> events = getThreadEvents(threadId);
+        return events.isEmpty() ? null : events.get(0);
     }
 
-    public Map<Long, Event> getThreadLastNodeMap() {
-        return threadLastNodeMap;
+    public Event getLastThreadEvent(long threadId) {
+        List<Event> events = getThreadEvents(threadId);
+        return events.isEmpty() ? null : events.get(events.size() - 1);
+    }
+
+    public Set<Long> getThreadIds() {
+        return threadIds;
     }
 
     public List<Event> getThreadEvents(long threadId) {
-        return threadIdToEvents.get(threadId);
+        List<Event> events = threadIdToEvents.get(threadId);
+        return events == null ? Lists.<Event>newArrayList() : events;
     }
 
     public List<BranchEvent> getThreadBranchEvents(long threadId) {
@@ -157,8 +162,8 @@ public class Trace {
         return threadIdToEvents;
     }
 
-    public Map<Long, List<SyncEvent>> getSyncNodesMap() {
-        return syncNodesMap;
+    public Map<Long, List<SyncEvent>> getSyncObjToSyncEvents() {
+        return syncObjToSyncEvents;
     }
 
     public List<ReadEvent> getReadEventsOn(String addr) {
@@ -268,7 +273,7 @@ public class Trace {
      */
     private void addNode(Event node) {
         Long tid = node.getTID();
-        threads.add(tid);
+        threadIds.add(tid);
 
         if (node instanceof BranchEvent) {
             // branch node
@@ -293,14 +298,10 @@ public class Trace {
             if (threadNodes == null) {
                 threadNodes = new ArrayList<>();
                 threadIdToEvents.put(tid, threadNodes);
-                threadFirstNodeMap.put(tid, node);
-
             }
 
             threadNodes.add(node);
-
             // TODO: Optimize it -- no need to update it every time
-            threadLastNodeMap.put(tid, node);
             if (node instanceof MemoryAccessEvent) {
                 info.incrementSharedReadWriteNumber();
 
@@ -335,10 +336,10 @@ public class Trace {
                 info.incrementSyncNumber();
 
                 long addr = ((SyncEvent) node).getSyncObject();
-                List<SyncEvent> syncNodes = syncNodesMap.get(addr);
+                List<SyncEvent> syncNodes = syncObjToSyncEvents.get(addr);
                 if (syncNodes == null) {
                     syncNodes = new ArrayList<>();
-                    syncNodesMap.put(addr, syncNodes);
+                    syncObjToSyncEvents.put(addr, syncNodes);
                 }
 
                 syncNodes.add((SyncEvent) node);
@@ -430,7 +431,7 @@ public class Trace {
 
         // add info
         info.addSharedAddresses(sharedAddresses);
-        info.addThreads(threads);
+        info.addThreads(threadIds);
 
     }
 

@@ -166,57 +166,46 @@ public class EngineSMTLIB1 {
      * @param firstNodes
      * @param lastNodes
      */
-    public void addSynchronizationConstraints(Trace trace,
-            Map<Long, List<SyncEvent>> syncNodesMap,
-            Map<Long, Event> firstNodes, Map<Long, Event> lastNodes) {
-        lockEngine = new LockSetEngine();// construct a new lockset for this
-                                         // segment
+    public void addSynchronizationConstraints(Trace trace) {
+        lockEngine = new LockSetEngine();
 
         // thread first node - last node
-        Iterator<List<SyncEvent>> mapIt = syncNodesMap.values().iterator();
-        while (mapIt.hasNext()) {
-            List<SyncEvent> nodes = mapIt.next();
+        for (List<SyncEvent> syncEvents : trace.getSyncObjToSyncEvents().values()) {
+            List<LockRegion> lockRegions = new ArrayList<>();
 
-            List<LockRegion> lockPairs = new ArrayList<>();
-
-            HashMap<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<Long, Stack<SyncEvent>>();
+            Map<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<>();
             SyncEvent matchNotifyNode = null;
 
             // during recording
             // should after wait, before notify
             // after lock, before unlock
 
-            for (int i = 0; i < nodes.size(); i++) {
-                SyncEvent node = nodes.get(i);
-                long thisGID = node.getGID();
-                String var = makeVariable(thisGID);
-                if (node.getType().equals(EventType.START)) {
-                    long tid = Long.valueOf(node.getSyncObject());
-                    Event fnode = firstNodes.get(tid);
-                    if (fnode != null) {
-                        long fGID = fnode.getGID();
-                        String fvar = makeVariable(fGID);
+            for (SyncEvent syncEvent : syncEvents) {
+                long gid1 = syncEvent.getGID();
+                String var1 = makeVariable(gid1);
 
-                        CONS_ASSERT.append("(< ").append(var).append(" ").append(fvar)
-                                .append(")\n");
-
-                        reachEngine.addEdge(thisGID, fGID);
-
+                if (syncEvent.getType().equals(EventType.START)) {
+                    Event fstThrdEvent = trace.getFirstThreadEvent(syncEvent.getSyncObject());
+                    /* YilongL: it's possible that the first event of the new
+                     * thread is not in the current trace */
+                    if (fstThrdEvent != null) {
+                        long gid2 = fstThrdEvent.getGID();
+                        String var2 = makeVariable(gid2);
+                        CONS_ASSERT.append(String.format("(< %s %s)\n", var1, var2));
+                        reachEngine.addEdge(gid1, gid2);
                     }
-                } else if (node.getType().equals(EventType.JOIN)) {
-                    long tid = Long.valueOf(node.getSyncObject());
-                    Event lnode = lastNodes.get(tid);
-                    if (lnode != null) {
-                        long lGID = lnode.getGID();
-                        String lvar = makeVariable(lGID);
-                        CONS_ASSERT.append("(< ").append(lvar).append(" ").append(var)
-                                .append(")\n");
-                        reachEngine.addEdge(lGID, thisGID);
-
+                } else if (syncEvent.getType().equals(EventType.JOIN)) {
+                    Event lastThrdEvent = trace.getLastThreadEvent(syncEvent.getSyncObject());
+                    /* YilongL: it's possible that the last event of the thread
+                     * to join is not in the current trace */
+                    if (lastThrdEvent != null) {
+                        long gid2 = lastThrdEvent.getGID();
+                        String var2 = makeVariable(gid2);
+                        CONS_ASSERT.append(String.format("(< %s %s)\n", var2, var1));
+                        reachEngine.addEdge(gid2, gid1);
                     }
-
-                } else if (node.getType().equals(EventType.LOCK)) {
-                    long tid = node.getTID();
+                } else if (syncEvent.getType().equals(EventType.LOCK)) {
+                    long tid = syncEvent.getTID();
 
                     Stack<SyncEvent> stack = threadSyncStack.get(tid);
                     if (stack == null) {
@@ -224,9 +213,9 @@ public class EngineSMTLIB1 {
                         threadSyncStack.put(tid, stack);
                     }
 
-                    stack.push(node);
-                } else if (node.getType().equals(EventType.UNLOCK)) {
-                    long tid = node.getTID();
+                    stack.push(syncEvent);
+                } else if (syncEvent.getType().equals(EventType.UNLOCK)) {
+                    long tid = syncEvent.getTID();
                     Stack<SyncEvent> stack = threadSyncStack.get(tid);
 
                     // assert(stack.size()>0);//this is possible when segmented
@@ -238,19 +227,19 @@ public class EngineSMTLIB1 {
                     // TODO: make sure no nested locks?
 
                     if (stack.isEmpty()) {
-                        LockRegion lp = new LockRegion(null, node);
-                        lockPairs.add(lp);
-                        lockEngine.add(node.getSyncObject(), tid, lp);
+                        LockRegion lp = new LockRegion(null, syncEvent);
+                        lockRegions.add(lp);
+                        lockEngine.add(syncEvent.getSyncObject(), tid, lp);
                     } else if (stack.size() == 1) {
-                        LockRegion lp = new LockRegion(stack.pop(), node);
-                        lockPairs.add(lp);
+                        LockRegion lp = new LockRegion(stack.pop(), syncEvent);
+                        lockRegions.add(lp);
 
-                        lockEngine.add(node.getSyncObject(), tid, lp);
+                        lockEngine.add(syncEvent.getSyncObject(), tid, lp);
                     } else
                         stack.pop();// handle reentrant lock here
 
-                } else if (node.getType().equals(EventType.WAIT)) {
-                    long tid = node.getTID();
+                } else if (syncEvent.getType().equals(EventType.WAIT)) {
+                    long tid = syncEvent.getTID();
 
                     // assert(matchNotifyNode!=null);this is also possible when
                     // segmented
@@ -258,7 +247,7 @@ public class EngineSMTLIB1 {
                         long notifyGID = matchNotifyNode.getGID();
                         String notifyVar = makeVariable(notifyGID);
 
-                        int nodeIndex = trace.getFullTrace().indexOf(node) + 1;
+                        int nodeIndex = trace.getFullTrace().indexOf(syncEvent) + 1;
 
                         // TODO: handle OutofBounds
                         try {
@@ -269,12 +258,12 @@ public class EngineSMTLIB1 {
                             // if we arrive here, it means the wait node is
                             // the last node of the corresponding thread
                             // so add an order from notify to wait instead
-                            nodeIndex = trace.getFullTrace().indexOf(node);
+                            nodeIndex = trace.getFullTrace().indexOf(syncEvent);
                         }
                         long waitNextGID = trace.getFullTrace().get(nodeIndex).getGID();
-                        var = makeVariable(waitNextGID);
+                        var1 = makeVariable(waitNextGID);
 
-                        CONS_ASSERT.append("(< ").append(notifyVar).append(" ").append(var)
+                        CONS_ASSERT.append("(< ").append(notifyVar).append(" ").append(var1)
                         .append(")\n");
 
                         reachEngine.addEdge(notifyGID, waitNextGID);
@@ -290,16 +279,16 @@ public class EngineSMTLIB1 {
                         threadSyncStack.put(tid, stack);
                     }
                     if (stack.isEmpty())
-                        lockPairs.add(new LockRegion(null, node));
+                        lockRegions.add(new LockRegion(null, syncEvent));
                     else if (stack.size() == 1)
-                        lockPairs.add(new LockRegion(stack.pop(), node));
+                        lockRegions.add(new LockRegion(stack.pop(), syncEvent));
                     else
                         stack.pop();// handle reentrant lock here
 
-                    stack.push(node);
+                    stack.push(syncEvent);
 
-                } else if (node.getType().equals(EventType.NOTIFY)) {
-                    matchNotifyNode = node;
+                } else if (syncEvent.getType().equals(EventType.NOTIFY)) {
+                    matchNotifyNode = syncEvent;
                 }
             }
 
@@ -312,12 +301,12 @@ public class EngineSMTLIB1 {
                 {
                     SyncEvent node = stack.firstElement();
                     LockRegion lp = new LockRegion(node, null);
-                    lockPairs.add(lp);
+                    lockRegions.add(lp);
                     lockEngine.add(node.getSyncObject(), node.getTID(), lp);
                 }
             }
 
-            CONS_ASSERT.append(constructLockConstraintsOptimized(lockPairs));
+            CONS_ASSERT.append(constructLockConstraintsOptimized(lockRegions));
         }
 
     }

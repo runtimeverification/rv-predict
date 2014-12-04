@@ -288,8 +288,7 @@ public class NewRVPredict {
                     engine.addIntraThreadConstraints(trace.getThreadIdToEventsMap());
 
                 // 3. order for locks, signals, fork/joins
-                engine.addSynchronizationConstraints(trace, trace.getSyncNodesMap(),
-                        trace.getThreadFirstNodeMap(), trace.getThreadLastNodeMap());
+                engine.addSynchronizationConstraints(trace);
 
                 detectRace(engine, trace);
             }

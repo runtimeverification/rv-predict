@@ -265,20 +265,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case IASTORE: case FASTORE: case DASTORE: case LASTORE:
             instrumentArrayStore(opcode);
             break;
-        case MONITORENTER: {
-            int sid = getCrntStmtSID();
-            // <stack>... objectref </stack>
-            int index = dupThenAStore(); // jvm_local_vars[index] = objectref
-            // <stack>... objectref </stack>
-            mv.visitInsn(opcode);
-            // <stack>... </stack>
-            addPushConstInsn(mv, sid);
-            mv.visitVarInsn(ALOAD, index);
-            // <stack>... sid objectref </stack>
-            addLoggingCallBack(LOG_LOCK, DESC_LOG_LOCK);
-            break;
-        }
-        case MONITOREXIT: {
+        case MONITORENTER: case MONITOREXIT: {
             int sid = getCrntStmtSID();
             // <stack>... objectref </stack>
             int index = dupThenAStore(); // jvm_local_vars[index] = objectref
@@ -286,7 +273,11 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             addPushConstInsn(mv, sid);
             mv.visitVarInsn(ALOAD, index);
             // <stack>... objectref sid objectref </stack>
-            addLoggingCallBack(LOG_UNLOCK, DESC_LOG_UNLOCK);
+            if (opcode == MONITORENTER) {
+                addLoggingCallBack(LOG_LOCK, DESC_LOG_LOCK);
+            } else {
+                addLoggingCallBack(LOG_UNLOCK, DESC_LOG_UNLOCK);
+            }
             // <stack>... objectref </stack>
             mv.visitInsn(opcode);
             break;

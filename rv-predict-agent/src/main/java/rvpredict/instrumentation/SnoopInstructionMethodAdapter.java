@@ -120,21 +120,10 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     break;
                 case "join":
                     if (isThreadClass(owner)) {
-                        /* TODO(YilongL): Since calls to thread join must be
-                         * logged after they return, the code here is kind of
-                         * ad-hoc. We definitely need more general way to handle
-                         * such case. */
-                        int sid = getCrntStmtSID();
-
-                        int index = dupThenAStore();
-
-                        mv.visitMethodInsn(opcode, owner, name, desc, itf);
-
-                        addPushConstInsn(mv, sid);
-                        mv.visitVarInsn(ALOAD, index);
+                        prepareLoggingThreadEvents();
                         addLoggingCallBack(LOG_THREAD_JOIN, DESC_LOG_THREAD_JOIN);
                     }
-                    return;
+                    break;
                 case "wait":
                     prepareLoggingThreadEvents();
                     addLoggingCallBack(LOG_WAIT, DESC_LOG_WAIT);

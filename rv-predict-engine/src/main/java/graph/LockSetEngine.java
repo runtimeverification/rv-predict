@@ -28,6 +28,7 @@
  ******************************************************************************/
 package graph;
 
+import java.util.Collection;
 import java.util.ListIterator;
 import java.util.List;
 
@@ -45,6 +46,12 @@ import rvpredict.trace.MemoryAccessEvent;
 public class LockSetEngine {
 
     private Table<Long, Long, List<LockRegion>> lockTbl = HashBasedTable.create();
+
+    public void addAll(Collection<LockRegion> lockRegions) {
+        for (LockRegion lockRegion : lockRegions) {
+            add(lockRegion);
+        }
+    }
 
     public void add(LockRegion lockRegion) {
         long addr = lockRegion.getLockObj();

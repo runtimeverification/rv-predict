@@ -186,7 +186,6 @@ public class SMTConstraintBuilder {
                         SyncEvent lockEvent = lockStack.isEmpty() ? null : lockStack.pop();
                         LockRegion lockRegion = new LockRegion(lockEvent, syncEvent);
                         lockRegions.add(lockRegion);
-                        lockEngine.add(lockRegion);
                     } else {
                         /* discard reentrant lock region */
                         lockStack.pop();
@@ -225,9 +224,10 @@ public class SMTConstraintBuilder {
                     SyncEvent lockEvent = lockStack.firstElement();
                     LockRegion lockRegion = new LockRegion(lockEvent, null);
                     lockRegions.add(lockRegion);
-                    lockEngine.add(lockRegion);
                 }
             }
+
+            lockEngine.addAll(lockRegions);
 
             smtlibAssertion.append(constructLockConstraintsOptimized(lockRegions));
         }

@@ -158,6 +158,13 @@ public class Trace {
         return events == null ? Lists.<Event>newArrayList() : events;
     }
 
+    public Event getNextThreadEvent(Event event) {
+        List<Event> events = getThreadEvents(event.getTID());
+        int nextThrdEventIdx = events.indexOf(event) + 1;
+        assert nextThrdEventIdx > 0;
+        return events.size() == nextThrdEventIdx ? null : events.get(nextThrdEventIdx);
+    }
+
     public List<BranchEvent> getThreadBranchEvents(long threadId) {
         List<BranchEvent> events = threadIdToBranchEvents.get(threadId);
         return events == null ? Lists.<BranchEvent>newArrayList() : events;

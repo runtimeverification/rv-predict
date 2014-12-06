@@ -39,7 +39,9 @@ import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
@@ -171,7 +173,8 @@ public class SMTConstraintBuilder {
         for (List<SyncEvent> syncEvents : trace.getLockObjToSyncEvents().values()) {
             List<LockRegion> lockRegions = Lists.newArrayList();
             Map<Long, Stack<SyncEvent>> threadIdToLockStack = Maps.newHashMap();
-            SyncEvent matchNotifyEvent = null;
+            Deque<SyncEvent> waitQueue = new ArrayDeque<>();
+            Deque<SyncEvent> notifyQueue = new ArrayDeque<>();
 
             for (SyncEvent syncEvent : syncEvents) {
                 if (syncEvent.getType().equals(EventType.LOCK)) {
@@ -191,16 +194,10 @@ public class SMTConstraintBuilder {
                 } else if (syncEvent.getType().equals(EventType.WAIT)) {
                     long threadId = syncEvent.getTID();
 
-                    if (matchNotifyEvent != null) {
-                        List<Event> thrdEvents = trace.getThreadEvents(threadId);
-                        int idx = thrdEvents.indexOf(syncEvent);
-                        Event nextThrdEvent = idx + 1 == thrdEvents.size() ? null : thrdEvents
-                                .get(idx + 1);
-
-                        assertHappensBefore(matchNotifyEvent, nextThrdEvent == null ? syncEvent
-                                : nextThrdEvent);
-
-                        matchNotifyEvent = null;
+                    if (notifyQueue.isEmpty()) {
+                        waitQueue.addLast(syncEvent);
+                    } else {
+                        matchWaitNotifyPair(trace, syncEvent, notifyQueue.removeFirst());
                     }
 
                     /* model wait event as two consecutive unlock-lock events */
@@ -214,7 +211,11 @@ public class SMTConstraintBuilder {
                     /* lock */
                     stack.push(syncEvent);
                 } else if (syncEvent.getType().equals(EventType.NOTIFY)) {
-                    matchNotifyEvent = syncEvent;
+                    if (waitQueue.isEmpty()) {
+                        notifyQueue.addLast(syncEvent);
+                    } else {
+                        matchWaitNotifyPair(trace, waitQueue.removeFirst(), syncEvent);
+                    }
                 }
             }
 
@@ -230,6 +231,17 @@ public class SMTConstraintBuilder {
 
             smtlibAssertion.append(constructLockConstraintsOptimized(lockRegions));
         }
+    }
+
+    /**
+     * Matches a given pair of wait-notify events, i.e., enforces the notify
+     * event to happen in between the equivalent unlock-lock pair of the wait
+     * event.
+     */
+    private void matchWaitNotifyPair(Trace trace, SyncEvent waitEvent, SyncEvent notifyEvent) {
+        Event nextThrdEvent = trace.getNextThreadEvent(waitEvent);
+        assertHappensBefore(notifyEvent, nextThrdEvent == null ? waitEvent
+                : nextThrdEvent);
     }
 
     private String constructLockConstraintsOptimized(List<LockRegion> lockPairs) {

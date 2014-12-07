@@ -282,7 +282,7 @@ public class SMTConstraintBuilder {
             List<WriteEvent> writenodes_value_match = new ArrayList<>();
             for (int j = 0; j < writenodes.size(); j++) {
                 WriteEvent wnode = writenodes.get(j);
-                if (wnode.getValue() == rnode.getValue() && !canReach(rnode, wnode)) {
+                if (wnode.getValue() == rnode.getValue() && !happensBefore(rnode, wnode)) {
                     if (wnode.getTID() != rnode.getTID())
                         writenodes_value_match.add(wnode);
                     else {
@@ -321,8 +321,8 @@ public class SMTConstraintBuilder {
                     String last_cons_d = null;
                     for (int k = 0; k < writenodes.size(); k++) {
                         WriteEvent wnode2 = writenodes.get(k);
-                        if (!writenodes_value_match.contains(wnode2) && !canReach(wnode2, wnode1)
-                                && !canReach(rnode, wnode2)) {
+                        if (!writenodes_value_match.contains(wnode2) && !happensBefore(wnode2, wnode1)
+                                && !happensBefore(rnode, wnode2)) {
                             String var_w2 = makeOrderVariable(wnode2);
 
                             if (last_cons_d != null) {
@@ -393,7 +393,7 @@ public class SMTConstraintBuilder {
 
                     for (int k = 0; k < writenodes.size(); k++) {
                         WriteEvent wnode3 = writenodes.get(k);
-                        if (wnode3.getTID() != rnode.getTID() && !canReach(rnode, wnode3)) {
+                        if (wnode3.getTID() != rnode.getTID() && !happensBefore(rnode, wnode3)) {
                             String var_w3 = makeOrderVariable(wnode3);
 
                             String cons_e = "(> " + var_w3 + " " + var_r + ")\n";
@@ -419,17 +419,10 @@ public class SMTConstraintBuilder {
     }
 
     /**
-     * return true if node1 can reach node2 from the ordering relation
-     *
-     * @param node1
-     * @param node2
-     * @return
+     * Checks if one event happens before another.
      */
-    public boolean canReach(Event node1, Event node2) {
-        long gid1 = node1.getGID();
-        long gid2 = node2.getGID();
-
-        return reachEngine.canReach(gid1, gid2);
+    public boolean happensBefore(Event e1, Event e2) {
+        return reachEngine.canReach(e1.getGID(), e2.getGID());
 
     }
 

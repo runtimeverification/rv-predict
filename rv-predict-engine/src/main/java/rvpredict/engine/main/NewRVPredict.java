@@ -233,9 +233,9 @@ public class NewRVPredict {
 
                     /* not a race if one event happens-before the other */
                     if (fst.getGID() < snd.getGID()
-                            && cnstrBuilder.canReach(fst, snd)
+                            && cnstrBuilder.happensBefore(fst, snd)
                             || fst.getGID() > snd.getGID()
-                            && cnstrBuilder.canReach(snd, fst)) {
+                            && cnstrBuilder.happensBefore(snd, fst)) {
                         continue;
                     }
 

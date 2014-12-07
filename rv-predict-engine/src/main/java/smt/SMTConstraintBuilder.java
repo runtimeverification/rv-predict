@@ -57,6 +57,8 @@ public class SMTConstraintBuilder {
 
     private final Configuration config;
 
+    private final Trace trace;
+
     private final ReachabilityEngine reachEngine = new ReachabilityEngine();
     private final LockSetEngine lockEngine = new LockSetEngine();
 
@@ -67,8 +69,9 @@ public class SMTConstraintBuilder {
 
     private final String benchname;
 
-    public SMTConstraintBuilder(Configuration config) {
+    public SMTConstraintBuilder(Configuration config, Trace trace) {
         this.config = config;
+        this.trace = trace;
         benchname = "(benchmark " + config.tableName + ".smt\n";
     }
 
@@ -78,11 +81,8 @@ public class SMTConstraintBuilder {
 
     /**
      * Declares an order variable for each event in a given trace.
-     *
-     * @param trace
-     *            the given trace
      */
-    public void declareVariables(Trace trace) {
+    public void declareVariables() {
         for (Event e : trace.getAllEvents()) {
             smtlibDecl.append(String.format("(%s Int)\n", makeOrderVariable(e)));
         }
@@ -95,7 +95,7 @@ public class SMTConstraintBuilder {
         reachEngine.addEdge(e1, e2);
     }
 
-    private void assertMutualExclusion(Trace trace, LockRegion lockRegion1, LockRegion lockRegion2) {
+    private void assertMutualExclusion(LockRegion lockRegion1, LockRegion lockRegion2) {
         String case1 = String.format("(< %s %s)",
                 lockRegion1.getUnlock() != null ? makeOrderVariable(lockRegion1.getUnlock())
                         : makeOrderVariable(trace.getLastThreadEvent(lockRegion1.getThreadId())),
@@ -112,11 +112,8 @@ public class SMTConstraintBuilder {
     /**
      * Adds intra-thread must happens-before (MHB) constraints of sequential
      * consistent memory model for a given trace.
-     *
-     * @param trace
-     *            the given trace
      */
-    public void addIntraThreadConstraints(Trace trace) {
+    public void addIntraThreadConstraints() {
         for (List<Event> events : trace.getThreadIdToEventsMap().values()) {
             Event prevEvent = events.get(0);
             for (Event crntEvent : events.subList(1, events.size())) {
@@ -129,11 +126,8 @@ public class SMTConstraintBuilder {
     /**
      * Adds intra-thread must happens-before (MHB) constraints of relaxed PSO
      * memory model for a given trace.
-     *
-     * @param trace
-     *            the given trace
      */
-    public void addPSOIntraThreadConstraints(Trace trace) {
+    public void addPSOIntraThreadConstraints() {
         for (List<MemoryAccessEvent> nodes : trace.getMemAccessEventsTable().values()) {
             MemoryAccessEvent prevEvent = nodes.get(0);
             for (MemoryAccessEvent crntEvent : nodes.subList(1, nodes.size())) {
@@ -145,11 +139,8 @@ public class SMTConstraintBuilder {
 
     /**
      * Adds must happens-before constraints (MHB) for a given trace.
-     *
-     * @param trace
-     *            the given trace
      */
-    public void addMHBConstraints(Trace trace) {
+    public void addMHBConstraints() {
         for (List<SyncEvent> startOrJoinEvents : trace.getThreadIdToStartJoinEvents().values()) {
             for (SyncEvent startOrJoinEvent : startOrJoinEvents) {
                 long threadId = startOrJoinEvent.getSyncObject();
@@ -176,11 +167,8 @@ public class SMTConstraintBuilder {
 
     /**
      * Adds lock mutual exclusion constraints for a given trace.
-     *
-     * @param trace
-     *            the given trace
      */
-    public void addLockingConstraints(Trace trace) {
+    public void addLockingConstraints() {
         /* enumerate the locking events on each intrinsic lock */
         for (List<SyncEvent> syncEvents : trace.getLockObjToSyncEvents().values()) {
             Map<Long, Deque<SyncEvent>> threadIdToLockStack = Maps.newHashMap();
@@ -206,7 +194,7 @@ public class SMTConstraintBuilder {
                     if (notifyQueue.isEmpty()) {
                         waitQueue.addLast(syncEvent);
                     } else {
-                        matchWaitNotifyPair(trace, syncEvent, notifyQueue.removeFirst());
+                        matchWaitNotifyPair(syncEvent, notifyQueue.removeFirst());
                     }
 
                     /* model wait event as two consecutive unlock-lock events */
@@ -225,7 +213,7 @@ public class SMTConstraintBuilder {
                     if (waitQueue.isEmpty()) {
                         notifyQueue.addLast(syncEvent);
                     } else {
-                        matchWaitNotifyPair(trace, waitQueue.removeFirst(), syncEvent);
+                        matchWaitNotifyPair(waitQueue.removeFirst(), syncEvent);
                     }
                 }
             }
@@ -243,7 +231,7 @@ public class SMTConstraintBuilder {
             for (LockRegion lockRegion1 : lockRegions) {
                 for (LockRegion lockRegion2 : lockRegions) {
                     if (lockRegion1.getThreadId() < lockRegion2.getThreadId()) {
-                        assertMutualExclusion(trace, lockRegion1, lockRegion2);
+                        assertMutualExclusion(lockRegion1, lockRegion2);
                     }
                 }
             }
@@ -255,7 +243,7 @@ public class SMTConstraintBuilder {
      * event to happen in between the equivalent unlock-lock pair of the wait
      * event.
      */
-    private void matchWaitNotifyPair(Trace trace, SyncEvent waitEvent, SyncEvent notifyEvent) {
+    private void matchWaitNotifyPair(SyncEvent waitEvent, SyncEvent notifyEvent) {
         Event nextThrdEvent = trace.getNextThreadEvent(waitEvent);
         assertHappensBefore(notifyEvent, nextThrdEvent == null ? waitEvent
                 : nextThrdEvent);

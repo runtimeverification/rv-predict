@@ -274,21 +274,21 @@ public class NewRVPredict {
 
             // OPT: if #sv==0 or #shared rw ==0 continue
             if (trace.mayRace()) {
-                SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config);
+                SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config, trace);
 
                 // 1. declare all variables
-                cnstrBuilder.declareVariables(trace);
+                cnstrBuilder.declareVariables();
                 // 2. intra-thread order for all nodes, excluding branches
                 // and basic block transitions
                 if (config.rmm_pso) {
-                    cnstrBuilder.addPSOIntraThreadConstraints(trace);
+                    cnstrBuilder.addPSOIntraThreadConstraints();
                 } else {
-                    cnstrBuilder.addIntraThreadConstraints(trace);
+                    cnstrBuilder.addIntraThreadConstraints();
                 }
 
                 // 3. order for locks, signals, fork/joins
-                cnstrBuilder.addMHBConstraints(trace);
-                cnstrBuilder.addLockingConstraints(trace);
+                cnstrBuilder.addMHBConstraints();
+                cnstrBuilder.addLockingConstraints();
 
                 detectRace(cnstrBuilder, trace);
             }

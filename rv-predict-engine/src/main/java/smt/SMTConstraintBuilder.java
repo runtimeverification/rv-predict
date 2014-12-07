@@ -42,9 +42,7 @@ import graph.ReachabilityEngine;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Stack;
 import java.util.List;
 
 import com.google.common.collect.Lists;
@@ -95,6 +93,20 @@ public class SMTConstraintBuilder {
         smtlibAssertion.append(String.format("(< %s %s)\n", makeOrderVariable(e1),
                 makeOrderVariable(e2)));
         reachEngine.addEdge(e1, e2);
+    }
+
+    private void assertMutualExclusion(Trace trace, LockRegion lockRegion1, LockRegion lockRegion2) {
+        String case1 = String.format("(< %s %s)",
+                lockRegion1.getUnlock() != null ? makeOrderVariable(lockRegion1.getUnlock())
+                        : makeOrderVariable(trace.getLastThreadEvent(lockRegion1.getThreadId())),
+                lockRegion2.getLock() != null ? makeOrderVariable(lockRegion2.getLock())
+                        : makeOrderVariable(trace.getFirstThreadEvent(lockRegion2.getThreadId())));
+        String case2 = String.format("(< %s %s)",
+                lockRegion2.getUnlock() != null ? makeOrderVariable(lockRegion2.getUnlock())
+                        : makeOrderVariable(trace.getLastThreadEvent(lockRegion2.getThreadId())),
+                lockRegion1.getLock() != null ? makeOrderVariable(lockRegion1.getLock())
+                        : makeOrderVariable(trace.getFirstThreadEvent(lockRegion1.getThreadId())));
+        smtlibAssertion.append(String.format("(or %s %s)\n", case1, case2));
     }
 
     /**
@@ -171,28 +183,26 @@ public class SMTConstraintBuilder {
     public void addLockingConstraints(Trace trace) {
         /* enumerate the locking events on each intrinsic lock */
         for (List<SyncEvent> syncEvents : trace.getLockObjToSyncEvents().values()) {
+            Map<Long, Deque<SyncEvent>> threadIdToLockStack = Maps.newHashMap();
             List<LockRegion> lockRegions = Lists.newArrayList();
-            Map<Long, Stack<SyncEvent>> threadIdToLockStack = Maps.newHashMap();
             Deque<SyncEvent> waitQueue = new ArrayDeque<>();
             Deque<SyncEvent> notifyQueue = new ArrayDeque<>();
 
             for (SyncEvent syncEvent : syncEvents) {
+                long tid = syncEvent.getTID();
+
                 if (syncEvent.getType().equals(EventType.LOCK)) {
-                    safeStackMapGet(threadIdToLockStack, syncEvent.getTID()).push(syncEvent);
+                    safeStackMapGet(threadIdToLockStack, tid).push(syncEvent);
                 } else if (syncEvent.getType().equals(EventType.UNLOCK)) {
-                    Stack<SyncEvent> lockStack = safeStackMapGet(threadIdToLockStack,
-                            syncEvent.getTID());
+                    Deque<SyncEvent> lockStack = safeStackMapGet(threadIdToLockStack, tid);
                     if (lockStack.size() <= 1) {
                         SyncEvent lockEvent = lockStack.isEmpty() ? null : lockStack.pop();
-                        LockRegion lockRegion = new LockRegion(lockEvent, syncEvent);
-                        lockRegions.add(lockRegion);
+                        lockRegions.add(new LockRegion(lockEvent, syncEvent));
                     } else {
                         /* discard reentrant lock region */
                         lockStack.pop();
                     }
                 } else if (syncEvent.getType().equals(EventType.WAIT)) {
-                    long threadId = syncEvent.getTID();
-
                     if (notifyQueue.isEmpty()) {
                         waitQueue.addLast(syncEvent);
                     } else {
@@ -200,11 +210,13 @@ public class SMTConstraintBuilder {
                     }
 
                     /* model wait event as two consecutive unlock-lock events */
-                    Stack<SyncEvent> stack = safeStackMapGet(threadIdToLockStack, threadId);
+                    Deque<SyncEvent> stack = safeStackMapGet(threadIdToLockStack, tid);
                     /* unlock */
                     if (stack.size() <= 1) {
-                        lockRegions.add(new LockRegion(stack.isEmpty() ? null : stack.pop(), syncEvent));
+                        lockRegions.add(new LockRegion(stack.isEmpty() ? null : stack.pop(),
+                                syncEvent));
                     } else {
+                        /* discard reentrant lock region */
                         stack.pop();
                     }
                     /* lock */
@@ -218,18 +230,23 @@ public class SMTConstraintBuilder {
                 }
             }
 
-            for (Stack<SyncEvent> lockStack : threadIdToLockStack.values()) {
+            for (Deque<SyncEvent> lockStack : threadIdToLockStack.values()) {
                 /* the corresponding unlock events are missing in the current trace window */
                 if (lockStack.size() > 0) {
-                    SyncEvent lockEvent = lockStack.firstElement();
-                    LockRegion lockRegion = new LockRegion(lockEvent, null);
-                    lockRegions.add(lockRegion);
+                    SyncEvent lockEvent = lockStack.peek();
+                    lockRegions.add(new LockRegion(lockEvent, null));
                 }
             }
 
             lockEngine.addAll(lockRegions);
 
-            smtlibAssertion.append(constructLockConstraintsOptimized(lockRegions));
+            for (LockRegion lockRegion1 : lockRegions) {
+                for (LockRegion lockRegion2 : lockRegions) {
+                    if (lockRegion1.getThreadId() < lockRegion2.getThreadId()) {
+                        assertMutualExclusion(trace, lockRegion1, lockRegion2);
+                    }
+                }
+            }
         }
     }
 
@@ -242,95 +259,6 @@ public class SMTConstraintBuilder {
         Event nextThrdEvent = trace.getNextThreadEvent(waitEvent);
         assertHappensBefore(notifyEvent, nextThrdEvent == null ? waitEvent
                 : nextThrdEvent);
-    }
-
-    private String constructLockConstraintsOptimized(List<LockRegion> lockPairs) {
-        String CONS_LOCK = "";
-
-        // obtain each thread's last lockpair
-        HashMap<Long, LockRegion> lastLockPairMap = new HashMap<Long, LockRegion>();
-
-        for (int i = 0; i < lockPairs.size(); i++) {
-            LockRegion lp1 = lockPairs.get(i);
-            String var_lp1_a = "";
-            String var_lp1_b = "";
-
-            if (lp1.getLock() == null)//
-                continue;
-            else
-                var_lp1_a = makeOrderVariable(lp1.getLock());
-
-            if (lp1.getUnlock() != null)
-                var_lp1_b = makeOrderVariable(lp1.getUnlock());
-
-            long lp1_tid = lp1.getLock().getTID();
-            LockRegion lp1_pre = lastLockPairMap.get(lp1_tid);
-
-            /*
-             * String var_lp1_pre_b = ""; if(lp1_pre!=null) var_lp1_pre_b =
-             * makeVariable(lp1_pre.unlock.getGID());;
-             */
-
-            ArrayList<LockRegion> flexLockPairs = new ArrayList<LockRegion>();
-
-            // find all lps that are from a different thread, and have no
-            // happens-after relation with lp1
-            // could further optimize by consider lock regions per thread
-            for (int j = 0; j < lockPairs.size(); j++) {
-                LockRegion lp = lockPairs.get(j);
-                if (lp.getLock() != null) {
-                    if (lp.getLock().getTID() != lp1_tid
-                            && !canReach(lp1.getLock(), lp.getLock())) {
-                        flexLockPairs.add(lp);
-                    }
-                } else if (lp.getUnlock() != null) {
-                    if (lp.getUnlock().getTID() != lp1_tid
-                            && !canReach(lp1.getLock(), lp.getUnlock())) {
-                        flexLockPairs.add(lp);
-                    }
-                }
-            }
-
-            for (int j = 0; j < flexLockPairs.size(); j++) {
-                LockRegion lp2 = flexLockPairs.get(j);
-
-                if (lp2.getUnlock() == null || lp2.getLock() == null && lp1_pre != null)// impossible
-                                                                              // to
-                                                                              // match
-                                                                              // lp2
-                    continue;
-
-                String var_lp2_b = "";
-                String var_lp2_a = "";
-
-                var_lp2_b = makeOrderVariable(lp2.getUnlock());
-
-                if (lp2.getLock() != null)
-                    var_lp2_a = makeOrderVariable(lp2.getLock());
-
-                String cons_b;
-
-                // lp1_b==null, lp2_a=null
-                if (lp1.getUnlock() == null || lp2.getLock() == null) {
-                    cons_b = "(> " + var_lp1_a + " " + var_lp2_b + ")\n";
-                    // the trace may not be well-formed due to segmentation
-                    if (lp1.getLock().getGID() < lp2.getUnlock().getGID())
-                        cons_b = "";
-
-                } else {
-                    cons_b = "(or (> " + var_lp1_a + " " + var_lp2_b + ") (> " + var_lp2_a + " "
-                            + var_lp1_b + "))\n";
-                }
-
-                CONS_LOCK += cons_b;
-
-            }
-            lastLockPairMap.put(lp1.getLock().getTID(), lp1);
-
-        }
-
-        return CONS_LOCK;
-
     }
 
     /**
@@ -544,10 +472,10 @@ public class SMTConstraintBuilder {
         return task.sat;
     }
 
-    private static <K, E> Stack<E> safeStackMapGet(Map<K, Stack<E>> map, K key) {
-        Stack<E> value = map.get(key);
+    private static <K, E> Deque<E> safeStackMapGet(Map<K, Deque<E>> map, K key) {
+        Deque<E> value = map.get(key);
         if (value == null) {
-            value = new Stack<>();
+            value = new ArrayDeque<>();
             map.put(key, value);
         }
         return value;

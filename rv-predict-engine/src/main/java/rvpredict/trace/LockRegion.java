@@ -64,4 +64,9 @@ public class LockRegion {
     public long getThreadId() {
         return threadId;
     }
+
+    @Override
+    public String toString() {
+        return String.format("<%s, %s>", lock, unlock);
+    }
 }

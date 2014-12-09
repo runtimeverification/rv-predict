@@ -240,9 +240,8 @@ public class NewRVPredict {
                     }
 
                     /* start building constraints for MCM */
-                    StringBuilder sb1 = cnstrBuilder.addReadWriteConsistencyConstraints(fst);
-                    StringBuilder sb2 = cnstrBuilder.addReadWriteConsistencyConstraints(snd);
-                    StringBuilder sb = sb1.append(sb2);
+                    StringBuilder sb = cnstrBuilder.addReadWriteConsistencyConstraints(fst);
+                    sb.append(cnstrBuilder.addReadWriteConsistencyConstraints(snd));
 
                     if (cnstrBuilder.isRace(fst, snd, sb)) {
                         for (Race r : potentialRaces) {

@@ -132,7 +132,9 @@ public class Trace {
     }
 
     public Long getInitValueOf(String addr) {
-        return initValues.get(addr);
+        Long initValue = initValues.get(addr);
+        // TODO(YilongL): assuming that every variable is initialized is very Java-specific
+        return initValue == null ? 0 : initValue;
     }
 
     public Map<Integer, String> getLocIdToStmtSigMap() {

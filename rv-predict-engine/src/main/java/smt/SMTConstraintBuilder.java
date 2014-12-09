@@ -40,7 +40,6 @@ import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Map;
 import java.util.List;
@@ -350,156 +349,73 @@ public class SMTConstraintBuilder {
     /**
      * Adds read-write consistency constraints.
      */
-    // TODO: NEED to handle the feasibility of new added write nodes
     public StringBuilder addReadWriteConsistencyConstraints(MemoryAccessEvent event) {
-        List<ReadEvent> readNodes = trace.getCtrlFlowDependentEvents(event);
+        StringBuilder cnstr = new StringBuilder("(and true ");
 
-        StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
+        /* make sure that every dependent read event reads the same value as in the original trace */
+        for (ReadEvent depRead : trace.getCtrlFlowDependentEvents(event)) {
+            List<WriteEvent> writeEvents = trace.getWriteEventsOn(depRead.getAddr());
 
-        for (int i = 0; i < readNodes.size(); i++) {
-
-            ReadEvent rnode = readNodes.get(i);
-
-            // get all write nodes on the address
-            List<WriteEvent> writenodes = trace.getWriteEventsOn(rnode.getAddr());
-            // no write to array field?
-            // Yes, it could be: java.io.PrintStream out
-            if (writenodes == null || writenodes.size() < 1)//
-                continue;
-
-            WriteEvent preNode = null;//
-
-            // get all write nodes on the address & write the same value
-            List<WriteEvent> writenodes_value_match = new ArrayList<>();
-            for (int j = 0; j < writenodes.size(); j++) {
-                WriteEvent wnode = writenodes.get(j);
-                if (wnode.getValue() == rnode.getValue() && !happensBefore(rnode, wnode)) {
-                    if (wnode.getTID() != rnode.getTID())
-                        writenodes_value_match.add(wnode);
-                    else {
-                        if (preNode == null
-                                || (preNode.getGID() < wnode.getGID() && wnode.getGID() < rnode
-                                        .getGID()))
-                            preNode = wnode;
-
+            /* thread immediate write predecessor */
+            WriteEvent thrdImdWrtPred = null;
+            /* predecessor write set: all write events whose values could be read by `depRead' */
+            List<WriteEvent> predWriteSet = Lists.newArrayList();
+            for (WriteEvent write : writeEvents) {
+                if (write.getTID() == depRead.getTID()) {
+                    if (write.getGID() < depRead.getGID()) {
+                        thrdImdWrtPred = write;
                     }
+                } else if (!happensBefore(depRead, write)) {
+                    predWriteSet.add(write);
                 }
             }
-            if (writenodes_value_match.size() > 0) {
-                if (preNode != null)
-                    writenodes_value_match.add(preNode);
-
-                // TODO: consider the case when preNode is not null
-
-                String var_r = makeOrderVariable(rnode);
-
-                String cons_a = "";
-                String cons_a_end = "";
-
-                String cons_b = "";
-                String cons_b_end = "";
-
-                // make sure all the nodes that x depends on read the same value
-
-                for (int j = 0; j < writenodes_value_match.size(); j++) {
-                    WriteEvent wnode1 = writenodes_value_match.get(j);
-                    String var_w1 = makeOrderVariable(wnode1);
-
-                    String cons_b_ = "(> " + var_r + " " + var_w1 + ")\n";
-
-                    String cons_c = "";
-                    String cons_c_end = "";
-                    String last_cons_d = null;
-                    for (int k = 0; k < writenodes.size(); k++) {
-                        WriteEvent wnode2 = writenodes.get(k);
-                        if (!writenodes_value_match.contains(wnode2) && !happensBefore(wnode2, wnode1)
-                                && !happensBefore(rnode, wnode2)) {
-                            String var_w2 = makeOrderVariable(wnode2);
-
-                            if (last_cons_d != null) {
-                                cons_c += "(and " + last_cons_d;
-                                cons_c_end += ")";
-
-                            }
-                            last_cons_d = "(or (> " + var_w2 + " " + var_r + ")" + " (> " + var_w1
-                                    + " " + var_w2 + "))\n";
-
-                        }
-                    }
-                    if (last_cons_d != null) {
-                        cons_c += last_cons_d;
-                    }
-                    cons_c = cons_c + cons_c_end;
-
-                    if (cons_c.length() > 0)
-                        cons_b_ = "(and " + cons_b_ + " " + cons_c + ")\n";
-
-                    if (j + 1 < writenodes_value_match.size()) {
-                        cons_b += "(or " + cons_b_;
-                        cons_b_end += ")";
-
-                        cons_a += "(and (> " + var_w1 + " " + var_r + ")\n";
-                        cons_a_end += ")";
-                    } else {
-                        cons_b += cons_b_;
-                        cons_a += "(> " + var_w1 + " " + var_r + ")\n";
-                    }
-                }
-
-                cons_b += cons_b_end;
-
-                Long rValue = rnode.getValue();
-                Long initValue = trace.getInitValueOf(rnode.getAddr());
-
-                // it's possible that we don't have initial value for static
-                // variable
-                // so we allow init value to be zero or null? -- null is turned
-                // into 0 by System.identityHashCode
-                boolean allowMatchInit = true;
-                if (initValue == null) {
-                    // it's possible for the read node to match with the init
-                    // write node
-                    // if preNode is null
-                    if (preNode != null) {
-                        allowMatchInit = false;
-                    }
-                }
-
-                if (initValue == null && allowMatchInit || initValue != null
-                        && rValue.equals(initValue)) {
-                    if (cons_a.length() > 0) {
-                        cons_a += cons_a_end + "\n";
-                        CONS_CAUSAL_RW.append("(or \n" + cons_a + " " + cons_b + ")\n\n");
-                    }
-                } else {
-                    CONS_CAUSAL_RW.append(cons_b + "\n");
-                }
-            } else {
-                // make sure it reads the initial write
-                Long rValue = rnode.getValue();
-                Long initValue = trace.getInitValueOf(rnode.getAddr());
-
-                if (initValue != null && rValue.equals(initValue)) {
-                    String var_r = makeOrderVariable(rnode);
-
-                    for (int k = 0; k < writenodes.size(); k++) {
-                        WriteEvent wnode3 = writenodes.get(k);
-                        if (wnode3.getTID() != rnode.getTID() && !happensBefore(rnode, wnode3)) {
-                            String var_w3 = makeOrderVariable(wnode3);
-
-                            String cons_e = "(> " + var_w3 + " " + var_r + ")\n";
-                            CONS_CAUSAL_RW.append(cons_e);
-                        }
-
-                    }
-
-                }
-
+            if (thrdImdWrtPred != null) {
+                predWriteSet.add(thrdImdWrtPred);
             }
 
+            /* predecessor write set of same value */
+            List<WriteEvent> sameValPredWriteSet = Lists.newArrayList();
+            for (WriteEvent write : predWriteSet) {
+                if (write.getValue() == depRead.getValue()) {
+                    sameValPredWriteSet.add(write);
+                }
+            }
+
+            /* case 1: the dependent read reads the initial value */
+            StringBuilder case1 = null;
+            if (thrdImdWrtPred == null
+                    && trace.getInitValueOf(depRead.getAddr()) == depRead.getValue()) {
+                case1 = new StringBuilder("(and true ");
+                for (WriteEvent write : predWriteSet) {
+                    case1.append(String.format("(< %s %s)", makeOrderVariable(depRead),
+                            makeOrderVariable(write)));
+                }
+                case1.append(")");
+            }
+
+            /* case 2: the dependent read reads a previously written value */
+            StringBuilder case2 = new StringBuilder("(or false ");
+            for (WriteEvent write : sameValPredWriteSet) {
+                case2.append("(and ");
+                case2.append(String.format("(< %s %s)", makeOrderVariable(write), makeOrderVariable(depRead)));
+                for (WriteEvent otherWrite : writeEvents) {
+                    if (write != otherWrite && !happensBefore(otherWrite, write)
+                            && !happensBefore(depRead, otherWrite)) {
+                        case2.append(String.format("(or (< %s %s) (< %s %s))",
+                                makeOrderVariable(otherWrite), makeOrderVariable(write),
+                                makeOrderVariable(depRead), makeOrderVariable(otherWrite)));
+                    }
+                }
+                case2.append(")");
+            }
+            case2.append(")");
+
+            cnstr.append(String.format("(or %s %s)", case1 != null ? case1 : false,
+                    case2));
         }
 
-        return CONS_CAUSAL_RW;
+        cnstr.append(")");
+        return cnstr;
     }
 
     /**

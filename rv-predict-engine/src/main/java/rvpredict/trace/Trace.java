@@ -218,13 +218,13 @@ public class Trace {
     }
 
     /**
-     * Gets dependent nodes of a given {@code MemoryAccessEvent}. Without
-     * logging {@code BranchNode}, all read events that happen-before the given
-     * event have to be included conservatively. Otherwise, only the read events
-     * that happen-before the latest branch event are included.
+     * Gets control-flow dependent events of a given {@code MemoryAccessEvent}.
+     * Without logging {@code BranchNode}, all read events that happen-before
+     * the given event have to be included conservatively. Otherwise, only the
+     * read events that happen-before the latest branch event are included.
      */
     // TODO: NEED to include the dependent nodes from other threads
-    public List<ReadEvent> getDependentReadEvents(MemoryAccessEvent memAccEvent, boolean branch) {
+    public List<ReadEvent> getCtrlFlowDependentEvents(MemoryAccessEvent memAccEvent) {
         // TODO(YilongL): optimize this method when it becomes a bottleneck
         List<ReadEvent> readEvents = new ArrayList<>();
 

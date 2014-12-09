@@ -240,13 +240,8 @@ public class NewRVPredict {
                     }
 
                     /* start building constraints for MCM */
-                    List<ReadEvent> readDeps1 = trace.getDependentReadEvents(fst, config.branch);
-                    List<ReadEvent> readDeps2 = trace.getDependentReadEvents(snd, config.branch);
-
-                    StringBuilder sb1 = cnstrBuilder.constructCausalReadWriteConstraints(fst.getGID(),
-                            readDeps1, trace);
-                    StringBuilder sb2 = cnstrBuilder.constructCausalReadWriteConstraints(-1, readDeps2,
-                            trace);
+                    StringBuilder sb1 = cnstrBuilder.addReadWriteConsistencyConstraints(fst);
+                    StringBuilder sb2 = cnstrBuilder.addReadWriteConsistencyConstraints(snd);
                     StringBuilder sb = sb1.append(sb2);
 
                     if (cnstrBuilder.isRace(fst, snd, sb)) {

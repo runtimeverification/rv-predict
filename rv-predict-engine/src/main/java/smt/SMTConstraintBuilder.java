@@ -88,7 +88,7 @@ public class SMTConstraintBuilder {
     }
 
     /**
-     * Declares an order variable for each event in a given trace.
+     * Declares an order variable for each event.
      */
     public void declareVariables() {
         for (Event e : trace.getAllEvents()) {
@@ -148,7 +148,7 @@ public class SMTConstraintBuilder {
 
     /**
      * Adds intra-thread must happens-before (MHB) constraints of sequential
-     * consistent memory model for a given trace.
+     * consistent memory model.
      */
     public void addIntraThreadConstraints() {
         for (List<Event> events : trace.getThreadIdToEventsMap().values()) {
@@ -162,7 +162,7 @@ public class SMTConstraintBuilder {
 
     /**
      * Adds intra-thread must happens-before (MHB) constraints of relaxed PSO
-     * memory model for a given trace.
+     * memory model.
      */
     public void addPSOIntraThreadConstraints() {
         for (List<MemoryAccessEvent> nodes : trace.getMemAccessEventsTable().values()) {
@@ -175,7 +175,7 @@ public class SMTConstraintBuilder {
     }
 
     /**
-     * Adds must happens-before constraints (MHB) for a given trace.
+     * Adds must happens-before constraints (MHB).
      */
     public void addMHBConstraints() {
         for (List<SyncEvent> startOrJoinEvents : trace.getThreadIdToStartJoinEvents().values()) {
@@ -203,7 +203,7 @@ public class SMTConstraintBuilder {
     }
 
     /**
-     * Adds lock mutual exclusion constraints for a given trace.
+     * Adds lock mutual exclusion constraints.
      */
     public void addLockingConstraints() {
         /* enumerate the locking events on each intrinsic lock */
@@ -347,24 +347,17 @@ public class SMTConstraintBuilder {
     }
 
     /**
-     * return the read-write constraints
-     *
-     * @param readNodes
-     * @param indexedWriteNodes
-     * @param initValueMap
-     * @return
+     * Adds read-write consistency constraints.
      */
     // TODO: NEED to handle the feasibility of new added write nodes
-    public StringBuilder constructCausalReadWriteConstraints(long rgid,
-            List<ReadEvent> readNodes, Trace trace) {
+    public StringBuilder addReadWriteConsistencyConstraints(MemoryAccessEvent event) {
+        List<ReadEvent> readNodes = trace.getCtrlFlowDependentEvents(event);
+
         StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
 
         for (int i = 0; i < readNodes.size(); i++) {
 
             ReadEvent rnode = readNodes.get(i);
-            // filter out itself --
-            if (rgid == rnode.getGID())
-                continue;
 
             // get all write nodes on the address
             List<WriteEvent> writenodes = trace.getWriteEventsOn(rnode.getAddr());

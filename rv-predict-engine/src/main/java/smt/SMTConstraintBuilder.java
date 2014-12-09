@@ -76,6 +76,7 @@ public class SMTConstraintBuilder {
     }
 
     private static String makeOrderVariable(Event event) {
+        assert event.getType() != EventType.WAIT;
         return "o" + event.getGID();
     }
 

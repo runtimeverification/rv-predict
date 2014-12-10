@@ -56,6 +56,7 @@
     </test>
     <test name="bubblesort.BubbleSort">
         <runs value="64" />
+        <rvarg key="--maxlen" value="1500" />
         <arg key="-cp" value="basic.jar" />
         <arg value="bubblesort.BubbleSort" />
     </test>

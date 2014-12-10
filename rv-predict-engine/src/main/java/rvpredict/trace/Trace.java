@@ -243,7 +243,7 @@ public class Trace {
 
         Event event = prevBranchEvent == null ? memAccEvent : prevBranchEvent;
         for (Event e : getThreadEvents(threadId)) {
-            if (e.getGID() > event.getGID()) {
+            if (e.getGID() >= event.getGID()) {
                 break;
             }
 

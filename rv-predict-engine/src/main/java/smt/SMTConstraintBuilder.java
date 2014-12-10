@@ -382,7 +382,7 @@ public class SMTConstraintBuilder {
             }
 
             /* case 1: the dependent read reads the initial value */
-            StringBuilder case1 = null;
+            StringBuilder case1 = new StringBuilder("false");
             if (thrdImdWrtPred == null
                     && trace.getInitValueOf(depRead.getAddr()) == depRead.getValue()) {
                 case1 = new StringBuilder("(and true ");
@@ -410,8 +410,7 @@ public class SMTConstraintBuilder {
             }
             case2.append(")");
 
-            cnstr.append(String.format("(or %s %s)", case1 != null ? case1 : false,
-                    case2));
+            cnstr.append(String.format("(or %s %s)", case1, case2));
         }
 
         cnstr.append(")");

@@ -51,7 +51,7 @@ import rvpredict.trace.Trace;
 import rvpredict.trace.TraceInfo;
 import rvpredict.trace.WriteEvent;
 import rvpredict.util.Logger;
-import smt.EngineSMTLIB1;
+import smt.SMTConstraintBuilder;
 import violation.Race;
 import violation.Violation;
 
@@ -68,7 +68,6 @@ public class NewRVPredict {
     private final HashSet<Violation> violations = new HashSet<Violation>();
     private final HashSet<Violation> potentialviolations = new HashSet<Violation>();
     private final Configuration config;
-    private final EngineSMTLIB1 engine;
     private final Logger logger;
     private final long totalTraceLength;
     private final DBEngine dbEngine;
@@ -76,7 +75,6 @@ public class NewRVPredict {
 
     public NewRVPredict(Configuration config) {
         this.config = config;
-        this.engine = new EngineSMTLIB1(config);
         logger = config.logger;
 
         long startTime = System.currentTimeMillis();
@@ -136,10 +134,11 @@ public class NewRVPredict {
      * outside events. Therefore, it is sufficient to consider only one event
      * from each block.
      *
+     * @param cnstrBuilder
      * @param trace
      *            the trace to analyze
      */
-    private void detectRace(Trace trace) {
+    private void detectRace(SMTConstraintBuilder cnstrBuilder, Trace trace) {
         /* enumerate each shared memory address in the trace */
         for (String addr : trace.getMemAccessEventsTable().rowKeySet()) {
             /* exclude volatile variable */
@@ -228,15 +227,15 @@ public class NewRVPredict {
                     }
 
                     /* not a race if the two events hold a common lock */
-                    if (engine.hasCommonLock(fst, snd)) {
+                    if (cnstrBuilder.hasCommonLock(fst, snd)) {
                         continue;
                     }
 
                     /* not a race if one event happens-before the other */
                     if (fst.getGID() < snd.getGID()
-                            && engine.canReach(fst, snd)
+                            && cnstrBuilder.canReach(fst, snd)
                             || fst.getGID() > snd.getGID()
-                            && engine.canReach(snd, fst)) {
+                            && cnstrBuilder.canReach(snd, fst)) {
                         continue;
                     }
 
@@ -244,13 +243,13 @@ public class NewRVPredict {
                     List<ReadEvent> readDeps1 = trace.getDependentReadEvents(fst, config.branch);
                     List<ReadEvent> readDeps2 = trace.getDependentReadEvents(snd, config.branch);
 
-                    StringBuilder sb1 = engine.constructCausalReadWriteConstraints(fst.getGID(),
+                    StringBuilder sb1 = cnstrBuilder.constructCausalReadWriteConstraints(fst.getGID(),
                             readDeps1, trace);
-                    StringBuilder sb2 = engine.constructCausalReadWriteConstraints(-1, readDeps2,
+                    StringBuilder sb2 = cnstrBuilder.constructCausalReadWriteConstraints(-1, readDeps2,
                             trace);
                     StringBuilder sb = sb1.append(sb2);
 
-                    if (engine.isRace(fst, snd, sb)) {
+                    if (cnstrBuilder.isRace(fst, snd, sb)) {
                         for (Race r : potentialRaces) {
                             if (violations.add(r)) {
                                 logger.report(r.toString(), Logger.MSGTYPE.REAL);
@@ -262,19 +261,6 @@ public class NewRVPredict {
         }
     }
 
-    /**
-     * The input is the application name and the optional options
-     *
-     * @param args
-     */
-    public static void main(String[] args) {
-        Configuration config = new Configuration();
-        config.parseArguments(args, true);
-        config.outdir = "./log";
-        NewRVPredict predictor = new NewRVPredict(config);
-        predictor.run();
-    }
-
     public void run() {
         Map<String, Long> initValues = new HashMap<>();
 
@@ -282,36 +268,29 @@ public class NewRVPredict {
         for (int round = 0; round * config.window_size < totalTraceLength; round++) {
             long index_start = round * config.window_size + 1;
             long index_end = (round + 1) * config.window_size;
-            // if(totalTraceLength>rvpredict.config.window_size)System.out.println("***************** Round "+(round+1)+": "+index_start+"-"+index_end+"/"+totalTraceLength+" ******************\n");
 
             // load trace
             Trace trace = dbEngine.getTrace(index_start, index_end, initValues, traceInfo);
 
             // OPT: if #sv==0 or #shared rw ==0 continue
             if (trace.mayRace()) {
-                // Now, construct the constraints
+                SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config);
 
                 // 1. declare all variables
-                engine.declareVariables(trace.getFullTrace());
+                cnstrBuilder.declareVariables(trace);
                 // 2. intra-thread order for all nodes, excluding branches
                 // and basic block transitions
-                if (config.rmm_pso)// TODO: add intra order between sync
-                    engine.addPSOIntraThreadConstraints(trace.getMemAccessEventsTable());
-                else
-                    engine.addIntraThreadConstraints(trace.getThreadIdToEventsMap());
+                if (config.rmm_pso) {
+                    cnstrBuilder.addPSOIntraThreadConstraints(trace);
+                } else {
+                    cnstrBuilder.addIntraThreadConstraints(trace);
+                }
 
                 // 3. order for locks, signals, fork/joins
-                engine.addSynchronizationConstraints(trace, trace.getSyncNodesMap(),
-                        trace.getThreadFirstNodeMap(), trace.getThreadLastNodeMap());
+                cnstrBuilder.addMHBConstraints(trace);
+                cnstrBuilder.addLockingConstraints(trace);
 
-                // 4. match read-write
-                // This is only used for constructing all read-write
-                // consistency constraints
-
-                // engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
-                // engine.addReadWriteConstraints(trace.getIndexedReadNodes(),trace.getIndexedWriteNodes());
-
-                detectRace(trace);
+                detectRace(cnstrBuilder, trace);
             }
 
             /* use the final values of the current window as the initial values

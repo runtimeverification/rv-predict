@@ -28,82 +28,68 @@
  ******************************************************************************/
 package graph;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.ListIterator;
 import java.util.List;
 
-import rvpredict.trace.LockPair;
-import rvpredict.trace.SyncEvent;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Table;
+
+import rvpredict.trace.LockRegion;
+import rvpredict.trace.MemoryAccessEvent;
 
 /**
  * Engine for computing the Lockset algorithm
  *
- * @author jeffhuang
- *
  */
 public class LockSetEngine {
-    List<SyncEvent> locktrace;
-    int n_type = 0;
-    int N = 0;
-    Map<Integer, Integer> lock_types = new HashMap<Integer, Integer>();
-    Map<Integer, Integer> type_locks = new HashMap<Integer, Integer>();
 
-    List<Object> lock_index = new ArrayList<>();
+    private Table<Long, Long, List<LockRegion>> lockTbl = HashBasedTable.create();
 
-    private HashMap<Long, HashMap<Long, ArrayList<LockPair>>> indexedThreadLockMaps = new HashMap<>();
-
-    public void add(long addr, long tid, LockPair lp) {
-        // TODO Auto-generated method stub
-        HashMap<Long, ArrayList<LockPair>> threadlockmap = indexedThreadLockMaps.get(addr);
-        if (threadlockmap == null) {
-            threadlockmap = new HashMap<Long, ArrayList<LockPair>>();
-            indexedThreadLockMaps.put(addr, threadlockmap);
+    public void add(LockRegion lockRegion) {
+        long addr = lockRegion.getLockObj();
+        long threadId = lockRegion.getThreadId();
+        List<LockRegion> lockRegions = lockTbl.get(addr, threadId);
+        if (lockRegions == null) {
+            lockRegions = Lists.newArrayList();
+            lockTbl.put(addr, threadId, lockRegions);
         }
 
-        ArrayList<LockPair> lockpairs = threadlockmap.get(tid);
-        if (lockpairs == null) {
-            lockpairs = new ArrayList<LockPair>();
-            threadlockmap.put(tid, lockpairs);
-        }
-
-        // filter out re-entrant locks for CP
-        while (!lockpairs.isEmpty()) {
-            int lastPos = lockpairs.size() - 1;
-            LockPair lp2 = lockpairs.get(lastPos);
-            if (lp.lock == null || (lp2.lock != null && lp.lock.getGID() < lp2.lock.getGID()))
-                lockpairs.remove(lastPos);
-            else
+        // TODO(YilongL): what does the following mean?
+        // filter out reentrant locks for CP
+        ListIterator<LockRegion> iter = lockRegions.listIterator(lockRegions.size());
+        while (iter.hasPrevious()) {
+            LockRegion prevLockRegion = iter.previous();
+            if (lockRegion.getLock() == null
+                    || (prevLockRegion.getLock() != null && lockRegion.getLock().getGID() < prevLockRegion.getLock()
+                            .getGID())) {
+                iter.remove();
+            } else {
                 break;
+            }
         }
 
-        lockpairs.add(lp);
-
+        lockRegions.add(lockRegion);
     }
 
+    // TODO(YilongL): what does the following mean?
     // NOTE: it's possible two lockpairs overlap, because we skipped wait nodes
-    public boolean hasCommonLock(long tid1, long gid1, long tid2, long gid2) {
-        Iterator<Long> keyIt = indexedThreadLockMaps.keySet().iterator();
-        while (keyIt.hasNext()) {
-            long key = keyIt.next();
-            HashMap<Long, ArrayList<LockPair>> threadlockmap = indexedThreadLockMaps.get(key);
-            ArrayList<LockPair> lockpairs1 = threadlockmap.get(tid1);
-            ArrayList<LockPair> lockpairs2 = threadlockmap.get(tid2);
-            if (lockpairs1 != null && lockpairs2 != null) {
-                boolean hasLock1 = matchAnyLockPair(lockpairs1, gid1);
-                if (hasLock1) {
-                    boolean hasLock2 = matchAnyLockPair(lockpairs2, gid2);
-                    if (hasLock2)
-                        return true;
-                }
+    public boolean hasCommonLock(MemoryAccessEvent e1, MemoryAccessEvent e2) {
+        assert e1.getTID() != e2.getTID();
+
+        for (Long addr : lockTbl.rowKeySet()) {
+            List<LockRegion> lockRegion1 = lockTbl.get(addr, e1.getTID());
+            List<LockRegion> lockRegion2 = lockTbl.get(addr, e2.getTID());
+            if (lockRegion1 != null && lockRegion2 != null) {
+                return matchAnyLockPair(lockRegion1, e1.getGID())
+                        && matchAnyLockPair(lockRegion2, e2.getGID());
             }
         }
 
         return false;
     }
 
-    private boolean matchAnyLockPair(ArrayList<LockPair> lockpair, long gid) {
+    private boolean matchAnyLockPair(List<LockRegion> lockpair, long gid) {
         int s, e, mid;
 
         s = 0;
@@ -111,24 +97,24 @@ public class LockSetEngine {
         while (s <= e) {
             mid = (s + e) / 2;
 
-            LockPair lp = lockpair.get(mid);
+            LockRegion lp = lockpair.get(mid);
 
-            if (lp.lock == null) {
-                if (gid < lp.unlock.getGID())
+            if (lp.getLock() == null) {
+                if (gid < lp.getUnlock().getGID())
                     return true;
                 else {
                     s = mid + 1;
                 }
-            } else if (lp.unlock == null) {
-                if (gid > lp.lock.getGID())
+            } else if (lp.getUnlock() == null) {
+                if (gid > lp.getLock().getGID())
                     return true;
                 else {
                     e = mid - 1;
                 }
             } else {
-                if (gid > lp.unlock.getGID())
+                if (gid > lp.getUnlock().getGID())
                     s = mid + 1;
-                else if (gid < lp.lock.getGID())
+                else if (gid < lp.getLock().getGID())
                     e = mid - 1;
                 else
                     return true;

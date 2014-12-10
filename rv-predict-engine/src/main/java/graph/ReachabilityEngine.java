@@ -30,6 +30,8 @@ package graph;
 
 import java.util.*;
 
+import rvpredict.trace.Event;
+
 /*
  * property: never call addEdge after canReach
  * TODO: must be optimized to handle big graph
@@ -45,11 +47,8 @@ public class ReachabilityEngine {
 
     HashMap<Long, HashSet<Long>> edgeSetMap = new HashMap<Long, HashSet<Long>>();
 
-    public void addEdge(long gid1, long gid2) {
-        long i1 = getId(gid1);
-        long i2 = getId(gid2);
-
-        addInternalEdge(i1, i2);
+    public void addEdge(Event e1, Event e2) {
+        addInternalEdge(getId(e1.getGID()), getId(e2.getGID()));
     }
 
     private void addInternalEdge(long i1, long i2) {

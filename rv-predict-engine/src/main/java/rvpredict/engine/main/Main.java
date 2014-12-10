@@ -141,8 +141,12 @@ public class Main {
         }
 
         if (config.predict) {
-            NewRVPredict predictor = new NewRVPredict(config);
-            predictor.run();
+            try {
+                new NewRVPredict(config).run();
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(1);
+            }
         }
     }
 

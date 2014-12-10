@@ -20,6 +20,7 @@ public class Config {
     public static final String LOG_THREAD_JOIN = "logJoin";
     public static final String LOG_WAIT = "logWait";
     public static final String LOG_NOTIFY = "logNotify";
+    public static final String LOG_NOTIFY_ALL = "logNotifyAll";
 
     public static final String DESC_LOG_FIELD_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;Z)V";
 
@@ -33,6 +34,7 @@ public class Config {
     public static final String DESC_LOG_THREAD_JOIN = "(ILjava/lang/Object;)V";
     public static final String DESC_LOG_WAIT = "(ILjava/lang/Object;)V";
     public static final String DESC_LOG_NOTIFY = "(ILjava/lang/Object;)V";
+    public static final String DESC_LOG_NOTIFY_ALL = "(ILjava/lang/Object;)V";
 
     public boolean verbose;
 

@@ -129,9 +129,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     addLoggingCallBack(LOG_WAIT, DESC_LOG_WAIT);
                     break;
                 case "notify":
-                case "notifyAll":
                     prepareLoggingThreadEvents();
                     addLoggingCallBack(LOG_NOTIFY, DESC_LOG_NOTIFY);
+                    break;
+                case "notifyAll":
+                    prepareLoggingThreadEvents();
+                    addLoggingCallBack(LOG_NOTIFY_ALL, DESC_LOG_NOTIFY_ALL);
                 }
             }
         }

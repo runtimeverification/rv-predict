@@ -97,7 +97,6 @@ public class SMTConstraintBuilder {
                 String wait1 = makeOrderVariable(e, 1);
                 smtlibDecl.append(String.format("(%s Int)\n", wait0));
                 smtlibDecl.append(String.format("(%s Int)\n", wait1));
-                smtlibDecl.append(String.format("(%s Int)\n", makeMatchVariable(e)));
                 smtlibAssertion.append(String.format("(< %s %s)\n", wait0, wait1));
             } else if (e.getType() == EventType.NOTIFY) {
                 smtlibDecl.append(String.format("(%s Int)\n", makeOrderVariable(e)));
@@ -238,7 +237,7 @@ public class SMTConstraintBuilder {
                         /* wait event is modeled as two consecutive unlock-lock events */
                         locks.push(syncEvent);
                     }
-                } else if (eventType == EventType.NOTIFY) {
+                } else if (eventType == EventType.NOTIFY || eventType == EventType.NOTIFY_ALL) {
                     safeDequeMapGet(threadIdToNotifyQueue, tid).add(syncEvent);
                 } else {
                     assert false : "dead code";
@@ -304,14 +303,11 @@ public class SMTConstraintBuilder {
                             StringBuilder sb = new StringBuilder("(and ");
                             sb.append(String.format("(< %s %s %s)",
                                     wait0, makeOrderVariable(notify), wait1));
-                            /* make sure the wait is matched with exactly
-                             * one notify event */
-                            sb.append(String.format("(= %s %s)", makeMatchVariable(wait),
-                                    notify.getGID()));
-                            /* make sure the notify can be used only once */
-                            // TODO(YilongL): handle notifyAll
-                            sb.append(String.format("(= %s %s)", makeMatchVariable(notify),
-                                    wait.getGID()));
+                            if (notify.getType() == EventType.NOTIFY) {
+                                /* make sure NOTIFY can be used only once */
+                                sb.append(String.format("(= %s %s)", makeMatchVariable(notify),
+                                        wait.getGID()));
+                            }
                             sb.append(")");
 
                             matchWaitNotify.append(sb);
@@ -321,22 +317,18 @@ public class SMTConstraintBuilder {
 
                 /* handle the case where the notify is not in the current window */
                 for (long threadId : trace.getThreadIds()) {
-                    StringBuilder sb = new StringBuilder("(and ");
+                    StringBuilder sb = new StringBuilder();
                     Event fstEvent = trace.getFirstThreadEvent(threadId);
                     String ordVarFstEvent = fstEvent.getType() == EventType.WAIT ?
                             makeOrderVariable(fstEvent, 0) : makeOrderVariable(fstEvent);
                     sb.append(String.format("(< %s %s %s)", wait0, ordVarFstEvent, wait1));
-                    sb.append(String.format("(= %s -1)", makeMatchVariable(wait)));
-                    sb.append(")");
                     matchWaitNotify.append(sb);
 
-                    sb = new StringBuilder("(and ");
+                    sb = new StringBuilder();
                     Event lastEvent = trace.getLastThreadEvent(threadId);
                     String ordVarLastEvent = lastEvent.getType() == EventType.WAIT ?
                             makeOrderVariable(lastEvent, 1) : makeOrderVariable(lastEvent);
                     sb.append(String.format("(< %s %s %s)", wait0, ordVarLastEvent, wait1));
-                    sb.append(String.format("(= %s -1)", makeMatchVariable(wait)));
-                    sb.append(")");
                     matchWaitNotify.append(sb);
                 }
 

@@ -226,16 +226,12 @@ public class SMTConstraintBuilder {
                         notifyEvents.clear();
                     } else {
                         /* discard reentrant lock region */
-                        locks.pop();
-                    }
-
-                    if (eventType == EventType.WAIT) {
-                        if (!locks.isEmpty()) {
-                            /* calling wait() in a reentrant lock region results in deadlock */
-                            System.err.println("Found dead lock in trace!");
+                        if (eventType == EventType.UNLOCK) {
+                            locks.pop();
+                        } else {
+                            locks.removeFirst();
+                            locks.addFirst(syncEvent);
                         }
-                        /* wait event is modeled as two consecutive unlock-lock events */
-                        locks.push(syncEvent);
                     }
                 } else if (eventType == EventType.NOTIFY || eventType == EventType.NOTIFY_ALL) {
                     safeDequeMapGet(threadIdToNotifyQueue, tid).add(syncEvent);

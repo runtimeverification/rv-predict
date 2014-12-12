@@ -315,22 +315,9 @@ public class SMTConstraintBuilder {
                     }
                 }
 
-                /* handle the case where the notify is not in the current window */
-                for (long threadId : trace.getThreadIds()) {
-                    StringBuilder sb = new StringBuilder();
-                    Event fstEvent = trace.getFirstThreadEvent(threadId);
-                    String ordVarFstEvent = fstEvent.getType() == EventType.WAIT ?
-                            makeOrderVariable(fstEvent, 0) : makeOrderVariable(fstEvent);
-                    sb.append(String.format("(< %s %s %s)", wait0, ordVarFstEvent, wait1));
-                    matchWaitNotify.append(sb);
-
-                    sb = new StringBuilder();
-                    Event lastEvent = trace.getLastThreadEvent(threadId);
-                    String ordVarLastEvent = lastEvent.getType() == EventType.WAIT ?
-                            makeOrderVariable(lastEvent, 1) : makeOrderVariable(lastEvent);
-                    sb.append(String.format("(< %s %s %s)", wait0, ordVarLastEvent, wait1));
-                    matchWaitNotify.append(sb);
-                }
+                /* YilongL: we don't need to consider the case where the notify
+                 * is not in the current window because it is unsound to guess
+                 * outside the current window */
 
                 matchWaitNotify.append(")\n");
                 smtlibAssertion.append(matchWaitNotify);

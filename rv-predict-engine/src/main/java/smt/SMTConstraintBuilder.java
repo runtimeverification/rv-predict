@@ -418,30 +418,14 @@ public class SMTConstraintBuilder {
         return task.sat;
     }
 
-    /**
-     * return true if the solver return a solution to the constraints
-     *
-     * @param e1
-     * @param e2
-     * @param casualConstraint
-     * @return
-     */
-    public boolean isRace(Event e1, Event e2, StringBuilder casualConstraint) {
-        String var1 = makeOrderVariable(e1);
-        String var2 = makeOrderVariable(e2);
-
-        // String QUERY = "\n(assert (= "+var1+" "+var2+"))\n\n";
-
+    public boolean isRace(Event e1, Event e2, CharSequence casualConstraint) {
         id++;
         task = new SMTTaskRun(config, id);
-
-        String cons_assert = smtlibAssertion.toString() + casualConstraint.toString() + ")\n";
-        cons_assert = cons_assert.replace(var2 + " ", var1 + " ");
-        cons_assert = cons_assert.replace(var2 + ")", var1 + ")");
-        StringBuilder msg = new StringBuilder(benchname).append(CONS_SETLOGIC)
-                .append(smtlibDecl).append(cons_assert).append(")");
+        StringBuilder msg = new StringBuilder(benchname).append(CONS_SETLOGIC).append(smtlibDecl)
+                .append(smtlibAssertion)
+                .append(String.format("(= %s %s)", makeOrderVariable(e1), makeOrderVariable(e2)))
+                .append(casualConstraint).append("))");
         task.sendMessage(msg.toString());
-
         return task.sat;
     }
 

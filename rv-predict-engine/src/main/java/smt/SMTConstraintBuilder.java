@@ -322,7 +322,9 @@ public class SMTConstraintBuilder {
     }
 
     /**
-     * Adds read-write consistency constraints.
+     * Generates a formula ensuring that all read events that {@code event}
+     * depends on read the same value as in the original trace, to guarantee
+     * {@code event} will be generated in the predicted trace.
      */
     public StringBuilder addReadWriteConsistencyConstraints(MemoryAccessEvent event) {
         StringBuilder cnstr = new StringBuilder("(and true ");

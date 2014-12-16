@@ -37,39 +37,51 @@ import java.util.Set;
 import java.util.List;
 
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a
  * corresponding type. Events are indexed by their thread Id, Type, and memory
  * address.
- *
- * @author jeffhuang
- *
  */
 public class Trace {
 
-    // rawfulltrace represents all the raw events in the global order
-    private final List<Event> rawfulltrace = new ArrayList<>();
+    /**
+     * Unprocessed raw events reading from the logging phase.
+     */
+    private final List<Event> rawEvents = new ArrayList<>();
 
-    // indexed by address, the set of read/write threads
-    // used to prune away local data accesses
-    private final Map<String, Set<Long>> indexedReadThreads = new HashMap<>();
-    private final Map<String, Set<Long>> indexedWriteThreads = new HashMap<>();
+    /**
+     * Read threads on each address.
+     */
+    private final Map<String, Set<Long>> addrToReadThreads = new HashMap<>();
 
-    // the set of shared memory locations
-    private final Set<String> sharedAddresses = new HashSet<>();
+    /**
+     * Write threads on each address.
+     */
+    private final Map<String, Set<Long>> addrToWriteThreads = new HashMap<>();
+
+    /**
+     * Shared memory locations.
+     */
+    private final Set<String> sharedMemAddr = new HashSet<>();
 
     private final Set<Long> threadIds = new HashSet<>();
 
     // fulltrace represents all the critical events in the global order
     private final List<Event> allEvents = new ArrayList<>();
 
-    // per thread node map
+    /**
+     * Events of each thread.
+     */
     private final Map<Long, List<Event>> threadIdToEvents = new HashMap<>();
 
-    // per thread branch nodes
+    /**
+     * Branch events of each thread.
+     */
     private final Map<Long, List<BranchEvent>> threadIdToBranchEvents = new HashMap<>();
 
     /**
@@ -118,7 +130,7 @@ public class Trace {
      * @return
      */
     public boolean mayRace() {
-        return !sharedAddresses.isEmpty();
+        return !sharedMemAddr.isEmpty();
     }
 
     public List<Event> getAllEvents() {
@@ -249,29 +261,24 @@ public class Trace {
         return readEvents;
     }
 
-    /**
-     * add a new event to the trace in the order of its appearance
-     *
-     * @param node
-     */
-    public void addRawNode(AbstractEvent node) {
-        rawfulltrace.add(node);
+    public void addRawEvent(Event node) {
+        rawEvents.add(node);
         if (node instanceof MemoryAccessEvent) {
             String addr = ((MemoryAccessEvent) node).getAddr();
             Long tid = node.getTID();
 
             if (node instanceof ReadEvent) {
-                Set<Long> set = indexedReadThreads.get(addr);
+                Set<Long> set = addrToReadThreads.get(addr);
                 if (set == null) {
                     set = new HashSet<Long>();
-                    indexedReadThreads.put(addr, set);
+                    addrToReadThreads.put(addr, set);
                 }
                 set.add(tid);
             } else {
-                Set<Long> set = indexedWriteThreads.get(addr);
+                Set<Long> set = addrToWriteThreads.get(addr);
                 if (set == null) {
                     set = new HashSet<Long>();
-                    indexedWriteThreads.put(addr, set);
+                    addrToWriteThreads.put(addr, set);
                 }
                 set.add(tid);
             }
@@ -283,7 +290,7 @@ public class Trace {
      *
      * @param node
      */
-    private void addNode(Event node) {
+    private void addEvent(Event node) {
         Long tid = node.getTID();
         threadIds.add(tid);
 
@@ -372,53 +379,42 @@ public class Trace {
     }
 
     /**
-     * once trace is completely loaded, do two things: 1. prune away local data
-     * accesses 2. process the remaining trace
+     * Once trace is completely loaded, remove local data accesses and process
+     * the remaining trace.
      */
     public void finishedLoading() {
-        HashSet<String> addrs = new HashSet<String>();
-        addrs.addAll(indexedReadThreads.keySet());
-        addrs.addAll(indexedWriteThreads.keySet());
-        for (Iterator<String> addrIt = addrs.iterator(); addrIt.hasNext();) {
-            String addr = addrIt.next();
-            Set<Long> wtids = indexedWriteThreads.get(addr);
-            if (wtids != null && wtids.size() > 0) {
-                if (wtids.size() > 1) {
-                    sharedAddresses.add(addr);
-
+        for (String addr : Iterables.concat(addrToReadThreads.keySet(),
+                addrToWriteThreads.keySet())) {
+            Set<Long> wrtThrdIds = addrToWriteThreads.get(addr);
+            if (wrtThrdIds != null && !wrtThrdIds.isEmpty()) {
+                if (wrtThrdIds.size() > 1) {
+                    sharedMemAddr.add(addr);
                 } else {
-                    Set<Long> rtids = indexedReadThreads.get(addr);
-                    if (rtids != null) {
-                        HashSet<Long> set = new HashSet<>(rtids);
-                        set.addAll(wtids);
-                        if (set.size() > 1)
-                            sharedAddresses.add(addr);
+                    Set<Long> readThrdIds = addrToReadThreads.get(addr);
+                    if (readThrdIds != null && Sets.union(wrtThrdIds, readThrdIds).size() > 1) {
+                        sharedMemAddr.add(addr);
                     }
                 }
             }
         }
 
-        // add trace
-        for (int i = 0; i < rawfulltrace.size(); i++) {
-            Event node = rawfulltrace.get(i);
-            if (node instanceof MemoryAccessEvent) {
-                String addr = ((MemoryAccessEvent) node).getAddr();
-                if (sharedAddresses.contains(addr))
-                    addNode(node);
-                else
+        for (Event event : rawEvents) {
+            if (event instanceof MemoryAccessEvent) {
+                String addr = ((MemoryAccessEvent) event).getAddr();
+                if (sharedMemAddr.contains(addr)) {
+                    addEvent(event);
+                } else {
                     info.incrementLocalReadWriteNumber();
-
-            } else
-                addNode(node);
+                }
+            } else {
+                addEvent(event);
+            }
         }
 
-        // clear rawfulltrace
-        rawfulltrace.clear();
+        rawEvents.clear();
 
-        // add info
-        info.addSharedAddresses(sharedAddresses);
+        info.addSharedAddresses(sharedMemAddr);
         info.addThreads(threadIds);
-
     }
 
     // TODO(YilongL): add javadoc; addr seems to be some abstract address, e.g.

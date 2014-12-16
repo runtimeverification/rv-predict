@@ -149,7 +149,7 @@ public class DBEngine {
                     break;
             }
 
-            trace.addRawNode(node);
+            trace.addRawEvent(node);
         }
 
         trace.finishedLoading();

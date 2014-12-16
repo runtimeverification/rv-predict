@@ -120,29 +120,21 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     break;
                 case "join":
                     if (isThreadClass(owner)) {
-                        /* TODO(YilongL): Since calls to thread join must be
-                         * logged after they return, the code here is kind of
-                         * ad-hoc. We definitely need more general way to handle
-                         * such case. */
-                        int sid = getCrntStmtSID();
-
-                        int index = dupThenAStore();
-
-                        mv.visitMethodInsn(opcode, owner, name, desc, itf);
-
-                        addPushConstInsn(mv, sid);
-                        mv.visitVarInsn(ALOAD, index);
+                        prepareLoggingThreadEvents();
                         addLoggingCallBack(LOG_THREAD_JOIN, DESC_LOG_THREAD_JOIN);
                     }
-                    return;
+                    break;
                 case "wait":
                     prepareLoggingThreadEvents();
                     addLoggingCallBack(LOG_WAIT, DESC_LOG_WAIT);
                     break;
                 case "notify":
-                case "notifyAll":
                     prepareLoggingThreadEvents();
                     addLoggingCallBack(LOG_NOTIFY, DESC_LOG_NOTIFY);
+                    break;
+                case "notifyAll":
+                    prepareLoggingThreadEvents();
+                    addLoggingCallBack(LOG_NOTIFY_ALL, DESC_LOG_NOTIFY_ALL);
                 }
             }
         }
@@ -195,7 +187,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             // <stack>... ID null sid value </stack>
 
             if (isInit)
-                addLoggingCallBack(LOG_INIT_WRITE_ACCESS, DESC_LOG_INIT_WRITE_ACCESS);
+                addLoggingCallBack(LOG_FIELD_INIT, DESC_LOG_FIELD_INIT);
             else {
                 addPushConstInsn(mv, 1);
                 // <stack>... ID null sid value false </stack>
@@ -251,7 +243,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             loadThenBoxValue(desc, localVarIdx);
             // <stack>... ID objectref sid value </stack>
             if (isInit)
-                addLoggingCallBack(LOG_INIT_WRITE_ACCESS, DESC_LOG_INIT_WRITE_ACCESS);
+                addLoggingCallBack(LOG_FIELD_INIT, DESC_LOG_FIELD_INIT);
             else {
                 addPushConstInsn(mv, 1);
                 // <stack>... ID objectref sid value true </stack>
@@ -276,20 +268,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         case IASTORE: case FASTORE: case DASTORE: case LASTORE:
             instrumentArrayStore(opcode);
             break;
-        case MONITORENTER: {
-            int sid = getCrntStmtSID();
-            // <stack>... objectref </stack>
-            int index = dupThenAStore(); // jvm_local_vars[index] = objectref
-            // <stack>... objectref </stack>
-            mv.visitInsn(opcode);
-            // <stack>... </stack>
-            addPushConstInsn(mv, sid);
-            mv.visitVarInsn(ALOAD, index);
-            // <stack>... sid objectref </stack>
-            addLoggingCallBack(LOG_LOCK, DESC_LOG_LOCK);
-            break;
-        }
-        case MONITOREXIT: {
+        case MONITORENTER: case MONITOREXIT: {
             int sid = getCrntStmtSID();
             // <stack>... objectref </stack>
             int index = dupThenAStore(); // jvm_local_vars[index] = objectref
@@ -297,7 +276,11 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             addPushConstInsn(mv, sid);
             mv.visitVarInsn(ALOAD, index);
             // <stack>... objectref sid objectref </stack>
-            addLoggingCallBack(LOG_UNLOCK, DESC_LOG_UNLOCK);
+            if (opcode == MONITORENTER) {
+                addLoggingCallBack(LOG_LOCK, DESC_LOG_LOCK);
+            } else {
+                addLoggingCallBack(LOG_UNLOCK, DESC_LOG_UNLOCK);
+            }
             // <stack>... objectref </stack>
             mv.visitInsn(opcode);
             break;
@@ -401,7 +384,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         }
         // <stack>... sid arrayref index valueObjRef </stack>
         if (isInit) {
-            addLoggingCallBack(LOG_INIT_WRITE_ACCESS, DESC_LOG_INIT_WRITE_ACCESS);
+            addLoggingCallBack(LOG_ARRAY_INIT, DESC_LOG_ARRAY_INIT);
         } else {
             addPushConstInsn(mv, 1);
             // <stack>... sid arrayref index valueObjRef true </stack>

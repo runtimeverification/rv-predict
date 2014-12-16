@@ -92,6 +92,19 @@ public final class RecordRT {
     }
 
     /**
+     * Logs the {@code NOTIFY_ALL} event produced by invoking
+     * {@code object.notifyAll()}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param object
+     *            the {@code Object} whose {@code notifyAll()} method is invoked
+     */
+    public static void logNotifyAll(int locId, Object object) {
+        db.saveEvent(EventType.NOTIFY_ALL, locId, System.identityHashCode(object));
+    }
+
+    /**
      * Logs the {@code LOCK} event produced by entering block synchronized with
      * {@code object}'s intrinsic lock.
      *
@@ -145,25 +158,6 @@ public final class RecordRT {
     }
 
     /**
-     * Logs the {@code INIT} event produced by initializing a field or an array
-     * element.
-     *
-     * @param locId
-     *            the location identifier of the event
-     * @param object
-     *            the array or the owner object of the field; {@code null} when
-     *            initializing static field
-     * @param arrayIndexOrVarId
-     *            the array index or the variable identifier
-     * @param value
-     *            the initial value of the field or the element
-     */
-    public static void logInitialWrite(int locId, Object object, int arrayIndexOrVarId, Object value) {
-        db.saveEvent(EventType.INIT, locId, System.identityHashCode(object), arrayIndexOrVarId,
-                objectToLong(value));
-    }
-
-    /**
      * Logs the {@code READ/WRITE} event produced by array access.
      *
      * @param locId
@@ -181,6 +175,41 @@ public final class RecordRT {
     public static void logArrayAcc(int locId, Object array, int index, Object value, boolean isWrite) {
         db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(array), index, objectToLong(value));
+    }
+
+    /**
+     * Logs the {@code INIT} event produced by initializing a field.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param object
+     *            the owner object of the field; {@code null} when initializing
+     *            static field
+     * @param variableId
+     *            the variable identifier
+     * @param value
+     *            the initial value of the field
+     */
+    public static void logFieldInit(int locId, Object object, int variableId, Object value) {
+        db.saveEvent(EventType.INIT, locId, System.identityHashCode(object), -variableId,
+                objectToLong(value));
+    }
+
+    /**
+     * Logs the {@code INIT} event produced by initializing an array element.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param object
+     *            the array of the field
+     * @param index
+     *            the array index
+     * @param value
+     *            the initial value of the element
+     */
+    public static void logArrayInit(int locId, Object array, int index, Object value) {
+        db.saveEvent(EventType.INIT, locId, System.identityHashCode(array), index,
+                objectToLong(value));
     }
 
     /**

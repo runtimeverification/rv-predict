@@ -42,7 +42,7 @@ public class TestHelper {
      * Execute command, tests return code and potentially checks standard and
      * error output against expected content in files if
      * {@code expectedFilePrefix} not null.
-     * 
+     *
      * @param expectedFilePrefix
      *            the prefix for the expected files
      * @param numOfRuns
@@ -61,7 +61,7 @@ public class TestHelper {
         File stdoutFile = new File(testsPrefix + ".actual.out");
         File stderrFile = new File(testsPrefix + ".actual.err");
         File inFile = new File(testsPrefix + ".in");
-        
+
         // compile regex patterns
         List<Pattern> expectedPatterns = new ArrayList<>();
         for (String regex : Util.convertFileToString(new File(testsPrefix + ".expected.out")).split("(\n|\r)")) {
@@ -69,7 +69,7 @@ public class TestHelper {
                 expectedPatterns.add(Pattern.compile(regex));
             }
         }
-        
+
         ProcessBuilder processBuilder = new ProcessBuilder(command).inheritIO();
         processBuilder.directory(basePathFile);
         processBuilder.redirectOutput(stdoutFile);
@@ -77,7 +77,7 @@ public class TestHelper {
         if (inFile.exists() && !inFile.isDirectory()) {
             processBuilder.redirectInput(inFile);
         }
-        
+
         /*
          * run the command up to a certain number of times and gather the
          * outputs
@@ -85,8 +85,9 @@ public class TestHelper {
         for (int i = 0; i < numOfRuns && !expectedPatterns.isEmpty(); i++) {
             Process process = processBuilder.start();
             int returnCode = process.waitFor();
-            Assert.assertEquals("Expected no error during " + Arrays.toString(command) + ".", 0, returnCode);
-            
+            Assert.assertEquals("Expected no error during " + Arrays.toString(command) + ".\n"
+                    + Util.convertFileToString(stderrFile), 0, returnCode);
+
             Iterator<Pattern> iter = expectedPatterns.iterator();
             while (iter.hasNext()) {
                 if (iter.next().matcher(Util.convertFileToString(stdoutFile)).find()) {
@@ -94,7 +95,7 @@ public class TestHelper {
                 }
             }
         }
-        
+
         Assert.assertTrue("Unable to match regular expressions: \n\t" +
                         Joiner.on("\n\t").skipNulls().join(expectedPatterns),
                 expectedPatterns.isEmpty());

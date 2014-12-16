@@ -39,10 +39,9 @@ import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Map;
-import java.util.Stack;
 import java.util.List;
 
 import com.google.common.collect.Lists;
@@ -57,6 +56,8 @@ public class SMTConstraintBuilder {
 
     private final Configuration config;
 
+    private final Trace trace;
+
     private final ReachabilityEngine reachEngine = new ReachabilityEngine();
     private final LockSetEngine lockEngine = new LockSetEngine();
 
@@ -67,42 +68,88 @@ public class SMTConstraintBuilder {
 
     private final String benchname;
 
-    public SMTConstraintBuilder(Configuration config) {
+    public SMTConstraintBuilder(Configuration config, Trace trace) {
         this.config = config;
+        this.trace = trace;
         benchname = "(benchmark " + config.tableName + ".smt\n";
     }
 
     private static String makeOrderVariable(Event event) {
+        assert event.getType() != EventType.WAIT;
         return "o" + event.getGID();
     }
 
+    private static String makeOrderVariable(Event event, int subscript) {
+        return "o" + event.getGID() + "_" + subscript;
+    }
+
+    private static String makeMatchVariable(Event event) {
+        return "m" + event.getGID();
+    }
+
     /**
-     * Declares an order variable for each event in a given trace.
-     *
-     * @param trace
-     *            the given trace
+     * Declares an order variable for each event.
      */
-    public void declareVariables(Trace trace) {
+    public void declareVariables() {
         for (Event e : trace.getAllEvents()) {
-            smtlibDecl.append(String.format("(%s Int)\n", makeOrderVariable(e)));
+            if (e.getType() == EventType.WAIT) {
+                String wait0 = makeOrderVariable(e, 0);
+                String wait1 = makeOrderVariable(e, 1);
+                smtlibDecl.append(String.format("(%s Int)\n", wait0));
+                smtlibDecl.append(String.format("(%s Int)\n", wait1));
+                smtlibAssertion.append(String.format("(< %s %s)\n", wait0, wait1));
+            } else if (e.getType() == EventType.NOTIFY) {
+                smtlibDecl.append(String.format("(%s Int)\n", makeOrderVariable(e)));
+                smtlibDecl.append(String.format("(%s Int)\n", makeMatchVariable(e)));
+            } else {
+                smtlibDecl.append(String.format("(%s Int)\n", makeOrderVariable(e)));
+            }
         }
         smtlibDecl.append(")\n");
     }
 
     private void assertHappensBefore(Event e1, Event e2) {
-        smtlibAssertion.append(String.format("(< %s %s)\n", makeOrderVariable(e1),
-                makeOrderVariable(e2)));
+        String ordVar1 = e1.getType() == EventType.WAIT ? makeOrderVariable(e1, 0)
+                : makeOrderVariable(e1);
+        String ordVar2 = e2.getType() == EventType.WAIT ? makeOrderVariable(e2, 1)
+                : makeOrderVariable(e2);
+        smtlibAssertion.append(String.format("(< %s %s)\n", ordVar1, ordVar2));
         reachEngine.addEdge(e1, e2);
+    }
+
+    private String getAsstLockRegionHappensBefore(LockRegion lockRegion1, LockRegion lockRegion2) {
+        String ordVar1;
+        String ordVar2;
+
+        SyncEvent unlock = lockRegion1.getUnlock();
+        SyncEvent lock = lockRegion2.getLock();
+        if (unlock != null) {
+            ordVar1 = unlock.getType() == EventType.WAIT ? makeOrderVariable(unlock, 0)
+                    : makeOrderVariable(unlock);
+        } else {
+            ordVar1 = makeOrderVariable(trace.getLastThreadEvent(lockRegion1.getThreadId()));
+        }
+        if (lock != null) {
+            ordVar2 = lock.getType() == EventType.WAIT ? makeOrderVariable(lock, 1)
+                    : makeOrderVariable(lock);
+        } else {
+            ordVar2 = makeOrderVariable(trace.getFirstThreadEvent(lockRegion2.getThreadId()));
+        }
+
+        return String.format("(< %s %s)", ordVar1, ordVar2);
+    }
+
+    private void assertMutualExclusion(LockRegion lockRegion1, LockRegion lockRegion2) {
+        smtlibAssertion.append(String.format("(or %s %s)\n",
+                getAsstLockRegionHappensBefore(lockRegion1, lockRegion2),
+                getAsstLockRegionHappensBefore(lockRegion2, lockRegion1)));
     }
 
     /**
      * Adds intra-thread must happens-before (MHB) constraints of sequential
-     * consistent memory model for a given trace.
-     *
-     * @param trace
-     *            the given trace
+     * consistent memory model.
      */
-    public void addIntraThreadConstraints(Trace trace) {
+    public void addIntraThreadConstraints() {
         for (List<Event> events : trace.getThreadIdToEventsMap().values()) {
             Event prevEvent = events.get(0);
             for (Event crntEvent : events.subList(1, events.size())) {
@@ -114,12 +161,9 @@ public class SMTConstraintBuilder {
 
     /**
      * Adds intra-thread must happens-before (MHB) constraints of relaxed PSO
-     * memory model for a given trace.
-     *
-     * @param trace
-     *            the given trace
+     * memory model.
      */
-    public void addPSOIntraThreadConstraints(Trace trace) {
+    public void addPSOIntraThreadConstraints() {
         for (List<MemoryAccessEvent> nodes : trace.getMemAccessEventsTable().values()) {
             MemoryAccessEvent prevEvent = nodes.get(0);
             for (MemoryAccessEvent crntEvent : nodes.subList(1, nodes.size())) {
@@ -130,12 +174,9 @@ public class SMTConstraintBuilder {
     }
 
     /**
-     * Adds must happens-before constraints (MHB) for a given trace.
-     *
-     * @param trace
-     *            the given trace
+     * Adds must happens-before constraints (MHB).
      */
-    public void addMHBConstraints(Trace trace) {
+    public void addMHBConstraints() {
         for (List<SyncEvent> startOrJoinEvents : trace.getThreadIdToStartJoinEvents().values()) {
             for (SyncEvent startOrJoinEvent : startOrJoinEvents) {
                 long threadId = startOrJoinEvent.getSyncObject();
@@ -161,326 +202,196 @@ public class SMTConstraintBuilder {
     }
 
     /**
-     * Adds lock mutual exclusion constraints for a given trace.
-     *
-     * @param trace
-     *            the given trace
+     * Adds lock mutual exclusion constraints.
      */
-    public void addLockingConstraints(Trace trace) {
+    public void addLockingConstraints() {
         /* enumerate the locking events on each intrinsic lock */
         for (List<SyncEvent> syncEvents : trace.getLockObjToSyncEvents().values()) {
+            Map<Long, Deque<SyncEvent>> threadIdToLockStack = Maps.newHashMap();
+            Map<Long, Deque<SyncEvent>> threadIdToNotifyQueue = Maps.newHashMap();
             List<LockRegion> lockRegions = Lists.newArrayList();
-            Map<Long, Stack<SyncEvent>> threadIdToLockStack = Maps.newHashMap();
-            SyncEvent matchNotifyEvent = null;
 
             for (SyncEvent syncEvent : syncEvents) {
-                if (syncEvent.getType().equals(EventType.LOCK)) {
-                    safeStackMapGet(threadIdToLockStack, syncEvent.getTID()).push(syncEvent);
-                } else if (syncEvent.getType().equals(EventType.UNLOCK)) {
-                    Stack<SyncEvent> lockStack = safeStackMapGet(threadIdToLockStack,
-                            syncEvent.getTID());
-                    if (lockStack.size() <= 1) {
-                        SyncEvent lockEvent = lockStack.isEmpty() ? null : lockStack.pop();
-                        LockRegion lockRegion = new LockRegion(lockEvent, syncEvent);
-                        lockRegions.add(lockRegion);
-                        lockEngine.add(lockRegion);
+                long tid = syncEvent.getTID();
+
+                EventType eventType = syncEvent.getType();
+                if (eventType == EventType.LOCK) {
+                    safeDequeMapGet(threadIdToLockStack, tid).push(syncEvent);
+                } else if (eventType == EventType.UNLOCK || eventType == EventType.WAIT) {
+                    Deque<SyncEvent> locks = safeDequeMapGet(threadIdToLockStack, tid);
+                    if (locks.size() <= 1) {
+                        SyncEvent lock = locks.isEmpty() ? null : locks.pop();
+                        Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue, tid);
+                        lockRegions.add(new LockRegion(lock, syncEvent, notifyEvents));
+                        notifyEvents.clear();
                     } else {
                         /* discard reentrant lock region */
-                        lockStack.pop();
+                        if (eventType == EventType.UNLOCK) {
+                            locks.pop();
+                        } else {
+                            locks.removeFirst();
+                            locks.addFirst(syncEvent);
+                        }
                     }
-                } else if (syncEvent.getType().equals(EventType.WAIT)) {
-                    long threadId = syncEvent.getTID();
-
-                    if (matchNotifyEvent != null) {
-                        List<Event> thrdEvents = trace.getThreadEvents(threadId);
-                        int idx = thrdEvents.indexOf(syncEvent);
-                        Event nextThrdEvent = idx + 1 == thrdEvents.size() ? null : thrdEvents
-                                .get(idx + 1);
-
-                        assertHappensBefore(matchNotifyEvent, nextThrdEvent == null ? syncEvent
-                                : nextThrdEvent);
-
-                        matchNotifyEvent = null;
-                    }
-
-                    /* model wait event as two consecutive unlock-lock events */
-                    Stack<SyncEvent> stack = safeStackMapGet(threadIdToLockStack, threadId);
-                    /* unlock */
-                    if (stack.size() <= 1) {
-                        lockRegions.add(new LockRegion(stack.isEmpty() ? null : stack.pop(), syncEvent));
-                    } else {
-                        stack.pop();
-                    }
-                    /* lock */
-                    stack.push(syncEvent);
-                } else if (syncEvent.getType().equals(EventType.NOTIFY)) {
-                    matchNotifyEvent = syncEvent;
+                } else if (eventType == EventType.NOTIFY || eventType == EventType.NOTIFY_ALL) {
+                    safeDequeMapGet(threadIdToNotifyQueue, tid).add(syncEvent);
+                } else {
+                    assert false : "dead code";
                 }
             }
 
-            for (Stack<SyncEvent> lockStack : threadIdToLockStack.values()) {
+            for (Deque<SyncEvent> locks : threadIdToLockStack.values()) {
                 /* the corresponding unlock events are missing in the current trace window */
-                if (lockStack.size() > 0) {
-                    SyncEvent lockEvent = lockStack.firstElement();
-                    LockRegion lockRegion = new LockRegion(lockEvent, null);
-                    lockRegions.add(lockRegion);
-                    lockEngine.add(lockRegion);
+                if (!locks.isEmpty()) {
+                    SyncEvent lock = locks.peek();
+                    if (lock.getType() == EventType.WAIT && trace.getNextThreadEvent(lock) == null) {
+                        /* YilongL: do not create a new lock region in this case
+                         * because we don't know if the thread has been notified
+                         * from the wait */
+                        continue;
+                    }
+
+                    Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue, lock.getTID());
+                    lockRegions.add(new LockRegion(lock, null, notifyEvents));
+                    notifyEvents.clear();
                 }
             }
 
-            smtlibAssertion.append(constructLockConstraintsOptimized(lockRegions));
+            lockEngine.addAll(lockRegions);
+
+            /* assert lock regions mutual exclusion */
+            assertLockMutex(lockRegions);
+
+            matchWaitNotifyPair(lockRegions);
         }
     }
 
-    private String constructLockConstraintsOptimized(List<LockRegion> lockPairs) {
-        String CONS_LOCK = "";
-
-        // obtain each thread's last lockpair
-        HashMap<Long, LockRegion> lastLockPairMap = new HashMap<Long, LockRegion>();
-
-        for (int i = 0; i < lockPairs.size(); i++) {
-            LockRegion lp1 = lockPairs.get(i);
-            String var_lp1_a = "";
-            String var_lp1_b = "";
-
-            if (lp1.getLock() == null)//
-                continue;
-            else
-                var_lp1_a = makeOrderVariable(lp1.getLock());
-
-            if (lp1.getUnlock() != null)
-                var_lp1_b = makeOrderVariable(lp1.getUnlock());
-
-            long lp1_tid = lp1.getLock().getTID();
-            LockRegion lp1_pre = lastLockPairMap.get(lp1_tid);
-
-            /*
-             * String var_lp1_pre_b = ""; if(lp1_pre!=null) var_lp1_pre_b =
-             * makeVariable(lp1_pre.unlock.getGID());;
-             */
-
-            ArrayList<LockRegion> flexLockPairs = new ArrayList<LockRegion>();
-
-            // find all lps that are from a different thread, and have no
-            // happens-after relation with lp1
-            // could further optimize by consider lock regions per thread
-            for (int j = 0; j < lockPairs.size(); j++) {
-                LockRegion lp = lockPairs.get(j);
-                if (lp.getLock() != null) {
-                    if (lp.getLock().getTID() != lp1_tid
-                            && !canReach(lp1.getLock(), lp.getLock())) {
-                        flexLockPairs.add(lp);
-                    }
-                } else if (lp.getUnlock() != null) {
-                    if (lp.getUnlock().getTID() != lp1_tid
-                            && !canReach(lp1.getLock(), lp.getUnlock())) {
-                        flexLockPairs.add(lp);
-                    }
+    private void assertLockMutex(List<LockRegion> lockRegions) {
+        for (LockRegion lockRegion1 : lockRegions) {
+            for (LockRegion lockRegion2 : lockRegions) {
+                if (lockRegion1.getThreadId() < lockRegion2.getThreadId()) {
+                    assertMutualExclusion(lockRegion1, lockRegion2);
                 }
             }
-
-            for (int j = 0; j < flexLockPairs.size(); j++) {
-                LockRegion lp2 = flexLockPairs.get(j);
-
-                if (lp2.getUnlock() == null || lp2.getLock() == null && lp1_pre != null)// impossible
-                                                                              // to
-                                                                              // match
-                                                                              // lp2
-                    continue;
-
-                String var_lp2_b = "";
-                String var_lp2_a = "";
-
-                var_lp2_b = makeOrderVariable(lp2.getUnlock());
-
-                if (lp2.getLock() != null)
-                    var_lp2_a = makeOrderVariable(lp2.getLock());
-
-                String cons_b;
-
-                // lp1_b==null, lp2_a=null
-                if (lp1.getUnlock() == null || lp2.getLock() == null) {
-                    cons_b = "(> " + var_lp1_a + " " + var_lp2_b + ")\n";
-                    // the trace may not be well-formed due to segmentation
-                    if (lp1.getLock().getGID() < lp2.getUnlock().getGID())
-                        cons_b = "";
-
-                } else {
-                    cons_b = "(or (> " + var_lp1_a + " " + var_lp2_b + ") (> " + var_lp2_a + " "
-                            + var_lp1_b + "))\n";
-                }
-
-                CONS_LOCK += cons_b;
-
-            }
-            lastLockPairMap.put(lp1.getLock().getTID(), lp1);
-
         }
+    }
 
-        return CONS_LOCK;
+    private void matchWaitNotifyPair(List<LockRegion> lockRegions) {
+        for (LockRegion lockRegion1 : lockRegions) {
+            /* YilongL: we check the lock event (instead of unlock) to be
+             * wait because we don't want to add constraint for un-notified
+             * wait */
+            if (lockRegion1.getLock() != null
+                    && lockRegion1.getLock().getType() == EventType.WAIT) {
+                SyncEvent wait = lockRegion1.getLock();
 
+                /* assert that the wait event must be matched with a notify */
+                StringBuilder matchWaitNotify = new StringBuilder("(or ");
+
+                /* enumerate all notify in the current window */
+                String wait0 = makeOrderVariable(wait, 0);
+                String wait1 = makeOrderVariable(wait, 1);
+                for (LockRegion lockRegion2 : lockRegions) {
+                    if (lockRegion1.getThreadId() != lockRegion2.getThreadId()) {
+                        for (SyncEvent notify : lockRegion2.getNotifyEvents()) {
+                            /* the matched notify event must happen between
+                             * the unlock-lock pair of the wait event */
+                            StringBuilder sb = new StringBuilder("(and ");
+                            sb.append(String.format("(< %s %s %s)",
+                                    wait0, makeOrderVariable(notify), wait1));
+                            if (notify.getType() == EventType.NOTIFY) {
+                                /* make sure NOTIFY can be used only once */
+                                sb.append(String.format("(= %s %s)", makeMatchVariable(notify),
+                                        wait.getGID()));
+                            }
+                            sb.append(")");
+
+                            matchWaitNotify.append(sb);
+                        }
+                    }
+                }
+
+                /* YilongL: we don't need to consider the case where the notify
+                 * is not in the current window because it is unsound to guess
+                 * outside the current window */
+
+                matchWaitNotify.append(")\n");
+                smtlibAssertion.append(matchWaitNotify);
+            }
+        }
     }
 
     /**
-     * return the read-write constraints
-     *
-     * @param readNodes
-     * @param indexedWriteNodes
-     * @param initValueMap
-     * @return
+     * Generates a formula ensuring that all read events that {@code event}
+     * depends on read the same value as in the original trace, to guarantee
+     * {@code event} will be generated in the predicted trace.
      */
-    // TODO: NEED to handle the feasibility of new added write nodes
-    public StringBuilder constructCausalReadWriteConstraints(long rgid,
-            List<ReadEvent> readNodes, Trace trace) {
-        StringBuilder CONS_CAUSAL_RW = new StringBuilder("");
+    public StringBuilder addReadWriteConsistencyConstraints(MemoryAccessEvent event) {
+        StringBuilder cnstr = new StringBuilder("(and true ");
 
-        for (int i = 0; i < readNodes.size(); i++) {
+        /* make sure that every dependent read event reads the same value as in the original trace */
+        for (ReadEvent depRead : trace.getCtrlFlowDependentEvents(event)) {
+            List<WriteEvent> writeEvents = trace.getWriteEventsOn(depRead.getAddr());
 
-            ReadEvent rnode = readNodes.get(i);
-            // filter out itself --
-            if (rgid == rnode.getGID())
-                continue;
-
-            // get all write nodes on the address
-            List<WriteEvent> writenodes = trace.getWriteEventsOn(rnode.getAddr());
-            // no write to array field?
-            // Yes, it could be: java.io.PrintStream out
-            if (writenodes == null || writenodes.size() < 1)//
-                continue;
-
-            WriteEvent preNode = null;//
-
-            // get all write nodes on the address & write the same value
-            List<WriteEvent> writenodes_value_match = new ArrayList<>();
-            for (int j = 0; j < writenodes.size(); j++) {
-                WriteEvent wnode = writenodes.get(j);
-                if (wnode.getValue() == rnode.getValue() && !canReach(rnode, wnode)) {
-                    if (wnode.getTID() != rnode.getTID())
-                        writenodes_value_match.add(wnode);
-                    else {
-                        if (preNode == null
-                                || (preNode.getGID() < wnode.getGID() && wnode.getGID() < rnode
-                                        .getGID()))
-                            preNode = wnode;
-
+            /* thread immediate write predecessor */
+            WriteEvent thrdImdWrtPred = null;
+            /* predecessor write set: all write events whose values could be read by `depRead' */
+            List<WriteEvent> predWriteSet = Lists.newArrayList();
+            for (WriteEvent write : writeEvents) {
+                if (write.getTID() == depRead.getTID()) {
+                    if (write.getGID() < depRead.getGID()) {
+                        thrdImdWrtPred = write;
                     }
+                } else if (!happensBefore(depRead, write)) {
+                    predWriteSet.add(write);
                 }
             }
-            if (writenodes_value_match.size() > 0) {
-                if (preNode != null)
-                    writenodes_value_match.add(preNode);
-
-                // TODO: consider the case when preNode is not null
-
-                String var_r = makeOrderVariable(rnode);
-
-                String cons_a = "";
-                String cons_a_end = "";
-
-                String cons_b = "";
-                String cons_b_end = "";
-
-                // make sure all the nodes that x depends on read the same value
-
-                for (int j = 0; j < writenodes_value_match.size(); j++) {
-                    WriteEvent wnode1 = writenodes_value_match.get(j);
-                    String var_w1 = makeOrderVariable(wnode1);
-
-                    String cons_b_ = "(> " + var_r + " " + var_w1 + ")\n";
-
-                    String cons_c = "";
-                    String cons_c_end = "";
-                    String last_cons_d = null;
-                    for (int k = 0; k < writenodes.size(); k++) {
-                        WriteEvent wnode2 = writenodes.get(k);
-                        if (!writenodes_value_match.contains(wnode2) && !canReach(wnode2, wnode1)
-                                && !canReach(rnode, wnode2)) {
-                            String var_w2 = makeOrderVariable(wnode2);
-
-                            if (last_cons_d != null) {
-                                cons_c += "(and " + last_cons_d;
-                                cons_c_end += ")";
-
-                            }
-                            last_cons_d = "(or (> " + var_w2 + " " + var_r + ")" + " (> " + var_w1
-                                    + " " + var_w2 + "))\n";
-
-                        }
-                    }
-                    if (last_cons_d != null) {
-                        cons_c += last_cons_d;
-                    }
-                    cons_c = cons_c + cons_c_end;
-
-                    if (cons_c.length() > 0)
-                        cons_b_ = "(and " + cons_b_ + " " + cons_c + ")\n";
-
-                    if (j + 1 < writenodes_value_match.size()) {
-                        cons_b += "(or " + cons_b_;
-                        cons_b_end += ")";
-
-                        cons_a += "(and (> " + var_w1 + " " + var_r + ")\n";
-                        cons_a_end += ")";
-                    } else {
-                        cons_b += cons_b_;
-                        cons_a += "(> " + var_w1 + " " + var_r + ")\n";
-                    }
-                }
-
-                cons_b += cons_b_end;
-
-                Long rValue = rnode.getValue();
-                Long initValue = trace.getInitValueOf(rnode.getAddr());
-
-                // it's possible that we don't have initial value for static
-                // variable
-                // so we allow init value to be zero or null? -- null is turned
-                // into 0 by System.identityHashCode
-                boolean allowMatchInit = true;
-                if (initValue == null) {
-                    // it's possible for the read node to match with the init
-                    // write node
-                    // if preNode is null
-                    if (preNode != null) {
-                        allowMatchInit = false;
-                    }
-                }
-
-                if (initValue == null && allowMatchInit || initValue != null
-                        && rValue.equals(initValue)) {
-                    if (cons_a.length() > 0) {
-                        cons_a += cons_a_end + "\n";
-                        CONS_CAUSAL_RW.append("(or \n" + cons_a + " " + cons_b + ")\n\n");
-                    }
-                } else {
-                    CONS_CAUSAL_RW.append(cons_b + "\n");
-                }
-            } else {
-                // make sure it reads the initial write
-                Long rValue = rnode.getValue();
-                Long initValue = trace.getInitValueOf(rnode.getAddr());
-
-                if (initValue != null && rValue.equals(initValue)) {
-                    String var_r = makeOrderVariable(rnode);
-
-                    for (int k = 0; k < writenodes.size(); k++) {
-                        WriteEvent wnode3 = writenodes.get(k);
-                        if (wnode3.getTID() != rnode.getTID() && !canReach(rnode, wnode3)) {
-                            String var_w3 = makeOrderVariable(wnode3);
-
-                            String cons_e = "(> " + var_w3 + " " + var_r + ")\n";
-                            CONS_CAUSAL_RW.append(cons_e);
-                        }
-
-                    }
-
-                }
-
+            if (thrdImdWrtPred != null) {
+                predWriteSet.add(thrdImdWrtPred);
             }
 
+            /* predecessor write set of same value */
+            List<WriteEvent> sameValPredWriteSet = Lists.newArrayList();
+            for (WriteEvent write : predWriteSet) {
+                if (write.getValue() == depRead.getValue()) {
+                    sameValPredWriteSet.add(write);
+                }
+            }
+
+            /* case 1: the dependent read reads the initial value */
+            StringBuilder case1 = new StringBuilder("false");
+            if (thrdImdWrtPred == null
+                    && trace.getInitValueOf(depRead.getAddr()) == depRead.getValue()) {
+                case1 = new StringBuilder("(and true ");
+                for (WriteEvent write : predWriteSet) {
+                    case1.append(String.format("(< %s %s)", makeOrderVariable(depRead),
+                            makeOrderVariable(write)));
+                }
+                case1.append(")");
+            }
+
+            /* case 2: the dependent read reads a previously written value */
+            StringBuilder case2 = new StringBuilder("(or false ");
+            for (WriteEvent write : sameValPredWriteSet) {
+                case2.append("(and ");
+                case2.append(String.format("(< %s %s)", makeOrderVariable(write), makeOrderVariable(depRead)));
+                for (WriteEvent otherWrite : writeEvents) {
+                    if (write != otherWrite && !happensBefore(otherWrite, write)
+                            && !happensBefore(depRead, otherWrite)) {
+                        case2.append(String.format("(or (< %s %s) (< %s %s))",
+                                makeOrderVariable(otherWrite), makeOrderVariable(write),
+                                makeOrderVariable(depRead), makeOrderVariable(otherWrite)));
+                    }
+                }
+                case2.append(")");
+            }
+            case2.append(")");
+
+            cnstr.append(String.format("(or %s %s)", case1, case2));
         }
 
-        return CONS_CAUSAL_RW;
+        cnstr.append(")");
+        return cnstr;
     }
 
     /**
@@ -491,51 +402,39 @@ public class SMTConstraintBuilder {
     }
 
     /**
-     * return true if node1 can reach node2 from the ordering relation
-     *
-     * @param node1
-     * @param node2
-     * @return
+     * Checks if one event happens before another.
      */
-    public boolean canReach(Event node1, Event node2) {
-        long gid1 = node1.getGID();
-        long gid2 = node2.getGID();
-
-        return reachEngine.canReach(gid1, gid2);
+    public boolean happensBefore(Event e1, Event e2) {
+        return reachEngine.canReach(e1.getGID(), e2.getGID());
 
     }
 
-    /**
-     * return true if the solver return a solution to the constraints
-     *
-     * @param e1
-     * @param e2
-     * @param casualConstraint
-     * @return
-     */
-    public boolean isRace(Event e1, Event e2, StringBuilder casualConstraint) {
-        String var1 = makeOrderVariable(e1);
-        String var2 = makeOrderVariable(e2);
-
-        // String QUERY = "\n(assert (= "+var1+" "+var2+"))\n\n";
-
+    public boolean isSat() {
         id++;
         task = new SMTTaskRun(config, id);
 
-        String cons_assert = smtlibAssertion.toString() + casualConstraint.toString() + ")\n";
-        cons_assert = cons_assert.replace(var2 + " ", var1 + " ");
-        cons_assert = cons_assert.replace(var2 + ")", var1 + ")");
         StringBuilder msg = new StringBuilder(benchname).append(CONS_SETLOGIC)
-                .append(smtlibDecl).append(cons_assert).append(")");
+                .append(smtlibDecl).append(smtlibAssertion).append(")");
         task.sendMessage(msg.toString());
 
         return task.sat;
     }
 
-    private static <K, E> Stack<E> safeStackMapGet(Map<K, Stack<E>> map, K key) {
-        Stack<E> value = map.get(key);
+    public boolean isRace(Event e1, Event e2, CharSequence casualConstraint) {
+        id++;
+        task = new SMTTaskRun(config, id);
+        StringBuilder msg = new StringBuilder(benchname).append(CONS_SETLOGIC).append(smtlibDecl)
+                .append(smtlibAssertion)
+                .append(String.format("(= %s %s)", makeOrderVariable(e1), makeOrderVariable(e2)))
+                .append(casualConstraint).append("))");
+        task.sendMessage(msg.toString());
+        return task.sat;
+    }
+
+    private static <K, E> Deque<E> safeDequeMapGet(Map<K, Deque<E>> map, K key) {
+        Deque<E> value = map.get(key);
         if (value == null) {
-            value = new Stack<>();
+            value = new ArrayDeque<>();
             map.put(key, value);
         }
         return value;

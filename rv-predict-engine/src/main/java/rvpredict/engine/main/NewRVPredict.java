@@ -233,21 +233,15 @@ public class NewRVPredict {
 
                     /* not a race if one event happens-before the other */
                     if (fst.getGID() < snd.getGID()
-                            && cnstrBuilder.canReach(fst, snd)
+                            && cnstrBuilder.happensBefore(fst, snd)
                             || fst.getGID() > snd.getGID()
-                            && cnstrBuilder.canReach(snd, fst)) {
+                            && cnstrBuilder.happensBefore(snd, fst)) {
                         continue;
                     }
 
                     /* start building constraints for MCM */
-                    List<ReadEvent> readDeps1 = trace.getDependentReadEvents(fst, config.branch);
-                    List<ReadEvent> readDeps2 = trace.getDependentReadEvents(snd, config.branch);
-
-                    StringBuilder sb1 = cnstrBuilder.constructCausalReadWriteConstraints(fst.getGID(),
-                            readDeps1, trace);
-                    StringBuilder sb2 = cnstrBuilder.constructCausalReadWriteConstraints(-1, readDeps2,
-                            trace);
-                    StringBuilder sb = sb1.append(sb2);
+                    StringBuilder sb = cnstrBuilder.addReadWriteConsistencyConstraints(fst);
+                    sb.append(cnstrBuilder.addReadWriteConsistencyConstraints(snd));
 
                     if (cnstrBuilder.isRace(fst, snd, sb)) {
                         for (Race r : potentialRaces) {
@@ -274,21 +268,21 @@ public class NewRVPredict {
 
             // OPT: if #sv==0 or #shared rw ==0 continue
             if (trace.mayRace()) {
-                SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config);
+                SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config, trace);
 
                 // 1. declare all variables
-                cnstrBuilder.declareVariables(trace);
+                cnstrBuilder.declareVariables();
                 // 2. intra-thread order for all nodes, excluding branches
                 // and basic block transitions
                 if (config.rmm_pso) {
-                    cnstrBuilder.addPSOIntraThreadConstraints(trace);
+                    cnstrBuilder.addPSOIntraThreadConstraints();
                 } else {
-                    cnstrBuilder.addIntraThreadConstraints(trace);
+                    cnstrBuilder.addIntraThreadConstraints();
                 }
 
                 // 3. order for locks, signals, fork/joins
-                cnstrBuilder.addMHBConstraints(trace);
-                cnstrBuilder.addLockingConstraints(trace);
+                cnstrBuilder.addMHBConstraints();
+                cnstrBuilder.addLockingConstraints();
 
                 detectRace(cnstrBuilder, trace);
             }

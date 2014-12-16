@@ -28,6 +28,9 @@
  ******************************************************************************/
 package rvpredict.trace;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 public class LockRegion {
     private final SyncEvent lock;
     private final SyncEvent unlock;
@@ -35,7 +38,14 @@ public class LockRegion {
     private final long lockObj;
     private final long threadId;
 
-    public LockRegion(SyncEvent lock, SyncEvent unlock) {
+    private final Deque<SyncEvent> notifyEvents;
+
+    @Deprecated
+    LockRegion(SyncEvent lock, SyncEvent unlock) {
+        this(lock, unlock, new ArrayDeque<SyncEvent>());
+    }
+
+    public LockRegion(SyncEvent lock, SyncEvent unlock, Deque<SyncEvent> notifyEvents) {
         assert lock.getType().equals(EventType.LOCK) || lock.getType().equals(EventType.WAIT);
         assert unlock.getType().equals(EventType.UNLOCK) || unlock.getType().equals(EventType.WAIT);
         this.lock = lock;
@@ -47,6 +57,7 @@ public class LockRegion {
             lockObj = unlock.getSyncObject();
             threadId = unlock.getTID();
         }
+        this.notifyEvents = new ArrayDeque<>(notifyEvents);
     }
 
     public SyncEvent getLock() {
@@ -63,5 +74,14 @@ public class LockRegion {
 
     public long getThreadId() {
         return threadId;
+    }
+
+    public Deque<SyncEvent> getNotifyEvents() {
+        return notifyEvents;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("<%s, %s>", lock, unlock);
     }
 }

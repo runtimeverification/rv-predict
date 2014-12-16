@@ -137,29 +137,15 @@ public class DBEngine {
                 case WRITE:
                     node = new WriteEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
                     break;
-                case LOCK:
-                    node = new SyncEvent(GID, TID, ID, EventType.LOCK, ADDRL);
-                    break;
-                case UNLOCK:
-                    node = new SyncEvent(GID, TID, ID, EventType.UNLOCK, ADDRL);
-                    break;
-                case WAIT:
-                    node = new SyncEvent(GID, TID, ID, EventType.WAIT, ADDRL);
-                    break;
-                case NOTIFY:
-                    node = new SyncEvent(GID, TID, ID, EventType.NOTIFY, ADDRL);
-                    break;
-                case START:
-                    node = new SyncEvent(GID, TID, ID, EventType.START, ADDRL);
-                    break;
-                case JOIN:
-                    node = new SyncEvent(GID, TID, ID, EventType.JOIN, ADDRL);
+                case LOCK: case UNLOCK: case WAIT: case NOTIFY:
+                case NOTIFY_ALL: case START: case JOIN:
+                    node = new SyncEvent(GID, TID, ID, TYPE, ADDRL);
                     break;
                 case BRANCH:
                     node = new BranchEvent(GID, TID, ID);
                     break;
                 default:
-                    System.out.println(TYPE);
+                    assert false : "unexpected event type: " + TYPE;
                     break;
             }
 

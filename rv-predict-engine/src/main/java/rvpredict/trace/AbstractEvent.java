@@ -77,6 +77,6 @@ public abstract class AbstractEvent implements Event {
 
     @Override
     public String toString() {
-        return GID + ": thread " + TID + " " + ID + " " + type;
+        return String.format("(%s, E%s, T%s, L%s)", type, GID, TID, ID);
     }
 }

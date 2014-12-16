@@ -29,41 +29,14 @@
 package rvpredict.trace;
 
 /**
- * Interface for read and write events.
- *
+ * Represents read and write events.
  */
-public abstract class MemoryAccessEvent extends AbstractEvent {
-
-    protected final long value;
-    protected final long objectHashCode;
-    protected final long index;
+public abstract class MemoryAccessEvent extends InitOrAccessEvent {
 
     protected MemoryAccessEvent(long GID, long TID, int ID, EventType type, long objectHashCode,
             long index, long value) {
-        super(GID, TID, ID, type);
+        super(GID, TID, ID, type, objectHashCode, index, value);
         assert type == EventType.READ || type == EventType.WRITE;
-        this.objectHashCode = objectHashCode;
-        this.index = index;
-        this.value = value;
-    }
-
-    /**
-     * Returns {@code String} representation of the accessed memory address in the event.
-     */
-    public final String getAddr() {
-        return (objectHashCode == 0 ? "_" : objectHashCode + "_") + Math.abs(index);
-    }
-
-    /**
-     * Returns the value read or written in the access.
-     */
-    public final long getValue() {
-        return value;
-    }
-
-    @Override
-    public final String toString() {
-        return GID + ": thread " + TID + " " + ID + " " + objectHashCode + " " + index + " " + value + " " + type;
     }
 
 }

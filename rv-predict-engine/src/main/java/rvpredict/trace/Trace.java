@@ -132,7 +132,9 @@ public class Trace {
     }
 
     public Long getInitValueOf(String addr) {
-        return initValues.get(addr);
+        Long initValue = initValues.get(addr);
+        // TODO(YilongL): assuming that every variable is initialized is very Java-specific
+        return initValue == null ? 0 : initValue;
     }
 
     public Map<Integer, String> getLocIdToStmtSigMap() {
@@ -156,6 +158,13 @@ public class Trace {
     public List<Event> getThreadEvents(long threadId) {
         List<Event> events = threadIdToEvents.get(threadId);
         return events == null ? Lists.<Event>newArrayList() : events;
+    }
+
+    public Event getNextThreadEvent(Event event) {
+        List<Event> events = getThreadEvents(event.getTID());
+        int nextThrdEventIdx = events.indexOf(event) + 1;
+        assert nextThrdEventIdx > 0;
+        return events.size() == nextThrdEventIdx ? null : events.get(nextThrdEventIdx);
     }
 
     public List<BranchEvent> getThreadBranchEvents(long threadId) {
@@ -211,13 +220,13 @@ public class Trace {
     }
 
     /**
-     * Gets dependent nodes of a given {@code MemoryAccessEvent}. Without
-     * logging {@code BranchNode}, all read events that happen-before the given
-     * event have to be included conservatively. Otherwise, only the read events
-     * that happen-before the latest branch event are included.
+     * Gets control-flow dependent events of a given {@code MemoryAccessEvent}.
+     * Without logging {@code BranchNode}, all read events that happen-before
+     * the given event have to be included conservatively. Otherwise, only the
+     * read events that happen-before the latest branch event are included.
      */
     // TODO: NEED to include the dependent nodes from other threads
-    public List<ReadEvent> getDependentReadEvents(MemoryAccessEvent memAccEvent, boolean branch) {
+    public List<ReadEvent> getCtrlFlowDependentEvents(MemoryAccessEvent memAccEvent) {
         // TODO(YilongL): optimize this method when it becomes a bottleneck
         List<ReadEvent> readEvents = new ArrayList<>();
 
@@ -234,7 +243,7 @@ public class Trace {
 
         Event event = prevBranchEvent == null ? memAccEvent : prevBranchEvent;
         for (Event e : getThreadEvents(threadId)) {
-            if (e.getGID() > event.getGID()) {
+            if (e.getGID() >= event.getGID()) {
                 break;
             }
 

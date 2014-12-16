@@ -29,32 +29,12 @@
 package rvpredict.trace;
 
 /**
- * Initialization event.
+ * Represents initialization event.
  */
-public class InitEvent extends AbstractEvent {
-
-    private final long value;
-    private final long objectHashCode;
-    private final long index;
+public class InitEvent extends InitOrAccessEvent {
 
     public InitEvent(long GID, long tid, int ID, long objectHashCode, long index, long value) {
-        super(GID, tid, ID, EventType.INIT);
-        this.objectHashCode = objectHashCode;
-        this.index = index;
-        this.value = value;
-    }
-
-    public String getAddr() {
-        return (objectHashCode == 0 ? "." : objectHashCode + ".") + index;
-    }
-
-    public long getValue() {
-        return value;
-    }
-
-    @Override
-    public String toString() {
-        return GID + ": thread " + TID + " " + ID + " " + objectHashCode + " " + index + " " + value + " " + type;
+        super(GID, tid, ID, EventType.INIT, objectHashCode, index, value);
     }
 
 }

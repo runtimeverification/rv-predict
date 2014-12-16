@@ -144,12 +144,14 @@ public final class RecordRT {
      *            read access
      * @param isWrite
      *            specifies if it is a write access
+     * @param branchModel
+     *            specifies if we use branch model
      */
     public static void logFieldAcc(int locId, Object object, int variableId, Object value,
-            boolean isWrite) {
+            boolean isWrite, boolean branchModel) {
         db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(object), -variableId, objectToLong(value));
-        if (!isPrimitiveWrapper(value)) {
+        if (!isPrimitiveWrapper(value) && branchModel) {
             // TODO(YilongL): what does it mean?
             // shared object reference variable deference
             // make it as a branch event

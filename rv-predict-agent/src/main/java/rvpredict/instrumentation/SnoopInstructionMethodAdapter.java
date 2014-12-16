@@ -67,7 +67,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     @Override
     public void visitMaxs(int maxStack, int maxLocals) {
-        mv.visitMaxs(maxStack + 5, crntMaxIndex + 2);// may change to ...
+        mv.visitMaxs(maxStack + 6, crntMaxIndex + 2);// may change to ...
     }
 
     @Override
@@ -170,7 +170,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             addPushConstInsn(mv, sid);
             loadThenBoxValue(desc, localVarIdx);
             addPushConstInsn(mv, 0);
-            // <stack>... value ID null sid value false </stack>
+            addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
+            // <stack>... value ID null sid value false branch </stack>
             addLoggingCallBack(LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
             // <stack>... value </stack>
             break;
@@ -190,7 +191,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 addLoggingCallBack(LOG_FIELD_INIT, DESC_LOG_FIELD_INIT);
             else {
                 addPushConstInsn(mv, 1);
-                // <stack>... ID null sid value false </stack>
+                addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
+                // <stack>... ID null sid value false branch </stack>
                 addLoggingCallBack(LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
             }
             break;
@@ -211,7 +213,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             addPushConstInsn(mv, sid);
             loadThenBoxValue(desc, localVarIdx2);
             addPushConstInsn(mv, 0);
-            // <stack>... value ID objectref sid value false </stack>
+            addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
+            // <stack>... value ID objectref sid value false branch </stack>
             addLoggingCallBack(LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
             // <stack>... value </stack>
             break;
@@ -246,7 +249,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 addLoggingCallBack(LOG_FIELD_INIT, DESC_LOG_FIELD_INIT);
             else {
                 addPushConstInsn(mv, 1);
-                // <stack>... ID objectref sid value true </stack>
+                addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
+                // <stack>... ID objectref sid value true branch </stack>
                 addLoggingCallBack(LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
             }
             // <stack>... </stack>

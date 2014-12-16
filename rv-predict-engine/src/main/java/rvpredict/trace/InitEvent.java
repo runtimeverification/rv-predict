@@ -45,7 +45,11 @@ public class InitEvent extends AbstractEvent {
     }
 
     public String getAddr() {
-        return (objectHashCode == 0 ? "." : objectHashCode + ".") + index;
+        if (index < 0) {
+            return Long.toHexString(objectHashCode) + "." + -index;
+        } else {
+            return Long.toHexString(objectHashCode) + "[" + index + "]";
+        }
     }
 
     public long getValue() {
@@ -53,8 +57,9 @@ public class InitEvent extends AbstractEvent {
     }
 
     @Override
-    public String toString() {
-        return GID + ": thread " + TID + " " + ID + " " + objectHashCode + " " + index + " " + value + " " + type;
+    public final String toString() {
+        return String.format("(%s, E%s, T%s, L%s, %s, %s)", type, GID, TID, ID, getAddr(),
+                Long.toHexString(value));
     }
 
 }

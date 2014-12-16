@@ -11,8 +11,9 @@ public class Config {
     public final Configuration commandLine = new Configuration();
 
     public static final String LOG_FIELD_ACCESS = "logFieldAcc";
-    public static final String LOG_INIT_WRITE_ACCESS = "logInitialWrite";
+    public static final String LOG_FIELD_INIT = "logFieldInit";
     public static final String LOG_ARRAY_ACCESS = "logArrayAcc";
+    public static final String LOG_ARRAY_INIT = "logArrayInit";
     public static final String LOG_LOCK = "logLock";
     public static final String LOG_UNLOCK = "logUnlock";
     public static final String LOG_BRANCH = "logBranch";
@@ -23,9 +24,9 @@ public class Config {
     public static final String LOG_NOTIFY_ALL = "logNotifyAll";
 
     public static final String DESC_LOG_FIELD_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;Z)V";
-
-    public static final String DESC_LOG_INIT_WRITE_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;)V";
     public static final String DESC_LOG_ARRAY_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;Z)V";
+    public static final String DESC_LOG_FIELD_INIT = "(ILjava/lang/Object;ILjava/lang/Object;)V";
+    public static final String DESC_LOG_ARRAY_INIT = "(ILjava/lang/Object;ILjava/lang/Object;)V";
 
     public static final String DESC_LOG_LOCK = "(ILjava/lang/Object;)V";
     public static final String DESC_LOG_UNLOCK = "(ILjava/lang/Object;)V";

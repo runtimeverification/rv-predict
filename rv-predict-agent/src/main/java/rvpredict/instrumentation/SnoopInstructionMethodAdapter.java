@@ -187,7 +187,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             // <stack>... ID null sid value </stack>
 
             if (isInit)
-                addLoggingCallBack(LOG_INIT_WRITE_ACCESS, DESC_LOG_INIT_WRITE_ACCESS);
+                addLoggingCallBack(LOG_FIELD_INIT, DESC_LOG_FIELD_INIT);
             else {
                 addPushConstInsn(mv, 1);
                 // <stack>... ID null sid value false </stack>
@@ -243,7 +243,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             loadThenBoxValue(desc, localVarIdx);
             // <stack>... ID objectref sid value </stack>
             if (isInit)
-                addLoggingCallBack(LOG_INIT_WRITE_ACCESS, DESC_LOG_INIT_WRITE_ACCESS);
+                addLoggingCallBack(LOG_FIELD_INIT, DESC_LOG_FIELD_INIT);
             else {
                 addPushConstInsn(mv, 1);
                 // <stack>... ID objectref sid value true </stack>
@@ -384,7 +384,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         }
         // <stack>... sid arrayref index valueObjRef </stack>
         if (isInit) {
-            addLoggingCallBack(LOG_INIT_WRITE_ACCESS, DESC_LOG_INIT_WRITE_ACCESS);
+            addLoggingCallBack(LOG_ARRAY_INIT, DESC_LOG_ARRAY_INIT);
         } else {
             addPushConstInsn(mv, 1);
             // <stack>... sid arrayref index valueObjRef true </stack>

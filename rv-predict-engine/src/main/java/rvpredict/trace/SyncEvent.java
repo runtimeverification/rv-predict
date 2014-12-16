@@ -54,7 +54,7 @@ public class SyncEvent extends AbstractEvent {
 
     @Override
     public final String toString() {
-        return GID + ": thread " + TID + " " + ID + " " + syncObject + " " + type;
+        return String.format("(%s, E%s, T%s, L%s, %s)", type, GID, TID, ID, Long.toHexString(syncObject));
     }
 
 }

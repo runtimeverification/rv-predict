@@ -51,7 +51,11 @@ public abstract class MemoryAccessEvent extends AbstractEvent {
      * Returns {@code String} representation of the accessed memory address in the event.
      */
     public final String getAddr() {
-        return (objectHashCode == 0 ? "_" : objectHashCode + "_") + Math.abs(index);
+        if (index < 0) {
+            return Long.toHexString(objectHashCode) + "." + -index;
+        } else {
+            return Long.toHexString(objectHashCode) + "[" + index + "]";
+        }
     }
 
     /**
@@ -63,7 +67,8 @@ public abstract class MemoryAccessEvent extends AbstractEvent {
 
     @Override
     public final String toString() {
-        return GID + ": thread " + TID + " " + ID + " " + objectHashCode + " " + index + " " + value + " " + type;
+        return String.format("(%s, E%s, T%s, L%s, %s, %s)", type, GID, TID, ID, getAddr(),
+                Long.toHexString(value));
     }
 
 }

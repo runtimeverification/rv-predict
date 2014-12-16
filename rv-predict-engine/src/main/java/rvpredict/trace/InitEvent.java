@@ -29,37 +29,12 @@
 package rvpredict.trace;
 
 /**
- * Initialization event.
+ * Represents initialization event.
  */
-public class InitEvent extends AbstractEvent {
-
-    private final long value;
-    private final long objectHashCode;
-    private final long index;
+public class InitEvent extends InitOrAccessEvent {
 
     public InitEvent(long GID, long tid, int ID, long objectHashCode, long index, long value) {
-        super(GID, tid, ID, EventType.INIT);
-        this.objectHashCode = objectHashCode;
-        this.index = index;
-        this.value = value;
-    }
-
-    public String getAddr() {
-        if (index < 0) {
-            return Long.toHexString(objectHashCode) + "." + -index;
-        } else {
-            return Long.toHexString(objectHashCode) + "[" + index + "]";
-        }
-    }
-
-    public long getValue() {
-        return value;
-    }
-
-    @Override
-    public final String toString() {
-        return String.format("(%s, E%s, T%s, L%s, %s, %s)", type, GID, TID, ID, getAddr(),
-                Long.toHexString(value));
+        super(GID, tid, ID, EventType.INIT, objectHashCode, index, value);
     }
 
 }

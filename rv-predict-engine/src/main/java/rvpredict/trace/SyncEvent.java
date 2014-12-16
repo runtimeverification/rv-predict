@@ -29,7 +29,7 @@
 package rvpredict.trace;
 
 /**
- * Interface for synchronization events.
+ * Represents synchronization events.
  *
  */
 public class SyncEvent extends AbstractEvent {

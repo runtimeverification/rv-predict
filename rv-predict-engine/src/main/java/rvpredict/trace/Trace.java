@@ -33,9 +33,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.Stack;
 import java.util.List;
 
 import com.google.common.collect.HashBasedTable;
@@ -70,10 +68,6 @@ public class Trace {
 
     // per thread node map
     private final Map<Long, List<Event>> threadIdToEvents = new HashMap<>();
-
-    // per thread per lock lock/unlock pair
-    private final Map<Long, Map<Long, List<LockRegion>>> threadIndexedLockPairs = new HashMap<>();
-    private final Map<Long, Stack<SyncEvent>> threadSyncStack = new HashMap<>();
 
     // per thread branch nodes
     private final Map<Long, List<BranchEvent>> threadIdToBranchEvents = new HashMap<>();
@@ -372,41 +366,6 @@ public class Trace {
                     }
 
                     syncEvents.add(syncEvent);
-
-                    if (syncEvent.getType().equals(EventType.LOCK)) {
-                        Stack<SyncEvent> stack = threadSyncStack.get(tid);
-                        if (stack == null) {
-                            stack = new Stack<SyncEvent>();
-                            threadSyncStack.put(tid, stack);
-                        }
-
-                        stack.push(syncEvent);
-                    } else if (syncEvent.getType().equals(EventType.UNLOCK)) {
-                        Map<Long, List<LockRegion>> indexedLockpairs = threadIndexedLockPairs
-                                .get(tid);
-                        if (indexedLockpairs == null) {
-                            indexedLockpairs = new HashMap<>();
-                            threadIndexedLockPairs.put(tid, indexedLockpairs);
-                        }
-                        List<LockRegion> lockpairs = indexedLockpairs.get(syncObj);
-                        if (lockpairs == null) {
-                            lockpairs = new ArrayList<>();
-                            indexedLockpairs.put(syncObj, lockpairs);
-                        }
-
-                        Stack<SyncEvent> stack = threadSyncStack.get(tid);
-                        if (stack == null) {
-                            stack = new Stack<SyncEvent>();
-                            threadSyncStack.put(tid, stack);
-                        }
-                        // assert(stack.size()>0); //this is possible when segmented
-                        if (stack.size() == 0)
-                            lockpairs.add(new LockRegion(null, syncEvent));
-                        else if (stack.size() == 1)
-                            lockpairs.add(new LockRegion(stack.pop(), syncEvent));
-                        else
-                            stack.pop();// handle reentrant lock
-                    }
                 }
             }
         }
@@ -453,9 +412,6 @@ public class Trace {
                 addNode(node);
         }
 
-        // process sync stack to handle windowing
-        checkSyncStack();
-
         // clear rawfulltrace
         rawfulltrace.clear();
 
@@ -463,42 +419,6 @@ public class Trace {
         info.addSharedAddresses(sharedAddresses);
         info.addThreads(threadIds);
 
-    }
-
-    /**
-     * compute the lock/unlock pairs because we analyze the trace window by
-     * window, lock/unlock may not be in the same window, so we may have null
-     * lock or unlock node in the pair.
-     */
-    private void checkSyncStack() {
-        // check threadSyncStack - only to handle when segmented
-        Iterator<Entry<Long, Stack<SyncEvent>>> entryIt = threadSyncStack.entrySet().iterator();
-        while (entryIt.hasNext()) {
-            Entry<Long, Stack<SyncEvent>> entry = entryIt.next();
-            Long tid = entry.getKey();
-            Stack<SyncEvent> stack = entry.getValue();
-
-            if (!stack.isEmpty()) {
-                Map<Long, List<LockRegion>> indexedLockpairs = threadIndexedLockPairs
-                        .get(tid);
-                if (indexedLockpairs == null) {
-                    indexedLockpairs = new HashMap<>();
-                    threadIndexedLockPairs.put(tid, indexedLockpairs);
-                }
-
-                while (!stack.isEmpty()) {
-                    SyncEvent syncnode = stack.pop();// lock or wait
-
-                    List<LockRegion> lockpairs = indexedLockpairs.get(syncnode.getSyncObject());
-                    if (lockpairs == null) {
-                        lockpairs = new ArrayList<>();
-                        indexedLockpairs.put(syncnode.getSyncObject(), lockpairs);
-                    }
-
-                    lockpairs.add(new LockRegion(syncnode, null));
-                }
-            }
-        }
     }
 
     // TODO(YilongL): add javadoc; addr seems to be some abstract address, e.g.

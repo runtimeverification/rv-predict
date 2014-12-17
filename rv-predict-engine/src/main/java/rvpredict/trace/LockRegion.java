@@ -69,7 +69,6 @@ public class LockRegion {
     }
 
     public SyncEvent getPreWait() {
-        assert prewait != null;
         return prewait;
     }
 

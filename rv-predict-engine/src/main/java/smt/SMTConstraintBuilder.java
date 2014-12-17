@@ -192,7 +192,8 @@ public class SMTConstraintBuilder {
                 switch (syncEvent.getType()) {
                 case LOCK:
                 case WAIT:
-                    assert !threadIdToPrevLock.containsKey(tid) : "Unexpected nested locking events!";
+                    assert !threadIdToPrevLock.containsKey(tid) : "Unexpected nested locking events:\n"
+                            + threadIdToPrevLock.get(tid) + ", " + syncEvent;
                     threadIdToPrevLock.put(tid, syncEvent);
                     break;
                 case PRE_WAIT:
@@ -243,7 +244,7 @@ public class SMTConstraintBuilder {
             if (lockRegion1.getLock() != null
                     && lockRegion1.getLock().getType() == EventType.WAIT) {
                 /* assert that the wait event must be matched with a notify */
-                StringBuilder matchWaitNotify = new StringBuilder("(or ");
+                StringBuilder matchWaitNotify = new StringBuilder("(or false ");
 
                 /* enumerate all notify in the current window */
                 SyncEvent wait = lockRegion1.getLock();
@@ -253,9 +254,12 @@ public class SMTConstraintBuilder {
                             /* the matched notify event must happen between
                              * the unlock-lock pair of the wait event */
                             StringBuilder sb = new StringBuilder("(and ");
-                            sb.append(String.format("(< %s %s %s)",
-                                    makeOrderVariable(lockRegion1.getPreWait()),
-                                    makeOrderVariable(notify),
+                            if (lockRegion1.getPreWait() != null) {
+                                sb.append(String.format("(< %s %s)",
+                                        makeOrderVariable(lockRegion1.getPreWait()),
+                                        makeOrderVariable(notify)));
+                            }
+                            sb.append(String.format("(< %s %s)", makeOrderVariable(notify),
                                     makeOrderVariable(wait)));
                             if (notify.getType() == EventType.NOTIFY) {
                                 /* make sure NOTIFY can be used only once */

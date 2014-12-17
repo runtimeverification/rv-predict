@@ -125,7 +125,9 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     }
                     break;
                 case "wait":
-                    prepareLoggingThreadEvents();
+                    int index = astore();
+                    addPushConstInsn(mv, getCrntStmtSID());
+                    mv.visitVarInsn(ALOAD, index);
                     addLoggingCallBack(LOG_WAIT, DESC_LOG_WAIT);
                     return;
                 case "notify":

@@ -142,7 +142,7 @@ public class Main {
 
         if (config.predict) {
             try {
-                new NewRVPredict(config).run();
+                new RVPredict(config).run();
             } catch (Exception | Error e) {
                 e.printStackTrace();
                 System.exit(1);

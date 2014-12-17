@@ -55,15 +55,7 @@ import smt.SMTConstraintBuilder;
 import violation.Race;
 import violation.Violation;
 
-/**
- * The NewRVPredict class implements our new race detection algorithm based on
- * constraint solving. The events in the trace are loaded and processed window
- * by window with a configurable window size.
- *
- * @author jeffhuang
- *
- */
-public class NewRVPredict {
+public class RVPredict {
 
     private final HashSet<Violation> violations = new HashSet<Violation>();
     private final HashSet<Violation> potentialviolations = new HashSet<Violation>();
@@ -73,7 +65,7 @@ public class NewRVPredict {
     private final DBEngine dbEngine;
     private final TraceInfo traceInfo;
 
-    public NewRVPredict(Configuration config) {
+    public RVPredict(Configuration config) {
         this.config = config;
         logger = config.logger;
 

@@ -124,12 +124,7 @@ public class Trace {
         this.info = info;
     }
 
-    /**
-     * return true if sharedAddresses is not empty
-     *
-     * @return
-     */
-    public boolean mayRace() {
+    public boolean hasSharedMemAddr() {
         return !sharedMemAddr.isEmpty();
     }
 

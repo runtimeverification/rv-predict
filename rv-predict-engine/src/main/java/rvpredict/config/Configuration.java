@@ -143,7 +143,7 @@ public class Configuration {
 
     final static String opt_max_len = "--maxlen";
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
-    public int window_size = 1000;
+    public int windowSize = 1000;
 
     @Parameter(names = "--branch", description = "Use the branch model", hidden = true, descriptionKey = "2020")
     public boolean branch;

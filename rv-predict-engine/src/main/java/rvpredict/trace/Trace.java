@@ -36,6 +36,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.List;
 
+import org.apache.commons.lang3.mutable.MutableInt;
+
 import com.beust.jcommander.internal.Maps;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Iterables;
@@ -65,8 +67,14 @@ public class Trace {
      */
     private final Map<String, Set<Long>> addrToWriteThreads = new HashMap<>();
 
-    private int crntLockLevel = 0;
+    /**
+     * Lock level table indexed by thread ID and lock object.
+     */
+    private final Table<Long, Long, MutableInt> lockLevelTbl = HashBasedTable.create();
 
+    /**
+     * Lock level of each LOCK/UNLOCK event.
+     */
     private final Map<SyncEvent, Integer> lockLevels = Maps.newHashMap();
 
     /**
@@ -283,8 +291,19 @@ public class Trace {
                 set.add(tid);
             }
         } else if (event.getType() == EventType.LOCK || event.getType() == EventType.UNLOCK) {
-            lockLevels.put((SyncEvent) event, event.getType() == EventType.LOCK ? ++crntLockLevel
-                    : --crntLockLevel);
+            Long lockObj = ((SyncEvent) event).getSyncObject();
+            MutableInt level = lockLevelTbl.get(event.getTID(), lockObj);
+            if (level == null) {
+                level = new MutableInt(0);
+                lockLevelTbl.put(event.getTID(), lockObj, level);
+            }
+            if (event.getType() == EventType.LOCK) {
+                level.increment();
+            }
+            lockLevels.put((SyncEvent) event, level.getValue());
+            if (event.getType() == EventType.UNLOCK) {
+                level.decrement();
+            }
         }
     }
 
@@ -401,21 +420,30 @@ public class Trace {
             }
         }
 
-        int minLockLevel = 1;
-        for (int lockLevel : lockLevels.values()) {
-            minLockLevel = Math.min(minLockLevel, lockLevel);
+        /* compute the levels of the outermost locking events */
+        Table<Long, Long, Integer> minLockLevels = HashBasedTable.create();
+        for (Map.Entry<SyncEvent, Integer> entry : lockLevels.entrySet()) {
+            long tid = entry.getKey().getTID();
+            long lockObj = entry.getKey().getSyncObject();
+            Integer level = minLockLevels.get(tid, lockObj);
+            if (level == null || level > entry.getValue()) {
+                level = entry.getValue();
+            }
+            minLockLevels.put(tid, lockObj, level);
         }
+
         for (Event event : rawEvents) {
-            if (event instanceof MemoryAccessEvent) {
-                String addr = ((MemoryAccessEvent) event).getAddr();
+            if (event instanceof InitOrAccessEvent) {
+                String addr = ((InitOrAccessEvent) event).getAddr();
                 if (sharedMemAddr.contains(addr)) {
                     addEvent(event);
                 } else {
                     info.incrementLocalReadWriteNumber();
                 }
             } else if (event.getType() == EventType.LOCK || event.getType() == EventType.UNLOCK) {
-                /* only preserve outer level lock regions */
-                if (lockLevels.get(event) == minLockLevel) {
+                /* only preserve outermost lock regions */
+                long lockObj = ((SyncEvent) event).getSyncObject();
+                if (lockLevels.get(event) == minLockLevels.get(event.getTID(), lockObj)) {
                     addEvent(event);
                 }
             } else {

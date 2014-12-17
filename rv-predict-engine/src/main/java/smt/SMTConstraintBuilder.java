@@ -75,12 +75,7 @@ public class SMTConstraintBuilder {
     }
 
     private static String makeOrderVariable(Event event) {
-        assert event.getType() != EventType.WAIT;
         return "o" + event.getGID();
-    }
-
-    private static String makeOrderVariable(Event event, int subscript) {
-        return "o" + event.getGID() + "_" + subscript;
     }
 
     private static String makeMatchVariable(Event event) {
@@ -93,55 +88,30 @@ public class SMTConstraintBuilder {
     public void declareVariables() {
         long startIndex = trace.getStartIndex();
         for (Event e : trace.getAllEvents()) {
-            if (e.getType() == EventType.WAIT) {
-                String wait0 = makeOrderVariable(e, 0);
-                String wait1 = makeOrderVariable(e, 1);
-                smtlibDecl.append(String.format("(%s Int)\n", wait0));
-                smtlibDecl.append(String.format("(%s Int)\n", wait1));
-                smtlibAssertion.append(String.format("(<= %s %s)\n", startIndex, wait0));
-                smtlibAssertion.append(String.format("(<= %s %s)\n", startIndex, wait1));
-                smtlibAssertion.append(String.format("(< %s %s)\n", wait0, wait1));
-            } else {
-                if (e.getType() == EventType.NOTIFY) {
-                    smtlibDecl.append(String.format("(%s Int)\n", makeMatchVariable(e)));
-                }
-                smtlibDecl.append(String.format("(%s Int)\n", makeOrderVariable(e)));
-                smtlibAssertion.append(String.format("(<= %s %s)\n", startIndex,
-                        makeOrderVariable(e)));
+            /* introduce a match variable for each NOTIFY event */
+            if (e.getType() == EventType.NOTIFY) {
+                smtlibDecl.append(String.format("(%s Int)\n", makeMatchVariable(e)));
             }
+            smtlibDecl.append(String.format("(%s Int)\n", makeOrderVariable(e)));
+            smtlibAssertion.append(String.format("(<= %s %s)\n", startIndex, makeOrderVariable(e)));
         }
         smtlibDecl.append(")\n");
     }
 
     private void assertHappensBefore(Event e1, Event e2) {
-        String ordVar1 = e1.getType() == EventType.WAIT ? makeOrderVariable(e1, 0)
-                : makeOrderVariable(e1);
-        String ordVar2 = e2.getType() == EventType.WAIT ? makeOrderVariable(e2, 1)
-                : makeOrderVariable(e2);
-        smtlibAssertion.append(String.format("(< %s %s)\n", ordVar1, ordVar2));
+        smtlibAssertion.append(String.format("(< %s %s)\n", makeOrderVariable(e1),
+                makeOrderVariable(e2)));
         reachEngine.addEdge(e1, e2);
     }
 
     private String getAsstLockRegionHappensBefore(LockRegion lockRegion1, LockRegion lockRegion2) {
-        String ordVar1;
-        String ordVar2;
-
         SyncEvent unlock = lockRegion1.getUnlock();
         SyncEvent lock = lockRegion2.getLock();
-        if (unlock != null) {
-            ordVar1 = unlock.getType() == EventType.WAIT ? makeOrderVariable(unlock, 0)
-                    : makeOrderVariable(unlock);
-        } else {
-            ordVar1 = makeOrderVariable(trace.getLastThreadEvent(lockRegion1.getThreadId()));
-        }
-        if (lock != null) {
-            ordVar2 = lock.getType() == EventType.WAIT ? makeOrderVariable(lock, 1)
-                    : makeOrderVariable(lock);
-        } else {
-            ordVar2 = makeOrderVariable(trace.getFirstThreadEvent(lockRegion2.getThreadId()));
-        }
-
-        return String.format("(< %s %s)", ordVar1, ordVar2);
+        return String.format("(< %s %s)",
+                unlock != null ? makeOrderVariable(unlock) : makeOrderVariable(
+                        trace.getLastThreadEvent(lockRegion1.getThreadId())),
+                lock != null ? makeOrderVariable(lock) : makeOrderVariable(
+                        trace.getFirstThreadEvent(lockRegion2.getThreadId())));
     }
 
     private void assertMutualExclusion(LockRegion lockRegion1, LockRegion lockRegion2) {
@@ -213,41 +183,41 @@ public class SMTConstraintBuilder {
         /* enumerate the locking events on each intrinsic lock */
         for (List<SyncEvent> syncEvents : trace.getLockObjToSyncEvents().values()) {
             Map<Long, SyncEvent> threadIdToPrevLock = Maps.newHashMap();
+            Map<Long, SyncEvent> threadIdToPreWait = Maps.newHashMap();
             Map<Long, Deque<SyncEvent>> threadIdToNotifyQueue = Maps.newHashMap();
             List<LockRegion> lockRegions = Lists.newArrayList();
 
             for (SyncEvent syncEvent : syncEvents) {
                 long tid = syncEvent.getTID();
 
-                EventType eventType = syncEvent.getType();
-                if (eventType == EventType.LOCK) {
+                SyncEvent prewait = null;
+                switch (syncEvent.getType()) {
+                case LOCK:
+                case WAIT:
                     assert !threadIdToPrevLock.containsKey(tid) : "Unexpected nested locking events!";
                     threadIdToPrevLock.put(tid, syncEvent);
-                } else if (eventType == EventType.UNLOCK || eventType == EventType.WAIT) {
-                    SyncEvent lock = threadIdToPrevLock.remove(tid);
+                    break;
+                case PRE_WAIT:
+                    prewait = threadIdToPreWait.put(tid, syncEvent);
+                case UNLOCK:
                     Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue, tid);
-                    lockRegions.add(new LockRegion(lock, syncEvent, notifyEvents));
-                    if (eventType == EventType.WAIT) {
-                        threadIdToPrevLock.put(tid, syncEvent);
-                    }
-                } else if (eventType == EventType.NOTIFY || eventType == EventType.NOTIFY_ALL) {
+                    lockRegions.add(new LockRegion(threadIdToPrevLock.remove(tid), syncEvent,
+                            prewait, notifyEvents));
+                    notifyEvents.clear();
+                    break;
+                case NOTIFY:
+                case NOTIFY_ALL:
                     safeDequeMapGet(threadIdToNotifyQueue, tid).add(syncEvent);
-                } else {
-                    assert false : "dead code";
+                    break;
+                default:
+                    assert false : "Unexpected synchronization event: " + syncEvent;
                 }
             }
 
             for (SyncEvent lock : threadIdToPrevLock.values()) {
-                if (lock.getType() == EventType.WAIT && trace.getNextThreadEvent(lock) == null) {
-                    // TODO(YilongL): this will become incorrect when we log wait() after it returns
-                    /* YilongL: do not create a new lock region in this case
-                     * because we don't know if the thread has been notified
-                     * from the wait */
-                    continue;
-                }
-
                 Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue, lock.getTID());
-                lockRegions.add(new LockRegion(lock, null, notifyEvents));
+                lockRegions.add(new LockRegion(lock, null, threadIdToPreWait.remove(lock.getTID()),
+                        notifyEvents));
                 notifyEvents.clear();
             }
 
@@ -272,20 +242,13 @@ public class SMTConstraintBuilder {
 
     private void matchWaitNotifyPair(List<LockRegion> lockRegions) {
         for (LockRegion lockRegion1 : lockRegions) {
-            /* YilongL: we check the lock event (instead of unlock) to be
-             * wait because we don't want to add constraint for un-notified
-             * wait */
-            // TODO(YilongL): this will become incorrect when we log wait() after it returns
             if (lockRegion1.getLock() != null
                     && lockRegion1.getLock().getType() == EventType.WAIT) {
-                SyncEvent wait = lockRegion1.getLock();
-
                 /* assert that the wait event must be matched with a notify */
                 StringBuilder matchWaitNotify = new StringBuilder("(or ");
 
                 /* enumerate all notify in the current window */
-                String wait0 = makeOrderVariable(wait, 0);
-                String wait1 = makeOrderVariable(wait, 1);
+                SyncEvent wait = lockRegion1.getLock();
                 for (LockRegion lockRegion2 : lockRegions) {
                     if (lockRegion1.getThreadId() != lockRegion2.getThreadId()) {
                         for (SyncEvent notify : lockRegion2.getNotifyEvents()) {
@@ -293,7 +256,9 @@ public class SMTConstraintBuilder {
                              * the unlock-lock pair of the wait event */
                             StringBuilder sb = new StringBuilder("(and ");
                             sb.append(String.format("(< %s %s %s)",
-                                    wait0, makeOrderVariable(notify), wait1));
+                                    makeOrderVariable(lockRegion1.getPreWait()),
+                                    makeOrderVariable(notify),
+                                    makeOrderVariable(wait)));
                             if (notify.getType() == EventType.NOTIFY) {
                                 /* make sure NOTIFY can be used only once */
                                 sb.append(String.format("(= %s %s)", makeMatchVariable(notify),

@@ -127,7 +127,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 case "wait":
                     prepareLoggingThreadEvents();
                     addLoggingCallBack(LOG_WAIT, DESC_LOG_WAIT);
-                    break;
+                    return;
                 case "notify":
                     prepareLoggingThreadEvents();
                     addLoggingCallBack(LOG_NOTIFY, DESC_LOG_NOTIFY);

@@ -67,15 +67,23 @@ public final class RecordRT {
     }
 
     /**
-     * Logs the {@code WAIT} event produced by invoking {@code object.wait()}.
+     * Logs events produced by invoking {@code object.wait()}.
      *
      * @param locId
      *            the location identifier of the event
      * @param object
      *            the {@code Object} whose {@code wait()} method is invoked
      */
-    public static void logWait(int locId, Object object) {
-        db.saveEvent(EventType.WAIT, locId, System.identityHashCode(object));
+    public static void logWait(int locId, Object object) throws InterruptedException {
+        int objectHashCode = System.identityHashCode(object);
+        db.saveEvent(EventType.PRE_WAIT, locId, objectHashCode);
+        try {
+            object.wait();
+        } catch (InterruptedException e) {
+            db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
+            throw e;
+        }
+        db.saveEvent(EventType.WAIT, locId, objectHashCode);
     }
 
     /**

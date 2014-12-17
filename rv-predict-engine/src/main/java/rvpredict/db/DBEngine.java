@@ -139,8 +139,14 @@ public class DBEngine {
                 case WRITE:
                     node = new WriteEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
                     break;
-                case LOCK: case UNLOCK: case WAIT: case NOTIFY:
-                case NOTIFY_ALL: case START: case JOIN:
+                case LOCK:
+                case UNLOCK:
+                case PRE_WAIT:
+                case WAIT:
+                case NOTIFY:
+                case NOTIFY_ALL:
+                case START:
+                case JOIN:
                     node = new SyncEvent(GID, TID, ID, TYPE, ADDRL);
                     break;
                 case BRANCH:

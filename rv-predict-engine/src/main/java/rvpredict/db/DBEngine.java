@@ -102,22 +102,24 @@ public class DBEngine {
     }
 
     /**
-     * load trace from event min to event max
-     * Currently trace is assumed to be read sequentially,
-     * in min-max segments, from beginning to end.
-     * @see rvpredict.db.TraceCache#getEvent(long)
+     * Load trace segment from event {@code fromIndex} to event
+     * {@code toIndex-1}. Event number is assumed to start from 1.
      *
-     * @param min index where the trace segment to be read should start from
-     * @param max index where the trace segment to be read should end
-     * @return a {@link rvpredict.trace.Trace} representing the trace segment read
+     * @see rvpredict.db.TraceCache#getEvent(long)
+     * @param fromIndex
+     *            low endpoint (inclusive) of the trace segment
+     * @param toIndex
+     *            high endpoint (exclusive) of the trace segment
+     * @return a {@link rvpredict.trace.Trace} representing the trace segment
+     *         read
      */
-    public Trace getTrace(long min, long max, Map<String, Long> initValues, TraceInfo info) {
+    public Trace getTrace(long fromIndex, long toIndex, Map<String, Long> initValues, TraceInfo info) {
         long traceSize = traceCache.getTraceSize();
-        assert min <= traceSize : "This method should only be called with a valid min value";
-        if (max > traceSize) max = traceSize; // resetting max to trace size.
+        assert fromIndex <= traceSize : "This method should only be called with a valid min value";
+        if (toIndex > traceSize + 1) toIndex = traceSize + 1;
         Trace trace = new Trace(initValues, info);
         AbstractEvent node = null;
-        for (long index = min; index <= max; index++) {
+        for (long index = fromIndex; index < toIndex; index++) {
             rvpredict.db.EventItem eventItem = traceCache.getEvent(index);
             long GID = eventItem.GID;
             long TID = eventItem.TID;

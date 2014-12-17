@@ -124,6 +124,10 @@ public class Trace {
         this.info = info;
     }
 
+    public long getStartIndex() {
+        return rawEvents.get(0).getGID();
+    }
+
     public boolean hasSharedMemAddr() {
         return !sharedMemAddr.isEmpty();
     }
@@ -405,8 +409,6 @@ public class Trace {
                 addEvent(event);
             }
         }
-
-        rawEvents.clear();
 
         info.addSharedAddresses(sharedMemAddr);
         info.addThreads(threadIds);

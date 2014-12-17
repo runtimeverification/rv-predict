@@ -260,10 +260,10 @@ public class NewRVPredict {
 
         // process the trace window by window
         for (int n = 0; n * config.windowSize < totalTraceLength; n++) {
-            long start = n * config.windowSize + 1;
-            long end = (n + 1) * config.windowSize;
+            long fromIndex = n * config.windowSize + 1;
+            long toIndex = fromIndex + config.windowSize;
 
-            Trace trace = dbEngine.getTrace(start, end, initValues, traceInfo);
+            Trace trace = dbEngine.getTrace(fromIndex, toIndex, initValues, traceInfo);
 
             if (trace.hasSharedMemAddr()) {
                 SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config, trace);

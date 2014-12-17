@@ -40,11 +40,6 @@ public class LockRegion {
 
     private final Deque<SyncEvent> notifyEvents;
 
-    @Deprecated
-    LockRegion(SyncEvent lock, SyncEvent unlock) {
-        this(lock, unlock, new ArrayDeque<SyncEvent>());
-    }
-
     public LockRegion(SyncEvent lock, SyncEvent unlock, Deque<SyncEvent> notifyEvents) {
         assert lock.getType().equals(EventType.LOCK) || lock.getType().equals(EventType.WAIT);
         assert unlock.getType().equals(EventType.UNLOCK) || unlock.getType().equals(EventType.WAIT);

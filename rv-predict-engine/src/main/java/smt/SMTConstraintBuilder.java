@@ -86,14 +86,12 @@ public class SMTConstraintBuilder {
      * Declares an order variable for each event.
      */
     public void declareVariables() {
-        long startIndex = trace.getStartIndex();
         for (Event e : trace.getAllEvents()) {
             /* introduce a match variable for each NOTIFY event */
             if (e.getType() == EventType.NOTIFY) {
                 smtlibDecl.append(String.format("(%s Int)\n", makeMatchVariable(e)));
             }
             smtlibDecl.append(String.format("(%s Int)\n", makeOrderVariable(e)));
-            smtlibAssertion.append(String.format("(<= %s %s)\n", startIndex, makeOrderVariable(e)));
         }
         smtlibDecl.append(")\n");
     }

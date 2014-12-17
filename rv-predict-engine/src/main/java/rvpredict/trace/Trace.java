@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.List;
 
+import com.beust.jcommander.internal.Maps;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -63,6 +64,10 @@ public class Trace {
      * Write threads on each address.
      */
     private final Map<String, Set<Long>> addrToWriteThreads = new HashMap<>();
+
+    private int crntLockLevel = 0;
+
+    private final Map<SyncEvent, Integer> lockLevels = Maps.newHashMap();
 
     /**
      * Shared memory locations.
@@ -260,13 +265,13 @@ public class Trace {
         return readEvents;
     }
 
-    public void addRawEvent(Event node) {
-        rawEvents.add(node);
-        if (node instanceof MemoryAccessEvent) {
-            String addr = ((MemoryAccessEvent) node).getAddr();
-            Long tid = node.getTID();
+    public void addRawEvent(Event event) {
+        rawEvents.add(event);
+        if (event instanceof MemoryAccessEvent) {
+            String addr = ((MemoryAccessEvent) event).getAddr();
+            Long tid = event.getTID();
 
-            if (node instanceof ReadEvent) {
+            if (event instanceof ReadEvent) {
                 Set<Long> set = addrToReadThreads.get(addr);
                 if (set == null) {
                     set = new HashSet<Long>();
@@ -281,6 +286,9 @@ public class Trace {
                 }
                 set.add(tid);
             }
+        } else if (event.getType() == EventType.LOCK || event.getType() == EventType.UNLOCK) {
+            lockLevels.put((SyncEvent) event, event.getType() == EventType.LOCK ? ++crntLockLevel
+                    : --crntLockLevel);
         }
     }
 
@@ -397,6 +405,10 @@ public class Trace {
             }
         }
 
+        int minLockLevel = 1;
+        for (int lockLevel : lockLevels.values()) {
+            minLockLevel = Math.min(minLockLevel, lockLevel);
+        }
         for (Event event : rawEvents) {
             if (event instanceof MemoryAccessEvent) {
                 String addr = ((MemoryAccessEvent) event).getAddr();
@@ -404,6 +416,11 @@ public class Trace {
                     addEvent(event);
                 } else {
                     info.incrementLocalReadWriteNumber();
+                }
+            } else if (event.getType() == EventType.LOCK || event.getType() == EventType.UNLOCK) {
+                /* only preserve outer level lock regions */
+                if (lockLevels.get(event) == minLockLevel) {
+                    addEvent(event);
                 }
             } else {
                 addEvent(event);

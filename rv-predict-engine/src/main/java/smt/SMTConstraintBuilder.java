@@ -212,7 +212,7 @@ public class SMTConstraintBuilder {
     public void addLockingConstraints() {
         /* enumerate the locking events on each intrinsic lock */
         for (List<SyncEvent> syncEvents : trace.getLockObjToSyncEvents().values()) {
-            Map<Long, Deque<SyncEvent>> threadIdToLockStack = Maps.newHashMap();
+            Map<Long, SyncEvent> threadIdToPrevLock = Maps.newHashMap();
             Map<Long, Deque<SyncEvent>> threadIdToNotifyQueue = Maps.newHashMap();
             List<LockRegion> lockRegions = Lists.newArrayList();
 
@@ -221,22 +221,14 @@ public class SMTConstraintBuilder {
 
                 EventType eventType = syncEvent.getType();
                 if (eventType == EventType.LOCK) {
-                    safeDequeMapGet(threadIdToLockStack, tid).push(syncEvent);
+                    assert !threadIdToPrevLock.containsKey(tid) : "Unexpected nested locking events!";
+                    threadIdToPrevLock.put(tid, syncEvent);
                 } else if (eventType == EventType.UNLOCK || eventType == EventType.WAIT) {
-                    Deque<SyncEvent> locks = safeDequeMapGet(threadIdToLockStack, tid);
-                    if (locks.size() <= 1) {
-                        SyncEvent lock = locks.isEmpty() ? null : locks.pop();
-                        Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue, tid);
-                        lockRegions.add(new LockRegion(lock, syncEvent, notifyEvents));
-                        notifyEvents.clear();
-                    } else {
-                        /* discard reentrant lock region */
-                        if (eventType == EventType.UNLOCK) {
-                            locks.pop();
-                        } else {
-                            locks.removeFirst();
-                            locks.addFirst(syncEvent);
-                        }
+                    SyncEvent lock = threadIdToPrevLock.remove(tid);
+                    Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue, tid);
+                    lockRegions.add(new LockRegion(lock, syncEvent, notifyEvents));
+                    if (eventType == EventType.WAIT) {
+                        threadIdToPrevLock.put(tid, syncEvent);
                     }
                 } else if (eventType == EventType.NOTIFY || eventType == EventType.NOTIFY_ALL) {
                     safeDequeMapGet(threadIdToNotifyQueue, tid).add(syncEvent);
@@ -245,21 +237,18 @@ public class SMTConstraintBuilder {
                 }
             }
 
-            for (Deque<SyncEvent> locks : threadIdToLockStack.values()) {
-                /* the corresponding unlock events are missing in the current trace window */
-                if (!locks.isEmpty()) {
-                    SyncEvent lock = locks.peek();
-                    if (lock.getType() == EventType.WAIT && trace.getNextThreadEvent(lock) == null) {
-                        /* YilongL: do not create a new lock region in this case
-                         * because we don't know if the thread has been notified
-                         * from the wait */
-                        continue;
-                    }
-
-                    Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue, lock.getTID());
-                    lockRegions.add(new LockRegion(lock, null, notifyEvents));
-                    notifyEvents.clear();
+            for (SyncEvent lock : threadIdToPrevLock.values()) {
+                if (lock.getType() == EventType.WAIT && trace.getNextThreadEvent(lock) == null) {
+                    // TODO(YilongL): this will become incorrect when we log wait() after it returns
+                    /* YilongL: do not create a new lock region in this case
+                     * because we don't know if the thread has been notified
+                     * from the wait */
+                    continue;
                 }
+
+                Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue, lock.getTID());
+                lockRegions.add(new LockRegion(lock, null, notifyEvents));
+                notifyEvents.clear();
             }
 
             lockEngine.addAll(lockRegions);
@@ -286,6 +275,7 @@ public class SMTConstraintBuilder {
             /* YilongL: we check the lock event (instead of unlock) to be
              * wait because we don't want to add constraint for un-notified
              * wait */
+            // TODO(YilongL): this will become incorrect when we log wait() after it returns
             if (lockRegion1.getLock() != null
                     && lockRegion1.getLock().getType() == EventType.WAIT) {
                 SyncEvent wait = lockRegion1.getLock();

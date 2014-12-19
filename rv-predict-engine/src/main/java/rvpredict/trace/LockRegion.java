@@ -34,17 +34,22 @@ import java.util.Deque;
 public class LockRegion {
     private final SyncEvent lock;
     private final SyncEvent unlock;
+    private final SyncEvent prewait;
 
     private final long lockObj;
     private final long threadId;
 
     private final Deque<SyncEvent> notifyEvents;
 
-    public LockRegion(SyncEvent lock, SyncEvent unlock, Deque<SyncEvent> notifyEvents) {
-        assert lock.getType().equals(EventType.LOCK) || lock.getType().equals(EventType.WAIT);
-        assert unlock.getType().equals(EventType.UNLOCK) || unlock.getType().equals(EventType.WAIT);
+    public LockRegion(SyncEvent lock, SyncEvent unlock, SyncEvent prewait,
+            Deque<SyncEvent> notifyEvents) {
+        assert lock == null || lock.getType().equals(EventType.LOCK)
+                || lock.getType().equals(EventType.WAIT);
+        assert unlock == null || unlock.getType().equals(EventType.UNLOCK)
+                || unlock.getType().equals(EventType.PRE_WAIT);
         this.lock = lock;
         this.unlock = unlock;
+        this.prewait = prewait;
         if (lock != null) {
             lockObj = lock.getSyncObject();
             threadId = lock.getTID();
@@ -61,6 +66,10 @@ public class LockRegion {
 
     public SyncEvent getUnlock() {
         return unlock;
+    }
+
+    public SyncEvent getPreWait() {
+        return prewait;
     }
 
     public long getLockObj() {

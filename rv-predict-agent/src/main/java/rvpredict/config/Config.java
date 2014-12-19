@@ -18,8 +18,8 @@ public class Config {
     public static final String LOG_UNLOCK = "logUnlock";
     public static final String LOG_BRANCH = "logBranch";
     public static final String LOG_THREAD_START = "logStart";
-    public static final String LOG_THREAD_JOIN = "logJoin";
-    public static final String LOG_WAIT = "logWait";
+    public static final String RVPREDICT_JOIN = "rvPredictJoin";
+    public static final String RVPREDICT_WAIT = "rvPredictWait";
     public static final String LOG_NOTIFY = "logNotify";
     public static final String LOG_NOTIFY_ALL = "logNotifyAll";
 
@@ -31,9 +31,9 @@ public class Config {
     public static final String DESC_LOG_LOCK = "(ILjava/lang/Object;)V";
     public static final String DESC_LOG_UNLOCK = "(ILjava/lang/Object;)V";
     public static final String DESC_LOG_BRANCH = "(I)V";
-    public static final String DESC_LOG_THREAD_START = "(ILjava/lang/Object;)V";
-    public static final String DESC_LOG_THREAD_JOIN = "(ILjava/lang/Object;)V";
-    public static final String DESC_LOG_WAIT = "(ILjava/lang/Object;)V";
+    public static final String DESC_LOG_THREAD_START = "(ILjava/lang/Thread;)V";
+    public static final String DESC_RVPREDICT_JOIN = "(ILjava/lang/Thread;)V";
+    public static final String DESC_RVPREDICT_WAIT = "(ILjava/lang/Object;)V";
     public static final String DESC_LOG_NOTIFY = "(ILjava/lang/Object;)V";
     public static final String DESC_LOG_NOTIFY_ALL = "(ILjava/lang/Object;)V";
 

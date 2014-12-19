@@ -55,15 +55,7 @@ import smt.SMTConstraintBuilder;
 import violation.Race;
 import violation.Violation;
 
-/**
- * The NewRVPredict class implements our new race detection algorithm based on
- * constraint solving. The events in the trace are loaded and processed window
- * by window with a configurable window size.
- *
- * @author jeffhuang
- *
- */
-public class NewRVPredict {
+public class RVPredict {
 
     private final HashSet<Violation> violations = new HashSet<Violation>();
     private final HashSet<Violation> potentialviolations = new HashSet<Violation>();
@@ -73,7 +65,7 @@ public class NewRVPredict {
     private final DBEngine dbEngine;
     private final TraceInfo traceInfo;
 
-    public NewRVPredict(Configuration config) {
+    public RVPredict(Configuration config) {
         this.config = config;
         logger = config.logger;
 
@@ -256,40 +248,31 @@ public class NewRVPredict {
     }
 
     public void run() {
-        Map<String, Long> initValues = new HashMap<>();
+        Trace.State initState = new Trace.State();
 
         // process the trace window by window
-        for (int round = 0; round * config.window_size < totalTraceLength; round++) {
-            long index_start = round * config.window_size + 1;
-            long index_end = (round + 1) * config.window_size;
+        for (int n = 0; n * config.windowSize < totalTraceLength; n++) {
+            long fromIndex = n * config.windowSize + 1;
+            long toIndex = fromIndex + config.windowSize;
 
-            // load trace
-            Trace trace = dbEngine.getTrace(index_start, index_end, initValues, traceInfo);
+            Trace trace = dbEngine.getTrace(fromIndex, toIndex, initState, traceInfo);
 
-            // OPT: if #sv==0 or #shared rw ==0 continue
-            if (trace.mayRace()) {
+            if (trace.hasSharedMemAddr()) {
                 SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config, trace);
 
-                // 1. declare all variables
                 cnstrBuilder.declareVariables();
-                // 2. intra-thread order for all nodes, excluding branches
-                // and basic block transitions
                 if (config.rmm_pso) {
                     cnstrBuilder.addPSOIntraThreadConstraints();
                 } else {
                     cnstrBuilder.addIntraThreadConstraints();
                 }
-
-                // 3. order for locks, signals, fork/joins
                 cnstrBuilder.addMHBConstraints();
                 cnstrBuilder.addLockingConstraints();
 
                 detectRace(cnstrBuilder, trace);
             }
 
-            /* use the final values of the current window as the initial values
-             * of the next window */
-            initValues = trace.getFinalValues();
+            initState = trace.computeFinalState();
         }
         System.exit(0);
     }

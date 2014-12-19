@@ -29,13 +29,18 @@
 package rvpredict.trace;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.List;
 
+import org.apache.commons.lang3.mutable.MutableInt;
+
+import com.beust.jcommander.internal.Maps;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -63,6 +68,16 @@ public class Trace {
      * Write threads on each address.
      */
     private final Map<String, Set<Long>> addrToWriteThreads = new HashMap<>();
+
+    /**
+     * Lock level table indexed by thread ID and lock object.
+     */
+    private final Table<Long, Long, MutableInt> lockLevelTbl = HashBasedTable.create();
+
+    /**
+     * Lock level of each LOCK/UNLOCK event.
+     */
+    private final Map<SyncEvent, Integer> lockLevels = Maps.newHashMap();
 
     /**
      * Shared memory locations.
@@ -109,27 +124,19 @@ public class Trace {
      */
     private final Table<String, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
 
-    /**
-     * Initial value of each address.
-     */
-    private final Map<String, Long> initValues;
-
     private List<ReadEvent> allReadNodes;
+
+    private final State initState;
 
     private final TraceInfo info;
 
-    public Trace(Map<String, Long> initValues, TraceInfo info) {
-        assert initValues != null && info != null;
-        this.initValues = initValues;
+    public Trace(State initState, TraceInfo info) {
+        assert initState != null && info != null;
+        this.initState = initState;
         this.info = info;
     }
 
-    /**
-     * return true if sharedAddresses is not empty
-     *
-     * @return
-     */
-    public boolean mayRace() {
+    public boolean hasSharedMemAddr() {
         return !sharedMemAddr.isEmpty();
     }
 
@@ -138,9 +145,25 @@ public class Trace {
     }
 
     public Long getInitValueOf(String addr) {
-        Long initValue = initValues.get(addr);
+        Long initValue = initState.addrToValue.get(addr);
         // TODO(YilongL): assuming that every variable is initialized is very Java-specific
         return initValue == null ? 0 : initValue;
+    }
+
+    /**
+     * Returns all unmatched notify events from previous windows.
+     */
+    public Set<SyncEvent> getAllUnmatchedNotifyEvents() {
+        return Collections.unmodifiableSet(initState.notifyToWaitingThreads.keySet());
+    }
+
+    /**
+     * Returns unmatched notify events on a given object from previous windows.
+     */
+    public List<SyncEvent> getUnmatchedNotifyEvents(Long object) {
+        List<SyncEvent> result = initState.objToNotifyEvents.get(object);
+        return result == null ? Collections.<SyncEvent>emptyList() :
+            Collections.unmodifiableList(initState.objToNotifyEvents.get(object));
     }
 
     public Map<Integer, String> getLocIdToStmtSigMap() {
@@ -204,15 +227,6 @@ public class Trace {
         return memAccessEventsTbl;
     }
 
-    public Map<String, Long> getFinalValues() {
-        Map<String, Long> finalValues = new HashMap<>(initValues);
-        for (String addr : addrToWriteEvents.keySet()) {
-            List<WriteEvent> writeEvents = addrToWriteEvents.get(addr);
-            finalValues.put(addr, writeEvents.get(writeEvents.size() - 1).getValue());
-        }
-        return finalValues;
-    }
-
     public List<ReadEvent> getAllReadNodes() {
         if (allReadNodes == null) {
             allReadNodes = new ArrayList<>();
@@ -261,13 +275,97 @@ public class Trace {
         return readEvents;
     }
 
-    public void addRawEvent(Event node) {
-        rawEvents.add(node);
-        if (node instanceof MemoryAccessEvent) {
-            String addr = ((MemoryAccessEvent) node).getAddr();
-            Long tid = node.getTID();
+    public State computeFinalState() {
+        State finalState = new State(initState);
 
-            if (node instanceof ReadEvent) {
+        /* compute final values */
+        for (String addr : addrToWriteEvents.keySet()) {
+            List<WriteEvent> writeEvents = addrToWriteEvents.get(addr);
+            finalState.addrToValue.put(addr, writeEvents.get(writeEvents.size() - 1).getValue());
+        }
+
+        for (Event e : allEvents) {
+            if (e instanceof SyncEvent) {
+                SyncEvent event = (SyncEvent) e;
+                long tid = event.getTID();
+                long obj = event.getSyncObject();
+                switch (event.getType()) {
+                case PRE_WAIT: {
+                    Set<Long> waitSet = finalState.objToWaitingThreads.get(obj);
+                    if (waitSet == null) {
+                        waitSet = Sets.newHashSet();
+                        finalState.objToWaitingThreads.put(obj, waitSet);
+                    }
+                    waitSet.add(tid);
+                    break;
+                }
+                case WAIT: {
+                    finalState.objToWaitingThreads.get(obj).remove(tid);
+
+                    Set<SyncEvent> notifyToRemove = Sets.newHashSet();
+                    SyncEvent fstMatchedNotify = null;
+                    for (SyncEvent notify : finalState.objToNotifyEvents.get(obj)) {
+                        Set<Long> waitSet = finalState.notifyToWaitingThreads.get(notify);
+                        if (waitSet.contains(tid)) {
+                            if (fstMatchedNotify == null) {
+                                fstMatchedNotify = notify;
+
+                                /* NOTIFY event can only be used once */
+                                if (fstMatchedNotify.getType() == EventType.NOTIFY) {
+                                    notifyToRemove.add(fstMatchedNotify);
+                                }
+                            }
+
+                            waitSet.remove(tid);
+                            /* remove useless NOTIFY/NOTIFY_ALL events */
+                            if (waitSet.isEmpty()) {
+                                notifyToRemove.add(notify);
+                            }
+                        }
+                    }
+                    assert fstMatchedNotify != null;
+                    finalState.objToNotifyEvents.get(obj).removeAll(notifyToRemove);
+                    finalState.notifyToWaitingThreads.keySet().removeAll(notifyToRemove);
+                    break;
+                }
+                case NOTIFY:
+                case NOTIFY_ALL: {
+                    Set<Long> waitSet = finalState.objToWaitingThreads.get(obj);
+                    /* no need to record the notify if there is no thread waiting */
+                    if (waitSet != null && !waitSet.isEmpty()) {
+                        List<SyncEvent> notifyEvents = finalState.objToNotifyEvents.get(obj);
+                        if (notifyEvents == null) {
+                            notifyEvents = Lists.newArrayList();
+                            finalState.objToNotifyEvents.put(obj, notifyEvents);
+                        }
+                        notifyEvents.add(event);
+                        finalState.notifyToWaitingThreads.put(event, Sets.newHashSet(waitSet));
+                    }
+                    break;
+                }
+                case START:
+                case JOIN:
+                case LOCK:
+                case UNLOCK:
+                    break;
+                default:
+                    assert false : "Unexpected synchronization event: " + event;
+                }
+            }
+        }
+
+        finalState.cleanup();
+
+        return finalState;
+    }
+
+    public void addRawEvent(Event event) {
+        rawEvents.add(event);
+        if (event instanceof MemoryAccessEvent) {
+            String addr = ((MemoryAccessEvent) event).getAddr();
+            Long tid = event.getTID();
+
+            if (event instanceof ReadEvent) {
                 Set<Long> set = addrToReadThreads.get(addr);
                 if (set == null) {
                     set = new HashSet<Long>();
@@ -281,6 +379,20 @@ public class Trace {
                     addrToWriteThreads.put(addr, set);
                 }
                 set.add(tid);
+            }
+        } else if (event.getType() == EventType.LOCK || event.getType() == EventType.UNLOCK) {
+            Long lockObj = ((SyncEvent) event).getSyncObject();
+            MutableInt level = lockLevelTbl.get(event.getTID(), lockObj);
+            if (level == null) {
+                level = new MutableInt(0);
+                lockLevelTbl.put(event.getTID(), lockObj, level);
+            }
+            if (event.getType() == EventType.LOCK) {
+                level.increment();
+            }
+            lockLevels.put((SyncEvent) event, level.getValue());
+            if (event.getType() == EventType.UNLOCK) {
+                level.decrement();
             }
         }
     }
@@ -306,7 +418,7 @@ public class Trace {
             branchnodes.add((BranchEvent) node);
         } else if (node instanceof InitEvent) {
             // initial write node
-            initValues.put(((InitEvent) node).getAddr(), ((InitEvent) node).getValue());
+            initState.addrToValue.put(((InitEvent) node).getAddr(), ((InitEvent) node).getValue());
             info.incrementInitWriteNumber();
         } else {
             // all critical nodes -- read/write/synchronization events
@@ -398,13 +510,31 @@ public class Trace {
             }
         }
 
+        /* compute the levels of the outermost locking events */
+        Table<Long, Long, Integer> minLockLevels = HashBasedTable.create();
+        for (Entry<SyncEvent, Integer> entry : lockLevels.entrySet()) {
+            long tid = entry.getKey().getTID();
+            long lockObj = entry.getKey().getSyncObject();
+            Integer level = minLockLevels.get(tid, lockObj);
+            if (level == null || level > entry.getValue()) {
+                level = entry.getValue();
+            }
+            minLockLevels.put(tid, lockObj, level);
+        }
+
         for (Event event : rawEvents) {
-            if (event instanceof MemoryAccessEvent) {
-                String addr = ((MemoryAccessEvent) event).getAddr();
+            if (event instanceof InitOrAccessEvent) {
+                String addr = ((InitOrAccessEvent) event).getAddr();
                 if (sharedMemAddr.contains(addr)) {
                     addEvent(event);
                 } else {
                     info.incrementLocalReadWriteNumber();
+                }
+            } else if (event.getType() == EventType.LOCK || event.getType() == EventType.UNLOCK) {
+                /* only preserve outermost lock regions */
+                long lockObj = ((SyncEvent) event).getSyncObject();
+                if (lockLevels.get(event) == minLockLevels.get(event.getTID(), lockObj)) {
+                    addEvent(event);
                 }
             } else {
                 addEvent(event);
@@ -423,6 +553,58 @@ public class Trace {
         // all field addr should contain ".", not true for array access
         int dotPos = addr.indexOf(".");
         return dotPos != -1 && info.isVolatileAddr(Integer.valueOf(addr.substring(dotPos + 1)));
+    }
+
+    public static class State {
+
+        /**
+         * Map from memory address to its value.
+         */
+        private Map<String, Long> addrToValue = Maps.newHashMap();
+
+        /**
+         * Map from object to dormant threads waiting on it.
+         */
+        private Map<Long, Set<Long>> objToWaitingThreads = Maps.newHashMap();
+
+        /**
+         * Map from object to notify events issued on it.
+         */
+        private Map<Long, List<SyncEvent>> objToNotifyEvents = Maps.newHashMap();
+
+        /**
+         * Map from notify event to dormant threads that could be waken up by it.
+         */
+        private Map<SyncEvent, Set<Long>> notifyToWaitingThreads = Maps.newLinkedHashMap();
+
+        public State() { }
+
+        /**
+         * Garbage collects useless keys in maps.
+         */
+        private void cleanup() {
+            Iterator<Entry<Long, Set<Long>>> iter = objToWaitingThreads.entrySet().iterator();
+            while (iter.hasNext()) {
+                if (iter.next().getValue().isEmpty()) {
+                    iter.remove();
+                }
+            }
+
+            Iterator<Entry<Long, List<SyncEvent>>> iter2 = objToNotifyEvents.entrySet().iterator();
+            while (iter2.hasNext()) {
+                if (iter2.next().getValue().isEmpty()) {
+                    iter2.remove();
+                }
+            }
+        }
+
+        private State(State state) {
+            this.addrToValue = new HashMap<>(state.addrToValue);
+            this.objToWaitingThreads = new HashMap<>(state.objToWaitingThreads);
+            this.objToNotifyEvents = new HashMap<>(state.objToNotifyEvents);
+            this.notifyToWaitingThreads = new HashMap<>(state.notifyToWaitingThreads);
+        }
+
     }
 
 }

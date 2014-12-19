@@ -67,15 +67,23 @@ public final class RecordRT {
     }
 
     /**
-     * Logs the {@code WAIT} event produced by invoking {@code object.wait()}.
+     * Logs events produced by invoking {@code object.wait()}.
      *
      * @param locId
      *            the location identifier of the event
      * @param object
      *            the {@code Object} whose {@code wait()} method is invoked
      */
-    public static void logWait(int locId, Object object) {
-        db.saveEvent(EventType.WAIT, locId, System.identityHashCode(object));
+    public static void rvPredictWait(int locId, Object object) throws InterruptedException {
+        int objectHashCode = System.identityHashCode(object);
+        db.saveEvent(EventType.PRE_WAIT, locId, objectHashCode);
+        try {
+            object.wait();
+        } catch (InterruptedException e) {
+            db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
+            throw e;
+        }
+        db.saveEvent(EventType.WAIT, locId, objectHashCode);
     }
 
     /**
@@ -229,9 +237,9 @@ public final class RecordRT {
      *            the {@code Thread} object whose {@code start()} method is
      *            invoked
      */
-    public static void logStart(int locId, Object thread) {
+    public static void logStart(int locId, Thread thread) {
         long crntThreadId = Thread.currentThread().getId();
-        long newThreadId = ((Thread) thread).getId();
+        long newThreadId = thread.getId();
 
         String name = GlobalStateForInstrumentation.instance.threadIdToName.get(crntThreadId);
         // it's possible that name is NULL, because this thread is started from
@@ -267,8 +275,9 @@ public final class RecordRT {
      *            the {@code Thread} object whose {@code join()} method is
      *            invoked
      */
-    public static void logJoin(int locId, Object thread) {
-        db.saveEvent(EventType.JOIN, locId, ((Thread) thread).getId());
+    public static void rvPredictJoin(int locId, Thread thread) throws InterruptedException {
+        thread.join();
+        db.saveEvent(EventType.JOIN, locId, thread.getId());
     }
 
     private static boolean isPrimitiveWrapper(Object o) {

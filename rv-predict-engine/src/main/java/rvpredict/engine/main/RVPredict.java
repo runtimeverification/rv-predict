@@ -248,14 +248,14 @@ public class RVPredict {
     }
 
     public void run() {
-        Map<String, Long> initValues = new HashMap<>();
+        Trace.State initState = new Trace.State();
 
         // process the trace window by window
         for (int n = 0; n * config.windowSize < totalTraceLength; n++) {
             long fromIndex = n * config.windowSize + 1;
             long toIndex = fromIndex + config.windowSize;
 
-            Trace trace = dbEngine.getTrace(fromIndex, toIndex, initValues, traceInfo);
+            Trace trace = dbEngine.getTrace(fromIndex, toIndex, initState, traceInfo);
 
             if (trace.hasSharedMemAddr()) {
                 SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config, trace);
@@ -272,9 +272,7 @@ public class RVPredict {
                 detectRace(cnstrBuilder, trace);
             }
 
-            /* use the final values of the current window as the initial values
-             * of the next window */
-            initValues = trace.getFinalValues();
+            initState = trace.computeFinalState();
         }
         System.exit(0);
     }

@@ -113,11 +113,11 @@ public class DBEngine {
      * @return a {@link rvpredict.trace.Trace} representing the trace segment
      *         read
      */
-    public Trace getTrace(long fromIndex, long toIndex, Map<String, Long> initValues, TraceInfo info) {
+    public Trace getTrace(long fromIndex, long toIndex, Trace.State initState, TraceInfo info) {
         long traceSize = traceCache.getTraceSize();
         assert fromIndex <= traceSize : "This method should only be called with a valid min value";
         if (toIndex > traceSize + 1) toIndex = traceSize + 1;
-        Trace trace = new Trace(initValues, info);
+        Trace trace = new Trace(initState, info);
         AbstractEvent node = null;
         for (long index = fromIndex; index < toIndex; index++) {
             rvpredict.db.EventItem eventItem = traceCache.getEvent(index);

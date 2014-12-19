@@ -29,6 +29,7 @@
 package rvpredict.trace;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -36,6 +37,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.List;
+
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.beust.jcommander.internal.Maps;
@@ -146,6 +148,22 @@ public class Trace {
         Long initValue = initState.addrToValue.get(addr);
         // TODO(YilongL): assuming that every variable is initialized is very Java-specific
         return initValue == null ? 0 : initValue;
+    }
+
+    /**
+     * Returns all unmatched notify events from previous windows.
+     */
+    public Set<SyncEvent> getAllUnmatchedNotifyEvents() {
+        return Collections.unmodifiableSet(initState.notifyToWaitingThreads.keySet());
+    }
+
+    /**
+     * Returns unmatched notify events on a given object from previous windows.
+     */
+    public List<SyncEvent> getUnmatchedNotifyEvents(Long object) {
+        List<SyncEvent> result = initState.objToNotifyEvents.get(object);
+        return result == null ? Collections.<SyncEvent>emptyList() :
+            Collections.unmodifiableList(initState.objToNotifyEvents.get(object));
     }
 
     public Map<Integer, String> getLocIdToStmtSigMap() {
@@ -557,7 +575,7 @@ public class Trace {
         /**
          * Map from notify event to dormant threads that could be waken up by it.
          */
-        private Map<SyncEvent, Set<Long>> notifyToWaitingThreads = Maps.newHashMap();
+        private Map<SyncEvent, Set<Long>> notifyToWaitingThreads = Maps.newLinkedHashMap();
 
         public State() { }
 

@@ -43,7 +43,6 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.List;
-
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -93,6 +92,14 @@ public class SMTConstraintBuilder {
             }
             smtlibDecl.append(String.format("(%s Int)\n", makeOrderVariable(e)));
         }
+
+        /* match variables for notify events from previous windows */
+        for (Event e : trace.getAllUnmatchedNotifyEvents()) {
+            if (e.getType() == EventType.NOTIFY) {
+                smtlibDecl.append(String.format("(%s Int)\n", makeMatchVariable(e)));
+            }
+        }
+
         smtlibDecl.append(")\n");
     }
 
@@ -245,9 +252,19 @@ public class SMTConstraintBuilder {
                     && lockRegion1.getLock().getType() == EventType.WAIT) {
                 /* assert that the wait event must be matched with a notify */
                 StringBuilder matchWaitNotify = new StringBuilder("(or false ");
+                SyncEvent wait = lockRegion1.getLock();
+
+                /* enumerate unmatched notify from previous windows */
+                if (lockRegion1.getPreWait() == null) {
+                    for (SyncEvent notify : trace.getUnmatchedNotifyEvents(wait.getSyncObject())) {
+                        if (notify.getType() == EventType.NOTIFY) {
+                            matchWaitNotify.append(String.format("(= %s %s)",
+                                    makeMatchVariable(notify), wait.getGID()));
+                        }
+                    }
+                }
 
                 /* enumerate all notify in the current window */
-                SyncEvent wait = lockRegion1.getLock();
                 for (LockRegion lockRegion2 : lockRegions) {
                     if (lockRegion1.getThreadId() != lockRegion2.getThreadId()) {
                         for (SyncEvent notify : lockRegion2.getNotifyEvents()) {
@@ -272,10 +289,6 @@ public class SMTConstraintBuilder {
                         }
                     }
                 }
-
-                /* YilongL: we don't need to consider the case where the notify
-                 * is not in the current window because it is unsound to guess
-                 * outside the current window */
 
                 matchWaitNotify.append(")\n");
                 smtlibAssertion.append(matchWaitNotify);

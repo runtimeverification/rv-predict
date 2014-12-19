@@ -43,10 +43,8 @@ public class LockRegion {
 
     public LockRegion(SyncEvent lock, SyncEvent unlock, SyncEvent prewait,
             Deque<SyncEvent> notifyEvents) {
-        assert lock == null || lock.getType() == EventType.LOCK || lock.getType() == EventType.WAIT
-                || lock.getType() == EventType.WAIT_TIMEOUT;
-        assert unlock == null || unlock.getType() == EventType.UNLOCK
-                || unlock.getType() == EventType.PRE_WAIT;
+        assert lock == null || lock.isLock();
+        assert unlock == null || unlock.isUnlock();
         this.lock = lock;
         this.unlock = unlock;
         this.prewait = prewait;

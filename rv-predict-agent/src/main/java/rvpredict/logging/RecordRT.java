@@ -322,8 +322,62 @@ public final class RecordRT {
      *            invoked
      */
     public static void rvPredictJoin(int locId, Thread thread) throws InterruptedException {
-        thread.join();
-        db.saveEvent(EventType.JOIN, locId, thread.getId());
+        rvPredictJoin(locId, thread, 0);
+    }
+
+    /**
+     * Logs the {@code JOIN} event produced by invoking
+     * {@code thread.join(long)}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param thread
+     *            the {@code Thread} object whose {@code join(long)} method is
+     *            invoked
+     * @param millis
+     *            the first argument of {@code thread.join(long)}
+     */
+    public static void rvPredictJoin(int locId, Thread thread, long millis)
+            throws InterruptedException {
+        try {
+            thread.join(millis);
+        } catch (InterruptedException e) {
+            db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
+            throw e;
+        }
+
+        if (millis == 0) {
+            db.saveEvent(EventType.JOIN, locId, thread.getId());
+        }
+    }
+
+    /**
+     * Logs the {@code JOIN} event produced by invoking
+     * {@code thread.join(long, int)}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param thread
+     *            the {@code Thread} object whose {@code join(long, int)} method
+     *            is invoked
+     * @param millis
+     *            the first argument of {@code thread.join(long, int)}
+     * @param nanos
+     *            the second argument of {@code thread.join(long, int)}
+     *
+     */
+    public static void rvPredictJoin(int locId, Thread thread, long millis, int nanos)
+            throws InterruptedException {
+        try {
+            thread.join(millis, nanos);
+        } catch (InterruptedException e) {
+            db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
+            throw e;
+        }
+
+        if (millis == 0 && nanos == 0) {
+            db.saveEvent(EventType.JOIN, locId, thread.getId());
+        }
     }
 
     private static boolean isPrimitiveWrapper(Object o) {

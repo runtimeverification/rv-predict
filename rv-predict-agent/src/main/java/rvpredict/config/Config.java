@@ -33,6 +33,8 @@ public class Config {
     public static final String DESC_LOG_BRANCH = "(I)V";
     public static final String DESC_RVPREDICT_THREAD_START = "(ILjava/lang/Thread;)V";
     public static final String DESC_RVPREDICT_JOIN = "(ILjava/lang/Thread;)V";
+    public static final String DESC_RVPREDICT_JOIN_TIMEOUT = "(ILjava/lang/Thread;J)V";
+    public static final String DESC_RVPREDICT_JOIN_TIMEOUT_NANO = "(ILjava/lang/Thread;JI)V";
     public static final String DESC_RVPREDICT_WAIT = "(ILjava/lang/Object;)V";
     public static final String DESC_RVPREDICT_WAIT_TIMEOUT = "(ILjava/lang/Object;J)V";
     public static final String DESC_RVPREDICT_WAIT_TIMEOUT_NANO = "(ILjava/lang/Object;JI)V";

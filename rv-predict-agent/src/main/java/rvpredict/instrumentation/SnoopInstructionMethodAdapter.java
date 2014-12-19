@@ -139,6 +139,19 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     return;
                 }
                 break;
+            case "join(J)V":
+                if (isThreadClass(owner)) {
+                    substituteVirtualWithStatic(RVPREDICT_JOIN, DESC_RVPREDICT_JOIN_TIMEOUT, "J");
+                    return;
+                }
+                break;
+            case "join(JI)V":
+                if (isThreadClass(owner)) {
+                    substituteVirtualWithStatic(RVPREDICT_JOIN, DESC_RVPREDICT_JOIN_TIMEOUT_NANO,
+                            "J", "I");
+                    return;
+                }
+                break;
             case "wait()V":
                 substituteVirtualWithStatic(RVPREDICT_WAIT, DESC_RVPREDICT_WAIT);
                 return;

@@ -199,6 +199,7 @@ public class SMTConstraintBuilder {
                 switch (syncEvent.getType()) {
                 case LOCK:
                 case WAIT:
+                case WAIT_TIMEOUT:
                     assert !threadIdToPrevLock.containsKey(tid) : "Unexpected nested locking events:\n"
                             + threadIdToPrevLock.get(tid) + ", " + syncEvent;
                     threadIdToPrevLock.put(tid, syncEvent);

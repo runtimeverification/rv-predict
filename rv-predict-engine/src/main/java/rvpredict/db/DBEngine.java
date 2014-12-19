@@ -143,6 +143,7 @@ public class DBEngine {
                 case UNLOCK:
                 case PRE_WAIT:
                 case WAIT:
+                case WAIT_TIMEOUT:
                 case NOTIFY:
                 case NOTIFY_ALL:
                 case START:

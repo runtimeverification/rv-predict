@@ -17,11 +17,11 @@ public class Config {
     public static final String LOG_LOCK = "logLock";
     public static final String LOG_UNLOCK = "logUnlock";
     public static final String LOG_BRANCH = "logBranch";
-    public static final String LOG_THREAD_START = "logStart";
+    public static final String RVPREDICT_THREAD_START = "rvPredictStart";
     public static final String RVPREDICT_JOIN = "rvPredictJoin";
     public static final String RVPREDICT_WAIT = "rvPredictWait";
-    public static final String LOG_NOTIFY = "logNotify";
-    public static final String LOG_NOTIFY_ALL = "logNotifyAll";
+    public static final String RVPREDICT_NOTIFY = "rvPredictNotify";
+    public static final String RVPREDICT_NOTIFY_ALL = "rvPredictNotifyAll";
 
     public static final String DESC_LOG_FIELD_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;ZZ)V";
     public static final String DESC_LOG_ARRAY_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;Z)V";
@@ -31,11 +31,13 @@ public class Config {
     public static final String DESC_LOG_LOCK = "(ILjava/lang/Object;)V";
     public static final String DESC_LOG_UNLOCK = "(ILjava/lang/Object;)V";
     public static final String DESC_LOG_BRANCH = "(I)V";
-    public static final String DESC_LOG_THREAD_START = "(ILjava/lang/Thread;)V";
+    public static final String DESC_RVPREDICT_THREAD_START = "(ILjava/lang/Thread;)V";
     public static final String DESC_RVPREDICT_JOIN = "(ILjava/lang/Thread;)V";
     public static final String DESC_RVPREDICT_WAIT = "(ILjava/lang/Object;)V";
-    public static final String DESC_LOG_NOTIFY = "(ILjava/lang/Object;)V";
-    public static final String DESC_LOG_NOTIFY_ALL = "(ILjava/lang/Object;)V";
+    public static final String DESC_RVPREDICT_WAIT_TIMEOUT = "(ILjava/lang/Object;J)V";
+    public static final String DESC_RVPREDICT_WAIT_TIMEOUT_NANO = "(ILjava/lang/Object;JI)V";
+    public static final String DESC_RVPREDICT_NOTIFY = "(ILjava/lang/Object;)V";
+    public static final String DESC_RVPREDICT_NOTIFY_ALL = "(ILjava/lang/Object;)V";
 
     public boolean verbose;
 

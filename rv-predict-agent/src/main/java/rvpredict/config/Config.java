@@ -19,6 +19,9 @@ public class Config {
     public static final String LOG_BRANCH = "logBranch";
     public static final String RVPREDICT_THREAD_START = "rvPredictStart";
     public static final String RVPREDICT_JOIN = "rvPredictJoin";
+    public static final String RVPREDICT_INTERRUPT = "rvPredictInterrupt";
+    public static final String RVPREDICT_INTERRUPTED = "rvPredictInterrupted";
+    public static final String RVPREDICT_IS_INTERRUPTED = "rvPredictIsInterrupted";
     public static final String RVPREDICT_WAIT = "rvPredictWait";
     public static final String RVPREDICT_NOTIFY = "rvPredictNotify";
     public static final String RVPREDICT_NOTIFY_ALL = "rvPredictNotifyAll";
@@ -35,6 +38,9 @@ public class Config {
     public static final String DESC_RVPREDICT_JOIN = "(ILjava/lang/Thread;)V";
     public static final String DESC_RVPREDICT_JOIN_TIMEOUT = "(ILjava/lang/Thread;J)V";
     public static final String DESC_RVPREDICT_JOIN_TIMEOUT_NANO = "(ILjava/lang/Thread;JI)V";
+    public static final String DESC_RVPREDICT_INTERRUPT = "(ILjava/lang/Thread;)V";
+    public static final String DESC_RVPREDICT_INTERRUPTED = "(I)Z";
+    public static final String DESC_RVPREDICT_IS_INTERRUPTED = "(ILjava/lang/Thread;)Z";
     public static final String DESC_RVPREDICT_WAIT = "(ILjava/lang/Object;)V";
     public static final String DESC_RVPREDICT_WAIT_TIMEOUT = "(ILjava/lang/Object;J)V";
     public static final String DESC_RVPREDICT_WAIT_TIMEOUT_NANO = "(ILjava/lang/Object;JI)V";

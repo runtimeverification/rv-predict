@@ -95,32 +95,38 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     }
 
     /**
-     * Substitutes call to a non-static method with its counterpart static
-     * method provided by the RV-Predict runtime.
+     * Substitutes method call with its counterpart method provided by the
+     * RV-Predict runtime.
      *
-     * @param staticMethodName
-     *            the name of the static method
-     * @param staticMethodDesc
-     *            the descriptor of the static method
-     * @param numOfArgs
-     *            the number of arguments of the non-static method
+     * @param opcode
+     *            INVOKEVIRTUAL or INVOKESTATIC
+     * @param substName
+     *            the name of the substitution method
+     * @param substDesc
+     *            the descriptor of the substitution method
+     * @param argDesc
+     *            argument type descriptors of the original method
      */
-    private void substituteVirtualWithStatic(String staticMethodName, String staticMethodDesc,
+    private void substituteMethodCall(int opcode, String substName, String substDesc,
             String... argDesc) {
-        // <stack>... objectref (arg)* </stack>
+        assert opcode == INVOKEVIRTUAL || opcode == INVOKESTATIC;
+
+        // <stack>... (objectref)? (arg)* </stack>
         int[] indices = new int[argDesc.length];
         for (int i = argDesc.length - 1; i >= 0; i--) {
             indices[i] = storeValue(argDesc[i]);
         }
-        int objRefIndex = astore();
+        int objRefIndex = opcode == INVOKEVIRTUAL ? astore() : -1;
         // <stack>... </stack>
         addPushConstInsn(mv, getCrntStmtSID());
-        mv.visitVarInsn(ALOAD, objRefIndex);
+        if (opcode == INVOKEVIRTUAL) {
+            mv.visitVarInsn(ALOAD, objRefIndex);
+        }
         for (int i = 0; i < argDesc.length; i++) {
             loadValue(argDesc[i], indices[i]);
         }
-        // <stack>... sid objectref (arg)* </stack>
-        invokeStatic(staticMethodName, staticMethodDesc);
+        // <stack>... sid (objectref)? (arg)* </stack>
+        invokeStatic(substName, substDesc);
     }
 
     @Override
@@ -129,44 +135,63 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             switch (name + desc) {
             case "start()V":
                 if (isThreadClass(owner)) {
-                    substituteVirtualWithStatic(RVPREDICT_THREAD_START, DESC_RVPREDICT_THREAD_START);
+                    substituteMethodCall(opcode, RVPREDICT_THREAD_START, DESC_RVPREDICT_THREAD_START);
                     return;
                 }
                 break;
             case "join()V":
                 if (isThreadClass(owner)) {
-                    substituteVirtualWithStatic(RVPREDICT_JOIN, DESC_RVPREDICT_JOIN);
+                    substituteMethodCall(opcode, RVPREDICT_JOIN, DESC_RVPREDICT_JOIN);
                     return;
                 }
                 break;
             case "join(J)V":
                 if (isThreadClass(owner)) {
-                    substituteVirtualWithStatic(RVPREDICT_JOIN, DESC_RVPREDICT_JOIN_TIMEOUT, "J");
+                    substituteMethodCall(opcode, RVPREDICT_JOIN, DESC_RVPREDICT_JOIN_TIMEOUT, "J");
                     return;
                 }
                 break;
             case "join(JI)V":
                 if (isThreadClass(owner)) {
-                    substituteVirtualWithStatic(RVPREDICT_JOIN, DESC_RVPREDICT_JOIN_TIMEOUT_NANO,
+                    substituteMethodCall(opcode, RVPREDICT_JOIN, DESC_RVPREDICT_JOIN_TIMEOUT_NANO,
                             "J", "I");
                     return;
                 }
                 break;
+            case "interrupt()V":
+                if (isThreadClass(owner)) {
+                    substituteMethodCall(opcode, RVPREDICT_INTERRUPT, DESC_RVPREDICT_INTERRUPT);
+                    return;
+                }
+                break;
+            case "isInterrupted()Z":
+                if (isThreadClass(owner)) {
+                    substituteMethodCall(opcode, RVPREDICT_IS_INTERRUPTED,
+                            DESC_RVPREDICT_IS_INTERRUPTED);
+                    return;
+                }
+                break;
             case "wait()V":
-                substituteVirtualWithStatic(RVPREDICT_WAIT, DESC_RVPREDICT_WAIT);
+                substituteMethodCall(opcode, RVPREDICT_WAIT, DESC_RVPREDICT_WAIT);
                 return;
             case "wait(J)V":
-                substituteVirtualWithStatic(RVPREDICT_WAIT, DESC_RVPREDICT_WAIT_TIMEOUT, "J");
+                substituteMethodCall(opcode, RVPREDICT_WAIT, DESC_RVPREDICT_WAIT_TIMEOUT, "J");
                 return;
             case "wait(JI)V":
-                substituteVirtualWithStatic(RVPREDICT_WAIT, DESC_RVPREDICT_WAIT_TIMEOUT_NANO,
-                        "J", "I");
+                substituteMethodCall(opcode, RVPREDICT_WAIT, DESC_RVPREDICT_WAIT_TIMEOUT_NANO, "J",
+                        "I");
                 return;
             case "notify()V":
-                substituteVirtualWithStatic(RVPREDICT_NOTIFY, DESC_RVPREDICT_NOTIFY);
+                substituteMethodCall(opcode, RVPREDICT_NOTIFY, DESC_RVPREDICT_NOTIFY);
                 return;
             case "notifyAll()V":
-                substituteVirtualWithStatic(RVPREDICT_NOTIFY_ALL, DESC_RVPREDICT_NOTIFY_ALL);
+                substituteMethodCall(opcode, RVPREDICT_NOTIFY_ALL, DESC_RVPREDICT_NOTIFY_ALL);
+                return;
+            }
+        } else if (opcode == INVOKESTATIC) {
+            switch (owner + name + desc) {
+            case "java/lang/Thread/interrupted()Z":
+                substituteMethodCall(opcode, RVPREDICT_INTERRUPTED, DESC_RVPREDICT_INTERRUPTED);
                 return;
             }
         }

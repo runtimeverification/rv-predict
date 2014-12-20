@@ -6,5 +6,22 @@ package rvpredict.trace;
  * @author TraianSF
  */
 public enum EventType {
-    INIT, READ, WRITE, LOCK, UNLOCK, PRE_WAIT, WAIT, WAIT_TIMEOUT, WAIT_INTERRUPTED, NOTIFY, NOTIFY_ALL, START, JOIN, JOIN_INTERRUPTED, BRANCH;
+    INIT,
+    READ,
+    WRITE,
+    LOCK,
+    UNLOCK,
+    PRE_WAIT,
+    WAIT,
+    WAIT_TIMEOUT,
+    WAIT_INTERRUPTED,
+    NOTIFY,
+    NOTIFY_ALL,
+    START,
+    PRE_JOIN,
+    JOIN,
+    JOIN_TIMEOUT,
+    JOIN_INTERRUPTED,
+    INTERRUPT,
+    BRANCH;
 }

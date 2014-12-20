@@ -339,16 +339,14 @@ public final class RecordRT {
      */
     public static void rvPredictJoin(int locId, Thread thread, long millis)
             throws InterruptedException {
+        db.saveEvent(EventType.PRE_JOIN, locId, thread.getId());
         try {
             thread.join(millis);
         } catch (InterruptedException e) {
             db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
             throw e;
         }
-
-        if (millis == 0) {
-            db.saveEvent(EventType.JOIN, locId, thread.getId());
-        }
+        db.saveEvent(millis == 0 ? EventType.JOIN : EventType.JOIN_TIMEOUT, locId, thread.getId());
     }
 
     /**
@@ -368,16 +366,77 @@ public final class RecordRT {
      */
     public static void rvPredictJoin(int locId, Thread thread, long millis, int nanos)
             throws InterruptedException {
+        db.saveEvent(EventType.PRE_JOIN, locId, thread.getId());
         try {
             thread.join(millis, nanos);
         } catch (InterruptedException e) {
             db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
             throw e;
         }
+        db.saveEvent(millis == 0 && nanos == 0 ? EventType.JOIN : EventType.JOIN_TIMEOUT, locId,
+                thread.getId());
+    }
 
-        if (millis == 0 && nanos == 0) {
-            db.saveEvent(EventType.JOIN, locId, thread.getId());
+    /**
+     * Logs the events produced by invoking {@code thread.interrupt()}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param thread
+     *            the {@code Thread} object whose {@code interrupt()} method is
+     *            invoked
+     */
+    public static void rvPredictInterrupt(int locId, Thread thread) {
+        try {
+            /* YilongL: call checkAccess first because 1) INTERRUPT event should
+             * be logged before calling interrupt() and 2) no INTERRUPT event
+             * should be recorded on SecurityException */
+            thread.checkAccess();
+            /* TODO(YilongL): Interrupting a thread that is not alive need not
+             * have any effect; yet I am not sure how to model such case
+             * precisely so I just assume interrupted status will be set to true */
+            db.saveEvent(EventType.WRITE, locId, System.identityHashCode(thread),
+                    GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
+            db.saveEvent(EventType.INTERRUPT, locId, thread.getId());
+            thread.interrupt();
+        } catch (SecurityException e) {
+            throw e;
         }
+    }
+
+    /**
+     * Logs the events produced by invoking {@code thread.isInterrupted()}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param thread
+     *            the {@code Thread} object whose {@code isInterrupted()} method is
+     *            invoked
+     */
+    public static boolean rvPredictIsInterrupted(int locId, Thread thread) {
+        boolean isInterrupted = thread.isInterrupted();
+        /* the interrupted status is like an imaginary shared variable so we
+         * need to record access to it to preserve soundness */
+        db.saveEvent(EventType.READ, locId, System.identityHashCode(thread),
+                GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID,
+                isInterrupted ? 1 : 0);
+        return isInterrupted;
+    }
+
+    /**
+     * Logs the events produced by invoking {@code Thread#interrupted()}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     */
+    public static boolean rvPredictInterrupted(int locId) {
+        boolean interrupted = Thread.interrupted();
+        db.saveEvent(EventType.READ, locId, 0,
+                GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, interrupted ? 1 : 0);
+        /* clear interrupted status */
+        db.saveEvent(EventType.WRITE, locId, 0,
+                GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+        return interrupted;
     }
 
     private static boolean isPrimitiveWrapper(Object o) {

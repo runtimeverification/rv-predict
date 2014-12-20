@@ -299,7 +299,8 @@ public class Trace {
                     waitSet.add(tid);
                     break;
                 }
-                case WAIT: {
+                case WAIT:
+                case WAIT_TIMEOUT: {
                     finalState.objToWaitingThreads.get(obj).remove(tid);
 
                     Set<SyncEvent> notifyToRemove = Sets.newHashSet();
@@ -307,7 +308,7 @@ public class Trace {
                     for (SyncEvent notify : finalState.objToNotifyEvents.get(obj)) {
                         Set<Long> waitSet = finalState.notifyToWaitingThreads.get(notify);
                         if (waitSet.contains(tid)) {
-                            if (fstMatchedNotify == null) {
+                            if (event.getType() == EventType.WAIT && fstMatchedNotify == null) {
                                 fstMatchedNotify = notify;
 
                                 /* NOTIFY event can only be used once */
@@ -323,7 +324,7 @@ public class Trace {
                             }
                         }
                     }
-                    assert fstMatchedNotify != null;
+                    assert fstMatchedNotify != null || event.getType() != EventType.WAIT;
                     finalState.objToNotifyEvents.get(obj).removeAll(notifyToRemove);
                     finalState.notifyToWaitingThreads.keySet().removeAll(notifyToRemove);
                     break;

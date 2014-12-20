@@ -75,15 +75,57 @@ public final class RecordRT {
      *            the {@code Object} whose {@code wait()} method is invoked
      */
     public static void rvPredictWait(int locId, Object object) throws InterruptedException {
+        rvPredictWait(locId, object, 0);
+    }
+
+    /**
+     * Logs events produced by invoking {@code object.wait(long)}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param object
+     *            the {@code Object} whose {@code wait(long)} method is invoked
+     * @param timeout
+     *            the first argument of {@code object.wait(long)}
+     */
+    public static void rvPredictWait(int locId, Object object, long timeout)
+            throws InterruptedException {
         int objectHashCode = System.identityHashCode(object);
         db.saveEvent(EventType.PRE_WAIT, locId, objectHashCode);
         try {
-            object.wait();
+            object.wait(timeout);
         } catch (InterruptedException e) {
             db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
             throw e;
         }
-        db.saveEvent(EventType.WAIT, locId, objectHashCode);
+        db.saveEvent(timeout > 0 ? EventType.WAIT_TIMEOUT : EventType.WAIT, locId, objectHashCode);
+    }
+
+    /**
+     * Logs events produced by invoking {@code object.wait(long, int)}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param object
+     *            the {@code Object} whose {@code wait(long, int)} method is
+     *            invoked
+     * @param timeout
+     *            the first argument of {@code object.wait(long, int)}
+     * @param nano
+     *            the second argument of {@code object.wait(long, int)}
+     */
+    public static void rvPredictWait(int locId, Object object, long timeout, int nano)
+            throws InterruptedException {
+        int objectHashCode = System.identityHashCode(object);
+        db.saveEvent(EventType.PRE_WAIT, locId, objectHashCode);
+        try {
+            object.wait(timeout, nano);
+        } catch (InterruptedException e) {
+            db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
+            throw e;
+        }
+        db.saveEvent(timeout > 0 || nano > 0 ? EventType.WAIT_TIMEOUT : EventType.WAIT, locId,
+                objectHashCode);
     }
 
     /**
@@ -95,8 +137,9 @@ public final class RecordRT {
      * @param object
      *            the {@code Object} whose {@code notify()} method is invoked
      */
-    public static void logNotify(int locId, Object object) {
+    public static void rvPredictNotify(int locId, Object object) {
         db.saveEvent(EventType.NOTIFY, locId, System.identityHashCode(object));
+        object.notify();
     }
 
     /**
@@ -108,8 +151,9 @@ public final class RecordRT {
      * @param object
      *            the {@code Object} whose {@code notifyAll()} method is invoked
      */
-    public static void logNotifyAll(int locId, Object object) {
+    public static void rvPredictNotifyAll(int locId, Object object) {
         db.saveEvent(EventType.NOTIFY_ALL, locId, System.identityHashCode(object));
+        object.notifyAll();
     }
 
     /**
@@ -237,7 +281,7 @@ public final class RecordRT {
      *            the {@code Thread} object whose {@code start()} method is
      *            invoked
      */
-    public static void logStart(int locId, Thread thread) {
+    public static void rvPredictStart(int locId, Thread thread) {
         long crntThreadId = Thread.currentThread().getId();
         long newThreadId = thread.getId();
 
@@ -264,6 +308,8 @@ public final class RecordRT {
         threadTidIndexMap.put(crntThreadId, index);
 
         db.saveEvent(EventType.START, locId, newThreadId);
+
+        thread.start();
     }
 
     /**
@@ -276,8 +322,62 @@ public final class RecordRT {
      *            invoked
      */
     public static void rvPredictJoin(int locId, Thread thread) throws InterruptedException {
-        thread.join();
-        db.saveEvent(EventType.JOIN, locId, thread.getId());
+        rvPredictJoin(locId, thread, 0);
+    }
+
+    /**
+     * Logs the {@code JOIN} event produced by invoking
+     * {@code thread.join(long)}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param thread
+     *            the {@code Thread} object whose {@code join(long)} method is
+     *            invoked
+     * @param millis
+     *            the first argument of {@code thread.join(long)}
+     */
+    public static void rvPredictJoin(int locId, Thread thread, long millis)
+            throws InterruptedException {
+        try {
+            thread.join(millis);
+        } catch (InterruptedException e) {
+            db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
+            throw e;
+        }
+
+        if (millis == 0) {
+            db.saveEvent(EventType.JOIN, locId, thread.getId());
+        }
+    }
+
+    /**
+     * Logs the {@code JOIN} event produced by invoking
+     * {@code thread.join(long, int)}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param thread
+     *            the {@code Thread} object whose {@code join(long, int)} method
+     *            is invoked
+     * @param millis
+     *            the first argument of {@code thread.join(long, int)}
+     * @param nanos
+     *            the second argument of {@code thread.join(long, int)}
+     *
+     */
+    public static void rvPredictJoin(int locId, Thread thread, long millis, int nanos)
+            throws InterruptedException {
+        try {
+            thread.join(millis, nanos);
+        } catch (InterruptedException e) {
+            db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
+            throw e;
+        }
+
+        if (millis == 0 && nanos == 0) {
+            db.saveEvent(EventType.JOIN, locId, thread.getId());
+        }
     }
 
     private static boolean isPrimitiveWrapper(Object o) {

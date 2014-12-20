@@ -187,30 +187,40 @@ public class SMTConstraintBuilder {
     public void addLockingConstraints() {
         /* enumerate the locking events on each intrinsic lock */
         for (List<SyncEvent> syncEvents : trace.getLockObjToSyncEvents().values()) {
-            Map<Long, SyncEvent> threadIdToPrevLock = Maps.newHashMap();
+            Map<Long, SyncEvent> threadIdToPrevLockOrUnlock = Maps.newHashMap();
             Map<Long, SyncEvent> threadIdToPreWait = Maps.newHashMap();
             Map<Long, Deque<SyncEvent>> threadIdToNotifyQueue = Maps.newHashMap();
             List<LockRegion> lockRegions = Lists.newArrayList();
 
             for (SyncEvent syncEvent : syncEvents) {
                 long tid = syncEvent.getTID();
+                SyncEvent prevLockOrUnlock = threadIdToPrevLockOrUnlock.get(tid);
+                assert prevLockOrUnlock == null
+                    || !(prevLockOrUnlock.isLock() && syncEvent.isLock())
+                    || !(prevLockOrUnlock.isUnlock() && syncEvent.isUnlock()) :
+                    "Unexpected consecutive lock/unlock events:\n" + prevLockOrUnlock + ", " + syncEvent;
 
-                SyncEvent prewait = null;
                 switch (syncEvent.getType()) {
                 case LOCK:
                 case WAIT:
-                    assert !threadIdToPrevLock.containsKey(tid) : "Unexpected nested locking events:\n"
-                            + threadIdToPrevLock.get(tid) + ", " + syncEvent;
-                    threadIdToPrevLock.put(tid, syncEvent);
+                case WAIT_TIMEOUT:
+                    threadIdToPrevLockOrUnlock.put(tid, syncEvent);
                     break;
+
                 case PRE_WAIT:
-                    prewait = threadIdToPreWait.put(tid, syncEvent);
                 case UNLOCK:
                     Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue, tid);
-                    lockRegions.add(new LockRegion(threadIdToPrevLock.remove(tid), syncEvent,
-                            prewait, notifyEvents));
+                    lockRegions.add(new LockRegion(
+                            threadIdToPrevLockOrUnlock.put(tid, syncEvent),
+                            syncEvent,
+                            threadIdToPreWait.remove(tid),
+                            notifyEvents));
                     notifyEvents.clear();
+                    if (syncEvent.getType() == EventType.PRE_WAIT) {
+                        threadIdToPreWait.put(tid, syncEvent);
+                    }
                     break;
+
                 case NOTIFY:
                 case NOTIFY_ALL:
                     safeDequeMapGet(threadIdToNotifyQueue, tid).add(syncEvent);
@@ -220,11 +230,15 @@ public class SMTConstraintBuilder {
                 }
             }
 
-            for (SyncEvent lock : threadIdToPrevLock.values()) {
-                Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue, lock.getTID());
-                lockRegions.add(new LockRegion(lock, null, threadIdToPreWait.remove(lock.getTID()),
-                        notifyEvents));
-                notifyEvents.clear();
+            for (SyncEvent lockOrUnlock : threadIdToPrevLockOrUnlock.values()) {
+                if (lockOrUnlock.isLock()) {
+                    SyncEvent lock = lockOrUnlock;
+                    Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue,
+                            lock.getTID());
+                    lockRegions.add(new LockRegion(lock, null, threadIdToPreWait.remove(
+                            lock.getTID()), notifyEvents));
+                    notifyEvents.clear();
+                }
             }
 
             lockEngine.addAll(lockRegions);

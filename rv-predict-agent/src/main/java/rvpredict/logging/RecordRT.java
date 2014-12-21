@@ -98,7 +98,7 @@ public final class RecordRT {
             db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
             throw e;
         }
-        db.saveEvent(timeout > 0 ? EventType.WAIT_TIMEOUT : EventType.WAIT, locId, objectHashCode);
+        db.saveEvent(timeout > 0 ? EventType.WAIT_MAYBE_TIMEOUT : EventType.WAIT, locId, objectHashCode);
     }
 
     /**
@@ -124,7 +124,7 @@ public final class RecordRT {
             db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
             throw e;
         }
-        db.saveEvent(timeout > 0 || nano > 0 ? EventType.WAIT_TIMEOUT : EventType.WAIT, locId,
+        db.saveEvent(timeout > 0 || nano > 0 ? EventType.WAIT_MAYBE_TIMEOUT : EventType.WAIT, locId,
                 objectHashCode);
     }
 
@@ -346,7 +346,7 @@ public final class RecordRT {
             db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
             throw e;
         }
-        db.saveEvent(millis == 0 ? EventType.JOIN : EventType.JOIN_TIMEOUT, locId, thread.getId());
+        db.saveEvent(millis == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_TIMEOUT, locId, thread.getId());
     }
 
     /**
@@ -373,7 +373,7 @@ public final class RecordRT {
             db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
             throw e;
         }
-        db.saveEvent(millis == 0 && nanos == 0 ? EventType.JOIN : EventType.JOIN_TIMEOUT, locId,
+        db.saveEvent(millis == 0 && nanos == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_TIMEOUT, locId,
                 thread.getId());
     }
 

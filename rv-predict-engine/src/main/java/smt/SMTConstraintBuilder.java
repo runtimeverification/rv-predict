@@ -203,7 +203,7 @@ public class SMTConstraintBuilder {
                 switch (syncEvent.getType()) {
                 case LOCK:
                 case WAIT:
-                case WAIT_TIMEOUT:
+                case WAIT_MAYBE_TIMEOUT:
                     threadIdToPrevLockOrUnlock.put(tid, syncEvent);
                     break;
 

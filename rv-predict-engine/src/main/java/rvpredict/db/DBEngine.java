@@ -143,11 +143,16 @@ public class DBEngine {
                 case UNLOCK:
                 case PRE_WAIT:
                 case WAIT:
-                case WAIT_TIMEOUT:
+                case WAIT_MAYBE_TIMEOUT:
+                case WAIT_INTERRUPTED:
                 case NOTIFY:
                 case NOTIFY_ALL:
                 case START:
+                case PRE_JOIN:
                 case JOIN:
+                case JOIN_MAYBE_TIMEOUT:
+                case JOIN_INTERRUPTED:
+                case INTERRUPT:
                     node = new SyncEvent(GID, TID, ID, TYPE, ADDRL);
                     break;
                 case BRANCH:

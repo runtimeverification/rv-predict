@@ -315,7 +315,7 @@ public class Trace {
                     break;
                 }
                 case WAIT:
-                case WAIT_TIMEOUT: {
+                case WAIT_MAYBE_TIMEOUT: {
                     finalState.objToWaitingThreads.get(obj).remove(tid);
 
                     Set<SyncEvent> notifyToRemove = Sets.newHashSet();

@@ -100,7 +100,7 @@ public final class RecordRT {
             synchronized (crntThread) {
                 /* clear interrupted status */
                 db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
-                        GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+                        -GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
                 db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
             }
             throw e;
@@ -132,7 +132,7 @@ public final class RecordRT {
             synchronized (crntThread) {
                 /* clear interrupted status */
                 db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
-                        GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+                        -GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
                 db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
             }
             throw e;
@@ -321,6 +321,8 @@ public final class RecordRT {
         threadTidIndexMap.put(crntThreadId, index);
 
         db.saveEvent(EventType.START, locId, newThreadId);
+        db.saveEvent(EventType.INIT, locId, System.identityHashCode(thread),
+                -GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
 
         thread.start();
     }
@@ -360,7 +362,7 @@ public final class RecordRT {
             synchronized (crntThread) {
                 /* clear interrupted status */
                 db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
-                        GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+                        -GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
                 db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
             }
             throw e;
@@ -393,7 +395,7 @@ public final class RecordRT {
             synchronized (crntThread) {
                 /* clear interrupted status */
                 db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
-                        GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+                        -GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
                 db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
             }
             throw e;
@@ -418,7 +420,7 @@ public final class RecordRT {
             synchronized (crntThread) {
                 /* clear interrupted status */
                 db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
-                        GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+                        -GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
             }
             throw e;
         }
@@ -443,7 +445,7 @@ public final class RecordRT {
             synchronized (crntThread) {
                 /* clear interrupted status */
                 db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
-                        GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+                        -GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
             }
             throw e;
         }
@@ -475,7 +477,7 @@ public final class RecordRT {
                  * have any effect; yet I am not sure how to model such case
                  * precisely so I just assume interrupted status will be set to true */
                 db.saveEvent(EventType.WRITE, locId, System.identityHashCode(thread),
-                        GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
+                        -GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
                 db.saveEvent(EventType.INTERRUPT, locId, thread.getId());
             }
         } catch (SecurityException e) {
@@ -499,7 +501,7 @@ public final class RecordRT {
             /* the interrupted status is like an imaginary shared variable so we
              * need to record access to it to preserve soundness */
             db.saveEvent(EventType.READ, locId, System.identityHashCode(thread),
-                    GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID,
+                    -GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID,
                     isInterrupted ? 1 : 0);
         }
         return isInterrupted;
@@ -517,11 +519,11 @@ public final class RecordRT {
         synchronized (crntThread) {
             interrupted = Thread.interrupted();
             db.saveEvent(EventType.READ, locId, 0,
-                    GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID,
+                    -GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID,
                     interrupted ? 1 : 0);
             /* clear interrupted status */
             db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
-                    GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+                    -GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
         }
         return interrupted;
     }

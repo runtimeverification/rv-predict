@@ -18,19 +18,19 @@ public enum EventType {
     PRE_WAIT,
 
     /**
-     * Event generated after a thread is woken up from {@code Object#wait} by
+     * Event generated after a thread is awakened from {@code Object#wait} by
      * {@code Object#notify()/notifyAll()}.
      */
     WAIT,
 
     /**
-     * Event generated after a thread is woken up from {@code Object#wait}
+     * Event generated after a thread is awakened from {@code Object#wait}
      * because of {@code Object#notify()/notifyAll()} or timeout.
      */
     WAIT_MAYBE_TIMEOUT,
 
     /**
-     * Event generated after a thread is woken up from {@code Object#wait} by
+     * Event generated after a thread is awakened from {@code Object#wait} by
      * {@code Thread#interrupt()}.
      */
     WAIT_INTERRUPTED,
@@ -56,19 +56,19 @@ public enum EventType {
     PRE_JOIN,
 
     /**
-     * Event generated after a thread is woken up from {@code Thread#join} by
+     * Event generated after a thread is awakened from {@code Thread#join} by
      * {@code Thread#interrupt()}.
      */
     JOIN,
 
     /**
-     * Event generated after a thread is woken up from {@code Thread#join}
+     * Event generated after a thread is awakened from {@code Thread#join}
      * because of the thread to join finishes or timeout.
      */
     JOIN_MAYBE_TIMEOUT,
 
     /**
-     * Event generated after a thread is woken up from {@code Thread#join} by
+     * Event generated after a thread is awakened from {@code Thread#join} by
      * {@code Thread#interrupt()}.
      */
     JOIN_INTERRUPTED,

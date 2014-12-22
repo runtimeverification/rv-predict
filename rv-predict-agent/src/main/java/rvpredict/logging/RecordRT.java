@@ -95,6 +95,9 @@ public final class RecordRT {
         try {
             object.wait(timeout);
         } catch (InterruptedException e) {
+            /* clear interrupted status */
+            db.saveEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
+                    GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
             db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
             throw e;
         }
@@ -121,6 +124,9 @@ public final class RecordRT {
         try {
             object.wait(timeout, nano);
         } catch (InterruptedException e) {
+            /* clear interrupted status */
+            db.saveEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
+                    GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
             db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
             throw e;
         }
@@ -343,6 +349,9 @@ public final class RecordRT {
         try {
             thread.join(millis);
         } catch (InterruptedException e) {
+            /* clear interrupted status */
+            db.saveEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
+                    GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
             db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
             throw e;
         }
@@ -370,6 +379,9 @@ public final class RecordRT {
         try {
             thread.join(millis, nanos);
         } catch (InterruptedException e) {
+            /* clear interrupted status */
+            db.saveEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
+                    GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
             db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
             throw e;
         }
@@ -434,7 +446,7 @@ public final class RecordRT {
         db.saveEvent(EventType.READ, locId, 0,
                 GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, interrupted ? 1 : 0);
         /* clear interrupted status */
-        db.saveEvent(EventType.WRITE, locId, 0,
+        db.saveEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
                 GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
         return interrupted;
     }

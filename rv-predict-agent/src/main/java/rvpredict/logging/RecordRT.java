@@ -403,6 +403,54 @@ public final class RecordRT {
     }
 
     /**
+     * Logs the events produced by invoking {@code Thread#sleep(long)}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param millis
+     *            the first argument of {@code Thread#sleep(long)}
+     */
+    public static void rvPredictSleep(int locId, long millis) throws InterruptedException {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread crntThread = Thread.currentThread();
+            synchronized (crntThread) {
+                /* clear interrupted status */
+                db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
+                        GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Logs the events produced by invoking {@code Thread#sleep(long, int)}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param millis
+     *            the first argument of {@code Thread#sleep(long, int)}
+     * @param nanos
+     *            the second argument of {@code Thread#sleep(long, int)}
+     */
+    public static void rvPredictSleep(int locId, long millis, int nanos)
+            throws InterruptedException {
+        try {
+            Thread.sleep(millis, nanos);
+        } catch (InterruptedException e) {
+            Thread crntThread = Thread.currentThread();
+            synchronized (crntThread) {
+                /* clear interrupted status */
+                db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
+                        GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+            }
+            throw e;
+        }
+    }
+
+
+    /**
      * Logs the events produced by invoking {@code thread.interrupt()}.
      *
      * @param locId

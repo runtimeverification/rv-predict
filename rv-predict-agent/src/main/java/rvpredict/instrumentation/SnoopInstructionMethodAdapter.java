@@ -193,6 +193,12 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             case "java/lang/Thread/interrupted()Z":
                 substituteMethodCall(opcode, RVPREDICT_INTERRUPTED, DESC_RVPREDICT_INTERRUPTED);
                 return;
+            case "java/lang/Thread/sleep(J)V":
+                substituteMethodCall(opcode, RVPREDICT_SLEEP, DESC_RVPREDICT_SLEEP, "J");
+                return;
+            case "java/lang/Thread/sleep(JI)V":
+                substituteMethodCall(opcode, RVPREDICT_SLEEP, DESC_RVPREDICT_SLEEP_NANOS, "J", "I");
+                return;
             }
         }
         mv.visitMethodInsn(opcode, owner, name, desc, itf);

@@ -181,6 +181,16 @@ public class Trace {
         return result;
     }
 
+    public List<SyncEvent> getInterruptEventsOn(long tid) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    public List<SyncEvent> getUnmatchedInterruptEvents(long tid) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
     public Map<Integer, String> getLocIdToStmtSigMap() {
         return info.getLocIdToStmtSigMap();
     }
@@ -479,12 +489,15 @@ public class Trace {
                     writeNodes.add((WriteEvent) node);
                 }
             } else if (node instanceof SyncEvent) {
-                // synchronization nodes
                 info.incrementSyncNumber();
                 SyncEvent syncEvent = (SyncEvent) node;
 
-                if (syncEvent.getType().equals(EventType.START)
-                        || syncEvent.getType().equals(EventType.JOIN)) {
+                switch (syncEvent.getType()) {
+                case START:
+                case PRE_JOIN:
+                case JOIN:
+                case JOIN_MAYBE_TIMEOUT:
+                case JOIN_INTERRUPTED:
                     long threadObj = syncEvent.getSyncObject();
                     List<SyncEvent> events = threadIdToStartJoinEvents.get(threadObj);
                     if (events == null) {
@@ -492,15 +505,27 @@ public class Trace {
                         threadIdToStartJoinEvents.put(threadObj, events);
                     }
                     events.add(syncEvent);
-                } else {
+                    break;
+                case LOCK:
+                case UNLOCK:
+                case PRE_WAIT:
+                case WAIT:
+                case WAIT_MAYBE_TIMEOUT:
+                case WAIT_INTERRUPTED:
+                case NOTIFY:
+                case NOTIFY_ALL:
                     long syncObj = syncEvent.getSyncObject();
                     List<SyncEvent> syncEvents = lockObjToSyncEvents.get(syncObj);
                     if (syncEvents == null) {
                         syncEvents = new ArrayList<>();
                         lockObjToSyncEvents.put(syncObj, syncEvents);
                     }
-
                     syncEvents.add(syncEvent);
+                    break;
+                case INTERRUPT:
+                    throw new RuntimeException("Not yet implemented");
+                default:
+                    assert false : "unexpected event: " + syncEvent;
                 }
             }
         }

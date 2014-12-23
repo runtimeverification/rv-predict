@@ -167,8 +167,6 @@ public class SMTConstraintBuilder {
      */
     public void addProgramOrderAndThreadStartJoinConstraints() {
         for (List<SyncEvent> startOrJoinEvents : trace.getThreadIdToStartJoinEvents().values()) {
-            Map<Long, SyncEvent> threadIdToPrevJoin = Maps.newHashMap();
-
             for (SyncEvent startOrJoin : startOrJoinEvents) {
                 long tid = startOrJoin.getSyncObject();
                 switch (startOrJoin.getType()) {
@@ -180,17 +178,7 @@ public class SMTConstraintBuilder {
                         assertHappensBefore(startOrJoin, fstThrdEvent);
                     }
                     break;
-                case PRE_JOIN:
-                case JOIN_MAYBE_TIMEOUT:
                 case JOIN:
-                case JOIN_INTERRUPTED:
-                    SyncEvent prevJoin = threadIdToPrevJoin.put(tid, startOrJoin);
-                    assert prevJoin == null
-                        || (prevJoin.getType() == EventType.PRE_JOIN ^
-                            startOrJoin.getType() == EventType.PRE_JOIN) :
-                        "PRE_JOIN and JOIN events should appear alternatively; but found: " +
-                            prevJoin + ", " + startOrJoin;
-
                     if (startOrJoin.getType() == EventType.JOIN) {
                         Event lastThrdEvent = trace.getLastThreadEvent(tid);
                         /* YilongL: it's possible that the last event of the thread
@@ -198,29 +186,11 @@ public class SMTConstraintBuilder {
                         if (lastThrdEvent != null) {
                             assertHappensBefore(lastThrdEvent, startOrJoin);
                         }
-                    } else if (startOrJoin.getType() == EventType.JOIN_INTERRUPTED) {
-                          /* first check unmatched interrupts from previous windows */
-                          if (prevJoin == null
-                                  && !trace.getUnmatchedInterruptEvents(tid).isEmpty()) {
-                              break;
-                          }
-
-                        /* assert that the JOIN_INTERRUPTED event must be matched with an INTERRUPT */
-                        StringBuilder matchJoinInterrupt = new StringBuilder("(or false ");
-
-                        /* enumerate all interrupts in the current window */
-                        for (SyncEvent interrupt : trace.getInterruptEventsOn(tid)) {
-                            StringBuilder sb = new StringBuilder("(and ");
-                            if (prevJoin != null) {
-                                sb.append(getAsstHappensBefore(prevJoin, interrupt));
-                            }
-                            sb.append(getAsstHappensBefore(interrupt, startOrJoin));
-                            sb.append(")");
-                            matchJoinInterrupt.append(sb);
-                        }
-                        matchJoinInterrupt.append(")\n");
-                        smtlibAssertion.append(matchJoinInterrupt);
                     }
+                    break;
+                case PRE_JOIN:
+                case JOIN_MAYBE_TIMEOUT:
+                case JOIN_INTERRUPTED:
                     break;
                 default:
                     assert false : "unexpected event: " + startOrJoin;
@@ -296,7 +266,6 @@ public class SMTConstraintBuilder {
             assertLockMutex(lockRegions);
 
             matchWaitNotifyPair(lockRegions);
-            matchWaitInterruptPair(lockRegions);
         }
     }
 
@@ -319,115 +288,47 @@ public class SMTConstraintBuilder {
                 StringBuilder matchWaitNotify = new StringBuilder("(or false ");
                 SyncEvent wait = lockRegion1.getLock();
 
-                /* minimum GID of the available INTERRUPT from previous windows */
-                long minInterruptGID = Long.MAX_VALUE;
-                for (SyncEvent interrupt : trace.getUnmatchedInterruptEvents(wait.getTID())) {
-                    minInterruptGID = Math.min(minInterruptGID, interrupt.getGID());
-                }
-
                 /* enumerate unmatched notify from previous windows */
                 SyncEvent preWait = lockRegion1.getPreWait();
                 if (preWait == null) {
                     for (SyncEvent notify : trace.getUnmatchedNotifyEvents(wait.getTID(),
                             wait.getSyncObject())) {
                         /* ensure no interrupt happens between PRE_WAIT and this NOTIFY/NOTIFY_ALL */
-                        if (notify.getGID() < minInterruptGID) {
-                            if (notify.getType() == EventType.NOTIFY) {
-                                matchWaitNotify.append(String.format("(= %s %s)",
-                                        makeMatchVariable(notify), wait.getGID()));
-                            } else {
-                                /* constraint for this wait is trivially satisfied */
-                                continue outerloop;
-                            }
+                        if (notify.getType() == EventType.NOTIFY) {
+                            matchWaitNotify.append(String.format("(= %s %s)",
+                                    makeMatchVariable(notify), wait.getGID()));
+                        } else {
+                            /* constraint for this wait is trivially satisfied */
+                            continue outerloop;
                         }
                     }
                 }
 
-                /* if there is at least one INTERRUPT available in previous
-                 * windows then there is no point in trying to match
-                 * NOTIFY/NOTIFY_ALL in this window because this INTERRUPT must
-                 * happen before */
-                if (minInterruptGID == Long.MAX_VALUE) {
-                    /* INTERRUPT events in the current window */
-                    List<SyncEvent> interrupts = trace.getInterruptEventsOn(wait.getTID());
-
-                    /* enumerate all notify in the current window */
-                    for (LockRegion lockRegion2 : lockRegions) {
-                        if (lockRegion1.getThreadId() != lockRegion2.getThreadId()) {
-                            for (SyncEvent notify : lockRegion2.getNotifyEvents()) {
-                                /* the matched notify event must happen between
-                                 * PRE_WAIT and WAIT */
-                                StringBuilder sb = new StringBuilder("(and ");
-                                if (preWait != null) {
-                                    sb.append(getAsstHappensBefore(preWait, notify));
-                                }
-                                sb.append(getAsstHappensBefore(notify, wait));
-                                if (notify.getType() == EventType.NOTIFY) {
-                                    /* make sure NOTIFY can be used only once */
-                                    sb.append(String.format("(= %s %s)", makeMatchVariable(notify),
-                                            wait.getGID()));
-                                }
-                                /* not interrupt happens in between */
-                                for (SyncEvent interrupt : interrupts) {
-                                    if (preWait != null) {
-                                        sb.append(getAsstHappensBefore(notify, interrupt));
-                                    } else {
-                                        sb.append("(not " +
-                                            getAsstHappensBefore(preWait, interrupt, notify) + ")");
-                                    }
-                                }
-                                sb.append(")");
-
-                                matchWaitNotify.append(sb);
+                /* enumerate all notify in the current window */
+                for (LockRegion lockRegion2 : lockRegions) {
+                    if (lockRegion1.getThreadId() != lockRegion2.getThreadId()) {
+                        for (SyncEvent notify : lockRegion2.getNotifyEvents()) {
+                            /* the matched notify event must happen between
+                             * PRE_WAIT and WAIT */
+                            StringBuilder sb = new StringBuilder("(and ");
+                            if (preWait != null) {
+                                sb.append(getAsstHappensBefore(preWait, notify));
                             }
+                            sb.append(getAsstHappensBefore(notify, wait));
+                            if (notify.getType() == EventType.NOTIFY) {
+                                /* make sure NOTIFY can be used only once */
+                                sb.append(String.format("(= %s %s)", makeMatchVariable(notify),
+                                        wait.getGID()));
+                            }
+                            sb.append(")");
+
+                            matchWaitNotify.append(sb);
                         }
                     }
                 }
 
                 matchWaitNotify.append(")\n");
                 smtlibAssertion.append(matchWaitNotify);
-            }
-        }
-    }
-
-    private void matchWaitInterruptPair(List<LockRegion> lockRegions) {
-        for (LockRegion lockRegion1 : lockRegions) {
-            if (lockRegion1.getLock() != null
-                    && lockRegion1.getLock().getType() == EventType.WAIT_INTERRUPTED) {
-                SyncEvent wait = lockRegion1.getLock();
-
-                /* YilongL: I think it is fine to not enforce that no
-                 * NOTIFY/NOTIFY_ALL happens between PRE_WAIT and INTERRUPT
-                 * because it's unclear in this case whether that wait() will
-                 * return normally or throw an InterruptedException. So for
-                 * simplicity, we could assume that an InterruptedException will
-                 * be thrown. And, thus, if RV-Predict reports a data-race based
-                 * on a schedule of the above kind, we could argue that it's not
-                 * a false alarm. */
-
-                /* first check unmatched interrupts from previous windows */
-                SyncEvent preWait = lockRegion1.getPreWait();
-                if (preWait == null
-                        && !trace.getUnmatchedInterruptEvents(wait.getTID()).isEmpty()) {
-                    continue;
-                }
-
-                /* assert that the WAIT_INTERRUPTED event must be matched with an INTERRUPT */
-                StringBuilder matchWaitInterrupt = new StringBuilder("(or false ");
-
-                /* enumerate all interrupts in the current window */
-                for (SyncEvent interrupt : trace.getInterruptEventsOn(wait.getTID())) {
-                    StringBuilder sb = new StringBuilder("(and ");
-                    if (preWait != null) {
-                        sb.append(getAsstHappensBefore(preWait, interrupt));
-                    }
-                    sb.append(getAsstHappensBefore(interrupt, wait));
-                    sb.append(")");
-                    matchWaitInterrupt.append(sb);
-                }
-
-                matchWaitInterrupt.append(")\n");
-                smtlibAssertion.append(matchWaitInterrupt);
             }
         }
     }

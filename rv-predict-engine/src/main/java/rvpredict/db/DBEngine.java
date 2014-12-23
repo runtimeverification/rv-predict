@@ -152,7 +152,6 @@ public class DBEngine {
                 case JOIN:
                 case JOIN_MAYBE_TIMEOUT:
                 case JOIN_INTERRUPTED:
-                case INTERRUPT:
                     node = new SyncEvent(GID, TID, ID, TYPE, ADDRL);
                     break;
                 case BRANCH:

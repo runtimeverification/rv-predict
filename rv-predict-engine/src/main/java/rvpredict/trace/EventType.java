@@ -74,11 +74,6 @@ public enum EventType {
     JOIN_INTERRUPTED,
 
     /**
-     * Event generated before calling {@code Thread#interrupt()}.
-     */
-    INTERRUPT,
-
-    /**
      * Serves as a guard of a possible control flow change, which
      * determines the next instruction to execute in a thread.
      */

@@ -100,7 +100,12 @@ public class Trace {
     private final Map<Long, List<BranchEvent>> threadIdToBranchEvents = new HashMap<>();
 
     /**
-     * Start/Join events indexed by the ID of its owner Thread object.
+     * Interrupt events on each thread.
+     */
+    private final Map<Long, List<SyncEvent>> threadIdToInterruptEvents = new HashMap<>();
+
+    /**
+     * Start/Join events indexed by the ID of its target thread to join/start.
      */
     private final Map<Long, List<SyncEvent>> threadIdToStartJoinEvents = new HashMap<>();
 
@@ -182,8 +187,8 @@ public class Trace {
     }
 
     public List<SyncEvent> getInterruptEventsOn(long tid) {
-        // TODO Auto-generated method stub
-        return null;
+        List<SyncEvent> result = threadIdToInterruptEvents.get(tid);
+        return result == null ? Collections.<SyncEvent>emptyList() : result;
     }
 
     public List<SyncEvent> getUnmatchedInterruptEvents(long tid) {
@@ -316,6 +321,7 @@ public class Trace {
                 long obj = event.getSyncObject();
                 switch (event.getType()) {
                 case PRE_WAIT: {
+                    finalState.dormantThreads.add(tid);
                     Set<Long> waitSet = finalState.objToWaitingThreads.get(obj);
                     if (waitSet == null) {
                         waitSet = Sets.newHashSet();
@@ -325,7 +331,10 @@ public class Trace {
                     break;
                 }
                 case WAIT:
-                case WAIT_MAYBE_TIMEOUT: {
+                case WAIT_MAYBE_TIMEOUT:
+                case WAIT_INTERRUPTED: {
+                    finalState.dormantThreads.remove(tid);
+                    finalState.threadIdToInterrupts.remove(tid);
                     finalState.objToWaitingThreads.get(obj).remove(tid);
 
                     Set<SyncEvent> notifyToRemove = Sets.newHashSet();
@@ -369,8 +378,26 @@ public class Trace {
                     }
                     break;
                 }
-                case START:
+                case PRE_JOIN:
+                    finalState.dormantThreads.add(tid);
+                    break;
                 case JOIN:
+                case JOIN_MAYBE_TIMEOUT:
+                case JOIN_INTERRUPTED:
+                    finalState.dormantThreads.remove(tid);
+                    finalState.threadIdToInterrupts.remove(tid);
+                    break;
+                case INTERRUPT:
+                    if (finalState.dormantThreads.contains(obj)) {
+                        List<SyncEvent> interrupts = finalState.threadIdToInterrupts.get(obj);
+                        if (interrupts == null) {
+                            interrupts = Lists.newArrayList();
+                            finalState.threadIdToInterrupts.put(obj, interrupts);
+                        }
+                        interrupts.add(event);
+                    }
+                    break;
+                case START:
                 case LOCK:
                 case UNLOCK:
                     break;
@@ -492,19 +519,14 @@ public class Trace {
                 info.incrementSyncNumber();
                 SyncEvent syncEvent = (SyncEvent) node;
 
+                Map<Long, List<SyncEvent>> eventsMap = null;
                 switch (syncEvent.getType()) {
                 case START:
                 case PRE_JOIN:
                 case JOIN:
                 case JOIN_MAYBE_TIMEOUT:
                 case JOIN_INTERRUPTED:
-                    long threadObj = syncEvent.getSyncObject();
-                    List<SyncEvent> events = threadIdToStartJoinEvents.get(threadObj);
-                    if (events == null) {
-                        events = Lists.newArrayList();
-                        threadIdToStartJoinEvents.put(threadObj, events);
-                    }
-                    events.add(syncEvent);
+                    eventsMap = threadIdToStartJoinEvents;
                     break;
                 case LOCK:
                 case UNLOCK:
@@ -514,19 +536,21 @@ public class Trace {
                 case WAIT_INTERRUPTED:
                 case NOTIFY:
                 case NOTIFY_ALL:
-                    long syncObj = syncEvent.getSyncObject();
-                    List<SyncEvent> syncEvents = lockObjToSyncEvents.get(syncObj);
-                    if (syncEvents == null) {
-                        syncEvents = new ArrayList<>();
-                        lockObjToSyncEvents.put(syncObj, syncEvents);
-                    }
-                    syncEvents.add(syncEvent);
+                    eventsMap = lockObjToSyncEvents;
                     break;
                 case INTERRUPT:
-                    throw new RuntimeException("Not yet implemented");
+                    eventsMap = threadIdToInterruptEvents;
+                    break;
                 default:
                     assert false : "unexpected event: " + syncEvent;
                 }
+
+                List<SyncEvent> events = eventsMap.get(syncEvent.getSyncObject());
+                if (events == null) {
+                    events = Lists.newArrayList();
+                    eventsMap.put(syncEvent.getSyncObject(), events);
+                }
+                events.add(syncEvent);
             }
         }
     }
@@ -604,6 +628,16 @@ public class Trace {
         private Map<String, Long> addrToValue = Maps.newHashMap();
 
         /**
+         * Set of dormant threads blocked on wait or join.
+         */
+        private Set<Long> dormantThreads = Sets.newHashSet();
+
+        /**
+         * Map from thread ID to interrupt events on it.
+         */
+        private Map<Long, List<SyncEvent>> threadIdToInterrupts = Maps.newHashMap();
+
+        /**
          * Map from object to dormant threads waiting on it.
          */
         private Map<Long, Set<Long>> objToWaitingThreads = Maps.newHashMap();
@@ -641,6 +675,8 @@ public class Trace {
 
         private State(State state) {
             this.addrToValue = new HashMap<>(state.addrToValue);
+            this.dormantThreads = new HashSet<>(state.dormantThreads);
+            this.threadIdToInterrupts = new HashMap<>(state.threadIdToInterrupts);
             this.objToWaitingThreads = new HashMap<>(state.objToWaitingThreads);
             this.objToNotifyEvents = new HashMap<>(state.objToNotifyEvents);
             this.notifyToWaitingThreads = new HashMap<>(state.notifyToWaitingThreads);

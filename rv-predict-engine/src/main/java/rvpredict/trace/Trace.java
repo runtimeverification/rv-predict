@@ -158,12 +158,27 @@ public class Trace {
     }
 
     /**
-     * Returns unmatched notify events on a given object from previous windows.
+     * Returns unmatched notify events on a given object from previous windows
+     * that could wake up the given thread.
+     *
+     * @param tid
+     *            the given thread ID
+     * @param object
+     *            the given object
      */
-    public List<SyncEvent> getUnmatchedNotifyEvents(Long object) {
-        List<SyncEvent> result = initState.objToNotifyEvents.get(object);
-        return result == null ? Collections.<SyncEvent>emptyList() :
-            Collections.unmodifiableList(initState.objToNotifyEvents.get(object));
+    public List<SyncEvent> getUnmatchedNotifyEvents(Long tid, Long object) {
+        if (initState.objToNotifyEvents.get(object) == null) {
+            return Collections.emptyList();
+        }
+
+        List<SyncEvent> result = Lists.newArrayList();
+        for (SyncEvent notify : initState.objToNotifyEvents.get(object)) {
+            /* check if the notify could wake the given thread */
+            if (initState.notifyToWaitingThreads.get(notify).contains(tid)) {
+                result.add(notify);
+            }
+        }
+        return result;
     }
 
     public Map<Integer, String> getLocIdToStmtSigMap() {

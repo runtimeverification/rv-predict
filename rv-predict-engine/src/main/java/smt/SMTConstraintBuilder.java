@@ -270,7 +270,8 @@ public class SMTConstraintBuilder {
 
                 /* enumerate unmatched notify from previous windows */
                 if (lockRegion1.getPreWait() == null) {
-                    for (SyncEvent notify : trace.getUnmatchedNotifyEvents(wait.getSyncObject())) {
+                    for (SyncEvent notify : trace.getUnmatchedNotifyEvents(wait.getTID(),
+                            wait.getSyncObject())) {
                         if (notify.getType() == EventType.NOTIFY) {
                             matchWaitNotify.append(String.format("(= %s %s)",
                                     makeMatchVariable(notify), wait.getGID()));

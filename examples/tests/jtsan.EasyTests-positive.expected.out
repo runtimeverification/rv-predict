@@ -1,0 +1,21 @@
+(?s)(.*)Race on field jtsan.EasyTests\$3.sharedChar between:(\s)*jtsan.EasyTests\$3.thread1\(EasyTests.java:118\)(\s)*jtsan.EasyTests\$3.thread2\(EasyTests.java:123\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$1.sharedVar between:(\s)*jtsan.EasyTests\$1.thread1\(EasyTests.java:82\)(\s)*jtsan.EasyTests\$1.thread2\(EasyTests.java:87\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$8.sharedVar between:(\s)*jtsan.EasyTests\$8.thread1\(EasyTests.java:204\)(\s)*jtsan.EasyTests\$8.thread2\(EasyTests.java:210\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$2.sharedShort between:(\s)*jtsan.EasyTests\$2.thread1\(EasyTests.java:100\)(\s)*jtsan.EasyTests\$2.thread2\(EasyTests.java:105\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$4.sharedLong between:(\s)*jtsan.EasyTests\$4.thread1\(EasyTests.java:136\)(\s)*jtsan.EasyTests\$4.thread2\(EasyTests.java:141\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$9.sharedVar between:(\s)*jtsan.EasyTests\$9.thread1\(EasyTests.java:222\)(\s)*jtsan.EasyTests\$9.thread2\(EasyTests.java:227\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$6.sharedDouble between:(\s)*jtsan.EasyTests\$6.thread1\(EasyTests.java:172\)(\s)*jtsan.EasyTests\$6.thread2\(EasyTests.java:177\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$10.sharedVar between:(\s)*jtsan.EasyTests\$10.thread1\(EasyTests.java:240\)(\s)*jtsan.EasyTests\$10.thread2\(EasyTests.java:247\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$11\$RecursiveObject.value between:(\s)*jtsan.EasyTests\$11.thread1\(EasyTests.java:275\)(\s)*jtsan.EasyTests\$11.thread2\(EasyTests.java:280\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$5.sharedFloat between:(\s)*jtsan.EasyTests\$5.thread1\(EasyTests.java:154\)(\s)*jtsan.EasyTests\$5.thread2\(EasyTests.java:159\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$7.sharedObject between:(\s)*jtsan.EasyTests\$7.thread1\(EasyTests.java:188\)(\s)*jtsan.EasyTests\$7.thread2\(EasyTests.java:193\)(.*)

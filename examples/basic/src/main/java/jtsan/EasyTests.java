@@ -48,10 +48,10 @@ public class EasyTests {
             tests.lockedVsNoLockedWW2();
             tests.differentLocksWW();
             tests.recursiveObjectWW();
-            tests.systemArrayCopy();
-            tests.systemArrayCopy2();
-            tests.systemArrayCopy3();
-            tests.systemArrayCopyException();
+//            tests.systemArrayCopy();
+//            tests.systemArrayCopy2();
+//            tests.systemArrayCopy3();
+//            tests.systemArrayCopyException();
         } else {
             // negative tests
             tests.noOperation();

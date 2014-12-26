@@ -203,14 +203,14 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-        int sid = GlobalStateForInstrumentation.getVariableId(owner, name);
+        int sid = GlobalMetaData.getVariableId(owner, name);
         String varSig = (owner + "." + name).replace("/", ".");
         // TODO(YilongL): move the following code to GlobalStateForInstrumentation
         String sig_loc = source
                 + "|"
                 + (className + "|" + signature + "|" + varSig + "|" + crntLineNum).replace("/",
                         ".");
-        int ID = GlobalStateForInstrumentation.getLocationId(sig_loc);
+        int ID = GlobalMetaData.getLocationId(sig_loc);
 
         int localVarIdx;
         int localVarIdx2;
@@ -613,7 +613,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      *         current statement in the instrumented program
      */
     private int getCrntStmtSID() {
-        return GlobalStateForInstrumentation.getLocationId(getCrntStmtSig());
+        return GlobalMetaData.getLocationId(getCrntStmtSig());
     }
 
     /**

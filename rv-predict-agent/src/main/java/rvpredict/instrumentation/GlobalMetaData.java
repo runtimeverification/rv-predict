@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.collect.Sets;
 
-public class GlobalStateForInstrumentation {
+public class GlobalMetaData {
 
     private static final Map<String, Set<String>> classNameToFieldNames = new ConcurrentHashMap<>();
     private static final Map<String, String> classNameToSuperclassName = new ConcurrentHashMap<>();
@@ -26,7 +26,10 @@ public class GlobalStateForInstrumentation {
     public static final ConcurrentHashMap<Long, String> threadIdToName = new ConcurrentHashMap<>();
 
     public static final ConcurrentHashMap<String, Integer> varSigToId = new ConcurrentHashMap<>();
-    private static final String[] varSigs = new String[10000];
+
+    private static final int MAX_NUM_OF_FIELDS = 10000;
+
+    private static final String[] varSigs = new String[MAX_NUM_OF_FIELDS];
 
     public static final ConcurrentHashMap<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
     public static final List<Map.Entry<String, Integer>> unsavedStmtSigToLocId = new ArrayList<>();
@@ -39,7 +42,7 @@ public class GlobalStateForInstrumentation {
     public static int NATIVE_INTERRUPTED_STATUS_VAR_ID = getVariableId("java.lang.Thread",
             NATIVE_INTERRUPTED_STATUS_VAR);
 
-    private GlobalStateForInstrumentation() { }
+    private GlobalMetaData() { }
 
     public static void setSuperclass(String className, String superclassName) {
         className = className.replace("/", ".");

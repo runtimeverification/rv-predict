@@ -29,7 +29,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
             String[] interfaces) {
         className = name;
         this.version = version;
-        GlobalStateForInstrumentation.setSuperclass(name, superName);
+        GlobalMetaData.setSuperclass(name, superName);
         cv.visit(version, access, name, signature, superName, interfaces);
     }
 
@@ -45,10 +45,10 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
         /* TODO(YilongL): add comments about what is special about `final`,
          * `volatile`, and `static` w.r.t. instrumentation */
 
-        GlobalStateForInstrumentation.addField(className, name);
+        GlobalMetaData.addField(className, name);
         // Opcodes.ACC_FINAL
         if ((access & Opcodes.ACC_VOLATILE) != 0) { // volatile
-            GlobalStateForInstrumentation.addVolatileVariable(className, name);
+            GlobalMetaData.addVolatileVariable(className, name);
         }
 
         return cv.visitField(access, name, desc, signature, value);

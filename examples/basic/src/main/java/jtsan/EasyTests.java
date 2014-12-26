@@ -52,6 +52,7 @@ public class EasyTests {
 //            tests.systemArrayCopy2();
 //            tests.systemArrayCopy3();
 //            tests.systemArrayCopyException();
+            tests.volatileArray();
         } else {
             // negative tests
             tests.noOperation();
@@ -388,6 +389,30 @@ public class EasyTests {
             }
         };
     }
+
+    @RaceTest(expectRace = true,
+            description = "Volatile array doesn't mean an array of volatile elements")
+    public void volatileArray() {
+        new ThreadRunner(2) {
+            volatile boolean[] volatileArr;
+
+            @Override
+            public void setUp() {
+                volatileArr = new boolean[10];
+            }
+
+            @Override
+            public void thread1() {
+                volatileArr[5] = true;
+            }
+
+            @Override
+            public void thread2() {
+                volatileArr[5] = false;
+            }
+        };
+    }
+
 
     //------------------ Negative tests ---------------------
 

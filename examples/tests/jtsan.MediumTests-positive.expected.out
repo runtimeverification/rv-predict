@@ -1,0 +1,3 @@
+(?s)(.*)Race on an array access between:(\s)*jtsan.MediumTests\$3.thread1\(MediumTests.java:86\)(\s)*jtsan.MediumTests\$3.thread2\(MediumTests.java:91\)(.*)
+
+(?s)(.*)Race on field jtsan.MediumTests\$4.sharedVar between:(\s)*jtsan.MediumTests\$4.thread1\(MediumTests.java:103\)(\s)*jtsan.MediumTests\$4.thread2\(MediumTests.java:113\)(.*)

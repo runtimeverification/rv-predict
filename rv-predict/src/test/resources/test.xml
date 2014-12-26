@@ -87,4 +87,15 @@
 	    <arg value="negative" />
     </test>
     
+	<test name="jtsan.MediumTests-positive">
+        <arg key="-cp" value="basic.jar" />
+        <arg value="jtsan.MediumTests" />
+	    <arg value="positive" />
+    </test>
+        <test name="jtsan.MediumTests-negative">
+        <arg key="-cp" value="basic.jar" />
+        <arg value="jtsan.MediumTests" />
+	    <arg value="negative" />
+    </test>
+    
 </tests>

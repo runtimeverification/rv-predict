@@ -1,5 +1,8 @@
 package rvpredict.instrumentation;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
@@ -16,6 +19,8 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
     private String source;
 
     private int version;
+
+    private final Set<String> finalFields = new HashSet<>();
 
     public SnoopInstructionClassAdapter(ClassVisitor cv, Config config) {
         super(Opcodes.ASM5, cv);
@@ -46,8 +51,10 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
          * `volatile`, and `static` w.r.t. instrumentation */
 
         GlobalMetaData.addField(className, name);
-        // Opcodes.ACC_FINAL
-        if ((access & Opcodes.ACC_VOLATILE) != 0) { // volatile
+        if ((access & Opcodes.ACC_FINAL) != 0) {
+            finalFields.add(name);
+        }
+        if ((access & Opcodes.ACC_VOLATILE) != 0) {
             GlobalMetaData.addVolatileVariable(className, name);
         }
 
@@ -68,7 +75,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
             }
 
             mv = new SnoopInstructionMethodAdapter(mv, source, className, version, name, name
-                    + desc, access, numOfWords, config);
+                    + desc, access, numOfWords, finalFields, config);
         }
         return mv;
     }

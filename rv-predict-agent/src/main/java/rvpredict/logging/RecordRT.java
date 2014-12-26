@@ -52,7 +52,7 @@ public final class RecordRT {
     public static void initNonSharing() {
         long tid = Thread.currentThread().getId();
 
-        GlobalStateForInstrumentation.instance.registerThreadName(tid, MAIN_NAME);
+        GlobalStateForInstrumentation.registerThreadName(tid, MAIN_NAME);
 
         threadTidIndexMap = new HashMap<>();
         threadTidIndexMap.put(tid, 1);
@@ -228,6 +228,7 @@ public final class RecordRT {
      */
     public static void logFieldAcc(int locId, Object object, int variableId, Object value,
             boolean isWrite, boolean branchModel) {
+        variableId = GlobalStateForInstrumentation.resolveVariableId(variableId);
         db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(object), -variableId, objectToLong(value));
         if (!isPrimitiveWrapper(value) && branchModel) {
@@ -272,6 +273,7 @@ public final class RecordRT {
      *            the initial value of the field
      */
     public static void logFieldInit(int locId, Object object, int variableId, Object value) {
+        variableId = GlobalStateForInstrumentation.resolveVariableId(variableId);
         db.saveEvent(EventType.INIT, locId, System.identityHashCode(object), -variableId,
                 objectToLong(value));
     }
@@ -312,13 +314,13 @@ public final class RecordRT {
         long crntThreadId = Thread.currentThread().getId();
         long newThreadId = thread.getId();
 
-        String name = GlobalStateForInstrumentation.instance.threadIdToName.get(crntThreadId);
+        String name = GlobalStateForInstrumentation.threadIdToName.get(crntThreadId);
         // it's possible that name is NULL, because this thread is started from
         // library: e.g., AWT-EventQueue-0
         if (name == null) {
             name = Thread.currentThread().getName();
             threadTidIndexMap.put(crntThreadId, 1);
-            GlobalStateForInstrumentation.instance.registerThreadName(crntThreadId, name);
+            GlobalStateForInstrumentation.registerThreadName(crntThreadId, name);
         }
 
         int index = threadTidIndexMap.get(crntThreadId);
@@ -328,7 +330,7 @@ public final class RecordRT {
         else
             name = name + "." + index;
 
-        GlobalStateForInstrumentation.instance.registerThreadName(newThreadId, name);
+        GlobalStateForInstrumentation.registerThreadName(newThreadId, name);
         threadTidIndexMap.put(newThreadId, 1);
 
         index++;

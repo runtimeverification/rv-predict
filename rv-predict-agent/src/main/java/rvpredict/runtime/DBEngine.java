@@ -150,6 +150,12 @@ public class DBEngine {
         long tid = Thread.currentThread().getId();
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
         try {
+            /*
+             * TODO(YilongL): the following code seems to cause the infinite
+             * recursion when running nailgun; on the other hand, since this
+             * method can be called from RecordRT, we should try to keep its
+             * dependence on other classes to a minimal degree
+             */
             EventOutputStream traceOS = threadLocalTraceOS.get();
             traceOS.writeEvent(e);
             long eventsWritten = traceOS.getEventsWrittenCount();
@@ -163,8 +169,8 @@ public class DBEngine {
         } catch (FileNotFoundException e1) {
             e1.printStackTrace();
         } catch (IOException e1) {
-                e1.printStackTrace();
-            }
+            e1.printStackTrace();
+        }
     }
 
     /**

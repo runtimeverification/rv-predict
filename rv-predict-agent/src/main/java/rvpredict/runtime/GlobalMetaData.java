@@ -4,11 +4,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
-import rvpredict.runtime.bootstrap.java.util.ArrayList;
 import rvpredict.runtime.bootstrap.java.util.AbstractMap.SimpleEntry;
-import rvpredict.runtime.bootstrap.java.util.concurrent.ConcurrentHashMap;
+import rvpredict.runtime.bootstrap.java.util.ArrayList;
 
+/**
+ * TODO(YilongL): split this class into two; those methods/data that are not
+ * accessed from RecordRT can use ConcurrentHashMap; others cannot
+ */
 public class GlobalMetaData {
 
     private static final Map<String, Set<String>> classNameToFieldNames = new ConcurrentHashMap<>();

@@ -26,8 +26,6 @@ public class GlobalMetaData {
      * our case.
      */
 
-    public static final ConcurrentHashMap<Long, String> threadIdToName = new ConcurrentHashMap<>();
-
     public static final ConcurrentHashMap<String, Integer> varSigToId = new ConcurrentHashMap<>();
 
     private static final int MAX_NUM_OF_FIELDS = 10000;
@@ -63,10 +61,6 @@ public class GlobalMetaData {
     public static void addField(String className, String fieldName) {
         className = className.replace("/", ".");
         classNameToFieldNames.get(className).add(fieldName);
-    }
-
-    public static void registerThreadName(long tid, String name) {
-        threadIdToName.put(tid, name);
     }
 
     public static int getVariableId(String className, String fieldName) {

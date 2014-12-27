@@ -29,30 +29,15 @@
 package rvpredict.runtime;
 
 import static rvpredict.runtime.GlobalMetaData.NATIVE_INTERRUPTED_STATUS_VAR_ID;
-import rvpredict.runtime.bootstrap.java.util.HashMap;
 import rvpredict.trace.EventType;
 
 public final class RecordRT {
-
-    private static HashMap<Long, Integer> threadTidIndexMap;
-    private final static String MAIN_NAME = "0";
 
     private static DBEngine db;
 
     // TODO(YilongL): move this method out of the runtime library
     public static void init(DBEngine db) {
         RecordRT.db = db;
-        initNonSharing();
-    }
-
-    // TODO(YilongL): move this method out of the runtime library
-    public static void initNonSharing() {
-        long tid = Thread.currentThread().getId();
-
-        GlobalMetaData.registerThreadName(tid, MAIN_NAME);
-
-        threadTidIndexMap = new HashMap<>();
-        threadTidIndexMap.put(tid, 1);
     }
 
     /**
@@ -308,35 +293,9 @@ public final class RecordRT {
      *            invoked
      */
     public static void rvPredictStart(int locId, Thread thread) {
-        long crntThreadId = Thread.currentThread().getId();
-        long newThreadId = thread.getId();
-
-        String name = GlobalMetaData.threadIdToName.get(crntThreadId);
-        // it's possible that name is NULL, because this thread is started from
-        // library: e.g., AWT-EventQueue-0
-        if (name == null) {
-            name = Thread.currentThread().getName();
-            threadTidIndexMap.put(crntThreadId, 1);
-            GlobalMetaData.registerThreadName(crntThreadId, name);
-        }
-
-        int index = threadTidIndexMap.get(crntThreadId);
-
-        if (name.equals(MAIN_NAME))
-            name = "" + index;
-        else
-            name = name + "." + index;
-
-        GlobalMetaData.registerThreadName(newThreadId, name);
-        threadTidIndexMap.put(newThreadId, 1);
-
-        index++;
-        threadTidIndexMap.put(crntThreadId, index);
-
         db.saveEvent(EventType.INIT, locId, System.identityHashCode(thread),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-        db.saveEvent(EventType.START, locId, newThreadId);
-
+        db.saveEvent(EventType.START, locId, thread.getId());
         thread.start();
     }
 

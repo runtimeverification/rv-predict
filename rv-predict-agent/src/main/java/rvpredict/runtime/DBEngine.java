@@ -200,7 +200,7 @@ public class DBEngine {
     /**
      * Flush un-previously-saved metadata to disk.
      */
-    public void saveMetaData() {
+    private void saveMetaData() {
         /* save <volatileVariable, Id> pairs */
         synchronized (GlobalMetaData.volatileVariables) {
             Set<Integer> volatileFieldIds = new HashSet<>(GlobalMetaData.unsavedVolatileVariables.size());

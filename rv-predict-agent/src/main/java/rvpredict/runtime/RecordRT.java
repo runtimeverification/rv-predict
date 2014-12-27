@@ -26,13 +26,10 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package rvpredict.logging;
+package rvpredict.runtime;
 
-import static rvpredict.instrumentation.GlobalMetaData.NATIVE_INTERRUPTED_STATUS_VAR_ID;
-
-import java.util.HashMap;
-
-import rvpredict.instrumentation.GlobalMetaData;
+import static rvpredict.runtime.GlobalMetaData.NATIVE_INTERRUPTED_STATUS_VAR_ID;
+import rvpredict.runtime.bootstrap.java.util.HashMap;
 import rvpredict.trace.EventType;
 
 public final class RecordRT {

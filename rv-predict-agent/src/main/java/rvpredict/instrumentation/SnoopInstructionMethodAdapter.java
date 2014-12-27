@@ -12,6 +12,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 import rvpredict.config.Config;
+import rvpredict.runtime.GlobalMetaData;
 
 public class SnoopInstructionMethodAdapter extends MethodVisitor {
 

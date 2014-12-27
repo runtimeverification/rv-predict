@@ -1,13 +1,13 @@
-package rvpredict.logging;
-
-import rvpredict.db.EventOutputStream;
-import rvpredict.db.TraceCache;
+package rvpredict.runtime;
 
 import java.io.BufferedOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.nio.file.Paths;
-import java.util.concurrent.ConcurrentHashMap;
+
+import rvpredict.db.EventOutputStream;
+import rvpredict.db.TraceCache;
+import rvpredict.runtime.bootstrap.java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Class extending {@link java.lang.ThreadLocal} to handle thread-local output

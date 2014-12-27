@@ -1,14 +1,13 @@
-package rvpredict.instrumentation;
+package rvpredict.runtime;
 
-import java.util.AbstractMap.SimpleEntry;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
-import com.google.common.collect.Sets;
+import rvpredict.runtime.bootstrap.java.util.ArrayList;
+import rvpredict.runtime.bootstrap.java.util.AbstractMap.SimpleEntry;
+import rvpredict.runtime.bootstrap.java.util.concurrent.ConcurrentHashMap;
 
 public class GlobalMetaData {
 
@@ -34,7 +33,8 @@ public class GlobalMetaData {
     public static final ConcurrentHashMap<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
     public static final List<Map.Entry<String, Integer>> unsavedStmtSigToLocId = new ArrayList<>();
 
-    public static final Set<String> volatileVariables = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    public static final Set<String> volatileVariables = Collections
+            .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     public static final List<String> unsavedVolatileVariables = new ArrayList<>();
 
     private static final String NATIVE_INTERRUPTED_STATUS_VAR = "$interruptedStatus";
@@ -51,7 +51,8 @@ public class GlobalMetaData {
             System.err.println("[Warning]: class " + className + " is instrumented more than once!");
         } else {
             classNameToSuperclassName.put(className, superclassName);
-            classNameToFieldNames.put(className, Sets.<String>newConcurrentHashSet());
+            classNameToFieldNames.put(className,
+                    Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>()));
         }
     }
 

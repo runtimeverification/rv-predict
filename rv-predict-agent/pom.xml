@@ -41,7 +41,7 @@
                             <mainClass>rvpredict.engine.main.GUIMain</mainClass>
                         </manifest>
                         <manifestEntries>
-                            <Premain-Class>rvpredict.instrumentation.SnoopInstructionTransformer</Premain-Class>
+                            <Premain-Class>rvpredict.instrumentation.Agent</Premain-Class>
                         </manifestEntries>
                     </archive>
                 </configuration>

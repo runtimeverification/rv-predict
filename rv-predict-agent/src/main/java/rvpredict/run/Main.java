@@ -32,7 +32,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import rvpredict.config.Config;
-import rvpredict.logging.RecordRT;
+import rvpredict.runtime.RecordRT;
 
 /**
  * The entry class to run the record version of the application. During

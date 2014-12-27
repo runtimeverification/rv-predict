@@ -1,4 +1,4 @@
-package rvpredict.runtime;
+package rvpredict.logging;
 
 import java.io.BufferedOutputStream;
 import java.io.FileNotFoundException;

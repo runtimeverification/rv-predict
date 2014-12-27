@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package rvpredict.runtime;
+package rvpredict.logging;
 
 import java.io.BufferedOutputStream;
 import java.io.FileNotFoundException;
@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import rvpredict.db.EventItem;
 import rvpredict.db.EventOutputStream;
+import rvpredict.runtime.GlobalMetaData;
 import rvpredict.runtime.bootstrap.java.util.HashSet;
 import rvpredict.trace.EventType;
 

@@ -29,6 +29,7 @@
 package rvpredict.runtime;
 
 import static rvpredict.runtime.GlobalMetaData.NATIVE_INTERRUPTED_STATUS_VAR_ID;
+import rvpredict.logging.DBEngine;
 import rvpredict.trace.EventType;
 
 public final class RecordRT {

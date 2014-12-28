@@ -74,7 +74,7 @@ public class Agent implements ClassFileTransformer {
         final DBEngine db = new DBEngine(commandLine.outdir);
         RVPredictRuntime.init(db);
 
-        inst.addTransformer(new Agent(config));
+        inst.addTransformer(new Agent(config), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {
             if (!c.isInterface() && inst.isModifiableClass(c)) {
                 try {

@@ -42,6 +42,7 @@
                         </manifest>
                         <manifestEntries>
                             <Premain-Class>rvpredict.instrumentation.Agent</Premain-Class>
+                            <Can-Retransform-Classes>true</Can-Retransform-Classes>
                         </manifestEntries>
                     </archive>
                 </configuration>

@@ -17,6 +17,7 @@ import rvpredict.util.Logger;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.Arrays;
 
@@ -76,13 +77,12 @@ public class Agent implements ClassFileTransformer {
         inst.addTransformer(new Agent(config));
         for (Class<?> c : inst.getAllLoadedClasses()) {
             if (!c.isInterface() && inst.isModifiableClass(c)) {
-//                System.out.println("Retransforming: " + c);
-//                try {
-//                    inst.retransformClasses(c);
-//                } catch (UnmodifiableClassException e) {
-//                    System.err.println("Cannot retransform class. Exception: " + e);
-//                    System.exit(1);
-//                }
+                try {
+                    inst.retransformClasses(c);
+                } catch (UnmodifiableClassException e) {
+                    System.err.println("Cannot retransform class. Exception: " + e);
+                    System.exit(1);
+                }
             }
         }
 

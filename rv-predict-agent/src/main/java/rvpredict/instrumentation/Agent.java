@@ -11,7 +11,7 @@ import rvpredict.config.Config;
 import rvpredict.db.TraceCache;
 import rvpredict.engine.main.Main;
 import rvpredict.logging.DBEngine;
-import rvpredict.runtime.RecordRT;
+import rvpredict.runtime.RVPredictRuntime;
 import rvpredict.util.Logger;
 
 import java.lang.instrument.ClassFileTransformer;
@@ -71,7 +71,7 @@ public class Agent implements ClassFileTransformer {
 
         TraceCache.removeTraceFiles(commandLine.outdir);
         final DBEngine db = new DBEngine(commandLine.outdir);
-        RecordRT.init(db);
+        RVPredictRuntime.init(db);
 
         inst.addTransformer(new Agent(config));
         for (Class<?> c : inst.getAllLoadedClasses()) {

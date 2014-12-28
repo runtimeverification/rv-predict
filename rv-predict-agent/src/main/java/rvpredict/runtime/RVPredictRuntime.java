@@ -28,17 +28,21 @@
  ******************************************************************************/
 package rvpredict.runtime;
 
-import static rvpredict.runtime.GlobalMetaData.NATIVE_INTERRUPTED_STATUS_VAR_ID;
+import static rvpredict.instrumentation.MetaData.NATIVE_INTERRUPTED_STATUS_VAR_ID;
+
+import java.util.Set;
+
+import rvpredict.instrumentation.MetaData;
 import rvpredict.logging.DBEngine;
 import rvpredict.trace.EventType;
 
-public final class RecordRT {
+public final class RVPredictRuntime {
 
     private static DBEngine db;
 
     // TODO(YilongL): move this method out of the runtime library
     public static void init(DBEngine db) {
-        RecordRT.db = db;
+        RVPredictRuntime.db = db;
     }
 
     /**
@@ -211,7 +215,7 @@ public final class RecordRT {
      */
     public static void logFieldAcc(int locId, Object object, int variableId, Object value,
             boolean isWrite, boolean branchModel) {
-        variableId = GlobalMetaData.resolveVariableId(variableId);
+        variableId = RVPredictRuntime.resolveVariableId(variableId);
         db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(object), -variableId, objectToLong(value));
         if (!isPrimitiveWrapper(value) && branchModel) {
@@ -256,7 +260,7 @@ public final class RecordRT {
      *            the initial value of the field
      */
     public static void logFieldInit(int locId, Object object, int variableId, Object value) {
-        variableId = GlobalMetaData.resolveVariableId(variableId);
+        variableId = RVPredictRuntime.resolveVariableId(variableId);
         db.saveEvent(EventType.INIT, locId, System.identityHashCode(object), -variableId,
                 objectToLong(value));
     }
@@ -531,6 +535,40 @@ public final class RecordRT {
         if (o instanceof Float) return Float.floatToRawIntBits((Float) o);
         if (o instanceof Double) return Double.doubleToRawLongBits((Double) o);
         return System.identityHashCode(o);
+    }
+
+    /**
+     * TODO(YilongL): doing name mangling at runtime introduce unnecessary
+     * dependency on ConcurrentHashMap and Collections.newSetFromMap
+     */
+    private static int resolveVariableId(int variableId) {
+        String varSig = MetaData.varSigs[variableId];
+        int idx = varSig.lastIndexOf(".");
+        String className = varSig.substring(0, idx);
+        String fieldName = varSig.substring(idx + 1);
+        Set<String> fieldNames = MetaData.classNameToFieldNames.get(className);
+        while (fieldNames != null && !fieldNames.contains(fieldName)) {
+            className = MetaData.classNameToSuperclassName.get(className);
+            if (className == null) {
+                fieldNames = null;
+                break;
+            }
+
+            fieldNames = MetaData.classNameToFieldNames.get(className);
+        }
+
+        if (fieldNames == null) {
+            /* failed to resolve this variable Id */
+            // TODO(YilongL): make sure this doesn't happen
+
+//            System.out.println("[Warning]: unable to retrieve field information of class "
+//                    + className + "; resolving field " + fieldName);
+
+            return variableId;
+        } else {
+            assert fieldNames.contains(fieldName);
+            return MetaData.getVariableId(className, fieldName);
+        }
     }
 
 }

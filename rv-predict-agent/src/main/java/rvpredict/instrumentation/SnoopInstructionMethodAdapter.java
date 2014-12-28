@@ -12,7 +12,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 import rvpredict.config.Config;
-import rvpredict.runtime.GlobalMetaData;
 
 public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
@@ -217,14 +216,14 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             return;
         }
 
-        int sid = GlobalMetaData.getVariableId(owner, name);
+        int sid = MetaData.getVariableId(owner, name);
         String varSig = (owner + "." + name).replace("/", ".");
         // TODO(YilongL): move the following code to GlobalStateForInstrumentation
         String sig_loc = source
                 + "|"
                 + (className + "|" + signature + "|" + varSig + "|" + crntLineNum).replace("/",
                         ".");
-        int ID = GlobalMetaData.getLocationId(sig_loc);
+        int ID = MetaData.getLocationId(sig_loc);
 
         int localVarIdx;
         int localVarIdx2;
@@ -627,7 +626,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      *         current statement in the instrumented program
      */
     private int getCrntStmtSID() {
-        return GlobalMetaData.getLocationId(getCrntStmtSig());
+        return MetaData.getLocationId(getCrntStmtSig());
     }
 
     /**

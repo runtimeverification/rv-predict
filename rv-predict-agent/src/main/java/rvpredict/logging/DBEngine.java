@@ -34,13 +34,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import rvpredict.db.EventItem;
 import rvpredict.db.EventOutputStream;
-import rvpredict.runtime.GlobalMetaData;
-import rvpredict.runtime.bootstrap.java.util.HashSet;
+import rvpredict.instrumentation.MetaData;
 import rvpredict.trace.EventType;
 
 /**
@@ -203,18 +203,18 @@ public class DBEngine {
      */
     private void saveMetaData() {
         /* save <volatileVariable, Id> pairs */
-        synchronized (GlobalMetaData.volatileVariables) {
-            Set<Integer> volatileFieldIds = new HashSet<>(GlobalMetaData.unsavedVolatileVariables.size());
-            for (String var : GlobalMetaData.unsavedVolatileVariables) {
-                volatileFieldIds.add(GlobalMetaData.varSigToId.get(var));
+        synchronized (MetaData.volatileVariables) {
+            Set<Integer> volatileFieldIds = new HashSet<>(MetaData.unsavedVolatileVariables.size());
+            for (String var : MetaData.unsavedVolatileVariables) {
+                volatileFieldIds.add(MetaData.varSigToId.get(var));
             }
             saveObject(volatileFieldIds);
         }
 
         /* save <StmtSig, LocId> pairs */
-        synchronized (GlobalMetaData.stmtSigToLocId) {
-            saveObject(GlobalMetaData.unsavedStmtSigToLocId);
-            GlobalMetaData.unsavedStmtSigToLocId.clear();
+        synchronized (MetaData.stmtSigToLocId) {
+            saveObject(MetaData.unsavedStmtSigToLocId);
+            MetaData.unsavedStmtSigToLocId.clear();
         }
     }
 }

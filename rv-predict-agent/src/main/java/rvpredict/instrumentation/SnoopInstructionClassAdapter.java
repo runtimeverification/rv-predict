@@ -10,7 +10,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 import rvpredict.config.Config;
-import rvpredict.runtime.GlobalMetaData;
 
 public class SnoopInstructionClassAdapter extends ClassVisitor {
 
@@ -35,7 +34,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
             String[] interfaces) {
         className = name;
         this.version = version;
-        GlobalMetaData.setSuperclass(name, superName);
+        MetaData.setSuperclass(name, superName);
         cv.visit(version, access, name, signature, superName, interfaces);
     }
 
@@ -51,12 +50,12 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
         /* TODO(YilongL): add comments about what is special about `final`,
          * `volatile`, and `static` w.r.t. instrumentation */
 
-        GlobalMetaData.addField(className, name);
+        MetaData.addField(className, name);
         if ((access & Opcodes.ACC_FINAL) != 0) {
             finalFields.add(name);
         }
         if ((access & Opcodes.ACC_VOLATILE) != 0) {
-            GlobalMetaData.addVolatileVariable(className, name);
+            MetaData.addVolatileVariable(className, name);
         }
 
         return cv.visitField(access, name, desc, signature, value);

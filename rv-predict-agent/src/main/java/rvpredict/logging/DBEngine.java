@@ -133,6 +133,29 @@ public class DBEngine {
     }
 
     /**
+     * Checks if we are in the process of class loading or instrumentation.
+     */
+    private boolean skipSavingEvent() {
+        StackTraceElement[] stackTraceElems = Thread.currentThread().getStackTrace();
+        if (stackTraceElems.length == 0) {
+            return false;
+        }
+
+        String entryClass = stackTraceElems[stackTraceElems.length - 1].getClassName();
+        if (entryClass.startsWith("sun") || entryClass.startsWith("java")) {
+            return true;
+        }
+
+        for (StackTraceElement e : stackTraceElems) {
+            if (e.getClassName().startsWith("java.lang.ClassLoader")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Saves an {@link rvpredict.db.EventItem} to the database.
      * Each event is saved in a file corresponding to its own thread.
      *
@@ -147,7 +170,7 @@ public class DBEngine {
      * @param value data involved in the event
      */
     public void saveEvent(EventType eventType, int id, long addrl, long addrr, long value) {
-        if (shutdown) return;
+        if (shutdown || skipSavingEvent()) return;
 
         long gid = globalEventID.incrementAndGet();
         long tid = Thread.currentThread().getId();

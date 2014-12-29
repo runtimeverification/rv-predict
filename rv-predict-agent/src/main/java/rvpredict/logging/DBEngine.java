@@ -34,6 +34,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -72,7 +73,7 @@ public class DBEngine {
             metadataLoggingThread.join();
             for (EventOutputStream stream : threadLocalTraceOS.getStreamsMap().values()) {
                 try {
-                    stream.flush();
+                    stream.close();
                 } catch (IOException e) {
                     // TODO(TraianSF) We can probably safely ignore file errors at this (shutdown) stage
                     e.printStackTrace();
@@ -99,7 +100,6 @@ public class DBEngine {
 
             @Override
             public void run() {
-
                 while (!shutdown) {
                     try {
                         synchronized (metadataOS) {
@@ -110,6 +110,7 @@ public class DBEngine {
                     }
                     saveMetaData();
                 }
+                saveMetaData();
             }
 
         });
@@ -147,6 +148,7 @@ public class DBEngine {
      */
     public void saveEvent(EventType eventType, int id, long addrl, long addrr, long value) {
         if (shutdown) return;
+
         long gid = globalEventID.incrementAndGet();
         long tid = Thread.currentThread().getId();
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
@@ -190,9 +192,9 @@ public class DBEngine {
         saveEvent(eventType, locId, 0, 0, 0);
     }
 
-    private void saveObject(Object threadTidList) {
+    private void saveObject(Object object) {
         try {
-            metadataOS.writeObject(threadTidList);
+            metadataOS.writeObject(object);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -209,11 +211,12 @@ public class DBEngine {
                 volatileFieldIds.add(MetaData.varSigToId.get(var));
             }
             saveObject(volatileFieldIds);
+            MetaData.unsavedVolatileVariables.clear();
         }
 
         /* save <StmtSig, LocId> pairs */
         synchronized (MetaData.stmtSigToLocId) {
-            saveObject(MetaData.unsavedStmtSigToLocId);
+            saveObject(new ArrayList<>(MetaData.unsavedStmtSigToLocId));
             MetaData.unsavedStmtSigToLocId.clear();
         }
     }

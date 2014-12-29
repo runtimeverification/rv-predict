@@ -32,6 +32,8 @@ import java.io.*;
 import java.nio.file.Paths;
 import java.util.*;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 import rvpredict.trace.*;
 
 /**
@@ -61,10 +63,10 @@ public class DBEngine {
                 } catch (EOFException e) {
                     break;
                 }
-                List<Map.Entry<String, Integer>> stmtSigIdList = (List<Map.Entry<String, Integer>>) metadataIS
+                List<Pair<String, Integer>> stmtSigIdList = (List<Pair<String, Integer>>) metadataIS
                         .readObject();
-                for (Map.Entry<String, Integer> entry : stmtSigIdList) {
-                    locIdToStmtSig.put(entry.getValue(), entry.getKey());
+                for (Pair<String, Integer> pair : stmtSigIdList) {
+                    locIdToStmtSig.put(pair.getValue(), pair.getKey());
                 }
             }
         } catch (IOException | ClassNotFoundException e) {

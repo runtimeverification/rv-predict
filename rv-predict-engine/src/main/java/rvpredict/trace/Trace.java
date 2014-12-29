@@ -320,6 +320,14 @@ public class Trace {
                     finalState.objToWaitingThreads.get(obj).remove(tid);
 
                     Set<SyncEvent> notifyToRemove = Sets.newHashSet();
+                    if (!finalState.objToNotifyEvents.containsKey(obj)
+                            && (event.getType() == EventType.WAIT_MAYBE_TIMEOUT
+                            ||  event.getType() == EventType.WAIT_INTERRUPTED)) {
+                        /* finalState.objToNotifyEvents.get(obj) could be null
+                         * for WAIT_MAYBE_TIMEOUT and WAIT_INTERRUPTED */
+                        break;
+                    }
+
                     SyncEvent fstMatchedNotify = null;
                     for (SyncEvent notify : finalState.objToNotifyEvents.get(obj)) {
                         Set<Long> waitSet = finalState.notifyToWaitingThreads.get(notify);

@@ -134,6 +134,11 @@ public class DBEngine {
 
     /**
      * Checks if we are in the process of class loading or instrumentation.
+     * <p>
+     * Note that this method would not be necessary if we had mock for
+     * fundamental JDK classes that are used in class loading and
+     * instrumentation, i.e, {@code ArrayList}, {@code HashMap}, {@code Vector},
+     * etc.
      */
     private boolean skipSavingEvent() {
         StackTraceElement[] stackTraceElems = Thread.currentThread().getStackTrace();
@@ -141,13 +146,20 @@ public class DBEngine {
             return false;
         }
 
+        // TODO(YilongL): implement a profiling mechanism to see the top
+        // event-producing classes
+
         String entryClass = stackTraceElems[stackTraceElems.length - 1].getClassName();
-        if (entryClass.startsWith("sun") || entryClass.startsWith("java")) {
+        /* YilongL: note that we cannot skip saving event by checking
+         * entryClass.startsWith("java") because java.lang.Thread.run() */
+        if (entryClass.startsWith("sun")) {
+            // sun.instrument.InstrumentationImpl.loadClassAndCallPremain
             return true;
         }
 
         for (StackTraceElement e : stackTraceElems) {
-            if (e.getClassName().startsWith("java.lang.ClassLoader")) {
+            String className = e.getClassName();
+            if (className.startsWith("java.lang.ClassLoader") || className.startsWith("sun")) {
                 return true;
             }
         }

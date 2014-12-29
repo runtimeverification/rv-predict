@@ -70,8 +70,9 @@ public class Main {
             }
             String noSharingAgentOptions = sharingAgentOptions;
 
-            List<String> appArgList = new ArrayList<String>();
+            List<String> appArgList = new ArrayList<>();
             appArgList.add(java);
+            appArgList.add("-ea");
             appArgList.add("-Xbootclasspath/a:" + rvAgent);
             int agentIds = appArgList.size();
             if (config.optlog) {

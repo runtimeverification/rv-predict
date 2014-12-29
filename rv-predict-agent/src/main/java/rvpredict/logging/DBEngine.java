@@ -157,6 +157,25 @@ public class DBEngine {
             return true;
         }
 
+        /* a typical stack trace of class loading plus agent instrumentation:
+         *      ...
+         *      at rvpredict.instrumentation.Agent.transform(Agent.java:144)
+         *      at sun.instrument.TransformerManager.transform(TransformerManager.java:188)
+         *      at sun.instrument.InstrumentationImpl.transform(InstrumentationImpl.java:428)
+         *      at java.lang.ClassLoader.defineClass1(Native Method)
+         *      at java.lang.ClassLoader.defineClass(ClassLoader.java:760)
+         *      at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142)
+         *      at java.net.URLClassLoader.defineClass(URLClassLoader.java:455)
+         *      at java.net.URLClassLoader.access$100(URLClassLoader.java:73)
+         *      at java.net.URLClassLoader$1.run(URLClassLoader.java:367)
+         *      at java.net.URLClassLoader$1.run(URLClassLoader.java:361)
+         *      at java.security.AccessController.doPrivileged(Native Method)
+         *      at java.net.URLClassLoader.findClass(URLClassLoader.java:360)
+         *      at java.lang.ClassLoader.loadClass(ClassLoader.java:424)
+         *      at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:308)
+         *      at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
+         *      ...
+         */
         for (StackTraceElement e : stackTraceElems) {
             String className = e.getClassName();
             if (className.startsWith("java.lang.ClassLoader") || className.startsWith("sun")) {

@@ -77,6 +77,11 @@ public class Agent implements ClassFileTransformer {
         inst.addTransformer(new Agent(config), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {
             if (!c.isInterface() && inst.isModifiableClass(c)) {
+//                String className = c.getName();
+//                if (!className.startsWith("sun") && !className.startsWith("java.lang")
+//                        && !className.startsWith("java.io") && !className.startsWith("java.nio")) {
+//                    System.err.println("Preloaded class: " + className);
+//                }
                 try {
                     inst.retransformClasses(c);
                 } catch (UnmodifiableClassException e) {
@@ -85,6 +90,7 @@ public class Agent implements ClassFileTransformer {
                 }
             }
         }
+        System.out.println("Finished retransforming preloaded classes.");
 
         final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
             @Override
@@ -128,6 +134,7 @@ public class Agent implements ClassFileTransformer {
                 }
             }
 
+//        System.err.println(cname + " " + toInstrument);
         if (toInstrument) {
             ClassReader cr = new ClassReader(cbuf);
 

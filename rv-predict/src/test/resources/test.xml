@@ -91,8 +91,9 @@
         <arg key="-cp" value="basic.jar" />
         <arg value="jtsan.MediumTests" />
 	    <arg value="positive" />
+        <rvarg key="--include" value="java.util.ArrayList,java.util.HashMap,java.util.TreeMap" />
     </test>
-        <test name="jtsan.MediumTests-negative">
+    <test name="jtsan.MediumTests-negative">
         <arg key="-cp" value="basic.jar" />
         <arg value="jtsan.MediumTests" />
 	    <arg value="negative" />

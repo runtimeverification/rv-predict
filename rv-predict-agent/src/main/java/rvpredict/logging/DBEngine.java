@@ -149,8 +149,8 @@ public class DBEngine {
      */
     public void saveEvent(EventType eventType, int id, long addrl, long addrr, long value) {
         if (shutdown) return;
-        long tid = Thread.currentThread().getId();
         long gid = globalEventID.incrementAndGet();
+        long tid = Thread.currentThread().getId();
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
         try {
             EventOutputStream traceOS = threadLocalTraceOS.get();

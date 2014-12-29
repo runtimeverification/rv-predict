@@ -28,7 +28,10 @@
  ******************************************************************************/
 package rvpredict.logging;
 
+import static rvpredict.instrumentation.GlobalStateForInstrumentation.NATIVE_INTERRUPTED_STATUS_VAR_ID;
+
 import java.util.HashMap;
+
 import rvpredict.instrumentation.GlobalStateForInstrumentation;
 import rvpredict.trace.EventType;
 
@@ -90,15 +93,27 @@ public final class RecordRT {
      */
     public static void rvPredictWait(int locId, Object object, long timeout)
             throws InterruptedException {
+        Thread crntThread = Thread.currentThread();
         int objectHashCode = System.identityHashCode(object);
         db.saveEvent(EventType.PRE_WAIT, locId, objectHashCode);
         try {
             object.wait(timeout);
         } catch (InterruptedException e) {
-            db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
+            synchronized (crntThread) {
+                /* require interrupted status to be true at the moment */
+                db.saveEvent(EventType.READ, locId, System.identityHashCode(crntThread),
+                        -NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
+                /* clear interrupted status */
+                db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
+                        -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+                db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
+            }
             throw e;
         }
-        db.saveEvent(timeout > 0 ? EventType.WAIT_TIMEOUT : EventType.WAIT, locId, objectHashCode);
+
+        db.saveEvent(EventType.READ, locId, System.identityHashCode(crntThread),
+                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+        db.saveEvent(timeout > 0 ? EventType.WAIT_MAYBE_TIMEOUT : EventType.WAIT, locId, objectHashCode);
     }
 
     /**
@@ -116,15 +131,27 @@ public final class RecordRT {
      */
     public static void rvPredictWait(int locId, Object object, long timeout, int nano)
             throws InterruptedException {
+        Thread crntThread = Thread.currentThread();
         int objectHashCode = System.identityHashCode(object);
         db.saveEvent(EventType.PRE_WAIT, locId, objectHashCode);
         try {
             object.wait(timeout, nano);
         } catch (InterruptedException e) {
-            db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
+            synchronized (crntThread) {
+                /* require interrupted status to be true at the moment */
+                db.saveEvent(EventType.READ, locId, System.identityHashCode(crntThread),
+                        -NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
+                /* clear interrupted status */
+                db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
+                        -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+                db.saveEvent(EventType.WAIT_INTERRUPTED, locId, objectHashCode);
+            }
             throw e;
         }
-        db.saveEvent(timeout > 0 || nano > 0 ? EventType.WAIT_TIMEOUT : EventType.WAIT, locId,
+
+        db.saveEvent(EventType.READ, locId, System.identityHashCode(crntThread),
+                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+        db.saveEvent(timeout > 0 || nano > 0 ? EventType.WAIT_MAYBE_TIMEOUT : EventType.WAIT, locId,
                 objectHashCode);
     }
 
@@ -307,6 +334,8 @@ public final class RecordRT {
         index++;
         threadTidIndexMap.put(crntThreadId, index);
 
+        db.saveEvent(EventType.INIT, locId, System.identityHashCode(thread),
+                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
         db.saveEvent(EventType.START, locId, newThreadId);
 
         thread.start();
@@ -339,16 +368,26 @@ public final class RecordRT {
      */
     public static void rvPredictJoin(int locId, Thread thread, long millis)
             throws InterruptedException {
+        Thread crntThread = Thread.currentThread();
+        db.saveEvent(EventType.PRE_JOIN, locId, thread.getId());
         try {
             thread.join(millis);
         } catch (InterruptedException e) {
-            db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
+            synchronized (crntThread) {
+                /* require interrupted status to be true at the moment */
+                db.saveEvent(EventType.READ, locId, System.identityHashCode(crntThread),
+                        -NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
+                /* clear interrupted status */
+                db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
+                        -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+                db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
+            }
             throw e;
         }
 
-        if (millis == 0) {
-            db.saveEvent(EventType.JOIN, locId, thread.getId());
-        }
+        db.saveEvent(EventType.READ, locId, System.identityHashCode(crntThread),
+                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+        db.saveEvent(millis == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_TIMEOUT, locId, thread.getId());
     }
 
     /**
@@ -368,16 +407,152 @@ public final class RecordRT {
      */
     public static void rvPredictJoin(int locId, Thread thread, long millis, int nanos)
             throws InterruptedException {
+        Thread crntThread = Thread.currentThread();
+        db.saveEvent(EventType.PRE_JOIN, locId, thread.getId());
         try {
             thread.join(millis, nanos);
         } catch (InterruptedException e) {
-            db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
+            synchronized (crntThread) {
+                /* require interrupted status to be true at the moment */
+                db.saveEvent(EventType.READ, locId, System.identityHashCode(crntThread),
+                        -NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
+                /* clear interrupted status */
+                db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
+                        -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+                db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
+            }
             throw e;
         }
 
-        if (millis == 0 && nanos == 0) {
-            db.saveEvent(EventType.JOIN, locId, thread.getId());
+        db.saveEvent(EventType.READ, locId, System.identityHashCode(crntThread),
+                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+        db.saveEvent(millis == 0 && nanos == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_TIMEOUT, locId,
+                thread.getId());
+    }
+
+    /**
+     * Logs the events produced by invoking {@code Thread#sleep(long)}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param millis
+     *            the first argument of {@code Thread#sleep(long)}
+     */
+    public static void rvPredictSleep(int locId, long millis) throws InterruptedException {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread crntThread = Thread.currentThread();
+            synchronized (crntThread) {
+                /* require interrupted status to be true at the moment */
+                db.saveEvent(EventType.READ, locId, System.identityHashCode(crntThread),
+                        -NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
+                /* clear interrupted status */
+                db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
+                        -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+            }
+            throw e;
         }
+    }
+
+    /**
+     * Logs the events produced by invoking {@code Thread#sleep(long, int)}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param millis
+     *            the first argument of {@code Thread#sleep(long, int)}
+     * @param nanos
+     *            the second argument of {@code Thread#sleep(long, int)}
+     */
+    public static void rvPredictSleep(int locId, long millis, int nanos)
+            throws InterruptedException {
+        try {
+            Thread.sleep(millis, nanos);
+        } catch (InterruptedException e) {
+            Thread crntThread = Thread.currentThread();
+            synchronized (crntThread) {
+                /* require interrupted status to be true at the moment */
+                db.saveEvent(EventType.READ, locId, System.identityHashCode(crntThread),
+                        -NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
+                /* clear interrupted status */
+                db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
+                        -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+            }
+            throw e;
+        }
+    }
+
+
+    /**
+     * Logs the events produced by invoking {@code thread.interrupt()}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param thread
+     *            the {@code Thread} object whose {@code interrupt()} method is
+     *            invoked
+     */
+    public static void rvPredictInterrupt(int locId, Thread thread) {
+        try {
+            /* YilongL: the synchronization block here is not trying to
+             * (hopelessly) ensure read-write consistency or data-race w.r.t the
+             * interrupted status; it's meant to at least preserve the more
+             * important constraint that interrupt should happen before the
+             * blocking method throwing an InterruptedException */
+
+            /* make sure the write on interrupted status is logged before the
+             * read generated by blocking method */
+            synchronized (thread) {
+                /* YilongL: conceptually speaking, INTERRUPT should be logged before
+                 * calling thread.interrupt(); however, it is also required that no
+                 * event is logged on SecurityException; so we make the logging of
+                 * all interrupt-related events synchronize on the interrupted
+                 * thread object */
+                thread.interrupt();
+                /* TODO(YilongL): Interrupting a thread that is not alive need not
+                 * have any effect; yet I am not sure how to model such case
+                 * precisely so I just assume interrupted status will be set to true */
+                db.saveEvent(EventType.WRITE, locId, System.identityHashCode(thread),
+                        -NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
+            }
+        } catch (SecurityException e) {
+            throw e;
+        }
+    }
+
+    /**
+     * Logs the events produced by invoking {@code thread.isInterrupted()}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     * @param thread
+     *            the {@code Thread} object whose {@code isInterrupted()} method is
+     *            invoked
+     */
+    public static boolean rvPredictIsInterrupted(int locId, Thread thread) {
+        boolean isInterrupted = thread.isInterrupted();
+        /* the interrupted status is like an imaginary shared variable so we
+         * need to record access to it to preserve soundness */
+        db.saveEvent(EventType.READ, locId, System.identityHashCode(thread),
+                -NATIVE_INTERRUPTED_STATUS_VAR_ID, isInterrupted ? 1 : 0);
+        return isInterrupted;
+    }
+
+    /**
+     * Logs the events produced by invoking {@code Thread#interrupted()}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     */
+    public static boolean rvPredictInterrupted(int locId) {
+        boolean interrupted = Thread.interrupted();
+        db.saveEvent(EventType.READ, locId, 0, -NATIVE_INTERRUPTED_STATUS_VAR_ID,
+                interrupted ? 1 : 0);
+        /* clear interrupted status */
+        db.saveEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
+                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+        return interrupted;
     }
 
     private static boolean isPrimitiveWrapper(Object o) {

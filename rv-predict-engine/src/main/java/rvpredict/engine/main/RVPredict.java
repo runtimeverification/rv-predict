@@ -266,7 +266,7 @@ public class RVPredict {
                 } else {
                     cnstrBuilder.addIntraThreadConstraints();
                 }
-                cnstrBuilder.addMHBConstraints();
+                cnstrBuilder.addProgramOrderAndThreadStartJoinConstraints();
                 cnstrBuilder.addLockingConstraints();
 
                 detectRace(cnstrBuilder, trace);

@@ -36,6 +36,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 
+import rvpredict.trace.Event;
 import rvpredict.trace.LockRegion;
 import rvpredict.trace.MemoryAccessEvent;
 
@@ -54,81 +55,58 @@ public class LockSetEngine {
     }
 
     public void add(LockRegion lockRegion) {
-        long addr = lockRegion.getLockObj();
+        long lockObj = lockRegion.getLockObj();
         long threadId = lockRegion.getThreadId();
-        List<LockRegion> lockRegions = lockTbl.get(addr, threadId);
+        List<LockRegion> lockRegions = lockTbl.get(lockObj, threadId);
         if (lockRegions == null) {
             lockRegions = Lists.newArrayList();
-            lockTbl.put(addr, threadId, lockRegions);
+            lockTbl.put(lockObj, threadId, lockRegions);
         }
 
-        // TODO(YilongL): what does the following mean?
-        // filter out reentrant locks for CP
         ListIterator<LockRegion> iter = lockRegions.listIterator(lockRegions.size());
-        while (iter.hasPrevious()) {
+        if (iter.hasPrevious()) {
             LockRegion prevLockRegion = iter.previous();
-            if (lockRegion.getLock() == null
-                    || (prevLockRegion.getLock() != null && lockRegion.getLock().getGID() < prevLockRegion.getLock()
-                            .getGID())) {
-                iter.remove();
-            } else {
-                break;
-            }
+            assert lockRegion.getLock().getGID() > prevLockRegion.getUnlock().getGID() :
+                "unexpected overlapping lock region: " + prevLockRegion + " and " + lockRegion;
         }
 
         lockRegions.add(lockRegion);
     }
 
-    // TODO(YilongL): what does the following mean?
-    // NOTE: it's possible two lockpairs overlap, because we skipped wait nodes
+    /**
+     * Checks if two given {@code MemoryAccessEvent}'s hold a common lock.
+     */
     public boolean hasCommonLock(MemoryAccessEvent e1, MemoryAccessEvent e2) {
         assert e1.getTID() != e2.getTID();
 
-        for (Long addr : lockTbl.rowKeySet()) {
-            List<LockRegion> lockRegion1 = lockTbl.get(addr, e1.getTID());
-            List<LockRegion> lockRegion2 = lockTbl.get(addr, e2.getTID());
-            if (lockRegion1 != null && lockRegion2 != null) {
-                return matchAnyLockPair(lockRegion1, e1.getGID())
-                        && matchAnyLockPair(lockRegion2, e2.getGID());
+        for (Long lockObj : lockTbl.rowKeySet()) {
+            /* check if both events hold lockObj */
+            if (hasLock(e1, lockObj) && hasLock(e2, lockObj)) {
+                return true;
             }
         }
 
         return false;
     }
 
-    private boolean matchAnyLockPair(List<LockRegion> lockpair, long gid) {
-        int s, e, mid;
-
-        s = 0;
-        e = lockpair.size() - 1;
-        while (s <= e) {
-            mid = (s + e) / 2;
-
-            LockRegion lp = lockpair.get(mid);
-
-            if (lp.getLock() == null) {
-                if (gid < lp.getUnlock().getGID())
-                    return true;
-                else {
-                    s = mid + 1;
+    /**
+     * Checks if a given event holds a specific lock.
+     */
+    private boolean hasLock(Event e, Long lockObj) {
+        // TODO(YilongL): optimize this method when necessary
+        List<LockRegion> lockRegions = lockTbl.get(lockObj, e.getTID());
+        if (lockRegions != null) {
+            for (LockRegion lockRegion : lockRegions) {
+                if (lockRegion.getLock() == null || lockRegion.getLock().getGID() < e.getGID()) {
+                    if (lockRegion.getUnlock() == null
+                            || e.getGID() < lockRegion.getUnlock().getGID()) {
+                        return true;
+                    }
+                } else {
+                    return false;
                 }
-            } else if (lp.getUnlock() == null) {
-                if (gid > lp.getLock().getGID())
-                    return true;
-                else {
-                    e = mid - 1;
-                }
-            } else {
-                if (gid > lp.getUnlock().getGID())
-                    s = mid + 1;
-                else if (gid < lp.getLock().getGID())
-                    e = mid - 1;
-                else
-                    return true;
             }
         }
-
         return false;
     }
-
 }

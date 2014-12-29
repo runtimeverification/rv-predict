@@ -9,7 +9,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GlobalStateForInstrumentation {
+
     public static GlobalStateForInstrumentation instance = new GlobalStateForInstrumentation();
+
+    public static int NATIVE_INTERRUPTED_STATUS_VAR_ID = instance
+            .getVariableId("java.lang.Thread.$interruptedStatus");
 
     // can be computed during offline analysis
 

@@ -43,6 +43,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.List;
+
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -104,19 +105,26 @@ public class SMTConstraintBuilder {
     }
 
     private void assertHappensBefore(Event e1, Event e2) {
-        smtlibAssertion.append(String.format("(< %s %s)\n", makeOrderVariable(e1),
-                makeOrderVariable(e2)));
+        smtlibAssertion.append(getAsstHappensBefore(e1, e2));
         reachEngine.addEdge(e1, e2);
+    }
+
+    private String getAsstHappensBefore(Event... events) {
+        StringBuilder sb = new StringBuilder("(<");
+        for (Event event : events) {
+            sb.append(" ");
+            sb.append(makeOrderVariable(event));
+        }
+        sb.append(")");
+        return sb.toString();
     }
 
     private String getAsstLockRegionHappensBefore(LockRegion lockRegion1, LockRegion lockRegion2) {
         SyncEvent unlock = lockRegion1.getUnlock();
         SyncEvent lock = lockRegion2.getLock();
-        return String.format("(< %s %s)",
-                unlock != null ? makeOrderVariable(unlock) : makeOrderVariable(
-                        trace.getLastThreadEvent(lockRegion1.getThreadId())),
-                lock != null ? makeOrderVariable(lock) : makeOrderVariable(
-                        trace.getFirstThreadEvent(lockRegion2.getThreadId())));
+        return getAsstHappensBefore(
+                unlock != null ? unlock : trace.getLastThreadEvent(lockRegion1.getThreadId()),
+                lock != null ? lock : trace.getFirstThreadEvent(lockRegion2.getThreadId()));
     }
 
     private void assertMutualExclusion(LockRegion lockRegion1, LockRegion lockRegion2) {
@@ -154,28 +162,38 @@ public class SMTConstraintBuilder {
     }
 
     /**
-     * Adds must happens-before constraints (MHB).
+     * Adds program order and thread start/join constraints, that is, the must
+     * happens-before constraints (MHB) in the paper.
      */
-    public void addMHBConstraints() {
+    public void addProgramOrderAndThreadStartJoinConstraints() {
         for (List<SyncEvent> startOrJoinEvents : trace.getThreadIdToStartJoinEvents().values()) {
-            for (SyncEvent startOrJoinEvent : startOrJoinEvents) {
-                long threadId = startOrJoinEvent.getSyncObject();
-                if (startOrJoinEvent.getType().equals(EventType.START)) {
-                    Event fstThrdEvent = trace.getFirstThreadEvent(threadId);
+            for (SyncEvent startOrJoin : startOrJoinEvents) {
+                long tid = startOrJoin.getSyncObject();
+                switch (startOrJoin.getType()) {
+                case START:
+                    Event fstThrdEvent = trace.getFirstThreadEvent(tid);
                     /* YilongL: it's possible that the first event of the new
                      * thread is not in the current trace */
                     if (fstThrdEvent != null) {
-                        assertHappensBefore(startOrJoinEvent, fstThrdEvent);
+                        assertHappensBefore(startOrJoin, fstThrdEvent);
                     }
-                } else if (startOrJoinEvent.getType().equals(EventType.JOIN)) {
-                    Event lastThrdEvent = trace.getLastThreadEvent(threadId);
-                    /* YilongL: it's possible that the last event of the thread
-                     * to join is not in the current trace */
-                    if (lastThrdEvent != null) {
-                        assertHappensBefore(lastThrdEvent, startOrJoinEvent);
+                    break;
+                case JOIN:
+                    if (startOrJoin.getType() == EventType.JOIN) {
+                        Event lastThrdEvent = trace.getLastThreadEvent(tid);
+                        /* YilongL: it's possible that the last event of the thread
+                         * to join is not in the current trace */
+                        if (lastThrdEvent != null) {
+                            assertHappensBefore(lastThrdEvent, startOrJoin);
+                        }
                     }
-                } else {
-                    assert false : "unexpected event: " + startOrJoinEvent;
+                    break;
+                case PRE_JOIN:
+                case JOIN_MAYBE_TIMEOUT:
+                case JOIN_INTERRUPTED:
+                    break;
+                default:
+                    assert false : "unexpected event: " + startOrJoin;
                 }
             }
         }
@@ -203,7 +221,8 @@ public class SMTConstraintBuilder {
                 switch (syncEvent.getType()) {
                 case LOCK:
                 case WAIT:
-                case WAIT_TIMEOUT:
+                case WAIT_MAYBE_TIMEOUT:
+                case WAIT_INTERRUPTED:
                     threadIdToPrevLockOrUnlock.put(tid, syncEvent);
                     break;
 
@@ -261,20 +280,26 @@ public class SMTConstraintBuilder {
     }
 
     private void matchWaitNotifyPair(List<LockRegion> lockRegions) {
+        outerloop:
         for (LockRegion lockRegion1 : lockRegions) {
             if (lockRegion1.getLock() != null
                     && lockRegion1.getLock().getType() == EventType.WAIT) {
-                /* assert that the wait event must be matched with a notify */
+                /* assertion that the wait event must be matched with a notify */
                 StringBuilder matchWaitNotify = new StringBuilder("(or false ");
                 SyncEvent wait = lockRegion1.getLock();
 
                 /* enumerate unmatched notify from previous windows */
-                if (lockRegion1.getPreWait() == null) {
+                SyncEvent preWait = lockRegion1.getPreWait();
+                if (preWait == null) {
                     for (SyncEvent notify : trace.getUnmatchedNotifyEvents(wait.getTID(),
                             wait.getSyncObject())) {
+                        /* ensure no interrupt happens between PRE_WAIT and this NOTIFY/NOTIFY_ALL */
                         if (notify.getType() == EventType.NOTIFY) {
                             matchWaitNotify.append(String.format("(= %s %s)",
                                     makeMatchVariable(notify), wait.getGID()));
+                        } else {
+                            /* constraint for this wait is trivially satisfied */
+                            continue outerloop;
                         }
                     }
                 }
@@ -284,15 +309,12 @@ public class SMTConstraintBuilder {
                     if (lockRegion1.getThreadId() != lockRegion2.getThreadId()) {
                         for (SyncEvent notify : lockRegion2.getNotifyEvents()) {
                             /* the matched notify event must happen between
-                             * the unlock-lock pair of the wait event */
+                             * PRE_WAIT and WAIT */
                             StringBuilder sb = new StringBuilder("(and ");
-                            if (lockRegion1.getPreWait() != null) {
-                                sb.append(String.format("(< %s %s)",
-                                        makeOrderVariable(lockRegion1.getPreWait()),
-                                        makeOrderVariable(notify)));
+                            if (preWait != null) {
+                                sb.append(getAsstHappensBefore(preWait, notify));
                             }
-                            sb.append(String.format("(< %s %s)", makeOrderVariable(notify),
-                                    makeOrderVariable(wait)));
+                            sb.append(getAsstHappensBefore(notify, wait));
                             if (notify.getType() == EventType.NOTIFY) {
                                 /* make sure NOTIFY can be used only once */
                                 sb.append(String.format("(= %s %s)", makeMatchVariable(notify),
@@ -354,8 +376,7 @@ public class SMTConstraintBuilder {
                     && trace.getInitValueOf(depRead.getAddr()) == depRead.getValue()) {
                 case1 = new StringBuilder("(and true ");
                 for (WriteEvent write : predWriteSet) {
-                    case1.append(String.format("(< %s %s)", makeOrderVariable(depRead),
-                            makeOrderVariable(write)));
+                    case1.append(getAsstHappensBefore(depRead, write));
                 }
                 case1.append(")");
             }
@@ -364,13 +385,13 @@ public class SMTConstraintBuilder {
             StringBuilder case2 = new StringBuilder("(or false ");
             for (WriteEvent write : sameValPredWriteSet) {
                 case2.append("(and ");
-                case2.append(String.format("(< %s %s)", makeOrderVariable(write), makeOrderVariable(depRead)));
+                case2.append(getAsstHappensBefore(write, depRead));
                 for (WriteEvent otherWrite : writeEvents) {
                     if (write != otherWrite && !happensBefore(otherWrite, write)
                             && !happensBefore(depRead, otherWrite)) {
-                        case2.append(String.format("(or (< %s %s) (< %s %s))",
-                                makeOrderVariable(otherWrite), makeOrderVariable(write),
-                                makeOrderVariable(depRead), makeOrderVariable(otherWrite)));
+                        case2.append(String.format("(or %s %s)",
+                                getAsstHappensBefore(otherWrite, write),
+                                getAsstHappensBefore(depRead, otherWrite)));
                     }
                 }
                 case2.append(")");

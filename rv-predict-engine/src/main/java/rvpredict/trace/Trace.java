@@ -100,7 +100,7 @@ public class Trace {
     private final Map<Long, List<BranchEvent>> threadIdToBranchEvents = new HashMap<>();
 
     /**
-     * Start/Join events indexed by the ID of its owner Thread object.
+     * Start/Join events indexed by the ID of its target thread to join/start.
      */
     private final Map<Long, List<SyncEvent>> threadIdToStartJoinEvents = new HashMap<>();
 
@@ -315,7 +315,8 @@ public class Trace {
                     break;
                 }
                 case WAIT:
-                case WAIT_TIMEOUT: {
+                case WAIT_MAYBE_TIMEOUT:
+                case WAIT_INTERRUPTED: {
                     finalState.objToWaitingThreads.get(obj).remove(tid);
 
                     Set<SyncEvent> notifyToRemove = Sets.newHashSet();
@@ -359,8 +360,11 @@ public class Trace {
                     }
                     break;
                 }
-                case START:
+                case PRE_JOIN:
                 case JOIN:
+                case JOIN_MAYBE_TIMEOUT:
+                case JOIN_INTERRUPTED:
+                case START:
                 case LOCK:
                 case UNLOCK:
                     break;
@@ -479,29 +483,38 @@ public class Trace {
                     writeNodes.add((WriteEvent) node);
                 }
             } else if (node instanceof SyncEvent) {
-                // synchronization nodes
                 info.incrementSyncNumber();
                 SyncEvent syncEvent = (SyncEvent) node;
 
-                if (syncEvent.getType().equals(EventType.START)
-                        || syncEvent.getType().equals(EventType.JOIN)) {
-                    long threadObj = syncEvent.getSyncObject();
-                    List<SyncEvent> events = threadIdToStartJoinEvents.get(threadObj);
-                    if (events == null) {
-                        events = Lists.newArrayList();
-                        threadIdToStartJoinEvents.put(threadObj, events);
-                    }
-                    events.add(syncEvent);
-                } else {
-                    long syncObj = syncEvent.getSyncObject();
-                    List<SyncEvent> syncEvents = lockObjToSyncEvents.get(syncObj);
-                    if (syncEvents == null) {
-                        syncEvents = new ArrayList<>();
-                        lockObjToSyncEvents.put(syncObj, syncEvents);
-                    }
-
-                    syncEvents.add(syncEvent);
+                Map<Long, List<SyncEvent>> eventsMap = null;
+                switch (syncEvent.getType()) {
+                case START:
+                case PRE_JOIN:
+                case JOIN:
+                case JOIN_MAYBE_TIMEOUT:
+                case JOIN_INTERRUPTED:
+                    eventsMap = threadIdToStartJoinEvents;
+                    break;
+                case LOCK:
+                case UNLOCK:
+                case PRE_WAIT:
+                case WAIT:
+                case WAIT_MAYBE_TIMEOUT:
+                case WAIT_INTERRUPTED:
+                case NOTIFY:
+                case NOTIFY_ALL:
+                    eventsMap = lockObjToSyncEvents;
+                    break;
+                default:
+                    assert false : "unexpected event: " + syncEvent;
                 }
+
+                List<SyncEvent> events = eventsMap.get(syncEvent.getSyncObject());
+                if (events == null) {
+                    events = Lists.newArrayList();
+                    eventsMap.put(syncEvent.getSyncObject(), events);
+                }
+                events.add(syncEvent);
             }
         }
     }

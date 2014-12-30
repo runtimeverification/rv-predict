@@ -44,13 +44,16 @@ public class Config {
     public static final String DESC_RVPREDICT_INTERRUPT = "(ILjava/lang/Thread;)V";
     public static final String DESC_RVPREDICT_INTERRUPTED = "(I)Z";
     public static final String DESC_RVPREDICT_IS_INTERRUPTED = "(ILjava/lang/Thread;)Z";
-    public static final String DESC_RVPREDICT_SLEEP = "(J)V";
-    public static final String DESC_RVPREDICT_SLEEP_NANOS = "(JI)V";
+    public static final String DESC_RVPREDICT_SLEEP = "(IJ)V";
+    public static final String DESC_RVPREDICT_SLEEP_NANOS = "(IJI)V";
     public static final String DESC_RVPREDICT_WAIT = "(ILjava/lang/Object;)V";
     public static final String DESC_RVPREDICT_WAIT_TIMEOUT = "(ILjava/lang/Object;J)V";
     public static final String DESC_RVPREDICT_WAIT_TIMEOUT_NANO = "(ILjava/lang/Object;JI)V";
     public static final String DESC_RVPREDICT_NOTIFY = "(ILjava/lang/Object;)V";
     public static final String DESC_RVPREDICT_NOTIFY_ALL = "(ILjava/lang/Object;)V";
+
+    public static final String RVPREDICT_SYSTEM_ARRAYCOPY = "rvPredictSystemArraycopy";
+    public static final String DESC_RVPREDICT_SYSTEM_ARRAYCOPY = "(ILjava/lang/Object;ILjava/lang/Object;II)V";
 
     public boolean verbose;
 

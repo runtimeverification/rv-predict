@@ -20,4 +20,12 @@
 
 (?s)(.*)Race on field jtsan.EasyTests\$11\$RecursiveObject.value between:(\s)*jtsan.EasyTests\$11.thread1\(EasyTests.java:237\)(\s)*jtsan.EasyTests\$11.thread2\(EasyTests.java:242\)(.*)
 
+(?s)(.*)Race on an array access between:(\s)*jtsan.EasyTests\$12.thread1\(EasyTests.java:260\)(\s)*jtsan.EasyTests\$12.thread2\(EasyTests.java:265\)(.*)
+
+(?s)(.*)Race on an array access between:(\s)*jtsan.EasyTests\$13.thread1\(EasyTests.java:283\)(\s)*jtsan.EasyTests\$13.thread2\(EasyTests.java:288\)(.*)
+
+(?s)(.*)Race on an array access between:(\s)*jtsan.EasyTests\$14.thread1\(EasyTests.java:306\)(\s)*jtsan.EasyTests\$14.thread2\(EasyTests.java:311\)(.*)
+
+(?s)(.*)Race on an array access between:(\s)*jtsan.EasyTests\$15.thread1\(EasyTests.java:333\)(\s)*jtsan.EasyTests\$15.thread2\(EasyTests.java:343\)(.*)
+
 (?s)(.*)Race on an array access between:(\s)*jtsan.EasyTests\$16.thread1\(EasyTests.java:361\)(\s)*jtsan.EasyTests\$16.thread2\(EasyTests.java:366\)(.*)

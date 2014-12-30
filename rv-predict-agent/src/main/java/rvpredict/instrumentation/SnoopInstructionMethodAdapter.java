@@ -192,14 +192,19 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             }
         } else if (opcode == INVOKESTATIC) {
             switch (owner + name + desc) {
-            case "java/lang/Thread/interrupted()Z":
+            case "java/lang/Threadinterrupted()Z":
                 substituteMethodCall(opcode, RVPREDICT_INTERRUPTED, DESC_RVPREDICT_INTERRUPTED);
                 return;
-            case "java/lang/Thread/sleep(J)V":
+            case "java/lang/Threadsleep(J)V":
                 substituteMethodCall(opcode, RVPREDICT_SLEEP, DESC_RVPREDICT_SLEEP, "J");
                 return;
-            case "java/lang/Thread/sleep(JI)V":
+            case "java/lang/Threadsleep(JI)V":
                 substituteMethodCall(opcode, RVPREDICT_SLEEP, DESC_RVPREDICT_SLEEP_NANOS, "J", "I");
+                return;
+            case "java/lang/Systemarraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V":
+                substituteMethodCall(opcode, RVPREDICT_SYSTEM_ARRAYCOPY,
+                        DESC_RVPREDICT_SYSTEM_ARRAYCOPY, "Ljava/lang/Object;", "I",
+                        "Ljava/lang/Object;", "I", "I");
                 return;
             }
         }

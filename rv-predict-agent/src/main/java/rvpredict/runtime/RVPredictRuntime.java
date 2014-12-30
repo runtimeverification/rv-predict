@@ -518,6 +518,138 @@ public final class RVPredictRuntime {
         return interrupted;
     }
 
+    /**
+     * Logs the events produced by invoking {@code System#arraycopy(Object, int, Object, int, int)}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     */
+    public static void rvPredictSystemArraycopy(int locId, Object src, int srcPos, Object dest,
+            int destPos, int length) {
+        // 8 primitive types: boolean, byte, char, short, int, long, float, and double
+
+        if (srcPos >= 0 && destPos >=0 && length > 0) {
+            if (src instanceof Object[]) {
+                if (dest instanceof Object[]) {
+                    if (srcPos + length <= ((Object[]) src).length
+                            && destPos + length <= ((Object[]) dest).length) {
+                        int k = length;
+                        for (int i = 0; i < length; i++) {
+                            Object srcObj = ((Object[]) src)[i + srcPos];
+                            if (srcObj == null
+                                    || dest.getClass().getComponentType()
+                                            .isAssignableFrom(srcObj.getClass())) {
+                                logArrayAcc(locId, src, srcPos + i, srcObj, false);
+                            } else {
+                                k = i;
+                                break;
+                            }
+                        }
+                        for (int i = 0; i < k; i++) {
+                            logArrayAcc(locId, dest, destPos + i, ((Object[]) src)[i + srcPos], true);
+                        }
+                    }
+                }
+            } else if (src instanceof boolean[]) {
+                if (dest instanceof boolean[]) {
+                    if (srcPos + length <= ((boolean[]) src).length
+                            && destPos + length <= ((boolean[]) dest).length) {
+                        for (int i = srcPos; i < srcPos + length; i++) {
+                            logArrayAcc(locId, src, i, ((boolean[]) src)[i], false);
+                        }
+                        for (int i = destPos; i < destPos + length; i++) {
+                            logArrayAcc(locId, dest, i, ((boolean[]) src)[i - destPos + srcPos], true);
+                        }
+                    }
+                }
+            } else if (src instanceof byte[]) {
+                if (dest instanceof byte[]) {
+                    if (srcPos + length <= ((byte[]) src).length
+                            && destPos + length <= ((byte[]) dest).length) {
+                        for (int i = srcPos; i < srcPos + length; i++) {
+                            logArrayAcc(locId, src, i, ((byte[]) src)[i], false);
+                        }
+                        for (int i = destPos; i < destPos + length; i++) {
+                            logArrayAcc(locId, dest, i, ((byte[]) src)[i - destPos + srcPos], true);
+                        }
+                    }
+                }
+            } else if (src instanceof char[]) {
+                if (dest instanceof char[]) {
+                    if (srcPos + length <= ((char[]) src).length
+                            && destPos + length <= ((char[]) dest).length) {
+                        for (int i = srcPos; i < srcPos + length; i++) {
+                            logArrayAcc(locId, src, i, ((char[]) src)[i], false);
+                        }
+                        for (int i = destPos; i < destPos + length; i++) {
+                            logArrayAcc(locId, dest, i, ((char[]) src)[i - destPos + srcPos], true);
+                        }
+                    }
+                }
+            } else if (src instanceof short[]) {
+                if (dest instanceof short[]) {
+                    if (srcPos + length <= ((short[]) src).length
+                            && destPos + length <= ((short[]) dest).length) {
+                        for (int i = srcPos; i < srcPos + length; i++) {
+                            logArrayAcc(locId, src, i, ((short[]) src)[i], false);
+                        }
+                        for (int i = destPos; i < destPos + length; i++) {
+                            logArrayAcc(locId, dest, i, ((short[]) src)[i - destPos + srcPos], true);
+                        }
+                    }
+                }
+            } else if (dest instanceof int[]) {
+                if (srcPos + length <= ((int[]) src).length
+                        && destPos + length <= ((int[]) dest).length) {
+                    for (int i = srcPos; i < srcPos + length; i++) {
+                        logArrayAcc(locId, src, i, ((int[]) src)[i], false);
+                    }
+                    for (int i = destPos; i < destPos + length; i++) {
+                        logArrayAcc(locId, dest, i, ((int[]) src)[i - destPos + srcPos], true);
+                    }
+                }
+            } else if (src instanceof long[]) {
+                if (dest instanceof long[]) {
+                    if (srcPos + length <= ((long[]) src).length
+                            && destPos + length <= ((long[]) dest).length) {
+                        for (int i = srcPos; i < srcPos + length; i++) {
+                            logArrayAcc(locId, src, i, ((long[]) src)[i], false);
+                        }
+                        for (int i = destPos; i < destPos + length; i++) {
+                            logArrayAcc(locId, dest, i, ((long[]) src)[i - destPos + srcPos], true);
+                        }
+                    }
+                }
+            } else if (src instanceof float[]) {
+                if (dest instanceof float[]) {
+                    if (srcPos + length <= ((float[]) src).length
+                            && destPos + length <= ((float[]) dest).length) {
+                        for (int i = srcPos; i < srcPos + length; i++) {
+                            logArrayAcc(locId, src, i, ((float[]) src)[i], false);
+                        }
+                        for (int i = destPos; i < destPos + length; i++) {
+                            logArrayAcc(locId, dest, i, ((float[]) src)[i - destPos + srcPos], true);
+                        }
+                    }
+                }
+            } else if (src instanceof double[]) {
+                if (dest instanceof double[]) {
+                    if (srcPos + length <= ((double[]) src).length
+                            && destPos + length <= ((double[]) dest).length) {
+                        for (int i = srcPos; i < srcPos + length; i++) {
+                            logArrayAcc(locId, src, i, ((double[]) src)[i], false);
+                        }
+                        for (int i = destPos; i < destPos + length; i++) {
+                            logArrayAcc(locId, dest, i, ((double[]) src)[i - destPos + srcPos], true);
+                        }
+                    }
+                }
+            }
+        }
+
+        System.arraycopy(src, srcPos, dest, destPos, length);
+    }
+
     private static boolean isPrimitiveWrapper(Object o) {
         /* YilongL: we do not use guava's `Primitives.isWrapperType' because o could be null */
         return o instanceof Integer || o instanceof Long || o instanceof Byte

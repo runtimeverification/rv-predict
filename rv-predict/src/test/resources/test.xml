@@ -99,4 +99,16 @@
 	    <arg value="negative" />
     </test>
     
+	<test name="jtsan.CustomTests-positive">
+        <arg key="-cp" value="basic.jar" />
+        <arg value="jtsan.CustomTests" />
+	    <arg value="positive" />
+    </test>
+        <test name="jtsan.CustomTests-negative">
+        <arg key="-cp" value="basic.jar" />
+        <arg value="jtsan.CustomTests" />
+	    <arg value="negative" />
+    </test>
+
+    
 </tests>

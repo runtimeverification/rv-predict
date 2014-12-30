@@ -26,13 +26,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package rvpredict.run;
+package rvpredict.main;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import rvpredict.config.Config;
-import rvpredict.logging.RecordRT;
 
 /**
  * The entry class to run the record version of the application. During
@@ -62,7 +61,6 @@ public class Main {
             // }
 
             // initialize the recording data structures
-            RecordRT.initNonSharing();
             String appname = args[0];
 
             Class<?> c = Class.forName(appname);

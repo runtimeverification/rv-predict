@@ -11,20 +11,21 @@ import rvpredict.config.Config;
 import rvpredict.db.TraceCache;
 import rvpredict.engine.main.Main;
 import rvpredict.logging.DBEngine;
-import rvpredict.logging.RecordRT;
+import rvpredict.runtime.RVPredictRuntime;
 import rvpredict.util.Logger;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.Arrays;
 
-public class SnoopInstructionTransformer implements ClassFileTransformer {
+public class Agent implements ClassFileTransformer {
 
     private final Config config;
 
-    public SnoopInstructionTransformer(Config config) {
+    public Agent(Config config) {
         this.config = config;
     }
 
@@ -71,16 +72,31 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
 
         TraceCache.removeTraceFiles(commandLine.outdir);
         final DBEngine db = new DBEngine(commandLine.outdir);
-        // db.closeDB();
-        // initialize RecordRT first
-        RecordRT.init(db);
+        RVPredictRuntime.init(db);
 
-        inst.addTransformer(new SnoopInstructionTransformer(config));
+        inst.addTransformer(new Agent(config), true);
+        for (Class<?> c : inst.getAllLoadedClasses()) {
+            if (!c.isInterface() && inst.isModifiableClass(c)) {
+//                String className = c.getName();
+//                if (!className.startsWith("sun") && !className.startsWith("java.lang")
+//                        && !className.startsWith("java.io") && !className.startsWith("java.nio")) {
+//                    System.err.println("Preloaded class: " + className);
+//                }
+                try {
+                    inst.retransformClasses(c);
+                } catch (UnmodifiableClassException e) {
+                    System.err.println("Cannot retransform class. Exception: " + e);
+                    System.exit(1);
+                }
+            }
+        }
+        System.out.println("Finished retransforming preloaded classes.");
+
         final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
             @Override
             public void cleanup() {
                 db.finishLogging();
-                    }
+            }
         };
         Thread predict = Main.getPredictionThread(commandLine, cleanupAgent, commandLine.predict);
         Runtime.getRuntime().addShutdownHook(predict);
@@ -118,11 +134,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
                 }
             }
 
-        // TODO(YilongL): we need a more general mechanism
-        // special handle java.io.File
-        if (cname.equals("java/io/File"))
-            toInstrument = true;
-
+//        System.err.println(cname + " " + toInstrument);
         if (toInstrument) {
             ClassReader cr = new ClassReader(cbuf);
 

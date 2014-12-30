@@ -1,5 +1,8 @@
 package rvpredict.instrumentation;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
@@ -17,6 +20,8 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
 
     private int version;
 
+    private final Set<String> finalFields = new HashSet<>();
+
     public SnoopInstructionClassAdapter(ClassVisitor cv, Config config) {
         super(Opcodes.ASM5, cv);
         assert cv != null;
@@ -29,7 +34,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
             String[] interfaces) {
         className = name;
         this.version = version;
-        GlobalMetaData.setSuperclass(name, superName);
+        MetaData.setSuperclass(name, superName);
         cv.visit(version, access, name, signature, superName, interfaces);
     }
 
@@ -45,10 +50,12 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
         /* TODO(YilongL): add comments about what is special about `final`,
          * `volatile`, and `static` w.r.t. instrumentation */
 
-        GlobalMetaData.addField(className, name);
-        // Opcodes.ACC_FINAL
-        if ((access & Opcodes.ACC_VOLATILE) != 0) { // volatile
-            GlobalMetaData.addVolatileVariable(className, name);
+        MetaData.addField(className, name);
+        if ((access & Opcodes.ACC_FINAL) != 0) {
+            finalFields.add(name);
+        }
+        if ((access & Opcodes.ACC_VOLATILE) != 0) {
+            MetaData.addVolatileVariable(className, name);
         }
 
         return cv.visitField(access, name, desc, signature, value);
@@ -68,7 +75,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
             }
 
             mv = new SnoopInstructionMethodAdapter(mv, source, className, version, name, name
-                    + desc, access, numOfWords, config);
+                    + desc, access, numOfWords, finalFields, config);
         }
         return mv;
     }

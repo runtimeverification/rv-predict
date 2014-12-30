@@ -34,13 +34,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import rvpredict.db.EventItem;
 import rvpredict.db.EventOutputStream;
-import rvpredict.instrumentation.GlobalMetaData;
+import rvpredict.instrumentation.MetaData;
 import rvpredict.trace.EventType;
 
 /**
@@ -72,7 +73,7 @@ public class DBEngine {
             metadataLoggingThread.join();
             for (EventOutputStream stream : threadLocalTraceOS.getStreamsMap().values()) {
                 try {
-                    stream.flush();
+                    stream.close();
                 } catch (IOException e) {
                     // TODO(TraianSF) We can probably safely ignore file errors at this (shutdown) stage
                     e.printStackTrace();
@@ -99,7 +100,6 @@ public class DBEngine {
 
             @Override
             public void run() {
-
                 while (!shutdown) {
                     try {
                         synchronized (metadataOS) {
@@ -110,6 +110,7 @@ public class DBEngine {
                     }
                     saveMetaData();
                 }
+                saveMetaData();
             }
 
         });
@@ -132,6 +133,60 @@ public class DBEngine {
     }
 
     /**
+     * Checks if we are in the process of class loading or instrumentation.
+     * <p>
+     * Note that this method would not be necessary if we had mock for
+     * fundamental JDK classes that are used in class loading and
+     * instrumentation, i.e, {@code ArrayList}, {@code HashMap}, {@code Vector},
+     * etc.
+     */
+    private boolean skipSavingEvent() {
+        StackTraceElement[] stackTraceElems = Thread.currentThread().getStackTrace();
+        if (stackTraceElems.length == 0) {
+            return false;
+        }
+
+        // TODO(YilongL): implement a profiling mechanism to see the top
+        // event-producing classes
+
+        String entryClass = stackTraceElems[stackTraceElems.length - 1].getClassName();
+        /* YilongL: note that we cannot skip saving event by checking
+         * entryClass.startsWith("java") because java.lang.Thread.run() */
+        if (entryClass.startsWith("sun")) {
+            // sun.instrument.InstrumentationImpl.loadClassAndCallPremain
+            return true;
+        }
+
+        /* a typical stack trace of class loading plus agent instrumentation:
+         *      ...
+         *      at rvpredict.instrumentation.Agent.transform(Agent.java:144)
+         *      at sun.instrument.TransformerManager.transform(TransformerManager.java:188)
+         *      at sun.instrument.InstrumentationImpl.transform(InstrumentationImpl.java:428)
+         *      at java.lang.ClassLoader.defineClass1(Native Method)
+         *      at java.lang.ClassLoader.defineClass(ClassLoader.java:760)
+         *      at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142)
+         *      at java.net.URLClassLoader.defineClass(URLClassLoader.java:455)
+         *      at java.net.URLClassLoader.access$100(URLClassLoader.java:73)
+         *      at java.net.URLClassLoader$1.run(URLClassLoader.java:367)
+         *      at java.net.URLClassLoader$1.run(URLClassLoader.java:361)
+         *      at java.security.AccessController.doPrivileged(Native Method)
+         *      at java.net.URLClassLoader.findClass(URLClassLoader.java:360)
+         *      at java.lang.ClassLoader.loadClass(ClassLoader.java:424)
+         *      at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:308)
+         *      at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
+         *      ...
+         */
+        for (StackTraceElement e : stackTraceElems) {
+            String className = e.getClassName();
+            if (className.startsWith("java.lang.ClassLoader") || className.startsWith("sun")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Saves an {@link rvpredict.db.EventItem} to the database.
      * Each event is saved in a file corresponding to its own thread.
      *
@@ -146,11 +201,18 @@ public class DBEngine {
      * @param value data involved in the event
      */
     public void saveEvent(EventType eventType, int id, long addrl, long addrr, long value) {
-        if (shutdown) return;
+        if (shutdown || skipSavingEvent()) return;
+
         long gid = globalEventID.incrementAndGet();
         long tid = Thread.currentThread().getId();
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
         try {
+            /*
+             * TODO(YilongL): the following code seems to cause the infinite
+             * recursion when running nailgun; on the other hand, since this
+             * method can be called from RecordRT, we should try to keep its
+             * dependence on other classes to a minimal degree
+             */
             EventOutputStream traceOS = threadLocalTraceOS.get();
             traceOS.writeEvent(e);
             long eventsWritten = traceOS.getEventsWrittenCount();
@@ -164,8 +226,8 @@ public class DBEngine {
         } catch (FileNotFoundException e1) {
             e1.printStackTrace();
         } catch (IOException e1) {
-                e1.printStackTrace();
-            }
+            e1.printStackTrace();
+        }
     }
 
     /**
@@ -184,9 +246,9 @@ public class DBEngine {
         saveEvent(eventType, locId, 0, 0, 0);
     }
 
-    private void saveObject(Object threadTidList) {
+    private void saveObject(Object object) {
         try {
-            metadataOS.writeObject(threadTidList);
+            metadataOS.writeObject(object);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -195,20 +257,21 @@ public class DBEngine {
     /**
      * Flush un-previously-saved metadata to disk.
      */
-    public void saveMetaData() {
+    private void saveMetaData() {
         /* save <volatileVariable, Id> pairs */
-        synchronized (GlobalMetaData.volatileVariables) {
-            Set<Integer> volatileFieldIds = new HashSet<>(GlobalMetaData.unsavedVolatileVariables.size());
-            for (String var : GlobalMetaData.unsavedVolatileVariables) {
-                volatileFieldIds.add(GlobalMetaData.varSigToId.get(var));
+        synchronized (MetaData.volatileVariables) {
+            Set<Integer> volatileFieldIds = new HashSet<>(MetaData.unsavedVolatileVariables.size());
+            for (String var : MetaData.unsavedVolatileVariables) {
+                volatileFieldIds.add(MetaData.varSigToId.get(var));
             }
             saveObject(volatileFieldIds);
+            MetaData.unsavedVolatileVariables.clear();
         }
 
         /* save <StmtSig, LocId> pairs */
-        synchronized (GlobalMetaData.stmtSigToLocId) {
-            saveObject(GlobalMetaData.unsavedStmtSigToLocId);
-            GlobalMetaData.unsavedStmtSigToLocId.clear();
+        synchronized (MetaData.stmtSigToLocId) {
+            saveObject(new ArrayList<>(MetaData.unsavedStmtSigToLocId));
+            MetaData.unsavedStmtSigToLocId.clear();
         }
     }
 }

@@ -54,6 +54,12 @@ public class Race extends AbstractViolation {
         locId2 = e2.getID();
         stmtSig1 = locIdToStmtSig.get(locId1);
         stmtSig2 = locIdToStmtSig.get(locId2);
+        if (stmtSig1 == null) {
+            System.err.println("[Warning]: missing metadata for location ID " + locId1);
+        }
+        if (stmtSig2 == null) {
+            System.err.println("[Warning]: missing metadata for location ID " + locId2);
+        }
     }
 
     @Override

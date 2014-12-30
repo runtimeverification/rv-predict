@@ -1,6 +1,5 @@
 package rvpredict.instrumentation;
 
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -8,12 +7,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.google.common.collect.Sets;
+import org.apache.commons.lang3.tuple.Pair;
 
-public class GlobalMetaData {
+public class MetaData {
 
-    private static final Map<String, Set<String>> classNameToFieldNames = new ConcurrentHashMap<>();
-    private static final Map<String, String> classNameToSuperclassName = new ConcurrentHashMap<>();
+    public static final Map<String, Set<String>> classNameToFieldNames = new ConcurrentHashMap<>();
+    public static final Map<String, String> classNameToSuperclassName = new ConcurrentHashMap<>();
 
     /**
      * YilongL: Those fields starting with `unsaved` are used for incremental
@@ -23,18 +22,17 @@ public class GlobalMetaData {
      * our case.
      */
 
-    public static final ConcurrentHashMap<Long, String> threadIdToName = new ConcurrentHashMap<>();
-
     public static final ConcurrentHashMap<String, Integer> varSigToId = new ConcurrentHashMap<>();
 
     private static final int MAX_NUM_OF_FIELDS = 10000;
 
-    private static final String[] varSigs = new String[MAX_NUM_OF_FIELDS];
+    public static final String[] varSigs = new String[MAX_NUM_OF_FIELDS];
 
     public static final ConcurrentHashMap<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
-    public static final List<Map.Entry<String, Integer>> unsavedStmtSigToLocId = new ArrayList<>();
+    public static final List<Pair<String, Integer>> unsavedStmtSigToLocId = new ArrayList<>();
 
-    public static final Set<String> volatileVariables = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    public static final Set<String> volatileVariables = Collections
+            .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     public static final List<String> unsavedVolatileVariables = new ArrayList<>();
 
     private static final String NATIVE_INTERRUPTED_STATUS_VAR = "$interruptedStatus";
@@ -42,7 +40,7 @@ public class GlobalMetaData {
     public static int NATIVE_INTERRUPTED_STATUS_VAR_ID = getVariableId("java.lang.Thread",
             NATIVE_INTERRUPTED_STATUS_VAR);
 
-    private GlobalMetaData() { }
+    private MetaData() { }
 
     public static void setSuperclass(String className, String superclassName) {
         className = className.replace("/", ".");
@@ -51,17 +49,14 @@ public class GlobalMetaData {
             System.err.println("[Warning]: class " + className + " is instrumented more than once!");
         } else {
             classNameToSuperclassName.put(className, superclassName);
-            classNameToFieldNames.put(className, Sets.<String>newConcurrentHashSet());
+            classNameToFieldNames.put(className,
+                    Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>()));
         }
     }
 
     public static void addField(String className, String fieldName) {
         className = className.replace("/", ".");
         classNameToFieldNames.get(className).add(fieldName);
-    }
-
-    public static void registerThreadName(long tid, String name) {
-        threadIdToName.put(tid, name);
     }
 
     public static int getVariableId(String className, String fieldName) {
@@ -103,7 +98,7 @@ public class GlobalMetaData {
                 if (locId == null) {
                     locId = stmtSigToLocId.size() + 1;
                     stmtSigToLocId.put(sig, locId);
-                    unsavedStmtSigToLocId.add(new SimpleEntry<>(sig, locId));
+                    unsavedStmtSigToLocId.add(Pair.of(sig, locId));
                 }
             }
         }
@@ -113,35 +108,5 @@ public class GlobalMetaData {
 
     private static String getVariableSignature(String className, String fieldName) {
         return (className + "." + fieldName).replace("/", ".");
-    }
-
-    public static int resolveVariableId(int variableId) {
-        String varSig = varSigs[variableId];
-        int idx = varSig.lastIndexOf(".");
-        String className = varSig.substring(0, idx);
-        String fieldName = varSig.substring(idx + 1);
-        Set<String> fieldNames = classNameToFieldNames.get(className);
-        while (fieldNames != null && !fieldNames.contains(fieldName)) {
-            className = classNameToSuperclassName.get(className);
-            if (className == null) {
-                fieldNames = null;
-                break;
-            }
-
-            fieldNames = classNameToFieldNames.get(className);
-        }
-
-        if (fieldNames == null) {
-            /* failed to resolve this variable Id */
-            // TODO(YilongL): make sure this doesn't happen
-
-//            System.out.println("[Warning]: unable to retrieve field information of class "
-//                    + className + "; resolving field " + fieldName);
-
-            return variableId;
-        } else {
-            assert fieldNames.contains(fieldName);
-            return getVariableId(className, fieldName);
-        }
     }
 }

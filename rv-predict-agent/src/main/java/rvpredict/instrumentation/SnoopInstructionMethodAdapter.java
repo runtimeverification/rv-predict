@@ -4,6 +4,8 @@ import static org.objectweb.asm.Opcodes.*;
 import static rvpredict.config.Config.*;
 import static rvpredict.instrumentation.Utility.*;
 
+import java.util.Set;
+
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -34,6 +36,8 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      */
     private final boolean isStatic;
 
+    private final Set<String> finalFields;
+
     private final Config config;
 
     /**
@@ -44,7 +48,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     public SnoopInstructionMethodAdapter(MethodVisitor mv, String source, String className,
             int version, String methodName, String signature, int access, int argSize,
-            Config config) {
+            Set<String> finalFields, Config config) {
         super(Opcodes.ASM5, mv);
         this.source = source == null ? "Unknown" : source;
         this.className = className;
@@ -54,6 +58,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         this.isInit = "<init>".equals(methodName) || "<clinit>".equals(methodName);
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
+        this.finalFields = finalFields;
         this.config = config;
 
         crntMaxIndex = argSize + 1;
@@ -203,14 +208,22 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-        int sid = GlobalMetaData.getVariableId(owner, name);
+        /* Optimization: no need to log field access or initialization for final fields */
+        if (owner.equals(className) && finalFields.contains(name)) {
+            /* YilongL: note that this is not complete because `finalFields'
+             * only contains the final fields of the class we are instrumenting */
+            mv.visitFieldInsn(opcode, owner, name, desc);
+            return;
+        }
+
+        int sid = MetaData.getVariableId(owner, name);
         String varSig = (owner + "." + name).replace("/", ".");
         // TODO(YilongL): move the following code to GlobalStateForInstrumentation
         String sig_loc = source
                 + "|"
                 + (className + "|" + signature + "|" + varSig + "|" + crntLineNum).replace("/",
                         ".");
-        int ID = GlobalMetaData.getLocationId(sig_loc);
+        int ID = MetaData.getLocationId(sig_loc);
 
         int localVarIdx;
         int localVarIdx2;
@@ -613,7 +626,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      *         current statement in the instrumented program
      */
     private int getCrntStmtSID() {
-        return GlobalMetaData.getLocationId(getCrntStmtSig());
+        return MetaData.getLocationId(getCrntStmtSig());
     }
 
     /**

@@ -293,14 +293,11 @@ public class Trace {
     public State computeFinalState() {
         State finalState = new State(initState);
 
-        /* compute final values */
-        for (String addr : addrToWriteEvents.keySet()) {
-            List<WriteEvent> writeEvents = addrToWriteEvents.get(addr);
-            finalState.addrToValue.put(addr, writeEvents.get(writeEvents.size() - 1).getValue());
-        }
-
-        for (Event e : allEvents) {
-            if (e instanceof SyncEvent) {
+        for (Event e : rawEvents) {
+            if (e instanceof InitOrAccessEvent) {
+                InitOrAccessEvent initOrAcc = (InitOrAccessEvent) e;
+                finalState.addrToValue.put(initOrAcc.getAddr(), initOrAcc.getValue());
+            } else if (e instanceof SyncEvent) {
                 SyncEvent event = (SyncEvent) e;
                 long tid = event.getTID();
                 long obj = event.getSyncObject();
@@ -320,6 +317,14 @@ public class Trace {
                     finalState.objToWaitingThreads.get(obj).remove(tid);
 
                     Set<SyncEvent> notifyToRemove = Sets.newHashSet();
+                    if (!finalState.objToNotifyEvents.containsKey(obj)
+                            && (event.getType() == EventType.WAIT_MAYBE_TIMEOUT
+                            ||  event.getType() == EventType.WAIT_INTERRUPTED)) {
+                        /* finalState.objToNotifyEvents.get(obj) could be null
+                         * for WAIT_MAYBE_TIMEOUT and WAIT_INTERRUPTED */
+                        break;
+                    }
+
                     SyncEvent fstMatchedNotify = null;
                     for (SyncEvent notify : finalState.objToNotifyEvents.get(obj)) {
                         Set<Long> waitSet = finalState.notifyToWaitingThreads.get(notify);
@@ -569,8 +574,6 @@ public class Trace {
                 addEvent(event);
             }
         }
-
-        rawEvents.clear();
 
         info.addSharedAddresses(sharedMemAddr);
         info.addThreads(threadIds);

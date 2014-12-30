@@ -148,9 +148,9 @@ public class Configuration {
     @Parameter(names = "--branch", description = "Use the branch model", hidden = true, descriptionKey = "2020")
     public boolean branch;
 
-    final static String opt_no_volatile = "--novolatile";
-    @Parameter(names = opt_no_volatile, description = "Exclude volatile variables", hidden = true, descriptionKey = "2030")
-    public boolean novolatile;
+    final static String opt_volatile = "--volatile";
+    @Parameter(names = opt_volatile, description = "Check unordered conflict accesses on volatile variables", hidden = true, descriptionKey = "2030")
+    public boolean checkVolatile;
 
     // final static String opt_constraint_outdir = "--outdir";
     // @Parameter(names = opt_constraint_outdir, description =

@@ -36,8 +36,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     private final Config config;
 
-    private final GlobalStateForInstrumentation globalState;
-
     /**
      * current max index of local variables
      */
@@ -46,7 +44,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     public SnoopInstructionMethodAdapter(MethodVisitor mv, String source, String className,
             int version, String methodName, String signature, int access, int argSize,
-            Config config, GlobalStateForInstrumentation globalState) {
+            Config config) {
         super(Opcodes.ASM5, mv);
         this.source = source == null ? "Unknown" : source;
         this.className = className;
@@ -57,7 +55,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
         this.config = config;
-        this.globalState = globalState;
 
         crntMaxIndex = argSize + 1;
         if (config.verbose) {
@@ -206,13 +203,14 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
+        int sid = GlobalMetaData.getVariableId(owner, name);
         String varSig = (owner + "." + name).replace("/", ".");
-        int sid = globalState.getVariableId(varSig);
+        // TODO(YilongL): move the following code to GlobalStateForInstrumentation
         String sig_loc = source
                 + "|"
                 + (className + "|" + signature + "|" + varSig + "|" + crntLineNum).replace("/",
                         ".");
-        int ID = globalState.getLocationId(sig_loc);
+        int ID = GlobalMetaData.getLocationId(sig_loc);
 
         int localVarIdx;
         int localVarIdx2;
@@ -615,7 +613,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      *         current statement in the instrumented program
      */
     private int getCrntStmtSID() {
-        return globalState.getLocationId(getCrntStmtSig());
+        return GlobalMetaData.getLocationId(getCrntStmtSig());
     }
 
     /**

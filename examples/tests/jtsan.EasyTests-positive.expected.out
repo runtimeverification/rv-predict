@@ -1,0 +1,23 @@
+(?s)(.*)Race on field jtsan.EasyTests\$1.sharedVar between:(\s)*jtsan.EasyTests\$1.thread1\(EasyTests.java:44\)(\s)*jtsan.EasyTests\$1.thread2\(EasyTests.java:49\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$2.sharedShort between:(\s)*jtsan.EasyTests\$2.thread1\(EasyTests.java:62\)(\s)*jtsan.EasyTests\$2.thread2\(EasyTests.java:67\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$3.sharedChar between:(\s)*jtsan.EasyTests\$3.thread1\(EasyTests.java:80\)(\s)*jtsan.EasyTests\$3.thread2\(EasyTests.java:85\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$4.sharedLong between:(\s)*jtsan.EasyTests\$4.thread1\(EasyTests.java:98\)(\s)*jtsan.EasyTests\$4.thread2\(EasyTests.java:103\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$5.sharedFloat between:(\s)*jtsan.EasyTests\$5.thread1\(EasyTests.java:116\)(\s)*jtsan.EasyTests\$5.thread2\(EasyTests.java:121\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$6.sharedDouble between:(\s)*jtsan.EasyTests\$6.thread1\(EasyTests.java:134\)(\s)*jtsan.EasyTests\$6.thread2\(EasyTests.java:139\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$7.sharedObject between:(\s)*jtsan.EasyTests\$7.thread1\(EasyTests.java:150\)(\s)*jtsan.EasyTests\$7.thread2\(EasyTests.java:155\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$8.sharedVar between:(\s)*jtsan.EasyTests\$8.thread1\(EasyTests.java:166\)(\s)*jtsan.EasyTests\$8.thread2\(EasyTests.java:172\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$9.sharedVar between:(\s)*jtsan.EasyTests\$9.thread1\(EasyTests.java:184\)(\s)*jtsan.EasyTests\$9.thread2\(EasyTests.java:189\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$10.sharedVar between:(\s)*jtsan.EasyTests\$10.thread1\(EasyTests.java:202\)(\s)*jtsan.EasyTests\$10.thread2\(EasyTests.java:209\)(.*)
+
+(?s)(.*)Race on field jtsan.EasyTests\$11\$RecursiveObject.value between:(\s)*jtsan.EasyTests\$11.thread1\(EasyTests.java:237\)(\s)*jtsan.EasyTests\$11.thread2\(EasyTests.java:242\)(.*)
+
+(?s)(.*)Race on an array access between:(\s)*jtsan.EasyTests\$16.thread1\(EasyTests.java:361\)(\s)*jtsan.EasyTests\$16.thread2\(EasyTests.java:366\)(.*)

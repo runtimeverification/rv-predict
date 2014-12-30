@@ -134,7 +134,7 @@ public class RVPredict {
         /* enumerate each shared memory address in the trace */
         for (String addr : trace.getMemAccessEventsTable().rowKeySet()) {
             /* exclude volatile variable */
-            if (config.novolatile && trace.isVolatileAddr(addr)) {
+            if (!config.checkVolatile && trace.isVolatileAddr(addr)) {
                 continue;
             }
 

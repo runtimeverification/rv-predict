@@ -23,11 +23,9 @@ import java.util.Arrays;
 public class SnoopInstructionTransformer implements ClassFileTransformer {
 
     private final Config config;
-    private final GlobalStateForInstrumentation globalState;
 
-    public SnoopInstructionTransformer(Config config, GlobalStateForInstrumentation globalState) {
+    public SnoopInstructionTransformer(Config config) {
         this.config = config;
-        this.globalState = globalState;
     }
 
     public static void premain(String agentArgs, Instrumentation inst) {
@@ -39,7 +37,6 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
         final Config config = Config.instance;
-        final GlobalStateForInstrumentation globalState = GlobalStateForInstrumentation.instance;
         final Configuration commandLine = config.commandLine;
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         commandLine.parseArguments(args, false);
@@ -73,12 +70,12 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
         }
 
         TraceCache.removeTraceFiles(commandLine.outdir);
-        final DBEngine db = new DBEngine(globalState, commandLine.outdir);
+        final DBEngine db = new DBEngine(commandLine.outdir);
         // db.closeDB();
         // initialize RecordRT first
         RecordRT.init(db);
 
-        inst.addTransformer(new SnoopInstructionTransformer(config, globalState));
+        inst.addTransformer(new SnoopInstructionTransformer(config));
         final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
             @Override
             public void cleanup() {
@@ -130,7 +127,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
             ClassReader cr = new ClassReader(cbuf);
 
             ClassWriter cw = new ClassWriter(cr, 0);
-            ClassVisitor instrumentor = new SnoopInstructionClassAdapter(cw, config, globalState);
+            ClassVisitor instrumentor = new SnoopInstructionClassAdapter(cw, config);
             CheckClassAdapter cv = new CheckClassAdapter(instrumentor);
             cr.accept(cv, 0);
 

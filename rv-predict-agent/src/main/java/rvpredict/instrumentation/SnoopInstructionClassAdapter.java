@@ -12,20 +12,16 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
 
     private final Config config;
 
-    private final GlobalStateForInstrumentation globalState;
-
     private String className;
     private String source;
 
     private int version;
 
-    public SnoopInstructionClassAdapter(ClassVisitor cv, Config config,
-            GlobalStateForInstrumentation globalState) {
+    public SnoopInstructionClassAdapter(ClassVisitor cv, Config config) {
         super(Opcodes.ASM5, cv);
         assert cv != null;
 
         this.config = config;
-        this.globalState = globalState;
     }
 
     @Override
@@ -33,6 +29,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
             String[] interfaces) {
         className = name;
         this.version = version;
+        GlobalMetaData.setSuperclass(name, superName);
         cv.visit(version, access, name, signature, superName, interfaces);
     }
 
@@ -48,11 +45,10 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
         /* TODO(YilongL): add comments about what is special about `final`,
          * `volatile`, and `static` w.r.t. instrumentation */
 
-        String sig_var = (className + "." + name).replace("/", ".");
-        globalState.getVariableId(sig_var);
+        GlobalMetaData.addField(className, name);
         // Opcodes.ACC_FINAL
         if ((access & Opcodes.ACC_VOLATILE) != 0) { // volatile
-            globalState.addVolatileVariable(sig_var);
+            GlobalMetaData.addVolatileVariable(className, name);
         }
 
         return cv.visitField(access, name, desc, signature, value);
@@ -72,7 +68,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
             }
 
             mv = new SnoopInstructionMethodAdapter(mv, source, className, version, name, name
-                    + desc, access, numOfWords, config, globalState);
+                    + desc, access, numOfWords, config);
         }
         return mv;
     }

@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import rvpredict.db.EventItem;
 import rvpredict.db.EventOutputStream;
-import rvpredict.instrumentation.GlobalStateForInstrumentation;
+import rvpredict.instrumentation.GlobalMetaData;
 import rvpredict.trace.EventType;
 
 /**
@@ -54,7 +54,6 @@ public class DBEngine {
 
     private final AtomicLong globalEventID  = new AtomicLong(0);
     private static final int BUFFER_THRESHOLD = 10000;
-    private final GlobalStateForInstrumentation globalState;
     private final Thread metadataLoggingThread;
     private final ThreadLocalEventStream threadLocalTraceOS;
     private final ObjectOutputStream metadataOS;
@@ -89,8 +88,7 @@ public class DBEngine {
         }
     }
 
-    public DBEngine(GlobalStateForInstrumentation globalState, String directory) {
-        this.globalState = globalState;
+    public DBEngine(String directory) {
         threadLocalTraceOS = new ThreadLocalEventStream(directory);
         metadataOS = createMetadataOS(directory);
         metadataLoggingThread = startMetadataLogging();
@@ -199,18 +197,18 @@ public class DBEngine {
      */
     public void saveMetaData() {
         /* save <volatileVariable, Id> pairs */
-        synchronized (globalState.volatileVariables) {
-            Set<Integer> volatileFieldIds = new HashSet<>(globalState.unsavedVolatileVariables.size());
-            for (String var : globalState.unsavedVolatileVariables) {
-                volatileFieldIds.add(globalState.varSigToId.get(var));
+        synchronized (GlobalMetaData.volatileVariables) {
+            Set<Integer> volatileFieldIds = new HashSet<>(GlobalMetaData.unsavedVolatileVariables.size());
+            for (String var : GlobalMetaData.unsavedVolatileVariables) {
+                volatileFieldIds.add(GlobalMetaData.varSigToId.get(var));
             }
             saveObject(volatileFieldIds);
         }
 
         /* save <StmtSig, LocId> pairs */
-        synchronized (globalState.stmtSigToLocId) {
-            saveObject(globalState.unsavedStmtSigToLocId);
-            globalState.unsavedStmtSigToLocId.clear();
+        synchronized (GlobalMetaData.stmtSigToLocId) {
+            saveObject(GlobalMetaData.unsavedStmtSigToLocId);
+            GlobalMetaData.unsavedStmtSigToLocId.clear();
         }
     }
 }

@@ -6,12 +6,6 @@
 
 (?s)(.*)Race on field org.apache.log4j.Category.repository between:(\s)*org.apache.log4j.Category.log\(Category.java:852\)(\s)*org.apache.log4j.Category.setHierarchy\(Category.java:947\)(.*)
 
-(?s)(.*)Race on field org.apache.log4j.Category.parent between:(\s)*org.apache.log4j.Category.getEffectiveLevel\(Category.java:442\)(\s)*org.apache.log4j.Hierarchy.updateParents\(Hierarchy.java:538\)(.*)
-
-(?s)(.*)Race on field org.apache.mina.core.service.IoServiceListenerSupport.largestManagedSessionCount between:(\s)*org.apache.mina.core.service.IoServiceListenerSupport.fireSessionCreated\(IoServiceListenerSupport.java:185\)(\s)*org.apache.mina.core.service.IoServiceListenerSupport.fireSessionCreated\(IoServiceListenerSupport.java:186\)(.*)
-
-(?s)(.*)Race on field org.apache.mina.core.service.IoServiceListenerSupport.cumulativeManagedSessionCount between two instances of:(\s)*org.apache.mina.core.service.IoServiceListenerSupport.fireSessionCreated\(IoServiceListenerSupport.java:188\)(.*)
-
 (?s)(.*)Race on field org.apache.mina.core.buffer.IoBuffer.allocator between:(\s)*org.apache.mina.core.buffer.IoBuffer.allocate\(IoBuffer.java:218\)(\s)*org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)
 
 (?s)(.*)Race on field org.apache.mina.core.buffer.IoBuffer.allocator between:(\s)*org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:167\)(\s)*org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)

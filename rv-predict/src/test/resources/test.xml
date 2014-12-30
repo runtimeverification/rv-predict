@@ -75,4 +75,16 @@
         <arg key="-cp" value="basic.jar" />
         <arg value="benchmarks.JGFMolDynBenchSizeA" />
     </test>
+    
+	<test name="jtsan.EasyTests-positive">
+        <arg key="-cp" value="basic.jar" />
+        <arg value="jtsan.EasyTests" />
+	    <arg value="positive" />
+    </test>
+        <test name="jtsan.EasyTests-negative">
+        <arg key="-cp" value="basic.jar" />
+        <arg value="jtsan.EasyTests" />
+	    <arg value="negative" />
+    </test>
+    
 </tests>

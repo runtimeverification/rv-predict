@@ -188,6 +188,14 @@ public class Utility {
         return false;
     }
 
+    public static boolean isLockClass(String className) {
+        // TODO(YilongL): avoid hard-coding like this
+        return "java/util/concurrent/locks/Lock".equals(className)
+            || "java/util/concurrent/locks/ReentrantLock".equals(className)
+            || "java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock".equals(className)
+            || "java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock".equals(className);
+    }
+
     /**
      * Helper method that adds a instruction which pushes a constant value onto
      * the operand stack.

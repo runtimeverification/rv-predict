@@ -21,6 +21,7 @@ import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
@@ -589,6 +590,34 @@ public class JUConcurrentTests {
         };
     }
 
+    @RaceTest(expectRace = false,
+            description = "ConcurrentHashMap accesses")
+    public void concurrentHashMap() {
+        final ConcurrentHashMap<Integer, Integer> map = new ConcurrentHashMap<>();
+        new ThreadRunner(4) {
+
+            @Override
+            public void thread1() {
+                map.put(1, 1);
+            }
+
+            @Override
+            public void thread2() {
+                map.put(1, 2);
+            }
+
+            @Override
+            public void thread3() {
+                thread2();
+            }
+
+            @Override
+            public void thread4() {
+                thread1();
+            }
+        };
+    }
+
     // Example from http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/src/main/java/util/
     // concurrent/locks/LockSupport.java?view=markup .
     class FIFOMutex {
@@ -728,7 +757,8 @@ public class JUConcurrentTests {
 //            tests.readAndWriteTryLocks();
             tests.reentrantLockSimple();
             tests.tryLock2();
-//            tests.atomicInteger();
+            tests.atomicInteger();
+            tests.concurrentHashMap();
 //            tests.fifoMutexUser();
 //            tests.futureTask();
 //            tests.synchronousQueue();

@@ -141,8 +141,8 @@ public class DBEngine {
                 case WRITE:
                     node = new WriteEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
                     break;
-                case LOCK:
-                case UNLOCK:
+                case WRITE_LOCK:
+                case WRITE_UNLOCK:
                 case READ_LOCK:
                 case READ_UNLOCK:
                 case PRE_WAIT:

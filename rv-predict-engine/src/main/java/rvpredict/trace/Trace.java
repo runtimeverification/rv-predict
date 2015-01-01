@@ -370,8 +370,8 @@ public class Trace {
                 case JOIN_MAYBE_TIMEOUT:
                 case JOIN_INTERRUPTED:
                 case START:
-                case LOCK:
-                case UNLOCK:
+                case WRITE_LOCK:
+                case WRITE_UNLOCK:
                 case READ_LOCK:
                 case READ_UNLOCK:
                     break;
@@ -503,8 +503,8 @@ public class Trace {
                 case JOIN_INTERRUPTED:
                     eventsMap = threadIdToStartJoinEvents;
                     break;
-                case LOCK:
-                case UNLOCK:
+                case WRITE_LOCK:
+                case WRITE_UNLOCK:
                 case READ_LOCK:
                 case READ_UNLOCK:
                 case PRE_WAIT:

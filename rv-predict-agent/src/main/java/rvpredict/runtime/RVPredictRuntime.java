@@ -184,7 +184,7 @@ public final class RVPredictRuntime {
      *            the {@code Object} whose intrinsic lock is acquired
      */
     public static void logMonitorEnter(int locId, Object object) {
-        db.saveEvent(EventType.LOCK, locId, calcMonitorId(object));
+        db.saveEvent(EventType.WRITE_LOCK, locId, calcMonitorId(object));
     }
 
     /**
@@ -197,7 +197,7 @@ public final class RVPredictRuntime {
      *            the {@code Object} whose intrinsic lock is released
      */
     public static void logMonitorExit(int locId, Object object) {
-        db.saveEvent(EventType.UNLOCK, locId, calcMonitorId(object));
+        db.saveEvent(EventType.WRITE_UNLOCK, locId, calcMonitorId(object));
     }
 
     /**
@@ -562,7 +562,7 @@ public final class RVPredictRuntime {
             if (acquired) {
                 db.saveEvent(EventType.READ, locId, System.identityHashCode(Thread.currentThread()),
                         -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-                db.saveEvent(EventType.LOCK, locId, calcLockId(lock));
+                db.saveEvent(EventType.WRITE_LOCK, locId, calcLockId(lock));
             }
             return acquired;
         } catch (InterruptedException e) {
@@ -747,11 +747,11 @@ public final class RVPredictRuntime {
         return (MONITOR_C << 32L) + System.identityHashCode(obj);
     }
     private static EventType getLockEventType(Lock lock) {
-        return readLockToRWLock.containsKey(lock) ? EventType.READ_LOCK : EventType.LOCK;
+        return readLockToRWLock.containsKey(lock) ? EventType.READ_LOCK : EventType.WRITE_LOCK;
     }
 
     private static EventType getUnlockEventType(Lock lock) {
-        return readLockToRWLock.containsKey(lock) ? EventType.READ_UNLOCK : EventType.UNLOCK;
+        return readLockToRWLock.containsKey(lock) ? EventType.READ_UNLOCK : EventType.WRITE_UNLOCK;
     }
 
     private static long calcLockId(Lock lock) {

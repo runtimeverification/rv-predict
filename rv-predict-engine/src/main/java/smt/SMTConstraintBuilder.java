@@ -219,7 +219,7 @@ public class SMTConstraintBuilder {
                     "Unexpected consecutive lock/unlock events:\n" + prevLockOrUnlock + ", " + syncEvent;
 
                 switch (syncEvent.getType()) {
-                case LOCK:
+                case WRITE_LOCK:
                 case READ_LOCK:
                 case WAIT:
                 case WAIT_MAYBE_TIMEOUT:
@@ -228,7 +228,7 @@ public class SMTConstraintBuilder {
                     break;
 
                 case PRE_WAIT:
-                case UNLOCK:
+                case WRITE_UNLOCK:
                 case READ_UNLOCK:
                     Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue, tid);
                     lockRegions.add(new LockRegion(

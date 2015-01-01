@@ -13,12 +13,12 @@ public enum EventType {
     /**
      * Event generated after acquiring an intrinsic lock or write lock.
      */
-    LOCK,
+    WRITE_LOCK,
 
     /**
      * Event generated before releasing an intrinsic lock or write lock.
      */
-    UNLOCK,
+    WRITE_UNLOCK,
 
     /**
      * Event generated after acquiring a read lock, i.e.,
@@ -100,10 +100,10 @@ public enum EventType {
     BRANCH;
 
     public static boolean isLock(EventType type) {
-        return type == LOCK || type == READ_LOCK;
+        return type == WRITE_LOCK || type == READ_LOCK;
     }
 
     public static boolean isUnlock(EventType type) {
-        return type == UNLOCK || type == READ_UNLOCK;
+        return type == WRITE_UNLOCK || type == READ_UNLOCK;
     }
 }

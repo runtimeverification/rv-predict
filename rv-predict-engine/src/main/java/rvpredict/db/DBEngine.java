@@ -149,8 +149,6 @@ public class DBEngine {
                 case WAIT:
                 case WAIT_MAYBE_TIMEOUT:
                 case WAIT_INTERRUPTED:
-                case NOTIFY:
-                case NOTIFY_ALL:
                 case START:
                 case PRE_JOIN:
                 case JOIN:

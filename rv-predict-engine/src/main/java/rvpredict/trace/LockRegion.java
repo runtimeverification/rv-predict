@@ -28,9 +28,6 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 public class LockRegion {
     private final SyncEvent lock;
     private final SyncEvent unlock;
@@ -41,10 +38,7 @@ public class LockRegion {
 
     private boolean isReadLocked = false;
 
-    private final Deque<SyncEvent> notifyEvents;
-
-    public LockRegion(SyncEvent lock, SyncEvent unlock, SyncEvent prewait,
-            Deque<SyncEvent> notifyEvents) {
+    public LockRegion(SyncEvent lock, SyncEvent unlock, SyncEvent prewait) {
         assert lock == null || lock.isLockEvent();
         assert unlock == null || unlock.isUnlockEvent();
         this.lock = lock;
@@ -69,7 +63,6 @@ public class LockRegion {
                 isReadLocked = true;
             }
         }
-        this.notifyEvents = new ArrayDeque<>(notifyEvents);
     }
 
     public SyncEvent getLock() {
@@ -90,10 +83,6 @@ public class LockRegion {
 
     public long getThreadId() {
         return threadId;
-    }
-
-    public Deque<SyncEvent> getNotifyEvents() {
-        return notifyEvents;
     }
 
     @Override

@@ -186,12 +186,6 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     substituteMethodCall(opcode, RVPREDICT_WAIT, DESC_RVPREDICT_WAIT_TIMEOUT_NANO,
                             "J", "I");
                     return;
-                case "notify()V":
-                    substituteMethodCall(opcode, RVPREDICT_NOTIFY, DESC_RVPREDICT_NOTIFY);
-                    return;
-                case "notifyAll()V":
-                    substituteMethodCall(opcode, RVPREDICT_NOTIFY_ALL, DESC_RVPREDICT_NOTIFY_ALL);
-                    return;
                 }
             }
 

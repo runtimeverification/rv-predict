@@ -147,34 +147,6 @@ public final class RVPredictRuntime {
     }
 
     /**
-     * Logs the {@code NOTIFY} event produced by invoking
-     * {@code object.notify()}.
-     *
-     * @param locId
-     *            the location identifier of the event
-     * @param object
-     *            the {@code Object} whose {@code notify()} method is invoked
-     */
-    public static void rvPredictNotify(int locId, Object object) {
-        db.saveEvent(EventType.NOTIFY, locId, calcMonitorId(object));
-        object.notify();
-    }
-
-    /**
-     * Logs the {@code NOTIFY_ALL} event produced by invoking
-     * {@code object.notifyAll()}.
-     *
-     * @param locId
-     *            the location identifier of the event
-     * @param object
-     *            the {@code Object} whose {@code notifyAll()} method is invoked
-     */
-    public static void rvPredictNotifyAll(int locId, Object object) {
-        db.saveEvent(EventType.NOTIFY_ALL, locId, calcMonitorId(object));
-        object.notifyAll();
-    }
-
-    /**
      * Logs the {@code LOCK} event produced by entering block synchronized with
      * {@code object}'s intrinsic lock.
      *

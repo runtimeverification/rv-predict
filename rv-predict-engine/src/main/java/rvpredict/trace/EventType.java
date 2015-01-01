@@ -56,16 +56,6 @@ public enum EventType {
     WAIT_INTERRUPTED,
 
     /**
-     * Event generated before calling {@code Object#notify()}.
-     */
-    NOTIFY,
-
-    /**
-     * Event generated before calling {@code Object#notifyAll()}.
-     */
-    NOTIFY_ALL,
-
-    /**
      * Event generated before calling {@code Thread#start()}.
      */
     START,
@@ -76,8 +66,8 @@ public enum EventType {
     PRE_JOIN,
 
     /**
-     * Event generated after a thread is awakened from {@code Thread#join} by
-     * {@code Thread#interrupt()}.
+     * Event generated after a thread is awakened from {@code Thread#join}
+     * because the joining thread finishes.
      */
     JOIN,
 

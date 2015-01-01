@@ -110,13 +110,11 @@
 	    <arg value="negative" />
     </test>
 
-<!--
 	<test name="jtsan.JUConcurrentTests-positive">
         <arg key="-cp" value="basic.jar" />
         <arg value="jtsan.JUConcurrentTests" />
 	    <arg value="positive" />
     </test>
--->
 
 	<test name="jtsan.JUConcurrentTests-negative">
         <arg key="-cp" value="basic.jar" />

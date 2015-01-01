@@ -742,7 +742,7 @@ public class JUConcurrentTests {
             // positive tests
             tests.writingUnderReaderLock();
             tests.differentLocksWW2();
-            tests.cyclicBarrierWrong();
+//            tests.cyclicBarrierWrong();
             tests.lockNeMonitor();
         } else {
             // negative tests
@@ -753,8 +753,8 @@ public class JUConcurrentTests {
 //            tests.cyclicBarrier();
 //            tests.semaphore();
             tests.writeLocksOnly();
-//            tests.readAndWriteLocks();
-//            tests.readAndWriteTryLocks();
+            tests.readAndWriteLocks();
+            tests.readAndWriteTryLocks();
             tests.reentrantLockSimple();
             tests.tryLock2();
             tests.atomicInteger();

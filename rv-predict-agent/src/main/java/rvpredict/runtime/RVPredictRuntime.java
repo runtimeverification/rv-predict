@@ -106,13 +106,13 @@ public final class RVPredictRuntime {
             object.wait(timeout);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            db.saveEvent(EventType.WAIT_INTERRUPTED, locId, monitorId);
+            db.saveEvent(EventType.WAIT, locId, monitorId);
             throw e;
         }
 
         db.saveEvent(EventType.READ, locId, System.identityHashCode(Thread.currentThread()),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-        db.saveEvent(timeout > 0 ? EventType.WAIT_MAYBE_TIMEOUT : EventType.WAIT, locId, monitorId);
+        db.saveEvent(EventType.WAIT, locId, monitorId);
     }
 
     /**
@@ -136,14 +136,13 @@ public final class RVPredictRuntime {
             object.wait(timeout, nano);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            db.saveEvent(EventType.WAIT_INTERRUPTED, locId, monitorId);
+            db.saveEvent(EventType.WAIT, locId, monitorId);
             throw e;
         }
 
         db.saveEvent(EventType.READ, locId, System.identityHashCode(Thread.currentThread()),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-        db.saveEvent(timeout > 0 || nano > 0 ? EventType.WAIT_MAYBE_TIMEOUT : EventType.WAIT, locId,
-                monitorId);
+        db.saveEvent(EventType.WAIT, locId, monitorId);
     }
 
     /**

@@ -205,8 +205,6 @@ public class SMTConstraintBuilder {
                 case WRITE_LOCK:
                 case READ_LOCK:
                 case WAIT:
-                case WAIT_MAYBE_TIMEOUT:
-                case WAIT_INTERRUPTED:
                     threadIdToPrevLockOrUnlock.put(tid, syncEvent);
                     break;
 

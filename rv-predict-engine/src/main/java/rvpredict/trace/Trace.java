@@ -372,6 +372,8 @@ public class Trace {
                 case START:
                 case LOCK:
                 case UNLOCK:
+                case READ_LOCK:
+                case READ_UNLOCK:
                     break;
                 default:
                     assert false : "Unexpected synchronization event: " + event;
@@ -405,18 +407,18 @@ public class Trace {
                 }
                 set.add(tid);
             }
-        } else if (event.getType() == EventType.LOCK || event.getType() == EventType.UNLOCK) {
+        } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
             Long lockObj = ((SyncEvent) event).getSyncObject();
             MutableInt level = lockLevelTbl.get(event.getTID(), lockObj);
             if (level == null) {
                 level = new MutableInt(0);
                 lockLevelTbl.put(event.getTID(), lockObj, level);
             }
-            if (event.getType() == EventType.LOCK) {
+            if (EventType.isLock(event.getType())) {
                 level.increment();
             }
             lockLevels.put((SyncEvent) event, level.getValue());
-            if (event.getType() == EventType.UNLOCK) {
+            if (EventType.isUnlock(event.getType())) {
                 level.decrement();
             }
         }
@@ -428,6 +430,7 @@ public class Trace {
      * @param node
      */
     private void addEvent(Event node) {
+//        System.err.println(node + " " + info.getLocIdToStmtSigMap().get(node.getID()));
         Long tid = node.getTID();
         threadIds.add(tid);
 
@@ -502,6 +505,8 @@ public class Trace {
                     break;
                 case LOCK:
                 case UNLOCK:
+                case READ_LOCK:
+                case READ_UNLOCK:
                 case PRE_WAIT:
                 case WAIT:
                 case WAIT_MAYBE_TIMEOUT:
@@ -564,7 +569,7 @@ public class Trace {
                 } else {
                     info.incrementLocalReadWriteNumber();
                 }
-            } else if (event.getType() == EventType.LOCK || event.getType() == EventType.UNLOCK) {
+            } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
                 /* only preserve outermost lock regions */
                 long lockObj = ((SyncEvent) event).getSyncObject();
                 if (lockLevels.get(event) == minLockLevels.get(event.getTID(), lockObj)) {

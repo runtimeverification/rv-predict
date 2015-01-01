@@ -203,7 +203,7 @@ public class SMTConstraintBuilder {
      * Adds lock mutual exclusion constraints.
      */
     public void addLockingConstraints() {
-        /* enumerate the locking events on each intrinsic lock */
+        /* enumerate the locking events on each lock */
         for (List<SyncEvent> syncEvents : trace.getLockObjToSyncEvents().values()) {
             Map<Long, SyncEvent> threadIdToPrevLockOrUnlock = Maps.newHashMap();
             Map<Long, SyncEvent> threadIdToPreWait = Maps.newHashMap();
@@ -214,12 +214,13 @@ public class SMTConstraintBuilder {
                 long tid = syncEvent.getTID();
                 SyncEvent prevLockOrUnlock = threadIdToPrevLockOrUnlock.get(tid);
                 assert prevLockOrUnlock == null
-                    || !(prevLockOrUnlock.isLock() && syncEvent.isLock())
-                    || !(prevLockOrUnlock.isUnlock() && syncEvent.isUnlock()) :
+                    || !(prevLockOrUnlock.isLockEvent() && syncEvent.isLockEvent())
+                    || !(prevLockOrUnlock.isUnlockEvent() && syncEvent.isUnlockEvent()) :
                     "Unexpected consecutive lock/unlock events:\n" + prevLockOrUnlock + ", " + syncEvent;
 
                 switch (syncEvent.getType()) {
                 case LOCK:
+                case READ_LOCK:
                 case WAIT:
                 case WAIT_MAYBE_TIMEOUT:
                 case WAIT_INTERRUPTED:
@@ -228,6 +229,7 @@ public class SMTConstraintBuilder {
 
                 case PRE_WAIT:
                 case UNLOCK:
+                case READ_UNLOCK:
                     Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue, tid);
                     lockRegions.add(new LockRegion(
                             threadIdToPrevLockOrUnlock.put(tid, syncEvent),
@@ -250,7 +252,7 @@ public class SMTConstraintBuilder {
             }
 
             for (SyncEvent lockOrUnlock : threadIdToPrevLockOrUnlock.values()) {
-                if (lockOrUnlock.isLock()) {
+                if (lockOrUnlock.isLockEvent()) {
                     SyncEvent lock = lockOrUnlock;
                     Deque<SyncEvent> notifyEvents = safeDequeMapGet(threadIdToNotifyQueue,
                             lock.getTID());
@@ -272,7 +274,8 @@ public class SMTConstraintBuilder {
     private void assertLockMutex(List<LockRegion> lockRegions) {
         for (LockRegion lockRegion1 : lockRegions) {
             for (LockRegion lockRegion2 : lockRegions) {
-                if (lockRegion1.getThreadId() < lockRegion2.getThreadId()) {
+                if (lockRegion1.getThreadId() < lockRegion2.getThreadId()
+                        && (lockRegion1.isWriteLocked() || lockRegion2.isWriteLocked())) {
                     assertMutualExclusion(lockRegion1, lockRegion2);
                 }
             }

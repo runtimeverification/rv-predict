@@ -143,6 +143,8 @@ public class DBEngine {
                     break;
                 case LOCK:
                 case UNLOCK:
+                case READ_LOCK:
+                case READ_UNLOCK:
                 case PRE_WAIT:
                 case WAIT:
                 case WAIT_MAYBE_TIMEOUT:

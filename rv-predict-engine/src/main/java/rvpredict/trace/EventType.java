@@ -9,9 +9,27 @@ public enum EventType {
     INIT,
     READ,
     WRITE,
+
+    /**
+     * Event generated after acquiring an intrinsic lock or write lock.
+     */
     LOCK,
+
+    /**
+     * Event generated before releasing an intrinsic lock or write lock.
+     */
     UNLOCK,
+
+    /**
+     * Event generated after acquiring a read lock, i.e.,
+     * {@code ReadWriteLock#readLock()#lock()}.
+     */
     READ_LOCK,
+
+    /**
+     * Event generated before releasing a read lock, i.e.,
+     * {@code ReadWriteLock#readLock()#unlock()}.
+     */
     READ_UNLOCK,
 
     /**
@@ -80,4 +98,12 @@ public enum EventType {
      * determines the next instruction to execute in a thread.
      */
     BRANCH;
+
+    public static boolean isLock(EventType type) {
+        return type == LOCK || type == READ_LOCK;
+    }
+
+    public static boolean isUnlock(EventType type) {
+        return type == UNLOCK || type == READ_UNLOCK;
+    }
 }

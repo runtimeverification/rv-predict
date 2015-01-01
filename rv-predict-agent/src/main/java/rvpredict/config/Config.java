@@ -34,10 +34,16 @@ public class Config {
     public static final String RVPREDICT_NOTIFY_ALL = "rvPredictNotifyAll";
 
     // java.util.concurrent.locks.Lock methods
+    // note that this doesn't provide mocks for methods specific in concrete lock implementation
     public static final String RVPREDICT_LOCK = "rvPredictLock";
     public static final String RVPREDICT_LOCK_INTERRUPTIBLY = "rvPredictLockInterruptibly";
     public static final String RVPREDICT_TRY_LOCK = "rvPredictTryLock";
     public static final String RVPREDICT_UNLOCK = "rvPredictUnlock";
+
+    // java.util.concurrent.locks.ReadWriteLock methods
+//    public static final String RVPREDICT_REENTRANT_RW_LOCK_CTOR = "rvPredictReentrantReadWriteCtor";
+    public static final String RVPREDICT_RW_LOCK_READ_LOCK = "rvPredictReadWriteLockReadLock";
+    public static final String RVPREDICT_RW_LOCK_WRITE_LOCK = "rvPredictReadWriteLockWriteLock";
 
     public static final String DESC_LOG_FIELD_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;ZZ)V";
     public static final String DESC_LOG_ARRAY_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;Z)V";
@@ -70,6 +76,11 @@ public class Config {
     public static final String DESC_RVPREDICT_TRY_LOCK = "(ILjava/util/concurrent/locks/Lock;)Z";
     public static final String DESC_RVPREDICT_TRY_LOCK_TIMEOUT = "(ILjava/util/concurrent/locks/Lock;JLjava/util/concurrent/TimeUnit;)Z";
     public static final String DESC_RVPREDICT_UNLOCK = "(ILjava/util/concurrent/locks/Lock;)V";
+
+    public static final String DESC_RVPREDICT_RW_LOCK_READ_LOCK = "(ILjava/util/concurrent/locks/ReadWriteLock;)Ljava/util/concurrent/locks/Lock;";
+    public static final String DESC_RVPREDICT_RW_LOCK_WRITE_LOCK = "(ILjava/util/concurrent/locks/ReadWriteLock;)Ljava/util/concurrent/locks/Lock;";
+    public static final String DESC_RVPREDICT_REENTRANT_RW_LOCK_READ_LOCK = "(ILjava/util/concurrent/locks/ReentrantReadWriteLock;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;";
+    public static final String DESC_RVPREDICT_REENTRANT_RW_LOCK_WRITE_LOCK = "(ILjava/util/concurrent/locks/ReentrantReadWriteLock;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;";
 
     public boolean verbose;
 

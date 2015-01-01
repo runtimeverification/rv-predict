@@ -228,6 +228,27 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                     return;
                 }
                 break;
+
+            case "readLock()Ljava/util/concurrent/locks/Lock;":
+            case "readLock()Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;":
+                if (isReadWriteLockClass(owner)) {
+                    substituteMethodCall(opcode, RVPREDICT_RW_LOCK_READ_LOCK,
+                        desc.endsWith("$ReadLock;") ?
+                        DESC_RVPREDICT_REENTRANT_RW_LOCK_READ_LOCK :
+                        DESC_RVPREDICT_RW_LOCK_READ_LOCK);
+                    return;
+                }
+                break;
+            case "writeLock()Ljava/util/concurrent/locks/Lock;":
+            case "writeLock()Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;":
+                if (isReadWriteLockClass(owner)) {
+                    substituteMethodCall(opcode, RVPREDICT_RW_LOCK_WRITE_LOCK,
+                        desc.endsWith("$WriteLock;") ?
+                        DESC_RVPREDICT_REENTRANT_RW_LOCK_WRITE_LOCK :
+                        DESC_RVPREDICT_RW_LOCK_WRITE_LOCK);
+                    return;
+                }
+                break;
             }
         } else if (opcode == INVOKESTATIC) {
             switch (owner + name + desc) {

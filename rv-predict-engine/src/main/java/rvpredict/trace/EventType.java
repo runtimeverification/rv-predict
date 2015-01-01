@@ -11,6 +11,8 @@ public enum EventType {
     WRITE,
     LOCK,
     UNLOCK,
+    READ_LOCK,
+    READ_UNLOCK,
 
     /**
      * Event generated before calling {@code Object#wait}.

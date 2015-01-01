@@ -31,18 +31,34 @@ package rvpredict.runtime;
 import static rvpredict.instrumentation.MetaData.NATIVE_INTERRUPTED_STATUS_VAR_ID;
 
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import rvpredict.instrumentation.MetaData;
 import rvpredict.logging.DBEngine;
 import rvpredict.trace.EventType;
 
+/**
+ * TODO(YilongL): add javadoc about 1) when to log each event & reason (because
+ * we want consistent trace) 2) why data race cannot lead to R-W inconsistency
+ * 3) why synchronization on crntThread sometimes
+ *
+ * @author YilongL
+ *
+ */
 public final class RVPredictRuntime {
 
     private static final long MONITOR_C = 42L;
 
+    private static ConcurrentHashMap<Lock, ReadWriteLock> readLockToRWLock = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<Lock, ReadWriteLock> writeLockToRWLock = new ConcurrentHashMap<>();
+
     private static DBEngine db;
+
+    private RVPredictRuntime() { } // forbid initialization
 
     // TODO(YilongL): move this method out of the runtime library
     public static void init(DBEngine db) {
@@ -459,6 +475,22 @@ public final class RVPredictRuntime {
     }
 
     /**
+     * Logs the events produced by invoking {@code Thread#interrupted()}.
+     *
+     * @param locId
+     *            the location identifier of the event
+     */
+    public static boolean rvPredictInterrupted(int locId) {
+        boolean interrupted = Thread.interrupted();
+        db.saveEvent(EventType.READ, locId, 0, -NATIVE_INTERRUPTED_STATUS_VAR_ID,
+                interrupted ? 1 : 0);
+        /* clear interrupted status */
+        db.saveEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
+                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
+        return interrupted;
+    }
+
+    /**
      * Logs the {@code LOCK} event produced by invoking {@code Lock#lock()}.
      *
      * @param locId
@@ -468,7 +500,7 @@ public final class RVPredictRuntime {
      */
     public static void rvPredictLock(int locId, Lock lock) {
         lock.lock();
-        db.saveEvent(EventType.LOCK, locId, System.identityHashCode(lock));
+        db.saveEvent(getLockEventType(lock), locId, calcLockId(lock));
     }
 
     /**
@@ -486,7 +518,7 @@ public final class RVPredictRuntime {
             lock.lockInterruptibly();
             db.saveEvent(EventType.READ, locId, System.identityHashCode(Thread.currentThread()),
                     -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-            db.saveEvent(EventType.LOCK, locId, System.identityHashCode(lock));
+            db.saveEvent(getLockEventType(lock), locId, calcLockId(lock));
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
             throw e;
@@ -504,7 +536,7 @@ public final class RVPredictRuntime {
     public static boolean rvPredictTryLock(int locId, Lock lock) {
         boolean acquired = lock.tryLock();
         if (acquired) {
-            db.saveEvent(EventType.LOCK, locId, System.identityHashCode(lock));
+            db.saveEvent(getLockEventType(lock), locId, calcLockId(lock));
         }
         return acquired;
     }
@@ -530,7 +562,7 @@ public final class RVPredictRuntime {
             if (acquired) {
                 db.saveEvent(EventType.READ, locId, System.identityHashCode(Thread.currentThread()),
                         -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-                db.saveEvent(EventType.LOCK, locId, System.identityHashCode(lock));
+                db.saveEvent(EventType.LOCK, locId, calcLockId(lock));
             }
             return acquired;
         } catch (InterruptedException e) {
@@ -548,24 +580,34 @@ public final class RVPredictRuntime {
      *            the lock to release
      */
     public static void rvPredictUnlock(int locId, Lock lock) {
-        db.saveEvent(EventType.UNLOCK, locId, System.identityHashCode(lock));
+        db.saveEvent(getUnlockEventType(lock), locId, calcLockId(lock));
         lock.unlock();
     }
 
-    /**
-     * Logs the events produced by invoking {@code Thread#interrupted()}.
-     *
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static boolean rvPredictInterrupted(int locId) {
-        boolean interrupted = Thread.interrupted();
-        db.saveEvent(EventType.READ, locId, 0, -NATIVE_INTERRUPTED_STATUS_VAR_ID,
-                interrupted ? 1 : 0);
-        /* clear interrupted status */
-        db.saveEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
-                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-        return interrupted;
+    public static Lock rvPredictReadWriteLockReadLock(int locId, ReadWriteLock readWriteLock) {
+        Lock readLock = readWriteLock.readLock();
+        readLockToRWLock.putIfAbsent(readLock, readWriteLock);
+        return readLock;
+    }
+
+    public static ReentrantReadWriteLock.ReadLock rvPredictReadWriteLockReadLock(int locId,
+            ReentrantReadWriteLock readWriteLock) {
+        ReentrantReadWriteLock.ReadLock readLock = readWriteLock.readLock();
+        readLockToRWLock.putIfAbsent(readLock, readWriteLock);
+        return readLock;
+    }
+
+    public static Lock rvPredictReadWriteLockWriteLock(int locId, ReadWriteLock readWriteLock) {
+        Lock writeLock = readWriteLock.writeLock();
+        writeLockToRWLock.putIfAbsent(writeLock, readWriteLock);
+        return writeLock;
+    }
+
+    public static ReentrantReadWriteLock.WriteLock rvPredictReadWriteLockWriteLock(int locId,
+            ReentrantReadWriteLock readWriteLock) {
+        ReentrantReadWriteLock.WriteLock writeLock = readWriteLock.writeLock();
+        writeLockToRWLock.putIfAbsent(writeLock, readWriteLock);
+        return writeLock;
     }
 
     /**
@@ -703,6 +745,26 @@ public final class RVPredictRuntime {
     private static long calcMonitorId(Object obj) {
         // Use low 32bit for object hash and high 32bit for the magic constant.
         return (MONITOR_C << 32L) + System.identityHashCode(obj);
+    }
+    private static EventType getLockEventType(Lock lock) {
+        return readLockToRWLock.containsKey(lock) ? EventType.READ_LOCK : EventType.LOCK;
+    }
+
+    private static EventType getUnlockEventType(Lock lock) {
+        return readLockToRWLock.containsKey(lock) ? EventType.READ_UNLOCK : EventType.UNLOCK;
+    }
+
+    private static long calcLockId(Lock lock) {
+        if (readLockToRWLock.containsKey(lock)) {
+            /* get the associated ReadWriteLock for read lock */
+            return System.identityHashCode(readLockToRWLock.get(lock));
+        } else if (writeLockToRWLock.containsKey(lock)) {
+            /* get the associated ReadWriteLock for write lock */
+            return System.identityHashCode(writeLockToRWLock.get(lock));
+        } else {
+            /* normal lock */
+            return System.identityHashCode(lock);
+        }
     }
 
     /**

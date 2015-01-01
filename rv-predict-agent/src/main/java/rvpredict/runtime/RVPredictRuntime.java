@@ -311,13 +311,14 @@ public final class RVPredictRuntime {
             thread.join(millis);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
+            db.saveEvent(EventType.JOIN_MAYBE_FAILED, locId, thread.getId());
             throw e;
         }
 
         db.saveEvent(EventType.READ, locId, System.identityHashCode(Thread.currentThread()),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-        db.saveEvent(millis == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_TIMEOUT, locId, thread.getId());
+        db.saveEvent(millis == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_FAILED,
+                locId, thread.getId());
     }
 
     /**
@@ -342,13 +343,13 @@ public final class RVPredictRuntime {
             thread.join(millis, nanos);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            db.saveEvent(EventType.JOIN_INTERRUPTED, locId, thread.getId());
+            db.saveEvent(EventType.JOIN_MAYBE_FAILED, locId, thread.getId());
             throw e;
         }
 
         db.saveEvent(EventType.READ, locId, System.identityHashCode(Thread.currentThread()),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-        db.saveEvent(millis == 0 && nanos == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_TIMEOUT, locId,
+        db.saveEvent(millis == 0 && nanos == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_FAILED, locId,
                 thread.getId());
     }
 

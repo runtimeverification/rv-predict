@@ -173,8 +173,7 @@ public class SMTConstraintBuilder {
                     }
                     break;
                 case PRE_JOIN:
-                case JOIN_MAYBE_TIMEOUT:
-                case JOIN_INTERRUPTED:
+                case JOIN_MAYBE_FAILED:
                     break;
                 default:
                     assert false : "unexpected event: " + startOrJoin;

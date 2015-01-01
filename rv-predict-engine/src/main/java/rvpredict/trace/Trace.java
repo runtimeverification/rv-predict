@@ -384,8 +384,7 @@ public class Trace {
                 case START:
                 case PRE_JOIN:
                 case JOIN:
-                case JOIN_MAYBE_TIMEOUT:
-                case JOIN_INTERRUPTED:
+                case JOIN_MAYBE_FAILED:
                     eventsMap = threadIdToStartJoinEvents;
                     break;
                 case WRITE_LOCK:

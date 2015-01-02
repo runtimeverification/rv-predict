@@ -71,7 +71,7 @@ public class Agent implements ClassFileTransformer {
         }
 
         TraceCache.removeTraceFiles(commandLine.outdir);
-        final DBEngine db = new DBEngine(commandLine.outdir);
+        final DBEngine db = new DBEngine(commandLine);
         RVPredictRuntime.init(db);
 
         inst.addTransformer(new Agent(config), true);

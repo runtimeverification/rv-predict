@@ -28,7 +28,6 @@
  ******************************************************************************/
 package rvpredict.engine.main;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,8 +56,8 @@ import violation.Violation;
 
 public class RVPredict {
 
-    private final HashSet<Violation> violations = new HashSet<Violation>();
-    private final HashSet<Violation> potentialviolations = new HashSet<Violation>();
+    private final HashSet<Violation> violations = new HashSet<>();
+    private final HashSet<Violation> potentialviolations = new HashSet<>();
     private final Configuration config;
     private final Logger logger;
     private final long totalTraceLength;
@@ -73,15 +72,9 @@ public class RVPredict {
 
         dbEngine = new DBEngine(config.outdir);
 
-        // load all the metadata in the application
-        Set<Integer> volatileFieldIds = new HashSet<>();
-        Map<Integer, String> locIdToStmtSig = new HashMap<>();
-        dbEngine.getMetadata(volatileFieldIds, locIdToStmtSig);
-
         // the total number of events in the trace
-        totalTraceLength = dbEngine.getTraceSize();
-
-        traceInfo = new TraceInfo(volatileFieldIds, locIdToStmtSig);
+        totalTraceLength = dbEngine.getTraceLength();
+        traceInfo = new TraceInfo(dbEngine.getVolatileFieldIds(), dbEngine.getLocIdToStmtSig());
 
         addHooks(startTime);
     }

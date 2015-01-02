@@ -6,6 +6,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Class adding a transparency layer between the prediction engine and the
@@ -21,8 +22,8 @@ public class TraceCache {
      * termination for files holding events
      */
     public static final String TRACE_SUFFIX = "trace.bin";
+    public static final String ZIP_EXTENSION = ".gz";
     private final Map<Long,Map.Entry<EventInputStream,EventItem>> indexes;
-    private final long traceSize;
 
     /**
      * Creates a new {@code TraceCahce} structure for a trace log in a given directory.
@@ -36,9 +37,12 @@ public class TraceCache {
         for (String file : files) {
             try {
                 File f = Paths.get(directory, file).toFile();
-                traceSize += f.length();
+                InputStream in = new FileInputStream(f);
+                if (file.endsWith(ZIP_EXTENSION)) {
+                    in = new GZIPInputStream(in);
+                }
                 EventInputStream inputStream = new EventInputStream(
-                       new BufferedInputStream( new FileInputStream(f)));
+                       new BufferedInputStream(in));
                 EventItem event = inputStream.readEvent();
                 indexes.put(event.GID, new AbstractMap.SimpleEntry<>(inputStream,event));
             } catch (FileNotFoundException e) {
@@ -47,12 +51,11 @@ public class TraceCache {
                 e.printStackTrace();
             }
         }
-        this.traceSize = traceSize / EventItem.SIZEOF;
     }
 
     private static String[] getTraceFiles(String directory) {
         DirectoryScanner scanner = new DirectoryScanner();
-        scanner.setIncludes(new String[]{"*" + TRACE_SUFFIX});
+        scanner.setIncludes(new String[]{"*" + TRACE_SUFFIX + "*"});
         scanner.setBasedir(directory);
         scanner.setCaseSensitive(false);
         scanner.scan();
@@ -71,14 +74,6 @@ public class TraceCache {
                 System.err.println("Cannot delete trace file " + fname + "from dir. " + directory);
             }
         }
-    }
-
-    /**
-     * Accessor for the {@code traceSize} field.
-     * @return total (over all threads) number of events recorded
-     */
-    public long getTraceSize() {
-        return traceSize;
     }
 
     /**

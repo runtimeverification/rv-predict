@@ -1,10 +1,13 @@
 package rvpredict.logging;
 
-import java.io.BufferedOutputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import rvpredict.config.Configuration;
+import rvpredict.db.EventOutputStream;
+import rvpredict.db.TraceCache;
+
+import java.io.*;
 import java.nio.file.Paths;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.zip.GZIPOutputStream;
 
 import rvpredict.db.EventOutputStream;
 import rvpredict.db.TraceCache;
@@ -18,6 +21,7 @@ import rvpredict.db.TraceCache;
 public class ThreadLocalEventStream extends ThreadLocal<EventOutputStream> {
     private final String directory;
     private final ConcurrentHashMap<Long,EventOutputStream> streamsMap = new ConcurrentHashMap<>();
+    private final boolean zip;
 
     /**
      * Accessor to the map of streams indexed by thread identifier
@@ -27,25 +31,28 @@ public class ThreadLocalEventStream extends ThreadLocal<EventOutputStream> {
         return streamsMap;
     }
 
-    /**
-     * Class constructor initializing the directory
-     * @param directory  location where the thread local event streams should be saved to
-     */
-    public ThreadLocalEventStream(String directory) {
+    public ThreadLocalEventStream(Configuration config) {
         super();
-        this.directory = directory;
+        this.directory = config.outdir;
+        this.zip = config.zip;
     }
 
     @Override
     protected EventOutputStream initialValue() {
         try {
-            EventOutputStream newTraceOs = new EventOutputStream(new BufferedOutputStream(
-                    new FileOutputStream(Paths.get(directory,
-                            Thread.currentThread().getId() + "_"
-                                    +TraceCache.TRACE_SUFFIX).toFile())));
-            streamsMap.put(Thread.currentThread().getId(),newTraceOs);
-            return newTraceOs;
+            OutputStream outputStream = new FileOutputStream(Paths.get(directory,
+                    Thread.currentThread().getId() + "_" + TraceCache.TRACE_SUFFIX
+                            + (zip?TraceCache.ZIP_EXTENSION:"")).toFile());
+            if (zip) {
+                outputStream = new GZIPOutputStream(outputStream,true);
+            }
+            EventOutputStream eventOutputStream = new EventOutputStream(new BufferedOutputStream(
+                    outputStream));
+            streamsMap.put(Thread.currentThread().getId(),eventOutputStream);
+            return eventOutputStream;
         } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) { // GZIPOutputStream exception
             e.printStackTrace();
         }
         return null;

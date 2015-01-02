@@ -42,6 +42,7 @@ public class Agent implements ClassFileTransformer {
         "java/nio",
         "java/util/concurrent/atomic/AtomicLong",
         "java/util/concurrent/ConcurrentHashMap",
+        "java/util/zip/GZIPOutputStream",
         "java/util/regex",
 
         // Basics of the JDK that everything else is depending on

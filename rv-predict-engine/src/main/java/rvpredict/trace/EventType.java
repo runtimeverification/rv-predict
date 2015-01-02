@@ -35,14 +35,14 @@ public enum EventType {
     /**
      * Event generated before calling {@code Object#wait}.
      */
-    PRE_WAIT,
+    WAIT_REL,
 
     /**
      * Event generated after a thread is awakened from {@code Object#wait} for
      * whatever reason (e.g., spurious wakeup, being notified, or being
      * interrupted).
      */
-    WAIT,
+    WAIT_ACQ,
 
     /**
      * Event generated before calling {@code Thread#start()}.

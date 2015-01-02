@@ -189,7 +189,6 @@ public class SMTConstraintBuilder {
         /* enumerate the locking events on each lock */
         for (List<SyncEvent> syncEvents : trace.getLockObjToSyncEvents().values()) {
             Map<Long, SyncEvent> threadIdToPrevLockOrUnlock = Maps.newHashMap();
-            Map<Long, SyncEvent> threadIdToPreWait = Maps.newHashMap();
             List<LockRegion> lockRegions = Lists.newArrayList();
 
             for (SyncEvent syncEvent : syncEvents) {
@@ -203,20 +202,15 @@ public class SMTConstraintBuilder {
                 switch (syncEvent.getType()) {
                 case WRITE_LOCK:
                 case READ_LOCK:
-                case WAIT:
+                case WAIT_ACQ:
                     threadIdToPrevLockOrUnlock.put(tid, syncEvent);
                     break;
 
-                case PRE_WAIT:
                 case WRITE_UNLOCK:
                 case READ_UNLOCK:
-                    lockRegions.add(new LockRegion(
-                            threadIdToPrevLockOrUnlock.put(tid, syncEvent),
-                            syncEvent,
-                            threadIdToPreWait.remove(tid)));
-                    if (syncEvent.getType() == EventType.PRE_WAIT) {
-                        threadIdToPreWait.put(tid, syncEvent);
-                    }
+                case WAIT_REL:
+                    lockRegions.add(new LockRegion(threadIdToPrevLockOrUnlock.put(tid, syncEvent),
+                            syncEvent));
                     break;
                 default:
                     assert false : "Unexpected synchronization event: " + syncEvent;
@@ -226,8 +220,7 @@ public class SMTConstraintBuilder {
             for (SyncEvent lockOrUnlock : threadIdToPrevLockOrUnlock.values()) {
                 if (lockOrUnlock.isLockEvent()) {
                     SyncEvent lock = lockOrUnlock;
-                    lockRegions.add(new LockRegion(lock, null, threadIdToPreWait.remove(
-                            lock.getTID())));
+                    lockRegions.add(new LockRegion(lock, null));
                 }
             }
 

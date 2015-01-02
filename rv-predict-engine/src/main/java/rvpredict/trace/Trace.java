@@ -391,8 +391,8 @@ public class Trace {
                 case WRITE_UNLOCK:
                 case READ_LOCK:
                 case READ_UNLOCK:
-                case PRE_WAIT:
-                case WAIT:
+                case WAIT_REL:
+                case WAIT_ACQ:
                     eventsMap = lockObjToSyncEvents;
                     break;
                 default:

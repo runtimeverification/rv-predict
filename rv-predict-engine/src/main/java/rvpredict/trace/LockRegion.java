@@ -31,19 +31,17 @@ package rvpredict.trace;
 public class LockRegion {
     private final SyncEvent lock;
     private final SyncEvent unlock;
-    private final SyncEvent prewait;
 
     private final long lockObj;
     private final long threadId;
 
     private boolean isReadLocked = false;
 
-    public LockRegion(SyncEvent lock, SyncEvent unlock, SyncEvent prewait) {
+    public LockRegion(SyncEvent lock, SyncEvent unlock) {
         assert lock == null || lock.isLockEvent();
         assert unlock == null || unlock.isUnlockEvent();
         this.lock = lock;
         this.unlock = unlock;
-        this.prewait = prewait;
         if (lock != null) {
             lockObj = lock.getSyncObject();
             threadId = lock.getTID();
@@ -71,10 +69,6 @@ public class LockRegion {
 
     public SyncEvent getUnlock() {
         return unlock;
-    }
-
-    public SyncEvent getPreWait() {
-        return prewait;
     }
 
     public long getLockObj() {

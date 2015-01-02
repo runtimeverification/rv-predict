@@ -58,11 +58,11 @@ public class SyncEvent extends AbstractEvent {
     }
 
     public boolean isLockEvent() {
-        return EventType.isLock(type) || type == EventType.WAIT;
+        return EventType.isLock(type) || type == EventType.WAIT_ACQ;
     }
 
     public boolean isUnlockEvent() {
-        return EventType.isUnlock(type) || type == EventType.PRE_WAIT;
+        return EventType.isUnlock(type) || type == EventType.WAIT_REL;
     }
 
 }

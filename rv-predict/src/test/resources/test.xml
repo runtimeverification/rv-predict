@@ -6,6 +6,12 @@
         <rvarg key="--maxlen" value="3000" />
         <arg key="-jar" value="ftpserver.jar" />
     </test>
+    <test name="ftpserver.jar">
+      	<runs value="128" />
+        <rvarg value="--zip" />
+        <rvarg key="--maxlen" value="3000" />
+        <arg key="-jar" value="ftpserver.jar" />
+    </test>
     <test name="demo.Example">
         <arg key="-cp" value="basic.jar" />
         <arg value="demo.Example" />

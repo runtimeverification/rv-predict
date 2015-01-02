@@ -39,21 +39,35 @@ public class LockRegion {
     private final long lockObj;
     private final long threadId;
 
+    private boolean isReadLocked = false;
+
     private final Deque<SyncEvent> notifyEvents;
 
     public LockRegion(SyncEvent lock, SyncEvent unlock, SyncEvent prewait,
             Deque<SyncEvent> notifyEvents) {
-        assert lock == null || lock.isLock();
-        assert unlock == null || unlock.isUnlock();
+        assert lock == null || lock.isLockEvent();
+        assert unlock == null || unlock.isUnlockEvent();
         this.lock = lock;
         this.unlock = unlock;
         this.prewait = prewait;
         if (lock != null) {
             lockObj = lock.getSyncObject();
             threadId = lock.getTID();
+            if (lock.getType() == EventType.READ_LOCK) {
+                assert unlock == null || unlock.getType() == EventType.READ_UNLOCK :
+                    "Expected no PRE_WAIT event inside read lock region; but found: "
+                        + unlock;
+                isReadLocked = true;
+            }
         } else {
             lockObj = unlock.getSyncObject();
             threadId = unlock.getTID();
+            if (unlock.getType() == EventType.READ_UNLOCK) {
+                assert lock == null || lock.getType() == EventType.READ_LOCK :
+                    "Expected no WAIT* event inside read lock region; but found: "
+                        + lock;
+                isReadLocked = true;
+            }
         }
         this.notifyEvents = new ArrayDeque<>(notifyEvents);
     }
@@ -85,5 +99,9 @@ public class LockRegion {
     @Override
     public String toString() {
         return String.format("<%s, %s>", lock, unlock);
+    }
+
+    public boolean isWriteLocked() {
+        return !isReadLocked;
     }
 }

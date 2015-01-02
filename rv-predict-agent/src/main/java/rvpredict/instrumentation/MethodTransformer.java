@@ -13,7 +13,7 @@ import org.objectweb.asm.Type;
 
 import rvpredict.config.Config;
 
-public class SnoopInstructionMethodAdapter extends MethodVisitor {
+public class MethodTransformer extends MethodVisitor {
 
     private final String className;
     private final int version;
@@ -46,7 +46,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
     private int crntMaxIndex;
     private int crntLineNum;
 
-    public SnoopInstructionMethodAdapter(MethodVisitor mv, String source, String className,
+    public MethodTransformer(MethodVisitor mv, String source, String className,
             int version, String methodName, String signature, int access, int argSize,
             Set<String> finalFields, Config config) {
         super(Opcodes.ASM5, mv);

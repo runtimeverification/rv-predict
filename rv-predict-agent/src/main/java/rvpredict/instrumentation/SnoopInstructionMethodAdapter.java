@@ -111,17 +111,17 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
      */
     private void substituteMethodCall(int opcode, String substName, String substDesc,
             String... argDesc) {
-        assert opcode == INVOKEVIRTUAL || opcode == INVOKESTATIC;
+        assert opcode == INVOKEVIRTUAL || opcode == INVOKESPECIAL || opcode == INVOKESTATIC;
 
         // <stack>... (objectref)? (arg)* </stack>
         int[] indices = new int[argDesc.length];
         for (int i = argDesc.length - 1; i >= 0; i--) {
             indices[i] = storeValue(argDesc[i]);
         }
-        int objRefIndex = opcode == INVOKEVIRTUAL ? astore() : -1;
+        int objRefIndex = opcode == INVOKESTATIC ? -1 : astore();
         // <stack>... </stack>
         addPushConstInsn(mv, getCrntStmtSID());
-        if (opcode == INVOKEVIRTUAL) {
+        if (opcode != INVOKESTATIC) {
             mv.visitVarInsn(ALOAD, objRefIndex);
         }
         for (int i = 0; i < argDesc.length; i++) {
@@ -133,62 +133,122 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
 
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-        if (opcode == INVOKEVIRTUAL) {
-            switch (name + desc) {
-            case "start()V":
-                if (isThreadClass(owner)) {
-                    substituteMethodCall(opcode, RVPREDICT_THREAD_START, DESC_RVPREDICT_THREAD_START);
+        if (opcode == INVOKEVIRTUAL || opcode == INVOKEINTERFACE) {
+            if (opcode == INVOKEVIRTUAL) {
+                /* Optimization: these methods cannot be invoked by INVOKEINTERFACE */
+                switch (name + desc) {
+                case "start()V":
+                    if (isThreadClass(owner)) {
+                        substituteMethodCall(opcode, RVPREDICT_START, DESC_RVPREDICT_START);
+                        return;
+                    }
+                    break;
+                case "join()V":
+                    if (isThreadClass(owner)) {
+                        substituteMethodCall(opcode, RVPREDICT_JOIN, DESC_RVPREDICT_JOIN);
+                        return;
+                    }
+                    break;
+                case "join(J)V":
+                    if (isThreadClass(owner)) {
+                        substituteMethodCall(opcode, RVPREDICT_JOIN, DESC_RVPREDICT_JOIN_TIMEOUT,
+                                "J");
+                        return;
+                    }
+                    break;
+                case "join(JI)V":
+                    if (isThreadClass(owner)) {
+                        substituteMethodCall(opcode, RVPREDICT_JOIN,
+                                DESC_RVPREDICT_JOIN_TIMEOUT_NANO, "J", "I");
+                        return;
+                    }
+                    break;
+                case "interrupt()V":
+                    if (isThreadClass(owner)) {
+                        substituteMethodCall(opcode, RVPREDICT_INTERRUPT, DESC_RVPREDICT_INTERRUPT);
+                        return;
+                    }
+                    break;
+                case "isInterrupted()Z":
+                    if (isThreadClass(owner)) {
+                        substituteMethodCall(opcode, RVPREDICT_IS_INTERRUPTED,
+                                DESC_RVPREDICT_IS_INTERRUPTED);
+                        return;
+                    }
+                    break;
+                case "wait()V":
+                    substituteMethodCall(opcode, RVPREDICT_WAIT, DESC_RVPREDICT_WAIT);
                     return;
-                }
-                break;
-            case "join()V":
-                if (isThreadClass(owner)) {
-                    substituteMethodCall(opcode, RVPREDICT_JOIN, DESC_RVPREDICT_JOIN);
+                case "wait(J)V":
+                    substituteMethodCall(opcode, RVPREDICT_WAIT, DESC_RVPREDICT_WAIT_TIMEOUT, "J");
                     return;
-                }
-                break;
-            case "join(J)V":
-                if (isThreadClass(owner)) {
-                    substituteMethodCall(opcode, RVPREDICT_JOIN, DESC_RVPREDICT_JOIN_TIMEOUT, "J");
-                    return;
-                }
-                break;
-            case "join(JI)V":
-                if (isThreadClass(owner)) {
-                    substituteMethodCall(opcode, RVPREDICT_JOIN, DESC_RVPREDICT_JOIN_TIMEOUT_NANO,
+                case "wait(JI)V":
+                    substituteMethodCall(opcode, RVPREDICT_WAIT, DESC_RVPREDICT_WAIT_TIMEOUT_NANO,
                             "J", "I");
                     return;
+                case "notify()V":
+                    substituteMethodCall(opcode, RVPREDICT_NOTIFY, DESC_RVPREDICT_NOTIFY);
+                    return;
+                case "notifyAll()V":
+                    substituteMethodCall(opcode, RVPREDICT_NOTIFY_ALL, DESC_RVPREDICT_NOTIFY_ALL);
+                    return;
                 }
-                break;
-            case "interrupt()V":
-                if (isThreadClass(owner)) {
-                    substituteMethodCall(opcode, RVPREDICT_INTERRUPT, DESC_RVPREDICT_INTERRUPT);
+            }
+
+            switch (name + desc) {
+            case "lock()V":
+                if (isLockClass(owner)) {
+                    substituteMethodCall(opcode, RVPREDICT_LOCK, DESC_RVPREDICT_LOCK);
                     return;
                 }
                 break;
-            case "isInterrupted()Z":
-                if (isThreadClass(owner)) {
-                    substituteMethodCall(opcode, RVPREDICT_IS_INTERRUPTED,
-                            DESC_RVPREDICT_IS_INTERRUPTED);
+            case "lockInterruptibly()V":
+                if (isLockClass(owner)) {
+                    substituteMethodCall(opcode, RVPREDICT_LOCK_INTERRUPTIBLY,
+                            DESC_RVPREDICT_LOCK_INTERRUPTIBLY);
                     return;
                 }
                 break;
-            case "wait()V":
-                substituteMethodCall(opcode, RVPREDICT_WAIT, DESC_RVPREDICT_WAIT);
-                return;
-            case "wait(J)V":
-                substituteMethodCall(opcode, RVPREDICT_WAIT, DESC_RVPREDICT_WAIT_TIMEOUT, "J");
-                return;
-            case "wait(JI)V":
-                substituteMethodCall(opcode, RVPREDICT_WAIT, DESC_RVPREDICT_WAIT_TIMEOUT_NANO, "J",
-                        "I");
-                return;
-            case "notify()V":
-                substituteMethodCall(opcode, RVPREDICT_NOTIFY, DESC_RVPREDICT_NOTIFY);
-                return;
-            case "notifyAll()V":
-                substituteMethodCall(opcode, RVPREDICT_NOTIFY_ALL, DESC_RVPREDICT_NOTIFY_ALL);
-                return;
+            case "tryLock()Z":
+                if (isLockClass(owner)) {
+                    substituteMethodCall(opcode, RVPREDICT_TRY_LOCK, DESC_RVPREDICT_TRY_LOCK);
+                    return;
+                }
+                break;
+            case "tryLock(JLjava/util/concurrent/TimeUnit;)Z":
+                if (isLockClass(owner)) {
+                    substituteMethodCall(opcode, RVPREDICT_TRY_LOCK,
+                            DESC_RVPREDICT_TRY_LOCK_TIMEOUT, "J", "Ljava/util/concurrent/TimeUnit;");
+                    return;
+                }
+                break;
+            case "unlock()V":
+                if (isLockClass(owner)) {
+                    substituteMethodCall(opcode, RVPREDICT_UNLOCK, DESC_RVPREDICT_UNLOCK);
+                    return;
+                }
+                break;
+
+            case "readLock()Ljava/util/concurrent/locks/Lock;":
+            case "readLock()Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;":
+                if (isReadWriteLockClass(owner)) {
+                    substituteMethodCall(opcode, RVPREDICT_RW_LOCK_READ_LOCK,
+                        desc.endsWith("$ReadLock;") ?
+                        DESC_RVPREDICT_REENTRANT_RW_LOCK_READ_LOCK :
+                        DESC_RVPREDICT_RW_LOCK_READ_LOCK);
+                    return;
+                }
+                break;
+            case "writeLock()Ljava/util/concurrent/locks/Lock;":
+            case "writeLock()Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;":
+                if (isReadWriteLockClass(owner)) {
+                    substituteMethodCall(opcode, RVPREDICT_RW_LOCK_WRITE_LOCK,
+                        desc.endsWith("$WriteLock;") ?
+                        DESC_RVPREDICT_REENTRANT_RW_LOCK_WRITE_LOCK :
+                        DESC_RVPREDICT_RW_LOCK_WRITE_LOCK);
+                    return;
+                }
+                break;
             }
         } else if (opcode == INVOKESTATIC) {
             switch (owner + name + desc) {
@@ -356,16 +416,21 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             // <stack>... objectref </stack>
             int index = dupThenAStore(); // jvm_local_vars[index] = objectref
             // <stack>... objectref </stack>
-            addPushConstInsn(mv, sid);
-            mv.visitVarInsn(ALOAD, index);
-            // <stack>... objectref sid objectref </stack>
             if (opcode == MONITORENTER) {
-                invokeStatic(LOG_LOCK, DESC_LOG_LOCK);
+                mv.visitInsn(opcode);
+                // <stack>... </stack>
+                addPushConstInsn(mv, sid);
+                mv.visitVarInsn(ALOAD, index);
+                // <stack>... sid objectref </stack>
+                invokeStatic(LOG_MONITOR_ENTER, DESC_LOG_MONITOR_ENTER);
             } else {
-                invokeStatic(LOG_UNLOCK, DESC_LOG_UNLOCK);
+                addPushConstInsn(mv, sid);
+                mv.visitVarInsn(ALOAD, index);
+                // <stack>... objectref sid objectref </stack>
+                invokeStatic(LOG_MONITOR_EXIT, DESC_LOG_MONITOR_EXIT);
+                // <stack>... objectref </stack>
+                mv.visitInsn(opcode);
             }
-            // <stack>... objectref </stack>
-            mv.visitInsn(opcode);
             break;
         }
         case IRETURN: case LRETURN: case FRETURN: case DRETURN:
@@ -378,7 +443,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
                 } else {
                     mv.visitVarInsn(ALOAD, 0);
                 }
-                invokeStatic(LOG_UNLOCK, DESC_LOG_UNLOCK);
+                invokeStatic(LOG_MONITOR_EXIT, DESC_LOG_MONITOR_EXIT);
             }
             mv.visitInsn(opcode);
             break;
@@ -486,7 +551,7 @@ public class SnoopInstructionMethodAdapter extends MethodVisitor {
             } else {
                 mv.visitVarInsn(ALOAD, 0);
             }
-            invokeStatic(LOG_LOCK, DESC_LOG_LOCK);
+            invokeStatic(LOG_MONITOR_ENTER, DESC_LOG_MONITOR_ENTER);
         }
 
         mv.visitCode();

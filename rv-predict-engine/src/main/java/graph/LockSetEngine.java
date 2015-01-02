@@ -81,7 +81,10 @@ public class LockSetEngine {
 
         for (Long lockObj : lockTbl.rowKeySet()) {
             /* check if both events hold lockObj */
-            if (hasLock(e1, lockObj) && hasLock(e2, lockObj)) {
+            LockRegion lockRegion1 = getLockRegion(e1, lockObj);
+            LockRegion lockRegion2 = getLockRegion(e2, lockObj);
+            if (lockRegion1 != null && lockRegion2 != null
+                    && (lockRegion1.isWriteLocked() || lockRegion2.isWriteLocked())) {
                 return true;
             }
         }
@@ -89,10 +92,7 @@ public class LockSetEngine {
         return false;
     }
 
-    /**
-     * Checks if a given event holds a specific lock.
-     */
-    private boolean hasLock(Event e, Long lockObj) {
+    private LockRegion getLockRegion(Event e, Long lockObj) {
         // TODO(YilongL): optimize this method when necessary
         List<LockRegion> lockRegions = lockTbl.get(lockObj, e.getTID());
         if (lockRegions != null) {
@@ -100,13 +100,13 @@ public class LockSetEngine {
                 if (lockRegion.getLock() == null || lockRegion.getLock().getGID() < e.getGID()) {
                     if (lockRegion.getUnlock() == null
                             || e.getGID() < lockRegion.getUnlock().getGID()) {
-                        return true;
+                        return lockRegion;
                     }
                 } else {
-                    return false;
+                    return null;
                 }
             }
         }
-        return false;
+        return null;
     }
 }

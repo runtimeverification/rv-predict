@@ -57,13 +57,13 @@ public class SyncEvent extends AbstractEvent {
         return String.format("(%s, E%s, T%s, L%s, %s)", type, GID, TID, ID, Long.toHexString(syncObject));
     }
 
-    public boolean isLock() {
-        return type == EventType.LOCK || type == EventType.WAIT
-                || type == EventType.WAIT_INTERRUPTED || type == EventType.WAIT_MAYBE_TIMEOUT;
+    public boolean isLockEvent() {
+        return EventType.isLock(type) || type == EventType.WAIT
+            || type == EventType.WAIT_INTERRUPTED || type == EventType.WAIT_MAYBE_TIMEOUT;
     }
 
-    public boolean isUnlock() {
-        return type == EventType.UNLOCK || type == EventType.PRE_WAIT;
+    public boolean isUnlockEvent() {
+        return EventType.isUnlock(type) || type == EventType.PRE_WAIT;
     }
 
 }

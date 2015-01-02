@@ -25,6 +25,30 @@ public class Agent implements ClassFileTransformer {
 
     private final Config config;
 
+    /**
+     * Packages/classes that need to be excluded from instrumentation. These are
+     * not configurable by the users because including them for instrumentation
+     * almost certainly leads to crash.
+     */
+    private static String[] IGNORES = new String[] {
+        // rv-predict itself and the libraries we are using
+        "rvpredict",
+        "org.objectweb.asm",
+        "com/beust",
+        "org/apache/tools/ant/util/JavaEnvUtils",
+
+        // JDK classes used by the RV-Predict runtime library
+        "java/io",
+        "java/nio",
+        "java/util/concurrent/atomic/AtomicLong",
+        "java/util/concurrent/ConcurrentHashMap",
+        "java/util/regex",
+
+        // Basics of the JDK that everything else is depending on
+        "sun",
+        "java/lang"
+    };
+
     public Agent(Config config) {
         this.config = config;
     }
@@ -135,6 +159,9 @@ public class Agent implements ClassFileTransformer {
             }
 
 //        System.err.println(cname + " " + toInstrument);
+        for (String ignore : IGNORES) {
+            toInstrument = toInstrument && !cname.startsWith(ignore);
+        }
         if (toInstrument) {
             ClassReader cr = new ClassReader(cbuf);
 

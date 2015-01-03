@@ -759,7 +759,7 @@ public class JUConcurrentTests {
             tests.tryLock2();
             tests.atomicInteger();
             tests.concurrentHashMap();
-//            tests.fifoMutexUser();
+            tests.fifoMutexUser();
 //            tests.futureTask();
 //            tests.synchronousQueue();
         }

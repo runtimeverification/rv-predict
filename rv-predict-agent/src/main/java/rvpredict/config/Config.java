@@ -74,8 +74,6 @@ public class Config {
 
     public static final String DESC_RVPREDICT_RW_LOCK_READ_LOCK = "(ILjava/util/concurrent/locks/ReadWriteLock;)Ljava/util/concurrent/locks/Lock;";
     public static final String DESC_RVPREDICT_RW_LOCK_WRITE_LOCK = "(ILjava/util/concurrent/locks/ReadWriteLock;)Ljava/util/concurrent/locks/Lock;";
-    public static final String DESC_RVPREDICT_REENTRANT_RW_LOCK_READ_LOCK = "(ILjava/util/concurrent/locks/ReentrantReadWriteLock;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;";
-    public static final String DESC_RVPREDICT_REENTRANT_RW_LOCK_WRITE_LOCK = "(ILjava/util/concurrent/locks/ReentrantReadWriteLock;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;";
 
     public boolean verbose;
 

@@ -29,7 +29,6 @@
 package rvpredict.trace;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -150,37 +149,6 @@ public class Trace {
         return initValue == null ? 0 : initValue;
     }
 
-    /**
-     * Returns all unmatched notify events from previous windows.
-     */
-    public Set<SyncEvent> getAllUnmatchedNotifyEvents() {
-        return Collections.unmodifiableSet(initState.notifyToWaitingThreads.keySet());
-    }
-
-    /**
-     * Returns unmatched notify events on a given object from previous windows
-     * that could wake up the given thread.
-     *
-     * @param tid
-     *            the given thread ID
-     * @param object
-     *            the given object
-     */
-    public List<SyncEvent> getUnmatchedNotifyEvents(Long tid, Long object) {
-        if (initState.objToNotifyEvents.get(object) == null) {
-            return Collections.emptyList();
-        }
-
-        List<SyncEvent> result = Lists.newArrayList();
-        for (SyncEvent notify : initState.objToNotifyEvents.get(object)) {
-            /* check if the notify could wake the given thread */
-            if (initState.notifyToWaitingThreads.get(notify).contains(tid)) {
-                result.add(notify);
-            }
-        }
-        return result;
-    }
-
     public Map<Integer, String> getLocIdToStmtSigMap() {
         return info.getLocIdToStmtSigMap();
     }
@@ -297,91 +265,8 @@ public class Trace {
             if (e instanceof InitOrAccessEvent) {
                 InitOrAccessEvent initOrAcc = (InitOrAccessEvent) e;
                 finalState.addrToValue.put(initOrAcc.getAddr(), initOrAcc.getValue());
-            } else if (e instanceof SyncEvent) {
-                SyncEvent event = (SyncEvent) e;
-                long tid = event.getTID();
-                long obj = event.getSyncObject();
-                switch (event.getType()) {
-                case PRE_WAIT: {
-                    Set<Long> waitSet = finalState.objToWaitingThreads.get(obj);
-                    if (waitSet == null) {
-                        waitSet = Sets.newHashSet();
-                        finalState.objToWaitingThreads.put(obj, waitSet);
-                    }
-                    waitSet.add(tid);
-                    break;
-                }
-                case WAIT:
-                case WAIT_MAYBE_TIMEOUT:
-                case WAIT_INTERRUPTED: {
-                    finalState.objToWaitingThreads.get(obj).remove(tid);
-
-                    Set<SyncEvent> notifyToRemove = Sets.newHashSet();
-                    if (!finalState.objToNotifyEvents.containsKey(obj)
-                            && (event.getType() == EventType.WAIT_MAYBE_TIMEOUT
-                            ||  event.getType() == EventType.WAIT_INTERRUPTED)) {
-                        /* finalState.objToNotifyEvents.get(obj) could be null
-                         * for WAIT_MAYBE_TIMEOUT and WAIT_INTERRUPTED */
-                        break;
-                    }
-
-                    SyncEvent fstMatchedNotify = null;
-                    for (SyncEvent notify : finalState.objToNotifyEvents.get(obj)) {
-                        Set<Long> waitSet = finalState.notifyToWaitingThreads.get(notify);
-                        if (waitSet.contains(tid)) {
-                            if (event.getType() == EventType.WAIT && fstMatchedNotify == null) {
-                                fstMatchedNotify = notify;
-
-                                /* NOTIFY event can only be used once */
-                                if (fstMatchedNotify.getType() == EventType.NOTIFY) {
-                                    notifyToRemove.add(fstMatchedNotify);
-                                }
-                            }
-
-                            waitSet.remove(tid);
-                            /* remove useless NOTIFY/NOTIFY_ALL events */
-                            if (waitSet.isEmpty()) {
-                                notifyToRemove.add(notify);
-                            }
-                        }
-                    }
-                    assert fstMatchedNotify != null || event.getType() != EventType.WAIT;
-                    finalState.objToNotifyEvents.get(obj).removeAll(notifyToRemove);
-                    finalState.notifyToWaitingThreads.keySet().removeAll(notifyToRemove);
-                    break;
-                }
-                case NOTIFY:
-                case NOTIFY_ALL: {
-                    Set<Long> waitSet = finalState.objToWaitingThreads.get(obj);
-                    /* no need to record the notify if there is no thread waiting */
-                    if (waitSet != null && !waitSet.isEmpty()) {
-                        List<SyncEvent> notifyEvents = finalState.objToNotifyEvents.get(obj);
-                        if (notifyEvents == null) {
-                            notifyEvents = Lists.newArrayList();
-                            finalState.objToNotifyEvents.put(obj, notifyEvents);
-                        }
-                        notifyEvents.add(event);
-                        finalState.notifyToWaitingThreads.put(event, Sets.newHashSet(waitSet));
-                    }
-                    break;
-                }
-                case PRE_JOIN:
-                case JOIN:
-                case JOIN_MAYBE_TIMEOUT:
-                case JOIN_INTERRUPTED:
-                case START:
-                case WRITE_LOCK:
-                case WRITE_UNLOCK:
-                case READ_LOCK:
-                case READ_UNLOCK:
-                    break;
-                default:
-                    assert false : "Unexpected synchronization event: " + event;
-                }
             }
         }
-
-        finalState.cleanup();
 
         return finalState;
     }
@@ -499,20 +384,15 @@ public class Trace {
                 case START:
                 case PRE_JOIN:
                 case JOIN:
-                case JOIN_MAYBE_TIMEOUT:
-                case JOIN_INTERRUPTED:
+                case JOIN_MAYBE_FAILED:
                     eventsMap = threadIdToStartJoinEvents;
                     break;
                 case WRITE_LOCK:
                 case WRITE_UNLOCK:
                 case READ_LOCK:
                 case READ_UNLOCK:
-                case PRE_WAIT:
-                case WAIT:
-                case WAIT_MAYBE_TIMEOUT:
-                case WAIT_INTERRUPTED:
-                case NOTIFY:
-                case NOTIFY_ALL:
+                case WAIT_REL:
+                case WAIT_ACQ:
                     eventsMap = lockObjToSyncEvents;
                     break;
                 default:
@@ -599,47 +479,10 @@ public class Trace {
          */
         private Map<String, Long> addrToValue = Maps.newHashMap();
 
-        /**
-         * Map from object to dormant threads waiting on it.
-         */
-        private Map<Long, Set<Long>> objToWaitingThreads = Maps.newHashMap();
-
-        /**
-         * Map from object to notify events issued on it.
-         */
-        private Map<Long, List<SyncEvent>> objToNotifyEvents = Maps.newHashMap();
-
-        /**
-         * Map from notify event to dormant threads that could be waken up by it.
-         */
-        private Map<SyncEvent, Set<Long>> notifyToWaitingThreads = Maps.newLinkedHashMap();
-
         public State() { }
-
-        /**
-         * Garbage collects useless keys in maps.
-         */
-        private void cleanup() {
-            Iterator<Entry<Long, Set<Long>>> iter = objToWaitingThreads.entrySet().iterator();
-            while (iter.hasNext()) {
-                if (iter.next().getValue().isEmpty()) {
-                    iter.remove();
-                }
-            }
-
-            Iterator<Entry<Long, List<SyncEvent>>> iter2 = objToNotifyEvents.entrySet().iterator();
-            while (iter2.hasNext()) {
-                if (iter2.next().getValue().isEmpty()) {
-                    iter2.remove();
-                }
-            }
-        }
 
         private State(State state) {
             this.addrToValue = new HashMap<>(state.addrToValue);
-            this.objToWaitingThreads = new HashMap<>(state.objToWaitingThreads);
-            this.objToNotifyEvents = new HashMap<>(state.objToNotifyEvents);
-            this.notifyToWaitingThreads = new HashMap<>(state.notifyToWaitingThreads);
         }
 
     }

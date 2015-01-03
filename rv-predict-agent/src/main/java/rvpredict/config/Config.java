@@ -30,8 +30,6 @@ public class Config {
 
     // Object monitor methods
     public static final String RVPREDICT_WAIT = "rvPredictWait";
-    public static final String RVPREDICT_NOTIFY = "rvPredictNotify";
-    public static final String RVPREDICT_NOTIFY_ALL = "rvPredictNotifyAll";
 
     // java.util.concurrent.locks.Lock methods
     // note that this doesn't provide mocks for methods specific in concrete lock implementation
@@ -41,7 +39,6 @@ public class Config {
     public static final String RVPREDICT_UNLOCK = "rvPredictUnlock";
 
     // java.util.concurrent.locks.ReadWriteLock methods
-//    public static final String RVPREDICT_REENTRANT_RW_LOCK_CTOR = "rvPredictReentrantReadWriteCtor";
     public static final String RVPREDICT_RW_LOCK_READ_LOCK = "rvPredictReadWriteLockReadLock";
     public static final String RVPREDICT_RW_LOCK_WRITE_LOCK = "rvPredictReadWriteLockWriteLock";
 
@@ -65,8 +62,6 @@ public class Config {
     public static final String DESC_RVPREDICT_WAIT = "(ILjava/lang/Object;)V";
     public static final String DESC_RVPREDICT_WAIT_TIMEOUT = "(ILjava/lang/Object;J)V";
     public static final String DESC_RVPREDICT_WAIT_TIMEOUT_NANO = "(ILjava/lang/Object;JI)V";
-    public static final String DESC_RVPREDICT_NOTIFY = "(ILjava/lang/Object;)V";
-    public static final String DESC_RVPREDICT_NOTIFY_ALL = "(ILjava/lang/Object;)V";
 
     public static final String RVPREDICT_SYSTEM_ARRAYCOPY = "rvPredictSystemArraycopy";
     public static final String DESC_RVPREDICT_SYSTEM_ARRAYCOPY = "(ILjava/lang/Object;ILjava/lang/Object;II)V";

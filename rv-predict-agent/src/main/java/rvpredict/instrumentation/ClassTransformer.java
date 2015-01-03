@@ -11,7 +11,7 @@ import org.objectweb.asm.Type;
 
 import rvpredict.config.Config;
 
-public class SnoopInstructionClassAdapter extends ClassVisitor {
+public class ClassTransformer extends ClassVisitor {
 
     private final Config config;
 
@@ -22,7 +22,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
 
     private final Set<String> finalFields = new HashSet<>();
 
-    public SnoopInstructionClassAdapter(ClassVisitor cv, Config config) {
+    public ClassTransformer(ClassVisitor cv, Config config) {
         super(Opcodes.ASM5, cv);
         assert cv != null;
 
@@ -74,7 +74,7 @@ public class SnoopInstructionClassAdapter extends ClassVisitor {
                     numOfWords++;
             }
 
-            mv = new SnoopInstructionMethodAdapter(mv, source, className, version, name, name
+            mv = new MethodTransformer(mv, source, className, version, name, name
                     + desc, access, numOfWords, finalFields, config);
         }
         return mv;

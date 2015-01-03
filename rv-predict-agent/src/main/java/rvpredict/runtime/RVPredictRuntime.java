@@ -35,8 +35,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import rvpredict.instrumentation.MetaData;
 import rvpredict.logging.DBEngine;
 import rvpredict.trace.EventType;
@@ -599,22 +597,8 @@ public final class RVPredictRuntime {
         return readLock;
     }
 
-    public static ReentrantReadWriteLock.ReadLock rvPredictReadWriteLockReadLock(int locId,
-            ReentrantReadWriteLock readWriteLock) {
-        ReentrantReadWriteLock.ReadLock readLock = readWriteLock.readLock();
-        readLockToRWLock.putIfAbsent(readLock, readWriteLock);
-        return readLock;
-    }
-
     public static Lock rvPredictReadWriteLockWriteLock(int locId, ReadWriteLock readWriteLock) {
         Lock writeLock = readWriteLock.writeLock();
-        writeLockToRWLock.putIfAbsent(writeLock, readWriteLock);
-        return writeLock;
-    }
-
-    public static ReentrantReadWriteLock.WriteLock rvPredictReadWriteLockWriteLock(int locId,
-            ReentrantReadWriteLock readWriteLock) {
-        ReentrantReadWriteLock.WriteLock writeLock = readWriteLock.writeLock();
         writeLockToRWLock.putIfAbsent(writeLock, readWriteLock);
         return writeLock;
     }

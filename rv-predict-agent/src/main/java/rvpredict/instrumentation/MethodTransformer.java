@@ -1,7 +1,7 @@
 package rvpredict.instrumentation;
 
 import static org.objectweb.asm.Opcodes.*;
-import static rvpredict.config.Config.*;
+import static rvpredict.instrumentation.Interceptors.*;
 import static rvpredict.instrumentation.Utility.*;
 
 import java.util.Set;

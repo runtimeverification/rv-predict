@@ -28,13 +28,13 @@
  ******************************************************************************/
 package rvpredict.runtime;
 
-import static rvpredict.instrumentation.MetaData.NATIVE_INTERRUPTED_STATUS_VAR_ID;
-
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
+
 import rvpredict.instrumentation.MetaData;
 import rvpredict.logging.DBEngine;
 import rvpredict.trace.EventType;
@@ -94,6 +94,13 @@ import rvpredict.trace.EventType;
 public final class RVPredictRuntime {
 
     private static final long MONITOR_C = 42L;
+    private static final long ATOMIC_LOCK_C = 43L;
+
+    private static int NATIVE_INTERRUPTED_STATUS_VAR_ID = MetaData.getVariableId(
+            "java.lang.Thread", "$interruptedStatus");
+    private static int ATOMIC_BOOLEAN_MOCK_VAR_ID = MetaData.getVariableId(
+            "java.util.concurrent.atomic.AtomicBoolean", "$value");
+
 
     private static ConcurrentHashMap<Lock, ReadWriteLock> readLockToRWLock = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<Lock, ReadWriteLock> writeLockToRWLock = new ConcurrentHashMap<>();
@@ -444,8 +451,7 @@ public final class RVPredictRuntime {
                 thread.checkAccess();
             }
 
-            /*
-             * TODO(YilongL): Interrupting a thread that is not alive need not
+            /* TODO(YilongL): Interrupting a thread that is not alive need not
              * have any effect; yet I am not sure how to model such case
              * precisely so I just assume interrupted status will be set to true
              */
@@ -603,6 +609,60 @@ public final class RVPredictRuntime {
         return writeLock;
     }
 
+    public static boolean rvPredictAtomicBoolGet(int locId, AtomicBoolean atomicBool) {
+        boolean result;
+        synchronized (atomicBool) {
+            db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
+            result = atomicBool.get();
+            db.saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
+                    -ATOMIC_BOOLEAN_MOCK_VAR_ID, result ? 1 : 0);
+            db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
+        }
+        return result;
+    }
+
+    public static void rvPredictAtomicBoolSet(int locId, AtomicBoolean atomicBool, boolean newValue) {
+        synchronized (atomicBool) {
+            db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
+            atomicBool.set(newValue);
+            db.saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
+                    -ATOMIC_BOOLEAN_MOCK_VAR_ID, newValue ? 1 : 0);
+            db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
+        }
+    }
+
+    public static boolean rvPredictAtomicBoolGAS(int locId, AtomicBoolean atomicBool,
+            boolean newValue) {
+        boolean result;
+        synchronized (atomicBool) {
+            db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
+            db.saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
+                    -ATOMIC_BOOLEAN_MOCK_VAR_ID, atomicBool.get() ? 1 : 0);
+            result = atomicBool.getAndSet(newValue);
+            db.saveEvent(EventType.WRITE, locId, System.identityHashCode(atomicBool),
+                    -ATOMIC_BOOLEAN_MOCK_VAR_ID, newValue ? 1 : 0);
+            db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
+        }
+        return result;
+    }
+
+    public static boolean rvPredictAtomicBoolCAS(int locId, AtomicBoolean atomicBool,
+            boolean expect, boolean update) {
+        boolean result;
+        synchronized (atomicBool) {
+            db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
+            db.saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
+                    -ATOMIC_BOOLEAN_MOCK_VAR_ID, atomicBool.get() ? 1 : 0);
+            result = atomicBool.compareAndSet(expect, update);
+            if (result) {
+                db.saveEvent(EventType.WRITE, locId, System.identityHashCode(atomicBool),
+                        -ATOMIC_BOOLEAN_MOCK_VAR_ID, update ? 1 : 0);
+            }
+            db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
+        }
+        return result;
+    }
+
     /**
      * Logs the events produced by invoking
      * {@code System#arraycopy(Object, int, Object, int, int)}.
@@ -740,6 +800,21 @@ public final class RVPredictRuntime {
     private static long calcMonitorId(Object obj) {
         // Use low 32bit for object hash and high 32bit for the magic constant.
         return (MONITOR_C << 32L) + System.identityHashCode(obj);
+    }
+
+    /**
+     * Calculates the identifier of the imaginary lock guarding access to
+     * {@code AtomicX} variable.
+     * <p>
+     * This method is used for mocking {@code AtomicX} classes.
+     *
+     * @param atomicVar
+     *            the atomic variable
+     * @return the imaginary lock identifier
+     */
+    private static long calcAtomicLockId(Object atomicVar) {
+        // Use low 32bit for object hash and high 32bit for the magic constant.
+        return (ATOMIC_LOCK_C << 32L) + System.identityHashCode(atomicVar);
     }
 
     private static EventType getLockEventType(Lock lock) {

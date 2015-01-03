@@ -3,6 +3,8 @@ package rvpredict.instrumentation;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.objectweb.asm.Opcodes;
+
 public class Interceptors {
 
     public static final String LOG_FIELD_ACCESS = "logFieldAcc";
@@ -83,12 +85,10 @@ public class Interceptors {
 
     private static Map<String, MethodCallSubst> VIRTUAL_METHOD_CALL_SUBST = new HashMap<>();
 
-    public static MethodCallSubst getStaticMethodCallSubst(String methodSignature) {
-        return STATIC_METHOD_CALL_SUBST.get(methodSignature);
-    }
-
-    public static MethodCallSubst getVirtualMethodCallSubst(String methodSignature) {
-        return VIRTUAL_METHOD_CALL_SUBST.get(methodSignature);
+    public static MethodCallSubst getMethodCallSubst(int opcode, String sig) {
+        return opcode == Opcodes.INVOKESTATIC ?
+            STATIC_METHOD_CALL_SUBST.get(sig) :
+            VIRTUAL_METHOD_CALL_SUBST.get(sig);
     }
 
     private static String getMethodSignature(String methodName, String... argTypeDescs) {

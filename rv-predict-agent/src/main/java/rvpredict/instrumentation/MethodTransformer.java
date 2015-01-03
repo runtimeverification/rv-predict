@@ -127,9 +127,7 @@ public class MethodTransformer extends MethodVisitor {
         if (opcode == INVOKEVIRTUAL || opcode == INVOKEINTERFACE || opcode == INVOKESTATIC) {
             int idx = (name + desc).lastIndexOf(')');
             String sig = (name + desc).substring(0, idx + 1);
-            MethodCallSubst subst = opcode == INVOKESTATIC ?
-                    Interceptors.getStaticMethodCallSubst(sig) :
-                    Interceptors.getVirtualMethodCallSubst(sig);
+            MethodCallSubst subst = Interceptors.getMethodCallSubst(opcode, sig);
             if (subst != null && isSubclassOf(owner, subst.owner)) {
                 substituteMethodCall(opcode, subst);
                 return;

@@ -1,11 +1,13 @@
 package rvpredict.instrumentation;
 
 import java.lang.reflect.Method;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
@@ -67,6 +69,20 @@ public class Interceptors {
             init("rvPredictTryLock", I, Lock.class, J, TimeUnit.class);
     private static final Interceptor RVPREDICT_UNLOCK             =
             init("rvPredictUnlock", I, Lock.class);
+    private static final Interceptor RVPREDICT_LOCK_NEW_COND      =
+            init("rvPredictLockNewCondition", I, Lock.class);
+
+    // java.util.concurrent.locks.Condition methods
+    private static final Interceptor RVPREDICT_COND_AWAIT         =
+            init("rvPredictConditionAwait", I, Condition.class);
+    private static final Interceptor RVPREDICT_COND_AWAIT_TIMEOUT =
+            init("rvPredictConditionAwait", I, Condition.class, J, TimeUnit.class);
+    private static final Interceptor RVPREDICT_COND_AWAIT_NANOS   =
+            init("rvPredictConditionAwaitNanos", I, Condition.class, J);
+    private static final Interceptor RVPREDICT_COND_AWAIT_UNINTERRUPTIBLY =
+            init("rvPredictConditionAwaitUninterruptibly", I, Condition.class);
+    private static final Interceptor RVPREDICT_COND_AWAIT_UNTIL   =
+            init("rvPredictConditionAwaitUntil", I, Condition.class, Date.class);
 
     // java.util.concurrent.locks.ReadWriteLock methods
     private static final Interceptor RVPREDICT_RW_LOCK_READ_LOCK  =
@@ -100,6 +116,7 @@ public class Interceptors {
     private static final String JL_THREAD       =   "java/lang/Thread";
     private static final String JL_SYSTEM       =   "java/lang/System";
     private static final String JUCL_LOCK       =   "java/util/concurrent/locks/Lock";
+    private static final String JUCL_CONDITION  =   "java/util/concurrent/locks/Condition";
     private static final String JUCL_RW_LOCK    =   "java/util/concurrent/locks/ReadWriteLock";
     private static final String JUCL_AQS        =   "java/util/concurrent/locks/AbstractQueuedSynchronizer";
     private static final String JUCA_ATOMIC_BOOL    =   "java/util/concurrent/atomic/AtomicBoolean";
@@ -211,6 +228,14 @@ public class Interceptors {
         registerVirtualMethodInterceptor(RVPREDICT_TRY_LOCK, JUCL_LOCK, "tryLock");
         registerVirtualMethodInterceptor(RVPREDICT_TRY_LOCK_TIMEOUT, JUCL_LOCK, "tryLock");
         registerVirtualMethodInterceptor(RVPREDICT_UNLOCK, JUCL_LOCK, "unlock");
+        registerVirtualMethodInterceptor(RVPREDICT_LOCK_NEW_COND, JUCL_LOCK, "newCondition");
+
+        /* java.util.concurrent.locks.Condition methods */
+        registerVirtualMethodInterceptor(RVPREDICT_COND_AWAIT, JUCL_CONDITION, "await");
+        registerVirtualMethodInterceptor(RVPREDICT_COND_AWAIT_TIMEOUT, JUCL_CONDITION, "await");
+        registerVirtualMethodInterceptor(RVPREDICT_COND_AWAIT_NANOS, JUCL_CONDITION, "await");
+        registerVirtualMethodInterceptor(RVPREDICT_COND_AWAIT_UNINTERRUPTIBLY, JUCL_CONDITION, "awaitUninterruptibly");
+        registerVirtualMethodInterceptor(RVPREDICT_COND_AWAIT_UNTIL, JUCL_CONDITION, "awaitUntil");
 
         /* java.util.concurrent.locks.ReadWriteLock methods */
         registerVirtualMethodInterceptor(RVPREDICT_RW_LOCK_READ_LOCK, JUCL_RW_LOCK, "readLock");

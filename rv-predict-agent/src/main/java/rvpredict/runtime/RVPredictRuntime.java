@@ -30,11 +30,13 @@ package rvpredict.runtime;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
@@ -133,6 +135,7 @@ public final class RVPredictRuntime {
 
     private static ConcurrentHashMap<Lock, ReadWriteLock> readLockToRWLock = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<Lock, ReadWriteLock> writeLockToRWLock = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<Condition, Lock> conditionToLock = new ConcurrentHashMap<>();
 
     private static DBEngine db;
 
@@ -626,6 +629,12 @@ public final class RVPredictRuntime {
         lock.unlock();
     }
 
+    public static Condition rvPredictLockNewCondition(int locId, Lock lock) {
+        Condition condition = lock.newCondition();
+        conditionToLock.putIfAbsent(condition, lock);
+        return condition;
+    }
+
     public static Lock rvPredictReadWriteLockReadLock(int locId, ReadWriteLock readWriteLock) {
         Lock readLock = readWriteLock.readLock();
         readLockToRWLock.putIfAbsent(readLock, readWriteLock);
@@ -636,6 +645,83 @@ public final class RVPredictRuntime {
         Lock writeLock = readWriteLock.writeLock();
         writeLockToRWLock.putIfAbsent(writeLock, readWriteLock);
         return writeLock;
+    }
+
+    public static void rvPredictConditionAwait(int locId, Condition condition)
+            throws InterruptedException {
+        long lockId = System.identityHashCode(conditionToLock.get(condition));
+        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        try {
+            condition.await();
+        } catch (InterruptedException e) {
+            onBlockingMethodInterrupted(locId);
+            db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            throw e;
+        }
+
+        onBlockingMethodNormalReturn(locId);
+        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+    }
+
+    public static boolean rvPredictConditionAwait(int locId, Condition condition, long time,
+            TimeUnit unit) throws InterruptedException {
+        boolean result;
+        long lockId = System.identityHashCode(conditionToLock.get(condition));
+        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        try {
+            result = condition.await(time, unit);
+        } catch (InterruptedException e) {
+            onBlockingMethodInterrupted(locId);
+            db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            throw e;
+        }
+
+        onBlockingMethodNormalReturn(locId);
+        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        return result;
+    }
+
+    public static long rvPredictConditionAwaitNanos(int locId, Condition condition,
+            long nanosTimeout) throws InterruptedException {
+        long result;
+        long lockId = System.identityHashCode(conditionToLock.get(condition));
+        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        try {
+            result = condition.awaitNanos(nanosTimeout);
+        } catch (InterruptedException e) {
+            onBlockingMethodInterrupted(locId);
+            db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            throw e;
+        }
+
+        onBlockingMethodNormalReturn(locId);
+        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        return result;
+    }
+
+    public static boolean rvPredictConditionAwaitUntil(int locId, Condition condition, Date deadline)
+            throws InterruptedException {
+        boolean result;
+        long lockId = System.identityHashCode(conditionToLock.get(condition));
+        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        try {
+            result = condition.awaitUntil(deadline);
+        } catch (InterruptedException e) {
+            onBlockingMethodInterrupted(locId);
+            db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            throw e;
+        }
+
+        onBlockingMethodNormalReturn(locId);
+        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        return result;
+    }
+
+    public static void rvPredictConditionAwaitUninterruptibly(int locId, Condition condition) {
+        long lockId = System.identityHashCode(conditionToLock.get(condition));
+        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        condition.awaitUninterruptibly();
+        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
     }
 
     public static int rvPredictAbstractQueuedSynchronizerGetState(int locId,

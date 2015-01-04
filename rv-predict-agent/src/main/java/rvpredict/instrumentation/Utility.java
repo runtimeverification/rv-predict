@@ -181,12 +181,18 @@ public class Utility {
             return isThreadClass(class0);
         case "java/util/concurrent/locks/Lock":
             return isLockClass(class0);
+        case "java/util/concurrent/locks/Condition":
+            return isConditionClass(class0);
         case "java/util/concurrent/locks/ReadWriteLock":
             return isReadWriteLockClass(class0);
         case "java/util/concurrent/locks/AbstractQueuedSynchronizer":
             return isAQSClass(class0);
+        case "java/util/concurrent/atomic/AtomicBoolean":
+            return false;
         default:
-            throw new RuntimeException("Not yet implemented!");
+            System.err.println("[Warning]: unexpected case isSubclassOf(" + class0 + ", " + class1
+                    + ")");
+            return false;
         }
     }
 
@@ -216,6 +222,13 @@ public class Utility {
             || "java/util/concurrent/locks/ReentrantLock".equals(className)
             || "java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock".equals(className)
             || "java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock".equals(className);
+    }
+
+    private static boolean isConditionClass(String className) {
+        // TODO(YilongL): avoid hard-coding like this
+        return "java/util/concurrent/locks/Condition".equals(className)
+            || "java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject".equals(className)
+            || "java/util/concurrent/locks/AbstractQueuedLongSynchronizer$ConditionObject".equals(className);
     }
 
     private static boolean isReadWriteLockClass(String className) {

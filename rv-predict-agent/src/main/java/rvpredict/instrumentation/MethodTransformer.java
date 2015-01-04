@@ -12,7 +12,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 import rvpredict.config.Config;
-import rvpredict.instrumentation.Interceptors.MethodCallSubst;
+import rvpredict.instrumentation.Interceptors.InterceptionInfo;
 
 public class MethodTransformer extends MethodVisitor {
 
@@ -101,13 +101,13 @@ public class MethodTransformer extends MethodVisitor {
      * Substitutes method call with its counterpart method provided by the
      * RV-Predict runtime.
      */
-    private void substituteMethodCall(int opcode, MethodCallSubst subst) {
+    private void substituteMethodCall(int opcode, InterceptionInfo info) {
         assert opcode == INVOKEVIRTUAL || opcode == INVOKESPECIAL || opcode == INVOKESTATIC;
 
         // <stack>... (objectref)? (arg)* </stack>
-        int[] indices = new int[subst.argDescs.length];
-        for (int i = subst.argDescs.length - 1; i >= 0; i--) {
-            indices[i] = storeValue(subst.argDescs[i]);
+        int[] indices = new int[info.paramTypeDescs.length];
+        for (int i = info.paramTypeDescs.length - 1; i >= 0; i--) {
+            indices[i] = storeValue(info.paramTypeDescs[i]);
         }
         int objRefIndex = opcode == INVOKESTATIC ? -1 : astore();
         // <stack>... </stack>
@@ -115,11 +115,11 @@ public class MethodTransformer extends MethodVisitor {
         if (opcode != INVOKESTATIC) {
             mv.visitVarInsn(ALOAD, objRefIndex);
         }
-        for (int i = 0; i < subst.argDescs.length; i++) {
-            loadValue(subst.argDescs[i], indices[i]);
+        for (int i = 0; i < info.paramTypeDescs.length; i++) {
+            loadValue(info.paramTypeDescs[i], indices[i]);
         }
         // <stack>... sid (objectref)? (arg)* </stack>
-        invokeStatic(subst.name, subst.desc);
+        invokeStatic(info.interceptor);
     }
 
     @Override
@@ -127,9 +127,9 @@ public class MethodTransformer extends MethodVisitor {
         if (opcode == INVOKEVIRTUAL || opcode == INVOKEINTERFACE || opcode == INVOKESTATIC) {
             int idx = (name + desc).lastIndexOf(')');
             String sig = (name + desc).substring(0, idx + 1);
-            MethodCallSubst subst = Interceptors.getMethodCallSubst(opcode, sig);
-            if (subst != null && isSubclassOf(owner, subst.owner)) {
-                substituteMethodCall(opcode, subst);
+            InterceptionInfo info = Interceptors.getInterceptionInfo(opcode, sig);
+            if (info != null && isSubclassOf(owner, info.owner)) {
+                substituteMethodCall(opcode, info);
                 return;
             }
         }
@@ -176,7 +176,7 @@ public class MethodTransformer extends MethodVisitor {
             addPushConstInsn(mv, 0);
             addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
             // <stack>... value ID null sid value false branch </stack>
-            invokeStatic(LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
+            invokeStatic(LOG_FIELD_ACCESS);
             // <stack>... value </stack>
             break;
         case PUTSTATIC:
@@ -192,12 +192,12 @@ public class MethodTransformer extends MethodVisitor {
             // <stack>... ID null sid value </stack>
 
             if (isInit)
-                invokeStatic(LOG_FIELD_INIT, DESC_LOG_FIELD_INIT);
+                invokeStatic(LOG_FIELD_INIT);
             else {
                 addPushConstInsn(mv, 1);
                 addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
                 // <stack>... ID null sid value false branch </stack>
-                invokeStatic(LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
+                invokeStatic(LOG_FIELD_ACCESS);
             }
             break;
         case GETFIELD:
@@ -219,7 +219,7 @@ public class MethodTransformer extends MethodVisitor {
             addPushConstInsn(mv, 0);
             addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
             // <stack>... value ID objectref sid value false branch </stack>
-            invokeStatic(LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
+            invokeStatic(LOG_FIELD_ACCESS);
             // <stack>... value </stack>
             break;
         case PUTFIELD:
@@ -250,12 +250,12 @@ public class MethodTransformer extends MethodVisitor {
             loadThenBoxValue(desc, localVarIdx);
             // <stack>... ID objectref sid value </stack>
             if (isInit)
-                invokeStatic(LOG_FIELD_INIT, DESC_LOG_FIELD_INIT);
+                invokeStatic(LOG_FIELD_INIT);
             else {
                 addPushConstInsn(mv, 1);
                 addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
                 // <stack>... ID objectref sid value true branch </stack>
-                invokeStatic(LOG_FIELD_ACCESS, DESC_LOG_FIELD_ACCESS);
+                invokeStatic(LOG_FIELD_ACCESS);
             }
             // <stack>... </stack>
             break;
@@ -287,12 +287,12 @@ public class MethodTransformer extends MethodVisitor {
                 addPushConstInsn(mv, sid);
                 mv.visitVarInsn(ALOAD, index);
                 // <stack>... sid objectref </stack>
-                invokeStatic(LOG_MONITOR_ENTER, DESC_LOG_MONITOR_ENTER);
+                invokeStatic(LOG_MONITOR_ENTER);
             } else {
                 addPushConstInsn(mv, sid);
                 mv.visitVarInsn(ALOAD, index);
                 // <stack>... objectref sid objectref </stack>
-                invokeStatic(LOG_MONITOR_EXIT, DESC_LOG_MONITOR_EXIT);
+                invokeStatic(LOG_MONITOR_EXIT);
                 // <stack>... objectref </stack>
                 mv.visitInsn(opcode);
             }
@@ -308,7 +308,7 @@ public class MethodTransformer extends MethodVisitor {
                 } else {
                     mv.visitVarInsn(ALOAD, 0);
                 }
-                invokeStatic(LOG_MONITOR_EXIT, DESC_LOG_MONITOR_EXIT);
+                invokeStatic(LOG_MONITOR_EXIT);
             }
             mv.visitInsn(opcode);
             break;
@@ -362,7 +362,7 @@ public class MethodTransformer extends MethodVisitor {
         addPushConstInsn(mv, 0);
         // <stack>... value sid arrayref index valueObjRef false </stack>
 
-        invokeStatic(LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
+        invokeStatic(LOG_ARRAY_ACCESS);
         // <stack>... value </stack>
     }
 
@@ -397,11 +397,11 @@ public class MethodTransformer extends MethodVisitor {
         }
         // <stack>... sid arrayref index valueObjRef </stack>
         if (isInit) {
-            invokeStatic(LOG_ARRAY_INIT, DESC_LOG_ARRAY_INIT);
+            invokeStatic(LOG_ARRAY_INIT);
         } else {
             addPushConstInsn(mv, 1);
             // <stack>... sid arrayref index valueObjRef true </stack>
-            invokeStatic(LOG_ARRAY_ACCESS, DESC_LOG_ARRAY_ACCESS);
+            invokeStatic(LOG_ARRAY_ACCESS);
         }
         // <stack>... </stack>
     }
@@ -416,7 +416,7 @@ public class MethodTransformer extends MethodVisitor {
             } else {
                 mv.visitVarInsn(ALOAD, 0);
             }
-            invokeStatic(LOG_MONITOR_ENTER, DESC_LOG_MONITOR_ENTER);
+            invokeStatic(LOG_MONITOR_ENTER);
         }
 
         mv.visitCode();
@@ -427,7 +427,7 @@ public class MethodTransformer extends MethodVisitor {
         if (config.commandLine.branch) {
             if (opcode != JSR && opcode != GOTO) {
                 addPushConstInsn(mv, getCrntStmtSID());
-                invokeStatic(LOG_BRANCH, DESC_LOG_BRANCH);
+                invokeStatic(LOG_BRANCH);
             }
         }
         mv.visitJumpInsn(opcode, label);
@@ -437,13 +437,13 @@ public class MethodTransformer extends MethodVisitor {
     public void visitTableSwitchInsn(int min, int max, Label dflt, Label... labels) {
         if (config.commandLine.branch) {
             addPushConstInsn(mv, getCrntStmtSID());
-            invokeStatic(LOG_BRANCH, DESC_LOG_BRANCH);
+            invokeStatic(LOG_BRANCH);
         }
         mv.visitTableSwitchInsn(min, max, dflt, labels);
     }
 
-    private void invokeStatic(String methodName, String methodDescriptor) {
-        mv.visitMethodInsn(INVOKESTATIC, config.logClass, methodName, methodDescriptor, false);
+    private void invokeStatic(Interceptor methodInfo) {
+        mv.visitMethodInsn(INVOKESTATIC, config.logClass, methodInfo.name, methodInfo.desc, false);
     }
 
     /**

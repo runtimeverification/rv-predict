@@ -37,6 +37,12 @@ public class Interceptors {
     public static final String RVPREDICT_RW_LOCK_READ_LOCK = "rvPredictReadWriteLockReadLock";
     public static final String RVPREDICT_RW_LOCK_WRITE_LOCK = "rvPredictReadWriteLockWriteLock";
 
+    // java.util.concurrent.atomic.AtomicBoolean
+    private static final String RVPREDICT_ATOMIC_BOOL_GET = "rvPredictAtomicBoolGet";
+    private static final String RVPREDICT_ATOMIC_BOOL_SET = "rvPredictAtomicBoolSet";
+    private static final String RVPREDICT_ATOMIC_BOOL_CAS = "rvPredictAtomicBoolCAS";
+    private static final String RVPREDICT_ATOMIC_BOOL_GAS = "rvPredictAtomicBoolGAS";
+
     public static final String DESC_LOG_FIELD_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;ZZ)V";
     public static final String DESC_LOG_ARRAY_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;Z)V";
     public static final String DESC_LOG_FIELD_INIT = "(ILjava/lang/Object;ILjava/lang/Object;)V";
@@ -70,16 +76,23 @@ public class Interceptors {
     public static final String DESC_RVPREDICT_RW_LOCK_READ_LOCK = "(ILjava/util/concurrent/locks/ReadWriteLock;)Ljava/util/concurrent/locks/Lock;";
     public static final String DESC_RVPREDICT_RW_LOCK_WRITE_LOCK = "(ILjava/util/concurrent/locks/ReadWriteLock;)Ljava/util/concurrent/locks/Lock;";
 
+    public static final String DESC_RVPREDICT_ATOMIC_BOOL_GET = "(ILjava/util/concurrent/atomic/AtomicBoolean;)Z";
+    public static final String DESC_RVPREDICT_ATOMIC_BOOL_SET = "(ILjava/util/concurrent/atomic/AtomicBoolean;Z)V";
+    public static final String DESC_RVPREDICT_ATOMIC_BOOL_CAS = "(ILjava/util/concurrent/atomic/AtomicBoolean;ZZ)Z";
+    public static final String DESC_RVPREDICT_ATOMIC_BOOL_GAS = "(ILjava/util/concurrent/atomic/AtomicBoolean;Z)Z";
+
     /*
      * Some useful constants.
      */
     private static final String I               =   "I";
     private static final String J               =   "J";
+    private static final String Z               =   "Z";
     private static final String JL_OBJECT       =   "java/lang/Object";
     private static final String JL_THREAD       =   "java/lang/Thread";
     private static final String JL_SYSTEM       =   "java/lang/System";
     private static final String JUCL_LOCK       =   "java/util/concurrent/locks/Lock";
     private static final String JUCL_RW_LOCK    =   "java/util/concurrent/locks/ReadWriteLock";
+    private static final String JUCA_ATOMIC_BOOL    =   "java/util/concurrent/atomic/AtomicBoolean";
 
     private static Map<String, MethodCallSubst> STATIC_METHOD_CALL_SUBST = new HashMap<>();
 
@@ -164,11 +177,20 @@ public class Interceptors {
 
         /* java.util.concurrent.locks.ReadWriteLock methods */
         registerVirtualMethodSubstitution(RVPREDICT_RW_LOCK_READ_LOCK,
-                DESC_RVPREDICT_RW_LOCK_READ_LOCK, JUCL_RW_LOCK,
-                "readLock");
+                DESC_RVPREDICT_RW_LOCK_READ_LOCK, JUCL_RW_LOCK, "readLock");
         registerVirtualMethodSubstitution(RVPREDICT_RW_LOCK_WRITE_LOCK,
-                DESC_RVPREDICT_RW_LOCK_WRITE_LOCK, JUCL_RW_LOCK,
-                "writeLock");
+                DESC_RVPREDICT_RW_LOCK_WRITE_LOCK, JUCL_RW_LOCK, "writeLock");
+
+        /* java.util.concurrent.atomic.AtomicBoolean methods */
+        // TODO(YilongL): investigate how/whether to mock lazySet & weakCompareAndSet
+        registerVirtualMethodSubstitution(RVPREDICT_ATOMIC_BOOL_GET,
+                DESC_RVPREDICT_ATOMIC_BOOL_GET, JUCA_ATOMIC_BOOL, "get");
+        registerVirtualMethodSubstitution(RVPREDICT_ATOMIC_BOOL_SET,
+                DESC_RVPREDICT_ATOMIC_BOOL_SET, JUCA_ATOMIC_BOOL, "set", Z);
+        registerVirtualMethodSubstitution(RVPREDICT_ATOMIC_BOOL_GAS,
+                DESC_RVPREDICT_ATOMIC_BOOL_GAS, JUCA_ATOMIC_BOOL, "getAndSet", Z);
+        registerVirtualMethodSubstitution(RVPREDICT_ATOMIC_BOOL_CAS,
+                DESC_RVPREDICT_ATOMIC_BOOL_CAS, JUCA_ATOMIC_BOOL, "compareAndSet", Z, Z);
     }
 
     static class MethodCallSubst {

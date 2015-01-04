@@ -749,9 +749,9 @@ public class JUConcurrentTests {
 //            tests.arrayBlockingQueue();
             tests.lockInterruptibly();
             tests.reentrantLockInterruptibly();
-//            tests.countDownLatch();
+            tests.countDownLatch();
 //            tests.cyclicBarrier();
-//            tests.semaphore();
+            tests.semaphore();
             tests.writeLocksOnly();
             tests.readAndWriteLocks();
             tests.readAndWriteTryLocks();

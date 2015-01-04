@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
@@ -73,6 +74,14 @@ public class Interceptors {
     private static final Interceptor RVPREDICT_RW_LOCK_WRITE_LOCK =
             init("rvPredictReadWriteLockWriteLock", I, ReadWriteLock.class);
 
+    // java.util.concurrent.locks.AbstractQueueSynchronizer
+    private static final Interceptor RVPREDICT_AQS_GETSTATE  =
+            init("rvPredictAbstractQueuedSynchronizerGetState", I, AbstractQueuedSynchronizer.class);
+    private static final Interceptor RVPREDICT_AQS_SETSTATE  =
+            init("rvPredictAbstractQueuedSynchronizerSetState", I, AbstractQueuedSynchronizer.class, I);
+    private static final Interceptor RVPREDICT_AQS_CASSTATE  =
+            init("rvPredictAbstractQueuedSynchronizerCASState", I, AbstractQueuedSynchronizer.class, I, I);
+
     // java.util.concurrent.atomic.AtomicBoolean
     private static final Interceptor RVPREDICT_ATOMIC_BOOL_GET = init("rvPredictAtomicBoolGet", I,
             AtomicBoolean.class);
@@ -83,6 +92,7 @@ public class Interceptors {
     private static final Interceptor RVPREDICT_ATOMIC_BOOL_GAS = init("rvPredictAtomicBoolGAS", I,
             AtomicBoolean.class, Z);
 
+
     /*
      * Some useful constants.
      */
@@ -91,6 +101,7 @@ public class Interceptors {
     private static final String JL_SYSTEM       =   "java/lang/System";
     private static final String JUCL_LOCK       =   "java/util/concurrent/locks/Lock";
     private static final String JUCL_RW_LOCK    =   "java/util/concurrent/locks/ReadWriteLock";
+    private static final String JUCL_AQS        =   "java/util/concurrent/locks/AbstractQueuedSynchronizer";
     private static final String JUCA_ATOMIC_BOOL    =   "java/util/concurrent/atomic/AtomicBoolean";
 
     /**
@@ -204,6 +215,11 @@ public class Interceptors {
         /* java.util.concurrent.locks.ReadWriteLock methods */
         registerVirtualMethodInterceptor(RVPREDICT_RW_LOCK_READ_LOCK, JUCL_RW_LOCK, "readLock");
         registerVirtualMethodInterceptor(RVPREDICT_RW_LOCK_WRITE_LOCK, JUCL_RW_LOCK, "writeLock");
+
+        /* java.util.concurrent.locks.AbstractQueuedSynchronizer methods */
+        registerVirtualMethodInterceptor(RVPREDICT_AQS_GETSTATE, JUCL_AQS, "getState");
+        registerVirtualMethodInterceptor(RVPREDICT_AQS_SETSTATE, JUCL_AQS, "setState");
+        registerVirtualMethodInterceptor(RVPREDICT_AQS_CASSTATE, JUCL_AQS, "compareAndSetState");
 
         /* java.util.concurrent.atomic.AtomicBoolean methods */
         // TODO(YilongL): investigate how/whether to mock lazySet & weakCompareAndSet

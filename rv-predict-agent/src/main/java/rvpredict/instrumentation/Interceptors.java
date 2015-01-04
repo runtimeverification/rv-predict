@@ -1,92 +1,91 @@
 package rvpredict.instrumentation;
 
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+
+import rvpredict.runtime.RVPredictRuntime;
 
 public class Interceptors {
 
-    public static final String LOG_FIELD_ACCESS = "logFieldAcc";
-    public static final String LOG_FIELD_INIT = "logFieldInit";
-    public static final String LOG_ARRAY_ACCESS = "logArrayAcc";
-    public static final String LOG_ARRAY_INIT = "logArrayInit";
-    public static final String LOG_MONITOR_ENTER = "logMonitorEnter";
-    public static final String LOG_MONITOR_EXIT = "logMonitorExit";
-    public static final String LOG_BRANCH = "logBranch";
+    private static final Class<Boolean> Z   =   boolean.class;
+    private static final Class<Integer> I   =   int.class;
+    private static final Class<Long>    J   =   long.class;
+    private static final Class<Object>  O   =   Object.class;
+    private static final Class<Thread>  T   =   Thread.class;
+
+    /** Short-hand for {@link Interceptor#create(String, Class...)}. */
+    private static Interceptor init(String name, Class<?>... parameterTypes) {
+        return Interceptor.create(name, parameterTypes);
+    }
+
+    public static final Interceptor LOG_FIELD_ACCESS  =  init("logFieldAcc", I, O, I, O, Z, Z);
+    public static final Interceptor LOG_FIELD_INIT    =  init("logFieldInit", I, O, I, O);
+    public static final Interceptor LOG_ARRAY_ACCESS  =  init("logArrayAcc", I, O, I, O, Z);
+    public static final Interceptor LOG_ARRAY_INIT    =  init("logArrayInit", I, O, I, O);
+    public static final Interceptor LOG_MONITOR_ENTER =  init("logMonitorEnter", I, O);
+    public static final Interceptor LOG_MONITOR_EXIT  =  init("logMonitorExit", I, O);
+    public static final Interceptor LOG_BRANCH        =  init("logBranch", I);
 
     // Thread methods
-    public static final String RVPREDICT_START = "rvPredictStart";
-    public static final String RVPREDICT_JOIN = "rvPredictJoin";
-    public static final String RVPREDICT_INTERRUPT = "rvPredictInterrupt";
-    public static final String RVPREDICT_INTERRUPTED = "rvPredictInterrupted";
-    public static final String RVPREDICT_IS_INTERRUPTED = "rvPredictIsInterrupted";
-    public static final String RVPREDICT_SLEEP = "rvPredictSleep";
+    private static final Interceptor RVPREDICT_START              =  init("rvPredictStart", I, T);
+    private static final Interceptor RVPREDICT_JOIN               =  init("rvPredictJoin", I, T);
+    private static final Interceptor RVPREDICT_JOIN_TIMEOUT       =  init("rvPredictJoin", I, T, J);
+    private static final Interceptor RVPREDICT_JOIN_TIMEOUT_NANO  =  init("rvPredictJoin", I, T, J, I);
+    private static final Interceptor RVPREDICT_INTERRUPT          =  init("rvPredictInterrupt", I, T);
+    private static final Interceptor RVPREDICT_INTERRUPTED        =  init("rvPredictInterrupted", I);
+    private static final Interceptor RVPREDICT_IS_INTERRUPTED     =  init("rvPredictIsInterrupted", I, T);
+    private static final Interceptor RVPREDICT_SLEEP              =  init("rvPredictSleep", I, J);
+    private static final Interceptor RVPREDICT_SLEEP_NANO         =  init("rvPredictSleep", I, J, I);
 
     // Object monitor methods
-    public static final String RVPREDICT_WAIT = "rvPredictWait";
+    private static final Interceptor RVPREDICT_WAIT               =  init("rvPredictWait", I, O);
+    private static final Interceptor RVPREDICT_WAIT_TIMEOUT       =  init("rvPredictWait", I, O, J);
+    private static final Interceptor RVPREDICT_WAIT_TIMEOUT_NANO  =  init("rvPredictWait", I, O, J, I);
+
+    // java.lang.System methods
+    private static final Interceptor RVPREDICT_SYSTEM_ARRAYCOPY   =  init("rvPredictSystemArraycopy",
+            I, O, I, O, I, I);
 
     // java.util.concurrent.locks.Lock methods
     // note that this doesn't provide mocks for methods specific in concrete lock implementation
-    public static final String RVPREDICT_LOCK = "rvPredictLock";
-    public static final String RVPREDICT_LOCK_INTERRUPTIBLY = "rvPredictLockInterruptibly";
-    public static final String RVPREDICT_TRY_LOCK = "rvPredictTryLock";
-    public static final String RVPREDICT_UNLOCK = "rvPredictUnlock";
+    private static final Interceptor RVPREDICT_LOCK               =
+            init("rvPredictLock", I, Lock.class);
+    private static final Interceptor RVPREDICT_LOCK_INTERRUPTIBLY =
+            init("rvPredictLockInterruptibly", I, Lock.class);
+    private static final Interceptor RVPREDICT_TRY_LOCK           =
+            init("rvPredictTryLock", I, Lock.class);
+    private static final Interceptor RVPREDICT_TRY_LOCK_TIMEOUT   =
+            init("rvPredictTryLock", I, Lock.class, J, TimeUnit.class);
+    private static final Interceptor RVPREDICT_UNLOCK             =
+            init("rvPredictUnlock", I, Lock.class);
 
     // java.util.concurrent.locks.ReadWriteLock methods
-    public static final String RVPREDICT_RW_LOCK_READ_LOCK = "rvPredictReadWriteLockReadLock";
-    public static final String RVPREDICT_RW_LOCK_WRITE_LOCK = "rvPredictReadWriteLockWriteLock";
+    private static final Interceptor RVPREDICT_RW_LOCK_READ_LOCK  =
+            init("rvPredictReadWriteLockReadLock", I, ReadWriteLock.class);
+    private static final Interceptor RVPREDICT_RW_LOCK_WRITE_LOCK =
+            init("rvPredictReadWriteLockWriteLock", I, ReadWriteLock.class);
 
     // java.util.concurrent.atomic.AtomicBoolean
-    private static final String RVPREDICT_ATOMIC_BOOL_GET = "rvPredictAtomicBoolGet";
-    private static final String RVPREDICT_ATOMIC_BOOL_SET = "rvPredictAtomicBoolSet";
-    private static final String RVPREDICT_ATOMIC_BOOL_CAS = "rvPredictAtomicBoolCAS";
-    private static final String RVPREDICT_ATOMIC_BOOL_GAS = "rvPredictAtomicBoolGAS";
-
-    public static final String DESC_LOG_FIELD_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;ZZ)V";
-    public static final String DESC_LOG_ARRAY_ACCESS = "(ILjava/lang/Object;ILjava/lang/Object;Z)V";
-    public static final String DESC_LOG_FIELD_INIT = "(ILjava/lang/Object;ILjava/lang/Object;)V";
-    public static final String DESC_LOG_ARRAY_INIT = "(ILjava/lang/Object;ILjava/lang/Object;)V";
-
-    public static final String DESC_LOG_MONITOR_ENTER = "(ILjava/lang/Object;)V";
-    public static final String DESC_LOG_MONITOR_EXIT = "(ILjava/lang/Object;)V";
-    public static final String DESC_LOG_BRANCH = "(I)V";
-    public static final String DESC_RVPREDICT_START = "(ILjava/lang/Thread;)V";
-    public static final String DESC_RVPREDICT_JOIN = "(ILjava/lang/Thread;)V";
-    public static final String DESC_RVPREDICT_JOIN_TIMEOUT = "(ILjava/lang/Thread;J)V";
-    public static final String DESC_RVPREDICT_JOIN_TIMEOUT_NANO = "(ILjava/lang/Thread;JI)V";
-    public static final String DESC_RVPREDICT_INTERRUPT = "(ILjava/lang/Thread;)V";
-    public static final String DESC_RVPREDICT_INTERRUPTED = "(I)Z";
-    public static final String DESC_RVPREDICT_IS_INTERRUPTED = "(ILjava/lang/Thread;)Z";
-    public static final String DESC_RVPREDICT_SLEEP = "(IJ)V";
-    public static final String DESC_RVPREDICT_SLEEP_NANOS = "(IJI)V";
-    public static final String DESC_RVPREDICT_WAIT = "(ILjava/lang/Object;)V";
-    public static final String DESC_RVPREDICT_WAIT_TIMEOUT = "(ILjava/lang/Object;J)V";
-    public static final String DESC_RVPREDICT_WAIT_TIMEOUT_NANO = "(ILjava/lang/Object;JI)V";
-
-    public static final String RVPREDICT_SYSTEM_ARRAYCOPY = "rvPredictSystemArraycopy";
-    public static final String DESC_RVPREDICT_SYSTEM_ARRAYCOPY = "(ILjava/lang/Object;ILjava/lang/Object;II)V";
-
-    public static final String DESC_RVPREDICT_LOCK = "(ILjava/util/concurrent/locks/Lock;)V";
-    public static final String DESC_RVPREDICT_LOCK_INTERRUPTIBLY = "(ILjava/util/concurrent/locks/Lock;)V";
-    public static final String DESC_RVPREDICT_TRY_LOCK = "(ILjava/util/concurrent/locks/Lock;)Z";
-    public static final String DESC_RVPREDICT_TRY_LOCK_TIMEOUT = "(ILjava/util/concurrent/locks/Lock;JLjava/util/concurrent/TimeUnit;)Z";
-    public static final String DESC_RVPREDICT_UNLOCK = "(ILjava/util/concurrent/locks/Lock;)V";
-
-    public static final String DESC_RVPREDICT_RW_LOCK_READ_LOCK = "(ILjava/util/concurrent/locks/ReadWriteLock;)Ljava/util/concurrent/locks/Lock;";
-    public static final String DESC_RVPREDICT_RW_LOCK_WRITE_LOCK = "(ILjava/util/concurrent/locks/ReadWriteLock;)Ljava/util/concurrent/locks/Lock;";
-
-    public static final String DESC_RVPREDICT_ATOMIC_BOOL_GET = "(ILjava/util/concurrent/atomic/AtomicBoolean;)Z";
-    public static final String DESC_RVPREDICT_ATOMIC_BOOL_SET = "(ILjava/util/concurrent/atomic/AtomicBoolean;Z)V";
-    public static final String DESC_RVPREDICT_ATOMIC_BOOL_CAS = "(ILjava/util/concurrent/atomic/AtomicBoolean;ZZ)Z";
-    public static final String DESC_RVPREDICT_ATOMIC_BOOL_GAS = "(ILjava/util/concurrent/atomic/AtomicBoolean;Z)Z";
+    private static final Interceptor RVPREDICT_ATOMIC_BOOL_GET = init("rvPredictAtomicBoolGet", I,
+            AtomicBoolean.class);
+    private static final Interceptor RVPREDICT_ATOMIC_BOOL_SET = init("rvPredictAtomicBoolSet", I,
+            AtomicBoolean.class, Z);
+    private static final Interceptor RVPREDICT_ATOMIC_BOOL_CAS = init("rvPredictAtomicBoolCAS", I,
+            AtomicBoolean.class, Z, Z);
+    private static final Interceptor RVPREDICT_ATOMIC_BOOL_GAS = init("rvPredictAtomicBoolGAS", I,
+            AtomicBoolean.class, Z);
 
     /*
      * Some useful constants.
      */
-    private static final String I               =   "I";
-    private static final String J               =   "J";
-    private static final String Z               =   "Z";
     private static final String JL_OBJECT       =   "java/lang/Object";
     private static final String JL_THREAD       =   "java/lang/Thread";
     private static final String JL_SYSTEM       =   "java/lang/System";
@@ -94,116 +93,159 @@ public class Interceptors {
     private static final String JUCL_RW_LOCK    =   "java/util/concurrent/locks/ReadWriteLock";
     private static final String JUCA_ATOMIC_BOOL    =   "java/util/concurrent/atomic/AtomicBoolean";
 
-    private static Map<String, MethodCallSubst> STATIC_METHOD_CALL_SUBST = new HashMap<>();
+    /**
+     * Map from static method's signature to its {@link Interceptor}.
+     */
+    private static Map<String, InterceptionInfo> STATIC_METHOD_INTERCEPTION = new HashMap<>();
 
-    private static Map<String, MethodCallSubst> VIRTUAL_METHOD_CALL_SUBST = new HashMap<>();
+    /**
+     * Map from instance method's signature to its {@link Interceptor}.
+     */
+    private static Map<String, InterceptionInfo> VIRTUAL_METHOD_INTERCEPTION = new HashMap<>();
 
-    public static MethodCallSubst getMethodCallSubst(int opcode, String sig) {
+    public static InterceptionInfo getInterceptionInfo(int opcode, String methodSig) {
         return opcode == Opcodes.INVOKESTATIC ?
-            STATIC_METHOD_CALL_SUBST.get(sig) :
-            VIRTUAL_METHOD_CALL_SUBST.get(sig);
+            STATIC_METHOD_INTERCEPTION.get(methodSig) :
+            VIRTUAL_METHOD_INTERCEPTION.get(methodSig);
     }
 
-    private static String getMethodSignature(String methodName, String... argTypeDescs) {
-        StringBuilder sb = new StringBuilder(methodName);
-        sb.append("(");
-        for (int i = 0; i < argTypeDescs.length; i++) {
-            sb.append(argTypeDescs[i]);
+    private static String[] calcParamTypeDescs(Interceptor interceptor, boolean isStatic) {
+        Type[] paramTypes = Type.getArgumentTypes(interceptor.desc);
+        int k = isStatic ? 1 : 2;
+        String[] paramTypeDescs = new String[paramTypes.length - k];
+        for (int i = k; i < paramTypes.length; i++) {
+            paramTypeDescs[i - k] = paramTypes[i].getDescriptor();
         }
-        sb.append(")");
-        return sb.toString();
+        return paramTypeDescs;
     }
 
-    private static void registerStaticMethodSubstitution(String substName, String substDesc,
-            String owner, String origName, String... origArgTypeDescs) {
-        STATIC_METHOD_CALL_SUBST.put(getMethodSignature(origName, origArgTypeDescs),
-                new MethodCallSubst(substName, substDesc, owner, origArgTypeDescs));
+    /**
+     * Computes the original method's signature from the interceptor's
+     * descriptor.
+     *
+     * @param interceptorDesc
+     *            the interceptor's descriptor
+     * @param origName
+     *            the original method's name
+     * @param isStatic
+     *            specifies if the original method is static
+     * @return the original method's signature
+     */
+    private static String getOrigMethodSignature(String interceptorDesc, String origName,
+            boolean isStatic) {
+        int from = (isStatic ? interceptorDesc.indexOf('I') : interceptorDesc.indexOf(';')) + 1;
+        int to = interceptorDesc.lastIndexOf(')') + 1;
+        return origName + "(" + interceptorDesc.substring(from, to);
     }
 
-    private static void registerVirtualMethodSubstitution(String substName, String substDesc,
-            String owner, String origName, String... origArgTypeDescs) {
-        VIRTUAL_METHOD_CALL_SUBST.put(getMethodSignature(origName, origArgTypeDescs),
-                new MethodCallSubst(substName, substDesc, owner, origArgTypeDescs));
+    /**
+     * Registers an {@link Interceptor} for a given static method.
+     *
+     * @param interceptor
+     *            the {@code Interceptor}
+     * @param owner
+     *            the owner class of the method to intercept
+     * @param toIntercept
+     *            the method to intercept
+     */
+    private static void registerStaticMethodInterceptor(Interceptor interceptor, String owner,
+            String toIntercept) {
+        STATIC_METHOD_INTERCEPTION.put(getOrigMethodSignature(interceptor.desc, toIntercept, true),
+                new InterceptionInfo(interceptor, owner, calcParamTypeDescs(interceptor, true)));
+    }
+
+    /**
+     * Registers an {@link Interceptor} for a given instance method.
+     *
+     * @param interceptor
+     *            the {@code Interceptor}
+     * @param owner
+     *            the owner class of the method to intercept
+     * @param toIntercept
+     *            the method to intercept
+     */
+    private static void registerVirtualMethodInterceptor(Interceptor interceptor, String owner,
+            String toIntercept) {
+        VIRTUAL_METHOD_INTERCEPTION.put(getOrigMethodSignature(interceptor.desc, toIntercept, false),
+                new InterceptionInfo(interceptor, owner, calcParamTypeDescs(interceptor, false)));
     }
 
     static {
         /* static methods */
-        registerStaticMethodSubstitution(RVPREDICT_INTERRUPTED, DESC_RVPREDICT_INTERRUPTED,
-                JL_THREAD, "interrupted");
-        registerStaticMethodSubstitution(RVPREDICT_SLEEP, DESC_RVPREDICT_SLEEP,
-                JL_THREAD, "sleep", J);
-        registerStaticMethodSubstitution(RVPREDICT_SLEEP, DESC_RVPREDICT_SLEEP_NANOS,
-                JL_THREAD, "sleep", J, I);
+        registerStaticMethodInterceptor(RVPREDICT_INTERRUPTED, JL_THREAD, "interrupted");
+        registerStaticMethodInterceptor(RVPREDICT_SLEEP, JL_THREAD, "sleep");
+        registerStaticMethodInterceptor(RVPREDICT_SLEEP_NANO, JL_THREAD, "sleep");
 
-        registerStaticMethodSubstitution(RVPREDICT_SYSTEM_ARRAYCOPY,
-                DESC_RVPREDICT_SYSTEM_ARRAYCOPY, JL_SYSTEM, "arraycopy", "Ljava/lang/Object;",
-                I, "Ljava/lang/Object;", I, I);
+        registerStaticMethodInterceptor(RVPREDICT_SYSTEM_ARRAYCOPY, JL_SYSTEM, "arraycopy");
 
         /* thread start/join/interrupt methods */
-        registerVirtualMethodSubstitution(RVPREDICT_START, DESC_RVPREDICT_START,
-                JL_THREAD, "start");
-        registerVirtualMethodSubstitution(RVPREDICT_JOIN, DESC_RVPREDICT_JOIN,
-                JL_THREAD, "join");
-        registerVirtualMethodSubstitution(RVPREDICT_JOIN, DESC_RVPREDICT_JOIN_TIMEOUT,
-                JL_THREAD, "join", J);
-        registerVirtualMethodSubstitution(RVPREDICT_JOIN, DESC_RVPREDICT_JOIN_TIMEOUT_NANO,
-                JL_THREAD, "join", J, I);
-        registerVirtualMethodSubstitution(RVPREDICT_INTERRUPT, DESC_RVPREDICT_INTERRUPT,
-                JL_THREAD, "interrupt");
-        registerVirtualMethodSubstitution(RVPREDICT_IS_INTERRUPTED, DESC_RVPREDICT_IS_INTERRUPTED,
-                JL_THREAD, "isInterrupted");
+        registerVirtualMethodInterceptor(RVPREDICT_START, JL_THREAD, "start");
+        registerVirtualMethodInterceptor(RVPREDICT_JOIN, JL_THREAD, "join");
+        registerVirtualMethodInterceptor(RVPREDICT_JOIN_TIMEOUT, JL_THREAD, "join");
+        registerVirtualMethodInterceptor(RVPREDICT_JOIN_TIMEOUT_NANO, JL_THREAD, "join");
+        registerVirtualMethodInterceptor(RVPREDICT_INTERRUPT, JL_THREAD, "interrupt");
+        registerVirtualMethodInterceptor(RVPREDICT_IS_INTERRUPTED, JL_THREAD, "isInterrupted");
 
         /* object monitor methods */
         /* YilongL: we don't need to instrument notify/notifyAll because we
          * assume spurious wakeup can happen at any time in the prediction engine */
-        registerVirtualMethodSubstitution(RVPREDICT_WAIT, DESC_RVPREDICT_WAIT,
-                JL_OBJECT, "wait");
-        registerVirtualMethodSubstitution(RVPREDICT_WAIT, DESC_RVPREDICT_WAIT_TIMEOUT,
-                JL_OBJECT, "wait", J);
-        registerVirtualMethodSubstitution(RVPREDICT_WAIT, DESC_RVPREDICT_WAIT_TIMEOUT_NANO,
-                JL_OBJECT, "wait", J, I);
+        registerVirtualMethodInterceptor(RVPREDICT_WAIT, JL_OBJECT, "wait");
+        registerVirtualMethodInterceptor(RVPREDICT_WAIT_TIMEOUT, JL_OBJECT, "wait");
+        registerVirtualMethodInterceptor(RVPREDICT_WAIT_TIMEOUT_NANO, JL_OBJECT, "wait");
 
         /* java.util.concurrent.locks.Lock methods */
-        registerVirtualMethodSubstitution(RVPREDICT_LOCK, DESC_RVPREDICT_LOCK,
-                JUCL_LOCK, "lock");
-        registerVirtualMethodSubstitution(RVPREDICT_LOCK_INTERRUPTIBLY, DESC_RVPREDICT_LOCK_INTERRUPTIBLY,
-                JUCL_LOCK, "lockInterruptibly");
-        registerVirtualMethodSubstitution(RVPREDICT_TRY_LOCK, DESC_RVPREDICT_TRY_LOCK,
-                JUCL_LOCK, "tryLock");
-        registerVirtualMethodSubstitution(RVPREDICT_TRY_LOCK, DESC_RVPREDICT_TRY_LOCK_TIMEOUT,
-                JUCL_LOCK, "tryLock", J, "Ljava/util/concurrent/TimeUnit;");
-        registerVirtualMethodSubstitution(RVPREDICT_UNLOCK, DESC_RVPREDICT_UNLOCK,
-                JUCL_LOCK, "unlock");
+        registerVirtualMethodInterceptor(RVPREDICT_LOCK, JUCL_LOCK, "lock");
+        registerVirtualMethodInterceptor(RVPREDICT_LOCK_INTERRUPTIBLY, JUCL_LOCK,
+                "lockInterruptibly");
+        registerVirtualMethodInterceptor(RVPREDICT_TRY_LOCK, JUCL_LOCK, "tryLock");
+        registerVirtualMethodInterceptor(RVPREDICT_TRY_LOCK_TIMEOUT, JUCL_LOCK, "tryLock");
+        registerVirtualMethodInterceptor(RVPREDICT_UNLOCK, JUCL_LOCK, "unlock");
 
         /* java.util.concurrent.locks.ReadWriteLock methods */
-        registerVirtualMethodSubstitution(RVPREDICT_RW_LOCK_READ_LOCK,
-                DESC_RVPREDICT_RW_LOCK_READ_LOCK, JUCL_RW_LOCK, "readLock");
-        registerVirtualMethodSubstitution(RVPREDICT_RW_LOCK_WRITE_LOCK,
-                DESC_RVPREDICT_RW_LOCK_WRITE_LOCK, JUCL_RW_LOCK, "writeLock");
+        registerVirtualMethodInterceptor(RVPREDICT_RW_LOCK_READ_LOCK, JUCL_RW_LOCK, "readLock");
+        registerVirtualMethodInterceptor(RVPREDICT_RW_LOCK_WRITE_LOCK, JUCL_RW_LOCK, "writeLock");
 
         /* java.util.concurrent.atomic.AtomicBoolean methods */
         // TODO(YilongL): investigate how/whether to mock lazySet & weakCompareAndSet
-        registerVirtualMethodSubstitution(RVPREDICT_ATOMIC_BOOL_GET,
-                DESC_RVPREDICT_ATOMIC_BOOL_GET, JUCA_ATOMIC_BOOL, "get");
-        registerVirtualMethodSubstitution(RVPREDICT_ATOMIC_BOOL_SET,
-                DESC_RVPREDICT_ATOMIC_BOOL_SET, JUCA_ATOMIC_BOOL, "set", Z);
-        registerVirtualMethodSubstitution(RVPREDICT_ATOMIC_BOOL_GAS,
-                DESC_RVPREDICT_ATOMIC_BOOL_GAS, JUCA_ATOMIC_BOOL, "getAndSet", Z);
-        registerVirtualMethodSubstitution(RVPREDICT_ATOMIC_BOOL_CAS,
-                DESC_RVPREDICT_ATOMIC_BOOL_CAS, JUCA_ATOMIC_BOOL, "compareAndSet", Z, Z);
+        registerVirtualMethodInterceptor(RVPREDICT_ATOMIC_BOOL_GET, JUCA_ATOMIC_BOOL, "get");
+        registerVirtualMethodInterceptor(RVPREDICT_ATOMIC_BOOL_SET, JUCA_ATOMIC_BOOL, "set");
+        registerVirtualMethodInterceptor(RVPREDICT_ATOMIC_BOOL_GAS, JUCA_ATOMIC_BOOL, "getAndSet");
+        registerVirtualMethodInterceptor(RVPREDICT_ATOMIC_BOOL_CAS, JUCA_ATOMIC_BOOL, "compareAndSet");
     }
 
-    static class MethodCallSubst {
+    static class Interceptor {
 
         /**
-         * Name of the substitution method.
+         * The interceptor method's name.
          */
         final String name;
 
         /**
-         * Descriptor of the substitution method.
+         * The interceptor method's descriptor (see {@link Type}).
          */
         final String desc;
+
+        private static Interceptor create(String name, Class<?>... parameterTypes) {
+            Method method;
+            try {
+                method = RVPredictRuntime.class.getMethod(name, parameterTypes);
+            } catch (NoSuchMethodException | SecurityException e) {
+                e.printStackTrace();
+                return null;
+            }
+
+            return new Interceptor(method.getName(), Type.getMethodDescriptor(method));
+        }
+
+        private Interceptor(String name, String desc) {
+            this.name = name;
+            this.desc = desc;
+        }
+    }
+
+    static class InterceptionInfo {
+
+        final Interceptor interceptor;
 
         /**
          * Owner class name of the original method.
@@ -211,15 +253,15 @@ public class Interceptors {
         final String owner;
 
         /**
-         * Argument type descriptors of the original method
+         * Parameter type descriptors of the original method
          */
-        final String[] argDescs;
+        final String[] paramTypeDescs;
 
-        private MethodCallSubst(String name, String desc, String owner, String... argDescs) {
-            this.name = name;
-            this.desc = desc;
+        private InterceptionInfo(Interceptor interceptor, String owner,
+                String... paramTypeDescs) {
+            this.interceptor = interceptor;
             this.owner = owner;
-            this.argDescs = argDescs;
+            this.paramTypeDescs = paramTypeDescs;
         }
     }
 

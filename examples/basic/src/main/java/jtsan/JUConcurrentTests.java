@@ -226,6 +226,41 @@ public class JUConcurrentTests {
     }
 
     @RaceTest(expectRace = false,
+            description = "Work with BlockingQueue. One reader, one writer")
+    public void arrayBlockingQueue2() {
+        new ThreadRunner(2) {
+
+            BlockingQueue<Integer> q;
+
+            @Override
+            public void setUp() {
+                q = new ArrayBlockingQueue<Integer>(1);
+            }
+
+            @Override
+            public void thread1() {
+                sharedVar = 1;
+                try {
+                    q.put(1);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException("Exception in arrayBlockingQueue test", ex);
+                }
+            }
+
+            @Override
+            public void thread2() {
+                try {
+                    q.take();
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException("Exception in arrayBlockingQueue test", ex);
+                }
+                sharedVar = 2;
+            }
+        };
+    }
+
+
+    @RaceTest(expectRace = false,
             description = "Use Lock.lockInteruptibly for acquired a lock")
     public void lockInterruptibly() {
         new ThreadRunner(2) {
@@ -746,7 +781,8 @@ public class JUConcurrentTests {
             tests.lockNeMonitor();
         } else {
             // negative tests
-//            tests.arrayBlockingQueue();
+            tests.arrayBlockingQueue(); // testing the internal of ABQ
+            tests.arrayBlockingQueue2(); // testing HB relation imposed by ABQ.put/take
             tests.lockInterruptibly();
             tests.reentrantLockInterruptibly();
             tests.countDownLatch();

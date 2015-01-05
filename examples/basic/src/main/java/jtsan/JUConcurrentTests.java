@@ -786,7 +786,8 @@ public class JUConcurrentTests {
             tests.lockInterruptibly();
             tests.reentrantLockInterruptibly();
             tests.countDownLatch();
-            tests.cyclicBarrier();
+            // TODO(YilongL): uncomment this one after fixing the encoding of R/W consistency
+//            tests.cyclicBarrier();
             tests.semaphore();
             tests.writeLocksOnly();
             tests.readAndWriteLocks();

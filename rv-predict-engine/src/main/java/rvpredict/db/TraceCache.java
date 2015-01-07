@@ -31,7 +31,6 @@ public class TraceCache {
      * @param directory  location on filesystem where the trace log can be found
      */
     public TraceCache(String directory) {
-        long traceSize = 0;
         String[] files = getTraceFiles(directory);
         indexes = new HashMap<>(files.length);
         for (String file : files) {

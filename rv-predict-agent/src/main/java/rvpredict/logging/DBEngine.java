@@ -205,7 +205,8 @@ public class DBEngine {
         if (shutdown || skipSavingEvent()) return;
 
         long gid = globalEventID.incrementAndGet();
-        long tid = Thread.currentThread().getId();
+        EventOutputStream traceOS = threadLocalTraceOS.get();
+        long tid = traceOS.getId();
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
         try {
             /*
@@ -214,8 +215,8 @@ public class DBEngine {
              * method can be called from RecordRT, we should try to keep its
              * dependence on other classes to a minimal degree
              */
-            EventOutputStream traceOS = threadLocalTraceOS.get();
             traceOS.writeEvent(e);
+
             long eventsWritten = traceOS.getEventsWrittenCount();
             if (eventsWritten % BUFFER_THRESHOLD == 0) {
                 // Flushing events and metadata periodically to allow crash recovery.

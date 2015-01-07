@@ -32,8 +32,6 @@ import java.io.*;
 import java.nio.file.Paths;
 import java.util.*;
 
-import org.apache.commons.lang3.tuple.Pair;
-
 import rvpredict.trace.*;
 
 /**
@@ -78,51 +76,9 @@ public class DBEngine {
         assert fromIndex <= traceLength : "This method should only be called with a valid min value";
         if (toIndex > traceLength + 1) toIndex = traceLength + 1;
         Trace trace = new Trace(initState, info);
-        AbstractEvent node = null;
         for (long index = fromIndex; index < toIndex; index++) {
             rvpredict.db.EventItem eventItem = traceCache.getEvent(index);
-            long GID = eventItem.GID;
-            long TID = eventItem.TID;
-            int ID = eventItem.ID;
-            long ADDRL = eventItem.ADDRL;
-            long ADDRR = eventItem.ADDRR;
-            long VALUE = eventItem.VALUE;
-            EventType TYPE = eventItem.TYPE;
-
-            switch (TYPE) {
-                case INIT:
-                    node = new InitEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
-                    break;
-                case READ:
-                    node = new ReadEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
-                    break;
-                case WRITE:
-                    node = new WriteEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
-                    break;
-                case WRITE_LOCK:
-                case WRITE_UNLOCK:
-                case READ_LOCK:
-                case READ_UNLOCK:
-                case PRE_WAIT:
-                case WAIT:
-                case WAIT_MAYBE_TIMEOUT:
-                case WAIT_INTERRUPTED:
-                case NOTIFY:
-                case NOTIFY_ALL:
-                case START:
-                case PRE_JOIN:
-                case JOIN:
-                case JOIN_MAYBE_TIMEOUT:
-                case JOIN_INTERRUPTED:
-                    node = new SyncEvent(GID, TID, ID, TYPE, ADDRL);
-                    break;
-                case BRANCH:
-                    node = new BranchEvent(GID, TID, ID);
-                    break;
-                default:
-                    assert false : "unexpected event type: " + TYPE;
-                    break;
-            }
+            AbstractEvent node = AbstractEvent.of(eventItem);
 
             trace.addRawEvent(node);
         }

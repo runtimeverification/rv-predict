@@ -5,7 +5,7 @@ import rvpredict.db.EventInputStream;
 import rvpredict.db.EventItem;
 import rvpredict.db.TraceCache;
 import rvpredict.trace.AbstractEvent;
-import rvpredict.trace.SyncEvent;
+import rvpredict.trace.Event;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -14,9 +14,15 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 /**
- * Created by Traian on 02.01.2015.
+ * Debugging class for dumping the contents of a log file to console.
+ * Uses metadata information to desugar location pointers to actual locations in the code.
+ *
+ * @author TraianSF
  */
 public class DumpLogFile {
+    /**
+     * @param args path to a file containing a trace segment.
+     */
     public static void main(String[] args) {
         if (args.length < 1) {
             System.err.println("Usage " + DumpLogFile.class.getName() + " <log_file_name>");
@@ -37,9 +43,9 @@ public class DumpLogFile {
                     new BufferedInputStream(in));
             System.out.println("Dumping events from " + file);
             while (true) {
-                EventItem event = inputStream.readEvent();
-                AbstractEvent abstractEvent = AbstractEvent.of(event);
-                System.out.println(abstractEvent.toString() + locIdToStmtSig.get(abstractEvent.getID()));
+                EventItem eventItem = inputStream.readEvent();
+                Event event = AbstractEvent.of(eventItem);
+                System.out.println(event.toString() + locIdToStmtSig.get(event.getID()));
             }
         } catch (EOFException _) {
         } catch (FileNotFoundException e) {

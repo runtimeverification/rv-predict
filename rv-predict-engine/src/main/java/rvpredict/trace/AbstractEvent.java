@@ -47,7 +47,7 @@ public abstract class AbstractEvent implements Event {
         this.type = type;
     }
 
-    public static AbstractEvent of(EventItem eventItem) {
+    public static Event of(EventItem eventItem) {
         AbstractEvent node = null;
         long GID = eventItem.GID;
         long TID = eventItem.TID;

@@ -32,12 +32,10 @@ import java.io.*;
 import java.nio.file.Paths;
 import java.util.*;
 
-import org.apache.commons.lang3.tuple.Pair;
-
 import rvpredict.trace.*;
 
 /**
- * Class for loading traces of events from disk.
+ * Class for loading metadata and traces of events from disk.
  *
  * @author TraianSF
  *
@@ -45,46 +43,13 @@ import rvpredict.trace.*;
 public class DBEngine {
     public static final String METADATA_BIN = "metadata.bin";
     private final TraceCache traceCache;
-    private final ObjectInputStream metadataIS;
-
-    /**
-     * Reads the previously saved metadata into the structures given as parameters
-     * @param threadIdNameMap  map associating thread identifiers to thread names
-     * @param sharedVarIdSigMap map giving signatures for the shared variables
-     * @param volatileAddresses  map giving locations for volatile variables
-     * @param stmtIdSigMap  map giving signature/location information for events
-     */
-    @SuppressWarnings("unchecked")
-    public void getMetadata(Set<Integer> volatileFieldIds, Map<Integer, String> locIdToStmtSig) {
-        try {
-            while (true) {
-                try {
-                    volatileFieldIds.addAll((Collection<Integer>) metadataIS.readObject());
-                } catch (EOFException e) {
-                    break;
-                }
-                List<Pair<String, Integer>> stmtSigIdList = (List<Pair<String, Integer>>) metadataIS
-                        .readObject();
-                for (Pair<String, Integer> pair : stmtSigIdList) {
-                    locIdToStmtSig.put(pair.getValue(), pair.getKey());
-                }
-            }
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-    }
+    private final long traceLength;
+    private final Set<Integer> volatileFieldIds = new HashSet<>();
+    private final Map<Integer, String> locIdToStmtSig = new HashMap<>();
 
     public DBEngine(String directory) {
         traceCache = new TraceCache(directory);
-        ObjectInputStream metadataIS = null;
-        try {
-            metadataIS = new ObjectInputStream(
-                    new BufferedInputStream(
-                            new FileInputStream(Paths.get(directory, METADATA_BIN).toFile())));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        this.metadataIS = metadataIS;
+        traceLength = readMetadata(directory);
     }
 
     /**
@@ -93,14 +58,6 @@ public class DBEngine {
      */
     public boolean checkLog() {
         return true;
-    }
-
-    /**
-     *
-     * @return total size (in events) of the recorded trace.
-     */
-    public long getTraceSize() {
-        return traceCache.getTraceSize();
     }
 
     /**
@@ -116,51 +73,12 @@ public class DBEngine {
      *         read
      */
     public Trace getTrace(long fromIndex, long toIndex, Trace.State initState, TraceInfo info) {
-        long traceSize = traceCache.getTraceSize();
-        assert fromIndex <= traceSize : "This method should only be called with a valid min value";
-        if (toIndex > traceSize + 1) toIndex = traceSize + 1;
+        assert fromIndex <= traceLength : "This method should only be called with a valid min value";
+        if (toIndex > traceLength + 1) toIndex = traceLength + 1;
         Trace trace = new Trace(initState, info);
-        AbstractEvent node = null;
         for (long index = fromIndex; index < toIndex; index++) {
             rvpredict.db.EventItem eventItem = traceCache.getEvent(index);
-            long GID = eventItem.GID;
-            long TID = eventItem.TID;
-            int ID = eventItem.ID;
-            long ADDRL = eventItem.ADDRL;
-            long ADDRR = eventItem.ADDRR;
-            long VALUE = eventItem.VALUE;
-            EventType TYPE = eventItem.TYPE;
-
-            switch (TYPE) {
-                case INIT:
-                    node = new InitEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
-                    break;
-                case READ:
-                    node = new ReadEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
-                    break;
-                case WRITE:
-                    node = new WriteEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
-                    break;
-                case WRITE_LOCK:
-                case WRITE_UNLOCK:
-                case READ_LOCK:
-                case READ_UNLOCK:
-                case WAIT_REL:
-                case WAIT_ACQ:
-                case START:
-                case PRE_JOIN:
-                case JOIN:
-                case JOIN_MAYBE_FAILED:
-                    node = new SyncEvent(GID, TID, ID, TYPE, ADDRL);
-                    break;
-                case BRANCH:
-                    node = new BranchEvent(GID, TID, ID);
-                    break;
-                default:
-                    assert false : "unexpected event type: " + TYPE;
-                    break;
-            }
-
+            Event node = AbstractEvent.of(eventItem);
             trace.addRawEvent(node);
         }
 
@@ -169,4 +87,46 @@ public class DBEngine {
         return trace;
     }
 
+    public long getTraceLength() {
+        return traceLength;
+    }
+
+    public Set<Integer> getVolatileFieldIds() {
+        return volatileFieldIds;
+    }
+
+    public Map<Integer, String> getLocIdToStmtSig() {
+        return locIdToStmtSig;
+    }
+
+    @SuppressWarnings("unchecked")
+    private long readMetadata(String directory) {
+        ObjectInputStream metadataIS = null;
+        try {
+            metadataIS = new ObjectInputStream(
+                    new BufferedInputStream(
+                            new FileInputStream(Paths.get(directory, METADATA_BIN).toFile())));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        long size = -1;
+        try {
+            while (true) {
+                try {
+                    volatileFieldIds.addAll((Collection<Integer>) metadataIS.readObject());
+                } catch (EOFException e) {
+                    break;
+                }
+                List<Map.Entry<String, Integer>> stmtSigIdList = (List<Map.Entry<String, Integer>>) metadataIS
+                        .readObject();
+                for (Map.Entry<String, Integer> entry : stmtSigIdList) {
+                    locIdToStmtSig.put(entry.getValue(), entry.getKey());
+                }
+                size = metadataIS.readLong();
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return size;
+    }
 }

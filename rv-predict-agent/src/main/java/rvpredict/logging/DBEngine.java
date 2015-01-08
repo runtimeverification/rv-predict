@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
+import rvpredict.config.Configuration;
 import rvpredict.db.EventItem;
 import rvpredict.db.EventOutputStream;
 import rvpredict.instrumentation.MetaData;
@@ -89,9 +90,9 @@ public class DBEngine {
         }
     }
 
-    public DBEngine(String directory) {
-        threadLocalTraceOS = new ThreadLocalEventStream(directory);
-        metadataOS = createMetadataOS(directory);
+    public DBEngine(Configuration config) {
+        threadLocalTraceOS = new ThreadLocalEventStream(config);
+        metadataOS = createMetadataOS(config.outdir);
         metadataLoggingThread = startMetadataLogging();
     }
 
@@ -215,6 +216,7 @@ public class DBEngine {
              */
             EventOutputStream traceOS = threadLocalTraceOS.get();
             traceOS.writeEvent(e);
+
             long eventsWritten = traceOS.getEventsWrittenCount();
             if (eventsWritten % BUFFER_THRESHOLD == 0) {
                 // Flushing events and metadata periodically to allow crash recovery.
@@ -272,6 +274,12 @@ public class DBEngine {
         synchronized (MetaData.stmtSigToLocId) {
             saveObject(new ArrayList<>(MetaData.unsavedStmtSigToLocId));
             MetaData.unsavedStmtSigToLocId.clear();
+        }
+
+        try {
+            metadataOS.writeLong(globalEventID.get());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

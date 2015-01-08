@@ -58,6 +58,9 @@ public class Main {
             // TODO(Traian): there should be only one agentOptions
             String sharingAgentOptions = Configuration.opt_only_log + " "
                     + escapeString(config.outdir);
+            if (config.zip) {
+                sharingAgentOptions += " " + Configuration.opt_zip;
+            }
             if (Configuration.additionalExcludes != null) {
                 Configuration.additionalExcludes.replaceAll(" ", "");
                 sharingAgentOptions += " " + Configuration.opt_exclude + " "

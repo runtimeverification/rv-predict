@@ -223,18 +223,6 @@ public class MethodTransformer extends MethodVisitor {
             // <stack>... value </stack>
             break;
         case PUTFIELD:
-            // TODO(YilongL): why don't we instrument inner class fields?
-            if (name.startsWith("this$")) { // inner class
-                mv.visitFieldInsn(opcode, owner, name, desc);
-                break;
-            }
-
-            // TODO(YilongL): what is this?
-            if (className.contains("$") && name.startsWith("val$")) { // strange class
-                mv.visitFieldInsn(opcode, owner, name, desc);
-                break;
-            }
-
             // <stack>... objectref value </stack>
             localVarIdx = storeValue(desc); // jvm_local_vars[localVarIdx] = value
             // <stack>... objectref </stack>

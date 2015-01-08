@@ -35,35 +35,14 @@ public enum EventType {
     /**
      * Event generated before calling {@code Object#wait}.
      */
-    PRE_WAIT,
+    WAIT_REL,
 
     /**
-     * Event generated after a thread is awakened from {@code Object#wait} by
-     * {@code Object#notify()/notifyAll()}.
+     * Event generated after a thread is awakened from {@code Object#wait} for
+     * whatever reason (e.g., spurious wakeup, being notified, or being
+     * interrupted).
      */
-    WAIT,
-
-    /**
-     * Event generated after a thread is awakened from {@code Object#wait}
-     * because of {@code Object#notify()/notifyAll()} or timeout.
-     */
-    WAIT_MAYBE_TIMEOUT,
-
-    /**
-     * Event generated after a thread is awakened from {@code Object#wait} by
-     * {@code Thread#interrupt()}.
-     */
-    WAIT_INTERRUPTED,
-
-    /**
-     * Event generated before calling {@code Object#notify()}.
-     */
-    NOTIFY,
-
-    /**
-     * Event generated before calling {@code Object#notifyAll()}.
-     */
-    NOTIFY_ALL,
+    WAIT_ACQ,
 
     /**
      * Event generated before calling {@code Thread#start()}.
@@ -76,22 +55,16 @@ public enum EventType {
     PRE_JOIN,
 
     /**
-     * Event generated after a thread is awakened from {@code Thread#join} by
-     * {@code Thread#interrupt()}.
+     * Event generated after a thread is awakened from {@code Thread#join()}
+     * because the joining thread finishes.
      */
     JOIN,
 
     /**
-     * Event generated after a thread is awakened from {@code Thread#join}
-     * because of the thread to join finishes or timeout.
+     * Event generated after a thread is awakened from some version of
+     * {@code Thread#join} even when the joining thread is not finished.
      */
-    JOIN_MAYBE_TIMEOUT,
-
-    /**
-     * Event generated after a thread is awakened from {@code Thread#join} by
-     * {@code Thread#interrupt()}.
-     */
-    JOIN_INTERRUPTED,
+    JOIN_MAYBE_FAILED,
 
     /**
      * Serves as a guard of a possible control flow change, which

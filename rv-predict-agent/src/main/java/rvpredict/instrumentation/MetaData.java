@@ -35,11 +35,6 @@ public class MetaData {
             .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     public static final List<String> unsavedVolatileVariables = new ArrayList<>();
 
-    private static final String NATIVE_INTERRUPTED_STATUS_VAR = "$interruptedStatus";
-
-    public static int NATIVE_INTERRUPTED_STATUS_VAR_ID = getVariableId("java.lang.Thread",
-            NATIVE_INTERRUPTED_STATUS_VAR);
-
     private MetaData() { }
 
     public static void setSuperclass(String className, String superclassName) {

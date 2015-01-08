@@ -79,7 +79,6 @@ public class DBEngine {
         for (long index = fromIndex; index < toIndex; index++) {
             rvpredict.db.EventItem eventItem = traceCache.getEvent(index);
             AbstractEvent node = AbstractEvent.of(eventItem);
-
             trace.addRawEvent(node);
         }
 

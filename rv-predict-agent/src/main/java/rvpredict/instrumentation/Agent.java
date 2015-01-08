@@ -47,7 +47,11 @@ public class Agent implements ClassFileTransformer {
 
         // Basics of the JDK that everything else is depending on
         "sun",
-        "java/lang"
+        "java/lang",
+
+        /* LockSupport can be seen as an optimization to busy wait, no need
+         * to instrument nor intercept */
+        "java/util/concurrent/lock/LockSupport"
     };
 
     public Agent(Config config) {
@@ -167,7 +171,7 @@ public class Agent implements ClassFileTransformer {
             ClassReader cr = new ClassReader(cbuf);
 
             ClassWriter cw = new ClassWriter(cr, 0);
-            ClassVisitor instrumentor = new SnoopInstructionClassAdapter(cw, config);
+            ClassVisitor instrumentor = new ClassTransformer(cw, config);
             CheckClassAdapter cv = new CheckClassAdapter(instrumentor);
             cr.accept(cv, 0);
 

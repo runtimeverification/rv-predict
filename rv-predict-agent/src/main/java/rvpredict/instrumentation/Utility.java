@@ -3,6 +3,7 @@ package rvpredict.instrumentation;
 import static org.objectweb.asm.Opcodes.*;
 
 import java.io.IOException;
+
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
@@ -168,7 +169,26 @@ public class Utility {
         }
     }
 
-    public static boolean isThreadClass(String className) {
+    public static boolean isSubclassOf(String class0, String class1) {
+        if (class0.equals(class1)) {
+            return true;
+        }
+
+        switch (class1) {
+        case "java/lang/Object":
+            return true;
+        case "java/lang/Thread":
+            return isThreadClass(class0);
+        case "java/util/concurrent/locks/Lock":
+            return isLockClass(class0);
+        case "java/util/concurrent/locks/ReadWriteLock":
+            return isReadWriteLockClass(class0);
+        default:
+            throw new RuntimeException("Not yet implemented!");
+        }
+    }
+
+    private static boolean isThreadClass(String className) {
         if (className.startsWith(DESC_ARRAY_PREFIX)) {
             return false;
         }
@@ -188,7 +208,7 @@ public class Utility {
         return false;
     }
 
-    public static boolean isLockClass(String className) {
+    private static boolean isLockClass(String className) {
         // TODO(YilongL): avoid hard-coding like this
         return "java/util/concurrent/locks/Lock".equals(className)
             || "java/util/concurrent/locks/ReentrantLock".equals(className)
@@ -196,7 +216,7 @@ public class Utility {
             || "java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock".equals(className);
     }
 
-    public static boolean isReadWriteLockClass(String className) {
+    private static boolean isReadWriteLockClass(String className) {
         // TODO(YilongL): avoid hard-coding like this
         return "java/util/concurrent/locks/ReadWriteLock".equals(className)
             || "java/util/concurrent/locks/ReentrantReadWriteLock".equals(className);

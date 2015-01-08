@@ -10,9 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPOutputStream;
 
-import rvpredict.db.EventOutputStream;
-import rvpredict.db.TraceCache;
-
 /**
  * Class extending {@link java.lang.ThreadLocal} to handle thread-local output
  * to {@link rvpredict.db.EventOutputStream} in a given directory.
@@ -50,7 +47,7 @@ public class ThreadLocalEventStream extends ThreadLocal<EventOutputStream> {
                 outputStream = new GZIPOutputStream(outputStream,true);
             }
             EventOutputStream eventOutputStream = new EventOutputStream(new BufferedOutputStream(
-                    outputStream), id);
+                    outputStream));
             streamsMap.put(id,eventOutputStream);
             return eventOutputStream;
         } catch (FileNotFoundException e) {

@@ -11,8 +11,6 @@ import java.io.OutputStream;
  */
 public class EventOutputStream extends DataOutputStream {
 
-    private final int id;
-
     /**
      * Creates a new event output stream to write events to the specified
      * underlying output stream. The counter <code>written</code> is
@@ -22,9 +20,8 @@ public class EventOutputStream extends DataOutputStream {
      *            use.
      * @see java.io.FilterOutputStream#out
      */
-    public EventOutputStream(OutputStream out, int id) {
+    public EventOutputStream(OutputStream out) {
         super(out);
-        this.id = id;
         eventsWrittenCount = 0;
     }
 
@@ -54,8 +51,4 @@ public class EventOutputStream extends DataOutputStream {
     }
 
     private long eventsWrittenCount;
-
-    public int getId() {
-        return id;
-    }
 }

@@ -1,4 +1,4 @@
-package rvpredict.instrumentation;
+package rvpredict.instrumentation.transformer;
 
 import static org.objectweb.asm.Opcodes.*;
 import static rvpredict.instrumentation.RVPredictRuntimeMethods.*;
@@ -12,6 +12,10 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 import rvpredict.config.Config;
+import rvpredict.instrumentation.MetaData;
+import rvpredict.instrumentation.RVPredictRuntimeMethods;
+import rvpredict.instrumentation.RVPredictRuntimeMethods.RVPredictInterceptor;
+import rvpredict.instrumentation.RVPredictRuntimeMethods.RVPredictRuntimeMethod;
 
 public class MethodTransformer extends MethodVisitor {
 
@@ -102,9 +106,9 @@ public class MethodTransformer extends MethodVisitor {
      */
     private void substituteMethodCall(int opcode, RVPredictInterceptor interceptor) {
         // <stack>... (objectref)? (arg)* </stack>
-        int[] indices = new int[interceptor.paramTypeDescs.length];
-        for (int i = interceptor.paramTypeDescs.length - 1; i >= 0; i--) {
-            indices[i] = storeValue(interceptor.paramTypeDescs[i]);
+        int[] indices = new int[interceptor.paramTypeDescs.size()];
+        for (int i = interceptor.paramTypeDescs.size() - 1; i >= 0; i--) {
+            indices[i] = storeValue(interceptor.paramTypeDescs.get(i));
         }
         int objRefIndex = opcode == INVOKESTATIC ? -1 : astore();
         // <stack>... </stack>
@@ -112,8 +116,8 @@ public class MethodTransformer extends MethodVisitor {
         if (opcode != INVOKESTATIC) {
             mv.visitVarInsn(ALOAD, objRefIndex);
         }
-        for (int i = 0; i < interceptor.paramTypeDescs.length; i++) {
-            loadValue(interceptor.paramTypeDescs[i], indices[i]);
+        for (int i = 0; i < interceptor.paramTypeDescs.size(); i++) {
+            loadValue(interceptor.paramTypeDescs.get(i), indices[i]);
         }
         // <stack>... sid (objectref)? (arg)* </stack>
         invokeStatic(interceptor);

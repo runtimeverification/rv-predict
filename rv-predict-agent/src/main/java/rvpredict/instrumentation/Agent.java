@@ -10,6 +10,7 @@ import org.objectweb.asm.util.CheckClassAdapter;
 import rvpredict.config.Config;
 import rvpredict.db.TraceCache;
 import rvpredict.engine.main.Main;
+import rvpredict.instrumentation.transformer.ClassTransformer;
 import rvpredict.logging.DBEngine;
 import rvpredict.runtime.RVPredictRuntime;
 import rvpredict.util.Logger;

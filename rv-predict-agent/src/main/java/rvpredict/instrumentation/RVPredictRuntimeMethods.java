@@ -10,6 +10,7 @@ import org.objectweb.asm.Type;
 
 import rvpredict.runtime.RVPredictRuntime;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -232,20 +233,20 @@ public class RVPredictRuntimeMethods {
     /**
      * Represents a RV-Predict runtime library method.
      */
-    static class RVPredictRuntimeMethod {
+    public static class RVPredictRuntimeMethod {
 
         /* method name and descriptor are used by ASM to uniquely locate a
          * method in RVPredictRuntime */
-        final String name;
+        public final String name;
 
-        final String desc;
+        public final String desc;
 
         private static RVPredictRuntimeMethod create(String name, Class<?>... parameterTypes) {
             Method method = getMethodHandler(name, parameterTypes);
             return new RVPredictRuntimeMethod(method.getName(), Type.getMethodDescriptor(method));
         }
 
-        static Method getMethodHandler(String name, Class<?>... parameterTypes) {
+        private static Method getMethodHandler(String name, Class<?>... parameterTypes) {
             Method method = null;
             try {
                 method = RVPredictRuntime.class.getMethod(name, parameterTypes);
@@ -270,30 +271,30 @@ public class RVPredictRuntimeMethods {
      * For example, {@link RVPredictRuntime#rvPredictWait(int, Object, long)} is
      * associated with {@link Object#wait(long)}.
      */
-    static class RVPredictInterceptor extends RVPredictRuntimeMethod {
+    public static class RVPredictInterceptor extends RVPredictRuntimeMethod {
 
         /**
          * Method type of the associated Java method. Can be
          * {@link RVPredictRuntimeMethods#STATIC}, {@link RVPredictRuntimeMethods#VIRTUAL}, or
          * {@link RVPredictRuntimeMethods#SPECIAL}.
          */
-        final int methodType;
+        private final int methodType;
 
         /**
          * Represents the class or interface in which the associated Java method
          * is declared.
          */
-        final String classOrInterface;
+        private final String classOrInterface;
 
         /**
          * The associated Java method's name.
          */
-        final String methodName;
+        private final String methodName;
 
         /**
          * The parameter type descriptors of the associated Java method.
          */
-        final String[] paramTypeDescs;
+        public final ImmutableList<String> paramTypeDescs;
 
         private static RVPredictInterceptor create(int methodType, String classOrInterface,
                 String methodName, String interceptorName, Class<?>... parameterTypes)
@@ -324,17 +325,18 @@ public class RVPredictRuntimeMethods {
             this.methodType = opcode;
             this.classOrInterface = classOrInterface;
             this.methodName = methodName;
-            paramTypeDescs = new String[parameterTypes.length];
-            for (int i = 0; i < parameterTypes.length; i++) {
-                paramTypeDescs[i] = Type.getDescriptor(parameterTypes[i]);
+            ImmutableList.Builder<String> builder = ImmutableList.builder();
+            for (Class<?> cls : parameterTypes) {
+                builder.add(Type.getDescriptor(cls));
             }
+            paramTypeDescs = builder.build();
         }
 
         private String getOriginalMethodSig() {
             StringBuilder sb = new StringBuilder(methodName);
             sb.append("(");
-            for (int i = 0; i < paramTypeDescs.length; i ++) {
-                sb.append(paramTypeDescs[i]);
+            for (String paramTypeDesc : paramTypeDescs) {
+                sb.append(paramTypeDesc);
             }
             sb.append(")");
             return sb.toString();

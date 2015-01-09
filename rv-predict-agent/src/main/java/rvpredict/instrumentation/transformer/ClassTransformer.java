@@ -1,4 +1,4 @@
-package rvpredict.instrumentation;
+package rvpredict.instrumentation.transformer;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -10,6 +10,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 import rvpredict.config.Config;
+import rvpredict.instrumentation.MetaData;
 
 public class ClassTransformer extends ClassVisitor {
 

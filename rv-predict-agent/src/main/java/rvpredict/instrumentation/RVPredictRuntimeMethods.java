@@ -1,16 +1,12 @@
 package rvpredict.instrumentation;
 
-import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.objectweb.asm.Type;
-
 import rvpredict.runtime.RVPredictRuntime;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -20,7 +16,7 @@ public class RVPredictRuntimeMethods {
      * Some class literals.
      */
     private static final Class<Boolean> Z   =   boolean.class;
-    private static final Class<Integer> I   =   int.class;
+    static final Class<Integer> I   =   int.class;
     private static final Class<Long>    J   =   long.class;
     private static final Class<Object>  O   =   Object.class;
 
@@ -35,9 +31,9 @@ public class RVPredictRuntimeMethods {
     /*
      * Some useful constants.
      */
-    private static final int STATIC     =   0x0;
-    private static final int VIRTUAL    =   0x1;
-    private static final int SPECIAL    =   0x2;
+    public static final int STATIC     =   0x0;
+    public static final int VIRTUAL    =   0x1;
+    public static final int SPECIAL    =   0x2;
     private static final String JL_OBJECT       =   "java/lang/Object";
     private static final String JL_THREAD       =   "java/lang/Thread";
     private static final String JL_SYSTEM       =   "java/lang/System";
@@ -228,120 +224,6 @@ public class RVPredictRuntimeMethods {
             }
         }
         return null;
-    }
-
-    /**
-     * Represents a RV-Predict runtime library method.
-     */
-    public static class RVPredictRuntimeMethod {
-
-        /* method name and descriptor are used by ASM to uniquely locate a
-         * method in RVPredictRuntime */
-        public final String name;
-
-        public final String desc;
-
-        private static RVPredictRuntimeMethod create(String name, Class<?>... parameterTypes) {
-            Method method = getMethodHandler(name, parameterTypes);
-            return new RVPredictRuntimeMethod(method.getName(), Type.getMethodDescriptor(method));
-        }
-
-        private static Method getMethodHandler(String name, Class<?>... parameterTypes) {
-            Method method = null;
-            try {
-                method = RVPredictRuntime.class.getMethod(name, parameterTypes);
-            } catch (NoSuchMethodException | SecurityException e) {
-                e.printStackTrace();
-            }
-            return method;
-        }
-
-        protected RVPredictRuntimeMethod(String name, String desc) {
-            this.name = name;
-            this.desc = desc;
-        }
-
-    }
-
-    /**
-     * Represents a special kind of RV-Predict runtime library method, i.e.
-     * interceptor, that is bound to some corresponding Java method and can be
-     * used to replace it during bytecode transformation.
-     * <p>
-     * For example, {@link RVPredictRuntime#rvPredictWait(int, Object, long)} is
-     * associated with {@link Object#wait(long)}.
-     */
-    public static class RVPredictInterceptor extends RVPredictRuntimeMethod {
-
-        /**
-         * Method type of the associated Java method. Can be
-         * {@link RVPredictRuntimeMethods#STATIC}, {@link RVPredictRuntimeMethods#VIRTUAL}, or
-         * {@link RVPredictRuntimeMethods#SPECIAL}.
-         */
-        private final int methodType;
-
-        /**
-         * Represents the class or interface in which the associated Java method
-         * is declared.
-         */
-        private final String classOrInterface;
-
-        /**
-         * The associated Java method's name.
-         */
-        private final String methodName;
-
-        /**
-         * The parameter type descriptors of the associated Java method.
-         */
-        public final ImmutableList<String> paramTypeDescs;
-
-        private static RVPredictInterceptor create(int methodType, String classOrInterface,
-                String methodName, String interceptorName, Class<?>... parameterTypes)
-                throws ClassNotFoundException {
-            Class<?>[] interceptorParamTypes;
-            int length = parameterTypes.length;
-            if (methodType == STATIC) {
-                interceptorParamTypes = new Class<?>[length + 1];
-                interceptorParamTypes[0] = I;
-                System.arraycopy(parameterTypes, 0, interceptorParamTypes, 1, length);
-            } else {
-                interceptorParamTypes = new Class<?>[length + 2];
-                interceptorParamTypes[0] = I;
-                interceptorParamTypes[1] = Class.forName(classOrInterface.replace("/", "."));
-                System.arraycopy(parameterTypes, 0, interceptorParamTypes, 2, length);
-            }
-
-            Method methodHandler = RVPredictRuntimeMethod.getMethodHandler(interceptorName,
-                    interceptorParamTypes);
-            return new RVPredictInterceptor(interceptorName,
-                    Type.getMethodDescriptor(methodHandler), methodType, classOrInterface,
-                    methodName, parameterTypes);
-        }
-
-        private RVPredictInterceptor(String name, String desc, int opcode, String classOrInterface,
-                String methodName, Class<?>[] parameterTypes) {
-            super(name, desc);
-            this.methodType = opcode;
-            this.classOrInterface = classOrInterface;
-            this.methodName = methodName;
-            ImmutableList.Builder<String> builder = ImmutableList.builder();
-            for (Class<?> cls : parameterTypes) {
-                builder.add(Type.getDescriptor(cls));
-            }
-            paramTypeDescs = builder.build();
-        }
-
-        private String getOriginalMethodSig() {
-            StringBuilder sb = new StringBuilder(methodName);
-            sb.append("(");
-            for (String paramTypeDesc : paramTypeDescs) {
-                sb.append(paramTypeDesc);
-            }
-            sb.append(")");
-            return sb.toString();
-        }
-
     }
 
 }

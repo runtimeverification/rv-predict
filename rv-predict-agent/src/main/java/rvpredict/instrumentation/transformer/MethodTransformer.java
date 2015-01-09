@@ -13,9 +13,9 @@ import org.objectweb.asm.Type;
 
 import rvpredict.config.Config;
 import rvpredict.instrumentation.MetaData;
+import rvpredict.instrumentation.RVPredictInterceptor;
+import rvpredict.instrumentation.RVPredictRuntimeMethod;
 import rvpredict.instrumentation.RVPredictRuntimeMethods;
-import rvpredict.instrumentation.RVPredictRuntimeMethods.RVPredictInterceptor;
-import rvpredict.instrumentation.RVPredictRuntimeMethods.RVPredictRuntimeMethod;
 
 public class MethodTransformer extends MethodVisitor {
 

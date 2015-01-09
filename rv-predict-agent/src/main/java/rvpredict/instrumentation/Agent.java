@@ -142,26 +142,23 @@ public class Agent implements ClassFileTransformer {
     @Override
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
-
         boolean toInstrument = true;
-        String[] tmp = config.excludeList;
-
-        for (int i = 0; i < tmp.length; i++) {
-            String s = tmp[i];
-            if (cname.startsWith(s)) {
-                toInstrument = false;
-                break;
+        if (config.excludeList != null) {
+            for (String exclude : config.excludeList) {
+                if (cname.startsWith(exclude)) {
+                    toInstrument = false;
+                    break;
+                }
             }
         }
-        tmp = config.includeList;
-        if (tmp != null)
-            for (int i = 0; i < tmp.length; i++) {
-                String s = tmp[i];
-                if (cname.startsWith(s)) {
+        if (config.includeList != null) {
+            for (String include : config.includeList) {
+                if (cname.startsWith(include)) {
                     toInstrument = true;
                     break;
                 }
             }
+        }
 
 //        System.err.println(cname + " " + toInstrument);
         for (String ignore : IGNORES) {
@@ -177,7 +174,8 @@ public class Agent implements ClassFileTransformer {
 
             byte[] ret = cw.toByteArray();
             return ret;
+        } else {
+            return cbuf;
         }
-        return cbuf;
     }
 }

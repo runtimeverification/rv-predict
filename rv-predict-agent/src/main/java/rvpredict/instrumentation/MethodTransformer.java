@@ -1,7 +1,7 @@
 package rvpredict.instrumentation;
 
 import static org.objectweb.asm.Opcodes.*;
-import static rvpredict.instrumentation.Interceptors.*;
+import static rvpredict.instrumentation.RVPredictRuntimeMethods.*;
 import static rvpredict.instrumentation.Utility.*;
 
 import java.util.Set;
@@ -12,7 +12,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 import rvpredict.config.Config;
-import rvpredict.instrumentation.Interceptors.InterceptionInfo;
 
 public class MethodTransformer extends MethodVisitor {
 
@@ -101,13 +100,11 @@ public class MethodTransformer extends MethodVisitor {
      * Substitutes method call with its counterpart method provided by the
      * RV-Predict runtime.
      */
-    private void substituteMethodCall(int opcode, InterceptionInfo info) {
-        assert opcode == INVOKEVIRTUAL || opcode == INVOKESPECIAL || opcode == INVOKESTATIC;
-
+    private void substituteMethodCall(int opcode, RVPredictInterceptor interceptor) {
         // <stack>... (objectref)? (arg)* </stack>
-        int[] indices = new int[info.paramTypeDescs.length];
-        for (int i = info.paramTypeDescs.length - 1; i >= 0; i--) {
-            indices[i] = storeValue(info.paramTypeDescs[i]);
+        int[] indices = new int[interceptor.paramTypeDescs.length];
+        for (int i = interceptor.paramTypeDescs.length - 1; i >= 0; i--) {
+            indices[i] = storeValue(interceptor.paramTypeDescs[i]);
         }
         int objRefIndex = opcode == INVOKESTATIC ? -1 : astore();
         // <stack>... </stack>
@@ -115,23 +112,21 @@ public class MethodTransformer extends MethodVisitor {
         if (opcode != INVOKESTATIC) {
             mv.visitVarInsn(ALOAD, objRefIndex);
         }
-        for (int i = 0; i < info.paramTypeDescs.length; i++) {
-            loadValue(info.paramTypeDescs[i], indices[i]);
+        for (int i = 0; i < interceptor.paramTypeDescs.length; i++) {
+            loadValue(interceptor.paramTypeDescs[i], indices[i]);
         }
         // <stack>... sid (objectref)? (arg)* </stack>
-        invokeStatic(info.interceptor);
+        invokeStatic(interceptor);
     }
 
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-        if (opcode == INVOKEVIRTUAL || opcode == INVOKEINTERFACE || opcode == INVOKESTATIC) {
-            int idx = (name + desc).lastIndexOf(')');
-            String sig = (name + desc).substring(0, idx + 1);
-            InterceptionInfo info = Interceptors.getInterceptionInfo(opcode, sig);
-            if (info != null && isSubclassOf(owner, info.owner)) {
-                substituteMethodCall(opcode, info);
-                return;
-            }
+        int idx = (name + desc).lastIndexOf(')');
+        String methodSig = (name + desc).substring(0, idx + 1);
+        RVPredictInterceptor interceptor = RVPredictRuntimeMethods.lookup(owner, methodSig, itf);
+        if (interceptor != null) {
+            substituteMethodCall(opcode, interceptor);
+            return;
         }
         mv.visitMethodInsn(opcode, owner, name, desc, itf);
     }
@@ -430,8 +425,9 @@ public class MethodTransformer extends MethodVisitor {
         mv.visitTableSwitchInsn(min, max, dflt, labels);
     }
 
-    private void invokeStatic(Interceptor methodInfo) {
-        mv.visitMethodInsn(INVOKESTATIC, config.logClass, methodInfo.name, methodInfo.desc, false);
+    private void invokeStatic(RVPredictRuntimeMethod rvpredictRTMethod) {
+        mv.visitMethodInsn(INVOKESTATIC, config.logClass, rvpredictRTMethod.name,
+                rvpredictRTMethod.desc, false);
     }
 
     /**

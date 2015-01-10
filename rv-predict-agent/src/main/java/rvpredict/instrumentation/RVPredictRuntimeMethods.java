@@ -16,14 +16,14 @@ public class RVPredictRuntimeMethods {
      * Some class literals.
      */
     private static final Class<Boolean> Z   =   boolean.class;
-    static final Class<Integer> I   =   int.class;
+    private static final Class<Integer> I   =   int.class;
     private static final Class<Long>    J   =   long.class;
     private static final Class<Object>  O   =   Object.class;
 
-    public static final RVPredictRuntimeMethod LOG_FIELD_ACCESS  =  init("logFieldAcc", I, O, I, O, Z, Z);
-    public static final RVPredictRuntimeMethod LOG_FIELD_INIT    =  init("logFieldInit", I, O, I, O);
-    public static final RVPredictRuntimeMethod LOG_ARRAY_ACCESS  =  init("logArrayAcc", I, O, I, O, Z);
-    public static final RVPredictRuntimeMethod LOG_ARRAY_INIT    =  init("logArrayInit", I, O, I, O);
+    public static final RVPredictRuntimeMethod LOG_FIELD_ACCESS  =  init("logFieldAcc", I, O, I, J, Z, Z);
+    public static final RVPredictRuntimeMethod LOG_FIELD_INIT    =  init("logFieldInit", I, O, I, J);
+    public static final RVPredictRuntimeMethod LOG_ARRAY_ACCESS  =  init("logArrayAcc", I, O, I, J, Z);
+    public static final RVPredictRuntimeMethod LOG_ARRAY_INIT    =  init("logArrayInit", I, O, I, J);
     public static final RVPredictRuntimeMethod LOG_MONITOR_ENTER =  init("logMonitorEnter", I, O);
     public static final RVPredictRuntimeMethod LOG_MONITOR_EXIT  =  init("logMonitorExit", I, O);
     public static final RVPredictRuntimeMethod LOG_BRANCH        =  init("logBranch", I);

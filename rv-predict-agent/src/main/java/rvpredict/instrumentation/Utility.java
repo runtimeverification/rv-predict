@@ -45,10 +45,6 @@ public class Utility {
 
     public static final int[] ICONST_X = {ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, ICONST_5 };
 
-    public static boolean isPrimitiveTypeDesc(String desc) {
-        return !desc.startsWith(DESC_ARRAY_PREFIX) && !desc.startsWith(DESC_OBJECT_PREFIX);
-    }
-
     public static boolean isSingleWordTypeDesc(String desc) {
         return !desc.startsWith(DESC_LONG) && !desc.startsWith(DESC_DOUBLE);
     }
@@ -105,68 +101,38 @@ public class Utility {
         }
     }
 
-    public static void addPrimitive2ObjectConv(MethodVisitor mv, int aloadOpCode) {
-        String desc;
-        switch (aloadOpCode) {
-        case IALOAD: case IASTORE:
-            desc = DESC_INT;
-            break;
+    public static void calcLongValue(MethodVisitor mv, int arrayLoadOrStoreOpcode) {
+        switch (arrayLoadOrStoreOpcode) {
         case BALOAD: case BASTORE:
-            // TODO(YilongL): is it a latent bug since we cannot tell from the
-            // opcode that whether JVM is loading/storing a byte or a boolean
-            desc = DESC_BOOL;
-            break;
         case CALOAD: case CASTORE:
-            desc = DESC_CHAR;
-            break;
-        case DALOAD: case DASTORE:
-            desc = DESC_DOUBLE;
-            break;
-        case FALOAD: case FASTORE:
-            desc = DESC_FLOAT;
+        case SALOAD: case SASTORE:
+        case IALOAD: case IASTORE:
+            mv.visitInsn(I2L);
             break;
         case LALOAD: case LASTORE:
-            desc = DESC_LONG;
+            break; // do nothing
+        case AALOAD: case AASTORE:
+            mv.visitMethodInsn(INVOKESTATIC, "java/lang/System", "identityHashCode",
+                    "(Ljava/lang/Object;)I", false);
+            mv.visitInsn(I2L);
             break;
-        case SALOAD: case SASTORE:
-            desc = DESC_SHORT;
+        case DALOAD:
+        case DASTORE:
+            mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "doubleToLongBits", "(D)J",
+                    false);
+            break;
+        case FALOAD:
+        case FASTORE:
+            mv.visitMethodInsn(INVOKESTATIC, "java/lang/Float", "floatToIntBits", "(F)I", false);
+            mv.visitInsn(I2L);
             break;
         default:
-            desc = null;
-            assert false : "Expected an array load opcode; but found: " + aloadOpCode;
+            assert false : "Expected an array load/store opcode; but found: " + arrayLoadOrStoreOpcode;
         }
-
-        addPrimitive2ObjectConv(mv, desc);
     }
 
-    public static void addPrimitive2ObjectConv(MethodVisitor mv, String desc) {
-        if (desc.startsWith(DESC_INT)) {
-            mv.visitMethodInsn(INVOKESTATIC, INTEGER_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_INTEGER_VALUEOF, false);
-        } else if (desc.startsWith(DESC_BYTE)) {
-            mv.visitMethodInsn(INVOKESTATIC, BYTE_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_BYTE_VALUEOF, false);
-        } else if (desc.startsWith(DESC_SHORT)) {
-            mv.visitMethodInsn(INVOKESTATIC, SHORT_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_SHORT_VALUEOF, false);
-        } else if (desc.startsWith(DESC_BOOL)) {
-            mv.visitMethodInsn(INVOKESTATIC, BOOLEAN_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_BOOLEAN_VALUEOF, false);
-        } else if (desc.startsWith(DESC_CHAR)) {
-            mv.visitMethodInsn(INVOKESTATIC, CHARACTER_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_CHAR_VALUEOF, false);
-        } else if (desc.startsWith(DESC_LONG)) {
-            mv.visitMethodInsn(INVOKESTATIC, LONG_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_LONG_VALUEOF, false);
-        } else if (desc.startsWith(DESC_FLOAT)) {
-            mv.visitMethodInsn(INVOKESTATIC, FLOAT_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_FLOAT_VALUEOF, false);
-        } else if (desc.startsWith(DESC_DOUBLE)) {
-            mv.visitMethodInsn(INVOKESTATIC, DOUBLE_INTERNAL_NAME, METHOD_VALUEOF,
-                    DESC_DOUBLE_VALUEOF, false);
-        } else {
-            assert false : "Expected primitive type descriptor; but found: " + desc;
-        }
+    public static void calcLongValue(MethodVisitor mv, String desc) {
+        calcLongValue(mv, Type.getType(desc).getOpcode(IALOAD));
     }
 
     public static boolean isSubclassOf(String class0, String class1) {

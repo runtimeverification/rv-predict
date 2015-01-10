@@ -50,11 +50,11 @@ public class RVPredictInterceptor extends RVPredictRuntimeMethod {
         int length = parameterTypes.length;
         if (methodType == RVPredictRuntimeMethods.STATIC) {
             interceptorParamTypes = new Class<?>[length + 1];
-            interceptorParamTypes[0] = RVPredictRuntimeMethods.I;
+            interceptorParamTypes[0] = int.class;
             System.arraycopy(parameterTypes, 0, interceptorParamTypes, 1, length);
         } else {
             interceptorParamTypes = new Class<?>[length + 2];
-            interceptorParamTypes[0] = RVPredictRuntimeMethods.I;
+            interceptorParamTypes[0] = int.class;
             interceptorParamTypes[1] = Class.forName(classOrInterface.replace("/", "."));
             System.arraycopy(parameterTypes, 0, interceptorParamTypes, 2, length);
         }

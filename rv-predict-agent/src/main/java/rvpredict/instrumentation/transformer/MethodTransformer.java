@@ -73,7 +73,7 @@ public class MethodTransformer extends MethodVisitor {
 
     @Override
     public void visitMaxs(int maxStack, int maxLocals) {
-        mv.visitMaxs(maxStack + 6, crntMaxIndex + 2);// may change to ...
+        mv.visitMaxs(maxStack + 7, crntMaxIndex + 2);// may change to ...
     }
 
     @Override
@@ -171,7 +171,7 @@ public class MethodTransformer extends MethodVisitor {
             addPushConstInsn(mv, ID);
             mv.visitInsn(ACONST_NULL);
             addPushConstInsn(mv, sid);
-            loadThenBoxValue(desc, localVarIdx);
+            loadThenCalcLongValue(desc, localVarIdx);
             addPushConstInsn(mv, 0);
             addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
             // <stack>... value ID null sid value false branch </stack>
@@ -187,7 +187,7 @@ public class MethodTransformer extends MethodVisitor {
             addPushConstInsn(mv, ID);
             mv.visitInsn(ACONST_NULL);
             addPushConstInsn(mv, sid);
-            loadThenBoxValue(desc, localVarIdx);
+            loadThenCalcLongValue(desc, localVarIdx);
             // <stack>... ID null sid value </stack>
 
             if (isInit)
@@ -214,7 +214,7 @@ public class MethodTransformer extends MethodVisitor {
             addPushConstInsn(mv, ID);
             mv.visitVarInsn(ALOAD, localVarIdx);
             addPushConstInsn(mv, sid);
-            loadThenBoxValue(desc, localVarIdx2);
+            loadThenCalcLongValue(desc, localVarIdx2);
             addPushConstInsn(mv, 0);
             addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
             // <stack>... value ID objectref sid value false branch </stack>
@@ -234,7 +234,7 @@ public class MethodTransformer extends MethodVisitor {
             addPushConstInsn(mv, ID);
             mv.visitVarInsn(ALOAD, localVarIdx2);
             addPushConstInsn(mv, sid);
-            loadThenBoxValue(desc, localVarIdx);
+            loadThenCalcLongValue(desc, localVarIdx);
             // <stack>... ID objectref sid value </stack>
             if (isInit)
                 invokeStatic(LOG_FIELD_INIT);
@@ -340,14 +340,11 @@ public class MethodTransformer extends MethodVisitor {
         mv.visitVarInsn(ILOAD, localVarIdx1);
         mv.visitVarInsn(getElementLoadOpcode(arrayLoadOpcode), localVarIdx3);
         // <stack>... value sid arrayref index value </stack>
-
-        if (arrayLoadOpcode != AALOAD) {
-            addPrimitive2ObjectConv(mv, arrayLoadOpcode);
-        }
-        // <stack>... value sid arrayref index valueObjRef </stack>
+        calcLongValue(mv, arrayLoadOpcode);
+        // <stack>... value sid arrayref index longValue </stack>
 
         addPushConstInsn(mv, 0);
-        // <stack>... value sid arrayref index valueObjRef false </stack>
+        // <stack>... value sid arrayref index longValue false </stack>
 
         invokeStatic(LOG_ARRAY_ACCESS);
         // <stack>... value </stack>
@@ -379,15 +376,13 @@ public class MethodTransformer extends MethodVisitor {
         mv.visitVarInsn(ILOAD, localVarIdx2);
         mv.visitVarInsn(getElementLoadOpcode(arrayStoreOpcode), localVarIdx1);
         // <stack>... sid arrayref index value </stack>
-        if (arrayStoreOpcode != AASTORE) {
-            addPrimitive2ObjectConv(mv, arrayStoreOpcode);
-        }
-        // <stack>... sid arrayref index valueObjRef </stack>
+        calcLongValue(mv, arrayStoreOpcode);
+        // <stack>... sid arrayref index longValue </stack>
         if (isInit) {
             invokeStatic(LOG_ARRAY_INIT);
         } else {
             addPushConstInsn(mv, 1);
-            // <stack>... sid arrayref index valueObjRef true </stack>
+            // <stack>... sid arrayref index longValue true </stack>
             invokeStatic(LOG_ARRAY_ACCESS);
         }
         // <stack>... </stack>
@@ -501,11 +496,9 @@ public class MethodTransformer extends MethodVisitor {
      * @param index
      *            the local variable index that has the value
      */
-    private void loadThenBoxValue(String desc, int index) {
+    private void loadThenCalcLongValue(String desc, int index) {
         loadValue(desc, index);
-        if (isPrimitiveTypeDesc(desc)) {
-            addPrimitive2ObjectConv(mv, desc);
-        }
+        calcLongValue(mv, desc);
     }
 
     /**

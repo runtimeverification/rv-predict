@@ -268,11 +268,11 @@ public final class RVPredictRuntime {
      * @param branchModel
      *            specifies if we use branch model
      */
-    public static void logFieldAcc(int locId, Object object, int variableId, Object value,
+    public static void logFieldAcc(int locId, Object object, int variableId, long value,
             boolean isWrite, boolean branchModel) {
         variableId = RVPredictRuntime.resolveVariableId(variableId);
         db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
-                System.identityHashCode(object), -variableId, objectToLong(value));
+                System.identityHashCode(object), -variableId, value);
         if (!isPrimitiveWrapper(value) && branchModel) {
             // TODO(YilongL): what does it mean?
             // shared object reference variable deference
@@ -296,9 +296,9 @@ public final class RVPredictRuntime {
      * @param isWrite
      *            specifies if it is a write access
      */
-    public static void logArrayAcc(int locId, Object array, int index, Object value, boolean isWrite) {
+    public static void logArrayAcc(int locId, Object array, int index, long value, boolean isWrite) {
         db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
-                System.identityHashCode(array), index, objectToLong(value));
+                System.identityHashCode(array), index, value);
     }
 
     /**
@@ -314,10 +314,9 @@ public final class RVPredictRuntime {
      * @param value
      *            the initial value of the field
      */
-    public static void logFieldInit(int locId, Object object, int variableId, Object value) {
+    public static void logFieldInit(int locId, Object object, int variableId, long value) {
         variableId = RVPredictRuntime.resolveVariableId(variableId);
-        db.saveEvent(EventType.INIT, locId, System.identityHashCode(object), -variableId,
-                objectToLong(value));
+        db.saveEvent(EventType.INIT, locId, System.identityHashCode(object), -variableId, value);
     }
 
     /**
@@ -332,9 +331,8 @@ public final class RVPredictRuntime {
      * @param value
      *            the initial value of the element
      */
-    public static void logArrayInit(int locId, Object array, int index, Object value) {
-        db.saveEvent(EventType.INIT, locId, System.identityHashCode(array), index,
-                objectToLong(value));
+    public static void logArrayInit(int locId, Object array, int index, long value) {
+        db.saveEvent(EventType.INIT, locId, System.identityHashCode(array), index, value);
     }
 
     /**
@@ -857,14 +855,16 @@ public final class RVPredictRuntime {
                             if (srcObj == null
                                     || dest.getClass().getComponentType()
                                             .isAssignableFrom(srcObj.getClass())) {
-                                logArrayAcc(locId, src, srcPos + i, srcObj, false);
+                                logArrayAcc(locId, src, srcPos + i,
+                                        System.identityHashCode(srcObj), false);
                             } else {
                                 k = i;
                                 break;
                             }
                         }
                         for (int i = 0; i < k; i++) {
-                            logArrayAcc(locId, dest, destPos + i, ((Object[]) src)[i + srcPos], true);
+                            logArrayAcc(locId, dest, destPos + i,
+                                    System.identityHashCode(((Object[]) src)[i + srcPos]), true);
                         }
                     }
                 }
@@ -873,10 +873,11 @@ public final class RVPredictRuntime {
                     if (srcPos + length <= ((boolean[]) src).length
                             && destPos + length <= ((boolean[]) dest).length) {
                         for (int i = srcPos; i < srcPos + length; i++) {
-                            logArrayAcc(locId, src, i, ((boolean[]) src)[i], false);
+                            logArrayAcc(locId, src, i, ((boolean[]) src)[i] ? 1 : 0, false);
                         }
                         for (int i = destPos; i < destPos + length; i++) {
-                            logArrayAcc(locId, dest, i, ((boolean[]) src)[i - destPos + srcPos], true);
+                            logArrayAcc(locId, dest, i, ((boolean[]) src)[i - destPos + srcPos] ? 1
+                                    : 0, true);
                         }
                     }
                 }
@@ -943,10 +944,13 @@ public final class RVPredictRuntime {
                     if (srcPos + length <= ((float[]) src).length
                             && destPos + length <= ((float[]) dest).length) {
                         for (int i = srcPos; i < srcPos + length; i++) {
-                            logArrayAcc(locId, src, i, ((float[]) src)[i], false);
+                            logArrayAcc(locId, src, i, Float.floatToIntBits(((float[]) src)[i]),
+                                    false);
                         }
                         for (int i = destPos; i < destPos + length; i++) {
-                            logArrayAcc(locId, dest, i, ((float[]) src)[i - destPos + srcPos], true);
+                            logArrayAcc(locId, dest, i,
+                                    Float.floatToIntBits(((float[]) src)[i - destPos + srcPos]),
+                                    true);
                         }
                     }
                 }
@@ -955,10 +959,13 @@ public final class RVPredictRuntime {
                     if (srcPos + length <= ((double[]) src).length
                             && destPos + length <= ((double[]) dest).length) {
                         for (int i = srcPos; i < srcPos + length; i++) {
-                            logArrayAcc(locId, src, i, ((double[]) src)[i], false);
+                            logArrayAcc(locId, src, i, Double.doubleToLongBits(((double[]) src)[i]),
+                                    false);
                         }
                         for (int i = destPos; i < destPos + length; i++) {
-                            logArrayAcc(locId, dest, i, ((double[]) src)[i - destPos + srcPos], true);
+                            logArrayAcc(locId, dest, i,
+                                    Double.doubleToLongBits(((double[]) src)[i - destPos + srcPos]),
+                                    true);
                         }
                     }
                 }
@@ -1042,18 +1049,6 @@ public final class RVPredictRuntime {
         return o instanceof Integer || o instanceof Long || o instanceof Byte
                 || o instanceof Boolean || o instanceof Float || o instanceof Double
                 || o instanceof Short || o instanceof Character;
-    }
-
-    private static long objectToLong(Object o) {
-        if (o instanceof Boolean) return ((Boolean) o).booleanValue() ? 1 : 0;
-        if (o instanceof Byte) return (Byte) o;
-        if (o instanceof Character) return ((Character) o);
-        if (o instanceof Short) return (Short) o;
-        if (o instanceof Integer) return (Integer) o;
-        if (o instanceof Long) return (Long) o;
-        if (o instanceof Float) return Float.floatToRawIntBits((Float) o);
-        if (o instanceof Double) return Double.doubleToRawLongBits((Double) o);
-        return System.identityHashCode(o);
     }
 
     /**

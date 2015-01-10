@@ -8,7 +8,6 @@ import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-
 import rvpredict.config.Config;
 import rvpredict.instrumentation.MetaData;
 
@@ -75,8 +74,8 @@ public class ClassTransformer extends ClassVisitor {
                     numOfWords++;
             }
 
-            mv = new MethodTransformer(mv, source, className, version, name, name
-                    + desc, access, numOfWords, finalFields, config);
+            mv = new MethodTransformer(mv, source, className, version, name, desc, access,
+                    numOfWords, finalFields, config);
         }
         return mv;
     }

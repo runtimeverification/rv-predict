@@ -10,7 +10,6 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-
 import rvpredict.config.Config;
 import rvpredict.instrumentation.MetaData;
 import rvpredict.instrumentation.RVPredictInterceptor;
@@ -22,7 +21,6 @@ public class MethodTransformer extends MethodVisitor {
     private final String className;
     private final int version;
     private final String source;
-    private final String methodName;
     private final String signature;
 
     /**
@@ -51,29 +49,20 @@ public class MethodTransformer extends MethodVisitor {
     private int crntLineNum;
 
     public MethodTransformer(MethodVisitor mv, String source, String className,
-            int version, String methodName, String signature, int access, int argSize,
+            int version, String name, String desc, int access, int argSize,
             Set<String> finalFields, Config config) {
         super(Opcodes.ASM5, mv);
         this.source = source == null ? "Unknown" : source;
         this.className = className;
         this.version = version;
-        this.methodName = methodName;
-        this.signature = signature;
-        this.isInit = "<init>".equals(methodName) || "<clinit>".equals(methodName);
+        this.signature = name + desc;
+        this.isInit = "<init>".equals(name) || "<clinit>".equals(name);
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
         this.finalFields = finalFields;
         this.config = config;
 
         crntMaxIndex = argSize + 1;
-        if (config.verbose) {
-            System.out.println("method: " + this.methodName);
-        }
-    }
-
-    @Override
-    public void visitMaxs(int maxStack, int maxLocals) {
-        mv.visitMaxs(maxStack + 7, crntMaxIndex + 2);// may change to ...
     }
 
     @Override

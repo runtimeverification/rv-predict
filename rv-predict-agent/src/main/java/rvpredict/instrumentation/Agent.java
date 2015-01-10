@@ -6,7 +6,6 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.util.CheckClassAdapter;
-
 import rvpredict.config.Config;
 import rvpredict.db.TraceCache;
 import rvpredict.engine.main.Main;
@@ -167,9 +166,9 @@ public class Agent implements ClassFileTransformer {
         if (toInstrument) {
             ClassReader cr = new ClassReader(cbuf);
 
-            ClassWriter cw = new ClassWriter(cr, 0);
+            ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
             ClassVisitor instrumentor = new ClassTransformer(cw, config);
-            CheckClassAdapter cv = new CheckClassAdapter(instrumentor);
+            ClassVisitor cv = new CheckClassAdapter(instrumentor);
             cr.accept(cv, 0);
 
             byte[] ret = cw.toByteArray();

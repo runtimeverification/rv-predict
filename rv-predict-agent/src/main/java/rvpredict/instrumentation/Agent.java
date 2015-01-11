@@ -1,25 +1,25 @@
 package rvpredict.instrumentation;
 
-import rvpredict.config.Configuration;
-
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.util.CheckClassAdapter;
-import rvpredict.config.Config;
-import rvpredict.db.TraceCache;
-import rvpredict.engine.main.Main;
-import rvpredict.instrumentation.transformer.ClassTransformer;
-import rvpredict.logging.DBEngine;
-import rvpredict.runtime.RVPredictRuntime;
-import rvpredict.util.Logger;
-
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.Arrays;
+
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.util.CheckClassAdapter;
+
+import rvpredict.config.Config;
+import rvpredict.config.Configuration;
+import rvpredict.db.TraceCache;
+import rvpredict.engine.main.Main;
+import rvpredict.instrumentation.transformer.ClassTransformer;
+import rvpredict.logging.DBEngine;
+import rvpredict.runtime.RVPredictRuntime;
+import rvpredict.util.Logger;
 
 public class Agent implements ClassFileTransformer {
 
@@ -35,7 +35,10 @@ public class Agent implements ClassFileTransformer {
         "rvpredict",
         "org.objectweb.asm",
         "com/beust",
-        "org/apache/tools/ant/util/JavaEnvUtils",
+
+        // the bytecode of ant uses the deprecated JSR/RET instructions which cause
+        // RuntimeException: "JSR/RET are not supported with computeFrames option"
+        "org/apache/tools/ant",
 
         // JDK classes used by the RV-Predict runtime library
         "java/io",
@@ -89,10 +92,9 @@ public class Agent implements ClassFileTransformer {
             if (config.includeList == null) {
                 config.includeList = includes;
             } else {
-                System.out.println("Includes: " + Arrays.toString(includes));
-                int length = config.includeList.length;
-                String[] array = new String[length + includes.length];
-                System.arraycopy(includes, 0, array, length, includes.length);
+                String[] array = new String[config.includeList.length + includes.length];
+                System.arraycopy(config.includeList, 0, array, 0, config.includeList.length);
+                System.arraycopy(includes, 0, array, config.includeList.length, includes.length);
                 config.includeList = array;
             }
             System.out.println("Including: " + Arrays.toString(config.includeList));
@@ -166,10 +168,16 @@ public class Agent implements ClassFileTransformer {
         if (toInstrument) {
             ClassReader cr = new ClassReader(cbuf);
 
-            ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
-            ClassVisitor instrumentor = new ClassTransformer(cw, config);
-            ClassVisitor cv = new CheckClassAdapter(instrumentor);
-            cr.accept(cv, 0);
+            ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES);
+            ClassVisitor cv = new ClassTransformer(cw, config);
+            cv = new CheckClassAdapter(cv);
+            try {
+                cr.accept(cv, ClassReader.EXPAND_FRAMES);
+            } catch (Exception e) {
+                /* exceptions during class loading are silently suppressed by default */
+                System.err.println("Cannot retransform " + cname + ". Exception: " + e);
+                throw e;
+            }
 
             byte[] ret = cw.toByteArray();
             return ret;

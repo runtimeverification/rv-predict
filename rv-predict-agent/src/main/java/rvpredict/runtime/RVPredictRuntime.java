@@ -75,6 +75,9 @@ import rvpredict.trace.EventType;
  * example, suppose two read and write operations on shared variable {@code x}
  * are racey, the following scenarios are possible:
  *
+ *
+ *  TODO(YilongL): here is a mistake, read event is logged after the read happens!
+ *  reconsider the following examples and conclusion
  * <pre>
  * read-write race:  log(write, x, 1) ~> log(read, x, 0) ~> write(x, 1) ~> read(x, 1), where initValue(x) = 0
  * write-write race: log(write, x, 1) ~> log(write, x, 2) ~> write(x, 2) ~> write(x, 1), where initValue(x) = 0
@@ -160,26 +163,26 @@ public final class RVPredictRuntime {
     /**
      * Logs events produced by invoking {@code object.wait()}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param object
      *            the {@code Object} whose {@code wait()} method is invoked
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void rvPredictWait(int locId, Object object) throws InterruptedException {
-        rvPredictWait(locId, object, 0);
+    public static void rvPredictWait(Object object, int locId) throws InterruptedException {
+        rvPredictWait(object, 0, locId);
     }
 
     /**
      * Logs events produced by invoking {@code object.wait(long)}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param object
      *            the {@code Object} whose {@code wait(long)} method is invoked
      * @param timeout
      *            the first argument of {@code object.wait(long)}
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void rvPredictWait(int locId, Object object, long timeout)
+    public static void rvPredictWait(Object object, long timeout, int locId)
             throws InterruptedException {
         long monitorId = calcMonitorId(object);
         db.saveEvent(EventType.WAIT_REL, locId, monitorId);
@@ -198,8 +201,6 @@ public final class RVPredictRuntime {
     /**
      * Logs events produced by invoking {@code object.wait(long, int)}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param object
      *            the {@code Object} whose {@code wait(long, int)} method is
      *            invoked
@@ -207,8 +208,10 @@ public final class RVPredictRuntime {
      *            the first argument of {@code object.wait(long, int)}
      * @param nano
      *            the second argument of {@code object.wait(long, int)}
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void rvPredictWait(int locId, Object object, long timeout, int nano)
+    public static void rvPredictWait(Object object, long timeout, int nano, int locId)
             throws InterruptedException {
         long monitorId = calcMonitorId(object);
         db.saveEvent(EventType.WAIT_REL, locId, monitorId);
@@ -228,12 +231,12 @@ public final class RVPredictRuntime {
      * Logs the {@code LOCK} event produced by entering block synchronized with
      * {@code object}'s intrinsic lock.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param object
      *            the {@code Object} whose intrinsic lock is acquired
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void logMonitorEnter(int locId, Object object) {
+    public static void logMonitorEnter(Object object, int locId) {
         db.saveEvent(EventType.WRITE_LOCK, locId, calcMonitorId(object));
     }
 
@@ -241,35 +244,35 @@ public final class RVPredictRuntime {
      * Logs the {@code UNLOCK} event produced by exiting block synchronized with
      * {@code object}'s intrinsic lock.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param object
      *            the {@code Object} whose intrinsic lock is released
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void logMonitorExit(int locId, Object object) {
+    public static void logMonitorExit(Object object, int locId) {
         db.saveEvent(EventType.WRITE_UNLOCK, locId, calcMonitorId(object));
     }
 
     /**
      * Logs the {@code READ/WRITE} event produced by field access.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param object
      *            the owner object of the field; {@code null} when accessing
      *            static fields
-     * @param variableId
-     *            the variable identifier of the field
      * @param value
      *            the value written by the write access or the value read by the
      *            read access
+     * @param variableId
+     *            the variable identifier of the field
      * @param isWrite
      *            specifies if it is a write access
      * @param branchModel
      *            specifies if we use branch model
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void logFieldAcc(int locId, Object object, int variableId, long value,
-            boolean isWrite, boolean branchModel) {
+    public static void logFieldAcc(Object object, long value, int variableId, boolean isWrite,
+            boolean branchModel, int locId) {
         variableId = RVPredictRuntime.resolveVariableId(variableId);
         db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(object), -variableId, value);
@@ -284,8 +287,6 @@ public final class RVPredictRuntime {
     /**
      * Logs the {@code READ/WRITE} event produced by array access.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param array
      *            the array to access
      * @param index
@@ -295,8 +296,10 @@ public final class RVPredictRuntime {
      *            read access
      * @param isWrite
      *            specifies if it is a write access
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void logArrayAcc(int locId, Object array, int index, long value, boolean isWrite) {
+    public static void logArrayAcc(Object array, int index, long value, boolean isWrite, int locId) {
         db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(array), index, value);
     }
@@ -304,17 +307,17 @@ public final class RVPredictRuntime {
     /**
      * Logs the {@code INIT} event produced by initializing a field.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param object
      *            the owner object of the field; {@code null} when initializing
      *            static field
-     * @param variableId
-     *            the variable identifier
      * @param value
      *            the initial value of the field
+     * @param variableId
+     *            the variable identifier
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void logFieldInit(int locId, Object object, int variableId, long value) {
+    public static void logFieldInit(Object object, long value, int variableId, int locId) {
         variableId = RVPredictRuntime.resolveVariableId(variableId);
         db.saveEvent(EventType.INIT, locId, System.identityHashCode(object), -variableId, value);
     }
@@ -322,16 +325,16 @@ public final class RVPredictRuntime {
     /**
      * Logs the {@code INIT} event produced by initializing an array element.
      *
-     * @param locId
-     *            the location identifier of the event
-     * @param object
+     * @param array
      *            the array of the field
      * @param index
      *            the array index
      * @param value
      *            the initial value of the element
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void logArrayInit(int locId, Object array, int index, long value) {
+    public static void logArrayInit(Object array, int index, long value, int locId) {
         db.saveEvent(EventType.INIT, locId, System.identityHashCode(array), index, value);
     }
 
@@ -344,13 +347,13 @@ public final class RVPredictRuntime {
      * parent thread with the order of children threads forked by the parent
      * thread.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param thread
      *            the {@code Thread} object whose {@code start()} method is
      *            invoked
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void rvPredictStart(int locId, Thread thread) {
+    public static void rvPredictStart(Thread thread, int locId) {
         db.saveEvent(EventType.INIT, locId, System.identityHashCode(thread),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
         db.saveEvent(EventType.START, locId, thread.getId());
@@ -360,29 +363,29 @@ public final class RVPredictRuntime {
     /**
      * Logs the {@code JOIN} event produced by invoking {@code thread.join()}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param thread
      *            the {@code Thread} object whose {@code join()} method is
      *            invoked
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void rvPredictJoin(int locId, Thread thread) throws InterruptedException {
-        rvPredictJoin(locId, thread, 0);
+    public static void rvPredictJoin(Thread thread, int locId) throws InterruptedException {
+        rvPredictJoin(thread, 0, locId);
     }
 
     /**
      * Logs the {@code JOIN} event produced by invoking
      * {@code thread.join(long)}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param thread
      *            the {@code Thread} object whose {@code join(long)} method is
      *            invoked
      * @param millis
      *            the first argument of {@code thread.join(long)}
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void rvPredictJoin(int locId, Thread thread, long millis)
+    public static void rvPredictJoin(Thread thread, long millis, int locId)
             throws InterruptedException {
         db.saveEvent(EventType.PRE_JOIN, locId, thread.getId());
         try {
@@ -402,8 +405,6 @@ public final class RVPredictRuntime {
      * Logs the {@code JOIN} event produced by invoking
      * {@code thread.join(long, int)}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param thread
      *            the {@code Thread} object whose {@code join(long, int)} method
      *            is invoked
@@ -411,9 +412,11 @@ public final class RVPredictRuntime {
      *            the first argument of {@code thread.join(long, int)}
      * @param nanos
      *            the second argument of {@code thread.join(long, int)}
+     * @param locId
+     *            the location identifier of the event
      *
      */
-    public static void rvPredictJoin(int locId, Thread thread, long millis, int nanos)
+    public static void rvPredictJoin(Thread thread, long millis, int nanos, int locId)
             throws InterruptedException {
         db.saveEvent(EventType.PRE_JOIN, locId, thread.getId());
         try {
@@ -432,12 +435,12 @@ public final class RVPredictRuntime {
     /**
      * Logs the events produced by invoking {@code Thread#sleep(long)}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param millis
      *            the first argument of {@code Thread#sleep(long)}
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void rvPredictSleep(int locId, long millis) throws InterruptedException {
+    public static void rvPredictSleep(long millis, int locId) throws InterruptedException {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException e) {
@@ -449,14 +452,14 @@ public final class RVPredictRuntime {
     /**
      * Logs the events produced by invoking {@code Thread#sleep(long, int)}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param millis
      *            the first argument of {@code Thread#sleep(long, int)}
      * @param nanos
      *            the second argument of {@code Thread#sleep(long, int)}
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void rvPredictSleep(int locId, long millis, int nanos)
+    public static void rvPredictSleep(long millis, int nanos, int locId)
             throws InterruptedException {
         try {
             Thread.sleep(millis, nanos);
@@ -469,13 +472,13 @@ public final class RVPredictRuntime {
     /**
      * Logs the events produced by invoking {@code thread.interrupt()}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param thread
      *            the {@code Thread} object whose {@code interrupt()} method is
      *            invoked
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void rvPredictInterrupt(int locId, Thread thread) {
+    public static void rvPredictInterrupt(Thread thread, int locId) {
         try {
             if (thread != Thread.currentThread()) {
                 thread.checkAccess();
@@ -501,13 +504,13 @@ public final class RVPredictRuntime {
     /**
      * Logs the events produced by invoking {@code thread.isInterrupted()}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param thread
      *            the {@code Thread} object whose {@code isInterrupted()} method
      *            is invoked
+     * @param locId
+     *            the location identifier of the event
      */
-    public static boolean rvPredictIsInterrupted(int locId, Thread thread) {
+    public static boolean rvPredictIsInterrupted(Thread thread, int locId) {
         boolean isInterrupted = thread.isInterrupted();
         /*
          * the interrupted status is like an imaginary shared variable so we
@@ -537,12 +540,12 @@ public final class RVPredictRuntime {
     /**
      * Logs the {@code LOCK} event produced by invoking {@code Lock#lock()}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param lock
      *            the lock to acquire
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void rvPredictLock(int locId, Lock lock) {
+    public static void rvPredictLock(Lock lock, int locId) {
         lock.lock();
         db.saveEvent(getLockEventType(lock), locId, calcLockId(lock));
     }
@@ -550,14 +553,15 @@ public final class RVPredictRuntime {
     /**
      * Logs events produced by invoking {@code Lock#lockInterruptibly()}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param lock
      *            the lock to acquire
+     * @param locId
+     *            the location identifier of the event
+     *
      * @throws InterruptedException
      *             see {@link Lock#lockInterruptibly()}
      */
-    public static void rvPredictLockInterruptibly(int locId, Lock lock) throws InterruptedException {
+    public static void rvPredictLockInterruptibly(Lock lock, int locId) throws InterruptedException {
         try {
             lock.lockInterruptibly();
             onBlockingMethodNormalReturn(locId);
@@ -572,12 +576,12 @@ public final class RVPredictRuntime {
     /**
      * Logs the {@code LOCK} event produced by invoking {@code Lock#tryLock()}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param lock
      *            the lock to acquire
+     * @param locId
+     *            the location identifier of the event
      */
-    public static boolean rvPredictTryLock(int locId, Lock lock) {
+    public static boolean rvPredictTryLock(Lock lock, int locId) {
         boolean acquired = lock.tryLock();
         if (acquired) {
             db.saveEvent(getLockEventType(lock), locId, calcLockId(lock));
@@ -588,18 +592,19 @@ public final class RVPredictRuntime {
     /**
      * Logs events produced by invoking {@code Lock#tryLock(long, TimeUnit)}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param lock
      *            the lock to acquire
      * @param time
      *            first argument of {@code Lock#tryLock(long, TimeUnit)}
      * @param unit
      *            second argument of {@code Lock#tryLock(long, TimeUnit)}.
+     * @param locId
+     *            the location identifier of the event
+     *
      * @throws InterruptedException
      *             see {@link Lock#tryLock(long, TimeUnit)}
      */
-    public static boolean rvPredictTryLock(int locId, Lock lock, long time, TimeUnit unit)
+    public static boolean rvPredictTryLock(Lock lock, long time, TimeUnit unit, int locId)
             throws InterruptedException {
         try {
             boolean acquired = lock.tryLock(time, unit);
@@ -617,35 +622,35 @@ public final class RVPredictRuntime {
     /**
      * Logs the {@code UNLOCK} event produced by invoking {@code Lock#Unlock()}.
      *
-     * @param locId
-     *            the location identifier of the event
      * @param lock
      *            the lock to release
+     * @param locId
+     *            the location identifier of the event
      */
-    public static void rvPredictUnlock(int locId, Lock lock) {
+    public static void rvPredictUnlock(Lock lock, int locId) {
         db.saveEvent(getUnlockEventType(lock), locId, calcLockId(lock));
         lock.unlock();
     }
 
-    public static Condition rvPredictLockNewCondition(int locId, Lock lock) {
+    public static Condition rvPredictLockNewCondition(Lock lock, int locId) {
         Condition condition = lock.newCondition();
         conditionToLock.putIfAbsent(condition, lock);
         return condition;
     }
 
-    public static Lock rvPredictReadWriteLockReadLock(int locId, ReadWriteLock readWriteLock) {
+    public static Lock rvPredictReadWriteLockReadLock(ReadWriteLock readWriteLock, int locId) {
         Lock readLock = readWriteLock.readLock();
         readLockToRWLock.putIfAbsent(readLock, readWriteLock);
         return readLock;
     }
 
-    public static Lock rvPredictReadWriteLockWriteLock(int locId, ReadWriteLock readWriteLock) {
+    public static Lock rvPredictReadWriteLockWriteLock(ReadWriteLock readWriteLock, int locId) {
         Lock writeLock = readWriteLock.writeLock();
         writeLockToRWLock.putIfAbsent(writeLock, readWriteLock);
         return writeLock;
     }
 
-    public static void rvPredictConditionAwait(int locId, Condition condition)
+    public static void rvPredictConditionAwait(Condition condition, int locId)
             throws InterruptedException {
         long lockId = System.identityHashCode(conditionToLock.get(condition));
         db.saveEvent(EventType.WAIT_REL, locId, lockId);
@@ -661,8 +666,8 @@ public final class RVPredictRuntime {
         db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
     }
 
-    public static boolean rvPredictConditionAwait(int locId, Condition condition, long time,
-            TimeUnit unit) throws InterruptedException {
+    public static boolean rvPredictConditionAwait(Condition condition, long time, TimeUnit unit,
+            int locId) throws InterruptedException {
         boolean result;
         long lockId = System.identityHashCode(conditionToLock.get(condition));
         db.saveEvent(EventType.WAIT_REL, locId, lockId);
@@ -679,8 +684,8 @@ public final class RVPredictRuntime {
         return result;
     }
 
-    public static long rvPredictConditionAwaitNanos(int locId, Condition condition,
-            long nanosTimeout) throws InterruptedException {
+    public static long rvPredictConditionAwaitNanos(Condition condition, long nanosTimeout,
+            int locId) throws InterruptedException {
         long result;
         long lockId = System.identityHashCode(conditionToLock.get(condition));
         db.saveEvent(EventType.WAIT_REL, locId, lockId);
@@ -697,7 +702,7 @@ public final class RVPredictRuntime {
         return result;
     }
 
-    public static boolean rvPredictConditionAwaitUntil(int locId, Condition condition, Date deadline)
+    public static boolean rvPredictConditionAwaitUntil(Condition condition, Date deadline, int locId)
             throws InterruptedException {
         boolean result;
         long lockId = System.identityHashCode(conditionToLock.get(condition));
@@ -715,15 +720,15 @@ public final class RVPredictRuntime {
         return result;
     }
 
-    public static void rvPredictConditionAwaitUninterruptibly(int locId, Condition condition) {
+    public static void rvPredictConditionAwaitUninterruptibly(Condition condition, int locId) {
         long lockId = System.identityHashCode(conditionToLock.get(condition));
         db.saveEvent(EventType.WAIT_REL, locId, lockId);
         condition.awaitUninterruptibly();
         db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
     }
 
-    public static int rvPredictAbstractQueuedSynchronizerGetState(int locId,
-            AbstractQueuedSynchronizer sync) {
+    public static int rvPredictAbstractQueuedSynchronizerGetState(AbstractQueuedSynchronizer sync,
+            int locId) {
         int result;
         try {
             synchronized (sync) {
@@ -740,8 +745,8 @@ public final class RVPredictRuntime {
         return result;
     }
 
-    public static void rvPredictAbstractQueuedSynchronizerSetState(int locId,
-            AbstractQueuedSynchronizer sync, int newState) {
+    public static void rvPredictAbstractQueuedSynchronizerSetState(AbstractQueuedSynchronizer sync,
+            int newState, int locId) {
         try {
             synchronized (sync) {
                 db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
@@ -756,8 +761,8 @@ public final class RVPredictRuntime {
         }
     }
 
-    public static boolean rvPredictAbstractQueuedSynchronizerCASState(int locId,
-            AbstractQueuedSynchronizer sync, int expect, int update) {
+    public static boolean rvPredictAbstractQueuedSynchronizerCASState(AbstractQueuedSynchronizer sync,
+            int expect, int update, int locId) {
         boolean result;
         try {
             synchronized (sync) {
@@ -778,7 +783,7 @@ public final class RVPredictRuntime {
         return result;
     }
 
-    public static boolean rvPredictAtomicBoolGet(int locId, AtomicBoolean atomicBool) {
+    public static boolean rvPredictAtomicBoolGet(AtomicBoolean atomicBool, int locId) {
         boolean result;
         synchronized (atomicBool) {
             db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
@@ -790,7 +795,7 @@ public final class RVPredictRuntime {
         return result;
     }
 
-    public static void rvPredictAtomicBoolSet(int locId, AtomicBoolean atomicBool, boolean newValue) {
+    public static void rvPredictAtomicBoolSet(AtomicBoolean atomicBool, boolean newValue, int locId) {
         synchronized (atomicBool) {
             db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
             atomicBool.set(newValue);
@@ -800,8 +805,8 @@ public final class RVPredictRuntime {
         }
     }
 
-    public static boolean rvPredictAtomicBoolGAS(int locId, AtomicBoolean atomicBool,
-            boolean newValue) {
+    public static boolean rvPredictAtomicBoolGAS(AtomicBoolean atomicBool, boolean newValue,
+            int locId) {
         boolean result;
         synchronized (atomicBool) {
             db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
@@ -815,8 +820,8 @@ public final class RVPredictRuntime {
         return result;
     }
 
-    public static boolean rvPredictAtomicBoolCAS(int locId, AtomicBoolean atomicBool,
-            boolean expect, boolean update) {
+    public static boolean rvPredictAtomicBoolCAS(AtomicBoolean atomicBool, boolean expect,
+            boolean update, int locId) {
         boolean result;
         synchronized (atomicBool) {
             db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
@@ -839,8 +844,8 @@ public final class RVPredictRuntime {
      * @param locId
      *            the location identifier of the event
      */
-    public static void rvPredictSystemArraycopy(int locId, Object src, int srcPos, Object dest,
-            int destPos, int length) {
+    public static void rvPredictSystemArraycopy(Object src, int srcPos, Object dest, int destPos,
+            int length, int locId) {
         // 8 primitive types: boolean, byte, char, short, int, long, float, and
         // double
 
@@ -855,16 +860,16 @@ public final class RVPredictRuntime {
                             if (srcObj == null
                                     || dest.getClass().getComponentType()
                                             .isAssignableFrom(srcObj.getClass())) {
-                                logArrayAcc(locId, src, srcPos + i,
-                                        System.identityHashCode(srcObj), false);
+                                logArrayAcc(src, srcPos + i, System.identityHashCode(srcObj),
+                                        false, locId);
                             } else {
                                 k = i;
                                 break;
                             }
                         }
                         for (int i = 0; i < k; i++) {
-                            logArrayAcc(locId, dest, destPos + i,
-                                    System.identityHashCode(((Object[]) src)[i + srcPos]), true);
+                            logArrayAcc(dest, destPos + i, System.identityHashCode(((Object[]) src)[i + srcPos]),
+                                    true, locId);
                         }
                     }
                 }
@@ -873,11 +878,11 @@ public final class RVPredictRuntime {
                     if (srcPos + length <= ((boolean[]) src).length
                             && destPos + length <= ((boolean[]) dest).length) {
                         for (int i = srcPos; i < srcPos + length; i++) {
-                            logArrayAcc(locId, src, i, ((boolean[]) src)[i] ? 1 : 0, false);
+                            logArrayAcc(src, i, ((boolean[]) src)[i] ? 1 : 0, false, locId);
                         }
                         for (int i = destPos; i < destPos + length; i++) {
-                            logArrayAcc(locId, dest, i, ((boolean[]) src)[i - destPos + srcPos] ? 1
-                                    : 0, true);
+                            logArrayAcc(dest, i, ((boolean[]) src)[i - destPos + srcPos] ? 1
+                                                            : 0, true, locId);
                         }
                     }
                 }
@@ -886,10 +891,10 @@ public final class RVPredictRuntime {
                     if (srcPos + length <= ((byte[]) src).length
                             && destPos + length <= ((byte[]) dest).length) {
                         for (int i = srcPos; i < srcPos + length; i++) {
-                            logArrayAcc(locId, src, i, ((byte[]) src)[i], false);
+                            logArrayAcc(src, i, ((byte[]) src)[i], false, locId);
                         }
                         for (int i = destPos; i < destPos + length; i++) {
-                            logArrayAcc(locId, dest, i, ((byte[]) src)[i - destPos + srcPos], true);
+                            logArrayAcc(dest, i, ((byte[]) src)[i - destPos + srcPos], true, locId);
                         }
                     }
                 }
@@ -898,10 +903,10 @@ public final class RVPredictRuntime {
                     if (srcPos + length <= ((char[]) src).length
                             && destPos + length <= ((char[]) dest).length) {
                         for (int i = srcPos; i < srcPos + length; i++) {
-                            logArrayAcc(locId, src, i, ((char[]) src)[i], false);
+                            logArrayAcc(src, i, ((char[]) src)[i], false, locId);
                         }
                         for (int i = destPos; i < destPos + length; i++) {
-                            logArrayAcc(locId, dest, i, ((char[]) src)[i - destPos + srcPos], true);
+                            logArrayAcc(dest, i, ((char[]) src)[i - destPos + srcPos], true, locId);
                         }
                     }
                 }
@@ -910,10 +915,10 @@ public final class RVPredictRuntime {
                     if (srcPos + length <= ((short[]) src).length
                             && destPos + length <= ((short[]) dest).length) {
                         for (int i = srcPos; i < srcPos + length; i++) {
-                            logArrayAcc(locId, src, i, ((short[]) src)[i], false);
+                            logArrayAcc(src, i, ((short[]) src)[i], false, locId);
                         }
                         for (int i = destPos; i < destPos + length; i++) {
-                            logArrayAcc(locId, dest, i, ((short[]) src)[i - destPos + srcPos], true);
+                            logArrayAcc(dest, i, ((short[]) src)[i - destPos + srcPos], true, locId);
                         }
                     }
                 }
@@ -921,10 +926,10 @@ public final class RVPredictRuntime {
                 if (srcPos + length <= ((int[]) src).length
                         && destPos + length <= ((int[]) dest).length) {
                     for (int i = srcPos; i < srcPos + length; i++) {
-                        logArrayAcc(locId, src, i, ((int[]) src)[i], false);
+                        logArrayAcc(src, i, ((int[]) src)[i], false, locId);
                     }
                     for (int i = destPos; i < destPos + length; i++) {
-                        logArrayAcc(locId, dest, i, ((int[]) src)[i - destPos + srcPos], true);
+                        logArrayAcc(dest, i, ((int[]) src)[i - destPos + srcPos], true, locId);
                     }
                 }
             } else if (src instanceof long[]) {
@@ -932,10 +937,10 @@ public final class RVPredictRuntime {
                     if (srcPos + length <= ((long[]) src).length
                             && destPos + length <= ((long[]) dest).length) {
                         for (int i = srcPos; i < srcPos + length; i++) {
-                            logArrayAcc(locId, src, i, ((long[]) src)[i], false);
+                            logArrayAcc(src, i, ((long[]) src)[i], false, locId);
                         }
                         for (int i = destPos; i < destPos + length; i++) {
-                            logArrayAcc(locId, dest, i, ((long[]) src)[i - destPos + srcPos], true);
+                            logArrayAcc(dest, i, ((long[]) src)[i - destPos + srcPos], true, locId);
                         }
                     }
                 }
@@ -944,13 +949,13 @@ public final class RVPredictRuntime {
                     if (srcPos + length <= ((float[]) src).length
                             && destPos + length <= ((float[]) dest).length) {
                         for (int i = srcPos; i < srcPos + length; i++) {
-                            logArrayAcc(locId, src, i, Float.floatToIntBits(((float[]) src)[i]),
-                                    false);
+                            logArrayAcc(src, i, Float.floatToIntBits(((float[]) src)[i]), false,
+                                    locId);
                         }
                         for (int i = destPos; i < destPos + length; i++) {
-                            logArrayAcc(locId, dest, i,
-                                    Float.floatToIntBits(((float[]) src)[i - destPos + srcPos]),
-                                    true);
+                            logArrayAcc(dest, i, Float.floatToIntBits(((float[]) src)[i - destPos + srcPos]),
+                                    true,
+                                    locId);
                         }
                     }
                 }
@@ -959,13 +964,13 @@ public final class RVPredictRuntime {
                     if (srcPos + length <= ((double[]) src).length
                             && destPos + length <= ((double[]) dest).length) {
                         for (int i = srcPos; i < srcPos + length; i++) {
-                            logArrayAcc(locId, src, i, Double.doubleToLongBits(((double[]) src)[i]),
-                                    false);
+                            logArrayAcc(src, i, Double.doubleToLongBits(((double[]) src)[i]), false,
+                                    locId);
                         }
                         for (int i = destPos; i < destPos + length; i++) {
-                            logArrayAcc(locId, dest, i,
-                                    Double.doubleToLongBits(((double[]) src)[i - destPos + srcPos]),
-                                    true);
+                            logArrayAcc(dest, i, Double.doubleToLongBits(((double[]) src)[i - destPos + srcPos]),
+                                    true,
+                                    locId);
                         }
                     }
                 }

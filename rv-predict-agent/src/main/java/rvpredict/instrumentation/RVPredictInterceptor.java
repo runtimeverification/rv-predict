@@ -1,8 +1,7 @@
 package rvpredict.instrumentation;
 
-import java.lang.reflect.Method;
-
 import org.objectweb.asm.Type;
+import org.objectweb.asm.commons.Method;
 
 import rvpredict.runtime.RVPredictRuntime;
 
@@ -13,7 +12,7 @@ import com.google.common.collect.ImmutableList;
  * interceptor, that is bound to some corresponding Java method and can be
  * used to replace it during bytecode transformation.
  * <p>
- * For example, {@link RVPredictRuntime#rvPredictWait(int, Object, long)} is
+ * For example, {@link RVPredictRuntime#rvPredictWait(Object, long, int)} is
  * associated with {@link Object#wait(long)}.
  *
  * @author YilongL
@@ -36,7 +35,7 @@ public class RVPredictInterceptor extends RVPredictRuntimeMethod {
     /**
      * The associated Java method's name.
      */
-    final String methodName;
+    final String name;
 
     /**
      * The parameter type descriptors of the associated Java method.
@@ -44,34 +43,32 @@ public class RVPredictInterceptor extends RVPredictRuntimeMethod {
     public final ImmutableList<String> paramTypeDescs;
 
     public static RVPredictInterceptor create(int methodType, String classOrInterface,
-            String methodName, String interceptorName, Class<?>... parameterTypes)
+            String name, String interceptorName, Class<?>... parameterTypes)
             throws ClassNotFoundException {
         Class<?>[] interceptorParamTypes;
         int length = parameterTypes.length;
         if (methodType == RVPredictRuntimeMethods.STATIC) {
             interceptorParamTypes = new Class<?>[length + 1];
-            interceptorParamTypes[0] = int.class;
-            System.arraycopy(parameterTypes, 0, interceptorParamTypes, 1, length);
+            System.arraycopy(parameterTypes, 0, interceptorParamTypes, 0, length);
+            interceptorParamTypes[length] = int.class;
         } else {
             interceptorParamTypes = new Class<?>[length + 2];
-            interceptorParamTypes[0] = int.class;
-            interceptorParamTypes[1] = Class.forName(classOrInterface.replace("/", "."));
-            System.arraycopy(parameterTypes, 0, interceptorParamTypes, 2, length);
+            interceptorParamTypes[0] = Class.forName(classOrInterface.replace("/", "."));
+            System.arraycopy(parameterTypes, 0, interceptorParamTypes, 1, length);
+            interceptorParamTypes[length + 1] = int.class;
         }
 
-        Method methodHandler = RVPredictRuntimeMethod.getMethodHandler(interceptorName,
-                interceptorParamTypes);
-        return new RVPredictInterceptor(interceptorName,
-                Type.getMethodDescriptor(methodHandler), methodType, classOrInterface,
-                methodName, parameterTypes);
+        Method method = RVPredictRuntimeMethod.getAsmMethod(interceptorName, interceptorParamTypes);
+        return new RVPredictInterceptor(method, methodType, classOrInterface, name,
+                parameterTypes);
     }
 
-    private RVPredictInterceptor(String name, String desc, int opcode, String classOrInterface,
-            String methodName, Class<?>[] parameterTypes) {
-        super(name, desc);
+    private RVPredictInterceptor(Method method, int opcode, String classOrInterface,
+            String name, Class<?>[] parameterTypes) {
+        super(method);
         this.methodType = opcode;
         this.classOrInterface = classOrInterface;
-        this.methodName = methodName;
+        this.name = name;
         ImmutableList.Builder<String> builder = ImmutableList.builder();
         for (Class<?> cls : parameterTypes) {
             builder.add(Type.getDescriptor(cls));
@@ -80,7 +77,7 @@ public class RVPredictInterceptor extends RVPredictRuntimeMethod {
     }
 
     public String getOriginalMethodSig() {
-        StringBuilder sb = new StringBuilder(methodName);
+        StringBuilder sb = new StringBuilder(name);
         sb.append("(");
         for (String paramTypeDesc : paramTypeDescs) {
             sb.append(paramTypeDesc);

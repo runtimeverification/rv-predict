@@ -2,21 +2,32 @@ package rvpredict.instrumentation.transformer;
 
 import static org.objectweb.asm.Opcodes.*;
 import static rvpredict.instrumentation.RVPredictRuntimeMethods.*;
-import static rvpredict.instrumentation.Utility.*;
-
 import java.util.Set;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.commons.GeneratorAdapter;
+import org.objectweb.asm.commons.Method;
+
 import rvpredict.config.Config;
 import rvpredict.instrumentation.MetaData;
 import rvpredict.instrumentation.RVPredictInterceptor;
 import rvpredict.instrumentation.RVPredictRuntimeMethod;
 import rvpredict.instrumentation.RVPredictRuntimeMethods;
+import rvpredict.runtime.RVPredictRuntime;
 
 public class MethodTransformer extends MethodVisitor {
+
+    private static final Type OBJECT_TYPE    = Type.getObjectType("java/lang/Object");
+    private static final Type CLASS_TYPE     = Type.getObjectType("java/lang/Class");
+    private static final Type JL_FLOAT_TYPE  = Type.getObjectType("java/lang/Float");
+    private static final Type JL_DOUBLE_TYPE = Type.getObjectType("java/lang/Double");
+    private static final Type JL_SYSTEM_TYPE = Type.getObjectType("java/lang/System");
+    private static final Type RVPREDICT_RUNTIME_TYPE = Type.getType(RVPredictRuntime.class);
+
+    private final GeneratorAdapter mv;
 
     private final String className;
     private final int version;
@@ -40,18 +51,14 @@ public class MethodTransformer extends MethodVisitor {
 
     private final Set<String> finalFields;
 
-    private final Config config;
-
-    /**
-     * current max index of local variables
-     */
-    private int crntMaxIndex;
     private int crntLineNum;
 
-    public MethodTransformer(MethodVisitor mv, String source, String className,
-            int version, String name, String desc, int access, int argSize,
-            Set<String> finalFields, Config config) {
-        super(Opcodes.ASM5, mv);
+    private final int branchModel;
+
+    public MethodTransformer(MethodVisitor mv, String source, String className, int version,
+            String name, String desc, int access, Set<String> finalFields, Config config) {
+        super(Opcodes.ASM5, new GeneratorAdapter(mv, access, name, desc));
+        this.mv = (GeneratorAdapter) super.mv;
         this.source = source == null ? "Unknown" : source;
         this.className = className;
         this.version = version;
@@ -60,68 +67,13 @@ public class MethodTransformer extends MethodVisitor {
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
         this.finalFields = finalFields;
-        this.config = config;
-
-        crntMaxIndex = argSize + 1;
-    }
-
-    @Override
-    public void visitVarInsn(int opcode, int localVarIdx) {
-        crntMaxIndex = Math.max(localVarIdx, crntMaxIndex);
-
-        switch (opcode) {
-        case LSTORE: case DSTORE: case LLOAD: case DLOAD:
-            /* double words load/store opcodes */
-            crntMaxIndex = Math.max(crntMaxIndex, localVarIdx + 1);
-        case ISTORE: case FSTORE: case ASTORE: case ILOAD: case FLOAD: case ALOAD:
-        case RET:
-            /* single word load/store and ret opcodes */
-            mv.visitVarInsn(opcode, localVarIdx);
-            break;
-        default:
-            assert false : "Unknown var instruction opcode " + opcode;
-        }
+        this.branchModel = config.commandLine.branch ? 1 : 0;
     }
 
     @Override
     public void visitLineNumber(int line, Label start) {
         crntLineNum = line;
         mv.visitLineNumber(line, start);
-    }
-
-    /**
-     * Substitutes method call with its counterpart method provided by the
-     * RV-Predict runtime.
-     */
-    private void substituteMethodCall(int opcode, RVPredictInterceptor interceptor) {
-        // <stack>... (objectref)? (arg)* </stack>
-        int[] indices = new int[interceptor.paramTypeDescs.size()];
-        for (int i = interceptor.paramTypeDescs.size() - 1; i >= 0; i--) {
-            indices[i] = storeValue(interceptor.paramTypeDescs.get(i));
-        }
-        int objRefIndex = opcode == INVOKESTATIC ? -1 : astore();
-        // <stack>... </stack>
-        addPushConstInsn(mv, getCrntStmtSID());
-        if (opcode != INVOKESTATIC) {
-            mv.visitVarInsn(ALOAD, objRefIndex);
-        }
-        for (int i = 0; i < interceptor.paramTypeDescs.size(); i++) {
-            loadValue(interceptor.paramTypeDescs.get(i), indices[i]);
-        }
-        // <stack>... sid (objectref)? (arg)* </stack>
-        invokeStatic(interceptor);
-    }
-
-    @Override
-    public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-        int idx = (name + desc).lastIndexOf(')');
-        String methodSig = (name + desc).substring(0, idx + 1);
-        RVPredictInterceptor interceptor = RVPredictRuntimeMethods.lookup(owner, methodSig, itf);
-        if (interceptor != null) {
-            substituteMethodCall(opcode, interceptor);
-            return;
-        }
-        mv.visitMethodInsn(opcode, owner, name, desc, itf);
     }
 
     @Override
@@ -134,105 +86,76 @@ public class MethodTransformer extends MethodVisitor {
             return;
         }
 
-        int sid = MetaData.getVariableId(owner, name);
-        String varSig = (owner + "." + name).replace("/", ".");
-        // TODO(YilongL): move the following code to GlobalStateForInstrumentation
-        String sig_loc = source
-                + "|"
-                + (className + "|" + signature + "|" + varSig + "|" + crntLineNum).replace("/",
-                        ".");
-        int ID = MetaData.getLocationId(sig_loc);
+        int varId = MetaData.getVariableId(owner, name);
+        int locId = MetaData.getLocationId(getFieldAccLocSig(owner, name));
 
-        int localVarIdx;
-        int localVarIdx2;
+        Type valueType = Type.getType(desc);
         switch (opcode) {
         case GETSTATIC:
+        case GETFIELD:
+            /* read event should be logged after it happens */
+
             if (isInit) {
                 mv.visitFieldInsn(opcode, owner, name, desc);
                 return;
             }
 
-            // <stack>... </stack>
-            mv.visitFieldInsn(opcode, owner, name, desc);
-            // <stack>... value </stack>
-            localVarIdx = dupThenStoreValue(desc); // jvm_local_vars[localVarIdx] = value
-            // <stack>... value </stack>
-            addPushConstInsn(mv, ID);
-            mv.visitInsn(ACONST_NULL);
-            addPushConstInsn(mv, sid);
-            loadThenCalcLongValue(desc, localVarIdx);
-            addPushConstInsn(mv, 0);
-            addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
-            // <stack>... value ID null sid value false branch </stack>
+            if (opcode == GETSTATIC) {
+                // <stack>... </stack>
+                mv.push((String) null);
+                // <stack>... null </stack>
+            } else {
+                // <stack>... objectref </stack>
+                mv.dup();
+                // <stack>... objectref objectref </stack>
+            }
+            mv.visitFieldInsn(opcode, owner, name, desc); // read happens
+            // <stack>... objectref value </stack>
+            if (valueType.getSize() == 1) {
+                mv.dupX1();
+            } else {
+                mv.dup2X1();
+            }
+            // <stack>... value objectref value </stack>
+            calcLongValue(valueType);
+            // <stack>... value objectref longValue </stack>
+            push(varId, 0, branchModel, locId);
+            // <stack>... value objectref longValue varId false branch locId </stack>
             invokeStatic(LOG_FIELD_ACCESS);
             // <stack>... value </stack>
             break;
         case PUTSTATIC:
-            // <stack>... value </stack>
-            localVarIdx = dupThenStoreValue(desc); // jvm_local_vars[localVarIdx] = value
-            // <stack>... value </stack>
-            mv.visitFieldInsn(opcode, owner, name, desc);
-            // <stack>... </stack>
-            addPushConstInsn(mv, ID);
-            mv.visitInsn(ACONST_NULL);
-            addPushConstInsn(mv, sid);
-            loadThenCalcLongValue(desc, localVarIdx);
-            // <stack>... ID null sid value </stack>
-
-            if (isInit)
-                invokeStatic(LOG_FIELD_INIT);
-            else {
-                addPushConstInsn(mv, 1);
-                addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
-                // <stack>... ID null sid value false branch </stack>
-                invokeStatic(LOG_FIELD_ACCESS);
-            }
-            break;
-        case GETFIELD:
-            if (isInit) {
-                mv.visitFieldInsn(opcode, owner, name, desc);
-                return;
-            }
-
-            // <stack>... objectref </stack>
-            localVarIdx = dupThenAStore(); // jvm_local_vars[localVarIdx] = objectref
-            mv.visitFieldInsn(opcode, owner, name, desc);
-            // <stack>... value </stack>
-            localVarIdx2 = dupThenStoreValue(desc); // jvm_local_vars[localVarIdx2] = value
-            // <stack>... value </stack>
-            addPushConstInsn(mv, ID);
-            mv.visitVarInsn(ALOAD, localVarIdx);
-            addPushConstInsn(mv, sid);
-            loadThenCalcLongValue(desc, localVarIdx2);
-            addPushConstInsn(mv, 0);
-            addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
-            // <stack>... value ID objectref sid value false branch </stack>
-            invokeStatic(LOG_FIELD_ACCESS);
-            // <stack>... value </stack>
-            break;
         case PUTFIELD:
-            // <stack>... objectref value </stack>
-            localVarIdx = storeValue(desc); // jvm_local_vars[localVarIdx] = value
-            // <stack>... objectref </stack>
-            localVarIdx2 = dupThenAStore(); // jvm_local_vars[localVarIdx2] = objectref
-            // <stack>... objectref </stack>
-            loadValue(desc, localVarIdx);
-            // <stack>... objectref value </stack>
-            mv.visitFieldInsn(opcode, owner, name, desc);
+            /* write event should be logged before it happens */
+
+            // <stack>... (objectref)? value </stack>
+            int value = storeNewLocal(valueType);
+            if (opcode == PUTSTATIC) {
+                mv.push((String) null);
+            }
+            int objectref = storeNewLocal(OBJECT_TYPE);
             // <stack>... </stack>
-            addPushConstInsn(mv, ID);
-            mv.visitVarInsn(ALOAD, localVarIdx2);
-            addPushConstInsn(mv, sid);
-            loadThenCalcLongValue(desc, localVarIdx);
-            // <stack>... ID objectref sid value </stack>
-            if (isInit)
+            mv.loadLocal(objectref);
+            mv.loadLocal(value);
+            // <stack>... objectref value </stack>
+            calcLongValue(valueType);
+            // <stack>... objectref longValue </stack>
+            if (isInit) {
+                push(varId, locId);
+                // <stack>... objectref longValue varId locId </stack>
                 invokeStatic(LOG_FIELD_INIT);
-            else {
-                addPushConstInsn(mv, 1);
-                addPushConstInsn(mv, config.commandLine.branch ? 1 : 0);
-                // <stack>... ID objectref sid value true branch </stack>
+            } else {
+                push(varId, 1, branchModel, locId);
+                // <stack>... objectref longValue varId true branch locId </stack>
                 invokeStatic(LOG_FIELD_ACCESS);
             }
+            // <stack>... </stack>
+            if (opcode == PUTFIELD) {
+                mv.loadLocal(objectref);
+            }
+            mv.loadLocal(value);
+            // <stack>... (objectref)? value </stack>
+            mv.visitFieldInsn(opcode, owner, name, desc); // write happens
             // <stack>... </stack>
             break;
         default:
@@ -242,48 +165,64 @@ public class MethodTransformer extends MethodVisitor {
     }
 
     @Override
+    public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+        int idx = (name + desc).lastIndexOf(')');
+        String methodSig = (name + desc).substring(0, idx + 1);
+        RVPredictInterceptor interceptor = RVPredictRuntimeMethods.lookup(owner, methodSig, itf);
+        if (interceptor != null) {
+            // <stack>... (objectref)? (arg)* </stack>
+            mv.push(getCrntLocId());
+            // <stack>... (objectref)? (arg)* sid </stack>
+            invokeStatic(interceptor);
+            return;
+        }
+        mv.visitMethodInsn(opcode, owner, name, desc, itf);
+    }
+
+    @Override
     public void visitInsn(int opcode) {
         switch (opcode) {
         case AALOAD: case BALOAD: case CALOAD: case SALOAD:
         case IALOAD: case FALOAD: case DALOAD: case LALOAD:
-            instrumentArrayLoad(opcode);
+            if (isInit) {
+                mv.visitInsn(opcode);
+                return;
+            }
+
+            logArrayLoad(opcode);
             break;
         case AASTORE: case BASTORE: case CASTORE: case SASTORE:
         case IASTORE: case FASTORE: case DASTORE: case LASTORE:
-            instrumentArrayStore(opcode);
+            logArrayStore(opcode);
             break;
-        case MONITORENTER: case MONITOREXIT: {
-            int sid = getCrntStmtSID();
+        case MONITORENTER:
+            /* moniter enter must logged after it happens */
             // <stack>... objectref </stack>
-            int index = dupThenAStore(); // jvm_local_vars[index] = objectref
+            mv.dup();
+            mv.visitInsn(opcode);
+            mv.push(getCrntLocId());
+            // <stack>... objectref locId </stack>
+            invokeStatic(LOG_MONITOR_ENTER);
+            break;
+        case MONITOREXIT: {
+            /* moniter exit must logged before it happens */
             // <stack>... objectref </stack>
-            if (opcode == MONITORENTER) {
-                mv.visitInsn(opcode);
-                // <stack>... </stack>
-                addPushConstInsn(mv, sid);
-                mv.visitVarInsn(ALOAD, index);
-                // <stack>... sid objectref </stack>
-                invokeStatic(LOG_MONITOR_ENTER);
-            } else {
-                addPushConstInsn(mv, sid);
-                mv.visitVarInsn(ALOAD, index);
-                // <stack>... objectref sid objectref </stack>
-                invokeStatic(LOG_MONITOR_EXIT);
-                // <stack>... objectref </stack>
-                mv.visitInsn(opcode);
-            }
+            mv.dup();
+            mv.push(getCrntLocId());
+            // <stack>... objectref objectref locId </stack>
+            invokeStatic(LOG_MONITOR_EXIT);
+            mv.visitInsn(opcode);
             break;
         }
         case IRETURN: case LRETURN: case FRETURN: case DRETURN:
         case ARETURN: case RETURN: case ATHROW:
             if (isSynchronized) {
-                /* Add a runtime library callback to log {@code UNLOCK} event for synchronized method. */
-                addPushConstInsn(mv, getCrntStmtSID());
                 if (isStatic) {
                     loadClassLiteral();
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);
+                    mv.loadThis();
                 }
+                mv.push(getCrntLocId());
                 invokeStatic(LOG_MONITOR_EXIT);
             }
             mv.visitInsn(opcode);
@@ -294,99 +233,66 @@ public class MethodTransformer extends MethodVisitor {
         }
     }
 
-    private void instrumentArrayLoad(int arrayLoadOpcode) {
-        if (isInit) {
-            mv.visitInsn(arrayLoadOpcode);
-            return;
-        }
-
-        boolean isElemSingleWord = isElementSingleWord(arrayLoadOpcode);
-        int sid = getCrntStmtSID();
-
+    /**
+     * Array load must be logged after it happens.
+     */
+    private void logArrayLoad(int arrayLoadOpcode) {
+        Type valueType = getValueType(arrayLoadOpcode);
         // <stack>... arrayref index </stack>
-        mv.visitInsn(DUP2);
+        mv.dup2();
         // <stack>... arrayref index arrayref index </stack>
-        int localVarIdx1 = istore(); // jvm_local_vars[localVarIdx1] = index
-        int localVarIdx2 = astore(); // jvm_local_vars[localVarIdx2] = arrayref
-        // <stack>... arrayref index </stack>
-        mv.visitInsn(arrayLoadOpcode);
-        // <stack>... value </stack>, where `value` could be one word or two words
-        if (isElemSingleWord) {
-            mv.visitInsn(DUP);
+        mv.visitInsn(arrayLoadOpcode); // <--- array load happens
+        // <stack>... arrayref index value </stack>
+        if (valueType.getSize() == 1) {
+            mv.dupX2();
         } else {
-            mv.visitInsn(DUP2);
+            mv.dup2X2();
         }
-        // <stack>... value value </stack>
-        int localVarIdx3 = ++crntMaxIndex;
-        if (!isElemSingleWord) {
-            crntMaxIndex++;
-        }
-        mv.visitVarInsn(getElementStoreOpcode(arrayLoadOpcode), localVarIdx3); // jvm_local_vars[localVarIdx3] = value
-        // <stack>... value </stack>
-
-        addPushConstInsn(mv, sid);
-        mv.visitVarInsn(ALOAD, localVarIdx2);
-        mv.visitVarInsn(ILOAD, localVarIdx1);
-        mv.visitVarInsn(getElementLoadOpcode(arrayLoadOpcode), localVarIdx3);
-        // <stack>... value sid arrayref index value </stack>
-        calcLongValue(mv, arrayLoadOpcode);
-        // <stack>... value sid arrayref index longValue </stack>
-
-        addPushConstInsn(mv, 0);
-        // <stack>... value sid arrayref index longValue false </stack>
-
+        // <stack>... value arrayref index value </stack>
+        calcLongValue(valueType);
+        // <stack>... value arrayref index longValue </stack>
+        push(0, getCrntLocId());
+        // <stack>... value arrayref index longValue false locId </stack>
         invokeStatic(LOG_ARRAY_ACCESS);
         // <stack>... value </stack>
     }
 
-    private void instrumentArrayStore(int arrayStoreOpcode) {
-        boolean isElemSingleWord = isElementSingleWord(arrayStoreOpcode);
-        int sid = getCrntStmtSID();
-
-        // <stack>... arrayref index value </stack>, where value could be one word or two words
-        int localVarIdx1 = ++crntMaxIndex;
-        mv.visitVarInsn(getElementStoreOpcode(arrayStoreOpcode), localVarIdx1); // jvm_local_vars[localVarIdx1] = value
-        if (!isElemSingleWord) {
-            crntMaxIndex++;
-        }
-        // <stack>... arrayref index </stack>
-        mv.visitInsn(DUP2);
-        // <stack>... arrayref index arrayref index </stack>
-        int localVarIdx2 = istore(); // jvm_local_vars[localVarIdx2] = index
-        // <stack>... arrayref index arrayref </stack>
-        int localVarIdx3 = astore(); // jvm_local_vars[localVarIdx3] = arrayref
-        // <stack>... arrayref index </stack>
-        mv.visitVarInsn(getElementLoadOpcode(arrayStoreOpcode), localVarIdx1);
+    /**
+     * Array store must be logged before it happens.
+     */
+    private void logArrayStore(int arrayStoreOpcode) {
+        Type valueType = getValueType(arrayStoreOpcode);
         // <stack>... arrayref index value </stack>
-        mv.visitInsn(arrayStoreOpcode);
-        // <stack>... </stack>
-        addPushConstInsn(mv, sid);
-        mv.visitVarInsn(ALOAD, localVarIdx3);
-        mv.visitVarInsn(ILOAD, localVarIdx2);
-        mv.visitVarInsn(getElementLoadOpcode(arrayStoreOpcode), localVarIdx1);
-        // <stack>... sid arrayref index value </stack>
-        calcLongValue(mv, arrayStoreOpcode);
-        // <stack>... sid arrayref index longValue </stack>
+        int value = storeNewLocal(valueType);
+        // <stack>... arrayref index </stack>
+        mv.dup2();
+        mv.loadLocal(value);
+        calcLongValue(valueType);
+        // <stack>... arrayref index array index longValue </stack>
         if (isInit) {
+            push(getCrntLocId());
+            // <stack>... arrayref index array index longValue locId </stack>
             invokeStatic(LOG_ARRAY_INIT);
         } else {
-            addPushConstInsn(mv, 1);
-            // <stack>... sid arrayref index longValue true </stack>
+            push(1, getCrntLocId());
+            // <stack>... arrayref index array index longValue true locId </stack>
             invokeStatic(LOG_ARRAY_ACCESS);
         }
-        // <stack>... </stack>
+        // <stack>... arrayref index </stack>
+        mv.loadLocal(value);
+        // <stack>... arrayref index value </stack>
+        mv.visitInsn(arrayStoreOpcode); // <--- array store happens
     }
 
     @Override
     public void visitCode() {
         if (isSynchronized) {
-            /* Add a runtime library callback to log {@code LOCK} event for synchronized method. */
-            addPushConstInsn(mv, getCrntStmtSID());
             if (isStatic) {
                 loadClassLiteral();
             } else {
-                mv.visitVarInsn(ALOAD, 0);
+                mv.loadThis();
             }
+            mv.push(getCrntLocId());
             invokeStatic(LOG_MONITOR_ENTER);
         }
 
@@ -395,9 +301,9 @@ public class MethodTransformer extends MethodVisitor {
 
     @Override
     public void visitJumpInsn(int opcode, Label label) {
-        if (config.commandLine.branch) {
+        if (branchModel == 1) {
             if (opcode != JSR && opcode != GOTO) {
-                addPushConstInsn(mv, getCrntStmtSID());
+                mv.push(getCrntLocId());
                 invokeStatic(LOG_BRANCH);
             }
         }
@@ -406,132 +312,117 @@ public class MethodTransformer extends MethodVisitor {
 
     @Override
     public void visitTableSwitchInsn(int min, int max, Label dflt, Label... labels) {
-        if (config.commandLine.branch) {
-            addPushConstInsn(mv, getCrntStmtSID());
+        if (branchModel == 1) {
+            mv.push(getCrntLocId());
             invokeStatic(LOG_BRANCH);
         }
         mv.visitTableSwitchInsn(min, max, dflt, labels);
     }
 
+    private void push(int... ints) {
+        for (int i : ints) {
+            mv.push(i);
+        }
+    }
+
     private void invokeStatic(RVPredictRuntimeMethod rvpredictRTMethod) {
-        mv.visitMethodInsn(INVOKESTATIC, config.logClass, rvpredictRTMethod.name,
-                rvpredictRTMethod.desc, false);
+        mv.invokeStatic(RVPREDICT_RUNTIME_TYPE, rvpredictRTMethod.method);
     }
 
-    /**
-     * Stores the top value from the operand stack to the local variable array.
-     *
-     * @param desc
-     *            the type descriptor of the value to store
-     * @return the local variable index that stores the value
-     */
-    private int storeValue(String desc) {
-        int localVarIdx = ++crntMaxIndex;
-        int opcode = Type.getType(desc).getOpcode(ISTORE);
-        mv.visitVarInsn(opcode, localVarIdx);
-        if (isDoubleWordTypeDesc(desc)) {
-            crntMaxIndex++;
+    private Type getValueType(int arrayLoadOrStoreOpcode) {
+        switch (arrayLoadOrStoreOpcode) {
+        case BALOAD: case BASTORE:
+            /* YilongL: see JVM Specification $2.11.1. Types and the Java Virtual Machine
+             * for the reason why we return BYTE_TYPE instead of BOOLEAN_TYPE:
+             * http://docs.oracle.com/javase/specs/jvms/se7/html/jvms-2.html#jvms-2.11.1 */
+            return Type.BYTE_TYPE;
+        case CALOAD: case CASTORE:
+            return Type.CHAR_TYPE;
+        case SALOAD: case SASTORE:
+            return Type.SHORT_TYPE;
+        case IALOAD: case IASTORE:
+            return Type.INT_TYPE;
+        case LALOAD: case LASTORE:
+            return Type.LONG_TYPE;
+        case AALOAD: case AASTORE:
+            return OBJECT_TYPE;
+        case FALOAD: case FASTORE:
+            return Type.FLOAT_TYPE;
+        case DALOAD: case DASTORE:
+            return Type.DOUBLE_TYPE;
+        default:
+            assert false : "Expected an array load/store opcode; but found: " + arrayLoadOrStoreOpcode;
+            return null;
         }
-        return localVarIdx;
     }
 
-    /**
-     * Duplicates and then stores the top value from the operand stack to the
-     * local variable array.
-     *
-     * @param desc
-     *            the type descriptor of the value to store
-     * @return the local variable index that stores the value
-     */
-    private int dupThenStoreValue(String desc) {
-        int localVarIdx = ++crntMaxIndex;
-        int opcode = Type.getType(desc).getOpcode(ISTORE);
-        if (isSingleWordTypeDesc(desc)) {
-            mv.visitInsn(DUP);
-            mv.visitVarInsn(opcode, localVarIdx);
-        } else {
-            mv.visitInsn(DUP2);
-            mv.visitVarInsn(opcode, localVarIdx);
-            crntMaxIndex++;
+    private int storeNewLocal(Type type) {
+        int local = mv.newLocal(type);
+        mv.storeLocal(local, type);
+        return local;
+    }
+
+    public void calcLongValue(Type type) {
+        switch (type.getSort()) {
+        case Type.BOOLEAN:
+        case Type.BYTE:
+        case Type.CHAR:
+        case Type.SHORT:
+        case Type.INT:
+            mv.cast(type, Type.LONG_TYPE);
+        case Type.LONG:
+            break;
+        case Type.OBJECT:
+        case Type.ARRAY:
+            mv.invokeStatic(JL_SYSTEM_TYPE, Method.getMethod("int identityHashCode(Object)"));
+            mv.visitInsn(I2L);
+            break;
+        case Type.FLOAT:
+            mv.invokeStatic(JL_FLOAT_TYPE, Method.getMethod("int floatToIntBits(float)"));
+            mv.visitInsn(I2L);
+            break;
+        case Type.DOUBLE:
+            mv.invokeStatic(JL_DOUBLE_TYPE, Method.getMethod("long doubleToLongBits(double)"));
+            break;
+        default:
+            assert false : "Unexpected type: " + type;
         }
-        return localVarIdx;
-    }
-
-    private int dupThenAStore() {
-        int localVarIdx = ++crntMaxIndex;
-        mv.visitInsn(DUP);
-        mv.visitVarInsn(ASTORE, localVarIdx);
-        return localVarIdx;
-    }
-
-    private int astore() {
-        int localVarIdx = ++crntMaxIndex;
-        mv.visitVarInsn(ASTORE, localVarIdx);
-        return localVarIdx;
-    }
-
-    private int istore() {
-        int localVarIdx = ++crntMaxIndex;
-        mv.visitVarInsn(ISTORE, localVarIdx);
-        return localVarIdx;
-    }
-
-    /**
-     * Loads the value from the local variable array, boxes it, and puts it on
-     * top of the operand stack.
-     *
-     * @param desc
-     *            the type descriptor of the value to load
-     * @param index
-     *            the local variable index that has the value
-     */
-    private void loadThenCalcLongValue(String desc, int index) {
-        loadValue(desc, index);
-        calcLongValue(mv, desc);
-    }
-
-    /**
-     * Loads the value from the local variable array and puts it on top of the
-     * operand stack.
-     *
-     * @param desc
-     *            the type descriptor of the value to load
-     * @param index
-     *            the local variable index that has the value
-     */
-    private void loadValue(String desc, int index) {
-        mv.visitVarInsn(Type.getType(desc).getOpcode(ILOAD), index);
     }
 
     private void loadClassLiteral() {
         /* before Java 5 the bytecode for loading class literal is quite cumbersome */
+        Type owner = Type.getObjectType(className);
         if (version < 49) {
             /* `class$` is a special method generated to compute class literal */
             String fieldName = "class$" + className.replace('/', '$');
-            mv.visitFieldInsn(GETSTATIC, className, fieldName, DESC_CLASS);
-            Label l0 = new Label();
-            mv.visitJumpInsn(IFNONNULL, l0);
+            mv.getStatic(owner, fieldName, CLASS_TYPE);
+            Label l0 = mv.newLabel();
+            mv.ifNonNull(l0);
             mv.visitLdcInsn(className.replace('/', '.'));
-            mv.visitMethodInsn(INVOKESTATIC, className, "class$", String.format("(%s)%s", DESC_STRING, DESC_CLASS), false);
-            mv.visitInsn(DUP);
-            mv.visitFieldInsn(PUTSTATIC, className, fieldName, DESC_CLASS);
-            Label l1 = new Label();
-            mv.visitJumpInsn(GOTO, l1);
-            mv.visitLabel(l0);
-            mv.visitFieldInsn(GETSTATIC, className, fieldName, DESC_CLASS);
-            mv.visitLabel(l1);
+            mv.invokeStatic(owner, Method.getMethod("Class class$(String)"));
+            mv.dup();
+            mv.putStatic(owner, fieldName, CLASS_TYPE);
+            Label l1 = mv.newLabel();
+            mv.goTo(l1);
+            mv.mark(l0);
+            mv.getStatic(owner, fieldName, CLASS_TYPE);
+            mv.mark(l1);
         } else {
-            mv.visitLdcInsn(Type.getObjectType(className));
+            mv.visitLdcInsn(owner);
         }
     }
 
-
     /**
-     * @return a unique integer representing the syntactic identifier of the
+     * @return a unique integer representing the location identifier of the
      *         current statement in the instrumented program
      */
-    private int getCrntStmtSID() {
+    private int getCrntLocId() {
         return MetaData.getLocationId(getCrntStmtSig());
+    }
+
+    private String getFieldAccLocSig(String owner, String name) {
+        return String.format("%s|%s|%s|%s.%s|%s", source, className, signature, owner, name,
+                crntLineNum).replace("/", ".");
     }
 
     /**
@@ -539,7 +430,6 @@ public class MethodTransformer extends MethodVisitor {
      *         statement in the instrumented program
      */
     private String getCrntStmtSig() {
-        // TODO(YilongL): is the replace really necessary?
         return String.format("%s|%s|%s|%s", source, className, signature, crntLineNum).replace("/", ".");
     }
 }

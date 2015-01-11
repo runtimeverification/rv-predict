@@ -1,8 +1,6 @@
 package rvpredict.instrumentation;
 
-import java.lang.reflect.Method;
-
-import org.objectweb.asm.Type;
+import org.objectweb.asm.commons.Method;
 
 import rvpredict.runtime.RVPredictRuntime;
 
@@ -13,30 +11,28 @@ import rvpredict.runtime.RVPredictRuntime;
  */
 public class RVPredictRuntimeMethod {
 
-    /* method name and descriptor are used by ASM to uniquely locate a
-     * method in RVPredictRuntime */
-    public final String name;
-
-    public final String desc;
+    /**
+     * ASM method descriptor.
+     */
+    public final Method method;
 
     public static RVPredictRuntimeMethod create(String name, Class<?>... parameterTypes) {
-        Method method = getMethodHandler(name, parameterTypes);
-        return new RVPredictRuntimeMethod(method.getName(), Type.getMethodDescriptor(method));
+        Method method = getAsmMethod(name, parameterTypes);
+        return new RVPredictRuntimeMethod(method);
     }
 
-    static Method getMethodHandler(String name, Class<?>... parameterTypes) {
+    static Method getAsmMethod(String name, Class<?>... parameterTypes) {
         Method method = null;
         try {
-            method = RVPredictRuntime.class.getMethod(name, parameterTypes);
+            method = Method.getMethod(RVPredictRuntime.class.getMethod(name, parameterTypes));
         } catch (NoSuchMethodException | SecurityException e) {
             e.printStackTrace();
         }
         return method;
     }
 
-    protected RVPredictRuntimeMethod(String name, String desc) {
-        this.name = name;
-        this.desc = desc;
+    protected RVPredictRuntimeMethod(Method method) {
+        this.method = method;
     }
 
 }

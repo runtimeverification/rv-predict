@@ -49,9 +49,8 @@ public class Agent implements ClassFileTransformer {
         "sun",
         "java/lang",
 
-        /* LockSupport can be seen as an optimization to busy wait, no need
-         * to instrument nor intercept */
-        "java/util/concurrent/lock/LockSupport"
+        /* we provide complete mocking of the jucl package */
+        "java/util/concurrent/locks"
     };
 
     public Agent(Config config) {

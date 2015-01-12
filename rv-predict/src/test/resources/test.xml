@@ -116,16 +116,17 @@
 	    <arg value="negative" />
     </test>
 
-	<test name="jtsan.JUConcurrentTests-positive">
+    <test name="jtsan.JUConcurrentTests-positive">
         <arg key="-cp" value="basic.jar" />
         <arg value="jtsan.JUConcurrentTests" />
-	    <arg value="positive" />
+        <arg value="positive" />
     </test>
 
-	<test name="jtsan.JUConcurrentTests-negative">
+    <test name="jtsan.JUConcurrentTests-negative">
         <arg key="-cp" value="basic.jar" />
         <arg value="jtsan.JUConcurrentTests" />
-	    <arg value="negative" />
+        <arg value="negative" />
+        <rvarg key="--include" value="java.util.concurrent.Semaphore,java.util.concurrent.CountDownLatch,java.util.concurrent.CyclicBarrier,java.util.concurrent.ArrayBlockingQueue" />
     </test>
     
 </tests>

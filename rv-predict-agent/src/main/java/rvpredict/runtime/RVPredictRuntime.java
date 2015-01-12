@@ -28,10 +28,15 @@
  ******************************************************************************/
 package rvpredict.runtime;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.AbstractQueuedSynchronizer;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
@@ -98,12 +103,39 @@ public final class RVPredictRuntime {
 
     private static int NATIVE_INTERRUPTED_STATUS_VAR_ID = MetaData.getVariableId(
             "java.lang.Thread", "$interruptedStatus");
-    private static int ATOMIC_BOOLEAN_MOCK_VAR_ID = MetaData.getVariableId(
+    private static int ATOMIC_BOOLEAN_MOCK_VAL_ID = MetaData.getVariableId(
             "java.util.concurrent.atomic.AtomicBoolean", "$value");
+    private static int AQS_MOCK_STATE_ID = MetaData.getVariableId(
+            "java.util.concurrent.locks.AbstractQueuedSynchronizer", "$state");
 
+    private static final Method AQS_GET_STATE;
+    private static final Method AQS_SET_STATE;
+    private static final Method AQS_CAS_STATE;
+
+    static {
+        Method aqsGetState = null;
+        Method aqsSetState = null;
+        Method aqsCASState = null;
+        try {
+            aqsGetState = AbstractQueuedSynchronizer.class.getDeclaredMethod("getState");
+            aqsSetState = AbstractQueuedSynchronizer.class.getDeclaredMethod("setState", int.class);
+            aqsCASState = AbstractQueuedSynchronizer.class.getDeclaredMethod("compareAndSetState", int.class, int.class);
+
+            aqsGetState.setAccessible(true);
+            aqsSetState.setAccessible(true);
+            aqsCASState.setAccessible(true);
+        } catch (NoSuchMethodException | SecurityException e) {
+            e.printStackTrace();
+        }
+
+        AQS_GET_STATE = aqsGetState;
+        AQS_SET_STATE = aqsSetState;
+        AQS_CAS_STATE = aqsCASState;
+    }
 
     private static ConcurrentHashMap<Lock, ReadWriteLock> readLockToRWLock = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<Lock, ReadWriteLock> writeLockToRWLock = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<Condition, Lock> conditionToLock = new ConcurrentHashMap<>();
 
     private static DBEngine db;
 
@@ -597,6 +629,12 @@ public final class RVPredictRuntime {
         lock.unlock();
     }
 
+    public static Condition rvPredictLockNewCondition(int locId, Lock lock) {
+        Condition condition = lock.newCondition();
+        conditionToLock.putIfAbsent(condition, lock);
+        return condition;
+    }
+
     public static Lock rvPredictReadWriteLockReadLock(int locId, ReadWriteLock readWriteLock) {
         Lock readLock = readWriteLock.readLock();
         readLockToRWLock.putIfAbsent(readLock, readWriteLock);
@@ -609,13 +647,146 @@ public final class RVPredictRuntime {
         return writeLock;
     }
 
+    public static void rvPredictConditionAwait(int locId, Condition condition)
+            throws InterruptedException {
+        long lockId = System.identityHashCode(conditionToLock.get(condition));
+        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        try {
+            condition.await();
+        } catch (InterruptedException e) {
+            onBlockingMethodInterrupted(locId);
+            db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            throw e;
+        }
+
+        onBlockingMethodNormalReturn(locId);
+        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+    }
+
+    public static boolean rvPredictConditionAwait(int locId, Condition condition, long time,
+            TimeUnit unit) throws InterruptedException {
+        boolean result;
+        long lockId = System.identityHashCode(conditionToLock.get(condition));
+        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        try {
+            result = condition.await(time, unit);
+        } catch (InterruptedException e) {
+            onBlockingMethodInterrupted(locId);
+            db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            throw e;
+        }
+
+        onBlockingMethodNormalReturn(locId);
+        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        return result;
+    }
+
+    public static long rvPredictConditionAwaitNanos(int locId, Condition condition,
+            long nanosTimeout) throws InterruptedException {
+        long result;
+        long lockId = System.identityHashCode(conditionToLock.get(condition));
+        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        try {
+            result = condition.awaitNanos(nanosTimeout);
+        } catch (InterruptedException e) {
+            onBlockingMethodInterrupted(locId);
+            db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            throw e;
+        }
+
+        onBlockingMethodNormalReturn(locId);
+        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        return result;
+    }
+
+    public static boolean rvPredictConditionAwaitUntil(int locId, Condition condition, Date deadline)
+            throws InterruptedException {
+        boolean result;
+        long lockId = System.identityHashCode(conditionToLock.get(condition));
+        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        try {
+            result = condition.awaitUntil(deadline);
+        } catch (InterruptedException e) {
+            onBlockingMethodInterrupted(locId);
+            db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            throw e;
+        }
+
+        onBlockingMethodNormalReturn(locId);
+        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        return result;
+    }
+
+    public static void rvPredictConditionAwaitUninterruptibly(int locId, Condition condition) {
+        long lockId = System.identityHashCode(conditionToLock.get(condition));
+        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        condition.awaitUninterruptibly();
+        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+    }
+
+    public static int rvPredictAbstractQueuedSynchronizerGetState(int locId,
+            AbstractQueuedSynchronizer sync) {
+        int result;
+        try {
+            synchronized (sync) {
+                db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
+                result = (int) AQS_GET_STATE.invoke(sync);
+                db.saveEvent(EventType.READ, locId, System.identityHashCode(sync),
+                        -AQS_MOCK_STATE_ID, result);
+                db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
+            }
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
+                | SecurityException e) {
+            throw new RuntimeException(e);
+        }
+        return result;
+    }
+
+    public static void rvPredictAbstractQueuedSynchronizerSetState(int locId,
+            AbstractQueuedSynchronizer sync, int newState) {
+        try {
+            synchronized (sync) {
+                db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
+                AQS_SET_STATE.invoke(sync, newState);
+                db.saveEvent(EventType.WRITE, locId, System.identityHashCode(sync),
+                        -AQS_MOCK_STATE_ID, newState);
+                db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
+            }
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
+                | SecurityException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static boolean rvPredictAbstractQueuedSynchronizerCASState(int locId,
+            AbstractQueuedSynchronizer sync, int expect, int update) {
+        boolean result;
+        try {
+            synchronized (sync) {
+                db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
+                db.saveEvent(EventType.READ, locId, System.identityHashCode(sync),
+                        -AQS_MOCK_STATE_ID, (int) AQS_GET_STATE.invoke(sync));
+                result = (boolean) AQS_CAS_STATE.invoke(sync, expect, update);
+                if (result) {
+                    db.saveEvent(EventType.READ, locId, System.identityHashCode(sync),
+                            -AQS_MOCK_STATE_ID, update);
+                }
+                db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
+            }
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
+                | SecurityException e) {
+            throw new RuntimeException(e);
+        }
+        return result;
+    }
+
     public static boolean rvPredictAtomicBoolGet(int locId, AtomicBoolean atomicBool) {
         boolean result;
         synchronized (atomicBool) {
             db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
             result = atomicBool.get();
             db.saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
-                    -ATOMIC_BOOLEAN_MOCK_VAR_ID, result ? 1 : 0);
+                    -ATOMIC_BOOLEAN_MOCK_VAL_ID, result ? 1 : 0);
             db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }
         return result;
@@ -626,7 +797,7 @@ public final class RVPredictRuntime {
             db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
             atomicBool.set(newValue);
             db.saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
-                    -ATOMIC_BOOLEAN_MOCK_VAR_ID, newValue ? 1 : 0);
+                    -ATOMIC_BOOLEAN_MOCK_VAL_ID, newValue ? 1 : 0);
             db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }
     }
@@ -637,10 +808,10 @@ public final class RVPredictRuntime {
         synchronized (atomicBool) {
             db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
             db.saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
-                    -ATOMIC_BOOLEAN_MOCK_VAR_ID, atomicBool.get() ? 1 : 0);
+                    -ATOMIC_BOOLEAN_MOCK_VAL_ID, atomicBool.get() ? 1 : 0);
             result = atomicBool.getAndSet(newValue);
             db.saveEvent(EventType.WRITE, locId, System.identityHashCode(atomicBool),
-                    -ATOMIC_BOOLEAN_MOCK_VAR_ID, newValue ? 1 : 0);
+                    -ATOMIC_BOOLEAN_MOCK_VAL_ID, newValue ? 1 : 0);
             db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }
         return result;
@@ -652,11 +823,11 @@ public final class RVPredictRuntime {
         synchronized (atomicBool) {
             db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
             db.saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
-                    -ATOMIC_BOOLEAN_MOCK_VAR_ID, atomicBool.get() ? 1 : 0);
+                    -ATOMIC_BOOLEAN_MOCK_VAL_ID, atomicBool.get() ? 1 : 0);
             result = atomicBool.compareAndSet(expect, update);
             if (result) {
                 db.saveEvent(EventType.WRITE, locId, System.identityHashCode(atomicBool),
-                        -ATOMIC_BOOLEAN_MOCK_VAR_ID, update ? 1 : 0);
+                        -ATOMIC_BOOLEAN_MOCK_VAL_ID, update ? 1 : 0);
             }
             db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }

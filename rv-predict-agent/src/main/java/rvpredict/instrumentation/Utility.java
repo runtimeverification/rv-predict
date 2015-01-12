@@ -181,10 +181,18 @@ public class Utility {
             return isThreadClass(class0);
         case "java/util/concurrent/locks/Lock":
             return isLockClass(class0);
+        case "java/util/concurrent/locks/Condition":
+            return isConditionClass(class0);
         case "java/util/concurrent/locks/ReadWriteLock":
             return isReadWriteLockClass(class0);
+        case "java/util/concurrent/locks/AbstractQueuedSynchronizer":
+            return isAQSClass(class0);
+        case "java/util/concurrent/atomic/AtomicBoolean":
+            return false;
         default:
-            throw new RuntimeException("Not yet implemented!");
+            System.err.println("[Warning]: unexpected case isSubclassOf(" + class0 + ", " + class1
+                    + ")");
+            return false;
         }
     }
 
@@ -216,10 +224,25 @@ public class Utility {
             || "java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock".equals(className);
     }
 
+    private static boolean isConditionClass(String className) {
+        // TODO(YilongL): avoid hard-coding like this
+        return "java/util/concurrent/locks/Condition".equals(className)
+            || "java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject".equals(className)
+            || "java/util/concurrent/locks/AbstractQueuedLongSynchronizer$ConditionObject".equals(className);
+    }
+
     private static boolean isReadWriteLockClass(String className) {
         // TODO(YilongL): avoid hard-coding like this
         return "java/util/concurrent/locks/ReadWriteLock".equals(className)
             || "java/util/concurrent/locks/ReentrantReadWriteLock".equals(className);
+    }
+
+    private static boolean isAQSClass(String class0) {
+        // TODO(YilongL): avoid hard-coding like this
+        return "java/util/concurrent/Semaphore$Sync".equals(class0)
+            || "java/util/concurrent/Semaphore$FairSync".equals(class0)
+            || "java/util/concurrent/Semaphore$NonfairSync".equals(class0)
+            || "java/util/concurrent/CountDownLatch$Sync".equals(class0);
     }
 
     /**

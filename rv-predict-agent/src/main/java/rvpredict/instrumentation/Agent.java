@@ -33,11 +33,9 @@ public class Agent implements ClassFileTransformer {
     private static String[] IGNORES = new String[] {
         // rv-predict itself and the libraries we are using
         "rvpredict",
+        /* TODO(YilongL): shall we repackage these libraries using JarJar? */
         "org.objectweb.asm",
         "com/beust",
-
-        // the bytecode of ant uses the deprecated JSR/RET instructions which cause
-        // RuntimeException: "JSR/RET are not supported with computeFrames option"
         "org/apache/tools/ant",
 
         // JDK classes used by the RV-Predict runtime library
@@ -168,11 +166,11 @@ public class Agent implements ClassFileTransformer {
         if (toInstrument) {
             ClassReader cr = new ClassReader(cbuf);
 
-            ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES);
+            ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
             ClassVisitor cv = new ClassTransformer(cw, config);
             cv = new CheckClassAdapter(cv);
             try {
-                cr.accept(cv, ClassReader.EXPAND_FRAMES);
+                cr.accept(cv, 0);
             } catch (Exception e) {
                 /* exceptions during class loading are silently suppressed by default */
                 System.err.println("Cannot retransform " + cname + ". Exception: " + e);

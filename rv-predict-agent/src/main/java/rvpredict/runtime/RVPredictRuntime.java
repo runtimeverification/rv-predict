@@ -111,29 +111,19 @@ public final class RVPredictRuntime {
     private static int AQS_MOCK_STATE_ID = MetaData.getVariableId(
             "java.util.concurrent.locks.AbstractQueuedSynchronizer", "$state");
 
-    private static final Method AQS_GET_STATE;
-    private static final Method AQS_SET_STATE;
-    private static final Method AQS_CAS_STATE;
+    private static final Method AQS_GET_STATE = getDeclaredMethod(AbstractQueuedSynchronizer.class, "getState");
+    private static final Method AQS_SET_STATE = getDeclaredMethod(AbstractQueuedSynchronizer.class, "setState", int.class);
+    private static final Method AQS_CAS_STATE = getDeclaredMethod(AbstractQueuedSynchronizer.class, "compareAndSetState", int.class, int.class);
 
-    static {
-        Method aqsGetState = null;
-        Method aqsSetState = null;
-        Method aqsCASState = null;
+    private static Method getDeclaredMethod(Class<?> cls, String name, Class<?>... parameterTypes) {
         try {
-            aqsGetState = AbstractQueuedSynchronizer.class.getDeclaredMethod("getState");
-            aqsSetState = AbstractQueuedSynchronizer.class.getDeclaredMethod("setState", int.class);
-            aqsCASState = AbstractQueuedSynchronizer.class.getDeclaredMethod("compareAndSetState", int.class, int.class);
-
-            aqsGetState.setAccessible(true);
-            aqsSetState.setAccessible(true);
-            aqsCASState.setAccessible(true);
+            Method method = cls.getDeclaredMethod(name, parameterTypes);
+            method.setAccessible(true);
+            return method;
         } catch (NoSuchMethodException | SecurityException e) {
             e.printStackTrace();
+            throw new RuntimeException(e);
         }
-
-        AQS_GET_STATE = aqsGetState;
-        AQS_SET_STATE = aqsSetState;
-        AQS_CAS_STATE = aqsCASState;
     }
 
     private static ConcurrentHashMap<Lock, ReadWriteLock> readLockToRWLock = new ConcurrentHashMap<>();

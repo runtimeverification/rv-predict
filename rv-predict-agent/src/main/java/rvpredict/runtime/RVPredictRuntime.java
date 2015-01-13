@@ -622,24 +622,36 @@ public final class RVPredictRuntime {
         lock.unlock();
     }
 
+    /**
+     * {@link Lock#newCondition()}
+     */
     public static Condition rvPredictLockNewCondition(Lock lock, int locId) {
         Condition condition = lock.newCondition();
         conditionToLock.putIfAbsent(condition, lock);
         return condition;
     }
 
+    /**
+     * {@link ReadWriteLock#readLock()}
+     */
     public static Lock rvPredictReadWriteLockReadLock(ReadWriteLock readWriteLock, int locId) {
         Lock readLock = readWriteLock.readLock();
         readLockToRWLock.putIfAbsent(readLock, readWriteLock);
         return readLock;
     }
 
+    /**
+     * {@link ReadWriteLock#writeLock()}
+     */
     public static Lock rvPredictReadWriteLockWriteLock(ReadWriteLock readWriteLock, int locId) {
         Lock writeLock = readWriteLock.writeLock();
         writeLockToRWLock.putIfAbsent(writeLock, readWriteLock);
         return writeLock;
     }
 
+    /**
+     * {@link Condition#await()}
+     */
     public static void rvPredictConditionAwait(Condition condition, int locId)
             throws InterruptedException {
         long lockId = System.identityHashCode(conditionToLock.get(condition));
@@ -656,6 +668,9 @@ public final class RVPredictRuntime {
         db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
     }
 
+    /**
+     * {@link Condition#await(long, TimeUnit)}
+     */
     public static boolean rvPredictConditionAwait(Condition condition, long time, TimeUnit unit,
             int locId) throws InterruptedException {
         boolean result;
@@ -674,6 +689,9 @@ public final class RVPredictRuntime {
         return result;
     }
 
+    /**
+     * {@link Condition#awaitNanos(long)}
+     */
     public static long rvPredictConditionAwaitNanos(Condition condition, long nanosTimeout,
             int locId) throws InterruptedException {
         long result;
@@ -692,6 +710,9 @@ public final class RVPredictRuntime {
         return result;
     }
 
+    /**
+     * {@link Condition#awaitUntil(Date)}
+     */
     public static boolean rvPredictConditionAwaitUntil(Condition condition, Date deadline, int locId)
             throws InterruptedException {
         boolean result;
@@ -710,6 +731,9 @@ public final class RVPredictRuntime {
         return result;
     }
 
+    /**
+     * {@link Condition#awaitUninterruptibly()}
+     */
     public static void rvPredictConditionAwaitUninterruptibly(Condition condition, int locId) {
         long lockId = System.identityHashCode(conditionToLock.get(condition));
         db.saveEvent(EventType.WAIT_REL, locId, lockId);
@@ -717,6 +741,9 @@ public final class RVPredictRuntime {
         db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
     }
 
+    /**
+     * {@link AbstractQueuedSynchronizer#getState()}
+     */
     public static int rvPredictAbstractQueuedSynchronizerGetState(AbstractQueuedSynchronizer sync,
             int locId) {
         int result;
@@ -735,6 +762,9 @@ public final class RVPredictRuntime {
         return result;
     }
 
+    /**
+     * {@link AbstractQueuedSynchronizer#setState(int)}
+     */
     public static void rvPredictAbstractQueuedSynchronizerSetState(AbstractQueuedSynchronizer sync,
             int newState, int locId) {
         try {
@@ -751,6 +781,9 @@ public final class RVPredictRuntime {
         }
     }
 
+    /**
+     * {@link AbstractQueuedSynchronizer#compareAndSetState(int, int)}
+     */
     public static boolean rvPredictAbstractQueuedSynchronizerCASState(AbstractQueuedSynchronizer sync,
             int expect, int update, int locId) {
         boolean result;
@@ -773,6 +806,9 @@ public final class RVPredictRuntime {
         return result;
     }
 
+    /**
+     * {@link AtomicBoolean#get()}
+     */
     public static boolean rvPredictAtomicBoolGet(AtomicBoolean atomicBool, int locId) {
         boolean result;
         synchronized (atomicBool) {
@@ -785,6 +821,9 @@ public final class RVPredictRuntime {
         return result;
     }
 
+    /**
+     * {@link AtomicBoolean#set(boolean)}
+     */
     public static void rvPredictAtomicBoolSet(AtomicBoolean atomicBool, boolean newValue, int locId) {
         synchronized (atomicBool) {
             db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
@@ -795,6 +834,9 @@ public final class RVPredictRuntime {
         }
     }
 
+    /**
+     * {@link AtomicBoolean#getAndSet(boolean)}
+     */
     public static boolean rvPredictAtomicBoolGAS(AtomicBoolean atomicBool, boolean newValue,
             int locId) {
         boolean result;
@@ -810,6 +852,9 @@ public final class RVPredictRuntime {
         return result;
     }
 
+    /**
+     * {@link AtomicBoolean#compareAndSet(boolean, boolean)}
+     */
     public static boolean rvPredictAtomicBoolCAS(AtomicBoolean atomicBool, boolean expect,
             boolean update, int locId) {
         boolean result;

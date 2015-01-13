@@ -171,7 +171,7 @@ public class Agent implements ClassFileTransformer {
             cv = new CheckClassAdapter(cv);
             try {
                 cr.accept(cv, 0);
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 /* exceptions during class loading are silently suppressed by default */
                 System.err.println("Cannot retransform " + cname + ". Exception: " + e);
                 throw e;
@@ -179,8 +179,8 @@ public class Agent implements ClassFileTransformer {
 
             byte[] ret = cw.toByteArray();
             return ret;
-        } else {
-            return cbuf;
         }
+        // no transformation happens
+        return null;
     }
 }

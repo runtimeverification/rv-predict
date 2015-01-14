@@ -72,7 +72,7 @@ public class DBEngine {
                 metadataOS.notify();
             }
             metadataLoggingThread.join();
-            for (EventOutputStream stream : threadLocalTraceOS.getStreamsMap().values()) {
+            for (EventOutputStream stream : EventOutputStream.getStreamsMap().values()) {
                 try {
                     stream.close();
                 } catch (IOException e) {

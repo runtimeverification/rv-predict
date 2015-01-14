@@ -1,6 +1,7 @@
 package rvpredict.instrumentation;
 
 import java.io.IOException;
+import java.lang.instrument.ClassFileTransformer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Date;
@@ -237,7 +238,19 @@ public class RVPredictRuntimeMethods {
         return null;
     }
 
-    public static boolean isSubclassOf(String class0, String class1, boolean itf) {
+    /**
+     * Checks if one class or interface extends or implements another class or
+     * interface.
+     *
+     * @param class0
+     *            the name of the first class or interface
+     * @param class1
+     *            the name of the second class of interface
+     * @param itf
+     *            if {@code class1} represents an interface
+     * @return {@code true} if {@code class1} is assignable from {@code class0}
+     */
+    private static boolean isSubclassOf(String class0, String class1, boolean itf) {
         assert !class1.startsWith("[");
 
         if (class0.startsWith("[")) {
@@ -259,6 +272,19 @@ public class RVPredictRuntimeMethods {
         }
     }
 
+    /**
+     * Obtains the {@link ClassReader} used to retrieve the superclass and
+     * interfaces information of a class or interface.
+     * <p>
+     * This method is meant to avoid class loading when checking inheritance
+     * relation because class loading during
+     * {@link ClassFileTransformer#transform(ClassLoader, String, Class, java.security.ProtectionDomain, byte[])}
+     * can not be properly intercepted by the java agent.
+     *
+     * @param className
+     *            the class or interface to read
+     * @return the {@link ClassReader}
+     */
     private static ClassReader getClassReader(String className) {
         try {
             return new ClassReader(className);
@@ -268,6 +294,15 @@ public class RVPredictRuntimeMethods {
         }
     }
 
+    /**
+     * Gets all superclasses of a class or interface.
+     * <p>
+     * The superclass of an interface will be the {@code Object}.
+     *
+     * @param className
+     *            the internal name of a class or interface
+     * @return set of superclasses
+     */
     private static List<String> getSuperclasses(String className) {
         List<String> result = new ArrayList<>();
         while (className != null) {
@@ -279,6 +314,14 @@ public class RVPredictRuntimeMethods {
         return result;
     }
 
+    /**
+     * Gets all implemented interfaces (including parent interfaces) of a class
+     * or all parent interfaces of an interface.
+     *
+     * @param className
+     *            the internal name of a class or interface
+     * @return set of interfaces
+     */
     private static Set<String> getInterfaces(String className) {
         Set<String> interfaces = new HashSet<>();
         Deque<String> queue = new ArrayDeque<>();

@@ -1,14 +1,9 @@
 package rvpredict.instrumentation;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.tuple.Pair;
-
 public class MetaData {
 
     public static final Map<String, Set<String>> classNameToFieldNames = new ConcurrentHashMap<>();

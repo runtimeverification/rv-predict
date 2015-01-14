@@ -3,6 +3,7 @@ package rvpredict.instrumentation;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang3.tuple.Pair;
 public class MetaData {
 
     public static final Map<String, Set<String>> classNameToFieldNames = new ConcurrentHashMap<>();
@@ -23,7 +24,7 @@ public class MetaData {
     public static final String[] varSigs = new String[MAX_NUM_OF_FIELDS];
 
     public static final ConcurrentHashMap<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
-    public static final List<Map.Entry<String, Integer>> unsavedStmtSigToLocId = new ArrayList<>();
+    public static final List<Pair<String, Integer>> unsavedStmtSigToLocId = new ArrayList<>();
 
     public static final Set<String> volatileVariables = Collections
             .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
@@ -87,7 +88,7 @@ public class MetaData {
                 if (locId == null) {
                     locId = stmtSigToLocId.size() + 1;
                     stmtSigToLocId.put(sig, locId);
-                    unsavedStmtSigToLocId.add(new AbstractMap.SimpleImmutableEntry(sig, locId));
+                    unsavedStmtSigToLocId.add(Pair.of(sig, locId));
                 }
             }
         }

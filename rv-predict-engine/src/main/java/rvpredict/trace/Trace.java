@@ -36,7 +36,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.beust.jcommander.internal.Maps;
 import com.google.common.collect.HashBasedTable;
@@ -70,7 +71,7 @@ public class Trace {
     /**
      * Lock level table indexed by thread ID and lock object.
      */
-    private final Table<Long, Long, AtomicInteger> lockLevelTbl = HashBasedTable.create();
+    private final Table<Long, Long, MutableInt> lockLevelTbl = HashBasedTable.create();
 
     /**
      * Lock level of each LOCK/UNLOCK event.
@@ -293,17 +294,17 @@ public class Trace {
             }
         } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
             Long lockObj = ((SyncEvent) event).getSyncObject();
-            AtomicInteger level = lockLevelTbl.get(event.getTID(), lockObj);
+            MutableInt level = lockLevelTbl.get(event.getTID(), lockObj);
             if (level == null) {
-                level = new AtomicInteger(0);
+                level = new MutableInt(0);
                 lockLevelTbl.put(event.getTID(), lockObj, level);
             }
             if (EventType.isLock(event.getType())) {
-                level.incrementAndGet();
+                level.increment();
             }
-            lockLevels.put((SyncEvent) event, level.get());
+            lockLevels.put((SyncEvent) event, level.getValue());
             if (EventType.isUnlock(event.getType())) {
-                level.decrementAndGet();
+                level.decrement();
             }
         }
     }

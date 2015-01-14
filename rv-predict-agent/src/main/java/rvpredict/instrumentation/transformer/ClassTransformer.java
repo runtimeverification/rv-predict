@@ -1,4 +1,4 @@
-package rvpredict.instrumentation;
+package rvpredict.instrumentation.transformer;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -10,6 +10,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 import rvpredict.config.Config;
+import rvpredict.instrumentation.MetaData;
 
 public class ClassTransformer extends ClassVisitor {
 
@@ -67,15 +68,13 @@ public class ClassTransformer extends ClassVisitor {
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
 
         if (mv != null) {
-            Type[] args = Type.getArgumentTypes(desc);
-            int numOfWords = args.length;
-            for (int i = 0; i < args.length; i++) {
-                if (args[i] == Type.DOUBLE_TYPE || args[i] == Type.LONG_TYPE)
-                    numOfWords++;
+            int crntMaxLocals = 0;
+            for (Type type : Type.getArgumentTypes(desc)) {
+                crntMaxLocals += type.getSize();
             }
 
-            mv = new MethodTransformer(mv, source, className, version, name, name
-                    + desc, access, numOfWords, finalFields, config);
+            mv = new MethodTransformer(mv, source, className, version, name, desc, access,
+                    crntMaxLocals, finalFields, config);
         }
         return mv;
     }

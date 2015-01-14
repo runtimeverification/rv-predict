@@ -1,6 +1,11 @@
 package rvpredict.instrumentation;
 
-import rvpredict.config.Configuration;
+import java.lang.instrument.ClassFileTransformer;
+import java.lang.instrument.IllegalClassFormatException;
+import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
+import java.security.ProtectionDomain;
+import java.util.Arrays;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -8,18 +13,13 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.util.CheckClassAdapter;
 
 import rvpredict.config.Config;
+import rvpredict.config.Configuration;
 import rvpredict.db.TraceCache;
 import rvpredict.engine.main.Main;
+import rvpredict.instrumentation.transformer.ClassTransformer;
 import rvpredict.logging.DBEngine;
 import rvpredict.runtime.RVPredictRuntime;
 import rvpredict.util.Logger;
-
-import java.lang.instrument.ClassFileTransformer;
-import java.lang.instrument.IllegalClassFormatException;
-import java.lang.instrument.Instrumentation;
-import java.lang.instrument.UnmodifiableClassException;
-import java.security.ProtectionDomain;
-import java.util.Arrays;
 
 public class Agent implements ClassFileTransformer {
 
@@ -33,9 +33,10 @@ public class Agent implements ClassFileTransformer {
     private static String[] IGNORES = new String[] {
         // rv-predict itself and the libraries we are using
         "rvpredict",
+        /* TODO(YilongL): shall we repackage these libraries using JarJar? */
         "org.objectweb.asm",
         "com/beust",
-        "org/apache/tools/ant/util/JavaEnvUtils",
+        "org/apache/tools/ant",
 
         // JDK classes used by the RV-Predict runtime library
         "java/io",
@@ -89,10 +90,9 @@ public class Agent implements ClassFileTransformer {
             if (config.includeList == null) {
                 config.includeList = includes;
             } else {
-                System.out.println("Includes: " + Arrays.toString(includes));
-                int length = config.includeList.length;
-                String[] array = new String[length + includes.length];
-                System.arraycopy(includes, 0, array, length, includes.length);
+                String[] array = new String[config.includeList.length + includes.length];
+                System.arraycopy(config.includeList, 0, array, 0, config.includeList.length);
+                System.arraycopy(includes, 0, array, config.includeList.length, includes.length);
                 config.includeList = array;
             }
             System.out.println("Including: " + Arrays.toString(config.includeList));
@@ -141,26 +141,23 @@ public class Agent implements ClassFileTransformer {
     @Override
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
-
         boolean toInstrument = true;
-        String[] tmp = config.excludeList;
-
-        for (int i = 0; i < tmp.length; i++) {
-            String s = tmp[i];
-            if (cname.startsWith(s)) {
-                toInstrument = false;
-                break;
+        if (config.excludeList != null) {
+            for (String exclude : config.excludeList) {
+                if (cname.startsWith(exclude)) {
+                    toInstrument = false;
+                    break;
+                }
             }
         }
-        tmp = config.includeList;
-        if (tmp != null)
-            for (int i = 0; i < tmp.length; i++) {
-                String s = tmp[i];
-                if (cname.startsWith(s)) {
+        if (config.includeList != null) {
+            for (String include : config.includeList) {
+                if (cname.startsWith(include)) {
                     toInstrument = true;
                     break;
                 }
             }
+        }
 
 //        System.err.println(cname + " " + toInstrument);
         for (String ignore : IGNORES) {
@@ -169,14 +166,21 @@ public class Agent implements ClassFileTransformer {
         if (toInstrument) {
             ClassReader cr = new ClassReader(cbuf);
 
-            ClassWriter cw = new ClassWriter(cr, 0);
-            ClassVisitor instrumentor = new ClassTransformer(cw, config);
-            CheckClassAdapter cv = new CheckClassAdapter(instrumentor);
-            cr.accept(cv, 0);
+            ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
+            ClassVisitor cv = new ClassTransformer(cw, config);
+            ClassVisitor checker = new CheckClassAdapter(cv);
+            try {
+                cr.accept(checker, 0);
+            } catch (Throwable e) {
+                /* exceptions during class loading are silently suppressed by default */
+                System.err.println("Cannot retransform " + cname + ". Exception: " + e);
+                throw e;
+            }
 
             byte[] ret = cw.toByteArray();
             return ret;
         }
-        return cbuf;
+        // no transformation happens
+        return null;
     }
 }

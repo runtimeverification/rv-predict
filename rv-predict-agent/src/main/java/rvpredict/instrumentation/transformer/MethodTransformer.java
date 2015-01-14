@@ -392,7 +392,7 @@ public class MethodTransformer extends MethodVisitor {
      * <p>
      * In order to make this approach work correctly, we have to ensure two
      * things:
-     * <li>our phantom local variable do not overwrite the content of some
+     * <li>our phantom local variable does not overwrite the content of some
      * original local variable; this is done by maintaining the correct
      * {@link MethodTransformer#crntMaxLocals} at all time
      * <li>our phantom local variable do not get overwritten before it serves

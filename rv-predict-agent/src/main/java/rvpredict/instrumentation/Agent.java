@@ -168,9 +168,9 @@ public class Agent implements ClassFileTransformer {
 
             ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
             ClassVisitor cv = new ClassTransformer(cw, config);
-            cv = new CheckClassAdapter(cv);
+            ClassVisitor checker = new CheckClassAdapter(cv);
             try {
-                cr.accept(cv, 0);
+                cr.accept(checker, 0);
             } catch (Throwable e) {
                 /* exceptions during class loading are silently suppressed by default */
                 System.err.println("Cannot retransform " + cname + ". Exception: " + e);

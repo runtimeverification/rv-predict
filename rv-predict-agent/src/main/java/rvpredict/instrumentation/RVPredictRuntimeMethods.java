@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Deque;
 import java.util.HashSet;
@@ -47,6 +48,8 @@ public class RVPredictRuntimeMethods {
     private static final String JL_OBJECT       =   "java/lang/Object";
     private static final String JL_THREAD       =   "java/lang/Thread";
     private static final String JL_SYSTEM       =   "java/lang/System";
+    private static final String JU_COLLECTION   =   "java/util/Collection";
+    private static final String JU_MAP          =   "java/util/Map";
     private static final String JUCL_LOCK       =   "java/util/concurrent/locks/Lock";
     private static final String JUCL_CONDITION  =   "java/util/concurrent/locks/Condition";
     private static final String JUCL_RW_LOCK    =   "java/util/concurrent/locks/ReadWriteLock";
@@ -89,6 +92,18 @@ public class RVPredictRuntimeMethods {
     // java.lang.System methods
     public static final RVPredictInterceptor RVPREDICT_SYSTEM_ARRAYCOPY   =
             register(STATIC, JL_SYSTEM, "arraycopy", "rvPredictSystemArraycopy", O, I, O, I, I);
+
+    // java.util.Collection methods
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_ADD     =
+            register(INTERFACE, JU_COLLECTION, "add", "rvPredictCollectionAdd", O);
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_ADD_ALL =
+            register(INTERFACE, JU_COLLECTION, "addAll", "rvPredictCollectionAddAll", Collection.class);
+
+    // java.util.Map methods
+    public static final RVPredictInterceptor RVPREDICT_MAP_PUT            =
+            register(INTERFACE, JU_MAP, "put", "rvPredictMapPut", O, O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_PUT_ALL        =
+            register(INTERFACE, JU_MAP, "putAll", "rvPredictMapPutAll", Map.class);
 
     // java.util.concurrent.locks.Lock methods
     // note that this doesn't provide mocks for methods specific in concrete lock implementation

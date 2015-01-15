@@ -30,7 +30,9 @@ package rvpredict.runtime;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.Date;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -99,17 +101,22 @@ import rvpredict.trace.EventType;
  * @author YilongL
  *
  */
+@SuppressWarnings({ "unchecked", "rawtypes" })
 public final class RVPredictRuntime {
 
     private static final long MONITOR_C = 42L;
     private static final long ATOMIC_LOCK_C = 43L;
+
+    private static final long DUMMY_VALUE = 0L;
+
+    private static final String MOCK_STATE_FIELD = "$state";
 
     private static int NATIVE_INTERRUPTED_STATUS_VAR_ID = MetaData.getVariableId(
             "java.lang.Thread", "$interruptedStatus");
     private static int ATOMIC_BOOLEAN_MOCK_VAL_ID = MetaData.getVariableId(
             "java.util.concurrent.atomic.AtomicBoolean", "$value");
     private static int AQS_MOCK_STATE_ID = MetaData.getVariableId(
-            "java.util.concurrent.locks.AbstractQueuedSynchronizer", "$state");
+            "java.util.concurrent.locks.AbstractQueuedSynchronizer", MOCK_STATE_FIELD);
 
     private static final Method AQS_GET_STATE = getDeclaredMethod(AbstractQueuedSynchronizer.class, "getState");
     private static final Method AQS_SET_STATE = getDeclaredMethod(AbstractQueuedSynchronizer.class, "setState", int.class);
@@ -1015,6 +1022,46 @@ public final class RVPredictRuntime {
         System.arraycopy(src, srcPos, dest, destPos, length);
     }
 
+    /**
+     * {@link Collection#add(Object)}
+     */
+    public static boolean rvPredictCollectionAdd(Collection collection, Object e, int locId) {
+        if (!isConcurrentCollection(collection)) {
+            accessMockStatus(collection, true, locId);
+        }
+        return collection.add(e);
+    }
+
+    /**
+     * {@link Collection#addAll(Collection)}
+     */
+    public static boolean rvPredictCollectionAddAll(Collection collection, Collection c, int locId) {
+        if (!isConcurrentCollection(collection)) {
+            accessMockStatus(collection, true, locId);
+        }
+        return collection.addAll(c);
+    }
+
+    /**
+     * {@link Map#put(Object, Object)}
+     */
+    public static Object rvPredictMapPut(Map map, Object key, Object value, int locId) {
+        if (!isConcurrentCollection(map)) {
+            accessMockStatus(map, true, locId);
+        }
+        return map.put(key, value);
+    }
+
+    /**
+     * {@link Map#putAll(Map)}
+     */
+    public static void rvPredictMapPutAll(Map map, Map m, int locId) {
+        if (!isConcurrentCollection(map)) {
+            accessMockStatus(map, true, locId);
+        }
+        map.putAll(m);
+    }
+
     private static long calcMonitorId(Object obj) {
         // Use low 32bit for object hash and high 32bit for the magic constant.
         return (MONITOR_C << 32L) + System.identityHashCode(obj);
@@ -1054,6 +1101,18 @@ public final class RVPredictRuntime {
             /* normal lock */
             return System.identityHashCode(lock);
         }
+    }
+
+    private static void accessMockStatus(Object mockObject, boolean isWrite, int locId) {
+        db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
+                System.identityHashCode(mockObject),
+                -MetaData.getVariableId(mockObject.getClass().getName(), MOCK_STATE_FIELD),
+                DUMMY_VALUE);
+    }
+
+    private static boolean isConcurrentCollection(Object object) {
+        String packageName = object.getClass().getPackage().getName();
+        return packageName.contains("java.util.concurrent");
     }
 
     /**

@@ -1,8 +1,8 @@
-(?s)(.*)Race on field java.util.ArrayList.size between:(\s)*java.util.ArrayList.add\(ArrayList.java:458\)(\s)*java.util.ArrayList.add\(ArrayList.java:459\)(.*)
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.MediumTests\$1.thread1\(MediumTests.java:51\)(\s)*jtsan.MediumTests\$1.thread2\(MediumTests.java:56\)(.*)
 
-(?s)(.*)Race on field java.util.HashMap.size between two instances of:(\s)*java.util.HashMap.putVal\(HashMap.java:661\)(.*)
+(?s)(.*)Race on field java.util.HashSet.\$state between:(\s)*jtsan.MediumTests\$2.thread1\(MediumTests.java:71\)(\s)*jtsan.MediumTests\$2.thread2\(MediumTests.java:76\)(.*)
 
-(?s)(.*)Race on field java.util.TreeMap.size between two instances of:(\s)*java.util.TreeMap.put\(TreeMap.java:541\)(.*)
+(?s)(.*)Race on field java.util.TreeMap.\$state between:(\s)*jtsan.MediumTests\$3.thread1\(MediumTests.java:89\)(\s)*jtsan.MediumTests\$3.thread2\(MediumTests.java:94\)(.*)
 
 (?s)(.*)Race on an array access between:(\s)*jtsan.MediumTests\$4.thread1\(MediumTests.java:107\)(\s)*jtsan.MediumTests\$4.thread2\(MediumTests.java:112\)(.*)
 

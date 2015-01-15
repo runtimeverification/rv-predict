@@ -21,7 +21,9 @@ public class RVPredictInterceptor extends RVPredictRuntimeMethod {
 
     /**
      * Method type of the associated Java method. Can be
-     * {@link RVPredictRuntimeMethods#STATIC}, {@link RVPredictRuntimeMethods#VIRTUAL}, or
+     * {@link RVPredictRuntimeMethods#STATIC},
+     * {@link RVPredictRuntimeMethods#VIRTUAL},
+     * {@link RVPredictRuntimeMethods#INTERFACE} or
      * {@link RVPredictRuntimeMethods#SPECIAL}.
      */
     final int methodType;

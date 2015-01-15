@@ -6,6 +6,8 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -38,6 +40,9 @@ public class Agent implements ClassFileTransformer {
         "com/beust",
         "org/apache/tools/ant",
 
+        // array type
+        "[",
+
         // JDK classes used by the RV-Predict runtime library
         "java/io",
         "java/nio",
@@ -54,11 +59,15 @@ public class Agent implements ClassFileTransformer {
         "java/util/concurrent/locks"
     };
 
+    static Instrumentation instrumentation;
+
     public Agent(Config config) {
         this.config = config;
     }
 
     public static void premain(String agentArgs, Instrumentation inst) {
+        instrumentation = inst;
+
         if (agentArgs == null) {
             agentArgs = "";
         }
@@ -138,9 +147,26 @@ public class Agent implements ClassFileTransformer {
         }
     }
 
+    private static final Set<String> loadedClasses = new HashSet<>();
+
     @Override
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
+        if (config.verbose) {
+            if (c == null) {
+                System.err.println("[Java-agent] intercepted class load: " + cname);
+            } else {
+                System.err.println("[Java-agent] intercepted class redefinition/retransformation: " + c);
+            }
+
+            loadedClasses.add(cname.replace("/", "."));
+            for (Class<?> cls : instrumentation.getAllLoadedClasses()) {
+                if (loadedClasses.add(cls.getName())) {
+                    System.err.println("[Java-agent] missed to intercept class load: " + cls);
+                }
+            }
+        }
+
         boolean toInstrument = true;
         if (config.excludeList != null) {
             for (String exclude : config.excludeList) {

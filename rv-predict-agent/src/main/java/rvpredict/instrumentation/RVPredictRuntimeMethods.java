@@ -1,9 +1,18 @@
 package rvpredict.instrumentation;
 
+import java.io.IOException;
+import java.lang.instrument.ClassFileTransformer;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
+import org.objectweb.asm.ClassReader;
 
 import rvpredict.runtime.RVPredictRuntime;
 
@@ -31,9 +40,10 @@ public class RVPredictRuntimeMethods {
     /*
      * Some useful constants.
      */
-    public static final int STATIC     =   0x0;
-    public static final int VIRTUAL    =   0x1;
-    public static final int SPECIAL    =   0x2;
+    public static final int STATIC     =   0;
+    public static final int VIRTUAL    =   1;
+    public static final int INTERFACE  =   2;
+    public static final int SPECIAL    =   3;
     private static final String JL_OBJECT       =   "java/lang/Object";
     private static final String JL_THREAD       =   "java/lang/Thread";
     private static final String JL_SYSTEM       =   "java/lang/System";
@@ -83,35 +93,35 @@ public class RVPredictRuntimeMethods {
     // java.util.concurrent.locks.Lock methods
     // note that this doesn't provide mocks for methods specific in concrete lock implementation
     public static final RVPredictInterceptor RVPREDICT_LOCK               =
-            register(VIRTUAL, JUCL_LOCK, "lock", "rvPredictLock");
+            register(INTERFACE, JUCL_LOCK, "lock", "rvPredictLock");
     public static final RVPredictInterceptor RVPREDICT_LOCK_INTERRUPTIBLY =
-            register(VIRTUAL, JUCL_LOCK, "lockInterruptibly", "rvPredictLockInterruptibly");
+            register(INTERFACE, JUCL_LOCK, "lockInterruptibly", "rvPredictLockInterruptibly");
     public static final RVPredictInterceptor RVPREDICT_TRY_LOCK           =
-            register(VIRTUAL, JUCL_LOCK, "tryLock", "rvPredictTryLock");
+            register(INTERFACE, JUCL_LOCK, "tryLock", "rvPredictTryLock");
     public static final RVPredictInterceptor RVPREDICT_TRY_LOCK_TIMEOUT   =
-            register(VIRTUAL, JUCL_LOCK, "tryLock", "rvPredictTryLock", J, TimeUnit.class);
+            register(INTERFACE, JUCL_LOCK, "tryLock", "rvPredictTryLock", J, TimeUnit.class);
     public static final RVPredictInterceptor RVPREDICT_UNLOCK             =
-            register(VIRTUAL, JUCL_LOCK, "unlock", "rvPredictUnlock");
+            register(INTERFACE, JUCL_LOCK, "unlock", "rvPredictUnlock");
     public static final RVPredictInterceptor RVPREDICT_LOCK_NEW_COND      =
-            register(VIRTUAL, JUCL_LOCK, "newCondition", "rvPredictLockNewCondition");
+            register(INTERFACE, JUCL_LOCK, "newCondition", "rvPredictLockNewCondition");
 
     // java.util.concurrent.locks.Condition methods
     public static final RVPredictInterceptor RVPREDICT_COND_AWAIT         =
-            register(VIRTUAL, JUCL_CONDITION, "await", "rvPredictConditionAwait");
+            register(INTERFACE, JUCL_CONDITION, "await", "rvPredictConditionAwait");
     public static final RVPredictInterceptor RVPREDICT_COND_AWAIT_TIMEOUT =
-            register(VIRTUAL, JUCL_CONDITION, "await", "rvPredictConditionAwait", J, TimeUnit.class);
+            register(INTERFACE, JUCL_CONDITION, "await", "rvPredictConditionAwait", J, TimeUnit.class);
     public static final RVPredictInterceptor RVPREDICT_COND_AWAIT_NANOS   =
-            register(VIRTUAL, JUCL_CONDITION, "awaitNanos", "rvPredictConditionAwaitNanos", J);
+            register(INTERFACE, JUCL_CONDITION, "awaitNanos", "rvPredictConditionAwaitNanos", J);
     public static final RVPredictInterceptor RVPREDICT_COND_AWAIT_UNINTERRUPTIBLY =
-            register(VIRTUAL, JUCL_CONDITION, "awaitUninterruptibly", "rvPredictConditionAwaitUninterruptibly");
+            register(INTERFACE, JUCL_CONDITION, "awaitUninterruptibly", "rvPredictConditionAwaitUninterruptibly");
     public static final RVPredictInterceptor RVPREDICT_COND_AWAIT_UNTIL   =
-            register(VIRTUAL, JUCL_CONDITION, "awaitUntil", "rvPredictConditionAwaitUntil", Date.class);
+            register(INTERFACE, JUCL_CONDITION, "awaitUntil", "rvPredictConditionAwaitUntil", Date.class);
 
     // java.util.concurrent.locks.ReadWriteLock methods
     public static final RVPredictInterceptor RVPREDICT_RW_LOCK_READ_LOCK  =
-            register(VIRTUAL, JUCL_RW_LOCK, "readLock", "rvPredictReadWriteLockReadLock");
+            register(INTERFACE, JUCL_RW_LOCK, "readLock", "rvPredictReadWriteLockReadLock");
     public static final RVPredictInterceptor RVPREDICT_RW_LOCK_WRITE_LOCK =
-            register(VIRTUAL, JUCL_RW_LOCK, "writeLock", "rvPredictReadWriteLockWriteLock");
+            register(INTERFACE, JUCL_RW_LOCK, "writeLock", "rvPredictReadWriteLockWriteLock");
 
     // java.util.concurrent.locks.AbstractQueueSynchronizer
     public static final RVPredictInterceptor RVPREDICT_AQS_GETSTATE  =
@@ -214,7 +224,9 @@ public class RVPredictRuntimeMethods {
                     }
                     break;
                 case VIRTUAL:
-                    if (Utility.isSubclassOf(owner, interceptor.classOrInterface)) {
+                case INTERFACE:
+                    if (isSubclassOf(owner, interceptor.classOrInterface,
+                            interceptor.methodType == INTERFACE)) {
                         return interceptor;
                     }
                     break;
@@ -224,6 +236,105 @@ public class RVPredictRuntimeMethods {
             }
         }
         return null;
+    }
+
+    /**
+     * Checks if one class or interface extends or implements another class or
+     * interface.
+     *
+     * @param class0
+     *            the name of the first class or interface
+     * @param class1
+     *            the name of the second class of interface
+     * @param itf
+     *            if {@code class1} represents an interface
+     * @return {@code true} if {@code class1} is assignable from {@code class0}
+     */
+    private static boolean isSubclassOf(String class0, String class1, boolean itf) {
+        assert !class1.startsWith("[");
+
+        if (class0.startsWith("[")) {
+            return class1.equals("java/lang/Object");
+        }
+        if (class0.equals(class1)) {
+            return true;
+        }
+
+        List<String> superclasses = getSuperclasses(class0);
+        if (!itf) {
+            return superclasses.contains(class1);
+        } else {
+            boolean result = getInterfaces(class0).contains(class1);
+            for (String superclass : superclasses) {
+                result = result || getInterfaces(superclass).contains(class1);
+            }
+            return result;
+        }
+    }
+
+    /**
+     * Obtains the {@link ClassReader} used to retrieve the superclass and
+     * interfaces information of a class or interface.
+     * <p>
+     * This method is meant to avoid class loading when checking inheritance
+     * relation because class loading during
+     * {@link ClassFileTransformer#transform(ClassLoader, String, Class, java.security.ProtectionDomain, byte[])}
+     * can not be properly intercepted by the java agent.
+     *
+     * @param className
+     *            the class or interface to read
+     * @return the {@link ClassReader}
+     */
+    private static ClassReader getClassReader(String className) {
+        try {
+            return new ClassReader(className);
+        } catch (IOException e) {
+            System.err.println("ASM ClassReader: unable to read " + className);
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Gets all superclasses of a class or interface.
+     * <p>
+     * The superclass of an interface will be the {@code Object}.
+     *
+     * @param className
+     *            the internal name of a class or interface
+     * @return set of superclasses
+     */
+    private static List<String> getSuperclasses(String className) {
+        List<String> result = new ArrayList<>();
+        while (className != null) {
+            className = getClassReader(className).getSuperName();
+            if (className != null) {
+                result.add(className);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Gets all implemented interfaces (including parent interfaces) of a class
+     * or all parent interfaces of an interface.
+     *
+     * @param className
+     *            the internal name of a class or interface
+     * @return set of interfaces
+     */
+    private static Set<String> getInterfaces(String className) {
+        Set<String> interfaces = new HashSet<>();
+        Deque<String> queue = new ArrayDeque<>();
+        queue.add(className);
+        while (!queue.isEmpty()) {
+            String cls = queue.poll();
+            for (String itf : getClassReader(cls).getInterfaces()) {
+                if (interfaces.add(itf)) {
+                    queue.add(itf);
+                }
+            }
+        }
+        return interfaces;
     }
 
 }

@@ -190,7 +190,8 @@ public class MethodTransformer extends MethodVisitor {
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
         int idx = (name + desc).lastIndexOf(')');
         String methodSig = (name + desc).substring(0, idx + 1);
-        RVPredictInterceptor interceptor = RVPredictRuntimeMethods.lookup(owner, methodSig, itf);
+        RVPredictInterceptor interceptor = RVPredictRuntimeMethods.lookup(opcode, owner, methodSig,
+                itf);
         if (interceptor != null) {
             // <stack>... (objectref)? (arg)* </stack>
             push(getCrntLocId());

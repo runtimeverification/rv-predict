@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Opcodes;
 
 import rvpredict.runtime.RVPredictRuntime;
 
@@ -41,10 +42,10 @@ public class RVPredictRuntimeMethods {
     /*
      * Some useful constants.
      */
-    public static final int STATIC     =   0;
-    public static final int VIRTUAL    =   1;
-    public static final int INTERFACE  =   2;
-    public static final int SPECIAL    =   3;
+    public static final int STATIC     =   Opcodes.INVOKESTATIC;
+    public static final int VIRTUAL    =   Opcodes.INVOKEVIRTUAL;
+    public static final int INTERFACE  =   Opcodes.INVOKEINTERFACE;
+    public static final int SPECIAL    =   Opcodes.INVOKESPECIAL;
     private static final String JL_OBJECT       =   "java/lang/Object";
     private static final String JL_THREAD       =   "java/lang/Thread";
     private static final String JL_SYSTEM       =   "java/lang/System";
@@ -56,10 +57,12 @@ public class RVPredictRuntimeMethods {
     private static final String JUCL_AQS        =   "java/util/concurrent/locks/AbstractQueuedSynchronizer";
     private static final String JUCA_ATOMIC_BOOL    =   "java/util/concurrent/atomic/AtomicBoolean";
 
-    /**
+    /*
      * Map from method signature to possible {@link RVPredictInterceptor}'s.
      */
-    private static final Map<String, List<RVPredictInterceptor>> METHOD_INTERCEPTION = Maps.newHashMap();
+    private static final Map<String, List<RVPredictInterceptor>> STATIC_METHOD_INTERCEPTION = Maps.newHashMap();
+    private static final Map<String, List<RVPredictInterceptor>> SPECIAL_METHOD_INTERCEPTION = Maps.newHashMap();
+    private static final Map<String, List<RVPredictInterceptor>> VIRTUAL_METHOD_INTERCEPTION = Maps.newHashMap();
 
     // Thread methods
     public static final RVPredictInterceptor RVPREDICT_START              =
@@ -190,11 +193,12 @@ public class RVPredictRuntimeMethods {
         try {
             interceptor = RVPredictInterceptor.create(methodType, classOrInterface, methodName,
                     interceptorName, parameterTypes);
-            List<RVPredictInterceptor> interceptors = METHOD_INTERCEPTION.get(interceptor
+            Map<String, List<RVPredictInterceptor>> interceptorTable = getInterceptorTable(methodType);
+            List<RVPredictInterceptor> interceptors = interceptorTable.get(interceptor
                     .getOriginalMethodSig());
             if (interceptors == null) {
                 interceptors = Lists.newArrayList();
-                METHOD_INTERCEPTION.put(interceptor.getOriginalMethodSig(), interceptors);
+                interceptorTable.put(interceptor.getOriginalMethodSig(), interceptors);
             }
             interceptors.add(interceptor);
         } catch (Exception e) {
@@ -208,6 +212,9 @@ public class RVPredictRuntimeMethods {
      * Looks up the corresponding interceptor method for a given Java method
      * call.
      *
+     * @param opcode
+     *            either INVOKEVIRTUAL, INVOKESPECIAL, INVOKESTATIC or
+     *            INVOKEINTERFACE
      * @param owner
      *            the class/interface name of the object whose member method is
      *            invoked or the class name of the static method
@@ -217,12 +224,13 @@ public class RVPredictRuntimeMethods {
      * @return the {@link RVPredictInterceptor} if successful or {@code null} if
      *         no suitable interceptor found
      */
-    public static RVPredictInterceptor lookup(String owner, String methodSig, boolean itf) {
+    public static RVPredictInterceptor lookup(int opcode, String owner, String methodSig,
+            boolean itf) {
         /*
          * TODO(YilongL): figure out how to the deal with `itf' introduced for Java 8
          * http://stackoverflow.com/questions/24510785/explanation-of-itf-parameter-of-visitmethodinsn-in-asm-5
          */
-        List<RVPredictInterceptor> interceptors = METHOD_INTERCEPTION.get(methodSig);
+        List<RVPredictInterceptor> interceptors = getInterceptorTable(opcode).get(methodSig);
         if (interceptors != null) {
             for (RVPredictInterceptor interceptor : interceptors) {
                 /* Method signature alone is not enough to determine if an
@@ -235,6 +243,7 @@ public class RVPredictRuntimeMethods {
                 case STATIC:
                 case SPECIAL:
                     if (interceptor.classOrInterface.equals(owner)) {
+                        assert interceptor.methodType == opcode;
                         return interceptor;
                     }
                     break;
@@ -251,6 +260,39 @@ public class RVPredictRuntimeMethods {
             }
         }
         return null;
+    }
+
+    /**
+     * Retrieves the method interceptor table corresponding to a given method
+     * invocation opcode.
+     * <p>
+     * This prevents us from intercepting method invocation whose opcode is
+     * different from the interceptor's declared method type.
+     * <p>
+     * For example, we don't want to intercept interface/virtual method that is
+     * called with {@code INVOKESPECIAL} because it means that we haven't
+     * correctly exclude classes/interfaces we are mocking from instrumentation.
+     * E.g., if we fail to exclude an implementation of the {@code Map}
+     * interface which calls {@code super.put(...)} from its own put method, it
+     * would cause infinite recursion inside our interceptor method at runtime.
+     *
+     * @param opcode
+     *            the method invocation opcode
+     * @return the method interceptor table
+     */
+    private static Map<String, List<RVPredictInterceptor>> getInterceptorTable(int opcode) {
+        switch (opcode) {
+        case Opcodes.INVOKESTATIC:
+            return STATIC_METHOD_INTERCEPTION;
+        case Opcodes.INVOKESPECIAL:
+            return SPECIAL_METHOD_INTERCEPTION;
+        case Opcodes.INVOKEVIRTUAL:
+        case Opcodes.INVOKEINTERFACE:
+            return VIRTUAL_METHOD_INTERCEPTION;
+        default:
+            assert false : "unreachable";
+            return null;
+        }
     }
 
     /**

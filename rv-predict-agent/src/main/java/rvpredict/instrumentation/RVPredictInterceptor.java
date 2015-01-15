@@ -25,6 +25,13 @@ public class RVPredictInterceptor extends RVPredictRuntimeMethod {
      * {@link RVPredictRuntimeMethods#VIRTUAL},
      * {@link RVPredictRuntimeMethods#INTERFACE} or
      * {@link RVPredictRuntimeMethods#SPECIAL}.
+     * <p>
+     * <b>Note:</b> the method type of a method and method invocation opcode
+     * <em>do not</em> have a simple one-to-one relation. For example, when a
+     * virtual/interface method, say, {@code foo()} is called using
+     * {@code super.foo()} from some subclass, the method invocation opcode
+     * generated will be {@code INVOKESPECIAL} because there is no dynamic
+     * dispatching involved.
      */
     final int methodType;
 
@@ -65,10 +72,10 @@ public class RVPredictInterceptor extends RVPredictRuntimeMethod {
                 parameterTypes);
     }
 
-    private RVPredictInterceptor(Method method, int opcode, String classOrInterface,
+    private RVPredictInterceptor(Method method, int methodType, String classOrInterface,
             String name, Class<?>[] parameterTypes) {
         super(method);
-        this.methodType = opcode;
+        this.methodType = methodType;
         this.classOrInterface = classOrInterface;
         this.name = name;
         ImmutableList.Builder<String> builder = ImmutableList.builder();

@@ -26,6 +26,12 @@ public abstract class InitOrAccessEvent extends AbstractEvent {
         }
     }
 
+    public final int getIndex() {
+        // TODO(YilongL): index should be an integer instead of long
+        // in fact, objecthashcode should also be an integer!!!
+        return (int) index;
+    }
+
     /**
      * Returns the value read or written in the event.
      */

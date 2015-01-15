@@ -109,7 +109,7 @@ public class MethodTransformer extends MethodVisitor {
         }
 
         int varId = MetaData.getVariableId(owner, name);
-        int locId = MetaData.getLocationId(getFieldAccLocSig(owner, name));
+        int locId = getCrntLocId();
 
         Type valueType = Type.getType(desc);
         switch (opcode) {
@@ -479,11 +479,6 @@ public class MethodTransformer extends MethodVisitor {
      */
     private int getCrntLocId() {
         return MetaData.getLocationId(getCrntStmtSig());
-    }
-
-    private String getFieldAccLocSig(String owner, String name) {
-        return String.format("%s|%s|%s|%s.%s|%s", source, className, signature, owner, name,
-                crntLineNum).replace("/", ".");
     }
 
     /**

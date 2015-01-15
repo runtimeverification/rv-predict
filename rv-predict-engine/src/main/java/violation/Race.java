@@ -40,10 +40,12 @@ public class Race extends AbstractViolation {
 
     private final int locId1;
     private final int locId2;
+    private final String varSig;
     private final String stmtSig1;
     private final String stmtSig2;
 
-    public Race(MemoryAccessEvent e1, MemoryAccessEvent e2, Map<Integer, String> locIdToStmtSig) {
+    public Race(MemoryAccessEvent e1, MemoryAccessEvent e2, Map<Integer, String> varIdToVarSig,
+            Map<Integer, String> locIdToStmtSig) {
         if (e1.getID() > e2.getID()) {
             MemoryAccessEvent tmp = e1;
             e1 = e2;
@@ -52,6 +54,7 @@ public class Race extends AbstractViolation {
 
         locId1 = e1.getID();
         locId2 = e2.getID();
+        varSig = e1.getIndex() < 0 ? varIdToVarSig.get(-e1.getIndex()) : null;
         stmtSig1 = locIdToStmtSig.get(locId1);
         stmtSig2 = locIdToStmtSig.get(locId2);
         if (stmtSig1 == null) {
@@ -93,10 +96,10 @@ public class Race extends AbstractViolation {
 
         Location loc1 = new Location(node1);
         String result = "Race on ";
-        if (loc1.varSignature == null) {
+        if (varSig == null) {
             result += "an array access";
         } else {
-            result += "field " + loc1.varSignature;
+            result += "field " + varSig;
         }
         result += " between";
         if (node1.equals(node2)) {
@@ -113,7 +116,6 @@ public class Race extends AbstractViolation {
         String className;
         String methodName;
         String methodSignature;
-        String varSignature;
         String line;
 
         Location(String descriptor) {
@@ -123,13 +125,7 @@ public class Race extends AbstractViolation {
             int par = fields[2].indexOf('(');
             methodName = fields[2].substring(0, par);
             methodSignature = fields[2].substring(par);
-            if (fields.length == 4) {
-                varSignature = null;
-                line = fields[3];
-            } else {
-                varSignature = fields[3];
-                line = fields[4];
-            }
+            line = fields[3];
         }
 
         @Override

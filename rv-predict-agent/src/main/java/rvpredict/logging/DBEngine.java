@@ -264,16 +264,22 @@ public class DBEngine {
         synchronized (MetaData.volatileVariables) {
             Set<Integer> volatileFieldIds = new HashSet<>(MetaData.unsavedVolatileVariables.size());
             for (String var : MetaData.unsavedVolatileVariables) {
-                volatileFieldIds.add(MetaData.varSigToId.get(var));
+                volatileFieldIds.add(MetaData.varSigToVarId.get(var));
             }
             saveObject(volatileFieldIds);
             MetaData.unsavedVolatileVariables.clear();
         }
 
+        /* save <VarSig, VarId> pairs */
+        synchronized (MetaData.varSigToVarId) {
+            saveObject(new ArrayList<>(MetaData.unsavedVarIdToVarSig));
+            MetaData.unsavedVarIdToVarSig.clear();
+        }
+
         /* save <StmtSig, LocId> pairs */
         synchronized (MetaData.stmtSigToLocId) {
-            saveObject(new ArrayList<>(MetaData.unsavedStmtSigToLocId));
-            MetaData.unsavedStmtSigToLocId.clear();
+            saveObject(new ArrayList<>(MetaData.unsavedLocIdToStmtSig));
+            MetaData.unsavedLocIdToStmtSig.clear();
         }
 
         try {

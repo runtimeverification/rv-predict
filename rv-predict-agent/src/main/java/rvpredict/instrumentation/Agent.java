@@ -59,6 +59,11 @@ public class Agent implements ClassFileTransformer {
         "java/util/concurrent/locks"
     };
 
+    private static String[] MOCKS = new String[] {
+        "java/util/Collection",
+        "java/util/Map"
+    };
+
     static Instrumentation instrumentation;
 
     public Agent(Config config) {
@@ -188,6 +193,25 @@ public class Agent implements ClassFileTransformer {
 //        System.err.println(cname + " " + toInstrument);
         for (String ignore : IGNORES) {
             toInstrument = toInstrument && !cname.startsWith(ignore);
+        }
+        if (toInstrument) {
+            for (String mock : MOCKS) {
+                if (Utility.isSubclassOf(cname, mock)) {
+                    toInstrument = false;
+                    if (config.verbose) {
+                        /* TODO(YilongL): this may cause missing data races if
+                         * the mock for interface/superclass does not contain
+                         * methods specific to this implementation. This could
+                         * be a big problem if the application makes heavy use
+                         * of helper methods specific in some high-level
+                         * concurrency library (e.g. Guava) while most of the
+                         * classes are simply excluded here */
+                        System.err.println("[Java-agent] excluded " + c
+                                + " from instrumentation because we are mocking " + mock);
+                    }
+                    break;
+                }
+            }
         }
         if (toInstrument) {
             ClassReader cr = new ClassReader(cbuf);

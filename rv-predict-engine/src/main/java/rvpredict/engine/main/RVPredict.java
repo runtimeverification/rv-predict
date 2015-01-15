@@ -225,8 +225,9 @@ public class RVPredict {
                     }
 
                     /* start building constraints for MCM */
-                    StringBuilder sb = cnstrBuilder.addReadWriteConsistencyConstraints(fst);
-                    sb.append(cnstrBuilder.addReadWriteConsistencyConstraints(snd));
+                    StringBuilder sb = new StringBuilder()
+                            .append(cnstrBuilder.getAbstractFeasibilityConstraint(fst)).append(" ")
+                            .append(cnstrBuilder.getAbstractFeasibilityConstraint(snd));
 
                     if (cnstrBuilder.isRace(fst, snd, sb)) {
                         for (Race r : potentialRaces) {

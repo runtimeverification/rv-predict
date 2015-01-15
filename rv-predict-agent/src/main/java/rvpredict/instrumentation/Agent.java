@@ -181,14 +181,6 @@ public class Agent implements ClassFileTransformer {
                 }
             }
         }
-        if (config.includeList != null) {
-            for (String include : config.includeList) {
-                if (cname.startsWith(include)) {
-                    toInstrument = true;
-                    break;
-                }
-            }
-        }
 
 //        System.err.println(cname + " " + toInstrument);
         for (String ignore : IGNORES) {
@@ -213,6 +205,17 @@ public class Agent implements ClassFileTransformer {
                 }
             }
         }
+
+        /* include list overrides the above */
+        if (config.includeList != null) {
+            for (String include : config.includeList) {
+                if (cname.startsWith(include)) {
+                    toInstrument = true;
+                    break;
+                }
+            }
+        }
+
         if (toInstrument) {
             ClassReader cr = new ClassReader(cbuf);
 

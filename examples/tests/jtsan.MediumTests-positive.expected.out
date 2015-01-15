@@ -6,4 +6,4 @@
 
 (?s)(.*)Race on an array access between:(\s)*jtsan.MediumTests\$4.thread1\(MediumTests.java:107\)(\s)*jtsan.MediumTests\$4.thread2\(MediumTests.java:112\)(.*)
 
-(?s)(.*)Race on field jtsan.MediumTests\$5.sharedVar between:(\s)*jtsan.MediumTests\$5.thread1\(MediumTests.java:124\)(\s)*jtsan.MediumTests\$5.thread2\(MediumTests.java:134\)(.*)
+(?s)(.*)Race on field jtsan.ThreadRunner.sharedVar between:(\s)*jtsan.MediumTests\$5.thread1\(MediumTests.java:124\)(\s)*jtsan.MediumTests\$5.thread2\(MediumTests.java:134\)(.*)

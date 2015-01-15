@@ -191,7 +191,7 @@ public class DBEngine {
      * Saves an {@link rvpredict.db.EventItem} to the database.
      * Each event is saved in a file corresponding to its own thread.
      *
-     * @see rvpredict.db.EventItem#EventItem(long, long, int, long, long, long, rvpredict.trace.EventType)
+     * @see rvpredict.db.EventItem#EventItem(long, long, int, long, int, long, rvpredict.trace.EventType)
      *      for a more elaborate description of the parameters.
      * @see java.lang.ThreadLocal
      *
@@ -201,7 +201,7 @@ public class DBEngine {
      * @param addrr additional information identifying the event
      * @param value data involved in the event
      */
-    public void saveEvent(EventType eventType, int id, long addrl, long addrr, long value) {
+    public void saveEvent(EventType eventType, int id, long addrl, int addrr, long value) {
         if (shutdown || skipSavingEvent()) return;
 
         long gid = globalEventID.incrementAndGet();
@@ -233,7 +233,7 @@ public class DBEngine {
     }
 
     /**
-     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, long, long)}
+     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, int, long)}
      * The missing arguments default to 0.
      */
     public void saveEvent(EventType eventType, int locId, long arg) {
@@ -241,7 +241,7 @@ public class DBEngine {
     }
 
     /**
-     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, long, long)}
+     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, int, long)}
      * The missing arguments default to 0.
      */
      public void saveEvent(EventType eventType, int locId) {

@@ -30,7 +30,7 @@ package rvpredict.trace;
 
 public class WriteEvent extends MemoryAccessEvent {
 
-    public WriteEvent(long GID, long tid, int ID, long objectHashCode, long index, long value) {
+    public WriteEvent(long GID, long tid, int ID, long objectHashCode, int index, long value) {
         super(GID, tid, ID, EventType.WRITE, objectHashCode, index, value);
     }
 

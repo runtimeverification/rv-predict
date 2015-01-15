@@ -40,7 +40,7 @@ public class EventOutputStream extends DataOutputStream {
         writeLong(event.TID);
         writeInt(event.ID);
         writeLong(event.ADDRL);
-        writeLong(event.ADDRR);
+        writeInt(event.ADDRR);
         writeLong(event.VALUE);
         writeByte(event.TYPE.ordinal());
         eventsWrittenCount++;

@@ -54,7 +54,7 @@ public class Race extends AbstractViolation {
 
         locId1 = e1.getID();
         locId2 = e2.getID();
-        varSig = e1.getIndex() < 0 ? varIdToVarSig.get(-e1.getIndex()) : null;
+        varSig = e1.getFieldIdOrArrayIndex() < 0 ? varIdToVarSig.get(-e1.getFieldIdOrArrayIndex()) : null;
         stmtSig1 = locIdToStmtSig.get(locId1);
         stmtSig2 = locIdToStmtSig.get(locId2);
         if (stmtSig1 == null) {
@@ -115,7 +115,6 @@ public class Race extends AbstractViolation {
         String source;
         String className;
         String methodName;
-        String methodSignature;
         String line;
 
         Location(String descriptor) {
@@ -124,7 +123,6 @@ public class Race extends AbstractViolation {
             className = fields[1];
             int par = fields[2].indexOf('(');
             methodName = fields[2].substring(0, par);
-            methodSignature = fields[2].substring(par);
             line = fields[3];
         }
 

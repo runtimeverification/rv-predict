@@ -4,10 +4,10 @@ public abstract class InitOrAccessEvent extends AbstractEvent {
 
     protected final long value;
     protected final long objectHashCode;
-    protected final long index;
+    protected final int index;
 
     protected InitOrAccessEvent(long GID, long TID, int ID, EventType type, long objectHashCode,
-            long index, long value) {
+            int index, long value) {
         super(GID, TID, ID, type);
         this.objectHashCode = objectHashCode;
         this.index = index;
@@ -26,10 +26,14 @@ public abstract class InitOrAccessEvent extends AbstractEvent {
         }
     }
 
-    public final int getIndex() {
-        // TODO(YilongL): index should be an integer instead of long
-        // in fact, objecthashcode should also be an integer!!!
-        return (int) index;
+    /**
+     * Gets the field identifier or array index involved in the event.
+     *
+     * @return a negative integer representing field identifier or a
+     *         non-negative integer representing array index
+     */
+    public final int getFieldIdOrArrayIndex() {
+        return index;
     }
 
     /**

@@ -39,13 +39,14 @@ import rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Map;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import rvpredict.config.Configuration;
 
@@ -60,6 +61,15 @@ public class SMTConstraintBuilder {
 
     private final ReachabilityEngine reachEngine = new ReachabilityEngine();
     private final LockSetEngine lockEngine = new LockSetEngine();
+
+    private final Map<MemoryAccessEvent, StringBuilder> abstractPhi = Maps.newHashMap();
+    private final Map<ReadEvent, StringBuilder> concretePhi = Maps.newHashMap();
+
+    /**
+     * Avoids infinite recursion when building the concrete feasibility
+     * constraint of a {@link ReadEvent}.
+     */
+    private final Set<ReadEvent> visited = Sets.newHashSet();
 
     // constraints below
     private final StringBuilder smtlibDecl = new StringBuilder(":extrafuns (\n");
@@ -78,12 +88,28 @@ public class SMTConstraintBuilder {
         return "o" + event.getGID();
     }
 
+    private String makeConcretePhiVariable(ReadEvent event) {
+        return "phi_c" + event.getGID();
+    }
+
+    private String makeAbstractPhiVariable(MemoryAccessEvent event) {
+        return "phi_a" + event.getGID();
+    }
+
     /**
      * Declares an order variable for each event.
      */
     public void declareVariables() {
         for (Event e : trace.getAllEvents()) {
             smtlibDecl.append(String.format("(%s Int)\n", makeOrderVariable(e)));
+            if (e instanceof MemoryAccessEvent) {
+                smtlibDecl.append(String.format("(%s Bool)\n",
+                        makeAbstractPhiVariable((MemoryAccessEvent) e)));
+                if (e instanceof ReadEvent) {
+                    smtlibDecl.append(String.format("(%s Bool)\n",
+                            makeConcretePhiVariable((ReadEvent) e)));
+                }
+            }
         }
         smtlibDecl.append(")\n");
     }
@@ -246,72 +272,97 @@ public class SMTConstraintBuilder {
      * Generates a formula ensuring that all read events that {@code event}
      * depends on read the same value as in the original trace, to guarantee
      * {@code event} will be generated in the predicted trace.
+     * <p>
+     * <b>Note:</b> however, if {@code event} is a {@link ReadEvent}, it is
+     * allowed to read a different value than in the original trace.
      */
-    public StringBuilder addReadWriteConsistencyConstraints(MemoryAccessEvent event) {
-        StringBuilder cnstr = new StringBuilder("(and true ");
+    public String getAbstractFeasibilityConstraint(MemoryAccessEvent event) {
+        StringBuilder phi = abstractPhi.get(event);
+        if (phi == null) {
+            phi = new StringBuilder("(and true ");
 
-        /* make sure that every dependent read event reads the same value as in the original trace */
-        for (ReadEvent depRead : trace.getCtrlFlowDependentEvents(event)) {
-            List<WriteEvent> writeEvents = trace.getWriteEventsOn(depRead.getAddr());
+            /* make sure that every dependent read event reads the same value as in the original trace */
+            for (ReadEvent depRead : trace.getCtrlFlowDependentEvents(event)) {
+                phi.append(getConcreteFeasibilityConstraint(depRead)).append(" ");
+            }
 
-            /* thread immediate write predecessor */
-            WriteEvent thrdImdWrtPred = null;
-            /* predecessor write set: all write events whose values could be read by `depRead' */
-            List<WriteEvent> predWriteSet = Lists.newArrayList();
-            for (WriteEvent write : writeEvents) {
-                if (write.getTID() == depRead.getTID()) {
-                    if (write.getGID() < depRead.getGID()) {
-                        thrdImdWrtPred = write;
-                    }
-                } else if (!happensBefore(depRead, write)) {
-                    predWriteSet.add(write);
+            phi.append(")");
+            abstractPhi.put(event, phi);
+        }
+        return makeAbstractPhiVariable(event);
+    }
+
+    /**
+     * Generates a formula ensuring that {@code event} will be generated exactly
+     * the same as in the predicted trace.
+     */
+    private String getConcreteFeasibilityConstraint(ReadEvent event) {
+        StringBuilder phi = concretePhi.get(event);
+        if (phi != null || visited.contains(event)) {
+            return makeConcretePhiVariable(event);
+        }
+        visited.add(event);
+
+        List<WriteEvent> writeEvents = trace.getWriteEventsOn(event.getAddr());
+
+        /* thread immediate write predecessor */
+        WriteEvent thrdImdWrtPred = null;
+        /* predecessor write set: all write events whose values could be read by `depRead' */
+        List<WriteEvent> predWriteSet = Lists.newArrayList();
+        for (WriteEvent write : writeEvents) {
+            if (write.getTID() == event.getTID()) {
+                if (write.getGID() < event.getGID()) {
+                    thrdImdWrtPred = write;
                 }
+            } else if (!happensBefore(event, write)) {
+                predWriteSet.add(write);
             }
-            if (thrdImdWrtPred != null) {
-                predWriteSet.add(thrdImdWrtPred);
-            }
-
-            /* predecessor write set of same value */
-            List<WriteEvent> sameValPredWriteSet = Lists.newArrayList();
-            for (WriteEvent write : predWriteSet) {
-                if (write.getValue() == depRead.getValue()) {
-                    sameValPredWriteSet.add(write);
-                }
-            }
-
-            /* case 1: the dependent read reads the initial value */
-            StringBuilder case1 = new StringBuilder("false");
-            if (thrdImdWrtPred == null
-                    && trace.getInitValueOf(depRead.getAddr()) == depRead.getValue()) {
-                case1 = new StringBuilder("(and true ");
-                for (WriteEvent write : predWriteSet) {
-                    case1.append(getAsstHappensBefore(depRead, write));
-                }
-                case1.append(")");
-            }
-
-            /* case 2: the dependent read reads a previously written value */
-            StringBuilder case2 = new StringBuilder("(or false ");
-            for (WriteEvent write : sameValPredWriteSet) {
-                case2.append("(and ");
-                case2.append(getAsstHappensBefore(write, depRead));
-                for (WriteEvent otherWrite : writeEvents) {
-                    if (write != otherWrite && !happensBefore(otherWrite, write)
-                            && !happensBefore(depRead, otherWrite)) {
-                        case2.append(String.format("(or %s %s)",
-                                getAsstHappensBefore(otherWrite, write),
-                                getAsstHappensBefore(depRead, otherWrite)));
-                    }
-                }
-                case2.append(")");
-            }
-            case2.append(")");
-
-            cnstr.append(String.format("(or %s %s)", case1, case2));
+        }
+        if (thrdImdWrtPred != null) {
+            predWriteSet.add(thrdImdWrtPred);
         }
 
-        cnstr.append(")");
-        return cnstr;
+        /* predecessor write set of same value */
+        List<WriteEvent> sameValPredWriteSet = Lists.newArrayList();
+        for (WriteEvent write : predWriteSet) {
+            if (write.getValue() == event.getValue()) {
+                sameValPredWriteSet.add(write);
+            }
+        }
+
+        /* case 1: the dependent read reads the initial value */
+        StringBuilder case1 = new StringBuilder("false");
+        if (thrdImdWrtPred == null
+                && trace.getInitValueOf(event.getAddr()) == event.getValue()) {
+            case1 = new StringBuilder("(and true ");
+            for (WriteEvent write : predWriteSet) {
+                case1.append(getAsstHappensBefore(event, write));
+            }
+            case1.append(")");
+        }
+
+        /* case 2: the dependent read reads a previously written value */
+        StringBuilder case2 = new StringBuilder("(or false ");
+        for (WriteEvent write : sameValPredWriteSet) {
+            case2.append("(and ");
+            case2.append(makeAbstractPhiVariable(write)).append(" ");
+            getAbstractFeasibilityConstraint(write);
+            case2.append(getAsstHappensBefore(write, event));
+            for (WriteEvent otherWrite : writeEvents) {
+                if (write != otherWrite && !happensBefore(otherWrite, write)
+                        && !happensBefore(event, otherWrite)) {
+                    case2.append(String.format("(or %s %s)",
+                            getAsstHappensBefore(otherWrite, write),
+                            getAsstHappensBefore(event, otherWrite)));
+                }
+            }
+            case2.append(")");
+        }
+        case2.append(")");
+
+        phi = new StringBuilder("(or ").append(case1).append(" ").append(case2).append(")");
+        concretePhi.put(event, phi);
+        return makeConcretePhiVariable(event);
     }
 
     /**
@@ -343,21 +394,20 @@ public class SMTConstraintBuilder {
     public boolean isRace(Event e1, Event e2, CharSequence casualConstraint) {
         id++;
         task = new SMTTaskRun(config, id);
-        StringBuilder msg = new StringBuilder(benchname).append(CONS_SETLOGIC).append(smtlibDecl)
-                .append(smtlibAssertion)
-                .append(String.format("(= %s %s)", makeOrderVariable(e1), makeOrderVariable(e2)))
-                .append(casualConstraint).append("))");
+        StringBuilder msg = new StringBuilder(benchname).append(CONS_SETLOGIC).append(smtlibDecl);
+        msg.append(smtlibAssertion);
+        for (Entry<MemoryAccessEvent, StringBuilder> entry : abstractPhi.entrySet()) {
+            msg.append("(= ").append(makeAbstractPhiVariable(entry.getKey())).append(" ")
+                    .append(entry.getValue()).append(")");
+        }
+        for (Entry<ReadEvent, StringBuilder> entry : concretePhi.entrySet()) {
+            msg.append("(= ").append(makeConcretePhiVariable(entry.getKey())).append(" ")
+                    .append(entry.getValue()).append(")");
+        }
+        msg.append(String.format("(= %s %s)", makeOrderVariable(e1), makeOrderVariable(e2)))
+           .append(casualConstraint).append("))");
         task.sendMessage(msg.toString());
         return task.sat;
-    }
-
-    private static <K, E> Deque<E> safeDequeMapGet(Map<K, Deque<E>> map, K key) {
-        Deque<E> value = map.get(key);
-        if (value == null) {
-            value = new ArrayDeque<>();
-            map.put(key, value);
-        }
-        return value;
     }
 
 }

@@ -3,8 +3,6 @@ package rvpredict.config;
 import java.io.IOException;
 import java.util.Properties;
 
-import rvpredict.runtime.RVPredictRuntime;
-
 public class Config {
     public static final java.lang.String PROGRAM_NAME = "rv-predict-agent";
     public static final Config instance = new Config();
@@ -16,7 +14,6 @@ public class Config {
 
     public String[] excludeList;
     public String[] includeList;
-    public String logClass;
 
     public static boolean shutDown = false;
 
@@ -36,9 +33,6 @@ public class Config {
             if (includeList.length == 1 && includeList[0].isEmpty()) {
                 includeList = null;
             }
-            logClass = properties.getProperty("rv.logClass", RVPredictRuntime.class.getName()).replace(
-                    '.', '/');
-
         } catch (IOException ex) {
             ex.printStackTrace();
         }

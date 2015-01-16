@@ -1,0 +1,23 @@
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$1.thread1\(JUCollectionTests.java:27\)(\s)*jtsan.JUCollectionTests\$1.thread2\(JUCollectionTests.java:41\)(.*)
+
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$1.thread1\(JUCollectionTests.java:28\)(\s)*jtsan.JUCollectionTests\$1.thread2\(JUCollectionTests.java:41\)(.*)
+
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$1.thread1\(JUCollectionTests.java:29\)(\s)*jtsan.JUCollectionTests\$1.thread2\(JUCollectionTests.java:41\)(.*)
+
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$1.thread1\(JUCollectionTests.java:30\)(\s)*jtsan.JUCollectionTests\$1.thread2\(JUCollectionTests.java:41\)(.*)
+
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$1.thread1\(JUCollectionTests.java:31\)(\s)*jtsan.JUCollectionTests\$1.thread2\(JUCollectionTests.java:41\)(.*)
+
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$1.thread1\(JUCollectionTests.java:32\)(\s)*jtsan.JUCollectionTests\$1.thread2\(JUCollectionTests.java:41\)(.*)
+
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$1.thread1\(JUCollectionTests.java:33\)(\s)*jtsan.JUCollectionTests\$1.thread2\(JUCollectionTests.java:41\)(.*)
+
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$1.thread1\(JUCollectionTests.java:34\)(\s)*jtsan.JUCollectionTests\$1.thread2\(JUCollectionTests.java:41\)
+
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$1.thread1\(JUCollectionTests.java:35\)(\s)*jtsan.JUCollectionTests\$1.thread2\(JUCollectionTests.java:41\)
+
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$1.thread1\(JUCollectionTests.java:36\)(\s)*jtsan.JUCollectionTests\$1.thread2\(JUCollectionTests.java:41\)(.*)
+
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$2.thread1\(JUCollectionTests.java:64\)(\s)*jtsan.JUCollectionTests\$2.thread2\(JUCollectionTests.java:71\)(.*)
+
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$3.thread1\(JUCollectionTests.java:94\)(\s)*jtsan.JUCollectionTests\$3.thread2\(JUCollectionTests.java:104\)(.*)

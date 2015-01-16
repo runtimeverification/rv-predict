@@ -41,6 +41,8 @@ public class RVPredictRuntimeMethods {
     private static final String JL_OBJECT       =   "java/lang/Object";
     private static final String JL_THREAD       =   "java/lang/Thread";
     private static final String JL_SYSTEM       =   "java/lang/System";
+    private static final String JL_ITERABLE     =   "java/lang/Iterable";
+    private static final String JU_ITERATOR     =   "java/util/Iterator";
     private static final String JU_COLLECTION   =   "java/util/Collection";
     private static final String JU_MAP          =   "java/util/Map";
     private static final String JUCL_LOCK       =   "java/util/concurrent/locks/Lock";
@@ -88,17 +90,53 @@ public class RVPredictRuntimeMethods {
     public static final RVPredictInterceptor RVPREDICT_SYSTEM_ARRAYCOPY   =
             register(STATIC, JL_SYSTEM, "arraycopy", "rvPredictSystemArraycopy", O, I, O, I, I);
 
+    // java.lang.Iterable methods
+    public static final RVPredictInterceptor RVPREDICT_ITERABLE_ITERATOR  =
+            register(INTERFACE, JL_ITERABLE, "iterator", "rvPredictIterableGetIterator");
+
+    // java.util.Iterator methods
+    public static final RVPredictInterceptor RVPREDICT_ITERATOR_HAS_NEXT  =
+            register(INTERFACE, JU_ITERATOR, "hasNext", "rvPredictIteratorHasNext");
+    public static final RVPredictInterceptor RVPREDICT_ITERATOR_NEXT      =
+            register(INTERFACE, JU_ITERATOR, "next", "rvPredictIteratorNext");
+    public static final RVPredictInterceptor RVPREDICT_ITERATOR_REMOVE    =
+            register(INTERFACE, JU_ITERATOR, "remove", "rvPredictIteratorRemove");
+
     // java.util.Collection methods
     public static final RVPredictInterceptor RVPREDICT_COLLECTION_ADD     =
             register(INTERFACE, JU_COLLECTION, "add", "rvPredictCollectionAdd", O);
     public static final RVPredictInterceptor RVPREDICT_COLLECTION_ADD_ALL =
             register(INTERFACE, JU_COLLECTION, "addAll", "rvPredictCollectionAddAll", Collection.class);
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_REMOVE  =
+            register(INTERFACE, JU_COLLECTION, "remove", "rvPredictCollectionRemove", O);
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_REMOVE_ALL =
+            register(INTERFACE, JU_COLLECTION, "removeAll", "rvPredictCollectionRemoveAll", Collection.class);
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_RETAIN_ALL =
+            register(INTERFACE, JU_COLLECTION, "retainAll", "rvPredictCollectionRetainAll", Collection.class);
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_CONTAINS  =
+            register(INTERFACE, JU_COLLECTION, "contains", "rvPredictCollectionContains", O);
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_CONTAINS_ALL =
+            register(INTERFACE, JU_COLLECTION, "containsAll", "rvPredictCollectionContainsAll", Collection.class);
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_CLEAR   =
+            register(INTERFACE, JU_COLLECTION, "clear", "rvPredictCollectionClear");
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_TOARRAY =
+            register(INTERFACE, JU_COLLECTION, "toArray", "rvPredictCollectionToArray");
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_TOARRAY_GENERIC =
+            register(INTERFACE, JU_COLLECTION, "toArray", "rvPredictCollectionToArray", Object[].class);
 
     // java.util.Map methods
+//    public static final RVPredictInterceptor RVPREDICT_MAP_GET            =
+//            register(INTERFACE, JU_MAP, "get", "rvPredictMapGet", O);
     public static final RVPredictInterceptor RVPREDICT_MAP_PUT            =
             register(INTERFACE, JU_MAP, "put", "rvPredictMapPut", O, O);
     public static final RVPredictInterceptor RVPREDICT_MAP_PUT_ALL        =
             register(INTERFACE, JU_MAP, "putAll", "rvPredictMapPutAll", Map.class);
+//    public static final RVPredictInterceptor RVPREDICT_MAP_REMOVE         =
+//            register(INTERFACE, JU_MAP, "remove", "rvPredictMapRemove", O);
+//    public static final RVPredictInterceptor RVPREDICT_MAP_CONTAINS_KEY   =
+//            register(INTERFACE, JU_MAP, "containsKey", "rvPredictMapContainsKey", O);
+//    public static final RVPredictInterceptor RVPREDICT_MAP_CONTAINS_VAL   =
+//            register(INTERFACE, JU_MAP, "containsValue", "rvPredictMapContainsValue", O);
 
     // java.util.concurrent.locks.Lock methods
     // note that this doesn't provide mocks for methods specific in concrete lock implementation

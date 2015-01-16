@@ -1,32 +1,37 @@
 package rvpredict.logging;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
 /**
  * Class extending {@link java.lang.ThreadLocal} to handle thread-local output
- * to {@link EventOutputStream} in a given directory.
+ * of events.  It associates an {@link EventPipe}
+ * to each thread.  Current implementation adds these to a registry used by the
+ * {@link rvpredict.logging.LoggingServer} thread to associate a
+ * {@link rvpredict.logging.LoggerThread} to each of them for saving their contents
+ * to disk.
  *
  * @author TraianSF
  */
-public class ThreadLocalEventStream extends ThreadLocal<EventOutputStream> {
+public class ThreadLocalEventStream extends ThreadLocal<EventPipe> {
 
-    static final EventOutputStream END_REGISTRY = new EventOutputStream();
-    private BlockingQueue<EventOutputStream> registry;
+    static final EventPipe END_REGISTRY = new EventPipe();
+    private BlockingQueue<EventPipe> registry;
 
-    public ThreadLocalEventStream(BlockingQueue<EventOutputStream> registry) {
+    public ThreadLocalEventStream(BlockingQueue<EventPipe> registry) {
         super();
         this.registry = registry;
     }
 
     @Override
-    protected synchronized EventOutputStream initialValue() {
-        final EventOutputStream stream = new EventOutputStream();
-        registry.add(stream);
-        return stream;
+    protected synchronized EventPipe initialValue() {
+        final EventPipe pipe = new EventPipe();
+        registry.add(pipe);
+        return pipe;
    }
 
+    /**
+     * Adds the END_REGISTRY marker to the registry to signal end of activity.
+     */
     public synchronized void close() {
         registry.add(END_REGISTRY);
     }

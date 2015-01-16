@@ -6,46 +6,27 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Created by Traian on 16.01.2015.
+ * Class for dumping events to disk.  Reads data through the given
+ * {@link EventPipe} and writes them to given {@link java.io.DataOutputStream}.
  */
 public class LoggerThread implements Runnable {
-
-    private final EventOutputStream loggerQueue;
-    private final DataOutputStream outputStream;
+    private final EventPipe eventPipe;
+    private final EventOutputStream outputStream;
     private Thread owner;
 
-    public LoggerThread(EventOutputStream loggerQueue, DataOutputStream outputStream) {
-        this.loggerQueue = loggerQueue;
+    public LoggerThread(EventPipe eventPipe, EventOutputStream outputStream) {
+        this.eventPipe = eventPipe;
         this.outputStream = outputStream;
     }
 
-    /**
-     * Writes an {@link rvpredict.db.EventItem} to the underlying output stream.
-     *
-     * @param      event   an {@link rvpredict.db.EventItem} to be written.
-     * @exception  java.io.IOException  if an I/O error occurs.
-     * @see        java.io.FilterOutputStream#out
-     */
-    public void writeEvent(EventItem event) throws IOException {
-        outputStream.writeLong(event.GID);
-        outputStream.writeLong(event.TID);
-        outputStream.writeInt(event.ID);
-        outputStream.writeLong(event.ADDRL);
-        outputStream.writeLong(event.ADDRR);
-        outputStream.writeLong(event.VALUE);
-        outputStream.writeByte(event.TYPE.ordinal());
-    }
 
     @Override
     public void run() {
         owner = Thread.currentThread();
         try {
-            EventItem[] buffer;
-            while (EventOutputStream.END_BUFFER != (buffer = loggerQueue.take())) {
-                for (EventItem event : buffer) {
-                    if (event == null) break;
-                    writeEvent(event);
-                }
+            EventItem event;
+            while (null != (event = eventPipe.readEvent())) {
+                outputStream.writeEvent(event);
                 outputStream.flush();
             }
             outputStream.close();
@@ -59,7 +40,7 @@ public class LoggerThread implements Runnable {
      * Sends closing signal to the event queue, then waits for the thread to flush and finish.
      */
     public void finishLogging() {
-        loggerQueue.close();
+        eventPipe.close();
         try {
             owner.join();
         } catch (InterruptedException e) {

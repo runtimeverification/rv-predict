@@ -12,7 +12,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Created by Traian on 16.01.2015.
+ * Functionality for recording metadata.
+ * A thread wakes every minute to record the previously unsaved metadata
+ * Data recorded:
+ *  - volatile variables
+ *  - location identification
+ *  - number of events written so far
  */
 public class MetadataLoggerThread implements Runnable {
     private final ObjectOutputStream metadataOS;
@@ -88,6 +93,9 @@ public class MetadataLoggerThread implements Runnable {
         }
     }
 
+    /**
+     * Signals shutdown, wakes the thread, then waits for it to finish and closes the stream.
+     */
     public void finishLogging() {
         shutdown = true;
         synchronized (metadataOS) {

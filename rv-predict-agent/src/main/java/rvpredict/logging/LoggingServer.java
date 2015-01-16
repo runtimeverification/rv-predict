@@ -2,6 +2,7 @@ package rvpredict.logging;
 
 import rvpredict.config.Configuration;
 import rvpredict.db.TraceCache;
+import rvpredict.trace.Event;
 
 import java.io.*;
 import java.nio.file.Paths;
@@ -13,14 +14,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPOutputStream;
 
 /**
- * Created by Traian on 16.01.2015.
+ * Logging server.  Makes it transparent to the Logging Engine on how
+ * events are logged.  The current implementation associates to each thread
+ * a queue for logging events into it and creates a thread for syncing events to disk.
+ *
+ * @author TraianSF
  */
 public class LoggingServer implements Runnable {
     private static final AtomicInteger threadId = new AtomicInteger();
     private final Configuration config;
     private Thread owner;
-    private List<LoggerThread> loggers = new LinkedList<>();
-    BlockingQueue<EventOutputStream> loggersRegistry;
+    private final List<LoggerThread> loggers = new LinkedList<>();
+    private final BlockingQueue<EventPipe> loggersRegistry;
     private final ThreadLocalEventStream threadLocalTraceOS;
     private final MetadataLoggerThread metadataLoggerThread;
 
@@ -39,10 +44,10 @@ public class LoggingServer implements Runnable {
         metadataLoggingThread.start();
 
         owner = Thread.currentThread();
-        EventOutputStream eventOS;
+        EventPipe eventOS;
         try {
             while (ThreadLocalEventStream.END_REGISTRY != (eventOS = loggersRegistry.take())) {
-                final DataOutputStream outputStream = newDataOutputStream();
+                final EventOutputStream outputStream = newEventOutputStream();
                 final LoggerThread logger = new LoggerThread(eventOS, outputStream);
                 Thread loggerThread = new Thread(logger);
                 loggerThread.setDaemon(true);
@@ -54,6 +59,10 @@ public class LoggingServer implements Runnable {
         }
     }
 
+    /**
+     * Shuts down the logging process, signaling all threads, including the logging server
+     * to finish recording and yields control.
+     */
     public void finishLogging() {
         threadLocalTraceOS.close();
         try {
@@ -70,12 +79,8 @@ public class LoggingServer implements Runnable {
     }
 
 
-
-
-
-
-    private DataOutputStream newDataOutputStream() {
-        DataOutputStream dataOutputStream = null;
+    private EventOutputStream newEventOutputStream() {
+        EventOutputStream eventOutputStream = null;
         try {
             int id = threadId.incrementAndGet();
             OutputStream outputStream = new FileOutputStream(Paths.get(config.outdir,
@@ -84,17 +89,17 @@ public class LoggingServer implements Runnable {
             if (config.zip) {
                 outputStream = new GZIPOutputStream(outputStream,true);
             }
-            dataOutputStream = new DataOutputStream(new BufferedOutputStream(
+            eventOutputStream = new EventOutputStream(new BufferedOutputStream(
                     outputStream));
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) { // GZIPOutputStream exception
             e.printStackTrace();
         }
-        return dataOutputStream;
+        return eventOutputStream;
     }
 
-    public EventOutputStream getOutputStream() {
+    public EventPipe getOutputStream() {
        return threadLocalTraceOS.get();
     }
 }

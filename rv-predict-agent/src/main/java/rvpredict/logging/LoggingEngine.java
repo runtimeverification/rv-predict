@@ -35,8 +35,7 @@ import rvpredict.db.EventItem;
 import rvpredict.trace.EventType;
 
 /**
- * Class encapsulating functionality for recording events to disk.
- * TODO(TraianSF): Maybe we should rename the class now that there is no DB code left.
+ * Class encapsulating functionality for recording events
  *
  * @author TraianSF
  *
@@ -51,7 +50,7 @@ public class LoggingEngine {
 
     /**
      * Method invoked at the end of the logging task, to insure that
-     * all data is flushed to disk before concluding.
+     * all data is recorded before concluding.
      */
     public void finishLogging() {
         shutdown = true;
@@ -131,12 +130,10 @@ public class LoggingEngine {
     }
 
     /**
-     * Saves an {@link rvpredict.db.EventItem} to the database.
-     * Each event is saved in a file corresponding to its own thread.
+     * Logs an {@link rvpredict.db.EventItem} to the trace.
      *
      * @see rvpredict.db.EventItem#EventItem(long, long, int, long, long, long, rvpredict.trace.EventType)
      *      for a more elaborate description of the parameters.
-     * @see java.lang.ThreadLocal
      *
      * @param eventType  type of event being recorded
      * @param id location id of the event
@@ -150,8 +147,7 @@ public class LoggingEngine {
         long gid = globalEventID.incrementAndGet();
         long tid = Thread.currentThread().getId();
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
-        EventOutputStream traceOS = loggingServer.getOutputStream();
-        traceOS.writeEvent(e);
+        loggingServer.getOutputStream().writeEvent(e);
     }
 
     /**

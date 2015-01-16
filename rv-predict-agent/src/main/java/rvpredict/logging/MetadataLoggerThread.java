@@ -1,6 +1,5 @@
 package rvpredict.logging;
 
-import rvpredict.config.Configuration;
 import rvpredict.instrumentation.MetaData;
 
 import java.io.BufferedOutputStream;

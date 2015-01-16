@@ -1,11 +1,7 @@
 package rvpredict.logging;
 
 import rvpredict.db.EventItem;
-import rvpredict.trace.Event;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -16,10 +12,11 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class EventOutputStream {
     private static final int BUFFER_SIZE=1024*1024;
-    static final List<EventItem> END_BUFFER = new LinkedList<>();
+    static final EventItem[] END_BUFFER = new EventItem[1];
 
-    private final BlockingQueue<List<EventItem>> queue;
-    private List<EventItem> buffer = new ArrayList<>(BUFFER_SIZE);
+    private final BlockingQueue<EventItem[]> queue;
+    private EventItem[] buffer = new EventItem[BUFFER_SIZE+1];
+    int index = 0;
 
     /**
      * Creates a new event output stream.
@@ -30,18 +27,13 @@ public class EventOutputStream {
     }
 
     public void writeEvent(EventItem event) {
-        buffer.add(event);
-        if (buffer.size() >= BUFFER_SIZE) {
-            try {
-                queue.put(buffer);
-                buffer = new ArrayList<>(BUFFER_SIZE);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        buffer[index++] = event;
+        if (index == BUFFER_SIZE) {
+            flush();
         }
     }
 
-    public List<EventItem> take() {
+    public EventItem[] take() {
         try {
             return queue.take();
         } catch (InterruptedException e) {
@@ -52,8 +44,12 @@ public class EventOutputStream {
 
     public void flush() {
         try {
-            if (!buffer.isEmpty())
+            if (index != 0) {
+                buffer[index] = null;
                 queue.put(buffer);
+                buffer = new EventItem[BUFFER_SIZE+1];
+                index = 0;
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

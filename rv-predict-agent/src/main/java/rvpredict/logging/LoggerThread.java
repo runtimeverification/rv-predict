@@ -4,8 +4,6 @@ import rvpredict.db.EventItem;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.util.List;
 
 /**
  * Created by Traian on 16.01.2015.
@@ -42,9 +40,10 @@ public class LoggerThread implements Runnable {
     public void run() {
         owner = Thread.currentThread();
         try {
-            List<EventItem> buffer;
+            EventItem[] buffer;
             while (EventOutputStream.END_BUFFER != (buffer = loggerQueue.take())) {
                 for (EventItem event : buffer) {
+                    if (event == null) break;
                     writeEvent(event);
                 }
                 outputStream.flush();

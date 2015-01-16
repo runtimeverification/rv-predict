@@ -1,11 +1,13 @@
-package rvpredict.db;
+package rvpredict.logging;
 
-import rvpredict.config.Configuration;
+import rvpredict.db.EventItem;
+import rvpredict.trace.Event;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Extension of the DataOutputStream class specialized for {@link rvpredict.db.EventItem}
@@ -14,7 +16,7 @@ import java.util.concurrent.BlockingQueue;
  */
 public class EventOutputStream {
     private static final int BUFFER_SIZE=1024*1024;
-    private static final List<EventItem> END_MARKER = new LinkedList<>();
+    static final List<EventItem> END_BUFFER = new LinkedList<>();
 
     private final BlockingQueue<List<EventItem>> queue;
     private List<EventItem> buffer = new ArrayList<>(BUFFER_SIZE);
@@ -22,13 +24,12 @@ public class EventOutputStream {
     /**
      * Creates a new event output stream.
      *
-     * @param queue
      */
-    public EventOutputStream(BlockingQueue<List<EventItem>> queue) {
-        this.queue = queue;
+    public EventOutputStream() {
+        this.queue = new LinkedBlockingQueue<>();
     }
 
-    public final void writeEvent(EventItem event) {
+    public void writeEvent(EventItem event) {
         buffer.add(event);
         if (buffer.size() >= BUFFER_SIZE) {
             try {
@@ -40,7 +41,16 @@ public class EventOutputStream {
         }
     }
 
-    public final void flush() {
+    public List<EventItem> take() {
+        try {
+            return queue.take();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public void flush() {
         try {
             if (!buffer.isEmpty())
                 queue.put(buffer);
@@ -49,10 +59,10 @@ public class EventOutputStream {
         }
     }
 
-    public final void close() {
+    public void close() {
         try {
             flush();
-            queue.put(END_MARKER);
+            queue.put(END_BUFFER);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

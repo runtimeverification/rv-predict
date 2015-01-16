@@ -10,7 +10,7 @@ import org.objectweb.asm.util.CheckClassAdapter;
 import rvpredict.config.Config;
 import rvpredict.db.TraceCache;
 import rvpredict.engine.main.Main;
-import rvpredict.logging.DBEngine;
+import rvpredict.logging.LoggingEngine;
 import rvpredict.runtime.RVPredictRuntime;
 import rvpredict.util.Logger;
 
@@ -99,7 +99,7 @@ public class Agent implements ClassFileTransformer {
         }
 
         TraceCache.removeTraceFiles(commandLine.outdir);
-        final DBEngine db = new DBEngine(commandLine);
+        final LoggingEngine db = new LoggingEngine(commandLine);
         RVPredictRuntime.init(db);
 
         inst.addTransformer(new Agent(config), true);

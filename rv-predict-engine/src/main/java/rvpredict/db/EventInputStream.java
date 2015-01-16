@@ -23,8 +23,7 @@ public class EventInputStream extends DataInputStream {
 
     /**
      * Reads <code>45</code> bytes and returns an <code>EventItem</code>.
-     * This method is suitable for reading bytes written by the {@link rvpredict.db.EventOutputStream#writeEvent(EventItem)}
-     * method.
+     *
      * @return     the <code>EventItem</code> read.
      * @exception java.io.EOFException  if this stream reaches the end before reading all the bytes.
      * @exception  IOException   if an I/O error occurs.

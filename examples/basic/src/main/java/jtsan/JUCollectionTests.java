@@ -135,6 +135,51 @@ public class JUCollectionTests {
         };
     }
 
+    private static class DelegatedIterator implements Iterator<Integer> {
+
+        private final Iterator<Integer> iter;
+
+        private DelegatedIterator(Collection<Integer> collection) {
+            iter = collection.iterator();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return iter.hasNext();
+        }
+
+        @Override
+        public Integer next() {
+            return iter.next() * 2;
+        }
+    }
+
+    @RaceTest(expectRace = true,
+            description = "customized implementation of iterator by delegation")
+    public void delegatedIterator() {
+        final Collection<Integer> ints = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            ints.add(i);
+        }
+        final DelegatedIterator iter = new DelegatedIterator(ints);
+
+        new ThreadRunner(2) {
+
+            @Override
+            public void thread1() {
+                shortSleep();
+                while (iter.hasNext()) {
+                    iter.next();
+                }
+            }
+
+            @Override
+            public void thread2() {
+                ints.add(0);
+            }
+        };
+    }
+
     public static void main(String[] args) {
         JUCollectionTests tests = new JUCollectionTests();
         // positive tests
@@ -142,6 +187,7 @@ public class JUCollectionTests {
             tests.basicCollectionOps();
             tests.foreachLoop0();
             tests.foreachLoop1();
+            tests.delegatedIterator();
         } else {
             // negative tests
             tests.readOnlyIteration();

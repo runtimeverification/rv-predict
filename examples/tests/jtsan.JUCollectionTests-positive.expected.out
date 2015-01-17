@@ -21,3 +21,5 @@
 (?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$2.thread1\(JUCollectionTests.java:64\)(\s)*jtsan.JUCollectionTests\$2.thread2\(JUCollectionTests.java:71\)(.*)
 
 (?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$3.thread1\(JUCollectionTests.java:94\)(\s)*jtsan.JUCollectionTests\$3.thread2\(JUCollectionTests.java:104\)(.*)
+
+(?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$5.thread2\(JUCollectionTests.java:178\)(\s)*jtsan.JUCollectionTests\$DelegatedIterator.hasNext\(JUCollectionTests.java:148\)(.*)

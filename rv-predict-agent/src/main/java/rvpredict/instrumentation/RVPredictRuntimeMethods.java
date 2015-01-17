@@ -125,18 +125,26 @@ public class RVPredictRuntimeMethods {
             register(INTERFACE, JU_COLLECTION, "toArray", "rvPredictCollectionToArray", Object[].class);
 
     // java.util.Map methods
-//    public static final RVPredictInterceptor RVPREDICT_MAP_GET            =
-//            register(INTERFACE, JU_MAP, "get", "rvPredictMapGet", O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_GET            =
+            register(INTERFACE, JU_MAP, "get", "rvPredictMapGet", O);
     public static final RVPredictInterceptor RVPREDICT_MAP_PUT            =
             register(INTERFACE, JU_MAP, "put", "rvPredictMapPut", O, O);
     public static final RVPredictInterceptor RVPREDICT_MAP_PUT_ALL        =
             register(INTERFACE, JU_MAP, "putAll", "rvPredictMapPutAll", Map.class);
-//    public static final RVPredictInterceptor RVPREDICT_MAP_REMOVE         =
-//            register(INTERFACE, JU_MAP, "remove", "rvPredictMapRemove", O);
-//    public static final RVPredictInterceptor RVPREDICT_MAP_CONTAINS_KEY   =
-//            register(INTERFACE, JU_MAP, "containsKey", "rvPredictMapContainsKey", O);
-//    public static final RVPredictInterceptor RVPREDICT_MAP_CONTAINS_VAL   =
-//            register(INTERFACE, JU_MAP, "containsValue", "rvPredictMapContainsValue", O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_REMOVE         =
+            register(INTERFACE, JU_MAP, "remove", "rvPredictMapRemove", O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_CONTAINS_KEY   =
+            register(INTERFACE, JU_MAP, "containsKey", "rvPredictMapContainsKey", O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_CONTAINS_VAL   =
+            register(INTERFACE, JU_MAP, "containsValue", "rvPredictMapContainsValue", O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_CLEAR          =
+            register(INTERFACE, JU_MAP, "clear", "rvPredictMapClear");
+//    public static final RVPredictInterceptor RVPREDICT_MAP_ENTRY_SET      =
+//            register(INTERFACE, JU_MAP, "entrySet", "rvPredictMapEntrySet");
+//    public static final RVPredictInterceptor RVPREDICT_MAP_KEY_SET        =
+//            register(INTERFACE, JU_MAP, "keySet", "rvPredictMapKeySet");
+//    public static final RVPredictInterceptor RVPREDICT_MAP_VALUES         =
+//            register(INTERFACE, JU_MAP, "values", "rvPredictMapValues");
 
     // java.util.concurrent.locks.Lock methods
     // note that this doesn't provide mocks for methods specific in concrete lock implementation

@@ -1064,9 +1064,7 @@ public final class RVPredictRuntime {
      * {@link Collection#add(Object)}
      */
     public static boolean rvPredictCollectionAdd(Collection collection, Object e, int locId) {
-        if (!isConcurrentCollection(collection)) {
-            accessMockState(collection, true, locId);
-        }
+        writeCollectionState(collection, locId);
         return collection.add(e);
     }
 
@@ -1074,9 +1072,7 @@ public final class RVPredictRuntime {
      * {@link Collection#addAll(Collection)}
      */
     public static boolean rvPredictCollectionAddAll(Collection collection, Collection c, int locId) {
-        if (!isConcurrentCollection(collection)) {
-            accessMockState(collection, true, locId);
-        }
+        writeCollectionState(collection, locId);
         return collection.addAll(c);
     }
 
@@ -1084,9 +1080,7 @@ public final class RVPredictRuntime {
      * {@link Collection#remove(Object)}
      */
     public static boolean rvPredictCollectionRemove(Collection collection, Object e, int locId) {
-        if (!isConcurrentCollection(collection)) {
-            accessMockState(collection, true, locId);
-        }
+        writeCollectionState(collection, locId);
         return collection.remove(e);
     }
 
@@ -1094,9 +1088,7 @@ public final class RVPredictRuntime {
      * {@link Collection#removeAll(Collection)}
      */
     public static boolean rvPredictCollectionRemoveAll(Collection collection, Collection c, int locId) {
-        if (!isConcurrentCollection(collection)) {
-            accessMockState(collection, true, locId);
-        }
+        writeCollectionState(collection, locId);
         return collection.removeAll(c);
     }
 
@@ -1104,9 +1096,7 @@ public final class RVPredictRuntime {
      * {@link Collection#retainAll(Collection)}
      */
     public static boolean rvPredictCollectionRetainAll(Collection collection, Collection c, int locId) {
-        if (!isConcurrentCollection(collection)) {
-            accessMockState(collection, true, locId);
-        }
+        writeCollectionState(collection, locId);
         return collection.retainAll(c);
     }
 
@@ -1114,29 +1104,25 @@ public final class RVPredictRuntime {
      * {@link Collection#contains(Object)}
      */
     public static boolean rvPredictCollectionContains(Collection collection, Object e, int locId) {
-        if (!isConcurrentCollection(collection)) {
-            accessMockState(collection, false, locId);
-        }
-        return collection.contains(e);
+        boolean result = collection.contains(e);
+        readCollectionState(collection, locId);
+        return result;
     }
 
     /**
      * {@link Collection#containsAll(Collection)}
      */
     public static boolean rvPredictCollectionContainsAll(Collection collection, Collection c, int locId) {
-        if (!isConcurrentCollection(collection)) {
-            accessMockState(collection, false, locId);
-        }
-        return collection.containsAll(c);
+        boolean result = collection.containsAll(c);
+        readCollectionState(collection, locId);
+        return result;
     }
 
     /**
      * {@link Collection#clear(Object)}
      */
     public static void rvPredictCollectionClear(Collection collection, int locId) {
-        if (!isConcurrentCollection(collection)) {
-            accessMockState(collection, true, locId);
-        }
+        writeCollectionState(collection, locId);
         collection.clear();
     }
 
@@ -1144,29 +1130,34 @@ public final class RVPredictRuntime {
      * {@link Collection#toArray()}
      */
     public static Object[] rvPredictCollectionToArray(Collection collection, int locId) {
-        if (!isConcurrentCollection(collection)) {
-            accessMockState(collection, false, locId);
-        }
-        return collection.toArray();
+        Object[] result = collection.toArray();
+        readCollectionState(collection, locId);
+        return result;
     }
 
     /**
      * {@link Collection#toArray(Object[])}
      */
     public static Object[] rvPredictCollectionToArray(Collection collection, Object[] a, int locId) {
-        if (!isConcurrentCollection(collection)) {
-            accessMockState(collection, false, locId);
-        }
-        return collection.toArray(a);
+        Object[] result = collection.toArray(a);
+        readCollectionState(collection, locId);
+        return result;
+    }
+
+    /**
+     * {@link Map#get(Object)}
+     */
+    public static Object rvPredictMapGet(Map map, Object key, int locId) {
+        Object result = map.get(key);
+        readCollectionState(map, locId);
+        return result;
     }
 
     /**
      * {@link Map#put(Object, Object)}
      */
     public static Object rvPredictMapPut(Map map, Object key, Object value, int locId) {
-        if (!isConcurrentCollection(map)) {
-            accessMockState(map, true, locId);
-        }
+        writeCollectionState(map, locId);
         return map.put(key, value);
     }
 
@@ -1174,10 +1165,42 @@ public final class RVPredictRuntime {
      * {@link Map#putAll(Map)}
      */
     public static void rvPredictMapPutAll(Map map, Map m, int locId) {
-        if (!isConcurrentCollection(map)) {
-            accessMockState(map, true, locId);
-        }
+        writeCollectionState(map, locId);
         map.putAll(m);
+    }
+
+    /**
+     * {@link Map#remove(Object)}
+     */
+    public static Object rvPredictMapRemove(Map map, Object key, int locId) {
+        writeCollectionState(map, locId);
+        return map.remove(key);
+    }
+
+    /**
+     * {@link Map#containsKey(Object)}
+     */
+    public static boolean rvPredictMapContainsKey(Map map, Object key, int locId) {
+        boolean result = map.containsKey(key);
+        readCollectionState(map, locId);
+        return result;
+    }
+
+    /**
+     * {@link Map#containsValue(Object)}
+     */
+    public static boolean rvPredictMapContainsValue(Map map, Object value, int locId) {
+        boolean result = map.containsValue(value);
+        readCollectionState(map, locId);
+        return result;
+    }
+
+    /**
+     * {@link Map#clear()}
+     */
+    public static void rvPredictMapClear(Map map, int locId) {
+        writeCollectionState(map, locId);
+        map.clear();
     }
 
     private static long calcMonitorId(Object obj) {
@@ -1222,20 +1245,37 @@ public final class RVPredictRuntime {
     }
 
     /**
-     * Logs event generated by accessing the (abstract) state of a mock object.
+     * Logs event generated by reading the (abstract) state of a collection
+     * object.
      *
-     * @param mockObject
-     *            the mock object
-     * @param isWrite
-     *            if the access can be model as a write
+     * @param collection
+     *            the collection
      * @param locId
      *            the location identifier
      */
-    private static void accessMockState(Object mockObject, boolean isWrite, int locId) {
-        db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
-                System.identityHashCode(mockObject),
-                -MetaData.getVariableId(mockObject.getClass().getName(), MOCK_STATE_FIELD),
-                DUMMY_VALUE);
+    private static void readCollectionState(Object collection, int locId) {
+        if (!isConcurrentCollection(collection)) {
+            db.saveEvent(EventType.READ, locId, System.identityHashCode(collection),
+                    -MetaData.getVariableId(collection.getClass().getName(), MOCK_STATE_FIELD),
+                    DUMMY_VALUE);
+        }
+    }
+
+    /**
+     * Logs event generated by writing the (abstract) state of a collection
+     * object.
+     *
+     * @param collection
+     *            the collection
+     * @param locId
+     *            the location identifier
+     */
+    private static void writeCollectionState(Object collection, int locId) {
+        if (!isConcurrentCollection(collection)) {
+            db.saveEvent(EventType.WRITE, locId, System.identityHashCode(collection),
+                    -MetaData.getVariableId(collection.getClass().getName(), MOCK_STATE_FIELD),
+                    DUMMY_VALUE);
+        }
     }
 
     /**
@@ -1245,7 +1285,11 @@ public final class RVPredictRuntime {
     private static void accessThroughIterator(Iterator iterator, boolean isWrite, int locId) {
         Object collection = resolveAccessedCollection(iterator);
         if (collection != null) {
-            accessMockState(collection, isWrite, locId);
+            if (isWrite) {
+                writeCollectionState(collection, locId);
+            } else {
+                readCollectionState(collection, locId);
+            }
         } else if (Config.instance.verbose) {
             /* this is possible because not all iterators are created by
              * Iterable.iterator() */

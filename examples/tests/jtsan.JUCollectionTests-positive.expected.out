@@ -23,3 +23,17 @@
 (?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$3.thread1\(JUCollectionTests.java:94\)(\s)*jtsan.JUCollectionTests\$3.thread2\(JUCollectionTests.java:104\)(.*)
 
 (?s)(.*)Race on field java.util.ArrayList.\$state between:(\s)*jtsan.JUCollectionTests\$5.thread2\(JUCollectionTests.java:178\)(\s)*jtsan.JUCollectionTests\$DelegatedIterator.hasNext\(JUCollectionTests.java:148\)(.*)
+
+(?s)(.*)Race on field java.util.HashMap.\$state between:(\s)*jtsan.JUCollectionTests\$6.thread1\(JUCollectionTests.java:191\)(\s)*jtsan.JUCollectionTests\$6.thread2\(JUCollectionTests.java:202\)(.*)
+
+(?s)(.*)Race on field java.util.HashMap.\$state between:(\s)*jtsan.JUCollectionTests\$6.thread1\(JUCollectionTests.java:192\)(\s)*jtsan.JUCollectionTests\$6.thread2\(JUCollectionTests.java:202\)(.*)
+
+(?s)(.*)Race on field java.util.HashMap.\$state between:(\s)*jtsan.JUCollectionTests\$6.thread1\(JUCollectionTests.java:193\)(\s)*jtsan.JUCollectionTests\$6.thread2\(JUCollectionTests.java:202\)(.*)
+
+(?s)(.*)Race on field java.util.HashMap.\$state between:(\s)*jtsan.JUCollectionTests\$6.thread1\(JUCollectionTests.java:194\)(\s)*jtsan.JUCollectionTests\$6.thread2\(JUCollectionTests.java:202\)(.*)
+
+(?s)(.*)Race on field java.util.HashMap.\$state between:(\s)*jtsan.JUCollectionTests\$6.thread1\(JUCollectionTests.java:195\)(\s)*jtsan.JUCollectionTests\$6.thread2\(JUCollectionTests.java:202\)(.*)
+
+(?s)(.*)Race on field java.util.HashMap.\$state between:(\s)*jtsan.JUCollectionTests\$6.thread1\(JUCollectionTests.java:196\)(\s)*jtsan.JUCollectionTests\$6.thread2\(JUCollectionTests.java:202\)(.*)
+
+(?s)(.*)Race on field java.util.HashMap.\$state between:(\s)*jtsan.JUCollectionTests\$6.thread1\(JUCollectionTests.java:197\)(\s)*jtsan.JUCollectionTests\$6.thread2\(JUCollectionTests.java:202\)(.*)

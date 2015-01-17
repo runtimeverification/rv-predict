@@ -180,6 +180,30 @@ public class JUCollectionTests {
         };
     }
 
+    @RaceTest(expectRace = true,
+            description = "Basic operations in Map interface")
+    public void basicMapOps() {
+        final java.util.Map<Integer, Integer> map = new java.util.HashMap<>();
+
+        new ThreadRunner(2) {
+            @Override
+            public void thread1() {
+                map.get(0);
+                map.put(1, 1);
+                map.putAll(Collections.singletonMap(2, 2));
+                map.containsKey(1);
+                map.containsValue(1);
+                map.remove(1);
+                map.clear();
+            }
+
+            @Override
+            public void thread2() {
+                map.put(0, 0);
+            }
+        };
+    }
+
     public static void main(String[] args) {
         JUCollectionTests tests = new JUCollectionTests();
         // positive tests
@@ -188,6 +212,7 @@ public class JUCollectionTests {
             tests.foreachLoop0();
             tests.foreachLoop1();
             tests.delegatedIterator();
+            tests.basicMapOps();
         } else {
             // negative tests
             tests.readOnlyIteration();

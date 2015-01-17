@@ -43,6 +43,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
+import rvpredict.config.Config;
 import rvpredict.instrumentation.MetaData;
 import rvpredict.logging.LoggingEngine;
 import rvpredict.trace.EventType;
@@ -1242,7 +1243,14 @@ public final class RVPredictRuntime {
      * {@link Collection}, {@link Map}, etc.) through a {@link Iterator}.
      */
     private static void accessThroughIterator(Iterator iterator, boolean isWrite, int locId) {
-        accessMockState(resolveAccessedCollection(iterator), isWrite, locId);
+        Object collection = resolveAccessedCollection(iterator);
+        if (collection != null) {
+            accessMockState(collection, isWrite, locId);
+        } else if (Config.instance.verbose) {
+            /* this is possible because not all iterators are created by
+             * Iterable.iterator() */
+            System.err.println("[Runtime] Unable to find the collection associated with " + iterator);
+        }
     }
 
     /**

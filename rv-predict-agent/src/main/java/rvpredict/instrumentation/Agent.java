@@ -63,6 +63,10 @@ public class Agent implements ClassFileTransformer {
     private static String[] MOCKS = new String[] {
         "java/util/Collection",
         "java/util/Map"
+
+        /* YilongL: do not exclude Iterator because it's not likely to slow down
+         * logging a lot; besides, I am interested in seeing what could happen */
+        // "java/util/Iterator"
     };
 
     static Instrumentation instrumentation;

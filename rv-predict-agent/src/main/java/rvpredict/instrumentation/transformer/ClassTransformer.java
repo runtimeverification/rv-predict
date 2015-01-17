@@ -67,7 +67,9 @@ public class ClassTransformer extends ClassVisitor {
             String[] exceptions) {
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
 
-        if (mv != null) {
+        /* do not instrument synthesized bridge method; otherwise, it may cause
+         * infinite recursion at runtime */
+        if (mv != null && (access & Opcodes.ACC_BRIDGE) == 0) {
             int crntMaxLocals = 0;
             for (Type type : Type.getArgumentTypes(desc)) {
                 crntMaxLocals += type.getSize();

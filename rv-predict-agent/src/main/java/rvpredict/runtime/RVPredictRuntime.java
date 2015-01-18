@@ -31,10 +31,12 @@ package rvpredict.runtime;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -138,7 +140,25 @@ public final class RVPredictRuntime {
     private static final ConcurrentHashMap<Lock, ReadWriteLock> readLockToRWLock = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Lock, ReadWriteLock> writeLockToRWLock = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Condition, Lock> conditionToLock = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<Iterator, Iterable> iteratorToIterable = new ConcurrentHashMap<>();
+
+    /**
+     * Map from iterator to its associated iterable (if any).
+     * <p>
+     * Use {@link WeakHashMap} to avoid memory leaks.
+     */
+    private static final Map<Iterator, Iterable> iteratorToIterable = Collections
+            .synchronizedMap(new WeakHashMap<Iterator, Iterable>());
+
+    /**
+     * Map from view to its backed collection. There are two kinds of view in
+     * the Java Collections Framework: the collection views provided in the
+     * {@link Map} interface and the range views provided in the {@link List},
+     * {@link SortedSet}, and {@link SortMap} interfaces.
+     * <p>
+     * Use {@link WeakHashMap} to avoid memory leaks.
+     */
+    private static final Map<Collection, Object> viewToBackedCollection = Collections
+            .synchronizedMap(new WeakHashMap<Collection, Object>());
 
     private static LoggingEngine db;
 
@@ -1203,6 +1223,33 @@ public final class RVPredictRuntime {
         map.clear();
     }
 
+    /**
+     * {@link Map#entrySet()}
+     */
+    public static Set rvPredictMapEntrySet(Map map, int locId) {
+        Set result = map.entrySet();
+        viewToBackedCollection.put(result, map);
+        return result;
+    }
+
+    /**
+     * {@link Map#keySet()}
+     */
+    public static Set rvPredictMapKeySet(Map map, int locId) {
+        Set result = map.keySet();
+        viewToBackedCollection.put(result, map);
+        return result;
+    }
+
+    /**
+     * {@link Map#values()}
+     */
+    public static Collection rvPredictMapValues(Map map, int locId) {
+        Collection result = map.values();
+        viewToBackedCollection.put(result, map);
+        return result;
+    }
+
     private static long calcMonitorId(Object obj) {
         // Use low 32bit for object hash and high 32bit for the magic constant.
         return (MONITOR_C << 32L) + System.identityHashCode(obj);
@@ -1254,6 +1301,9 @@ public final class RVPredictRuntime {
      *            the location identifier
      */
     private static void readCollectionState(Object collection, int locId) {
+        if (collection instanceof Collection) {
+            collection = getBackedCollection((Collection) collection);
+        }
         if (!isConcurrentCollection(collection)) {
             db.saveEvent(EventType.READ, locId, System.identityHashCode(collection),
                     -MetaData.getVariableId(collection.getClass().getName(), MOCK_STATE_FIELD),
@@ -1271,6 +1321,9 @@ public final class RVPredictRuntime {
      *            the location identifier
      */
     private static void writeCollectionState(Object collection, int locId) {
+        if (collection instanceof Collection) {
+            collection = getBackedCollection((Collection) collection);
+        }
         if (!isConcurrentCollection(collection)) {
             db.saveEvent(EventType.WRITE, locId, System.identityHashCode(collection),
                     -MetaData.getVariableId(collection.getClass().getName(), MOCK_STATE_FIELD),
@@ -1305,23 +1358,30 @@ public final class RVPredictRuntime {
         Iterable iterable = iteratorToIterable.get(iterator);
         if (iterable instanceof Collection) {
             /* iterable could be just a view of the real backbone collection */
-            return getBackboneCollection((Collection) iterable);
+            return getBackedCollection((Collection) iterable);
         } else {
             return iterable;
         }
     }
 
     /**
-     * Gets the underlying {@link Collection} or {@link Map} of a given view.
+     * Gets the backing {@link Collection} or {@link Map} of a given view.
      */
-    private static Object getBackboneCollection(Collection view) {
-        // TODO: resolve the real underlying collection
-        return view;
+    private static Object getBackedCollection(Collection view) {
+        Object object;
+        while (true) {
+            object = viewToBackedCollection.get(view);
+            if (object instanceof Collection) {
+                view = (Collection) object;
+            } else {
+                return object == null ? view : object;
+            }
+        }
     }
 
     private static boolean isConcurrentCollection(Object object) {
         String packageName = object.getClass().getPackage().getName();
-        return packageName.contains("java.util.concurrent");
+        return packageName.startsWith("java.util.concurrent");
     }
 
     /**

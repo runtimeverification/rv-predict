@@ -204,6 +204,43 @@ public class JUCollectionTests {
         };
     }
 
+    @RaceTest(expectRace = true,
+            description = "modifying collection views of a map")
+    public void collectionViewsOfMap() {
+        final java.util.Map<Integer, Integer> map = new java.util.HashMap<>();
+
+        new ThreadRunner(2) {
+
+            @Override
+            public void setUp() {
+                for (int i = 0; i < 10; i++) {
+                    map.put(i, i);
+                }
+            }
+
+            @Override
+            public void thread1() {
+                shortSleep();
+                java.util.Set<Integer> keySet = map.keySet();
+                keySet.remove(0);               // modify key set view
+                for (Integer key : keySet) {};  // access key set view via iterator
+
+                Collection<Integer> values = map.values();
+                values.remove(0);               // modify value collection view
+                for (Integer val : values) {};  // access value collection view via iterator
+
+                java.util.Set<java.util.Map.Entry<Integer, Integer>> entrySet = map.entrySet();
+                Iterator<java.util.Map.Entry<Integer, Integer>> iter = entrySet.iterator();
+                java.util.Map.Entry<Integer, Integer> e = iter.next(); // read access via iterator
+            }
+
+            @Override
+            public void thread2() {
+                map.put(3, 3);
+            }
+        };
+    }
+
     public static void main(String[] args) {
         JUCollectionTests tests = new JUCollectionTests();
         // positive tests
@@ -213,6 +250,7 @@ public class JUCollectionTests {
             tests.foreachLoop1();
             tests.delegatedIterator();
             tests.basicMapOps();
+            tests.collectionViewsOfMap();
         } else {
             // negative tests
             tests.readOnlyIteration();

@@ -241,6 +241,33 @@ public class JUCollectionTests {
         };
     }
 
+    @ExcludedTest(reason = "not worth to instrument Map.Entry implementation")
+    @RaceTest(expectRace = true,
+            description = "Test instrumentation of map entry")
+    public void mapEntry() {
+        new ThreadRunner(2) {
+
+            java.util.Map.Entry<Integer, Integer> entry;
+
+            @Override
+            public void setUp() {
+                java.util.Map<Integer, Integer> m = new java.util.HashMap<>();
+                m.put(0, 0);
+                entry = m.entrySet().iterator().next();
+            }
+
+            @Override
+            public void thread1() {
+                entry.getValue();
+            }
+
+            @Override
+            public void thread2() {
+                entry.setValue(1);
+            }
+        };
+    }
+
     public static void main(String[] args) {
         JUCollectionTests tests = new JUCollectionTests();
         // positive tests
@@ -251,6 +278,7 @@ public class JUCollectionTests {
             tests.delegatedIterator();
             tests.basicMapOps();
             tests.collectionViewsOfMap();
+//            tests.mapEntry();
         } else {
             // negative tests
             tests.readOnlyIteration();

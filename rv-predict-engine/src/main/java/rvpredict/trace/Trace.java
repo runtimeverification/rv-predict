@@ -276,6 +276,7 @@ public class Trace {
     }
 
     public void addRawEvent(Event event) {
+//        System.err.println(event + " " + info.getLocIdToStmtSigMap().get(event.getID()));
         rawEvents.add(event);
         if (event instanceof MemoryAccessEvent) {
             String addr = ((MemoryAccessEvent) event).getAddr();
@@ -316,14 +317,14 @@ public class Trace {
     /**
      * add a new filtered event to the trace in the order of its appearance
      *
-     * @param node
+     * @param event
      */
-    private void addEvent(Event node) {
-//        System.err.println(node + " " + info.getLocIdToStmtSigMap().get(node.getID()));
-        Long tid = node.getTID();
+    private void addEvent(Event event) {
+//        System.err.println(event + " " + info.getLocIdToStmtSigMap().get(event.getID()));
+        Long tid = event.getTID();
         threadIds.add(tid);
 
-        if (node instanceof BranchEvent) {
+        if (event instanceof BranchEvent) {
             // branch node
             info.incrementBranchNumber();
 
@@ -332,15 +333,15 @@ public class Trace {
                 branchnodes = new ArrayList<>();
                 threadIdToBranchEvents.put(tid, branchnodes);
             }
-            branchnodes.add((BranchEvent) node);
-        } else if (node instanceof InitEvent) {
+            branchnodes.add((BranchEvent) event);
+        } else if (event instanceof InitEvent) {
             // initial write node
-            initState.addrToValue.put(((InitEvent) node).getAddr(), ((InitEvent) node).getValue());
+            initState.addrToValue.put(((InitEvent) event).getAddr(), ((InitEvent) event).getValue());
             info.incrementInitWriteNumber();
         } else {
             // all critical nodes -- read/write/synchronization events
 
-            allEvents.add(node);
+            allEvents.add(event);
 
             List<Event> threadNodes = threadIdToEvents.get(tid);
             if (threadNodes == null) {
@@ -348,12 +349,12 @@ public class Trace {
                 threadIdToEvents.put(tid, threadNodes);
             }
 
-            threadNodes.add(node);
+            threadNodes.add(event);
             // TODO: Optimize it -- no need to update it every time
-            if (node instanceof MemoryAccessEvent) {
+            if (event instanceof MemoryAccessEvent) {
                 info.incrementSharedReadWriteNumber();
 
-                MemoryAccessEvent mnode = (MemoryAccessEvent) node;
+                MemoryAccessEvent mnode = (MemoryAccessEvent) event;
                 String addr = mnode.getAddr();
 
                 List<MemoryAccessEvent> memAccessEvents = memAccessEventsTbl.get(addr, tid);
@@ -363,13 +364,13 @@ public class Trace {
                 }
                 memAccessEvents.add(mnode);
 
-                if (node instanceof ReadEvent) {
+                if (event instanceof ReadEvent) {
                     List<ReadEvent> readNodes = addrToReadEvents.get(addr);
                     if (readNodes == null) {
                         readNodes = new ArrayList<>();
                         addrToReadEvents.put(addr, readNodes);
                     }
-                    readNodes.add((ReadEvent) node);
+                    readNodes.add((ReadEvent) event);
 
                 } else {
                     List<WriteEvent> writeNodes = addrToWriteEvents.get(addr);
@@ -377,11 +378,11 @@ public class Trace {
                         writeNodes = new ArrayList<>();
                         addrToWriteEvents.put(addr, writeNodes);
                     }
-                    writeNodes.add((WriteEvent) node);
+                    writeNodes.add((WriteEvent) event);
                 }
-            } else if (node instanceof SyncEvent) {
+            } else if (event instanceof SyncEvent) {
                 info.incrementSyncNumber();
-                SyncEvent syncEvent = (SyncEvent) node;
+                SyncEvent syncEvent = (SyncEvent) event;
 
                 Map<Long, List<SyncEvent>> eventsMap = null;
                 switch (syncEvent.getType()) {

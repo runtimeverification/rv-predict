@@ -2,10 +2,10 @@
 
 package jtsan;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
+import java.util.*;
+import java.util.Map.Entry;
+
+
 
 /**
  * Class containing tests of proper mocking of the Java Collection Framework.
@@ -161,13 +161,13 @@ public class JUCollectionTests {
         for (int i = 0; i < 10; i++) {
             ints.add(i);
         }
-        final DelegatedIterator iter = new DelegatedIterator(ints);
 
         new ThreadRunner(2) {
 
             @Override
             public void thread1() {
                 shortSleep();
+                DelegatedIterator iter = new DelegatedIterator(ints);
                 while (iter.hasNext()) {
                     iter.next();
                 }
@@ -183,7 +183,7 @@ public class JUCollectionTests {
     @RaceTest(expectRace = true,
             description = "Basic operations in Map interface")
     public void basicMapOps() {
-        final java.util.Map<Integer, Integer> map = new java.util.HashMap<>();
+        final Map<Integer, Integer> map = new HashMap<>();
 
         new ThreadRunner(2) {
             @Override
@@ -207,7 +207,7 @@ public class JUCollectionTests {
     @RaceTest(expectRace = true,
             description = "modifying collection views of a map")
     public void collectionViewsOfMap() {
-        final java.util.Map<Integer, Integer> map = new java.util.HashMap<>();
+        final Map<Integer, Integer> map = new HashMap<>();
 
         new ThreadRunner(2) {
 
@@ -221,7 +221,7 @@ public class JUCollectionTests {
             @Override
             public void thread1() {
                 shortSleep();
-                java.util.Set<Integer> keySet = map.keySet();
+                Set<Integer> keySet = map.keySet();
                 keySet.remove(0);               // modify key set view
                 for (Integer key : keySet) {};  // access key set view via iterator
 
@@ -229,9 +229,9 @@ public class JUCollectionTests {
                 values.remove(0);               // modify value collection view
                 for (Integer val : values) {};  // access value collection view via iterator
 
-                java.util.Set<java.util.Map.Entry<Integer, Integer>> entrySet = map.entrySet();
-                Iterator<java.util.Map.Entry<Integer, Integer>> iter = entrySet.iterator();
-                java.util.Map.Entry<Integer, Integer> e = iter.next(); // read access via iterator
+                Set<Entry<Integer, Integer>> entrySet = map.entrySet();
+                Iterator<Entry<Integer, Integer>> iter = entrySet.iterator();
+                Entry<Integer, Integer> e = iter.next(); // read access via iterator
             }
 
             @Override
@@ -247,11 +247,11 @@ public class JUCollectionTests {
     public void mapEntry() {
         new ThreadRunner(2) {
 
-            java.util.Map.Entry<Integer, Integer> entry;
+            Entry<Integer, Integer> entry;
 
             @Override
             public void setUp() {
-                java.util.Map<Integer, Integer> m = new java.util.HashMap<>();
+                Map<Integer, Integer> m = new HashMap<>();
                 m.put(0, 0);
                 entry = m.entrySet().iterator().next();
             }
@@ -268,6 +268,124 @@ public class JUCollectionTests {
         };
     }
 
+    @RaceTest(expectRace = false,
+            description = "Test instrumentation of Collections$SynchronizedX classes")
+    public void synchronizedCollections() {
+        final Collection<Integer> c = Collections.synchronizedCollection(new ArrayList<Integer>());
+        new ThreadRunner(2) {
+
+            @Override
+            public void thread1() {
+                c.add(1);
+            }
+
+            @Override
+            public void thread2() {
+                c.contains(1);
+            }
+        };
+    }
+
+    @RaceTest(expectRace = true,
+            description = "two threads access through two different synchronized views")
+    public void differentSynchronizedViews() {
+        final Collection<Integer> c = new ArrayList<>();
+        new ThreadRunner(2) {
+
+            @Override
+            public void thread1() {
+                Collections.synchronizedCollection(c).add(1);
+            }
+
+            @Override
+            public void thread2() {
+                Collections.synchronizedCollection(c).contains(1);
+            }
+        };
+    }
+
+    @RaceTest(expectRace = true,
+            description = "iterate over synchronized collection without manually synchronize on it")
+    public void iterateSyncCollectionWrong() {
+        ArrayList<Integer> a = new ArrayList<>();
+        a.add(0);
+        a.add(1);
+        final Collection<Integer> c = Collections.synchronizedCollection(a);
+
+        new ThreadRunner(2) {
+
+            @Override
+            public void thread1() {
+                c.iterator().hasNext(); // explicit iterator
+                for (Integer i : c) {}; // implicit iterator
+            }
+
+            @Override
+            public void thread2() {
+                c.add(2);
+            }
+        };
+    }
+
+    @RaceTest(expectRace = true,
+            description = "iterate over the collection views of a synchronized map without correct synchronization")
+    public void syncMapIterateCollectionViewWrong() {
+        final Map<Integer, Integer> m = Collections.synchronizedMap(new HashMap<Integer, Integer>());
+
+        new ThreadRunner(2) {
+
+            Set<Integer> keySet;
+            Collection<Integer> values;
+            Set<Entry<Integer, Integer>> entrySet;
+
+            @Override
+            public void setUp() {
+                keySet = m.keySet();
+                values = m.values();
+                entrySet = m.entrySet();
+            }
+
+            @Override
+            public void thread1() {
+                keySet.iterator().hasNext(); // explicit iterator of key set view
+                for (Integer i : keySet) {}; // implicit iterator of key set view
+                synchronized (keySet) { keySet.iterator().hasNext(); } // should sync on m not keySet
+                values.iterator().hasNext(); // explicit iterator of values view
+                for (Integer i : values) {}; // implicit iterator of values view
+                synchronized (values) { values.iterator().hasNext(); } // should sync on m not values
+                entrySet.iterator().hasNext(); // explicit iterator of entry set view
+                for (Entry<?, ?> e : entrySet) {}; // implicit iterator of entry set view
+                synchronized (entrySet) { entrySet.iterator().hasNext(); } // should sync on m not entrySet
+            }
+
+            @Override
+            public void thread2() {
+                m.put(2, 2);
+            }
+        };
+    }
+
+    @RaceTest(expectRace = false,
+            description = "iterate over the collection views of a synchronized map with proper synchronization")
+    public void syncMapIterateCollectionView() {
+        final Map<Integer, Integer> m = Collections.synchronizedMap(new HashMap<Integer, Integer>());
+
+        new ThreadRunner(2) {
+
+            @Override
+            public void thread1() {
+                synchronized (m) { m.keySet().iterator().hasNext(); }
+                synchronized (m) { m.values().iterator().hasNext(); }
+                synchronized (m) { m.entrySet().iterator().hasNext(); }
+            }
+
+            @Override
+            public void thread2() {
+                m.put(2, 2);
+            }
+        };
+    }
+
     public static void main(String[] args) {
         JUCollectionTests tests = new JUCollectionTests();
         // positive tests
@@ -279,9 +397,14 @@ public class JUCollectionTests {
             tests.basicMapOps();
             tests.collectionViewsOfMap();
 //            tests.mapEntry();
+            tests.differentSynchronizedViews();
+            tests.iterateSyncCollectionWrong();
+            tests.syncMapIterateCollectionViewWrong();
         } else {
             // negative tests
             tests.readOnlyIteration();
+            tests.synchronizedCollections();
+            tests.syncMapIterateCollectionView();
         }
     }
 }

@@ -40,6 +40,7 @@ public class Agent implements ClassFileTransformer {
         "org.objectweb.asm",
         "com/beust",
         "org/apache/tools/ant",
+        "org/apache/commons/collections4",
 
         // array type
         "[",
@@ -67,6 +68,10 @@ public class Agent implements ClassFileTransformer {
         /* YilongL: do not exclude Iterator because it's not likely to slow down
          * logging a lot; besides, I am interested in seeing what could happen */
         // "java/util/Iterator"
+    };
+
+    private static String[] MUST_INCLUDES = new String[] {
+        "java/util/Collections$Synchronized"
     };
 
     static Instrumentation instrumentation;
@@ -222,6 +227,14 @@ public class Agent implements ClassFileTransformer {
         /* include list overrides the above */
         if (config.includeList != null) {
             for (String include : config.includeList) {
+                if (cname.startsWith(include)) {
+                    toInstrument = true;
+                    break;
+                }
+            }
+        }
+        if (!toInstrument) {
+            for (String include : MUST_INCLUDES) {
                 if (cname.startsWith(include)) {
                     toInstrument = true;
                     break;

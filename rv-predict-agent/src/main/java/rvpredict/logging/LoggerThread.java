@@ -30,7 +30,6 @@ public class LoggerThread implements Runnable {
                 outputStream.flush();
             }
             outputStream.close();
-
         } catch (IOException e) {
             e.printStackTrace();
         }

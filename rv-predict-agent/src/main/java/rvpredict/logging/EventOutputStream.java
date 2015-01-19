@@ -8,6 +8,11 @@ import java.io.OutputStream;
 
 /**
  * Extension of the DataOutputStream class specialized for Events
+ * This class is used for writing events to disk.
+ * It is created by a {@link rvpredict.logging.LoggingServer} and made available
+ * to a unique {@link rvpredict.logging.LoggerThread} object.
+ * Hence, a single thread would be using a class object for its entire duration.
+ *
  * @author TraianSF
  */
 public class EventOutputStream extends DataOutputStream {

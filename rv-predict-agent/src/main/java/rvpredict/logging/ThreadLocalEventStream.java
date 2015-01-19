@@ -15,7 +15,7 @@ import java.util.concurrent.BlockingQueue;
 public class ThreadLocalEventStream extends ThreadLocal<EventPipe> {
 
     static final EventPipe END_REGISTRY = new EventPipe();
-    private BlockingQueue<EventPipe> registry;
+    private final BlockingQueue<EventPipe> registry;
 
     public ThreadLocalEventStream(BlockingQueue<EventPipe> registry) {
         super();

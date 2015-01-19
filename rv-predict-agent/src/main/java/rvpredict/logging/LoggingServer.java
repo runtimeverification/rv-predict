@@ -2,7 +2,6 @@ package rvpredict.logging;
 
 import rvpredict.config.Configuration;
 import rvpredict.db.TraceCache;
-import rvpredict.trace.Event;
 
 import java.io.*;
 import java.nio.file.Paths;
@@ -21,7 +20,7 @@ import java.util.zip.GZIPOutputStream;
  * @author TraianSF
  */
 public class LoggingServer implements Runnable {
-    private static final AtomicInteger threadId = new AtomicInteger();
+    private static final AtomicInteger logFileId = new AtomicInteger();
     private final Configuration config;
     private Thread owner;
     private final List<LoggerThread> loggers = new LinkedList<>();
@@ -82,7 +81,7 @@ public class LoggingServer implements Runnable {
     private EventOutputStream newEventOutputStream() {
         EventOutputStream eventOutputStream = null;
         try {
-            int id = threadId.incrementAndGet();
+            int id = logFileId.incrementAndGet();
             OutputStream outputStream = new FileOutputStream(Paths.get(config.outdir,
                     id + "_" + TraceCache.TRACE_SUFFIX
                             + (config.zip ? TraceCache.ZIP_EXTENSION : "")).toFile());

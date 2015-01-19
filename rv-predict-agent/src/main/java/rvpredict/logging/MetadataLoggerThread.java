@@ -1,6 +1,7 @@
 package rvpredict.logging;
 
 import rvpredict.instrumentation.MetaData;
+import rvpredict.trace.SyncEvent;
 
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
@@ -28,7 +29,6 @@ public class MetadataLoggerThread implements Runnable {
     public MetadataLoggerThread(LoggingEngine engine) {
         loggingEngine = engine;
         metadataOS = createMetadataOS(engine.getConfig().outdir);
-
     }
 
     @Override
@@ -58,38 +58,38 @@ public class MetadataLoggerThread implements Runnable {
         return null;
     }
 
-    private void saveObject(Object object) {
-        try {
-            metadataOS.writeObject(object);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    private void saveObject(Object object) throws IOException {
+        metadataOS.writeObject(object);
     }
 
     /**
      * Flush un-previously-saved metadata to disk.
      */
     private void saveMetaData() {
-        /* save <volatileVariable, Id> pairs */
-        synchronized (MetaData.volatileVariables) {
-            Set<Integer> volatileFieldIds = new HashSet<>(MetaData.unsavedVolatileVariables.size());
-            for (String var : MetaData.unsavedVolatileVariables) {
-                volatileFieldIds.add(MetaData.varSigToId.get(var));
-            }
-            saveObject(volatileFieldIds);
-            MetaData.unsavedVolatileVariables.clear();
-        }
-
-        /* save <StmtSig, LocId> pairs */
-        synchronized (MetaData.stmtSigToLocId) {
-            saveObject(new ArrayList<>(MetaData.unsavedStmtSigToLocId));
-            MetaData.unsavedStmtSigToLocId.clear();
-        }
-
         try {
+            /* save <volatileVariable, Id> pairs */
+            synchronized (MetaData.volatileVariables) {
+                Set<Integer> volatileFieldIds = new HashSet<>(MetaData.unsavedVolatileVariables.size());
+                for (String var : MetaData.unsavedVolatileVariables) {
+                    volatileFieldIds.add(MetaData.varSigToId.get(var));
+                }
+                saveObject(volatileFieldIds);
+                MetaData.unsavedVolatileVariables.clear();
+            }
+
+            /* save <StmtSig, LocId> pairs */
+            synchronized (MetaData.stmtSigToLocId) {
+                saveObject(new ArrayList<>(MetaData.unsavedStmtSigToLocId));
+                MetaData.unsavedStmtSigToLocId.clear();
+            }
+
+            /* Save current trace length */
             metadataOS.writeLong(loggingEngine.getGlobalEventID());
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println(e.getMessage());
+            System.err.println("I/O Error while saving stmt-loc metadata." +
+                    " Metadata will be unreadable. Exiting...");
+            System.exit(1);
         }
     }
 

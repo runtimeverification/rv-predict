@@ -53,7 +53,7 @@ public abstract class AbstractEvent implements Event {
         long TID = eventItem.TID;
         int ID = eventItem.ID;
         long ADDRL = eventItem.ADDRL;
-        long ADDRR = eventItem.ADDRR;
+        int ADDRR = eventItem.ADDRR;
         long VALUE = eventItem.VALUE;
         EventType TYPE = eventItem.TYPE;
 

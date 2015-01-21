@@ -109,7 +109,7 @@ public class MethodTransformer extends MethodVisitor {
         }
 
         int varId = MetaData.getVariableId(owner, name);
-        int locId = MetaData.getLocationId(getFieldAccLocSig(owner, name));
+        int locId = getCrntLocId();
 
         Type valueType = Type.getType(desc);
         switch (opcode) {
@@ -190,7 +190,8 @@ public class MethodTransformer extends MethodVisitor {
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
         int idx = (name + desc).lastIndexOf(')');
         String methodSig = (name + desc).substring(0, idx + 1);
-        RVPredictInterceptor interceptor = RVPredictRuntimeMethods.lookup(owner, methodSig, itf);
+        RVPredictInterceptor interceptor = RVPredictRuntimeMethods.lookup(opcode, owner, methodSig,
+                itf);
         if (interceptor != null) {
             // <stack>... (objectref)? (arg)* </stack>
             push(getCrntLocId());
@@ -479,11 +480,6 @@ public class MethodTransformer extends MethodVisitor {
      */
     private int getCrntLocId() {
         return MetaData.getLocationId(getCrntStmtSig());
-    }
-
-    private String getFieldAccLocSig(String owner, String name) {
-        return String.format("%s|%s|%s|%s.%s|%s", source, className, signature, owner, name,
-                crntLineNum).replace("/", ".");
     }
 
     /**

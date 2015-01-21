@@ -149,6 +149,10 @@ public class Trace {
         return initValue == null ? 0 : initValue;
     }
 
+    public Map<Integer, String> getVarIdToVarSigMap() {
+        return info.getVarIdToVarSigMap();
+    }
+
     public Map<Integer, String> getLocIdToStmtSigMap() {
         return info.getLocIdToStmtSigMap();
     }

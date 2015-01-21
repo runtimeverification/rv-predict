@@ -17,14 +17,14 @@ public class MetaData {
      * our case.
      */
 
-    public static final ConcurrentHashMap<String, Integer> varSigToId = new ConcurrentHashMap<>();
+    public static final ConcurrentHashMap<String, Integer> varSigToVarId = new ConcurrentHashMap<>();
+    public static final List<Pair<Integer, String>> unsavedVarIdToVarSig = new ArrayList<>();
 
     private static final int MAX_NUM_OF_FIELDS = 10000;
-
     public static final String[] varSigs = new String[MAX_NUM_OF_FIELDS];
 
     public static final ConcurrentHashMap<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
-    public static final List<Pair<String, Integer>> unsavedStmtSigToLocId = new ArrayList<>();
+    public static final List<Pair<Integer, String>> unsavedLocIdToStmtSig = new ArrayList<>();
 
     public static final Set<String> volatileVariables = Collections
             .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
@@ -53,14 +53,15 @@ public class MetaData {
         /* YilongL: the following double-checked locking is correct because
          * varSigToId is a ConcurrentHashMap */
         String sig = getVariableSignature(className, fieldName);
-        Integer variableId = varSigToId.get(sig);
+        Integer variableId = varSigToVarId.get(sig);
         if (variableId == null) {
-            synchronized (varSigToId) {
-                variableId = varSigToId.get(sig);
+            synchronized (varSigToVarId) {
+                variableId = varSigToVarId.get(sig);
                 if (variableId == null) {
-                    variableId = varSigToId.size() + 1;
-                    varSigToId.put(sig, variableId);
+                    variableId = varSigToVarId.size() + 1;
+                    varSigToVarId.put(sig, variableId);
                     varSigs[variableId] = sig;
+                    unsavedVarIdToVarSig.add(Pair.of(variableId, sig));
                 }
             }
         }
@@ -88,7 +89,7 @@ public class MetaData {
                 if (locId == null) {
                     locId = stmtSigToLocId.size() + 1;
                     stmtSigToLocId.put(sig, locId);
-                    unsavedStmtSigToLocId.add(Pair.of(sig, locId));
+                    unsavedLocIdToStmtSig.add(Pair.of(locId, sig));
                 }
             }
         }

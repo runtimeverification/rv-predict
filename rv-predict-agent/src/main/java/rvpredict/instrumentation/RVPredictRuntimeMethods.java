@@ -1,18 +1,12 @@
 package rvpredict.instrumentation;
 
-import java.io.IOException;
-import java.lang.instrument.ClassFileTransformer;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
-import java.util.Deque;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Opcodes;
 
 import rvpredict.runtime.RVPredictRuntime;
 
@@ -40,23 +34,27 @@ public class RVPredictRuntimeMethods {
     /*
      * Some useful constants.
      */
-    public static final int STATIC     =   0;
-    public static final int VIRTUAL    =   1;
-    public static final int INTERFACE  =   2;
-    public static final int SPECIAL    =   3;
+    public static final int STATIC     =   Opcodes.INVOKESTATIC;
+    public static final int VIRTUAL    =   Opcodes.INVOKEVIRTUAL;
+    public static final int INTERFACE  =   Opcodes.INVOKEINTERFACE;
+    public static final int SPECIAL    =   Opcodes.INVOKESPECIAL;
     private static final String JL_OBJECT       =   "java/lang/Object";
     private static final String JL_THREAD       =   "java/lang/Thread";
     private static final String JL_SYSTEM       =   "java/lang/System";
+    private static final String JU_COLLECTION   =   "java/util/Collection";
+    private static final String JU_MAP          =   "java/util/Map";
     private static final String JUCL_LOCK       =   "java/util/concurrent/locks/Lock";
     private static final String JUCL_CONDITION  =   "java/util/concurrent/locks/Condition";
     private static final String JUCL_RW_LOCK    =   "java/util/concurrent/locks/ReadWriteLock";
     private static final String JUCL_AQS        =   "java/util/concurrent/locks/AbstractQueuedSynchronizer";
     private static final String JUCA_ATOMIC_BOOL    =   "java/util/concurrent/atomic/AtomicBoolean";
 
-    /**
+    /*
      * Map from method signature to possible {@link RVPredictInterceptor}'s.
      */
-    private static final Map<String, List<RVPredictInterceptor>> METHOD_INTERCEPTION = Maps.newHashMap();
+    private static final Map<String, List<RVPredictInterceptor>> STATIC_METHOD_INTERCEPTION = Maps.newHashMap();
+    private static final Map<String, List<RVPredictInterceptor>> SPECIAL_METHOD_INTERCEPTION = Maps.newHashMap();
+    private static final Map<String, List<RVPredictInterceptor>> VIRTUAL_METHOD_INTERCEPTION = Maps.newHashMap();
 
     // Thread methods
     public static final RVPredictInterceptor RVPREDICT_START              =
@@ -89,6 +87,18 @@ public class RVPredictRuntimeMethods {
     // java.lang.System methods
     public static final RVPredictInterceptor RVPREDICT_SYSTEM_ARRAYCOPY   =
             register(STATIC, JL_SYSTEM, "arraycopy", "rvPredictSystemArraycopy", O, I, O, I, I);
+
+    // java.util.Collection methods
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_ADD     =
+            register(INTERFACE, JU_COLLECTION, "add", "rvPredictCollectionAdd", O);
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_ADD_ALL =
+            register(INTERFACE, JU_COLLECTION, "addAll", "rvPredictCollectionAddAll", Collection.class);
+
+    // java.util.Map methods
+    public static final RVPredictInterceptor RVPREDICT_MAP_PUT            =
+            register(INTERFACE, JU_MAP, "put", "rvPredictMapPut", O, O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_PUT_ALL        =
+            register(INTERFACE, JU_MAP, "putAll", "rvPredictMapPutAll", Map.class);
 
     // java.util.concurrent.locks.Lock methods
     // note that this doesn't provide mocks for methods specific in concrete lock implementation
@@ -175,11 +185,12 @@ public class RVPredictRuntimeMethods {
         try {
             interceptor = RVPredictInterceptor.create(methodType, classOrInterface, methodName,
                     interceptorName, parameterTypes);
-            List<RVPredictInterceptor> interceptors = METHOD_INTERCEPTION.get(interceptor
+            Map<String, List<RVPredictInterceptor>> interceptorTable = getInterceptorTable(methodType);
+            List<RVPredictInterceptor> interceptors = interceptorTable.get(interceptor
                     .getOriginalMethodSig());
             if (interceptors == null) {
                 interceptors = Lists.newArrayList();
-                METHOD_INTERCEPTION.put(interceptor.getOriginalMethodSig(), interceptors);
+                interceptorTable.put(interceptor.getOriginalMethodSig(), interceptors);
             }
             interceptors.add(interceptor);
         } catch (Exception e) {
@@ -193,6 +204,9 @@ public class RVPredictRuntimeMethods {
      * Looks up the corresponding interceptor method for a given Java method
      * call.
      *
+     * @param opcode
+     *            either INVOKEVIRTUAL, INVOKESPECIAL, INVOKESTATIC or
+     *            INVOKEINTERFACE
      * @param owner
      *            the class/interface name of the object whose member method is
      *            invoked or the class name of the static method
@@ -202,12 +216,13 @@ public class RVPredictRuntimeMethods {
      * @return the {@link RVPredictInterceptor} if successful or {@code null} if
      *         no suitable interceptor found
      */
-    public static RVPredictInterceptor lookup(String owner, String methodSig, boolean itf) {
+    public static RVPredictInterceptor lookup(int opcode, String owner, String methodSig,
+            boolean itf) {
         /*
          * TODO(YilongL): figure out how to the deal with `itf' introduced for Java 8
          * http://stackoverflow.com/questions/24510785/explanation-of-itf-parameter-of-visitmethodinsn-in-asm-5
          */
-        List<RVPredictInterceptor> interceptors = METHOD_INTERCEPTION.get(methodSig);
+        List<RVPredictInterceptor> interceptors = getInterceptorTable(opcode).get(methodSig);
         if (interceptors != null) {
             for (RVPredictInterceptor interceptor : interceptors) {
                 /* Method signature alone is not enough to determine if an
@@ -220,12 +235,13 @@ public class RVPredictRuntimeMethods {
                 case STATIC:
                 case SPECIAL:
                     if (interceptor.classOrInterface.equals(owner)) {
+                        assert interceptor.methodType == opcode;
                         return interceptor;
                     }
                     break;
                 case VIRTUAL:
                 case INTERFACE:
-                    if (isSubclassOf(owner, interceptor.classOrInterface,
+                    if (Utility.isSubclassOf(owner, interceptor.classOrInterface,
                             interceptor.methodType == INTERFACE)) {
                         return interceptor;
                     }
@@ -239,102 +255,36 @@ public class RVPredictRuntimeMethods {
     }
 
     /**
-     * Checks if one class or interface extends or implements another class or
-     * interface.
-     *
-     * @param class0
-     *            the name of the first class or interface
-     * @param class1
-     *            the name of the second class of interface
-     * @param itf
-     *            if {@code class1} represents an interface
-     * @return {@code true} if {@code class1} is assignable from {@code class0}
-     */
-    private static boolean isSubclassOf(String class0, String class1, boolean itf) {
-        assert !class1.startsWith("[");
-
-        if (class0.startsWith("[")) {
-            return class1.equals("java/lang/Object");
-        }
-        if (class0.equals(class1)) {
-            return true;
-        }
-
-        List<String> superclasses = getSuperclasses(class0);
-        if (!itf) {
-            return superclasses.contains(class1);
-        } else {
-            boolean result = getInterfaces(class0).contains(class1);
-            for (String superclass : superclasses) {
-                result = result || getInterfaces(superclass).contains(class1);
-            }
-            return result;
-        }
-    }
-
-    /**
-     * Obtains the {@link ClassReader} used to retrieve the superclass and
-     * interfaces information of a class or interface.
+     * Retrieves the method interceptor table corresponding to a given method
+     * invocation opcode.
      * <p>
-     * This method is meant to avoid class loading when checking inheritance
-     * relation because class loading during
-     * {@link ClassFileTransformer#transform(ClassLoader, String, Class, java.security.ProtectionDomain, byte[])}
-     * can not be properly intercepted by the java agent.
-     *
-     * @param className
-     *            the class or interface to read
-     * @return the {@link ClassReader}
-     */
-    private static ClassReader getClassReader(String className) {
-        try {
-            return new ClassReader(className);
-        } catch (IOException e) {
-            System.err.println("ASM ClassReader: unable to read " + className);
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * Gets all superclasses of a class or interface.
+     * This prevents us from intercepting method invocation whose opcode is
+     * different from the interceptor's declared method type.
      * <p>
-     * The superclass of an interface will be the {@code Object}.
+     * For example, we don't want to intercept interface/virtual method that is
+     * called with {@code INVOKESPECIAL} because it means that we haven't
+     * correctly exclude classes/interfaces we are mocking from instrumentation.
+     * E.g., if we fail to exclude an implementation of the {@code Map}
+     * interface which calls {@code super.put(...)} from its own put method, it
+     * would cause infinite recursion inside our interceptor method at runtime.
      *
-     * @param className
-     *            the internal name of a class or interface
-     * @return set of superclasses
+     * @param opcode
+     *            the method invocation opcode
+     * @return the method interceptor table
      */
-    private static List<String> getSuperclasses(String className) {
-        List<String> result = new ArrayList<>();
-        while (className != null) {
-            className = getClassReader(className).getSuperName();
-            if (className != null) {
-                result.add(className);
-            }
+    private static Map<String, List<RVPredictInterceptor>> getInterceptorTable(int opcode) {
+        switch (opcode) {
+        case Opcodes.INVOKESTATIC:
+            return STATIC_METHOD_INTERCEPTION;
+        case Opcodes.INVOKESPECIAL:
+            return SPECIAL_METHOD_INTERCEPTION;
+        case Opcodes.INVOKEVIRTUAL:
+        case Opcodes.INVOKEINTERFACE:
+            return VIRTUAL_METHOD_INTERCEPTION;
+        default:
+            assert false : "unreachable";
+            return null;
         }
-        return result;
-    }
-
-    /**
-     * Gets all implemented interfaces (including parent interfaces) of a class
-     * or all parent interfaces of an interface.
-     *
-     * @param className
-     *            the internal name of a class or interface
-     * @return set of interfaces
-     */
-    private static Set<String> getInterfaces(String className) {
-        Set<String> interfaces = new HashSet<>();
-        Deque<String> queue = new ArrayDeque<>();
-        queue.add(className);
-        while (!queue.isEmpty()) {
-            String cls = queue.poll();
-            for (String itf : getClassReader(cls).getInterfaces()) {
-                if (interfaces.add(itf)) {
-                    queue.add(itf);
-                }
-            }
-        }
-        return interfaces;
     }
 
 }

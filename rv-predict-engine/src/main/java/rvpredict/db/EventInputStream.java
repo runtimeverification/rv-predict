@@ -35,7 +35,7 @@ public class EventInputStream extends DataInputStream {
                 readLong(),
                 readInt(),
                 readLong(),
-                readLong(),
+                readInt(),
                 readLong(),
                 EventType.values()[readByte()]);
     }

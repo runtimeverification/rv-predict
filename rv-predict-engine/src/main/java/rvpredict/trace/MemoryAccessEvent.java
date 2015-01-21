@@ -34,7 +34,7 @@ package rvpredict.trace;
 public abstract class MemoryAccessEvent extends InitOrAccessEvent {
 
     protected MemoryAccessEvent(long GID, long TID, int ID, EventType type, long objectHashCode,
-            long index, long value) {
+            int index, long value) {
         super(GID, TID, ID, type, objectHashCode, index, value);
         assert type == EventType.READ || type == EventType.WRITE;
     }

@@ -71,23 +71,29 @@ public class MetadataLoggerThread implements Runnable {
             synchronized (MetaData.volatileVariables) {
                 Set<Integer> volatileFieldIds = new HashSet<>(MetaData.unsavedVolatileVariables.size());
                 for (String var : MetaData.unsavedVolatileVariables) {
-                    volatileFieldIds.add(MetaData.varSigToId.get(var));
+                    volatileFieldIds.add(MetaData.varSigToVarId.get(var));
                 }
                 saveObject(volatileFieldIds);
                 MetaData.unsavedVolatileVariables.clear();
             }
 
+            /* save <VarSig, VarId> pairs */
+            synchronized (MetaData.varSigToVarId) {
+                saveObject(new ArrayList<>(MetaData.unsavedVarIdToVarSig));
+                MetaData.unsavedVarIdToVarSig.clear();
+            }
+
             /* save <StmtSig, LocId> pairs */
             synchronized (MetaData.stmtSigToLocId) {
-                saveObject(new ArrayList<>(MetaData.unsavedStmtSigToLocId));
-                MetaData.unsavedStmtSigToLocId.clear();
+                saveObject(new ArrayList<>(MetaData.unsavedLocIdToStmtSig));
+                MetaData.unsavedLocIdToStmtSig.clear();
             }
 
             /* Save current trace length */
             metadataOS.writeLong(loggingEngine.getGlobalEventID());
         } catch (IOException e) {
             System.err.println(e.getMessage());
-            System.err.println("I/O Error while saving stmt-loc metadata." +
+            System.err.println("I/O Error while saving metadata." +
                     " Metadata will be unreadable. Exiting...");
             System.exit(1);
         }

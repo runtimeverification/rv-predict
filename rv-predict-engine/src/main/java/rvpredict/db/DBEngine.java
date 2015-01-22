@@ -45,6 +45,7 @@ public class DBEngine {
     private final TraceCache traceCache;
     private final long traceLength;
     private final Set<Integer> volatileFieldIds = new HashSet<>();
+    private final Map<Integer, String> varIdToVarSig = new HashMap<>();
     private final Map<Integer, String> locIdToStmtSig = new HashMap<>();
 
     public DBEngine(String directory) {
@@ -95,38 +96,40 @@ public class DBEngine {
         return volatileFieldIds;
     }
 
+    public Map<Integer, String> getVarIdToVarSig() {
+        return varIdToVarSig;
+    }
+
     public Map<Integer, String> getLocIdToStmtSig() {
         return locIdToStmtSig;
     }
 
     @SuppressWarnings("unchecked")
     private long readMetadata(String directory) {
-        ObjectInputStream metadataIS = null;
-        try {
-            metadataIS = new ObjectInputStream(
-                    new BufferedInputStream(
-                            new FileInputStream(Paths.get(directory, METADATA_BIN).toFile())));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        long size = -1;
-        try {
+        try (ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
+                new FileInputStream(Paths.get(directory, METADATA_BIN).toFile())))) {
+            long size = -1;
+            List<Map.Entry<Integer, String>> list;
             while (true) {
                 try {
                     volatileFieldIds.addAll((Collection<Integer>) metadataIS.readObject());
                 } catch (EOFException e) {
                     break;
                 }
-                List<Map.Entry<String, Integer>> stmtSigIdList = (List<Map.Entry<String, Integer>>) metadataIS
-                        .readObject();
-                for (Map.Entry<String, Integer> entry : stmtSigIdList) {
-                    locIdToStmtSig.put(entry.getValue(), entry.getKey());
+                list = (List<Map.Entry<Integer, String>>) metadataIS.readObject();
+                for (Map.Entry<Integer, String> entry : list) {
+                    varIdToVarSig.put(entry.getKey(), entry.getValue());
+                }
+                list = (List<Map.Entry<Integer, String>>) metadataIS.readObject();
+                for (Map.Entry<Integer, String> entry : list) {
+                    locIdToStmtSig.put(entry.getKey(), entry.getValue());
                 }
                 size = metadataIS.readLong();
             }
+            return size;
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
+            return -1;
         }
-        return size;
     }
 }

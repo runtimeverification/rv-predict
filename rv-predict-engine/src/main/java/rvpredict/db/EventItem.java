@@ -11,7 +11,7 @@ public class EventItem {
     public final long TID;
     public final int ID;
     public final long ADDRL;
-    public final long ADDRR;
+    public final int ADDRR;
     public final long VALUE;
     public final EventType TYPE;
 
@@ -28,7 +28,7 @@ public class EventItem {
             + SIZEOF_LONG       //TID
             + SIZEOF_INT        //ID
             + SIZEOF_LONG       //ADDRL
-            + SIZEOF_LONG       //ADDRR
+            + SIZEOF_INT        //ADDRR
             + SIZEOF_LONG       //VALUE
             + SIZEOF_EVENT_TYPE //TYPE
             ;
@@ -42,7 +42,7 @@ public class EventItem {
      * @param value value for events carrying a value
      * @param type type of event
      */
-    public EventItem(long gid, long tid, int id, long addrl, long addrr, long value, EventType type) {
+    public EventItem(long gid, long tid, int id, long addrl, int addrr, long value, EventType type) {
         this.GID = gid;
         this.TID = tid;
         this.ID = id;

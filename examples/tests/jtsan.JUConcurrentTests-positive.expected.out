@@ -1,7 +1,7 @@
-(?s)(.*)Race on field jtsan.JUConcurrentTests\$1.sharedVar between two instances of:(\s)*jtsan.JUConcurrentTests\$1.thread1\(JUConcurrentTests.java:63\)(.*)
+(?s)(.*)Race on field jtsan.ThreadRunner.sharedVar between two instances of:(\s)*jtsan.JUConcurrentTests\$1.thread1\(JUConcurrentTests.java:63\)(.*)
 
-(?s)(.*)Race on field jtsan.JUConcurrentTests\$2.sharedVar between:(\s)*jtsan.JUConcurrentTests\$2.thread1\(JUConcurrentTests.java:95\)(\s)*jtsan.JUConcurrentTests\$2.thread2\(JUConcurrentTests.java:102\)(.*)
+(?s)(.*)Race on field jtsan.ThreadRunner.sharedVar between:(\s)*jtsan.JUConcurrentTests\$2.thread1\(JUConcurrentTests.java:95\)(\s)*jtsan.JUConcurrentTests\$2.thread2\(JUConcurrentTests.java:102\)(.*)
 
-(?s)(.*)Race on field jtsan.JUConcurrentTests\$3.sharedVar between:(\s)*jtsan.JUConcurrentTests\$3.thread1\(JUConcurrentTests.java:123\)(\s)*jtsan.JUConcurrentTests\$3.thread1\(JUConcurrentTests.java:130\)(.*)
+(?s)(.*)Race on field jtsan.ThreadRunner.sharedVar between:(\s)*jtsan.JUConcurrentTests\$3.thread1\(JUConcurrentTests.java:123\)(\s)*jtsan.JUConcurrentTests\$3.thread1\(JUConcurrentTests.java:130\)(.*)
 
-(?s)(.*)Race on field jtsan.JUConcurrentTests\$4.sharedVar between:(\s)*jtsan.JUConcurrentTests\$4.thread1\(JUConcurrentTests.java:160\)(\s)*jtsan.JUConcurrentTests\$4.thread2\(JUConcurrentTests.java:168\)(.*)
+(?s)(.*)Race on field jtsan.ThreadRunner.sharedVar between:(\s)*jtsan.JUConcurrentTests\$4.thread1\(JUConcurrentTests.java:160\)(\s)*jtsan.JUConcurrentTests\$4.thread2\(JUConcurrentTests.java:168\)(.*)

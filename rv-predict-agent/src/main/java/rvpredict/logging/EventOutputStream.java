@@ -38,12 +38,12 @@ public class EventOutputStream extends DataOutputStream {
      * @exception  java.io.IOException  if an I/O error occurs.
      * @see        java.io.FilterOutputStream#out
      */
-    public void writeEvent(EventItem event) throws IOException {
+   public final void writeEvent(EventItem event) throws IOException {
         writeLong(event.GID);
         writeLong(event.TID);
         writeInt(event.ID);
         writeLong(event.ADDRL);
-        writeLong(event.ADDRR);
+        writeInt(event.ADDRR);
         writeLong(event.VALUE);
         writeByte(event.TYPE.ordinal());
         if (++flushCount >= FLUSH_LIMIT) {

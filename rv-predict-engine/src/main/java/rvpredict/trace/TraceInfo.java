@@ -42,6 +42,7 @@ import java.util.Set;
 public class TraceInfo {
 
     // metadata
+    private final Map<Integer, String> varIdToVarSig;
     private final Map<Integer, String> locIdToStmtSig;
     private final Set<Integer> volatileFieldIds;
 
@@ -49,9 +50,14 @@ public class TraceInfo {
     HashSet<Long> threads = new HashSet<Long>();
     int num_br, num_sync, num_rw_shared, num_rw_local, num_w_init, num_prop;
 
-    public TraceInfo(Set<Integer> volatileFieldIds, Map<Integer, String> locIdToStmtSig) {
+    public TraceInfo(Set<Integer> volatileFieldIds, Map<Integer, String> varIdToVarSig, Map<Integer, String> locIdToStmtSig) {
         this.volatileFieldIds = volatileFieldIds;
+        this.varIdToVarSig = varIdToVarSig;
         this.locIdToStmtSig = locIdToStmtSig;
+    }
+
+    public Map<Integer, String> getVarIdToVarSigMap() {
+        return varIdToVarSig;
     }
 
     public Map<Integer, String> getLocIdToStmtSigMap() {

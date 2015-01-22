@@ -30,7 +30,7 @@ package rvpredict.trace;
 
 public class ReadEvent extends MemoryAccessEvent {
 
-    public ReadEvent(long GID, long tid, int ID, long objectHashCode, long index, long value) {
+    public ReadEvent(long GID, long tid, int ID, long objectHashCode, int index, long value) {
         super(GID, tid, ID, EventType.READ, objectHashCode, index, value);
     }
 

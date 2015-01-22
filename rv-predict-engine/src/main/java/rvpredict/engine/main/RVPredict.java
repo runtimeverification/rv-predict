@@ -74,7 +74,9 @@ public class RVPredict {
 
         // the total number of events in the trace
         totalTraceLength = dbEngine.getTraceLength();
-        traceInfo = new TraceInfo(dbEngine.getVolatileFieldIds(), dbEngine.getLocIdToStmtSig());
+        traceInfo = new TraceInfo(dbEngine.getVolatileFieldIds(),
+                dbEngine.getVarIdToVarSig(),
+                dbEngine.getLocIdToStmtSig());
 
         addHooks(startTime);
     }
@@ -201,7 +203,9 @@ public class RVPredict {
                     for (MemoryAccessEvent e1 : equivAccBlk.get(fst)) {
                         for (MemoryAccessEvent e2 : equivAccBlk.get(snd)) {
                             if (e1 instanceof WriteEvent || e2 instanceof WriteEvent) {
-                                potentialRaces.add(new Race(e1, e2, trace.getLocIdToStmtSigMap()));
+                                potentialRaces.add(new Race(e1, e2,
+                                        trace.getVarIdToVarSigMap(),
+                                        trace.getLocIdToStmtSigMap()));
                             }
                         }
                     }

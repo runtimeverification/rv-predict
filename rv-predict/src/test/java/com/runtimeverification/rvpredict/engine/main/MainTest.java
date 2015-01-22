@@ -77,7 +77,7 @@ public class MainTest {
         String[] args = new String[this.args.size()];
         this.args.toArray(args);
         helper.testCommand("tests/" + name, numOfRuns, args);
-        System.out.printf("Testing %s done.", name);
+        System.out.printf("Testing %s done.\n", name);
     }
 
     // The method bellow creates the set of parameter instances to be used as seeds by

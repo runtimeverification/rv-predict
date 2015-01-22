@@ -101,6 +101,7 @@
                             <goal>integration-test</goal>
                         </goals>
                         <configuration>
+                            <useFile>false</useFile>
                             <includes>
                                 <include>**/*.class</include>
                             </includes>

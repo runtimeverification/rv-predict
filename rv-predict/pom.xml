@@ -64,12 +64,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.11</version>
+                <version>2.18.1</version>
                 <dependencies>
                     <dependency>
                         <groupId>org.apache.maven.surefire</groupId>
                         <artifactId>surefire-junit47</artifactId>
-                        <version>2.12</version>
+                        <version>2.18.1</version>
                     </dependency>
                 </dependencies>
                 <configuration>
@@ -81,12 +81,12 @@
             </plugin>
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>2.12</version>
+                <version>2.18.1</version>
                 <dependencies>
                     <dependency>
                         <groupId>org.apache.maven.surefire</groupId>
                         <artifactId>surefire-junit47</artifactId>
-                        <version>2.12</version>
+                        <version>2.18.1</version>
                     </dependency>
                 </dependencies>
                 <configuration>
@@ -101,6 +101,8 @@
                             <goal>integration-test</goal>
                         </goals>
                         <configuration>
+                            <rerunFailingTestsCount>10</rerunFailingTestsCount>
+                            <redirectTestOutputToFile>true</redirectTestOutputToFile>
                             <includes>
                                 <include>**/*.class</include>
                             </includes>

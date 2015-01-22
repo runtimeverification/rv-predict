@@ -3,10 +3,7 @@ package rvpredict.logging;
 import rvpredict.instrumentation.MetaData;
 import rvpredict.trace.SyncEvent;
 
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -21,41 +18,43 @@ import java.util.Set;
  *  - number of events written so far
  */
 public class MetadataLoggerThread implements Runnable {
-    private final ObjectOutputStream metadataOS;
+    private ObjectOutputStream metadataOS;
     private final LoggingEngine loggingEngine;
     private boolean shutdown = false;
     private Thread owner;
 
     public MetadataLoggerThread(LoggingEngine engine) {
         loggingEngine = engine;
-        metadataOS = createMetadataOS(engine.getConfig().outdir);
     }
 
     @Override
     public void run() {
         owner = Thread.currentThread();
-        while (!shutdown) {
-            try {
+        try {
+            metadataOS = createMetadataOS(loggingEngine.getConfig().outdir);
+            while (!shutdown) {
                 synchronized (metadataOS) {
                     metadataOS.wait(60000);
                 }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                saveMetaData();
             }
             saveMetaData();
+        } catch (InterruptedException e) {
+            if (!shutdown) {
+                System.err.println("Warning: Process is being forcefully shut down. Metadata might be lost.");
+                System.err.print(e.getMessage());
+            }
+            saveMetaData();
+        } catch (IOException e) {
+            System.err.println("Error: I/O error while creating metadata log file. Metadata will not be recorded.");
+            System.err.println(e.getMessage());
         }
-        saveMetaData();
     }
 
-    private static ObjectOutputStream createMetadataOS(String directory) {
-        try {
-            return new ObjectOutputStream(
-                    new BufferedOutputStream(
-                            new FileOutputStream(Paths.get(directory, rvpredict.db.DBEngine.METADATA_BIN).toFile())));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
+    private static ObjectOutputStream createMetadataOS(String directory) throws IOException {
+        return new ObjectOutputStream(
+                new BufferedOutputStream(
+                        new FileOutputStream(Paths.get(directory, rvpredict.db.DBEngine.METADATA_BIN).toFile())));
     }
 
     private void saveObject(Object object) throws IOException {
@@ -102,20 +101,13 @@ public class MetadataLoggerThread implements Runnable {
     /**
      * Signals shutdown, wakes the thread, then waits for it to finish and closes the stream.
      */
-    public void finishLogging() {
+    public void finishLogging() throws InterruptedException, IOException {
         shutdown = true;
+        if (owner == null) return;
         synchronized (metadataOS) {
             metadataOS.notify();
         }
-        try {
-            owner.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        try {
-            metadataOS.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        owner.join();
+        metadataOS.close();
     }
 }

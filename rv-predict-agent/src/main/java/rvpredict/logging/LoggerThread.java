@@ -32,18 +32,16 @@ public class LoggerThread implements Runnable {
             outputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
     /**
      * Sends closing signal to the event queue, then waits for the thread to flush and finish.
      */
-    public void finishLogging() {
+    public void finishLogging() throws InterruptedException {
         eventPipe.close();
-        try {
-            owner.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        owner.join();
     }
 }

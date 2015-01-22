@@ -28,6 +28,7 @@
  ******************************************************************************/
 package rvpredict.logging;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import rvpredict.config.Configuration;
@@ -52,7 +53,7 @@ public class LoggingEngine {
      * Method invoked at the end of the logging task, to insure that
      * all data is recorded before concluding.
      */
-    public void finishLogging() {
+    public void finishLogging() throws IOException, InterruptedException {
         shutdown = true;
         loggingServer.finishLogging();
     }

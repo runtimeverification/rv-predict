@@ -11,7 +11,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * instance object of this class being created by the
  * {@link rvpredict.logging.ThreadLocalEventStream} for each logged thread
  * and being written to only by that thread through the
- * {@link rvpredict.logging.LoggingEngine#saveEvent(rvpredict.trace.EventType, int, long, long, long)},
+ * {@link rvpredict.logging.LoggingEngine#saveEvent(rvpredict.trace.EventType, int, long, int, long)},
  * while being only read from a {@link rvpredict.logging.LoggerThread} object
  * created for this purpose.
  *
@@ -61,15 +61,9 @@ public class EventPipe {
      *
      * @return the event read through the pipe or null if the pipe was closed.
      */
-    public EventItem readEvent() {
+    public EventItem readEvent() throws InterruptedException {
         if (outBuffer == null) {
-            try {
-                outBuffer = pipe.take();
-            } catch (InterruptedException e) {
-                System.err.println("Pipe broken at rvpredict.logging.EventPipe#readEvent()." +
-                                "\n\tAssuming end of stream");
-                return null;
-            }
+            outBuffer = pipe.take();
             if (outBuffer == END_BUFFER) return null;
         }
         EventItem event = outBuffer[outIndex++];
@@ -91,16 +85,16 @@ public class EventPipe {
      * Flushes the pipe input buffer through the pipe
      */
     private void flush() {
-        try {
             if (inIndex != 0) {
                 inBuffer[inIndex] = null;
-                pipe.put(inBuffer);
+                try {
+                    pipe.put(inBuffer);
+                } catch (InterruptedException e) {
+                    System.out.println("Process forcefully ending. All data in current buffer (" + inIndex + " events) lost.");
+                }
                 inBuffer = new EventItem[BUFFER_SIZE+1];
                 inIndex = 0;
             }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 
     /**
@@ -108,12 +102,8 @@ public class EventPipe {
      * {@link rvpredict.logging.EventPipe#BUFFER_SIZE} in the pipe
      * to signify its closing.
      */
-    public void close() {
-        try {
-            flush();
-            pipe.put(END_BUFFER);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+    public void close() throws InterruptedException {
+        flush();
+        pipe.put(END_BUFFER);
     }
 }

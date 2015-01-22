@@ -54,7 +54,12 @@ public class LoggingServer implements Runnable {
                 loggers.add(logger);
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            System.err.println("Process is being forcefully shut down. Log data lost.");
+            System.err.println(e.getMessage());
+
+        } catch (IOException e) {
+            System.err.println("Error creating stream for logging trace.");
+            System.err.println(e.getMessage());
         }
     }
 
@@ -62,13 +67,9 @@ public class LoggingServer implements Runnable {
      * Shuts down the logging process, signaling all threads, including the logging server
      * to finish recording and yields control.
      */
-    public void finishLogging() {
+    public void finishLogging() throws InterruptedException, IOException {
         threadLocalTraceOS.close();
-        try {
-            owner.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        owner.join();
 
         for (LoggerThread loggerThread : loggers) {
             loggerThread.finishLogging();
@@ -78,23 +79,17 @@ public class LoggingServer implements Runnable {
     }
 
 
-    private EventOutputStream newEventOutputStream() {
+    private EventOutputStream newEventOutputStream() throws IOException {
         EventOutputStream eventOutputStream = null;
-        try {
-            int id = logFileId.incrementAndGet();
-            OutputStream outputStream = new FileOutputStream(Paths.get(config.outdir,
-                    id + "_" + TraceCache.TRACE_SUFFIX
-                            + (config.zip ? TraceCache.ZIP_EXTENSION : "")).toFile());
-            if (config.zip) {
-                outputStream = new GZIPOutputStream(outputStream,true);
-            }
-            eventOutputStream = new EventOutputStream(new BufferedOutputStream(
-                    outputStream));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) { // GZIPOutputStream exception
-            e.printStackTrace();
+        int id = logFileId.incrementAndGet();
+        OutputStream outputStream = new FileOutputStream(Paths.get(config.outdir,
+                id + "_" + TraceCache.TRACE_SUFFIX
+                        + (config.zip ? TraceCache.ZIP_EXTENSION : "")).toFile());
+        if (config.zip) {
+            outputStream = new GZIPOutputStream(outputStream,true);
         }
+        eventOutputStream = new EventOutputStream(new BufferedOutputStream(
+                outputStream));
         return eventOutputStream;
     }
 

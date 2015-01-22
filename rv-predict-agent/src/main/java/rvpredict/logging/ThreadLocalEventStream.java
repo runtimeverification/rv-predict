@@ -1,61 +1,38 @@
 package rvpredict.logging;
 
-import rvpredict.config.Configuration;
-import rvpredict.db.EventOutputStream;
-import rvpredict.db.TraceCache;
-
-import java.io.*;
-import java.nio.file.Paths;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.zip.GZIPOutputStream;
+import java.util.concurrent.BlockingQueue;
 
 /**
  * Class extending {@link java.lang.ThreadLocal} to handle thread-local output
- * to {@link rvpredict.db.EventOutputStream} in a given directory.
+ * of events.  It associates an {@link EventPipe}
+ * to each thread.  Current implementation adds these to a registry used by the
+ * {@link rvpredict.logging.LoggingServer} thread to associate a
+ * {@link rvpredict.logging.LoggerThread} to each of them for saving their contents
+ * to disk.
  *
  * @author TraianSF
  */
-public class ThreadLocalEventStream extends ThreadLocal<EventOutputStream> {
-    private final String directory;
-    private final ConcurrentHashMap<Integer,EventOutputStream> streamsMap = new ConcurrentHashMap<>();
-    private final boolean zip;
-    private static final AtomicInteger threadId = new AtomicInteger();
+public class ThreadLocalEventStream extends ThreadLocal<EventPipe> {
 
-    /**
-     * Accessor to the map of streams indexed by thread identifier
-     * @return  a map containing all thread-local streams as values indexed by thread id.
-     */
-    public ConcurrentHashMap<Integer, EventOutputStream> getStreamsMap() {
-        return streamsMap;
-    }
+    static final EventPipe END_REGISTRY = new EventPipe();
+    private final BlockingQueue<EventPipe> registry;
 
-    public ThreadLocalEventStream(Configuration config) {
+    public ThreadLocalEventStream(BlockingQueue<EventPipe> registry) {
         super();
-        this.directory = config.outdir;
-        this.zip = config.zip;
+        this.registry = registry;
     }
 
     @Override
-    protected EventOutputStream initialValue() {
-        try {
-            int id = threadId.incrementAndGet();
-            OutputStream outputStream = new FileOutputStream(Paths.get(directory,
-                    id + "_" + TraceCache.TRACE_SUFFIX
-                            + (zip?TraceCache.ZIP_EXTENSION:"")).toFile());
-            if (zip) {
-                outputStream = new GZIPOutputStream(outputStream,true);
-            }
-            EventOutputStream eventOutputStream = new EventOutputStream(new BufferedOutputStream(
-                    outputStream));
-            streamsMap.put(id,eventOutputStream);
-            return eventOutputStream;
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) { // GZIPOutputStream exception
-            e.printStackTrace();
-        }
-        return null;
-    }
+    protected synchronized EventPipe initialValue() {
+        final EventPipe pipe = new EventPipe();
+        registry.add(pipe);
+        return pipe;
+   }
 
+    /**
+     * Adds the END_REGISTRY marker to the registry to signal end of activity.
+     */
+    public synchronized void close() {
+        registry.add(END_REGISTRY);
+    }
 }

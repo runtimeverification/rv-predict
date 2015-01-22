@@ -1,5 +1,6 @@
 package rvpredict.instrumentation;
 
+import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
@@ -18,8 +19,8 @@ import rvpredict.config.Config;
 import rvpredict.config.Configuration;
 import rvpredict.db.TraceCache;
 import rvpredict.engine.main.Main;
+import rvpredict.logging.LoggingEngine;
 import rvpredict.instrumentation.transformer.ClassTransformer;
-import rvpredict.logging.DBEngine;
 import rvpredict.runtime.RVPredictRuntime;
 import rvpredict.util.Logger;
 
@@ -113,7 +114,7 @@ public class Agent implements ClassFileTransformer {
         }
 
         TraceCache.removeTraceFiles(commandLine.outdir);
-        final DBEngine db = new DBEngine(commandLine);
+        final LoggingEngine db = new LoggingEngine(commandLine);
         RVPredictRuntime.init(db);
 
         inst.addTransformer(new Agent(config), true);
@@ -137,7 +138,15 @@ public class Agent implements ClassFileTransformer {
         final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
             @Override
             public void cleanup() {
-                db.finishLogging();
+                try {
+                    db.finishLogging();
+                } catch (IOException e) {
+                    System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
+                    System.err.println(e.getMessage());
+                } catch (InterruptedException e) {
+                    System.err.println("Warning: Execution is being forcefully ended. Log data might be lost.");
+                    System.err.println(e.getMessage());
+                }
             }
         };
         Thread predict = Main.getPredictionThread(commandLine, cleanupAgent, commandLine.predict);

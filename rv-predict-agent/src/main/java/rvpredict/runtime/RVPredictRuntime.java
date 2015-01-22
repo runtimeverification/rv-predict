@@ -43,7 +43,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
 import rvpredict.instrumentation.MetaData;
-import rvpredict.logging.DBEngine;
+import rvpredict.logging.LoggingEngine;
 import rvpredict.trace.EventType;
 
 /**
@@ -137,12 +137,12 @@ public final class RVPredictRuntime {
     private static ConcurrentHashMap<Lock, ReadWriteLock> writeLockToRWLock = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<Condition, Lock> conditionToLock = new ConcurrentHashMap<>();
 
-    private static DBEngine db;
+    private static LoggingEngine db;
 
     private RVPredictRuntime() { } // forbid initialization
 
     // TODO(YilongL): move this method out of the runtime library
-    public static void init(DBEngine db) {
+    public static void init(LoggingEngine db) {
         RVPredictRuntime.db = db;
     }
 

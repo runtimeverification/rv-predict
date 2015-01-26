@@ -9,6 +9,8 @@ import java.security.ProtectionDomain;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -86,31 +88,23 @@ public class Agent implements ClassFileTransformer {
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         commandLine.parseArguments(args, false);
 
+        if (commandLine.verbose) config.verbose = true;
+
         final boolean logOutput = commandLine.log_output.equalsIgnoreCase(Configuration.YES);
         commandLine.logger.report("Log directory: " + commandLine.outdir, Logger.MSGTYPE.INFO);
         if (Configuration.additionalExcludes != null) {
-            String[] excludes = Configuration.additionalExcludes.replace('.', '/').split(",");
-            if (config.excludeList == null) {
-                config.excludeList = excludes;
-            } else {
-                String[] array = new String[config.excludeList.length + excludes.length];
-                System.arraycopy(config.excludeList, 0, array, 0, config.excludeList.length);
-                System.arraycopy(excludes, 0, array, config.excludeList.length, excludes.length);
-                config.excludeList = array;
+            for (String exclude : Configuration.additionalExcludes.replace('.', '/').split(",")) {
+                if (exclude.isEmpty()) continue;
+                config.excludeList.add(Config.createRegEx(exclude));
             }
-            System.out.println("Excluding: " + Arrays.toString(config.excludeList));
+            System.out.println("Excluding: " + config.excludeList);
         }
         if (Configuration.additionalIncludes != null) {
-            String[] includes = Configuration.additionalIncludes.replace('.', '/').split(",");
-            if (config.includeList == null) {
-                config.includeList = includes;
-            } else {
-                String[] array = new String[config.includeList.length + includes.length];
-                System.arraycopy(config.includeList, 0, array, 0, config.includeList.length);
-                System.arraycopy(includes, 0, array, config.includeList.length, includes.length);
-                config.includeList = array;
+            for (String include : Configuration.additionalIncludes.replace('.', '/').split(",")) {
+                if (include.isEmpty()) continue;
+                config.includeList.add(Config.createRegEx(include));
             }
-            System.out.println("Including: " + Arrays.toString(config.includeList));
+            System.out.println("Including: " + config.includeList);
         }
 
         TraceCache.removeTraceFiles(commandLine.outdir);
@@ -182,13 +176,8 @@ public class Agent implements ClassFileTransformer {
         }
 
         boolean toInstrument = true;
-        if (config.excludeList != null) {
-            for (String exclude : config.excludeList) {
-                if (cname.startsWith(exclude)) {
-                    toInstrument = false;
-                    break;
-                }
-            }
+        for (Pattern exclude : config.excludeList) {
+            toInstrument = toInstrument && !exclude.matcher(cname).matches();
         }
 
 //        System.err.println(cname + " " + toInstrument);
@@ -216,13 +205,8 @@ public class Agent implements ClassFileTransformer {
         }
 
         /* include list overrides the above */
-        if (config.includeList != null) {
-            for (String include : config.includeList) {
-                if (cname.startsWith(include)) {
-                    toInstrument = true;
-                    break;
-                }
-            }
+        for (Pattern include : config.includeList) {
+            toInstrument = toInstrument || include.matcher(cname).matches();
         }
 
         if (toInstrument) {

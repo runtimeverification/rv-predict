@@ -47,6 +47,6 @@ public class Config {
      * @return A {@link java.util.regex.Pattern} which matches names specified by the given argument
      */
     public static Pattern createRegEx(String pattern) {
-        return Pattern.compile(pattern.replace(".", "\\.").replace("*", ".*"));
+        return Pattern.compile(pattern.replace(".", "\\.").replace("*", ".*")+".*");
     }
 }

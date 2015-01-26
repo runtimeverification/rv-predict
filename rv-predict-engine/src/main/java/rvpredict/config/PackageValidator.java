@@ -23,7 +23,7 @@ public class PackageValidator implements IParameterValidator {
                 }
                 char[] chars = pkgPart.toCharArray();
                 for (char c : chars) {
-                    if (!Character.isJavaIdentifierPart(c)) {
+                    if (!(Character.isJavaIdentifierPart(c) || c == '*')) {
                         throw new ParameterException("Incorrect package component " + pkgPart
                                 + " specified as part of the " + name + " option.");
                     }

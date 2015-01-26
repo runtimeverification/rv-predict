@@ -178,11 +178,13 @@ public class Agent implements ClassFileTransformer {
         boolean toInstrument = true;
         for (Pattern exclude : config.excludeList) {
             toInstrument = toInstrument && !exclude.matcher(cname).matches();
+            if (!toInstrument) break;
         }
 
 //        System.err.println(cname + " " + toInstrument);
         for (String ignore : IGNORES) {
             toInstrument = toInstrument && !cname.startsWith(ignore);
+            if (!toInstrument) break;
         }
         if (toInstrument) {
             for (String mock : MOCKS) {
@@ -204,9 +206,12 @@ public class Agent implements ClassFileTransformer {
             }
         }
 
+        if (!toInstrument) {
         /* include list overrides the above */
-        for (Pattern include : config.includeList) {
-            toInstrument = toInstrument || include.matcher(cname).matches();
+            for (Pattern include : config.includeList) {
+                toInstrument = toInstrument || include.matcher(cname).matches();
+                if (toInstrument) break;
+            }
         }
 
         if (toInstrument) {

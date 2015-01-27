@@ -386,6 +386,52 @@ public class JUCollectionTests {
         };
     }
 
+    @RaceTest(expectRace = true,
+            description = "test instrumentation of conversion constructor")
+    public void conversionCtor() {
+        final Map<Integer, Integer> m = new HashMap<>();
+
+        new ThreadRunner(2) {
+
+            @Override
+            public void thread1() {
+                new ArrayList<>(m.keySet());
+                new LinkedList<>(m.entrySet());
+                new HashSet<>(m.values());
+                new HashMap<>(m);
+                new TreeMap<>(m);
+            }
+
+            @Override
+            public void thread2() {
+                m.put(2, 2);
+            }
+        };
+    }
+
+    @RaceTest(expectRace = true,
+            description = "test instrumentation of conversion constructor")
+    public void conversionCtorSync() {
+        final Map<Integer, Integer> m = Collections.synchronizedMap(new HashMap<Integer, Integer>());
+
+        new ThreadRunner(2) {
+
+            @Override
+            public void thread1() {
+                new ArrayList<>(m.keySet());
+                new LinkedList<>(m.entrySet());
+                new HashSet<>(m.values());
+                new HashMap<>(m);
+                new TreeMap<>(m);
+            }
+
+            @Override
+            public void thread2() {
+                m.put(2, 2);
+            }
+        };
+    }
+
     public static void main(String[] args) {
         JUCollectionTests tests = new JUCollectionTests();
         // positive tests
@@ -400,6 +446,7 @@ public class JUCollectionTests {
             tests.differentSynchronizedViews();
             tests.iterateSyncCollectionWrong();
             tests.syncMapIterateCollectionViewWrong();
+//            tests.conversionCtor();
         } else {
             // negative tests
             tests.readOnlyIteration();

@@ -7,13 +7,10 @@ import java.util.Properties;
 import java.util.regex.Pattern;
 
 public class Config {
-    public static final java.lang.String PROGRAM_NAME = "rv-predict-agent";
     public static final Config instance = new Config();
     public static final String propFile = "rv.conf";
 
     public final Configuration commandLine = new Configuration();
-
-    public boolean verbose;
 
     public final List<Pattern> excludeList = new LinkedList<>();
     public final List<Pattern> includeList = new LinkedList<>();
@@ -25,7 +22,6 @@ public class Config {
             properties.load(ClassLoader.getSystemClassLoader()// this.getClass().getClassLoader()
                     .getResourceAsStream(propFile));
 
-            verbose = properties.getProperty("rv.verbose", "false").equals("true");
             for (String exclude : properties.getProperty("rv.excludeList", "").split(",")) {
                 if (exclude.isEmpty()) continue;
                 excludeList.add(createRegEx(exclude.replace('.','/')));
@@ -47,6 +43,10 @@ public class Config {
      * @return A {@link java.util.regex.Pattern} which matches names specified by the given argument
      */
     public static Pattern createRegEx(String pattern) {
-        return Pattern.compile(pattern.replace(".", "\\.").replace("*", ".*")+".*");
+        String escapeChars[] = new String[] {".","$","["};
+        for (String c : escapeChars) {
+           pattern = pattern.replace(c, "\\"  + c);
+        }
+        return Pattern.compile(pattern.replace("*", ".*")+".*");
     }
 }

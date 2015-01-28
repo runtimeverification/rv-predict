@@ -6,9 +6,7 @@ import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,32 +33,38 @@ public class Agent implements ClassFileTransformer {
      * not configurable by the users because including them for instrumentation
      * almost certainly leads to crash.
      */
-    private static String[] IGNORES = new String[] {
-        // rv-predict itself and the libraries we are using
-        "rvpredict",
-        /* TODO(YilongL): shall we repackage these libraries using JarJar? */
-        "org.objectweb.asm",
-        "com/beust",
-        "org/apache/tools/ant",
+    private static List<Pattern> IGNORES = new LinkedList<>();
+    static {
+        String [] ignores = new String[] {
+                // rv-predict itself and the libraries we are using
+                "rvpredict",
+                /* TODO(YilongL): shall we repackage these libraries using JarJar? */
+                "org.objectweb.asm",
+                "com/beust",
+                "org/apache/tools/ant",
 
-        // array type
-        "[",
+                // array type
+                "[",
 
-        // JDK classes used by the RV-Predict runtime library
-        "java/io",
-        "java/nio",
-        "java/util/concurrent/atomic/AtomicLong",
-        "java/util/concurrent/ConcurrentHashMap",
-        "java/util/zip/GZIPOutputStream",
-        "java/util/regex",
+                // JDK classes used by the RV-Predict runtime library
+                "java/io",
+                "java/nio",
+                "java/util/concurrent/atomic/AtomicLong",
+                "java/util/concurrent/ConcurrentHashMap",
+                "java/util/zip/GZIPOutputStream",
+                "java/util/regex",
 
-        // Basics of the JDK that everything else is depending on
-        "sun",
-        "java/lang",
+                // Basics of the JDK that everything else is depending on
+                "sun",
+                "java/lang",
 
-        /* we provide complete mocking of the jucl package */
-        "java/util/concurrent/locks"
-    };
+                /* we provide complete mocking of the jucl package */
+                "java/util/concurrent/locks"
+        };
+        for (String ignore : ignores) {
+            IGNORES.add(Config.createRegEx(ignore));
+        }
+    }
 
     private static String[] MOCKS = new String[] {
         "java/util/Collection",
@@ -87,8 +91,6 @@ public class Agent implements ClassFileTransformer {
         final Configuration commandLine = config.commandLine;
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         commandLine.parseArguments(args, false);
-
-        if (commandLine.verbose) config.verbose = true;
 
         final boolean logOutput = commandLine.log_output.equalsIgnoreCase(Configuration.YES);
         commandLine.logger.report("Log directory: " + commandLine.outdir, Logger.MSGTYPE.INFO);
@@ -160,7 +162,7 @@ public class Agent implements ClassFileTransformer {
     @Override
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
-        if (config.verbose) {
+        if (config.commandLine.verbose) {
             if (c == null) {
                 System.err.println("[Java-agent] intercepted class load: " + cname);
             } else {
@@ -182,15 +184,15 @@ public class Agent implements ClassFileTransformer {
         }
 
 //        System.err.println(cname + " " + toInstrument);
-        for (String ignore : IGNORES) {
-            toInstrument = toInstrument && !cname.startsWith(ignore);
+        for (Pattern ignore : IGNORES) {
+            toInstrument = toInstrument && !ignore.matcher(cname).matches();
             if (!toInstrument) break;
         }
         if (toInstrument) {
             for (String mock : MOCKS) {
                 if (Utility.isSubclassOf(cname, mock)) {
                     toInstrument = false;
-                    if (config.verbose) {
+                    if (config.commandLine.verbose) {
                         /* TODO(YilongL): this may cause missing data races if
                          * the mock for interface/superclass does not contain
                          * methods specific to this implementation. This could

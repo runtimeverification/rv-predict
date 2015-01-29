@@ -298,7 +298,7 @@ public class SMTConstraintBuilder {
      */
     private String getConcreteFeasibilityConstraint(ReadEvent event) {
         StringBuilder phi = concretePhi.get(event);
-        if (phi != null || visited.contains(event)) {
+        if (phi != null || visited.contains(event) || event.getValue() == 0xDEADBEEFL) {
             return makeConcretePhiVariable(event);
         }
         visited.add(event);

@@ -10,11 +10,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.util.CheckClassAdapter;
-
 import rvpredict.config.Config;
 import rvpredict.config.Configuration;
 import rvpredict.db.TraceCache;
@@ -40,6 +35,7 @@ public class Agent implements ClassFileTransformer {
         "org.objectweb.asm",
         "com/beust",
         "org/apache/tools/ant",
+        "org/apache/commons/collections4",
 
         // array type
         "[",
@@ -63,6 +59,14 @@ public class Agent implements ClassFileTransformer {
     private static String[] MOCKS = new String[] {
         "java/util/Collection",
         "java/util/Map"
+
+        /* YilongL: do not exclude Iterator because it's not likely to slow down
+         * logging a lot; besides, I am interested in seeing what could happen */
+        // "java/util/Iterator"
+    };
+
+    private static String[] MUST_INCLUDES = new String[] {
+        "java/util/Collections$Synchronized"
     };
 
     static Instrumentation instrumentation;
@@ -166,83 +170,79 @@ public class Agent implements ClassFileTransformer {
     @Override
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
-        if (config.verbose) {
-            if (c == null) {
-                System.err.println("[Java-agent] intercepted class load: " + cname);
-            } else {
-                System.err.println("[Java-agent] intercepted class redefinition/retransformation: " + c);
-            }
-
-            loadedClasses.add(cname.replace("/", "."));
-            for (Class<?> cls : instrumentation.getAllLoadedClasses()) {
-                if (loadedClasses.add(cls.getName())) {
-                    System.err.println("[Java-agent] missed to intercept class load: " + cls);
+        try {
+            if (config.verbose) {
+                if (c == null) {
+                    System.err.println("[Java-agent] intercepted class load: " + cname);
+                } else {
+                    System.err.println("[Java-agent] intercepted class redefinition/retransformation: " + c);
                 }
-            }
-        }
 
-        boolean toInstrument = true;
-        if (config.excludeList != null) {
-            for (String exclude : config.excludeList) {
-                if (cname.startsWith(exclude)) {
-                    toInstrument = false;
-                    break;
-                }
-            }
-        }
-
-//        System.err.println(cname + " " + toInstrument);
-        for (String ignore : IGNORES) {
-            toInstrument = toInstrument && !cname.startsWith(ignore);
-        }
-        if (toInstrument) {
-            for (String mock : MOCKS) {
-                if (Utility.isSubclassOf(cname, mock)) {
-                    toInstrument = false;
-                    if (config.verbose) {
-                        /* TODO(YilongL): this may cause missing data races if
-                         * the mock for interface/superclass does not contain
-                         * methods specific to this implementation. This could
-                         * be a big problem if the application makes heavy use
-                         * of helper methods specific in some high-level
-                         * concurrency library (e.g. Guava) while most of the
-                         * classes are simply excluded here */
-                        System.err.println("[Java-agent] excluded " + c
-                                + " from instrumentation because we are mocking " + mock);
+                loadedClasses.add(cname.replace("/", "."));
+                for (Class<?> cls : instrumentation.getAllLoadedClasses()) {
+                    if (loadedClasses.add(cls.getName())) {
+                        System.err.println("[Java-agent] missed to intercept class load: " + cls);
                     }
-                    break;
                 }
             }
-        }
 
-        /* include list overrides the above */
-        if (config.includeList != null) {
-            for (String include : config.includeList) {
-                if (cname.startsWith(include)) {
-                    toInstrument = true;
-                    break;
+            boolean toInstrument = true;
+            if (config.excludeList != null) {
+                for (String exclude : config.excludeList) {
+                    if (cname.startsWith(exclude)) {
+                        toInstrument = false;
+                        break;
+                    }
                 }
             }
-        }
 
-        if (toInstrument) {
-            ClassReader cr = new ClassReader(cbuf);
-
-            ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
-            ClassVisitor cv = new ClassTransformer(cw, config);
-            ClassVisitor checker = new CheckClassAdapter(cv);
-            try {
-                cr.accept(checker, 0);
-            } catch (Throwable e) {
-                /* exceptions during class loading are silently suppressed by default */
-                System.err.println("Cannot retransform " + cname + ". Exception: " + e);
-                throw e;
+            // System.err.println(cname + " " + toInstrument);
+            for (String ignore : IGNORES) {
+                toInstrument = toInstrument && !cname.startsWith(ignore);
+            }
+            if (toInstrument) {
+                for (String mock : MOCKS) {
+                    if (Utility.isSubclassOf(cname, mock)) {
+                        toInstrument = false;
+                        if (config.verbose) {
+                            /* TODO(YilongL): this may cause missing data races if
+                             * the mock for interface/superclass does not contain
+                             * methods specific to this implementation. This could
+                             * be a big problem if the application makes heavy use
+                             * of helper methods specific in some high-level
+                             * concurrency library (e.g. Guava) while most of the
+                             * classes are simply excluded here */
+                            System.err.println("[Java-agent] excluded " + c
+                                    + " from instrumentation because we are mocking " + mock);
+                        }
+                        break;
+                    }
+                }
             }
 
-            byte[] ret = cw.toByteArray();
-            return ret;
+            /* include list overrides the above */
+            if (config.includeList != null) {
+                for (String include : config.includeList) {
+                    if (cname.startsWith(include)) {
+                        toInstrument = true;
+                        break;
+                    }
+                }
+            }
+            if (!toInstrument) {
+                for (String include : MUST_INCLUDES) {
+                    if (cname.startsWith(include)) {
+                        toInstrument = true;
+                        break;
+                    }
+                }
+            }
+
+            return toInstrument ? ClassTransformer.transform(cbuf, config) : null;
+        } catch (Throwable e) {
+            /* exceptions during class loading are silently suppressed by default */
+            System.err.println("Cannot retransform " + cname + ". Exception: " + e);
+            throw e;
         }
-        // no transformation happens
-        return null;
     }
 }

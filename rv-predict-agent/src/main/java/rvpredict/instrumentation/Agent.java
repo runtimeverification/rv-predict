@@ -19,7 +19,6 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -31,7 +30,7 @@ public class Agent implements ClassFileTransformer {
      * not configurable by the users because including them for instrumentation
      * almost certainly leads to crash.
      */
-    private static List<Pattern> IGNORES = new LinkedList<>();
+    private static List<Pattern> IGNORES;
     static {
         String [] ignores = new String[] {
                 // rv-predict itself and the libraries we are using
@@ -59,27 +58,8 @@ public class Agent implements ClassFileTransformer {
                 /* we provide complete mocking of the jucl package */
                 "java.util.concurrent.locks"
         };
-        for (String ignore : ignores) {
-            IGNORES.add(Configuration.createRegEx(ignore));
-        }
+        IGNORES = Configuration.getDefaultPatterns(ignores);
     }
-    
-    /**
-     * Packages/classes that are excluded from instrumentation by default. These are
-     * configurable by the users through the <code>--exclude</code> command option.
-     */
-     private static String[] DEFAULT_EXCLUDES = new String[] {
-            "java.*",
-            "javax.*",
-            "sun.*",
-            "sunw.*",
-            "com.sun.*",
-            "com.ibm.*",
-            "com.apple.*",
-            "apple.awt.*",
-            "org.xml.*",
-            "jdk.internal.*"            
-    };
 
     private static String[] MOCKS = new String[] {
         "java/util/Collection",
@@ -109,29 +89,6 @@ public class Agent implements ClassFileTransformer {
 
         final boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
         config.logger.report("Log directory: " + config.outdir, Logger.MSGTYPE.INFO);
-        String excludes = Configuration.excludes;
-        if (excludes == null) {
-            config.excludeList = getDefaultExcludes();
-        } else {
-            excludes = excludes.trim();
-            if (excludes.charAt(0) == '+') { // initialize excludeList with default patterns
-                excludes = excludes.substring(1);
-                config.excludeList = getDefaultExcludes();
-            }
-            for (String exclude : excludes.replace('.', '/').split(",")) {
-                exclude = exclude.trim();
-                if (!exclude.isEmpty())
-                    config.excludeList.add(Configuration.createRegEx(exclude));
-            }
-            System.out.println("Excluding: " + config.excludeList);
-        }
-        if (Configuration.includes != null) {
-            for (String include : Configuration.includes.replace('.', '/').split(",")) {
-                if (include.isEmpty()) continue;
-                config.includeList.add(Configuration.createRegEx(include));
-            }
-            System.out.println("Including: " + config.includeList);
-        }
 
         TraceCache.removeTraceFiles(config.outdir);
         final LoggingEngine db = new LoggingEngine(config);
@@ -179,15 +136,6 @@ public class Agent implements ClassFileTransformer {
                         Logger.MSGTYPE.INFO);
             }
         }
-    }
-
-    private static List<Pattern> getDefaultExcludes() {
-        // Initialize excludeList with default values
-        List<Pattern> excludeList = new LinkedList<>();
-        for (String exclude : DEFAULT_EXCLUDES) {
-            excludeList.add(Configuration.createRegEx(exclude));
-        }
-        return excludeList;
     }
 
     private static final Set<String> loadedClasses = new HashSet<>();

@@ -48,23 +48,79 @@ public class Configuration {
     public static final String LOGGING_PHASE_COMPLETED = "Logging phase completed.";
     public static final String TRACE_LOGGED_IN = "\tTrace logged in: ";
     public static final String INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE = "Instrumented execution to record the trace";
+    /**
+     * Packages/classes that are excluded from instrumentation by default. These are
+     * configurable by the users through the <code>--exclude</code> command option.
+     */
+     private static String[] DEFAULT_EXCLUDES = new String[] {
+            "java.*",
+            "javax.*",
+            "sun.*",
+            "sunw.*",
+            "com.sun.*",
+            "com.ibm.*",
+            "com.apple.*",
+            "apple.awt.*",
+            "org.xml.*",
+            "jdk.internal.*"            
+    };
     public final List<Pattern> includeList = new LinkedList<>();
     public List<Pattern> excludeList = new LinkedList<>();
     private JCommander jCommander;
 
-    /**
-     * Creates a {@link java.util.regex.Pattern} from a String describing a package/class
-     * using file pattern conventions ({@code *} standing for a sequence of characters)
-     *
-     * @param pattern the package/class description
-     * @return A {@link java.util.regex.Pattern} which matches names specified by the given argument
-     */
-    public static Pattern createRegEx(String pattern) {
-        String escapeChars[] = new String[] {".","$","["};
+    private static Pattern createClassPattern(String pattern) {
+        pattern = pattern.replace('.','/');
+        String escapeChars[] = new String[] {"$","["};
         for (String c : escapeChars) {
            pattern = pattern.replace(c, "\\"  + c);
         }
         return Pattern.compile(pattern.replace("*", ".*")+".*");
+    }
+
+    private void initIncludeList() {
+        if (includes != null) {
+            for (String include : includes.replace('.', '/').split(",")) {
+                if (include.isEmpty()) continue;
+                includeList.add(createClassPattern(include));
+            }
+            System.out.println("Including: " + includeList);
+        }
+    }
+
+    private void initExcludeList() {
+        String excludes = Configuration.excludes;
+        if (excludes == null) {
+            excludeList = getDefaultPatterns(DEFAULT_EXCLUDES);
+        } else {
+            excludes = excludes.trim();
+            if (excludes.charAt(0) == '+') { // initialize excludeList with default patterns
+                excludes = excludes.substring(1);
+                excludeList = getDefaultPatterns(DEFAULT_EXCLUDES);
+            }
+            for (String exclude : excludes.replace('.', '/').split(",")) {
+                exclude = exclude.trim();
+                if (!exclude.isEmpty())
+                    excludeList.add(createClassPattern(exclude));
+            }
+            System.out.println("Excluding: " + excludeList);
+        }
+    }
+
+    /**
+     * Creates a {@link java.util.regex.Pattern} list from a String array 
+     * describing packages/classes using file pattern conventions ({@code *} 
+     * stands for a sequence of characters)
+     *
+     * @param patterns the array of package/class descriptions
+     * @return A {@link java.util.regex.Pattern} list which matches 
+     *         names specified by the given argument
+     */
+    public static List<Pattern> getDefaultPatterns(String[] patterns) {
+        List<Pattern> patternList = new LinkedList<>();
+        for (String pattern : patterns) {
+            patternList.add(createClassPattern(pattern));
+        }
+        return patternList;
     }
 
     // Copyright (c) 2013-2014 K Team. All Rights Reserved.
@@ -145,10 +201,6 @@ public class Configuration {
     @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude", hidden = true, descriptionKey = "1030")
     public static String excludes;
 
-//    public final static String opt_asynchronous = "--async";
-//    @Parameter(names = opt_asynchronous, description = "Record trace asynchronously", hidden = true, descriptionKey = "1050")
-//    public boolean async;
-
     public final static String opt_zip = "--zip";
     @Parameter(names = opt_zip, description = "Compress traces", hidden = true, descriptionKey = "1060")
     public boolean zip;
@@ -174,9 +226,6 @@ public class Configuration {
     @Parameter(names = opt_volatile, description = "Check unordered conflict accesses on volatile variables", hidden = true, descriptionKey = "2030")
     public boolean checkVolatile;
 
-    // final static String opt_constraint_outdir = "--outdir";
-    // @Parameter(names = opt_constraint_outdir, description =
-    // "constraint file directory", hidden = true)
     public String constraint_outdir;
 
     public String tableName = "main";
@@ -189,19 +238,9 @@ public class Configuration {
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
     public long solver_timeout = 60;
 
-//    final static String opt_solver_memory = "--solver_memory";
-//    @Parameter(names = opt_solver_memory, description =
-//    "solver memory size in MB", hidden = true)
-//    public long solver_memory = 8000;
-
     final static String opt_timeout = "--timeout";
     @Parameter(names = opt_timeout, description = "RV-Predict timeout in seconds", hidden = true, descriptionKey = "2070")
     public long timeout = 3600;
-
-    // final static String opt_smtlib1 = "--smtlib1";
-    // @Parameter(names = opt_smtlib1, description =
-    // "use constraint format SMT-LIB v1.2", hidden = true)
-//    public boolean smtlib1 = true;
 
     public final static String opt_outdir = "--dir";
     @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")
@@ -219,10 +258,6 @@ public class Configuration {
 
     public final static String opt_java = "--";
     public Logger logger;
-
-    // @Parameter(names = opt_java, description =
-    // "optional separator for java arguments")
-    // public boolean javaSeparator;
 
     public void parseArguments(String[] args, boolean checkJava) {
         this.args = args;
@@ -261,6 +296,10 @@ public class Configuration {
             System.err.println(e.getMessage());
             System.exit(1);
         }
+
+
+        initExcludeList();
+        initIncludeList();
 
         if (log_dir != null) {
             if (predict_dir != null) {

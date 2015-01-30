@@ -1,20 +1,15 @@
 package rvpredict.instrumentation.transformer;
 
+import org.objectweb.asm.*;
+import rvpredict.config.Configuration;
+import rvpredict.instrumentation.MetaData;
+
 import java.util.HashSet;
 import java.util.Set;
 
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-
-import rvpredict.config.Config;
-import rvpredict.instrumentation.MetaData;
-
 public class ClassTransformer extends ClassVisitor {
 
-    private final Config config;
+    private final Configuration config;
 
     private String className;
     private String source;
@@ -23,7 +18,7 @@ public class ClassTransformer extends ClassVisitor {
 
     private final Set<String> finalFields = new HashSet<>();
 
-    public ClassTransformer(ClassVisitor cv, Config config) {
+    public ClassTransformer(ClassVisitor cv, Configuration config) {
         super(Opcodes.ASM5, cv);
         assert cv != null;
 

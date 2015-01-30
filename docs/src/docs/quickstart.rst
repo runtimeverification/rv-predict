@@ -23,7 +23,7 @@ integration with IDEs and build management tools like Maven.
 
 
 On the command line
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 RV-Predict is invoked as follows:
 
@@ -36,7 +36,7 @@ where ``[options]`` include both RV-Predict and Java specific options.
 
 
 As an agent
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
 
 Assuming ``<rvPath>`` is the installation directory for RV-Predict,
 running RV-Predict as an agent along with your Java application simply
@@ -166,24 +166,29 @@ engineered to work for most common cases, there might be cases where
 user input could improve the prediction process.  We provide several 
 options for advanced users to tune RV-Predict:
 
-#. Window size.  For efficiency reasons, RV-Predict splits the execution 
-   trace into segments (called windows) of a specified size.  The default 
-   window size is ``1000``;  however, the user can alter this size using 
-   the ``--maxlen`` option, with the intuition that a larger size provides 
+#. Window size.  For efficiency reasons, RV-Predict splits the execution
+   trace into segments (called windows) of a specified size.  The default
+   window size is ``1000``;  however, the user can alter this size using
+   the ``--maxlen`` option, with the intuition that a larger size provides
    better coverage, at the expense of increasing the analysis time.
-#. Excluding packages.  To allow better control over the efficiency, 
-   RV-Predict provides the option ``--exclude`` to remove certain packages from 
-   logging.  This option takes a list of package prefixes separated by ``,`` and 
-   excludes from logging any class in a package starting with one of the 
-   prefixes.   The default excluded packages are: ``java``, 
-   ``javax``, ``sun``, ``sunw``, ``com.sun``, ``com.ibm``, ``com.apple``, ``apple.awt``, 
-   ``org.xml``, ``org.h2``, and ``rvpredict``.
+#. Excluding packages.  To allow better control over the efficiency,
+   RV-Predict provides the option ``--exclude`` to remove certain packages from
+   logging.  This option takes a list of package patterns prefixes separated 
+   by ``,`` and excludes from logging any class matched by one of the patterns.
+   The patterns can use ``*`` to match any sequence of characters. Moreover,
+   ``*`` is automatically assumed at the end of each pattern (to make sure 
+   inner classes are excluded together with their parent).
+   The default exclusion patterns are: ``java.*``, ``javax.*``, ``sun.*``, 
+   ``sunw.*``, ``com.sun.*``, ``com.ibm.*``, ``com.apple.*``, ``apple.awt.*``,
+   ``org.xml.*``, and ``jdk.internal.*``.
+   If one wants to **add** packages to the default list instead of overriding it,
+   one can prefix the argument of ``--exclude`` with the ``+`` character.
    Please note that excluding packages might affect precision, as events from 
    non-logged packages might prevent certain race conditions from occurring.
 #. Including packages.  To give more flexibility to selecting which packages 
    to include and exclude, RV-Predict also provides the ``--include`` option 
    which is similar to the ``--exclude`` option (comma separated list of 
-   package prefixes), but opposite in effect.  
+   package patterns), but opposite in effect.  
 #. Aggressive logging.  Through its ``--with-profile`` option, RV-Predict 
    provides some heuristics to detect and filter out from the log non-shared 
    data accesses.  Although not suitable for smaller applications (as it 

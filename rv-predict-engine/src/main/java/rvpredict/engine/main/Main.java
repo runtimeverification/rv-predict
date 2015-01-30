@@ -61,15 +61,15 @@ public class Main {
             if (config.zip) {
                 sharingAgentOptions += " " + Configuration.opt_zip;
             }
-            if (Configuration.additionalExcludes != null) {
-                Configuration.additionalExcludes.replaceAll(" ", "");
+            if (Configuration.excludes != null) {
+                Configuration.excludes.replaceAll(" ", "");
                 sharingAgentOptions += " " + Configuration.opt_exclude + " "
-                        + escapeString(Configuration.additionalExcludes);
+                        + escapeString(Configuration.excludes);
             }
-            if (Configuration.additionalIncludes != null) {
-                Configuration.additionalIncludes.replaceAll(" ", "");
+            if (Configuration.includes != null) {
+                Configuration.includes.replaceAll(" ", "");
                 sharingAgentOptions += " " + Configuration.opt_include + " "
-                        + escapeString(Configuration.additionalIncludes);
+                        + escapeString(Configuration.includes);
             }
             String noSharingAgentOptions = sharingAgentOptions;
 
@@ -80,16 +80,10 @@ public class Main {
             int agentIds = appArgList.size();
             if (config.optlog) {
                 if (logOutput) {
-                    if (config.optlog) {
-                        config.logger
-                                .report(center("First pass: Instrumented execution to detect shared variables"),
-                                        Logger.MSGTYPE.INFO);
-                    } else {
-                        config.logger.report(
-                                center("Instrumented execution to detect shared variables"),
-                                Logger.MSGTYPE.INFO);
+                    config.logger.report(
+                            center("Instrumented execution to detect shared variables"),
+                            Logger.MSGTYPE.INFO);
 
-                    }
                 }
                 appArgList.add("-javaagent:" + rvAgent + "=" + sharingAgentOptions);
             } else {
@@ -126,10 +120,7 @@ public class Main {
         db = new DBEngine(config.outdir);
         if (!db.checkLog()) {
             config.logger.report("Trace was not recorded properly. ", Logger.MSGTYPE.ERROR);
-            if (config.log) {
-                // config.logger.report("Please check the classpath.",
-                // Logger.MSGTYPE.ERROR);
-            } else {
+            if (!config.log) {
                 config.logger.report("Please run " + Configuration.PROGRAM_NAME + " with "
                         + Configuration.opt_only_log + " " + config.outdir + " first.",
                         Logger.MSGTYPE.ERROR);
@@ -202,9 +193,9 @@ public class Main {
             commandMsg.append("   ");
             for (String arg : args) {
                 if (arg.contains(" ")) {
-                    commandMsg.append(" \"" + arg + "\"");
+                    commandMsg.append(" \"").append(arg).append("\"");
                 } else {
-                    commandMsg.append(" " + arg);
+                    commandMsg.append(" ").append(arg);
                 }
             }
             commandLine.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
@@ -225,9 +216,8 @@ public class Main {
                                 + commandLine.outdir, Logger.MSGTYPE.VERBOSE);
                     }
 
-                    Process process = null;
                     try {
-                        process = finalProcessBuilder.start();
+                        Process process = finalProcessBuilder.start();
                         if (finalLogToScreen) {
                             Util.redirectOutput(process.getErrorStream(), System.err);
                             Util.redirectOutput(process.getInputStream(), System.out);
@@ -238,9 +228,7 @@ public class Main {
                         Util.redirectInput(process.getOutputStream(), System.in);
 
                         process.waitFor();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
+                    } catch (IOException | InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
@@ -274,9 +262,9 @@ public class Main {
             commandMsg.append("   ");
             for (String arg : appArgList) {
                 if (arg.contains(" ")) {
-                    commandMsg.append(" \"" + arg + "\"");
+                    commandMsg.append(" \"").append(arg).append("\"");
                 } else {
-                    commandMsg.append(" " + arg);
+                    commandMsg.append(" ").append(arg);
                 }
             }
             config.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
@@ -304,7 +292,7 @@ public class Main {
 
             process.waitFor();
             Runtime.getRuntime().removeShutdownHook(cleanupAgent);
-        } catch (IOException e) {
+        } catch (IOException ignored) {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

@@ -1,32 +1,30 @@
 package rvpredict.instrumentation;
 
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.util.CheckClassAdapter;
+import rvpredict.config.Configuration;
+import rvpredict.db.TraceCache;
+import rvpredict.engine.main.Main;
+import rvpredict.instrumentation.transformer.ClassTransformer;
+import rvpredict.logging.LoggingEngine;
+import rvpredict.runtime.RVPredictRuntime;
+import rvpredict.util.Logger;
+
 import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
-import java.util.*;
-import java.util.regex.Matcher;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.util.CheckClassAdapter;
-
-import rvpredict.config.Config;
-import rvpredict.config.Configuration;
-import rvpredict.db.TraceCache;
-import rvpredict.engine.main.Main;
-import rvpredict.logging.LoggingEngine;
-import rvpredict.instrumentation.transformer.ClassTransformer;
-import rvpredict.runtime.RVPredictRuntime;
-import rvpredict.util.Logger;
-
 public class Agent implements ClassFileTransformer {
-
-    private final Config config;
 
     /**
      * Packages/classes that need to be excluded from instrumentation. These are
@@ -40,31 +38,48 @@ public class Agent implements ClassFileTransformer {
                 "rvpredict",
                 /* TODO(YilongL): shall we repackage these libraries using JarJar? */
                 "org.objectweb.asm",
-                "com/beust",
-                "org/apache/tools/ant",
+                "com.beust",
+                "org.apache.tools.ant",
 
                 // array type
                 "[",
 
                 // JDK classes used by the RV-Predict runtime library
-                "java/io",
-                "java/nio",
-                "java/util/concurrent/atomic/AtomicLong",
-                "java/util/concurrent/ConcurrentHashMap",
-                "java/util/zip/GZIPOutputStream",
-                "java/util/regex",
+                "java.io",
+                "java.nio",
+                "java.util.concurrent.atomic.AtomicLong",
+                "java.util.concurrent.ConcurrentHashMap",
+                "java.util.zip.GZIPOutputStream",
+                "java.util.regex",
 
                 // Basics of the JDK that everything else is depending on
                 "sun",
-                "java/lang",
+                "java.lang",
 
                 /* we provide complete mocking of the jucl package */
-                "java/util/concurrent/locks"
+                "java.util.concurrent.locks"
         };
         for (String ignore : ignores) {
-            IGNORES.add(Config.createRegEx(ignore));
+            IGNORES.add(Configuration.createRegEx(ignore));
         }
     }
+    
+    /**
+     * Packages/classes that are excluded from instrumentation by default. These are
+     * configurable by the users through the <code>--exclude</code> command option.
+     */
+     private static String[] DEFAULT_EXCLUDES = new String[] {
+            "java.*",
+            "javax.*",
+            "sun.*",
+            "sunw.*",
+            "com.sun.*",
+            "com.ibm.*",
+            "com.apple.*",
+            "apple.awt.*",
+            "org.xml.*",
+            "jdk.internal.*"            
+    };
 
     private static String[] MOCKS = new String[] {
         "java/util/Collection",
@@ -72,8 +87,9 @@ public class Agent implements ClassFileTransformer {
     };
 
     static Instrumentation instrumentation;
+    private final Configuration config;
 
-    public Agent(Config config) {
+    public Agent(Configuration config) {
         this.config = config;
     }
 
@@ -87,30 +103,38 @@ public class Agent implements ClassFileTransformer {
             assert agentArgs.endsWith("\"") : "Argument must be quoted";
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
-        final Config config = Config.instance;
-        final Configuration commandLine = config.commandLine;
+        final Configuration config = new Configuration();
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        commandLine.parseArguments(args, false);
+        config.parseArguments(args, false);
 
-        final boolean logOutput = commandLine.log_output.equalsIgnoreCase(Configuration.YES);
-        commandLine.logger.report("Log directory: " + commandLine.outdir, Logger.MSGTYPE.INFO);
-        if (Configuration.additionalExcludes != null) {
-            for (String exclude : Configuration.additionalExcludes.replace('.', '/').split(",")) {
-                if (exclude.isEmpty()) continue;
-                config.excludeList.add(Config.createRegEx(exclude));
+        final boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
+        config.logger.report("Log directory: " + config.outdir, Logger.MSGTYPE.INFO);
+        String excludes = Configuration.excludes;
+        if (excludes == null) {
+            config.excludeList = getDefaultExcludes();
+        } else {
+            excludes = excludes.trim();
+            if (excludes.charAt(0) == '+') { // initialize excludeList with default patterns
+                excludes = excludes.substring(1);
+                config.excludeList = getDefaultExcludes();
+            }
+            for (String exclude : excludes.replace('.', '/').split(",")) {
+                exclude = exclude.trim();
+                if (!exclude.isEmpty())
+                    config.excludeList.add(Configuration.createRegEx(exclude));
             }
             System.out.println("Excluding: " + config.excludeList);
         }
-        if (Configuration.additionalIncludes != null) {
-            for (String include : Configuration.additionalIncludes.replace('.', '/').split(",")) {
+        if (Configuration.includes != null) {
+            for (String include : Configuration.includes.replace('.', '/').split(",")) {
                 if (include.isEmpty()) continue;
-                config.includeList.add(Config.createRegEx(include));
+                config.includeList.add(Configuration.createRegEx(include));
             }
             System.out.println("Including: " + config.includeList);
         }
 
-        TraceCache.removeTraceFiles(commandLine.outdir);
-        final LoggingEngine db = new LoggingEngine(commandLine);
+        TraceCache.removeTraceFiles(config.outdir);
+        final LoggingEngine db = new LoggingEngine(config);
         RVPredictRuntime.init(db);
 
         inst.addTransformer(new Agent(config), true);
@@ -145,16 +169,25 @@ public class Agent implements ClassFileTransformer {
                 }
             }
         };
-        Thread predict = Main.getPredictionThread(commandLine, cleanupAgent, commandLine.predict);
+        Thread predict = Main.getPredictionThread(config, cleanupAgent, config.predict);
         Runtime.getRuntime().addShutdownHook(predict);
 
-        if (commandLine.predict) {
+        if (config.predict) {
             if (logOutput) {
-                commandLine.logger.report(
+                config.logger.report(
                         Main.center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE),
                         Logger.MSGTYPE.INFO);
             }
         }
+    }
+
+    private static List<Pattern> getDefaultExcludes() {
+        // Initialize excludeList with default values
+        List<Pattern> excludeList = new LinkedList<>();
+        for (String exclude : DEFAULT_EXCLUDES) {
+            excludeList.add(Configuration.createRegEx(exclude));
+        }
+        return excludeList;
     }
 
     private static final Set<String> loadedClasses = new HashSet<>();
@@ -162,7 +195,7 @@ public class Agent implements ClassFileTransformer {
     @Override
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
-        if (config.commandLine.verbose) {
+        if (config.verbose) {
             if (c == null) {
                 System.err.println("[Java-agent] intercepted class load: " + cname);
             } else {
@@ -179,20 +212,16 @@ public class Agent implements ClassFileTransformer {
 
         boolean toInstrument = true;
         for (Pattern exclude : config.excludeList) {
-            toInstrument = toInstrument && !exclude.matcher(cname).matches();
+            toInstrument = !exclude.matcher(cname).matches();
             if (!toInstrument) break;
         }
 
-//        System.err.println(cname + " " + toInstrument);
-        for (Pattern ignore : IGNORES) {
-            toInstrument = toInstrument && !ignore.matcher(cname).matches();
-            if (!toInstrument) break;
-        }
+
         if (toInstrument) {
             for (String mock : MOCKS) {
                 if (Utility.isSubclassOf(cname, mock)) {
                     toInstrument = false;
-                    if (config.commandLine.verbose) {
+                    if (config.verbose) {
                         /* TODO(YilongL): this may cause missing data races if
                          * the mock for interface/superclass does not contain
                          * methods specific to this implementation. This could
@@ -211,11 +240,19 @@ public class Agent implements ClassFileTransformer {
         if (!toInstrument) {
         /* include list overrides the above */
             for (Pattern include : config.includeList) {
-                toInstrument = toInstrument || include.matcher(cname).matches();
+                toInstrument = include.matcher(cname).matches();
                 if (toInstrument) break;
             }
         }
 
+        if (toInstrument) {  //make sure we don't instrument IGNORES even if the user said so
+            //        System.err.println(cname + " " + toInstrument);
+            for (Pattern ignore : IGNORES) {
+                toInstrument = !ignore.matcher(cname).matches();
+                if (!toInstrument) break;
+            }
+        }
+        
         if (toInstrument) {
             ClassReader cr = new ClassReader(cbuf);
 
@@ -230,8 +267,7 @@ public class Agent implements ClassFileTransformer {
                 throw e;
             }
 
-            byte[] ret = cw.toByteArray();
-            return ret;
+            return cw.toByteArray();
         }
         // no transformation happens
         return null;

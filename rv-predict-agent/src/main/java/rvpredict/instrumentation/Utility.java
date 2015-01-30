@@ -3,12 +3,9 @@ package rvpredict.instrumentation;
 import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 
@@ -51,7 +48,7 @@ public class Utility {
             return true;
         }
 
-        List<String> superclasses = getSuperclasses(class0);
+        Set<String> superclasses = getSuperclasses(class0);
         if (!itf) {
             return superclasses.contains(class1);
         } else {
@@ -94,13 +91,20 @@ public class Utility {
      *            the internal name of a class or interface
      * @return set of superclasses
      */
-    private static List<String> getSuperclasses(String className) {
-        List<String> result = new ArrayList<>();
+    private static Set<String> getSuperclasses(String className) {
+        Set<String> result = new HashSet<>();
+        String superclassName;
         while (className != null) {
-            className = getClassReader(className).getSuperName();
-            if (className != null) {
-                result.add(className);
+            superclassName = MetaData.classNameToSuperclassName.get(className);
+            if (superclassName == null) {
+                superclassName = getClassReader(className).getSuperName();
+                MetaData.setSuperclass(className, superclassName);
             }
+
+            if (superclassName != null) {
+                result.add(superclassName);
+            }
+            className = superclassName;
         }
         return result;
     }
@@ -119,7 +123,13 @@ public class Utility {
         queue.add(className);
         while (!queue.isEmpty()) {
             String cls = queue.poll();
-            for (String itf : getClassReader(cls).getInterfaces()) {
+            String[] itfs = MetaData.classNameToInterfaceNames.get(cls);
+            if (itfs == null) {
+                itfs = getClassReader(cls).getInterfaces();
+                MetaData.setInterfaces(cls, itfs);
+            }
+
+            for (String itf : itfs) {
                 if (interfaces.add(itf)) {
                     queue.add(itf);
                 }

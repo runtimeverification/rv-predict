@@ -172,10 +172,13 @@ public class Agent implements ClassFileTransformer {
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
         try {
+            ClassReader cr = new ClassReader(cbuf);
             if (cname == null) {
                 // cname could be null for class like java/lang/invoke/LambdaForm$DMH
-                cname = new ClassReader(cbuf).getClassName();
+                cname = cr.getClassName();
             }
+            MetaData.setSuperclass(cname, cr.getSuperName());
+            MetaData.setInterfaces(cname, cr.getInterfaces());
 
             if (config.verbose) {
                 if (c == null) {

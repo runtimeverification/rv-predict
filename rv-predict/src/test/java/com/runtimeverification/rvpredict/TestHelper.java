@@ -50,10 +50,11 @@ public class TestHelper {
      * @param command
      *            list of arguments describing the system command to be
      *            executed.
+     * @return the number of runs before success
      * @throws IOException
      * @throws InterruptedException
      */
-    public void testCommand(String expectedFilePrefix, int numOfRuns, String... command)
+    public int testCommand(String expectedFilePrefix, int numOfRuns, String... command)
             throws IOException, InterruptedException {
         Assert.assertTrue(expectedFilePrefix != null);
 
@@ -82,7 +83,8 @@ public class TestHelper {
          * run the command up to a certain number of times and gather the
          * outputs
          */
-        for (int i = 0; i < numOfRuns && !expectedPatterns.isEmpty(); i++) {
+        int n;
+        for (n = 0; n < numOfRuns && !expectedPatterns.isEmpty(); n++) {
             Process process = processBuilder.start();
             int returnCode = process.waitFor();
             Assert.assertEquals("Expected no error during " + Arrays.toString(command) + ".\n"
@@ -99,6 +101,7 @@ public class TestHelper {
         Assert.assertTrue("Unable to match regular expressions: \n\t" +
                         Joiner.on("\n\t").skipNulls().join(expectedPatterns),
                 expectedPatterns.isEmpty());
+        return n;
     }
 
 }

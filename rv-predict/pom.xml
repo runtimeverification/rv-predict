@@ -101,7 +101,6 @@
                             <goal>integration-test</goal>
                         </goals>
                         <configuration>
-                            <rerunFailingTestsCount>10</rerunFailingTestsCount>
                             <redirectTestOutputToFile>true</redirectTestOutputToFile>
                             <includes>
                                 <include>**/*.class</include>

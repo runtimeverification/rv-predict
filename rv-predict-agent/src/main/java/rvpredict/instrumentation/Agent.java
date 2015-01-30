@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.objectweb.asm.ClassReader;
 import rvpredict.config.Config;
 import rvpredict.config.Configuration;
 import rvpredict.db.TraceCache;
@@ -171,6 +172,14 @@ public class Agent implements ClassFileTransformer {
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
         try {
+            ClassReader cr = new ClassReader(cbuf);
+            if (cname == null) {
+                // cname could be null for class like java/lang/invoke/LambdaForm$DMH
+                cname = cr.getClassName();
+            }
+            MetaData.setSuperclass(cname, cr.getSuperName());
+            MetaData.setInterfaces(cname, cr.getInterfaces());
+
             if (config.verbose) {
                 if (c == null) {
                     System.err.println("[Java-agent] intercepted class load: " + cname);

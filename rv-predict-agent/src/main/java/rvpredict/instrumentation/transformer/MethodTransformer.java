@@ -487,6 +487,6 @@ public class MethodTransformer extends MethodVisitor {
      *         statement in the instrumented program
      */
     private String getCrntStmtSig() {
-        return String.format("%s|%s|%s|%s", source, className, signature, crntLineNum).replace("/", ".");
+        return String.format("%s|%s|%s|%s", source, className, signature, crntLineNum);
     }
 }

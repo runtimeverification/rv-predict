@@ -1,17 +1,5 @@
 package rvpredict.instrumentation;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.util.CheckClassAdapter;
-import rvpredict.config.Configuration;
-import rvpredict.db.TraceCache;
-import rvpredict.engine.main.Main;
-import rvpredict.instrumentation.transformer.ClassTransformer;
-import rvpredict.logging.LoggingEngine;
-import rvpredict.runtime.RVPredictRuntime;
-import rvpredict.util.Logger;
-
 import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -23,7 +11,16 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import rvpredict.config.Configuration;
+import rvpredict.db.TraceCache;
+import rvpredict.engine.main.Main;
+import rvpredict.logging.LoggingEngine;
+import rvpredict.instrumentation.transformer.ClassTransformer;
+import rvpredict.runtime.RVPredictRuntime;
+import rvpredict.util.Logger;
+
 public class Agent implements ClassFileTransformer {
+
 
     /**
      * Packages/classes that need to be excluded from instrumentation. These are
@@ -39,6 +36,7 @@ public class Agent implements ClassFileTransformer {
                 "org.objectweb.asm",
                 "com.beust",
                 "org.apache.tools.ant",
+                "org.apache.commons.collections4",
 
                 // array type
                 "[",
@@ -64,7 +62,15 @@ public class Agent implements ClassFileTransformer {
     private static String[] MOCKS = new String[] {
         "java/util/Collection",
         "java/util/Map"
+
+        /* YilongL: do not exclude Iterator because it's not likely to slow down
+         * logging a lot; besides, I am interested in seeing what could happen */
+        // "java/util/Iterator"
     };
+
+    private static List<Pattern> MUST_INCLUDES = Configuration.getDefaultPatterns(new String[] {
+            "java/util/Collections$Synchronized"
+    });
 
     static Instrumentation instrumentation;
     private final Configuration config;
@@ -143,81 +149,77 @@ public class Agent implements ClassFileTransformer {
     @Override
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
-        if (config.verbose) {
-            if (c == null) {
-                System.err.println("[Java-agent] intercepted class load: " + cname);
-            } else {
-                System.err.println("[Java-agent] intercepted class redefinition/retransformation: " + c);
-            }
+        try {
+            if (config.verbose) {
+                if (c == null) {
+                    System.err.println("[Java-agent] intercepted class load: " + cname);
+                } else {
+                    System.err.println("[Java-agent] intercepted class redefinition/retransformation: " + c);
+                }
 
-            loadedClasses.add(cname.replace("/", "."));
-            for (Class<?> cls : instrumentation.getAllLoadedClasses()) {
-                if (loadedClasses.add(cls.getName())) {
-                    System.err.println("[Java-agent] missed to intercept class load: " + cls);
+                loadedClasses.add(cname.replace("/", "."));
+                for (Class<?> cls : instrumentation.getAllLoadedClasses()) {
+                    if (loadedClasses.add(cls.getName())) {
+                        System.err.println("[Java-agent] missed to intercept class load: " + cls);
+                    }
                 }
             }
-        }
 
-        boolean toInstrument = true;
-        for (Pattern exclude : config.excludeList) {
-            toInstrument = !exclude.matcher(cname).matches();
-            if (!toInstrument) break;
-        }
+            boolean toInstrument = true;
+            for (Pattern exclude : config.excludeList) {
+                toInstrument = !exclude.matcher(cname).matches();
+                if (!toInstrument) break;
+            }
 
 
-        if (toInstrument) {
-            for (String mock : MOCKS) {
-                if (Utility.isSubclassOf(cname, mock)) {
-                    toInstrument = false;
-                    if (config.verbose) {
-                        /* TODO(YilongL): this may cause missing data races if
+            if (toInstrument) {
+                for (String mock : MOCKS) {
+                    if (Utility.isSubclassOf(cname, mock)) {
+                        toInstrument = false;
+                        if (config.verbose) {
+                            /* TODO(YilongL): this may cause missing data races if
                          * the mock for interface/superclass does not contain
                          * methods specific to this implementation. This could
                          * be a big problem if the application makes heavy use
                          * of helper methods specific in some high-level
                          * concurrency library (e.g. Guava) while most of the
                          * classes are simply excluded here */
-                        System.err.println("[Java-agent] excluded " + c
-                                + " from instrumentation because we are mocking " + mock);
+                            System.err.println("[Java-agent] excluded " + c
+                                    + " from instrumentation because we are mocking " + mock);
+                        }
+                        break;
                     }
-                    break;
                 }
             }
-        }
 
-        if (!toInstrument) {
-        /* include list overrides the above */
-            for (Pattern include : config.includeList) {
-                toInstrument = include.matcher(cname).matches();
-                if (toInstrument) break;
+            if (!toInstrument) {
+                /* include list overrides the above */
+                for (Pattern include : config.includeList) {
+                    toInstrument = include.matcher(cname).matches();
+                    if (toInstrument) break;
+                }
             }
-        }
 
-        if (toInstrument) {  //make sure we don't instrument IGNORES even if the user said so
-            //        System.err.println(cname + " " + toInstrument);
-            for (Pattern ignore : IGNORES) {
-                toInstrument = !ignore.matcher(cname).matches();
-                if (!toInstrument) break;
+            if (toInstrument) {  //make sure we don't instrument IGNORES even if the user said so
+                //        System.err.println(cname + " " + toInstrument);
+                for (Pattern ignore : IGNORES) {
+                    toInstrument = !ignore.matcher(cname).matches();
+                    if (!toInstrument) break;
+                }
             }
-        }
+
+            if (!toInstrument) {
+                for (Pattern include : MUST_INCLUDES) {
+                    toInstrument = include.matcher(cname).matches();
+                    if (toInstrument) break;
+                }
+            }
         
-        if (toInstrument) {
-            ClassReader cr = new ClassReader(cbuf);
-
-            ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
-            ClassVisitor cv = new ClassTransformer(cw, config);
-            ClassVisitor checker = new CheckClassAdapter(cv);
-            try {
-                cr.accept(checker, 0);
-            } catch (Throwable e) {
-                /* exceptions during class loading are silently suppressed by default */
-                System.err.println("Cannot retransform " + cname + ". Exception: " + e);
-                throw e;
-            }
-
-            return cw.toByteArray();
+            return toInstrument ? ClassTransformer.transform(cbuf, config) : null;
+        } catch (Throwable e) {
+            /* exceptions during class loading are silently suppressed by default */
+            System.err.println("Cannot retransform " + cname + ". Exception: " + e);
+            throw e;
         }
-        // no transformation happens
-        return null;
     }
 }

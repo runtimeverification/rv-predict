@@ -18,7 +18,15 @@ public class ClassTransformer extends ClassVisitor {
 
     private final Set<String> finalFields = new HashSet<>();
 
-    public ClassTransformer(ClassVisitor cv, Configuration config) {
+    public static byte[] transform(byte[] cbuf, Configuration config) {
+        ClassReader cr = new ClassReader(cbuf);
+        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
+        ClassTransformer transformer = new ClassTransformer(cw, config);
+        cr.accept(transformer, 0);
+        return cw.toByteArray();
+    }
+
+    private ClassTransformer(ClassVisitor cv, Configuration config) {
         super(Opcodes.ASM5, cv);
         assert cv != null;
 
@@ -62,7 +70,9 @@ public class ClassTransformer extends ClassVisitor {
             String[] exceptions) {
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
 
-        if (mv != null) {
+        /* do not instrument synthesized bridge method; otherwise, it may cause
+         * infinite recursion at runtime */
+        if (mv != null && (access & Opcodes.ACC_BRIDGE) == 0) {
             int crntMaxLocals = 0;
             for (Type type : Type.getArgumentTypes(desc)) {
                 crntMaxLocals += type.getSize();

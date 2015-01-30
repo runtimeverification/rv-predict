@@ -69,7 +69,7 @@ public class Configuration {
     private JCommander jCommander;
 
     private static Pattern createClassPattern(String pattern) {
-        pattern = pattern.replace('.','/');
+        pattern = pattern.replace('.', '/');
         String escapeChars[] = new String[] {"$","["};
         for (String c : escapeChars) {
            pattern = pattern.replace(c, "\\"  + c);
@@ -249,7 +249,7 @@ public class Configuration {
     final static String short_opt_verbose = "-v";
     final static String opt_verbose = "--verbose";
     @Parameter(names = { short_opt_verbose, opt_verbose }, description = "Generate more verbose output", descriptionKey = "9000")
-    public boolean verbose;
+    public static boolean verbose;
 
     final static String short_opt_help = "-h";
     final static String opt_help = "--help";

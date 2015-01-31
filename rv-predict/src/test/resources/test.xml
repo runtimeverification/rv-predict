@@ -21,7 +21,7 @@
         <arg key="-jar" value="SpringExample.jar" />
     </test>
     <test name="account.Account">
-        <runs value="5" />
+        <runs value="32" />
         <arg key="-cp" value="basic.jar" />
         <arg value="account.Account" />
     </test>
@@ -83,7 +83,7 @@
         <arg key="-cp" value="basic.jar" />
         <arg value="benchmarks.JGFMolDynBenchSizeA" />
     </test>
-    
+
     <test name="jtsan.EasyTests-positive">
         <arg key="-cp" value="basic.jar" />
         <arg value="jtsan.EasyTests" />
@@ -94,7 +94,7 @@
         <arg value="jtsan.EasyTests" />
         <arg value="negative" />
     </test>
-    
+
     <test name="jtsan.MediumTests-positive">
         <arg key="-cp" value="basic.jar" />
         <arg value="jtsan.MediumTests" />
@@ -105,7 +105,7 @@
         <arg value="jtsan.MediumTests" />
         <arg value="negative" />
     </test>
-    
+
     <test name="jtsan.CustomTests-positive">
         <arg key="-cp" value="basic.jar" />
         <arg value="jtsan.CustomTests" />
@@ -129,7 +129,7 @@
         <arg value="negative" />
         <rvarg key="--include" value="java.util.concurrent.Semaphore,java.util.concurrent.CountDownLatch,java.util.concurrent.CyclicBarrier,java.util.concurrent.ArrayBlockingQueue" />
     </test>
-    
+
     <test name="jtsan.JUCollectionTests-positive">
         <arg key="-cp" value="basic.jar" />
         <arg value="jtsan.JUCollectionTests" />

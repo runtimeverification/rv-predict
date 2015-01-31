@@ -141,4 +141,9 @@
         <arg value="negative" />
     </test>
 
+    <test name="instrumentation.InstrumentationTests">
+        <arg key="-cp" value="basic.jar" />
+        <arg value="instrumentation.InstrumentationTests" />
+    </test>
+
 </tests>

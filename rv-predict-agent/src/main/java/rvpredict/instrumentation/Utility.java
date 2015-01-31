@@ -142,7 +142,7 @@ public class Utility {
         return interfaces;
     }
 
-    public void printTransformedClassToFile(String cname, byte[] cbuf, String dir) {
+    public static void printTransformedClassToFile(String cname, byte[] cbuf, String dir) {
         String fileName = dir + "/" + cname.substring(cname.lastIndexOf("/") + 1) + ".class";
         File f = new File(fileName);
 

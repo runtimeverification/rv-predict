@@ -6,8 +6,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.tuple.Pair;
 public class MetaData {
 
-    public static final Map<String, Set<String>> classNameToFieldNames = new ConcurrentHashMap<>();
-    public static final Map<String, String> classNameToSuperclassName = new ConcurrentHashMap<>();
+    public static final ConcurrentHashMap<String, Set<String>> classNameToFieldNames = new ConcurrentHashMap<>();
+    public static final ConcurrentHashMap<String, String[]> classNameToInterfaceNames = new ConcurrentHashMap<>();
+    public static final ConcurrentHashMap<String, String> classNameToSuperclassName = new ConcurrentHashMap<>();
 
     /**
      * YilongL: Those fields starting with `unsaved` are used for incremental
@@ -33,19 +34,31 @@ public class MetaData {
     private MetaData() { }
 
     public static void setSuperclass(String className, String superclassName) {
-        className = className.replace("/", ".");
-        superclassName = superclassName.replace("/", ".");
-        if (classNameToSuperclassName.containsKey(className)) {
-            System.err.println("[Warning]: class " + className + " is instrumented more than once!");
-        } else {
-            classNameToSuperclassName.put(className, superclassName);
-            classNameToFieldNames.put(className,
-                    Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>()));
+        if ("java/lang/Object".equals(className)) {
+            // the only case where superclassName is null
+            return;
+        }
+
+        String value = classNameToSuperclassName.putIfAbsent(className, superclassName);
+        if (value != null && !value.equals(superclassName)) {
+            System.err.println("[Warning]: attempts to reset the superclass name of " + className);
+        }
+    }
+
+    public static void setInterfaces(String className, String[] interfaces) {
+        if (interfaces == null) {
+            interfaces = new String[0];
+        }
+        String[] value = classNameToInterfaceNames.putIfAbsent(className,
+                Arrays.copyOf(interfaces, interfaces.length));
+        if (value != null && !Arrays.deepEquals(value, interfaces)) {
+            System.err.println("[Warning]: attempts to reset the interfaces of " + className);
         }
     }
 
     public static void addField(String className, String fieldName) {
-        className = className.replace("/", ".");
+        classNameToFieldNames.putIfAbsent(className,
+                Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>()));
         classNameToFieldNames.get(className).add(fieldName);
     }
 
@@ -98,6 +111,6 @@ public class MetaData {
     }
 
     private static String getVariableSignature(String className, String fieldName) {
-        return (className + "." + fieldName).replace("/", ".");
+        return className + "." + fieldName;
     }
 }

@@ -270,7 +270,7 @@ public class RVPredict {
                 detectRace(cnstrBuilder, trace);
             }
 
-            initState = trace.computeFinalState();
+            initState = trace.getFinalState();
         }
         System.exit(0);
     }

@@ -126,12 +126,14 @@ public class Trace {
     private List<ReadEvent> allReadNodes;
 
     private final State initState;
+    private final State finalState;
 
     private final TraceInfo info;
 
     public Trace(State initState, TraceInfo info) {
         assert initState != null && info != null;
         this.initState = initState;
+        this.finalState = new State(initState);
         this.info = info;
     }
 
@@ -262,22 +264,17 @@ public class Trace {
         return readEvents;
     }
 
-    public State computeFinalState() {
-        State finalState = new State(initState);
-
-        for (Event e : rawEvents) {
-            if (e instanceof InitOrAccessEvent) {
-                InitOrAccessEvent initOrAcc = (InitOrAccessEvent) e;
-                finalState.addrToValue.put(initOrAcc.getAddr(), initOrAcc.getValue());
-            }
-        }
-
+    public State getFinalState() {
         return finalState;
     }
 
     public void addRawEvent(Event event) {
 //        System.err.println(event + " " + info.getLocIdToStmtSigMap().get(event.getID()));
         rawEvents.add(event);
+        if (event instanceof InitOrAccessEvent) {
+            InitOrAccessEvent initOrAcc = (InitOrAccessEvent) event;
+            finalState.addrToValue.put(initOrAcc.getAddr(), initOrAcc.getValue());
+        }
         if (event instanceof MemoryAccessEvent) {
             String addr = ((MemoryAccessEvent) event).getAddr();
             Long tid = event.getTID();
@@ -337,6 +334,7 @@ public class Trace {
         } else if (event instanceof InitEvent) {
             // initial write node
             initState.addrToValue.put(((InitEvent) event).getAddr(), ((InitEvent) event).getValue());
+            finalState.addrToValue.put(((InitEvent) event).getAddr(), ((InitEvent) event).getValue());
             info.incrementInitWriteNumber();
         } else {
             // all critical nodes -- read/write/synchronization events

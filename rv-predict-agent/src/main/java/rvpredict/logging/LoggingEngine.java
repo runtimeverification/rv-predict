@@ -45,8 +45,10 @@ public class LoggingEngine {
 
     private final AtomicLong globalEventID  = new AtomicLong(0);
     private final LoggingServer loggingServer;
+    private final PredictionServer predictionServer;
     private final Configuration config;
     private volatile boolean shutdown = false;
+    private final LoggingFactory loggingFactory;
 
 
     /**
@@ -56,15 +58,21 @@ public class LoggingEngine {
     public void finishLogging() throws IOException, InterruptedException {
         shutdown = true;
         loggingServer.finishLogging();
+        if (config.online) {
+            predictionServer.finishLogging();
+        }
     }
 
     public LoggingEngine(Configuration config) {
         this.config = config;
+        if (config.online) {
+            loggingFactory = new OnlineLoggingFactory();
+            predictionServer = startPredicting();
+        } else {
+            loggingFactory = new OfflineLoggingFactory(config);
+            predictionServer = null;
+        }
         loggingServer = startLogging();
-    }
-
-    public Configuration getConfig() {
-        return config;
     }
 
     private LoggingServer startLogging() {
@@ -73,6 +81,14 @@ public class LoggingEngine {
         loggingServerThread.setDaemon(true);
         loggingServerThread.start();
         return loggingServer;
+    }
+    
+    private PredictionServer startPredicting() {
+        final PredictionServer predictionServer = new PredictionServer(this);
+        Thread predictionServerThread = new Thread(predictionServer);
+        predictionServerThread.setDaemon(true);
+        predictionServerThread.start();
+        return predictionServer;
     }
 
 
@@ -169,5 +185,13 @@ public class LoggingEngine {
 
     public long getGlobalEventID() {
         return globalEventID.get();
+    }
+
+    public LoggingFactory getLoggingFactory() {
+        return loggingFactory;
+    }
+
+    public Configuration getConfig() {
+        return config;
     }
 }

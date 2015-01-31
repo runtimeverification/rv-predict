@@ -1,10 +1,8 @@
 package rvpredict.logging;
 
 import rvpredict.instrumentation.MetaData;
-import rvpredict.trace.SyncEvent;
 
 import java.io.*;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
@@ -31,7 +29,7 @@ public class MetadataLoggerThread implements Runnable {
     public void run() {
         owner = Thread.currentThread();
         try {
-            metadataOS = createMetadataOS(loggingEngine.getConfig().outdir);
+            metadataOS = loggingEngine.getLoggingFactory().createMetadataOS();
             while (!shutdown) {
                 synchronized (metadataOS) {
                     metadataOS.wait(60000);
@@ -49,12 +47,6 @@ public class MetadataLoggerThread implements Runnable {
             System.err.println("Error: I/O error while creating metadata log file. Metadata will not be recorded.");
             System.err.println(e.getMessage());
         }
-    }
-
-    private static ObjectOutputStream createMetadataOS(String directory) throws IOException {
-        return new ObjectOutputStream(
-                new BufferedOutputStream(
-                        new FileOutputStream(Paths.get(directory, rvpredict.db.DBEngine.METADATA_BIN).toFile())));
     }
 
     private void saveObject(Object object) throws IOException {

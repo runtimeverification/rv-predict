@@ -35,9 +35,9 @@ public class EventItem {
     /**
      * Constructor of the EventItem class
      * @param gid global identifier / primary key of the event
-     * @param tid thread identifier primary key (see {@link rvpredict.trace.TraceInfo#threadIdNamemap})
+     * @param tid thread identifier primary key
      * @param id object identifier
-     * @param addrl statement location identifier (see {@link rvpredict.trace.TraceInfo#stmtIdSigMap})
+     * @param addrl statement location identifier
      * @param addrr index (for arrays)
      * @param value value for events carrying a value
      * @param type type of event

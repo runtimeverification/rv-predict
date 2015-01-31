@@ -78,7 +78,7 @@ public class DBEngine {
         if (toIndex > traceLength + 1) toIndex = traceLength + 1;
         Trace trace = new Trace(initState, info);
         for (long index = fromIndex; index < toIndex; index++) {
-            rvpredict.db.EventItem eventItem = traceCache.getEvent(index);
+            EventItem eventItem = traceCache.getEvent(index);
             Event node = AbstractEvent.of(eventItem);
             trace.addRawEvent(node);
         }

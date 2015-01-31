@@ -1,16 +1,10 @@
 package rvpredict.logging;
 
-import rvpredict.config.Configuration;
-import rvpredict.db.TraceCache;
-
 import java.io.*;
-import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.zip.GZIPOutputStream;
 
 /**
  * Logging server.  Makes it transparent to the Logging Engine on how
@@ -20,8 +14,7 @@ import java.util.zip.GZIPOutputStream;
  * @author TraianSF
  */
 public class LoggingServer implements Runnable {
-    private static final AtomicInteger logFileId = new AtomicInteger();
-    private final Configuration config;
+    private final LoggingEngine engine;
     private Thread owner;
     private final List<LoggerThread> loggers = new LinkedList<>();
     private final BlockingQueue<EventPipe> loggersRegistry;
@@ -30,10 +23,10 @@ public class LoggingServer implements Runnable {
 
 
     public LoggingServer(LoggingEngine engine) {
+        this.engine = engine;
         loggersRegistry = new LinkedBlockingQueue<>();
-        threadLocalTraceOS = new ThreadLocalEventStream(loggersRegistry);
-        this.config = engine.getConfig();
         metadataLoggerThread = new MetadataLoggerThread(engine);
+        threadLocalTraceOS = new ThreadLocalEventStream(engine.getLoggingFactory(), loggersRegistry);
     }
 
     @Override
@@ -46,7 +39,7 @@ public class LoggingServer implements Runnable {
         EventPipe eventOS;
         try {
             while (ThreadLocalEventStream.END_REGISTRY != (eventOS = loggersRegistry.take())) {
-                final EventOutputStream outputStream = newEventOutputStream();
+                final EventOutputStream outputStream = engine.getLoggingFactory().createEventOutputStream();
                 final LoggerThread logger = new LoggerThread(eventOS, outputStream);
                 Thread loggerThread = new Thread(logger);
                 loggerThread.setDaemon(true);
@@ -78,20 +71,6 @@ public class LoggingServer implements Runnable {
         metadataLoggerThread.finishLogging();
     }
 
-
-    private EventOutputStream newEventOutputStream() throws IOException {
-        EventOutputStream eventOutputStream = null;
-        int id = logFileId.incrementAndGet();
-        OutputStream outputStream = new FileOutputStream(Paths.get(config.outdir,
-                id + "_" + TraceCache.TRACE_SUFFIX
-                        + (config.zip ? TraceCache.ZIP_EXTENSION : "")).toFile());
-        if (config.zip) {
-            outputStream = new GZIPOutputStream(outputStream,true);
-        }
-        eventOutputStream = new EventOutputStream(new BufferedOutputStream(
-                outputStream));
-        return eventOutputStream;
-    }
 
     public EventPipe getOutputStream() {
        return threadLocalTraceOS.get();

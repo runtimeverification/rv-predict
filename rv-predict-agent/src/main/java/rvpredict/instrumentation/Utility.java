@@ -1,11 +1,15 @@
 package rvpredict.instrumentation;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.Set;
+
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 
@@ -136,6 +140,19 @@ public class Utility {
             }
         }
         return interfaces;
+    }
+
+    public void printTransformedClassToFile(String cname, byte[] cbuf, String dir) {
+        String fileName = dir + "/" + cname.substring(cname.lastIndexOf("/") + 1) + ".class";
+        File f = new File(fileName);
+
+        try {
+            OutputStream out = new FileOutputStream(f);
+            out.write(cbuf);
+            out.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

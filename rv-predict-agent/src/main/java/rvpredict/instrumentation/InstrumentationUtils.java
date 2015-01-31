@@ -13,7 +13,7 @@ import java.util.Set;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 
-public class Utility {
+public class InstrumentationUtils {
 
     /**
      * Checks if one class or interface extends or implements another class or

@@ -183,7 +183,7 @@ public class Agent implements ClassFileTransformer {
 
             if (toInstrument) {
                 for (String mock : MOCKS) {
-                    if (Utility.isSubclassOf(loader, cname, mock)) {
+                    if (InstrumentationUtils.isSubclassOf(loader, cname, mock)) {
                         toInstrument = false;
                         if (Configuration.verbose) {
                             /* TODO(YilongL): this may cause missing data races if

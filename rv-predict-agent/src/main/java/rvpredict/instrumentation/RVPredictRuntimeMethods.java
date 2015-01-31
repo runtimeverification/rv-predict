@@ -292,7 +292,7 @@ public class RVPredictRuntimeMethods {
                     break;
                 case VIRTUAL:
                 case INTERFACE:
-                    if (Utility.isSubclassOf(loader, owner, interceptor.classOrInterface)) {
+                    if (InstrumentationUtils.isSubclassOf(loader, owner, interceptor.classOrInterface)) {
                         return interceptor;
                     }
                     break;

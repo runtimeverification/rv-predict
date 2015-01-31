@@ -183,7 +183,7 @@ public class Agent implements ClassFileTransformer {
 
             if (toInstrument) {
                 for (String mock : MOCKS) {
-                    if (Utility.isSubclassOf(cname, mock)) {
+                    if (Utility.isSubclassOf(loader, cname, mock)) {
                         toInstrument = false;
                         if (Configuration.verbose) {
                             /* TODO(YilongL): this may cause missing data races if
@@ -222,8 +222,8 @@ public class Agent implements ClassFileTransformer {
                     if (toInstrument) break;
                 }
             }
-        
-            return toInstrument ? ClassTransformer.transform(cbuf, config) : null;
+
+            return toInstrument ? ClassTransformer.transform(loader, cbuf, config) : null;
         } catch (Throwable e) {
             /* exceptions during class loading are silently suppressed by default */
             System.err.println("Cannot retransform " + cname + ". Exception: " + e);

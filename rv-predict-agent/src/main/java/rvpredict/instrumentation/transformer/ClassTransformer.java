@@ -10,6 +10,7 @@ import java.util.Set;
 public class ClassTransformer extends ClassVisitor {
 
     private final Configuration config;
+    private final ClassLoader loader;
 
     private String className;
     private String source;
@@ -18,18 +19,19 @@ public class ClassTransformer extends ClassVisitor {
 
     private final Set<String> finalFields = new HashSet<>();
 
-    public static byte[] transform(byte[] cbuf, Configuration config) {
+    public static byte[] transform(ClassLoader loader, byte[] cbuf, Configuration config) {
         ClassReader cr = new ClassReader(cbuf);
         ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
-        ClassTransformer transformer = new ClassTransformer(cw, config);
+        ClassTransformer transformer = new ClassTransformer(cw, loader, config);
         cr.accept(transformer, 0);
         return cw.toByteArray();
     }
 
-    private ClassTransformer(ClassVisitor cv, Configuration config) {
+    private ClassTransformer(ClassVisitor cv, ClassLoader loader, Configuration config) {
         super(Opcodes.ASM5, cv);
         assert cv != null;
 
+        this.loader = loader;
         this.config = config;
     }
 
@@ -78,7 +80,7 @@ public class ClassTransformer extends ClassVisitor {
             }
 
             mv = new MethodTransformer(mv, source, className, version, name, desc, access,
-                    crntMaxLocals, finalFields, config);
+                    crntMaxLocals, finalFields, loader, config);
         }
         return mv;
     }

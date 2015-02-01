@@ -1497,7 +1497,9 @@ public final class RVPredictRuntime {
     }
 
     private static void saveEvent(EventType eventType, int id, long addrl, int addrr, long value) {
-        loggingEngine.saveEvent(eventType, id, addrl, addrr, value);
+        if (!skipSavingEvent()) {
+            loggingEngine.saveEvent(eventType, id, addrl, addrr, value);
+        }
     }
 
     /**
@@ -1516,4 +1518,16 @@ public final class RVPredictRuntime {
         saveEvent(eventType, locId, 0, 0, 0);
     }
 
+    /**
+     * Checks if logging should be disabled at the moment.
+     */
+    private static boolean skipSavingEvent() {
+        for (StackTraceElement e : new Throwable().getStackTrace()) {
+            String className = e.getClassName();
+            if (className.startsWith("java.lang.ClassLoader") || className.startsWith("sun")) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

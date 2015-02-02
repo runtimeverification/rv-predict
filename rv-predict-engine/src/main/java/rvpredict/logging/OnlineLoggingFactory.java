@@ -1,11 +1,16 @@
 package rvpredict.logging;
 
+import com.google.common.collect.BiMap;
+import com.sun.xml.internal.ws.api.addressing.WSEndpointReference;
 import rvpredict.db.EventInputStream;
+import rvpredict.instrumentation.MetaData;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -16,7 +21,12 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class OnlineLoggingFactory implements LoggingFactory {
     private static final PipedInputStream END_INPUT_STREAM = new PipedInputStream();
+    private final LoggingEngine loggingEngine;
     private BlockingQueue<PipedInputStream> eventInputStreams = new LinkedBlockingQueue<>();
+    
+    public OnlineLoggingFactory(LoggingEngine loggingEngine) {
+        this.loggingEngine = loggingEngine;
+    }
     
     @Override
     public EventPipe createEventPipe() {
@@ -45,5 +55,25 @@ public class OnlineLoggingFactory implements LoggingFactory {
         PipedInputStream stream = eventInputStreams.take();
         if (stream == END_INPUT_STREAM) return null;
         return new EventInputStream(stream);
+    }
+
+    @Override
+    public Set<Integer> getVolatileFieldIds() throws IOException, ClassNotFoundException {
+        return ((BiMap<String, Integer>)MetaData.volatileVarSigToVarId).inverse().keySet();
+    }
+
+    @Override
+    public Map<Integer, String> getVarIdToVarSig() throws IOException, ClassNotFoundException {
+        return ((BiMap<String, Integer>)MetaData.varSigToVarId).inverse();
+    }
+
+    @Override
+    public Map<Integer, String> getLocIdToStmtSig() throws IOException, ClassNotFoundException {
+        return ((BiMap<String, Integer>)MetaData.stmtSigToLocId).inverse();
+    }
+
+    @Override
+    public Long getTraceLength() throws IOException, ClassNotFoundException {
+        return loggingEngine.getGlobalEventID();
     }
 }

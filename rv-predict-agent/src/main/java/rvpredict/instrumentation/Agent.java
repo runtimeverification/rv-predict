@@ -13,10 +13,10 @@ import java.util.regex.Pattern;
 
 import org.objectweb.asm.ClassReader;
 import rvpredict.config.Configuration;
-import rvpredict.db.TraceCache;
 import rvpredict.engine.main.Main;
 import rvpredict.logging.LoggingEngine;
 import rvpredict.instrumentation.transformer.ClassTransformer;
+import rvpredict.logging.OfflineLoggingFactory;
 import rvpredict.runtime.RVPredictRuntime;
 import rvpredict.util.Logger;
 
@@ -97,7 +97,7 @@ public class Agent implements ClassFileTransformer {
         final boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
         config.logger.report("Log directory: " + config.outdir, Logger.MSGTYPE.INFO);
 
-        TraceCache.removeTraceFiles(config.outdir);
+        OfflineLoggingFactory.removeTraceFiles(config.outdir);
         final LoggingEngine db = new LoggingEngine(config);
         RVPredictRuntime.init(db);
 

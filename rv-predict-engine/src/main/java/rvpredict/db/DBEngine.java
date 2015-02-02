@@ -28,11 +28,15 @@
  ******************************************************************************/
 package rvpredict.db;
 
-import java.io.*;
-import java.nio.file.Paths;
-import java.util.*;
+import rvpredict.logging.LoggingFactory;
+import rvpredict.trace.AbstractEvent;
+import rvpredict.trace.Event;
+import rvpredict.trace.Trace;
+import rvpredict.trace.TraceInfo;
 
-import rvpredict.trace.*;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Class for loading metadata and traces of events from disk.
@@ -41,16 +45,18 @@ import rvpredict.trace.*;
  *
  */
 public class DBEngine {
-    public static final String METADATA_BIN = "metadata.bin";
     private final TraceCache traceCache;
     private final long traceLength;
-    private final Set<Integer> volatileFieldIds = new HashSet<>();
-    private final Map<Integer, String> varIdToVarSig = new HashMap<>();
-    private final Map<Integer, String> locIdToStmtSig = new HashMap<>();
+    private final Set<Integer> volatileFieldIds;
+    private final Map<Integer, String> varIdToVarSig;
+    private final Map<Integer, String> locIdToStmtSig;
 
-    public DBEngine(String directory) {
-        traceCache = new TraceCache(directory);
-        traceLength = readMetadata(directory);
+    public DBEngine(LoggingFactory loggingFactory) throws IOException, ClassNotFoundException {
+        traceCache = new TraceCache(loggingFactory);
+        volatileFieldIds = loggingFactory.getVolatileFieldIds();
+        varIdToVarSig = loggingFactory.getVarIdToVarSig();
+        locIdToStmtSig = loggingFactory.getLocIdToStmtSig();
+        traceLength = loggingFactory.getTraceLength();
     }
 
     /**
@@ -73,7 +79,7 @@ public class DBEngine {
      * @return a {@link rvpredict.trace.Trace} representing the trace segment
      *         read
      */
-    public Trace getTrace(long fromIndex, long toIndex, Trace.State initState, TraceInfo info) {
+    public Trace getTrace(long fromIndex, long toIndex, Trace.State initState, TraceInfo info) throws IOException, InterruptedException {
         assert fromIndex <= traceLength : "This method should only be called with a valid min value";
         if (toIndex > traceLength + 1) toIndex = traceLength + 1;
         Trace trace = new Trace(initState, info);
@@ -104,32 +110,4 @@ public class DBEngine {
         return locIdToStmtSig;
     }
 
-    @SuppressWarnings("unchecked")
-    private long readMetadata(String directory) {
-        try (ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
-                new FileInputStream(Paths.get(directory, METADATA_BIN).toFile())))) {
-            long size = -1;
-            List<Map.Entry<Integer, String>> list;
-            while (true) {
-                try {
-                    volatileFieldIds.addAll((Collection<Integer>) metadataIS.readObject());
-                } catch (EOFException e) {
-                    break;
-                }
-                list = (List<Map.Entry<Integer, String>>) metadataIS.readObject();
-                for (Map.Entry<Integer, String> entry : list) {
-                    varIdToVarSig.put(entry.getKey(), entry.getValue());
-                }
-                list = (List<Map.Entry<Integer, String>>) metadataIS.readObject();
-                for (Map.Entry<Integer, String> entry : list) {
-                    locIdToStmtSig.put(entry.getKey(), entry.getValue());
-                }
-                size = metadataIS.readLong();
-            }
-            return size;
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-            return -1;
-        }
-    }
 }

@@ -28,35 +28,35 @@
  ******************************************************************************/
 package rvpredict.engine.main;
 
-import java.util.HashSet;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.*;
-
 import rvpredict.config.Configuration;
 import rvpredict.db.DBEngine;
+import rvpredict.logging.OfflineLoggingFactory;
 import rvpredict.trace.Trace;
 import rvpredict.trace.TraceInfo;
 import rvpredict.util.Logger;
 import violation.Violation;
 
+import java.io.IOException;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.*;
+
 public class RVPredict {
 
     private final ConcurrentMap<Violation,Boolean> violations = new ConcurrentHashMap<>();
-    private final HashSet<Violation> potentialviolations = new HashSet<>();
     private final Configuration config;
     private final Logger logger;
     private final long totalTraceLength;
     private final DBEngine dbEngine;
     private final TraceInfo traceInfo;
 
-    public RVPredict(Configuration config) {
+    public RVPredict(Configuration config) throws IOException, ClassNotFoundException {
         this.config = config;
         logger = config.logger;
 
         long startTime = System.currentTimeMillis();
 
-        dbEngine = new DBEngine(config.outdir);
+        dbEngine = new DBEngine(new OfflineLoggingFactory(config));
 
         // the total number of events in the trace
         totalTraceLength = dbEngine.getTraceLength();
@@ -84,7 +84,7 @@ public class RVPredict {
         }, config.timeout * 1000);
     }
 
-    public void run() {
+    public void run() throws IOException, InterruptedException {
         ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(8);
         Trace.State initState = new Trace.State();
 
@@ -186,7 +186,7 @@ public class RVPredict {
                         Logger.MSGTYPE.STATISTICS);
 
                 logger.report("Total #Potential Violations: "
-                        + (potentialviolations.size() + violations.size()),
+                        + (violations.size()),
                         Logger.MSGTYPE.STATISTICS);
                 logger.report("Total #Real Violations: " + violations.size(),
                         Logger.MSGTYPE.STATISTICS);

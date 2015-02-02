@@ -1,78 +1,32 @@
 package rvpredict.db;
 
-import org.apache.tools.ant.DirectoryScanner;
+import rvpredict.logging.LoggingFactory;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.zip.GZIPInputStream;
+import java.io.EOFException;
+import java.io.IOException;
+import java.util.AbstractMap;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Class adding a transparency layer between the prediction engine and the
  * filesystem holding the trace log.
- * A trace log consists from a collection of files, each holding all the events
+ * A trace log consists from a collection of streams, each holding all the events
  * corresponding to a single thread.
- * The file names end with {@link #TRACE_SUFFIX}, having as a prefix the unique
- * id of the thread generating them.
  * @author TraianSF
  */
 public class TraceCache {
-    /**
-     * termination for files holding events
-     */
-    public static final String TRACE_SUFFIX = "trace.bin";
-    public static final String ZIP_EXTENSION = ".gz";
     private final Map<Long,Map.Entry<EventInputStream,EventItem>> indexes;
+    private final LoggingFactory loggingFactory;
 
     /**
-     * Creates a new {@code TraceCahce} structure for a trace log in a given directory.
+     * Creates a new {@code TraceCahce} structure for a trace log.
      *
-     * @param directory  location on filesystem where the trace log can be found
+     * @param loggingFactory suppling additional information about the nature of the logs.
      */
-    public TraceCache(String directory) {
-        String[] files = getTraceFiles(directory);
-        indexes = new HashMap<>(files.length);
-        for (String file : files) {
-            try {
-                File f = Paths.get(directory, file).toFile();
-                InputStream in = new FileInputStream(f);
-                if (file.endsWith(ZIP_EXTENSION)) {
-                    in = new GZIPInputStream(in);
-                }
-                EventInputStream inputStream = new EventInputStream(
-                       new BufferedInputStream(in));
-                EventItem event = inputStream.readEvent();
-                indexes.put(event.GID, new AbstractMap.SimpleEntry<>(inputStream,event));
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private static String[] getTraceFiles(String directory) {
-        DirectoryScanner scanner = new DirectoryScanner();
-        scanner.setIncludes(new String[]{"*" + TRACE_SUFFIX + "*"});
-        scanner.setBasedir(directory);
-        scanner.setCaseSensitive(false);
-        scanner.scan();
-        return scanner.getIncludedFiles();
-    }
-
-    /**
-     * Cleans all preexisting trace files from the specified <code>directory</code>
-     * @param directory
-     */
-    public static void removeTraceFiles(String directory) {
-        for (String fname : getTraceFiles(directory)) {
-            try {
-                Files.delete(Paths.get(directory, fname));
-            } catch (IOException e) {
-                System.err.println("Cannot delete trace file " + fname + "from dir. " + directory);
-            }
-        }
+    public TraceCache(LoggingFactory loggingFactory) {
+        this.loggingFactory = loggingFactory;
+        indexes = new HashMap<>();
     }
 
     /**
@@ -85,7 +39,10 @@ public class TraceCache {
      * @param index  index of the event to be read
      * @return the event requested
      */
-    public EventItem getEvent(long index) {
+    public EventItem getEvent(long index) throws IOException, InterruptedException {
+        if (!indexes.containsKey(index)) {
+            updateIndexes(index);
+        }
         Map.Entry<EventInputStream,EventItem> entry = indexes.remove(index);
 
         assert entry != null : "Index not (yet) available. Attempting to read events out of order?";
@@ -100,6 +57,15 @@ public class TraceCache {
             e.printStackTrace();
         }
         return event;
+    }
+
+    private void updateIndexes(long index) throws IOException, InterruptedException {
+        EventItem event;
+        do {
+            EventInputStream inputStream = loggingFactory.getInputStream();
+            event = inputStream.readEvent();
+            indexes.put(event.GID, new AbstractMap.SimpleEntry<>(inputStream, event));
+        } while (event.GID != index);
     }
 
 }

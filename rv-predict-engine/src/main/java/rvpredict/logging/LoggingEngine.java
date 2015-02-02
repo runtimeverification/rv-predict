@@ -66,7 +66,7 @@ public class LoggingEngine {
     public LoggingEngine(Configuration config) {
         this.config = config;
         if (config.online) {
-            loggingFactory = new OnlineLoggingFactory();
+            loggingFactory = new OnlineLoggingFactory(this);
             predictionServer = startPredicting();
         } else {
             loggingFactory = new OfflineLoggingFactory(config);

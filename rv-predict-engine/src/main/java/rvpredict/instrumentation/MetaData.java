@@ -3,6 +3,9 @@ package rvpredict.instrumentation;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.Maps;
 import org.apache.commons.lang3.tuple.Pair;
 public class MetaData {
 
@@ -18,17 +21,16 @@ public class MetaData {
      * our case.
      */
 
-    public static final ConcurrentHashMap<String, Integer> varSigToVarId = new ConcurrentHashMap<>();
+    public static final Map<String, Integer> varSigToVarId = Maps.synchronizedBiMap(HashBiMap.<String, Integer>create());
     public static final List<Pair<Integer, String>> unsavedVarIdToVarSig = new ArrayList<>();
 
     private static final int MAX_NUM_OF_FIELDS = 10000;
     public static final String[] varSigs = new String[MAX_NUM_OF_FIELDS];
 
-    public static final ConcurrentHashMap<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
+    public static final Map<String, Integer> stmtSigToLocId = Maps.synchronizedBiMap(HashBiMap.<String,Integer>create());
     public static final List<Pair<Integer, String>> unsavedLocIdToStmtSig = new ArrayList<>();
 
-    public static final Set<String> volatileVariables = Collections
-            .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    public static final Map<String, Integer> volatileVarSigToVarId = Maps.synchronizedBiMap(HashBiMap.<String,Integer>create());
     public static final List<String> unsavedVolatileVariables = new ArrayList<>();
 
     private MetaData() { }
@@ -84,10 +86,10 @@ public class MetaData {
 
     public static void addVolatileVariable(String className, String fieldName) {
         String sig = getVariableSignature(className, fieldName);
-        if (!volatileVariables.contains(sig)) {
-            synchronized (volatileVariables) {
-                if (!volatileVariables.contains(sig)) {
-                    volatileVariables.add(sig);
+        if (!volatileVarSigToVarId.containsKey(sig)) {
+            synchronized (volatileVarSigToVarId) {
+                if (!volatileVarSigToVarId.containsKey(sig)) {
+                    volatileVarSigToVarId.put(sig, varSigToVarId.get(sig));
                     unsavedVolatileVariables.add(sig);
                 }
             }

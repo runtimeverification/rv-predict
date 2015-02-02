@@ -4,6 +4,7 @@ import org.apache.tools.ant.util.JavaEnvUtils;
 import rvpredict.config.Configuration;
 import rvpredict.config.Util;
 import rvpredict.db.DBEngine;
+import rvpredict.logging.OfflineLoggingFactory;
 import rvpredict.util.Logger;
 
 import java.io.File;
@@ -86,13 +87,21 @@ public class Main {
             runAgent(config, appArgList, false);
         }
 
-        checkAndPredict(config);
+        try {
+            checkAndPredict(config);
+        } catch (IOException e) {
+            System.err.println("Error while reading the logs.");
+            System.err.println(e.getMessage());
+        } catch (ClassNotFoundException e) {
+            System.err.println("Error: Metadata file corrupted.");
+            System.err.println(e.getMessage());
+        }
     }
 
-    private static void checkAndPredict(Configuration config) {
+    private static void checkAndPredict(Configuration config) throws IOException, ClassNotFoundException {
         boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
         DBEngine db;
-        db = new DBEngine(config.outdir);
+        db = new DBEngine(new OfflineLoggingFactory(config));
         if (!db.checkLog()) {
             config.logger.report("Trace was not recorded properly. ", Logger.MSGTYPE.ERROR);
             if (!config.log) {
@@ -103,7 +112,7 @@ public class Main {
             System.exit(1);
         }
 
-        if (config.log && (config.verbose || logOutput)) {
+        if (config.log && (Configuration.verbose || logOutput)) {
             config.logger
                     .report(center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
             config.logger.report(Configuration.TRACE_LOGGED_IN + config.outdir,
@@ -184,7 +193,7 @@ public class Main {
             public void run() {
                 cleanupAgent.cleanup();
                 if (predict) {
-                    if (commandLine.log && (commandLine.verbose || logOutput)) {
+                    if (commandLine.log && (Configuration.verbose || logOutput)) {
                         commandLine.logger.report(center(Configuration.LOGGING_PHASE_COMPLETED),
                                 Logger.MSGTYPE.INFO);
                         commandLine.logger.report(Configuration.TRACE_LOGGED_IN

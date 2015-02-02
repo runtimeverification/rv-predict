@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import jdk.internal.org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassReader;
 import rvpredict.config.Configuration;
 import rvpredict.db.TraceCache;
 import rvpredict.engine.main.Main;

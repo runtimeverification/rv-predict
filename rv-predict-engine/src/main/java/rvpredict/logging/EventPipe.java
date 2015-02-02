@@ -15,7 +15,7 @@ import rvpredict.db.EventItem;
  * The {@link BufferedEventPipe#close()} method, which flushes the buffers and send the
  * {@link BufferedEventPipe#END_BUFFER} marker to close the pipe, is called only as part of the
  * {@link rvpredict.engine.main.Main.CleanupAgent#cleanup()} method added as a shutdown hook
- * to the logging {@link rvpredict.instrumentation.Agent#premain(String, java.lang.instrument.Instrumentation)} process.
+ * to the logging process.
  *
  * @author TraianSF
  */

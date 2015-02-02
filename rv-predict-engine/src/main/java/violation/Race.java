@@ -99,7 +99,7 @@ public class Race extends AbstractViolation {
         if (varSig == null) {
             result += "an array access";
         } else {
-            result += "field " + varSig;
+            result += "field " + varSig.replace("/", ".");
         }
         result += " between";
         if (node1.equals(node2)) {
@@ -118,6 +118,7 @@ public class Race extends AbstractViolation {
         String line;
 
         Location(String descriptor) {
+            descriptor = descriptor.replace("/", ".");
             String[] fields = descriptor.split("\\|");
             source = fields[0];
             className = fields[1];

@@ -38,7 +38,6 @@ public class ClassTransformer extends ClassVisitor {
             String[] interfaces) {
         className = name;
         this.version = version;
-        MetaData.setSuperclass(name, superName);
         cv.visit(version, access, name, signature, superName, interfaces);
     }
 

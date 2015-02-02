@@ -1,12 +1,11 @@
 package rvpredict.instrumentation;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
-import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.tuple.Pair;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 public class MetaData {
 
     public static final ConcurrentHashMap<String, Set<String>> classNameToFieldNames = new ConcurrentHashMap<>();
@@ -89,7 +88,7 @@ public class MetaData {
         if (!volatileVarSigToVarId.containsKey(sig)) {
             synchronized (volatileVarSigToVarId) {
                 if (!volatileVarSigToVarId.containsKey(sig)) {
-                    volatileVarSigToVarId.put(sig, varSigToVarId.get(sig));
+                    volatileVarSigToVarId.put(sig, getVariableId(className, fieldName));
                     unsavedVolatileVariables.add(sig);
                 }
             }

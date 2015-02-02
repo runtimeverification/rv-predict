@@ -466,6 +466,10 @@ public class Trace {
         info.addSharedAddresses(sharedMemAddr);
         info.addThreads(threadIds);
     }
+    
+    public int getSize() {
+        return rawEvents.size();
+    }
 
     // TODO(YilongL): add javadoc; addr seems to be some abstract address, e.g.
     // "_.1", built when reading the trace; figure out what happens and improve it

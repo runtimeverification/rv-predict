@@ -49,6 +49,7 @@ public class TraceInfo {
     HashSet<String> sharedAddresses = new HashSet<String>();
     HashSet<Long> threads = new HashSet<Long>();
     int num_br, num_sync, num_rw_shared, num_rw_local, num_w_init, num_prop;
+    long traceLength = 0;
 
     public TraceInfo(Set<Integer> volatileFieldIds, Map<Integer, String> varIdToVarSig, Map<Integer, String> locIdToStmtSig) {
         this.volatileFieldIds = volatileFieldIds;
@@ -128,4 +129,11 @@ public class TraceInfo {
         return num_prop;
     }
 
+    public void incrementTraceLength(int size) {
+        traceLength += size;
+    }
+
+    public long getTraceLength() {
+        return traceLength;
+    }
 }

@@ -46,9 +46,9 @@ public class RVPredict {
     private final ConcurrentMap<Violation,Boolean> violations = new ConcurrentHashMap<>();
     private final Configuration config;
     private final Logger logger;
-    private final long totalTraceLength;
     private final DBEngine dbEngine;
     private final TraceInfo traceInfo;
+    private final OfflineLoggingFactory loggingFactory;
 
     public RVPredict(Configuration config) throws IOException, ClassNotFoundException {
         this.config = config;
@@ -56,10 +56,10 @@ public class RVPredict {
 
         long startTime = System.currentTimeMillis();
 
-        dbEngine = new DBEngine(new OfflineLoggingFactory(config));
+        loggingFactory = new OfflineLoggingFactory(config);
+        dbEngine = new DBEngine(loggingFactory);
 
         // the total number of events in the trace
-        totalTraceLength = dbEngine.getTraceLength();
         traceInfo = new TraceInfo(dbEngine.getVolatileFieldIds(),
                 dbEngine.getVarIdToVarSig(),
                 dbEngine.getLocIdToStmtSig());
@@ -70,7 +70,7 @@ public class RVPredict {
     private void addHooks(long startTime) {
         // register a shutdown hook to store runtime statistics
         Runtime.getRuntime().addShutdownHook(
-                new ExecutionInfoTask(startTime, traceInfo, totalTraceLength));
+                new ExecutionInfoTask(startTime, traceInfo));
 
         // set a timer to timeout in a configured period
         Timer timer = new Timer();
@@ -85,15 +85,16 @@ public class RVPredict {
     }
 
     public void run() throws IOException, InterruptedException {
-        ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(8);
+        ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(4);
         Trace.State initState = new Trace.State();
 
+        long fromIndex = 1;
         // process the trace window by window
-        for (int n = 0; n * config.windowSize < totalTraceLength; n++) {
-            long fromIndex = n * config.windowSize + 1;
-            long toIndex = fromIndex + config.windowSize;
-
-            Trace trace = dbEngine.getTrace(fromIndex, toIndex, initState, traceInfo);
+        Trace trace;
+        do {
+            System.out.println("Starting from index: " + fromIndex);
+            trace = dbEngine.getTrace(fromIndex, fromIndex += config.windowSize, initState, traceInfo);
+            traceInfo.incrementTraceLength(trace.getSize());
 
             if (trace.hasSharedMemAddr()) {
 
@@ -102,7 +103,14 @@ public class RVPredict {
             }
 
             initState = trace.getFinalState();
+        } while (trace.getSize() == config.windowSize);
+        System.out.println("Ending at index: " + traceInfo.getTraceLength());
+        try {
+            System.out.println("Reported trace length: " + loggingFactory.getTraceLength());
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
+
         shutdownAndAwaitTermination(raceDetectorExecutor);
         System.exit(0);
     }
@@ -141,12 +149,10 @@ public class RVPredict {
     class ExecutionInfoTask extends Thread {
         TraceInfo info;
         long start_time;
-        long TOTAL_TRACE_LENGTH;
 
-        ExecutionInfoTask(long st, TraceInfo info, long size) {
+        ExecutionInfoTask(long st, TraceInfo info) {
             this.info = info;
             this.start_time = st;
-            this.TOTAL_TRACE_LENGTH = size;
         }
 
         @Override
@@ -169,7 +175,7 @@ public class RVPredict {
             if (violations.size() == 0)
                 logger.report("No races found.", Logger.MSGTYPE.INFO);
             else {
-                logger.report("Trace Size: " + TOTAL_TRACE_LENGTH, Logger.MSGTYPE.STATISTICS);
+                logger.report("Trace Size: " + info.getTraceLength(), Logger.MSGTYPE.STATISTICS);
                 logger.report("Total #Threads: " + TOTAL_THREAD_NUMBER, Logger.MSGTYPE.STATISTICS);
                 logger.report("Total #SharedVariables: " + TOTAL_SHAREDVARIABLE_NUMBER,
                         Logger.MSGTYPE.STATISTICS);

@@ -46,7 +46,6 @@ import java.util.Set;
  */
 public class DBEngine {
     private final TraceCache traceCache;
-    private final long traceLength;
     private final Set<Integer> volatileFieldIds;
     private final Map<Integer, String> varIdToVarSig;
     private final Map<Integer, String> locIdToStmtSig;
@@ -56,7 +55,6 @@ public class DBEngine {
         volatileFieldIds = loggingFactory.getVolatileFieldIds();
         varIdToVarSig = loggingFactory.getVarIdToVarSig();
         locIdToStmtSig = loggingFactory.getLocIdToStmtSig();
-        traceLength = loggingFactory.getTraceLength();
     }
 
     /**
@@ -80,11 +78,11 @@ public class DBEngine {
      *         read
      */
     public Trace getTrace(long fromIndex, long toIndex, Trace.State initState, TraceInfo info) throws IOException, InterruptedException {
-        assert fromIndex <= traceLength : "This method should only be called with a valid min value";
-        if (toIndex > traceLength + 1) toIndex = traceLength + 1;
         Trace trace = new Trace(initState, info);
         for (long index = fromIndex; index < toIndex; index++) {
             EventItem eventItem = traceCache.getEvent(index);
+            if (eventItem == null) 
+                break;
             Event node = AbstractEvent.of(eventItem);
             trace.addRawEvent(node);
         }
@@ -92,10 +90,6 @@ public class DBEngine {
         trace.finishedLoading();
 
         return trace;
-    }
-
-    public long getTraceLength() {
-        return traceLength;
     }
 
     public Set<Integer> getVolatileFieldIds() {

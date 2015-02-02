@@ -42,6 +42,7 @@ public class TraceCache {
     public EventItem getEvent(long index) throws IOException, InterruptedException {
         if (!indexes.containsKey(index)) {
             updateIndexes(index);
+            if (!indexes.containsKey(index)) return null;
         }
         Map.Entry<EventInputStream,EventItem> entry = indexes.remove(index);
 
@@ -63,6 +64,7 @@ public class TraceCache {
         EventItem event;
         do {
             EventInputStream inputStream = loggingFactory.getInputStream();
+            if (inputStream == null) return;
             event = inputStream.readEvent();
             indexes.put(event.GID, new AbstractMap.SimpleEntry<>(inputStream, event));
         } while (event.GID != index);

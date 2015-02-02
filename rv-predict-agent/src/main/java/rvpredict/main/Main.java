@@ -31,8 +31,6 @@ package rvpredict.main;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import rvpredict.config.Config;
-
 /**
  * The entry class to run the record version of the application. During
  * execution, the runtime traces are collected and stored event by event into a
@@ -53,7 +51,6 @@ public class Main {
 
     private static void run(String[] args) {
         try {
-            Config.instance.commandLine.tableName = args[0];
             // if(args.length>1)
             // for(int i=1;i<args.length;i++)
             // {
@@ -72,8 +69,7 @@ public class Main {
 
             if (args.length > 1) {
                 mainArgs = new String[args.length - 1];
-                for (int k = 0; k < args.length - 1; k++)
-                    mainArgs[k] = args[k + 1];
+                System.arraycopy(args, 1, mainArgs, 0, args.length - 1);
             }
             main.invoke(null, (Object) mainArgs);
             // production code should handle these exceptions more gracefully

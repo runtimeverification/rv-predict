@@ -55,66 +55,35 @@ public class Main {
             String libPath = basePath + separator + "lib" + separator;
             String rvAgent = libPath + "rv-predict" + ".jar";
 
-            // TODO(Traian): there should be only one agentOptions
-            String sharingAgentOptions = Configuration.opt_only_log + " "
+            String agentOptions = Configuration.opt_only_log + " "
                     + escapeString(config.outdir);
             if (config.zip) {
-                sharingAgentOptions += " " + Configuration.opt_zip;
+                agentOptions += " " + Configuration.opt_zip;
             }
-            if (Configuration.additionalExcludes != null) {
-                Configuration.additionalExcludes.replaceAll(" ", "");
-                sharingAgentOptions += " " + Configuration.opt_exclude + " "
-                        + escapeString(Configuration.additionalExcludes);
+            if (Configuration.excludes != null) {
+                Configuration.excludes.replaceAll(" ", "");
+                agentOptions += " " + Configuration.opt_exclude + " "
+                        + escapeString(Configuration.excludes);
             }
-            if (Configuration.additionalIncludes != null) {
-                Configuration.additionalIncludes.replaceAll(" ", "");
-                sharingAgentOptions += " " + Configuration.opt_include + " "
-                        + escapeString(Configuration.additionalIncludes);
+            if (Configuration.includes != null) {
+                Configuration.includes.replaceAll(" ", "");
+                agentOptions += " " + Configuration.opt_include + " "
+                        + escapeString(Configuration.includes);
             }
-            String noSharingAgentOptions = sharingAgentOptions;
 
             List<String> appArgList = new ArrayList<>();
             appArgList.add(java);
             appArgList.add("-ea");
             appArgList.add("-Xbootclasspath/a:" + rvAgent);
-            int agentIds = appArgList.size();
-            if (config.optlog) {
-                if (logOutput) {
-                    if (config.optlog) {
-                        config.logger
-                                .report(center("First pass: Instrumented execution to detect shared variables"),
-                                        Logger.MSGTYPE.INFO);
-                    } else {
-                        config.logger.report(
-                                center("Instrumented execution to detect shared variables"),
-                                Logger.MSGTYPE.INFO);
-
-                    }
-                }
-                appArgList.add("-javaagent:" + rvAgent + "=" + sharingAgentOptions);
-            } else {
-                appArgList.add("-javaagent:" + rvAgent + "=" + noSharingAgentOptions);
-                if (logOutput) {
-                    config.logger.report(
-                            center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE),
-                            Logger.MSGTYPE.INFO);
-                }
+            appArgList.add("-javaagent:" + rvAgent + "=" + agentOptions);
+            if (logOutput) {
+                config.logger.report(
+                        center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE),
+                        Logger.MSGTYPE.INFO);
             }
             appArgList.addAll(config.command_line);
 
-            if (config.optlog) {
-                runAgent(config, appArgList, false);
-                appArgList.set(agentIds, "-javaagent:" + rvAgent + "=" + noSharingAgentOptions);
-                if (logOutput) {
-                    config.logger.report(
-                            center("Second pass: Instrumented execution to record the trace"),
-                            Logger.MSGTYPE.INFO);
-                }
-                runAgent(config, appArgList, false);
-            } else {
-                runAgent(config, appArgList, false);
-
-            }
+            runAgent(config, appArgList, false);
         }
 
         checkAndPredict(config);
@@ -126,10 +95,7 @@ public class Main {
         db = new DBEngine(config.outdir);
         if (!db.checkLog()) {
             config.logger.report("Trace was not recorded properly. ", Logger.MSGTYPE.ERROR);
-            if (config.log) {
-                // config.logger.report("Please check the classpath.",
-                // Logger.MSGTYPE.ERROR);
-            } else {
+            if (!config.log) {
                 config.logger.report("Please run " + Configuration.PROGRAM_NAME + " with "
                         + Configuration.opt_only_log + " " + config.outdir + " first.",
                         Logger.MSGTYPE.ERROR);
@@ -202,9 +168,9 @@ public class Main {
             commandMsg.append("   ");
             for (String arg : args) {
                 if (arg.contains(" ")) {
-                    commandMsg.append(" \"" + arg + "\"");
+                    commandMsg.append(" \"").append(arg).append("\"");
                 } else {
-                    commandMsg.append(" " + arg);
+                    commandMsg.append(" ").append(arg);
                 }
             }
             commandLine.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
@@ -225,9 +191,8 @@ public class Main {
                                 + commandLine.outdir, Logger.MSGTYPE.VERBOSE);
                     }
 
-                    Process process = null;
                     try {
-                        process = finalProcessBuilder.start();
+                        Process process = finalProcessBuilder.start();
                         if (finalLogToScreen) {
                             Util.redirectOutput(process.getErrorStream(), System.err);
                             Util.redirectOutput(process.getInputStream(), System.out);
@@ -238,9 +203,7 @@ public class Main {
                         Util.redirectInput(process.getOutputStream(), System.in);
 
                         process.waitFor();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
+                    } catch (IOException | InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
@@ -274,9 +237,9 @@ public class Main {
             commandMsg.append("   ");
             for (String arg : appArgList) {
                 if (arg.contains(" ")) {
-                    commandMsg.append(" \"" + arg + "\"");
+                    commandMsg.append(" \"").append(arg).append("\"");
                 } else {
-                    commandMsg.append(" " + arg);
+                    commandMsg.append(" ").append(arg);
                 }
             }
             config.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
@@ -304,7 +267,7 @@ public class Main {
 
             process.waitFor();
             Runtime.getRuntime().removeShutdownHook(cleanupAgent);
-        } catch (IOException e) {
+        } catch (IOException ignored) {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

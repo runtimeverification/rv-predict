@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * Command line options class for rv-predict Used by JCommander to parse the
@@ -47,7 +48,80 @@ public class Configuration {
     public static final String LOGGING_PHASE_COMPLETED = "Logging phase completed.";
     public static final String TRACE_LOGGED_IN = "\tTrace logged in: ";
     public static final String INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE = "Instrumented execution to record the trace";
+    /**
+     * Packages/classes that are excluded from instrumentation by default. These are
+     * configurable by the users through the <code>--exclude</code> command option.
+     */
+     private static String[] DEFAULT_EXCLUDES = new String[] {
+            "java.*",
+            "javax.*",
+            "sun.*",
+            "sunw.*",
+            "com.sun.*",
+            "com.ibm.*",
+            "com.apple.*",
+            "apple.awt.*",
+            "org.xml.*",
+            "jdk.internal.*"            
+    };
+    public final List<Pattern> includeList = new LinkedList<>();
+    public List<Pattern> excludeList = new LinkedList<>();
     private JCommander jCommander;
+
+    private static Pattern createClassPattern(String pattern) {
+        pattern = pattern.replace('.', '/');
+        String escapeChars[] = new String[] {"$","["};
+        for (String c : escapeChars) {
+           pattern = pattern.replace(c, "\\"  + c);
+        }
+        return Pattern.compile(pattern.replace("*", ".*")+".*");
+    }
+
+    private void initIncludeList() {
+        if (includes != null) {
+            for (String include : includes.replace('.', '/').split(",")) {
+                if (include.isEmpty()) continue;
+                includeList.add(createClassPattern(include));
+            }
+            System.out.println("Including: " + includeList);
+        }
+    }
+
+    private void initExcludeList() {
+        String excludes = Configuration.excludes;
+        if (excludes == null) {
+            excludeList = getDefaultPatterns(DEFAULT_EXCLUDES);
+        } else {
+            excludes = excludes.trim();
+            if (excludes.charAt(0) == '+') { // initialize excludeList with default patterns
+                excludes = excludes.substring(1);
+                excludeList = getDefaultPatterns(DEFAULT_EXCLUDES);
+            }
+            for (String exclude : excludes.replace('.', '/').split(",")) {
+                exclude = exclude.trim();
+                if (!exclude.isEmpty())
+                    excludeList.add(createClassPattern(exclude));
+            }
+            System.out.println("Excluding: " + excludeList);
+        }
+    }
+
+    /**
+     * Creates a {@link java.util.regex.Pattern} list from a String array 
+     * describing packages/classes using file pattern conventions ({@code *} 
+     * stands for a sequence of characters)
+     *
+     * @param patterns the array of package/class descriptions
+     * @return A {@link java.util.regex.Pattern} list which matches 
+     *         names specified by the given argument
+     */
+    public static List<Pattern> getDefaultPatterns(String[] patterns) {
+        List<Pattern> patternList = new LinkedList<>();
+        for (String pattern : patterns) {
+            patternList.add(createClassPattern(pattern));
+        }
+        return patternList;
+    }
 
     // Copyright (c) 2013-2014 K Team. All Rights Reserved.
     public enum OS {
@@ -115,21 +189,13 @@ public class Configuration {
     @Parameter(names = opt_log_output, description = "Output of the logged execution [yes|no|<file>]", hidden = true, descriptionKey = "1010")
     public String log_output = YES;
 
-    final static String opt_optlog = "--with-profile";
-    @Parameter(names = opt_optlog, description = "Use profiling to optimize logging size", hidden = true, descriptionKey = "1020")
-    public boolean optlog;
-
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include", hidden = true, descriptionKey = "1025")
-    public static String additionalIncludes;
+    public static String includes;
 
     public final static String opt_exclude = "--exclude";
     @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude", hidden = true, descriptionKey = "1030")
-    public static String additionalExcludes;
-
-    public final static String opt_asynchronous = "--async";
-    @Parameter(names = opt_asynchronous, description = "Record trace asynchronously", hidden = true, descriptionKey = "1050")
-    public boolean async;
+    public static String excludes;
 
     public final static String opt_zip = "--zip";
     @Parameter(names = opt_zip, description = "Compress traces", hidden = true, descriptionKey = "1060")
@@ -156,9 +222,6 @@ public class Configuration {
     @Parameter(names = opt_volatile, description = "Check unordered conflict accesses on volatile variables", hidden = true, descriptionKey = "2030")
     public boolean checkVolatile;
 
-    // final static String opt_constraint_outdir = "--outdir";
-    // @Parameter(names = opt_constraint_outdir, description =
-    // "constraint file directory", hidden = true)
     public String constraint_outdir;
 
     public String tableName = "main";
@@ -171,19 +234,9 @@ public class Configuration {
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
     public long solver_timeout = 60;
 
-    final static String opt_solver_memory = "--solver_memory";
-    // @Parameter(names = opt_solver_memory, description =
-    // "solver memory size in MB", hidden = true)
-    public long solver_memory = 8000;
-
     final static String opt_timeout = "--timeout";
     @Parameter(names = opt_timeout, description = "RV-Predict timeout in seconds", hidden = true, descriptionKey = "2070")
     public long timeout = 3600;
-
-    // final static String opt_smtlib1 = "--smtlib1";
-    // @Parameter(names = opt_smtlib1, description =
-    // "use constraint format SMT-LIB v1.2", hidden = true)
-    public boolean smtlib1 = true;
 
     public final static String opt_outdir = "--dir";
     @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")
@@ -192,7 +245,7 @@ public class Configuration {
     final static String short_opt_verbose = "-v";
     final static String opt_verbose = "--verbose";
     @Parameter(names = { short_opt_verbose, opt_verbose }, description = "Generate more verbose output", descriptionKey = "9000")
-    public boolean verbose;
+    public static boolean verbose;
 
     final static String short_opt_help = "-h";
     final static String opt_help = "--help";
@@ -202,10 +255,6 @@ public class Configuration {
     public final static String opt_java = "--";
     public Logger logger;
 
-    // @Parameter(names = opt_java, description =
-    // "optional separator for java arguments")
-    // public boolean javaSeparator;
-
     public void parseArguments(String[] args, boolean checkJava) {
         this.args = args;
         String fileSeparator = System.getProperty("file.separator");
@@ -214,11 +263,9 @@ public class Configuration {
 
         // Collect all parameter names. It would be nice if JCommander provided
         // this directly.
-        Set<String> options = new HashSet<String>();
+        Set<String> options = new HashSet<>();
         for (ParameterDescription parameterDescription : jCommander.getParameters()) {
-            for (String name : parameterDescription.getParameter().names()) {
-                options.add(name);
-            }
+            Collections.addAll(options, parameterDescription.getParameter().names());
         }
 
         // Detecting a candidate for program options start
@@ -245,6 +292,10 @@ public class Configuration {
             System.err.println(e.getMessage());
             System.exit(1);
         }
+
+
+        initExcludeList();
+        initIncludeList();
 
         if (log_dir != null) {
             if (predict_dir != null) {
@@ -302,7 +353,7 @@ public class Configuration {
         List<String> argList = Arrays.asList(Arrays.copyOfRange(args, max, args.length));
         if (command_line == null) { // otherwise the java command has already
                                     // started
-            command_line = new ArrayList<String>(argList);
+            command_line = new ArrayList<>(argList);
             if (command_line.isEmpty() && log && checkJava) {
                 System.err.println("Error: Java command line is empty.");
                 usage();
@@ -351,8 +402,8 @@ public class Configuration {
         String usage = usageHeader + "  Options:";
         String shortUsage = usageHeader + "  Common options (use -h -v for a complete list):";
 
-        Map<String, String> usageMap = new TreeMap<String, String>();
-        Map<String, String> shortUsageMap = new TreeMap<String, String>();
+        Map<String, String> usageMap = new TreeMap<>();
+        Map<String, String> shortUsageMap = new TreeMap<>();
         int spacesBeforeCnt;
         int spacesAfterCnt;
         String description;

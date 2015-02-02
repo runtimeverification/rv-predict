@@ -1,10 +1,5 @@
 package rvpredict.instrumentation.transformer;
 
-import static org.objectweb.asm.Opcodes.*;
-import static rvpredict.instrumentation.RVPredictRuntimeMethods.*;
-
-import java.util.Set;
-
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -12,13 +7,17 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.InstructionAdapter;
 import org.objectweb.asm.commons.Method;
-
-import rvpredict.config.Config;
+import rvpredict.config.Configuration;
 import rvpredict.instrumentation.MetaData;
 import rvpredict.instrumentation.RVPredictInterceptor;
 import rvpredict.instrumentation.RVPredictRuntimeMethod;
 import rvpredict.instrumentation.RVPredictRuntimeMethods;
 import rvpredict.runtime.RVPredictRuntime;
+
+import java.util.Set;
+
+import static org.objectweb.asm.Opcodes.*;
+import static rvpredict.instrumentation.RVPredictRuntimeMethods.*;
 
 public class MethodTransformer extends MethodVisitor {
 
@@ -60,7 +59,7 @@ public class MethodTransformer extends MethodVisitor {
     private final int branchModel;
 
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
-            String name, String desc, int access, int crntMaxLocals, Set<String> finalFields, Config config) {
+            String name, String desc, int access, int crntMaxLocals, Set<String> finalFields, Configuration config) {
         super(Opcodes.ASM5, new InstructionAdapter(mv));
         this.mv = (InstructionAdapter) super.mv;
         this.source = source == null ? "Unknown" : source;
@@ -72,7 +71,7 @@ public class MethodTransformer extends MethodVisitor {
         this.isStatic = (access & ACC_STATIC) != 0;
         this.crntMaxLocals = crntMaxLocals;
         this.finalFields = finalFields;
-        this.branchModel = config.commandLine.branch ? 1 : 0;
+        this.branchModel = config.branch ? 1 : 0;
     }
 
     @Override

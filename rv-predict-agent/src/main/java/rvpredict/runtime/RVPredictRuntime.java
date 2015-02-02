@@ -44,7 +44,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.regex.Pattern;
 
-import rvpredict.config.Config;
+import rvpredict.config.Configuration;
 import rvpredict.instrumentation.MetaData;
 import rvpredict.logging.LoggingEngine;
 import rvpredict.trace.EventType;
@@ -156,8 +156,8 @@ public final class RVPredictRuntime {
     /**
      * Map from view to its backed collection. There are two kinds of view in
      * the Java Collections Framework: the collection views provided in the
-     * {@link Map} interface and the range views provided in the {@link List},
-     * {@link SortedSet}, and {@link SortMap} interfaces.
+     * {@link java.util.Map} interface and the range views provided in the {@link java.util.List},
+     * {@link java.util.SortedSet}, and {@link java.util.SortedMap} interfaces.
      */
     private static final SynchronizedWeakIdentityHashMap<Collection, Object> viewToBackedCollection = new SynchronizedWeakIdentityHashMap<>();
 
@@ -1053,7 +1053,7 @@ public final class RVPredictRuntime {
         Iterator iterator = iterable.iterator();
         if (!isCollectionInstrumented(iterable)) {
             Iterable value = iteratorToIterable.put(iterator, iterable);
-            if (value != null && Config.instance.verbose) {
+            if (value != null && Configuration.verbose) {
                 System.err.println("[Runtime] error: iterator " + iterator
                         + " was already bound to " + value);
             }
@@ -1146,7 +1146,7 @@ public final class RVPredictRuntime {
     }
 
     /**
-     * {@link Collection#clear(Object)}
+     * {@link java.util.Collection#clear()}
      */
     public static void rvPredictCollectionClear(Collection collection, int locId) {
         mockCollectionWriteAccess(collection, locId);
@@ -1380,7 +1380,7 @@ public final class RVPredictRuntime {
             } else {
                 mockCollectionReadAccess(collection, locId);
             }
-        } else if (Config.instance.verbose) {
+        } else if (Configuration.verbose) {
             /* this is possible because not all iterators are created by
              * Iterable.iterator() */
             System.err.println("[Runtime] Unable to find the collection associated with " + iterator);

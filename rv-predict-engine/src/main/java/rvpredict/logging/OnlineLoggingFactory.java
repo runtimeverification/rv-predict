@@ -1,7 +1,6 @@
 package rvpredict.logging;
 
 import com.google.common.collect.BiMap;
-import com.sun.xml.internal.ws.api.addressing.WSEndpointReference;
 import rvpredict.db.EventInputStream;
 import rvpredict.instrumentation.MetaData;
 

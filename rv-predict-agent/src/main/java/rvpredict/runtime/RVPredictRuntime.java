@@ -30,14 +30,19 @@ package rvpredict.runtime;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -294,6 +299,7 @@ public final class RVPredictRuntime {
      */
     public static void logFieldAcc(Object object, long value, int variableId, boolean isWrite,
             boolean branchModel, int locId) {
+        // TODO(YilongL): check skipSavingEvent before performing any computation?
         variableId = RVPredictRuntime.resolveVariableId(variableId);
         saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(object), -variableId, value);
@@ -1467,6 +1473,7 @@ public final class RVPredictRuntime {
      * dependency on ConcurrentHashMap and Collections.newSetFromMap
      */
     private static int resolveVariableId(int variableId) {
+        // TODO(YilongL): cache the result of variable resolution
         String varSig = MetaData.varSigs[variableId];
         int idx = varSig.lastIndexOf(".");
         String className = varSig.substring(0, idx);
@@ -1498,6 +1505,9 @@ public final class RVPredictRuntime {
 
     private static void saveEvent(EventType eventType, int id, long addrl, int addrr, long value) {
         if (!skipSavingEvent()) {
+            if (loggingEngine.getConfig().profile) {
+                updateEventStats();
+            }
             loggingEngine.saveEvent(eventType, id, addrl, addrr, value);
         }
     }
@@ -1522,12 +1532,70 @@ public final class RVPredictRuntime {
      * Checks if logging should be disabled at the moment.
      */
     private static boolean skipSavingEvent() {
-        for (StackTraceElement e : new Throwable().getStackTrace()) {
+        StackTraceElement[] stackTrace = new Throwable().getStackTrace();
+        for (StackTraceElement e : stackTrace) {
             String className = e.getClassName();
             if (className.startsWith("java.lang.ClassLoader") || className.startsWith("sun")) {
                 return true;
             }
         }
         return false;
+    }
+
+    private static final ConcurrentHashMap<String, AtomicLong> eventStats = new ConcurrentHashMap<>();
+
+    private static void updateEventStats() {
+        // TODO(YilongL): improve this method to record how many threads are
+        // accessing a certain object and the percentage of each type of events?
+        StackTraceElement[] stackTrace = new Throwable().getStackTrace();
+        for (StackTraceElement e : stackTrace) {
+            String className = e.getClassName();
+            if (!className.startsWith("rvpredict")) {
+                AtomicLong atoml = eventStats.get(className);
+                if (atoml == null) {
+                    synchronized (eventStats) {
+                        eventStats.putIfAbsent(className, new AtomicLong(0));
+                        atoml = eventStats.get(className);
+                    }
+                }
+                atoml.incrementAndGet();
+                break;
+            }
+        }
+    }
+
+    public static void printEventStats() {
+        List<Map.Entry<String, AtomicLong>> entries = new ArrayList<>(eventStats.entrySet());
+        Collections.sort(entries, new Comparator<Map.Entry<String, AtomicLong>>() {
+            @Override
+            public int compare(Map.Entry<String, AtomicLong> e1,
+                    Map.Entry<String, AtomicLong> e2) {
+                if (e1.getValue().longValue() < e2.getValue().longValue()) {
+                    return 1;
+                } else if (e1.getValue().equals(e2.getValue())) {
+                    return 0;
+                } else {
+                    return -1;
+                }
+            }
+        });
+        int total = 0;
+        for (Map.Entry<String, AtomicLong> e : entries) {
+            total += e.getValue().longValue();
+        }
+        System.err.println("-----------------------Events profiling statistics-------------------------");
+        System.err.println("Total number of events: " + total);
+        int c = 0;
+        for (Map.Entry<String, AtomicLong> e : entries) {
+            c += e.getValue().longValue();
+            System.err.printf("%-10s %-10s %-10s %-50s%n",
+                e.getValue(),
+                String.format("%.3f%%", e.getValue().longValue() * 100.0f / total),
+                String.format("%.3f%%", c * 100.0f / total),
+                e.getKey());
+            if (c * 1.0f / total > 0.9f) {
+                break;
+            }
+        }
     }
 }

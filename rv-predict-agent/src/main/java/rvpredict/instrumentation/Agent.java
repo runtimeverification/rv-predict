@@ -98,8 +98,8 @@ public class Agent implements ClassFileTransformer {
         config.logger.report("Log directory: " + config.outdir, Logger.MSGTYPE.INFO);
 
         TraceCache.removeTraceFiles(config.outdir);
-        final LoggingEngine db = new LoggingEngine(config);
-        RVPredictRuntime.init(db);
+        final LoggingEngine loggingEngine = new LoggingEngine(config);
+        RVPredictRuntime.init(loggingEngine);
 
         inst.addTransformer(new Agent(config), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {
@@ -123,7 +123,7 @@ public class Agent implements ClassFileTransformer {
             @Override
             public void cleanup() {
                 try {
-                    db.finishLogging();
+                    loggingEngine.finishLogging();
                 } catch (IOException e) {
                     System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
                     System.err.println(e.getMessage());

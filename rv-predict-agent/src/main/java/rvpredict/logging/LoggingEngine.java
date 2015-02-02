@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import rvpredict.config.Configuration;
 import rvpredict.db.EventItem;
+import rvpredict.runtime.RVPredictRuntime;
 import rvpredict.trace.EventType;
 
 /**
@@ -56,6 +57,9 @@ public class LoggingEngine {
     public void finishLogging() throws IOException, InterruptedException {
         shutdown = true;
         loggingServer.finishLogging();
+        if (config.profile) {
+            RVPredictRuntime.printEventStats();
+        }
     }
 
     public LoggingEngine(Configuration config) {

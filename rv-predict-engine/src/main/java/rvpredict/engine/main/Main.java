@@ -60,6 +60,11 @@ public class Main {
             if (config.zip) {
                 agentOptions += " " + Configuration.opt_zip;
             }
+            // TODO: frontend options should be automatically sent instead of hard-coding like this
+            if (config.profile) {
+                agentOptions += " " + Configuration.opt_event_profile;
+            }
+
             if (Configuration.excludes != null) {
                 Configuration.excludes.replaceAll(" ", "");
                 agentOptions += " " + Configuration.opt_exclude + " "

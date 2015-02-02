@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -52,7 +53,7 @@ import rvpredict.config.Configuration;
 
 public class SMTConstraintBuilder {
 
-    private int id = 0;// constraint id
+    private static AtomicInteger id = new AtomicInteger();// constraint id
     private SMTTaskRun task;
 
     private final Configuration config;
@@ -381,7 +382,7 @@ public class SMTConstraintBuilder {
     }
 
     public boolean isSat() {
-        id++;
+        int id = SMTConstraintBuilder.id.incrementAndGet();
         task = new SMTTaskRun(config, id);
 
         StringBuilder msg = new StringBuilder(benchname).append(CONS_SETLOGIC)
@@ -392,7 +393,7 @@ public class SMTConstraintBuilder {
     }
 
     public boolean isRace(Event e1, Event e2, CharSequence casualConstraint) {
-        id++;
+        int id = SMTConstraintBuilder.id.incrementAndGet();
         task = new SMTTaskRun(config, id);
         StringBuilder msg = new StringBuilder(benchname).append(CONS_SETLOGIC).append(smtlibDecl);
         msg.append(smtlibAssertion);

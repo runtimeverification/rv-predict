@@ -189,10 +189,6 @@ public class Configuration {
     @Parameter(names = opt_log_output, description = "Output of the logged execution [yes|no|<file>]", hidden = true, descriptionKey = "1010")
     public String log_output = YES;
 
-    final static String opt_optlog = "--with-profile";
-    @Parameter(names = opt_optlog, description = "Use profiling to optimize logging size", hidden = true, descriptionKey = "1020")
-    public boolean optlog;
-
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include", hidden = true, descriptionKey = "1025")
     public static String includes;

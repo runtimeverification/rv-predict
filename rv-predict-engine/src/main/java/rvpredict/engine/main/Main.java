@@ -55,60 +55,35 @@ public class Main {
             String libPath = basePath + separator + "lib" + separator;
             String rvAgent = libPath + "rv-predict" + ".jar";
 
-            // TODO(Traian): there should be only one agentOptions
-            String sharingAgentOptions = Configuration.opt_only_log + " "
+            String agentOptions = Configuration.opt_only_log + " "
                     + escapeString(config.outdir);
             if (config.zip) {
-                sharingAgentOptions += " " + Configuration.opt_zip;
+                agentOptions += " " + Configuration.opt_zip;
             }
             if (Configuration.excludes != null) {
                 Configuration.excludes.replaceAll(" ", "");
-                sharingAgentOptions += " " + Configuration.opt_exclude + " "
+                agentOptions += " " + Configuration.opt_exclude + " "
                         + escapeString(Configuration.excludes);
             }
             if (Configuration.includes != null) {
                 Configuration.includes.replaceAll(" ", "");
-                sharingAgentOptions += " " + Configuration.opt_include + " "
+                agentOptions += " " + Configuration.opt_include + " "
                         + escapeString(Configuration.includes);
             }
-            String noSharingAgentOptions = sharingAgentOptions;
 
             List<String> appArgList = new ArrayList<>();
             appArgList.add(java);
             appArgList.add("-ea");
             appArgList.add("-Xbootclasspath/a:" + rvAgent);
-            int agentIds = appArgList.size();
-            if (config.optlog) {
-                if (logOutput) {
-                    config.logger.report(
-                            center("Instrumented execution to detect shared variables"),
-                            Logger.MSGTYPE.INFO);
-
-                }
-                appArgList.add("-javaagent:" + rvAgent + "=" + sharingAgentOptions);
-            } else {
-                appArgList.add("-javaagent:" + rvAgent + "=" + noSharingAgentOptions);
-                if (logOutput) {
-                    config.logger.report(
-                            center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE),
-                            Logger.MSGTYPE.INFO);
-                }
+            appArgList.add("-javaagent:" + rvAgent + "=" + agentOptions);
+            if (logOutput) {
+                config.logger.report(
+                        center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE),
+                        Logger.MSGTYPE.INFO);
             }
             appArgList.addAll(config.command_line);
 
-            if (config.optlog) {
-                runAgent(config, appArgList, false);
-                appArgList.set(agentIds, "-javaagent:" + rvAgent + "=" + noSharingAgentOptions);
-                if (logOutput) {
-                    config.logger.report(
-                            center("Second pass: Instrumented execution to record the trace"),
-                            Logger.MSGTYPE.INFO);
-                }
-                runAgent(config, appArgList, false);
-            } else {
-                runAgent(config, appArgList, false);
-
-            }
+            runAgent(config, appArgList, false);
         }
 
         checkAndPredict(config);

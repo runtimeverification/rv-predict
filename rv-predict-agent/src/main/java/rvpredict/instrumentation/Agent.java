@@ -33,28 +33,28 @@ public class Agent implements ClassFileTransformer {
                 // rv-predict itself and the libraries we are using
                 "rvpredict",
                 /* TODO(YilongL): shall we repackage these libraries using JarJar? */
-                "org.objectweb.asm",
-                "com.beust",
-                "org.apache.tools.ant",
-                "org.apache.commons.collections4",
+                "org/objectweb/asm",
+                "com/beust",
+                "org/apache/tools/ant",
+                "org/apache/commons/collections4",
 
                 // array type
                 "[",
 
                 // JDK classes used by the RV-Predict runtime library
-                "java.io",
-                "java.nio",
-                "java.util.concurrent.atomic.AtomicLong",
-                "java.util.concurrent.ConcurrentHashMap",
-                "java.util.zip.GZIPOutputStream",
-                "java.util.regex",
+                "java/io",
+                "java/nio",
+                "java/util/concurrent/atomic/AtomicLong",
+                "java/util/concurrent/ConcurrentHashMap",
+                "java/util/zip/GZIPOutputStream",
+                "java/util/regex",
 
                 // Basics of the JDK that everything else is depending on
                 "sun",
-                "java.lang",
+                "java/lang",
 
                 /* we provide complete mocking of the jucl package */
-                "java.util.concurrent.locks"
+                "java/util/concurrent/locks"
         };
         IGNORES = Configuration.getDefaultPatterns(ignores);
     }
@@ -178,12 +178,12 @@ public class Agent implements ClassFileTransformer {
                         toInstrument = false;
                         if (config.verbose) {
                             /* TODO(YilongL): this may cause missing data races if
-                         * the mock for interface/superclass does not contain
-                         * methods specific to this implementation. This could
-                         * be a big problem if the application makes heavy use
-                         * of helper methods specific in some high-level
-                         * concurrency library (e.g. Guava) while most of the
-                         * classes are simply excluded here */
+                             * the mock for interface/superclass does not contain
+                             * methods specific to this implementation. This could
+                             * be a big problem if the application makes heavy use
+                             * of helper methods specific in some high-level
+                             * concurrency library (e.g. Guava) while most of the
+                             * classes are simply excluded here */
                             System.err.println("[Java-agent] excluded " + c
                                     + " from instrumentation because we are mocking " + mock);
                         }
@@ -201,7 +201,6 @@ public class Agent implements ClassFileTransformer {
             }
 
             if (toInstrument) {  //make sure we don't instrument IGNORES even if the user said so
-                //        System.err.println(cname + " " + toInstrument);
                 for (Pattern ignore : IGNORES) {
                     toInstrument = !ignore.matcher(cname).matches();
                     if (!toInstrument) break;

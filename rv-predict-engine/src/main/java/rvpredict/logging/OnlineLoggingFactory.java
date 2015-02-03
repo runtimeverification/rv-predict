@@ -55,7 +55,7 @@ public class OnlineLoggingFactory implements LoggingFactory {
 
     @Override
     public Set<Integer> getVolatileFieldIds() throws IOException, ClassNotFoundException {
-        return ((BiMap<String, Integer>)MetaData.volatileVarSigToVarId).inverse().keySet();
+        return MetaData.volatileFieldIds;
     }
 
     @Override
@@ -65,7 +65,7 @@ public class OnlineLoggingFactory implements LoggingFactory {
 
     @Override
     public Map<Integer, String> getLocIdToStmtSig() throws IOException, ClassNotFoundException {
-        return ((BiMap<String, Integer>)MetaData.stmtSigToLocId).inverse();
+        return MetaData.locIdToStmtSig;
     }
 
 }

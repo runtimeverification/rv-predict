@@ -1,5 +1,7 @@
 package rvpredict.logging;
 
+import rvpredict.config.Configuration;
+
 import java.io.*;
 import java.util.LinkedList;
 import java.util.List;
@@ -19,22 +21,26 @@ public class LoggingServer implements Runnable {
     private final List<LoggerThread> loggers = new LinkedList<>();
     private final BlockingQueue<EventPipe> loggersRegistry;
     private final ThreadLocalEventStream threadLocalTraceOS;
-    private final MetadataLoggerThread metadataLoggerThread;
+    private MetadataLoggerThread metadataLoggerThread;
 
 
     public LoggingServer(LoggingEngine engine) {
         this.engine = engine;
         loggersRegistry = new LinkedBlockingQueue<>();
-        metadataLoggerThread = new MetadataLoggerThread(engine);
+        if (!Configuration.online) {
+            metadataLoggerThread = new MetadataLoggerThread(engine);
+        }
         threadLocalTraceOS = new ThreadLocalEventStream(engine.getLoggingFactory(), loggersRegistry);
     }
 
     @Override
     public void run() {
-        Thread metadataLoggingThread = new Thread(metadataLoggerThread);
-        metadataLoggerThread.setOwner(metadataLoggingThread);
-        metadataLoggingThread.setDaemon(true);
-        metadataLoggingThread.start();
+        if (!Configuration.online) {
+            Thread metadataLoggingThread = new Thread(metadataLoggerThread);
+            metadataLoggerThread.setOwner(metadataLoggingThread);
+            metadataLoggingThread.setDaemon(true);
+            metadataLoggingThread.start();
+        }
 
         EventPipe eventOS;
         try {
@@ -69,7 +75,9 @@ public class LoggingServer implements Runnable {
             loggerThread.finishLogging();
         }
 
-        metadataLoggerThread.finishLogging();
+        if (!Configuration.online) {
+            metadataLoggerThread.finishLogging();
+        }
     }
 
 

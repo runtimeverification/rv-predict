@@ -23,7 +23,6 @@ public class LoggerThread implements Runnable {
             EventItem event;
             while (null != (event = eventPipe.readEvent())) {
                 outputStream.writeEvent(event);
-                outputStream.flush();
             }
             outputStream.close();
         } catch (IOException e) {

@@ -59,8 +59,7 @@ public class RVPredict implements Runnable {
 
         traceCache = new TraceCache(loggingFactory);
 
-        // the total number of events in the trace
-        traceInfo = new TraceInfo(loggingFactory);
+        traceInfo = new TraceInfo();
 
         addHooks(startTime);
     }

@@ -45,7 +45,7 @@ public class TraceCache {
      *         read
      */
     public Trace getTrace(long fromIndex, long toIndex, Trace.State initState, TraceInfo info) throws IOException, InterruptedException {
-        Trace trace = new Trace(initState, info);
+        Trace trace = new Trace(initState, loggingFactory, info);
         for (long index = fromIndex; index < toIndex; index++) {
             EventItem eventItem = getEvent(index);
             if (eventItem == null)

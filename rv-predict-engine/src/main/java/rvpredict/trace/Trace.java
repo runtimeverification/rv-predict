@@ -45,6 +45,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
+import rvpredict.log.LoggingFactory;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a
@@ -122,6 +123,7 @@ public class Trace {
      * Lists of {@code MemoryAccessEvent}'s indexed by address and thread ID.
      */
     private final Table<String, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
+    private final LoggingFactory loggingFactory;
 
     private List<ReadEvent> allReadNodes;
 
@@ -130,7 +132,8 @@ public class Trace {
 
     private final TraceInfo info;
 
-    public Trace(State initState, TraceInfo info) {
+    public Trace(State initState, LoggingFactory loggingFactory, TraceInfo info) {
+        this.loggingFactory = loggingFactory;
         assert initState != null && info != null;
         this.initState = initState;
         this.finalState = new State(initState);
@@ -468,7 +471,7 @@ public class Trace {
     public boolean isVolatileAddr(String addr) {
         // all field addr should contain ".", not true for array access
         int dotPos = addr.indexOf(".");
-        return dotPos != -1 && info.isVolatileAddr(Integer.valueOf(addr.substring(dotPos + 1)));
+        return dotPos != -1 && loggingFactory.isVolatile(Integer.valueOf(addr.substring(dotPos + 1)));
     }
 
     public static class State {

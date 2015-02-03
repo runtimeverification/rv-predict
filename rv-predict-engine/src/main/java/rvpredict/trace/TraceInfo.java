@@ -28,8 +28,6 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-import rvpredict.log.LoggingFactory;
-
 import java.util.HashSet;
 import java.util.Set;
 
@@ -42,16 +40,10 @@ import java.util.Set;
  */
 public class TraceInfo {
 
-    private final LoggingFactory loggingFactory;
-
-    HashSet<String> sharedAddresses = new HashSet<String>();
-    HashSet<Long> threads = new HashSet<Long>();
+    HashSet<String> sharedAddresses = new HashSet<>();
+    HashSet<Long> threads = new HashSet<>();
     int num_br, num_sync, num_rw_shared, num_rw_local, num_w_init, num_prop;
     long traceLength = 0;
-
-    public TraceInfo(LoggingFactory loggingFactory) {
-        this.loggingFactory = loggingFactory;
-    }
 
     public void addSharedAddresses(Set<String> s) {
         sharedAddresses.addAll(s);
@@ -67,10 +59,6 @@ public class TraceInfo {
 
     public int getTraceSharedVariableNumber() {
         return sharedAddresses.size();
-    }
-
-    public boolean isVolatileAddr(int varId) {
-        return loggingFactory.isVolatile(varId);
     }
 
     public void incrementBranchNumber() {
@@ -125,7 +113,4 @@ public class TraceInfo {
         return traceLength;
     }
 
-    public LoggingFactory getLoggingFactory() {
-        return loggingFactory;
-    }
 }

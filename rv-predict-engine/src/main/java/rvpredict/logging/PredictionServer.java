@@ -16,11 +16,13 @@ public class PredictionServer implements Runnable {
 
     @Override
     public void run() {
-        owner = Thread.currentThread();
-        
     }
 
     public void finishLogging() throws InterruptedException {
         owner.join();
+    }
+
+    public void setOwner(Thread owner) {
+        this.owner = owner;
     }
 }

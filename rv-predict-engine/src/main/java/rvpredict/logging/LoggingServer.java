@@ -32,16 +32,17 @@ public class LoggingServer implements Runnable {
     @Override
     public void run() {
         Thread metadataLoggingThread = new Thread(metadataLoggerThread);
+        metadataLoggerThread.setOwner(metadataLoggingThread);
         metadataLoggingThread.setDaemon(true);
         metadataLoggingThread.start();
 
-        owner = Thread.currentThread();
         EventPipe eventOS;
         try {
             while (ThreadLocalEventStream.END_REGISTRY != (eventOS = loggersRegistry.take())) {
                 final EventOutputStream outputStream = engine.getLoggingFactory().createEventOutputStream();
                 final LoggerThread logger = new LoggerThread(eventOS, outputStream);
                 Thread loggerThread = new Thread(logger);
+                logger.setOwner(loggerThread);
                 loggerThread.setDaemon(true);
                 loggerThread.start();
                 loggers.add(logger);
@@ -74,5 +75,9 @@ public class LoggingServer implements Runnable {
 
     public EventPipe getOutputStream() {
        return threadLocalTraceOS.get();
+    }
+
+    public void setOwner(Thread owner) {
+        this.owner = owner;
     }
 }

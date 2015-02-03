@@ -27,7 +27,6 @@ public class MetadataLoggerThread implements Runnable {
 
     @Override
     public void run() {
-        owner = Thread.currentThread();
         try {
             metadataOS = loggingEngine.getLoggingFactory().createMetadataOS();
             while (!shutdown) {
@@ -101,5 +100,9 @@ public class MetadataLoggerThread implements Runnable {
         }
         owner.join();
         metadataOS.close();
+    }
+
+    public void setOwner(Thread owner) {
+        this.owner = owner;
     }
 }

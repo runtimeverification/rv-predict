@@ -66,7 +66,7 @@ public class LoggingEngine {
     public LoggingEngine(Configuration config) {
         this.config = config;
         if (config.online) {
-            loggingFactory = new OnlineLoggingFactory(this);
+            loggingFactory = new OnlineLoggingFactory();
             predictionServer = startPredicting();
         } else {
             loggingFactory = new OfflineLoggingFactory(config);
@@ -78,6 +78,7 @@ public class LoggingEngine {
     private LoggingServer startLogging() {
         final LoggingServer loggingServer = new LoggingServer(this);
         Thread loggingServerThread = new Thread(loggingServer);
+        loggingServer.setOwner(loggingServerThread);
         loggingServerThread.setDaemon(true);
         loggingServerThread.start();
         return loggingServer;
@@ -86,6 +87,7 @@ public class LoggingEngine {
     private PredictionServer startPredicting() {
         final PredictionServer predictionServer = new PredictionServer(this);
         Thread predictionServerThread = new Thread(predictionServer);
+        predictionServer.setOwner(predictionServerThread);
         predictionServerThread.setDaemon(true);
         predictionServerThread.start();
         return predictionServer;

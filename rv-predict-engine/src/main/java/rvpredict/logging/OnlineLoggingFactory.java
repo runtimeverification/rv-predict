@@ -20,12 +20,9 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class OnlineLoggingFactory implements LoggingFactory {
     private static final PipedInputStream END_INPUT_STREAM = new PipedInputStream();
-    private final LoggingEngine loggingEngine;
     private BlockingQueue<PipedInputStream> eventInputStreams = new LinkedBlockingQueue<>();
     
-    public OnlineLoggingFactory(LoggingEngine loggingEngine) {
-        this.loggingEngine = loggingEngine;
-    }
+    public OnlineLoggingFactory() { }
     
     @Override
     public EventPipe createEventPipe() {

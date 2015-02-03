@@ -21,7 +21,6 @@ public class LoggerThread implements Runnable {
 
     @Override
     public void run() {
-        owner = Thread.currentThread();
         try {
             EventItem event;
             while (null != (event = eventPipe.readEvent())) {
@@ -42,5 +41,9 @@ public class LoggerThread implements Runnable {
     public void finishLogging() throws InterruptedException {
         eventPipe.close();
         owner.join();
+    }
+
+    public void setOwner(Thread owner) {
+        this.owner = owner;
     }
 }

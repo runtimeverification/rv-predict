@@ -196,6 +196,15 @@ public class MethodTransformer extends MethodVisitor {
             push(getCrntLocId());
             // <stack>... (objectref)? (arg)* sid </stack>
             invokeRTMethod(interceptor);
+            /* cast the result back to the original return type to pass bytecode
+             * verification since an overriding method may specialize the return
+             * type */
+            if (version >= 51) {
+                Type returnType = Type.getType((name + desc).substring(idx + 1));
+                if (!interceptor.method.getReturnType().equals(returnType)) {
+                    mv.checkcast(returnType);
+                }
+            }
             return;
         }
         mv.visitMethodInsn(opcode, owner, name, desc, itf);

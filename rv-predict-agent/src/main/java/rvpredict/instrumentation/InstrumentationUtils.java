@@ -13,36 +13,22 @@ import java.util.Set;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 
-public class Utility {
+public class InstrumentationUtils {
 
     /**
      * Checks if one class or interface extends or implements another class or
      * interface.
      *
+     * @param loader
+     *            the defining loader of {@link class0}, may be null if it is
+     *            the bootstrap class loader or unknown
      * @param class0
      *            the name of the first class or interface
      * @param class1
      *            the name of the second class of interface
      * @return {@code true} if {@code class1} is assignable from {@code class0}
      */
-    public static boolean isSubclassOf(String class0, String class1) {
-        boolean itf = (getClassReader(class1).getAccess() & Opcodes.ACC_INTERFACE) != 0;
-        return isSubclassOf(class0, class1, itf);
-    }
-
-    /**
-     * Checks if one class or interface extends or implements another class or
-     * interface.
-     *
-     * @param class0
-     *            the name of the first class or interface
-     * @param class1
-     *            the name of the second class of interface
-     * @param itf
-     *            if {@code class1} represents an interface
-     * @return {@code true} if {@code class1} is assignable from {@code class0}
-     */
-    public static boolean isSubclassOf(String class0, String class1, boolean itf) {
+    public static boolean isSubclassOf(ClassLoader loader, String class0, String class1) {
         assert !class1.startsWith("[");
 
         if (class0.startsWith("[")) {
@@ -52,13 +38,14 @@ public class Utility {
             return true;
         }
 
-        Set<String> superclasses = getSuperclasses(class0);
+        boolean itf = (getClassReader(class1, loader).getAccess() & Opcodes.ACC_INTERFACE) != 0;
+        Set<String> superclasses = getSuperclasses(class0, loader);
         if (!itf) {
             return superclasses.contains(class1);
         } else {
-            boolean result = getInterfaces(class0).contains(class1);
+            boolean result = getInterfaces(class0, loader).contains(class1);
             for (String superclass : superclasses) {
-                result = result || getInterfaces(superclass).contains(class1);
+                result = result || getInterfaces(superclass, loader).contains(class1);
             }
             return result;
         }
@@ -75,11 +62,15 @@ public class Utility {
      *
      * @param className
      *            the class or interface to read
+     * @param loader
+     *            the defining loader of the class, may be null if it is the
+     *            bootstrap class loader or unknown
      * @return the {@link ClassReader}
      */
-    private static ClassReader getClassReader(String className) {
+    private static ClassReader getClassReader(String className, ClassLoader loader) {
         try {
-            return new ClassReader(className);
+            return loader == null ? new ClassReader(className) : new ClassReader(
+                    loader.getResourceAsStream(className + ".class"));
         } catch (IOException e) {
             System.err.println("ASM ClassReader: unable to read " + className);
             throw new RuntimeException(e);
@@ -93,15 +84,18 @@ public class Utility {
      *
      * @param className
      *            the internal name of a class or interface
+     * @param loader
+     *            the defining loader of the class, may be null if it is the
+     *            bootstrap class loader or unknown
      * @return set of superclasses
      */
-    private static Set<String> getSuperclasses(String className) {
+    private static Set<String> getSuperclasses(String className, ClassLoader loader) {
         Set<String> result = new HashSet<>();
         String superclassName;
         while (className != null) {
             superclassName = MetaData.classNameToSuperclassName.get(className);
             if (superclassName == null) {
-                superclassName = getClassReader(className).getSuperName();
+                superclassName = getClassReader(className, loader).getSuperName();
                 MetaData.setSuperclass(className, superclassName);
             }
 
@@ -119,9 +113,12 @@ public class Utility {
      *
      * @param className
      *            the internal name of a class or interface
+     * @param loader
+     *            the defining loader of the class, may be null if it is the
+     *            bootstrap class loader or unknown
      * @return set of interfaces
      */
-    private static Set<String> getInterfaces(String className) {
+    private static Set<String> getInterfaces(String className, ClassLoader loader) {
         Set<String> interfaces = new HashSet<>();
         Deque<String> queue = new ArrayDeque<>();
         queue.add(className);
@@ -129,7 +126,7 @@ public class Utility {
             String cls = queue.poll();
             String[] itfs = MetaData.classNameToInterfaceNames.get(cls);
             if (itfs == null) {
-                itfs = getClassReader(cls).getInterfaces();
+                itfs = getClassReader(cls, loader).getInterfaces();
                 MetaData.setInterfaces(cls, itfs);
             }
 

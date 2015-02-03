@@ -96,10 +96,16 @@ public class Agent implements ClassFileTransformer {
 
         final boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
         config.logger.report("Log directory: " + config.outdir, Logger.MSGTYPE.INFO);
+        if (Configuration.includes != null) {
+            config.logger.report("Including: " + config.includeList, Logger.MSGTYPE.INFO);
+        }
+        if (Configuration.excludes != null) {
+            config.logger.report("Excluding: " + config.excludeList, Logger.MSGTYPE.INFO);
+        }
 
         TraceCache.removeTraceFiles(config.outdir);
-        final LoggingEngine db = new LoggingEngine(config);
-        RVPredictRuntime.init(db);
+        final LoggingEngine loggingEngine = new LoggingEngine(config);
+        RVPredictRuntime.init(loggingEngine);
 
         inst.addTransformer(new Agent(config), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {
@@ -123,7 +129,7 @@ public class Agent implements ClassFileTransformer {
             @Override
             public void cleanup() {
                 try {
-                    db.finishLogging();
+                    loggingEngine.finishLogging();
                 } catch (IOException e) {
                     System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
                     System.err.println(e.getMessage());
@@ -180,10 +186,9 @@ public class Agent implements ClassFileTransformer {
                 if (!toInstrument) break;
             }
 
-
             if (toInstrument) {
                 for (String mock : MOCKS) {
-                    if (Utility.isSubclassOf(cname, mock)) {
+                    if (InstrumentationUtils.isSubclassOf(loader, cname, mock)) {
                         toInstrument = false;
                         if (Configuration.verbose) {
                             /* TODO(YilongL): this may cause missing data races if
@@ -222,8 +227,8 @@ public class Agent implements ClassFileTransformer {
                     if (toInstrument) break;
                 }
             }
-        
-            return toInstrument ? ClassTransformer.transform(cbuf, config) : null;
+
+            return toInstrument ? ClassTransformer.transform(loader, cbuf, config) : null;
         } catch (Throwable e) {
             /* exceptions during class loading are silently suppressed by default */
             System.err.println("Cannot retransform " + cname + ". Exception: " + e);

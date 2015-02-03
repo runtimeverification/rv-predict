@@ -40,7 +40,7 @@
     </test>
 -->
     <test name="airlinetickets.Airlinetickets">
-        <runs value="5" />
+        <runs value="32" />
         <arg key="-cp" value="basic.jar" />
         <arg value="airlinetickets.Airlinetickets" />
     </test>

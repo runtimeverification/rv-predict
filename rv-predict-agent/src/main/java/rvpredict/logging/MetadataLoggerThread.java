@@ -1,8 +1,6 @@
 package rvpredict.logging;
 
 import rvpredict.instrumentation.MetaData;
-import rvpredict.trace.SyncEvent;
-
 import java.io.*;
 import java.nio.file.Paths;
 import java.util.ArrayList;

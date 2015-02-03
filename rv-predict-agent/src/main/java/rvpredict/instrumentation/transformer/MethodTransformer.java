@@ -30,6 +30,7 @@ public class MethodTransformer extends MethodVisitor {
 
     private final InstructionAdapter mv;
 
+    private final ClassLoader loader;
     private final String className;
     private final int version;
     private final String source;
@@ -59,7 +60,8 @@ public class MethodTransformer extends MethodVisitor {
     private final int branchModel;
 
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
-            String name, String desc, int access, int crntMaxLocals, Set<String> finalFields, Configuration config) {
+            String name, String desc, int access, int crntMaxLocals, Set<String> finalFields,
+            ClassLoader loader, Configuration config) {
         super(Opcodes.ASM5, new InstructionAdapter(mv));
         this.mv = (InstructionAdapter) super.mv;
         this.source = source == null ? "Unknown" : source;
@@ -71,6 +73,7 @@ public class MethodTransformer extends MethodVisitor {
         this.isStatic = (access & ACC_STATIC) != 0;
         this.crntMaxLocals = crntMaxLocals;
         this.finalFields = finalFields;
+        this.loader = loader;
         this.branchModel = config.branch ? 1 : 0;
     }
 
@@ -190,7 +193,7 @@ public class MethodTransformer extends MethodVisitor {
         int idx = (name + desc).lastIndexOf(')');
         String methodSig = (name + desc).substring(0, idx + 1);
         RVPredictInterceptor interceptor = RVPredictRuntimeMethods.lookup(opcode, owner, methodSig,
-                itf);
+                loader, itf);
         if (interceptor != null) {
             // <stack>... (objectref)? (arg)* </stack>
             push(getCrntLocId());

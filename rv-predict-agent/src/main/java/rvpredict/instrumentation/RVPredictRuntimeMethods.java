@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.objectweb.asm.Opcodes;
 
+import rvpredict.instrumentation.transformer.MethodTransformer;
 import rvpredict.runtime.RVPredictRuntime;
 
 import com.google.common.collect.Lists;
@@ -258,12 +259,16 @@ public class RVPredictRuntimeMethods {
      *            invoked or the class name of the static method
      * @param methodSig
      *            the signature of the invoked method
+     * @param loader
+     *            the defining loader of the class being transformed by
+     *            {@link MethodTransformer#visitMethodInsn(int, String, String, String, boolean)}
+     *            , may be null if it is the bootstrap class loader or unknown
      * @param itf
      * @return the {@link RVPredictInterceptor} if successful or {@code null} if
      *         no suitable interceptor found
      */
     public static RVPredictInterceptor lookup(int opcode, String owner, String methodSig,
-            boolean itf) {
+            ClassLoader loader, boolean itf) {
         /*
          * TODO(YilongL): figure out how to the deal with `itf' introduced for Java 8
          * http://stackoverflow.com/questions/24510785/explanation-of-itf-parameter-of-visitmethodinsn-in-asm-5
@@ -287,8 +292,7 @@ public class RVPredictRuntimeMethods {
                     break;
                 case VIRTUAL:
                 case INTERFACE:
-                    if (Utility.isSubclassOf(owner, interceptor.classOrInterface,
-                            interceptor.methodType == INTERFACE)) {
+                    if (InstrumentationUtils.isSubclassOf(loader, owner, interceptor.classOrInterface)) {
                         return interceptor;
                     }
                     break;

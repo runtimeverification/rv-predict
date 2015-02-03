@@ -75,6 +75,10 @@ public class LoggingServer implements Runnable {
             loggerThread.finishLogging();
         }
 
+        for (LoggerThread loggerThread : loggers) {
+            loggerThread.join();
+        }
+
         if (!Configuration.online) {
             metadataLoggerThread.finishLogging();
         }

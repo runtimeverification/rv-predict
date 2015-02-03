@@ -94,8 +94,9 @@ public class RVPredict implements Runnable {
         try {
             ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(4,
                     new ThreadFactory() {
+                        int id = 0;
                         public Thread newThread(Runnable r) {
-                            Thread t = new Thread(r, "Race Detector");
+                            Thread t = new Thread(r, "Race Detector " + ++id);
                             t.setDaemon(true);
                             return t;
                         }
@@ -117,7 +118,11 @@ public class RVPredict implements Runnable {
             } while (trace.getSize() == config.windowSize);
 
             shutdownAndAwaitTermination(raceDetectorExecutor);
-            return;
+            if (!Configuration.online) {
+                System.exit(0);
+            } else {
+                return;
+            }
         } catch (InterruptedException e) {
             System.err.println("Error: prediction interrupted.");
             System.err.println(e.getMessage());
@@ -134,10 +139,10 @@ public class RVPredict implements Runnable {
         pool.shutdown(); // Disable new tasks from being submitted
         try {
             // Wait a while for existing tasks to terminate
-            if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
+            if (!pool.awaitTermination(config.timeout, TimeUnit.SECONDS)) {
                 pool.shutdownNow(); // Cancel currently executing tasks
                 // Wait a while for tasks to respond to being cancelled
-                if (!pool.awaitTermination(60, TimeUnit.SECONDS))
+                if (!pool.awaitTermination(config.timeout, TimeUnit.SECONDS))
                     System.err.println("Pool did not terminate");
             }
         } catch (InterruptedException ie) {

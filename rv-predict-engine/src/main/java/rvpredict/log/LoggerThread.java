@@ -34,14 +34,22 @@ public class LoggerThread implements Runnable {
     }
 
     /**
-     * Sends closing signal to the event queue, then waits for the thread to flush and finish.
+     * Sends closing signal to the event queue.
+     * @throws InterruptedException
      */
     public void finishLogging() throws InterruptedException {
         eventPipe.close();
-        owner.join();
     }
 
     public void setOwner(Thread owner) {
         this.owner = owner;
+    }
+
+    /**
+     * Wait for the thread to flush and finish.
+     * @throws InterruptedException
+     */
+    public void join() throws InterruptedException {
+        owner.join();
     }
 }

@@ -1,4 +1,4 @@
-package rvpredict.logging;
+package rvpredict.log;
 
 import rvpredict.instrumentation.MetaData;
 

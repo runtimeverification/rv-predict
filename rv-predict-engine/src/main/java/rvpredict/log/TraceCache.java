@@ -1,6 +1,9 @@
-package rvpredict.db;
+package rvpredict.log;
 
-import rvpredict.logging.LoggingFactory;
+import rvpredict.trace.AbstractEvent;
+import rvpredict.trace.Event;
+import rvpredict.trace.Trace;
+import rvpredict.trace.TraceInfo;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -27,6 +30,31 @@ public class TraceCache {
     public TraceCache(LoggingFactory loggingFactory) {
         this.loggingFactory = loggingFactory;
         indexes = new HashMap<>();
+    }
+
+    /**
+     * Load trace segment from event {@code fromIndex} to event
+     * {@code toIndex-1}. Event number is assumed to start from 1.
+     *
+     * @see TraceCache#getEvent(long)
+     * @param fromIndex
+     *            low endpoint (inclusive) of the trace segment
+     * @param toIndex
+     *            high endpoint (exclusive) of the trace segment
+     * @return a {@link rvpredict.trace.Trace} representing the trace segment
+     *         read
+     */
+    public Trace getTrace(long fromIndex, long toIndex, Trace.State initState, TraceInfo info) throws IOException, InterruptedException {
+        Trace trace = new Trace(initState, info);
+        for (long index = fromIndex; index < toIndex; index++) {
+            EventItem eventItem = getEvent(index);
+            if (eventItem == null)
+                break;
+            Event node = AbstractEvent.of(eventItem);
+            trace.addRawEvent(node);
+        }
+        trace.finishedLoading();
+        return trace;
     }
 
     /**

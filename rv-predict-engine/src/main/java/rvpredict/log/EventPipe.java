@@ -1,15 +1,13 @@
-package rvpredict.logging;
-
-import rvpredict.db.EventItem;
+package rvpredict.log;
 
 /**
- * A pipe for passing {@link rvpredict.db.EventItem}s from one thread to another.
+ * A pipe for passing {@link EventItem}s from one thread to another.
  * The class is meant for a single-producer-single-consumer design with an
  * instance object of this class being created by the
- * {@link rvpredict.logging.ThreadLocalEventStream} for each logged thread
+ * {@link rvpredict.log.ThreadLocalEventStream} for each logged thread
  * and being written to only by that thread through the
- * {@link rvpredict.logging.LoggingEngine#saveEvent(rvpredict.trace.EventType, int, long, int, long)},
- * while being only read from a {@link rvpredict.logging.LoggerThread} object
+ * {@link rvpredict.log.LoggingEngine#saveEvent(rvpredict.trace.EventType, int, long, int, long)},
+ * while being only read from a {@link rvpredict.log.LoggerThread} object
  * created for this purpose.
  *
  * The {@link BufferedEventPipe#close()} method, which flushes the buffers and send the

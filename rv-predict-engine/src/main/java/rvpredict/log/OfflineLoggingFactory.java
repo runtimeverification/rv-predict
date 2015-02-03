@@ -1,8 +1,7 @@
-package rvpredict.logging;
+package rvpredict.log;
 
 import org.apache.tools.ant.DirectoryScanner;
 import rvpredict.config.Configuration;
-import rvpredict.db.EventInputStream;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -13,7 +12,7 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 /**
- * {@link rvpredict.logging.BufferedEventPipe} factory.
+ * {@link rvpredict.log.BufferedEventPipe} factory.
  *
  * @author Traian SF
  */
@@ -31,7 +30,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
     private final Set<Integer> volatileFieldIds = new HashSet<>();
     private final Map<Integer, String> varIdToVarSig = new HashMap<>();
     private final Map<Integer, String> locIdToStmtSig = new HashMap<>();
-    private Long traceLength;
 
     public OfflineLoggingFactory(Configuration config) {
         this.config = config;
@@ -104,47 +102,55 @@ public class OfflineLoggingFactory implements LoggingFactory {
     }
 
     @Override
-    public Set<Integer> getVolatileFieldIds() throws IOException, ClassNotFoundException {
-        if (volatileFieldIds.isEmpty()) readMetadata();
-        return volatileFieldIds;
-    }
-
-    @Override
-    public Map<Integer, String> getVarIdToVarSig() throws IOException, ClassNotFoundException {
-        if (varIdToVarSig.isEmpty()) readMetadata();
-        return varIdToVarSig;
-    }
-
-    @Override
-    public Map<Integer, String> getLocIdToStmtSig() throws IOException, ClassNotFoundException {
+    public String getStmtSig(int locId) {
         if (locIdToStmtSig.isEmpty()) readMetadata();
-        return locIdToStmtSig;
+        return locIdToStmtSig.get(locId);
     }
 
+    @Override
+    public boolean isVolatile(int fieldId) {
+        if (volatileFieldIds.isEmpty()) readMetadata();
+        return volatileFieldIds.contains(fieldId);
+    }
+
+    @Override
+    public String getVarSig(int fieldId) {
+        if (varIdToVarSig.isEmpty()) readMetadata();
+        return varIdToVarSig.get(fieldId);
+    }
 
     @SuppressWarnings("unchecked")
-    public void readMetadata() throws IOException, ClassNotFoundException {
-        ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
-                new FileInputStream(Paths.get(config.outdir, METADATA_BIN).toFile()))); 
-        long size = -1;
-        List<Map.Entry<Integer, String>> list;
-        while (true) {
-            try {
-                volatileFieldIds.addAll((Collection<Integer>) metadataIS.readObject());
-            } catch (EOFException e) {
-                break;
+    public void readMetadata() {
+        try {
+            ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
+                    new FileInputStream(Paths.get(config.outdir, METADATA_BIN).toFile())));
+            long size = -1;
+            List<Map.Entry<Integer, String>> list;
+            while (true) {
+                try {
+                    volatileFieldIds.addAll((Collection<Integer>) metadataIS.readObject());
+                } catch (EOFException e) {
+                    break;
+                }
+                list = (List<Map.Entry<Integer, String>>) metadataIS.readObject();
+                for (Map.Entry<Integer, String> entry : list) {
+                    varIdToVarSig.put(entry.getKey(), entry.getValue());
+                }
+                list = (List<Map.Entry<Integer, String>>) metadataIS.readObject();
+                for (Map.Entry<Integer, String> entry : list) {
+                    locIdToStmtSig.put(entry.getKey(), entry.getValue());
+                }
+                size = metadataIS.readLong();
             }
-            list = (List<Map.Entry<Integer, String>>) metadataIS.readObject();
-            for (Map.Entry<Integer, String> entry : list) {
-                varIdToVarSig.put(entry.getKey(), entry.getValue());
-            }
-            list = (List<Map.Entry<Integer, String>>) metadataIS.readObject();
-            for (Map.Entry<Integer, String> entry : list) {
-                locIdToStmtSig.put(entry.getKey(), entry.getValue());
-            }
-            size = metadataIS.readLong();
+            return;
+        } catch (FileNotFoundException e) {
+            System.err.println("Error: Metadata file not found.");
+            System.err.println(e.getMessage());
+        } catch (ClassNotFoundException | IOException e) {
+            System.err.println("Error: Metadata for the logged execution is corrupted.");
+            System.err.println(e.getMessage());
         }
-        traceLength = size;
+        System.exit(1);
     }
 
     @Override

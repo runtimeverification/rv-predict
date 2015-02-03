@@ -1,17 +1,15 @@
 package rvpredict.util;
 
 import rvpredict.config.Configuration;
-import rvpredict.db.DBEngine;
-import rvpredict.db.EventInputStream;
-import rvpredict.db.EventItem;
-import rvpredict.logging.OfflineLoggingFactory;
+import rvpredict.log.EventInputStream;
+import rvpredict.log.EventItem;
+import rvpredict.log.OfflineLoggingFactory;
 import rvpredict.trace.AbstractEvent;
 import rvpredict.trace.Event;
 
 import java.io.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -33,17 +31,7 @@ public class DumpLogFile {
         Path directory = path.getParent();
         Configuration configuration = new Configuration();
         configuration.outdir = directory.toString();
-        DBEngine db = null;
-        try {
-            db = new DBEngine(new OfflineLoggingFactory(configuration));
-        } catch (IOException e) {
-            System.err.println("Error while reading the logs.");
-            System.err.println(e.getMessage());
-        } catch (ClassNotFoundException e) {
-            System.err.println("Error: Metadata file corrupted.");
-            System.err.println(e.getMessage());
-        }
-        Map<Integer, String> locIdToStmtSig = db.getLocIdToStmtSig();
+        OfflineLoggingFactory loggingFactory = new OfflineLoggingFactory(configuration);
         String file = args[0];
         File f = new File(file);
         try {
@@ -58,7 +46,7 @@ public class DumpLogFile {
             while (true) {
                 EventItem eventItem = inputStream.readEvent();
                 Event event = AbstractEvent.of(eventItem);
-                System.out.println(event.toString() + locIdToStmtSig.get(event.getID()));
+                System.out.println(event.toString() + loggingFactory.getStmtSig(event.getID()));
             }
         } catch (EOFException ignored) {
         } catch (IOException e) {

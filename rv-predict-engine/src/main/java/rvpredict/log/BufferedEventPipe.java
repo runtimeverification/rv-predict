@@ -1,6 +1,4 @@
-package rvpredict.logging;
-
-import rvpredict.db.EventItem;
+package rvpredict.log;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -60,7 +58,7 @@ public class BufferedEventPipe implements EventPipe {
         assert event != null : "Each buffer should at least contain one element";
         /**
          * The above assertion should always be hold, in normal operating conditions, as
-         * (1) only non-null events are written into the buffer in {@link rvpredict.logging.LoggingEngine#saveEvent(rvpredict.trace.EventType, int, long, long, long)}
+         * (1) only non-null events are written into the buffer in {@link rvpredict.log.LoggingEngine#saveEvent(rvpredict.trace.EventType, int, long, long, long)}
          * (2) null can be written during {@link BufferedEventPipe#flush()}, but never on an empty buffer.
          * (3) following code checks for null so next read would not read from the same buffer if so.
          */

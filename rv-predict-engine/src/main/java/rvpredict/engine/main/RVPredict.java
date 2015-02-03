@@ -29,10 +29,8 @@
 package rvpredict.engine.main;
 
 import rvpredict.config.Configuration;
-import rvpredict.db.DBEngine;
-import rvpredict.logging.LoggingFactory;
-import rvpredict.logging.OfflineLoggingFactory;
-import rvpredict.logging.OnlineLoggingFactory;
+import rvpredict.log.TraceCache;
+import rvpredict.log.LoggingFactory;
 import rvpredict.trace.Trace;
 import rvpredict.trace.TraceInfo;
 import rvpredict.util.Logger;
@@ -48,21 +46,21 @@ public class RVPredict implements Runnable {
     private final ConcurrentMap<Violation,Boolean> violations = new ConcurrentHashMap<>();
     private final Configuration config;
     private final Logger logger;
-    private final DBEngine dbEngine;
+    private final TraceCache traceCache;
     private final TraceInfo traceInfo;
+    private LoggingFactory loggingFactory;
 
     public RVPredict(Configuration config, LoggingFactory loggingFactory) throws IOException, ClassNotFoundException {
         this.config = config;
+        this.loggingFactory = loggingFactory;
         logger = config.logger;
 
         long startTime = System.currentTimeMillis();
 
-        dbEngine = new DBEngine(loggingFactory);
+        traceCache = new TraceCache(loggingFactory);
 
         // the total number of events in the trace
-        traceInfo = new TraceInfo(dbEngine.getVolatileFieldIds(),
-                dbEngine.getVarIdToVarSig(),
-                dbEngine.getLocIdToStmtSig());
+        traceInfo = new TraceInfo(loggingFactory);
 
         addHooks(startTime);
     }
@@ -94,7 +92,7 @@ public class RVPredict implements Runnable {
             // process the trace window by window
             Trace trace;
             do {
-                trace = dbEngine.getTrace(fromIndex, fromIndex += config.windowSize, initState, traceInfo);
+                trace = traceCache.getTrace(fromIndex, fromIndex += config.windowSize, initState, traceInfo);
                 traceInfo.incrementTraceLength(trace.getSize());
 
                 if (trace.hasSharedMemAddr()) {
@@ -146,6 +144,10 @@ public class RVPredict implements Runnable {
 
     public Logger getLogger() {
         return logger;
+    }
+
+    public LoggingFactory getLoggingFactory() {
+        return loggingFactory;
     }
 
     class ExecutionInfoTask extends Thread {

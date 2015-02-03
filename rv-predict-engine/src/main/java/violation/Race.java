@@ -28,8 +28,7 @@
  ******************************************************************************/
 package violation;
 
-import java.util.Map;
-
+import rvpredict.log.LoggingFactory;
 import rvpredict.trace.MemoryAccessEvent;
 
 /**
@@ -44,8 +43,7 @@ public class Race extends AbstractViolation {
     private final String stmtSig1;
     private final String stmtSig2;
 
-    public Race(MemoryAccessEvent e1, MemoryAccessEvent e2, Map<Integer, String> varIdToVarSig,
-            Map<Integer, String> locIdToStmtSig) {
+    public Race(MemoryAccessEvent e1, MemoryAccessEvent e2, LoggingFactory loggingFactory) {
         if (e1.getID() > e2.getID()) {
             MemoryAccessEvent tmp = e1;
             e1 = e2;
@@ -54,9 +52,9 @@ public class Race extends AbstractViolation {
 
         locId1 = e1.getID();
         locId2 = e2.getID();
-        varSig = e1.getFieldIdOrArrayIndex() < 0 ? varIdToVarSig.get(-e1.getFieldIdOrArrayIndex()) : null;
-        stmtSig1 = locIdToStmtSig.get(locId1);
-        stmtSig2 = locIdToStmtSig.get(locId2);
+        varSig = e1.getFieldIdOrArrayIndex() < 0 ? loggingFactory.getVarSig(-e1.getFieldIdOrArrayIndex()) : null;
+        stmtSig1 = loggingFactory.getStmtSig(locId1);
+        stmtSig2 = loggingFactory.getStmtSig(locId2);
         if (stmtSig1 == null) {
             System.err.println("[Warning]: missing metadata for location ID " + locId1);
         }

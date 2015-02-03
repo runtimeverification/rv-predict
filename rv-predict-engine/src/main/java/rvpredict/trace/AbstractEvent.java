@@ -28,7 +28,7 @@
  ******************************************************************************/
 package rvpredict.trace;
 
-import rvpredict.db.EventItem;
+import rvpredict.log.EventItem;
 
 /**
  * Base class for all events in the trace.

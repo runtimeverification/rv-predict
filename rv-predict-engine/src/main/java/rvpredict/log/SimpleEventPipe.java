@@ -1,6 +1,5 @@
-package rvpredict.logging;
+package rvpredict.log;
 
-import rvpredict.db.EventItem;
 import rvpredict.trace.EventType;
 
 import java.util.concurrent.BlockingQueue;

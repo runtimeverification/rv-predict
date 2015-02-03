@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
 
 import rvpredict.config.Configuration;
 import rvpredict.instrumentation.MetaData;
-import rvpredict.logging.LoggingEngine;
+import rvpredict.log.LoggingEngine;
 import rvpredict.trace.EventType;
 
 /**

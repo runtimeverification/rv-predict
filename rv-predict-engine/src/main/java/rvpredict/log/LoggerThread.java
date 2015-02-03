@@ -1,6 +1,4 @@
-package rvpredict.logging;
-
-import rvpredict.db.EventItem;
+package rvpredict.log;
 
 import java.io.IOException;
 

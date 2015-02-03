@@ -132,9 +132,7 @@ public class RaceDetectorThread implements Runnable {
                     for (MemoryAccessEvent e1 : equivAccBlk.get(fst)) {
                         for (MemoryAccessEvent e2 : equivAccBlk.get(snd)) {
                             if (e1 instanceof WriteEvent || e2 instanceof WriteEvent) {
-                                potentialRaces.add(new Race(e1, e2,
-                                        trace.getVarIdToVarSigMap(),
-                                        trace.getLocIdToStmtSigMap()));
+                                potentialRaces.add(new Race(e1, e2, RVPredict.getLoggingFactory()));
                             }
                         }
                     }

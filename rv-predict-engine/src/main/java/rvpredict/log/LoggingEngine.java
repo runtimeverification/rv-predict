@@ -26,13 +26,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package rvpredict.logging;
+package rvpredict.log;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import rvpredict.config.Configuration;
-import rvpredict.db.EventItem;
 import rvpredict.trace.EventType;
 
 /**
@@ -94,9 +93,9 @@ public class LoggingEngine {
     }
 
     /**
-     * Logs an {@link rvpredict.db.EventItem} to the trace.
+     * Logs an {@link EventItem} to the trace.
      *
-     * @see rvpredict.db.EventItem#EventItem(long, long, int, long, int, long, rvpredict.trace.EventType)
+     * @see EventItem#EventItem(long, long, int, long, int, long, rvpredict.trace.EventType)
      *      for a more elaborate description of the parameters.
      *
      * @param eventType  type of event being recorded

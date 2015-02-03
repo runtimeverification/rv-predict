@@ -1,4 +1,4 @@
-package rvpredict.db;
+package rvpredict.log;
 
 import rvpredict.trace.EventType;
 

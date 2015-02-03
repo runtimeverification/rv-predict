@@ -151,14 +151,6 @@ public class Trace {
         return initValue == null ? 0 : initValue;
     }
 
-    public Map<Integer, String> getVarIdToVarSigMap() {
-        return info.getVarIdToVarSigMap();
-    }
-
-    public Map<Integer, String> getLocIdToStmtSigMap() {
-        return info.getLocIdToStmtSigMap();
-    }
-
     public Event getFirstThreadEvent(long threadId) {
         List<Event> events = getThreadEvents(threadId);
         return events.isEmpty() ? null : events.get(0);

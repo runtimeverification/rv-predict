@@ -3,8 +3,7 @@ package rvpredict.engine.main;
 import org.apache.tools.ant.util.JavaEnvUtils;
 import rvpredict.config.Configuration;
 import rvpredict.config.Util;
-import rvpredict.db.DBEngine;
-import rvpredict.logging.OfflineLoggingFactory;
+import rvpredict.log.OfflineLoggingFactory;
 import rvpredict.util.Logger;
 
 import java.io.File;
@@ -14,7 +13,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.security.CodeSource;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author TraianSF
@@ -100,17 +101,6 @@ public class Main {
 
     private static void checkAndPredict(Configuration config) throws IOException, ClassNotFoundException {
         boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
-        DBEngine db;
-        db = new DBEngine(new OfflineLoggingFactory(config));
-        if (!db.checkLog()) {
-            config.logger.report("Trace was not recorded properly. ", Logger.MSGTYPE.ERROR);
-            if (!config.log) {
-                config.logger.report("Please run " + Configuration.PROGRAM_NAME + " with "
-                        + Configuration.opt_only_log + " " + config.outdir + " first.",
-                        Logger.MSGTYPE.ERROR);
-            }
-            System.exit(1);
-        }
 
         if (config.log && (Configuration.verbose || logOutput)) {
             config.logger

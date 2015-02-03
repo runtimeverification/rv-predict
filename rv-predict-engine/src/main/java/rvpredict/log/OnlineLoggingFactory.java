@@ -1,20 +1,16 @@
-package rvpredict.logging;
+package rvpredict.log;
 
-import com.google.common.collect.BiMap;
-import rvpredict.db.EventInputStream;
 import rvpredict.instrumentation.MetaData;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * {@link rvpredict.logging.SimpleEventPipe} factory.
+ * {@link rvpredict.log.SimpleEventPipe} factory.
  *
  * @author Traian SF
  */
@@ -54,18 +50,18 @@ public class OnlineLoggingFactory implements LoggingFactory {
     }
 
     @Override
-    public Set<Integer> getVolatileFieldIds() throws IOException, ClassNotFoundException {
-        return MetaData.volatileFieldIds;
+    public String getStmtSig(int locId) {
+        return MetaData.locIdToStmtSig.get(locId);
     }
 
     @Override
-    public Map<Integer, String> getVarIdToVarSig() throws IOException, ClassNotFoundException {
-        return ((BiMap<String, Integer>)MetaData.varSigToVarId).inverse();
+    public boolean isVolatile(int fieldId) {
+        return MetaData.volatileFieldIds.contains(fieldId);
     }
 
     @Override
-    public Map<Integer, String> getLocIdToStmtSig() throws IOException, ClassNotFoundException {
-        return MetaData.locIdToStmtSig;
+    public String getVarSig(int fieldId) {
+        return MetaData.varSigs[fieldId];
     }
 
 }

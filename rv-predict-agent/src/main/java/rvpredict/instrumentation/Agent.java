@@ -14,9 +14,9 @@ import java.util.regex.Pattern;
 import org.objectweb.asm.ClassReader;
 import rvpredict.config.Configuration;
 import rvpredict.engine.main.Main;
-import rvpredict.logging.LoggingEngine;
+import rvpredict.log.LoggingEngine;
 import rvpredict.instrumentation.transformer.ClassTransformer;
-import rvpredict.logging.OfflineLoggingFactory;
+import rvpredict.log.OfflineLoggingFactory;
 import rvpredict.runtime.RVPredictRuntime;
 import rvpredict.util.Logger;
 

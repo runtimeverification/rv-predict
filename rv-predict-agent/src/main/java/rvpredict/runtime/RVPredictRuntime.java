@@ -591,7 +591,6 @@ public final class RVPredictRuntime {
             onBlockingMethodInterrupted(locId);
             throw e;
         }
-        ;
     }
 
     /**
@@ -1455,12 +1454,10 @@ public final class RVPredictRuntime {
     }
 
     private static void saveEvent(EventType eventType, int id, long addrl, int addrr, long value) {
-        if (!skipSavingEvent()) {
-            if (loggingEngine.getConfig().profile) {
-                updateEventStats();
-            }
-            loggingEngine.saveEvent(eventType, id, addrl, addrr, value);
+        if (loggingEngine.getConfig().profile) {
+            updateEventStats();
         }
+        loggingEngine.saveEvent(eventType, id, addrl, addrr, value);
     }
 
     /**
@@ -1477,20 +1474,6 @@ public final class RVPredictRuntime {
      */
     private static void saveEvent(EventType eventType, int locId) {
         saveEvent(eventType, locId, 0, 0, 0);
-    }
-
-    /**
-     * Checks if logging should be disabled at the moment.
-     */
-    private static boolean skipSavingEvent() {
-        StackTraceElement[] stackTrace = new Throwable().getStackTrace();
-        for (StackTraceElement e : stackTrace) {
-            String className = e.getClassName();
-            if (className.startsWith("java.lang.ClassLoader") || className.startsWith("sun")) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static final ConcurrentHashMap<String, AtomicLong> eventStats = new ConcurrentHashMap<>();

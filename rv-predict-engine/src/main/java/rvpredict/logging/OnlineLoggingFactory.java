@@ -71,8 +71,4 @@ public class OnlineLoggingFactory implements LoggingFactory {
         return ((BiMap<String, Integer>)MetaData.stmtSigToLocId).inverse();
     }
 
-    @Override
-    public Long getTraceLength() throws IOException, ClassNotFoundException {
-        return loggingEngine.getGlobalEventID();
-    }
 }

@@ -119,13 +119,8 @@ public class Main {
                     Logger.MSGTYPE.VERBOSE);
         }
 
-        if (config.predict) {
-            try {
-                new RVPredict(config).run();
-            } catch (Exception | Error e) {
-                e.printStackTrace();
-                System.exit(1);
-            }
+        if (config.predict && !config.online) {
+            new RVPredict(config, new OfflineLoggingFactory(config)).run();
         }
     }
 

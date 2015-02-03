@@ -105,29 +105,23 @@ public class OfflineLoggingFactory implements LoggingFactory {
 
     @Override
     public Set<Integer> getVolatileFieldIds() throws IOException, ClassNotFoundException {
-        if (volatileFieldIds == null) readMetadata();
+        if (volatileFieldIds.isEmpty()) readMetadata();
         return volatileFieldIds;
     }
 
     @Override
     public Map<Integer, String> getVarIdToVarSig() throws IOException, ClassNotFoundException {
-        if (varIdToVarSig == null) readMetadata();
+        if (varIdToVarSig.isEmpty()) readMetadata();
         return varIdToVarSig;
     }
 
     @Override
     public Map<Integer, String> getLocIdToStmtSig() throws IOException, ClassNotFoundException {
-        if (locIdToStmtSig == null) readMetadata();
+        if (locIdToStmtSig.isEmpty()) readMetadata();
         return locIdToStmtSig;
     }
 
-    @Override
-    public Long getTraceLength() throws IOException, ClassNotFoundException {
-        if (traceLength == null) readMetadata();
-        return traceLength;
-    }
-    
-    
+
     @SuppressWarnings("unchecked")
     public void readMetadata() throws IOException, ClassNotFoundException {
         ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(

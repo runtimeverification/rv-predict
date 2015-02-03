@@ -30,5 +30,4 @@ public interface LoggingFactory {
 
     Map<Integer,String> getLocIdToStmtSig() throws IOException, ClassNotFoundException;
 
-    Long getTraceLength() throws IOException, ClassNotFoundException;
 }

@@ -86,9 +86,7 @@ public class DBEngine {
             Event node = AbstractEvent.of(eventItem);
             trace.addRawEvent(node);
         }
-
         trace.finishedLoading();
-
         return trace;
     }
 

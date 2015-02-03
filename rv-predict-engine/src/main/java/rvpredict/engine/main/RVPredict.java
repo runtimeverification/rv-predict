@@ -30,7 +30,9 @@ package rvpredict.engine.main;
 
 import rvpredict.config.Configuration;
 import rvpredict.db.DBEngine;
+import rvpredict.logging.LoggingFactory;
 import rvpredict.logging.OfflineLoggingFactory;
+import rvpredict.logging.OnlineLoggingFactory;
 import rvpredict.trace.Trace;
 import rvpredict.trace.TraceInfo;
 import rvpredict.util.Logger;
@@ -41,22 +43,20 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.*;
 
-public class RVPredict {
+public class RVPredict implements Runnable {
 
     private final ConcurrentMap<Violation,Boolean> violations = new ConcurrentHashMap<>();
     private final Configuration config;
     private final Logger logger;
     private final DBEngine dbEngine;
     private final TraceInfo traceInfo;
-    private final OfflineLoggingFactory loggingFactory;
 
-    public RVPredict(Configuration config) throws IOException, ClassNotFoundException {
+    public RVPredict(Configuration config, LoggingFactory loggingFactory) throws IOException, ClassNotFoundException {
         this.config = config;
         logger = config.logger;
 
         long startTime = System.currentTimeMillis();
 
-        loggingFactory = new OfflineLoggingFactory(config);
         dbEngine = new DBEngine(loggingFactory);
 
         // the total number of events in the trace
@@ -84,35 +84,37 @@ public class RVPredict {
         }, config.timeout * 1000);
     }
 
-    public void run() throws IOException, InterruptedException {
-        ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(4);
-        Trace.State initState = new Trace.State();
-
-        long fromIndex = 1;
-        // process the trace window by window
-        Trace trace;
-        do {
-            System.out.println("Starting from index: " + fromIndex);
-            trace = dbEngine.getTrace(fromIndex, fromIndex += config.windowSize, initState, traceInfo);
-            traceInfo.incrementTraceLength(trace.getSize());
-
-            if (trace.hasSharedMemAddr()) {
-
-                final RaceDetectorThread raceDetectorThread = new RaceDetectorThread(this, trace);
-                raceDetectorExecutor.execute(raceDetectorThread);
-            }
-
-            initState = trace.getFinalState();
-        } while (trace.getSize() == config.windowSize);
-        System.out.println("Ending at index: " + traceInfo.getTraceLength());
+    @Override
+    public void run() {
         try {
-            System.out.println("Reported trace length: " + loggingFactory.getTraceLength());
-        } catch (ClassNotFoundException e) {
+            ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(4);
+            Trace.State initState = new Trace.State();
+
+            long fromIndex = 1;
+            // process the trace window by window
+            Trace trace;
+            do {
+                trace = dbEngine.getTrace(fromIndex, fromIndex += config.windowSize, initState, traceInfo);
+                traceInfo.incrementTraceLength(trace.getSize());
+
+                if (trace.hasSharedMemAddr()) {
+                    raceDetectorExecutor.execute(new RaceDetectorThread(this, trace));
+                }
+
+                initState = trace.getFinalState();
+            } while (trace.getSize() == config.windowSize);
+
+            shutdownAndAwaitTermination(raceDetectorExecutor);
+            System.exit(0);
+        } catch (InterruptedException e) {
+            System.err.println("Error: prediction interrupted.");
+            System.err.println(e.getMessage());
+        } catch (IOException e) {
+            System.err.println("Error: I/O error during prediction.");
+            System.err.println(e.getMessage());
             e.printStackTrace();
         }
-
-        shutdownAndAwaitTermination(raceDetectorExecutor);
-        System.exit(0);
+        System.exit(1);
     }
 
 

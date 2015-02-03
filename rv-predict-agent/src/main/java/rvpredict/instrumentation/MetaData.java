@@ -21,8 +21,9 @@ public class MetaData {
     public static final ConcurrentHashMap<String, Integer> varSigToVarId = new ConcurrentHashMap<>();
     public static final List<Pair<Integer, String>> unsavedVarIdToVarSig = new ArrayList<>();
 
-    private static final int MAX_NUM_OF_FIELDS = 10000;
+    public static final int MAX_NUM_OF_FIELDS = 10000;
     public static final String[] varSigs = new String[MAX_NUM_OF_FIELDS];
+    public static final int[] resolvedVarId = new int[MetaData.MAX_NUM_OF_FIELDS];
 
     public static final ConcurrentHashMap<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
     public static final List<Pair<Integer, String>> unsavedLocIdToStmtSig = new ArrayList<>();
@@ -112,5 +113,45 @@ public class MetaData {
 
     private static String getVariableSignature(String className, String fieldName) {
         return className + "." + fieldName;
+    }
+
+    /**
+     * TODO(YilongL): doing name mangling at runtime introduce unnecessary
+     * dependency on ConcurrentHashMap and Collections.newSetFromMap
+     */
+    public static int resolveVariableId(int variableId) {
+        int result = resolvedVarId[variableId];
+        if (result > 0) {
+            return result;
+        }
+
+        String varSig = varSigs[variableId];
+        int idx = varSig.lastIndexOf(".");
+        String className = varSig.substring(0, idx);
+        String fieldName = varSig.substring(idx + 1);
+        Set<String> fieldNames = classNameToFieldNames.get(className);
+        while (fieldNames != null && !fieldNames.contains(fieldName)) {
+            className = classNameToSuperclassName.get(className);
+            if (className == null) {
+                fieldNames = null;
+                break;
+            }
+
+            fieldNames = classNameToFieldNames.get(className);
+        }
+
+        if (fieldNames == null) {
+            /* failed to resolve this variable Id */
+            // TODO(YilongL): uncomment this and make sure it doesn't happen!
+//            System.err.println("[Warning]: unable to retrieve field information of class "
+//                    + className + "; resolving field " + fieldName);
+
+            result = variableId;
+        } else {
+            assert fieldNames.contains(fieldName);
+            result = getVariableId(className, fieldName);
+        }
+        resolvedVarId[variableId] = result;
+        return result;
     }
 }

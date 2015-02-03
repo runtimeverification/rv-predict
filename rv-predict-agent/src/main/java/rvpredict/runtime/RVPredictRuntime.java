@@ -300,7 +300,7 @@ public final class RVPredictRuntime {
     public static void logFieldAcc(Object object, long value, int variableId, boolean isWrite,
             boolean branchModel, int locId) {
         // TODO(YilongL): check skipSavingEvent before performing any computation?
-        variableId = RVPredictRuntime.resolveVariableId(variableId);
+        variableId = MetaData.resolveVariableId(variableId);
         saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(object), -variableId, value);
         if (!isPrimitiveWrapper(value) && branchModel) {
@@ -345,7 +345,7 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void logFieldInit(Object object, long value, int variableId, int locId) {
-        variableId = RVPredictRuntime.resolveVariableId(variableId);
+        variableId = MetaData.resolveVariableId(variableId);
         saveEvent(EventType.INIT, locId, System.identityHashCode(object), -variableId, value);
     }
 
@@ -1466,41 +1466,6 @@ public final class RVPredictRuntime {
         return o instanceof Integer || o instanceof Long || o instanceof Byte
                 || o instanceof Boolean || o instanceof Float || o instanceof Double
                 || o instanceof Short || o instanceof Character;
-    }
-
-    /**
-     * TODO(YilongL): doing name mangling at runtime introduce unnecessary
-     * dependency on ConcurrentHashMap and Collections.newSetFromMap
-     */
-    private static int resolveVariableId(int variableId) {
-        // TODO(YilongL): cache the result of variable resolution
-        String varSig = MetaData.varSigs[variableId];
-        int idx = varSig.lastIndexOf(".");
-        String className = varSig.substring(0, idx);
-        String fieldName = varSig.substring(idx + 1);
-        Set<String> fieldNames = MetaData.classNameToFieldNames.get(className);
-        while (fieldNames != null && !fieldNames.contains(fieldName)) {
-            className = MetaData.classNameToSuperclassName.get(className);
-            if (className == null) {
-                fieldNames = null;
-                break;
-            }
-
-            fieldNames = MetaData.classNameToFieldNames.get(className);
-        }
-
-        if (fieldNames == null) {
-            /* failed to resolve this variable Id */
-            // TODO(YilongL): make sure this doesn't happen
-
-            // System.out.println("[Warning]: unable to retrieve field information of class "
-            // + className + "; resolving field " + fieldName);
-
-            return variableId;
-        } else {
-            assert fieldNames.contains(fieldName);
-            return MetaData.getVariableId(className, fieldName);
-        }
     }
 
     private static void saveEvent(EventType eventType, int id, long addrl, int addrr, long value) {

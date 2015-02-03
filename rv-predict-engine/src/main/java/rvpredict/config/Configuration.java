@@ -83,7 +83,6 @@ public class Configuration {
                 if (include.isEmpty()) continue;
                 includeList.add(createClassPattern(include));
             }
-            System.out.println("Including: " + includeList);
         }
     }
 
@@ -102,7 +101,6 @@ public class Configuration {
                 if (!exclude.isEmpty())
                     excludeList.add(createClassPattern(exclude));
             }
-            System.out.println("Excluding: " + excludeList);
         }
     }
 

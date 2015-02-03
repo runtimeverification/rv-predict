@@ -96,6 +96,12 @@ public class Agent implements ClassFileTransformer {
 
         final boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
         config.logger.report("Log directory: " + config.outdir, Logger.MSGTYPE.INFO);
+        if (Configuration.includes != null) {
+            config.logger.report("Including: " + config.includeList, Logger.MSGTYPE.INFO);
+        }
+        if (Configuration.excludes != null) {
+            config.logger.report("Excluding: " + config.excludeList, Logger.MSGTYPE.INFO);
+        }
 
         TraceCache.removeTraceFiles(config.outdir);
         final LoggingEngine loggingEngine = new LoggingEngine(config);
@@ -179,7 +185,6 @@ public class Agent implements ClassFileTransformer {
                 toInstrument = !exclude.matcher(cname).matches();
                 if (!toInstrument) break;
             }
-
 
             if (toInstrument) {
                 for (String mock : MOCKS) {

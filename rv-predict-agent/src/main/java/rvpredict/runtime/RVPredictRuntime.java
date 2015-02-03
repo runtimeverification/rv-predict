@@ -298,17 +298,11 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void logFieldAcc(Object object, long value, int variableId, boolean isWrite,
-            boolean branchModel, int locId) {
+            int locId) {
         // TODO(YilongL): check skipSavingEvent before performing any computation?
         variableId = MetaData.resolveVariableId(variableId);
         saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(object), -variableId, value);
-        if (!isPrimitiveWrapper(value) && branchModel) {
-            // TODO(YilongL): what does it mean?
-            // shared object reference variable deference
-            // make it as a branch event
-            logBranch(-1);
-        }
     }
 
     /**
@@ -1458,14 +1452,6 @@ public final class RVPredictRuntime {
          * imaginary interrupted status field */
         saveEvent(EventType.READ, locId, System.identityHashCode(Thread.currentThread()),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-    }
-
-    private static boolean isPrimitiveWrapper(Object o) {
-        /* YilongL: we do not use guava's `Primitives.isWrapperType' because o
-         * could be null */
-        return o instanceof Integer || o instanceof Long || o instanceof Byte
-                || o instanceof Boolean || o instanceof Float || o instanceof Double
-                || o instanceof Short || o instanceof Character;
     }
 
     private static void saveEvent(EventType eventType, int id, long addrl, int addrr, long value) {

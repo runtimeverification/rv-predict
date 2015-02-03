@@ -59,6 +59,9 @@ public class Main {
 
             String agentOptions = Configuration.opt_only_log + " "
                     + escapeString(config.outdir);
+            if (Configuration.online) {
+                agentOptions += " " + Configuration.opt_online;
+            }
             if (config.zip) {
                 agentOptions += " " + Configuration.opt_zip;
             }
@@ -109,7 +112,7 @@ public class Main {
                     Logger.MSGTYPE.VERBOSE);
         }
 
-        if (config.predict && !config.online) {
+        if (config.predict && !Configuration.online) {
             new RVPredict(config, new OfflineLoggingFactory(config)).run();
         }
     }
@@ -173,7 +176,7 @@ public class Main {
         final boolean finalLogToScreen = logToScreen;
         final String finalFile = file;
         final ProcessBuilder finalProcessBuilder = processBuilder;
-        return new Thread() {
+        return new Thread("CleanUp Agent") {
             @Override
             public void run() {
                 cleanupAgent.cleanup();

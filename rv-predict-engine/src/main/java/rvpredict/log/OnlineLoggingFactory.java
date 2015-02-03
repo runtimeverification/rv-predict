@@ -18,8 +18,6 @@ public class OnlineLoggingFactory implements LoggingFactory {
     private static final PipedInputStream END_INPUT_STREAM = new PipedInputStream();
     private BlockingQueue<PipedInputStream> eventInputStreams = new LinkedBlockingQueue<>();
     
-    public OnlineLoggingFactory() { }
-    
     @Override
     public EventPipe createEventPipe() {
         return new SimpleEventPipe();

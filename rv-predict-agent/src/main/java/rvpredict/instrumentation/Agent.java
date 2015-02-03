@@ -97,9 +97,11 @@ public class Agent implements ClassFileTransformer {
         final boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
         config.logger.report("Log directory: " + config.outdir, Logger.MSGTYPE.INFO);
 
-        OfflineLoggingFactory.removeTraceFiles(config.outdir);
-        final LoggingEngine db = new LoggingEngine(config);
-        RVPredictRuntime.init(db);
+        if (!Configuration.online) {
+            OfflineLoggingFactory.removeTraceFiles(config.outdir);
+        }
+        final LoggingEngine loggingEngine = new LoggingEngine(config);
+        RVPredictRuntime.init(loggingEngine);
 
         inst.addTransformer(new Agent(config), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {
@@ -123,7 +125,7 @@ public class Agent implements ClassFileTransformer {
             @Override
             public void cleanup() {
                 try {
-                    db.finishLogging();
+                    loggingEngine.finishLogging();
                 } catch (IOException e) {
                     System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
                     System.err.println(e.getMessage());
@@ -133,7 +135,7 @@ public class Agent implements ClassFileTransformer {
                 }
             }
         };
-        Thread predict = Main.getPredictionThread(config, cleanupAgent, config.predict);
+        Thread predict = Main.getPredictionThread(config, cleanupAgent, config.predict && !Configuration.online);
         Runtime.getRuntime().addShutdownHook(predict);
 
         if (config.predict) {

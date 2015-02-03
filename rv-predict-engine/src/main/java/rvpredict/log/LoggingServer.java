@@ -36,7 +36,7 @@ public class LoggingServer implements Runnable {
     @Override
     public void run() {
         if (!Configuration.online) {
-            Thread metadataLoggingThread = new Thread(metadataLoggerThread);
+            Thread metadataLoggingThread = new Thread(metadataLoggerThread, "Metadata logger");
             metadataLoggerThread.setOwner(metadataLoggingThread);
             metadataLoggingThread.setDaemon(true);
             metadataLoggingThread.start();
@@ -47,7 +47,7 @@ public class LoggingServer implements Runnable {
             while (ThreadLocalEventStream.END_REGISTRY != (eventOS = loggersRegistry.take())) {
                 final EventOutputStream outputStream = engine.getLoggingFactory().createEventOutputStream();
                 final LoggerThread logger = new LoggerThread(eventOS, outputStream);
-                Thread loggerThread = new Thread(logger);
+                Thread loggerThread = new Thread(logger, "Logger thread");
                 logger.setOwner(loggerThread);
                 loggerThread.setDaemon(true);
                 loggerThread.start();

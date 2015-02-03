@@ -57,6 +57,7 @@ public class LoggingEngine {
     public void finishLogging() throws IOException, InterruptedException {
         shutdown = true;
         loggingServer.finishLogging();
+
         if (config.online) {
             predictionServer.finishLogging();
         }
@@ -64,7 +65,7 @@ public class LoggingEngine {
 
     public LoggingEngine(Configuration config) {
         this.config = config;
-        if (config.online) {
+        if (Configuration.online) {
             loggingFactory = new OnlineLoggingFactory();
             predictionServer = startPredicting();
         } else {
@@ -76,7 +77,7 @@ public class LoggingEngine {
 
     private LoggingServer startLogging() {
         final LoggingServer loggingServer = new LoggingServer(this);
-        Thread loggingServerThread = new Thread(loggingServer);
+        Thread loggingServerThread = new Thread(loggingServer, "Logging server");
         loggingServer.setOwner(loggingServerThread);
         loggingServerThread.setDaemon(true);
         loggingServerThread.start();
@@ -85,7 +86,7 @@ public class LoggingEngine {
     
     private PredictionServer startPredicting() {
         final PredictionServer predictionServer = new PredictionServer(this);
-        Thread predictionServerThread = new Thread(predictionServer);
+        Thread predictionServerThread = new Thread(predictionServer, "Prediction main thread");
         predictionServer.setOwner(predictionServerThread);
         predictionServerThread.setDaemon(true);
         predictionServerThread.start();

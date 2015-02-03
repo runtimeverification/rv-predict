@@ -49,6 +49,7 @@ public class RVPredict implements Runnable {
     private final TraceCache traceCache;
     private final TraceInfo traceInfo;
     private LoggingFactory loggingFactory;
+    private ExecutionInfoTask infoTask;
 
     public RVPredict(Configuration config, LoggingFactory loggingFactory) throws IOException, ClassNotFoundException {
         this.config = config;
@@ -60,17 +61,24 @@ public class RVPredict implements Runnable {
         traceCache = new TraceCache(loggingFactory);
 
         traceInfo = new TraceInfo();
+        infoTask = new ExecutionInfoTask(startTime, traceInfo);
 
-        addHooks(startTime);
+        addHooks();
+    }
+    
+    public void report() {
+        infoTask.run();
     }
 
-    private void addHooks(long startTime) {
-        // register a shutdown hook to store runtime statistics
-        Runtime.getRuntime().addShutdownHook(
-                new ExecutionInfoTask(startTime, traceInfo));
+    private void addHooks() {
+        if (!Configuration.online) {
+            // register a shutdown hook to store runtime statistics
+            Runtime.getRuntime().addShutdownHook(
+                    new Thread(infoTask, "Execution Info Task"));
+        }
 
         // set a timer to timeout in a configured period
-        Timer timer = new Timer();
+        Timer timer = new Timer(true);
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
@@ -84,7 +92,14 @@ public class RVPredict implements Runnable {
     @Override
     public void run() {
         try {
-            ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(4);
+            ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(4,
+                    new ThreadFactory() {
+                        public Thread newThread(Runnable r) {
+                            Thread t = new Thread(r, "Race Detector");
+                            t.setDaemon(true);
+                            return t;
+                        }
+                    });
             Trace.State initState = new Trace.State();
 
             long fromIndex = 1;
@@ -102,7 +117,7 @@ public class RVPredict implements Runnable {
             } while (trace.getSize() == config.windowSize);
 
             shutdownAndAwaitTermination(raceDetectorExecutor);
-            System.exit(0);
+            return;
         } catch (InterruptedException e) {
             System.err.println("Error: prediction interrupted.");
             System.err.println(e.getMessage());
@@ -149,7 +164,7 @@ public class RVPredict implements Runnable {
         return loggingFactory;
     }
 
-    class ExecutionInfoTask extends Thread {
+    class ExecutionInfoTask implements Runnable {
         TraceInfo info;
         long start_time;
 

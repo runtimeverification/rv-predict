@@ -25,7 +25,7 @@ public class SimpleEventPipe implements EventPipe {
 
     @Override
     public EventItem readEvent() throws InterruptedException {
-        EventItem event = pipe.remove();
+        EventItem event = pipe.take();
         if (event == END_EVENT)
             return null;
         return event;
@@ -33,6 +33,6 @@ public class SimpleEventPipe implements EventPipe {
 
     @Override
     public void close() throws InterruptedException {
-
+        pipe.put(END_EVENT);
     }
 }

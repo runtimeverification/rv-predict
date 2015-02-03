@@ -28,11 +28,11 @@
  ******************************************************************************/
 package rvpredict.log;
 
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
-
 import rvpredict.config.Configuration;
 import rvpredict.trace.EventType;
+
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Class encapsulating functionality for recording events
@@ -57,6 +57,9 @@ public class LoggingEngine {
     public void finishLogging() throws IOException, InterruptedException {
         shutdown = true;
         loggingServer.finishLogging();
+        if (config.profile) {
+            EventStats.printEventStats();
+        }
 
         if (config.online) {
             predictionServer.finishLogging();
@@ -112,22 +115,6 @@ public class LoggingEngine {
         long tid = Thread.currentThread().getId();
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
         loggingServer.getOutputStream().writeEvent(e);
-    }
-
-    /**
-     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, int, long)}
-     * The missing arguments default to 0.
-     */
-    public void saveEvent(EventType eventType, int locId, long arg) {
-        saveEvent(eventType, locId, arg, 0, 0);
-    }
-
-    /**
-     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, int, long)}
-     * The missing arguments default to 0.
-     */
-    public void saveEvent(EventType eventType, int locId) {
-        saveEvent(eventType, locId, 0, 0, 0);
     }
 
     public long getGlobalEventID() {

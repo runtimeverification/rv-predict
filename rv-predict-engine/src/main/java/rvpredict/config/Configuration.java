@@ -62,7 +62,7 @@ public class Configuration {
             "com.apple.*",
             "apple.awt.*",
             "org.xml.*",
-            "jdk.internal.*"            
+            "jdk.internal.*"
     };
     public final List<Pattern> includeList = new LinkedList<>();
     public List<Pattern> excludeList = new LinkedList<>();
@@ -83,7 +83,6 @@ public class Configuration {
                 if (include.isEmpty()) continue;
                 includeList.add(createClassPattern(include));
             }
-            System.out.println("Including: " + includeList);
         }
     }
 
@@ -102,17 +101,16 @@ public class Configuration {
                 if (!exclude.isEmpty())
                     excludeList.add(createClassPattern(exclude));
             }
-            System.out.println("Excluding: " + excludeList);
         }
     }
 
     /**
-     * Creates a {@link java.util.regex.Pattern} list from a String array 
-     * describing packages/classes using file pattern conventions ({@code *} 
+     * Creates a {@link java.util.regex.Pattern} list from a String array
+     * describing packages/classes using file pattern conventions ({@code *}
      * stands for a sequence of characters)
      *
      * @param patterns the array of package/class descriptions
-     * @return A {@link java.util.regex.Pattern} list which matches 
+     * @return A {@link java.util.regex.Pattern} list which matches
      *         names specified by the given argument
      */
     public static List<Pattern> getDefaultPatterns(String[] patterns) {
@@ -123,7 +121,6 @@ public class Configuration {
         return patternList;
     }
 
-    // Copyright (c) 2013-2014 K Team. All Rights Reserved.
     public enum OS {
         OSX(true, "osx"), UNIX(true, "linux"), UNKNOWN(false, null), WIN(false, "cygwin");
 
@@ -154,7 +151,7 @@ public class Configuration {
             if (this == UNKNOWN) {
                 System.err.println("Unknown OS type. " + System.getProperty("os.name")
                         + " not recognized. "
-                        + "Please contact K developers with details of your OS.");
+                        + "Please contact RV-Predict developers with details of your OS.");
                 System.exit(1);
             }
             if (this == WIN) {
@@ -200,6 +197,10 @@ public class Configuration {
     public final static String opt_zip = "--zip";
     @Parameter(names = opt_zip, description = "Compress traces", hidden = true, descriptionKey = "1060")
     public boolean zip;
+
+    public final static String opt_event_profile = "--profile";
+    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1070")
+    public boolean profile;
 
     public final static String opt_only_predict = "--predict";
     @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "2000")

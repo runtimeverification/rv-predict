@@ -46,6 +46,7 @@ import java.util.regex.Pattern;
 
 import rvpredict.config.Configuration;
 import rvpredict.instrumentation.MetaData;
+import rvpredict.log.EventStats;
 import rvpredict.log.LoggingEngine;
 import rvpredict.trace.EventType;
 
@@ -161,13 +162,13 @@ public final class RVPredictRuntime {
      */
     private static final SynchronizedWeakIdentityHashMap<Collection, Object> viewToBackedCollection = new SynchronizedWeakIdentityHashMap<>();
 
-    private static LoggingEngine db;
+    private static LoggingEngine loggingEngine;
 
     private RVPredictRuntime() { } // forbid initialization
 
     // TODO(YilongL): move this method out of the runtime library
     public static void init(LoggingEngine db) {
-        RVPredictRuntime.db = db;
+        RVPredictRuntime.loggingEngine = db;
     }
 
     /**
@@ -178,7 +179,7 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void logBranch(int locId) {
-        db.saveEvent(EventType.BRANCH, locId);
+        saveEvent(EventType.BRANCH, locId);
     }
 
     /**
@@ -206,17 +207,17 @@ public final class RVPredictRuntime {
     public static void rvPredictWait(Object object, long timeout, int locId)
             throws InterruptedException {
         long monitorId = calcMonitorId(object);
-        db.saveEvent(EventType.WAIT_REL, locId, monitorId);
+        saveEvent(EventType.WAIT_REL, locId, monitorId);
         try {
             object.wait(timeout);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            db.saveEvent(EventType.WAIT_ACQ, locId, monitorId);
+            saveEvent(EventType.WAIT_ACQ, locId, monitorId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        db.saveEvent(EventType.WAIT_ACQ, locId, monitorId);
+        saveEvent(EventType.WAIT_ACQ, locId, monitorId);
     }
 
     /**
@@ -235,17 +236,17 @@ public final class RVPredictRuntime {
     public static void rvPredictWait(Object object, long timeout, int nano, int locId)
             throws InterruptedException {
         long monitorId = calcMonitorId(object);
-        db.saveEvent(EventType.WAIT_REL, locId, monitorId);
+        saveEvent(EventType.WAIT_REL, locId, monitorId);
         try {
             object.wait(timeout, nano);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            db.saveEvent(EventType.WAIT_ACQ, locId, monitorId);
+            saveEvent(EventType.WAIT_ACQ, locId, monitorId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        db.saveEvent(EventType.WAIT_ACQ, locId, monitorId);
+        saveEvent(EventType.WAIT_ACQ, locId, monitorId);
     }
 
     /**
@@ -258,7 +259,7 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void logMonitorEnter(Object object, int locId) {
-        db.saveEvent(EventType.WRITE_LOCK, locId, calcMonitorId(object));
+        saveEvent(EventType.WRITE_LOCK, locId, calcMonitorId(object));
     }
 
     /**
@@ -271,7 +272,7 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void logMonitorExit(Object object, int locId) {
-        db.saveEvent(EventType.WRITE_UNLOCK, locId, calcMonitorId(object));
+        saveEvent(EventType.WRITE_UNLOCK, locId, calcMonitorId(object));
     }
 
     /**
@@ -294,8 +295,9 @@ public final class RVPredictRuntime {
      */
     public static void logFieldAcc(Object object, long value, int variableId, boolean isWrite,
             boolean branchModel, int locId) {
+        // TODO(YilongL): check skipSavingEvent before performing any computation?
         variableId = RVPredictRuntime.resolveVariableId(variableId);
-        db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
+        saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(object), -variableId, value);
         if (!isPrimitiveWrapper(value) && branchModel) {
             // TODO(YilongL): what does it mean?
@@ -321,7 +323,7 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void logArrayAcc(Object array, int index, long value, boolean isWrite, int locId) {
-        db.saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
+        saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(array), index, value);
     }
 
@@ -340,7 +342,7 @@ public final class RVPredictRuntime {
      */
     public static void logFieldInit(Object object, long value, int variableId, int locId) {
         variableId = RVPredictRuntime.resolveVariableId(variableId);
-        db.saveEvent(EventType.INIT, locId, System.identityHashCode(object), -variableId, value);
+        saveEvent(EventType.INIT, locId, System.identityHashCode(object), -variableId, value);
     }
 
     /**
@@ -356,7 +358,7 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void logArrayInit(Object array, int index, long value, int locId) {
-        db.saveEvent(EventType.INIT, locId, System.identityHashCode(array), index, value);
+        saveEvent(EventType.INIT, locId, System.identityHashCode(array), index, value);
     }
 
     /**
@@ -375,9 +377,9 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void rvPredictStart(Thread thread, int locId) {
-        db.saveEvent(EventType.INIT, locId, System.identityHashCode(thread),
+        saveEvent(EventType.INIT, locId, System.identityHashCode(thread),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-        db.saveEvent(EventType.START, locId, thread.getId());
+        saveEvent(EventType.START, locId, thread.getId());
         thread.start();
     }
 
@@ -408,17 +410,17 @@ public final class RVPredictRuntime {
      */
     public static void rvPredictJoin(Thread thread, long millis, int locId)
             throws InterruptedException {
-        db.saveEvent(EventType.PRE_JOIN, locId, thread.getId());
+        saveEvent(EventType.PRE_JOIN, locId, thread.getId());
         try {
             thread.join(millis);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            db.saveEvent(EventType.JOIN_MAYBE_FAILED, locId, thread.getId());
+            saveEvent(EventType.JOIN_MAYBE_FAILED, locId, thread.getId());
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        db.saveEvent(millis == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_FAILED, locId,
+        saveEvent(millis == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_FAILED, locId,
                 thread.getId());
     }
 
@@ -439,17 +441,17 @@ public final class RVPredictRuntime {
      */
     public static void rvPredictJoin(Thread thread, long millis, int nanos, int locId)
             throws InterruptedException {
-        db.saveEvent(EventType.PRE_JOIN, locId, thread.getId());
+        saveEvent(EventType.PRE_JOIN, locId, thread.getId());
         try {
             thread.join(millis, nanos);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            db.saveEvent(EventType.JOIN_MAYBE_FAILED, locId, thread.getId());
+            saveEvent(EventType.JOIN_MAYBE_FAILED, locId, thread.getId());
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        db.saveEvent(millis == 0 && nanos == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_FAILED,
+        saveEvent(millis == 0 && nanos == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_FAILED,
                 locId, thread.getId());
     }
 
@@ -514,7 +516,7 @@ public final class RVPredictRuntime {
              * make sure the write on interrupted status is logged before the
              * read-and-clear events generated by the blocking method
              */
-            db.saveEvent(EventType.WRITE, locId, System.identityHashCode(thread),
+            saveEvent(EventType.WRITE, locId, System.identityHashCode(thread),
                     -NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
             thread.interrupt();
         } catch (SecurityException e) {
@@ -537,7 +539,7 @@ public final class RVPredictRuntime {
          * the interrupted status is like an imaginary shared variable so we
          * need to record access to it to preserve soundness
          */
-        db.saveEvent(EventType.READ, locId, System.identityHashCode(thread),
+        saveEvent(EventType.READ, locId, System.identityHashCode(thread),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, isInterrupted ? 1 : 0);
         return isInterrupted;
     }
@@ -550,10 +552,10 @@ public final class RVPredictRuntime {
      */
     public static boolean rvPredictInterrupted(int locId) {
         boolean interrupted = Thread.interrupted();
-        db.saveEvent(EventType.READ, locId, 0, -NATIVE_INTERRUPTED_STATUS_VAR_ID, interrupted ? 1
+        saveEvent(EventType.READ, locId, 0, -NATIVE_INTERRUPTED_STATUS_VAR_ID, interrupted ? 1
                 : 0);
         /* clear interrupted status */
-        db.saveEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
+        saveEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
         return interrupted;
     }
@@ -568,7 +570,7 @@ public final class RVPredictRuntime {
      */
     public static void rvPredictLock(Lock lock, int locId) {
         lock.lock();
-        db.saveEvent(getLockEventType(lock), locId, calcLockId(lock));
+        saveEvent(getLockEventType(lock), locId, calcLockId(lock));
     }
 
     /**
@@ -586,7 +588,7 @@ public final class RVPredictRuntime {
         try {
             lock.lockInterruptibly();
             onBlockingMethodNormalReturn(locId);
-            db.saveEvent(getLockEventType(lock), locId, calcLockId(lock));
+            saveEvent(getLockEventType(lock), locId, calcLockId(lock));
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
             throw e;
@@ -605,7 +607,7 @@ public final class RVPredictRuntime {
     public static boolean rvPredictTryLock(Lock lock, int locId) {
         boolean acquired = lock.tryLock();
         if (acquired) {
-            db.saveEvent(getLockEventType(lock), locId, calcLockId(lock));
+            saveEvent(getLockEventType(lock), locId, calcLockId(lock));
         }
         return acquired;
     }
@@ -631,7 +633,7 @@ public final class RVPredictRuntime {
             boolean acquired = lock.tryLock(time, unit);
             if (acquired) {
                 onBlockingMethodNormalReturn(locId);
-                db.saveEvent(EventType.WRITE_LOCK, locId, calcLockId(lock));
+                saveEvent(EventType.WRITE_LOCK, locId, calcLockId(lock));
             }
             return acquired;
         } catch (InterruptedException e) {
@@ -649,7 +651,7 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void rvPredictUnlock(Lock lock, int locId) {
-        db.saveEvent(getUnlockEventType(lock), locId, calcLockId(lock));
+        saveEvent(getUnlockEventType(lock), locId, calcLockId(lock));
         lock.unlock();
     }
 
@@ -686,17 +688,17 @@ public final class RVPredictRuntime {
     public static void rvPredictConditionAwait(Condition condition, int locId)
             throws InterruptedException {
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        saveEvent(EventType.WAIT_REL, locId, lockId);
         try {
             condition.await();
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            saveEvent(EventType.WAIT_ACQ, locId, lockId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveEvent(EventType.WAIT_ACQ, locId, lockId);
     }
 
     /**
@@ -706,17 +708,17 @@ public final class RVPredictRuntime {
             int locId) throws InterruptedException {
         boolean result;
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        saveEvent(EventType.WAIT_REL, locId, lockId);
         try {
             result = condition.await(time, unit);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            saveEvent(EventType.WAIT_ACQ, locId, lockId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveEvent(EventType.WAIT_ACQ, locId, lockId);
         return result;
     }
 
@@ -727,17 +729,17 @@ public final class RVPredictRuntime {
             int locId) throws InterruptedException {
         long result;
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        saveEvent(EventType.WAIT_REL, locId, lockId);
         try {
             result = condition.awaitNanos(nanosTimeout);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            saveEvent(EventType.WAIT_ACQ, locId, lockId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveEvent(EventType.WAIT_ACQ, locId, lockId);
         return result;
     }
 
@@ -748,17 +750,17 @@ public final class RVPredictRuntime {
             throws InterruptedException {
         boolean result;
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        saveEvent(EventType.WAIT_REL, locId, lockId);
         try {
             result = condition.awaitUntil(deadline);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            saveEvent(EventType.WAIT_ACQ, locId, lockId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveEvent(EventType.WAIT_ACQ, locId, lockId);
         return result;
     }
 
@@ -767,9 +769,9 @@ public final class RVPredictRuntime {
      */
     public static void rvPredictConditionAwaitUninterruptibly(Condition condition, int locId) {
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        db.saveEvent(EventType.WAIT_REL, locId, lockId);
+        saveEvent(EventType.WAIT_REL, locId, lockId);
         condition.awaitUninterruptibly();
-        db.saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveEvent(EventType.WAIT_ACQ, locId, lockId);
     }
 
     /**
@@ -780,11 +782,11 @@ public final class RVPredictRuntime {
         int result;
         try {
             synchronized (sync) {
-                db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
+                saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
                 result = (int) AQS_GET_STATE.invoke(sync);
-                db.saveEvent(EventType.READ, locId, System.identityHashCode(sync),
+                saveEvent(EventType.READ, locId, System.identityHashCode(sync),
                         -AQS_MOCK_STATE_ID, result);
-                db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
+                saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
             }
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
                 | SecurityException e) {
@@ -800,11 +802,11 @@ public final class RVPredictRuntime {
             int newState, int locId) {
         try {
             synchronized (sync) {
-                db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
+                saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
                 AQS_SET_STATE.invoke(sync, newState);
-                db.saveEvent(EventType.WRITE, locId, System.identityHashCode(sync),
+                saveEvent(EventType.WRITE, locId, System.identityHashCode(sync),
                         -AQS_MOCK_STATE_ID, newState);
-                db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
+                saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
             }
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
                 | SecurityException e) {
@@ -820,15 +822,15 @@ public final class RVPredictRuntime {
         boolean result;
         try {
             synchronized (sync) {
-                db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
-                db.saveEvent(EventType.READ, locId, System.identityHashCode(sync),
+                saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
+                saveEvent(EventType.READ, locId, System.identityHashCode(sync),
                         -AQS_MOCK_STATE_ID, (int) AQS_GET_STATE.invoke(sync));
                 result = (boolean) AQS_CAS_STATE.invoke(sync, expect, update);
                 if (result) {
-                    db.saveEvent(EventType.READ, locId, System.identityHashCode(sync),
+                    saveEvent(EventType.READ, locId, System.identityHashCode(sync),
                             -AQS_MOCK_STATE_ID, update);
                 }
-                db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
+                saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
             }
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
                 | SecurityException e) {
@@ -843,11 +845,11 @@ public final class RVPredictRuntime {
     public static boolean rvPredictAtomicBoolGet(AtomicBoolean atomicBool, int locId) {
         boolean result;
         synchronized (atomicBool) {
-            db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
+            saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
             result = atomicBool.get();
-            db.saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
+            saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
                     -ATOMIC_BOOLEAN_MOCK_VAL_ID, result ? 1 : 0);
-            db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
+            saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }
         return result;
     }
@@ -857,11 +859,11 @@ public final class RVPredictRuntime {
      */
     public static void rvPredictAtomicBoolSet(AtomicBoolean atomicBool, boolean newValue, int locId) {
         synchronized (atomicBool) {
-            db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
+            saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
             atomicBool.set(newValue);
-            db.saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
+            saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
                     -ATOMIC_BOOLEAN_MOCK_VAL_ID, newValue ? 1 : 0);
-            db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
+            saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }
     }
 
@@ -872,13 +874,13 @@ public final class RVPredictRuntime {
             int locId) {
         boolean result;
         synchronized (atomicBool) {
-            db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
-            db.saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
+            saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
+            saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
                     -ATOMIC_BOOLEAN_MOCK_VAL_ID, atomicBool.get() ? 1 : 0);
             result = atomicBool.getAndSet(newValue);
-            db.saveEvent(EventType.WRITE, locId, System.identityHashCode(atomicBool),
+            saveEvent(EventType.WRITE, locId, System.identityHashCode(atomicBool),
                     -ATOMIC_BOOLEAN_MOCK_VAL_ID, newValue ? 1 : 0);
-            db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
+            saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }
         return result;
     }
@@ -890,15 +892,15 @@ public final class RVPredictRuntime {
             boolean update, int locId) {
         boolean result;
         synchronized (atomicBool) {
-            db.saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
-            db.saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
+            saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
+            saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
                     -ATOMIC_BOOLEAN_MOCK_VAL_ID, atomicBool.get() ? 1 : 0);
             result = atomicBool.compareAndSet(expect, update);
             if (result) {
-                db.saveEvent(EventType.WRITE, locId, System.identityHashCode(atomicBool),
+                saveEvent(EventType.WRITE, locId, System.identityHashCode(atomicBool),
                         -ATOMIC_BOOLEAN_MOCK_VAL_ID, update ? 1 : 0);
             }
-            db.saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
+            saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }
         return result;
     }
@@ -1338,7 +1340,7 @@ public final class RVPredictRuntime {
             collection = getBackedCollection((Collection) collection);
         }
         if (!isThreadSafeCollection(collection)) {
-            db.saveEvent(EventType.READ, locId, System.identityHashCode(collection),
+            saveEvent(EventType.READ, locId, System.identityHashCode(collection),
                     -MetaData.getVariableId(collection.getClass().getName(), MOCK_STATE_FIELD),
                     DUMMY_VALUE);
         }
@@ -1362,7 +1364,7 @@ public final class RVPredictRuntime {
             collection = getBackedCollection((Collection) collection);
         }
         if (!isThreadSafeCollection(collection)) {
-            db.saveEvent(EventType.WRITE, locId, System.identityHashCode(collection),
+            saveEvent(EventType.WRITE, locId, System.identityHashCode(collection),
                     -MetaData.getVariableId(collection.getClass().getName(), MOCK_STATE_FIELD),
                     DUMMY_VALUE);
         }
@@ -1438,10 +1440,10 @@ public final class RVPredictRuntime {
     private static void onBlockingMethodInterrupted(int locId) {
         Thread crntThread = Thread.currentThread();
         /* require interrupted status to be true at the moment */
-        db.saveEvent(EventType.READ, locId, System.identityHashCode(crntThread),
+        saveEvent(EventType.READ, locId, System.identityHashCode(crntThread),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
         /* clear interrupted status */
-        db.saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
+        saveEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
     }
 
@@ -1450,7 +1452,7 @@ public final class RVPredictRuntime {
          * logs the write of interrupted status to 1 before this read. Thus, the
          * logged global trace could violate read-write consistency on the
          * imaginary interrupted status field */
-        db.saveEvent(EventType.READ, locId, System.identityHashCode(Thread.currentThread()),
+        saveEvent(EventType.READ, locId, System.identityHashCode(Thread.currentThread()),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
     }
 
@@ -1467,6 +1469,7 @@ public final class RVPredictRuntime {
      * dependency on ConcurrentHashMap and Collections.newSetFromMap
      */
     private static int resolveVariableId(int variableId) {
+        // TODO(YilongL): cache the result of variable resolution
         String varSig = MetaData.varSigs[variableId];
         int idx = varSig.lastIndexOf(".");
         String className = varSig.substring(0, idx);
@@ -1494,6 +1497,45 @@ public final class RVPredictRuntime {
             assert fieldNames.contains(fieldName);
             return MetaData.getVariableId(className, fieldName);
         }
+    }
+
+    private static void saveEvent(EventType eventType, int id, long addrl, int addrr, long value) {
+        if (!skipSavingEvent()) {
+            if (loggingEngine.getConfig().profile) {
+                EventStats.updateEventStats();
+            }
+            loggingEngine.saveEvent(eventType, id, addrl, addrr, value);
+        }
+    }
+
+    /**
+     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, int, long)}
+     * The missing arguments default to 0.
+     */
+    private static void saveEvent(EventType eventType, int locId, long arg) {
+        saveEvent(eventType, locId, arg, 0, 0);
+    }
+
+    /**
+     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, int, long)}
+     * The missing arguments default to 0.
+     */
+    private static void saveEvent(EventType eventType, int locId) {
+        saveEvent(eventType, locId, 0, 0, 0);
+    }
+
+    /**
+     * Checks if logging should be disabled at the moment.
+     */
+    private static boolean skipSavingEvent() {
+        StackTraceElement[] stackTrace = new Throwable().getStackTrace();
+        for (StackTraceElement e : stackTrace) {
+            String className = e.getClassName();
+            if (className.startsWith("java.lang.ClassLoader") || className.startsWith("sun")) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

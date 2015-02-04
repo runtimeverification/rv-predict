@@ -277,7 +277,7 @@ public class Trace {
     }
 
     public void addRawEvent(Event event) {
-//        System.err.println(event + " " + info.getLocIdToStmtSigMap().get(event.getID()));
+//        System.err.println(event + " " + metadata.getLocIdToStmtSigMap().get(event.getID()));
         rawEvents.add(event);
         if (event instanceof MemoryAccessEvent) {
             String addr = ((MemoryAccessEvent) event).getAddr();
@@ -321,7 +321,7 @@ public class Trace {
      * @param event
      */
     private void addEvent(Event event) {
-//        System.err.println(event + " " + info.getLocIdToStmtSigMap().get(event.getID()));
+//        System.err.println(event + " " + metadata.getLocIdToStmtSigMap().get(event.getID()));
         Long tid = event.getTID();
         threadIds.add(tid);
 

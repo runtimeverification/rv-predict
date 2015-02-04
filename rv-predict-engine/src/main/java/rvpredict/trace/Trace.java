@@ -128,12 +128,12 @@ public class Trace {
 
     private final State initState;
 
-    private final TraceInfo info;
+    private final TraceMetadata metadata;
 
-    public Trace(State initState, TraceInfo info) {
-        assert initState != null && info != null;
+    public Trace(State initState, TraceMetadata metadata) {
+        assert initState != null && metadata != null;
         this.initState = initState;
-        this.info = info;
+        this.metadata = metadata;
     }
 
     public boolean hasSharedMemAddr() {
@@ -151,11 +151,11 @@ public class Trace {
     }
 
     public Map<Integer, String> getVarIdToVarSigMap() {
-        return info.getVarIdToVarSigMap();
+        return metadata.getVarIdToVarSigMap();
     }
 
     public Map<Integer, String> getLocIdToStmtSigMap() {
-        return info.getLocIdToStmtSigMap();
+        return metadata.getLocIdToStmtSigMap();
     }
 
     public Event getFirstThreadEvent(long threadId) {
@@ -326,9 +326,6 @@ public class Trace {
         threadIds.add(tid);
 
         if (event instanceof BranchEvent) {
-            // branch node
-            info.incrementBranchNumber();
-
             List<BranchEvent> branchnodes = threadIdToBranchEvents.get(tid);
             if (branchnodes == null) {
                 branchnodes = new ArrayList<>();
@@ -338,7 +335,6 @@ public class Trace {
         } else if (event instanceof InitEvent) {
             // initial write node
             initState.addrToValue.put(((InitEvent) event).getAddr(), ((InitEvent) event).getValue());
-            info.incrementInitWriteNumber();
         } else {
             // all critical nodes -- read/write/synchronization events
 
@@ -353,8 +349,6 @@ public class Trace {
             threadNodes.add(event);
             // TODO: Optimize it -- no need to update it every time
             if (event instanceof MemoryAccessEvent) {
-                info.incrementSharedReadWriteNumber();
-
                 MemoryAccessEvent mnode = (MemoryAccessEvent) event;
                 String addr = mnode.getAddr();
 
@@ -382,7 +376,6 @@ public class Trace {
                     writeNodes.add((WriteEvent) event);
                 }
             } else if (event instanceof SyncEvent) {
-                info.incrementSyncNumber();
                 SyncEvent syncEvent = (SyncEvent) event;
 
                 Map<Long, List<SyncEvent>> eventsMap = null;
@@ -454,7 +447,6 @@ public class Trace {
                 String addr = ((InitOrAccessEvent) event).getAddr();
                 if (!sharedMemAddr.contains(addr)) {
                     iter.remove();
-                    info.incrementLocalReadWriteNumber();
                 }
             } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
                 /* only preserve outermost lock regions */
@@ -502,9 +494,6 @@ public class Trace {
             }
             addEvent(event);
         }
-
-        info.addSharedAddresses(sharedMemAddr);
-        info.addThreads(threadIds);
     }
 
     // TODO(YilongL): add javadoc; addr seems to be some abstract address, e.g.
@@ -512,7 +501,7 @@ public class Trace {
     public boolean isVolatileAddr(String addr) {
         // all field addr should contain ".", not true for array access
         int dotPos = addr.indexOf(".");
-        return dotPos != -1 && info.isVolatileAddr(Integer.valueOf(addr.substring(dotPos + 1)));
+        return dotPos != -1 && metadata.isVolatileAddr(Integer.valueOf(addr.substring(dotPos + 1)));
     }
 
     public static class State {

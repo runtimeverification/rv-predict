@@ -47,7 +47,7 @@ import rvpredict.trace.Event;
 import rvpredict.trace.MemoryAccessEvent;
 import rvpredict.trace.ReadEvent;
 import rvpredict.trace.Trace;
-import rvpredict.trace.TraceInfo;
+import rvpredict.trace.TraceMetadata;
 import rvpredict.trace.WriteEvent;
 import rvpredict.util.Logger;
 import smt.SMTConstraintBuilder;
@@ -57,12 +57,11 @@ import violation.Violation;
 public class RVPredict {
 
     private final HashSet<Violation> violations = new HashSet<>();
-    private final HashSet<Violation> potentialviolations = new HashSet<>();
     private final Configuration config;
     private final Logger logger;
     private final long totalTraceLength;
     private final DBEngine dbEngine;
-    private final TraceInfo traceInfo;
+    private final TraceMetadata metadata;
 
     public RVPredict(Configuration config) {
         this.config = config;
@@ -74,7 +73,7 @@ public class RVPredict {
 
         // the total number of events in the trace
         totalTraceLength = dbEngine.getTraceLength();
-        traceInfo = new TraceInfo(dbEngine.getVolatileFieldIds(),
+        metadata = new TraceMetadata(dbEngine.getVolatileFieldIds(),
                 dbEngine.getVarIdToVarSig(),
                 dbEngine.getLocIdToStmtSig());
 
@@ -82,11 +81,6 @@ public class RVPredict {
     }
 
     private void addHooks(long startTime) {
-        // register a shutdown hook to store runtime statistics
-        Runtime.getRuntime().addShutdownHook(
-                new ExecutionInfoTask(startTime, traceInfo, totalTraceLength));
-
-        // set a timer to timeout in a configured period
         Timer timer = new Timer();
         timer.schedule(new TimerTask() {
             @Override
@@ -253,7 +247,7 @@ public class RVPredict {
             long fromIndex = n * config.windowSize + 1;
             long toIndex = fromIndex + config.windowSize;
 
-            Trace trace = dbEngine.getTrace(fromIndex, toIndex, initState, traceInfo);
+            Trace trace = dbEngine.getTrace(fromIndex, toIndex, initState, metadata);
 
             if (trace.hasSharedMemAddr()) {
                 SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config, trace);
@@ -273,68 +267,6 @@ public class RVPredict {
             initState = trace.computeFinalState();
         }
         System.exit(0);
-    }
-
-    class ExecutionInfoTask extends Thread {
-        TraceInfo info;
-        long start_time;
-        long TOTAL_TRACE_LENGTH;
-
-        ExecutionInfoTask(long st, TraceInfo info, long size) {
-            this.info = info;
-            this.start_time = st;
-            this.TOTAL_TRACE_LENGTH = size;
-        }
-
-        @Override
-        public void run() {
-
-            // Report statistics about the trace and race detection
-
-            // TODO: query the following information from DB may be expensive
-
-            int TOTAL_THREAD_NUMBER = info.getTraceThreadNumber();
-            int TOTAL_SHAREDVARIABLE_NUMBER = info.getTraceSharedVariableNumber();
-            int TOTAL_BRANCH_NUMBER = info.getTraceBranchNumber();
-            int TOTAL_SHAREDREADWRITE_NUMBER = info.getTraceSharedReadWriteNumber();
-            int TOTAL_LOCALREADWRITE_NUMBER = info.getTraceLocalReadWriteNumber();
-            int TOTAL_INITWRITE_NUMBER = info.getTraceInitWriteNumber();
-
-            int TOTAL_SYNC_NUMBER = info.getTraceSyncNumber();
-            int TOTAL_PROPERTY_NUMBER = info.getTracePropertyNumber();
-
-            if (violations.size() == 0)
-                logger.report("No races found.", Logger.MSGTYPE.INFO);
-            else {
-                logger.report("Trace Size: " + TOTAL_TRACE_LENGTH, Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Threads: " + TOTAL_THREAD_NUMBER, Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #SharedVariables: " + TOTAL_SHAREDVARIABLE_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Shared Read-Writes: " + TOTAL_SHAREDREADWRITE_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Local Read-Writes: " + TOTAL_LOCALREADWRITE_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Initial Writes: " + TOTAL_INITWRITE_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Synchronizations: " + TOTAL_SYNC_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Branches: " + TOTAL_BRANCH_NUMBER, Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Property Events: " + TOTAL_PROPERTY_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-
-                logger.report("Total #Potential Violations: "
-                        + (potentialviolations.size() + violations.size()),
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Real Violations: " + violations.size(),
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total Time: " + (System.currentTimeMillis() - start_time) + "ms",
-                        Logger.MSGTYPE.STATISTICS);
-            }
-
-            logger.closePrinter();
-
-        }
-
     }
 
 }

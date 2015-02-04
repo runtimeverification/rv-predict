@@ -78,9 +78,6 @@ public class MetadataLoggerThread implements Runnable {
                 saveObject(new ArrayList<>(MetaData.unsavedLocIdToStmtSig));
                 MetaData.unsavedLocIdToStmtSig.clear();
             }
-
-            /* Save current trace length */
-            metadataOS.writeLong(loggingEngine.getGlobalEventID());
         } catch (IOException e) {
             System.err.println(e.getMessage());
             System.err.println("I/O Error while saving metadata." +

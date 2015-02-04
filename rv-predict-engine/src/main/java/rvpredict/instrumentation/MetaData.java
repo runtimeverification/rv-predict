@@ -29,7 +29,8 @@ public class MetaData {
     public static final Map<Integer, String> locIdToStmtSig = new HashMap<>();
     public static final List<Pair<Integer, String>> unsavedLocIdToStmtSig = new ArrayList<>();
 
-    public static final Set<String> volatileVariables = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    public static final Set<String> volatileVariables = Collections
+            .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     public static final Set<Integer> volatileFieldIds = new HashSet<>();
     public static final List<String> unsavedVolatileVariables = new ArrayList<>();
 

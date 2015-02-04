@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Created by Traian on 03.02.2015.
+ * Class used for profiling the logging process
  */
 public class EventStats {
     private static final ConcurrentHashMap<String, AtomicLong> eventStats = new ConcurrentHashMap<>();

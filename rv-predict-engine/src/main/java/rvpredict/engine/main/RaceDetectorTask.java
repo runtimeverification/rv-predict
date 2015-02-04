@@ -10,7 +10,7 @@ import violation.Race;
 import java.util.*;
 
 /**
- * Detects data races from a given trace.
+ * Detects data races from a given {@link rvpredict.trace.Trace} object
  * <p/>
  * <p/>
  * We analyze memory access events on each shared memory address in the
@@ -33,11 +33,11 @@ import java.util.*;
  * from each block.
  *
  */
-public class RaceDetectorThread implements Runnable {
+public class RaceDetectorTask implements Runnable {
     private final rvpredict.engine.main.RVPredict RVPredict;
     private final Trace trace;
 
-    public RaceDetectorThread(rvpredict.engine.main.RVPredict RVPredict, Trace trace) {
+    public RaceDetectorTask(rvpredict.engine.main.RVPredict RVPredict, Trace trace) {
         this.RVPredict = RVPredict;
         this.trace = trace;
     }
@@ -138,7 +138,7 @@ public class RaceDetectorThread implements Runnable {
                     }
                     boolean hasFreshRace = false;
                     for (Race potentialRace : potentialRaces) {
-                        hasFreshRace = !RVPredict.getViolations().containsKey(potentialRace);
+                        hasFreshRace = !RVPredict.getViolations().contains(potentialRace);
                         if (hasFreshRace) break;
                     }
                     if (!hasFreshRace) {
@@ -167,7 +167,7 @@ public class RaceDetectorThread implements Runnable {
 
                     if (cnstrBuilder.isRace(fst, snd, sb)) {
                         for (Race r : potentialRaces) {
-                            if (null == RVPredict.getViolations().putIfAbsent(r, true)) {
+                            if (RVPredict.getViolations().add(r)) {
                                 RVPredict.getLogger().report(r.toString(), Logger.MSGTYPE.REAL);
                             }
                         }

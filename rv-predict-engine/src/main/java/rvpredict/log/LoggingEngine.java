@@ -29,6 +29,7 @@
 package rvpredict.log;
 
 import rvpredict.config.Configuration;
+import rvpredict.engine.main.RVPredict;
 import rvpredict.trace.EventType;
 
 import java.io.IOException;
@@ -44,7 +45,7 @@ public class LoggingEngine {
 
     private final AtomicLong globalEventID  = new AtomicLong(0);
     private final LoggingServer loggingServer;
-    private final PredictionServer predictionServer;
+    private final RVPredict predictionServer;
     private final Configuration config;
     private volatile boolean shutdown = false;
     private final LoggingFactory loggingFactory;
@@ -61,7 +62,7 @@ public class LoggingEngine {
             EventStats.printEventStats();
         }
 
-        if (config.online) {
+        if (Configuration.online) {
             predictionServer.finishLogging();
         }
     }
@@ -87,8 +88,13 @@ public class LoggingEngine {
         return loggingServer;
     }
     
-    private PredictionServer startPredicting() {
-        final PredictionServer predictionServer = new PredictionServer(this);
+    private RVPredict startPredicting() {
+       RVPredict predictionServer = null;
+        try {
+            predictionServer = new RVPredict(config, loggingFactory);
+        } catch (IOException | ClassNotFoundException e) {
+            assert false : "These exceptions should only be thrown for offline prediction";
+        }
         Thread predictionServerThread = new Thread(predictionServer, "Prediction main thread");
         predictionServer.setOwner(predictionServerThread);
         predictionServerThread.setDaemon(true);
@@ -115,10 +121,6 @@ public class LoggingEngine {
         long tid = Thread.currentThread().getId();
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
         loggingServer.getOutputStream().writeEvent(e);
-    }
-
-    public long getGlobalEventID() {
-        return globalEventID.get();
     }
 
     public LoggingFactory getLoggingFactory() {

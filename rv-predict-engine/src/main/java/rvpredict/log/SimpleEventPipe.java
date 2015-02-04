@@ -6,7 +6,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
 /**
- * A buffer based implementation of the EventPipe interface.
+ * A simple implementation of the {@link EventPipe} interface.
  *
  * @author TraianSF
  */

@@ -12,7 +12,11 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 /**
- * {@link rvpredict.log.BufferedEventPipe} factory.
+ * An implementation of the {@link rvpredict.log.LoggingFactory} interface used for 
+ * offline prediction.
+ * 
+ * Metadata and events are written and read from files in the 
+ * {@link rvpredict.config.Configuration#outdir} directory.
  *
  * @author Traian SF
  */
@@ -39,7 +43,7 @@ public class OfflineLoggingFactory implements LoggingFactory {
      * The file names end with {@link OfflineLoggingFactory#TRACE_SUFFIX}, having as a prefix the unique
      * id of the thread generating them.
      */
-    public static String[] getTraceFiles(String directory) {
+    private static String[] getTraceFiles(String directory) {
         DirectoryScanner scanner = new DirectoryScanner();
         scanner.setIncludes(new String[]{"*" + TRACE_SUFFIX + "*"});
         scanner.setBasedir(directory);
@@ -124,7 +128,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
         try {
             ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
                     new FileInputStream(Paths.get(config.outdir, METADATA_BIN).toFile())));
-            long size = -1;
             List<Map.Entry<Integer, String>> list;
             while (true) {
                 try {
@@ -140,7 +143,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
                 for (Map.Entry<Integer, String> entry : list) {
                     locIdToStmtSig.put(entry.getKey(), entry.getValue());
                 }
-                size = metadataIS.readLong();
             }
             return;
         } catch (FileNotFoundException e) {
@@ -164,4 +166,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
     public EventPipe createEventPipe() {
         return new BufferedEventPipe();
     }
+    
+    
 }

@@ -3,8 +3,8 @@ package rvpredict.log;
 import java.io.IOException;
 
 /**
- * Class for dumping events to disk.  Reads data through the given
- * {@link BufferedEventPipe} and writes them to given {@link java.io.DataOutputStream}.
+ * Class for dumping events to disk.  Reads data through an
+ * {@link EventPipe} and writes them to an {@link rvpredict.log.EventOutputStream}
  */
 public class LoggerThread implements Runnable {
     private final EventPipe eventPipe;
@@ -25,9 +25,7 @@ public class LoggerThread implements Runnable {
                 outputStream.writeEvent(event);
             }
             outputStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }

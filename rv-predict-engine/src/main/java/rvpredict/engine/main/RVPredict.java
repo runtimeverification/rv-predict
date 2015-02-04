@@ -37,19 +37,28 @@ import rvpredict.util.Logger;
 import violation.Violation;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.*;
 
+/**
+ * Class for predicting violations from a logged execution.
+ * 
+ * Splits the log in segments of length {@link rvpredict.config.Configuration#windowSize},
+ * each of them being executed as a {@link RaceDetectorTask} task.
+ */
 public class RVPredict implements Runnable {
 
-    private final ConcurrentMap<Violation,Boolean> violations = new ConcurrentHashMap<>();
+    private final Set<Violation> violations = Collections.newSetFromMap(new ConcurrentHashMap<Violation,Boolean>());
     private final Configuration config;
     private final Logger logger;
     private final TraceCache traceCache;
     private final TraceInfo traceInfo;
     private LoggingFactory loggingFactory;
     private ExecutionInfoTask infoTask;
+    private Thread owner;
 
     public RVPredict(Configuration config, LoggingFactory loggingFactory) throws IOException, ClassNotFoundException {
         this.config = config;
@@ -61,11 +70,11 @@ public class RVPredict implements Runnable {
         traceCache = new TraceCache(loggingFactory);
 
         traceInfo = new TraceInfo();
-        infoTask = new ExecutionInfoTask(startTime, traceInfo);
+        infoTask = new ExecutionInfoTask(this, startTime, traceInfo);
 
         addHooks();
     }
-    
+
     public void report() {
         infoTask.run();
     }
@@ -111,7 +120,7 @@ public class RVPredict implements Runnable {
                 traceInfo.incrementTraceLength(trace.getSize());
 
                 if (trace.hasSharedMemAddr()) {
-                    raceDetectorExecutor.execute(new RaceDetectorThread(this, trace));
+                    raceDetectorExecutor.execute(new RaceDetectorTask(this, trace));
                 }
 
                 initState = trace.getFinalState();
@@ -135,7 +144,7 @@ public class RVPredict implements Runnable {
     }
 
 
-    void shutdownAndAwaitTermination(ExecutorService pool) {
+    private void shutdownAndAwaitTermination(ExecutorService pool) {
         pool.shutdown(); // Disable new tasks from being submitted
         try {
             // Wait a while for existing tasks to terminate
@@ -153,7 +162,7 @@ public class RVPredict implements Runnable {
         }
     }
 
-    public ConcurrentMap<Violation, Boolean> getViolations() {
+    public Set<Violation> getViolations() {
         return violations;
     }
 
@@ -168,65 +177,14 @@ public class RVPredict implements Runnable {
     public LoggingFactory getLoggingFactory() {
         return loggingFactory;
     }
-
-    class ExecutionInfoTask implements Runnable {
-        TraceInfo info;
-        long start_time;
-
-        ExecutionInfoTask(long st, TraceInfo info) {
-            this.info = info;
-            this.start_time = st;
-        }
-
-        @Override
-        public void run() {
-
-            // Report statistics about the trace and race detection
-
-            // TODO: query the following information from DB may be expensive
-
-            int TOTAL_THREAD_NUMBER = info.getTraceThreadNumber();
-            int TOTAL_SHAREDVARIABLE_NUMBER = info.getTraceSharedVariableNumber();
-            int TOTAL_BRANCH_NUMBER = info.getTraceBranchNumber();
-            int TOTAL_SHAREDREADWRITE_NUMBER = info.getTraceSharedReadWriteNumber();
-            int TOTAL_LOCALREADWRITE_NUMBER = info.getTraceLocalReadWriteNumber();
-            int TOTAL_INITWRITE_NUMBER = info.getTraceInitWriteNumber();
-
-            int TOTAL_SYNC_NUMBER = info.getTraceSyncNumber();
-            int TOTAL_PROPERTY_NUMBER = info.getTracePropertyNumber();
-
-            if (violations.size() == 0)
-                logger.report("No races found.", Logger.MSGTYPE.INFO);
-            else {
-                logger.report("Trace Size: " + info.getTraceLength(), Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Threads: " + TOTAL_THREAD_NUMBER, Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #SharedVariables: " + TOTAL_SHAREDVARIABLE_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Shared Read-Writes: " + TOTAL_SHAREDREADWRITE_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Local Read-Writes: " + TOTAL_LOCALREADWRITE_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Initial Writes: " + TOTAL_INITWRITE_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Synchronizations: " + TOTAL_SYNC_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Branches: " + TOTAL_BRANCH_NUMBER, Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Property Events: " + TOTAL_PROPERTY_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-
-                logger.report("Total #Potential Violations: "
-                        + (violations.size()),
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Real Violations: " + violations.size(),
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total Time: " + (System.currentTimeMillis() - start_time) + "ms",
-                        Logger.MSGTYPE.STATISTICS);
-            }
-
-            logger.closePrinter();
-
-        }
-
+    
+    public void finishLogging() throws InterruptedException {
+        loggingFactory.finishLogging();
+        owner.join();
+        report();
     }
 
+    public void setOwner(Thread owner) {
+        this.owner = owner;
+    }
 }

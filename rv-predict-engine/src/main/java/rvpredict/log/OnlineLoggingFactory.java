@@ -10,9 +10,16 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * {@link rvpredict.log.SimpleEventPipe} factory.
+ * A {@link rvpredict.log.LoggingFactory} for online prediction.
+ * 
+ * Using a {@link rvpredict.log.SimpleEventPipe}, to make data available asap to prediction
+ * 
+ * Whenever an {@link rvpredict.log.EventOutputStream} is requested, it is created based 
+ * on an {@link java.io.PipedOutputStream}. At the same time, a {@link java.io.PipedInputStream}
+ * is created and queued.  These are later used as a base for an {@link rvpredict.log.EventInputStream} are
+ * whenever one is requested through {@link #getInputStream()}
  *
- * @author Traian SF
+ * @author TraianSF
  */
 public class OnlineLoggingFactory implements LoggingFactory {
     private static final PipedInputStream END_INPUT_STREAM = new PipedInputStream();
@@ -25,7 +32,7 @@ public class OnlineLoggingFactory implements LoggingFactory {
 
     @Override
     public ObjectOutputStream createMetadataOS() throws IOException {
-        return new ObjectOutputStream(new PipedOutputStream());
+        throw new UnsupportedOperationException("Not implemented for online prediction");
     }
 
     @Override

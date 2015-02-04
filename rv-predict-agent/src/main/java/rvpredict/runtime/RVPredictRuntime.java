@@ -288,23 +288,15 @@ public final class RVPredictRuntime {
      *            the variable identifier of the field
      * @param isWrite
      *            specifies if it is a write access
-     * @param branchModel
-     *            specifies if we use branch model
      * @param locId
      *            the location identifier of the event
      */
     public static void logFieldAcc(Object object, long value, int variableId, boolean isWrite,
-            boolean branchModel, int locId) {
+            int locId) {
         // TODO(YilongL): check skipSavingEvent before performing any computation?
-        variableId = RVPredictRuntime.resolveVariableId(variableId);
+        variableId = MetaData.resolveFieldId(variableId);
         saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(object), -variableId, value);
-        if (!isPrimitiveWrapper(value) && branchModel) {
-            // TODO(YilongL): what does it mean?
-            // shared object reference variable deference
-            // make it as a branch event
-            logBranch(-1);
-        }
     }
 
     /**
@@ -341,7 +333,7 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void logFieldInit(Object object, long value, int variableId, int locId) {
-        variableId = RVPredictRuntime.resolveVariableId(variableId);
+        variableId = MetaData.resolveFieldId(variableId);
         saveEvent(EventType.INIT, locId, System.identityHashCode(object), -variableId, value);
     }
 
@@ -593,7 +585,6 @@ public final class RVPredictRuntime {
             onBlockingMethodInterrupted(locId);
             throw e;
         }
-        ;
     }
 
     /**
@@ -1456,56 +1447,11 @@ public final class RVPredictRuntime {
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
     }
 
-    private static boolean isPrimitiveWrapper(Object o) {
-        /* YilongL: we do not use guava's `Primitives.isWrapperType' because o
-         * could be null */
-        return o instanceof Integer || o instanceof Long || o instanceof Byte
-                || o instanceof Boolean || o instanceof Float || o instanceof Double
-                || o instanceof Short || o instanceof Character;
-    }
-
-    /**
-     * TODO(YilongL): doing name mangling at runtime introduce unnecessary
-     * dependency on ConcurrentHashMap and Collections.newSetFromMap
-     */
-    private static int resolveVariableId(int variableId) {
-        // TODO(YilongL): cache the result of variable resolution
-        String varSig = MetaData.varSigs[variableId];
-        int idx = varSig.lastIndexOf(".");
-        String className = varSig.substring(0, idx);
-        String fieldName = varSig.substring(idx + 1);
-        Set<String> fieldNames = MetaData.classNameToFieldNames.get(className);
-        while (fieldNames != null && !fieldNames.contains(fieldName)) {
-            className = MetaData.classNameToSuperclassName.get(className);
-            if (className == null) {
-                fieldNames = null;
-                break;
-            }
-
-            fieldNames = MetaData.classNameToFieldNames.get(className);
-        }
-
-        if (fieldNames == null) {
-            /* failed to resolve this variable Id */
-            // TODO(YilongL): make sure this doesn't happen
-
-            // System.out.println("[Warning]: unable to retrieve field information of class "
-            // + className + "; resolving field " + fieldName);
-
-            return variableId;
-        } else {
-            assert fieldNames.contains(fieldName);
-            return MetaData.getVariableId(className, fieldName);
-        }
-    }
-
     private static void saveEvent(EventType eventType, int id, long addrl, int addrr, long value) {
-        if (!skipSavingEvent()) {
-            if (loggingEngine.getConfig().profile) {
-                EventStats.updateEventStats();
-            }
-            loggingEngine.saveEvent(eventType, id, addrl, addrr, value);
+        if (loggingEngine.getConfig().profile) {
+            EventStats.updateEventStats();
         }
+        loggingEngine.saveEvent(eventType, id, addrl, addrr, value);
     }
 
     /**
@@ -1523,19 +1469,4 @@ public final class RVPredictRuntime {
     private static void saveEvent(EventType eventType, int locId) {
         saveEvent(eventType, locId, 0, 0, 0);
     }
-
-    /**
-     * Checks if logging should be disabled at the moment.
-     */
-    private static boolean skipSavingEvent() {
-        StackTraceElement[] stackTrace = new Throwable().getStackTrace();
-        for (StackTraceElement e : stackTrace) {
-            String className = e.getClassName();
-            if (className.startsWith("java.lang.ClassLoader") || className.startsWith("sun")) {
-                return true;
-            }
-        }
-        return false;
-    }
-
 }

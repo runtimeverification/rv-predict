@@ -143,8 +143,8 @@ public class MethodTransformer extends MethodVisitor {
             // <stack>... value objectref value </stack>
             calcLongValue(valueType);
             // <stack>... value objectref longValue </stack>
-            push(varId, 0, branchModel, locId);
-            // <stack>... value objectref longValue varId false branch locId </stack>
+            push(varId, 0, locId);
+            // <stack>... value objectref longValue varId false locId </stack>
             invokeRTMethod(LOG_FIELD_ACCESS);
             // <stack>... value </stack>
             break;
@@ -169,8 +169,8 @@ public class MethodTransformer extends MethodVisitor {
                 // <stack>... objectref longValue varId locId </stack>
                 invokeRTMethod(LOG_FIELD_INIT);
             } else {
-                push(varId, 1, branchModel, locId);
-                // <stack>... objectref longValue varId true branch locId </stack>
+                push(varId, 1, locId);
+                // <stack>... objectref longValue varId true locId </stack>
                 invokeRTMethod(LOG_FIELD_ACCESS);
             }
             // <stack>... </stack>

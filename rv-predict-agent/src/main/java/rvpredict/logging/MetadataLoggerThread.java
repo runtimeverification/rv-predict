@@ -68,7 +68,7 @@ public class MetadataLoggerThread implements Runnable {
             synchronized (MetaData.volatileVariables) {
                 Set<Integer> volatileFieldIds = new HashSet<>(MetaData.unsavedVolatileVariables.size());
                 for (String var : MetaData.unsavedVolatileVariables) {
-                    volatileFieldIds.add(MetaData.varSigToVarId.get(var));
+                    volatileFieldIds.add(MetaData.getVariableId(var));
                 }
                 saveObject(volatileFieldIds);
                 MetaData.unsavedVolatileVariables.clear();

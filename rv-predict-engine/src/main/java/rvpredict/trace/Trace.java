@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -446,23 +447,60 @@ public class Trace {
             minLockLevels.put(tid, lockObj, level);
         }
 
-        for (Event event : rawEvents) {
+        ListIterator<Event> iter = rawEvents.listIterator();
+        while (iter.hasNext()) {
+            Event event = iter.next();
             if (event instanceof InitOrAccessEvent) {
                 String addr = ((InitOrAccessEvent) event).getAddr();
-                if (sharedMemAddr.contains(addr)) {
-                    addEvent(event);
-                } else {
+                if (!sharedMemAddr.contains(addr)) {
+                    iter.remove();
                     info.incrementLocalReadWriteNumber();
                 }
             } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
                 /* only preserve outermost lock regions */
                 long lockObj = ((SyncEvent) event).getSyncObject();
-                if (lockLevels.get(event) == minLockLevels.get(event.getTID(), lockObj)) {
-                    addEvent(event);
+                if (lockLevels.get(event) != minLockLevels.get(event.getTID(), lockObj)) {
+                    iter.remove();
+                }
+            }
+        }
+
+        /* remove empty lock regions */
+        Map<Long, Event> lockObjToLockEvent = new HashMap<>();
+        Set<Long> criticalThreadIds = new HashSet<>();
+        Set<Event> criticalLockingEvents = new HashSet<>();
+        for (Event event : rawEvents) {
+            if (event.isLockEvent()) {
+                long lockObj = ((SyncEvent) event).getSyncObject();
+                Event prevLock = lockObjToLockEvent.put(lockObj, event);
+                assert prevLock == null : "Unexpected unmatched lock event: " + prevLock;
+            } else if (event.isUnlockEvent()) {
+                long lockObj = ((SyncEvent) event).getSyncObject();
+                Event lock = lockObjToLockEvent.remove(lockObj);
+                if (lock != null) {
+                    if (criticalLockingEvents.contains(lock)) {
+                        criticalLockingEvents.add(event);
+                    }
+                } else {
+                    if (criticalThreadIds.contains(event.getTID())) {
+                        criticalLockingEvents.add(event);
+                    }
                 }
             } else {
-                addEvent(event);
+                criticalThreadIds.add(event.getTID());
+                for (Event e : lockObjToLockEvent.values()) {
+                    if (e.getTID() == event.getTID()) {
+                        criticalLockingEvents.add(e);
+                    }
+                }
             }
+        }
+        for (Event event : rawEvents) {
+            if ((event.isLockEvent() || event.isUnlockEvent())
+                    && !criticalLockingEvents.contains(event)) {
+                continue;
+            }
+            addEvent(event);
         }
 
         info.addSharedAddresses(sharedMemAddr);

@@ -458,30 +458,31 @@ public class Trace {
         }
 
         /* remove empty lock regions */
-        Map<Long, Event> lockObjToLockEvent = new HashMap<>();
+        Table<Long, Long, Event> lockEventTbl = HashBasedTable.create();
         Set<Long> criticalThreadIds = new HashSet<>();
         Set<Event> criticalLockingEvents = new HashSet<>();
         for (Event event : rawEvents) {
+            long tid = event.getTID();
             if (event.isLockEvent()) {
                 long lockObj = ((SyncEvent) event).getSyncObject();
-                Event prevLock = lockObjToLockEvent.put(lockObj, event);
+                Event prevLock = lockEventTbl.put(tid, lockObj, event);
                 assert prevLock == null : "Unexpected unmatched lock event: " + prevLock;
             } else if (event.isUnlockEvent()) {
                 long lockObj = ((SyncEvent) event).getSyncObject();
-                Event lock = lockObjToLockEvent.remove(lockObj);
+                Event lock = lockEventTbl.remove(tid, lockObj);
                 if (lock != null) {
                     if (criticalLockingEvents.contains(lock)) {
                         criticalLockingEvents.add(event);
                     }
                 } else {
-                    if (criticalThreadIds.contains(event.getTID())) {
+                    if (criticalThreadIds.contains(tid)) {
                         criticalLockingEvents.add(event);
                     }
                 }
             } else {
-                criticalThreadIds.add(event.getTID());
-                for (Event e : lockObjToLockEvent.values()) {
-                    if (e.getTID() == event.getTID()) {
+                criticalThreadIds.add(tid);
+                for (Event e : lockEventTbl.values()) {
+                    if (e.getTID() == tid) {
                         criticalLockingEvents.add(e);
                     }
                 }

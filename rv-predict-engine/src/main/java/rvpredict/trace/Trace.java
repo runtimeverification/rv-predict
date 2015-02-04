@@ -496,12 +496,18 @@ public class Trace {
         }
     }
 
-    // TODO(YilongL): add javadoc; addr seems to be some abstract address, e.g.
-    // "_.1", built when reading the trace; figure out what happens and improve it
+    /**
+     * Checks if a memory address is volatile.
+     *
+     * @param addr
+     *            {@code String} representation of the memory address as defined
+     *            in {@link InitOrAccessEvent#getAddr()}
+     * @return {@code true} if the address is {@code volatile}; otherwise,
+     *         {@code false}
+     */
     public boolean isVolatileAddr(String addr) {
-        // all field addr should contain ".", not true for array access
         int dotPos = addr.indexOf(".");
-        return dotPos != -1 && metadata.isVolatileAddr(Integer.valueOf(addr.substring(dotPos + 1)));
+        return dotPos != -1 && metadata.isVolatileField(Integer.valueOf(addr.substring(dotPos + 1)));
     }
 
     public static class State {

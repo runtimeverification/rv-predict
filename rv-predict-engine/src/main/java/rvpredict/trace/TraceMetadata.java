@@ -58,8 +58,16 @@ public class TraceMetadata {
         return locIdToStmtSig;
     }
 
-    public boolean isVolatileAddr(int varId) {
-        return volatileFieldIds.contains(varId);
+    /**
+     * Checks if a field is volatile.
+     *
+     * @param fieldId
+     *            the field identifier
+     * @return {@code true} if the field is declared as {@code volatile};
+     *         otherwise, {@code false}
+     */
+    public boolean isVolatileField(int fieldId) {
+        return volatileFieldIds.contains(fieldId);
     }
 
 }

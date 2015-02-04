@@ -23,7 +23,7 @@ public class MetaData {
 
     public static final int MAX_NUM_OF_FIELDS = 10000;
     public static final String[] varSigs = new String[MAX_NUM_OF_FIELDS];
-    public static final int[] resolvedVarId = new int[MetaData.MAX_NUM_OF_FIELDS];
+    public static final int[] resolvedFieldId = new int[MetaData.MAX_NUM_OF_FIELDS];
 
     public static final ConcurrentHashMap<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
     public static final List<Pair<Integer, String>> unsavedLocIdToStmtSig = new ArrayList<>();
@@ -116,16 +116,17 @@ public class MetaData {
     }
 
     /**
-     * TODO(YilongL): doing name mangling at runtime introduce unnecessary
-     * dependency on ConcurrentHashMap and Collections.newSetFromMap
+     * Performs field resolution as specified in the JVM specification $5.4.3.2
+     * except that we do it at run-time instead of load-time because it's easier
+     * to implement. The result is cached to reduce runtime overhead.
      */
-    public static int resolveVariableId(int variableId) {
-        int result = resolvedVarId[variableId];
+    public static int resolveFieldId(int fieldId) {
+        int result = resolvedFieldId[fieldId];
         if (result > 0) {
             return result;
         }
 
-        String varSig = varSigs[variableId];
+        String varSig = varSigs[fieldId];
         int idx = varSig.lastIndexOf(".");
         String className = varSig.substring(0, idx);
         String fieldName = varSig.substring(idx + 1);
@@ -146,12 +147,12 @@ public class MetaData {
 //            System.err.println("[Warning]: unable to retrieve field information of class "
 //                    + className + "; resolving field " + fieldName);
 
-            result = variableId;
+            result = fieldId;
         } else {
             assert fieldNames.contains(fieldName);
             result = getVariableId(className, fieldName);
         }
-        resolvedVarId[variableId] = result;
+        resolvedFieldId[fieldId] = result;
         return result;
     }
 }

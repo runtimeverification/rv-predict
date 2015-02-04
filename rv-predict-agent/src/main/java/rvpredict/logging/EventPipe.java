@@ -82,19 +82,22 @@ public class EventPipe {
     }
 
     /**
-     * Flushes the pipe input buffer through the pipe
+     * Flushes the pipe input buffer through the pipe.
+     * <p>
+     * This method needs to be synchronized because it can be called by the
+     * cleanup thread from {@link #close()} as well.
      */
-    private void flush() {
-            if (inIndex != 0) {
-                inBuffer[inIndex] = null;
-                try {
-                    pipe.put(inBuffer);
-                } catch (InterruptedException e) {
-                    System.out.println("Process forcefully ending. All data in current buffer (" + inIndex + " events) lost.");
-                }
-                inBuffer = new EventItem[BUFFER_SIZE+1];
-                inIndex = 0;
+    private synchronized void flush() {
+        if (inIndex != 0) {
+            inBuffer[inIndex] = null;
+            try {
+                pipe.put(inBuffer);
+            } catch (InterruptedException e) {
+                System.out.println("Process forcefully ending. All data in current buffer (" + inIndex + " events) lost.");
             }
+            inBuffer = new EventItem[BUFFER_SIZE+1];
+            inIndex = 0;
+        }
     }
 
     /**

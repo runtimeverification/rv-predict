@@ -24,7 +24,7 @@ public class RVPredictRuntimeMethods {
     private static final Class<Long>    J   =   long.class;
     private static final Class<Object>  O   =   Object.class;
 
-    public static final RVPredictRuntimeMethod LOG_FIELD_ACCESS  =  init("logFieldAcc", O, J, I, Z, Z, I);
+    public static final RVPredictRuntimeMethod LOG_FIELD_ACCESS  =  init("logFieldAcc", O, J, I, Z, I);
     public static final RVPredictRuntimeMethod LOG_FIELD_INIT    =  init("logFieldInit", O, J, I, I);
     public static final RVPredictRuntimeMethod LOG_ARRAY_ACCESS  =  init("logArrayAcc", O, I, J, Z, I);
     public static final RVPredictRuntimeMethod LOG_ARRAY_INIT    =  init("logArrayInit", O, I, J, I);

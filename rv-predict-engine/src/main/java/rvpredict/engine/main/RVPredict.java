@@ -81,6 +81,8 @@ public class RVPredict {
     }
 
     private void addHooks(long startTime) {
+        Runtime.getRuntime().addShutdownHook(
+                new ExecutionInfoTask(startTime, metadata, totalTraceLength));
         Timer timer = new Timer();
         timer.schedule(new TimerTask() {
             @Override
@@ -269,4 +271,25 @@ public class RVPredict {
         System.exit(0);
     }
 
+    class ExecutionInfoTask extends Thread {
+        TraceMetadata info;
+        long start_time;
+        long TOTAL_TRACE_LENGTH;
+
+        ExecutionInfoTask(long st, TraceMetadata info, long size) {
+            this.info = info;
+            this.start_time = st;
+            this.TOTAL_TRACE_LENGTH = size;
+        }
+
+        @Override
+        public void run() {
+            if (violations.size() == 0) {
+                logger.report("No races found.", Logger.MSGTYPE.INFO);
+            }
+
+            logger.closePrinter();
+        }
+
+    }
 }

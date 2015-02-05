@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.*;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Joiner;
@@ -23,7 +24,6 @@ import org.junit.Assert;
  */
 public class TestHelper {
 
-    private final FileSystem fileSystem;
     private final File basePathFile;
     private final Path basePath;
 
@@ -32,7 +32,7 @@ public class TestHelper {
      * @param filePath  path to the file which prompted this test, used to establish working dir
      */
     public TestHelper(String filePath)   {
-        fileSystem = FileSystems.getDefault();
+        FileSystem fileSystem = FileSystems.getDefault();
         this.basePath = fileSystem.getPath(filePath);
         basePathFile = basePath.toFile();
 
@@ -54,48 +54,68 @@ public class TestHelper {
      * @throws IOException
      * @throws InterruptedException
      */
-    public int testCommand(String expectedFilePrefix, int numOfRuns, String... command)
+    public int testCommand(final String expectedFilePrefix, int numOfRuns, final String... command)
             throws IOException, InterruptedException {
         Assert.assertTrue(expectedFilePrefix != null);
 
-        String testsPrefix= basePath.toString() + "/" + expectedFilePrefix;
-        File stdoutFile = new File(testsPrefix + ".actual.out");
-        File stderrFile = new File(testsPrefix + ".actual.err");
-        File inFile = new File(testsPrefix + ".in");
+        final String testsPrefix= basePath.toString() + "/" + expectedFilePrefix;
+        final File inFile = new File(testsPrefix + ".in");
 
         // compile regex patterns
-        List<Pattern> expectedPatterns = new ArrayList<>();
+        final List<Pattern> expectedPatterns = new ArrayList<>();
         for (String regex : Util.convertFileToString(new File(testsPrefix + ".expected.out")).split("(\n|\r)")) {
             if (!regex.isEmpty()) {
                 expectedPatterns.add(Pattern.compile(regex));
             }
         }
 
-        ProcessBuilder processBuilder = new ProcessBuilder(command).inheritIO();
-        processBuilder.directory(basePathFile);
-        processBuilder.redirectOutput(stdoutFile);
-        processBuilder.redirectError(stderrFile);
-        if (inFile.exists() && !inFile.isDirectory()) {
-            processBuilder.redirectInput(inFile);
-        }
 
+        int n;
         /*
          * run the command up to a certain number of times and gather the
          * outputs
          */
-        int n;
+        ExecutorService pool = new ThreadPoolExecutor(4,4,0, TimeUnit.SECONDS,new LinkedBlockingQueue<Runnable>(4));
         for (n = 0; n < numOfRuns && !expectedPatterns.isEmpty(); n++) {
-            Process process = processBuilder.start();
-            int returnCode = process.waitFor();
-            Assert.assertEquals("Expected no error during " + Arrays.toString(command) + ".\n"
-                    + Util.convertFileToString(stderrFile), 0, returnCode);
+            pool.execute(new Runnable() {
+                @Override
+                public void run() {
+                    if (expectedPatterns.isEmpty()) return;
+                    try {
+                        long id = Thread.currentThread().getId();
+                        File stdoutFile = new File(testsPrefix + id + ".actual.out");
+                        File stderrFile = new File(testsPrefix + id + ".actual.err");
+                        ProcessBuilder processBuilder = new ProcessBuilder(command).inheritIO();
+                        processBuilder.directory(basePathFile);
+                        processBuilder.redirectOutput(stdoutFile);
+                        processBuilder.redirectError(stderrFile);
+                        if (inFile.exists() && !inFile.isDirectory()) {
+                            processBuilder.redirectInput(inFile);
+                        }
+                        Process process = processBuilder.start();
+                        int returnCode = process.waitFor();
+                        if (expectedPatterns.isEmpty()) return;
+                        Assert.assertEquals("Expected no error during " + Arrays.toString(command) + ".\n"
+                                + Util.convertFileToString(stderrFile), 0, returnCode);
 
-            Iterator<Pattern> iter = expectedPatterns.iterator();
-            while (iter.hasNext()) {
-                if (iter.next().matcher(Util.convertFileToString(stdoutFile)).find()) {
-                    iter.remove();
+                        String output = Util.convertFileToString(stdoutFile);
+                        synchronized (expectedPatterns) {
+                            Iterator<Pattern> iter = expectedPatterns.iterator();
+                            while (iter.hasNext()) {
+                                if (iter.next().matcher(output).find()) {
+                                    iter.remove();
+                                }
+                            }
+                        }
+                    } catch (InterruptedException | IOException e) {
+                        e.printStackTrace();
+                    }
                 }
-            }
+            });
+        }
+        pool.shutdown();
+        while (!pool.isTerminated()) {
+            pool.awaitTermination(1, TimeUnit.SECONDS);
         }
 
         Assert.assertTrue("Unable to match regular expressions: \n\t" +

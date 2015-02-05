@@ -75,7 +75,19 @@ public class TestHelper {
          * run the command up to a certain number of times and gather the
          * outputs
          */
-        ExecutorService pool = new ThreadPoolExecutor(4,4,0, TimeUnit.SECONDS,new LinkedBlockingQueue<Runnable>(4));
+        LinkedBlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<Runnable>(4) {
+            @Override
+            public boolean offer(Runnable runnable) {
+                try {
+                    put(runnable);
+                    return true;
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                return false;
+            }
+        };
+        ExecutorService pool = new ThreadPoolExecutor(4,4,0, TimeUnit.SECONDS, workQueue);
         for (n = 0; n < numOfRuns && !expectedPatterns.isEmpty(); n++) {
             pool.execute(new Runnable() {
                 @Override

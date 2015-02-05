@@ -456,6 +456,8 @@ public class Trace {
                 if (lockLevels.get(event) == minLockLevels.get(event.getTID(), lockObj)) {
                     reducedEvents.add(event);
                 }
+            } else {
+                reducedEvents.add(event);
             }
         }
 

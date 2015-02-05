@@ -64,19 +64,17 @@ public class LoggingEngine {
 
     public LoggingEngine(Configuration config) {
         this.config = config;
-        loggingServer = startLogging();
+        loggingServer = new LoggingServer(this);
     }
 
     public Configuration getConfig() {
         return config;
     }
 
-    private LoggingServer startLogging() {
-        final LoggingServer loggingServer = new LoggingServer(this);
+    public void startLogging() {
         Thread loggingServerThread = new Thread(loggingServer);
         loggingServerThread.setDaemon(true);
         loggingServerThread.start();
-        return loggingServer;
     }
 
     /**
@@ -97,7 +95,7 @@ public class LoggingEngine {
         long gid = globalEventID.incrementAndGet();
         long tid = Thread.currentThread().getId();
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
-        loggingServer.getOutputStream().writeEvent(e);
+        loggingServer.writeEvent(e);
     }
 
     public long getGlobalEventID() {

@@ -2,12 +2,11 @@ package rvpredict.logging;
 
 import rvpredict.db.EventItem;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Class for dumping events to disk.  Reads data through the given
- * {@link EventPipe} and writes them to given {@link java.io.DataOutputStream}.
+ * {@link EventPipe} and writes them to given {@link EventOutputStream}.
  */
 public class LoggerThread implements Runnable {
     private final EventPipe eventPipe;
@@ -19,7 +18,6 @@ public class LoggerThread implements Runnable {
         this.outputStream = outputStream;
     }
 
-
     @Override
     public void run() {
         owner = Thread.currentThread();
@@ -27,8 +25,8 @@ public class LoggerThread implements Runnable {
             EventItem event;
             while (null != (event = eventPipe.readEvent())) {
                 outputStream.writeEvent(event);
-                outputStream.flush();
             }
+            outputStream.flush();
             outputStream.close();
         } catch (IOException e) {
             e.printStackTrace();

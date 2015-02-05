@@ -1,6 +1,7 @@
 package rvpredict.logging;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Class extending {@link java.lang.ThreadLocal} to handle thread-local output
@@ -17,14 +18,24 @@ public class ThreadLocalEventStream extends ThreadLocal<EventPipe> {
     static final EventPipe END_REGISTRY = new EventPipe();
     private final BlockingQueue<EventPipe> registry;
 
-    public ThreadLocalEventStream(BlockingQueue<EventPipe> registry) {
+    private static final ThreadLocalEventStream instance = new ThreadLocalEventStream();
+
+    public static ThreadLocalEventStream getInstance() {
+        return instance;
+    }
+
+    private ThreadLocalEventStream() {
         super();
-        this.registry = registry;
+        this.registry = new LinkedBlockingQueue<>();
+    }
+
+    public EventPipe takeEventPipe() throws InterruptedException {
+        return registry.take();
     }
 
     @Override
-    protected synchronized EventPipe initialValue() {
-        final EventPipe pipe = new EventPipe();
+    protected EventPipe initialValue() {
+        EventPipe pipe = new EventPipe();
         registry.add(pipe);
         return pipe;
    }
@@ -32,7 +43,7 @@ public class ThreadLocalEventStream extends ThreadLocal<EventPipe> {
     /**
      * Adds the END_REGISTRY marker to the registry to signal end of activity.
      */
-    public synchronized void close() {
+    public void close() {
         registry.add(END_REGISTRY);
     }
 }

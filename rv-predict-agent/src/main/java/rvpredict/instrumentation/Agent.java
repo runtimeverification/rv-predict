@@ -106,6 +106,7 @@ public class Agent implements ClassFileTransformer {
         TraceCache.removeTraceFiles(config.outdir);
         final LoggingEngine loggingEngine = new LoggingEngine(config);
         RVPredictRuntime.init(loggingEngine);
+        loggingEngine.startLogging();
 
         inst.addTransformer(new Agent(config), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {

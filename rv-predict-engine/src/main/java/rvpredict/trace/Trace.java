@@ -32,15 +32,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.List;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.beust.jcommander.internal.Maps;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -56,7 +57,8 @@ public class Trace {
     /**
      * Unprocessed raw events reading from the logging phase.
      */
-    private final List<Event> rawEvents = new ArrayList<>();
+    private ImmutableList<Event> rawEvents = null;
+    private final ImmutableList.Builder<Event> rawEventsBuilder = ImmutableList.builder();
 
     /**
      * Read threads on each address.
@@ -127,12 +129,12 @@ public class Trace {
 
     private final State initState;
 
-    private final TraceInfo info;
+    private final TraceMetadata metadata;
 
-    public Trace(State initState, TraceInfo info) {
-        assert initState != null && info != null;
+    public Trace(State initState, TraceMetadata metadata) {
+        assert initState != null && metadata != null;
         this.initState = initState;
-        this.info = info;
+        this.metadata = metadata;
     }
 
     public boolean hasSharedMemAddr() {
@@ -150,11 +152,11 @@ public class Trace {
     }
 
     public Map<Integer, String> getVarIdToVarSigMap() {
-        return info.getVarIdToVarSigMap();
+        return metadata.getVarIdToVarSigMap();
     }
 
     public Map<Integer, String> getLocIdToStmtSigMap() {
-        return info.getLocIdToStmtSigMap();
+        return metadata.getLocIdToStmtSigMap();
     }
 
     public Event getFirstThreadEvent(long threadId) {
@@ -276,8 +278,8 @@ public class Trace {
     }
 
     public void addRawEvent(Event event) {
-//        System.err.println(event + " " + info.getLocIdToStmtSigMap().get(event.getID()));
-        rawEvents.add(event);
+//        System.err.println(event + " " + metadata.getLocIdToStmtSigMap().get(event.getID()));
+        rawEventsBuilder.add(event);
         if (event instanceof MemoryAccessEvent) {
             String addr = ((MemoryAccessEvent) event).getAddr();
             Long tid = event.getTID();
@@ -325,9 +327,6 @@ public class Trace {
         threadIds.add(tid);
 
         if (event instanceof BranchEvent) {
-            // branch node
-            info.incrementBranchNumber();
-
             List<BranchEvent> branchnodes = threadIdToBranchEvents.get(tid);
             if (branchnodes == null) {
                 branchnodes = new ArrayList<>();
@@ -337,7 +336,6 @@ public class Trace {
         } else if (event instanceof InitEvent) {
             // initial write node
             initState.addrToValue.put(((InitEvent) event).getAddr(), ((InitEvent) event).getValue());
-            info.incrementInitWriteNumber();
         } else {
             // all critical nodes -- read/write/synchronization events
 
@@ -352,8 +350,6 @@ public class Trace {
             threadNodes.add(event);
             // TODO: Optimize it -- no need to update it every time
             if (event instanceof MemoryAccessEvent) {
-                info.incrementSharedReadWriteNumber();
-
                 MemoryAccessEvent mnode = (MemoryAccessEvent) event;
                 String addr = mnode.getAddr();
 
@@ -381,7 +377,6 @@ public class Trace {
                     writeNodes.add((WriteEvent) event);
                 }
             } else if (event instanceof SyncEvent) {
-                info.incrementSyncNumber();
                 SyncEvent syncEvent = (SyncEvent) event;
 
                 Map<Long, List<SyncEvent>> eventsMap = null;
@@ -419,6 +414,8 @@ public class Trace {
      * the remaining trace.
      */
     public void finishedLoading() {
+        rawEvents = rawEventsBuilder.build();
+
         for (String addr : Iterables.concat(addrToReadThreads.keySet(),
                 addrToWriteThreads.keySet())) {
             Set<Long> wrtThrdIds = addrToWriteThreads.get(addr);
@@ -446,35 +443,76 @@ public class Trace {
             minLockLevels.put(tid, lockObj, level);
         }
 
+        List<Event> reducedEvents = new ArrayList<>();
         for (Event event : rawEvents) {
             if (event instanceof InitOrAccessEvent) {
                 String addr = ((InitOrAccessEvent) event).getAddr();
                 if (sharedMemAddr.contains(addr)) {
-                    addEvent(event);
-                } else {
-                    info.incrementLocalReadWriteNumber();
+                    reducedEvents.add(event);
                 }
             } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
                 /* only preserve outermost lock regions */
                 long lockObj = ((SyncEvent) event).getSyncObject();
                 if (lockLevels.get(event) == minLockLevels.get(event.getTID(), lockObj)) {
-                    addEvent(event);
+                    reducedEvents.add(event);
                 }
             } else {
-                addEvent(event);
+                reducedEvents.add(event);
             }
         }
 
-        info.addSharedAddresses(sharedMemAddr);
-        info.addThreads(threadIds);
+        /* remove empty lock regions */
+        Table<Long, Long, Event> lockEventTbl = HashBasedTable.create();
+        Set<Long> criticalThreadIds = new HashSet<>();
+        Set<Event> criticalLockingEvents = new HashSet<>();
+        for (Event event : reducedEvents) {
+            long tid = event.getTID();
+            if (event.isLockEvent()) {
+                long lockObj = ((SyncEvent) event).getSyncObject();
+                Event prevLock = lockEventTbl.put(tid, lockObj, event);
+                assert prevLock == null : "Unexpected unmatched lock event: " + prevLock;
+            } else if (event.isUnlockEvent()) {
+                long lockObj = ((SyncEvent) event).getSyncObject();
+                Event lock = lockEventTbl.remove(tid, lockObj);
+                if (lock != null) {
+                    if (criticalLockingEvents.contains(lock)) {
+                        criticalLockingEvents.add(event);
+                    }
+                } else {
+                    if (criticalThreadIds.contains(tid)) {
+                        criticalLockingEvents.add(event);
+                    }
+                }
+            } else {
+                criticalThreadIds.add(tid);
+                for (Event e : lockEventTbl.values()) {
+                    if (e.getTID() == tid) {
+                        criticalLockingEvents.add(e);
+                    }
+                }
+            }
+        }
+        for (Event event : reducedEvents) {
+            if ((event.isLockEvent() || event.isUnlockEvent())
+                    && !criticalLockingEvents.contains(event)) {
+                continue;
+            }
+            addEvent(event);
+        }
     }
 
-    // TODO(YilongL): add javadoc; addr seems to be some abstract address, e.g.
-    // "_.1", built when reading the trace; figure out what happens and improve it
+    /**
+     * Checks if a memory address is volatile.
+     *
+     * @param addr
+     *            {@code String} representation of the memory address as defined
+     *            in {@link InitOrAccessEvent#getAddr()}
+     * @return {@code true} if the address is {@code volatile}; otherwise,
+     *         {@code false}
+     */
     public boolean isVolatileAddr(String addr) {
-        // all field addr should contain ".", not true for array access
         int dotPos = addr.indexOf(".");
-        return dotPos != -1 && info.isVolatileAddr(Integer.valueOf(addr.substring(dotPos + 1)));
+        return dotPos != -1 && metadata.isVolatileField(Integer.valueOf(addr.substring(dotPos + 1)));
     }
 
     public static class State {

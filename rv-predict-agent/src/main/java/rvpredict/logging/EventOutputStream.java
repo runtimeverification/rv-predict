@@ -38,7 +38,7 @@ public class EventOutputStream extends DataOutputStream {
      * @exception  java.io.IOException  if an I/O error occurs.
      * @see        java.io.FilterOutputStream#out
      */
-   public final void writeEvent(EventItem event) throws IOException {
+    public final void writeEvent(EventItem event) throws IOException {
         writeLong(event.GID);
         writeLong(event.TID);
         writeInt(event.ID);

@@ -1,6 +1,7 @@
 package rvpredict.logging;
 
 import rvpredict.config.Configuration;
+import rvpredict.db.EventItem;
 import rvpredict.db.TraceCache;
 
 import java.io.*;
@@ -93,7 +94,7 @@ public class LoggingServer implements Runnable {
         return eventOutputStream;
     }
 
-    public EventPipe getOutputStream() {
-       return threadLocalTraceOS.get();
+    public void writeEvent(EventItem event) {
+       threadLocalTraceOS.get().writeEvent(event);
     }
 }

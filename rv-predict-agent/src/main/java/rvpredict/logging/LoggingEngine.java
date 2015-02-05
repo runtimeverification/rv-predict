@@ -97,7 +97,7 @@ public class LoggingEngine {
         long gid = globalEventID.incrementAndGet();
         long tid = Thread.currentThread().getId();
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
-        loggingServer.getOutputStream().writeEvent(e);
+        loggingServer.writeEvent(e);
     }
 
     public long getGlobalEventID() {

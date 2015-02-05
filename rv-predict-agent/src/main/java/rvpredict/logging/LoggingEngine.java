@@ -64,19 +64,17 @@ public class LoggingEngine {
 
     public LoggingEngine(Configuration config) {
         this.config = config;
-        loggingServer = startLogging();
+        loggingServer = new LoggingServer(this);
     }
 
     public Configuration getConfig() {
         return config;
     }
 
-    private LoggingServer startLogging() {
-        final LoggingServer loggingServer = new LoggingServer(this);
+    public void startLogging() {
         Thread loggingServerThread = new Thread(loggingServer);
         loggingServerThread.setDaemon(true);
         loggingServerThread.start();
-        return loggingServer;
     }
 
     /**

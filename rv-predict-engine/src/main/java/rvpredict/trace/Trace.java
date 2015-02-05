@@ -32,16 +32,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.ListIterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.List;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.beust.jcommander.internal.Maps;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -57,7 +57,8 @@ public class Trace {
     /**
      * Unprocessed raw events reading from the logging phase.
      */
-    private final List<Event> rawEvents = new ArrayList<>();
+    private ImmutableList<Event> rawEvents = null;
+    private final ImmutableList.Builder<Event> rawEventsBuilder = ImmutableList.builder();
 
     /**
      * Read threads on each address.
@@ -278,7 +279,7 @@ public class Trace {
 
     public void addRawEvent(Event event) {
 //        System.err.println(event + " " + metadata.getLocIdToStmtSigMap().get(event.getID()));
-        rawEvents.add(event);
+        rawEventsBuilder.add(event);
         if (event instanceof MemoryAccessEvent) {
             String addr = ((MemoryAccessEvent) event).getAddr();
             Long tid = event.getTID();
@@ -413,6 +414,8 @@ public class Trace {
      * the remaining trace.
      */
     public void finishedLoading() {
+        rawEvents = rawEventsBuilder.build();
+
         for (String addr : Iterables.concat(addrToReadThreads.keySet(),
                 addrToWriteThreads.keySet())) {
             Set<Long> wrtThrdIds = addrToWriteThreads.get(addr);
@@ -440,19 +443,18 @@ public class Trace {
             minLockLevels.put(tid, lockObj, level);
         }
 
-        ListIterator<Event> iter = rawEvents.listIterator();
-        while (iter.hasNext()) {
-            Event event = iter.next();
+        List<Event> reducedEvents = new ArrayList<>();
+        for (Event event : rawEvents) {
             if (event instanceof InitOrAccessEvent) {
                 String addr = ((InitOrAccessEvent) event).getAddr();
-                if (!sharedMemAddr.contains(addr)) {
-                    iter.remove();
+                if (sharedMemAddr.contains(addr)) {
+                    reducedEvents.add(event);
                 }
             } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
                 /* only preserve outermost lock regions */
                 long lockObj = ((SyncEvent) event).getSyncObject();
-                if (lockLevels.get(event) != minLockLevels.get(event.getTID(), lockObj)) {
-                    iter.remove();
+                if (lockLevels.get(event) == minLockLevels.get(event.getTID(), lockObj)) {
+                    reducedEvents.add(event);
                 }
             }
         }
@@ -461,7 +463,7 @@ public class Trace {
         Table<Long, Long, Event> lockEventTbl = HashBasedTable.create();
         Set<Long> criticalThreadIds = new HashSet<>();
         Set<Event> criticalLockingEvents = new HashSet<>();
-        for (Event event : rawEvents) {
+        for (Event event : reducedEvents) {
             long tid = event.getTID();
             if (event.isLockEvent()) {
                 long lockObj = ((SyncEvent) event).getSyncObject();
@@ -488,7 +490,7 @@ public class Trace {
                 }
             }
         }
-        for (Event event : rawEvents) {
+        for (Event event : reducedEvents) {
             if ((event.isLockEvent() || event.isUnlockEvent())
                     && !criticalLockingEvents.contains(event)) {
                 continue;

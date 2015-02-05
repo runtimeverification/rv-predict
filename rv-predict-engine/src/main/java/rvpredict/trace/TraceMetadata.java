@@ -28,33 +28,46 @@
  ******************************************************************************/
 package rvpredict.trace;
 
+import java.util.Map;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+
 /**
- * Represents synchronization events.
- *
+ * Metadata shared by all trace segments.
  */
-public class SyncEvent extends AbstractEvent {
+public class TraceMetadata {
 
-    private final long syncObject;
+    private final ImmutableMap<Integer, String> varIdToVarSig;
+    private final ImmutableMap<Integer, String> locIdToStmtSig;
+    private final ImmutableSet<Integer> volatileFieldIds;
 
-    public SyncEvent(long GID, long TID, int ID, EventType type, long syncObject) {
-        super(GID, TID, ID, type);
-        this.syncObject = syncObject;
+    public TraceMetadata(Set<Integer> volatileFieldIds, Map<Integer, String> varIdToVarSig,
+            Map<Integer, String> locIdToStmtSig) {
+        this.volatileFieldIds = ImmutableSet.copyOf(volatileFieldIds);
+        this.varIdToVarSig = ImmutableMap.copyOf(varIdToVarSig);
+        this.locIdToStmtSig = ImmutableMap.copyOf(locIdToStmtSig);
+    }
+
+    public Map<Integer, String> getVarIdToVarSigMap() {
+        return varIdToVarSig;
+    }
+
+    public Map<Integer, String> getLocIdToStmtSigMap() {
+        return locIdToStmtSig;
     }
 
     /**
-     * Returns the {@code long} representation of the synchronization object involved
-     * in the event.
+     * Checks if a field is volatile.
      *
-     * @see {@link rvpredict.logging.RecordRT} for the specific object involved
-     *      in each event
+     * @param fieldId
+     *            the field identifier
+     * @return {@code true} if the field is declared as {@code volatile};
+     *         otherwise, {@code false}
      */
-    public final long getSyncObject() {
-        return syncObject;
-    }
-
-    @Override
-    public final String toString() {
-        return String.format("(%s, E%s, T%s, L%s, %s)", type, GID, TID, ID, Long.toHexString(syncObject));
+    public boolean isVolatileField(int fieldId) {
+        return volatileFieldIds.contains(fieldId);
     }
 
 }

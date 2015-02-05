@@ -5,8 +5,6 @@ import rvpredict.config.Configuration;
 import java.io.*;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Logging server.  Makes it transparent to the Logging Engine on how
@@ -19,18 +17,16 @@ public class LoggingServer implements Runnable {
     private final LoggingEngine engine;
     private Thread owner;
     private final List<LoggerThread> loggers = new LinkedList<>();
-    private final BlockingQueue<EventPipe> loggersRegistry;
     private final ThreadLocalEventStream threadLocalTraceOS;
     private MetadataLoggerThread metadataLoggerThread;
 
 
     public LoggingServer(LoggingEngine engine) {
         this.engine = engine;
-        loggersRegistry = new LinkedBlockingQueue<>();
         if (!Configuration.online) {
             metadataLoggerThread = new MetadataLoggerThread(engine);
         }
-        threadLocalTraceOS = new ThreadLocalEventStream(engine.getLoggingFactory(), loggersRegistry);
+        threadLocalTraceOS = new ThreadLocalEventStream(engine.getLoggingFactory());
     }
 
     @Override
@@ -44,9 +40,10 @@ public class LoggingServer implements Runnable {
 
         EventPipe eventOS;
         try {
-            while (ThreadLocalEventStream.END_REGISTRY != (eventOS = loggersRegistry.take())) {
-                final EventOutputStream outputStream = engine.getLoggingFactory().createEventOutputStream();
-                final LoggerThread logger = new LoggerThread(eventOS, outputStream);
+            while (ThreadLocalEventStream.END_REGISTRY != (eventOS = threadLocalTraceOS
+                    .takeEventPipe())) {
+                EventOutputStream outputStream = engine.getLoggingFactory().createEventOutputStream();
+                LoggerThread logger = new LoggerThread(eventOS, outputStream);
                 Thread loggerThread = new Thread(logger, "Logger thread");
                 logger.setOwner(loggerThread);
                 loggerThread.setDaemon(true);

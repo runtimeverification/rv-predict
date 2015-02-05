@@ -41,10 +41,12 @@ import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.beust.jcommander.internal.Maps;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
+
 import rvpredict.log.LoggingFactory;
 
 /**
@@ -57,7 +59,8 @@ public class Trace {
     /**
      * Unprocessed raw events reading from the logging phase.
      */
-    private final List<Event> rawEvents = new ArrayList<>();
+    private ImmutableList<Event> rawEvents = null;
+    private final ImmutableList.Builder<Event> rawEventsBuilder = ImmutableList.builder();
 
     /**
      * Read threads on each address.
@@ -264,8 +267,8 @@ public class Trace {
     }
 
     public void addRawEvent(Event event) {
-//        System.err.println(event + " " + info.getLocIdToStmtSigMap().get(event.getID()));
-        rawEvents.add(event);
+//        System.err.println(event + " " + loggingFactory.getStmtSig(event.getID()));
+        rawEventsBuilder.add(event);
         if (event instanceof InitOrAccessEvent) {
             InitOrAccessEvent initOrAcc = (InitOrAccessEvent) event;
             finalState.addrToValue.put(initOrAcc.getAddr(), initOrAcc.getValue());
@@ -312,7 +315,7 @@ public class Trace {
      * @param event
      */
     private void addEvent(Event event) {
-//        System.err.println(event + " " + info.getLocIdToStmtSigMap().get(event.getID()));
+//        System.err.println(event + " " + loggingFactory.getStmtSig(event.getID()));
         Long tid = event.getTID();
         threadIds.add(tid);
 
@@ -412,6 +415,8 @@ public class Trace {
      * the remaining trace.
      */
     public void finishedLoading() {
+        rawEvents = rawEventsBuilder.build();
+
         for (String addr : Iterables.concat(addrToReadThreads.keySet(),
                 addrToWriteThreads.keySet())) {
             Set<Long> wrtThrdIds = addrToWriteThreads.get(addr);
@@ -439,29 +444,67 @@ public class Trace {
             minLockLevels.put(tid, lockObj, level);
         }
 
+        List<Event> reducedEvents = new ArrayList<>();
         for (Event event : rawEvents) {
             if (event instanceof InitOrAccessEvent) {
                 String addr = ((InitOrAccessEvent) event).getAddr();
                 if (sharedMemAddr.contains(addr)) {
-                    addEvent(event);
-                } else {
-                    info.incrementLocalReadWriteNumber();
+                    reducedEvents.add(event);
                 }
             } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
                 /* only preserve outermost lock regions */
                 long lockObj = ((SyncEvent) event).getSyncObject();
                 if (lockLevels.get(event) == minLockLevels.get(event.getTID(), lockObj)) {
-                    addEvent(event);
+                    reducedEvents.add(event);
                 }
             } else {
-                addEvent(event);
+                reducedEvents.add(event);
             }
+        }
+
+        /* remove empty lock regions */
+        Table<Long, Long, Event> lockEventTbl = HashBasedTable.create();
+        Set<Long> criticalThreadIds = new HashSet<>();
+        Set<Event> criticalLockingEvents = new HashSet<>();
+        for (Event event : reducedEvents) {
+            long tid = event.getTID();
+            if (event.isLockEvent()) {
+                long lockObj = ((SyncEvent) event).getSyncObject();
+                Event prevLock = lockEventTbl.put(tid, lockObj, event);
+                assert prevLock == null : "Unexpected unmatched lock event: " + prevLock;
+            } else if (event.isUnlockEvent()) {
+                long lockObj = ((SyncEvent) event).getSyncObject();
+                Event lock = lockEventTbl.remove(tid, lockObj);
+                if (lock != null) {
+                    if (criticalLockingEvents.contains(lock)) {
+                        criticalLockingEvents.add(event);
+                    }
+                } else {
+                    if (criticalThreadIds.contains(tid)) {
+                        criticalLockingEvents.add(event);
+                    }
+                }
+            } else {
+                criticalThreadIds.add(tid);
+                for (Event e : lockEventTbl.values()) {
+                    if (e.getTID() == tid) {
+                        criticalLockingEvents.add(e);
+                    }
+                }
+            }
+        }
+        for (Event event : reducedEvents) {
+            if ((event.isLockEvent() || event.isUnlockEvent())
+                    && !criticalLockingEvents.contains(event)) {
+                continue;
+            }
+            addEvent(event);
         }
 
         info.addSharedAddresses(sharedMemAddr);
         info.addThreads(threadIds);
     }
-    
+
     public int getSize() {
         return rawEvents.size();
     }

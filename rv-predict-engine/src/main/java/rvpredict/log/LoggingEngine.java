@@ -76,18 +76,16 @@ public class LoggingEngine {
             loggingFactory = new OfflineLoggingFactory(config);
             predictionServer = null;
         }
-        loggingServer = startLogging();
+        loggingServer = new LoggingServer(this);
     }
 
-    private LoggingServer startLogging() {
-        final LoggingServer loggingServer = new LoggingServer(this);
+    public void startLogging() {
         Thread loggingServerThread = new Thread(loggingServer, "Logging server");
         loggingServer.setOwner(loggingServerThread);
         loggingServerThread.setDaemon(true);
         loggingServerThread.start();
-        return loggingServer;
     }
-    
+
     private RVPredict startPredicting() {
        RVPredict predictionServer = null;
         try {

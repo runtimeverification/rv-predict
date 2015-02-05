@@ -60,7 +60,6 @@
         <arg value="critical.Critical" />
     </test>
     <test name="bufwriter.BufWriter">
-        <runs value="8" />
         <arg key="-cp" value="basic.jar" />
         <arg value="bufwriter.BufWriter" />
     </test>

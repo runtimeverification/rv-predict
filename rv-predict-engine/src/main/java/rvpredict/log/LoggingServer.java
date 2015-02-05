@@ -84,9 +84,8 @@ public class LoggingServer implements Runnable {
         }
     }
 
-
-    public EventPipe getOutputStream() {
-       return threadLocalTraceOS.get();
+    public void writeEvent(EventItem event) {
+       threadLocalTraceOS.get().writeEvent(event);
     }
 
     public void setOwner(Thread owner) {

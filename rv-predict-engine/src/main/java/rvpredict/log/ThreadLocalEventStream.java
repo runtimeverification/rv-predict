@@ -25,8 +25,8 @@ public class ThreadLocalEventStream extends ThreadLocal<EventPipe> {
     }
 
     @Override
-    protected synchronized EventPipe initialValue() {
-        final EventPipe pipe = loggingFactory.createEventPipe();
+    protected EventPipe initialValue() {
+        EventPipe pipe = loggingFactory.createEventPipe();
         registry.add(pipe);
         return pipe;
    }
@@ -34,7 +34,7 @@ public class ThreadLocalEventStream extends ThreadLocal<EventPipe> {
     /**
      * Adds the END_REGISTRY marker to the registry to signal end of activity.
      */
-    public synchronized void close() {
+    public void close() {
         registry.add(END_REGISTRY);
     }
 }

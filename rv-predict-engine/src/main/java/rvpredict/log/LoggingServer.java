@@ -85,7 +85,12 @@ public class LoggingServer implements Runnable {
     }
 
     public void writeEvent(EventItem event) {
-       threadLocalTraceOS.get().writeEvent(event);
+        try {
+            threadLocalTraceOS.get().writeEvent(event);
+        } catch (InterruptedException e) {
+            System.err.println("Process being interrupted. Log data in current buffer lost.");
+            e.printStackTrace();
+        }
     }
 
     public void setOwner(Thread owner) {

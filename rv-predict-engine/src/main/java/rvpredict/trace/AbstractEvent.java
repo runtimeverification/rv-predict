@@ -71,8 +71,8 @@ public abstract class AbstractEvent implements Event {
             case WRITE_UNLOCK:
             case READ_LOCK:
             case READ_UNLOCK:
-                case WAIT_REL:
-                case WAIT_ACQ:
+            case WAIT_REL:
+            case WAIT_ACQ:
             case START:
             case PRE_JOIN:
             case JOIN:
@@ -110,6 +110,16 @@ public abstract class AbstractEvent implements Event {
     }
 
     @Override
+    public final boolean isLockEvent() {
+        return EventType.isLock(type) || type == EventType.WAIT_ACQ;
+    }
+
+    @Override
+    public final boolean isUnlockEvent() {
+        return EventType.isUnlock(type) || type == EventType.WAIT_REL;
+    }
+
+    @Override
     public boolean equals(Object object) {
         if (!(object instanceof Event)) {
             return false;
@@ -117,7 +127,6 @@ public abstract class AbstractEvent implements Event {
         Event otherEvent = (Event) object;
         return getGID() == otherEvent.getGID();
     }
-
 
     @Override
     public String toString() {

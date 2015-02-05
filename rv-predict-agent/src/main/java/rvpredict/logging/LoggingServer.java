@@ -8,8 +8,6 @@ import java.io.*;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPOutputStream;
 
@@ -25,14 +23,12 @@ public class LoggingServer implements Runnable {
     private final Configuration config;
     private Thread owner;
     private final List<LoggerThread> loggers = new LinkedList<>();
-    private final BlockingQueue<EventPipe> loggersRegistry;
     private final ThreadLocalEventStream threadLocalTraceOS;
     private final MetadataLoggerThread metadataLoggerThread;
 
 
     public LoggingServer(LoggingEngine engine) {
-        loggersRegistry = new LinkedBlockingQueue<>();
-        threadLocalTraceOS = new ThreadLocalEventStream(loggersRegistry);
+        threadLocalTraceOS = ThreadLocalEventStream.getInstance();
         this.config = engine.getConfig();
         metadataLoggerThread = new MetadataLoggerThread(engine);
     }
@@ -46,7 +42,8 @@ public class LoggingServer implements Runnable {
         owner = Thread.currentThread();
         EventPipe eventOS;
         try {
-            while (ThreadLocalEventStream.END_REGISTRY != (eventOS = loggersRegistry.take())) {
+            while (ThreadLocalEventStream.END_REGISTRY != (eventOS = threadLocalTraceOS
+                    .takeEventPipe())) {
                 final EventOutputStream outputStream = newEventOutputStream();
                 final LoggerThread logger = new LoggerThread(eventOS, outputStream);
                 Thread loggerThread = new Thread(logger);

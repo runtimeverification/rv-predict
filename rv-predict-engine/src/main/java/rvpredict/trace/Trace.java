@@ -133,14 +133,11 @@ public class Trace {
     private final State initState;
     private final State finalState;
 
-    private final TraceInfo info;
-
-    public Trace(State initState, LoggingFactory loggingFactory, TraceInfo info) {
+    public Trace(State initState, LoggingFactory loggingFactory) {
         this.loggingFactory = loggingFactory;
-        assert initState != null && info != null;
+        assert initState != null;
         this.initState = initState;
         this.finalState = new State(initState);
-        this.info = info;
     }
 
     public boolean hasSharedMemAddr() {
@@ -320,9 +317,6 @@ public class Trace {
         threadIds.add(tid);
 
         if (event instanceof BranchEvent) {
-            // branch node
-            info.incrementBranchNumber();
-
             List<BranchEvent> branchnodes = threadIdToBranchEvents.get(tid);
             if (branchnodes == null) {
                 branchnodes = new ArrayList<>();
@@ -333,7 +327,6 @@ public class Trace {
             // initial write node
             initState.addrToValue.put(((InitEvent) event).getAddr(), ((InitEvent) event).getValue());
             finalState.addrToValue.put(((InitEvent) event).getAddr(), ((InitEvent) event).getValue());
-            info.incrementInitWriteNumber();
         } else {
             // all critical nodes -- read/write/synchronization events
 
@@ -348,8 +341,6 @@ public class Trace {
             threadNodes.add(event);
             // TODO: Optimize it -- no need to update it every time
             if (event instanceof MemoryAccessEvent) {
-                info.incrementSharedReadWriteNumber();
-
                 MemoryAccessEvent mnode = (MemoryAccessEvent) event;
                 String addr = mnode.getAddr();
 
@@ -377,7 +368,6 @@ public class Trace {
                     writeNodes.add((WriteEvent) event);
                 }
             } else if (event instanceof SyncEvent) {
-                info.incrementSyncNumber();
                 SyncEvent syncEvent = (SyncEvent) event;
 
                 Map<Long, List<SyncEvent>> eventsMap = null;
@@ -500,9 +490,6 @@ public class Trace {
             }
             addEvent(event);
         }
-
-        info.addSharedAddresses(sharedMemAddr);
-        info.addThreads(threadIds);
     }
 
     public int getSize() {

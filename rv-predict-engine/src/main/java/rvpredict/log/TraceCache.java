@@ -3,8 +3,6 @@ package rvpredict.log;
 import rvpredict.trace.AbstractEvent;
 import rvpredict.trace.Event;
 import rvpredict.trace.Trace;
-import rvpredict.trace.TraceInfo;
-
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.AbstractMap;
@@ -44,8 +42,8 @@ public class TraceCache {
      * @return a {@link rvpredict.trace.Trace} representing the trace segment
      *         read
      */
-    public Trace getTrace(long fromIndex, long toIndex, Trace.State initState, TraceInfo info) throws IOException, InterruptedException {
-        Trace trace = new Trace(initState, loggingFactory, info);
+    public Trace getTrace(long fromIndex, long toIndex, Trace.State initState) throws IOException, InterruptedException {
+        Trace trace = new Trace(initState, loggingFactory);
         for (long index = fromIndex; index < toIndex; index++) {
             EventItem eventItem = getEvent(index);
             if (eventItem == null)

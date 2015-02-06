@@ -7,7 +7,7 @@ package rvpredict.log;
  * {@link rvpredict.log.ThreadLocalEventStream} for each logged thread
  * and being written to only by that thread through the
  * {@link rvpredict.log.LoggingEngine#saveEvent(rvpredict.trace.EventType, int, long, int, long)},
- * while being only read from a {@link rvpredict.log.LoggerThread} object
+ * while being only read from a {@link rvpredict.log.Logger} object
  * created for this purpose.
  *
  * The {@link BufferedEventPipe#close()} method, which flushes the buffers and send the

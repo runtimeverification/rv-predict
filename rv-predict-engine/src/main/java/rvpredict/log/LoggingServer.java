@@ -16,15 +16,15 @@ import java.util.List;
 public class LoggingServer implements Runnable {
     private final LoggingEngine engine;
     private Thread owner;
-    private final List<LoggerThread> loggers = new LinkedList<>();
+    private final List<Logger> loggers = new LinkedList<>();
     private final ThreadLocalEventStream threadLocalTraceOS;
-    private MetadataLoggerThread metadataLoggerThread;
+    private MetadataLogger metadataLogger;
 
 
     public LoggingServer(LoggingEngine engine) {
         this.engine = engine;
         if (!Configuration.online) {
-            metadataLoggerThread = new MetadataLoggerThread(engine);
+            metadataLogger = new MetadataLogger(engine);
         }
         threadLocalTraceOS = new ThreadLocalEventStream(engine.getLoggingFactory());
     }
@@ -32,10 +32,10 @@ public class LoggingServer implements Runnable {
     @Override
     public void run() {
         if (!Configuration.online) {
-            Thread metadataLoggingThread = new Thread(metadataLoggerThread, "Metadata logger");
-            metadataLoggerThread.setOwner(metadataLoggingThread);
-            metadataLoggingThread.setDaemon(true);
-            metadataLoggingThread.start();
+            Thread metadataLoggerThread = new Thread(metadataLogger, "Metadata logger");
+            metadataLogger.setOwner(metadataLoggerThread);
+            metadataLoggerThread.setDaemon(true);
+            metadataLoggerThread.start();
         }
 
         EventPipe eventOS;
@@ -43,7 +43,7 @@ public class LoggingServer implements Runnable {
             while (ThreadLocalEventStream.END_REGISTRY != (eventOS = threadLocalTraceOS
                     .takeEventPipe())) {
                 EventOutputStream outputStream = engine.getLoggingFactory().createEventOutputStream();
-                LoggerThread logger = new LoggerThread(eventOS, outputStream);
+                Logger logger = new Logger(eventOS, outputStream);
                 Thread loggerThread = new Thread(logger, "Logger thread");
                 logger.setOwner(loggerThread);
                 loggerThread.setDaemon(true);
@@ -68,16 +68,16 @@ public class LoggingServer implements Runnable {
         threadLocalTraceOS.close();
         owner.join();
 
-        for (LoggerThread loggerThread : loggers) {
-            loggerThread.finishLogging();
+        for (Logger logger : loggers) {
+            logger.finishLogging();
         }
 
-        for (LoggerThread loggerThread : loggers) {
-            loggerThread.join();
+        for (Logger logger : loggers) {
+            logger.awaitTermination();
         }
 
         if (!Configuration.online) {
-            metadataLoggerThread.finishLogging();
+            metadataLogger.finishLogging();
         }
     }
 

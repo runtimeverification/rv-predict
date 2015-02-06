@@ -6,16 +6,15 @@ import java.io.IOException;
  * Class for dumping events to disk.  Reads data through an
  * {@link EventPipe} and writes them to an {@link rvpredict.log.EventOutputStream}
  */
-public class LoggerThread implements Runnable {
+public class Logger implements Runnable {
     private final EventPipe eventPipe;
     private final EventOutputStream outputStream;
     private Thread owner;
 
-    public LoggerThread(EventPipe eventPipe, EventOutputStream outputStream) {
+    public Logger(EventPipe eventPipe, EventOutputStream outputStream) {
         this.eventPipe = eventPipe;
         this.outputStream = outputStream;
     }
-
 
     @Override
     public void run() {
@@ -46,7 +45,7 @@ public class LoggerThread implements Runnable {
      * Wait for the thread to flush and finish.
      * @throws InterruptedException
      */
-    public void join() throws InterruptedException {
+    public void awaitTermination() throws InterruptedException {
         owner.join();
     }
 }

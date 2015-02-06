@@ -14,7 +14,7 @@ public interface LoggingFactory {
      * one (producer) thread to another (logging) thread
      * @see ThreadLocalEventStream#initialValue() for creation
      * @see rvpredict.log.LoggingEngine#saveEvent(rvpredict.trace.EventType, int, long, int, long) for producer
-     * @see rvpredict.log.LoggerThread for consumer
+     * @see rvpredict.log.Logger for consumer
      * @return a new {@link rvpredict.log.EventPipe}
      */
     EventPipe createEventPipe();
@@ -22,7 +22,7 @@ public interface LoggingFactory {
     /**
      * Creates a new stream for logging metadata.
      * @return a new {@link java.io.ObjectOutputStream} to save metadata into.
-     * @see rvpredict.log.MetadataLoggerThread
+     * @see rvpredict.log.MetadataLogger
      * @throws IOException if the stream cannot be created.
      */
     ObjectOutputStream createMetadataOS() throws IOException;

@@ -12,7 +12,7 @@
         <rvarg key="--maxlen" value="3000" />
         <arg key="-jar" value="ftpserver.jar" />
     </test>
-    <test name="demo.Example">
+     <test name="demo.Example">
         <arg key="-cp" value="basic.jar" />
         <arg value="demo.Example" />
         <rvarg key="--include" value="a.b" />
@@ -21,7 +21,7 @@
         <arg key="-jar" value="SpringExample.jar" />
     </test>
     <test name="account.Account">
-        <runs value="32" />
+        <runs value="64" />
         <arg key="-cp" value="basic.jar" />
         <arg value="account.Account" />
     </test>
@@ -45,7 +45,7 @@
         <arg value="airlinetickets.Airlinetickets" />
     </test>
     <test name="boundedbuffer.BoundedBuffer">
-        <runs value="64" />
+        <runs value="128" />
         <arg key="-cp" value="basic.jar" />
         <arg value="boundedbuffer.BoundedBuffer" />
     </test>

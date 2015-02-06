@@ -57,7 +57,7 @@ public class Logger {
         return out;
     }
 
-    public void report(String msg, MSGTYPE type) {
+    public synchronized void report(String msg, MSGTYPE type) {
         switch (type) {
         case ERROR:
             System.err.println(msg);

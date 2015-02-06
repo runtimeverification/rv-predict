@@ -1,9 +1,10 @@
 package rvpredict.instrumentation;
 
+import org.apache.commons.lang3.tuple.Pair;
+import rvpredict.config.Configuration;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.commons.lang3.tuple.Pair;
 public class MetaData {
 
     public static final ConcurrentHashMap<String, Set<String>> classNameToFieldNames = new ConcurrentHashMap<>();
@@ -18,18 +19,20 @@ public class MetaData {
      * our case.
      */
 
-    public static final ConcurrentHashMap<String, Integer> varSigToVarId = new ConcurrentHashMap<>();
+    public static final Map<String, Integer> varSigToVarId = new ConcurrentHashMap<>();
     public static final List<Pair<Integer, String>> unsavedVarIdToVarSig = new ArrayList<>();
 
     public static final int MAX_NUM_OF_FIELDS = 10000;
     public static final String[] varSigs = new String[MAX_NUM_OF_FIELDS];
     public static final int[] resolvedFieldId = new int[MetaData.MAX_NUM_OF_FIELDS];
 
-    public static final ConcurrentHashMap<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
+    public static final Map<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
+    public static final Map<Integer, String> locIdToStmtSig = new HashMap<>();
     public static final List<Pair<Integer, String>> unsavedLocIdToStmtSig = new ArrayList<>();
 
     public static final Set<String> volatileVariables = Collections
             .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    public static final Set<Integer> volatileFieldIds = new HashSet<>();
     public static final List<String> unsavedVolatileVariables = new ArrayList<>();
 
     private MetaData() { }
@@ -89,7 +92,11 @@ public class MetaData {
             synchronized (volatileVariables) {
                 if (!volatileVariables.contains(sig)) {
                     volatileVariables.add(sig);
-                    unsavedVolatileVariables.add(sig);
+                    if (Configuration.online) {
+                        volatileFieldIds.add(getVariableId(className, fieldName));
+                    } else {
+                        unsavedVolatileVariables.add(sig);
+                    }
                 }
             }
         }
@@ -103,7 +110,11 @@ public class MetaData {
                 if (locId == null) {
                     locId = stmtSigToLocId.size() + 1;
                     stmtSigToLocId.put(sig, locId);
-                    unsavedLocIdToStmtSig.add(Pair.of(locId, sig));
+                    if (Configuration.online) {
+                        locIdToStmtSig.put(locId, sig);
+                    } else {
+                        unsavedLocIdToStmtSig.add(Pair.of(locId, sig));
+                    }
                 }
             }
         }

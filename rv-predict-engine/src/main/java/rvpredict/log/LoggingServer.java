@@ -1,16 +1,12 @@
-package rvpredict.logging;
+package rvpredict.log;
 
 import rvpredict.config.Configuration;
-import rvpredict.db.TraceCache;
 
 import java.io.*;
-import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.zip.GZIPOutputStream;
 
 /**
  * Logging server.  Makes it transparent to the Logging Engine on how
@@ -20,35 +16,39 @@ import java.util.zip.GZIPOutputStream;
  * @author TraianSF
  */
 public class LoggingServer implements Runnable {
-    private static final AtomicInteger logFileId = new AtomicInteger();
-    private final Configuration config;
+    private final LoggingEngine engine;
     private Thread owner;
     private final List<LoggerThread> loggers = new LinkedList<>();
     private final BlockingQueue<EventPipe> loggersRegistry;
     private final ThreadLocalEventStream threadLocalTraceOS;
-    private final MetadataLoggerThread metadataLoggerThread;
+    private MetadataLoggerThread metadataLoggerThread;
 
 
     public LoggingServer(LoggingEngine engine) {
+        this.engine = engine;
         loggersRegistry = new LinkedBlockingQueue<>();
-        threadLocalTraceOS = new ThreadLocalEventStream(loggersRegistry);
-        this.config = engine.getConfig();
-        metadataLoggerThread = new MetadataLoggerThread(engine);
+        if (!Configuration.online) {
+            metadataLoggerThread = new MetadataLoggerThread(engine);
+        }
+        threadLocalTraceOS = new ThreadLocalEventStream(engine.getLoggingFactory(), loggersRegistry);
     }
 
     @Override
     public void run() {
-        Thread metadataLoggingThread = new Thread(metadataLoggerThread);
-        metadataLoggingThread.setDaemon(true);
-        metadataLoggingThread.start();
+        if (!Configuration.online) {
+            Thread metadataLoggingThread = new Thread(metadataLoggerThread, "Metadata logger");
+            metadataLoggerThread.setOwner(metadataLoggingThread);
+            metadataLoggingThread.setDaemon(true);
+            metadataLoggingThread.start();
+        }
 
-        owner = Thread.currentThread();
         EventPipe eventOS;
         try {
             while (ThreadLocalEventStream.END_REGISTRY != (eventOS = loggersRegistry.take())) {
-                final EventOutputStream outputStream = newEventOutputStream();
+                final EventOutputStream outputStream = engine.getLoggingFactory().createEventOutputStream();
                 final LoggerThread logger = new LoggerThread(eventOS, outputStream);
-                Thread loggerThread = new Thread(logger);
+                Thread loggerThread = new Thread(logger, "Logger thread");
+                logger.setOwner(loggerThread);
                 loggerThread.setDaemon(true);
                 loggerThread.start();
                 loggers.add(logger);
@@ -75,25 +75,21 @@ public class LoggingServer implements Runnable {
             loggerThread.finishLogging();
         }
 
-        metadataLoggerThread.finishLogging();
-    }
-
-
-    private EventOutputStream newEventOutputStream() throws IOException {
-        EventOutputStream eventOutputStream = null;
-        int id = logFileId.incrementAndGet();
-        OutputStream outputStream = new FileOutputStream(Paths.get(config.outdir,
-                id + "_" + TraceCache.TRACE_SUFFIX
-                        + (config.zip ? TraceCache.ZIP_EXTENSION : "")).toFile());
-        if (config.zip) {
-            outputStream = new GZIPOutputStream(outputStream,true);
+        for (LoggerThread loggerThread : loggers) {
+            loggerThread.join();
         }
-        eventOutputStream = new EventOutputStream(new BufferedOutputStream(
-                outputStream));
-        return eventOutputStream;
+
+        if (!Configuration.online) {
+            metadataLoggerThread.finishLogging();
+        }
     }
+
 
     public EventPipe getOutputStream() {
        return threadLocalTraceOS.get();
+    }
+
+    public void setOwner(Thread owner) {
+        this.owner = owner;
     }
 }

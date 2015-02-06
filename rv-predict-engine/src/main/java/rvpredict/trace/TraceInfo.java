@@ -29,7 +29,6 @@
 package rvpredict.trace;
 
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -41,28 +40,10 @@ import java.util.Set;
  */
 public class TraceInfo {
 
-    // metadata
-    private final Map<Integer, String> varIdToVarSig;
-    private final Map<Integer, String> locIdToStmtSig;
-    private final Set<Integer> volatileFieldIds;
-
-    HashSet<String> sharedAddresses = new HashSet<String>();
-    HashSet<Long> threads = new HashSet<Long>();
+    HashSet<String> sharedAddresses = new HashSet<>();
+    HashSet<Long> threads = new HashSet<>();
     int num_br, num_sync, num_rw_shared, num_rw_local, num_w_init, num_prop;
-
-    public TraceInfo(Set<Integer> volatileFieldIds, Map<Integer, String> varIdToVarSig, Map<Integer, String> locIdToStmtSig) {
-        this.volatileFieldIds = volatileFieldIds;
-        this.varIdToVarSig = varIdToVarSig;
-        this.locIdToStmtSig = locIdToStmtSig;
-    }
-
-    public Map<Integer, String> getVarIdToVarSigMap() {
-        return varIdToVarSig;
-    }
-
-    public Map<Integer, String> getLocIdToStmtSigMap() {
-        return locIdToStmtSig;
-    }
+    long traceLength = 0;
 
     public void addSharedAddresses(Set<String> s) {
         sharedAddresses.addAll(s);
@@ -78,10 +59,6 @@ public class TraceInfo {
 
     public int getTraceSharedVariableNumber() {
         return sharedAddresses.size();
-    }
-
-    public boolean isVolatileAddr(int varId) {
-        return volatileFieldIds.contains(varId);
     }
 
     public void incrementBranchNumber() {
@@ -126,6 +103,14 @@ public class TraceInfo {
 
     public int getTracePropertyNumber() {
         return num_prop;
+    }
+
+    public void incrementTraceLength(int size) {
+        traceLength += size;
+    }
+
+    public long getTraceLength() {
+        return traceLength;
     }
 
 }

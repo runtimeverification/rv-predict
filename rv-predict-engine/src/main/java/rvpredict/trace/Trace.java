@@ -45,6 +45,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
+import rvpredict.log.LoggingFactory;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a
@@ -122,16 +123,20 @@ public class Trace {
      * Lists of {@code MemoryAccessEvent}'s indexed by address and thread ID.
      */
     private final Table<String, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
+    private final LoggingFactory loggingFactory;
 
     private List<ReadEvent> allReadNodes;
 
     private final State initState;
+    private final State finalState;
 
     private final TraceInfo info;
 
-    public Trace(State initState, TraceInfo info) {
+    public Trace(State initState, LoggingFactory loggingFactory, TraceInfo info) {
+        this.loggingFactory = loggingFactory;
         assert initState != null && info != null;
         this.initState = initState;
+        this.finalState = new State(initState);
         this.info = info;
     }
 
@@ -147,14 +152,6 @@ public class Trace {
         Long initValue = initState.addrToValue.get(addr);
         // TODO(YilongL): assuming that every variable is initialized is very Java-specific
         return initValue == null ? 0 : initValue;
-    }
-
-    public Map<Integer, String> getVarIdToVarSigMap() {
-        return info.getVarIdToVarSigMap();
-    }
-
-    public Map<Integer, String> getLocIdToStmtSigMap() {
-        return info.getLocIdToStmtSigMap();
     }
 
     public Event getFirstThreadEvent(long threadId) {
@@ -262,22 +259,17 @@ public class Trace {
         return readEvents;
     }
 
-    public State computeFinalState() {
-        State finalState = new State(initState);
-
-        for (Event e : rawEvents) {
-            if (e instanceof InitOrAccessEvent) {
-                InitOrAccessEvent initOrAcc = (InitOrAccessEvent) e;
-                finalState.addrToValue.put(initOrAcc.getAddr(), initOrAcc.getValue());
-            }
-        }
-
+    public State getFinalState() {
         return finalState;
     }
 
     public void addRawEvent(Event event) {
 //        System.err.println(event + " " + info.getLocIdToStmtSigMap().get(event.getID()));
         rawEvents.add(event);
+        if (event instanceof InitOrAccessEvent) {
+            InitOrAccessEvent initOrAcc = (InitOrAccessEvent) event;
+            finalState.addrToValue.put(initOrAcc.getAddr(), initOrAcc.getValue());
+        }
         if (event instanceof MemoryAccessEvent) {
             String addr = ((MemoryAccessEvent) event).getAddr();
             Long tid = event.getTID();
@@ -337,6 +329,7 @@ public class Trace {
         } else if (event instanceof InitEvent) {
             // initial write node
             initState.addrToValue.put(((InitEvent) event).getAddr(), ((InitEvent) event).getValue());
+            finalState.addrToValue.put(((InitEvent) event).getAddr(), ((InitEvent) event).getValue());
             info.incrementInitWriteNumber();
         } else {
             // all critical nodes -- read/write/synchronization events
@@ -468,13 +461,17 @@ public class Trace {
         info.addSharedAddresses(sharedMemAddr);
         info.addThreads(threadIds);
     }
+    
+    public int getSize() {
+        return rawEvents.size();
+    }
 
     // TODO(YilongL): add javadoc; addr seems to be some abstract address, e.g.
     // "_.1", built when reading the trace; figure out what happens and improve it
     public boolean isVolatileAddr(String addr) {
         // all field addr should contain ".", not true for array access
         int dotPos = addr.indexOf(".");
-        return dotPos != -1 && info.isVolatileAddr(Integer.valueOf(addr.substring(dotPos + 1)));
+        return dotPos != -1 && loggingFactory.isVolatile(Integer.valueOf(addr.substring(dotPos + 1)));
     }
 
     public static class State {

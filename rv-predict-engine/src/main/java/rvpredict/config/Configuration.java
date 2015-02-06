@@ -207,6 +207,10 @@ public class Configuration {
     public String predict_dir = null;
     public boolean predict = true;
 
+    public final static String opt_online = "--online";
+    @Parameter(names = opt_online, description = "Run prediction online", descriptionKey = "2005")
+    public static boolean online = false;
+
     // final static String opt_rmm_pso = "--pso";//for testing only
     // @Parameter(names = opt_rmm_pso, description = "PSO memory model", hidden
     // = true)

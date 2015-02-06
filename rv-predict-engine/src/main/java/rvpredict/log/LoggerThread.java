@@ -1,13 +1,10 @@
-package rvpredict.logging;
+package rvpredict.log;
 
-import rvpredict.db.EventItem;
-
-import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Class for dumping events to disk.  Reads data through the given
- * {@link EventPipe} and writes them to given {@link java.io.DataOutputStream}.
+ * Class for dumping events to disk.  Reads data through an
+ * {@link EventPipe} and writes them to an {@link rvpredict.log.EventOutputStream}
  */
 public class LoggerThread implements Runnable {
     private final EventPipe eventPipe;
@@ -22,26 +19,34 @@ public class LoggerThread implements Runnable {
 
     @Override
     public void run() {
-        owner = Thread.currentThread();
         try {
             EventItem event;
             while (null != (event = eventPipe.readEvent())) {
                 outputStream.writeEvent(event);
-                outputStream.flush();
             }
             outputStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
     /**
-     * Sends closing signal to the event queue, then waits for the thread to flush and finish.
+     * Sends closing signal to the event queue.
+     * @throws InterruptedException
      */
     public void finishLogging() throws InterruptedException {
         eventPipe.close();
+    }
+
+    public void setOwner(Thread owner) {
+        this.owner = owner;
+    }
+
+    /**
+     * Wait for the thread to flush and finish.
+     * @throws InterruptedException
+     */
+    public void join() throws InterruptedException {
         owner.join();
     }
 }

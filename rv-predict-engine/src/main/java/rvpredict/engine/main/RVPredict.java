@@ -28,66 +28,66 @@
  ******************************************************************************/
 package rvpredict.engine.main;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.Map.Entry;
+import rvpredict.config.Configuration;
+import rvpredict.log.TraceCache;
+import rvpredict.log.LoggingFactory;
+import rvpredict.trace.Trace;
+import rvpredict.trace.TraceInfo;
+import rvpredict.util.Logger;
+import violation.Violation;
+
+import java.io.IOException;
+import java.util.Collections;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.*;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+/**
+ * Class for predicting violations from a logged execution.
+ * 
+ * Splits the log in segments of length {@link rvpredict.config.Configuration#windowSize},
+ * each of them being executed as a {@link RaceDetectorTask} task.
+ */
+public class RVPredict implements Runnable {
 
-import rvpredict.config.Configuration;
-import rvpredict.db.DBEngine;
-import rvpredict.trace.Event;
-import rvpredict.trace.MemoryAccessEvent;
-import rvpredict.trace.ReadEvent;
-import rvpredict.trace.Trace;
-import rvpredict.trace.TraceInfo;
-import rvpredict.trace.WriteEvent;
-import rvpredict.util.Logger;
-import smt.SMTConstraintBuilder;
-import violation.Race;
-import violation.Violation;
-
-public class RVPredict {
-
-    private final HashSet<Violation> violations = new HashSet<>();
-    private final HashSet<Violation> potentialviolations = new HashSet<>();
+    private final Set<Violation> violations = Collections.newSetFromMap(new ConcurrentHashMap<Violation,Boolean>());
     private final Configuration config;
     private final Logger logger;
-    private final long totalTraceLength;
-    private final DBEngine dbEngine;
+    private final TraceCache traceCache;
     private final TraceInfo traceInfo;
+    private LoggingFactory loggingFactory;
+    private ExecutionInfoTask infoTask;
+    private Thread owner;
 
-    public RVPredict(Configuration config) {
+    public RVPredict(Configuration config, LoggingFactory loggingFactory) throws IOException, ClassNotFoundException {
         this.config = config;
+        this.loggingFactory = loggingFactory;
         logger = config.logger;
 
         long startTime = System.currentTimeMillis();
 
-        dbEngine = new DBEngine(config.outdir);
+        traceCache = new TraceCache(loggingFactory);
 
-        // the total number of events in the trace
-        totalTraceLength = dbEngine.getTraceLength();
-        traceInfo = new TraceInfo(dbEngine.getVolatileFieldIds(),
-                dbEngine.getVarIdToVarSig(),
-                dbEngine.getLocIdToStmtSig());
+        traceInfo = new TraceInfo();
+        infoTask = new ExecutionInfoTask(this, startTime, traceInfo);
 
-        addHooks(startTime);
+        addHooks();
     }
 
-    private void addHooks(long startTime) {
-        // register a shutdown hook to store runtime statistics
-        Runtime.getRuntime().addShutdownHook(
-                new ExecutionInfoTask(startTime, traceInfo, totalTraceLength));
+    public void report() {
+        infoTask.run();
+    }
+
+    private void addHooks() {
+        if (!Configuration.online) {
+            // register a shutdown hook to store runtime statistics
+            Runtime.getRuntime().addShutdownHook(
+                    new Thread(infoTask, "Execution Info Task"));
+        }
 
         // set a timer to timeout in a configured period
-        Timer timer = new Timer();
+        Timer timer = new Timer(true);
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
@@ -98,243 +98,93 @@ public class RVPredict {
         }, config.timeout * 1000);
     }
 
-    /**
-     * Detects data races from a given trace.
-     *
-     * <p>
-     * We analyze memory access events on each shared memory address in the
-     * trace separately. For each shared memory address, enumerate all memory
-     * access pairs on this address and build the data-abstract feasibility for
-     * each of them. Then for each memory access pair, send to the SMT solver
-     * its data-abstract feasibility together with the already built must
-     * happen-before (MHB) constraints and locking constraints. The pair is
-     * reported as a real data race if the solver returns sat.
-     *
-     * <p>
-     * To reduce the expensive calls to the SMT solver, we apply three
-     * optimizations:
-     * <li>Use Lockset + Weak HB algorithm to filter out those memory access
-     * pairs that are obviously not data races.
-     * <li>Group "equivalent" memory access events to a block and consider them
-     * as a single memory access. In short, such block has the property that all
-     * memory access events in it have the same causal HB relation with the
-     * outside events. Therefore, it is sufficient to consider only one event
-     * from each block.
-     *
-     * @param cnstrBuilder
-     * @param trace
-     *            the trace to analyze
-     */
-    private void detectRace(SMTConstraintBuilder cnstrBuilder, Trace trace) {
-        /* enumerate each shared memory address in the trace */
-        for (String addr : trace.getMemAccessEventsTable().rowKeySet()) {
-            /* exclude volatile variable */
-            if (!config.checkVolatile && trace.isVolatileAddr(addr)) {
-                continue;
-            }
-
-            /* skip if there is no write event */
-            if (trace.getWriteEventsOn(addr).isEmpty()) {
-                continue;
-            }
-
-            /* skip if there is only one thread */
-            if (trace.getMemAccessEventsTable().row(addr).size() == 1) {
-                continue;
-            }
-
-            /* group equivalent reads and writes into memory access blocks */
-            Map<MemoryAccessEvent, List<MemoryAccessEvent>> equivAccBlk = new LinkedHashMap<>();
-            for (Entry<Long, List<MemoryAccessEvent>> entry : trace
-                    .getMemAccessEventsTable().row(addr).entrySet()) {
-                // TODO(YilongL): the extensive use of List#indexOf could be a performance problem later
-
-                long crntTID = entry.getKey();
-                List<MemoryAccessEvent> memAccEvents = entry.getValue();
-
-                List<Event> crntThrdEvents = trace.getThreadEvents(crntTID);
-
-                ListIterator<MemoryAccessEvent> iter = memAccEvents.listIterator();
-                while (iter.hasNext()) {
-                    MemoryAccessEvent memAcc = iter.next();
-                    equivAccBlk.put(memAcc, Lists.newArrayList(memAcc));
-                    if (memAcc instanceof WriteEvent) {
-                        int prevMemAccIdx = crntThrdEvents.indexOf(memAcc);
-
-                        while (iter.hasNext()) {
-                            MemoryAccessEvent crntMemAcc = iter.next();
-                            int crntMemAccIdx = crntThrdEvents.indexOf(crntMemAcc);
-
-                            /* ends the block if there is sync/branch event in between */
-                            boolean memAccOnly = true;
-                            for (Event e : crntThrdEvents.subList(prevMemAccIdx + 1, crntMemAccIdx)) {
-                                memAccOnly = memAccOnly && (e instanceof MemoryAccessEvent);
-                            }
-                            if (!memAccOnly) {
-                                iter.previous();
-                                break;
-                            }
-
-                            equivAccBlk.get(memAcc).add(crntMemAcc);
-                            if (!config.branch) {
-                                /* YilongL: without logging branch events, we
-                                 * have to be conservative and end the block
-                                 * when a read event is encountered */
-                                if (crntMemAcc instanceof ReadEvent) {
-                                    break;
-                                }
-                            }
-
-                            prevMemAccIdx = crntMemAccIdx;
-                        }
-                    }
-                }
-            }
-
-            /* check memory access pairs */
-            for (MemoryAccessEvent fst : equivAccBlk.keySet()) {
-                for (MemoryAccessEvent snd : equivAccBlk.keySet()) {
-                    if (fst.getTID() >= snd.getTID()) {
-                        continue;
-                    }
-
-                    /* skip if all potential data races are already known */
-                    Set<Race> potentialRaces = Sets.newHashSet();
-                    for (MemoryAccessEvent e1 : equivAccBlk.get(fst)) {
-                        for (MemoryAccessEvent e2 : equivAccBlk.get(snd)) {
-                            if (e1 instanceof WriteEvent || e2 instanceof WriteEvent) {
-                                potentialRaces.add(new Race(e1, e2,
-                                        trace.getVarIdToVarSigMap(),
-                                        trace.getLocIdToStmtSigMap()));
-                            }
-                        }
-                    }
-                    if (violations.containsAll(potentialRaces)) {
-                        /* YilongL: note that this could lead to miss of data
-                         * races if their signatures are the same */
-                        continue;
-                    }
-
-                    /* not a race if the two events hold a common lock */
-                    if (cnstrBuilder.hasCommonLock(fst, snd)) {
-                        continue;
-                    }
-
-                    /* not a race if one event happens-before the other */
-                    if (fst.getGID() < snd.getGID()
-                            && cnstrBuilder.happensBefore(fst, snd)
-                            || fst.getGID() > snd.getGID()
-                            && cnstrBuilder.happensBefore(snd, fst)) {
-                        continue;
-                    }
-
-                    /* start building constraints for MCM */
-                    StringBuilder sb = new StringBuilder()
-                            .append(cnstrBuilder.getAbstractFeasibilityConstraint(fst)).append(" ")
-                            .append(cnstrBuilder.getAbstractFeasibilityConstraint(snd));
-
-                    if (cnstrBuilder.isRace(fst, snd, sb)) {
-                        for (Race r : potentialRaces) {
-                            if (violations.add(r)) {
-                                logger.report(r.toString(), Logger.MSGTYPE.REAL);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
+    @Override
     public void run() {
-        Trace.State initState = new Trace.State();
+        try {
+            ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(4,
+                    new ThreadFactory() {
+                        int id = 0;
+                        public Thread newThread(Runnable r) {
+                            Thread t = new Thread(r, "Race Detector " + ++id);
+                            t.setDaemon(true);
+                            return t;
+                        }
+                    });
+            Trace.State initState = new Trace.State();
 
-        // process the trace window by window
-        for (int n = 0; n * config.windowSize < totalTraceLength; n++) {
-            long fromIndex = n * config.windowSize + 1;
-            long toIndex = fromIndex + config.windowSize;
+            long fromIndex = 1;
+            // process the trace window by window
+            Trace trace;
+            do {
+                trace = traceCache.getTrace(fromIndex, fromIndex += config.windowSize, initState, traceInfo);
+                traceInfo.incrementTraceLength(trace.getSize());
 
-            Trace trace = dbEngine.getTrace(fromIndex, toIndex, initState, traceInfo);
-
-            if (trace.hasSharedMemAddr()) {
-                SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config, trace);
-
-                cnstrBuilder.declareVariables();
-                if (config.rmm_pso) {
-                    cnstrBuilder.addPSOIntraThreadConstraints();
-                } else {
-                    cnstrBuilder.addIntraThreadConstraints();
+                if (trace.hasSharedMemAddr()) {
+                    raceDetectorExecutor.execute(new RaceDetectorTask(this, trace));
                 }
-                cnstrBuilder.addProgramOrderAndThreadStartJoinConstraints();
-                cnstrBuilder.addLockingConstraints();
 
-                detectRace(cnstrBuilder, trace);
+                initState = trace.getFinalState();
+            } while (trace.getSize() == config.windowSize);
+
+            shutdownAndAwaitTermination(raceDetectorExecutor);
+            if (!Configuration.online) {
+                System.exit(0);
+            } else {
+                return;
             }
-
-            initState = trace.computeFinalState();
+        } catch (InterruptedException e) {
+            System.err.println("Error: prediction interrupted.");
+            System.err.println(e.getMessage());
+        } catch (IOException e) {
+            System.err.println("Error: I/O error during prediction.");
+            System.err.println(e.getMessage());
+            e.printStackTrace();
         }
-        System.exit(0);
+        System.exit(1);
     }
 
-    class ExecutionInfoTask extends Thread {
-        TraceInfo info;
-        long start_time;
-        long TOTAL_TRACE_LENGTH;
 
-        ExecutionInfoTask(long st, TraceInfo info, long size) {
-            this.info = info;
-            this.start_time = st;
-            this.TOTAL_TRACE_LENGTH = size;
-        }
-
-        @Override
-        public void run() {
-
-            // Report statistics about the trace and race detection
-
-            // TODO: query the following information from DB may be expensive
-
-            int TOTAL_THREAD_NUMBER = info.getTraceThreadNumber();
-            int TOTAL_SHAREDVARIABLE_NUMBER = info.getTraceSharedVariableNumber();
-            int TOTAL_BRANCH_NUMBER = info.getTraceBranchNumber();
-            int TOTAL_SHAREDREADWRITE_NUMBER = info.getTraceSharedReadWriteNumber();
-            int TOTAL_LOCALREADWRITE_NUMBER = info.getTraceLocalReadWriteNumber();
-            int TOTAL_INITWRITE_NUMBER = info.getTraceInitWriteNumber();
-
-            int TOTAL_SYNC_NUMBER = info.getTraceSyncNumber();
-            int TOTAL_PROPERTY_NUMBER = info.getTracePropertyNumber();
-
-            if (violations.size() == 0)
-                logger.report("No races found.", Logger.MSGTYPE.INFO);
-            else {
-                logger.report("Trace Size: " + TOTAL_TRACE_LENGTH, Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Threads: " + TOTAL_THREAD_NUMBER, Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #SharedVariables: " + TOTAL_SHAREDVARIABLE_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Shared Read-Writes: " + TOTAL_SHAREDREADWRITE_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Local Read-Writes: " + TOTAL_LOCALREADWRITE_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Initial Writes: " + TOTAL_INITWRITE_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Synchronizations: " + TOTAL_SYNC_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Branches: " + TOTAL_BRANCH_NUMBER, Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Property Events: " + TOTAL_PROPERTY_NUMBER,
-                        Logger.MSGTYPE.STATISTICS);
-
-                logger.report("Total #Potential Violations: "
-                        + (potentialviolations.size() + violations.size()),
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total #Real Violations: " + violations.size(),
-                        Logger.MSGTYPE.STATISTICS);
-                logger.report("Total Time: " + (System.currentTimeMillis() - start_time) + "ms",
-                        Logger.MSGTYPE.STATISTICS);
+    private void shutdownAndAwaitTermination(ExecutorService pool) {
+        pool.shutdown(); // Disable new tasks from being submitted
+        try {
+            // Wait a while for existing tasks to terminate
+            if (!pool.awaitTermination(config.timeout, TimeUnit.SECONDS)) {
+                pool.shutdownNow(); // Cancel currently executing tasks
+                // Wait a while for tasks to respond to being cancelled
+                if (!pool.awaitTermination(config.timeout, TimeUnit.SECONDS))
+                    System.err.println("Pool did not terminate");
             }
-
-            logger.closePrinter();
-
+        } catch (InterruptedException ie) {
+            // (Re-)Cancel if current thread also interrupted
+            pool.shutdownNow();
+            // Preserve interrupt status
+            Thread.currentThread().interrupt();
         }
-
     }
 
+    public Set<Violation> getViolations() {
+        return violations;
+    }
+
+    public Configuration getConfig() {
+        return config;
+    }
+
+    public Logger getLogger() {
+        return logger;
+    }
+
+    public LoggingFactory getLoggingFactory() {
+        return loggingFactory;
+    }
+    
+    public void finishLogging() throws InterruptedException {
+        loggingFactory.finishLogging();
+        owner.join();
+        report();
+    }
+
+    public void setOwner(Thread owner) {
+        this.owner = owner;
+    }
 }

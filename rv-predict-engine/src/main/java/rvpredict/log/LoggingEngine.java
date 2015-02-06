@@ -26,15 +26,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package rvpredict.logging;
+package rvpredict.log;
+
+import rvpredict.config.Configuration;
+import rvpredict.engine.main.RVPredict;
+import rvpredict.trace.EventType;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
-
-import rvpredict.config.Configuration;
-import rvpredict.db.EventItem;
-import rvpredict.runtime.RVPredictRuntime;
-import rvpredict.trace.EventType;
 
 /**
  * Class encapsulating functionality for recording events
@@ -46,8 +45,10 @@ public class LoggingEngine {
 
     private final AtomicLong globalEventID  = new AtomicLong(0);
     private final LoggingServer loggingServer;
+    private final RVPredict predictionServer;
     private final Configuration config;
     private volatile boolean shutdown = false;
+    private final LoggingFactory loggingFactory;
 
 
     /**
@@ -58,31 +59,53 @@ public class LoggingEngine {
         shutdown = true;
         loggingServer.finishLogging();
         if (config.profile) {
-            RVPredictRuntime.printEventStats();
+            EventStats.printEventStats();
+        }
+
+        if (Configuration.online) {
+            predictionServer.finishLogging();
         }
     }
 
     public LoggingEngine(Configuration config) {
         this.config = config;
+        if (Configuration.online) {
+            loggingFactory = new OnlineLoggingFactory();
+            predictionServer = startPredicting();
+        } else {
+            loggingFactory = new OfflineLoggingFactory(config);
+            predictionServer = null;
+        }
         loggingServer = startLogging();
-    }
-
-    public Configuration getConfig() {
-        return config;
     }
 
     private LoggingServer startLogging() {
         final LoggingServer loggingServer = new LoggingServer(this);
-        Thread loggingServerThread = new Thread(loggingServer);
+        Thread loggingServerThread = new Thread(loggingServer, "Logging server");
+        loggingServer.setOwner(loggingServerThread);
         loggingServerThread.setDaemon(true);
         loggingServerThread.start();
         return loggingServer;
     }
+    
+    private RVPredict startPredicting() {
+       RVPredict predictionServer = null;
+        try {
+            predictionServer = new RVPredict(config, loggingFactory);
+        } catch (IOException | ClassNotFoundException e) {
+            assert false : "These exceptions should only be thrown for offline prediction";
+        }
+        Thread predictionServerThread = new Thread(predictionServer, "Prediction main thread");
+        predictionServer.setOwner(predictionServerThread);
+        predictionServerThread.setDaemon(true);
+        predictionServerThread.start();
+        return predictionServer;
+    }
 
     /**
-     * Logs an {@link rvpredict.db.EventItem} to the trace.
+     * Logs an {@link EventItem} to the trace.
      *
-     * @see rvpredict.db.EventItem#EventItem(long, long, int, long, int, long, rvpredict.trace.EventType)
+     * @see EventItem#EventItem(long, long, int, long, int, long, rvpredict.trace.EventType)
      *      for a more elaborate description of the parameters.
      *
      * @param eventType  type of event being recorded
@@ -100,7 +123,11 @@ public class LoggingEngine {
         loggingServer.getOutputStream().writeEvent(e);
     }
 
-    public long getGlobalEventID() {
-        return globalEventID.get();
+    public LoggingFactory getLoggingFactory() {
+        return loggingFactory;
+    }
+
+    public Configuration getConfig() {
+        return config;
     }
 }

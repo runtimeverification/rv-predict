@@ -45,7 +45,7 @@ public class SyncEvent extends AbstractEvent {
      * Returns the {@code long} representation of the synchronization object involved
      * in the event.
      *
-     * @see {@link rvpredict.logging.RecordRT} for the specific object involved
+     * @see {@link rvpredict.log.RecordRT} for the specific object involved
      *      in each event
      */
     public final long getSyncObject() {

@@ -1,8 +1,8 @@
-package rvpredict.logging;
+package rvpredict.log;
 
 import rvpredict.instrumentation.MetaData;
+
 import java.io.*;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
@@ -27,9 +27,8 @@ public class MetadataLoggerThread implements Runnable {
 
     @Override
     public void run() {
-        owner = Thread.currentThread();
         try {
-            metadataOS = createMetadataOS(loggingEngine.getConfig().outdir);
+            metadataOS = loggingEngine.getLoggingFactory().createMetadataOS();
             while (!shutdown) {
                 synchronized (metadataOS) {
                     metadataOS.wait(60000);
@@ -47,12 +46,6 @@ public class MetadataLoggerThread implements Runnable {
             System.err.println("Error: I/O error while creating metadata log file. Metadata will not be recorded.");
             System.err.println(e.getMessage());
         }
-    }
-
-    private static ObjectOutputStream createMetadataOS(String directory) throws IOException {
-        return new ObjectOutputStream(
-                new BufferedOutputStream(
-                        new FileOutputStream(Paths.get(directory, rvpredict.db.DBEngine.METADATA_BIN).toFile())));
     }
 
     private void saveObject(Object object) throws IOException {
@@ -85,9 +78,6 @@ public class MetadataLoggerThread implements Runnable {
                 saveObject(new ArrayList<>(MetaData.unsavedLocIdToStmtSig));
                 MetaData.unsavedLocIdToStmtSig.clear();
             }
-
-            /* Save current trace length */
-            metadataOS.writeLong(loggingEngine.getGlobalEventID());
         } catch (IOException e) {
             System.err.println(e.getMessage());
             System.err.println("I/O Error while saving metadata." +
@@ -107,5 +97,9 @@ public class MetadataLoggerThread implements Runnable {
         }
         owner.join();
         metadataOS.close();
+    }
+
+    public void setOwner(Thread owner) {
+        this.owner = owner;
     }
 }

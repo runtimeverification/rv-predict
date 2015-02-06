@@ -1,16 +1,15 @@
 package rvpredict.util;
 
-import rvpredict.db.DBEngine;
-import rvpredict.db.EventInputStream;
-import rvpredict.db.EventItem;
-import rvpredict.db.TraceCache;
+import rvpredict.config.Configuration;
+import rvpredict.log.EventInputStream;
+import rvpredict.log.EventItem;
+import rvpredict.log.OfflineLoggingFactory;
 import rvpredict.trace.AbstractEvent;
 import rvpredict.trace.Event;
 
 import java.io.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -30,26 +29,26 @@ public class DumpLogFile {
         }
         Path path = Paths.get(args[0]).toAbsolutePath();
         Path directory = path.getParent();
-        DBEngine db = new DBEngine(directory.toString());
-        Map<Integer, String> locIdToStmtSig = db.getLocIdToStmtSig();
+        Configuration configuration = new Configuration();
+        configuration.outdir = directory.toString();
+        OfflineLoggingFactory loggingFactory = new OfflineLoggingFactory(configuration);
         String file = args[0];
         File f = new File(file);
         try {
             InputStream in = new FileInputStream(f);
-            if (file.endsWith(TraceCache.ZIP_EXTENSION)) {
+            if (file.endsWith(OfflineLoggingFactory.ZIP_EXTENSION)) {
                 in = new GZIPInputStream(in);
             }
             EventInputStream inputStream = new EventInputStream(
                     new BufferedInputStream(in));
             System.out.println("Dumping events from " + file);
+            //noinspection InfiniteLoopStatement
             while (true) {
                 EventItem eventItem = inputStream.readEvent();
                 Event event = AbstractEvent.of(eventItem);
-                System.out.println(event.toString() + locIdToStmtSig.get(event.getID()));
+                System.out.println(event.toString() + loggingFactory.getStmtSig(event.getID()));
             }
-        } catch (EOFException _) {
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+        } catch (EOFException ignored) {
         } catch (IOException e) {
             e.printStackTrace();
         }

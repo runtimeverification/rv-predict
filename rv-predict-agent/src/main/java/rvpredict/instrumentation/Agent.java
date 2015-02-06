@@ -13,10 +13,10 @@ import java.util.regex.Pattern;
 
 import org.objectweb.asm.ClassReader;
 import rvpredict.config.Configuration;
-import rvpredict.db.TraceCache;
 import rvpredict.engine.main.Main;
-import rvpredict.logging.LoggingEngine;
+import rvpredict.log.LoggingEngine;
 import rvpredict.instrumentation.transformer.ClassTransformer;
+import rvpredict.log.OfflineLoggingFactory;
 import rvpredict.runtime.RVPredictRuntime;
 import rvpredict.util.Logger;
 
@@ -103,7 +103,9 @@ public class Agent implements ClassFileTransformer {
             config.logger.report("Excluding: " + config.excludeList, Logger.MSGTYPE.INFO);
         }
 
-        TraceCache.removeTraceFiles(config.outdir);
+        if (!Configuration.online) {
+            OfflineLoggingFactory.removeTraceFiles(config.outdir);
+        }
         final LoggingEngine loggingEngine = new LoggingEngine(config);
         RVPredictRuntime.init(loggingEngine);
 
@@ -139,7 +141,7 @@ public class Agent implements ClassFileTransformer {
                 }
             }
         };
-        Thread predict = Main.getPredictionThread(config, cleanupAgent, config.predict);
+        Thread predict = Main.getPredictionThread(config, cleanupAgent, config.predict && !Configuration.online);
         Runtime.getRuntime().addShutdownHook(predict);
 
         if (config.predict) {

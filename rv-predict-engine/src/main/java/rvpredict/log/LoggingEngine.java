@@ -50,23 +50,6 @@ public class LoggingEngine {
     private volatile boolean shutdown = false;
     private final LoggingFactory loggingFactory;
 
-
-    /**
-     * Method invoked at the end of the logging task, to insure that
-     * all data is recorded before concluding.
-     */
-    public void finishLogging() throws IOException, InterruptedException {
-        shutdown = true;
-        loggingServer.finishLogging();
-        if (config.profile) {
-            EventStats.printEventStats();
-        }
-
-        if (Configuration.online) {
-            predictionServer.finishLogging();
-        }
-    }
-
     public LoggingEngine(Configuration config) {
         this.config = config;
         if (Configuration.online) {
@@ -84,6 +67,22 @@ public class LoggingEngine {
         loggingServer.setOwner(loggingServerThread);
         loggingServerThread.setDaemon(true);
         loggingServerThread.start();
+    }
+
+    /**
+     * Method invoked at the end of the logging task, to insure that
+     * all data is recorded before concluding.
+     */
+    public void finishLogging() throws IOException, InterruptedException {
+        shutdown = true;
+        loggingServer.finishLogging();
+        if (config.profile) {
+            EventStats.printEventStats();
+        }
+
+        if (Configuration.online) {
+            predictionServer.finishLogging();
+        }
     }
 
     private RVPredict startPredicting() {

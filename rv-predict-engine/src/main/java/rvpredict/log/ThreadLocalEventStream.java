@@ -8,7 +8,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * of events.  It associates an {@link EventPipe}
  * to each thread.  Current implementation adds these to a registry used by the
  * {@link rvpredict.log.LoggingServer} thread to associate a
- * {@link rvpredict.log.LoggerThread} to each of them for saving their contents
+ * {@link rvpredict.log.Logger} to each of them for saving their contents
  * to disk.
  *
  * @author TraianSF

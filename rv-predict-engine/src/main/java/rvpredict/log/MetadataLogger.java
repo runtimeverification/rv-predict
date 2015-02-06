@@ -15,13 +15,13 @@ import java.util.Set;
  *  - location identification
  *  - number of events written so far
  */
-public class MetadataLoggerThread implements Runnable {
+public class MetadataLogger implements Runnable {
     private ObjectOutputStream metadataOS;
     private final LoggingEngine loggingEngine;
     private boolean shutdown = false;
     private Thread owner;
 
-    public MetadataLoggerThread(LoggingEngine engine) {
+    public MetadataLogger(LoggingEngine engine) {
         loggingEngine = engine;
     }
 

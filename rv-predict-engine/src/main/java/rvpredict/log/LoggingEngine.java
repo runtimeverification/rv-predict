@@ -76,18 +76,16 @@ public class LoggingEngine {
             loggingFactory = new OfflineLoggingFactory(config);
             predictionServer = null;
         }
-        loggingServer = startLogging();
+        loggingServer = new LoggingServer(this);
     }
 
-    private LoggingServer startLogging() {
-        final LoggingServer loggingServer = new LoggingServer(this);
+    public void startLogging() {
         Thread loggingServerThread = new Thread(loggingServer, "Logging server");
         loggingServer.setOwner(loggingServerThread);
         loggingServerThread.setDaemon(true);
         loggingServerThread.start();
-        return loggingServer;
     }
-    
+
     private RVPredict startPredicting() {
        RVPredict predictionServer = null;
         try {
@@ -120,7 +118,7 @@ public class LoggingEngine {
         long gid = globalEventID.incrementAndGet();
         long tid = Thread.currentThread().getId();
         EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
-        loggingServer.getOutputStream().writeEvent(e);
+        loggingServer.writeEvent(e);
     }
 
     public LoggingFactory getLoggingFactory() {

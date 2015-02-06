@@ -32,9 +32,10 @@ public class BufferedEventPipe implements EventPipe {
      * the buffer is made available for reading through a blocking queue.
      *
      * @param event  the event to be sent through the pipe
+     * @throws InterruptedException
      */
     @Override
-    public void writeEvent(EventItem event) {
+    public void writeEvent(EventItem event) throws InterruptedException {
         inBuffer[inIndex++] = event;
         if (inIndex == BUFFER_SIZE) {
             flush();
@@ -74,15 +75,12 @@ public class BufferedEventPipe implements EventPipe {
      * <p>
      * This method needs to be synchronized because it can be called by the
      * cleanup thread from {@link #close()} as well.
+     * @throws InterruptedException
      */
-    private synchronized void flush() {
+    private synchronized void flush() throws InterruptedException {
         if (inIndex != 0) {
             inBuffer[inIndex] = null;
-            try {
-                pipe.put(inBuffer);
-            } catch (InterruptedException e) {
-                System.out.println("Process forcefully ending. All data in current buffer (" + inIndex + " events) lost.");
-            }
+            pipe.put(inBuffer);
             inBuffer = new EventItem[BUFFER_SIZE+1];
             inIndex = 0;
         }

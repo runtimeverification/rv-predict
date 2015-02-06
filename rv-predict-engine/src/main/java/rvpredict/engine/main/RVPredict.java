@@ -32,7 +32,6 @@ import rvpredict.config.Configuration;
 import rvpredict.log.TraceCache;
 import rvpredict.log.LoggingFactory;
 import rvpredict.trace.Trace;
-import rvpredict.trace.TraceInfo;
 import rvpredict.util.Logger;
 import violation.Violation;
 
@@ -45,7 +44,7 @@ import java.util.concurrent.*;
 
 /**
  * Class for predicting violations from a logged execution.
- * 
+ *
  * Splits the log in segments of length {@link rvpredict.config.Configuration#windowSize},
  * each of them being executed as a {@link RaceDetectorTask} task.
  */
@@ -55,7 +54,6 @@ public class RVPredict implements Runnable {
     private final Configuration config;
     private final Logger logger;
     private final TraceCache traceCache;
-    private final TraceInfo traceInfo;
     private LoggingFactory loggingFactory;
     private ExecutionInfoTask infoTask;
     private Thread owner;
@@ -69,8 +67,7 @@ public class RVPredict implements Runnable {
 
         traceCache = new TraceCache(loggingFactory);
 
-        traceInfo = new TraceInfo();
-        infoTask = new ExecutionInfoTask(this, startTime, traceInfo);
+        infoTask = new ExecutionInfoTask(this, startTime);
 
         addHooks();
     }
@@ -104,6 +101,7 @@ public class RVPredict implements Runnable {
             ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(4,
                     new ThreadFactory() {
                         int id = 0;
+                        @Override
                         public Thread newThread(Runnable r) {
                             Thread t = new Thread(r, "Race Detector " + ++id);
                             t.setDaemon(true);
@@ -116,8 +114,7 @@ public class RVPredict implements Runnable {
             // process the trace window by window
             Trace trace;
             do {
-                trace = traceCache.getTrace(fromIndex, fromIndex += config.windowSize, initState, traceInfo);
-                traceInfo.incrementTraceLength(trace.getSize());
+                trace = traceCache.getTrace(fromIndex, fromIndex += config.windowSize, initState);
 
                 if (trace.hasSharedMemAddr()) {
                     raceDetectorExecutor.execute(new RaceDetectorTask(this, trace));
@@ -177,7 +174,7 @@ public class RVPredict implements Runnable {
     public LoggingFactory getLoggingFactory() {
         return loggingFactory;
     }
-    
+
     public void finishLogging() throws InterruptedException {
         loggingFactory.finishLogging();
         owner.join();

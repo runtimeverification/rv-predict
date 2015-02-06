@@ -67,9 +67,12 @@ public class MetaData {
     }
 
     public static int getVariableId(String className, String fieldName) {
+        return getVariableId(getVariableSignature(className, fieldName));
+    }
+
+    public static int getVariableId(String sig) {
         /* YilongL: the following double-checked locking is correct because
          * varSigToId is a ConcurrentHashMap */
-        String sig = getVariableSignature(className, fieldName);
         Integer variableId = varSigToVarId.get(sig);
         if (variableId == null) {
             synchronized (varSigToVarId) {

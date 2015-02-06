@@ -20,10 +20,10 @@ package rvpredict.log;
 public interface EventPipe {
     /**
      * Puts an event in the pipe input buffer. When the buffer limit
-     * 
+     *
      * @param event  the event to be sent through the pipe
      */
-    void writeEvent(EventItem event);
+    void writeEvent(EventItem event) throws InterruptedException;
 
     /**
      * Reads an event from the pipe output buffer.

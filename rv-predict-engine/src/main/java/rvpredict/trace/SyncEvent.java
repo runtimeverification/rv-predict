@@ -57,12 +57,4 @@ public class SyncEvent extends AbstractEvent {
         return String.format("(%s, E%s, T%s, L%s, %s)", type, GID, TID, ID, Long.toHexString(syncObject));
     }
 
-    public boolean isLockEvent() {
-        return EventType.isLock(type) || type == EventType.WAIT_ACQ;
-    }
-
-    public boolean isUnlockEvent() {
-        return EventType.isUnlock(type) || type == EventType.WAIT_REL;
-    }
-
 }

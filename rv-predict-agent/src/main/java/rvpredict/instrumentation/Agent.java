@@ -108,6 +108,7 @@ public class Agent implements ClassFileTransformer {
         }
         final LoggingEngine loggingEngine = new LoggingEngine(config);
         RVPredictRuntime.init(loggingEngine);
+        loggingEngine.startLogging();
 
         inst.addTransformer(new Agent(config), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {

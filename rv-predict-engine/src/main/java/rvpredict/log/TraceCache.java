@@ -1,8 +1,9 @@
 package rvpredict.log;
 
-import rvpredict.trace.AbstractEvent;
 import rvpredict.trace.Event;
+import rvpredict.trace.EventUtils;
 import rvpredict.trace.Trace;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.AbstractMap;
@@ -48,7 +49,7 @@ public class TraceCache {
             EventItem eventItem = getEvent(index);
             if (eventItem == null)
                 break;
-            Event node = AbstractEvent.of(eventItem);
+            Event node = EventUtils.of(eventItem);
             trace.addRawEvent(node);
         }
         trace.finishedLoading();

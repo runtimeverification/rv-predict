@@ -179,7 +179,7 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void logBranch(int locId) {
-        saveEvent(EventType.BRANCH, locId);
+        saveEvent(EventType.BRANCH, locId, 0, 0, 0);
     }
 
     /**
@@ -207,17 +207,17 @@ public final class RVPredictRuntime {
     public static void rvPredictWait(Object object, long timeout, int locId)
             throws InterruptedException {
         long monitorId = calcMonitorId(object);
-        saveEvent(EventType.WAIT_REL, locId, monitorId);
+        saveSyncEvent(EventType.WAIT_REL, locId, monitorId);
         try {
             object.wait(timeout);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveEvent(EventType.WAIT_ACQ, locId, monitorId);
+            saveSyncEvent(EventType.WAIT_ACQ, locId, monitorId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveEvent(EventType.WAIT_ACQ, locId, monitorId);
+        saveSyncEvent(EventType.WAIT_ACQ, locId, monitorId);
     }
 
     /**
@@ -236,17 +236,17 @@ public final class RVPredictRuntime {
     public static void rvPredictWait(Object object, long timeout, int nano, int locId)
             throws InterruptedException {
         long monitorId = calcMonitorId(object);
-        saveEvent(EventType.WAIT_REL, locId, monitorId);
+        saveSyncEvent(EventType.WAIT_REL, locId, monitorId);
         try {
             object.wait(timeout, nano);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveEvent(EventType.WAIT_ACQ, locId, monitorId);
+            saveSyncEvent(EventType.WAIT_ACQ, locId, monitorId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveEvent(EventType.WAIT_ACQ, locId, monitorId);
+        saveSyncEvent(EventType.WAIT_ACQ, locId, monitorId);
     }
 
     /**
@@ -259,7 +259,7 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void logMonitorEnter(Object object, int locId) {
-        saveEvent(EventType.WRITE_LOCK, locId, calcMonitorId(object));
+        saveSyncEvent(EventType.WRITE_LOCK, locId, calcMonitorId(object));
     }
 
     /**
@@ -272,7 +272,7 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void logMonitorExit(Object object, int locId) {
-        saveEvent(EventType.WRITE_UNLOCK, locId, calcMonitorId(object));
+        saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcMonitorId(object));
     }
 
     /**
@@ -371,7 +371,7 @@ public final class RVPredictRuntime {
     public static void rvPredictStart(Thread thread, int locId) {
         saveEvent(EventType.INIT, locId, System.identityHashCode(thread),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-        saveEvent(EventType.START, locId, thread.getId());
+        saveSyncEvent(EventType.START, locId, thread.getId());
         thread.start();
     }
 
@@ -402,17 +402,17 @@ public final class RVPredictRuntime {
      */
     public static void rvPredictJoin(Thread thread, long millis, int locId)
             throws InterruptedException {
-        saveEvent(EventType.PRE_JOIN, locId, thread.getId());
+        saveSyncEvent(EventType.PRE_JOIN, locId, thread.getId());
         try {
             thread.join(millis);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveEvent(EventType.JOIN_MAYBE_FAILED, locId, thread.getId());
+            saveSyncEvent(EventType.JOIN_MAYBE_FAILED, locId, thread.getId());
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveEvent(millis == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_FAILED, locId,
+        saveSyncEvent(millis == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_FAILED, locId,
                 thread.getId());
     }
 
@@ -433,17 +433,17 @@ public final class RVPredictRuntime {
      */
     public static void rvPredictJoin(Thread thread, long millis, int nanos, int locId)
             throws InterruptedException {
-        saveEvent(EventType.PRE_JOIN, locId, thread.getId());
+        saveSyncEvent(EventType.PRE_JOIN, locId, thread.getId());
         try {
             thread.join(millis, nanos);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveEvent(EventType.JOIN_MAYBE_FAILED, locId, thread.getId());
+            saveSyncEvent(EventType.JOIN_MAYBE_FAILED, locId, thread.getId());
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveEvent(millis == 0 && nanos == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_FAILED,
+        saveSyncEvent(millis == 0 && nanos == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_FAILED,
                 locId, thread.getId());
     }
 
@@ -562,7 +562,7 @@ public final class RVPredictRuntime {
      */
     public static void rvPredictLock(Lock lock, int locId) {
         lock.lock();
-        saveEvent(getLockEventType(lock), locId, calcLockId(lock));
+        saveSyncEvent(getLockEventType(lock), locId, calcLockId(lock));
     }
 
     /**
@@ -580,7 +580,7 @@ public final class RVPredictRuntime {
         try {
             lock.lockInterruptibly();
             onBlockingMethodNormalReturn(locId);
-            saveEvent(getLockEventType(lock), locId, calcLockId(lock));
+            saveSyncEvent(getLockEventType(lock), locId, calcLockId(lock));
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
             throw e;
@@ -598,7 +598,7 @@ public final class RVPredictRuntime {
     public static boolean rvPredictTryLock(Lock lock, int locId) {
         boolean acquired = lock.tryLock();
         if (acquired) {
-            saveEvent(getLockEventType(lock), locId, calcLockId(lock));
+            saveSyncEvent(getLockEventType(lock), locId, calcLockId(lock));
         }
         return acquired;
     }
@@ -624,7 +624,7 @@ public final class RVPredictRuntime {
             boolean acquired = lock.tryLock(time, unit);
             if (acquired) {
                 onBlockingMethodNormalReturn(locId);
-                saveEvent(EventType.WRITE_LOCK, locId, calcLockId(lock));
+                saveSyncEvent(EventType.WRITE_LOCK, locId, calcLockId(lock));
             }
             return acquired;
         } catch (InterruptedException e) {
@@ -642,7 +642,7 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void rvPredictUnlock(Lock lock, int locId) {
-        saveEvent(getUnlockEventType(lock), locId, calcLockId(lock));
+        saveSyncEvent(getUnlockEventType(lock), locId, calcLockId(lock));
         lock.unlock();
     }
 
@@ -679,17 +679,17 @@ public final class RVPredictRuntime {
     public static void rvPredictConditionAwait(Condition condition, int locId)
             throws InterruptedException {
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveEvent(EventType.WAIT_REL, locId, lockId);
+        saveSyncEvent(EventType.WAIT_REL, locId, lockId);
         try {
             condition.await();
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
     }
 
     /**
@@ -699,17 +699,17 @@ public final class RVPredictRuntime {
             int locId) throws InterruptedException {
         boolean result;
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveEvent(EventType.WAIT_REL, locId, lockId);
+        saveSyncEvent(EventType.WAIT_REL, locId, lockId);
         try {
             result = condition.await(time, unit);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
         return result;
     }
 
@@ -720,17 +720,17 @@ public final class RVPredictRuntime {
             int locId) throws InterruptedException {
         long result;
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveEvent(EventType.WAIT_REL, locId, lockId);
+        saveSyncEvent(EventType.WAIT_REL, locId, lockId);
         try {
             result = condition.awaitNanos(nanosTimeout);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
         return result;
     }
 
@@ -741,17 +741,17 @@ public final class RVPredictRuntime {
             throws InterruptedException {
         boolean result;
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveEvent(EventType.WAIT_REL, locId, lockId);
+        saveSyncEvent(EventType.WAIT_REL, locId, lockId);
         try {
             result = condition.awaitUntil(deadline);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveEvent(EventType.WAIT_ACQ, locId, lockId);
+            saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
         return result;
     }
 
@@ -760,9 +760,9 @@ public final class RVPredictRuntime {
      */
     public static void rvPredictConditionAwaitUninterruptibly(Condition condition, int locId) {
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveEvent(EventType.WAIT_REL, locId, lockId);
+        saveSyncEvent(EventType.WAIT_REL, locId, lockId);
         condition.awaitUninterruptibly();
-        saveEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
     }
 
     /**
@@ -773,11 +773,11 @@ public final class RVPredictRuntime {
         int result;
         try {
             synchronized (sync) {
-                saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
+                saveSyncEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
                 result = (int) AQS_GET_STATE.invoke(sync);
                 saveEvent(EventType.READ, locId, System.identityHashCode(sync),
                         -AQS_MOCK_STATE_ID, result);
-                saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
+                saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
             }
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
                 | SecurityException e) {
@@ -793,11 +793,11 @@ public final class RVPredictRuntime {
             int newState, int locId) {
         try {
             synchronized (sync) {
-                saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
+                saveSyncEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
                 AQS_SET_STATE.invoke(sync, newState);
                 saveEvent(EventType.WRITE, locId, System.identityHashCode(sync),
                         -AQS_MOCK_STATE_ID, newState);
-                saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
+                saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
             }
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
                 | SecurityException e) {
@@ -813,7 +813,7 @@ public final class RVPredictRuntime {
         boolean result;
         try {
             synchronized (sync) {
-                saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
+                saveSyncEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(sync));
                 saveEvent(EventType.READ, locId, System.identityHashCode(sync),
                         -AQS_MOCK_STATE_ID, (int) AQS_GET_STATE.invoke(sync));
                 result = (boolean) AQS_CAS_STATE.invoke(sync, expect, update);
@@ -821,7 +821,7 @@ public final class RVPredictRuntime {
                     saveEvent(EventType.READ, locId, System.identityHashCode(sync),
                             -AQS_MOCK_STATE_ID, update);
                 }
-                saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
+                saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
             }
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
                 | SecurityException e) {
@@ -836,11 +836,11 @@ public final class RVPredictRuntime {
     public static boolean rvPredictAtomicBoolGet(AtomicBoolean atomicBool, int locId) {
         boolean result;
         synchronized (atomicBool) {
-            saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
+            saveSyncEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
             result = atomicBool.get();
             saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
                     -ATOMIC_BOOLEAN_MOCK_VAL_ID, result ? 1 : 0);
-            saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
+            saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }
         return result;
     }
@@ -850,11 +850,11 @@ public final class RVPredictRuntime {
      */
     public static void rvPredictAtomicBoolSet(AtomicBoolean atomicBool, boolean newValue, int locId) {
         synchronized (atomicBool) {
-            saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
+            saveSyncEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
             atomicBool.set(newValue);
             saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
                     -ATOMIC_BOOLEAN_MOCK_VAL_ID, newValue ? 1 : 0);
-            saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
+            saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }
     }
 
@@ -865,13 +865,13 @@ public final class RVPredictRuntime {
             int locId) {
         boolean result;
         synchronized (atomicBool) {
-            saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
+            saveSyncEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
             saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
                     -ATOMIC_BOOLEAN_MOCK_VAL_ID, atomicBool.get() ? 1 : 0);
             result = atomicBool.getAndSet(newValue);
             saveEvent(EventType.WRITE, locId, System.identityHashCode(atomicBool),
                     -ATOMIC_BOOLEAN_MOCK_VAL_ID, newValue ? 1 : 0);
-            saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
+            saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }
         return result;
     }
@@ -883,7 +883,7 @@ public final class RVPredictRuntime {
             boolean update, int locId) {
         boolean result;
         synchronized (atomicBool) {
-            saveEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
+            saveSyncEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
             saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
                     -ATOMIC_BOOLEAN_MOCK_VAL_ID, atomicBool.get() ? 1 : 0);
             result = atomicBool.compareAndSet(expect, update);
@@ -891,7 +891,7 @@ public final class RVPredictRuntime {
                 saveEvent(EventType.WRITE, locId, System.identityHashCode(atomicBool),
                         -ATOMIC_BOOLEAN_MOCK_VAL_ID, update ? 1 : 0);
             }
-            saveEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
+            saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }
         return result;
     }
@@ -1276,14 +1276,6 @@ public final class RVPredictRuntime {
         return (ATOMIC_LOCK_C << 32L) + System.identityHashCode(atomicVar);
     }
 
-    private static EventType getLockEventType(Lock lock) {
-        return readLockToRWLock.containsKey(lock) ? EventType.READ_LOCK : EventType.WRITE_LOCK;
-    }
-
-    private static EventType getUnlockEventType(Lock lock) {
-        return readLockToRWLock.containsKey(lock) ? EventType.READ_UNLOCK : EventType.WRITE_UNLOCK;
-    }
-
     private static long calcLockId(Lock lock) {
         if (readLockToRWLock.containsKey(lock)) {
             /* get the associated ReadWriteLock for read lock */
@@ -1295,6 +1287,14 @@ public final class RVPredictRuntime {
             /* normal lock */
             return System.identityHashCode(lock);
         }
+    }
+
+    private static EventType getLockEventType(Lock lock) {
+        return readLockToRWLock.containsKey(lock) ? EventType.READ_LOCK : EventType.WRITE_LOCK;
+    }
+
+    private static EventType getUnlockEventType(Lock lock) {
+        return readLockToRWLock.containsKey(lock) ? EventType.READ_UNLOCK : EventType.WRITE_UNLOCK;
     }
 
     /**
@@ -1447,26 +1447,16 @@ public final class RVPredictRuntime {
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
     }
 
-    private static void saveEvent(EventType eventType, int id, long addrl, int addrr, long value) {
+    private static void saveEvent(EventType eventType, int id, int addrl, int addrr, long value) {
         if (loggingEngine.getConfig().profile) {
             EventStats.updateEventStats();
         }
         loggingEngine.saveEvent(eventType, id, addrl, addrr, value);
     }
 
-    /**
-     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, int, long)}
-     * The missing arguments default to 0.
-     */
-    private static void saveEvent(EventType eventType, int locId, long arg) {
-        saveEvent(eventType, locId, arg, 0, 0);
-    }
-
-    /**
-     * Wrapper for {@link #saveEvent(rvpredict.trace.EventType, int, long, int, long)}
-     * The missing arguments default to 0.
-     */
-    private static void saveEvent(EventType eventType, int locId) {
-        saveEvent(eventType, locId, 0, 0, 0);
+    private static void saveSyncEvent(EventType eventType, int locId, long syncObj) {
+        int lower32 = (int) syncObj;
+        int upper32 = (int)(syncObj >> 32);
+        saveEvent(eventType, locId, upper32, lower32, 0);
     }
 }

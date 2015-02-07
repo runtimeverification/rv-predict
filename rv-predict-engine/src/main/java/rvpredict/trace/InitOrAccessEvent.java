@@ -3,10 +3,10 @@ package rvpredict.trace;
 public abstract class InitOrAccessEvent extends AbstractEvent {
 
     protected final long value;
-    protected final long objectHashCode;
+    protected final int objectHashCode;
     protected final int index;
 
-    protected InitOrAccessEvent(long GID, long TID, int ID, EventType type, long objectHashCode,
+    protected InitOrAccessEvent(long GID, long TID, int ID, EventType type, int objectHashCode,
             int index, long value) {
         super(GID, TID, ID, type);
         this.objectHashCode = objectHashCode;
@@ -18,11 +18,12 @@ public abstract class InitOrAccessEvent extends AbstractEvent {
      * Returns {@code String} representation of the memory address involved in
      * the event.
      */
+    @Deprecated
     public final String getAddr() {
         if (index < 0) {
-            return Long.toHexString(objectHashCode) + "." + -index;
+            return Integer.toHexString(objectHashCode) + "." + -index;
         } else {
-            return Long.toHexString(objectHashCode) + "[" + index + "]";
+            return Integer.toHexString(objectHashCode) + "[" + index + "]";
         }
     }
 

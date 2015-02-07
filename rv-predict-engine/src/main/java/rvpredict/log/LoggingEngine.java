@@ -111,7 +111,7 @@ public class LoggingEngine {
      * @param addrr additional information identifying the event
      * @param value data involved in the event
      */
-    public void saveEvent(EventType eventType, int id, long addrl, int addrr, long value) {
+    public void saveEvent(EventType eventType, int id, int addrl, int addrr, long value) {
         if (shutdown) return;
 
         long gid = globalEventID.incrementAndGet();

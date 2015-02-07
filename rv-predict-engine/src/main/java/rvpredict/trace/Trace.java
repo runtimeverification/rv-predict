@@ -65,12 +65,12 @@ public class Trace {
     /**
      * Read threads on each address.
      */
-    private final Map<String, Set<Long>> addrToReadThreads = new HashMap<>();
+    private final Map<MemoryAddr, Set<Long>> addrToReadThreads = new HashMap<>();
 
     /**
      * Write threads on each address.
      */
-    private final Map<String, Set<Long>> addrToWriteThreads = new HashMap<>();
+    private final Map<MemoryAddr, Set<Long>> addrToWriteThreads = new HashMap<>();
 
     /**
      * Lock level table indexed by thread ID and lock object.
@@ -85,7 +85,7 @@ public class Trace {
     /**
      * Shared memory locations.
      */
-    private final Set<String> sharedMemAddr = new HashSet<>();
+    private final Set<MemoryAddr> sharedMemAddr = new HashSet<>();
 
     private final Set<Long> threadIds = new HashSet<>();
 
@@ -115,17 +115,17 @@ public class Trace {
     /**
      * Read events on each address.
      */
-    private final Map<String, List<ReadEvent>> addrToReadEvents = new HashMap<>();
+    private final Map<MemoryAddr, List<ReadEvent>> addrToReadEvents = new HashMap<>();
 
     /**
      * Write events on each address.
      */
-    private final Map<String, List<WriteEvent>> addrToWriteEvents = new HashMap<>();
+    private final Map<MemoryAddr, List<WriteEvent>> addrToWriteEvents = new HashMap<>();
 
     /**
      * Lists of {@code MemoryAccessEvent}'s indexed by address and thread ID.
      */
-    private final Table<String, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
+    private final Table<MemoryAddr, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
     private final LoggingFactory loggingFactory;
 
     private List<ReadEvent> allReadNodes;
@@ -148,7 +148,7 @@ public class Trace {
         return allEvents;
     }
 
-    public Long getInitValueOf(String addr) {
+    public Long getInitValueOf(MemoryAddr addr) {
         Long initValue = initState.addrToValue.get(addr);
         // TODO(YilongL): assuming that every variable is initialized is very Java-specific
         return initValue == null ? 0 : initValue;
@@ -197,17 +197,17 @@ public class Trace {
         return lockObjToSyncEvents;
     }
 
-    public List<ReadEvent> getReadEventsOn(String addr) {
+    public List<ReadEvent> getReadEventsOn(MemoryAddr addr) {
         List<ReadEvent> events = addrToReadEvents.get(addr);
         return events == null ? Lists.<ReadEvent>newArrayList() : events;
     }
 
-    public List<WriteEvent> getWriteEventsOn(String addr) {
+    public List<WriteEvent> getWriteEventsOn(MemoryAddr addr) {
         List<WriteEvent> events = addrToWriteEvents.get(addr);
         return events == null ? Lists.<WriteEvent>newArrayList() : events;
     }
 
-    public Table<String, Long, List<MemoryAccessEvent>> getMemAccessEventsTable() {
+    public Table<MemoryAddr, Long, List<MemoryAccessEvent>> getMemAccessEventsTable() {
         return memAccessEventsTbl;
     }
 
@@ -302,7 +302,7 @@ public class Trace {
             finalState.addrToValue.put(initOrAcc.getAddr(), initOrAcc.getValue());
         }
         if (event instanceof MemoryAccessEvent) {
-            String addr = ((MemoryAccessEvent) event).getAddr();
+            MemoryAddr addr = ((MemoryAccessEvent) event).getAddr();
             Long tid = event.getTID();
 
             if (event instanceof ReadEvent) {
@@ -373,7 +373,7 @@ public class Trace {
             // TODO: Optimize it -- no need to update it every time
             if (event instanceof MemoryAccessEvent) {
                 MemoryAccessEvent mnode = (MemoryAccessEvent) event;
-                String addr = mnode.getAddr();
+                MemoryAddr addr = mnode.getAddr();
 
                 List<MemoryAccessEvent> memAccessEvents = memAccessEventsTbl.get(addr, tid);
                 if (memAccessEvents == null) {
@@ -438,7 +438,7 @@ public class Trace {
     public void finishedLoading() {
         rawEvents = rawEventsBuilder.build();
 
-        for (String addr : Iterables.concat(addrToReadThreads.keySet(),
+        for (MemoryAddr addr : Iterables.concat(addrToReadThreads.keySet(),
                 addrToWriteThreads.keySet())) {
             Set<Long> wrtThrdIds = addrToWriteThreads.get(addr);
             if (wrtThrdIds != null && !wrtThrdIds.isEmpty()) {
@@ -468,7 +468,7 @@ public class Trace {
         List<Event> reducedEvents = new ArrayList<>();
         for (Event event : rawEvents) {
             if (event instanceof InitOrAccessEvent) {
-                String addr = ((InitOrAccessEvent) event).getAddr();
+                MemoryAddr addr = ((InitOrAccessEvent) event).getAddr();
                 if (sharedMemAddr.contains(addr)) {
                     reducedEvents.add(event);
                 }
@@ -531,14 +531,13 @@ public class Trace {
      * Checks if a memory address is volatile.
      *
      * @param addr
-     *            {@code String} representation of the memory address as defined
-     *            in {@link InitOrAccessEvent#getAddr()}
+     *            the memory address
      * @return {@code true} if the address is {@code volatile}; otherwise,
      *         {@code false}
      */
-    public boolean isVolatileField(String addr) {
-        int dotPos = addr.indexOf(".");
-        return dotPos != -1 && loggingFactory.isVolatile(Integer.valueOf(addr.substring(dotPos + 1)));
+    public boolean isVolatileField(MemoryAddr addr) {
+        int fieldId = -addr.fieldIdOrArrayIndex();
+        return fieldId > 0 && loggingFactory.isVolatile(fieldId);
     }
 
     public static class State {
@@ -546,7 +545,7 @@ public class Trace {
         /**
          * Map from memory address to its value.
          */
-        private Map<String, Long> addrToValue = Maps.newHashMap();
+        private Map<MemoryAddr, Long> addrToValue = Maps.newHashMap();
 
         public State() { }
 

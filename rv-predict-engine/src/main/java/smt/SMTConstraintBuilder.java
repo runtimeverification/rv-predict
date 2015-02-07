@@ -53,6 +53,7 @@ import rvpredict.config.Configuration;
 
 public class SMTConstraintBuilder {
 
+    public static final long _0X_DEADBEEFL = 0xDEADBEEFL;
     private static AtomicInteger id = new AtomicInteger();// constraint id
     private SMTTaskRun task;
 
@@ -302,7 +303,7 @@ public class SMTConstraintBuilder {
      * feasibility constraint is also satisfied.
      */
     private String getConcreteFeasibilityConstraint(MemoryAccessEvent event) {
-        if (computedConcretePhi.contains(event) || event.getValue() == 0xDEADBEEFL) {
+        if (computedConcretePhi.contains(event) || event.getValue() == _0X_DEADBEEFL) {
             return makeConcretePhiVariable(event);
         }
         computedConcretePhi.add(event);

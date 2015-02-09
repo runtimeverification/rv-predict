@@ -49,7 +49,7 @@ import rvpredict.instrumentation.MetaData;
 import rvpredict.log.EventStats;
 import rvpredict.log.LoggingEngine;
 import rvpredict.trace.EventType;
-import smt.SMTConstraintBuilder;
+import rvpredict.trace.Trace;
 
 /**
  * RV-Predict runtime library that consists of instrumented methods for logging
@@ -120,7 +120,7 @@ public final class RVPredictRuntime {
      * this dummy value, the prediction engine has to understand this dummy
      * value to avoid generating read-write consistency constraint for it.
      */
-    private static final long DUMMY_VALUE = SMTConstraintBuilder._0X_DEADBEEFL;
+    private static final long DUMMY_VALUE = Trace._0X_DEADBEEFL;
 
     private static final String MOCK_STATE_FIELD = "$state";
 

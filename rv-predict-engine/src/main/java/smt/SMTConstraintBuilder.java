@@ -53,7 +53,6 @@ import rvpredict.config.Configuration;
 
 public class SMTConstraintBuilder {
 
-    public static final long _0X_DEADBEEFL = 0xDEADBEEFL;
     private static AtomicInteger id = new AtomicInteger();// constraint id
     private SMTTaskRun task;
 
@@ -303,7 +302,7 @@ public class SMTConstraintBuilder {
      * feasibility constraint is also satisfied.
      */
     private String getConcreteFeasibilityConstraint(MemoryAccessEvent event) {
-        if (computedConcretePhi.contains(event) || event.getValue() == _0X_DEADBEEFL) {
+        if (computedConcretePhi.contains(event) || event.getValue() == Trace._0X_DEADBEEFL) {
             return makeConcretePhiVariable(event);
         }
         computedConcretePhi.add(event);
@@ -339,13 +338,15 @@ public class SMTConstraintBuilder {
 
             /* case 1: the dependent read reads the initial value */
             StringBuilder case1 = new StringBuilder("false");
-            if (thrdImdWrtPred == null
-                    && trace.getInitValueOf(event.getAddr()) == event.getValue()) {
-                case1 = new StringBuilder("(and true ");
-                for (WriteEvent write : predWriteSet) {
-                    case1.append(getAsstHappensBefore(event, write));
+            if (thrdImdWrtPred == null) {
+                long initVal = trace.getInitValueOf(event.getAddr());
+                if (initVal == event.getValue() || initVal == Trace._0X_DEADBEEFL) {
+                    case1 = new StringBuilder("(and true ");
+                    for (WriteEvent write : predWriteSet) {
+                        case1.append(getAsstHappensBefore(event, write));
+                    }
+                    case1.append(")");
                 }
-                case1.append(")");
             }
 
             /* case 2: the dependent read reads a previously written value */

@@ -56,6 +56,8 @@ import rvpredict.log.LoggingFactory;
  */
 public class Trace {
 
+    public static final long _0X_DEADBEEFL = 0xDEADBEEFL;
+
     /**
      * Unprocessed raw events reading from the logging phase.
      */
@@ -126,6 +128,7 @@ public class Trace {
      * Lists of {@code MemoryAccessEvent}'s indexed by address and thread ID.
      */
     private final Table<MemoryAddr, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
+
     private final LoggingFactory loggingFactory;
 
     private List<ReadEvent> allReadNodes;
@@ -148,10 +151,18 @@ public class Trace {
         return allEvents;
     }
 
+    /**
+     * Gets the initial value of a memory address.
+     *
+     * @param addr
+     *            the address
+     * @return the actual initial value of the memory address or a dummy value
+     *         {@link #_0X_DEADBEEFL} if the initial value is not recorded or
+     *         missing
+     */
     public Long getInitValueOf(MemoryAddr addr) {
         Long initValue = initState.addrToValue.get(addr);
-        // TODO(YilongL): assuming that every variable is initialized is very Java-specific
-        return initValue == null ? 0 : initValue;
+        return initValue == null ? _0X_DEADBEEFL : initValue;
     }
 
     public Event getFirstThreadEvent(long threadId) {

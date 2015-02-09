@@ -70,7 +70,9 @@ public enum EventType {
      * Serves as a guard of a possible control flow change, which
      * determines the next instruction to execute in a thread.
      */
-    BRANCH;
+    BRANCH,
+
+    FINALIZE;
 
     public static boolean isLock(EventType type) {
         return type == WRITE_LOCK || type == READ_LOCK;

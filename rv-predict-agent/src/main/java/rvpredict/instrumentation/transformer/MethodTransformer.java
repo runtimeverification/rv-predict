@@ -7,26 +7,20 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.InstructionAdapter;
 import org.objectweb.asm.commons.Method;
+
 import rvpredict.config.Configuration;
 import rvpredict.instrumentation.MetaData;
 import rvpredict.instrumentation.RVPredictInterceptor;
 import rvpredict.instrumentation.RVPredictRuntimeMethod;
 import rvpredict.instrumentation.RVPredictRuntimeMethods;
-import rvpredict.runtime.RVPredictRuntime;
 
 import java.util.Set;
 
 import static org.objectweb.asm.Opcodes.*;
+import static rvpredict.instrumentation.InstrumentationUtils.*;
 import static rvpredict.instrumentation.RVPredictRuntimeMethods.*;
 
 public class MethodTransformer extends MethodVisitor {
-
-    private static final Type OBJECT_TYPE    = Type.getObjectType("java/lang/Object");
-    private static final Type CLASS_TYPE     = Type.getObjectType("java/lang/Class");
-    private static final Type JL_FLOAT_TYPE  = Type.getObjectType("java/lang/Float");
-    private static final Type JL_DOUBLE_TYPE = Type.getObjectType("java/lang/Double");
-    private static final Type JL_SYSTEM_TYPE = Type.getObjectType("java/lang/System");
-    private static final Type RVPREDICT_RUNTIME_TYPE = Type.getType(RVPredictRuntime.class);
 
     private final InstructionAdapter mv;
 

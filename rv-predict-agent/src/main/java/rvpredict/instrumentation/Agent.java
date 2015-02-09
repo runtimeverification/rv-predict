@@ -38,6 +38,7 @@ public class Agent implements ClassFileTransformer {
                 "com/beust",
                 "org/apache/tools/ant",
                 "org/apache/commons/collections4",
+                "org/apache/commons/lang3",
 
                 // array type
                 "[",
@@ -231,7 +232,12 @@ public class Agent implements ClassFileTransformer {
                 }
             }
 
-            return toInstrument ? ClassTransformer.transform(loader, cbuf, config) : null;
+            if (toInstrument) {
+                byte[] transformed = ClassTransformer.transform(loader, c == null, cbuf, config);
+                return transformed;
+            } else {
+                return null;
+            }
         } catch (Throwable e) {
             /* exceptions during class loading are silently suppressed by default */
             System.err.println("Cannot retransform " + cname + ". Exception: " + e);

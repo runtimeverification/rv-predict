@@ -183,6 +183,11 @@ public final class RVPredictRuntime {
         saveEvent(EventType.BRANCH, locId, 0, 0, 0);
     }
 
+    public static void logObjectFinalize(Object object) {
+//        System.err.println("FINALIZE " + System.identityHashCode(object));
+//        saveEvent(EventType.FINALIZE, 0, System.identityHashCode(object), 0, 0);
+    }
+
     /**
      * Logs events produced by invoking {@code object.wait()}.
      *

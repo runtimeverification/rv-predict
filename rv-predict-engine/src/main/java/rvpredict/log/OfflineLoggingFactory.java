@@ -12,10 +12,10 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 /**
- * An implementation of the {@link rvpredict.log.LoggingFactory} interface used for 
+ * An implementation of the {@link rvpredict.log.LoggingFactory} interface used for
  * offline prediction.
- * 
- * Metadata and events are written and read from files in the 
+ *
+ * Metadata and events are written and read from files in the
  * {@link rvpredict.config.Configuration#outdir} directory.
  *
  * @author Traian SF
@@ -65,6 +65,7 @@ public class OfflineLoggingFactory implements LoggingFactory {
         }
     }
 
+    @Override
     public EventOutputStream createEventOutputStream() throws IOException {
         int id = logFileId.incrementAndGet();
         OutputStream outputStream = new FileOutputStream(Paths.get(config.outdir,
@@ -95,7 +96,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
                 EventInputStream inputStream = new EventInputStream(
                         new BufferedInputStream(in));
                 inputStreams.add(inputStream);
-
             }
         }
         if (inputStreamsIterator == null) {
@@ -166,6 +166,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
     public EventPipe createEventPipe() {
         return new BufferedEventPipe();
     }
-    
-    
+
+
 }

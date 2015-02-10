@@ -10,11 +10,7 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.commons.lang3.tuple.Pair;
 import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
@@ -151,46 +147,6 @@ public class InstrumentationUtils {
             }
         }
         return interfaces;
-    }
-
-    /**
-     * Gets the defining class of the {@code finalize()} method to be overriden,
-     * that is, the class referred to by {@code super.finalize()} in the current
-     * class.
-     *
-     * @param superName
-     *            the internal superclass name of the current class
-     * @param loader
-     *            the defining loader of the current class; maybe {@code null}
-     *            if it is the bootstrap loader
-     * @return the internal name of the least ancestor class defining method
-     *         {@code finalize()} plus a boolean specifying if method
-     *         {@code finalize()} is declared as final
-     */
-    public static Pair<String, Boolean> getSuperFinalizeClass(String superName, ClassLoader loader) {
-        while (true) {
-            ClassReader reader = getClassReader(superName, loader);
-            final MutableBoolean hasFinalize = new MutableBoolean();
-            final MutableBoolean isFinal = new MutableBoolean();
-            ClassVisitor methodCollector = new ClassVisitor(Opcodes.ASM5) {
-                @Override
-                public MethodVisitor visitMethod(int access, String name, String desc, String signature,
-                        String[] exceptions) {
-                    if (hasFinalize.isFalse() && (name + desc).equals("finalize()V")) {
-                        hasFinalize.setTrue();
-                        isFinal.setValue((access & Opcodes.ACC_FINAL) != 0);
-                    }
-                    return null;
-                }
-            };
-            reader.accept(methodCollector, ClassReader.SKIP_CODE);
-
-            if (hasFinalize.isTrue()) {
-                return Pair.of(superName, isFinal.booleanValue());
-            } else {
-                superName = reader.getSuperName();
-            }
-        }
     }
 
     public static void printTransformedClassToFile(String cname, byte[] cbuf, String dir) {

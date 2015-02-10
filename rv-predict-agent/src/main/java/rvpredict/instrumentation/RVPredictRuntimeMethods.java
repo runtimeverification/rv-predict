@@ -31,7 +31,6 @@ public class RVPredictRuntimeMethods {
     public static final RVPredictRuntimeMethod LOG_MONITOR_ENTER =  init("logMonitorEnter", O, I);
     public static final RVPredictRuntimeMethod LOG_MONITOR_EXIT  =  init("logMonitorExit", O, I);
     public static final RVPredictRuntimeMethod LOG_BRANCH        =  init("logBranch", I);
-    public static final RVPredictRuntimeMethod LOG_OBJECT_FINALIZE =  init("logObjectFinalize", O);
 
     /*
      * Some useful constants.

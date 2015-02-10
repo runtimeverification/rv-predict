@@ -233,7 +233,7 @@ public class Agent implements ClassFileTransformer {
             }
 
             if (toInstrument) {
-                byte[] transformed = ClassTransformer.transform(loader, c == null, cbuf, config);
+                byte[] transformed = ClassTransformer.transform(loader, cbuf, config);
                 return transformed;
             } else {
                 return null;

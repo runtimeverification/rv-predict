@@ -33,7 +33,7 @@ import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.log.TraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Logger;
-import violation.Violation;
+import com.runtimeverification.rvpredict.violation.Violation;
 
 import java.io.IOException;
 import java.util.Collections;

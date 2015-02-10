@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package smt;
+package com.runtimeverification.rvpredict.smt;
 
 import com.runtimeverification.rvpredict.trace.Event;
 import com.runtimeverification.rvpredict.trace.EventType;
@@ -36,8 +36,8 @@ import com.runtimeverification.rvpredict.trace.LockRegion;
 import com.runtimeverification.rvpredict.trace.ReadEvent;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.WriteEvent;
-import graph.LockSetEngine;
-import graph.ReachabilityEngine;
+import com.runtimeverification.rvpredict.graph.LockSetEngine;
+import com.runtimeverification.rvpredict.graph.ReachabilityEngine;
 
 import java.util.Map;
 import java.util.List;

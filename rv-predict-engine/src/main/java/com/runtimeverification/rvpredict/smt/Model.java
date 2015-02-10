@@ -29,7 +29,7 @@
   either expressed or implied, of the FreeBSD Project.
  */
 
-package smt;
+package com.runtimeverification.rvpredict.smt;
 
 import java.util.Map;
 import java.util.HashMap;

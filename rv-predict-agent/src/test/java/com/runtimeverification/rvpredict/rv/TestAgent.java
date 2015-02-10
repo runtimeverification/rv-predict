@@ -1,4 +1,4 @@
-package rv;
+package com.runtimeverification.rvpredict.rv;
 
 import java.util.ArrayList;
 import java.util.List;

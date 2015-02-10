@@ -1,4 +1,4 @@
-package asm;
+package com.runtimeverification.rvpredict.asm;
 
 import java.io.IOException;
 
@@ -18,7 +18,12 @@ public class MethodWriterTest {
         ClassWriter cw = new ClassWriter(cr, 0);
         StringBuilder resultBuilder = new StringBuilder();
         cr.accept(new MyClassVisitor(Opcodes.ASM5, cw, resultBuilder), 0);
-        Assert.assertEquals("asm/ClassB|asm/ClassA|asm/ClassB|asm/ClassA|asm/ClassB|asm/ClassA|",
+        Assert.assertEquals("com/runtimeverification/rvpredict/asm/ClassB" +
+                        "|com/runtimeverification/rvpredict/asm/ClassA" +
+                        "|com/runtimeverification/rvpredict/asm/ClassB" +
+                        "|com/runtimeverification/rvpredict/asm/ClassA" +
+                        "|com/runtimeverification/rvpredict/asm/ClassB" +
+                        "|com/runtimeverification/rvpredict/asm/ClassA|",
                 resultBuilder.toString());
     }
 

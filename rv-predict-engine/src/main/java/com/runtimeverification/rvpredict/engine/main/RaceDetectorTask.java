@@ -4,8 +4,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.trace.*;
 import com.runtimeverification.rvpredict.util.Logger;
-import smt.SMTConstraintBuilder;
-import violation.Race;
+import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
+import com.runtimeverification.rvpredict.violation.Race;
 
 import java.util.*;
 

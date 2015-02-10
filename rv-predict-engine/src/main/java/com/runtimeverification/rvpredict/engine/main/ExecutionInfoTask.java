@@ -1,7 +1,7 @@
 package com.runtimeverification.rvpredict.engine.main;
 
 import com.runtimeverification.rvpredict.util.Logger;
-import violation.Violation;
+import com.runtimeverification.rvpredict.violation.Violation;
 
 import java.util.Set;
 

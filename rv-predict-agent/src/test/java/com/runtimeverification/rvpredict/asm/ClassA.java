@@ -1,4 +1,4 @@
-package asm;
+package com.runtimeverification.rvpredict.asm;
 
 public class ClassA {
 

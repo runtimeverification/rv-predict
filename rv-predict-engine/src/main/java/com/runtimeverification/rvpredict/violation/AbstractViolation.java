@@ -1,4 +1,4 @@
-package violation;
+package com.runtimeverification.rvpredict.violation;
 
 public abstract class AbstractViolation implements Violation {
 

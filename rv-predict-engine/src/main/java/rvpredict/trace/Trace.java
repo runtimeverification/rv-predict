@@ -162,7 +162,9 @@ public class Trace {
      */
     public Long getInitValueOf(MemoryAddr addr) {
         Long initValue = initState.addrToValue.get(addr);
-        return initValue == null ? _0X_DEADBEEFL : initValue;
+        // TODO(YilongL): uncomment the following statement after fixing issue#304
+//        return initValue == null ? _0X_DEADBEEFL : initValue;
+        return initValue == null ? 0 : initValue;
     }
 
     public Event getFirstThreadEvent(long threadId) {

@@ -65,6 +65,7 @@ public class OfflineLoggingFactory implements LoggingFactory {
         }
     }
 
+    @Override
     public EventOutputStream createEventOutputStream() throws IOException {
         int id = logFileId.incrementAndGet();
         OutputStream outputStream = new FileOutputStream(Paths.get(config.outdir,
@@ -95,7 +96,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
                 EventInputStream inputStream = new EventInputStream(
                         new BufferedInputStream(in));
                 inputStreams.add(inputStream);
-
             }
         }
         if (inputStreamsIterator == null) {
@@ -166,6 +166,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
     public EventPipe createEventPipe() {
         return new BufferedEventPipe();
     }
-    
-    
+
+
 }

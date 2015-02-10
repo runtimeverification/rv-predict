@@ -52,7 +52,8 @@ public class Race extends AbstractViolation {
 
         locId1 = e1.getID();
         locId2 = e2.getID();
-        varSig = e1.getFieldIdOrArrayIndex() < 0 ? loggingFactory.getVarSig(-e1.getFieldIdOrArrayIndex()) : null;
+        int idx = e1.getAddr().fieldIdOrArrayIndex();
+        varSig = idx < 0 ? loggingFactory.getVarSig(-idx) : null;
         stmtSig1 = loggingFactory.getStmtSig(locId1);
         stmtSig2 = loggingFactory.getStmtSig(locId2);
         if (stmtSig1 == null) {

@@ -55,6 +55,8 @@ import com.google.common.collect.Table;
  */
 public class Trace {
 
+    public static final long _0X_DEADBEEFL = 0xDEADBEEFL;
+
     /**
      * Unprocessed raw events reading from the logging phase.
      */
@@ -64,12 +66,12 @@ public class Trace {
     /**
      * Read threads on each address.
      */
-    private final Map<String, Set<Long>> addrToReadThreads = new HashMap<>();
+    private final Map<MemoryAddr, Set<Long>> addrToReadThreads = new HashMap<>();
 
     /**
      * Write threads on each address.
      */
-    private final Map<String, Set<Long>> addrToWriteThreads = new HashMap<>();
+    private final Map<MemoryAddr, Set<Long>> addrToWriteThreads = new HashMap<>();
 
     /**
      * Lock level table indexed by thread ID and lock object.
@@ -84,7 +86,7 @@ public class Trace {
     /**
      * Shared memory locations.
      */
-    private final Set<String> sharedMemAddr = new HashSet<>();
+    private final Set<MemoryAddr> sharedMemAddr = new HashSet<>();
 
     private final Set<Long> threadIds = new HashSet<>();
 
@@ -114,17 +116,18 @@ public class Trace {
     /**
      * Read events on each address.
      */
-    private final Map<String, List<ReadEvent>> addrToReadEvents = new HashMap<>();
+    private final Map<MemoryAddr, List<ReadEvent>> addrToReadEvents = new HashMap<>();
 
     /**
      * Write events on each address.
      */
-    private final Map<String, List<WriteEvent>> addrToWriteEvents = new HashMap<>();
+    private final Map<MemoryAddr, List<WriteEvent>> addrToWriteEvents = new HashMap<>();
 
     /**
      * Lists of {@code MemoryAccessEvent}'s indexed by address and thread ID.
      */
-    private final Table<String, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
+    private final Table<MemoryAddr, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
+
     private final LoggingFactory loggingFactory;
 
     private List<ReadEvent> allReadNodes;
@@ -147,9 +150,19 @@ public class Trace {
         return allEvents;
     }
 
-    public Long getInitValueOf(String addr) {
+    /**
+     * Gets the initial value of a memory address.
+     *
+     * @param addr
+     *            the address
+     * @return the actual initial value of the memory address or a dummy value
+     *         {@link #_0X_DEADBEEFL} if the initial value is not recorded or
+     *         missing
+     */
+    public Long getInitValueOf(MemoryAddr addr) {
         Long initValue = initState.addrToValue.get(addr);
-        // TODO(YilongL): assuming that every variable is initialized is very Java-specific
+        // TODO(YilongL): uncomment the following statement after fixing issue#304
+//        return initValue == null ? _0X_DEADBEEFL : initValue;
         return initValue == null ? 0 : initValue;
     }
 
@@ -196,17 +209,17 @@ public class Trace {
         return lockObjToSyncEvents;
     }
 
-    public List<ReadEvent> getReadEventsOn(String addr) {
+    public List<ReadEvent> getReadEventsOn(MemoryAddr addr) {
         List<ReadEvent> events = addrToReadEvents.get(addr);
         return events == null ? Lists.<ReadEvent>newArrayList() : events;
     }
 
-    public List<WriteEvent> getWriteEventsOn(String addr) {
+    public List<WriteEvent> getWriteEventsOn(MemoryAddr addr) {
         List<WriteEvent> events = addrToWriteEvents.get(addr);
         return events == null ? Lists.<WriteEvent>newArrayList() : events;
     }
 
-    public Table<String, Long, List<MemoryAccessEvent>> getMemAccessEventsTable() {
+    public Table<MemoryAddr, Long, List<MemoryAccessEvent>> getMemAccessEventsTable() {
         return memAccessEventsTbl;
     }
 
@@ -224,28 +237,16 @@ public class Trace {
 
     /**
      * Gets control-flow dependent events of a given {@code MemoryAccessEvent}.
-     * Without logging {@code BranchNode}, all read events that happen-before
+     * Without logging {@code BranchEvent}, all read events that happen-before
      * the given event have to be included conservatively. Otherwise, only the
      * read events that happen-before the latest branch event are included.
      */
-    // TODO: NEED to include the dependent nodes from other threads
     public List<ReadEvent> getCtrlFlowDependentEvents(MemoryAccessEvent memAccEvent) {
         // TODO(YilongL): optimize this method when it becomes a bottleneck
         List<ReadEvent> readEvents = new ArrayList<>();
-
-        long threadId = memAccEvent.getTID();
-
-        BranchEvent prevBranchEvent = null;
-        for (BranchEvent branchEvent : getThreadBranchEvents(threadId)) {
-            if (branchEvent.getGID() < memAccEvent.getGID()) {
-                prevBranchEvent = branchEvent;
-            } else {
-                break;
-            }
-        }
-
+        BranchEvent prevBranchEvent = getLastBranchEventBefore(memAccEvent);
         Event event = prevBranchEvent == null ? memAccEvent : prevBranchEvent;
-        for (Event e : getThreadEvents(threadId)) {
+        for (Event e : getThreadEvents(memAccEvent.getTID())) {
             if (e.getGID() >= event.getGID()) {
                 break;
             }
@@ -256,6 +257,49 @@ public class Trace {
         }
 
         return readEvents;
+    }
+
+    /**
+     * Gets all read events that happen-before the given event but not in
+     * {@link #getCtrlFlowDependentEvents(MemoryAccessEvent)}.
+     */
+    public List<ReadEvent> getExtraDataFlowDependentEvents(MemoryAccessEvent memAccEvent) {
+        BranchEvent prevBranchEvent = getLastBranchEventBefore(memAccEvent);
+        if (prevBranchEvent == null) {
+            return ImmutableList.of();
+        } else {
+            List<ReadEvent> readEvents = new ArrayList<>();
+            for (Event e : getThreadEvents(memAccEvent.getTID())) {
+                if (e.getGID() >= memAccEvent.getGID()) {
+                    break;
+                }
+                if (e.getGID() > prevBranchEvent.getGID() && e instanceof ReadEvent) {
+                    readEvents.add((ReadEvent) e);
+                }
+            }
+            return readEvents;
+        }
+    }
+
+    /**
+     * Given an {@code event}, returns the last branch event that appears before
+     * it in the same thread.
+     *
+     * @param event
+     *            the event
+     * @return the last branch event before {@code event} if there is one;
+     *         otherwise, {@code null}
+     */
+    private BranchEvent getLastBranchEventBefore(Event event) {
+        BranchEvent lastBranchEvent = null;
+        for (BranchEvent branchEvent : getThreadBranchEvents(event.getTID())) {
+            if (branchEvent.getGID() < event.getGID()) {
+                lastBranchEvent = branchEvent;
+            } else {
+                break;
+            }
+        }
+        return lastBranchEvent;
     }
 
     public State getFinalState() {
@@ -270,7 +314,7 @@ public class Trace {
             finalState.addrToValue.put(initOrAcc.getAddr(), initOrAcc.getValue());
         }
         if (event instanceof MemoryAccessEvent) {
-            String addr = ((MemoryAccessEvent) event).getAddr();
+            MemoryAddr addr = ((MemoryAccessEvent) event).getAddr();
             Long tid = event.getTID();
 
             if (event instanceof ReadEvent) {
@@ -323,9 +367,8 @@ public class Trace {
             }
             branchnodes.add((BranchEvent) event);
         } else if (event instanceof InitEvent) {
-            // initial write node
-            initState.addrToValue.put(((InitEvent) event).getAddr(), ((InitEvent) event).getValue());
-            finalState.addrToValue.put(((InitEvent) event).getAddr(), ((InitEvent) event).getValue());
+            InitEvent initEvent = (InitEvent) event;
+            initState.addrToValue.put(initEvent.getAddr(), initEvent.getValue());
         } else {
             // all critical nodes -- read/write/synchronization events
 
@@ -341,7 +384,7 @@ public class Trace {
             // TODO: Optimize it -- no need to update it every time
             if (event instanceof MemoryAccessEvent) {
                 MemoryAccessEvent mnode = (MemoryAccessEvent) event;
-                String addr = mnode.getAddr();
+                MemoryAddr addr = mnode.getAddr();
 
                 List<MemoryAccessEvent> memAccessEvents = memAccessEventsTbl.get(addr, tid);
                 if (memAccessEvents == null) {
@@ -406,7 +449,7 @@ public class Trace {
     public void finishedLoading() {
         rawEvents = rawEventsBuilder.build();
 
-        for (String addr : Iterables.concat(addrToReadThreads.keySet(),
+        for (MemoryAddr addr : Iterables.concat(addrToReadThreads.keySet(),
                 addrToWriteThreads.keySet())) {
             Set<Long> wrtThrdIds = addrToWriteThreads.get(addr);
             if (wrtThrdIds != null && !wrtThrdIds.isEmpty()) {
@@ -436,7 +479,7 @@ public class Trace {
         List<Event> reducedEvents = new ArrayList<>();
         for (Event event : rawEvents) {
             if (event instanceof InitOrAccessEvent) {
-                String addr = ((InitOrAccessEvent) event).getAddr();
+                MemoryAddr addr = ((InitOrAccessEvent) event).getAddr();
                 if (sharedMemAddr.contains(addr)) {
                     reducedEvents.add(event);
                 }
@@ -499,14 +542,13 @@ public class Trace {
      * Checks if a memory address is volatile.
      *
      * @param addr
-     *            {@code String} representation of the memory address as defined
-     *            in {@link InitOrAccessEvent#getAddr()}
+     *            the memory address
      * @return {@code true} if the address is {@code volatile}; otherwise,
      *         {@code false}
      */
-    public boolean isVolatileField(String addr) {
-        int dotPos = addr.indexOf(".");
-        return dotPos != -1 && loggingFactory.isVolatile(Integer.valueOf(addr.substring(dotPos + 1)));
+    public boolean isVolatileField(MemoryAddr addr) {
+        int fieldId = -addr.fieldIdOrArrayIndex();
+        return fieldId > 0 && loggingFactory.isVolatile(fieldId);
     }
 
     public static class State {
@@ -514,7 +556,7 @@ public class Trace {
         /**
          * Map from memory address to its value.
          */
-        private Map<String, Long> addrToValue = Maps.newHashMap();
+        private Map<MemoryAddr, Long> addrToValue = Maps.newHashMap();
 
         public State() { }
 

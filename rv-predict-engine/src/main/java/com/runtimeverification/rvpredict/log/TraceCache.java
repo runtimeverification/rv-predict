@@ -1,8 +1,7 @@
 package com.runtimeverification.rvpredict.log;
 
-import com.runtimeverification.rvpredict.trace.AbstractEvent;
-import com.runtimeverification.rvpredict.trace.Event;
 import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.trace.EventUtils;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -43,14 +42,14 @@ public class TraceCache {
      * @return a {@link com.runtimeverification.rvpredict.trace.Trace} representing the trace segment
      *         read
      */
-    public Trace getTrace(long fromIndex, long toIndex, Trace.State initState) throws IOException, InterruptedException {
+    public Trace getTrace(long fromIndex, long toIndex, Trace.State initState) throws IOException,
+            InterruptedException {
         Trace trace = new Trace(initState, loggingFactory);
         for (long index = fromIndex; index < toIndex; index++) {
             EventItem eventItem = getEvent(index);
             if (eventItem == null)
                 break;
-            Event node = AbstractEvent.of(eventItem);
-            trace.addRawEvent(node);
+            trace.addRawEvent(EventUtils.of(eventItem));
         }
         trace.finishedLoading();
         return trace;

@@ -37,14 +37,8 @@ public class EventOutputStream extends DataOutputStream {
      * @see        java.io.FilterOutputStream#out
      */
    public final void writeEvent(EventItem event) throws IOException {
-        writeLong(event.GID);
-        writeLong(event.TID);
-        writeInt(event.ID);
-        writeLong(event.ADDRL);
-        writeInt(event.ADDRR);
-        writeLong(event.VALUE);
-        writeByte(event.TYPE.ordinal());
-        if (++flushCount >= FLUSH_LIMIT) {
+       event.writeTo(this);
+       if (++flushCount >= FLUSH_LIMIT) {
             flush();
             flushCount = 0;
         }

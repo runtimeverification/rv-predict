@@ -33,7 +33,7 @@ package com.runtimeverification.rvpredict.trace;
  */
 public class InitEvent extends InitOrAccessEvent {
 
-    public InitEvent(long GID, long tid, int ID, long objectHashCode, int index, long value) {
+    public InitEvent(long GID, long tid, int ID, int objectHashCode, int index, long value) {
         super(GID, tid, ID, EventType.INIT, objectHashCode, index, value);
     }
 

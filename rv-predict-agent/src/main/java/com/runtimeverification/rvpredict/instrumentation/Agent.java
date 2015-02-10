@@ -226,7 +226,12 @@ public class Agent implements ClassFileTransformer {
                 }
             }
 
-            return toInstrument ? ClassTransformer.transform(loader, cbuf, config) : null;
+            if (toInstrument) {
+                byte[] transformed = ClassTransformer.transform(loader, cbuf, config);
+                return transformed;
+            } else {
+                return null;
+            }
         } catch (Throwable e) {
             /* exceptions during class loading are silently suppressed by default */
             System.err.println("Cannot retransform " + cname + ". Exception: " + e);

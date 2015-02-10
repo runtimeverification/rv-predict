@@ -3,9 +3,9 @@ package com.runtimeverification.rvpredict.util;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventInputStream;
 import com.runtimeverification.rvpredict.log.EventItem;
-import com.runtimeverification.rvpredict.trace.AbstractEvent;
-import com.runtimeverification.rvpredict.trace.Event;
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
+import com.runtimeverification.rvpredict.trace.Event;
+import com.runtimeverification.rvpredict.trace.EventUtils;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -45,7 +45,7 @@ public class DumpLogFile {
             //noinspection InfiniteLoopStatement
             while (true) {
                 EventItem eventItem = inputStream.readEvent();
-                Event event = AbstractEvent.of(eventItem);
+                Event event = EventUtils.of(eventItem);
                 System.out.println(event.toString() + loggingFactory.getStmtSig(event.getID()));
             }
         } catch (EOFException ignored) {

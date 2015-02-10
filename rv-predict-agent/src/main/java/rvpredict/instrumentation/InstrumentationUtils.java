@@ -12,8 +12,18 @@ import java.util.Set;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+
+import rvpredict.runtime.RVPredictRuntime;
 
 public class InstrumentationUtils {
+
+    public static final Type OBJECT_TYPE    = Type.getObjectType("java/lang/Object");
+    public static final Type CLASS_TYPE     = Type.getObjectType("java/lang/Class");
+    public static final Type JL_FLOAT_TYPE  = Type.getObjectType("java/lang/Float");
+    public static final Type JL_DOUBLE_TYPE = Type.getObjectType("java/lang/Double");
+    public static final Type JL_SYSTEM_TYPE = Type.getObjectType("java/lang/System");
+    public static final Type RVPREDICT_RUNTIME_TYPE = Type.getType(RVPredictRuntime.class);
 
     /**
      * Checks if one class or interface extends or implements another class or

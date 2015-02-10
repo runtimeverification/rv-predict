@@ -3,11 +3,10 @@ package rvpredict.instrumentation.transformer;
 import org.objectweb.asm.*;
 import rvpredict.config.Configuration;
 import rvpredict.instrumentation.MetaData;
-
 import java.util.HashSet;
 import java.util.Set;
 
-public class ClassTransformer extends ClassVisitor {
+public class ClassTransformer extends ClassVisitor implements Opcodes {
 
     private final Configuration config;
     private final ClassLoader loader;
@@ -27,9 +26,9 @@ public class ClassTransformer extends ClassVisitor {
         return cw.toByteArray();
     }
 
-    private ClassTransformer(ClassVisitor cv, ClassLoader loader, Configuration config) {
-        super(Opcodes.ASM5, cv);
-        assert cv != null;
+    private ClassTransformer(ClassWriter cw, ClassLoader loader, Configuration config) {
+        super(ASM5, cw);
+        assert cw != null;
 
         this.loader = loader;
         this.config = config;
@@ -56,10 +55,10 @@ public class ClassTransformer extends ClassVisitor {
          * `volatile`, and `static` w.r.t. instrumentation */
 
         MetaData.addField(className, name);
-        if ((access & Opcodes.ACC_FINAL) != 0) {
+        if ((access & ACC_FINAL) != 0) {
             finalFields.add(name);
         }
-        if ((access & Opcodes.ACC_VOLATILE) != 0) {
+        if ((access & ACC_VOLATILE) != 0) {
             MetaData.addVolatileVariable(className, name);
         }
 
@@ -73,7 +72,7 @@ public class ClassTransformer extends ClassVisitor {
 
         /* do not instrument synthesized bridge method; otherwise, it may cause
          * infinite recursion at runtime */
-        if (mv != null && (access & Opcodes.ACC_BRIDGE) == 0) {
+        if (mv != null && (access & ACC_BRIDGE) == 0) {
             int crntMaxLocals = 0;
             for (Type type : Type.getArgumentTypes(desc)) {
                 crntMaxLocals += type.getSize();
@@ -84,4 +83,5 @@ public class ClassTransformer extends ClassVisitor {
         }
         return mv;
     }
+
 }

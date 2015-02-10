@@ -4,8 +4,8 @@ import rvpredict.config.Configuration;
 import rvpredict.log.EventInputStream;
 import rvpredict.log.EventItem;
 import rvpredict.log.OfflineLoggingFactory;
-import rvpredict.trace.AbstractEvent;
 import rvpredict.trace.Event;
+import rvpredict.trace.EventUtils;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -45,7 +45,7 @@ public class DumpLogFile {
             //noinspection InfiniteLoopStatement
             while (true) {
                 EventItem eventItem = inputStream.readEvent();
-                Event event = AbstractEvent.of(eventItem);
+                Event event = EventUtils.of(eventItem);
                 System.out.println(event.toString() + loggingFactory.getStmtSig(event.getID()));
             }
         } catch (EOFException ignored) {

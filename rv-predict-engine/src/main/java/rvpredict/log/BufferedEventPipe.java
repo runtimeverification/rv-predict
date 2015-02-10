@@ -22,6 +22,9 @@ public class BufferedEventPipe implements EventPipe {
     private EventItem[] outBuffer = null;
     private int outIndex = 0;
 
+    private boolean writingEvent = false;
+    private long lastGID = 0;
+
     public BufferedEventPipe() {
         this.pipe = new LinkedBlockingQueue<>();
     }
@@ -36,9 +39,19 @@ public class BufferedEventPipe implements EventPipe {
      */
     @Override
     public void writeEvent(EventItem event) throws InterruptedException {
-        inBuffer[inIndex++] = event;
-        if (inIndex == BUFFER_SIZE) {
-            flush();
+        try {
+            assert !writingEvent : "This method is not supposed to be reentrant!";
+            writingEvent = true;
+
+            assert lastGID < event.GID : "Events from the same thread are logged out of order!";
+            lastGID = event.GID;
+
+            inBuffer[inIndex++] = event;
+            if (inIndex == BUFFER_SIZE) {
+                flush();
+            }
+        } finally {
+            writingEvent = false;
         }
     }
 
@@ -79,7 +92,6 @@ public class BufferedEventPipe implements EventPipe {
      */
     private synchronized void flush() throws InterruptedException {
         if (inIndex != 0) {
-            inBuffer[inIndex] = null;
             pipe.put(inBuffer);
             inBuffer = new EventItem[BUFFER_SIZE+1];
             inIndex = 0;

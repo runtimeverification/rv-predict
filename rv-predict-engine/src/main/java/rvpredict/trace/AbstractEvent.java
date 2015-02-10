@@ -30,8 +30,6 @@ package rvpredict.trace;
 
 import com.google.common.primitives.Longs;
 
-import rvpredict.log.EventItem;
-
 /**
  * Base class for all events in the trace.
  */
@@ -47,48 +45,6 @@ public abstract class AbstractEvent implements Event {
         this.TID = TID;
         this.ID = ID;
         this.type = type;
-    }
-
-    public static Event of(EventItem eventItem) {
-        AbstractEvent node = null;
-        long GID = eventItem.GID;
-        long TID = eventItem.TID;
-        int ID = eventItem.ID;
-        long ADDRL = eventItem.ADDRL;
-        int ADDRR = eventItem.ADDRR;
-        long VALUE = eventItem.VALUE;
-        EventType TYPE = eventItem.TYPE;
-
-        switch (TYPE) {
-            case INIT:
-                node = new InitEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
-                break;
-            case READ:
-                node = new ReadEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
-                break;
-            case WRITE:
-                node = new WriteEvent(GID, TID, ID, ADDRL, ADDRR, VALUE);
-                break;
-            case WRITE_LOCK:
-            case WRITE_UNLOCK:
-            case READ_LOCK:
-            case READ_UNLOCK:
-            case WAIT_REL:
-            case WAIT_ACQ:
-            case START:
-            case PRE_JOIN:
-            case JOIN:
-                case JOIN_MAYBE_FAILED:
-                node = new SyncEvent(GID, TID, ID, TYPE, ADDRL);
-                break;
-            case BRANCH:
-                node = new BranchEvent(GID, TID, ID);
-                break;
-            default:
-                assert false : "unexpected event type: " + TYPE;
-                break;
-        }
-        return node;
     }
 
     @Override

@@ -143,7 +143,7 @@ public class Main {
             appArgList.add(java);
             appArgList.add("-cp");
             appArgList.add(rvEngine);
-            appArgList.add("com.runtimeverification.rvpredict.engine.main.Main");
+            appArgList.add(Main.class.getName());
             appArgList.addAll(Arrays.asList(args));
 
             int index = appArgList.indexOf(Configuration.opt_outdir);

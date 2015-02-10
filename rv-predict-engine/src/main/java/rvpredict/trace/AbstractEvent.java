@@ -28,6 +28,7 @@
  ******************************************************************************/
 package rvpredict.trace;
 
+import com.google.common.primitives.Longs;
 
 /**
  * Base class for all events in the trace.
@@ -77,7 +78,15 @@ public abstract class AbstractEvent implements Event {
     }
 
     @Override
-    public boolean equals(Object object) {
+    public final int hashCode() {
+        return Longs.hashCode(GID);
+    }
+
+    @Override
+    public final boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
         if (!(object instanceof Event)) {
             return false;
         }

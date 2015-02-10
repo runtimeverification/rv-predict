@@ -366,9 +366,8 @@ public class Trace {
             }
             branchnodes.add((BranchEvent) event);
         } else if (event instanceof InitEvent) {
-            // initial write node
-            initState.addrToValue.put(((InitEvent) event).getAddr(), ((InitEvent) event).getValue());
-            finalState.addrToValue.put(((InitEvent) event).getAddr(), ((InitEvent) event).getValue());
+            InitEvent initEvent = (InitEvent) event;
+            initState.addrToValue.put(initEvent.getAddr(), initEvent.getValue());
         } else {
             // all critical nodes -- read/write/synchronization events
 

@@ -45,7 +45,7 @@
         <arg value="airlinetickets.Airlinetickets" />
     </test>
     <test name="boundedbuffer.BoundedBuffer">
-        <runs value="128" />
+        <runs value="256" />
         <arg key="-cp" value="basic.jar" />
         <arg value="boundedbuffer.BoundedBuffer" />
     </test>

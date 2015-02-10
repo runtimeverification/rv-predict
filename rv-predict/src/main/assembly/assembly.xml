@@ -21,7 +21,9 @@
                 <include>com.runtimeverification.rvpredict:rv-predict-agent</include>
             </includes>
             <binaries>
+                <!--
                 <attachmentClassifier>jar-with-dependencies</attachmentClassifier>
+                -->
                 <outputDirectory>/lib</outputDirectory>
                 <outputFileNameMapping>rv-predict.jar</outputFileNameMapping>
                 <unpack>false</unpack>

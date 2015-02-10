@@ -33,11 +33,6 @@ public class Agent implements ClassFileTransformer {
         String [] ignores = new String[] {
                 // rv-predict itself and the libraries we are using
                 "com/runtimeverification/rvpredict",
-                /* TODO(YilongL): shall we repackage these libraries using JarJar? */
-                "org/objectweb/asm",
-                "com/beust",
-                "org/apache/tools/ant",
-                "org/apache/commons/collections4",
 
                 // array type
                 "[",

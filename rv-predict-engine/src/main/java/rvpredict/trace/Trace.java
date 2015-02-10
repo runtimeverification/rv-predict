@@ -225,28 +225,16 @@ public class Trace {
 
     /**
      * Gets control-flow dependent events of a given {@code MemoryAccessEvent}.
-     * Without logging {@code BranchNode}, all read events that happen-before
+     * Without logging {@code BranchEvent}, all read events that happen-before
      * the given event have to be included conservatively. Otherwise, only the
      * read events that happen-before the latest branch event are included.
      */
-    // TODO: NEED to include the dependent nodes from other threads
     public List<ReadEvent> getCtrlFlowDependentEvents(MemoryAccessEvent memAccEvent) {
         // TODO(YilongL): optimize this method when it becomes a bottleneck
         List<ReadEvent> readEvents = new ArrayList<>();
-
-        long threadId = memAccEvent.getTID();
-
-        BranchEvent prevBranchEvent = null;
-        for (BranchEvent branchEvent : getThreadBranchEvents(threadId)) {
-            if (branchEvent.getGID() < memAccEvent.getGID()) {
-                prevBranchEvent = branchEvent;
-            } else {
-                break;
-            }
-        }
-
+        BranchEvent prevBranchEvent = getLastBranchEventBefore(memAccEvent);
         Event event = prevBranchEvent == null ? memAccEvent : prevBranchEvent;
-        for (Event e : getThreadEvents(threadId)) {
+        for (Event e : getThreadEvents(memAccEvent.getTID())) {
             if (e.getGID() >= event.getGID()) {
                 break;
             }
@@ -257,6 +245,49 @@ public class Trace {
         }
 
         return readEvents;
+    }
+
+    /**
+     * Gets all read events that happen-before the given event but not in
+     * {@link #getCtrlFlowDependentEvents(MemoryAccessEvent)}.
+     */
+    public List<ReadEvent> getExtraDataFlowDependentEvents(MemoryAccessEvent memAccEvent) {
+        BranchEvent prevBranchEvent = getLastBranchEventBefore(memAccEvent);
+        if (prevBranchEvent == null) {
+            return ImmutableList.of();
+        } else {
+            List<ReadEvent> readEvents = new ArrayList<>();
+            for (Event e : getThreadEvents(memAccEvent.getTID())) {
+                if (e.getGID() >= memAccEvent.getGID()) {
+                    break;
+                }
+                if (e.getGID() > prevBranchEvent.getGID() && e instanceof ReadEvent) {
+                    readEvents.add((ReadEvent) e);
+                }
+            }
+            return readEvents;
+        }
+    }
+
+    /**
+     * Given an {@code event}, returns the last branch event that appears before
+     * it in the same thread.
+     *
+     * @param event
+     *            the event
+     * @return the last branch event before {@code event} if there is one;
+     *         otherwise, {@code null}
+     */
+    private BranchEvent getLastBranchEventBefore(Event event) {
+        BranchEvent lastBranchEvent = null;
+        for (BranchEvent branchEvent : getThreadBranchEvents(event.getTID())) {
+            if (branchEvent.getGID() < event.getGID()) {
+                lastBranchEvent = branchEvent;
+            } else {
+                break;
+            }
+        }
+        return lastBranchEvent;
     }
 
     public State getFinalState() {

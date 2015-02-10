@@ -14,7 +14,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
-import rvpredict.runtime.RVPredictRuntime;
+import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 public class InstrumentationUtils {
 
@@ -30,7 +30,7 @@ public class InstrumentationUtils {
      * interface.
      *
      * @param loader
-     *            the defining loader of {@link class0}, may be null if it is
+     *            the defining loader of {@code class0}, may be null if it is
      *            the bootstrap class loader or unknown
      * @param class0
      *            the name of the first class or interface

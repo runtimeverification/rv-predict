@@ -36,9 +36,9 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 
-import rvpredict.trace.Event;
-import rvpredict.trace.LockRegion;
-import rvpredict.trace.MemoryAccessEvent;
+import com.runtimeverification.rvpredict.trace.Event;
+import com.runtimeverification.rvpredict.trace.LockRegion;
+import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
 
 /**
  * Engine for computing the Lockset algorithm

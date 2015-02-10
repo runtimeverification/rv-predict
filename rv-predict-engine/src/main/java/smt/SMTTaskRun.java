@@ -34,8 +34,8 @@ import java.io.PrintWriter;
 import java.util.*;
 import java.util.concurrent.*;
 
-import rvpredict.config.Configuration;
-import rvpredict.config.Util;
+import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.config.Util;
 
 /**
  * Constraint solving with Z3 solver

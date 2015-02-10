@@ -12,7 +12,7 @@ import java.util.concurrent.*;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Joiner;
-import rvpredict.config.Util;
+import com.runtimeverification.rvpredict.config.Util;
 
 import org.junit.Assert;
 

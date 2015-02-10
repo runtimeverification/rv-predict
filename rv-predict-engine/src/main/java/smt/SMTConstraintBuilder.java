@@ -28,14 +28,14 @@
  ******************************************************************************/
 package smt;
 
-import rvpredict.trace.Event;
-import rvpredict.trace.EventType;
-import rvpredict.trace.MemoryAccessEvent;
-import rvpredict.trace.SyncEvent;
-import rvpredict.trace.LockRegion;
-import rvpredict.trace.ReadEvent;
-import rvpredict.trace.Trace;
-import rvpredict.trace.WriteEvent;
+import com.runtimeverification.rvpredict.trace.Event;
+import com.runtimeverification.rvpredict.trace.EventType;
+import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
+import com.runtimeverification.rvpredict.trace.SyncEvent;
+import com.runtimeverification.rvpredict.trace.LockRegion;
+import com.runtimeverification.rvpredict.trace.ReadEvent;
+import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.trace.WriteEvent;
 import graph.LockSetEngine;
 import graph.ReachabilityEngine;
 
@@ -49,7 +49,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.config.Configuration;
 
 public class SMTConstraintBuilder {
 

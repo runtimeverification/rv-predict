@@ -28,8 +28,8 @@
  ******************************************************************************/
 package violation;
 
-import rvpredict.log.LoggingFactory;
-import rvpredict.trace.MemoryAccessEvent;
+import com.runtimeverification.rvpredict.log.LoggingFactory;
+import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
 
 /**
  * Data race violation

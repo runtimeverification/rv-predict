@@ -30,7 +30,7 @@ package graph;
 
 import java.util.*;
 
-import rvpredict.trace.Event;
+import com.runtimeverification.rvpredict.trace.Event;
 
 /*
  * property: never call addEdge after canReach

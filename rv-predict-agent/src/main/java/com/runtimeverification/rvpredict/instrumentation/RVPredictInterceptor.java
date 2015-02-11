@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.instrumentation;
 
+import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.Method;
 
@@ -10,13 +11,12 @@ import com.google.common.collect.ImmutableList;
  * interceptor, that is bound to some corresponding Java method and can be
  * used to replace it during bytecode transformation.
  * <p>
- * For example, {@link com.runtimeverification.rvpredict.runtime.RVPredictRuntime#rvPredictWait(Object, long, int)} is
+ * For example, {@link RVPredictRuntime#rvPredictWait(Object, long, int)} is
  * associated with {@link Object#wait(long)}.
  *
  * @author YilongL
  */
 public class RVPredictInterceptor extends RVPredictRuntimeMethod {
-
     /**
      * Method type of the associated Java method. Can be
      * {@link RVPredictRuntimeMethods#STATIC},

@@ -16,7 +16,7 @@ import java.util.zip.GZIPOutputStream;
  * offline prediction.
  * 
  * Metadata and events are written and read from files in the 
- * {@link com.runtimeverification.rvpredict.config.Configuration#outdir} directory.
+ * {@link Configuration#outdir} directory.
  *
  * @author Traian SF
  */

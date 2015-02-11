@@ -45,7 +45,7 @@ import java.util.concurrent.*;
 /**
  * Class for predicting violations from a logged execution.
  *
- * Splits the log in segments of length {@link com.runtimeverification.rvpredict.config.Configuration#windowSize},
+ * Splits the log in segments of length {@link Configuration#windowSize},
  * each of them being executed as a {@link RaceDetectorTask} task.
  */
 public class RVPredict implements Runnable {

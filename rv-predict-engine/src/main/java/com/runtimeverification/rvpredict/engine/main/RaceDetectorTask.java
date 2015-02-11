@@ -10,7 +10,7 @@ import com.runtimeverification.rvpredict.violation.Race;
 import java.util.*;
 
 /**
- * Detects data races from a given {@link com.runtimeverification.rvpredict.trace.Trace} object
+ * Detects data races from a given {@link Trace} object
  * <p/>
  * <p/>
  * We analyze memory access events on each shared memory address in the
@@ -34,10 +34,10 @@ import java.util.*;
  *
  */
 public class RaceDetectorTask implements Runnable {
-    private final com.runtimeverification.rvpredict.engine.main.RVPredict RVPredict;
+    private final RVPredict RVPredict;
     private final Trace trace;
 
-    public RaceDetectorTask(com.runtimeverification.rvpredict.engine.main.RVPredict RVPredict, Trace trace) {
+    public RaceDetectorTask(RVPredict RVPredict, Trace trace) {
         this.RVPredict = RVPredict;
         this.trace = trace;
     }

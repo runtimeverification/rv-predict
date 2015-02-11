@@ -102,7 +102,7 @@ public class LoggingEngine {
     /**
      * Logs an {@link EventItem} to the trace.
      *
-     * @see EventItem#EventItem(long, long, int, long, int, long, com.runtimeverification.rvpredict.trace.EventType)
+     * @see EventItem#EventItem(long, long, int, int, int, long, EventType)
      *      for a more elaborate description of the parameters.
      *
      * @param eventType  type of event being recorded

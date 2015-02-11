@@ -16,6 +16,7 @@ import org.objectweb.asm.commons.Method;
 import java.util.Set;
 
 import static com.runtimeverification.rvpredict.instrumentation.InstrumentationUtils.*;
+import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
 import static org.objectweb.asm.Opcodes.*;
 
 public class MethodTransformer extends MethodVisitor {
@@ -137,7 +138,7 @@ public class MethodTransformer extends MethodVisitor {
             // <stack>... value objectref longValue </stack>
             push(varId, 0, locId);
             // <stack>... value objectref longValue varId false locId </stack>
-            invokeRTMethod(RVPredictRuntimeMethods.LOG_FIELD_ACCESS);
+            invokeRTMethod(LOG_FIELD_ACCESS);
             // <stack>... value </stack>
             break;
         case PUTSTATIC:
@@ -159,11 +160,11 @@ public class MethodTransformer extends MethodVisitor {
             if (isInit) {
                 push(varId, locId);
                 // <stack>... objectref longValue varId locId </stack>
-                invokeRTMethod(RVPredictRuntimeMethods.LOG_FIELD_INIT);
+                invokeRTMethod(LOG_FIELD_INIT);
             } else {
                 push(varId, 1, locId);
                 // <stack>... objectref longValue varId true locId </stack>
-                invokeRTMethod(RVPredictRuntimeMethods.LOG_FIELD_ACCESS);
+                invokeRTMethod(LOG_FIELD_ACCESS);
             }
             // <stack>... </stack>
             if (opcode == PUTFIELD) {
@@ -228,7 +229,7 @@ public class MethodTransformer extends MethodVisitor {
             mv.visitInsn(opcode);
             push(getCrntLocId());
             // <stack>... objectref locId </stack>
-            invokeRTMethod(RVPredictRuntimeMethods.LOG_MONITOR_ENTER);
+            invokeRTMethod(LOG_MONITOR_ENTER);
             break;
         case MONITOREXIT: {
             /* moniter exit must logged before it happens */
@@ -236,7 +237,7 @@ public class MethodTransformer extends MethodVisitor {
             mv.dup();
             push(getCrntLocId());
             // <stack>... objectref objectref locId </stack>
-            invokeRTMethod(RVPredictRuntimeMethods.LOG_MONITOR_EXIT);
+            invokeRTMethod(LOG_MONITOR_EXIT);
             mv.visitInsn(opcode);
             break;
         }
@@ -249,7 +250,7 @@ public class MethodTransformer extends MethodVisitor {
                     loadThis();
                 }
                 push(getCrntLocId());
-                invokeRTMethod(RVPredictRuntimeMethods.LOG_MONITOR_EXIT);
+                invokeRTMethod(LOG_MONITOR_EXIT);
             }
             mv.visitInsn(opcode);
             break;
@@ -279,7 +280,7 @@ public class MethodTransformer extends MethodVisitor {
         // <stack>... value arrayref index longValue </stack>
         push(0, getCrntLocId());
         // <stack>... value arrayref index longValue false locId </stack>
-        invokeRTMethod(RVPredictRuntimeMethods.LOG_ARRAY_ACCESS);
+        invokeRTMethod(LOG_ARRAY_ACCESS);
         // <stack>... value </stack>
     }
 
@@ -298,11 +299,11 @@ public class MethodTransformer extends MethodVisitor {
         if (isInit) {
             push(getCrntLocId());
             // <stack>... arrayref index array index longValue locId </stack>
-            invokeRTMethod(RVPredictRuntimeMethods.LOG_ARRAY_INIT);
+            invokeRTMethod(LOG_ARRAY_INIT);
         } else {
             push(1, getCrntLocId());
             // <stack>... arrayref index array index longValue true locId </stack>
-            invokeRTMethod(RVPredictRuntimeMethods.LOG_ARRAY_ACCESS);
+            invokeRTMethod(LOG_ARRAY_ACCESS);
         }
         // <stack>... arrayref index </stack>
         loadLocal(value, valueType);
@@ -319,7 +320,7 @@ public class MethodTransformer extends MethodVisitor {
                 loadThis();
             }
             push(getCrntLocId());
-            invokeRTMethod(RVPredictRuntimeMethods.LOG_MONITOR_ENTER);
+            invokeRTMethod(LOG_MONITOR_ENTER);
         }
 
         mv.visitCode();
@@ -330,7 +331,7 @@ public class MethodTransformer extends MethodVisitor {
         if (branchModel == 1) {
             if (opcode != JSR && opcode != GOTO) {
                 push(getCrntLocId());
-                invokeRTMethod(RVPredictRuntimeMethods.LOG_BRANCH);
+                invokeRTMethod(LOG_BRANCH);
             }
         }
         mv.visitJumpInsn(opcode, label);
@@ -340,7 +341,7 @@ public class MethodTransformer extends MethodVisitor {
     public void visitTableSwitchInsn(int min, int max, Label dflt, Label... labels) {
         if (branchModel == 1) {
             push(getCrntLocId());
-            invokeRTMethod(RVPredictRuntimeMethods.LOG_BRANCH);
+            invokeRTMethod(LOG_BRANCH);
         }
         mv.visitTableSwitchInsn(min, max, dflt, labels);
     }

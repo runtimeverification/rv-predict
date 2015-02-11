@@ -39,7 +39,7 @@ public class TraceCache {
      *            low endpoint (inclusive) of the trace segment
      * @param toIndex
      *            high endpoint (exclusive) of the trace segment
-     * @return a {@link com.runtimeverification.rvpredict.trace.Trace} representing the trace segment
+     * @return a {@link Trace} representing the trace segment
      *         read
      */
     public Trace getTrace(long fromIndex, long toIndex, Trace.State initState) throws IOException,

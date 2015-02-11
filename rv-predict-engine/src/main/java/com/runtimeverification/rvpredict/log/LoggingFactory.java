@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.log;
 
+import com.runtimeverification.rvpredict.trace.EventType;
+
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 
@@ -13,7 +15,7 @@ public interface LoggingFactory {
      * Creates an {@link EventPipe} used for communicating events from
      * one (producer) thread to another (logging) thread
      * @see ThreadLocalEventStream#initialValue() for creation
-     * @see LoggingEngine#saveEvent(com.runtimeverification.rvpredict.trace.EventType, int, long, int, long) for producer
+     * @see LoggingEngine#saveEvent(EventType, int, int, int, long) 
      * @see Logger for consumer
      * @return a new {@link EventPipe}
      */

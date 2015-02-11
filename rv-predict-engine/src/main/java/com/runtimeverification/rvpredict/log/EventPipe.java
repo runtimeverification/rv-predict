@@ -1,18 +1,21 @@
 package com.runtimeverification.rvpredict.log;
 
+import com.runtimeverification.rvpredict.engine.main.Main;
+import com.runtimeverification.rvpredict.trace.EventType;
+
 /**
  * A pipe for passing {@link EventItem}s from one thread to another.
  * The class is meant for a single-producer-single-consumer design with an
  * instance object of this class being created by the
  * {@link ThreadLocalEventStream} for each logged thread
  * and being written to only by that thread through the
- * {@link LoggingEngine#saveEvent(com.runtimeverification.rvpredict.trace.EventType, int, long, int, long)},
+ * {@link LoggingEngine#saveEvent(EventType, int, int, int, long)},
  * while being only read from a {@link Logger} object
  * created for this purpose.
  *
  * The {@link BufferedEventPipe#close()} method, which flushes the buffers and send the
  * {@link BufferedEventPipe#END_BUFFER} marker to close the pipe, is called only as part of the
- * {@link com.runtimeverification.rvpredict.engine.main.Main.CleanupAgent#cleanup()} method added as a shutdown hook
+ * {@link Main.CleanupAgent#cleanup()} method added as a shutdown hook
  * to the logging process.
  *
  * @author TraianSF

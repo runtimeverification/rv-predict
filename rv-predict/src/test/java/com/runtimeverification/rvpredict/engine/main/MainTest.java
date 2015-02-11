@@ -48,8 +48,8 @@ public class MainTest {
 
     private static String rvPredictJar = basePath + separator + "lib" + separator + "rv-predict.jar";
     private static String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
-    private static List<String> rvArgList = Arrays.asList(new String[]{java, "-ea", "-cp", rvPredictJar,
-            "rvpredict.engine.main.Main"});
+    private static List<String> rvArgList = Arrays.asList(new String[]{
+            java, "-ea", "-cp", rvPredictJar, Main.class.getName()});
     private final TestHelper helper;
     private final String name;
     private final int numOfRuns;

@@ -26,30 +26,52 @@
     <build>
         <plugins>
             <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
+                <artifactId>maven-jar-plugin</artifactId>
                 <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
                     <archive>
                         <manifest>
-                            <mainClass>rvpredict.engine.main.GUIMain</mainClass>
+                            <mainClass>com.runtimeverification.rvpredict.engine.main.GUIMain</mainClass>
                         </manifest>
                         <manifestEntries>
-                            <Premain-Class>rvpredict.instrumentation.Agent</Premain-Class>
+                            <Premain-Class>com.runtimeverification.rvpredict.instrumentation.Agent</Premain-Class>
                             <Can-Retransform-Classes>true</Can-Retransform-Classes>
                         </manifestEntries>
                     </archive>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>jarjar-maven-plugin</artifactId>
                 <executions>
                     <execution>
                         <phase>package</phase>
                         <goals>
-                            <goal>single</goal>
+                            <goal>jarjar</goal>
                         </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <pattern>org.objectweb.**.*</pattern>
+                                    <result>com.runtimeverification.rvpredict.internal.org.objectweb.@1.@2</result>
+                                </rule>
+                                <rule>
+                                    <pattern>com.beust.**.*</pattern>
+                                    <result>com.runtimeverification.rvpredict.internal.com.beust.@1.@2</result>
+                                </rule>
+                                <rule>
+                                    <pattern>org.apache.**.*</pattern>
+                                    <result>com.runtimeverification.rvpredict.internal.org.apache.@1.@2</result>
+                                </rule>
+                                <rule>
+                                    <pattern>com.google.**.*</pattern>
+                                    <result>com.runtimeverification.rvpredict.internal.com.google.@1.@2</result>
+                                </rule>
+                            </rules>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
     </build>
 </project>
+    

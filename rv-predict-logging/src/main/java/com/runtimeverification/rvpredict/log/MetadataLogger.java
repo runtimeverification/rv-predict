@@ -15,7 +15,7 @@ import java.util.Set;
  *  - location identification
  *  - number of events written so far
  */
-public class MetadataLogger implements Runnable {
+public class MetadataLogger implements LoggingTask {
     private ObjectOutputStream metadataOS;
     private final LoggingEngine loggingEngine;
     private boolean shutdown = false;
@@ -89,6 +89,7 @@ public class MetadataLogger implements Runnable {
     /**
      * Signals shutdown, wakes the thread, then waits for it to finish and closes the stream.
      */
+    @Override
     public void finishLogging() throws InterruptedException, IOException {
         shutdown = true;
         if (owner == null) return;
@@ -99,6 +100,7 @@ public class MetadataLogger implements Runnable {
         metadataOS.close();
     }
 
+    @Override
     public void setOwner(Thread owner) {
         this.owner = owner;
     }

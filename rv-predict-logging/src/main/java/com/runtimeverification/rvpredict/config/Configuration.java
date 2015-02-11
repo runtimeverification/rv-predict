@@ -29,13 +29,17 @@
 package com.runtimeverification.rvpredict.config;
 
 import com.beust.jcommander.*;
-import com.runtimeverification.rvpredict.engine.main.Main;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLDecoder;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.CodeSource;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -75,6 +79,34 @@ public class Configuration {
            pattern = pattern.replace(c, "\\"  + c);
         }
         return Pattern.compile(pattern.replace("*", ".*")+".*");
+    }
+
+    public static String getBasePath() {
+        CodeSource codeSource = Configuration.class.getProtectionDomain().getCodeSource();
+        String path;
+        if (codeSource == null) {
+            path = ClassLoader.getSystemClassLoader()
+                    .getResource(Configuration.class.getName().replace('.', '/') + ".class").toString();
+            path = path.substring(path.indexOf("file:"), path.indexOf('!'));
+            URL url = null;
+            try {
+                url = new URL(path);
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+            path = url.getPath();
+        } else {
+            path = codeSource.getLocation().getPath();
+        }
+        path = new File(path).getAbsolutePath();
+        try {
+            String decodedPath = URLDecoder.decode(path, "UTF-8");
+            File parent = new File(decodedPath).getParentFile().getParentFile();
+            return parent.getAbsolutePath();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     private void initIncludeList() {
@@ -127,7 +159,7 @@ public class Configuration {
         private OS(boolean isPosix, String libDir) {
             this.isPosix = isPosix;
             String arch = System.getProperty("os.arch");
-            this.libDir = Main.getBasePath() + File.separator + "lib" + File.separator + "native"
+            this.libDir = getBasePath() + File.separator + "lib" + File.separator + "native"
                     + File.separator + libDir + File.separator
                     + (arch.toLowerCase().contains("64") ? "64" : "32");
         }

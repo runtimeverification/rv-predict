@@ -13,7 +13,7 @@ import java.util.List;
  *
  * @author TraianSF
  */
-public class LoggingServer implements Runnable {
+public class LoggingServer implements LoggingTask {
     private final LoggingEngine engine;
     private Thread owner;
     private final List<Logger> loggers = new LinkedList<>();
@@ -64,6 +64,7 @@ public class LoggingServer implements Runnable {
      * Shuts down the logging process, signaling all threads, including the logging server
      * to finish recording and yields control.
      */
+    @Override
     public void finishLogging() throws InterruptedException, IOException {
         threadLocalTraceOS.close();
         owner.join();
@@ -90,6 +91,7 @@ public class LoggingServer implements Runnable {
         }
     }
 
+    @Override
     public void setOwner(Thread owner) {
         this.owner = owner;
     }

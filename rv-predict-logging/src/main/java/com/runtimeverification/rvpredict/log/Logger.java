@@ -6,7 +6,7 @@ import java.io.IOException;
  * Class for dumping events to disk.  Reads data through an
  * {@link EventPipe} and writes them to an {@link EventOutputStream}
  */
-public class Logger implements Runnable {
+public class Logger implements LoggingTask {
     private final EventPipe eventPipe;
     private final EventOutputStream outputStream;
     private Thread owner;
@@ -33,10 +33,12 @@ public class Logger implements Runnable {
      * Sends closing signal to the event queue.
      * @throws InterruptedException
      */
+    @Override
     public void finishLogging() throws InterruptedException {
         eventPipe.close();
     }
 
+    @Override
     public void setOwner(Thread owner) {
         this.owner = owner;
     }

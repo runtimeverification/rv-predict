@@ -10,6 +10,7 @@ import com.runtimeverification.rvpredict.trace.EventType;
  * @author TraianSF
  */
 public class EventItem {
+    public static final long _0X_DEADBEEFL = 0xDEADBEEFL;
     public final long GID;
     public final long TID;
     public final int ID;

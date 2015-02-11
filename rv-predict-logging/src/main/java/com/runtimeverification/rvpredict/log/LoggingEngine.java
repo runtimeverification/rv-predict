@@ -29,7 +29,6 @@
 package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.engine.main.RVPredict;
 import com.runtimeverification.rvpredict.trace.EventType;
 
 import java.io.IOException;
@@ -45,20 +44,16 @@ public class LoggingEngine {
 
     private final AtomicLong globalEventID  = new AtomicLong(0);
     private final LoggingServer loggingServer;
-    private final RVPredict predictionServer;
+    private final LoggingTask predictionServer;
     private final Configuration config;
     private volatile boolean shutdown = false;
     private final LoggingFactory loggingFactory;
 
-    public LoggingEngine(Configuration config) {
+    public LoggingEngine(Configuration config, LoggingFactory loggingFactory, LoggingTask predictionServer) {
         this.config = config;
-        if (Configuration.online) {
-            loggingFactory = new OnlineLoggingFactory();
-            predictionServer = startPredicting();
-        } else {
-            loggingFactory = new OfflineLoggingFactory(config);
-            predictionServer = null;
-        }
+        this.loggingFactory = loggingFactory;
+        this.predictionServer = predictionServer;
+
         loggingServer = new LoggingServer(this);
     }
 
@@ -85,18 +80,12 @@ public class LoggingEngine {
         }
     }
 
-    private RVPredict startPredicting() {
-       RVPredict predictionServer = null;
-        try {
-            predictionServer = new RVPredict(config, loggingFactory);
-        } catch (IOException | ClassNotFoundException e) {
-            assert false : "These exceptions should only be thrown for offline prediction";
-        }
+    public void startPredicting() {
+
         Thread predictionServerThread = new Thread(predictionServer, "Prediction main thread");
         predictionServer.setOwner(predictionServerThread);
         predictionServerThread.setDaemon(true);
         predictionServerThread.start();
-        return predictionServer;
     }
 
     /**

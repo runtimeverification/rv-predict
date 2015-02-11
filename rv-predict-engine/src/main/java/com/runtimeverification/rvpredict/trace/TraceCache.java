@@ -1,7 +1,8 @@
-package com.runtimeverification.rvpredict.log;
+package com.runtimeverification.rvpredict.trace;
 
-import com.runtimeverification.rvpredict.trace.Trace;
-import com.runtimeverification.rvpredict.trace.EventUtils;
+import com.runtimeverification.rvpredict.log.EventInputStream;
+import com.runtimeverification.rvpredict.log.EventItem;
+import com.runtimeverification.rvpredict.log.LoggingFactory;
 
 import java.io.EOFException;
 import java.io.IOException;

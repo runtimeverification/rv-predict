@@ -12,6 +12,7 @@
         <module>examples</module>
         <module>rv-predict-installer</module>
         <module>docs</module>
+        <module>rv-predict-logging</module>
     </modules>
     <url>http://www.runtimeverification.com</url>
     <scm>

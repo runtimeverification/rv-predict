@@ -1,6 +1,5 @@
 package com.runtimeverification.rvpredict.log;
 
-import com.runtimeverification.rvpredict.engine.main.Main;
 import com.runtimeverification.rvpredict.trace.EventType;
 
 /**
@@ -14,9 +13,8 @@ import com.runtimeverification.rvpredict.trace.EventType;
  * created for this purpose.
  *
  * The {@link BufferedEventPipe#close()} method, which flushes the buffers and send the
- * {@link BufferedEventPipe#END_BUFFER} marker to close the pipe, is called only as part of the
- * {@link Main.CleanupAgent#cleanup()} method added as a shutdown hook
- * to the logging process.
+ * {@link BufferedEventPipe#END_BUFFER} marker to close the pipe, is called only as part of
+ *  a shutdown hook to the logging process.
  *
  * @author TraianSF
  */

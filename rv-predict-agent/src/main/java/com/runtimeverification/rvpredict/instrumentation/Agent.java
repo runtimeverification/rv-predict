@@ -13,7 +13,10 @@ import java.util.regex.Pattern;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.Main;
+import com.runtimeverification.rvpredict.engine.main.RVPredict;
 import com.runtimeverification.rvpredict.log.LoggingEngine;
+import com.runtimeverification.rvpredict.log.LoggingFactory;
+import com.runtimeverification.rvpredict.log.OnlineLoggingFactory;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 import org.objectweb.asm.ClassReader;
 import com.runtimeverification.rvpredict.instrumentation.transformer.ClassTransformer;
@@ -101,9 +104,24 @@ public class Agent implements ClassFileTransformer {
         if (!Configuration.online) {
             OfflineLoggingFactory.removeTraceFiles(config.outdir);
         }
-        final LoggingEngine loggingEngine = new LoggingEngine(config);
+        LoggingFactory loggingFactory;
+        RVPredict predictionServer = null;
+        if (Configuration.online) {
+            loggingFactory = new OnlineLoggingFactory();
+            try {
+                predictionServer = new RVPredict(config, loggingFactory);
+            } catch (IOException | ClassNotFoundException e) {
+                assert false : "These exceptions should only be thrown for offline prediction";
+            }
+        } else {
+            loggingFactory = new OfflineLoggingFactory(config);
+        }
+        final LoggingEngine loggingEngine = new LoggingEngine(config, loggingFactory, predictionServer);
         RVPredictRuntime.init(loggingEngine);
         loggingEngine.startLogging();
+        if (Configuration.online) {
+            loggingEngine.startPredicting();
+        }
 
         inst.addTransformer(new Agent(config), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {

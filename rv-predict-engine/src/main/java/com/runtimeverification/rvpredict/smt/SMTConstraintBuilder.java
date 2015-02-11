@@ -28,7 +28,6 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.smt;
 
-import com.runtimeverification.rvpredict.log.EventItem;
 import com.runtimeverification.rvpredict.trace.Event;
 import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
@@ -51,6 +50,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.util.Constants;
 
 public class SMTConstraintBuilder {
 
@@ -303,7 +303,7 @@ public class SMTConstraintBuilder {
      * feasibility constraint is also satisfied.
      */
     private String getConcreteFeasibilityConstraint(MemoryAccessEvent event) {
-        if (computedConcretePhi.contains(event) || event.getValue() == EventItem._0X_DEADBEEFL) {
+        if (computedConcretePhi.contains(event) || event.getValue() == Constants._0X_DEADBEEFL) {
             return makeConcretePhiVariable(event);
         }
         computedConcretePhi.add(event);
@@ -341,7 +341,7 @@ public class SMTConstraintBuilder {
             StringBuilder case1 = new StringBuilder("false");
             if (thrdImdWrtPred == null) {
                 long initVal = trace.getInitValueOf(event.getAddr());
-                if (initVal == event.getValue() || initVal == EventItem._0X_DEADBEEFL) {
+                if (initVal == event.getValue() || initVal == Constants._0X_DEADBEEFL) {
                     case1 = new StringBuilder("(and true ");
                     for (WriteEvent write : predWriteSet) {
                         case1.append(getAsstHappensBefore(event, write));

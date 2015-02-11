@@ -38,7 +38,6 @@ import java.util.Set;
 import java.util.List;
 
 import com.google.common.collect.*;
-import com.runtimeverification.rvpredict.log.EventItem;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -148,7 +147,7 @@ public class Trace {
      * @param addr
      *            the address
      * @return the actual initial value of the memory address or a dummy value
-     *         {@link EventItem#_0X_DEADBEEFL} if the initial value is not recorded or
+     *         {@link com.runtimeverification.rvpredict.util.Constants#_0X_DEADBEEFL} if the initial value is not recorded or
      *         missing
      */
     public Long getInitValueOf(MemoryAddr addr) {

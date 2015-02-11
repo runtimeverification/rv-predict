@@ -321,40 +321,6 @@ public final class RVPredictRuntime {
     }
 
     /**
-     * Logs the {@code INIT} event produced by initializing a field.
-     *
-     * @param object
-     *            the owner object of the field; {@code null} when initializing
-     *            static field
-     * @param value
-     *            the initial value of the field
-     * @param variableId
-     *            the variable identifier
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static void logFieldInit(Object object, long value, int variableId, int locId) {
-        variableId = MetaData.resolveFieldId(variableId);
-        saveEvent(EventType.INIT, locId, System.identityHashCode(object), -variableId, value);
-    }
-
-    /**
-     * Logs the {@code INIT} event produced by initializing an array element.
-     *
-     * @param array
-     *            the array of the field
-     * @param index
-     *            the array index
-     * @param value
-     *            the initial value of the element
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static void logArrayInit(Object array, int index, long value, int locId) {
-        saveEvent(EventType.INIT, locId, System.identityHashCode(array), index, value);
-    }
-
-    /**
      * Logs the {@code START} event produced by invoking {@code thread.start()}.
      *
      * When starting a new thread, a consistent unique identifier of the thread
@@ -370,7 +336,7 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void rvPredictStart(Thread thread, int locId) {
-        saveEvent(EventType.INIT, locId, System.identityHashCode(thread),
+        saveEvent(EventType.WRITE, locId, System.identityHashCode(thread),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
         saveSyncEvent(EventType.START, locId, thread.getId());
         thread.start();

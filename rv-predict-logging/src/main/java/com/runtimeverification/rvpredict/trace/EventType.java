@@ -6,7 +6,6 @@ package com.runtimeverification.rvpredict.trace;
  * @author TraianSF
  */
 public enum EventType {
-    INIT,
     READ,
     WRITE,
 

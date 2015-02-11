@@ -11,8 +11,6 @@ public class EventUtils {
 
     public static Event of(EventItem item) {
         switch (item.TYPE) {
-            case INIT:
-                return new InitEvent(item.GID, item.TID, item.ID, item.ADDRL, item.ADDRR, item.VALUE);
             case READ:
                 return new ReadEvent(item.GID, item.TID, item.ID, item.ADDRL, item.ADDRR, item.VALUE);
             case WRITE:

@@ -40,6 +40,7 @@ import java.util.List;
 import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.util.Constants;
+
 import org.apache.commons.lang3.mutable.MutableInt;
 
 /**
@@ -132,7 +133,7 @@ public class Trace {
     private final State initState;
 
     /**
-     * Maintains the current values for every location, as recorded into the trace 
+     * Maintains the current values for every location, as recorded into the trace
      */
     private static final State currentState = new State();
 
@@ -306,13 +307,13 @@ public class Trace {
         //  TODO(YilongL): uncomment the following statement after fixing issue#304
 //        Long initValue = Constants._0X_DEADBEEFL;
         rawEventsBuilder.add(event);
-        if (event instanceof InitOrAccessEvent) {
-            InitOrAccessEvent initOrAcc = (InitOrAccessEvent) event;
-            MemoryAddr addr = initOrAcc.getAddr();
+        if (event instanceof MemoryAccessEvent) {
+            MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
+            MemoryAddr addr = memAcc.getAddr();
             if (!initState.addrToValue.containsKey(addr)) {
                 initState.addrToValue.put(addr, currentState.addrToValue.getOrDefault(addr, initValue));
             }
-            currentState.addrToValue.put(addr, initOrAcc.getValue());
+            currentState.addrToValue.put(addr, memAcc.getValue());
             if (event instanceof MemoryAccessEvent) {
                 Long tid = event.getTID();
 
@@ -366,9 +367,6 @@ public class Trace {
                 threadIdToBranchEvents.put(tid, branchnodes);
             }
             branchnodes.add((BranchEvent) event);
-        } else if (event instanceof InitEvent) {
-            InitEvent initEvent = (InitEvent) event;
-            initState.addrToValue.put(initEvent.getAddr(), initEvent.getValue());
         } else {
             // all critical nodes -- read/write/synchronization events
 
@@ -478,8 +476,8 @@ public class Trace {
 
         List<Event> reducedEvents = new ArrayList<>();
         for (Event event : rawEvents) {
-            if (event instanceof InitOrAccessEvent) {
-                MemoryAddr addr = ((InitOrAccessEvent) event).getAddr();
+            if (event instanceof MemoryAccessEvent) {
+                MemoryAddr addr = ((MemoryAccessEvent) event).getAddr();
                 if (sharedMemAddr.contains(addr)) {
                     reducedEvents.add(event);
                 }
@@ -559,10 +557,6 @@ public class Trace {
         private Map<MemoryAddr, Long> addrToValue = Maps.newHashMap();
 
         public State() { }
-
-        private State(State state) {
-            this.addrToValue = new HashMap<>(state.addrToValue);
-        }
 
     }
 

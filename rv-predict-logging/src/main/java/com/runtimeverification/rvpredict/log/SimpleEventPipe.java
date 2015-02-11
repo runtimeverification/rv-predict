@@ -1,7 +1,5 @@
 package com.runtimeverification.rvpredict.log;
 
-import com.runtimeverification.rvpredict.trace.EventType;
-
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -11,7 +9,7 @@ import java.util.concurrent.LinkedBlockingDeque;
  * @author TraianSF
  */
 public class SimpleEventPipe implements EventPipe {
-    private final static EventItem END_EVENT = new EventItem(0,0,0,0,0,0, EventType.INIT);
+    private final static EventItem END_EVENT = new EventItem(0,0,0,0,0,0, null);
     private final BlockingQueue<EventItem> pipe;
 
     public SimpleEventPipe() {

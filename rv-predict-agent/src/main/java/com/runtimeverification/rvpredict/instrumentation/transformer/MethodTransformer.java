@@ -17,9 +17,8 @@ import java.util.Set;
 
 import static com.runtimeverification.rvpredict.instrumentation.InstrumentationUtils.*;
 import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
-import static org.objectweb.asm.Opcodes.*;
 
-public class MethodTransformer extends MethodVisitor {
+public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private final InstructionAdapter mv;
 
@@ -30,11 +29,6 @@ public class MethodTransformer extends MethodVisitor {
     private final String signature;
 
     private int crntMaxLocals;
-
-    /**
-     * Specifies whether the visited method is an initialization method.
-     */
-    private final boolean isInit;
 
     /**
      * Specifies whether the visited method is synchronized.
@@ -61,7 +55,6 @@ public class MethodTransformer extends MethodVisitor {
         this.className = className;
         this.version = version;
         this.signature = name + desc;
-        this.isInit = "<init>".equals(name) || "<clinit>".equals(name);
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
         this.crntMaxLocals = crntMaxLocals;
@@ -111,12 +104,6 @@ public class MethodTransformer extends MethodVisitor {
         case GETSTATIC:
         case GETFIELD:
             /* read event should be logged after it happens */
-
-            if (isInit) {
-                mv.visitFieldInsn(opcode, owner, name, desc);
-                return;
-            }
-
             if (opcode == GETSTATIC) {
                 // <stack>... </stack>
                 mv.aconst(null);
@@ -157,15 +144,9 @@ public class MethodTransformer extends MethodVisitor {
             // <stack>... objectref value </stack>
             calcLongValue(valueType);
             // <stack>... objectref longValue </stack>
-            if (isInit) {
-                push(varId, locId);
-                // <stack>... objectref longValue varId locId </stack>
-                invokeRTMethod(LOG_FIELD_INIT);
-            } else {
-                push(varId, 1, locId);
-                // <stack>... objectref longValue varId true locId </stack>
-                invokeRTMethod(LOG_FIELD_ACCESS);
-            }
+            push(varId, 1, locId);
+            // <stack>... objectref longValue varId true locId </stack>
+            invokeRTMethod(LOG_FIELD_ACCESS);
             // <stack>... </stack>
             if (opcode == PUTFIELD) {
                 loadLocal(objectref, OBJECT_TYPE);
@@ -211,11 +192,6 @@ public class MethodTransformer extends MethodVisitor {
         switch (opcode) {
         case AALOAD: case BALOAD: case CALOAD: case SALOAD:
         case IALOAD: case FALOAD: case DALOAD: case LALOAD:
-            if (isInit) {
-                mv.visitInsn(opcode);
-                return;
-            }
-
             logArrayLoad(opcode);
             break;
         case AASTORE: case BASTORE: case CASTORE: case SASTORE:
@@ -296,15 +272,9 @@ public class MethodTransformer extends MethodVisitor {
         loadLocal(value, valueType);
         calcLongValue(valueType);
         // <stack>... arrayref index array index longValue </stack>
-        if (isInit) {
-            push(getCrntLocId());
-            // <stack>... arrayref index array index longValue locId </stack>
-            invokeRTMethod(LOG_ARRAY_INIT);
-        } else {
-            push(1, getCrntLocId());
-            // <stack>... arrayref index array index longValue true locId </stack>
-            invokeRTMethod(LOG_ARRAY_ACCESS);
-        }
+        push(1, getCrntLocId());
+        // <stack>... arrayref index array index longValue true locId </stack>
+        invokeRTMethod(LOG_ARRAY_ACCESS);
         // <stack>... arrayref index </stack>
         loadLocal(value, valueType);
         // <stack>... arrayref index value </stack>

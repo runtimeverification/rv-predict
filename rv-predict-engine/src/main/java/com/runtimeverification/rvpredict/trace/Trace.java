@@ -124,8 +124,17 @@ public class Trace {
 
     private List<ReadEvent> allReadNodes;
 
+    /**
+     * The initial value at all addresses referenced in this trace segment.
+     * It is computed as the value in the currentState before the first access
+     * occurring in this trace segment.
+     */
     private final State initState;
-    private static final State finalState = new State();
+
+    /**
+     * Maintains the current values for every location, as recorded into the trace 
+     */
+    private static final State currentState = new State();
 
     public Trace(LoggingFactory loggingFactory) {
         this.loggingFactory = loggingFactory;
@@ -151,9 +160,8 @@ public class Trace {
      */
     public Long getInitValueOf(MemoryAddr addr) {
         Long initValue = initState.addrToValue.get(addr);
-        // TODO(YilongL): uncomment the following statement after fixing issue#304
-//        return initValue == null ? _0X_DEADBEEFL : initValue;
-        return initValue == null ? 0 : initValue;
+        assert initValue != null : "All values in the trace should have been set in addRawEvent";
+        return initValue;
     }
 
     public Event getFirstThreadEvent(long threadId) {
@@ -293,15 +301,18 @@ public class Trace {
     }
 
     public void addRawEvent(Event event) {
+        Long initValue = 0L;
+        // TODO(YilongL): uncomment the following statement after fixing issue#304
+//        Long initValue = Constants._0X_DEADBEEFL;
 //        System.err.println(event + " " + loggingFactory.getStmtSig(event.getID()));
         rawEventsBuilder.add(event);
         if (event instanceof InitOrAccessEvent) {
             InitOrAccessEvent initOrAcc = (InitOrAccessEvent) event;
             MemoryAddr addr = initOrAcc.getAddr();
             if (!initState.addrToValue.containsKey(addr)) {
-                initState.addrToValue.put(addr, finalState.addrToValue.getOrDefault(addr,0L));
+                initState.addrToValue.put(addr, currentState.addrToValue.getOrDefault(addr, initValue));
             }
-            finalState.addrToValue.put(addr, initOrAcc.getValue());
+            currentState.addrToValue.put(addr, initOrAcc.getValue());
             if (event instanceof MemoryAccessEvent) {
                 Long tid = event.getTID();
 

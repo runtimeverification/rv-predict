@@ -185,16 +185,12 @@ options for advanced users to tune RV-Predict:
    one can prefix the argument of ``--exclude`` with the ``+`` character.
    Please note that excluding packages might affect precision, as events from 
    non-logged packages might prevent certain race conditions from occurring.
+   Note: in ``bash``-like enviroments, the ``$`` character must be escaped 
+   as it is used by the shell to introduce environment variables.
 #. Including packages.  To give more flexibility to selecting which packages 
    to include and exclude, RV-Predict also provides the ``--include`` option 
    which is similar to the ``--exclude`` option (comma separated list of 
    package patterns), but opposite in effect.  
-#. Aggressive logging.  Through its ``--with-profile`` option, RV-Predict 
-   provides some heuristics to detect and filter out from the log non-shared 
-   data accesses.  Although not suitable for smaller applications (as it 
-   involves an additional preprocessing step for profiling), it can often bring 
-   significant speedups for larger applications, as it drastically reduces the 
-   trace size.
 
 
 Problems running RV-Predict?

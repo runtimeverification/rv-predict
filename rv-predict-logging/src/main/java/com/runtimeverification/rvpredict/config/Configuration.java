@@ -29,6 +29,7 @@
 package com.runtimeverification.rvpredict.config;
 
 import com.beust.jcommander.*;
+import com.google.common.base.Joiner;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.File;
@@ -219,11 +220,13 @@ public class Configuration {
     public String log_output = YES;
 
     public final static String opt_include = "--include";
-    @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include", hidden = true, descriptionKey = "1025")
+    @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include." +
+            "\nPrefix with + to add to the default included packages", hidden = true, descriptionKey = "1025")
     public static String includes;
 
     public final static String opt_exclude = "--exclude";
-    @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude", hidden = true, descriptionKey = "1030")
+    @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude." +
+            "\nPrefix with + to add to the default excluded packages", hidden = true, descriptionKey = "1030")
     public static String excludes;
 
     public final static String opt_zip = "--zip";
@@ -240,7 +243,7 @@ public class Configuration {
     public boolean predict = true;
 
     public final static String opt_online = "--online";
-    @Parameter(names = opt_online, description = "Run prediction online", descriptionKey = "2005")
+    @Parameter(names = opt_online, description = "Run prediction online", hidden = true, descriptionKey = "2005")
     public static boolean online = false;
 
     // final static String opt_rmm_pso = "--pso";//for testing only
@@ -460,7 +463,7 @@ public class Configuration {
             description += Util.spaces(spacesBeforeCnt)
                     + parameterDescription.getNames()
                     + Util.spaces(spacesAfterCnt)
-                    + parameterDescription.getDescription()
+                    + Joiner.on("\n" + Util.spaces(4 + max_option_length)).join(parameterDescription.getDescription().split("\\n"))
                     + (aDefault.isEmpty() ? "" : "\n" + Util.spaces(4)
                             + Util.spaces(max_option_length) + aDefault);
             usageMap.put(descriptionKey, description);

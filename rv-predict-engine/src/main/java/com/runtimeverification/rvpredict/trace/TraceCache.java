@@ -43,9 +43,9 @@ public class TraceCache {
      * @return a {@link Trace} representing the trace segment
      *         read
      */
-    public Trace getTrace(long fromIndex, long toIndex, Trace.State initState) throws IOException,
+    public Trace getTrace(long fromIndex, long toIndex) throws IOException,
             InterruptedException {
-        Trace trace = new Trace(initState, loggingFactory);
+        Trace trace = new Trace(loggingFactory);
         for (long index = fromIndex; index < toIndex; index++) {
             EventItem eventItem = getEvent(index);
             if (eventItem == null)

@@ -125,13 +125,11 @@ public class Trace {
     private List<ReadEvent> allReadNodes;
 
     private final State initState;
-    private final State finalState;
+    private static final State finalState = new State();
 
-    public Trace(State initState, LoggingFactory loggingFactory) {
+    public Trace(LoggingFactory loggingFactory) {
         this.loggingFactory = loggingFactory;
-        assert initState != null;
-        this.initState = initState;
-        this.finalState = new State(initState);
+        initState = new State();
     }
 
     public boolean hasSharedMemAddr() {
@@ -294,35 +292,34 @@ public class Trace {
         return lastBranchEvent;
     }
 
-    public State getFinalState() {
-        return finalState;
-    }
-
     public void addRawEvent(Event event) {
 //        System.err.println(event + " " + loggingFactory.getStmtSig(event.getID()));
         rawEventsBuilder.add(event);
         if (event instanceof InitOrAccessEvent) {
             InitOrAccessEvent initOrAcc = (InitOrAccessEvent) event;
-            finalState.addrToValue.put(initOrAcc.getAddr(), initOrAcc.getValue());
-        }
-        if (event instanceof MemoryAccessEvent) {
-            MemoryAddr addr = ((MemoryAccessEvent) event).getAddr();
-            Long tid = event.getTID();
+            MemoryAddr addr = initOrAcc.getAddr();
+            if (!initState.addrToValue.containsKey(addr)) {
+                initState.addrToValue.put(addr, finalState.addrToValue.getOrDefault(addr,0L));
+            }
+            finalState.addrToValue.put(addr, initOrAcc.getValue());
+            if (event instanceof MemoryAccessEvent) {
+                Long tid = event.getTID();
 
-            if (event instanceof ReadEvent) {
-                Set<Long> set = addrToReadThreads.get(addr);
-                if (set == null) {
-                    set = new HashSet<Long>();
-                    addrToReadThreads.put(addr, set);
+                if (event instanceof ReadEvent) {
+                    Set<Long> set = addrToReadThreads.get(addr);
+                    if (set == null) {
+                        set = new HashSet<Long>();
+                        addrToReadThreads.put(addr, set);
+                    }
+                    set.add(tid);
+                } else {
+                    Set<Long> set = addrToWriteThreads.get(addr);
+                    if (set == null) {
+                        set = new HashSet<Long>();
+                        addrToWriteThreads.put(addr, set);
+                    }
+                    set.add(tid);
                 }
-                set.add(tid);
-            } else {
-                Set<Long> set = addrToWriteThreads.get(addr);
-                if (set == null) {
-                    set = new HashSet<Long>();
-                    addrToWriteThreads.put(addr, set);
-                }
-                set.add(tid);
             }
         } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
             Long lockObj = ((SyncEvent) event).getSyncObject();

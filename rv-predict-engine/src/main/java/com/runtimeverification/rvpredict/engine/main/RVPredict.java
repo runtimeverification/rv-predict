@@ -30,7 +30,8 @@ package com.runtimeverification.rvpredict.engine.main;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
-import com.runtimeverification.rvpredict.log.TraceCache;
+import com.runtimeverification.rvpredict.log.LoggingTask;
+import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Logger;
 import com.runtimeverification.rvpredict.violation.Violation;
@@ -48,7 +49,7 @@ import java.util.concurrent.*;
  * Splits the log in segments of length {@link Configuration#windowSize},
  * each of them being executed as a {@link RaceDetectorTask} task.
  */
-public class RVPredict implements Runnable {
+public class RVPredict implements LoggingTask {
 
     private final Set<Violation> violations = Collections.newSetFromMap(new ConcurrentHashMap<Violation,Boolean>());
     private final Configuration config;
@@ -175,12 +176,14 @@ public class RVPredict implements Runnable {
         return loggingFactory;
     }
 
+    @Override
     public void finishLogging() throws InterruptedException {
         loggingFactory.finishLogging();
         owner.join();
         report();
     }
 
+    @Override
     public void setOwner(Thread owner) {
         this.owner = owner;
     }

@@ -49,7 +49,7 @@ import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.instrumentation.MetaData;
 import com.runtimeverification.rvpredict.log.EventStats;
 import com.runtimeverification.rvpredict.trace.EventType;
-import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.util.Constants;
 
 /**
  * RV-Predict runtime library that consists of instrumented methods for logging
@@ -120,7 +120,7 @@ public final class RVPredictRuntime {
      * this dummy value, the prediction engine has to understand this dummy
      * value to avoid generating read-write consistency constraint for it.
      */
-    private static final long DUMMY_VALUE = Trace._0X_DEADBEEFL;
+    private static final long DUMMY_VALUE = Constants._0X_DEADBEEFL;
 
     private static final String MOCK_STATE_FIELD = "$state";
 

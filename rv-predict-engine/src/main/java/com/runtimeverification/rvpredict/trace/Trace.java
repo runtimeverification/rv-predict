@@ -39,6 +39,7 @@ import java.util.List;
 
 import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 /**
@@ -47,8 +48,6 @@ import org.apache.commons.lang3.mutable.MutableInt;
  * address.
  */
 public class Trace {
-
-    public static final long _0X_DEADBEEFL = 0xDEADBEEFL;
 
     /**
      * Unprocessed raw events reading from the logging phase.
@@ -149,7 +148,7 @@ public class Trace {
      * @param addr
      *            the address
      * @return the actual initial value of the memory address or a dummy value
-     *         {@link #_0X_DEADBEEFL} if the initial value is not recorded or
+     *         {@link Constants#_0X_DEADBEEFL} if the initial value is not recorded or
      *         missing
      */
     public Long getInitValueOf(MemoryAddr addr) {

@@ -8,11 +8,6 @@ import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -52,7 +47,7 @@ public class Main {
             }
 
             String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
-            String basePath = getBasePath();
+            String basePath = Configuration.getBasePath();
             String separator = System.getProperty("file.separator");
             String libPath = basePath + separator + "lib" + separator;
             String rvAgent = libPath + "rv-predict" + ".jar";
@@ -135,7 +130,7 @@ public class Main {
         String file = null;
         if (predict) {
             String java = JavaEnvUtils.getJreExecutable("java");
-            String basePath = getBasePath();
+            String basePath = Configuration.getBasePath();
             String separator = System.getProperty("file.separator");
             String libPath = basePath + separator + "lib" + separator;
             String rvEngine = libPath + "rv-predict" + ".jar";
@@ -277,34 +272,6 @@ public class Main {
 
     public static String escapeString(String s) {
         return (s.contains(" ") ? "\\\"" + s + "\\\"" : s);
-    }
-
-    public static String getBasePath() {
-        CodeSource codeSource = Main.class.getProtectionDomain().getCodeSource();
-        String path;
-        if (codeSource == null) {
-            path = ClassLoader.getSystemClassLoader()
-                    .getResource(Main.class.getName().replace('.', '/') + ".class").toString();
-            path = path.substring(path.indexOf("file:"), path.indexOf('!'));
-            URL url = null;
-            try {
-                url = new URL(path);
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            }
-            path = url.getPath();
-        } else {
-            path = codeSource.getLocation().getPath();
-        }
-        path = new File(path).getAbsolutePath();
-        try {
-            String decodedPath = URLDecoder.decode(path, "UTF-8");
-            File parent = new File(decodedPath).getParentFile().getParentFile();
-            return parent.getAbsolutePath();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 
 }

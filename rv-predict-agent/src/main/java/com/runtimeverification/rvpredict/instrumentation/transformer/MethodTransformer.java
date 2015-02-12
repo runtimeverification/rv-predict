@@ -17,9 +17,8 @@ import java.util.Set;
 
 import static com.runtimeverification.rvpredict.instrumentation.InstrumentationUtils.*;
 import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
-import static org.objectweb.asm.Opcodes.*;
 
-public class MethodTransformer extends MethodVisitor {
+public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private final InstructionAdapter mv;
 

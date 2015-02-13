@@ -301,10 +301,10 @@ public class Trace {
     }
 
     public void addRawEvent(Event event) {
-        Long initValue = 0L;
-        // TODO(YilongL): uncomment the following statement after fixing issue#304
-//        Long initValue = Constants._0X_DEADBEEFL;
 //        System.err.println(event + " " + loggingFactory.getStmtSig(event.getID()));
+        Long initValue = 0L;
+        //  TODO(YilongL): uncomment the following statement after fixing issue#304
+//        Long initValue = Constants._0X_DEADBEEFL;
         rawEventsBuilder.add(event);
         if (event instanceof InitOrAccessEvent) {
             InitOrAccessEvent initOrAcc = (InitOrAccessEvent) event;

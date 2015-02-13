@@ -109,19 +109,17 @@ public class RVPredict implements LoggingTask {
                             return t;
                         }
                     });
-            Trace.State initState = new Trace.State();
 
             long fromIndex = 1;
             // process the trace window by window
             Trace trace;
             do {
-                trace = traceCache.getTrace(fromIndex, fromIndex += config.windowSize, initState);
+                trace = traceCache.getTrace(fromIndex, fromIndex += config.windowSize);
 
                 if (trace.hasSharedMemAddr()) {
                     raceDetectorExecutor.execute(new RaceDetectorTask(this, trace));
                 }
 
-                initState = trace.getFinalState();
             } while (trace.getSize() == config.windowSize);
 
             shutdownAndAwaitTermination(raceDetectorExecutor);

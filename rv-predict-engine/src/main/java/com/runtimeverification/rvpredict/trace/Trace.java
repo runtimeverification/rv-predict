@@ -124,14 +124,21 @@ public class Trace {
 
     private List<ReadEvent> allReadNodes;
 
+    /**
+     * The initial value at all addresses referenced in this trace segment.
+     * It is computed as the value in the currentState before the first access
+     * occurring in this trace segment.
+     */
     private final State initState;
-    private final State finalState;
 
-    public Trace(State initState, LoggingFactory loggingFactory) {
+    /**
+     * Maintains the current values for every location, as recorded into the trace 
+     */
+    private static final State currentState = new State();
+
+    public Trace(LoggingFactory loggingFactory) {
         this.loggingFactory = loggingFactory;
-        assert initState != null;
-        this.initState = initState;
-        this.finalState = new State(initState);
+        initState = new State();
     }
 
     public boolean hasSharedMemAddr() {
@@ -153,9 +160,8 @@ public class Trace {
      */
     public Long getInitValueOf(MemoryAddr addr) {
         Long initValue = initState.addrToValue.get(addr);
-        // TODO(YilongL): uncomment the following statement after fixing issue#304
-//        return initValue == null ? _0X_DEADBEEFL : initValue;
-        return initValue == null ? 0 : initValue;
+        assert initValue != null : "All values in the trace should have been set in addRawEvent";
+        return initValue;
     }
 
     public Event getFirstThreadEvent(long threadId) {
@@ -294,35 +300,37 @@ public class Trace {
         return lastBranchEvent;
     }
 
-    public State getFinalState() {
-        return finalState;
-    }
-
     public void addRawEvent(Event event) {
 //        System.err.println(event + " " + loggingFactory.getStmtSig(event.getID()));
+        Long initValue = 0L;
+        //  TODO(YilongL): uncomment the following statement after fixing issue#304
+//        Long initValue = Constants._0X_DEADBEEFL;
         rawEventsBuilder.add(event);
         if (event instanceof InitOrAccessEvent) {
             InitOrAccessEvent initOrAcc = (InitOrAccessEvent) event;
-            finalState.addrToValue.put(initOrAcc.getAddr(), initOrAcc.getValue());
-        }
-        if (event instanceof MemoryAccessEvent) {
-            MemoryAddr addr = ((MemoryAccessEvent) event).getAddr();
-            Long tid = event.getTID();
+            MemoryAddr addr = initOrAcc.getAddr();
+            if (!initState.addrToValue.containsKey(addr)) {
+                initState.addrToValue.put(addr, currentState.addrToValue.getOrDefault(addr, initValue));
+            }
+            currentState.addrToValue.put(addr, initOrAcc.getValue());
+            if (event instanceof MemoryAccessEvent) {
+                Long tid = event.getTID();
 
-            if (event instanceof ReadEvent) {
-                Set<Long> set = addrToReadThreads.get(addr);
-                if (set == null) {
-                    set = new HashSet<Long>();
-                    addrToReadThreads.put(addr, set);
+                if (event instanceof ReadEvent) {
+                    Set<Long> set = addrToReadThreads.get(addr);
+                    if (set == null) {
+                        set = new HashSet<Long>();
+                        addrToReadThreads.put(addr, set);
+                    }
+                    set.add(tid);
+                } else {
+                    Set<Long> set = addrToWriteThreads.get(addr);
+                    if (set == null) {
+                        set = new HashSet<Long>();
+                        addrToWriteThreads.put(addr, set);
+                    }
+                    set.add(tid);
                 }
-                set.add(tid);
-            } else {
-                Set<Long> set = addrToWriteThreads.get(addr);
-                if (set == null) {
-                    set = new HashSet<Long>();
-                    addrToWriteThreads.put(addr, set);
-                }
-                set.add(tid);
             }
         } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
             Long lockObj = ((SyncEvent) event).getSyncObject();

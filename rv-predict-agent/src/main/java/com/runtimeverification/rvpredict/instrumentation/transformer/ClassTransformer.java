@@ -2,8 +2,8 @@ package com.runtimeverification.rvpredict.instrumentation.transformer;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.instrumentation.MetaData;
-import org.objectweb.asm.*;
 
+import org.objectweb.asm.*;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -70,10 +70,11 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
     public MethodVisitor visitMethod(int access, String name, String desc, String signature,
             String[] exceptions) {
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
+        assert mv != null;
 
         /* do not instrument synthesized bridge method; otherwise, it may cause
          * infinite recursion at runtime */
-        if (mv != null && (access & ACC_BRIDGE) == 0) {
+        if ((access & ACC_BRIDGE) == 0) {
             int crntMaxLocals = 0;
             for (Type type : Type.getArgumentTypes(desc)) {
                 crntMaxLocals += type.getSize();
@@ -82,6 +83,11 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
             mv = new MethodTransformer(mv, source, className, version, name, desc, access,
                     crntMaxLocals, finalFields, loader, config);
         }
+
+        if ("<clinit>".equals(name)) {
+            mv = new ClassInitializerTransformer(mv, access, name, desc);
+        }
+
         return mv;
     }
 

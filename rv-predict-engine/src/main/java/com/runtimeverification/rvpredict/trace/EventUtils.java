@@ -27,6 +27,9 @@ public class EventUtils {
             case JOIN_MAYBE_FAILED:
                 long syncObj = (long)item.ADDRL << 32 | item.ADDRR & 0xFFFFFFFFL;
                 return new SyncEvent(item.GID, item.TID, item.ID, item.TYPE, syncObj);
+            case CLINIT_ENTER:
+            case CLINIT_EXIT:
+                return new MetaEvent(item.GID, item.TID, item.ID, item.TYPE);
             case BRANCH:
                 return new BranchEvent(item.GID, item.TID, item.ID);
             default:

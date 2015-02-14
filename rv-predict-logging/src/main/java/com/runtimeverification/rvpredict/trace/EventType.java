@@ -32,6 +32,18 @@ public enum EventType {
     READ_UNLOCK,
 
     /**
+     * Event generated after entering the class initializer code, i.e.
+     * {@code <clinit>}.
+     */
+    CLINIT_ENTER,
+
+    /**
+     * Event generated right before exiting the class initializer code, i.e.
+     * {@code <clinit>}.
+     */
+    CLINIT_EXIT,
+
+    /**
      * Event generated before calling {@code Object#wait}.
      */
     WAIT_REL,

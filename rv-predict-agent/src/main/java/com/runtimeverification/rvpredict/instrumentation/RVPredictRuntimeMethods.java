@@ -26,6 +26,8 @@ public class RVPredictRuntimeMethods {
 
     public static final RVPredictRuntimeMethod LOG_FIELD_ACCESS  =  init("logFieldAcc", O, J, I, Z, I);
     public static final RVPredictRuntimeMethod LOG_ARRAY_ACCESS  =  init("logArrayAcc", O, I, J, Z, I);
+    public static final RVPredictRuntimeMethod LOG_CLINIT_ENTER  =  init("logClassInitializerEnter");
+    public static final RVPredictRuntimeMethod LOG_CLINIT_EXIT   =  init("logClassInitializerExit");
     public static final RVPredictRuntimeMethod LOG_MONITOR_ENTER =  init("logMonitorEnter", O, I);
     public static final RVPredictRuntimeMethod LOG_MONITOR_EXIT  =  init("logMonitorExit", O, I);
     public static final RVPredictRuntimeMethod LOG_BRANCH        =  init("logBranch", I);

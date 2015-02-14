@@ -94,7 +94,7 @@ public class RaceDetectorTask implements Runnable {
                             MemoryAccessEvent crntMemAcc = iter.next();
                             int crntMemAccIdx = crntThrdEvents.indexOf(crntMemAcc);
 
-                            /* ends the block if there is sync/branch event in between */
+                            /* ends the block if there is sync/branch-event in between */
                             boolean memAccOnly = true;
                             for (Event e : crntThrdEvents.subList(prevMemAccIdx + 1, crntMemAccIdx)) {
                                 memAccOnly = memAccOnly && (e instanceof MemoryAccessEvent);
@@ -131,7 +131,9 @@ public class RaceDetectorTask implements Runnable {
                     Set<Race> potentialRaces = Sets.newHashSet();
                     for (MemoryAccessEvent e1 : equivAccBlk.get(fst)) {
                         for (MemoryAccessEvent e2 : equivAccBlk.get(snd)) {
-                            if (e1 instanceof WriteEvent || e2 instanceof WriteEvent) {
+                            if ((e1 instanceof WriteEvent || e2 instanceof WriteEvent)
+                                    && !trace.isClinitMemoryAccess(e1)
+                                    && !trace.isClinitMemoryAccess(e2)) {
                                 potentialRaces.add(new Race(e1, e2, RVPredict.getLoggingFactory()));
                             }
                         }

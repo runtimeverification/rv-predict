@@ -31,7 +31,6 @@ package com.runtimeverification.rvpredict.trace;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -121,9 +120,12 @@ public class Trace {
      */
     private final Table<MemoryAddr, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
 
-    private final LoggingFactory loggingFactory;
+    /**
+     * Set of {@code MemoryAccessEvent}'s that happen during class initialization.
+     */
+    private final Set<MemoryAccessEvent> clinitMemAccEvents = Sets.newHashSet();
 
-    private List<ReadEvent> allReadNodes;
+    private final LoggingFactory loggingFactory;
 
     /**
      * The initial value at all addresses referenced in this trace segment.
@@ -222,16 +224,8 @@ public class Trace {
         return memAccessEventsTbl;
     }
 
-    public List<ReadEvent> getAllReadNodes() {
-        if (allReadNodes == null) {
-            allReadNodes = new ArrayList<>();
-            Iterator<List<ReadEvent>> it = addrToReadEvents.values().iterator();
-            while (it.hasNext()) {
-                allReadNodes.addAll(it.next());
-            }
-        }
-
-        return allReadNodes;
+    public boolean isClinitMemoryAccess(MemoryAccessEvent event) {
+        return clinitMemAccEvents.contains(event);
     }
 
     /**
@@ -367,6 +361,15 @@ public class Trace {
                 threadIdToBranchEvents.put(tid, branchnodes);
             }
             branchnodes.add((BranchEvent) event);
+        } else if (event instanceof MetaEvent) {
+            EventType eventType = event.getType();
+            if (eventType == EventType.CLINIT_ENTER) {
+                currentState.incClinitLevel(tid);
+            } else if (eventType == EventType.CLINIT_EXIT) {
+                currentState.decClinitLevel(tid);
+            } else {
+                assert false : "unreachable";
+            }
         } else {
             // all critical nodes -- read/write/synchronization events
 
@@ -382,6 +385,10 @@ public class Trace {
             // TODO: Optimize it -- no need to update it every time
             if (event instanceof MemoryAccessEvent) {
                 MemoryAccessEvent mnode = (MemoryAccessEvent) event;
+                if (currentState.isClinitThread(tid)) {
+                    clinitMemAccEvents.add((MemoryAccessEvent) event);
+                }
+
                 MemoryAddr addr = mnode.getAddr();
 
                 List<MemoryAccessEvent> memAccessEvents = memAccessEventsTbl.get(addr, tid);
@@ -554,9 +561,35 @@ public class Trace {
         /**
          * Map from memory address to its value.
          */
-        private Map<MemoryAddr, Long> addrToValue = Maps.newHashMap();
+        private final Map<MemoryAddr, Long> addrToValue = Maps.newHashMap();
+
+        /**
+         * Map form thread ID to the current level of class initialization.
+         */
+        private final Map<Long, MutableInt> threadIdToClinitLevel = Maps.newHashMap();
 
         public State() { }
+
+        private boolean isClinitThread(long tid) {
+            MutableInt level = threadIdToClinitLevel.get(tid);
+            return level != null && level.intValue() > 0;
+        }
+
+        private void incClinitLevel(long tid) {
+            MutableInt level = threadIdToClinitLevel.get(tid);
+            if (level == null) {
+                level = new MutableInt();
+            }
+            level.increment();
+            threadIdToClinitLevel.put(tid, level);
+        }
+
+        private void decClinitLevel(long tid) {
+            MutableInt level = threadIdToClinitLevel.get(tid);
+            assert level != null && level.intValue() > 0;
+            level.decrement();
+            threadIdToClinitLevel.put(tid, level);
+        }
 
     }
 

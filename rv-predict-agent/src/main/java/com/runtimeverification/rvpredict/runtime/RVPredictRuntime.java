@@ -183,6 +183,14 @@ public final class RVPredictRuntime {
         saveEvent(EventType.BRANCH, locId, 0, 0, 0);
     }
 
+    public static void logClassInitializerEnter() {
+        saveEvent(EventType.CLINIT_ENTER, 0, 0, 0, 0);
+    }
+
+    public static void logClassInitializerExit() {
+        saveEvent(EventType.CLINIT_EXIT, 0, 0, 0, 0);
+    }
+
     /**
      * Logs events produced by invoking {@code object.wait()}.
      *

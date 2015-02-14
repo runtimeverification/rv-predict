@@ -4,9 +4,17 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.commons.AdviceAdapter;
 
+import com.runtimeverification.rvpredict.trace.EventType;
+
 import static com.runtimeverification.rvpredict.instrumentation.InstrumentationUtils.*;
 import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
 
+/**
+ * Injects code that logs {@link EventType#CLINIT_ENTER} and
+ * {@link EventType#CLINIT_EXIT} events.
+ *
+ * @author YilongL
+ */
 public class ClassInitializerTransformer extends AdviceAdapter implements Opcodes {
 
     protected ClassInitializerTransformer(MethodVisitor mv, int access, String name, String desc) {

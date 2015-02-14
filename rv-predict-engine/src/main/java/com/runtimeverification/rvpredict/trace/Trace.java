@@ -355,12 +355,7 @@ public class Trace {
         threadIds.add(tid);
 
         if (event instanceof BranchEvent) {
-            List<BranchEvent> branchnodes = threadIdToBranchEvents.get(tid);
-            if (branchnodes == null) {
-                branchnodes = new ArrayList<>();
-                threadIdToBranchEvents.put(tid, branchnodes);
-            }
-            branchnodes.add((BranchEvent) event);
+            getOrInitDefault(threadIdToBranchEvents, tid).add((BranchEvent) event);
         } else if (event instanceof MetaEvent) {
             EventType eventType = event.getType();
             if (eventType == EventType.CLINIT_ENTER) {
@@ -371,48 +366,24 @@ public class Trace {
                 assert false : "unreachable";
             }
         } else {
-            // all critical nodes -- read/write/synchronization events
-
             allEvents.add(event);
 
-            List<Event> threadNodes = threadIdToEvents.get(tid);
-            if (threadNodes == null) {
-                threadNodes = new ArrayList<>();
-                threadIdToEvents.put(tid, threadNodes);
-            }
-
-            threadNodes.add(event);
+            getOrInitDefault(threadIdToEvents, tid).add(event);
             // TODO: Optimize it -- no need to update it every time
             if (event instanceof MemoryAccessEvent) {
-                MemoryAccessEvent mnode = (MemoryAccessEvent) event;
+                MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
                 if (currentState.isClinitThread(tid)) {
                     clinitMemAccEvents.add((MemoryAccessEvent) event);
                 }
 
-                MemoryAddr addr = mnode.getAddr();
+                MemoryAddr addr = memAcc.getAddr();
 
-                List<MemoryAccessEvent> memAccessEvents = memAccessEventsTbl.get(addr, tid);
-                if (memAccessEvents == null) {
-                    memAccessEvents = Lists.newArrayList();
-                    memAccessEventsTbl.put(addr, tid, memAccessEvents);
-                }
-                memAccessEvents.add(mnode);
+                getOrInitDefault(memAccessEventsTbl.row(addr), tid).add(memAcc);
 
                 if (event instanceof ReadEvent) {
-                    List<ReadEvent> readNodes = addrToReadEvents.get(addr);
-                    if (readNodes == null) {
-                        readNodes = new ArrayList<>();
-                        addrToReadEvents.put(addr, readNodes);
-                    }
-                    readNodes.add((ReadEvent) event);
-
+                    getOrInitDefault(addrToReadEvents, addr).add((ReadEvent) event);
                 } else {
-                    List<WriteEvent> writeNodes = addrToWriteEvents.get(addr);
-                    if (writeNodes == null) {
-                        writeNodes = new ArrayList<>();
-                        addrToWriteEvents.put(addr, writeNodes);
-                    }
-                    writeNodes.add((WriteEvent) event);
+                    getOrInitDefault(addrToWriteEvents, addr).add((WriteEvent) event);
                 }
             } else if (event instanceof SyncEvent) {
                 SyncEvent syncEvent = (SyncEvent) event;
@@ -437,12 +408,7 @@ public class Trace {
                     assert false : "unexpected event: " + syncEvent;
                 }
 
-                List<SyncEvent> events = eventsMap.get(syncEvent.getSyncObject());
-                if (events == null) {
-                    events = Lists.newArrayList();
-                    eventsMap.put(syncEvent.getSyncObject(), events);
-                }
-                events.add(syncEvent);
+                getOrInitDefault(eventsMap, syncEvent.getSyncObject()).add(syncEvent);
             }
         }
     }
@@ -554,6 +520,15 @@ public class Trace {
     public boolean isVolatileField(MemoryAddr addr) {
         int fieldId = -addr.fieldIdOrArrayIndex();
         return fieldId > 0 && loggingFactory.isVolatile(fieldId);
+    }
+
+    private <K,V> List<V> getOrInitDefault(Map<K, List<V>> map, K key) {
+        List<V> value = map.get(key);
+        if (value == null) {
+            value = Lists.newArrayList();
+        }
+        map.put(key, value);
+        return value;
     }
 
     public static class State {

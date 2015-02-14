@@ -17,9 +17,8 @@ import java.util.Set;
 
 import static com.runtimeverification.rvpredict.instrumentation.InstrumentationUtils.*;
 import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
-import static org.objectweb.asm.Opcodes.*;
 
-public class MethodTransformer extends MethodVisitor {
+public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private final InstructionAdapter mv;
 
@@ -31,10 +30,14 @@ public class MethodTransformer extends MethodVisitor {
 
     private int crntMaxLocals;
 
+    private enum MethodType {
+        CLINIT, INIT, NORMAL;
+    }
+
     /**
-     * Specifies whether the visited method is an initialization method.
+     * {@link MethodType} of the method being transformed.
      */
-    private final boolean isInit;
+    private final MethodType type;
 
     /**
      * Specifies whether the visited method is synchronized.
@@ -46,14 +49,14 @@ public class MethodTransformer extends MethodVisitor {
      */
     private final boolean isStatic;
 
-    private final Set<String> finalFields;
+    private final Set<String> declaredFinalFields;
 
     private int crntLineNum;
 
     private final int branchModel;
 
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
-            String name, String desc, int access, int crntMaxLocals, Set<String> finalFields,
+            String name, String desc, int access, int crntMaxLocals, Set<String> declaredFinalFields,
             ClassLoader loader, Configuration config) {
         super(Opcodes.ASM5, new InstructionAdapter(mv));
         this.mv = (InstructionAdapter) super.mv;
@@ -61,11 +64,20 @@ public class MethodTransformer extends MethodVisitor {
         this.className = className;
         this.version = version;
         this.signature = name + desc;
-        this.isInit = "<init>".equals(name) || "<clinit>".equals(name);
+        switch (name) {
+        case "<init>":
+            type = MethodType.INIT;
+            break;
+        case "<clinit>":
+            type = MethodType.CLINIT;
+            break;
+        default:
+            type = MethodType.NORMAL;
+        }
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
         this.crntMaxLocals = crntMaxLocals;
-        this.finalFields = finalFields;
+        this.declaredFinalFields = declaredFinalFields;
         this.loader = loader;
         this.branchModel = config.branch ? 1 : 0;
     }
@@ -96,7 +108,7 @@ public class MethodTransformer extends MethodVisitor {
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
         /* Optimization: no need to log field access or initialization for final fields */
-        if (owner.equals(className) && finalFields.contains(name)) {
+        if (owner.equals(className) && declaredFinalFields.contains(name)) {
             /* YilongL: note that this is not complete because `finalFields'
              * only contains the final fields of the class we are instrumenting */
             mv.visitFieldInsn(opcode, owner, name, desc);
@@ -112,7 +124,7 @@ public class MethodTransformer extends MethodVisitor {
         case GETFIELD:
             /* read event should be logged after it happens */
 
-            if (isInit) {
+            if (type == MethodType.CLINIT) {
                 mv.visitFieldInsn(opcode, owner, name, desc);
                 return;
             }
@@ -157,7 +169,7 @@ public class MethodTransformer extends MethodVisitor {
             // <stack>... objectref value </stack>
             calcLongValue(valueType);
             // <stack>... objectref longValue </stack>
-            if (isInit) {
+            if (type == MethodType.CLINIT) {
                 push(varId, locId);
                 // <stack>... objectref longValue varId locId </stack>
                 invokeRTMethod(LOG_FIELD_INIT);
@@ -211,7 +223,7 @@ public class MethodTransformer extends MethodVisitor {
         switch (opcode) {
         case AALOAD: case BALOAD: case CALOAD: case SALOAD:
         case IALOAD: case FALOAD: case DALOAD: case LALOAD:
-            if (isInit) {
+            if (type == MethodType.CLINIT) {
                 mv.visitInsn(opcode);
                 return;
             }
@@ -296,7 +308,7 @@ public class MethodTransformer extends MethodVisitor {
         loadLocal(value, valueType);
         calcLongValue(valueType);
         // <stack>... arrayref index array index longValue </stack>
-        if (isInit) {
+        if (type == MethodType.CLINIT) {
             push(getCrntLocId());
             // <stack>... arrayref index array index longValue locId </stack>
             invokeRTMethod(LOG_ARRAY_INIT);

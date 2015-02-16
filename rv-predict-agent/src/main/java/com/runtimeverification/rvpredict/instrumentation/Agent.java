@@ -18,13 +18,16 @@ import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.log.OnlineLoggingFactory;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
+
 import org.objectweb.asm.ClassReader;
+
 import com.runtimeverification.rvpredict.instrumentation.transformer.ClassTransformer;
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.util.Logger;
 
 public class Agent implements ClassFileTransformer {
 
+    private static final String COM_RUNTIMEVERIFICATION_RVPREDICT = "com/runtimeverification/rvpredict";
 
     /**
      * Packages/classes that need to be excluded from instrumentation. These are
@@ -35,7 +38,7 @@ public class Agent implements ClassFileTransformer {
     static {
         String [] ignores = new String[] {
                 // rv-predict itself and the libraries we are using
-                "com/runtimeverification/rvpredict",
+                COM_RUNTIMEVERIFICATION_RVPREDICT,
 
                 // array type
                 "[",
@@ -180,7 +183,9 @@ public class Agent implements ClassFileTransformer {
                 // cname could be null for class like java/lang/invoke/LambdaForm$DMH
                 cname = cr.getClassName();
             }
-            Metadata.initClassMetadata(cname, cbuf);
+            if (!cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT)) {
+                Metadata.initClassMetadata(cname, cbuf);
+            }
 
             if (instrumentClass(loader, cname, c)) {
                 byte[] transformed = ClassTransformer.transform(loader, cbuf, config);

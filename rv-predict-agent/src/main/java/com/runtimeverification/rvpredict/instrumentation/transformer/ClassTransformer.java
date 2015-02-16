@@ -4,8 +4,6 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.instrumentation.Metadata;
 
 import org.objectweb.asm.*;
-import java.util.HashSet;
-import java.util.Set;
 
 public class ClassTransformer extends ClassVisitor implements Opcodes {
 
@@ -16,8 +14,6 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
     private String source;
 
     private int version;
-
-    private final Set<String> finalFields = new HashSet<>();
 
     public static byte[] transform(ClassLoader loader, byte[] cbuf, Configuration config) {
         ClassReader cr = new ClassReader(cbuf);
@@ -53,9 +49,6 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
     public FieldVisitor visitField(int access, String name, String desc, String signature,
             Object value) {
         // TODO(YilongL): remove this method completely
-        if ((access & ACC_FINAL) != 0) {
-            finalFields.add(name);
-        }
         if ((access & ACC_VOLATILE) != 0) {
             Metadata.addVolatileVariable(className, name);
         }
@@ -78,7 +71,7 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
             }
 
             mv = new MethodTransformer(mv, source, className, version, name, desc, access,
-                    crntMaxLocals, finalFields, loader, config);
+                    crntMaxLocals, loader, config);
         }
 
         if ("<clinit>".equals(name)) {

@@ -1,10 +1,12 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.instrumentation.ClassMetadata;
 import com.runtimeverification.rvpredict.instrumentation.Metadata;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods;
+
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -12,8 +14,6 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.InstructionAdapter;
 import org.objectweb.asm.commons.Method;
-
-import java.util.Set;
 
 import static com.runtimeverification.rvpredict.instrumentation.InstrumentationUtils.*;
 import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
@@ -40,15 +40,13 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
      */
     private final boolean isStatic;
 
-    private final Set<String> finalFields;
-
     private int crntLineNum;
 
     private final int branchModel;
 
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
-            String name, String desc, int access, int crntMaxLocals, Set<String> finalFields,
-            ClassLoader loader, Configuration config) {
+            String name, String desc, int access, int crntMaxLocals, ClassLoader loader,
+            Configuration config) {
         super(Opcodes.ASM5, new InstructionAdapter(mv));
         this.mv = (InstructionAdapter) super.mv;
         this.source = source == null ? "Unknown" : source;
@@ -58,7 +56,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
         this.crntMaxLocals = crntMaxLocals;
-        this.finalFields = finalFields;
         this.loader = loader;
         this.branchModel = config.branch ? 1 : 0;
     }
@@ -88,12 +85,16 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-        /* Optimization: no need to log field access or initialization for final fields */
-        if (owner.equals(className) && finalFields.contains(name)) {
-            /* YilongL: note that this is not complete because `finalFields'
-             * only contains the final fields of the class we are instrumenting */
-            mv.visitFieldInsn(opcode, owner, name, desc);
-            return;
+        /* Optimization: https://github.com/runtimeverification/rv-predict/issues/314 */
+        if (owner.equals(className)) {
+            ClassMetadata classMetadata = Metadata.getClassMetadata(owner);
+            if (classMetadata.getFieldNames().contains(name)
+                    && (Metadata.getClassMetadata(owner).getAccess(name) & ACC_FINAL) != 0) {
+                /* YilongL: note that this is not complete because `finalFields'
+                 * only contains the final fields of the class we are instrumenting */
+                mv.visitFieldInsn(opcode, owner, name, desc);
+                return;
+            }
         }
 
         int varId = Metadata.getVariableId(owner, name);

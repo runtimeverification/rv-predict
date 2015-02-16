@@ -8,11 +8,6 @@
     <artifactId>rv-predict-agent</artifactId>
     <dependencies>
         <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm-all</artifactId>
-            <version>5.0.3</version>
-        </dependency>
-        <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>rv-predict-logging</artifactId>
             <version>${project.version}</version>
@@ -74,4 +69,4 @@
         </plugins>
     </build>
 </project>
-    
+

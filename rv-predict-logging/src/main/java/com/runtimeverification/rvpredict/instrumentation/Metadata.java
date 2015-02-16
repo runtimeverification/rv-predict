@@ -1,15 +1,15 @@
 package com.runtimeverification.rvpredict.instrumentation;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+
 import org.apache.commons.lang3.tuple.Pair;
+import org.objectweb.asm.ClassReader;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 public class Metadata {
 
-    public static final ConcurrentHashMap<String, Set<String>> classNameToFieldNames = new ConcurrentHashMap<>();
-    public static final ConcurrentHashMap<String, String[]> classNameToInterfaceNames = new ConcurrentHashMap<>();
-    public static final ConcurrentHashMap<String, String> classNameToSuperclassName = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, ClassMetadata> cnameToClassMetadata = new ConcurrentHashMap<>();
 
     /**
      * YilongL: Those fields starting with `unsaved` are used for incremental
@@ -37,35 +37,6 @@ public class Metadata {
 
     private Metadata() { }
 
-    public static void setSuperclass(String className, String superclassName) {
-        if ("java/lang/Object".equals(className)) {
-            // the only case where superclassName is null
-            return;
-        }
-
-        String value = classNameToSuperclassName.putIfAbsent(className, superclassName);
-        if (value != null && !value.equals(superclassName)) {
-            System.err.println("[Warning]: attempts to reset the superclass name of " + className);
-        }
-    }
-
-    public static void setInterfaces(String className, String[] interfaces) {
-        if (interfaces == null) {
-            interfaces = new String[0];
-        }
-        String[] value = classNameToInterfaceNames.putIfAbsent(className,
-                Arrays.copyOf(interfaces, interfaces.length));
-        if (value != null && !Arrays.deepEquals(value, interfaces)) {
-            System.err.println("[Warning]: attempts to reset the interfaces of " + className);
-        }
-    }
-
-    public static void addField(String className, String fieldName) {
-        classNameToFieldNames.putIfAbsent(className,
-                Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>()));
-        classNameToFieldNames.get(className).add(fieldName);
-    }
-
     public static int getVariableId(String className, String fieldName) {
         return getVariableId(getVariableSignature(className, fieldName));
     }
@@ -89,6 +60,7 @@ public class Metadata {
         return variableId;
     }
 
+    @Deprecated
     public static void addVolatileVariable(String className, String fieldName) {
         String sig = getVariableSignature(className, fieldName);
         if (!volatileVariables.contains(sig)) {
@@ -144,22 +116,27 @@ public class Metadata {
         int idx = varSig.lastIndexOf(".");
         String className = varSig.substring(0, idx);
         String fieldName = varSig.substring(idx + 1);
-        Set<String> fieldNames = classNameToFieldNames.get(className);
-        while (fieldNames != null && !fieldNames.contains(fieldName)) {
-            className = classNameToSuperclassName.get(className);
-            if (className == null) {
-                fieldNames = null;
-                break;
+        ClassMetadata classMetadata = cnameToClassMetadata.get(className);
+        Set<String> fieldNames = null;
+        if (classMetadata != null) {
+            fieldNames = classMetadata.getFieldNames();
+            while (!fieldNames.contains(fieldName)) {
+                className = classMetadata.getSuperName();
+                if (className == null) {
+                    fieldNames = null;
+                    break;
+                } else {
+                    classMetadata = cnameToClassMetadata.get(className);
+                    fieldNames = classMetadata.getFieldNames();
+                }
             }
-
-            fieldNames = classNameToFieldNames.get(className);
         }
 
         if (fieldNames == null) {
             /* failed to resolve this variable Id */
             // TODO(YilongL): uncomment this and make sure it doesn't happen!
-//            System.err.println("[Warning]: unable to retrieve field information of class "
-//                    + className + "; resolving field " + fieldName);
+            System.err.println("[Warning]: unable to retrieve information of field " + fieldName
+                    + " in class " + className);
 
             result = fieldId;
         } else {
@@ -168,5 +145,19 @@ public class Metadata {
         }
         resolvedFieldId[fieldId] = result;
         return result;
+    }
+
+    public static ClassMetadata initClassMetadata(String cname, byte[] cbuf) {
+        return initClassMetadata(cname, new ClassReader(cbuf));
+    }
+
+    public static ClassMetadata initClassMetadata(String cname, ClassReader cr) {
+        ClassMetadata classMetadata = ClassMetadata.create(cr);
+        cnameToClassMetadata.put(cname, classMetadata);
+        return classMetadata;
+    }
+
+    public static ClassMetadata getClassMetadata(String cname) {
+        return cnameToClassMetadata.get(cname);
     }
 }

@@ -8,6 +8,7 @@ import java.lang.instrument.ClassFileTransformer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.objectweb.asm.ClassReader;
@@ -77,7 +78,7 @@ public class InstrumentationUtils {
      *            bootstrap class loader or unknown
      * @return the {@link ClassReader}
      */
-    private static ClassReader getClassReader(String className, ClassLoader loader) {
+    public static ClassReader getClassReader(String className, ClassLoader loader) {
         try {
             return loader == null ? new ClassReader(className) : new ClassReader(
                     loader.getResourceAsStream(className + ".class"));
@@ -101,18 +102,13 @@ public class InstrumentationUtils {
      */
     private static Set<String> getSuperclasses(String className, ClassLoader loader) {
         Set<String> result = new HashSet<>();
-        String superclassName;
         while (className != null) {
-            superclassName = Metadata.classNameToSuperclassName.get(className);
-            if (superclassName == null) {
-                superclassName = getClassReader(className, loader).getSuperName();
-                Metadata.setSuperclass(className, superclassName);
+            ClassMetadata classMetadata = getOrInitClassMetadata(className, loader);
+            String superName = classMetadata.getSuperName();
+            if (superName != null) {
+                result.add(superName);
             }
-
-            if (superclassName != null) {
-                result.add(superclassName);
-            }
-            className = superclassName;
+            className = superName;
         }
         return result;
     }
@@ -129,24 +125,29 @@ public class InstrumentationUtils {
      * @return set of interfaces
      */
     private static Set<String> getInterfaces(String className, ClassLoader loader) {
-        Set<String> interfaces = new HashSet<>();
+        Set<String> result = new HashSet<>();
         Deque<String> queue = new ArrayDeque<>();
         queue.add(className);
         while (!queue.isEmpty()) {
-            String cls = queue.poll();
-            String[] itfs = Metadata.classNameToInterfaceNames.get(cls);
-            if (itfs == null) {
-                itfs = getClassReader(cls, loader).getInterfaces();
-                Metadata.setInterfaces(cls, itfs);
-            }
-
-            for (String itf : itfs) {
-                if (interfaces.add(itf)) {
+            className = queue.poll();
+            ClassMetadata classMetadata = getOrInitClassMetadata(className, loader);
+            List<String> interfaces = classMetadata.getInterfaces();
+            for (String itf : interfaces) {
+                if (result.add(itf)) {
                     queue.add(itf);
                 }
             }
         }
-        return interfaces;
+        return result;
+    }
+
+    private static ClassMetadata getOrInitClassMetadata(String className, ClassLoader loader) {
+        ClassMetadata classMetadata = Metadata.getClassMetadata(className);
+        if (classMetadata == null) {
+            classMetadata = Metadata.initClassMetadata(className,
+                    getClassReader(className, loader));
+        }
+        return classMetadata;
     }
 
     public static void printTransformedClassToFile(String cname, byte[] cbuf, String dir) {

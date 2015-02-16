@@ -52,10 +52,7 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
     @Override
     public FieldVisitor visitField(int access, String name, String desc, String signature,
             Object value) {
-        /* TODO(YilongL): add comments about what is special about `final`,
-         * `volatile`, and `static` w.r.t. instrumentation */
-
-        Metadata.addField(className, name);
+        // TODO(YilongL): remove this method completely
         if ((access & ACC_FINAL) != 0) {
             finalFields.add(name);
         }

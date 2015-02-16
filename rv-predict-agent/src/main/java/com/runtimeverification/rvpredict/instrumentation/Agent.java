@@ -124,6 +124,7 @@ public class Agent implements ClassFileTransformer {
         }
 
         inst.addTransformer(new Agent(config), true);
+        RVPredictRuntimeMethods.forceClassInitialization();
         for (Class<?> c : inst.getAllLoadedClasses()) {
             if (inst.isModifiableClass(c)) {
                 try {

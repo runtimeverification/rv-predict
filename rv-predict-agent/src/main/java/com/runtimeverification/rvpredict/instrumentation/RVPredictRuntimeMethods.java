@@ -198,6 +198,10 @@ public class RVPredictRuntimeMethods {
     public static final RVPredictInterceptor RVPREDICT_ATOMIC_BOOL_GAS =
             register(VIRTUAL, JUCA_ATOMIC_BOOL, "getAndSet", "rvPredictAtomicBoolGAS", Z);
 
+    public static void forceClassInitialization() {
+        // do nothing
+    }
+
     /** Short-hand for {@link RVPredictRuntimeMethod#create(String, Class...)}. */
     private static RVPredictRuntimeMethod init(String name, Class<?>... parameterTypes) {
         return RVPredictRuntimeMethod.create(name, parameterTypes);

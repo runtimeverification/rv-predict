@@ -60,7 +60,6 @@ public class Metadata {
         return variableId;
     }
 
-    @Deprecated
     public static void addVolatileVariable(String className, String fieldName) {
         String sig = getVariableSignature(className, fieldName);
         if (!volatileVariables.contains(sig)) {

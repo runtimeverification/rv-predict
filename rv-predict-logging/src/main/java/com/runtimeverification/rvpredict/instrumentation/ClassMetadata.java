@@ -45,7 +45,7 @@ public class ClassMetadata implements Opcodes {
     }
 
     public static ClassMetadata create(ClassReader cr) {
-        String cname = cr.getClassName();
+        final String cname = cr.getClassName();
         String supername = cr.getSuperName();
         ImmutableList<String> interfaces = ImmutableList.copyOf(cr.getInterfaces());
         final ImmutableMap.Builder<String, Integer> mapBuilder = ImmutableMap.builder();
@@ -55,6 +55,10 @@ public class ClassMetadata implements Opcodes {
             public FieldVisitor visitField(int access, String name, String desc, String signature,
                     Object value) {
                 mapBuilder.put(name, access);
+                // TODO(YilongL): this seems adhoc; find a better way
+                if ((access & ACC_VOLATILE) != 0) {
+                    Metadata.addVolatileVariable(cname, name);
+                }
                 return null;
             }
         };

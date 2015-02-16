@@ -1,8 +1,6 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.instrumentation.Metadata;
-
 import org.objectweb.asm.*;
 
 public class ClassTransformer extends ClassVisitor implements Opcodes {
@@ -43,17 +41,6 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
     public void visitSource(String source, String debug) {
         this.source = source;
         cv.visitSource(source, debug);
-    }
-
-    @Override
-    public FieldVisitor visitField(int access, String name, String desc, String signature,
-            Object value) {
-        // TODO(YilongL): remove this method completely
-        if ((access & ACC_VOLATILE) != 0) {
-            Metadata.addVolatileVariable(className, name);
-        }
-
-        return cv.visitField(access, name, desc, signature, value);
     }
 
     @Override

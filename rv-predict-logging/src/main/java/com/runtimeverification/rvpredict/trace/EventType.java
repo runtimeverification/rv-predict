@@ -6,7 +6,6 @@ package com.runtimeverification.rvpredict.trace;
  * @author TraianSF
  */
 public enum EventType {
-    INIT,
     READ,
     WRITE,
 
@@ -31,6 +30,18 @@ public enum EventType {
      * {@code ReadWriteLock#readLock()#unlock()}.
      */
     READ_UNLOCK,
+
+    /**
+     * Event generated after entering the class initializer code, i.e.
+     * {@code <clinit>}.
+     */
+    CLINIT_ENTER,
+
+    /**
+     * Event generated right before exiting the class initializer code, i.e.
+     * {@code <clinit>}.
+     */
+    CLINIT_EXIT,
 
     /**
      * Event generated before calling {@code Object#wait}.

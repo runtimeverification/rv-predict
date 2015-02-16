@@ -31,12 +31,37 @@ package com.runtimeverification.rvpredict.trace;
 /**
  * Represents read and write events.
  */
-public abstract class MemoryAccessEvent extends InitOrAccessEvent {
+public abstract class MemoryAccessEvent extends AbstractEvent {
+
+    protected final long value;
+    protected final MemoryAddr addr;
 
     protected MemoryAccessEvent(long GID, long TID, int ID, EventType type, int objectHashCode,
             int index, long value) {
-        super(GID, TID, ID, type, objectHashCode, index, value);
+        super(GID, TID, ID, type);
         assert type == EventType.READ || type == EventType.WRITE;
+        this.addr = new MemoryAddr(objectHashCode, index);
+        this.value = value;
+    }
+
+    /**
+     * Returns the memory address involved in the event.
+     */
+    public final MemoryAddr getAddr() {
+        return addr;
+    }
+
+    /**
+     * Returns the value read or written in the event.
+     */
+    public final long getValue() {
+        return value;
+    }
+
+    @Override
+    public final String toString() {
+        return String.format("(%s, E%s, T%s, L%s, %s, %s)", type, GID, TID, ID, addr,
+                Long.toHexString(value));
     }
 
 }

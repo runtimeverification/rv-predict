@@ -125,18 +125,19 @@ public class Agent implements ClassFileTransformer {
 
         inst.addTransformer(new Agent(config), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {
-            if (!c.isInterface() && inst.isModifiableClass(c)) {
-//                String className = c.getName();
-//                if (!className.startsWith("sun") && !className.startsWith("java.lang")
-//                        && !className.startsWith("java.io") && !className.startsWith("java.nio")) {
-//                    System.err.println("Preloaded class: " + className);
-//                }
+            if (inst.isModifiableClass(c)) {
                 try {
                     inst.retransformClasses(c);
                 } catch (UnmodifiableClassException e) {
-                    System.err.println("Cannot retransform class. Exception: " + e);
-                    System.exit(1);
+                    // should not happen
                 }
+            } else {
+                /* TODO(YilongL): Shall(can) we register fields of these
+                 * unmodifiable classes too? We know for sure that primitive
+                 * classes and array class are unmodifiable. And if these are
+                 * the only unmodifiable classes then there is no field for us
+                 * to register (even the `length' field of an array object is
+                 * accessed by a specific bytecode instruction `arraylength'. */
             }
         }
         System.out.println("Finished retransforming preloaded classes.");
@@ -167,12 +168,12 @@ public class Agent implements ClassFileTransformer {
         }
     }
 
-    private static final Set<String> loadedClasses = new HashSet<>();
-
     @Override
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
         try {
+            checkUninterceptedClassLoading(cname, c);
+
             ClassReader cr = new ClassReader(cbuf);
             if (cname == null) {
                 // cname could be null for class like java/lang/invoke/LambdaForm$DMH
@@ -181,70 +182,7 @@ public class Agent implements ClassFileTransformer {
             MetaData.setSuperclass(cname, cr.getSuperName());
             MetaData.setInterfaces(cname, cr.getInterfaces());
 
-            if (Configuration.verbose) {
-                if (c == null) {
-                    System.err.println("[Java-agent] intercepted class load: " + cname);
-                } else {
-                    System.err.println("[Java-agent] intercepted class redefinition/retransformation: " + c);
-                }
-
-                loadedClasses.add(cname.replace("/", "."));
-                for (Class<?> cls : instrumentation.getAllLoadedClasses()) {
-                    if (loadedClasses.add(cls.getName())) {
-                        System.err.println("[Java-agent] missed to intercept class load: " + cls);
-                    }
-                }
-            }
-
-            boolean toInstrument = true;
-            for (Pattern exclude : config.excludeList) {
-                toInstrument = !exclude.matcher(cname).matches();
-                if (!toInstrument) break;
-            }
-
-            if (toInstrument) {
-                for (String mock : MOCKS) {
-                    if (InstrumentationUtils.isSubclassOf(loader, cname, mock)) {
-                        toInstrument = false;
-                        if (Configuration.verbose) {
-                            /* TODO(YilongL): this may cause missing data races if
-                             * the mock for interface/superclass does not contain
-                             * methods specific to this implementation. This could
-                             * be a big problem if the application makes heavy use
-                             * of helper methods specific in some high-level
-                             * concurrency library (e.g. Guava) while most of the
-                             * classes are simply excluded here */
-                            System.err.println("[Java-agent] excluded " + c
-                                    + " from instrumentation because we are mocking " + mock);
-                        }
-                        break;
-                    }
-                }
-            }
-
-            if (!toInstrument) {
-                /* include list overrides the above */
-                for (Pattern include : config.includeList) {
-                    toInstrument = include.matcher(cname).matches();
-                    if (toInstrument) break;
-                }
-            }
-
-            if (toInstrument) {  //make sure we don't instrument IGNORES even if the user said so
-                for (Pattern ignore : IGNORES) {
-                    toInstrument = !ignore.matcher(cname).matches();
-                    if (!toInstrument) break;
-                }
-            }
-
-            if (!toInstrument) {
-                for (Pattern include : MUST_INCLUDES) {
-                    toInstrument = include.matcher(cname).matches();
-                    if (toInstrument) break;
-                }
-            }
-
-            if (toInstrument) {
+            if (instrumentClass(loader, cname, c)) {
                 byte[] transformed = ClassTransformer.transform(loader, cbuf, config);
                 return transformed;
             } else {
@@ -256,4 +194,81 @@ public class Agent implements ClassFileTransformer {
             throw e;
         }
     }
+
+    private static final Set<String> loadedClasses = new HashSet<>();
+
+    private static void checkUninterceptedClassLoading(String cname, Class<?> c) {
+        if (Configuration.verbose) {
+            if (c == null) {
+                System.err.println("[Java-agent] intercepted class load: " + cname);
+            } else {
+                System.err.println("[Java-agent] intercepted class redefinition/retransformation: " + c);
+            }
+
+            loadedClasses.add(cname.replace("/", "."));
+            for (Class<?> cls : instrumentation.getAllLoadedClasses()) {
+                if (loadedClasses.add(cls.getName())) {
+                    System.err.println("[Java-agent] missed to intercept class load: " + cls);
+                }
+            }
+        }
+    }
+
+    private boolean instrumentClass(ClassLoader loader, String cname, Class<?> c) {
+        if (c != null && c.isInterface()) {
+            return false;
+        }
+
+        boolean toInstrument = true;
+        for (Pattern exclude : config.excludeList) {
+            toInstrument = !exclude.matcher(cname).matches();
+            if (!toInstrument) break;
+        }
+
+        if (toInstrument) {
+            for (String mock : MOCKS) {
+                if (InstrumentationUtils.isSubclassOf(loader, cname, mock)) {
+                    toInstrument = false;
+                    if (Configuration.verbose) {
+                        /* TODO(YilongL): this may cause missing data races if
+                         * the mock for interface/superclass does not contain
+                         * methods specific to this implementation. This could
+                         * be a big problem if the application makes heavy use
+                         * of helper methods specific in some high-level
+                         * concurrency library (e.g. Guava) while most of the
+                         * classes are simply excluded here */
+                        System.err.println("[Java-agent] excluded " + c
+                                + " from instrumentation because we are mocking " + mock);
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (!toInstrument) {
+            /* include list overrides the above */
+            for (Pattern include : config.includeList) {
+                toInstrument = include.matcher(cname).matches();
+                if (toInstrument) break;
+            }
+        }
+
+        /* make sure we don't instrument IGNORES even if the user said so */
+        if (toInstrument) {
+            for (Pattern ignore : IGNORES) {
+                toInstrument = !ignore.matcher(cname).matches();
+                if (!toInstrument) break;
+            }
+        }
+
+        if (!toInstrument) {
+            for (Pattern include : MUST_INCLUDES) {
+                toInstrument = include.matcher(cname).matches();
+                if (toInstrument) break;
+            }
+        }
+
+        return toInstrument;
+    }
+
 }

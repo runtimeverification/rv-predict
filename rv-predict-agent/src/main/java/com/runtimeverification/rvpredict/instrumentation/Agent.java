@@ -7,9 +7,7 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.Main;
@@ -23,63 +21,17 @@ import org.objectweb.asm.ClassReader;
 
 import com.runtimeverification.rvpredict.instrumentation.transformer.ClassTransformer;
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
+import com.runtimeverification.rvpredict.metadata.ClassMetadata;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.util.Logger;
+
+import static com.runtimeverification.rvpredict.instrumentation.InstrumentationUtils.*;
 
 public class Agent implements ClassFileTransformer {
 
-    private static final String COM_RUNTIMEVERIFICATION_RVPREDICT = "com/runtimeverification/rvpredict";
+    private static Instrumentation instrumentation;
 
-    /**
-     * Packages/classes that need to be excluded from instrumentation. These are
-     * not configurable by the users because including them for instrumentation
-     * almost certainly leads to crash.
-     */
-    private static List<Pattern> IGNORES;
-    static {
-        String [] ignores = new String[] {
-                // rv-predict itself and the libraries we are using
-                COM_RUNTIMEVERIFICATION_RVPREDICT,
-
-                // array type
-                "[",
-
-                // JDK classes used by the RV-Predict runtime library
-                "java/io",
-                "java/nio",
-                "java/util/concurrent/atomic/AtomicLong",
-                "java/util/concurrent/ConcurrentHashMap",
-                "java/util/zip/GZIPOutputStream",
-                "java/util/regex",
-
-                // Basics of the JDK that everything else is depending on
-                "sun",
-                "java/lang",
-
-                /* we provide complete mocking of the jucl package */
-                "java/util/concurrent/locks"
-        };
-        IGNORES = Configuration.getDefaultPatterns(ignores);
-    }
-
-    private static String[] MOCKS = new String[] {
-        "java/util/Collection",
-        "java/util/Map"
-
-        /* YilongL: do not exclude Iterator because it's not likely to slow down
-         * logging a lot; besides, I am interested in seeing what could happen */
-        // "java/util/Iterator"
-    };
-
-    private static List<Pattern> MUST_INCLUDES = Configuration.getDefaultPatterns(new String[] {
-            "java/util/Collections$Synchronized"
-    });
-
-    static Instrumentation instrumentation;
-    private final Configuration config;
-
-    public Agent(Configuration config) {
-        this.config = config;
-    }
+    public final static Configuration config = new Configuration();
 
     public static void premain(String agentArgs, Instrumentation inst) {
         instrumentation = inst;
@@ -91,7 +43,6 @@ public class Agent implements ClassFileTransformer {
             assert agentArgs.endsWith("\"") : "Argument must be quoted";
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
-        final Configuration config = new Configuration();
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         config.parseArguments(args, false);
 
@@ -126,7 +77,7 @@ public class Agent implements ClassFileTransformer {
             loggingEngine.startPredicting();
         }
 
-        inst.addTransformer(new Agent(config), true);
+        inst.addTransformer(new Agent(), true);
         RVPredictRuntimeMethods.forceClassInitialization();
         for (Class<?> c : inst.getAllLoadedClasses()) {
             if (inst.isModifiableClass(c)) {
@@ -183,16 +134,19 @@ public class Agent implements ClassFileTransformer {
                 // cname could be null for class like java/lang/invoke/LambdaForm$DMH
                 cname = cr.getClassName();
             }
-            if (!cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT)) {
-                Metadata.initClassMetadata(cname, cbuf);
-            }
 
-            if (instrumentClass(loader, cname, c)) {
-                byte[] transformed = ClassTransformer.transform(loader, cbuf, config);
-                return transformed;
-            } else {
-                return null;
+            boolean toInstrument = needToInstrument(cname, loader);
+            if (!cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT)) {
+                ClassMetadata classMetadata = Metadata.getOrInitClassMetadata(cname, cbuf);
+                if (toInstrument) {
+                    for (String fname : classMetadata.getFieldNames()) {
+                        Metadata.trackVariable(cname, fname, classMetadata.getAccess(fname));
+                    }
+                    byte[] transformed = ClassTransformer.transform(loader, cbuf, config);
+                    return transformed;
+                }
             }
+            return null;
         } catch (Throwable e) {
             /* exceptions during class loading are silently suppressed by default */
             System.err.println("Cannot retransform " + cname + ". Exception: " + e);
@@ -218,63 +172,6 @@ public class Agent implements ClassFileTransformer {
                 }
             }
         }
-    }
-
-    private boolean instrumentClass(ClassLoader loader, String cname, Class<?> c) {
-        if (c != null && c.isInterface()) {
-            return false;
-        }
-
-        boolean toInstrument = true;
-        for (Pattern exclude : config.excludeList) {
-            toInstrument = !exclude.matcher(cname).matches();
-            if (!toInstrument) break;
-        }
-
-        if (toInstrument) {
-            for (String mock : MOCKS) {
-                if (InstrumentationUtils.isSubclassOf(loader, cname, mock)) {
-                    toInstrument = false;
-                    if (Configuration.verbose) {
-                        /* TODO(YilongL): this may cause missing data races if
-                         * the mock for interface/superclass does not contain
-                         * methods specific to this implementation. This could
-                         * be a big problem if the application makes heavy use
-                         * of helper methods specific in some high-level
-                         * concurrency library (e.g. Guava) while most of the
-                         * classes are simply excluded here */
-                        System.err.println("[Java-agent] excluded " + c
-                                + " from instrumentation because we are mocking " + mock);
-                    }
-                    break;
-                }
-            }
-        }
-
-        if (!toInstrument) {
-            /* include list overrides the above */
-            for (Pattern include : config.includeList) {
-                toInstrument = include.matcher(cname).matches();
-                if (toInstrument) break;
-            }
-        }
-
-        /* make sure we don't instrument IGNORES even if the user said so */
-        if (toInstrument) {
-            for (Pattern ignore : IGNORES) {
-                toInstrument = !ignore.matcher(cname).matches();
-                if (!toInstrument) break;
-            }
-        }
-
-        if (!toInstrument) {
-            for (Pattern include : MUST_INCLUDES) {
-                toInstrument = include.matcher(cname).matches();
-                if (toInstrument) break;
-            }
-        }
-
-        return toInstrument;
     }
 
 }

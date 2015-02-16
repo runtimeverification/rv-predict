@@ -1,13 +1,15 @@
-package com.runtimeverification.rvpredict.instrumentation;
-
-import com.runtimeverification.rvpredict.config.Configuration;
-
-import org.apache.commons.lang3.tuple.Pair;
-import org.objectweb.asm.ClassReader;
+package com.runtimeverification.rvpredict.metadata;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-public class Metadata {
+
+import org.apache.commons.lang3.tuple.Pair;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Opcodes;
+
+import com.runtimeverification.rvpredict.config.Configuration;
+
+public class Metadata implements Opcodes {
 
     private static final ConcurrentHashMap<String, ClassMetadata> cnameToClassMetadata = new ConcurrentHashMap<>();
 
@@ -30,10 +32,12 @@ public class Metadata {
     public static final Map<Integer, String> locIdToStmtSig = new HashMap<>();
     public static final List<Pair<Integer, String>> unsavedLocIdToStmtSig = new ArrayList<>();
 
-    public static final Set<String> volatileVariables = Collections
-            .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
-    public static final Set<Integer> volatileFieldIds = new HashSet<>();
-    public static final List<String> unsavedVolatileVariables = new ArrayList<>();
+    public static final Set<Integer> volatileVariableIds = Collections
+            .newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
+    public static final List<Integer> unsavedVolatileVariableIds = new ArrayList<>();
+
+    public static final Set<Integer> trackedVariableIds = Collections
+            .newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
 
     private Metadata() { }
 
@@ -60,20 +64,25 @@ public class Metadata {
         return variableId;
     }
 
-    public static void addVolatileVariable(String className, String fieldName) {
-        String sig = getVariableSignature(className, fieldName);
-        if (!volatileVariables.contains(sig)) {
-            synchronized (volatileVariables) {
-                if (!volatileVariables.contains(sig)) {
-                    volatileVariables.add(sig);
-                    if (Configuration.online) {
-                        volatileFieldIds.add(getVariableId(className, fieldName));
-                    } else {
-                        unsavedVolatileVariables.add(sig);
+    private static void addVolatileVariable(int varId) {
+        if (!volatileVariableIds.contains(varId)) {
+            synchronized (volatileVariableIds) {
+                if (!volatileVariableIds.contains(varId)) {
+                    volatileVariableIds.add(varId);
+                    if (!Configuration.online) {
+                        unsavedVolatileVariableIds.add(varId);
                     }
                 }
             }
         }
+    }
+
+    public static void trackVariable(String className, String fieldName, int access) {
+        int varId = getVariableId(className, fieldName);
+        if ((access & ACC_VOLATILE) != 0) {
+            Metadata.addVolatileVariable(varId);
+        }
+        trackedVariableIds.add(varId);
     }
 
     public static int getLocationId(String sig) {
@@ -146,12 +155,16 @@ public class Metadata {
         return result;
     }
 
-    public static ClassMetadata initClassMetadata(String cname, byte[] cbuf) {
-        return initClassMetadata(cname, new ClassReader(cbuf));
+    public static ClassMetadata getOrInitClassMetadata(String cname, byte[] cbuf) {
+        return getOrInitClassMetadata(cname, new ClassReader(cbuf));
     }
 
-    public static ClassMetadata initClassMetadata(String cname, ClassReader cr) {
-        ClassMetadata classMetadata = ClassMetadata.create(cr);
+    public static ClassMetadata getOrInitClassMetadata(String cname, ClassReader cr) {
+        ClassMetadata classMetadata = getClassMetadata(cname);
+        if (classMetadata != null) {
+            return classMetadata;
+        }
+        classMetadata = ClassMetadata.create(cr);
         cnameToClassMetadata.put(cname, classMetadata);
         return classMetadata;
     }

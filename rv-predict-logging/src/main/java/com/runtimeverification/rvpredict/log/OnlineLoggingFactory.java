@@ -1,6 +1,6 @@
 package com.runtimeverification.rvpredict.log;
 
-import com.runtimeverification.rvpredict.instrumentation.Metadata;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -11,9 +11,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * A {@link LoggingFactory} for online prediction.
- * 
+ *
  * Using a {@link SimpleEventPipe}, to make data available asap to prediction
- * 
+ *
  * Whenever an {@link EventOutputStream} is requested, it is created based
  * on an {@link java.io.PipedOutputStream}. At the same time, a {@link java.io.PipedInputStream}
  * is created and queued.  These are later used as a base for an {@link EventInputStream} are
@@ -24,7 +24,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class OnlineLoggingFactory implements LoggingFactory {
     private static final PipedInputStream END_INPUT_STREAM = new PipedInputStream();
     private BlockingQueue<PipedInputStream> eventInputStreams = new LinkedBlockingQueue<>();
-    
+
     @Override
     public EventPipe createEventPipe() {
         return new SimpleEventPipe();
@@ -61,7 +61,7 @@ public class OnlineLoggingFactory implements LoggingFactory {
 
     @Override
     public boolean isVolatile(int fieldId) {
-        return Metadata.volatileFieldIds.contains(fieldId);
+        return Metadata.volatileVariableIds.contains(fieldId);
     }
 
     @Override

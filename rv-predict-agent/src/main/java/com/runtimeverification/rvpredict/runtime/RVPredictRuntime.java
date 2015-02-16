@@ -46,8 +46,8 @@ import java.util.regex.Pattern;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LoggingEngine;
-import com.runtimeverification.rvpredict.instrumentation.Metadata;
 import com.runtimeverification.rvpredict.log.EventStats;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.util.Constants;
 

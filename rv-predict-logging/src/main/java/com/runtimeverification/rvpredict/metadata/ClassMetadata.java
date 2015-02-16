@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.instrumentation;
+package com.runtimeverification.rvpredict.metadata;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -55,10 +55,6 @@ public class ClassMetadata implements Opcodes {
             public FieldVisitor visitField(int access, String name, String desc, String signature,
                     Object value) {
                 mapBuilder.put(name, access);
-                // TODO(YilongL): this seems adhoc; find a better way
-                if ((access & ACC_VOLATILE) != 0) {
-                    Metadata.addVolatileVariable(cname, name);
-                }
                 return null;
             }
         };

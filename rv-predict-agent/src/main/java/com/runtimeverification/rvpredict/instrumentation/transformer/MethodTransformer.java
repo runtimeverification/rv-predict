@@ -1,11 +1,11 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.instrumentation.ClassMetadata;
-import com.runtimeverification.rvpredict.instrumentation.Metadata;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods;
+import com.runtimeverification.rvpredict.metadata.ClassMetadata;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;

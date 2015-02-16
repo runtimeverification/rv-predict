@@ -1,6 +1,6 @@
 package com.runtimeverification.rvpredict.log;
 
-import com.runtimeverification.rvpredict.instrumentation.Metadata;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -58,13 +58,10 @@ public class MetadataLogger implements LoggingTask {
     private void saveMetaData() {
         try {
             /* save <volatileVariable, Id> pairs */
-            synchronized (Metadata.volatileVariables) {
-                Set<Integer> volatileFieldIds = new HashSet<>(Metadata.unsavedVolatileVariables.size());
-                for (String var : Metadata.unsavedVolatileVariables) {
-                    volatileFieldIds.add(Metadata.getVariableId(var));
-                }
+            synchronized (Metadata.volatileVariableIds) {
+                Set<Integer> volatileFieldIds = new HashSet<>(Metadata.unsavedVolatileVariableIds);
                 saveObject(volatileFieldIds);
-                Metadata.unsavedVolatileVariables.clear();
+                Metadata.unsavedVolatileVariableIds.clear();
             }
 
             /* save <VarSig, VarId> pairs */

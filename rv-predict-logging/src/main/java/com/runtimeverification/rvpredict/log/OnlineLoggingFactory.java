@@ -1,6 +1,6 @@
 package com.runtimeverification.rvpredict.log;
 
-import com.runtimeverification.rvpredict.instrumentation.MetaData;
+import com.runtimeverification.rvpredict.instrumentation.Metadata;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -56,17 +56,17 @@ public class OnlineLoggingFactory implements LoggingFactory {
 
     @Override
     public String getStmtSig(int locId) {
-        return MetaData.locIdToStmtSig.get(locId);
+        return Metadata.locIdToStmtSig.get(locId);
     }
 
     @Override
     public boolean isVolatile(int fieldId) {
-        return MetaData.volatileFieldIds.contains(fieldId);
+        return Metadata.volatileFieldIds.contains(fieldId);
     }
 
     @Override
     public String getVarSig(int fieldId) {
-        return MetaData.varSigs[fieldId];
+        return Metadata.varSigs[fieldId];
     }
 
 }

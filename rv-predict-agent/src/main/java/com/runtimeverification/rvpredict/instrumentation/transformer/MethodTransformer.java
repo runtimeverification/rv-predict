@@ -1,7 +1,7 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.instrumentation.MetaData;
+import com.runtimeverification.rvpredict.instrumentation.Metadata;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods;
@@ -96,7 +96,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             return;
         }
 
-        int varId = MetaData.getVariableId(owner, name);
+        int varId = Metadata.getVariableId(owner, name);
         int locId = getCrntLocId();
 
         Type valueType = Type.getType(desc);
@@ -453,7 +453,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
      *         current statement in the instrumented program
      */
     private int getCrntLocId() {
-        return MetaData.getLocationId(getCrntStmtSig());
+        return Metadata.getLocationId(getCrntStmtSig());
     }
 
     /**

@@ -103,10 +103,10 @@ public class InstrumentationUtils {
         Set<String> result = new HashSet<>();
         String superclassName;
         while (className != null) {
-            superclassName = MetaData.classNameToSuperclassName.get(className);
+            superclassName = Metadata.classNameToSuperclassName.get(className);
             if (superclassName == null) {
                 superclassName = getClassReader(className, loader).getSuperName();
-                MetaData.setSuperclass(className, superclassName);
+                Metadata.setSuperclass(className, superclassName);
             }
 
             if (superclassName != null) {
@@ -134,10 +134,10 @@ public class InstrumentationUtils {
         queue.add(className);
         while (!queue.isEmpty()) {
             String cls = queue.poll();
-            String[] itfs = MetaData.classNameToInterfaceNames.get(cls);
+            String[] itfs = Metadata.classNameToInterfaceNames.get(cls);
             if (itfs == null) {
                 itfs = getClassReader(cls, loader).getInterfaces();
-                MetaData.setInterfaces(cls, itfs);
+                Metadata.setInterfaces(cls, itfs);
             }
 
             for (String itf : itfs) {

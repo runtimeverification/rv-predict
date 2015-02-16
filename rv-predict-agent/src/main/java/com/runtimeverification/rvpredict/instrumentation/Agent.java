@@ -179,8 +179,7 @@ public class Agent implements ClassFileTransformer {
                 // cname could be null for class like java/lang/invoke/LambdaForm$DMH
                 cname = cr.getClassName();
             }
-            MetaData.setSuperclass(cname, cr.getSuperName());
-            MetaData.setInterfaces(cname, cr.getInterfaces());
+            collectMetadata(cname, cr);
 
             if (instrumentClass(loader, cname, c)) {
                 byte[] transformed = ClassTransformer.transform(loader, cbuf, config);
@@ -212,6 +211,11 @@ public class Agent implements ClassFileTransformer {
                 }
             }
         }
+    }
+
+    private void collectMetadata(String cname, ClassReader cr) {
+        Metadata.setSuperclass(cname, cr.getSuperName());
+        Metadata.setInterfaces(cname, cr.getInterfaces());
     }
 
     private boolean instrumentClass(ClassLoader loader, String cname, Class<?> c) {

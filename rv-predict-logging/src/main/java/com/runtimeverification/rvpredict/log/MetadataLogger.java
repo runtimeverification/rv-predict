@@ -1,6 +1,6 @@
 package com.runtimeverification.rvpredict.log;
 
-import com.runtimeverification.rvpredict.instrumentation.MetaData;
+import com.runtimeverification.rvpredict.instrumentation.Metadata;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -58,25 +58,25 @@ public class MetadataLogger implements LoggingTask {
     private void saveMetaData() {
         try {
             /* save <volatileVariable, Id> pairs */
-            synchronized (MetaData.volatileVariables) {
-                Set<Integer> volatileFieldIds = new HashSet<>(MetaData.unsavedVolatileVariables.size());
-                for (String var : MetaData.unsavedVolatileVariables) {
-                    volatileFieldIds.add(MetaData.getVariableId(var));
+            synchronized (Metadata.volatileVariables) {
+                Set<Integer> volatileFieldIds = new HashSet<>(Metadata.unsavedVolatileVariables.size());
+                for (String var : Metadata.unsavedVolatileVariables) {
+                    volatileFieldIds.add(Metadata.getVariableId(var));
                 }
                 saveObject(volatileFieldIds);
-                MetaData.unsavedVolatileVariables.clear();
+                Metadata.unsavedVolatileVariables.clear();
             }
 
             /* save <VarSig, VarId> pairs */
-            synchronized (MetaData.varSigToVarId) {
-                saveObject(new ArrayList<>(MetaData.unsavedVarIdToVarSig));
-                MetaData.unsavedVarIdToVarSig.clear();
+            synchronized (Metadata.varSigToVarId) {
+                saveObject(new ArrayList<>(Metadata.unsavedVarIdToVarSig));
+                Metadata.unsavedVarIdToVarSig.clear();
             }
 
             /* save <StmtSig, LocId> pairs */
-            synchronized (MetaData.stmtSigToLocId) {
-                saveObject(new ArrayList<>(MetaData.unsavedLocIdToStmtSig));
-                MetaData.unsavedLocIdToStmtSig.clear();
+            synchronized (Metadata.stmtSigToLocId) {
+                saveObject(new ArrayList<>(Metadata.unsavedLocIdToStmtSig));
+                Metadata.unsavedLocIdToStmtSig.clear();
             }
         } catch (IOException e) {
             System.err.println(e.getMessage());

@@ -5,7 +5,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-public class MetaData {
+public class Metadata {
 
     public static final ConcurrentHashMap<String, Set<String>> classNameToFieldNames = new ConcurrentHashMap<>();
     public static final ConcurrentHashMap<String, String[]> classNameToInterfaceNames = new ConcurrentHashMap<>();
@@ -24,7 +24,7 @@ public class MetaData {
 
     public static final int MAX_NUM_OF_FIELDS = 10000;
     public static final String[] varSigs = new String[MAX_NUM_OF_FIELDS];
-    public static final int[] resolvedFieldId = new int[MetaData.MAX_NUM_OF_FIELDS];
+    public static final int[] resolvedFieldId = new int[Metadata.MAX_NUM_OF_FIELDS];
 
     public static final Map<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
     public static final Map<Integer, String> locIdToStmtSig = new HashMap<>();
@@ -35,7 +35,7 @@ public class MetaData {
     public static final Set<Integer> volatileFieldIds = new HashSet<>();
     public static final List<String> unsavedVolatileVariables = new ArrayList<>();
 
-    private MetaData() { }
+    private Metadata() { }
 
     public static void setSuperclass(String className, String superclassName) {
         if ("java/lang/Object".equals(className)) {

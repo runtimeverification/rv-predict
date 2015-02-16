@@ -1,7 +1,7 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.instrumentation.MetaData;
+import com.runtimeverification.rvpredict.instrumentation.Metadata;
 
 import org.objectweb.asm.*;
 import java.util.HashSet;
@@ -55,12 +55,12 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
         /* TODO(YilongL): add comments about what is special about `final`,
          * `volatile`, and `static` w.r.t. instrumentation */
 
-        MetaData.addField(className, name);
+        Metadata.addField(className, name);
         if ((access & ACC_FINAL) != 0) {
             finalFields.add(name);
         }
         if ((access & ACC_VOLATILE) != 0) {
-            MetaData.addVolatileVariable(className, name);
+            Metadata.addVolatileVariable(className, name);
         }
 
         return cv.visitField(access, name, desc, signature, value);

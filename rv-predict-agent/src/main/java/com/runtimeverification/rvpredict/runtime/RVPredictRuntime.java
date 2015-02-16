@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LoggingEngine;
-import com.runtimeverification.rvpredict.instrumentation.MetaData;
+import com.runtimeverification.rvpredict.instrumentation.Metadata;
 import com.runtimeverification.rvpredict.log.EventStats;
 import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.util.Constants;
@@ -124,11 +124,11 @@ public final class RVPredictRuntime {
 
     private static final String MOCK_STATE_FIELD = "$state";
 
-    private static int NATIVE_INTERRUPTED_STATUS_VAR_ID = MetaData.getVariableId(
+    private static int NATIVE_INTERRUPTED_STATUS_VAR_ID = Metadata.getVariableId(
             "java.lang.Thread", "$interruptedStatus");
-    private static int ATOMIC_BOOLEAN_MOCK_VAL_ID = MetaData.getVariableId(
+    private static int ATOMIC_BOOLEAN_MOCK_VAL_ID = Metadata.getVariableId(
             "java.util.concurrent.atomic.AtomicBoolean", "$value");
-    private static int AQS_MOCK_STATE_ID = MetaData.getVariableId(
+    private static int AQS_MOCK_STATE_ID = Metadata.getVariableId(
             "java.util.concurrent.locks.AbstractQueuedSynchronizer", MOCK_STATE_FIELD);
 
     private static final Method AQS_GET_STATE = getDeclaredMethod(AbstractQueuedSynchronizer.class, "getState");
@@ -303,7 +303,7 @@ public final class RVPredictRuntime {
     public static void logFieldAcc(Object object, long value, int variableId, boolean isWrite,
             int locId) {
         // TODO(YilongL): check skipSavingEvent before performing any computation?
-        variableId = MetaData.resolveFieldId(variableId);
+        variableId = Metadata.resolveFieldId(variableId);
         saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(object), -variableId, value);
     }
@@ -1307,7 +1307,7 @@ public final class RVPredictRuntime {
         }
         if (!isThreadSafeCollection(collection)) {
             saveEvent(EventType.READ, locId, System.identityHashCode(collection),
-                    -MetaData.getVariableId(collection.getClass().getName(), MOCK_STATE_FIELD),
+                    -Metadata.getVariableId(collection.getClass().getName(), MOCK_STATE_FIELD),
                     DUMMY_VALUE);
         }
     }
@@ -1331,7 +1331,7 @@ public final class RVPredictRuntime {
         }
         if (!isThreadSafeCollection(collection)) {
             saveEvent(EventType.WRITE, locId, System.identityHashCode(collection),
-                    -MetaData.getVariableId(collection.getClass().getName(), MOCK_STATE_FIELD),
+                    -Metadata.getVariableId(collection.getClass().getName(), MOCK_STATE_FIELD),
                     DUMMY_VALUE);
         }
     }

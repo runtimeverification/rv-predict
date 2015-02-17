@@ -1,10 +1,12 @@
 package com.runtimeverification.rvpredict.engine.main;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+
 import org.apache.tools.ant.util.JavaEnvUtils;
-import com.runtimeverification.rvpredict.config.Util;
+
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.util.Logger;
+import com.runtimeverification.rvpredict.util.Util;
 
 import java.io.File;
 import java.io.IOException;

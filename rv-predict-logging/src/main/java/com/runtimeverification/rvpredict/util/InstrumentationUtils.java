@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.instrumentation;
+package com.runtimeverification.rvpredict.util;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -21,7 +21,6 @@ import org.objectweb.asm.Type;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.metadata.ClassMetadata;
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 public class InstrumentationUtils implements Opcodes {
 
@@ -30,54 +29,9 @@ public class InstrumentationUtils implements Opcodes {
     public static final Type JL_FLOAT_TYPE  = Type.getObjectType("java/lang/Float");
     public static final Type JL_DOUBLE_TYPE = Type.getObjectType("java/lang/Double");
     public static final Type JL_SYSTEM_TYPE = Type.getObjectType("java/lang/System");
-    public static final Type RVPREDICT_RUNTIME_TYPE = Type.getType(RVPredictRuntime.class);
 
-    public static final String COM_RUNTIMEVERIFICATION_RVPREDICT = "com/runtimeverification/rvpredict";
-
-    /**
-     * Packages/classes that need to be excluded from instrumentation. These are
-     * not configurable by the users because including them for instrumentation
-     * almost certainly leads to crash.
-     */
-    private static List<Pattern> IGNORES;
-    static {
-        String [] ignores = new String[] {
-                // rv-predict itself and the libraries we are using
-                COM_RUNTIMEVERIFICATION_RVPREDICT,
-
-                // array type
-                "[",
-
-                // JDK classes used by the RV-Predict runtime library
-                "java/io",
-                "java/nio",
-                "java/util/concurrent/atomic/AtomicLong",
-                "java/util/concurrent/ConcurrentHashMap",
-                "java/util/zip/GZIPOutputStream",
-                "java/util/regex",
-
-                // Basics of the JDK that everything else is depending on
-                "sun",
-                "java/lang",
-
-                /* we provide complete mocking of the jucl package */
-                "java/util/concurrent/locks"
-        };
-        IGNORES = Configuration.getDefaultPatterns(ignores);
-    }
-
-    private static String[] MOCKS = new String[] {
-        "java/util/Collection",
-        "java/util/Map"
-
-        /* YilongL: do not exclude Iterator because it's not likely to slow down
-         * logging a lot; besides, I am interested in seeing what could happen */
-        // "java/util/Iterator"
-    };
-
-    private static List<Pattern> MUST_INCLUDES = Configuration.getDefaultPatterns(new String[] {
-            "java/util/Collections$Synchronized"
-    });
+    public static final Type RVPREDICT_RUNTIME_TYPE = Type
+            .getObjectType("com/runtimeverification/rvpredict/runtime/RVPredictRuntime");
 
     /**
      * Checks if one class or interface extends or implements another class or
@@ -220,20 +174,20 @@ public class InstrumentationUtils implements Opcodes {
      *            the defining class loader
      * @return {@code true} if we should instrument it; otherwise, {@code false}
      */
-    public static boolean needToInstrument(String cname, ClassLoader loader) {
+    public static boolean needToInstrument(String cname, ClassLoader loader, Configuration config) {
         Boolean toInstrument = instrumentClass.get(cname);
         if (toInstrument != null) {
             return toInstrument;
         }
 
         toInstrument = true;
-        for (Pattern exclude : Agent.config.excludeList) {
+        for (Pattern exclude : config.excludeList) {
             toInstrument = !exclude.matcher(cname).matches();
             if (!toInstrument) break;
         }
 
         if (toInstrument) {
-            for (String mock : MOCKS) {
+            for (String mock : Configuration.MOCKS) {
                 if (InstrumentationUtils.isSubclassOf(loader, cname, mock)) {
                     toInstrument = false;
                     if (Configuration.verbose) {
@@ -254,7 +208,7 @@ public class InstrumentationUtils implements Opcodes {
 
         if (!toInstrument) {
             /* include list overrides the above */
-            for (Pattern include : Agent.config.includeList) {
+            for (Pattern include : config.includeList) {
                 toInstrument = include.matcher(cname).matches();
                 if (toInstrument) break;
             }
@@ -262,14 +216,14 @@ public class InstrumentationUtils implements Opcodes {
 
         /* make sure we don't instrument IGNORES even if the user said so */
         if (toInstrument) {
-            for (Pattern ignore : IGNORES) {
+            for (Pattern ignore : Configuration.IGNORES) {
                 toInstrument = !ignore.matcher(cname).matches();
                 if (!toInstrument) break;
             }
         }
 
         if (!toInstrument) {
-            for (Pattern include : MUST_INCLUDES) {
+            for (Pattern include : Configuration.MUST_INCLUDES) {
                 toInstrument = include.matcher(cname).matches();
                 if (toInstrument) break;
             }

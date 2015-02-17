@@ -23,15 +23,16 @@ import com.runtimeverification.rvpredict.instrumentation.transformer.ClassTransf
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.metadata.ClassMetadata;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
-import static com.runtimeverification.rvpredict.instrumentation.InstrumentationUtils.*;
+import static com.runtimeverification.rvpredict.util.InstrumentationUtils.*;
 
 public class Agent implements ClassFileTransformer {
 
     private static Instrumentation instrumentation;
 
-    public final static Configuration config = new Configuration();
+    private final static Configuration config = new Configuration();
 
     public static void premain(String agentArgs, Instrumentation inst) {
         instrumentation = inst;
@@ -135,8 +136,8 @@ public class Agent implements ClassFileTransformer {
                 cname = cr.getClassName();
             }
 
-            boolean toInstrument = needToInstrument(cname, loader);
-            if (!cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT)) {
+            boolean toInstrument = needToInstrument(cname, loader, config);
+            if (!cname.startsWith(Constants.COM_RUNTIMEVERIFICATION_RVPREDICT)) {
                 ClassMetadata classMetadata = Metadata.getOrInitClassMetadata(cname, cbuf);
                 if (toInstrument) {
                     for (String fname : classMetadata.getFieldNames()) {

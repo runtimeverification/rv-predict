@@ -6,4 +6,5 @@ package com.runtimeverification.rvpredict.util;
  */
 public class Constants {
     public static final long _0X_DEADBEEFL = 0xDEADBEEFL;
+    public static final String COM_RUNTIMEVERIFICATION_RVPREDICT = "com/runtimeverification/rvpredict";
 }

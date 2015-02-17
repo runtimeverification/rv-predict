@@ -6,7 +6,6 @@ import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods;
 import com.runtimeverification.rvpredict.metadata.ClassMetadata;
 import com.runtimeverification.rvpredict.metadata.Metadata;
-
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -15,8 +14,8 @@ import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.InstructionAdapter;
 import org.objectweb.asm.commons.Method;
 
-import static com.runtimeverification.rvpredict.instrumentation.InstrumentationUtils.*;
 import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
+import static com.runtimeverification.rvpredict.util.InstrumentationUtils.*;
 
 public class MethodTransformer extends MethodVisitor implements Opcodes {
 

@@ -6,8 +6,8 @@ import org.objectweb.asm.commons.AdviceAdapter;
 
 import com.runtimeverification.rvpredict.trace.EventType;
 
-import static com.runtimeverification.rvpredict.instrumentation.InstrumentationUtils.*;
 import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
+import static com.runtimeverification.rvpredict.util.InstrumentationUtils.*;
 
 /**
  * Injects code that logs {@link EventType#CLINIT_ENTER} and

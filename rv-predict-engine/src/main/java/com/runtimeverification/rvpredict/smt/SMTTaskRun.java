@@ -35,7 +35,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.config.Util;
+import com.runtimeverification.rvpredict.util.Util;
 
 /**
  * Constraint solving with Z3 solver

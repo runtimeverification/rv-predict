@@ -12,6 +12,7 @@ import org.objectweb.asm.Opcodes;
 
 import com.runtimeverification.rvpredict.instrumentation.transformer.MethodTransformer;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
+import com.runtimeverification.rvpredict.util.InstrumentationUtils;
 
 public class RVPredictRuntimeMethods {
 

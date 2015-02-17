@@ -30,7 +30,9 @@ package com.runtimeverification.rvpredict.config;
 
 import com.beust.jcommander.*;
 import com.google.common.base.Joiner;
+import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
+import com.runtimeverification.rvpredict.util.Util;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,6 +71,51 @@ public class Configuration {
             "org.xml.*",
             "jdk.internal.*"
     };
+
+     /**
+      * Packages/classes that need to be excluded from instrumentation. These are
+      * not configurable by the users because including them for instrumentation
+      * almost certainly leads to crash.
+      */
+     public static List<Pattern> IGNORES;
+     static {
+         String [] ignores = new String[] {
+                 Constants.COM_RUNTIMEVERIFICATION_RVPREDICT,
+
+                 // array type
+                 "[",
+
+                 // JDK classes used by the RV-Predict runtime library
+                 "java/io",
+                 "java/nio",
+                 "java/util/concurrent/atomic/AtomicLong",
+                 "java/util/concurrent/ConcurrentHashMap",
+                 "java/util/zip/GZIPOutputStream",
+                 "java/util/regex",
+
+                 // Basics of the JDK that everything else is depending on
+                 "sun",
+                 "java/lang",
+
+                 /* we provide complete mocking of the jucl package */
+                 "java/util/concurrent/locks"
+         };
+         IGNORES = getDefaultPatterns(ignores);
+     }
+
+     public static String[] MOCKS = new String[] {
+         "java/util/Collection",
+         "java/util/Map"
+
+         /* YilongL: do not exclude Iterator because it's not likely to slow down
+          * logging a lot; besides, I am interested in seeing what could happen */
+         // "java/util/Iterator"
+     };
+
+     public static List<Pattern> MUST_INCLUDES = getDefaultPatterns(new String[] {
+             "java/util/Collections$Synchronized"
+     });
+
     public final List<Pattern> includeList = new LinkedList<>();
     public List<Pattern> excludeList = new LinkedList<>();
     private JCommander jCommander;

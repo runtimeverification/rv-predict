@@ -8,6 +8,7 @@ import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.Main;
@@ -78,8 +79,9 @@ public class Agent implements ClassFileTransformer {
             loggingEngine.startPredicting();
         }
 
+        preinitializeClasses();
+
         inst.addTransformer(new Agent(), true);
-        RVPredictRuntimeMethods.forceClassInitialization();
         for (Class<?> c : inst.getAllLoadedClasses()) {
             if (inst.isModifiableClass(c)) {
                 try {
@@ -121,6 +123,23 @@ public class Agent implements ClassFileTransformer {
                         Main.center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE),
                         Logger.MSGTYPE.INFO);
             }
+        }
+    }
+
+    /**
+     * Pre-initialize certain classes to avoid error-prone class initialization
+     * during {@link ClassFileTransformer#transform} .
+     * <p>
+     * Inspired by <a href=
+     * "https://github.com/glowroot/glowroot/blob/master/core/src/main/java/org/glowroot/weaving/PreInitializeWeavingClasses.java"
+     * >PreInitializeWeavingClasses</a> from Glowroot project.
+     */
+    private static void preinitializeClasses() {
+        try {
+            Class.forName(ThreadLocalRandom.class.getName());
+            Class.forName(RVPredictRuntimeMethods.class.getName());
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
     }
 

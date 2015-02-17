@@ -8,6 +8,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.util.InstrumentationUtils;
 
 public class Metadata implements Opcodes {
 
@@ -26,7 +27,7 @@ public class Metadata implements Opcodes {
 
     public static final int MAX_NUM_OF_FIELDS = 10000;
     public static final String[] varSigs = new String[MAX_NUM_OF_FIELDS];
-    public static final int[] resolvedFieldId = new int[Metadata.MAX_NUM_OF_FIELDS];
+    public static final int[] resolvedFieldId = new int[MAX_NUM_OF_FIELDS];
 
     public static final Map<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
     public static final Map<Integer, String> locIdToStmtSig = new HashMap<>();
@@ -77,7 +78,7 @@ public class Metadata implements Opcodes {
         }
     }
 
-    public static void trackVariable(String className, String fieldName, int access) {
+    private static void trackVariable(String className, String fieldName, int access) {
         int varId = getVariableId(className, fieldName);
         if ((access & ACC_VOLATILE) != 0) {
             Metadata.addVolatileVariable(varId);
@@ -155,20 +156,30 @@ public class Metadata implements Opcodes {
         return result;
     }
 
-    public static ClassMetadata getOrInitClassMetadata(String cname, byte[] cbuf) {
-        return getOrInitClassMetadata(cname, new ClassReader(cbuf));
+    public static ClassMetadata getOrInitClassMetadata(ClassLoader loader, String cname, byte[] cbuf) {
+        return getOrInitClassMetadata(loader, cname, new ClassReader(cbuf));
     }
 
-    public static ClassMetadata getOrInitClassMetadata(String cname, ClassReader cr) {
+    public static ClassMetadata getOrInitClassMetadata(ClassLoader loader, String cname) {
+        return getOrInitClassMetadata(loader, cname,
+                InstrumentationUtils.getClassReader(cname, loader));
+    }
+
+    private static ClassMetadata getOrInitClassMetadata(ClassLoader loader, String cname,
+            ClassReader cr) {
         ClassMetadata classMetadata = getClassMetadata(cname);
         if (classMetadata != null) {
             return classMetadata;
         }
-        classMetadata = ClassMetadata.create(cr);
+        classMetadata = ClassMetadata.create(loader, cr);
+        for (String fname : classMetadata.getFieldNames()) {
+            trackVariable(cname, fname, classMetadata.getAccess(fname));
+        }
         cnameToClassMetadata.put(cname, classMetadata);
         return classMetadata;
     }
 
+    // TODO(YilongL): add a ClassLoader argument and change cnameToClassMetadata to a table?
     public static ClassMetadata getClassMetadata(String cname) {
         return cnameToClassMetadata.get(cname);
     }

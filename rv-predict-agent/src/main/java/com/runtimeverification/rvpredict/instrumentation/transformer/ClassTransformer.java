@@ -1,6 +1,8 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.instrumentation.Agent;
+
 import org.objectweb.asm.*;
 
 public class ClassTransformer extends ClassVisitor implements Opcodes {
@@ -13,10 +15,10 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
 
     private int version;
 
-    public static byte[] transform(ClassLoader loader, byte[] cbuf, Configuration config) {
+    public static byte[] transform(ClassLoader loader, byte[] cbuf) {
         ClassReader cr = new ClassReader(cbuf);
         ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
-        ClassTransformer transformer = new ClassTransformer(cw, loader, config);
+        ClassTransformer transformer = new ClassTransformer(cw, loader, Agent.config);
         cr.accept(transformer, 0);
         return cw.toByteArray();
     }

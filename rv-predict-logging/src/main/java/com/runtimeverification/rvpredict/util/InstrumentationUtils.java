@@ -33,6 +33,12 @@ public class InstrumentationUtils implements Opcodes {
     public static final Type RVPREDICT_RUNTIME_TYPE = Type
             .getObjectType("com/runtimeverification/rvpredict/runtime/RVPredictRuntime");
 
+    public static Configuration config;
+
+    public static void init(Configuration config) {
+        InstrumentationUtils.config = config;
+    }
+
     /**
      * Checks if one class or interface extends or implements another class or
      * interface.
@@ -110,9 +116,7 @@ public class InstrumentationUtils implements Opcodes {
     private static Set<String> getSuperclasses(String className, ClassLoader loader) {
         Set<String> result = new HashSet<>();
         while (className != null) {
-            ClassMetadata classMetadata = Metadata.getOrInitClassMetadata(className,
-                    getClassReader(className, loader));
-            String superName = classMetadata.getSuperName();
+            String superName = Metadata.getOrInitClassMetadata(loader, className).getSuperName();
             if (superName != null) {
                 result.add(superName);
             }
@@ -138,9 +142,8 @@ public class InstrumentationUtils implements Opcodes {
         queue.add(className);
         while (!queue.isEmpty()) {
             className = queue.poll();
-            ClassMetadata classMetadata = Metadata.getOrInitClassMetadata(className,
-                    getClassReader(className, loader));
-            List<String> interfaces = classMetadata.getInterfaces();
+            List<String> interfaces = Metadata.getOrInitClassMetadata(loader, className)
+                    .getInterfaces();
             for (String itf : interfaces) {
                 if (result.add(itf)) {
                     queue.add(itf);
@@ -168,13 +171,14 @@ public class InstrumentationUtils implements Opcodes {
     /**
      * Checks if we should instrument a class or interface.
      *
-     * @param cname
-     *            the name of the class or interface
-     * @param loader
-     *            the defining class loader
+     * @param classMetadata
+     *
      * @return {@code true} if we should instrument it; otherwise, {@code false}
      */
-    public static boolean needToInstrument(String cname, ClassLoader loader, Configuration config) {
+    public static boolean needToInstrument(ClassMetadata classMetadata) {
+        String cname = classMetadata.getClassName();
+        ClassLoader loader = classMetadata.getClassLoader();
+
         Boolean toInstrument = instrumentClass.get(cname);
         if (toInstrument != null) {
             return toInstrument;

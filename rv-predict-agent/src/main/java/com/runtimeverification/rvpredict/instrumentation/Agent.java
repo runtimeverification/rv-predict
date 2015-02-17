@@ -154,9 +154,9 @@ public class Agent implements ClassFileTransformer, Constants {
                 cname = cr.getClassName();
             }
 
-            if (!cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT)) {
+            if (!cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT) && !cname.startsWith("sun")) {
                 ClassMetadata classMetadata = ClassMetadata.getInstance(loader, cname, cbuf);
-                if (InstrumentationUtils.needToInstrument(classMetadata)) {
+                if (InstrumentationUtils.needToInstrument(classMetadata, loader)) {
                     byte[] transformed = ClassTransformer.transform(loader, cbuf);
                     return transformed;
                 }

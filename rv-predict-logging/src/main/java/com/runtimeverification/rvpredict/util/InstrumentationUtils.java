@@ -43,7 +43,7 @@ public class InstrumentationUtils implements Opcodes {
      * interface.
      *
      * @param loader
-     *            the defining loader of {@code class0}, may be null if it is
+     *            the initiating loader of {@code class0}, may be null if it is
      *            the bootstrap class loader or unknown
      * @param class0
      *            the name of the first class or interface
@@ -86,8 +86,8 @@ public class InstrumentationUtils implements Opcodes {
      * @param className
      *            the class or interface to read
      * @param loader
-     *            the defining loader of the class, may be null if it is the
-     *            bootstrap class loader or unknown
+     *            the initiating loader of the class, may be null if it is the
+     *            bootstrap class loader
      * @return the {@link ClassReader}
      */
     public static ClassReader getClassReader(String className, ClassLoader loader) {
@@ -108,7 +108,7 @@ public class InstrumentationUtils implements Opcodes {
      * @param className
      *            the internal name of a class or interface
      * @param loader
-     *            the defining loader of the class, may be null if it is the
+     *            the initiating loader of the class, may be null if it is the
      *            bootstrap class loader or unknown
      * @return set of superclasses
      */
@@ -131,7 +131,7 @@ public class InstrumentationUtils implements Opcodes {
      * @param className
      *            the internal name of a class or interface
      * @param loader
-     *            the defining loader of the class, may be null if it is the
+     *            the initiating loader of the class, may be null if it is the
      *            bootstrap class loader or unknown
      * @return set of interfaces
      */
@@ -174,9 +174,8 @@ public class InstrumentationUtils implements Opcodes {
      *
      * @return {@code true} if we should instrument it; otherwise, {@code false}
      */
-    public static boolean needToInstrument(ClassMetadata classMetadata) {
+    public static boolean needToInstrument(ClassMetadata classMetadata, ClassLoader loader) {
         String cname = classMetadata.getClassName();
-        ClassLoader loader = classMetadata.getClassLoader();
 
         Boolean toInstrument = instrumentClass.get(cname);
         if (toInstrument != null) {

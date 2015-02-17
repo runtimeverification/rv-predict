@@ -50,7 +50,7 @@ import java.util.regex.Pattern;
  * Command line options class for rv-predict Used by JCommander to parse the
  * main program parameters.
  */
-public class Configuration {
+public class Configuration implements Constants {
 
     public static final String LOGGING_PHASE_COMPLETED = "Logging phase completed.";
     public static final String TRACE_LOGGED_IN = "\tTrace logged in: ";
@@ -80,7 +80,7 @@ public class Configuration {
      public static List<Pattern> IGNORES;
      static {
          String [] ignores = new String[] {
-                 Constants.COM_RUNTIMEVERIFICATION_RVPREDICT,
+                 COM_RUNTIMEVERIFICATION_RVPREDICT,
 
                  // array type
                  "[",

@@ -20,7 +20,6 @@ import org.objectweb.asm.Type;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.metadata.ClassMetadata;
-import com.runtimeverification.rvpredict.metadata.Metadata;
 
 public class InstrumentationUtils implements Opcodes {
 
@@ -35,7 +34,7 @@ public class InstrumentationUtils implements Opcodes {
 
     public static Configuration config;
 
-    public static void init(Configuration config) {
+    public static void setConfig(Configuration config) {
         InstrumentationUtils.config = config;
     }
 
@@ -116,7 +115,7 @@ public class InstrumentationUtils implements Opcodes {
     private static Set<String> getSuperclasses(String className, ClassLoader loader) {
         Set<String> result = new HashSet<>();
         while (className != null) {
-            String superName = Metadata.getOrInitClassMetadata(loader, className).getSuperName();
+            String superName = ClassMetadata.getInstance(loader, className).getSuperName();
             if (superName != null) {
                 result.add(superName);
             }
@@ -142,7 +141,7 @@ public class InstrumentationUtils implements Opcodes {
         queue.add(className);
         while (!queue.isEmpty()) {
             className = queue.poll();
-            List<String> interfaces = Metadata.getOrInitClassMetadata(loader, className)
+            List<String> interfaces = ClassMetadata.getInstance(loader, className)
                     .getInterfaces();
             for (String itf : interfaces) {
                 if (result.add(itf)) {

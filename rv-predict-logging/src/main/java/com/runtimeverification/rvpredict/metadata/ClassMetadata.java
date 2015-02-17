@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.metadata;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
@@ -8,8 +10,11 @@ import org.objectweb.asm.Opcodes;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.runtimeverification.rvpredict.util.InstrumentationUtils;
 
 public class ClassMetadata implements Opcodes {
+
+    static final ConcurrentHashMap<String, ClassMetadata> cache = new ConcurrentHashMap<>();
 
     private final ClassLoader loader;
     private final String cname;
@@ -64,7 +69,7 @@ public class ClassMetadata implements Opcodes {
         return false;
     }
 
-    public static ClassMetadata create(ClassLoader loader, ClassReader cr) {
+    private static ClassMetadata create(ClassLoader loader, ClassReader cr) {
         final String cname = cr.getClassName();
         String supername = cr.getSuperName();
         ImmutableList<String> interfaces = ImmutableList.copyOf(cr.getInterfaces());
@@ -80,6 +85,30 @@ public class ClassMetadata implements Opcodes {
         };
         cr.accept(cv, ClassReader.SKIP_CODE);
         return new ClassMetadata(loader, cname, supername, interfaces, mapBuilder.build());
+    }
+
+    public static ClassMetadata getInstance(ClassLoader loader, String cname, byte[] cbuf) {
+        return getInstance0(loader, cname, new ClassReader(cbuf));
+    }
+
+    public static ClassMetadata getInstance(ClassLoader loader, String cname) {
+        return getInstance0(loader, cname,
+                InstrumentationUtils.getClassReader(cname, loader));
+    }
+
+    private static ClassMetadata getInstance0(ClassLoader loader, String cname,
+            ClassReader cr) {
+        // TODO(YilongL): add a ClassLoader argument and change cnameToClassMetadata to a table?
+        ClassMetadata classMetadata = cache.get(cname);
+        if (classMetadata != null) {
+            return classMetadata;
+        }
+        classMetadata = ClassMetadata.create(loader, cr);
+        for (String fname : classMetadata.getFieldNames()) {
+            Metadata.trackVariable(cname, fname, classMetadata.getAccess(fname));
+        }
+        cache.put(cname, classMetadata);
+        return classMetadata;
     }
 
 }

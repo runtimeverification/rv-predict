@@ -86,9 +86,9 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
         /* Optimization: https://github.com/runtimeverification/rv-predict/issues/314 */
         if (owner.equals(className)) {
-            ClassMetadata classMetadata = Metadata.getClassMetadata(owner);
+            ClassMetadata classMetadata = ClassMetadata.getInstance(loader, owner);
             if (classMetadata.getFieldNames().contains(name)
-                    && (Metadata.getClassMetadata(owner).getAccess(name) & ACC_FINAL) != 0) {
+                    && (classMetadata.getAccess(name) & ACC_FINAL) != 0) {
                 /* YilongL: note that this is not complete because `finalFields'
                  * only contains the final fields of the class we are instrumenting */
                 mv.visitFieldInsn(opcode, owner, name, desc);

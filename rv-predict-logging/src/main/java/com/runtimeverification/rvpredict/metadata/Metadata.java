@@ -4,15 +4,11 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.util.InstrumentationUtils;
 
 public class Metadata implements Opcodes {
-
-    private static final ConcurrentHashMap<String, ClassMetadata> cnameToClassMetadata = new ConcurrentHashMap<>();
 
     /**
      * YilongL: Those fields starting with `unsaved` are used for incremental
@@ -78,7 +74,7 @@ public class Metadata implements Opcodes {
         }
     }
 
-    private static void trackVariable(String className, String fieldName, int access) {
+    static void trackVariable(String className, String fieldName, int access) {
         int varId = getVariableId(className, fieldName);
         if ((access & ACC_VOLATILE) != 0) {
             Metadata.addVolatileVariable(varId);
@@ -125,7 +121,9 @@ public class Metadata implements Opcodes {
         int idx = varSig.lastIndexOf(".");
         String className = varSig.substring(0, idx);
         String fieldName = varSig.substring(idx + 1);
-        ClassMetadata classMetadata = cnameToClassMetadata.get(className);
+        // TODO(YilongL): ClassMetadata.cache should be made private and it should be a table;
+        // then this resolveFieldId method should be entirely removed
+        ClassMetadata classMetadata = ClassMetadata.cache.get(className);
         Set<String> fieldNames = null;
         if (classMetadata != null) {
             fieldNames = classMetadata.getFieldNames();
@@ -135,7 +133,7 @@ public class Metadata implements Opcodes {
                     fieldNames = null;
                     break;
                 } else {
-                    classMetadata = cnameToClassMetadata.get(className);
+                    classMetadata = ClassMetadata.cache.get(className);
                     fieldNames = classMetadata.getFieldNames();
                 }
             }
@@ -156,31 +154,4 @@ public class Metadata implements Opcodes {
         return result;
     }
 
-    public static ClassMetadata getOrInitClassMetadata(ClassLoader loader, String cname, byte[] cbuf) {
-        return getOrInitClassMetadata(loader, cname, new ClassReader(cbuf));
-    }
-
-    public static ClassMetadata getOrInitClassMetadata(ClassLoader loader, String cname) {
-        return getOrInitClassMetadata(loader, cname,
-                InstrumentationUtils.getClassReader(cname, loader));
-    }
-
-    private static ClassMetadata getOrInitClassMetadata(ClassLoader loader, String cname,
-            ClassReader cr) {
-        ClassMetadata classMetadata = getClassMetadata(cname);
-        if (classMetadata != null) {
-            return classMetadata;
-        }
-        classMetadata = ClassMetadata.create(loader, cr);
-        for (String fname : classMetadata.getFieldNames()) {
-            trackVariable(cname, fname, classMetadata.getAccess(fname));
-        }
-        cnameToClassMetadata.put(cname, classMetadata);
-        return classMetadata;
-    }
-
-    // TODO(YilongL): add a ClassLoader argument and change cnameToClassMetadata to a table?
-    public static ClassMetadata getClassMetadata(String cname) {
-        return cnameToClassMetadata.get(cname);
-    }
 }

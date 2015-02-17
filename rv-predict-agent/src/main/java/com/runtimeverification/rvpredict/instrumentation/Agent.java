@@ -23,12 +23,11 @@ import org.objectweb.asm.ClassReader;
 import com.runtimeverification.rvpredict.instrumentation.transformer.ClassTransformer;
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.metadata.ClassMetadata;
-import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.InstrumentationUtils;
 import com.runtimeverification.rvpredict.util.Logger;
 
-public class Agent implements ClassFileTransformer {
+public class Agent implements ClassFileTransformer, Constants {
 
     private static Instrumentation instrumentation;
 
@@ -36,7 +35,7 @@ public class Agent implements ClassFileTransformer {
 
     public static void premain(String agentArgs, Instrumentation inst) {
         instrumentation = inst;
-        InstrumentationUtils.init(config);
+        InstrumentationUtils.setConfig(config);
 
         if (agentArgs == null) {
             agentArgs = "";
@@ -155,8 +154,8 @@ public class Agent implements ClassFileTransformer {
                 cname = cr.getClassName();
             }
 
-            if (!cname.startsWith(Constants.COM_RUNTIMEVERIFICATION_RVPREDICT)) {
-                ClassMetadata classMetadata = Metadata.getOrInitClassMetadata(loader, cname, cbuf);
+            if (!cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT)) {
+                ClassMetadata classMetadata = ClassMetadata.getInstance(loader, cname, cbuf);
                 if (InstrumentationUtils.needToInstrument(classMetadata)) {
                     byte[] transformed = ClassTransformer.transform(loader, cbuf);
                     return transformed;

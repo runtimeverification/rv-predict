@@ -116,9 +116,10 @@ public final class RVPredictRuntime {
      * Dummy value used to represent abstract state whose concrete value we do
      * not care about.
      * <p>
-     * <b>Note:</b> since we do not generate {@link EventType#INIT} event with
-     * this dummy value, the prediction engine has to understand this dummy
-     * value to avoid generating read-write consistency constraint for it.
+     * <b>Note:</b> since we always return 0 as the initial value for all
+     * tracked variables, the prediction engine has to understand this dummy
+     * value to avoid generating read-write consistency constraint on abstract
+     * state.
      */
     private static final long DUMMY_VALUE = Constants._0X_DEADBEEFL;
 

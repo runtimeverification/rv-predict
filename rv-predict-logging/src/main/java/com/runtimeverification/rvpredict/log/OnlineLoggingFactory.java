@@ -66,7 +66,7 @@ public class OnlineLoggingFactory implements LoggingFactory {
 
     @Override
     public String getVarSig(int fieldId) {
-        return Metadata.varSigs[fieldId];
+        return Metadata.varSigs.get(fieldId);
     }
 
 }

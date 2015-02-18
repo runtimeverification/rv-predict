@@ -12,7 +12,6 @@ import org.objectweb.asm.Opcodes;
 
 import com.runtimeverification.rvpredict.instrumentation.transformer.MethodTransformer;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
-import com.runtimeverification.rvpredict.util.InstrumentationUtils;
 
 public class RVPredictRuntimeMethods {
 
@@ -293,7 +292,7 @@ public class RVPredictRuntimeMethods {
                     break;
                 case VIRTUAL:
                 case INTERFACE:
-                    if (InstrumentationUtils.isSubclassOf(loader, owner,
+                    if (InstrumentUtils.isSubclassOf(loader, owner,
                             interceptor.classOrInterface)) {
                         return interceptor;
                     }

@@ -302,8 +302,6 @@ public final class RVPredictRuntime {
      */
     public static void logFieldAcc(Object object, long value, int variableId, boolean isWrite,
             int locId) {
-        // TODO(YilongL): check skipSavingEvent before performing any computation?
-        variableId = Metadata.resolveFieldId(variableId);
         saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                 System.identityHashCode(object), -variableId, value);
     }

@@ -1,11 +1,13 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.instrumentation.InstrumentUtils;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods;
-import com.runtimeverification.rvpredict.metadata.ClassMetadata;
+import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -14,8 +16,8 @@ import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.InstructionAdapter;
 import org.objectweb.asm.commons.Method;
 
+import static com.runtimeverification.rvpredict.instrumentation.InstrumentUtils.*;
 import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
-import static com.runtimeverification.rvpredict.util.InstrumentationUtils.*;
 
 public class MethodTransformer extends MethodVisitor implements Opcodes {
 
@@ -84,19 +86,23 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-        /* Optimization: https://github.com/runtimeverification/rv-predict/issues/314 */
-        if (owner.equals(className)) {
-            ClassMetadata classMetadata = ClassMetadata.getInstance(loader, owner);
-            if (classMetadata.getFieldNames().contains(name)
-                    && (classMetadata.getAccess(name) & ACC_FINAL) != 0) {
-                /* YilongL: note that this is not complete because `finalFields'
-                 * only contains the final fields of the class we are instrumenting */
-                mv.visitFieldInsn(opcode, owner, name, desc);
-                return;
-            }
+        ClassFile classFile = Metadata.resolveDeclaringClass(loader, owner, name);
+        if (classFile == null) {
+            System.err.printf("[Warning] field resolution failure; "
+                    + "skipped instrumentation of field access %s.%s in class %s%n",
+                    owner, name, className);
+            mv.visitFieldInsn(opcode, owner, name, desc);
+            return;
         }
 
-        int varId = Metadata.getVariableId(owner, name);
+        /* Optimization: https://github.com/runtimeverification/rv-predict/issues/314 */
+        if ((classFile.getFieldAccess(name) & ACC_FINAL) != 0
+                || !InstrumentUtils.needToInstrument(classFile)) {
+            mv.visitFieldInsn(opcode, owner, name, desc);
+            return;
+        }
+
+        int varId = Metadata.getVariableId(classFile.getClassName(), name);
         int locId = getCrntLocId();
 
         Type valueType = Type.getType(desc);

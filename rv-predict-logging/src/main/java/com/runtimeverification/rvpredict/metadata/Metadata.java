@@ -21,9 +21,10 @@ public class Metadata implements Opcodes {
     public static final Map<String, Integer> varSigToVarId = new ConcurrentHashMap<>();
     public static final List<Pair<Integer, String>> unsavedVarIdToVarSig = new ArrayList<>();
 
-    public static final int MAX_NUM_OF_FIELDS = 10000;
-    public static final String[] varSigs = new String[MAX_NUM_OF_FIELDS];
-    public static final int[] resolvedFieldId = new int[MAX_NUM_OF_FIELDS];
+    public static final ArrayList<String> varSigs = new ArrayList<>(); {
+        varSigs.ensureCapacity(5000);
+        varSigs.add(null);
+    }
 
     public static final Map<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
     public static final Map<Integer, String> locIdToStmtSig = new HashMap<>();
@@ -33,16 +34,10 @@ public class Metadata implements Opcodes {
             .newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
     public static final List<Integer> unsavedVolatileVariableIds = new ArrayList<>();
 
-    public static final Set<Integer> trackedVariableIds = Collections
-            .newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
-
     private Metadata() { }
 
     public static int getVariableId(String className, String fieldName) {
-        return getVariableId(getVariableSignature(className, fieldName));
-    }
-
-    public static int getVariableId(String sig) {
+        String sig = getVariableSignature(className, fieldName);
         /* YilongL: the following double-checked locking is correct because
          * varSigToId is a ConcurrentHashMap */
         Integer variableId = varSigToVarId.get(sig);
@@ -52,7 +47,7 @@ public class Metadata implements Opcodes {
                 if (variableId == null) {
                     variableId = varSigToVarId.size() + 1;
                     varSigToVarId.put(sig, variableId);
-                    varSigs[variableId] = sig;
+                    varSigs.add(sig);
                     unsavedVarIdToVarSig.add(Pair.of(variableId, sig));
                 }
             }
@@ -61,7 +56,8 @@ public class Metadata implements Opcodes {
         return variableId;
     }
 
-    private static void addVolatileVariable(int varId) {
+    public static void addVolatileVariable(String cname, String fname) {
+        int varId = Metadata.getVariableId(cname, fname);
         if (!volatileVariableIds.contains(varId)) {
             synchronized (volatileVariableIds) {
                 if (!volatileVariableIds.contains(varId)) {
@@ -72,14 +68,6 @@ public class Metadata implements Opcodes {
                 }
             }
         }
-    }
-
-    static void trackVariable(String className, String fieldName, int access) {
-        int varId = getVariableId(className, fieldName);
-        if ((access & ACC_VOLATILE) != 0) {
-            Metadata.addVolatileVariable(varId);
-        }
-        trackedVariableIds.add(varId);
     }
 
     public static int getLocationId(String sig) {
@@ -107,51 +95,29 @@ public class Metadata implements Opcodes {
     }
 
     /**
-     * Performs field resolution as specified in the JVM specification $5.4.3.2
-     * except that we do it at run-time instead of load-time because it's easier
-     * to implement. The result is cached to reduce runtime overhead.
+     * Resolves the declaring class of a given field.
+     *
+     * @param loader
+     *            the loader that can be used to locate the owner class of the
+     *            field
+     * @param cname
+     *            the field's owner class name
+     * @param fname
+     *            the field's name
+     * @return the {@link ClassFile} of the declaring class or {@code null} if
+     *         the resolution fails
      */
-    public static int resolveFieldId(int fieldId) {
-        int result = resolvedFieldId[fieldId];
-        if (result > 0) {
-            return result;
-        }
-
-        String varSig = varSigs[fieldId];
-        int idx = varSig.lastIndexOf(".");
-        String className = varSig.substring(0, idx);
-        String fieldName = varSig.substring(idx + 1);
-        // TODO(YilongL): ClassMetadata.cache should be made private and it should be a table;
-        // then this resolveFieldId method should be entirely removed
-        ClassMetadata classMetadata = ClassMetadata.cache.get(className);
-        Set<String> fieldNames = null;
-        if (classMetadata != null) {
-            fieldNames = classMetadata.getFieldNames();
-            while (!fieldNames.contains(fieldName)) {
-                className = classMetadata.getSuperName();
-                if (className == null) {
-                    fieldNames = null;
-                    break;
-                } else {
-                    classMetadata = ClassMetadata.cache.get(className);
-                    fieldNames = classMetadata.getFieldNames();
-                }
+    public static ClassFile resolveDeclaringClass(ClassLoader loader, String cname, String fname) {
+        ClassFile classFile;
+        do {
+            classFile = ClassFile.getInstance(loader, cname);
+            if (classFile != null) {
+                cname = classFile.getSuperName();
+            } else {
+                return null;
             }
-        }
-
-        if (fieldNames == null) {
-            /* failed to resolve this variable Id */
-            // TODO(YilongL): uncomment this and make sure it doesn't happen!
-            System.err.println("[Warning]: unable to retrieve information of field " + fieldName
-                    + " in class " + className);
-
-            result = fieldId;
-        } else {
-            assert fieldNames.contains(fieldName);
-            result = getVariableId(className, fieldName);
-        }
-        resolvedFieldId[fieldId] = result;
-        return result;
+        } while (!classFile.getFieldNames().contains(fname));
+        return classFile;
     }
 
 }

@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.util;
+package com.runtimeverification.rvpredict.instrumentation;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -19,24 +19,17 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.metadata.ClassMetadata;
+import com.runtimeverification.rvpredict.metadata.ClassFile;
 
-public class InstrumentationUtils implements Opcodes {
+public class InstrumentUtils implements Opcodes {
 
     public static final Type OBJECT_TYPE    = Type.getObjectType("java/lang/Object");
     public static final Type CLASS_TYPE     = Type.getObjectType("java/lang/Class");
     public static final Type JL_FLOAT_TYPE  = Type.getObjectType("java/lang/Float");
     public static final Type JL_DOUBLE_TYPE = Type.getObjectType("java/lang/Double");
     public static final Type JL_SYSTEM_TYPE = Type.getObjectType("java/lang/System");
-
     public static final Type RVPREDICT_RUNTIME_TYPE = Type
             .getObjectType("com/runtimeverification/rvpredict/runtime/RVPredictRuntime");
-
-    public static Configuration config;
-
-    public static void setConfig(Configuration config) {
-        InstrumentationUtils.config = config;
-    }
 
     /**
      * Checks if one class or interface extends or implements another class or
@@ -115,7 +108,7 @@ public class InstrumentationUtils implements Opcodes {
     private static Set<String> getSuperclasses(String className, ClassLoader loader) {
         Set<String> result = new HashSet<>();
         while (className != null) {
-            String superName = ClassMetadata.getInstance(loader, className).getSuperName();
+            String superName = ClassFile.getInstance(loader, className).getSuperName();
             if (superName != null) {
                 result.add(superName);
             }
@@ -141,7 +134,7 @@ public class InstrumentationUtils implements Opcodes {
         queue.add(className);
         while (!queue.isEmpty()) {
             className = queue.poll();
-            List<String> interfaces = ClassMetadata.getInstance(loader, className)
+            List<String> interfaces = ClassFile.getInstance(loader, className)
                     .getInterfaces();
             for (String itf : interfaces) {
                 if (result.add(itf)) {
@@ -170,12 +163,13 @@ public class InstrumentationUtils implements Opcodes {
     /**
      * Checks if we should instrument a class or interface.
      *
-     * @param classMetadata
+     * @param classFile
      *
      * @return {@code true} if we should instrument it; otherwise, {@code false}
      */
-    public static boolean needToInstrument(ClassMetadata classMetadata, ClassLoader loader) {
-        String cname = classMetadata.getClassName();
+    public static boolean needToInstrument(ClassFile classFile) {
+        String cname = classFile.getClassName();
+        ClassLoader loader = classFile.getLoader();
 
         Boolean toInstrument = instrumentClass.get(cname);
         if (toInstrument != null) {
@@ -183,14 +177,14 @@ public class InstrumentationUtils implements Opcodes {
         }
 
         toInstrument = true;
-        for (Pattern exclude : config.excludeList) {
+        for (Pattern exclude : Agent.config.excludeList) {
             toInstrument = !exclude.matcher(cname).matches();
             if (!toInstrument) break;
         }
 
         if (toInstrument) {
             for (String mock : Configuration.MOCKS) {
-                if (InstrumentationUtils.isSubclassOf(loader, cname, mock)) {
+                if (InstrumentUtils.isSubclassOf(loader, cname, mock)) {
                     toInstrument = false;
                     if (Configuration.verbose) {
                         /* TODO(YilongL): this may cause missing data races if
@@ -210,7 +204,7 @@ public class InstrumentationUtils implements Opcodes {
 
         if (!toInstrument) {
             /* include list overrides the above */
-            for (Pattern include : config.includeList) {
+            for (Pattern include : Agent.config.includeList) {
                 toInstrument = include.matcher(cname).matches();
                 if (toInstrument) break;
             }

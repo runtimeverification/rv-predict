@@ -177,6 +177,15 @@ public class ClassFile implements Opcodes {
         URL url = getResource(loader, cname);
         String urlString = url != null ? url.toString() : ""; // generated class may not have a URL
 
+        /* check if we already have the class file created */
+        ClassFile classFile;
+        synchronized (classFileTable) {
+            classFile = classFileTable.get(urlString, cname);
+        }
+        if (classFile != null) {
+            return classFile;
+        }
+
         /* constructs the class reader to read the class */
         ClassReader cr;
         if (cbuf != null) {
@@ -186,13 +195,6 @@ public class ClassFile implements Opcodes {
             cr = new ClassReader(is);
         }
 
-        ClassFile classFile;
-        synchronized (classFileTable) {
-            classFile = classFileTable.get(urlString, cname);
-        }
-        if (classFile != null) {
-            return classFile;
-        }
         classFile = ClassFile.create(loader, urlString, cr);
         synchronized (classFileTable) {
             classFileTable.put(urlString, cname, classFile);

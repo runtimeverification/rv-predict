@@ -19,7 +19,7 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
         ClassReader cr = new ClassReader(cbuf);
         ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
         ClassTransformer transformer = new ClassTransformer(cw, loader, Agent.config);
-        cr.accept(transformer, 0);
+        cr.accept(transformer, ClassReader.EXPAND_FRAMES);
         return cw.toByteArray();
     }
 

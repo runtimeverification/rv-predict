@@ -82,6 +82,25 @@ public class Main {
         }
     }
 
+    /**
+     * Formats the RV-Predict specific options from the command line 
+     * as a string of options which can be passed to the -javaagent
+     * JVM option.
+     *
+     * It basically iterates through all arguments and builds a string out of them
+     * taking care to wrap any argument containing spaces using 
+     * {@link #escapeString(String)}.
+     *
+     * As the default behavior of the agent is to run prediction upon completing
+     * logging, the {@code --log} option must be passed to the agent.  Thus, if
+     * the {@code --dir} option was used by the user, it would be replaced by 
+     * {@code --log}.  If neither  {@code --dir} nor {@code --log} were used, then
+     * the {@code --log} option is added to make sure execution is logged in the
+     * directory expected by prediction.
+     *
+     * @param config
+     * @return the -javaagent options corresponding to the user command line
+     */
     private static String getAgentOptions(Configuration config) {
         boolean hasLogDir = false;
         StringBuilder agentOptions = new StringBuilder();

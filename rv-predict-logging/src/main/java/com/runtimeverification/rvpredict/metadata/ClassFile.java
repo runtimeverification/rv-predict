@@ -28,6 +28,7 @@ public class ClassFile implements Opcodes {
      */
     private final String urlString;
 
+    private final int access;
     private final String cname;
     private final String supername;
     private final ImmutableList<String> interfaces;
@@ -40,10 +41,12 @@ public class ClassFile implements Opcodes {
      */
     private final ClassLoader loader;
 
-    private ClassFile(ClassLoader loader, String urlString, String cname, String supername,
-            ImmutableList<String> interfaces, ImmutableMap<String, Integer> fieldToAccess) {
+    private ClassFile(ClassLoader loader, String urlString, int access, String cname,
+            String supername, ImmutableList<String> interfaces,
+            ImmutableMap<String, Integer> fieldToAccess) {
         this.loader = loader;
         this.urlString = urlString;
+        this.access = access;
         this.cname = cname;
         this.supername = supername;
         this.interfaces = interfaces;
@@ -52,6 +55,10 @@ public class ClassFile implements Opcodes {
 
     public ClassLoader getLoader() {
         return loader;
+    }
+
+    public int getAccess() {
+        return access;
     }
 
     public String getClassName() {
@@ -105,9 +112,6 @@ public class ClassFile implements Opcodes {
     }
 
     private static ClassFile create(ClassLoader loader, String urlString, ClassReader cr) {
-        final String cname = cr.getClassName();
-        String supername = cr.getSuperName();
-        ImmutableList<String> interfaces = ImmutableList.copyOf(cr.getInterfaces());
         final ImmutableMap.Builder<String, Integer> mapBuilder = ImmutableMap.builder();
 
         ClassVisitor cv = new ClassVisitor(ASM5) {
@@ -119,7 +123,13 @@ public class ClassFile implements Opcodes {
             }
         };
         cr.accept(cv, ClassReader.SKIP_CODE);
-        return new ClassFile(loader, urlString, cname, supername, interfaces, mapBuilder.build());
+        return new ClassFile(loader,
+                urlString,
+                cr.getAccess(),
+                cr.getClassName(),
+                cr.getSuperName(),
+                ImmutableList.copyOf(cr.getInterfaces()),
+                mapBuilder.build());
     }
 
     /**

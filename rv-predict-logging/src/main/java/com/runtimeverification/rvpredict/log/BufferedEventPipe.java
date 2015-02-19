@@ -22,7 +22,7 @@ public class BufferedEventPipe implements EventPipe {
     private EventItem[] outBuffer = null;
     private int outIndex = 0;
 
-    private boolean writingEvent = false;
+    private boolean isWritingEvent = false;
     private long lastGID = 0;
 
     public BufferedEventPipe() {
@@ -40,8 +40,10 @@ public class BufferedEventPipe implements EventPipe {
     @Override
     public void writeEvent(EventItem event) throws InterruptedException {
         try {
-            assert !writingEvent : "This method is not supposed to be reentrant!";
-            writingEvent = true;
+            if (isWritingEvent) {
+                throw new RuntimeException("This method is not supposed to be reentrant!");
+            }
+            isWritingEvent = true;
 
             assert lastGID < event.GID : "Events from the same thread are logged out of order!";
             lastGID = event.GID;
@@ -51,7 +53,7 @@ public class BufferedEventPipe implements EventPipe {
                 flush();
             }
         } finally {
-            writingEvent = false;
+            isWritingEvent = false;
         }
     }
 

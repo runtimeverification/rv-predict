@@ -1,19 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2013 University of Illinois
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package com.runtimeverification.rvpredict.config;
+package com.runtimeverification.rvpredict.util;
 
 import java.io.*;
 import java.util.Arrays;
@@ -34,17 +34,20 @@ import java.util.Scanner;
 
 /**
  * Utilities for interacting with file and solver
- * 
+ *
+ * TODO(YilongL): this class needs a complete rewrite...
+ *
  * @author jeffhuang
  *
  */
+@Deprecated
 public class Util {
 
     private final static String RV_STR = "rv";
 
     /**
      * Create a file "name" under the directory "path"
-     * 
+     *
      * @param path
      * @param name
      * @return
@@ -84,7 +87,7 @@ public class Util {
         return tempRVdir;
     }
 
-    static String spaces(int i) {
+    public static String spaces(int i) {
         return chars(i, ' ');
     }
 

@@ -299,12 +299,14 @@ public class SMTConstraintBuilder {
 
     /**
      * Generates a formula ensuring that {@code event} will be generated exactly
-     * the same as in the predicted trace <b>if</b> the corresponding data-abstract
+     * the same as in the original trace <b>if</b> the corresponding data-abstract
      * feasibility constraint is also satisfied.
      */
     private String getConcreteFeasibilityConstraint(MemoryAccessEvent event) {
-        if (computedConcretePhi.contains(event) || event.getValue() == Constants._0X_DEADBEEFL) {
+        if (computedConcretePhi.contains(event)) {
             return makeConcretePhiVariable(event);
+        } else if (event.getValue() == Constants._0X_DEADBEEFL) {
+            return "true";
         }
         computedConcretePhi.add(event);
 
@@ -339,15 +341,13 @@ public class SMTConstraintBuilder {
 
             /* case 1: the dependent read reads the initial value */
             StringBuilder case1 = new StringBuilder("false");
-            if (thrdImdWrtPred == null) {
-                long initVal = trace.getInitValueOf(event.getAddr());
-                if (initVal == event.getValue() || initVal == Constants._0X_DEADBEEFL) {
-                    case1 = new StringBuilder("(and true ");
-                    for (WriteEvent write : predWriteSet) {
-                        case1.append(getAsstHappensBefore(event, write));
-                    }
-                    case1.append(")");
+            if (thrdImdWrtPred == null &&
+                    trace.getInitValueOf(event.getAddr()) == event.getValue()) {
+                case1 = new StringBuilder("(and true ");
+                for (WriteEvent write : predWriteSet) {
+                    case1.append(getAsstHappensBefore(event, write));
                 }
+                case1.append(")");
             }
 
             /* case 2: the dependent read reads a previously written value */

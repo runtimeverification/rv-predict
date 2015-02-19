@@ -6,7 +6,7 @@ import org.objectweb.asm.commons.AdviceAdapter;
 
 import com.runtimeverification.rvpredict.trace.EventType;
 
-import static com.runtimeverification.rvpredict.instrumentation.InstrumentationUtils.*;
+import static com.runtimeverification.rvpredict.instrumentation.InstrumentUtils.*;
 import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
 
 /**

@@ -38,8 +38,6 @@ import java.util.List;
 
 import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
-import com.runtimeverification.rvpredict.util.Constants;
-
 import org.apache.commons.lang3.mutable.MutableInt;
 
 /**
@@ -128,9 +126,9 @@ public class Trace {
     private final LoggingFactory loggingFactory;
 
     /**
-     * The initial value at all addresses referenced in this trace segment.
-     * It is computed as the value in the currentState before the first access
-     * occurring in this trace segment.
+     * The initial value at all addresses referenced in this trace segment. It
+     * is computed as the value in the {@link #currentState} before the first
+     * access occurring in this trace segment.
      */
     private final State initState;
 
@@ -157,9 +155,7 @@ public class Trace {
      *
      * @param addr
      *            the address
-     * @return the actual initial value of the memory address or a dummy value
-     *         {@link Constants#_0X_DEADBEEFL} if the initial value is not recorded or
-     *         missing
+     * @return the initial value
      */
     public Long getInitValueOf(MemoryAddr addr) {
         Long initValue = initState.addrToValue.get(addr);
@@ -297,35 +293,14 @@ public class Trace {
 
     public void addRawEvent(Event event) {
 //        System.err.println(event + " " + loggingFactory.getStmtSig(event.getID()));
-        Long initValue = 0L;
-        //  TODO(YilongL): uncomment the following statement after fixing issue#304
-//        Long initValue = Constants._0X_DEADBEEFL;
         rawEventsBuilder.add(event);
         if (event instanceof MemoryAccessEvent) {
             MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
             MemoryAddr addr = memAcc.getAddr();
-            if (!initState.addrToValue.containsKey(addr)) {
-                initState.addrToValue.put(addr, currentState.addrToValue.getOrDefault(addr, initValue));
-            }
-            currentState.addrToValue.put(addr, memAcc.getValue());
+            updateTraceState(memAcc);
             if (event instanceof MemoryAccessEvent) {
-                Long tid = event.getTID();
-
-                if (event instanceof ReadEvent) {
-                    Set<Long> set = addrToReadThreads.get(addr);
-                    if (set == null) {
-                        set = new HashSet<Long>();
-                        addrToReadThreads.put(addr, set);
-                    }
-                    set.add(tid);
-                } else {
-                    Set<Long> set = addrToWriteThreads.get(addr);
-                    if (set == null) {
-                        set = new HashSet<Long>();
-                        addrToWriteThreads.put(addr, set);
-                    }
-                    set.add(tid);
-                }
+                getOrInitEmptySet(event instanceof ReadEvent ?
+                        addrToReadThreads : addrToWriteThreads, addr).add(event.getTID());
             }
         } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
             Long lockObj = ((SyncEvent) event).getSyncObject();
@@ -344,6 +319,14 @@ public class Trace {
         }
     }
 
+    private void updateTraceState(MemoryAccessEvent memAcc) {
+        MemoryAddr addr = memAcc.getAddr();
+        if (!initState.addrToValue.containsKey(addr)) {
+            initState.addrToValue.put(addr, currentState.addrToValue.getOrDefault(addr, 0L));
+        }
+        currentState.addrToValue.put(addr, memAcc.getValue());
+    }
+
     /**
      * add a new filtered event to the trace in the order of its appearance
      *
@@ -355,7 +338,7 @@ public class Trace {
         threadIds.add(tid);
 
         if (event instanceof BranchEvent) {
-            getOrInitDefault(threadIdToBranchEvents, tid).add((BranchEvent) event);
+            getOrInitEmptyList(threadIdToBranchEvents, tid).add((BranchEvent) event);
         } else if (event instanceof MetaEvent) {
             EventType eventType = event.getType();
             if (eventType == EventType.CLINIT_ENTER) {
@@ -368,7 +351,7 @@ public class Trace {
         } else {
             allEvents.add(event);
 
-            getOrInitDefault(threadIdToEvents, tid).add(event);
+            getOrInitEmptyList(threadIdToEvents, tid).add(event);
             // TODO: Optimize it -- no need to update it every time
             if (event instanceof MemoryAccessEvent) {
                 MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
@@ -378,12 +361,12 @@ public class Trace {
 
                 MemoryAddr addr = memAcc.getAddr();
 
-                getOrInitDefault(memAccessEventsTbl.row(addr), tid).add(memAcc);
+                getOrInitEmptyList(memAccessEventsTbl.row(addr), tid).add(memAcc);
 
                 if (event instanceof ReadEvent) {
-                    getOrInitDefault(addrToReadEvents, addr).add((ReadEvent) event);
+                    getOrInitEmptyList(addrToReadEvents, addr).add((ReadEvent) event);
                 } else {
-                    getOrInitDefault(addrToWriteEvents, addr).add((WriteEvent) event);
+                    getOrInitEmptyList(addrToWriteEvents, addr).add((WriteEvent) event);
                 }
             } else if (event instanceof SyncEvent) {
                 SyncEvent syncEvent = (SyncEvent) event;
@@ -408,7 +391,7 @@ public class Trace {
                     assert false : "unexpected event: " + syncEvent;
                 }
 
-                getOrInitDefault(eventsMap, syncEvent.getSyncObject()).add(syncEvent);
+                getOrInitEmptyList(eventsMap, syncEvent.getSyncObject()).add(syncEvent);
             }
         }
     }
@@ -522,10 +505,19 @@ public class Trace {
         return fieldId > 0 && loggingFactory.isVolatile(fieldId);
     }
 
-    private <K,V> List<V> getOrInitDefault(Map<K, List<V>> map, K key) {
+    private <K,V> List<V> getOrInitEmptyList(Map<K, List<V>> map, K key) {
         List<V> value = map.get(key);
         if (value == null) {
             value = Lists.newArrayList();
+        }
+        map.put(key, value);
+        return value;
+    }
+
+    private <K,V> Set<V> getOrInitEmptySet(Map<K, Set<V>> map, K key) {
+        Set<V> value = map.get(key);
+        if (value == null) {
+            value = Sets.newHashSet();
         }
         map.put(key, value);
         return value;

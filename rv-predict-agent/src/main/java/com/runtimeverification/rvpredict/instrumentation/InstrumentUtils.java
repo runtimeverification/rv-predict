@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.instrument.ClassFileTransformer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
@@ -14,7 +13,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
-import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
@@ -54,7 +52,7 @@ public class InstrumentUtils implements Opcodes {
             return true;
         }
 
-        boolean itf = (getClassReader(class1, loader).getAccess() & ACC_INTERFACE) != 0;
+        boolean itf = (ClassFile.getInstance(loader, class1).getAccess() & ACC_INTERFACE) != 0;
         Set<String> superclasses = getSuperclasses(class0, loader);
         if (!itf) {
             return superclasses.contains(class1);
@@ -64,32 +62,6 @@ public class InstrumentUtils implements Opcodes {
                 result = result || getInterfaces(superclass, loader).contains(class1);
             }
             return result;
-        }
-    }
-
-    /**
-     * Obtains the {@link ClassReader} used to retrieve the superclass and
-     * interfaces information of a class or interface.
-     * <p>
-     * This method is meant to avoid class loading when checking inheritance
-     * relation because class loading during
-     * {@link ClassFileTransformer#transform(ClassLoader, String, Class, java.security.ProtectionDomain, byte[])}
-     * can not be properly intercepted by the java agent.
-     *
-     * @param className
-     *            the class or interface to read
-     * @param loader
-     *            the initiating loader of the class, may be null if it is the
-     *            bootstrap class loader
-     * @return the {@link ClassReader}
-     */
-    public static ClassReader getClassReader(String className, ClassLoader loader) {
-        try {
-            return loader == null ? new ClassReader(className) : new ClassReader(
-                    loader.getResourceAsStream(className + ".class"));
-        } catch (IOException e) {
-            System.err.println("ASM ClassReader: unable to read " + className);
-            throw new RuntimeException(e);
         }
     }
 
@@ -184,7 +156,7 @@ public class InstrumentUtils implements Opcodes {
 
         if (toInstrument) {
             for (String mock : Configuration.MOCKS) {
-                if (InstrumentUtils.isSubclassOf(loader, cname, mock)) {
+                if (isSubclassOf(loader, cname, mock)) {
                     toInstrument = false;
                     if (Configuration.verbose) {
                         /* TODO(YilongL): this may cause missing data races if

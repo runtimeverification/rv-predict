@@ -28,8 +28,9 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.runtime;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Collections;
@@ -135,31 +136,33 @@ public final class RVPredictRuntime {
     private static int AQS_MOCK_STATE_ID = Metadata.getVariableId(
             "java.util.concurrent.locks.AbstractQueuedSynchronizer", MOCK_STATE_FIELD);
 
-    private static final Field SYNC_COLLECTION_MUTEX = getDeclaredField(Collections
-            .synchronizedCollection(Collections.EMPTY_LIST).getClass(), "mutex");
-    private static final Field SYNC_MAP_MUTEX = getDeclaredField(
+    private static final MethodHandle SYNC_COLLECTION_GET_MUTEX = getFieldGetter(
+            Collections.synchronizedCollection(Collections.EMPTY_LIST).getClass(), "mutex");
+    private static final MethodHandle SYNC_MAP_GET_MUTEX = getFieldGetter(
             Collections.synchronizedMap(Collections.EMPTY_MAP).getClass(), "mutex");
 
-    private static final Method AQS_GET_STATE = getDeclaredMethod(AbstractQueuedSynchronizer.class, "getState");
-    private static final Method AQS_SET_STATE = getDeclaredMethod(AbstractQueuedSynchronizer.class, "setState", int.class);
-    private static final Method AQS_CAS_STATE = getDeclaredMethod(AbstractQueuedSynchronizer.class, "compareAndSetState", int.class, int.class);
+    private static final MethodHandle AQS_GET_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "getState");
+    private static final MethodHandle AQS_SET_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "setState", int.class);
+    private static final MethodHandle AQS_CAS_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "compareAndSetState", int.class, int.class);
 
-    private static Field getDeclaredField(Class<?> cls, String name) {
+    private static MethodHandle getFieldGetter(Class<?> cls, String name) {
         try {
             Field field = cls.getDeclaredField(name);
             field.setAccessible(true);
-            return field;
-        } catch (NoSuchFieldException | SecurityException e) {
+            return MethodHandles.lookup().unreflectGetter(field);
+        } catch (NoSuchFieldException | SecurityException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static Method getDeclaredMethod(Class<?> cls, String name, Class<?>... parameterTypes) {
+    private static MethodHandle getMethodHandle(Class<?> cls, String name,
+            Class<?>... parameterTypes) {
         try {
             Method method = cls.getDeclaredMethod(name, parameterTypes);
             method.setAccessible(true);
-            return method;
-        } catch (NoSuchMethodException | SecurityException e) {
+            return MethodHandles.lookup().unreflect(method);
+        } catch (NoSuchMethodException | SecurityException | IllegalAccessException e) {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -770,8 +773,7 @@ public final class RVPredictRuntime {
                         -AQS_MOCK_STATE_ID, result);
                 saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
             }
-        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
-                | SecurityException e) {
+        } catch (Throwable e) {
             throw new RuntimeException(e);
         }
         return result;
@@ -790,8 +792,7 @@ public final class RVPredictRuntime {
                         -AQS_MOCK_STATE_ID, newState);
                 saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
             }
-        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
-                | SecurityException e) {
+        } catch (Throwable e) {
             throw new RuntimeException(e);
         }
     }
@@ -814,8 +815,7 @@ public final class RVPredictRuntime {
                 }
                 saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
             }
-        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
-                | SecurityException e) {
+        } catch (Throwable e) {
             throw new RuntimeException(e);
         }
         return result;
@@ -1346,11 +1346,10 @@ public final class RVPredictRuntime {
             Object mutex;
             try {
                 mutex = collection instanceof Collection ?
-                        SYNC_COLLECTION_MUTEX.get(collection) :
-                        SYNC_MAP_MUTEX.get(collection);
-            } catch (IllegalArgumentException | IllegalAccessException | SecurityException e) {
-                e.printStackTrace();
-                return;
+                    SYNC_COLLECTION_GET_MUTEX.invoke(collection) :
+                    SYNC_MAP_GET_MUTEX.invoke(collection);
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
             }
 
             Object backedColl = getBackedCollection(collection);

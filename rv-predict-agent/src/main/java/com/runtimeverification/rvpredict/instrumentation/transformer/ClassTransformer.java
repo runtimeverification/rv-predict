@@ -1,11 +1,9 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.instrumentation.MetaData;
+import com.runtimeverification.rvpredict.instrumentation.Agent;
 
 import org.objectweb.asm.*;
-import java.util.HashSet;
-import java.util.Set;
 
 public class ClassTransformer extends ClassVisitor implements Opcodes {
 
@@ -17,13 +15,11 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
 
     private int version;
 
-    private final Set<String> finalFields = new HashSet<>();
-
-    public static byte[] transform(ClassLoader loader, byte[] cbuf, Configuration config) {
+    public static byte[] transform(ClassLoader loader, byte[] cbuf) {
         ClassReader cr = new ClassReader(cbuf);
         ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
-        ClassTransformer transformer = new ClassTransformer(cw, loader, config);
-        cr.accept(transformer, 0);
+        ClassTransformer transformer = new ClassTransformer(cw, loader, Agent.config);
+        cr.accept(transformer, ClassReader.EXPAND_FRAMES);
         return cw.toByteArray();
     }
 
@@ -50,23 +46,6 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
     }
 
     @Override
-    public FieldVisitor visitField(int access, String name, String desc, String signature,
-            Object value) {
-        /* TODO(YilongL): add comments about what is special about `final`,
-         * `volatile`, and `static` w.r.t. instrumentation */
-
-        MetaData.addField(className, name);
-        if ((access & ACC_FINAL) != 0) {
-            finalFields.add(name);
-        }
-        if ((access & ACC_VOLATILE) != 0) {
-            MetaData.addVolatileVariable(className, name);
-        }
-
-        return cv.visitField(access, name, desc, signature, value);
-    }
-
-    @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature,
             String[] exceptions) {
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
@@ -81,7 +60,7 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
             }
 
             mv = new MethodTransformer(mv, source, className, version, name, desc, access,
-                    crntMaxLocals, finalFields, loader, config);
+                    crntMaxLocals, loader, config);
         }
 
         if ("<clinit>".equals(name)) {

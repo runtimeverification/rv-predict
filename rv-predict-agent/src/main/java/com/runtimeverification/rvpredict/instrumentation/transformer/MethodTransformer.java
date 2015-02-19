@@ -1,10 +1,13 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.instrumentation.MetaData;
+import com.runtimeverification.rvpredict.instrumentation.InstrumentUtils;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods;
+import com.runtimeverification.rvpredict.metadata.ClassFile;
+import com.runtimeverification.rvpredict.metadata.Metadata;
+
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -13,9 +16,7 @@ import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.InstructionAdapter;
 import org.objectweb.asm.commons.Method;
 
-import java.util.Set;
-
-import static com.runtimeverification.rvpredict.instrumentation.InstrumentationUtils.*;
+import static com.runtimeverification.rvpredict.instrumentation.InstrumentUtils.*;
 import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
 
 public class MethodTransformer extends MethodVisitor implements Opcodes {
@@ -40,15 +41,13 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
      */
     private final boolean isStatic;
 
-    private final Set<String> finalFields;
-
     private int crntLineNum;
 
     private final int branchModel;
 
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
-            String name, String desc, int access, int crntMaxLocals, Set<String> finalFields,
-            ClassLoader loader, Configuration config) {
+            String name, String desc, int access, int crntMaxLocals, ClassLoader loader,
+            Configuration config) {
         super(Opcodes.ASM5, new InstructionAdapter(mv));
         this.mv = (InstructionAdapter) super.mv;
         this.source = source == null ? "Unknown" : source;
@@ -58,7 +57,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
         this.crntMaxLocals = crntMaxLocals;
-        this.finalFields = finalFields;
         this.loader = loader;
         this.branchModel = config.branch ? 1 : 0;
     }
@@ -88,15 +86,23 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-        /* Optimization: no need to log field access or initialization for final fields */
-        if (owner.equals(className) && finalFields.contains(name)) {
-            /* YilongL: note that this is not complete because `finalFields'
-             * only contains the final fields of the class we are instrumenting */
+        ClassFile classFile = Metadata.resolveDeclaringClass(loader, owner, name);
+        if (classFile == null) {
+            System.err.printf("[Warning] field resolution failure; "
+                    + "skipped instrumentation of field access %s.%s in class %s%n",
+                    owner, name, className);
             mv.visitFieldInsn(opcode, owner, name, desc);
             return;
         }
 
-        int varId = MetaData.getVariableId(owner, name);
+        /* Optimization: https://github.com/runtimeverification/rv-predict/issues/314 */
+        if ((classFile.getFieldAccess(name) & ACC_FINAL) != 0
+                || !InstrumentUtils.needToInstrument(classFile)) {
+            mv.visitFieldInsn(opcode, owner, name, desc);
+            return;
+        }
+
+        int varId = Metadata.getVariableId(classFile.getClassName(), name);
         int locId = getCrntLocId();
 
         Type valueType = Type.getType(desc);
@@ -453,7 +459,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
      *         current statement in the instrumented program
      */
     private int getCrntLocId() {
-        return MetaData.getLocationId(getCrntStmtSig());
+        return Metadata.getLocationId(getCrntStmtSig());
     }
 
     /**

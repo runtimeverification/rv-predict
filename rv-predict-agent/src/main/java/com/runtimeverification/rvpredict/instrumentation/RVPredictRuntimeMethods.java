@@ -1,7 +1,9 @@
 package com.runtimeverification.rvpredict.instrumentation;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -10,9 +12,6 @@ import org.objectweb.asm.Opcodes;
 
 import com.runtimeverification.rvpredict.instrumentation.transformer.MethodTransformer;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 public class RVPredictRuntimeMethods {
 
@@ -55,9 +54,9 @@ public class RVPredictRuntimeMethods {
     /*
      * Map from method signature to possible {@link RVPredictInterceptor}'s.
      */
-    private static final Map<String, List<RVPredictInterceptor>> STATIC_METHOD_INTERCEPTION = Maps.newHashMap();
-    private static final Map<String, List<RVPredictInterceptor>> SPECIAL_METHOD_INTERCEPTION = Maps.newHashMap();
-    private static final Map<String, List<RVPredictInterceptor>> VIRTUAL_METHOD_INTERCEPTION = Maps.newHashMap();
+    private static final Map<String, List<RVPredictInterceptor>> STATIC_METHOD_INTERCEPTION = new HashMap<>();
+    private static final Map<String, List<RVPredictInterceptor>> SPECIAL_METHOD_INTERCEPTION = new HashMap<>();
+    private static final Map<String, List<RVPredictInterceptor>> VIRTUAL_METHOD_INTERCEPTION = new HashMap<>();
 
     // Thread methods
     public static final RVPredictInterceptor RVPREDICT_START              =
@@ -198,6 +197,7 @@ public class RVPredictRuntimeMethods {
     public static final RVPredictInterceptor RVPREDICT_ATOMIC_BOOL_GAS =
             register(VIRTUAL, JUCA_ATOMIC_BOOL, "getAndSet", "rvPredictAtomicBoolGAS", Z);
 
+
     /** Short-hand for {@link RVPredictRuntimeMethod#create(String, Class...)}. */
     private static RVPredictRuntimeMethod init(String name, Class<?>... parameterTypes) {
         return RVPredictRuntimeMethod.create(name, parameterTypes);
@@ -236,7 +236,7 @@ public class RVPredictRuntimeMethods {
             List<RVPredictInterceptor> interceptors = interceptorTable.get(interceptor
                     .getOriginalMethodSig());
             if (interceptors == null) {
-                interceptors = Lists.newArrayList();
+                interceptors = new ArrayList<>();
                 interceptorTable.put(interceptor.getOriginalMethodSig(), interceptors);
             }
             interceptors.add(interceptor);
@@ -292,7 +292,8 @@ public class RVPredictRuntimeMethods {
                     break;
                 case VIRTUAL:
                 case INTERFACE:
-                    if (InstrumentationUtils.isSubclassOf(loader, owner, interceptor.classOrInterface)) {
+                    if (InstrumentUtils.isSubclassOf(loader, owner,
+                            interceptor.classOrInterface)) {
                         return interceptor;
                     }
                     break;

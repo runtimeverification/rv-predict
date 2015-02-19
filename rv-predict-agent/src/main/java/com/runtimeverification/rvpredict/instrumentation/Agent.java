@@ -7,9 +7,8 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.Main;
@@ -18,65 +17,20 @@ import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.log.OnlineLoggingFactory;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
+
 import org.objectweb.asm.ClassReader;
+
 import com.runtimeverification.rvpredict.instrumentation.transformer.ClassTransformer;
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
+import com.runtimeverification.rvpredict.metadata.ClassFile;
+import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
-public class Agent implements ClassFileTransformer {
+public class Agent implements ClassFileTransformer, Constants {
 
+    private static Instrumentation instrumentation;
 
-    /**
-     * Packages/classes that need to be excluded from instrumentation. These are
-     * not configurable by the users because including them for instrumentation
-     * almost certainly leads to crash.
-     */
-    private static List<Pattern> IGNORES;
-    static {
-        String [] ignores = new String[] {
-                // rv-predict itself and the libraries we are using
-                "com/runtimeverification/rvpredict",
-
-                // array type
-                "[",
-
-                // JDK classes used by the RV-Predict runtime library
-                "java/io",
-                "java/nio",
-                "java/util/concurrent/atomic/AtomicLong",
-                "java/util/concurrent/ConcurrentHashMap",
-                "java/util/zip/GZIPOutputStream",
-                "java/util/regex",
-
-                // Basics of the JDK that everything else is depending on
-                "sun",
-                "java/lang",
-
-                /* we provide complete mocking of the jucl package */
-                "java/util/concurrent/locks"
-        };
-        IGNORES = Configuration.getDefaultPatterns(ignores);
-    }
-
-    private static String[] MOCKS = new String[] {
-        "java/util/Collection",
-        "java/util/Map"
-
-        /* YilongL: do not exclude Iterator because it's not likely to slow down
-         * logging a lot; besides, I am interested in seeing what could happen */
-        // "java/util/Iterator"
-    };
-
-    private static List<Pattern> MUST_INCLUDES = Configuration.getDefaultPatterns(new String[] {
-            "java/util/Collections$Synchronized"
-    });
-
-    static Instrumentation instrumentation;
-    private final Configuration config;
-
-    public Agent(Configuration config) {
-        this.config = config;
-    }
+    public final static Configuration config = new Configuration();
 
     public static void premain(String agentArgs, Instrumentation inst) {
         instrumentation = inst;
@@ -88,7 +42,6 @@ public class Agent implements ClassFileTransformer {
             assert agentArgs.endsWith("\"") : "Argument must be quoted";
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
-        final Configuration config = new Configuration();
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         config.parseArguments(args, false);
 
@@ -123,20 +76,24 @@ public class Agent implements ClassFileTransformer {
             loggingEngine.startPredicting();
         }
 
-        inst.addTransformer(new Agent(config), true);
+        preinitializeClasses();
+
+        inst.addTransformer(new Agent(), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {
-            if (!c.isInterface() && inst.isModifiableClass(c)) {
-//                String className = c.getName();
-//                if (!className.startsWith("sun") && !className.startsWith("java.lang")
-//                        && !className.startsWith("java.io") && !className.startsWith("java.nio")) {
-//                    System.err.println("Preloaded class: " + className);
-//                }
+            if (inst.isModifiableClass(c)) {
                 try {
                     inst.retransformClasses(c);
                 } catch (UnmodifiableClassException e) {
-                    System.err.println("Cannot retransform class. Exception: " + e);
-                    System.exit(1);
+                    // should not happen
+                    e.printStackTrace();
                 }
+            } else {
+                /* TODO(YilongL): Shall(can) we register fields of these
+                 * unmodifiable classes too? We know for sure that primitive
+                 * classes and array class are unmodifiable. And if these are
+                 * the only unmodifiable classes then there is no field for us
+                 * to register (even the `length' field of an array object is
+                 * accessed by a specific bytecode instruction `arraylength'. */
             }
         }
         System.out.println("Finished retransforming preloaded classes.");
@@ -167,93 +124,68 @@ public class Agent implements ClassFileTransformer {
         }
     }
 
-    private static final Set<String> loadedClasses = new HashSet<>();
+    /**
+     * Pre-initialize certain classes to avoid error-prone class initialization
+     * during {@link ClassFileTransformer#transform} .
+     * <p>
+     * Inspired by <a href=
+     * "https://github.com/glowroot/glowroot/blob/master/core/src/main/java/org/glowroot/weaving/PreInitializeWeavingClasses.java"
+     * >PreInitializeWeavingClasses</a> from Glowroot project.
+     */
+    private static void preinitializeClasses() {
+        try {
+            Class.forName(ThreadLocalRandom.class.getName());
+            Class.forName(RVPredictRuntimeMethods.class.getName());
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
 
     @Override
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
         try {
+            checkUninterceptedClassLoading(cname, c);
+
             ClassReader cr = new ClassReader(cbuf);
             if (cname == null) {
                 // cname could be null for class like java/lang/invoke/LambdaForm$DMH
                 cname = cr.getClassName();
             }
-            MetaData.setSuperclass(cname, cr.getSuperName());
-            MetaData.setInterfaces(cname, cr.getInterfaces());
 
-            if (Configuration.verbose) {
-                if (c == null) {
-                    System.err.println("[Java-agent] intercepted class load: " + cname);
-                } else {
-                    System.err.println("[Java-agent] intercepted class redefinition/retransformation: " + c);
-                }
-
-                loadedClasses.add(cname.replace("/", "."));
-                for (Class<?> cls : instrumentation.getAllLoadedClasses()) {
-                    if (loadedClasses.add(cls.getName())) {
-                        System.err.println("[Java-agent] missed to intercept class load: " + cls);
-                    }
+            if (!cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT) && !cname.startsWith("sun")) {
+                ClassFile classFile = ClassFile.getInstance(loader, cname, cbuf);
+                if (InstrumentUtils.needToInstrument(classFile)) {
+                    byte[] transformed = ClassTransformer.transform(loader, cbuf);
+                    return transformed;
                 }
             }
-
-            boolean toInstrument = true;
-            for (Pattern exclude : config.excludeList) {
-                toInstrument = !exclude.matcher(cname).matches();
-                if (!toInstrument) break;
-            }
-
-            if (toInstrument) {
-                for (String mock : MOCKS) {
-                    if (InstrumentationUtils.isSubclassOf(loader, cname, mock)) {
-                        toInstrument = false;
-                        if (Configuration.verbose) {
-                            /* TODO(YilongL): this may cause missing data races if
-                             * the mock for interface/superclass does not contain
-                             * methods specific to this implementation. This could
-                             * be a big problem if the application makes heavy use
-                             * of helper methods specific in some high-level
-                             * concurrency library (e.g. Guava) while most of the
-                             * classes are simply excluded here */
-                            System.err.println("[Java-agent] excluded " + c
-                                    + " from instrumentation because we are mocking " + mock);
-                        }
-                        break;
-                    }
-                }
-            }
-
-            if (!toInstrument) {
-                /* include list overrides the above */
-                for (Pattern include : config.includeList) {
-                    toInstrument = include.matcher(cname).matches();
-                    if (toInstrument) break;
-                }
-            }
-
-            if (toInstrument) {  //make sure we don't instrument IGNORES even if the user said so
-                for (Pattern ignore : IGNORES) {
-                    toInstrument = !ignore.matcher(cname).matches();
-                    if (!toInstrument) break;
-                }
-            }
-
-            if (!toInstrument) {
-                for (Pattern include : MUST_INCLUDES) {
-                    toInstrument = include.matcher(cname).matches();
-                    if (toInstrument) break;
-                }
-            }
-
-            if (toInstrument) {
-                byte[] transformed = ClassTransformer.transform(loader, cbuf, config);
-                return transformed;
-            } else {
-                return null;
-            }
+            return null;
         } catch (Throwable e) {
             /* exceptions during class loading are silently suppressed by default */
             System.err.println("Cannot retransform " + cname + ". Exception: " + e);
+            e.printStackTrace();
             throw e;
         }
     }
+
+    private static final Set<String> loadedClasses = new HashSet<>();
+
+    private static void checkUninterceptedClassLoading(String cname, Class<?> c) {
+        if (Configuration.verbose) {
+            if (c == null) {
+                System.err.println("[Java-agent] intercepted class load: " + cname);
+            } else {
+                System.err.println("[Java-agent] intercepted class redefinition/retransformation: " + c);
+            }
+
+            loadedClasses.add(cname.replace("/", "."));
+            for (Class<?> cls : instrumentation.getAllLoadedClasses()) {
+                if (loadedClasses.add(cls.getName())) {
+                    System.err.println("[Java-agent] missed to intercept class load: " + cls);
+                }
+            }
+        }
+    }
+
 }

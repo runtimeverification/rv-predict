@@ -1,10 +1,12 @@
 package com.runtimeverification.rvpredict.instrumentation;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
+
 import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.Method;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * Represents a special kind of RV-Predict runtime library method, i.e.
@@ -47,7 +49,7 @@ public class RVPredictInterceptor extends RVPredictRuntimeMethod {
     /**
      * The parameter type descriptors of the associated Java method.
      */
-    public final ImmutableList<String> paramTypeDescs;
+    public final List<String> paramTypeDescs;
 
     public static RVPredictInterceptor create(int methodType, String classOrInterface,
             String name, String interceptorName, Class<?>... parameterTypes)
@@ -76,11 +78,10 @@ public class RVPredictInterceptor extends RVPredictRuntimeMethod {
         this.methodType = methodType;
         this.classOrInterface = classOrInterface;
         this.name = name;
-        ImmutableList.Builder<String> builder = ImmutableList.builder();
+        this.paramTypeDescs = new ArrayList<>();
         for (Class<?> cls : parameterTypes) {
-            builder.add(Type.getDescriptor(cls));
+            paramTypeDescs.add(Type.getDescriptor(cls));
         }
-        paramTypeDescs = builder.build();
     }
 
     public String getOriginalMethodSig() {

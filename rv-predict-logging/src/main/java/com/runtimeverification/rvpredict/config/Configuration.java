@@ -204,11 +204,8 @@ public class Configuration {
     @Parameter(description = "<java_command_line>")
     public List<String> command_line;
 
-    public String[] getArgs() {
-        return args;
-    }
-
-    String[] args;
+    private String[] args;
+    private String[] rvArgs;
 
     public final static String opt_only_log = "--log";
     @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1000")
@@ -310,7 +307,6 @@ public class Configuration {
 
         // Detecting a candidate for program options start
         int max = Arrays.asList(args).indexOf(Configuration.opt_java);
-        String[] rvArgs;
         if (max != -1) { // -- was used. Using it as a separator for java
                          // command line
             rvArgs = Arrays.copyOf(args, max);
@@ -491,4 +487,11 @@ public class Configuration {
         return "Default: " + aDefault;
     }
 
+    public String[] getArgs() {
+        return args;
+    }
+
+    public String[] getRvArgs() {
+        return rvArgs;
+    }
 }

@@ -88,8 +88,10 @@ public class Configuration implements Constants {
                  // JDK classes used by the RV-Predict runtime library
                  "java/io",
                  "java/nio",
+                 "java/util/ArrayList",
                  "java/util/concurrent/atomic/AtomicLong",
                  "java/util/concurrent/ConcurrentHashMap",
+                 "java/util/concurrent/LinkedBlockingQueue",
                  "java/util/zip/GZIPOutputStream",
                  "java/util/regex",
 
@@ -116,8 +118,8 @@ public class Configuration implements Constants {
              "java/util/Collections$Synchronized"
      });
 
-    public final List<Pattern> includeList = new LinkedList<>();
-    public List<Pattern> excludeList = new LinkedList<>();
+    public final List<Pattern> includeList = new ArrayList<>();
+    public final List<Pattern> excludeList = new ArrayList<>();
     private JCommander jCommander;
 
     private static Pattern createClassPattern(String pattern) {
@@ -169,12 +171,12 @@ public class Configuration implements Constants {
     private void initExcludeList() {
         String excludes = Configuration.excludes;
         if (excludes == null) {
-            excludeList = getDefaultPatterns(DEFAULT_EXCLUDES);
+            excludeList.addAll(getDefaultPatterns(DEFAULT_EXCLUDES));
         } else {
             excludes = excludes.trim();
             if (excludes.charAt(0) == '+') { // initialize excludeList with default patterns
                 excludes = excludes.substring(1);
-                excludeList = getDefaultPatterns(DEFAULT_EXCLUDES);
+                excludeList.addAll(getDefaultPatterns(DEFAULT_EXCLUDES));
             }
             for (String exclude : excludes.replace('.', '/').split(",")) {
                 exclude = exclude.trim();
@@ -194,7 +196,7 @@ public class Configuration implements Constants {
      *         names specified by the given argument
      */
     public static List<Pattern> getDefaultPatterns(String[] patterns) {
-        List<Pattern> patternList = new LinkedList<>();
+        List<Pattern> patternList = new ArrayList<>();
         for (String pattern : patterns) {
             patternList.add(createClassPattern(pattern));
         }

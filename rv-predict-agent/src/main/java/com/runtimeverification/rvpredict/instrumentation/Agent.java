@@ -85,6 +85,7 @@ public class Agent implements ClassFileTransformer, Constants {
                     inst.retransformClasses(c);
                 } catch (UnmodifiableClassException e) {
                     // should not happen
+                    e.printStackTrace();
                 }
             } else {
                 /* TODO(YilongL): Shall(can) we register fields of these

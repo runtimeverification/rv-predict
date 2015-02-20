@@ -98,6 +98,10 @@ public class ClassFile implements Opcodes {
         return fieldToAccessFlag.get(fieldName);
     }
 
+    public ClassFile getSuperclass() {
+        return getInstance(loader, supername);
+    }
+
     /**
      * {@code ClassFile}'s counterpart of {@link Class#isAssignableFrom(Class)}.
      */

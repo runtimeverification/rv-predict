@@ -1,9 +1,13 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.instrumentation.Agent;
-
-import org.objectweb.asm.*;
 
 public class ClassTransformer extends ClassVisitor implements Opcodes {
 

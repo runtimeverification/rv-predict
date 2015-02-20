@@ -1,7 +1,8 @@
 package com.runtimeverification.rvpredict.log;
 
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+
+import com.runtimeverification.rvpredict.util.LinkedBlockingQueueCopy;
 
 /**
  * A buffer based implementation of the EventPipe interface.
@@ -26,7 +27,7 @@ public class BufferedEventPipe implements EventPipe {
     private long lastGID = 0;
 
     public BufferedEventPipe() {
-        this.pipe = new LinkedBlockingQueue<>();
+        this.pipe = new LinkedBlockingQueueCopy<>();
     }
 
     /**

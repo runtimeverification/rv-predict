@@ -92,7 +92,6 @@ public class Configuration implements Constants {
                  "java/util/concurrent/atomic/AtomicInteger",
                  "java/util/concurrent/atomic/AtomicLong",
                  "java/util/concurrent/ConcurrentHashMap",
-                 "java/util/concurrent/LinkedBlockingQueue",
                  "java/util/zip/GZIPOutputStream",
                  "java/util/regex",
 

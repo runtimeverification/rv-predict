@@ -17,6 +17,12 @@
         <arg value="demo.Example" />
         <rvarg key="--include" value="a.b" />
     </test>
+     <test name="demo.Example">
+        <arg key="-cp" value="basic.jar" />
+        <arg value="demo.Example" />
+        <rvarg key="--maxlen" value="3000" />
+        <rvarg key="--exclude" value="x" />
+    </test>
     <test name="SpringExample.jar">
         <arg key="-jar" value="SpringExample.jar" />
     </test>
@@ -33,12 +39,6 @@
         <arg key="-cp" value="basic.jar" />
         <arg value="input.MyScanner" />
     </test>
-<!--
-    <test name="com.example.Main">
-        <arg key="-cp" value="basic.jar" />
-        <arg value="com.example.Main" />
-    </test>
--->
     <test name="airlinetickets.Airlinetickets">
         <runs value="32" />
         <arg key="-cp" value="basic.jar" />

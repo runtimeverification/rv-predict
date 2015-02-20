@@ -1,13 +1,13 @@
 package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.util.LinkedBlockingQueueCopy;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * A {@link LoggingFactory} for online prediction.
@@ -23,7 +23,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class OnlineLoggingFactory implements LoggingFactory {
     private static final PipedInputStream END_INPUT_STREAM = new PipedInputStream();
-    private BlockingQueue<PipedInputStream> eventInputStreams = new LinkedBlockingQueue<>();
+    private BlockingQueue<PipedInputStream> eventInputStreams = new LinkedBlockingQueueCopy<>();
 
     @Override
     public EventPipe createEventPipe() {

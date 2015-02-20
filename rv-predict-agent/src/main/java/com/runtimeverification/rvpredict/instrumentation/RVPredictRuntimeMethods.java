@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import org.objectweb.asm.Opcodes;
 
 import com.runtimeverification.rvpredict.instrumentation.transformer.MethodTransformer;
+import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 public class RVPredictRuntimeMethods {
@@ -299,8 +300,7 @@ public class RVPredictRuntimeMethods {
                     break;
                 case VIRTUAL:
                 case INTERFACE:
-                    if (InstrumentUtils.isSubclassOf(loader, owner,
-                            interceptor.classOrInterface)) {
+                    if (ClassFile.isSubtypeOf(loader, owner, interceptor.classOrInterface)) {
                         return interceptor;
                     }
                     break;

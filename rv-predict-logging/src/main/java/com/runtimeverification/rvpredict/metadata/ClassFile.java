@@ -15,6 +15,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Table;
 
+/**
+ * Stores information of a (non-array) class.
+ *
+ * @author YilongL
+ *
+ */
 public class ClassFile implements Opcodes {
 
     /**
@@ -51,6 +57,9 @@ public class ClassFile implements Opcodes {
         this.supername = supername;
         this.interfaces = interfaces;
         this.fieldToAccessFlag = fieldToAccess;
+        if (cname.startsWith("[")) {
+            throw new UnsupportedOperationException("Unexpected array class name: " + cname);
+        }
     }
 
     public ClassLoader getLoader() {
@@ -59,6 +68,10 @@ public class ClassFile implements Opcodes {
 
     public int getAccess() {
         return access;
+    }
+
+    public boolean isInterface() {
+        return (access & ACC_INTERFACE) != 0;
     }
 
     public String getClassName() {
@@ -83,6 +96,43 @@ public class ClassFile implements Opcodes {
 
     public int getFieldAccess(String fieldName) {
         return fieldToAccessFlag.get(fieldName);
+    }
+
+    /**
+     * {@code ClassFile}'s counterpart of {@link Class#isAssignableFrom(Class)}.
+     */
+    public boolean isAssignableFrom(ClassFile classFile) {
+        if (cname.equals(classFile.cname)) {
+            return true;
+        } else if (classFile.cname.equals("java/lang/Object")) {
+            return false;
+        }
+
+        if (!classFile.isInterface()) {
+            ClassFile superclassFile = ClassFile.getInstance(classFile.loader, classFile.supername);
+            if (superclassFile != null) {
+                if (isAssignableFrom(superclassFile)) {
+                    return true;
+                }
+            } else {
+                System.err.println("[Warning] unable to get class file of " + classFile.supername
+                        + ", superclass of " + classFile.cname);
+            }
+        }
+
+        for (String itf : classFile.interfaces) {
+            ClassFile interfaceFile = getInstance(classFile.loader, itf);
+            if (interfaceFile != null) {
+                if (isAssignableFrom(interfaceFile)) {
+                    return true;
+                }
+            } else {
+                System.err.println("[Warning] unable to get the class file of " + itf
+                        + ", interface of " + classFile.cname);
+            }
+        }
+
+        return false;
     }
 
     @Override
@@ -223,6 +273,37 @@ public class ClassFile implements Opcodes {
     private static URL getResource(ClassLoader loader, String cname) {
         String name = cname + ".class";
         return loader == null ? ClassLoader.getSystemResource(name) : loader.getResource(name);
+    }
+
+    /**
+     * Checks if one class or interface is the same as, extends, or implements
+     * another class or interface.
+     *
+     * @param loader
+     *            the initiating loader of {@code type0}, may be null if it is
+     *            the bootstrap class loader or unknown
+     * @param type0
+     *            the name of the first class or interface
+     * @param type1
+     *            the name of the second class of interface
+     * @return {@code true} if {@code class1} is assignable from {@code class0}
+     */
+    public static boolean isSubtypeOf(ClassLoader loader, String type0, String type1) {
+        if (type0.startsWith("[") || type1.startsWith("[")) {
+            /* subtyping rules for array type are quite tricky;
+             * see JLS $4.10.3. Subtyping among Array Types */
+            throw new UnsupportedOperationException("Subtyping rules for array type not implemented!");
+        }
+
+        ClassFile classFile0 = getInstance(loader, type0);
+        ClassFile classFile1 = getInstance(loader, type1);
+        if (classFile0 == null || classFile1 == null) {
+            System.err.printf("[Warning] failed to check subtyping relation between %s and %s:%n"
+                    + "    unable to locate the class file of %s",
+                    type0, type1, classFile0 == null ? type0 : type1);
+            return false;
+        }
+        return classFile1.isAssignableFrom(classFile0);
     }
 
 }

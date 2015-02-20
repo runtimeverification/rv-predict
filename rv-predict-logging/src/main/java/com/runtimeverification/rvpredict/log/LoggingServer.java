@@ -91,8 +91,12 @@ public class LoggingServer implements LoggingTask {
             metadataLogger.finishLogging();
         }
 
-        for (Throwable e : uncaughtExceptions) {
-            e.printStackTrace();
+        if (!uncaughtExceptions.isEmpty()) {
+            for (Throwable e : uncaughtExceptions) {
+                e.printStackTrace();
+            }
+            throw new RuntimeException(
+                    "[logging] fatal error: uncaught exceptions thrown from logger threads!");
         }
     }
 

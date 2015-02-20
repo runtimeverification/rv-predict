@@ -3,7 +3,8 @@ package com.runtimeverification.rvpredict.log;
 import com.runtimeverification.rvpredict.config.Configuration;
 
 import java.io.*;
-import java.util.LinkedList;
+import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -16,16 +17,15 @@ import java.util.List;
 public class LoggingServer implements LoggingTask {
     private final LoggingEngine engine;
     private Thread owner;
-    private final List<Logger> loggers = new LinkedList<>();
+    private final List<Logger> loggers = new ArrayList<>();
     private final ThreadLocalEventStream threadLocalTraceOS;
-    private MetadataLogger metadataLogger;
+    private final MetadataLogger metadataLogger;
 
+    private final List<Throwable> uncaughtExceptions = new ArrayList<>();
 
     public LoggingServer(LoggingEngine engine) {
         this.engine = engine;
-        if (!Configuration.online) {
-            metadataLogger = new MetadataLogger(engine);
-        }
+        metadataLogger = Configuration.online ? null : new MetadataLogger(engine);
         threadLocalTraceOS = new ThreadLocalEventStream(engine.getLoggingFactory());
     }
 
@@ -44,10 +44,20 @@ public class LoggingServer implements LoggingTask {
                     .takeEventPipe())) {
                 EventOutputStream outputStream = engine.getLoggingFactory().createEventOutputStream();
                 Logger logger = new Logger(eventOS, outputStream);
-                Thread loggerThread = new Thread(logger, "Logger thread");
+                Thread loggerThread = new Thread(logger);
                 logger.setOwner(loggerThread);
+                loggerThread.setName("Logger-" + loggerThread.getId());
                 loggerThread.setDaemon(true);
                 loggerThread.start();
+                loggerThread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+                    @Override
+                    public void uncaughtException(Thread t, Throwable e) {
+                        /* if e is already a StackOverflowError, trying to print
+                         * it here is going to cause the StackOverflowError
+                         * again */
+                        uncaughtExceptions.add(e);
+                    }
+                });
                 loggers.add(logger);
             }
         } catch (InterruptedException e) {
@@ -79,6 +89,10 @@ public class LoggingServer implements LoggingTask {
 
         if (!Configuration.online) {
             metadataLogger.finishLogging();
+        }
+
+        for (Throwable e : uncaughtExceptions) {
+            e.printStackTrace();
         }
     }
 

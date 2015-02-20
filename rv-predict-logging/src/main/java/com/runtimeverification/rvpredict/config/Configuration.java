@@ -89,6 +89,7 @@ public class Configuration implements Constants {
                  "java/io",
                  "java/nio",
                  "java/util/ArrayList",
+                 "java/util/concurrent/atomic/AtomicInteger",
                  "java/util/concurrent/atomic/AtomicLong",
                  "java/util/concurrent/ConcurrentHashMap",
                  "java/util/concurrent/LinkedBlockingQueue",

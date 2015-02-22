@@ -292,7 +292,7 @@ public class Trace {
     }
 
     public void addRawEvent(Event event) {
-//        System.err.println(event + " " + loggingFactory.getStmtSig(event.getID()));
+//        System.err.println(event + " at " + loggingFactory.getStmtSig(event.getLocId()));
         rawEventsBuilder.add(event);
         if (event instanceof MemoryAccessEvent) {
             MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
@@ -333,7 +333,7 @@ public class Trace {
      * @param event
      */
     private void addEvent(Event event) {
-//        System.err.println(event + " " + loggingFactory.getStmtSig(event.getID()));
+//        System.err.println(event + " at " + loggingFactory.getStmtSig(event.getLocId()));
         Long tid = event.getTID();
         threadIds.add(tid);
 

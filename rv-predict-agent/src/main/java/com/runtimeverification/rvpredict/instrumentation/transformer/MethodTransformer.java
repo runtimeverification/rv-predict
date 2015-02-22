@@ -23,8 +23,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     private final ClassLoader loader;
     private final String className;
     private final int version;
-    private final String source;
-    private final String signature;
+    private final String locIdPrefix;
 
     /**
      * Specifies whether the visited method is synchronized.
@@ -44,14 +43,14 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             String name, String desc, int access, ClassLoader loader, Configuration config) {
         super(Opcodes.ASM5, new GeneratorAdapter(mv, access, name, desc));
         this.mv = (GeneratorAdapter) super.mv;
-        this.source = source == null ? "Unknown" : source;
         this.className = className;
         this.version = version;
-        this.signature = name + desc;
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
         this.loader = loader;
         this.branchModel = config.branch ? 1 : 0;
+        this.locIdPrefix = String.format("%s(%s:", className.replace("/", ".") + "." + name,
+                source == null ? "Unknown" : source);
     }
 
     @Override
@@ -436,14 +435,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
      *         current statement in the instrumented program
      */
     private int getCrntLocId() {
-        return Metadata.getLocationId(getCrntStmtSig());
-    }
-
-    /**
-     * @return a unique string representing the signature of the current
-     *         statement in the instrumented program
-     */
-    private String getCrntStmtSig() {
-        return String.format("%s|%s|%s|%s", source, className, signature, crntLineNum);
+        return Metadata.getLocationId(locIdPrefix + crntLineNum + ")");
     }
 }

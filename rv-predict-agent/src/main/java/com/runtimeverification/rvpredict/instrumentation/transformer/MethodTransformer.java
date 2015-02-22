@@ -13,7 +13,6 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.GeneratorAdapter;
-import org.objectweb.asm.commons.InstructionAdapter;
 import org.objectweb.asm.commons.Method;
 
 import static com.runtimeverification.rvpredict.instrumentation.InstrumentUtils.*;
@@ -21,15 +20,13 @@ import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntime
 
 public class MethodTransformer extends MethodVisitor implements Opcodes {
 
-    private final InstructionAdapter mv;
+    private final GeneratorAdapter mv;
 
     private final ClassLoader loader;
     private final String className;
     private final int version;
     private final String source;
     private final String signature;
-
-    private int crntMaxLocals;
 
     /**
      * Specifies whether the visited method is synchronized.
@@ -46,17 +43,15 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     private final int branchModel;
 
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
-            String name, String desc, int access, int crntMaxLocals, ClassLoader loader,
-            Configuration config) {
-        super(Opcodes.ASM5, new InstructionAdapter(mv));
-        this.mv = (InstructionAdapter) super.mv;
+            String name, String desc, int access, ClassLoader loader, Configuration config) {
+        super(Opcodes.ASM5, new GeneratorAdapter(mv, access, name, desc));
+        this.mv = (GeneratorAdapter) super.mv;
         this.source = source == null ? "Unknown" : source;
         this.className = className;
         this.version = version;
         this.signature = name + desc;
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
-        this.crntMaxLocals = crntMaxLocals;
         this.loader = loader;
         this.branchModel = config.branch ? 1 : 0;
     }
@@ -65,23 +60,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     public void visitLineNumber(int line, Label start) {
         crntLineNum = line;
         mv.visitLineNumber(line, start);
-    }
-
-    @Override
-    public void visitVarInsn(int opcode, int var) {
-        switch (opcode) {
-        case ISTORE: case FSTORE: case ASTORE:
-            crntMaxLocals = Math.max(crntMaxLocals, var);
-            break;
-        case LSTORE: case DSTORE:
-            crntMaxLocals = Math.max(crntMaxLocals, var + 1);
-            break;
-        case LLOAD: case DLOAD: case ILOAD: case FLOAD: case ALOAD: case RET:
-            break;
-        default:
-            assert false : "Unknown var instruction opcode " + opcode;
-        }
-        mv.visitVarInsn(opcode, var);
     }
 
     @Override
@@ -112,7 +90,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             /* read event should be logged after it happens */
             if (opcode == GETSTATIC) {
                 // <stack>... </stack>
-                mv.aconst(null);
+                mv.push((String) null);
                 // <stack>... null </stack>
             } else {
                 // <stack>... objectref </stack>
@@ -141,12 +119,12 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             // <stack>... (objectref)? value </stack>
             int value = storeNewLocal(valueType);
             if (opcode == PUTSTATIC) {
-                mv.aconst(null);
+                mv.push((String) null);
             }
             int objectref = storeNewLocal(OBJECT_TYPE);
             // <stack>... </stack>
-            loadLocal(objectref, OBJECT_TYPE);
-            loadLocal(value, valueType);
+            mv.loadLocal(objectref, OBJECT_TYPE);
+            mv.loadLocal(value, valueType);
             // <stack>... objectref value </stack>
             calcLongValue(valueType);
             // <stack>... objectref longValue </stack>
@@ -155,9 +133,9 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             invokeRTMethod(LOG_FIELD_ACCESS);
             // <stack>... </stack>
             if (opcode == PUTFIELD) {
-                loadLocal(objectref, OBJECT_TYPE);
+                mv.loadLocal(objectref, OBJECT_TYPE);
             }
-            loadLocal(value, valueType);
+            mv.loadLocal(value, valueType);
             // <stack>... (objectref)? value </stack>
             mv.visitFieldInsn(opcode, owner, name, desc); // write happens
             // <stack>... </stack>
@@ -185,7 +163,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             if (version >= 51) {
                 Type returnType = Type.getType((name + desc).substring(idx + 1));
                 if (!interceptor.method.getReturnType().equals(returnType)) {
-                    mv.checkcast(returnType);
+                    mv.checkCast(returnType);
                 }
             }
             return;
@@ -229,7 +207,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
                 if (isStatic) {
                     loadClassLiteral();
                 } else {
-                    loadThis();
+                    mv.loadThis();
                 }
                 push(getCrntLocId());
                 invokeRTMethod(LOG_MONITOR_EXIT);
@@ -275,14 +253,14 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         int value = storeNewLocal(valueType);
         // <stack>... arrayref index </stack>
         mv.dup2();
-        loadLocal(value, valueType);
+        mv.loadLocal(value, valueType);
         calcLongValue(valueType);
         // <stack>... arrayref index array index longValue </stack>
         push(1, getCrntLocId());
         // <stack>... arrayref index array index longValue true locId </stack>
         invokeRTMethod(LOG_ARRAY_ACCESS);
         // <stack>... arrayref index </stack>
-        loadLocal(value, valueType);
+        mv.loadLocal(value, valueType);
         // <stack>... arrayref index value </stack>
         mv.visitInsn(arrayStoreOpcode); // <--- array store happens
     }
@@ -293,7 +271,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             if (isStatic) {
                 loadClassLiteral();
             } else {
-                loadThis();
+                mv.loadThis();
             }
             push(getCrntLocId());
             invokeRTMethod(LOG_MONITOR_ENTER);
@@ -324,12 +302,12 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private void push(int... ints) {
         for (int i : ints) {
-            mv.iconst(i);
+            mv.push(i);
         }
     }
 
     private void invokeRTMethod(RVPredictRuntimeMethod rvpredictRTMethod) {
-        invokeStatic(RVPREDICT_RUNTIME_TYPE, rvpredictRTMethod.method);
+        mv.invokeStatic(RVPREDICT_RUNTIME_TYPE, rvpredictRTMethod.method);
     }
 
     private Type getValueType(int arrayLoadOrStoreOpcode) {
@@ -361,39 +339,15 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     /**
      * Stores the top value on the operand stack to local variable array.
-     * <p>
-     * <b>Note:</b> Unlike {@link GeneratorAdapter#newLocal(Type)}, the local
-     * variables created by this method <em>do not</em> interfere with the local
-     * variables in the original bytecode. When a local variable in the original
-     * bytecode is created in {@link MethodVisitor#visitVarInsn(int, int)} by
-     * some {@code xSTORE} instruction, it could simply overwrite the content of
-     * our (phantom) local variable. That is to say, we do not affect the
-     * ordering number of local variable in the original bytecode. Therefore,
-     * there is no need to change the frames in the original bytecode.
-     * <p>
-     * In order to make this approach work correctly, we have to ensure two
-     * things:
-     * <li>our phantom local variable does not overwrite the content of some
-     * original local variable; this is done by maintaining the correct
-     * {@link MethodTransformer#crntMaxLocals} at all time
-     * <li>our phantom local variable do not get overwritten before it serves
-     * its purpose; this is guaranteed by the way we use phantom local
-     * variables, that is, they are only used in a small scope that no
-     * {@code xSTORE} instruction in the original bytecode can interfere
      *
      * @param type
-     *            the type of the value
-     * @return the index of the local variable which holds the value
+     *            the type of the local variable to be created
+     * @return the identifier of the newly created local variable
      */
     private int storeNewLocal(Type type) {
-        int local = crntMaxLocals + 1;
-        crntMaxLocals += type.getSize();
-        mv.store(local, type);
+        int local = mv.newLocal(type);
+        mv.storeLocal(local, type);
         return local;
-    }
-
-    private void loadLocal(int var, Type type) {
-        mv.load(var, type);
     }
 
     public void calcLongValue(Type type) {
@@ -408,27 +362,19 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             break;
         case Type.OBJECT:
         case Type.ARRAY:
-            invokeStatic(JL_SYSTEM_TYPE, Method.getMethod("int identityHashCode(Object)"));
+            mv.invokeStatic(JL_SYSTEM_TYPE, Method.getMethod("int identityHashCode(Object)"));
             mv.visitInsn(I2L);
             break;
         case Type.FLOAT:
-            invokeStatic(JL_FLOAT_TYPE, Method.getMethod("int floatToIntBits(float)"));
+            mv.invokeStatic(JL_FLOAT_TYPE, Method.getMethod("int floatToIntBits(float)"));
             mv.visitInsn(I2L);
             break;
         case Type.DOUBLE:
-            invokeStatic(JL_DOUBLE_TYPE, Method.getMethod("long doubleToLongBits(double)"));
+            mv.invokeStatic(JL_DOUBLE_TYPE, Method.getMethod("long doubleToLongBits(double)"));
             break;
         default:
             assert false : "Unexpected type: " + type;
         }
-    }
-
-    private void invokeStatic(Type owner, Method method) {
-        mv.invokestatic(owner.getInternalName(), method.getName(), method.getDescriptor(), false);
-    }
-
-    private void loadThis() {
-        mv.load(0, OBJECT_TYPE);
     }
 
     private void loadClassLiteral() {
@@ -437,17 +383,17 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         if (version < 49) {
             /* `class$` is a special method generated to compute class literal */
             String fieldName = "class$" + className.replace('/', '$');
-            mv.getstatic(className, fieldName, CLASS_TYPE.getDescriptor());
-            Label l0 = new Label();
-            mv.ifnonnull(l0);
+            mv.getStatic(owner, fieldName, CLASS_TYPE);
+            Label l0 = mv.newLabel();
+            mv.ifNonNull(l0);
             mv.visitLdcInsn(className.replace('/', '.'));
-            invokeStatic(owner, Method.getMethod("Class class$(String)"));
+            mv.invokeStatic(owner, Method.getMethod("Class class$(String)"));
             mv.dup();
-            mv.putstatic(className, fieldName, CLASS_TYPE.getDescriptor());
+            mv.putStatic(owner, fieldName, CLASS_TYPE);
             Label l1 = new Label();
             mv.goTo(l1);
             mv.mark(l0);
-            mv.getstatic(className, fieldName, CLASS_TYPE.getDescriptor());
+            mv.getStatic(owner, fieldName, CLASS_TYPE);
             mv.mark(l1);
         } else {
             mv.visitLdcInsn(owner);

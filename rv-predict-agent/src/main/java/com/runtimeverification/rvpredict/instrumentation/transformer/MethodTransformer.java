@@ -22,6 +22,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private final ClassLoader loader;
     private final String className;
+    private final String methodName;
     private final int version;
     private final String locIdPrefix;
 
@@ -44,6 +45,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         super(Opcodes.ASM5, new GeneratorAdapter(mv, access, name, desc));
         this.mv = (GeneratorAdapter) super.mv;
         this.className = className;
+        this.methodName = name;
         this.version = version;
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
@@ -164,10 +166,18 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
                 }
             }
         } else {
-            ClassFile classFile = ClassFile.getInstance(loader, owner);
-            if (!needToInstrument(classFile)) {
+            if (owner.startsWith("[")) {
                 mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 return;
+            } else {
+                ClassFile classFile = ClassFile.getInstance(loader, owner);
+                if (classFile == null) {
+                    System.err.println("[Warning] unable to locate the class file of " + owner
+                            + " while transforming " + className + "." + methodName);
+                } else if (!needToInstrument(classFile)) {
+                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
+                    return;
+                }
             }
 
             /* Wrap the method call instruction into a try-finally block with logging code.

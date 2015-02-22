@@ -119,18 +119,18 @@ public class Trace {
     private final Table<MemoryAddr, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
 
     /**
+     * The initial value at all addresses referenced in this trace segment. It
+     * is computed as the value in the {@link #currentState} before the first
+     * access occurring in this trace segment.
+     */
+    private final Map<MemoryAddr, Long> addrToInitValue = Maps.newHashMap();
+
+    /**
      * Set of {@code MemoryAccessEvent}'s that happen during class initialization.
      */
     private final Set<MemoryAccessEvent> clinitMemAccEvents = Sets.newHashSet();
 
     private final LoggingFactory loggingFactory;
-
-    /**
-     * The initial value at all addresses referenced in this trace segment. It
-     * is computed as the value in the {@link #currentState} before the first
-     * access occurring in this trace segment.
-     */
-    private final State initState;
 
     /**
      * Maintains the current values for every location, as recorded into the trace
@@ -139,7 +139,6 @@ public class Trace {
 
     public Trace(LoggingFactory loggingFactory) {
         this.loggingFactory = loggingFactory;
-        initState = new State();
     }
 
     public boolean hasSharedMemAddr() {
@@ -158,7 +157,7 @@ public class Trace {
      * @return the initial value
      */
     public Long getInitValueOf(MemoryAddr addr) {
-        Long initValue = initState.addrToValue.get(addr);
+        Long initValue = addrToInitValue.get(addr);
         assert initValue != null : "All values in the trace should have been set in addRawEvent";
         return initValue;
     }
@@ -321,9 +320,7 @@ public class Trace {
 
     private void updateTraceState(MemoryAccessEvent memAcc) {
         MemoryAddr addr = memAcc.getAddr();
-        if (!initState.addrToValue.containsKey(addr)) {
-            initState.addrToValue.put(addr, currentState.addrToValue.getOrDefault(addr, 0L));
-        }
+        addrToInitValue.putIfAbsent(addr, currentState.addrToValue.getOrDefault(addr, 0L));
         currentState.addrToValue.put(addr, memAcc.getValue());
     }
 
@@ -539,7 +536,7 @@ public class Trace {
          */
         private final Map<Long, MutableInt> threadIdToClinitLevel = Maps.newHashMap();
 
-        public State() { }
+        private State() { }
 
         private boolean isClinitThread(long tid) {
             MutableInt level = threadIdToClinitLevel.get(tid);

@@ -345,6 +345,10 @@ public class Trace {
                 currentState.incClinitLevel(tid);
             } else if (eventType == EventType.CLINIT_EXIT) {
                 currentState.decClinitLevel(tid);
+            } else if (eventType == EventType.INVOKE_METHOD) {
+
+            } else if (eventType == EventType.FINISH_METHOD) {
+
             } else {
                 assert false : "unreachable";
             }

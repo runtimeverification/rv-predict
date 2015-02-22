@@ -212,6 +212,14 @@ public final class RVPredictRuntime {
         saveEvent(EventType.CLINIT_EXIT, 0, 0, 0, 0);
     }
 
+    public static void logInvokeMethod(int locId) {
+        saveEvent(EventType.INVOKE_METHOD, locId, 0, 0, 0);
+    }
+
+    public static void logFinishMethod(int locId) {
+        saveEvent(EventType.FINISH_METHOD, locId, 0, 0, 0);
+    }
+
     /**
      * Logs events produced by invoking {@code object.wait()}.
      *

@@ -11,7 +11,8 @@ public class MetaEvent extends AbstractEvent {
 
     public MetaEvent(long GID, long TID, int ID, EventType type) {
         super(GID, TID, ID, type);
-        assert type == EventType.CLINIT_ENTER || type == EventType.CLINIT_EXIT;
+        assert type == EventType.CLINIT_ENTER || type == EventType.CLINIT_EXIT
+                || type == EventType.INVOKE_METHOD || type == EventType.FINISH_METHOD;
     }
 
 }

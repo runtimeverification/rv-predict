@@ -30,6 +30,8 @@ public class RVPredictRuntimeMethods {
     public static final RVPredictRuntimeMethod LOG_CLINIT_EXIT   =  init("logClassInitializerExit");
     public static final RVPredictRuntimeMethod LOG_MONITOR_ENTER =  init("logMonitorEnter", O, I);
     public static final RVPredictRuntimeMethod LOG_MONITOR_EXIT  =  init("logMonitorExit", O, I);
+    public static final RVPredictRuntimeMethod LOG_INVOKE_METHOD =  init("logInvokeMethod", I);
+    public static final RVPredictRuntimeMethod LOG_FINISH_METHOD =  init("logFinishMethod", I);
     public static final RVPredictRuntimeMethod LOG_BRANCH        =  init("logBranch", I);
 
     /*

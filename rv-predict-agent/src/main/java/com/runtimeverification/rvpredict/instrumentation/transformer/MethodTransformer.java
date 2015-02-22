@@ -1,10 +1,8 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.instrumentation.InstrumentUtils;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
-import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
@@ -75,7 +73,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
         /* Optimization: https://github.com/runtimeverification/rv-predict/issues/314 */
         if ((classFile.getFieldAccess(name) & ACC_FINAL) != 0
-                || !InstrumentUtils.needToInstrument(classFile)) {
+                || !needToInstrument(classFile)) {
             mv.visitFieldInsn(opcode, owner, name, desc);
             return;
         }
@@ -150,12 +148,12 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
         int idx = (name + desc).lastIndexOf(')');
         String methodSig = (name + desc).substring(0, idx + 1);
-        RVPredictInterceptor interceptor = RVPredictRuntimeMethods.lookup(opcode, owner, methodSig,
-                loader, itf);
+        RVPredictInterceptor interceptor = lookup(opcode, owner, methodSig, loader, itf);
+        int locId = getCrntLocId();
         if (interceptor != null) {
             // <stack>... (objectref)? (arg)* </stack>
-            push(getCrntLocId());
-            // <stack>... (objectref)? (arg)* sid </stack>
+            push(locId);
+            // <stack>... (objectref)? (arg)* locId </stack>
             invokeRTMethod(interceptor);
             /* cast the result back to the original return type to pass bytecode
              * verification since an overriding method may specialize the return
@@ -166,9 +164,42 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
                     mv.checkCast(returnType);
                 }
             }
-            return;
+        } else {
+            ClassFile classFile = ClassFile.getInstance(loader, owner);
+            if (!needToInstrument(classFile)) {
+                mv.visitMethodInsn(opcode, owner, name, desc, itf);
+                return;
+            }
+
+            /* Wrap the method call instruction into a try-finally block with logging code.
+             *
+             * tryLabel:
+             *     LOG_INVOKE_METHOD
+             *     visitMethodInsn(opcode, owner, name, desc, itf)
+             *     LOG_FINISH_METHOD
+             *     goto afterLabel
+             * finallyLabel:
+             *     LOG_FINISH_METHOD
+             *     throw exception
+             * afterLabel:
+             *     ...
+             */
+            Label tryLabel = mv.mark();
+            push(locId);
+            invokeRTMethod(LOG_INVOKE_METHOD);
+            mv.visitMethodInsn(opcode, owner, name, desc, itf);
+            push(locId);
+            invokeRTMethod(LOG_FINISH_METHOD);
+            Label afterLabel = mv.newLabel();
+            mv.goTo(afterLabel);
+            Label finallyLabel = mv.newLabel();
+            mv.visitTryCatchBlock(tryLabel, finallyLabel, finallyLabel, null);
+            mv.mark(finallyLabel);
+            push(locId);
+            invokeRTMethod(LOG_FINISH_METHOD);
+            mv.throwException();
+            mv.mark(afterLabel);
         }
-        mv.visitMethodInsn(opcode, owner, name, desc, itf);
     }
 
     @Override

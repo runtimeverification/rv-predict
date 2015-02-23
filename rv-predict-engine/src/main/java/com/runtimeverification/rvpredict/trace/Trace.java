@@ -126,9 +126,22 @@ public class Trace {
     private final Map<MemoryAddr, Long> addrToInitValue = Maps.newHashMap();
 
     /**
+     * The initial stack trace for all threads referenced in this trace segment.
+     * It is computed as the value in the {@link #currentState} before the first
+     * event of that thread occurring in this trace segment.
+     */
+    private final Map<Long, List<Integer>> threadIdToInitStacktrace = Maps.newHashMap();
+
+    /**
      * Set of {@code MemoryAccessEvent}'s that happen during class initialization.
      */
     private final Set<MemoryAccessEvent> clinitMemAccEvents = Sets.newHashSet();
+
+    /**
+     * Map from thread Id to {@link EventType#INVOKE_METHOD} and
+     * {@link EventType#FINISH_METHOD} events.
+     */
+    private final Map<Long, List<MetaEvent>> threadIdToCallStackEvents = Maps.newHashMap();
 
     private final LoggingFactory loggingFactory;
 
@@ -223,6 +236,27 @@ public class Trace {
         return clinitMemAccEvents.contains(event);
     }
 
+    public List<String> getStacktraceAt(Event event) {
+        long tid = event.getTID();
+        List<String> stacktrace = Lists.newArrayList();
+        for (int locId : threadIdToInitStacktrace.get(tid)) {
+            stacktrace.add(loggingFactory.getStmtSig(locId));
+        }
+        for (MetaEvent e : threadIdToCallStackEvents.get(tid)) {
+            if (e.getGID() >= event.getGID()) {
+                break;
+            }
+
+            if (e.getType() == EventType.INVOKE_METHOD) {
+                stacktrace.add(loggingFactory.getStmtSig(e.getLocId()));
+            } else {
+                stacktrace.remove(stacktrace.size() - 1);
+            }
+        }
+        stacktrace.add(loggingFactory.getStmtSig(event.getLocId()));
+        return stacktrace;
+    }
+
     /**
      * Gets control-flow dependent events of a given {@code MemoryAccessEvent}.
      * Without logging {@code BranchEvent}, all read events that happen-before
@@ -293,10 +327,10 @@ public class Trace {
     public void addRawEvent(Event event) {
 //        System.err.println(event + " at " + loggingFactory.getStmtSig(event.getLocId()));
         rawEventsBuilder.add(event);
+        updateTraceState(event);
         if (event instanceof MemoryAccessEvent) {
             MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
             MemoryAddr addr = memAcc.getAddr();
-            updateTraceState(memAcc);
             if (event instanceof MemoryAccessEvent) {
                 getOrInitEmptySet(event instanceof ReadEvent ?
                         addrToReadThreads : addrToWriteThreads, addr).add(event.getTID());
@@ -318,10 +352,17 @@ public class Trace {
         }
     }
 
-    private void updateTraceState(MemoryAccessEvent memAcc) {
-        MemoryAddr addr = memAcc.getAddr();
-        addrToInitValue.putIfAbsent(addr, currentState.addrToValue.getOrDefault(addr, 0L));
-        currentState.addrToValue.put(addr, memAcc.getValue());
+    private void updateTraceState(Event event) {
+        long tid = event.getTID();
+        threadIdToInitStacktrace.putIfAbsent(tid,
+                new ArrayList<>(currentState.threadIdToStacktrace.getOrDefault(tid,
+                        new ArrayList<Integer>())));
+        if (event instanceof MemoryAccessEvent) {
+            MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
+            MemoryAddr addr = memAcc.getAddr();
+            addrToInitValue.putIfAbsent(addr, currentState.addrToValue.getOrDefault(addr, 0L));
+            currentState.addrToValue.put(addr, memAcc.getValue());
+        }
     }
 
     /**
@@ -343,9 +384,11 @@ public class Trace {
             } else if (eventType == EventType.CLINIT_EXIT) {
                 currentState.decClinitLevel(tid);
             } else if (eventType == EventType.INVOKE_METHOD) {
-
+                currentState.invokeMethod(event);
+                getOrInitEmptyList(threadIdToCallStackEvents, tid).add((MetaEvent) event);
             } else if (eventType == EventType.FINISH_METHOD) {
-
+                currentState.finishMethod(event);
+                getOrInitEmptyList(threadIdToCallStackEvents, tid).add((MetaEvent) event);
             } else {
                 assert false : "unreachable";
             }
@@ -506,7 +549,7 @@ public class Trace {
         return fieldId > 0 && loggingFactory.isVolatile(fieldId);
     }
 
-    private <K,V> List<V> getOrInitEmptyList(Map<K, List<V>> map, K key) {
+    private static <K,V> List<V> getOrInitEmptyList(Map<K, List<V>> map, K key) {
         List<V> value = map.get(key);
         if (value == null) {
             value = Lists.newArrayList();
@@ -515,7 +558,7 @@ public class Trace {
         return value;
     }
 
-    private <K,V> Set<V> getOrInitEmptySet(Map<K, Set<V>> map, K key) {
+    private static <K,V> Set<V> getOrInitEmptySet(Map<K, Set<V>> map, K key) {
         Set<V> value = map.get(key);
         if (value == null) {
             value = Sets.newHashSet();
@@ -536,7 +579,24 @@ public class Trace {
          */
         private final Map<Long, MutableInt> threadIdToClinitLevel = Maps.newHashMap();
 
+        /**
+         * Map from thread ID to the current stack trace elements.
+         */
+        private final Map<Long, List<Integer>> threadIdToStacktrace = Maps.newHashMap();
+
         private State() { }
+
+        private void invokeMethod(Event event) {
+            assert event.getType() == EventType.INVOKE_METHOD;
+            getOrInitEmptyList(threadIdToStacktrace, event.getTID()).add(event.getLocId());
+        }
+
+        private void finishMethod(Event event) {
+            assert event.getType() == EventType.FINISH_METHOD;
+            List<Integer> stacktrace = threadIdToStacktrace.get(event.getTID());
+            int locId = stacktrace.remove(stacktrace.size() - 1);
+            assert locId == event.getLocId();
+        }
 
         private boolean isClinitThread(long tid) {
             MutableInt level = threadIdToClinitLevel.get(tid);

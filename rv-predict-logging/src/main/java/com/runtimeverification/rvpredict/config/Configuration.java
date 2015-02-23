@@ -322,6 +322,10 @@ public class Configuration implements Constants {
     @Parameter(names = opt_timeout, description = "RV-Predict timeout in seconds", hidden = true, descriptionKey = "2070")
     public long timeout = 3600;
 
+    final static String opt_simple_report = "--simple-report";
+    @Parameter(names = opt_simple_report, description = "Output simple data race report", hidden = true, descriptionKey = "2080")
+    public boolean simple_report = false;
+
     public final static String opt_outdir = "--dir";
     @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")
     public String outdir = null;

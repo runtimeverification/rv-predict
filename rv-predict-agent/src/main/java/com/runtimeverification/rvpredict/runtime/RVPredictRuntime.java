@@ -818,7 +818,7 @@ public final class RVPredictRuntime {
                         -AQS_MOCK_STATE_ID, (int) AQS_GET_STATE.invoke(sync));
                 result = (boolean) AQS_CAS_STATE.invoke(sync, expect, update);
                 if (result) {
-                    saveEvent(EventType.READ, locId, System.identityHashCode(sync),
+                    saveEvent(EventType.WRITE, locId, System.identityHashCode(sync),
                             -AQS_MOCK_STATE_ID, update);
                 }
                 saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));

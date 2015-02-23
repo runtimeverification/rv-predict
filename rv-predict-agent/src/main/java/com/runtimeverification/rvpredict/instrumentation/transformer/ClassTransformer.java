@@ -53,6 +53,8 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
         assert mv != null;
 
+        mv = new ExceptionHandlerSorter(mv, access, name, desc, signature, exceptions);
+
         /* do not instrument synthesized bridge method; otherwise, it may cause
          * infinite recursion at runtime */
         if ((access & ACC_BRIDGE) == 0) {

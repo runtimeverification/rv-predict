@@ -3,7 +3,7 @@ package com.runtimeverification.rvpredict.smt.visitors;
 import com.runtimeverification.rvpredict.smt.formula.*;
 
 /**
- * Created by Traian on 24.02.2015.
+ * Base class for visitors.  Visits all nodes in an AST, but does nothing.
  */
 public class BasicVisitor implements Visitor {
     @Override
@@ -23,12 +23,7 @@ public class BasicVisitor implements Visitor {
     }
 
     @Override
-    public void visit(Relation node) {
-        visit((SMTOperation) node);
-    }
-
-    @Override
-    public void visit(SMTLibTerm node) {
+    public void visit(SMTTerm node) {
         node.getOperation().accept(this);
         for (SMTFormula term : node.getTerms()) {
             term.accept(this);
@@ -38,37 +33,27 @@ public class BasicVisitor implements Visitor {
 
     @Override
     public void visit(FormulaTerm node) {
-        visit((SMTLibTerm) node);
+        visit((SMTTerm) node);
     }
 
     @Override
-    public void visit(SortedTerm node) {
-        visit((SMTLibTerm) node);
-    }
-
-    @Override
-    public void visit(SMTLibConstant node) {
+    public void visit(SMTConstant node) {
         visit((SMTASTNode) node);
     }
 
     @Override
     public void visit(BooleanConstant node) {
-        visit((SMTLibConstant) node);
+        visit((SMTConstant) node);
     }
 
     @Override
-    public void visit(IntegerConstant node) {
-        visit((SMTLibConstant) node);
-    }
-
-    @Override
-    public void visit(Variable node) {
+    public void visit(SMTVariable node) {
         visit((SMTASTNode) node);
     }
 
     @Override
     public void visit(BooleanVariable node) {
-        visit((Variable) node);
+        visit((SMTVariable) node);
     }
 
     @Override
@@ -83,7 +68,7 @@ public class BasicVisitor implements Visitor {
 
     @Override
     public void visit(OrderVariable node) {
-        visit((Variable) node);
+        visit((SMTVariable) node);
     }
 
     @Override

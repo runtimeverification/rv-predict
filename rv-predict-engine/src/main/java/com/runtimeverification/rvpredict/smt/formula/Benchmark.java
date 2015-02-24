@@ -3,7 +3,7 @@ package com.runtimeverification.rvpredict.smt.formula;
 import com.runtimeverification.rvpredict.smt.visitors.Visitor;
 
 /**
- * Created by Traian on 24.02.2015.
+ * Representation of a top-level assertion.
  */
 public class Benchmark extends SMTASTNode {
     private final String name;

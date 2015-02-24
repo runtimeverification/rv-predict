@@ -7,4 +7,9 @@ import com.runtimeverification.rvpredict.smt.visitors.Visitor;
  */
 public interface SMTFormula {
     void accept(Visitor visitor);
+
+    /**
+     * @return the sort of this {@link SMTFormula}.
+     */
+    Sort getSort();
 }

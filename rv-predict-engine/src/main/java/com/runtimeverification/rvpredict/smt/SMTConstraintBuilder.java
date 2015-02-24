@@ -97,7 +97,7 @@ public class SMTConstraintBuilder {
     }
 
     private FormulaTerm getAsstHappensBefore(Event event1, Event event2) {
-        return new FormulaTerm(Relation.LESS_THAN, new OrderVariable(event1), new OrderVariable(event2));
+        return new FormulaTerm(BooleanOperation.LESS_THAN, new OrderVariable(event1), new OrderVariable(event2));
     }
 
     private FormulaTerm getAsstLockRegionHappensBefore(LockRegion lockRegion1, LockRegion lockRegion2) {
@@ -377,16 +377,16 @@ public class SMTConstraintBuilder {
         FormulaTerm raceAssertion = smtlibAssertion.shallowCopy();
         Benchmark benchmark = new Benchmark(benchname, raceAssertion);
         for (Entry<MemoryAccessEvent, FormulaTerm> entry : abstractPhi.entrySet()) {
-            raceAssertion.addFormula(new BooleanEquality(
+            raceAssertion.addFormula(new FormulaTerm(BooleanOperation.BOOL_EQUAL,
                     new AbstractPhiVariable(entry.getKey()),
                     entry.getValue()));
         }
         for (Entry<MemoryAccessEvent, FormulaTerm> entry : concretePhi.entrySet()) {
-            raceAssertion.addFormula(new BooleanEquality(
+            raceAssertion.addFormula(new FormulaTerm(BooleanOperation.BOOL_EQUAL,
                     new ConcretePhiVariable(entry.getKey()),
                     entry.getValue()));
         }
-        raceAssertion.addFormula(new FormulaTerm(Relation.EQUAL, new OrderVariable(e1), new OrderVariable(e2)));
+        raceAssertion.addFormula(new FormulaTerm(BooleanOperation.INT_EQUAL, new OrderVariable(e1), new OrderVariable(e2)));
         for (Formula casualConstraint : casualConstraints) {
             raceAssertion.addFormula(casualConstraint);
         }

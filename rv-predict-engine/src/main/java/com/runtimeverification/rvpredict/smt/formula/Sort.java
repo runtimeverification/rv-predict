@@ -1,6 +1,6 @@
 package com.runtimeverification.rvpredict.smt.formula;
 
 /**
-* Created by Traian on 24.02.2015.
-*/
+ * Defines the sorts in use for all {@link SMTFormula}s
+ */
 public enum Sort { Bool, Int }

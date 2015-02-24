@@ -5,29 +5,32 @@ import com.runtimeverification.rvpredict.smt.formula.*;
 import java.util.Collection;
 
 /**
- * Created by Traian on 24.02.2015.
+ * Filter for dumping the formula in the SMTLIB 1.2 format
  */
 public class SMTLib1Filter extends BasicVisitor {
     private final StringBuilder output;
 
-    public SMTLib1Filter(StringBuilder output) {
-        this.output = output;
-    }
-    
     public SMTLib1Filter() {
-        this(new StringBuilder());
+        output = new StringBuilder();
     }
 
+    /**
+     * Builds an SMTLIB representation of the {@code node}.
+     * One of the steps in doing this is collecting the variables in 
+     * the {@link Benchmark#assertion} and declaring them.
+     */
     @Override
     public void visit(Benchmark node) {
         output.append("(benchmark ").append(node.getName()).append(".smt\n");
         output.append(" :logic QF_IDL\n");
                 
-        Collection<Variable> variables = VariableCollector.getVariables(node);
+        Collection<SMTVariable> variables = VariableCollector.getVariables(node);
         if (!variables.isEmpty()) {
             output.append(" :extrafuns (\n");
-            for (Variable variable : variables) {
-                output.append("  (").append(variable.getName()).append(' ').append(variable.getSort()).append(")\n");
+            for (SMTVariable variable : variables) {
+                output.append("  (");
+                variable.accept(this);
+                output.append(' ').append(variable.getSort()).append(")\n");
             }
             output.append(")\n");
         }
@@ -42,7 +45,7 @@ public class SMTLib1Filter extends BasicVisitor {
     }
 
     @Override
-    public void visit(SMTLibTerm node) {
+    public void visit(SMTTerm node) {
         output.append('(');
         node.getOperation().accept(this);
         for (SMTFormula term : node.getTerms()) {
@@ -57,14 +60,13 @@ public class SMTLib1Filter extends BasicVisitor {
     }
 
     @Override
-    public void visit(SMTLibConstant node) {
+    public void visit(SMTConstant node) {
         output.append(node.getValue());
     }
 
     @Override
-    public void visit(Variable node) {
-        output.append(node.getName());
-
+    public void visit(SMTVariable node) {
+        output.append(node.getNamePrefix()).append(node.getId());
     }
 
     public String getResult() {

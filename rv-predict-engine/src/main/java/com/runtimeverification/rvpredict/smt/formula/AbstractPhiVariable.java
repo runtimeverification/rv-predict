@@ -3,10 +3,12 @@ package com.runtimeverification.rvpredict.smt.formula;
 import com.runtimeverification.rvpredict.smt.visitors.Visitor;
 import com.runtimeverification.rvpredict.trace.Event;
 
-/**
- * Created by Traian on 23.02.2015.
- */
-public class AbstractPhiVariable extends BooleanVariable {
+public final class AbstractPhiVariable extends BooleanVariable {
+    /**
+     * Prefix for naming variables belonging to this class.
+     */
+    private static final String PHI_A = "phi_a";
+
     public AbstractPhiVariable(Event event) {
         super(event);
     }
@@ -17,7 +19,7 @@ public class AbstractPhiVariable extends BooleanVariable {
     }
 
     @Override
-    public String getName() {
-        return "phi_a" + getId();
+    public String getNamePrefix() {
+        return PHI_A;
     }
 }

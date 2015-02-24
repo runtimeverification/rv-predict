@@ -56,12 +56,14 @@ public class Trace {
     private final ImmutableList.Builder<Event> rawEventsBuilder = ImmutableList.builder();
 
     /**
-     * Read threads on each address.
+     * Read threads on each address. Only used in filtering thread-local
+     * {@link MemoryAccessEvent}s.
      */
     private final Map<MemoryAddr, Set<Long>> addrToReadThreads = new HashMap<>();
 
     /**
-     * Write threads on each address.
+     * Write threads on each address. Only used in filtering thread-local
+     * {@link MemoryAccessEvent}s.
      */
     private final Map<MemoryAddr, Set<Long>> addrToWriteThreads = new HashMap<>();
 
@@ -327,12 +329,14 @@ public class Trace {
 //        System.err.println(event + " at " + loggingFactory.getStmtSig(event.getLocId()));
         rawEventsBuilder.add(event);
         updateTraceState(event);
+
         if (event instanceof MemoryAccessEvent) {
             MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
             MemoryAddr addr = memAcc.getAddr();
-            if (event instanceof MemoryAccessEvent) {
-                getOrInitEmptySet(event instanceof ReadEvent ?
-                        addrToReadThreads : addrToWriteThreads, addr).add(event.getTID());
+            getOrInitEmptySet(event instanceof ReadEvent ?
+                    addrToReadThreads : addrToWriteThreads, addr).add(event.getTID());
+            if (currentState.isInsideClassInitializer(event.getTID())) {
+                clinitMemAccEvents.add(memAcc);
             }
         }
     }
@@ -365,6 +369,21 @@ public class Trace {
                     outermostLockingEvents.add(syncEvent);
                 }
             }
+        } else if (event instanceof MetaEvent) {
+            EventType eventType = event.getType();
+            if (eventType == EventType.CLINIT_ENTER) {
+                currentState.incClinitDepth(tid);
+            } else if (eventType == EventType.CLINIT_EXIT) {
+                currentState.decClinitDepth(tid);
+            } else if (eventType == EventType.INVOKE_METHOD) {
+                currentState.invokeMethod(event);
+                getOrInitEmptyList(threadIdToCallStackEvents, tid).add((MetaEvent) event);
+            } else if (eventType == EventType.FINISH_METHOD) {
+                currentState.finishMethod(event);
+                getOrInitEmptyList(threadIdToCallStackEvents, tid).add((MetaEvent) event);
+            } else {
+                assert false : "unreachable";
+            }
         }
     }
 
@@ -381,31 +400,13 @@ public class Trace {
         if (event instanceof BranchEvent) {
             getOrInitEmptyList(threadIdToBranchEvents, tid).add((BranchEvent) event);
         } else if (event instanceof MetaEvent) {
-            EventType eventType = event.getType();
-            if (eventType == EventType.CLINIT_ENTER) {
-                currentState.incClinitLevel(tid);
-            } else if (eventType == EventType.CLINIT_EXIT) {
-                currentState.decClinitLevel(tid);
-            } else if (eventType == EventType.INVOKE_METHOD) {
-                currentState.invokeMethod(event);
-                getOrInitEmptyList(threadIdToCallStackEvents, tid).add((MetaEvent) event);
-            } else if (eventType == EventType.FINISH_METHOD) {
-                currentState.finishMethod(event);
-                getOrInitEmptyList(threadIdToCallStackEvents, tid).add((MetaEvent) event);
-            } else {
-                assert false : "unreachable";
-            }
+            // do nothing
         } else {
             allEvents.add(event);
 
             getOrInitEmptyList(threadIdToEvents, tid).add(event);
-            // TODO: Optimize it -- no need to update it every time
             if (event instanceof MemoryAccessEvent) {
                 MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
-                if (currentState.isClinitThread(tid)) {
-                    clinitMemAccEvents.add((MemoryAccessEvent) event);
-                }
-
                 MemoryAddr addr = memAcc.getAddr();
 
                 getOrInitEmptyList(memAccessEventsTbl.row(addr), tid).add(memAcc);
@@ -439,6 +440,8 @@ public class Trace {
                 }
 
                 getOrInitEmptyList(eventsMap, syncEvent.getSyncObject()).add(syncEvent);
+            } else {
+                assert false : "unreachable";
             }
         }
     }
@@ -566,13 +569,17 @@ public class Trace {
         /**
          * Map form thread ID to the current level of class initialization.
          */
-        private final Map<Long, MutableInt> threadIdToClinitLevel = Maps.newHashMap();
+        private final Map<Long, MutableInt> threadIdToClinitDepth = Maps.newHashMap();
 
         /**
          * Map from thread ID to the current stack trace elements.
          */
         private final Map<Long, List<Integer>> threadIdToStacktrace = Maps.newHashMap();
 
+        /**
+         * Table indexed by thread ID and lock object respectively. This table
+         * records the current lock status of each thread.
+         */
         private final Table<Long, Long, Deque<SyncEvent>> lockTable = HashBasedTable.create();
 
         private State() { }
@@ -612,25 +619,25 @@ public class Trace {
             assert EventType.isLock(lock.getType());
         }
 
-        private boolean isClinitThread(long tid) {
-            MutableInt level = threadIdToClinitLevel.get(tid);
+        private boolean isInsideClassInitializer(long tid) {
+            MutableInt level = threadIdToClinitDepth.get(tid);
             return level != null && level.intValue() > 0;
         }
 
-        private void incClinitLevel(long tid) {
-            MutableInt level = threadIdToClinitLevel.get(tid);
-            if (level == null) {
-                level = new MutableInt();
+        private void incClinitDepth(long tid) {
+            MutableInt depth = threadIdToClinitDepth.get(tid);
+            if (depth == null) {
+                depth = new MutableInt();
             }
-            level.increment();
-            threadIdToClinitLevel.put(tid, level);
+            depth.increment();
+            threadIdToClinitDepth.put(tid, depth);
         }
 
-        private void decClinitLevel(long tid) {
-            MutableInt level = threadIdToClinitLevel.get(tid);
-            assert level != null && level.intValue() > 0;
-            level.decrement();
-            threadIdToClinitLevel.put(tid, level);
+        private void decClinitDepth(long tid) {
+            MutableInt depth = threadIdToClinitDepth.get(tid);
+            assert depth != null && depth.intValue() > 0;
+            depth.decrement();
+            threadIdToClinitDepth.put(tid, depth);
         }
 
     }

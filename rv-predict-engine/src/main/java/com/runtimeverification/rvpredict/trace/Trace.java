@@ -28,16 +28,18 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.trace;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.List;
 
 import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
+
 import org.apache.commons.lang3.mutable.MutableInt;
 
 /**
@@ -62,16 +64,6 @@ public class Trace {
      * Write threads on each address.
      */
     private final Map<MemoryAddr, Set<Long>> addrToWriteThreads = new HashMap<>();
-
-    /**
-     * Lock level table indexed by thread ID and lock object.
-     */
-    private final Table<Long, Long, MutableInt> lockLevelTbl = HashBasedTable.create();
-
-    /**
-     * Lock level of each LOCK/UNLOCK event.
-     */
-    private final Map<SyncEvent, Integer> lockLevels = Maps.newHashMap();
 
     /**
      * Shared memory locations.
@@ -99,7 +91,7 @@ public class Trace {
     private final Map<Long, List<SyncEvent>> threadIdToStartJoinEvents = new HashMap<>();
 
     /**
-     * Wait/Notify/Lock/Unlock events indexed by the involved intrinsic lock object.
+     * Wait/Notify/Lock/Unlock events indexed by the involved lock object.
      */
     private final Map<Long, List<SyncEvent>> lockObjToSyncEvents = new HashMap<>();
 
@@ -132,10 +124,17 @@ public class Trace {
      */
     private final Map<Long, List<Integer>> threadIdToInitStacktrace = Maps.newHashMap();
 
+    private final Table<Long, Long, Deque<SyncEvent>> initLockTable = HashBasedTable.create();
+
     /**
      * Set of {@code MemoryAccessEvent}'s that happen during class initialization.
      */
     private final Set<MemoryAccessEvent> clinitMemAccEvents = Sets.newHashSet();
+
+    /**
+     * Set of outermost LOCK/UNLOCK events.
+     */
+    private final Set<SyncEvent> outermostLockingEvents = Sets.newHashSet();
 
     /**
      * Map from thread Id to {@link EventType#INVOKE_METHOD} and
@@ -335,20 +334,6 @@ public class Trace {
                 getOrInitEmptySet(event instanceof ReadEvent ?
                         addrToReadThreads : addrToWriteThreads, addr).add(event.getTID());
             }
-        } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
-            Long lockObj = ((SyncEvent) event).getSyncObject();
-            MutableInt level = lockLevelTbl.get(event.getTID(), lockObj);
-            if (level == null) {
-                level = new MutableInt(0);
-                lockLevelTbl.put(event.getTID(), lockObj, level);
-            }
-            if (EventType.isLock(event.getType())) {
-                level.increment();
-            }
-            lockLevels.put((SyncEvent) event, level.getValue());
-            if (EventType.isUnlock(event.getType())) {
-                level.decrement();
-            }
         }
     }
 
@@ -362,6 +347,24 @@ public class Trace {
             MemoryAddr addr = memAcc.getAddr();
             addrToInitValue.putIfAbsent(addr, currentState.addrToValue.getOrDefault(addr, 0L));
             currentState.addrToValue.put(addr, memAcc.getValue());
+        } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
+            if (!initLockTable.containsRow(tid)) {
+                initLockTable.row(tid).putAll(currentState.lockTable.row(tid));
+            }
+
+            SyncEvent syncEvent = (SyncEvent) event;
+            Long lockObj = syncEvent.getSyncObject();
+            if (EventType.isLock(event.getType())) {
+                currentState.acquireLock(event);
+                if (currentState.lockTable.get(tid, lockObj).size() == 1) {
+                    outermostLockingEvents.add(syncEvent);
+                }
+            } else {
+                currentState.releaseLock(event);
+                if (currentState.lockTable.get(tid, lockObj).isEmpty()) {
+                    outermostLockingEvents.add(syncEvent);
+                }
+            }
         }
     }
 
@@ -462,18 +465,6 @@ public class Trace {
             }
         }
 
-        /* compute the levels of the outermost locking events */
-        Table<Long, Long, Integer> minLockLevels = HashBasedTable.create();
-        for (Entry<SyncEvent, Integer> entry : lockLevels.entrySet()) {
-            long tid = entry.getKey().getTID();
-            long lockObj = entry.getKey().getSyncObject();
-            Integer level = minLockLevels.get(tid, lockObj);
-            if (level == null || level > entry.getValue()) {
-                level = entry.getValue();
-            }
-            minLockLevels.put(tid, lockObj, level);
-        }
-
         List<Event> reducedEvents = new ArrayList<>();
         for (Event event : rawEvents) {
             if (event instanceof MemoryAccessEvent) {
@@ -482,9 +473,7 @@ public class Trace {
                     reducedEvents.add(event);
                 }
             } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
-                /* only preserve outermost lock regions */
-                long lockObj = ((SyncEvent) event).getSyncObject();
-                if (lockLevels.get(event) == minLockLevels.get(event.getTID(), lockObj)) {
+                if (outermostLockingEvents.contains(event)) {
                     reducedEvents.add(event);
                 }
             } else {
@@ -584,6 +573,8 @@ public class Trace {
          */
         private final Map<Long, List<Integer>> threadIdToStacktrace = Maps.newHashMap();
 
+        private final Table<Long, Long, Deque<SyncEvent>> lockTable = HashBasedTable.create();
+
         private State() { }
 
         private void invokeMethod(Event event) {
@@ -596,6 +587,29 @@ public class Trace {
             List<Integer> stacktrace = threadIdToStacktrace.get(event.getTID());
             int locId = stacktrace.remove(stacktrace.size() - 1);
             assert locId == event.getLocId();
+        }
+
+        private void acquireLock(Event event) {
+            assert EventType.isLock(event.getType());
+
+            SyncEvent lock = (SyncEvent) event;
+            long tid = lock.getTID();
+            long lockObj = lock.getSyncObject();
+            Deque<SyncEvent> locks = lockTable.get(tid, lockObj);
+            if (locks == null) {
+                locks = new ArrayDeque<>();
+                lockTable.put(tid, lockObj, locks);
+            }
+            locks.add(lock);
+        }
+
+        private void releaseLock(Event event) {
+            assert EventType.isUnlock(event.getType());
+            SyncEvent unlock = (SyncEvent) event;
+            long tid = unlock.getTID();
+            long lockObj = unlock.getSyncObject();
+            Event lock = lockTable.get(tid, lockObj).removeLast();
+            assert EventType.isLock(lock.getType());
         }
 
         private boolean isClinitThread(long tid) {

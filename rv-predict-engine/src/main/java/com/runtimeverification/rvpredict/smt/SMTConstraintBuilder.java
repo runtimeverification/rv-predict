@@ -28,6 +28,8 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.smt;
 
+import com.runtimeverification.rvpredict.smt.formula.*;
+import com.runtimeverification.rvpredict.smt.visitors.SMTLib1Filter;
 import com.runtimeverification.rvpredict.trace.Event;
 import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
@@ -64,8 +66,8 @@ public class SMTConstraintBuilder {
     private final ReachabilityEngine reachEngine = new ReachabilityEngine();
     private final LockSetEngine lockEngine = new LockSetEngine();
 
-    private final Map<MemoryAccessEvent, StringBuilder> abstractPhi = Maps.newHashMap();
-    private final Map<MemoryAccessEvent, StringBuilder> concretePhi = Maps.newHashMap();
+    private final Map<MemoryAccessEvent, FormulaTerm> abstractPhi = Maps.newHashMap();
+    private final Map<MemoryAccessEvent, FormulaTerm> concretePhi = Maps.newHashMap();
 
     /**
      * Avoids infinite recursion when building the abstract feasibility
@@ -80,62 +82,25 @@ public class SMTConstraintBuilder {
     private final Set<MemoryAccessEvent> computedConcretePhi = Sets.newHashSet();
 
     // constraints below
-    private final StringBuilder smtlibDecl = new StringBuilder(":extrafuns (\n");
-    private final StringBuilder smtlibAssertion = new StringBuilder(":formula (and \n");
-    private static final String CONS_SETLOGIC = ":logic QF_IDL\n";
-
+    private final FormulaTerm smtlibAssertion = new FormulaTerm(BooleanOperation.AND);
     private final String benchname;
 
     public SMTConstraintBuilder(Configuration config, Trace trace) {
         this.config = config;
         this.trace = trace;
-        benchname = "(benchmark " + config.tableName + ".smt\n";
-    }
-
-    private static String makeOrderVariable(Event event) {
-        return "o" + event.getGID();
-    }
-
-    private String makeConcretePhiVariable(MemoryAccessEvent event) {
-        return "phi_c" + event.getGID();
-    }
-
-    private String makeAbstractPhiVariable(MemoryAccessEvent event) {
-        return "phi_a" + event.getGID();
-    }
-
-    /**
-     * Declares an order variable for each event.
-     */
-    public void declareVariables() {
-        for (Event e : trace.getAllEvents()) {
-            smtlibDecl.append(String.format("(%s Int)\n", makeOrderVariable(e)));
-            if (e instanceof MemoryAccessEvent) {
-                smtlibDecl.append(String.format("(%s Bool)\n",
-                        makeAbstractPhiVariable((MemoryAccessEvent) e)));
-                smtlibDecl.append(String.format("(%s Bool)\n",
-                        makeConcretePhiVariable((MemoryAccessEvent) e)));
-            }
-        }
-        smtlibDecl.append(")\n");
+        benchname = config.tableName;
     }
 
     private void assertHappensBefore(Event e1, Event e2) {
-        smtlibAssertion.append(getAsstHappensBefore(e1, e2));
+        smtlibAssertion.addFormula(getAsstHappensBefore(e1, e2));
         reachEngine.addEdge(e1, e2);
     }
 
-    private String getAsstHappensBefore(Event... events) {
-        StringBuilder sb = new StringBuilder("(<");
-        for (Event event : events) {
-            sb.append(" ");
-            sb.append(makeOrderVariable(event));
-        }
-        sb.append(")");
-        return sb.toString();
+    private FormulaTerm getAsstHappensBefore(Event event1, Event event2) {
+        return new FormulaTerm(Relation.LESS_THAN, new OrderVariable(event1), new OrderVariable(event2));
     }
 
-    private String getAsstLockRegionHappensBefore(LockRegion lockRegion1, LockRegion lockRegion2) {
+    private FormulaTerm getAsstLockRegionHappensBefore(LockRegion lockRegion1, LockRegion lockRegion2) {
         SyncEvent unlock = lockRegion1.getUnlock();
         SyncEvent lock = lockRegion2.getLock();
         return getAsstHappensBefore(
@@ -144,7 +109,7 @@ public class SMTConstraintBuilder {
     }
 
     private void assertMutualExclusion(LockRegion lockRegion1, LockRegion lockRegion2) {
-        smtlibAssertion.append(String.format("(or %s %s)\n",
+        smtlibAssertion.addFormula(new FormulaTerm(BooleanOperation.OR, 
                 getAsstLockRegionHappensBefore(lockRegion1, lockRegion2),
                 getAsstLockRegionHappensBefore(lockRegion2, lockRegion1)));
     }
@@ -281,20 +246,19 @@ public class SMTConstraintBuilder {
      * however, this {@code event} is allowed to read or write a different value
      * than in the original trace.
      */
-    public String getAbstractFeasibilityConstraint(MemoryAccessEvent event) {
+    public Formula getAbstractFeasibilityConstraint(MemoryAccessEvent event) {
         if (computedAbstractPhi.contains(event)) {
-            return makeAbstractPhiVariable(event);
+            return new AbstractPhiVariable(event);
         }
         computedAbstractPhi.add(event);
 
-        StringBuilder phi = new StringBuilder("(and true ");
+        FormulaTerm phi = new FormulaTerm(BooleanOperation.AND);
         /* make sure that every dependent read event reads the same value as in the original trace */
         for (ReadEvent depRead : trace.getCtrlFlowDependentEvents(event)) {
-            phi.append(getConcreteFeasibilityConstraint(depRead)).append(" ");
+            phi.addFormula(getConcreteFeasibilityConstraint(depRead));
         }
-        phi.append(")");
         abstractPhi.put(event, phi);
-        return makeAbstractPhiVariable(event);
+        return new AbstractPhiVariable(event);
     }
 
     /**
@@ -302,15 +266,15 @@ public class SMTConstraintBuilder {
      * the same as in the original trace <b>if</b> the corresponding data-abstract
      * feasibility constraint is also satisfied.
      */
-    private String getConcreteFeasibilityConstraint(MemoryAccessEvent event) {
+    private Formula getConcreteFeasibilityConstraint(MemoryAccessEvent event) {
         if (computedConcretePhi.contains(event)) {
-            return makeConcretePhiVariable(event);
+            return new ConcretePhiVariable(event);
         } else if (event.getValue() == Constants._0X_DEADBEEFL) {
-            return "true";
+            return BooleanConstant.TRUE;
         }
         computedConcretePhi.add(event);
 
-        StringBuilder phi;
+        FormulaTerm phi;
         if (event instanceof ReadEvent) {
             List<WriteEvent> writeEvents = trace.getWriteEventsOn(event.getAddr());
 
@@ -340,47 +304,44 @@ public class SMTConstraintBuilder {
             }
 
             /* case 1: the dependent read reads the initial value */
-            StringBuilder case1 = new StringBuilder("false");
+            Formula case1 = BooleanConstant.FALSE;
             if (thrdImdWrtPred == null &&
                     trace.getInitValueOf(event.getAddr()) == event.getValue()) {
-                case1 = new StringBuilder("(and true ");
+                FormulaTerm formula = new FormulaTerm(BooleanOperation.AND);
                 for (WriteEvent write : predWriteSet) {
-                    case1.append(getAsstHappensBefore(event, write));
+                    formula.addFormula(getAsstHappensBefore(event, write));
                 }
-                case1.append(")");
+                case1 = formula;
             }
 
             /* case 2: the dependent read reads a previously written value */
-            StringBuilder case2 = new StringBuilder("(or false ");
+            FormulaTerm case2 = new FormulaTerm(BooleanOperation.OR);
             for (WriteEvent write : sameValPredWriteSet) {
-                case2.append("(and ");
-                case2.append(getAbstractFeasibilityConstraint(write)).append(" ")
-                     .append(getConcreteFeasibilityConstraint(write)).append(" ");
-                case2.append(getAsstHappensBefore(write, event));
+                FormulaTerm formula = new FormulaTerm(BooleanOperation.AND,
+                        getAbstractFeasibilityConstraint(write),
+                        getConcreteFeasibilityConstraint(write));
+                case2.addFormula(formula);
+                formula.addFormula(getAsstHappensBefore(write, event));
                 for (WriteEvent otherWrite : writeEvents) {
                     if (write != otherWrite && !happensBefore(otherWrite, write)
                             && !happensBefore(event, otherWrite)) {
-                        case2.append(String.format("(or %s %s)",
+                        formula.addFormula(new FormulaTerm(BooleanOperation.OR,
                                 getAsstHappensBefore(otherWrite, write),
                                 getAsstHappensBefore(event, otherWrite)));
                     }
                 }
-                case2.append(")");
             }
-            case2.append(")");
-            phi = new StringBuilder("(or ").append(case1).append(" ").append(case2)
-                    .append(")");
+            phi = new FormulaTerm(BooleanOperation.OR, case1, case2);
         } else {
-            phi = new StringBuilder("(and true ");
+            phi = new FormulaTerm(BooleanOperation.AND);
             for (ReadEvent e : trace.getExtraDataFlowDependentEvents(event)) {
-                phi.append(getAbstractFeasibilityConstraint(e)).append(" ")
-                   .append(getConcreteFeasibilityConstraint(e)).append(" ");
+                phi.addFormula(getAbstractFeasibilityConstraint(e));
+                phi.addFormula(getConcreteFeasibilityConstraint(e));
             }
-            phi.append(")");
         }
         concretePhi.put(event, phi);
 
-        return makeConcretePhiVariable(event);
+        return new ConcretePhiVariable(event);
     }
 
     /**
@@ -402,29 +363,37 @@ public class SMTConstraintBuilder {
         int id = SMTConstraintBuilder.id.incrementAndGet();
         task = new SMTTaskRun(config, id);
 
-        StringBuilder msg = new StringBuilder(benchname).append(CONS_SETLOGIC)
-                .append(smtlibDecl).append(smtlibAssertion).append(")");
-        task.sendMessage(msg.toString());
+        Benchmark benchmark = new Benchmark(benchname, smtlibAssertion);
+        SMTLib1Filter filter = new SMTLib1Filter();
+        benchmark.accept(filter);
+        task.sendMessage(filter.getResult());
 
         return task.sat;
     }
 
-    public boolean isRace(Event e1, Event e2, CharSequence casualConstraint) {
+    public boolean isRace(Event e1, Event e2, Formula... casualConstraints) {
         int id = SMTConstraintBuilder.id.incrementAndGet();
         task = new SMTTaskRun(config, id);
-        StringBuilder msg = new StringBuilder(benchname).append(CONS_SETLOGIC).append(smtlibDecl);
-        msg.append(smtlibAssertion);
-        for (Entry<MemoryAccessEvent, StringBuilder> entry : abstractPhi.entrySet()) {
-            msg.append("(= ").append(makeAbstractPhiVariable(entry.getKey())).append(" ")
-                    .append(entry.getValue()).append(")");
+        FormulaTerm raceAssertion = smtlibAssertion.shallowCopy();
+        Benchmark benchmark = new Benchmark(benchname, raceAssertion);
+        for (Entry<MemoryAccessEvent, FormulaTerm> entry : abstractPhi.entrySet()) {
+            raceAssertion.addFormula(new BooleanEquality(
+                    new AbstractPhiVariable(entry.getKey()),
+                    entry.getValue()));
         }
-        for (Entry<MemoryAccessEvent, StringBuilder> entry : concretePhi.entrySet()) {
-            msg.append("(= ").append(makeConcretePhiVariable(entry.getKey())).append(" ")
-                    .append(entry.getValue()).append(")");
+        for (Entry<MemoryAccessEvent, FormulaTerm> entry : concretePhi.entrySet()) {
+            raceAssertion.addFormula(new BooleanEquality(
+                    new ConcretePhiVariable(entry.getKey()),
+                    entry.getValue()));
         }
-        msg.append(String.format("(= %s %s)", makeOrderVariable(e1), makeOrderVariable(e2)))
-           .append(casualConstraint).append("))");
-        task.sendMessage(msg.toString());
+        raceAssertion.addFormula(new FormulaTerm(Relation.EQUAL, new OrderVariable(e1), new OrderVariable(e2)));
+        for (Formula casualConstraint : casualConstraints) {
+            raceAssertion.addFormula(casualConstraint);
+        }
+        
+        SMTLib1Filter filter = new SMTLib1Filter();
+        benchmark.accept(filter);
+        task.sendMessage(filter.getResult());
         return task.sat;
     }
 

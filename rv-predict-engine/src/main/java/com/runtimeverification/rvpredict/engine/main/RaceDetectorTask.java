@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.engine.main;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.runtimeverification.rvpredict.smt.formula.Formula;
 import com.runtimeverification.rvpredict.trace.*;
 import com.runtimeverification.rvpredict.util.Logger;
 import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
@@ -47,7 +48,6 @@ public class RaceDetectorTask implements Runnable {
     public void run() {
         SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(RVPredict.getConfig(), trace);
 
-        cnstrBuilder.declareVariables();
         if (RVPredict.getConfig().rmm_pso) {
             cnstrBuilder.addPSOIntraThreadConstraints();
         } else {
@@ -163,11 +163,12 @@ public class RaceDetectorTask implements Runnable {
                     }
 
                     /* start building constraints for MCM */
-                    StringBuilder sb = new StringBuilder()
-                            .append(cnstrBuilder.getAbstractFeasibilityConstraint(fst)).append(" ")
-                            .append(cnstrBuilder.getAbstractFeasibilityConstraint(snd));
+                    Formula[] causalConstraints = new Formula[]{
+                            cnstrBuilder.getAbstractFeasibilityConstraint(fst),
+                            cnstrBuilder.getAbstractFeasibilityConstraint(snd)
+                    };
 
-                    if (cnstrBuilder.isRace(fst, snd, sb)) {
+                    if (cnstrBuilder.isRace(fst, snd, causalConstraints)) {
                         for (Race r : potentialRaces) {
                             if (RVPredict.getViolations().add(r)) {
                                 RVPredict.getLogger().report(r.toString(), Logger.MSGTYPE.REAL);

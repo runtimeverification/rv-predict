@@ -190,13 +190,6 @@ public class InstrumentUtils implements Opcodes {
             }
         }
 
-        if (!toInstrument) {
-            for (Pattern include : Configuration.MUST_INCLUDES) {
-                toInstrument = include.matcher(cname).matches();
-                if (toInstrument) break;
-            }
-        }
-
         instrumentClass.put(cname, toInstrument);
         return toInstrument;
     }

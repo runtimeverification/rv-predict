@@ -55,6 +55,7 @@ public class Configuration implements Constants {
     public static final String LOGGING_PHASE_COMPLETED = "Logging phase completed.";
     public static final String TRACE_LOGGED_IN = "\tTrace logged in: ";
     public static final String INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE = "Instrumented execution to record the trace";
+
     /**
      * Packages/classes that are excluded from instrumentation by default. These are
      * configurable by the users through the <code>--exclude</code> command option.
@@ -114,12 +115,9 @@ public class Configuration implements Constants {
          // "java/util/Iterator"
      };
 
-     public static List<Pattern> MUST_INCLUDES = getDefaultPatterns(new String[] {
-             "java/util/Collections$Synchronized"
-     });
-
     public final List<Pattern> includeList = new ArrayList<>();
     public final List<Pattern> excludeList = new ArrayList<>();
+
     private JCommander jCommander;
 
     private static Pattern createClassPattern(String pattern) {

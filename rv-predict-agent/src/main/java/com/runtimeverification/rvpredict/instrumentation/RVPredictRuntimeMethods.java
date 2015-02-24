@@ -45,6 +45,7 @@ public class RVPredictRuntimeMethods {
     private static final String JU_ITERATOR     =   "java/util/Iterator";
     private static final String JU_COLLECTION   =   "java/util/Collection";
     private static final String JU_MAP          =   "java/util/Map";
+    private static final String JU_COLLECTIONS  =   "java/util/Collections";
     private static final String JUCL_LOCK       =   "java/util/concurrent/locks/Lock";
     private static final String JUCL_CONDITION  =   "java/util/concurrent/locks/Condition";
     private static final String JUCL_RW_LOCK    =   "java/util/concurrent/locks/ReadWriteLock";
@@ -145,6 +146,12 @@ public class RVPredictRuntimeMethods {
             register(INTERFACE, JU_MAP, "keySet", "rvPredictMapKeySet");
     public static final RVPredictInterceptor RVPREDICT_MAP_VALUES         =
             register(INTERFACE, JU_MAP, "values", "rvPredictMapValues");
+
+    // java.util.Collections wrapper methods
+    public static final RVPredictInterceptor RVPREDICT_SYNC_COLLECTION    =
+            register(STATIC, JU_COLLECTIONS, "synchronizedCollection", "rvPredictSynchronizedCollection", Collection.class);
+    public static final RVPredictInterceptor RVPREDICT_SYNC_MAP           =
+            register(STATIC, JU_COLLECTIONS, "synchronizedMap", "rvPredictSynchronizedMap", Map.class);
 
     // java.util.concurrent.locks.Lock methods
     // note that this doesn't provide mocks for methods specific in concrete lock implementation

@@ -326,6 +326,10 @@ public class Configuration implements Constants {
     @Parameter(names = opt_simple_report, description = "Output simple data race report", hidden = true, descriptionKey = "2080")
     public boolean simple_report = false;
 
+    final static String opt_debug = "--debug";
+    @Parameter(names = opt_debug, description = "Output developer debugging information", hidden = true, descriptionKey = "2090")
+    public boolean debug = false;
+
     public final static String opt_outdir = "--dir";
     @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")
     public String outdir = null;

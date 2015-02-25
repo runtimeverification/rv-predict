@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.trace;
 
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventInputStream;
 import com.runtimeverification.rvpredict.log.EventItem;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
@@ -25,13 +26,14 @@ public class TraceCache {
 
     /**
      * Creates a new {@code TraceCahce} structure for a trace log.
+     * @param config
      *
      * @param loggingFactory suppling additional information about the nature of the logs.
      */
-    public TraceCache(LoggingFactory loggingFactory) {
+    public TraceCache(Configuration config, LoggingFactory loggingFactory) {
         this.loggingFactory = loggingFactory;
-        indexes = new HashMap<>();
-        crntState = new TraceState(loggingFactory);
+        this.indexes = new HashMap<>();
+        this.crntState = new TraceState(config, loggingFactory);
     }
 
     /**

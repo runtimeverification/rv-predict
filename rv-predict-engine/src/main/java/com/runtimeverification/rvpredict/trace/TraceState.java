@@ -12,6 +12,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.util.Constants;
 
@@ -38,9 +39,11 @@ public class TraceState {
      */
     private final Table<Long, Long, Deque<SyncEvent>> lockTable = HashBasedTable.create();
 
+    private final Configuration config;
     private final LoggingFactory loggingFactory;
 
-    TraceState(LoggingFactory loggingFactory) {
+    TraceState(Configuration config, LoggingFactory loggingFactory) {
+        this.config = config;
         this.loggingFactory = loggingFactory;
     }
 
@@ -109,12 +112,14 @@ public class TraceState {
         long value = memAcc.getValue();
         if (memAcc instanceof ReadEvent) {
             long oldVal = getAddrValue(addr);
-            if (value != Constants._0X_DEADBEEFL && value != oldVal) {
-                System.err.printf(
-                    String.format("[Warning] logged trace not sequential consistent:%n"
-                            + "  event %s reads a different value than the currently stored value %s%n"
-                            + "    at %s%n",
-                            memAcc, oldVal, loggingFactory.getStmtSig(memAcc.getLocId())));
+            if (config.debug) {
+                if (value != Constants._0X_DEADBEEFL && value != oldVal) {
+                    System.err.printf(
+                        String.format("[Warning] logged trace not sequential consistent:%n"
+                                + "  event %s reads a different value than the currently stored value %s%n"
+                                + "    at %s%n",
+                                memAcc, oldVal, loggingFactory.getStmtSig(memAcc.getLocId())));
+                }
             }
         }
         addrToValue.put(addr, value);

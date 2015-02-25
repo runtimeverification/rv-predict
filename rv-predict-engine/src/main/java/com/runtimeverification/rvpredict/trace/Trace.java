@@ -30,6 +30,8 @@ package com.runtimeverification.rvpredict.trace;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -237,25 +239,78 @@ public class Trace {
         return clinitMemAccEvents.contains(event);
     }
 
+    /**
+     * Returns the {@code String} representation of the stack trace at the point
+     * when a given {@code event} happened.
+     *
+     * @param event
+     *            the event
+     * @return a {@code List} of stack trace element represented in
+     *         {@code String}s
+     */
     public List<String> getStacktraceAt(Event event) {
         long tid = event.getTID();
         List<String> stacktrace = Lists.newArrayList();
-        for (int locId : threadIdToInitStacktrace.get(tid)) {
-            stacktrace.add(loggingFactory.getStmtSig(locId));
-        }
-        for (MetaEvent e : threadIdToCallStackEvents.get(tid)) {
-            if (e.getGID() >= event.getGID()) {
-                break;
+        if (event.getGID() >= rawEvents.get(0).getGID()) {
+            /* event is in the current window; reassemble its stack trace */
+            for (int locId : threadIdToInitStacktrace.get(tid)) {
+                stacktrace.add(loggingFactory.getStmtSig(locId));
             }
+            for (MetaEvent e : threadIdToCallStackEvents.get(tid)) {
+                if (e.getGID() >= event.getGID()) {
+                    break;
+                }
 
-            if (e.getType() == EventType.INVOKE_METHOD) {
-                stacktrace.add(loggingFactory.getStmtSig(e.getLocId()));
-            } else {
-                stacktrace.remove(stacktrace.size() - 1);
+                if (e.getType() == EventType.INVOKE_METHOD) {
+                    stacktrace.add(loggingFactory.getStmtSig(e.getLocId()));
+                } else {
+                    stacktrace.remove(stacktrace.size() - 1);
+                }
             }
+        } else {
+            /* event is from previous windows */
+            stacktrace.add("N/A");
         }
         stacktrace.add(loggingFactory.getStmtSig(event.getLocId()));
         return stacktrace;
+    }
+
+    public List<LockObject> getHeldLocksAt(MemoryAccessEvent memAcc) {
+        long tid = memAcc.getTID();
+        Map<Long, Deque<SyncEvent>> map = Maps.newHashMap();
+        for (Map.Entry<Long, Deque<SyncEvent>> entry : initLockTable.row(tid).entrySet()) {
+            map.put(entry.getKey(), new ArrayDeque<>(entry.getValue()));
+        }
+        for (Event e : getThreadEvents(tid)) {
+            if (e.getGID() >= memAcc.getGID()) {
+                break;
+            }
+
+            EventType type = e.getType();
+            if (EventType.isLock(type)) {
+                long lockObj = ((SyncEvent) e).getSyncObject();
+                map.putIfAbsent(lockObj, new ArrayDeque<SyncEvent>());
+                map.get(lockObj).add((SyncEvent) e);
+            } else if (EventType.isUnlock(type)) {
+                long lockObj = ((SyncEvent) e).getSyncObject();
+                SyncEvent lock = map.get(lockObj).removeLast();
+                assert lock.getTID() == tid && lock.getSyncObject() == lockObj;
+            }
+        }
+
+        List<LockObject> lockObjects = Lists.newArrayList();
+        for (Deque<SyncEvent> deque : map.values()) {
+            if (!deque.isEmpty()) {
+                lockObjects.add(LockObject.create(deque.peek()));
+            }
+        }
+        Collections.sort(lockObjects, new Comparator<LockObject>() {
+            @Override
+            public int compare(LockObject o1, LockObject o2) {
+                return Long.compare(o1.getLockEvent().getGID(), o2.getLockEvent().getGID());
+            }
+        });
+        return lockObjects;
     }
 
     /**
@@ -353,11 +408,13 @@ public class Trace {
             currentState.addrToValue.put(addr, memAcc.getValue());
         } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
             if (!initLockTable.containsRow(tid)) {
-                initLockTable.row(tid).putAll(currentState.lockTable.row(tid));
+                for (Map.Entry<Long, Deque<SyncEvent>> entry : currentState.lockTable.row(tid).entrySet()) {
+                    initLockTable.row(tid).put(entry.getKey(), new ArrayDeque<>(entry.getValue()));
+                }
             }
 
             SyncEvent syncEvent = (SyncEvent) event;
-            Long lockObj = syncEvent.getSyncObject();
+            long lockObj = syncEvent.getSyncObject();
             if (EventType.isLock(event.getType())) {
                 currentState.acquireLock(event);
                 if (currentState.lockTable.get(tid, lockObj).size() == 1) {
@@ -394,7 +451,7 @@ public class Trace {
      */
     private void addEvent(Event event) {
 //        System.err.println(event + " at " + loggingFactory.getStmtSig(event.getLocId()));
-        Long tid = event.getTID();
+        long tid = event.getTID();
         threadIds.add(tid);
 
         if (event instanceof BranchEvent) {
@@ -453,6 +510,8 @@ public class Trace {
     public void finishedLoading() {
         rawEvents = rawEventsBuilder.build();
 
+        /* compute memory addresses that are accessed by more than one thread
+         * and with at least one write access */
         for (MemoryAddr addr : Iterables.concat(addrToReadThreads.keySet(),
                 addrToWriteThreads.keySet())) {
             Set<Long> wrtThrdIds = addrToWriteThreads.get(addr);
@@ -559,6 +618,7 @@ public class Trace {
         return value;
     }
 
+    // TODO(YilongL): move this type to a new file
     public static class State {
 
         /**

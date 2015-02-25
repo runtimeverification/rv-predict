@@ -106,6 +106,7 @@ public class RVPredict implements LoggingTask {
                         final UncaughtExceptionHandler eh = new UncaughtExceptionHandler() {
                             @Override
                             public void uncaughtException(Thread t, Throwable e) {
+                                System.err.println("Uncaught exception in " + t + ":");
                                 e.printStackTrace();
                                 System.exit(1);
                             }

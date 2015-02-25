@@ -128,6 +128,8 @@ public class Trace {
 
     private final Map<Long, Map<Long, List<SyncEvent>>> threadIdToInitLockStatus = Maps.newHashMap();
 
+    private final Map<SyncEvent, List<String>> initHeldLockToStacktrace;
+
     /**
      * Set of {@code MemoryAccessEvent}'s that happen during class initialization.
      */
@@ -154,6 +156,7 @@ public class Trace {
     public Trace(TraceState crntState) {
         this.crntState = crntState;
         this.loggingFactory = crntState.getLoggingFactory();
+        this.initHeldLockToStacktrace = crntState.getHeldLockStacktraceSnapshot();
     }
 
     public boolean hasSharedMemAddr() {
@@ -269,7 +272,11 @@ public class Trace {
             }
         } else {
             /* event is from previous windows */
-            stacktrace.add("N/A");
+            if (initHeldLockToStacktrace.containsKey(event)) {
+                stacktrace.addAll(initHeldLockToStacktrace.get(event));
+            } else {
+                stacktrace.add("... stack trace not available ...");
+            }
         }
         stacktrace.add(loggingFactory.getStmtSig(event.getLocId()));
         return stacktrace;
@@ -504,6 +511,7 @@ public class Trace {
      */
     public void finishedLoading() {
         rawEvents = rawEventsBuilder.build();
+        crntState.finishLoading();
 
         /* compute memory addresses that are accessed by more than one thread
          * and with at least one write access */

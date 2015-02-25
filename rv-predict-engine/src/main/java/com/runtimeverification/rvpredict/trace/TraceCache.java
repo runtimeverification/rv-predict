@@ -51,6 +51,7 @@ public class TraceCache {
     public Trace getTrace(long fromIndex, long toIndex) throws IOException,
             InterruptedException {
         Trace trace = new Trace(crntState);
+        crntState.setCurrentTraceWindow(trace);
         for (long index = fromIndex; index < toIndex; index++) {
             EventItem eventItem = getEvent(index);
             if (eventItem == null)

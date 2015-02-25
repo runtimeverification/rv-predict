@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -11,6 +12,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
@@ -39,6 +41,13 @@ public class TraceState {
      */
     private final Table<Long, Long, Deque<SyncEvent>> lockTable = HashBasedTable.create();
 
+    /**
+     * Map from currently held lock to the stack trace at the time it is first acquired.
+     */
+    private final Map<SyncEvent, List<String>> lockHeldToStacktrace = Maps.newHashMap();
+
+    private Trace crntTraceWindow;
+
     private final Configuration config;
     private final LoggingFactory loggingFactory;
 
@@ -49,6 +58,11 @@ public class TraceState {
 
     public LoggingFactory getLoggingFactory() {
         return loggingFactory;
+    }
+
+    public void setCurrentTraceWindow(Trace traceWindow) {
+        assert crntTraceWindow == null;
+        this.crntTraceWindow = traceWindow;
     }
 
     public void invokeMethod(Event event) {
@@ -145,6 +159,36 @@ public class TraceState {
     public List<Integer> getStacktraceSnapshot(long threadId) {
         List<Integer> stacktrace = threadIdToStacktrace.get(threadId);
         return stacktrace == null ? ImmutableList.<Integer>of() : ImmutableList.copyOf(stacktrace);
+    }
+
+    public Map<SyncEvent, List<String>> getHeldLockStacktraceSnapshot() {
+        ImmutableMap.Builder<SyncEvent, List<String>> builder = ImmutableMap.builder();
+        for (Map.Entry<SyncEvent, List<String>> entry : lockHeldToStacktrace.entrySet()) {
+            builder.put(entry.getKey(), ImmutableList.copyOf(entry.getValue()));
+        }
+        return builder.build();
+    }
+
+    private Set<SyncEvent> getHeldLocks() {
+        Set<SyncEvent> locksHeld = Sets.newHashSet();
+        for (Table.Cell<Long, Long, Deque<SyncEvent>> cell : lockTable.cellSet()) {
+            Deque<SyncEvent> deque = cell.getValue();
+            if (!deque.isEmpty()) {
+                locksHeld.add(deque.peek());
+            }
+        }
+        return locksHeld;
+    }
+
+    public void finishLoading() {
+        Set<SyncEvent> locksHeld = getHeldLocks();
+        lockHeldToStacktrace.keySet().retainAll(locksHeld);
+        for (SyncEvent lock : locksHeld) {
+            lockHeldToStacktrace.putIfAbsent(lock, crntTraceWindow.getStacktraceAt(lock));
+        }
+
+        /* detach the state from the trace window */
+        crntTraceWindow = null;
     }
 
 }

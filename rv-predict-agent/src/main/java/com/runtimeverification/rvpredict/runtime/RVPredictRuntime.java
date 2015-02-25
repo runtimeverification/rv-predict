@@ -848,7 +848,7 @@ public final class RVPredictRuntime {
         synchronized (atomicBool) {
             saveSyncEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
             atomicBool.set(newValue);
-            saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
+            saveEvent(EventType.WRITE, locId, System.identityHashCode(atomicBool),
                     -ATOMIC_BOOLEAN_MOCK_VAL_ID, newValue ? 1 : 0);
             saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }

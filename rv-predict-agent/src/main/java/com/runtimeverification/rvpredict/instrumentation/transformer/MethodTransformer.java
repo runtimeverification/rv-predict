@@ -445,6 +445,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
      *         current statement in the instrumented program
      */
     private int getCrntLocId() {
-        return Metadata.getLocationId(locIdPrefix + crntLineNum + ")");
+        return Metadata.getLocationId(locIdPrefix + (crntLineNum == 0 ? "n/a" : crntLineNum) + ")");
     }
 }

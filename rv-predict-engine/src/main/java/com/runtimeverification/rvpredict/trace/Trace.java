@@ -95,7 +95,7 @@ public class Trace {
     /**
      * Wait/Notify/Lock/Unlock events indexed by the involved lock object.
      */
-    private final Map<Long, List<SyncEvent>> lockObjToSyncEvents = new HashMap<>();
+    private final Map<Long, List<SyncEvent>> lockIdToSyncEvents = new HashMap<>();
 
     /**
      * Read events on each address.
@@ -217,7 +217,7 @@ public class Trace {
     }
 
     public Map<Long, List<SyncEvent>> getLockObjToSyncEvents() {
-        return lockObjToSyncEvents;
+        return lockIdToSyncEvents;
     }
 
     public List<ReadEvent> getReadEventsOn(MemoryAddr addr) {
@@ -288,13 +288,13 @@ public class Trace {
 
             EventType type = e.getType();
             if (EventType.isLock(type)) {
-                long lockObj = ((SyncEvent) e).getSyncObject();
-                map.putIfAbsent(lockObj, new ArrayDeque<SyncEvent>());
-                map.get(lockObj).add((SyncEvent) e);
+                long lockId = ((SyncEvent) e).getSyncObject();
+                map.putIfAbsent(lockId, new ArrayDeque<SyncEvent>());
+                map.get(lockId).add((SyncEvent) e);
             } else if (EventType.isUnlock(type)) {
-                long lockObj = ((SyncEvent) e).getSyncObject();
-                SyncEvent lock = map.get(lockObj).removeLast();
-                assert lock.getTID() == tid && lock.getSyncObject() == lockObj;
+                long lockId = ((SyncEvent) e).getSyncObject();
+                SyncEvent lock = map.get(lockId).removeLast();
+                assert lock.getTID() == tid && lock.getSyncObject() == lockId;
             }
         }
 
@@ -408,15 +408,15 @@ public class Trace {
             threadIdToInitLockStatus.putIfAbsent(tid, crntState.getLockStatusSnapshot(tid));
 
             SyncEvent syncEvent = (SyncEvent) event;
-            long lockObj = syncEvent.getSyncObject();
+            long lockId = syncEvent.getSyncObject();
             if (EventType.isLock(event.getType())) {
                 crntState.acquireLock(event);
-                if (crntState.getLockCount(tid, lockObj) == 1) {
+                if (crntState.getLockCount(tid, lockId) == 1) {
                     outermostLockingEvents.add(syncEvent);
                 }
             } else {
                 crntState.releaseLock(event);
-                if (crntState.getLockCount(tid, lockObj) == 0) {
+                if (crntState.getLockCount(tid, lockId) == 0) {
                     outermostLockingEvents.add(syncEvent);
                 }
             }
@@ -484,7 +484,7 @@ public class Trace {
                 case READ_UNLOCK:
                 case WAIT_REL:
                 case WAIT_ACQ:
-                    eventsMap = lockObjToSyncEvents;
+                    eventsMap = lockIdToSyncEvents;
                     break;
                 default:
                     assert false : "unexpected event: " + syncEvent;
@@ -544,12 +544,12 @@ public class Trace {
         for (Event event : reducedEvents) {
             long tid = event.getTID();
             if (event.isLockEvent()) {
-                long lockObj = ((SyncEvent) event).getSyncObject();
-                Event prevLock = lockEventTbl.put(tid, lockObj, event);
+                long lockId = ((SyncEvent) event).getSyncObject();
+                Event prevLock = lockEventTbl.put(tid, lockId, event);
                 assert prevLock == null : "Unexpected unmatched lock event: " + prevLock;
             } else if (event.isUnlockEvent()) {
-                long lockObj = ((SyncEvent) event).getSyncObject();
-                Event lock = lockEventTbl.remove(tid, lockObj);
+                long lockId = ((SyncEvent) event).getSyncObject();
+                Event lock = lockEventTbl.remove(tid, lockId);
                 if (lock != null) {
                     if (criticalLockingEvents.contains(lock)) {
                         criticalLockingEvents.add(event);

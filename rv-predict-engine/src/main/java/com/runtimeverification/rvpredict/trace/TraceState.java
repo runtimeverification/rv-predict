@@ -68,11 +68,11 @@ public class TraceState {
 
         SyncEvent lock = (SyncEvent) event;
         long tid = lock.getTID();
-        long lockObj = lock.getSyncObject();
-        Deque<SyncEvent> locks = lockTable.get(tid, lockObj);
+        long lockId = lock.getSyncObject();
+        Deque<SyncEvent> locks = lockTable.get(tid, lockId);
         if (locks == null) {
             locks = new ArrayDeque<>();
-            lockTable.put(tid, lockObj, locks);
+            lockTable.put(tid, lockId, locks);
         }
         locks.add(lock);
     }
@@ -81,8 +81,8 @@ public class TraceState {
         assert EventType.isUnlock(event.getType());
         SyncEvent unlock = (SyncEvent) event;
         long tid = unlock.getTID();
-        long lockObj = unlock.getSyncObject();
-        Event lock = lockTable.get(tid, lockObj).removeLast();
+        long lockId = unlock.getSyncObject();
+        Event lock = lockTable.get(tid, lockId).removeLast();
         assert EventType.isLock(lock.getType());
     }
 

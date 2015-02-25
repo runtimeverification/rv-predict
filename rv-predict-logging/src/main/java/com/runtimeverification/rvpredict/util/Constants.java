@@ -5,6 +5,13 @@ package com.runtimeverification.rvpredict.util;
  * @author TraianSF
  */
 public interface Constants {
+
     long _0X_DEADBEEFL = 0xDEADBEEFL;
+
     String COM_RUNTIMEVERIFICATION_RVPREDICT = "com/runtimeverification/rvpredict";
+
+    long ATOMIC_LOCK_C = 43L;
+
+    long MONITOR_C = 42L;
+
 }

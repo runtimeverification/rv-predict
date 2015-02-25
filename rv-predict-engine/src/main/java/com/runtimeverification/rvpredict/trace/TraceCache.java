@@ -21,6 +21,8 @@ public class TraceCache {
     private final Map<Long,Map.Entry<EventInputStream,EventItem>> indexes;
     private final LoggingFactory loggingFactory;
 
+    private final TraceState crntState;
+
     /**
      * Creates a new {@code TraceCahce} structure for a trace log.
      *
@@ -29,6 +31,7 @@ public class TraceCache {
     public TraceCache(LoggingFactory loggingFactory) {
         this.loggingFactory = loggingFactory;
         indexes = new HashMap<>();
+        crntState = new TraceState(loggingFactory);
     }
 
     /**
@@ -45,7 +48,7 @@ public class TraceCache {
      */
     public Trace getTrace(long fromIndex, long toIndex) throws IOException,
             InterruptedException {
-        Trace trace = new Trace(loggingFactory);
+        Trace trace = new Trace(crntState);
         for (long index = fromIndex; index < toIndex; index++) {
             EventItem eventItem = getEvent(index);
             if (eventItem == null)

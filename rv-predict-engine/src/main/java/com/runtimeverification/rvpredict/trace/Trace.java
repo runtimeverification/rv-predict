@@ -255,7 +255,8 @@ public class Trace {
             for (int locId : threadIdToInitStacktrace.get(tid)) {
                 stacktrace.add(loggingFactory.getStmtSig(locId));
             }
-            for (MetaEvent e : threadIdToCallStackEvents.get(tid)) {
+            for (MetaEvent e : threadIdToCallStackEvents.getOrDefault(tid,
+                    Collections.<MetaEvent> emptyList())) {
                 if (e.getGID() >= event.getGID()) {
                     break;
                 }
@@ -402,8 +403,8 @@ public class Trace {
         if (event instanceof MemoryAccessEvent) {
             MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
             MemoryAddr addr = memAcc.getAddr();
-            addrToInitValue.putIfAbsent(addr, crntState.getAddrValue(addr));
-            crntState.updateAddrValue(memAcc);
+            addrToInitValue.putIfAbsent(addr, crntState.getValueAt(addr));
+            crntState.updateValueAt(memAcc);
         } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
             threadIdToInitLockStatus.putIfAbsent(tid, crntState.getLockStatusSnapshot(tid));
 

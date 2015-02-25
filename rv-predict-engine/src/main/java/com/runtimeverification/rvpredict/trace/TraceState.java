@@ -107,11 +107,11 @@ public class TraceState {
         threadIdToClinitDepth.put(tid, depth);
     }
 
-    public void updateAddrValue(MemoryAccessEvent memAcc) {
+    public void updateValueAt(MemoryAccessEvent memAcc) {
         MemoryAddr addr = memAcc.getAddr();
         long value = memAcc.getValue();
         if (memAcc instanceof ReadEvent) {
-            long oldVal = getAddrValue(addr);
+            long oldVal = getValueAt(addr);
             if (config.debug) {
                 if (value != Constants._0X_DEADBEEFL && value != oldVal) {
                     System.err.printf(
@@ -125,7 +125,7 @@ public class TraceState {
         addrToValue.put(addr, value);
     }
 
-    public long getAddrValue(MemoryAddr addr) {
+    public long getValueAt(MemoryAddr addr) {
         return addrToValue.getOrDefault(addr, 0L);
     }
 

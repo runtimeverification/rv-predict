@@ -56,7 +56,7 @@ public class SMTLIB1ModelReader {
                 DataInputStream in = new DataInputStream(fis);
                 BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
             String result = br.readLine();
-            if ("(error ".startsWith(result)) {
+            if (result == null || result.startsWith("(error ")) {
                 throw new RuntimeException("smt file has errors");
             }
             // System.out.println("Feasible: " + "sat".equals(result));

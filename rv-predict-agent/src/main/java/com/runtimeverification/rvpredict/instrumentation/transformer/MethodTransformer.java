@@ -221,32 +221,31 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
             /* Wrap the method call instruction into a try-finally block with logging code.
              *
-             * tryLabel:
              *     LOG_INVOKE_METHOD
+             * L0:
              *     visitMethodInsn(opcode, owner, name, desc, itf)
              *     LOG_FINISH_METHOD
-             *     goto afterLabel
-             * finallyLabel:
+             *     goto L2
+             * L1:
              *     LOG_FINISH_METHOD
              *     throw exception
-             * afterLabel:
+             * L2:
              *     ...
              */
-            Label tryLabel = mv.mark();
             push(locId);
             invokeRTMethod(LOG_INVOKE_METHOD);
+            Label l0 = mv.mark();
             mv.visitMethodInsn(opcode, owner, name, desc, itf);
             push(locId);
             invokeRTMethod(LOG_FINISH_METHOD);
-            Label afterLabel = mv.newLabel();
-            mv.goTo(afterLabel);
-            Label finallyLabel = mv.newLabel();
-            mv.visitTryCatchBlock(tryLabel, finallyLabel, finallyLabel, null);
-            mv.mark(finallyLabel);
+            Label l2 = mv.newLabel();
+            mv.goTo(l2);
+            Label l1 = mv.mark();
+            mv.catchException(l0, l1, null);
             push(locId);
             invokeRTMethod(LOG_FINISH_METHOD);
             mv.throwException();
-            mv.mark(afterLabel);
+            mv.mark(l2);
         }
     }
 

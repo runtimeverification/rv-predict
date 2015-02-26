@@ -30,10 +30,12 @@ package com.runtimeverification.rvpredict.violation;
 
 import java.util.List;
 
+import com.google.common.base.StandardSystemProperty;
 import com.google.common.collect.Lists;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.trace.LockObject;
 import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
+import com.runtimeverification.rvpredict.trace.SyncEvent;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.WriteEvent;
 
@@ -116,6 +118,7 @@ public class Race extends AbstractViolation {
                 (varSig.startsWith("#") ? "array element " : "field ") + varSig));
 
         generateMemAccReport(e1, sb);
+        sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
         generateMemAccReport(e2, sb);
 
         sb.append(String.format("}}}%n"));
@@ -123,13 +126,28 @@ public class Race extends AbstractViolation {
     }
 
     private void generateMemAccReport(MemoryAccessEvent e, StringBuilder sb) {
+        long tid = e.getTID();
         List<LockObject> heldLocks = trace.getHeldLocksAt(e);
         sb.append(String.format("    Concurrent %s in thread T%s (locks held: {%s})%n",
                 e instanceof WriteEvent ? "write" : "read",
-                e.getTID(),
+                tid,
                 getHeldLocksReport(heldLocks)));
         for (String s : Lists.reverse(trace.getStacktraceAt(e))) {
             sb.append(String.format("        at %s%n", s));
+        }
+
+        SyncEvent startEvent = trace.getStartEventOf(e.getTID());
+        if (startEvent != null) {
+            sb.append(String.format("    T%s is created by T%s%n", tid,
+                    startEvent.getTID()));
+            sb.append(String.format("        at %s%n",
+                    trace.getLoggingFactory().getStmtSig(startEvent.getLocId())));
+        } else {
+            if (tid == 1) {
+                sb.append(String.format("    T%s is the main thread%n", tid));
+            } else {
+                sb.append(String.format("    T%s is created by n/a%n", tid));
+            }
         }
 
         if (!heldLocks.isEmpty()) {

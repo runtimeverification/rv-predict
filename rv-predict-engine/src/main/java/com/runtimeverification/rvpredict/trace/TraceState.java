@@ -18,6 +18,8 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.util.Constants;
 
+
+// TODO(YilongL): think about the thread-safety about this class
 public class TraceState {
 
     /**
@@ -45,6 +47,8 @@ public class TraceState {
      * Map from currently held lock to the stack trace at the time it is first acquired.
      */
     private final Map<SyncEvent, List<String>> lockHeldToStacktrace = Maps.newHashMap();
+
+    private final Map<Long, SyncEvent> threadIdToStartEvent = Maps.newHashMap();
 
     private Trace crntTraceWindow;
 
@@ -189,6 +193,15 @@ public class TraceState {
 
         /* detach the state from the trace window */
         crntTraceWindow = null;
+    }
+
+    public void onThreadStart(SyncEvent startEvent) {
+        assert startEvent.getType() == EventType.START;
+        threadIdToStartEvent.put(startEvent.getSyncObject(), startEvent);
+    }
+
+    public SyncEvent getThreadStartEvent(long threadId) {
+        return threadIdToStartEvent.get(threadId);
     }
 
 }

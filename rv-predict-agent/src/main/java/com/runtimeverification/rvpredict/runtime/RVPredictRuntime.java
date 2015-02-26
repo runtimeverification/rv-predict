@@ -355,12 +355,6 @@ public final class RVPredictRuntime {
     /**
      * Logs the {@code START} event produced by invoking {@code thread.start()}.
      *
-     * When starting a new thread, a consistent unique identifier of the thread
-     * is created, and stored into a map with the thread id as the key. The
-     * unique identifier, i.e, name, is a concatenation of the name of the
-     * parent thread with the order of children threads forked by the parent
-     * thread.
-     *
      * @param thread
      *            the {@code Thread} object whose {@code start()} method is
      *            invoked
@@ -368,8 +362,6 @@ public final class RVPredictRuntime {
      *            the location identifier of the event
      */
     public static void rvPredictStart(Thread thread, int locId) {
-        saveEvent(EventType.WRITE, locId, System.identityHashCode(thread),
-                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
         saveSyncEvent(EventType.START, locId, thread.getId());
         thread.start();
     }

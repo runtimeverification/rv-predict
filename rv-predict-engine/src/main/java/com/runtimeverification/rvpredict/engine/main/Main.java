@@ -114,10 +114,7 @@ public class Main {
             agentOptions.append(escapeString(arg)).append(" ");
         }
         if (!hasLogDir) {
-            agentOptions
-                    .append(Configuration.opt_only_log)
-                    .append(" ")
-                    .append(escapeString(config.outdir));
+            agentOptions.insert(0, Configuration.opt_only_log + " " + escapeString(config.outdir) + " ");
         }
         return agentOptions.toString();
     }
@@ -159,14 +156,15 @@ public class Main {
             appArgList.add("-cp");
             appArgList.add(rvEngine);
             appArgList.add(Main.class.getName());
+            int rvIndex = appArgList.size();
             appArgList.addAll(Arrays.asList(args));
 
             int index = appArgList.indexOf(Configuration.opt_outdir);
             if (index != -1) {
                 appArgList.set(index, Configuration.opt_only_predict);
             } else {
-                appArgList.add(Configuration.opt_only_predict);
-                appArgList.add(commandLine.outdir);
+                appArgList.add(rvIndex, Configuration.opt_only_predict);
+                appArgList.add(rvIndex+1, commandLine.outdir);
             }
 
             processBuilder = new ProcessBuilder(appArgList.toArray(args));

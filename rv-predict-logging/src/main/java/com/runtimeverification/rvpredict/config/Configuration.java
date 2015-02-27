@@ -320,7 +320,7 @@ public class Configuration implements Constants {
 
     final static String opt_debug = "--debug";
     @Parameter(names = opt_debug, description = "Output developer debugging information", hidden = true, descriptionKey = "2090")
-    public boolean debug = false;
+    public static boolean debug = false;
 
     public final static String opt_outdir = "--dir";
     @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")

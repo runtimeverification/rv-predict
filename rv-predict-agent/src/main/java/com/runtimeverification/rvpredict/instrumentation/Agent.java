@@ -164,7 +164,9 @@ public class Agent implements ClassFileTransformer, Constants {
         } catch (Throwable e) {
             /* exceptions during class loading are silently suppressed by default */
             System.err.println("Cannot retransform " + cname + ". Exception: " + e);
-            e.printStackTrace();
+            if (Configuration.debug) {
+                e.printStackTrace();
+            }
             throw e;
         }
     }
@@ -172,7 +174,7 @@ public class Agent implements ClassFileTransformer, Constants {
     private static final Set<String> loadedClasses = new HashSet<>();
 
     private static void checkUninterceptedClassLoading(String cname, Class<?> c) {
-        if (Configuration.verbose) {
+        if (Configuration.debug) {
             if (c == null) {
                 System.err.println("[Java-agent] intercepted class load: " + cname);
             } else {

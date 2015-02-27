@@ -6,8 +6,11 @@ import com.runtimeverification.rvpredict.metadata.ClassFile;
 
 public class ClassWriter extends org.objectweb.asm.ClassWriter {
 
-    public ClassWriter(ClassReader classReader, int flags) {
-        super(classReader, flags);
+    private final ClassLoader loader;
+
+    public ClassWriter(ClassReader classReader, ClassLoader loader) {
+        super(classReader, org.objectweb.asm.ClassWriter.COMPUTE_FRAMES);
+        this.loader = loader == null ? ClassLoader.getSystemClassLoader() : loader;
     }
 
     /**
@@ -18,9 +21,14 @@ public class ClassWriter extends org.objectweb.asm.ClassWriter {
      */
     @Override
     protected String getCommonSuperClass(final String type1, final String type2) {
-        ClassLoader loader = getClass().getClassLoader();
         ClassFile class1 = ClassFile.getInstance(loader, type1);
         ClassFile class2 = ClassFile.getInstance(loader, type2);
+
+        if (class1 == null || class2 == null) {
+            throw new RuntimeException("Unable to find the common superclass of " + type1 + " and "
+                    + type2);
+        }
+
         if (class1.isAssignableFrom(class2)) {
             return type1;
         } else if (class2.isAssignableFrom(class1)) {

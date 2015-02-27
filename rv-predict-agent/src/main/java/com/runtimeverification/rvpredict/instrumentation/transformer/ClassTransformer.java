@@ -16,7 +16,7 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
 
     public static byte[] transform(ClassLoader loader, byte[] cbuf) {
         ClassReader cr = new ClassReader(cbuf);
-        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES);
+        ClassWriter cw = new ClassWriter(cr, loader);
         ClassTransformer transformer = new ClassTransformer(cw, loader);
         cr.accept(transformer, ClassReader.EXPAND_FRAMES);
         return cw.toByteArray();

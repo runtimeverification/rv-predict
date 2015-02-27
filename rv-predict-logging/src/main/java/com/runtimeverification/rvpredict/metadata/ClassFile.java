@@ -230,6 +230,7 @@ public class ClassFile implements Opcodes {
         try {
             return getInstance0(loader, cname, null);
         } catch (IOException e) {
+            System.err.println("[Warning] unable to locate the class file of " + cname);
             e.printStackTrace();
             return null;
         }

@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import org.objectweb.asm.Opcodes;
 
 import com.runtimeverification.rvpredict.instrumentation.transformer.MethodTransformer;
+import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 public class RVPredictRuntimeMethods {
@@ -29,6 +30,8 @@ public class RVPredictRuntimeMethods {
     public static final RVPredictRuntimeMethod LOG_CLINIT_EXIT   =  init("logClassInitializerExit");
     public static final RVPredictRuntimeMethod LOG_MONITOR_ENTER =  init("logMonitorEnter", O, I);
     public static final RVPredictRuntimeMethod LOG_MONITOR_EXIT  =  init("logMonitorExit", O, I);
+    public static final RVPredictRuntimeMethod LOG_INVOKE_METHOD =  init("logInvokeMethod", I);
+    public static final RVPredictRuntimeMethod LOG_FINISH_METHOD =  init("logFinishMethod", I);
     public static final RVPredictRuntimeMethod LOG_BRANCH        =  init("logBranch", I);
 
     /*
@@ -299,8 +302,7 @@ public class RVPredictRuntimeMethods {
                     break;
                 case VIRTUAL:
                 case INTERFACE:
-                    if (InstrumentUtils.isSubclassOf(loader, owner,
-                            interceptor.classOrInterface)) {
+                    if (ClassFile.isSubtypeOf(loader, owner, interceptor.classOrInterface)) {
                         return interceptor;
                     }
                     break;

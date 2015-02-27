@@ -181,7 +181,7 @@ public class Agent implements ClassFileTransformer, Constants {
 
             loadedClasses.add(cname.replace("/", "."));
             for (Class<?> cls : instrumentation.getAllLoadedClasses()) {
-                if (loadedClasses.add(cls.getName())) {
+                if (loadedClasses.add(cls.getName()) && !cls.isArray()) {
                     System.err.println("[Java-agent] missed to intercept class load: " + cls);
                 }
             }

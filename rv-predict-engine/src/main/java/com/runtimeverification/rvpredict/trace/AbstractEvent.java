@@ -58,7 +58,7 @@ public abstract class AbstractEvent implements Event {
     }
 
     @Override
-    public int getID() {
+    public int getLocId() {
         return ID;
     }
 

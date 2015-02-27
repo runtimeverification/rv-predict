@@ -46,7 +46,7 @@ public class DumpLogFile {
             while (true) {
                 EventItem eventItem = inputStream.readEvent();
                 Event event = EventUtils.of(eventItem);
-                System.out.println(event.toString() + loggingFactory.getStmtSig(event.getID()));
+                System.out.println(event.toString() + loggingFactory.getStmtSig(event.getLocId()));
             }
         } catch (EOFException ignored) {
         } catch (IOException e) {

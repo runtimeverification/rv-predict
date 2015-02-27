@@ -19,7 +19,7 @@ public interface Event {
     /**
      * Returns the program location ID of the event.
      */
-    int getID();
+    int getLocId();
 
     /**
      * Returns the event type.

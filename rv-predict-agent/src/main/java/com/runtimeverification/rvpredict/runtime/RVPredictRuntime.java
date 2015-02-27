@@ -212,6 +212,14 @@ public final class RVPredictRuntime {
         saveEvent(EventType.CLINIT_EXIT, 0, 0, 0, 0);
     }
 
+    public static void logInvokeMethod(int locId) {
+        saveEvent(EventType.INVOKE_METHOD, locId, 0, 0, 0);
+    }
+
+    public static void logFinishMethod(int locId) {
+        saveEvent(EventType.FINISH_METHOD, locId, 0, 0, 0);
+    }
+
     /**
      * Logs events produced by invoking {@code object.wait()}.
      *
@@ -810,7 +818,7 @@ public final class RVPredictRuntime {
                         -AQS_MOCK_STATE_ID, (int) AQS_GET_STATE.invoke(sync));
                 result = (boolean) AQS_CAS_STATE.invoke(sync, expect, update);
                 if (result) {
-                    saveEvent(EventType.READ, locId, System.identityHashCode(sync),
+                    saveEvent(EventType.WRITE, locId, System.identityHashCode(sync),
                             -AQS_MOCK_STATE_ID, update);
                 }
                 saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));

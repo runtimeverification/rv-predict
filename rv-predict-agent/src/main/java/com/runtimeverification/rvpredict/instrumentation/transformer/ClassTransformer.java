@@ -1,9 +1,11 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.instrumentation.Agent;
-
-import org.objectweb.asm.*;
 
 public class ClassTransformer extends ClassVisitor implements Opcodes {
 
@@ -17,7 +19,7 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
 
     public static byte[] transform(ClassLoader loader, byte[] cbuf) {
         ClassReader cr = new ClassReader(cbuf);
-        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
+        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES);
         ClassTransformer transformer = new ClassTransformer(cw, loader, Agent.config);
         cr.accept(transformer, ClassReader.EXPAND_FRAMES);
         return cw.toByteArray();
@@ -51,16 +53,13 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
         assert mv != null;
 
+        mv = new ExceptionHandlerSorter(mv, access, name, desc, signature, exceptions);
+
         /* do not instrument synthesized bridge method; otherwise, it may cause
          * infinite recursion at runtime */
         if ((access & ACC_BRIDGE) == 0) {
-            int crntMaxLocals = 0;
-            for (Type type : Type.getArgumentTypes(desc)) {
-                crntMaxLocals += type.getSize();
-            }
-
             mv = new MethodTransformer(mv, source, className, version, name, desc, access,
-                    crntMaxLocals, loader, config);
+                    loader, config);
         }
 
         if ("<clinit>".equals(name)) {

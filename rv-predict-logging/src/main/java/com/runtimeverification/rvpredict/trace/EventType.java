@@ -26,18 +26,6 @@ public enum EventType {
     READ_LOCK,
 
     /**
-     * Event generated before releasing a read lock, i.e.,
-     * {@code ReadWriteLock#readLock()#unlock()}.
-     */
-    READ_UNLOCK,
-
-    /**
-     * Event generated after entering the class initializer code, i.e.
-     * {@code <clinit>}.
-     */
-    CLINIT_ENTER,
-
-    /**
      * Event generated right before exiting the class initializer code, i.e.
      * {@code <clinit>}.
      */
@@ -81,7 +69,23 @@ public enum EventType {
      * Serves as a guard of a possible control flow change, which
      * determines the next instruction to execute in a thread.
      */
-    BRANCH;
+    BRANCH,
+
+    /**
+     * Event generated before releasing a read lock, i.e.,
+     * {@code ReadWriteLock#readLock()#unlock()}.
+     */
+    READ_UNLOCK,
+
+    /**
+     * Event generated after entering the class initializer code, i.e.
+     * {@code <clinit>}.
+     */
+    CLINIT_ENTER,
+
+    INVOKE_METHOD,
+
+    FINISH_METHOD;
 
     public static boolean isLock(EventType type) {
         return type == WRITE_LOCK || type == READ_LOCK;

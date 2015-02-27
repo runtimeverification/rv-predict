@@ -190,17 +190,6 @@ public final class RVPredictRuntime {
         RVPredictRuntime.loggingEngine = db;
     }
 
-    /**
-     * Logs the {@code BRANCH} event produced by jmp or tableswitch
-     * instructions.
-     *
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static void logBranch(int locId) {
-        saveEvent(EventType.BRANCH, locId, 0, 0, 0);
-    }
-
     public static void logClassInitializerEnter() {
         saveEvent(EventType.CLINIT_ENTER, 0, 0, 0, 0);
     }

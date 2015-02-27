@@ -83,11 +83,6 @@ public class Trace {
     private final Map<Long, List<Event>> threadIdToEvents = new HashMap<>();
 
     /**
-     * Branch events of each thread.
-     */
-    private final Map<Long, List<BranchEvent>> threadIdToBranchEvents = new HashMap<>();
-
-    /**
      * Start/Join events indexed by the ID of its target thread to join/start.
      */
     private final Map<Long, List<SyncEvent>> threadIdToStartJoinEvents = new HashMap<>();
@@ -208,11 +203,6 @@ public class Trace {
         return events.size() == nextThrdEventIdx ? null : events.get(nextThrdEventIdx);
     }
 
-    public List<BranchEvent> getThreadBranchEvents(long threadId) {
-        List<BranchEvent> events = threadIdToBranchEvents.get(threadId);
-        return events == null ? Lists.<BranchEvent>newArrayList() : events;
-    }
-
     public Map<Long, List<Event>> getThreadIdToEventsMap() {
         return threadIdToEvents;
     }
@@ -329,17 +319,14 @@ public class Trace {
 
     /**
      * Gets control-flow dependent events of a given {@code MemoryAccessEvent}.
-     * Without logging {@code BranchEvent}, all read events that happen-before
-     * the given event have to be included conservatively. Otherwise, only the
-     * read events that happen-before the latest branch event are included.
+     * Without any knowledge about the control flow of the program, all read
+     * events that happen-before the given event have to be included
+     * conservatively.
      */
     public List<ReadEvent> getCtrlFlowDependentEvents(MemoryAccessEvent memAccEvent) {
-        // TODO(YilongL): optimize this method when it becomes a bottleneck
         List<ReadEvent> readEvents = new ArrayList<>();
-        BranchEvent prevBranchEvent = getLastBranchEventBefore(memAccEvent);
-        Event event = prevBranchEvent == null ? memAccEvent : prevBranchEvent;
         for (Event e : getThreadEvents(memAccEvent.getTID())) {
-            if (e.getGID() >= event.getGID()) {
+            if (e.getGID() >= memAccEvent.getGID()) {
                 break;
             }
 
@@ -349,49 +336,6 @@ public class Trace {
         }
 
         return readEvents;
-    }
-
-    /**
-     * Gets all read events that happen-before the given event but not in
-     * {@link #getCtrlFlowDependentEvents(MemoryAccessEvent)}.
-     */
-    public List<ReadEvent> getExtraDataFlowDependentEvents(MemoryAccessEvent memAccEvent) {
-        BranchEvent prevBranchEvent = getLastBranchEventBefore(memAccEvent);
-        if (prevBranchEvent == null) {
-            return ImmutableList.of();
-        } else {
-            List<ReadEvent> readEvents = new ArrayList<>();
-            for (Event e : getThreadEvents(memAccEvent.getTID())) {
-                if (e.getGID() >= memAccEvent.getGID()) {
-                    break;
-                }
-                if (e.getGID() > prevBranchEvent.getGID() && e instanceof ReadEvent) {
-                    readEvents.add((ReadEvent) e);
-                }
-            }
-            return readEvents;
-        }
-    }
-
-    /**
-     * Given an {@code event}, returns the last branch event that appears before
-     * it in the same thread.
-     *
-     * @param event
-     *            the event
-     * @return the last branch event before {@code event} if there is one;
-     *         otherwise, {@code null}
-     */
-    private BranchEvent getLastBranchEventBefore(Event event) {
-        BranchEvent lastBranchEvent = null;
-        for (BranchEvent branchEvent : getThreadBranchEvents(event.getTID())) {
-            if (branchEvent.getGID() < event.getGID()) {
-                lastBranchEvent = branchEvent;
-            } else {
-                break;
-            }
-        }
-        return lastBranchEvent;
     }
 
     public void addRawEvent(Event event) {
@@ -471,9 +415,7 @@ public class Trace {
         long tid = event.getTID();
         threadIds.add(tid);
 
-        if (event instanceof BranchEvent) {
-            getOrInitEmptyList(threadIdToBranchEvents, tid).add((BranchEvent) event);
-        } else if (event instanceof MetaEvent) {
+       if (event instanceof MetaEvent) {
             // do nothing
         } else {
             allEvents.add(event);

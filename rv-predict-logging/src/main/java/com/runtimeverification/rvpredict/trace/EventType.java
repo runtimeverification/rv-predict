@@ -66,12 +66,6 @@ public enum EventType {
     JOIN_MAYBE_FAILED,
 
     /**
-     * Serves as a guard of a possible control flow change, which
-     * determines the next instruction to execute in a thread.
-     */
-    BRANCH,
-
-    /**
      * Event generated before releasing a read lock, i.e.,
      * {@code ReadWriteLock#readLock()#unlock()}.
      */

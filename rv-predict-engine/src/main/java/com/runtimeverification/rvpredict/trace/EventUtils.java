@@ -32,8 +32,6 @@ public class EventUtils {
             case INVOKE_METHOD:
             case FINISH_METHOD:
                 return new MetaEvent(item.GID, item.TID, item.ID, item.TYPE);
-            case BRANCH:
-                return new BranchEvent(item.GID, item.TID, item.ID);
             default:
                 assert false : "unexpected event type: " + item.TYPE;
                 return null;

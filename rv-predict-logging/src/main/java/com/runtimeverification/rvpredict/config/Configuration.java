@@ -290,17 +290,9 @@ public class Configuration implements Constants {
     @Parameter(names = opt_online, description = "Run prediction online", hidden = true, descriptionKey = "2005")
     public static boolean online = false;
 
-    // final static String opt_rmm_pso = "--pso";//for testing only
-    // @Parameter(names = opt_rmm_pso, description = "PSO memory model", hidden
-    // = true)
-    public boolean rmm_pso;
-
     final static String opt_max_len = "--maxlen";
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
     public int windowSize = 1000;
-
-    @Parameter(names = "--branch", description = "Use the branch model", hidden = true, descriptionKey = "2020")
-    public boolean branch;
 
     final static String opt_volatile = "--volatile";
     @Parameter(names = opt_volatile, description = "Check unordered conflict accesses on volatile variables", hidden = true, descriptionKey = "2030")

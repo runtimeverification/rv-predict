@@ -201,7 +201,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
                 }
             }
         } else {
-            if (owner.startsWith("[")) {
+            if (owner.startsWith("[") || "<init>".equals(name)) {
                 mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 return;
             } else {

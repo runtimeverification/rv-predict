@@ -95,9 +95,15 @@ public class BufferedEventPipe implements EventPipe {
      */
     private synchronized void flush() throws InterruptedException {
         if (inIndex != 0) {
-            pipe.put(inBuffer);
-            inBuffer = new EventItem[BUFFER_SIZE+1];
-            inIndex = 0;
+            try {
+                pipe.put(inBuffer);
+            } catch (InterruptedException e) {
+                throw e;
+            } finally {
+                /* always clean the buffer to avoid ArrayIndexOutOfBoundsException */
+                inBuffer = new EventItem[BUFFER_SIZE+1];
+                inIndex = 0;
+            }
         }
     }
 

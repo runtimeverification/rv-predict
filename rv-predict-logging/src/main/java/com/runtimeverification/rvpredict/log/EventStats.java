@@ -4,30 +4,25 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.runtimeverification.rvpredict.metadata.Metadata;
+
 /**
  * Class used for profiling the logging process
  */
 public class EventStats {
+
     private static final ConcurrentHashMap<String, AtomicLong> eventStats = new ConcurrentHashMap<>();
 
-    public static void updateEventStats() {
+    public static void updateEventStats(int locId) {
         // TODO(YilongL): improve this method to record how many threads are
         // accessing a certain object and the percentage of each type of events?
-        StackTraceElement[] stackTrace = new Throwable().getStackTrace();
-        for (StackTraceElement e : stackTrace) {
-            String className = e.getClassName();
-            if (!className.startsWith("rvpredict")) {
-                AtomicLong atoml = eventStats.get(className);
-                if (atoml == null) {
-                    synchronized (eventStats) {
-                        eventStats.putIfAbsent(className, new AtomicLong(0));
-                        atoml = eventStats.get(className);
-                    }
-                }
-                atoml.incrementAndGet();
-                break;
-            }
+        String className = Metadata.getLocationClass(locId);
+        AtomicLong atoml = eventStats.get(className);
+        if (atoml == null) {
+            eventStats.putIfAbsent(className, new AtomicLong(0));
+            atoml = eventStats.get(className);
         }
+        atoml.incrementAndGet();
     }
 
     public static void printEventStats() {

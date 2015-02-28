@@ -71,7 +71,7 @@ public class LoggingEngine {
     public void finishLogging() throws IOException, InterruptedException {
         shutdown = true;
         loggingServer.finishLogging();
-        if (config.profile) {
+        if (Configuration.profile) {
             EventStats.printEventStats();
         }
 

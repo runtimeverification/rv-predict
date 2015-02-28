@@ -1421,11 +1421,11 @@ public final class RVPredictRuntime {
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
     }
 
-    private static void saveEvent(EventType eventType, int id, int addrl, int addrr, long value) {
-        if (loggingEngine.getConfig().profile) {
-            EventStats.updateEventStats();
+    private static void saveEvent(EventType eventType, int locId, int addrl, int addrr, long value) {
+        if (Configuration.profile) {
+            EventStats.updateEventStats(locId);
         }
-        loggingEngine.saveEvent(eventType, id, addrl, addrr, value);
+        loggingEngine.saveEvent(eventType, locId, addrl, addrr, value);
     }
 
     private static void saveSyncEvent(EventType eventType, int locId, long syncObj) {

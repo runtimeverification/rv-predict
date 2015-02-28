@@ -277,9 +277,9 @@ public class Configuration implements Constants {
     @Parameter(names = opt_zip, description = "Compress traces", hidden = true, descriptionKey = "1060")
     public boolean zip;
 
-    public final static String opt_event_profile = "--profile";
+    final static String opt_event_profile = "--profile";
     @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1070")
-    public boolean profile;
+    public static boolean profile;
 
     public final static String opt_only_predict = "--predict";
     @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "2000")

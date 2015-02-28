@@ -4,6 +4,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.commons.JSRInlinerAdapter;
 import org.objectweb.asm.util.CheckClassAdapter;
 
 import com.runtimeverification.rvpredict.config.Configuration;
@@ -70,6 +71,10 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
 
         if ("<clinit>".equals(name)) {
             mv = new ClassInitializerTransformer(mv, access, name, desc);
+        }
+
+        if (version < 50) {
+            mv = new JSRInlinerAdapter(mv, access, name, desc, signature, exceptions);
         }
 
         return mv;

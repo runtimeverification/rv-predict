@@ -1424,8 +1424,9 @@ public final class RVPredictRuntime {
     private static void saveEvent(EventType eventType, int locId, int addrl, int addrr, long value) {
         if (Configuration.profile) {
             EventStats.updateEventStats(locId);
+        } else {
+            loggingEngine.saveEvent(eventType, locId, addrl, addrr, value);
         }
-        loggingEngine.saveEvent(eventType, locId, addrl, addrr, value);
     }
 
     private static void saveSyncEvent(EventType eventType, int locId, long syncObj) {

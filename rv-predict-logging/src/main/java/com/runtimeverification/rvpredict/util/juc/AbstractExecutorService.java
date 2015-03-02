@@ -211,7 +211,7 @@ public abstract class AbstractExecutorService implements ExecutorService {
             }
 
             if (ee == null)
-                ee = new ExecutionException(null);
+                ee = new ExecutionException(null); // <- YilongL: I changed this line to use the public constructor
             throw ee;
 
         } finally {

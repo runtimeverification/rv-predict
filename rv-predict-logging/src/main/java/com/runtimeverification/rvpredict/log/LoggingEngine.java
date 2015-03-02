@@ -72,7 +72,7 @@ public class LoggingEngine {
         shutdown = true;
         loggingServer.finishLogging();
         if (Configuration.profile) {
-            EventStats.printEventStats();
+            EventsProfiler.printEventStats();
         }
 
         if (Configuration.online) {

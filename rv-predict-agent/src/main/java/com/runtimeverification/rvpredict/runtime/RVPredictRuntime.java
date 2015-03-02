@@ -50,7 +50,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LoggingEngine;
-import com.runtimeverification.rvpredict.log.EventStats;
+import com.runtimeverification.rvpredict.log.EventsProfiler;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.util.Constants;
@@ -1423,7 +1423,7 @@ public final class RVPredictRuntime {
 
     private static void saveEvent(EventType eventType, int locId, int addrl, int addrr, long value) {
         if (Configuration.profile) {
-            EventStats.updateEventStats(locId);
+            EventsProfiler.updateEventStats(eventType, locId, addrl, addrr, value);
         } else {
             loggingEngine.saveEvent(eventType, locId, addrl, addrr, value);
         }

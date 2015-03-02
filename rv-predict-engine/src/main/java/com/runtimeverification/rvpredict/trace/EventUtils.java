@@ -29,6 +29,8 @@ public class EventUtils {
                 return new SyncEvent(item.GID, item.TID, item.ID, item.TYPE, syncObj);
             case CLINIT_ENTER:
             case CLINIT_EXIT:
+            case INVOKE_METHOD:
+            case FINISH_METHOD:
                 return new MetaEvent(item.GID, item.TID, item.ID, item.TYPE);
             case BRANCH:
                 return new BranchEvent(item.GID, item.TID, item.ID);

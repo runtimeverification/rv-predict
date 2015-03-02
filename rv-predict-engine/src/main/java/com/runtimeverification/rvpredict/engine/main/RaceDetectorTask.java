@@ -134,7 +134,8 @@ public class RaceDetectorTask implements Runnable {
                             if ((e1 instanceof WriteEvent || e2 instanceof WriteEvent)
                                     && !trace.isClinitMemoryAccess(e1)
                                     && !trace.isClinitMemoryAccess(e2)) {
-                                potentialRaces.add(new Race(e1, e2, RVPredict.getLoggingFactory()));
+                                potentialRaces.add(new Race(e1, e2, trace,
+                                        RVPredict.getLoggingFactory()));
                             }
                         }
                     }
@@ -169,9 +170,11 @@ public class RaceDetectorTask implements Runnable {
                     };
 
                     if (cnstrBuilder.isRace(fst, snd, causalConstraints)) {
-                        for (Race r : potentialRaces) {
-                            if (RVPredict.getViolations().add(r)) {
-                                RVPredict.getLogger().report(r.toString(), Logger.MSGTYPE.REAL);
+                        for (Race race : potentialRaces) {
+                            if (RVPredict.getViolations().add(race)) {
+                                String report = RVPredict.getConfig().simple_report ?
+                                        race.toString() : race.generateRaceReport();
+                                RVPredict.getLogger().report(report, Logger.MSGTYPE.REAL);
                             }
                         }
                     }

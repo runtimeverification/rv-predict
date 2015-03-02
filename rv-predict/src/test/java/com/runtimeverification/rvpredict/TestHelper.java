@@ -61,6 +61,8 @@ public class TestHelper {
         final String testsPrefix= basePath.toString() + "/" + expectedFilePrefix;
         final File inFile = new File(testsPrefix + ".in");
 
+        final String[] error = new String[1];
+        
         // compile regex patterns
         final List<Pattern> expectedPatterns = new ArrayList<>();
         for (String regex : Util.convertFileToString(new File(testsPrefix + ".expected.out")).split("(\n|\r)")) {
@@ -92,7 +94,7 @@ public class TestHelper {
             pool.execute(new Runnable() {
                 @Override
                 public void run() {
-                    if (expectedPatterns.isEmpty()) return;
+                    if (expectedPatterns.isEmpty() || error[0] != null) return;
                     try {
                         long id = Thread.currentThread().getId();
                         File stdoutFile = new File(testsPrefix + id + ".actual.out");
@@ -106,10 +108,12 @@ public class TestHelper {
                         }
                         Process process = processBuilder.start();
                         int returnCode = process.waitFor();
-                        if (expectedPatterns.isEmpty()) return;
-                        Assert.assertEquals("Expected no error during " + Arrays.toString(command) + ".\n"
-                                + Util.convertFileToString(stderrFile), 0, returnCode);
-
+                        if (expectedPatterns.isEmpty() || error[0] != null) return;
+                        if (returnCode != 0) {
+                            error[0] = "Expected no error during " + Arrays.toString(command) + " but received " + returnCode
+                                    + ".\n" + Util.convertFileToString(stderrFile);
+                            return;
+                        }
                         String output = Util.convertFileToString(stdoutFile);
                         synchronized (expectedPatterns) {
                             Iterator<Pattern> iter = expectedPatterns.iterator();
@@ -128,6 +132,10 @@ public class TestHelper {
         pool.shutdown();
         while (!pool.isTerminated()) {
             pool.awaitTermination(1, TimeUnit.SECONDS);
+        }
+        
+        if (error[0] != null) {
+            Assert.fail(error[0]);
         }
 
         Assert.assertTrue("Unable to match regular expressions: \n\t" +

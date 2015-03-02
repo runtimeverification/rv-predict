@@ -28,8 +28,11 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.violation;
 
+import com.google.common.collect.Lists;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
+import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.trace.WriteEvent;
 
 /**
  * Data race violation
@@ -37,23 +40,31 @@ import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
  */
 public class Race extends AbstractViolation {
 
+    private final MemoryAccessEvent e1;
+    private final MemoryAccessEvent e2;
+    private final Trace trace;
+
     private final int locId1;
     private final int locId2;
     private final String varSig;
     private final String stmtSig1;
     private final String stmtSig2;
 
-    public Race(MemoryAccessEvent e1, MemoryAccessEvent e2, LoggingFactory loggingFactory) {
-        if (e1.getID() > e2.getID()) {
+    public Race(MemoryAccessEvent e1, MemoryAccessEvent e2, Trace trace,
+            LoggingFactory loggingFactory) {
+        if (e1.getLocId() > e2.getLocId()) {
             MemoryAccessEvent tmp = e1;
             e1 = e2;
             e2 = tmp;
         }
 
-        locId1 = e1.getID();
-        locId2 = e2.getID();
+        this.e1 = e1;
+        this.e2 = e2;
+        this.trace = trace;
+        locId1 = e1.getLocId();
+        locId2 = e2.getLocId();
         int idx = e1.getAddr().fieldIdOrArrayIndex();
-        varSig = idx < 0 ? loggingFactory.getVarSig(-idx) : null;
+        varSig = idx < 0 ? loggingFactory.getVarSig(-idx).replace("/", ".") : "#" + idx;
         stmtSig1 = loggingFactory.getStmtSig(locId1);
         stmtSig2 = loggingFactory.getStmtSig(locId2);
         if (stmtSig1 == null) {
@@ -81,55 +92,42 @@ public class Race extends AbstractViolation {
 
     @Override
     public String toString() {
-        // Assuming
-        // String sig_loc = source + "|" +
-        // (classname+"|"+methodsignature+"|"+sig_var+"|"+line_cur).replace("/",
-        // ".");
-        String node1 = stmtSig1;
-        String node2 = stmtSig2;
-        if (node1.compareTo(node2) > 0) {
-            String tmp = node1;
-            node1 = node2;
-            node2 = tmp;
+        String stmtSig1 = this.stmtSig1;
+        String stmtSig2 = this.stmtSig2;
+        if (stmtSig1.compareTo(stmtSig2) > 0) {
+            String tmp = stmtSig1;
+            stmtSig1 = stmtSig2;
+            stmtSig2 = tmp;
         }
 
-        Location loc1 = new Location(node1);
-        String result = "Race on ";
-        if (varSig == null) {
-            result += "an array access";
-        } else {
-            result += "field " + varSig.replace("/", ".");
-        }
-        result += " between";
-        if (node1.equals(node2)) {
-            result += " two instances of:\n" + "\t" + loc1 + "\n";
-        } else {
-            Location loc2 = new Location(node2);
-            result += ":\n" + "\t" + loc1 + "\n" + "\t" + loc2 + "\n";
-        }
-        return result;
+        return String.format("Race on %s between%s",
+            varSig.startsWith("#") ? "an array access" : "field " + varSig,
+            stmtSig1.equals(stmtSig2) ?
+                String.format(" two instances of:%n    %s%n", stmtSig1) :
+                String.format(":%n    %s%n    %s%n", stmtSig1, stmtSig2));
     }
 
-    private class Location {
-        String source;
-        String className;
-        String methodName;
-        String line;
+    public String generateRaceReport() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("Possible data race on %s: {{{%n",
+                (varSig.startsWith("#") ? "array element " : "field ") + varSig));
 
-        Location(String descriptor) {
-            descriptor = descriptor.replace("/", ".");
-            String[] fields = descriptor.split("\\|");
-            source = fields[0];
-            className = fields[1];
-            int par = fields[2].indexOf('(');
-            methodName = fields[2].substring(0, par);
-            line = fields[3];
-        }
+        sb.append(generateMemAccReport(e1));
+        sb.append(generateMemAccReport(e2));
 
-        @Override
-        public String toString() {
-            return className + "." + methodName + "(" + source + ":" + line + ")";
+        sb.append(String.format("}}}%n"));
+        return sb.toString();
+    }
+
+    private String generateMemAccReport(MemoryAccessEvent e) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("    Concurrent %s in thread T%s%n",
+                e instanceof WriteEvent ? "write" : "read",
+                e.getTID()));
+        for (String s : Lists.reverse(trace.getStacktraceAt(e))) {
+            sb.append(String.format("        at %s%n", s));
         }
+        return sb.toString();
     }
 
 }

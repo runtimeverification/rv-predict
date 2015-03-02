@@ -28,13 +28,18 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.runtime;
 
-import java.lang.reflect.InvocationTargetException;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
+import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,7 +47,6 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.regex.Pattern;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LoggingEngine;
@@ -132,16 +136,32 @@ public final class RVPredictRuntime {
     private static int AQS_MOCK_STATE_ID = Metadata.getVariableId(
             "java.util.concurrent.locks.AbstractQueuedSynchronizer", MOCK_STATE_FIELD);
 
-    private static final Method AQS_GET_STATE = getDeclaredMethod(AbstractQueuedSynchronizer.class, "getState");
-    private static final Method AQS_SET_STATE = getDeclaredMethod(AbstractQueuedSynchronizer.class, "setState", int.class);
-    private static final Method AQS_CAS_STATE = getDeclaredMethod(AbstractQueuedSynchronizer.class, "compareAndSetState", int.class, int.class);
+    private static final MethodHandle SYNC_COLLECTION_GET_MUTEX = getFieldGetter(
+            Collections.synchronizedCollection(Collections.EMPTY_LIST).getClass(), "mutex");
+    private static final MethodHandle SYNC_MAP_GET_MUTEX = getFieldGetter(
+            Collections.synchronizedMap(Collections.EMPTY_MAP).getClass(), "mutex");
 
-    private static Method getDeclaredMethod(Class<?> cls, String name, Class<?>... parameterTypes) {
+    private static final MethodHandle AQS_GET_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "getState");
+    private static final MethodHandle AQS_SET_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "setState", int.class);
+    private static final MethodHandle AQS_CAS_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "compareAndSetState", int.class, int.class);
+
+    private static MethodHandle getFieldGetter(Class<?> cls, String name) {
+        try {
+            Field field = cls.getDeclaredField(name);
+            field.setAccessible(true);
+            return MethodHandles.lookup().unreflectGetter(field);
+        } catch (NoSuchFieldException | SecurityException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static MethodHandle getMethodHandle(Class<?> cls, String name,
+            Class<?>... parameterTypes) {
         try {
             Method method = cls.getDeclaredMethod(name, parameterTypes);
             method.setAccessible(true);
-            return method;
-        } catch (NoSuchMethodException | SecurityException e) {
+            return MethodHandles.lookup().unreflect(method);
+        } catch (NoSuchMethodException | SecurityException | IllegalAccessException e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
@@ -162,7 +182,7 @@ public final class RVPredictRuntime {
      * {@link java.util.Map} interface and the range views provided in the {@link java.util.List},
      * {@link java.util.SortedSet}, and {@link java.util.SortedMap} interfaces.
      */
-    private static final SynchronizedWeakIdentityHashMap<Collection, Object> viewToBackedCollection = new SynchronizedWeakIdentityHashMap<>();
+    private static final SynchronizedWeakIdentityHashMap<Object, Object> viewToBackedCollection = new SynchronizedWeakIdentityHashMap<>();
 
     private static LoggingEngine loggingEngine;
 
@@ -190,6 +210,14 @@ public final class RVPredictRuntime {
 
     public static void logClassInitializerExit() {
         saveEvent(EventType.CLINIT_EXIT, 0, 0, 0, 0);
+    }
+
+    public static void logInvokeMethod(int locId) {
+        saveEvent(EventType.INVOKE_METHOD, locId, 0, 0, 0);
+    }
+
+    public static void logFinishMethod(int locId) {
+        saveEvent(EventType.FINISH_METHOD, locId, 0, 0, 0);
     }
 
     /**
@@ -753,8 +781,7 @@ public final class RVPredictRuntime {
                         -AQS_MOCK_STATE_ID, result);
                 saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
             }
-        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
-                | SecurityException e) {
+        } catch (Throwable e) {
             throw new RuntimeException(e);
         }
         return result;
@@ -773,8 +800,7 @@ public final class RVPredictRuntime {
                         -AQS_MOCK_STATE_ID, newState);
                 saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
             }
-        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
-                | SecurityException e) {
+        } catch (Throwable e) {
             throw new RuntimeException(e);
         }
     }
@@ -792,13 +818,12 @@ public final class RVPredictRuntime {
                         -AQS_MOCK_STATE_ID, (int) AQS_GET_STATE.invoke(sync));
                 result = (boolean) AQS_CAS_STATE.invoke(sync, expect, update);
                 if (result) {
-                    saveEvent(EventType.READ, locId, System.identityHashCode(sync),
+                    saveEvent(EventType.WRITE, locId, System.identityHashCode(sync),
                             -AQS_MOCK_STATE_ID, update);
                 }
                 saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(sync));
             }
-        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
-                | SecurityException e) {
+        } catch (Throwable e) {
             throw new RuntimeException(e);
         }
         return result;
@@ -1018,12 +1043,10 @@ public final class RVPredictRuntime {
      */
     public static Iterator rvPredictIterableGetIterator(Iterable iterable, int locId) {
         Iterator iterator = iterable.iterator();
-        if (!isCollectionInstrumented(iterable)) {
-            Iterable value = iteratorToIterable.put(iterator, iterable);
-            if (value != null && Configuration.verbose) {
-                System.err.println("[Runtime] error: iterator " + iterator
-                        + " was already bound to " + value);
-            }
+        Iterable value = iteratorToIterable.put(iterator, iterable);
+        if (value != null && Configuration.verbose) {
+            System.err.println("[Runtime] error: iterator " + iterator
+                    + " was already bound to " + value);
         }
         return iterator;
     }
@@ -1033,7 +1056,7 @@ public final class RVPredictRuntime {
      */
     public static boolean rvPredictIteratorHasNext(Iterator iterator, int locId) {
         boolean result = iterator.hasNext();
-        accessThroughIterator(iterator, false, locId);
+        readUsingIterator(iterator, locId);
         return result;
     }
 
@@ -1042,7 +1065,7 @@ public final class RVPredictRuntime {
      */
     public static Object rvPredictIteratorNext(Iterator iterator, int locId) {
         Object result = iterator.next();
-        accessThroughIterator(iterator, false, locId);
+        readUsingIterator(iterator, locId);
         return result;
     }
 
@@ -1050,7 +1073,7 @@ public final class RVPredictRuntime {
      * {@link Iterator#remove()}
      */
     public static void rvPredictIteratorRemove(Iterator iterator, int locId) {
-        accessThroughIterator(iterator, true, locId);
+        writeUsingIterator(iterator, locId);
         iterator.remove();
     }
 
@@ -1202,9 +1225,7 @@ public final class RVPredictRuntime {
      */
     public static Set rvPredictMapEntrySet(Map map, int locId) {
         Set result = map.entrySet();
-        if (!isCollectionInstrumented(map)) {
-            viewToBackedCollection.put(result, map);
-        }
+        viewToBackedCollection.put(result, map);
         return result;
     }
 
@@ -1213,9 +1234,7 @@ public final class RVPredictRuntime {
      */
     public static Set rvPredictMapKeySet(Map map, int locId) {
         Set result = map.keySet();
-        if (!isCollectionInstrumented(map)) {
-            viewToBackedCollection.put(result, map);
-        }
+        viewToBackedCollection.put(result, map);
         return result;
     }
 
@@ -1224,10 +1243,26 @@ public final class RVPredictRuntime {
      */
     public static Collection rvPredictMapValues(Map map, int locId) {
         Collection result = map.values();
-        if (!isCollectionInstrumented(map)) {
-            viewToBackedCollection.put(result, map);
-        }
+        viewToBackedCollection.put(result, map);
         return result;
+    }
+
+    /**
+     * {@link Collections#synchronizedCollection(Collection)}
+     */
+    public static Collection rvPredictSynchronizedCollection(Collection collection, int locId) {
+        Collection syncCollection = Collections.synchronizedCollection(collection);
+        viewToBackedCollection.put(syncCollection, collection);
+        return syncCollection;
+    }
+
+    /**
+     * {@link Collections#synchronizedMap(Map)}
+     */
+    public static Map rvPredictSynchronizedMap(Map map, int locId) {
+        Map syncMap = Collections.synchronizedMap(map);
+        viewToBackedCollection.put(syncMap, map);
+        return syncMap;
     }
 
     private static long calcMonitorId(Object obj) {
@@ -1271,48 +1306,16 @@ public final class RVPredictRuntime {
         return readLockToRWLock.containsKey(lock) ? EventType.READ_UNLOCK : EventType.WRITE_UNLOCK;
     }
 
-    /**
-     * Checks if a given collection class is instrumented.
-     * <p>
-     * This is used to determine whether a collection needs to be mocked. For
-     * example, {@code Collections$SynchronizedX} classes are instrumented, so
-     * they should not be mocked.
-     *
-     * @param collection
-     *            the collection
-     * @return {@code true} if the collection is instrumented; otherwise,
-     *         {@code false}
-     */
-    private static boolean isCollectionInstrumented(Object collection) {
-        return collection.getClass().getName().startsWith("java.util.Collections$Synchronized");
-    }
-
-    /**
-     * Logs event generated by reading the (abstract) state of a collection
-     * object.
-     *
-     * @param collection
-     *            the collection
-     * @param locId
-     *            the location identifier
-     */
     private static void mockCollectionReadAccess(Object collection, int locId) {
-        if (isCollectionInstrumented(collection)) {
-            return;
-        }
+        mockCollectionAccess(collection, false, locId);
+    }
 
-        if (collection instanceof Collection) {
-            collection = getBackedCollection((Collection) collection);
-        }
-        if (!isThreadSafeCollection(collection)) {
-            saveEvent(EventType.READ, locId, System.identityHashCode(collection),
-                    -Metadata.getVariableId(collection.getClass().getName(), MOCK_STATE_FIELD),
-                    DUMMY_VALUE);
-        }
+    private static void mockCollectionWriteAccess(Object collection, int locId) {
+        mockCollectionAccess(collection, true, locId);
     }
 
     /**
-     * Logs event generated by writing the (abstract) state of a collection
+     * Logs event generated by accessing the (abstract) state of a collection
      * object.
      *
      * @param collection
@@ -1320,78 +1323,97 @@ public final class RVPredictRuntime {
      * @param locId
      *            the location identifier
      */
-    private static void mockCollectionWriteAccess(Object collection, int locId) {
-        if (isCollectionInstrumented(collection)) {
+    public static void mockCollectionAccess(Object collection, boolean isWrite, int locId) {
+        String className = collection.getClass().getName();
+        if (collection instanceof Vector || collection instanceof Hashtable
+                || className.startsWith("java.util.concurrent.")) {
+            /* non-wrapper thread-safe collections */
             return;
-        }
+        } else if (className.startsWith("java.util.Collections$Synchronized")) {
+            /* thread-safe collection wrapper */
+            Object mutex;
+            try {
+                mutex = collection instanceof Collection ?
+                    SYNC_COLLECTION_GET_MUTEX.invoke(collection) :
+                    SYNC_MAP_GET_MUTEX.invoke(collection);
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
+            }
 
-        if (collection instanceof Collection) {
-            collection = getBackedCollection((Collection) collection);
-        }
-        if (!isThreadSafeCollection(collection)) {
-            saveEvent(EventType.WRITE, locId, System.identityHashCode(collection),
-                    -Metadata.getVariableId(collection.getClass().getName(), MOCK_STATE_FIELD),
+            Object backedColl = getBackedCollection(collection);
+            synchronized (mutex) {
+                saveSyncEvent(EventType.WRITE_LOCK, locId, calcMonitorId(mutex));
+                saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
+                        System.identityHashCode(backedColl),
+                        -Metadata.getVariableId(backedColl.getClass().getName(), MOCK_STATE_FIELD),
+                        DUMMY_VALUE);
+                saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcMonitorId(mutex));
+            }
+        } else {
+            /* thread-unsafe collection */
+            Object backedColl = getBackedCollection(collection);
+            saveEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
+                    System.identityHashCode(backedColl),
+                    -Metadata.getVariableId(backedColl.getClass().getName(), MOCK_STATE_FIELD),
                     DUMMY_VALUE);
         }
     }
 
     /**
-     * Logs events generated by accessing some collection (e.g.
-     * {@link Collection}, {@link Map}, etc.) through a {@link Iterator}.
+     * Logs write event generated by accessing some collection (e.g.
+     * {@link Collection}, {@link Map}, etc.) using an {@link Iterator}.
      */
-    private static void accessThroughIterator(Iterator iterator, boolean isWrite, int locId) {
+    private static void writeUsingIterator(Iterator iterator, int locId) {
         Object collection = resolveAccessedCollection(iterator);
         if (collection != null) {
-            if (isWrite) {
-                mockCollectionWriteAccess(collection, locId);
-            } else {
-                mockCollectionReadAccess(collection, locId);
-            }
-        } else if (Configuration.verbose) {
-            /* this is possible because not all iterators are created by
-             * Iterable.iterator() */
-            System.err.println("[Runtime] Unable to find the collection associated with " + iterator);
+            mockCollectionWriteAccess(collection, locId);
         }
     }
 
     /**
-     * Gets the {@link Collection} or {@link Map} that a given {@link Iterator}
-     * is accessing.
+     * Logs read event generated by accessing some collection (e.g.
+     * {@link Collection}, {@link Map}, etc.) using an {@link Iterator}.
+     */
+    private static void readUsingIterator(Iterator iterator, int locId) {
+        Object collection = resolveAccessedCollection(iterator);
+        if (collection != null) {
+            mockCollectionReadAccess(collection, locId);
+        }
+    }
+
+    /**
+     * Returns the {@link Collection} or {@link Map} that a given
+     * {@link Iterator} is accessing or {@code null} if the accessed collection
+     * is not available.
      */
     private static Object resolveAccessedCollection(Iterator iterator) {
         Iterable iterable = iteratorToIterable.get(iterator);
-        if (iterable instanceof Collection) {
-            /* iterable could be just a view of the real backbone collection */
-            return getBackedCollection((Collection) iterable);
+        if (iterable == null) {
+            if (Configuration.verbose) {
+                /* this is possible because not all iterators are created by
+                 * Iterable.iterator() */
+                System.err.println("[Runtime] Unable to find the collection associated with " + iterator);
+            }
+            return null;
         } else {
-            return iterable;
+            return getBackedCollection(iterable);
         }
     }
 
     /**
      * Gets the backing {@link Collection} or {@link Map} of a given view.
      */
-    private static Object getBackedCollection(Collection view) {
-        Object object;
+    private static Object getBackedCollection(Object view) {
+        assert view != null;
+        Object backedColl;
         while (true) {
-            object = viewToBackedCollection.get(view);
-            if (object instanceof Collection) {
-                view = (Collection) object;
+            backedColl = viewToBackedCollection.get(view);
+            if (backedColl == null) {
+                return view;
             } else {
-                return object == null ? view : object;
+                view = backedColl;
             }
         }
-    }
-
-    /**
-     * Regex pattern describing the class name of thread-safe collection.
-     */
-    private static final Pattern THREAD_SAFE_COLLECTION_PATTERN = Pattern
-            .compile("java\\.util\\.(concurrent.*|Hashtable|Vector|Collections$Synchronized.*)");
-
-    private static boolean isThreadSafeCollection(Object object) {
-        String className = object.getClass().getName();
-        return THREAD_SAFE_COLLECTION_PATTERN.matcher(className).matches();
     }
 
     /**

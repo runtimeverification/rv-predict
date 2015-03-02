@@ -28,21 +28,24 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.engine.main;
 
-import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.LoggingFactory;
-import com.runtimeverification.rvpredict.log.LoggingTask;
-import com.runtimeverification.rvpredict.trace.TraceCache;
-import com.runtimeverification.rvpredict.trace.Trace;
-import com.runtimeverification.rvpredict.util.Logger;
-import com.runtimeverification.rvpredict.violation.Violation;
-
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.util.Collections;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+
+import com.google.common.collect.Sets;
+import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.LoggingFactory;
+import com.runtimeverification.rvpredict.log.LoggingTask;
+import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.trace.TraceCache;
+import com.runtimeverification.rvpredict.util.Logger;
+import com.runtimeverification.rvpredict.util.juc.Executors;
+import com.runtimeverification.rvpredict.violation.Violation;
 
 /**
  * Class for predicting violations from a logged execution.
@@ -52,7 +55,7 @@ import java.util.concurrent.*;
  */
 public class RVPredict implements LoggingTask {
 
-    private final Set<Violation> violations = Collections.newSetFromMap(new ConcurrentHashMap<Violation,Boolean>());
+    private final Set<Violation> violations = Sets.newConcurrentHashSet();
     private final Configuration config;
     private final Logger logger;
     private final TraceCache traceCache;
@@ -134,10 +137,10 @@ public class RVPredict implements LoggingTask {
             } while (trace.getSize() == config.windowSize);
 
             shutdownAndAwaitTermination(raceDetectorExecutor);
-            if (!Configuration.online) {
-                System.exit(0);
-            } else {
+            if (Configuration.online) {
                 return;
+            } else {
+                System.exit(0);
             }
         } catch (InterruptedException e) {
             System.err.println("Error: prediction interrupted.");

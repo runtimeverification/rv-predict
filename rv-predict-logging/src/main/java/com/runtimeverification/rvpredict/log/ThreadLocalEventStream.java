@@ -2,7 +2,7 @@ package com.runtimeverification.rvpredict.log;
 
 import java.util.concurrent.BlockingQueue;
 
-import com.runtimeverification.rvpredict.util.LinkedBlockingQueueCopy;
+import com.runtimeverification.rvpredict.util.juc.LinkedBlockingQueue;
 
 /**
  * Class extending {@link java.lang.ThreadLocal} to handle thread-local output
@@ -23,7 +23,7 @@ public class ThreadLocalEventStream extends ThreadLocal<EventPipe> {
     public ThreadLocalEventStream(LoggingFactory loggingFactory) {
         super();
         this.loggingFactory = loggingFactory;
-        this.registry = new LinkedBlockingQueueCopy<>();
+        this.registry = new LinkedBlockingQueue<>();
     }
 
     public EventPipe takeEventPipe() throws InterruptedException {

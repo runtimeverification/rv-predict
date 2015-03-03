@@ -86,7 +86,7 @@ public class Configuration implements Constants {
 
                  // Basics of the JDK that everything else is depending on
                  "sun/",
-                 "java/",
+                 "java/"
          };
          IGNORES = getDefaultPatterns(ignores);
      }
@@ -99,6 +99,18 @@ public class Configuration implements Constants {
           * logging a lot; besides, I am interested in seeing what could happen */
          // "java/util/Iterator"
      };
+
+    public static List<Pattern> MUST_INCLUDES;
+    static {
+        String[] mustIncludes = new String[] {
+                "java/util/concurrent/Semaphore",
+                "java/util/concurrent/CountDownLatch",
+                "java/util/concurrent/CyclicBarrier",
+                "java/util/concurrent/ArrayBlockingQueue",
+                "java/util/concurrent/LinkedBlockingQueue"
+        };
+        MUST_INCLUDES = getDefaultPatterns(mustIncludes);
+    }
 
     public final List<Pattern> includeList = new ArrayList<>();
     public final List<Pattern> excludeList = new ArrayList<>();

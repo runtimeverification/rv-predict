@@ -32,7 +32,7 @@ public class LockRegion {
     private final SyncEvent lock;
     private final SyncEvent unlock;
 
-    private final long lockObj;
+    private final long lockId;
     private final long threadId;
 
     private boolean isReadLocked = false;
@@ -43,7 +43,7 @@ public class LockRegion {
         this.lock = lock;
         this.unlock = unlock;
         if (lock != null) {
-            lockObj = lock.getSyncObject();
+            lockId = lock.getSyncObject();
             threadId = lock.getTID();
             if (lock.getType() == EventType.READ_LOCK) {
                 assert unlock == null || unlock.getType() == EventType.READ_UNLOCK :
@@ -52,7 +52,7 @@ public class LockRegion {
                 isReadLocked = true;
             }
         } else {
-            lockObj = unlock.getSyncObject();
+            lockId = unlock.getSyncObject();
             threadId = unlock.getTID();
             if (unlock.getType() == EventType.READ_UNLOCK) {
                 assert lock == null || lock.getType() == EventType.READ_LOCK :
@@ -72,7 +72,7 @@ public class LockRegion {
     }
 
     public long getLockObj() {
-        return lockObj;
+        return lockId;
     }
 
     public long getThreadId() {

@@ -28,8 +28,11 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.violation;
 
+import java.util.List;
+
 import com.google.common.collect.Lists;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
+import com.runtimeverification.rvpredict.trace.LockObject;
 import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.WriteEvent;
@@ -112,20 +115,43 @@ public class Race extends AbstractViolation {
         sb.append(String.format("Possible data race on %s: {{{%n",
                 (varSig.startsWith("#") ? "array element " : "field ") + varSig));
 
-        sb.append(generateMemAccReport(e1));
-        sb.append(generateMemAccReport(e2));
+        generateMemAccReport(e1, sb);
+        generateMemAccReport(e2, sb);
 
         sb.append(String.format("}}}%n"));
         return sb.toString();
     }
 
-    private String generateMemAccReport(MemoryAccessEvent e) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format("    Concurrent %s in thread T%s%n",
+    private void generateMemAccReport(MemoryAccessEvent e, StringBuilder sb) {
+        List<LockObject> heldLocks = trace.getHeldLocksAt(e);
+        sb.append(String.format("    Concurrent %s in thread T%s (locks held: {%s})%n",
                 e instanceof WriteEvent ? "write" : "read",
-                e.getTID()));
+                e.getTID(),
+                getHeldLocksReport(heldLocks)));
         for (String s : Lists.reverse(trace.getStacktraceAt(e))) {
             sb.append(String.format("        at %s%n", s));
+        }
+
+        if (!heldLocks.isEmpty()) {
+            sb.append(String.format("    Locks acquired by this thread (reporting in chronological order):%n"));
+            for (LockObject lock : heldLocks) {
+                sb.append(String.format("      %s%n", lock));
+                for (String s : Lists.reverse(trace.getStacktraceAt(lock.getLockEvent()))) {
+                    sb.append(String.format("        at %s%n", s));
+                }
+            }
+        }
+    }
+
+    private String getHeldLocksReport(List<LockObject> heldLocks) {
+        StringBuilder sb = new StringBuilder();
+        if (!heldLocks.isEmpty()) {
+            for (int i = 0; i < heldLocks.size(); i++) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+                sb.append(heldLocks.get(i));
+            }
         }
         return sb.toString();
     }

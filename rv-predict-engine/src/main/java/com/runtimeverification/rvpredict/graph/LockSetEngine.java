@@ -55,12 +55,12 @@ public class LockSetEngine {
     }
 
     public void add(LockRegion lockRegion) {
-        long lockObj = lockRegion.getLockObj();
+        long lockId = lockRegion.getLockObj();
         long threadId = lockRegion.getThreadId();
-        List<LockRegion> lockRegions = lockTbl.get(lockObj, threadId);
+        List<LockRegion> lockRegions = lockTbl.get(lockId, threadId);
         if (lockRegions == null) {
             lockRegions = Lists.newArrayList();
-            lockTbl.put(lockObj, threadId, lockRegions);
+            lockTbl.put(lockId, threadId, lockRegions);
         }
 
         ListIterator<LockRegion> iter = lockRegions.listIterator(lockRegions.size());
@@ -79,10 +79,10 @@ public class LockSetEngine {
     public boolean hasCommonLock(MemoryAccessEvent e1, MemoryAccessEvent e2) {
         assert e1.getTID() != e2.getTID();
 
-        for (Long lockObj : lockTbl.rowKeySet()) {
-            /* check if both events hold lockObj */
-            LockRegion lockRegion1 = getLockRegion(e1, lockObj);
-            LockRegion lockRegion2 = getLockRegion(e2, lockObj);
+        for (Long lockId : lockTbl.rowKeySet()) {
+            /* check if both events hold lockId */
+            LockRegion lockRegion1 = getLockRegion(e1, lockId);
+            LockRegion lockRegion2 = getLockRegion(e2, lockId);
             if (lockRegion1 != null && lockRegion2 != null
                     && (lockRegion1.isWriteLocked() || lockRegion2.isWriteLocked())) {
                 return true;
@@ -92,9 +92,9 @@ public class LockSetEngine {
         return false;
     }
 
-    private LockRegion getLockRegion(Event e, Long lockObj) {
+    private LockRegion getLockRegion(Event e, long lockId) {
         // TODO(YilongL): optimize this method when necessary
-        List<LockRegion> lockRegions = lockTbl.get(lockObj, e.getTID());
+        List<LockRegion> lockRegions = lockTbl.get(lockId, e.getTID());
         if (lockRegions != null) {
             for (LockRegion lockRegion : lockRegions) {
                 if (lockRegion.getLock() == null || lockRegion.getLock().getGID() < e.getGID()) {

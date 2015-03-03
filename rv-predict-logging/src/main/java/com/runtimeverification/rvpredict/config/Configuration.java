@@ -61,9 +61,7 @@ public class Configuration implements Constants {
      * configurable by the users through the <code>--exclude</code> command option.
      */
      private static String[] DEFAULT_EXCLUDES = new String[] {
-            "java.*",
             "javax.*",
-            "sun.*",
             "sunw.*",
             "com.sun.*",
             "com.ibm.*",
@@ -86,22 +84,9 @@ public class Configuration implements Constants {
                  // array type
                  "[",
 
-                 // JDK classes used by the RV-Predict runtime library
-                 "java/io",
-                 "java/nio",
-                 "java/util/ArrayList",
-                 "java/util/concurrent/atomic/AtomicInteger",
-                 "java/util/concurrent/atomic/AtomicLong",
-                 "java/util/concurrent/ConcurrentHashMap",
-                 "java/util/zip/GZIPOutputStream",
-                 "java/util/regex",
-
                  // Basics of the JDK that everything else is depending on
-                 "sun",
-                 "java/lang",
-
-                 /* we provide complete mocking of the jucl package */
-                 "java/util/concurrent/locks"
+                 "sun/",
+                 "java/",
          };
          IGNORES = getDefaultPatterns(ignores);
      }

@@ -124,9 +124,7 @@ public class Trace {
      * It is computed as the value in the {@link #crntState} before the first
      * event of that thread occurring in this trace segment.
      */
-    private final Map<Long, List<Integer>> threadIdToInitStacktrace = Maps.newHashMap();
-
-    private final Map<Long, Map<Long, List<SyncEvent>>> threadIdToInitLockStatus = Maps.newHashMap();
+    private final Map<Long, ThreadStatus> threadIdToInitThreadStatus = Maps.newHashMap();
 
     private final Map<SyncEvent, List<String>> initHeldLockToStacktrace;
 
@@ -157,6 +155,10 @@ public class Trace {
         this.crntState = crntState;
         this.loggingFactory = crntState.getLoggingFactory();
         this.initHeldLockToStacktrace = crntState.getHeldLockStacktraceSnapshot();
+    }
+
+    public LoggingFactory getLoggingFactory() {
+        return loggingFactory;
     }
 
     public boolean hasSharedMemAddr() {
@@ -255,7 +257,7 @@ public class Trace {
         List<String> stacktrace = Lists.newArrayList();
         if (event.getGID() >= rawEvents.get(0).getGID()) {
             /* event is in the current window; reassemble its stack trace */
-            for (int locId : threadIdToInitStacktrace.get(tid)) {
+            for (int locId : threadIdToInitThreadStatus.get(tid).stacktrace) {
                 stacktrace.add(loggingFactory.getStmtSig(locId));
             }
             for (MetaEvent e : threadIdToCallStackEvents.getOrDefault(tid,
@@ -285,8 +287,8 @@ public class Trace {
     public List<LockObject> getHeldLocksAt(MemoryAccessEvent memAcc) {
         long tid = memAcc.getTID();
         Map<Long, Deque<SyncEvent>> map = Maps.newHashMap();
-        for (Map.Entry<Long, List<SyncEvent>> entry : threadIdToInitLockStatus.getOrDefault(tid,
-                Collections.<Long, List<SyncEvent>> emptyMap()).entrySet()) {
+        for (Map.Entry<Long, List<SyncEvent>> entry : threadIdToInitThreadStatus.get(tid).lockStatus
+                .entrySet()) {
             map.put(entry.getKey(), new ArrayDeque<>(entry.getValue()));
         }
         for (Event e : getThreadEvents(tid)) {
@@ -319,6 +321,10 @@ public class Trace {
             }
         });
         return lockObjects;
+    }
+
+    public SyncEvent getStartEventOf(long tid) {
+        return threadIdToInitThreadStatus.get(tid).startEvent;
     }
 
     /**
@@ -406,15 +412,19 @@ public class Trace {
 
     private void updateTraceState(Event event) {
         long tid = event.getTID();
-        threadIdToInitStacktrace.putIfAbsent(tid, crntState.getStacktraceSnapshot(tid));
+        if (!threadIdToInitThreadStatus.containsKey(tid)) {
+            ThreadStatus initThreadInfo = getCurrentThreadStatus(tid);
+            threadIdToInitThreadStatus.putIfAbsent(tid, initThreadInfo);
+        }
+
         if (event instanceof MemoryAccessEvent) {
             MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
             MemoryAddr addr = memAcc.getAddr();
             addrToInitValue.putIfAbsent(addr, crntState.getValueAt(addr));
             crntState.updateValueAt(memAcc);
+        } else if (event.getType() == EventType.START) {
+            crntState.onThreadStart((SyncEvent) event);
         } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
-            threadIdToInitLockStatus.putIfAbsent(tid, crntState.getLockStatusSnapshot(tid));
-
             SyncEvent syncEvent = (SyncEvent) event;
             long lockId = syncEvent.getSyncObject();
             if (EventType.isLock(event.getType())) {
@@ -444,6 +454,11 @@ public class Trace {
                 assert false : "unreachable";
             }
         }
+    }
+
+    private ThreadStatus getCurrentThreadStatus(long tid) {
+        return new ThreadStatus(crntState.getStacktraceSnapshot(tid),
+                crntState.getThreadStartEvent(tid), crntState.getLockStatusSnapshot(tid));
     }
 
     /**
@@ -619,6 +634,20 @@ public class Trace {
         }
         map.put(key, value);
         return value;
+    }
+
+    private static class ThreadStatus {
+
+        private final List<Integer> stacktrace;
+        private final SyncEvent startEvent;
+        private final Map<Long, List<SyncEvent>> lockStatus;
+
+        private ThreadStatus(List<Integer> stacktrace, SyncEvent startEvent,
+                Map<Long, List<SyncEvent>> lockStatus) {
+            this.stacktrace = stacktrace;
+            this.startEvent = startEvent;
+            this.lockStatus = lockStatus;
+        }
     }
 
 }

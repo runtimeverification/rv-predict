@@ -19,7 +19,6 @@ package jtsan;
 
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -28,6 +27,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
@@ -177,24 +177,22 @@ public class JUConcurrentTests {
     @RaceTest(expectRace = false,
             description = "Work with BlockingQueue. Two readers, two writers")
     public void arrayBlockingQueue() {
-//        final int capacity = 10;
-//        final int iter = 1000;
         final int capacity = 8;
         final int iter = 10;
         new ThreadRunner(4) {
 
-            BlockingQueue<Integer> q;
+            ArrayBlockingQueue<Integer> abq;
 
             @Override
             public void setUp() {
-                q = new ArrayBlockingQueue<Integer>(capacity);
+                abq = new ArrayBlockingQueue<Integer>(capacity);
             }
 
             @Override
             public void thread1() {
                 try {
                     for (int i = 0; i < iter; i++) {
-                        q.put(i);
+                        abq.put(i);
                     }
                 } catch (InterruptedException ex) {
                     throw new RuntimeException("Exception in arrayBlockingQueue test", ex);
@@ -205,7 +203,7 @@ public class JUConcurrentTests {
             public void thread2() {
                 try {
                     for (int i = 0; i < iter; i++) {
-                        Integer o = q.take();
+                        Integer o = abq.take();
                     }
                 } catch (InterruptedException ex) {
                     throw new RuntimeException("Exception in arrayBlockingQueue test", ex);
@@ -230,18 +228,18 @@ public class JUConcurrentTests {
     public void arrayBlockingQueue2() {
         new ThreadRunner(2) {
 
-            BlockingQueue<Integer> q;
+            ArrayBlockingQueue<Integer> abq;
 
             @Override
             public void setUp() {
-                q = new ArrayBlockingQueue<Integer>(1);
+                abq = new ArrayBlockingQueue<Integer>(1);
             }
 
             @Override
             public void thread1() {
                 sharedVar = 1;
                 try {
-                    q.put(1);
+                    abq.put(1);
                 } catch (InterruptedException ex) {
                     throw new RuntimeException("Exception in arrayBlockingQueue test", ex);
                 }
@@ -250,12 +248,60 @@ public class JUConcurrentTests {
             @Override
             public void thread2() {
                 try {
-                    q.take();
+                    abq.take();
                 } catch (InterruptedException ex) {
                     throw new RuntimeException("Exception in arrayBlockingQueue test", ex);
                 }
                 sharedVar = 2;
             }
+        };
+    }
+
+    @RaceTest(expectRace = false,
+            description = "Work with LinkedBlockingQueue. Two readers, two writers")
+    public void linkedBlockingQueue() {
+        final int iter = 10;
+        new ThreadRunner(4) {
+
+            LinkedBlockingQueue<Integer> lbq;
+
+            @Override
+            public void setUp() {
+                lbq = new LinkedBlockingQueue<>();
+            }
+
+            @Override
+            public void thread1() {
+                try {
+                    for (int i = 0; i < iter; i++) {
+                        lbq.put(i);
+                    }
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException("Exception in linkedBlockingQueue test", ex);
+                }
+            }
+
+            @Override
+            public void thread2() {
+                try {
+                    for (int i = 0; i < iter; i++) {
+                        Integer o = lbq.take();
+                    }
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException("Exception in linkedBlockingQueue test", ex);
+                }
+            }
+
+            @Override
+            public void thread3() {
+                thread1();
+            }
+
+            @Override
+            public void thread4() {
+                thread2();
+            }
+
         };
     }
 
@@ -783,6 +829,7 @@ public class JUConcurrentTests {
             // negative tests
             tests.arrayBlockingQueue(); // testing the internal of ABQ
             tests.arrayBlockingQueue2(); // testing HB relation imposed by ABQ.put/take
+            tests.linkedBlockingQueue();
             tests.lockInterruptibly();
             tests.reentrantLockInterruptibly();
             tests.countDownLatch();

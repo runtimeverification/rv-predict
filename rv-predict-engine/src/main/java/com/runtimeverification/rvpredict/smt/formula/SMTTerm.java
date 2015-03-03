@@ -1,17 +1,16 @@
 package com.runtimeverification.rvpredict.smt.formula;
 
+import com.google.common.collect.ImmutableList;
 import com.runtimeverification.rvpredict.smt.visitors.Visitor;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
  * Base class for SMT terms.  Currently only extended by {@link FormulaTerm}.
  */
-public class SMTTerm extends SMTASTNode implements SMTFormula {
-    private final SMTOperation operation;
-    private final List<SMTFormula> terms;
+public class SMTTerm<Operation extends SMTOperation, Formula extends SMTFormula> extends SMTASTNode implements SMTFormula {
+    private final Operation operation;
+    private final ImmutableList<Formula> terms;
 
     /**
      * Builds a new term given an {@code operation} and a list of {@code terms} as arguments.
@@ -20,38 +19,18 @@ public class SMTTerm extends SMTASTNode implements SMTFormula {
      * @param operation
      * @param terms
      */
-    protected SMTTerm(SMTOperation operation, SMTFormula... terms) {
-        this.operation = operation;
+    public SMTTerm(Operation operation, Formula... terms) {
+        this(operation,ImmutableList.copyOf(terms));
         Sort[] arity = operation.getArity();
-        if (terms.length != arity.length) {
-            assert operation.isVariableArity() : "Too many/few terms";
-            if (terms.length < arity.length) {
-                assert terms.length == arity.length-1 : "Too few terms. Only the final sort can be iterated";
-
-            }
-        }
+        assert arity.length == terms.length : "This constructor can only be used for complete terms";
         for (int i = 0; i < terms.length; i++) {
-            if (i < arity.length) {
-                assert terms[i].getSort() == arity[i] : "Sort not matching arity";
-            } else {
-                assert terms[i].getSort() == arity[arity.length-1];
-            }
+            assert terms[i].getSort() == arity[i] : "Sort not matching arity";
         }
-        this.terms = new ArrayList<>(Arrays.asList(terms));
     }
-
-    /**
-     * Adds a new subterm to this term as an argument on the final position of the operation.
-     * 
-     * Only enabled when the operation has variable arity.
-     * Checks that the term matches the final sort of the arity.
-     * @param term
-     */
-    public void addFormula(SMTFormula term) {
-        assert operation.isVariableArity() : "One can add formulas only to variable arity ops";
-        Sort[] arity = operation.getArity();
-        assert term.getSort() == arity[arity.length-1];
-        terms.add(term);
+    
+    protected SMTTerm(Operation operation, ImmutableList<Formula> terms) {
+        this.operation = operation;
+        this.terms = terms;
     }
 
     @Override
@@ -64,11 +43,48 @@ public class SMTTerm extends SMTASTNode implements SMTFormula {
         return operation.getResultSort();
     }
 
-    public SMTOperation getOperation() {
+    public Operation getOperation() {
         return operation;
     }
 
-    public List<SMTFormula> getTerms() {
+    public List<Formula> getTerms() {
         return terms;
+    }
+
+    /**
+     * Abstract Builder class for SMTTerms.  Works only for operations of variable arity.
+     * @param <Operation> An SMTOperation type to be the top operation of the SMTTerm
+     * @param <Formula> The type of the arguments of the operation.
+     */
+    public static abstract class Builder<Operation extends SMTOperation,Formula extends SMTFormula> {
+        protected final Operation operation;
+        protected final ImmutableList.Builder<Formula> builder;
+        int size;
+
+        protected Builder(Operation operation) {
+            this.operation = operation;
+            assert operation.isVariableArity() : "Only operations with variable arity can be built.";
+            builder = ImmutableList.builder();
+        }
+
+        /**
+         * Adds new terms to this term builder.
+         *
+         * Checks that the term matches the corresponding sort of the operation's arity.
+         */
+        public void add(Formula... formulas) {
+            for (Formula formula : formulas) {
+                Sort[] arity = operation.getArity();
+                if (size < arity.length) {
+                    assert formula.getSort() == arity[size] : "Sort not matching arity";
+                } else {
+                    assert formula.getSort() == arity[arity.length - 1];
+                }
+                builder.add(formula);
+                size++;
+            }
+        }
+        
+        public abstract FormulaTerm build();
     }
 }

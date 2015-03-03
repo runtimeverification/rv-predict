@@ -82,7 +82,7 @@ public class SMTConstraintBuilder {
     private final Set<MemoryAccessEvent> computedConcretePhi = Sets.newHashSet();
 
     // constraints below
-    private final FormulaTerm smtlibAssertion = new FormulaTerm(BooleanOperation.AND);
+    private final FormulaTerm.Builder smtlibAssertionBuilder = FormulaTerm.andBuilder();
     private final String benchname;
 
     public SMTConstraintBuilder(Configuration config, Trace trace) {
@@ -92,12 +92,12 @@ public class SMTConstraintBuilder {
     }
 
     private void assertHappensBefore(Event e1, Event e2) {
-        smtlibAssertion.addFormula(getAsstHappensBefore(e1, e2));
+        smtlibAssertionBuilder.add(getAsstHappensBefore(e1, e2));
         reachEngine.addEdge(e1, e2);
     }
 
     private FormulaTerm getAsstHappensBefore(Event event1, Event event2) {
-        return new FormulaTerm(BooleanOperation.LESS_THAN, new OrderVariable(event1), new OrderVariable(event2));
+        return FormulaTerm.LESS_THAN(new OrderVariable(event1), new OrderVariable(event2));
     }
 
     private FormulaTerm getAsstLockRegionHappensBefore(LockRegion lockRegion1, LockRegion lockRegion2) {
@@ -109,7 +109,7 @@ public class SMTConstraintBuilder {
     }
 
     private void assertMutualExclusion(LockRegion lockRegion1, LockRegion lockRegion2) {
-        smtlibAssertion.addFormula(new FormulaTerm(BooleanOperation.OR, 
+        smtlibAssertionBuilder.add(FormulaTerm.OR(
                 getAsstLockRegionHappensBefore(lockRegion1, lockRegion2),
                 getAsstLockRegionHappensBefore(lockRegion2, lockRegion1)));
     }
@@ -252,12 +252,12 @@ public class SMTConstraintBuilder {
         }
         computedAbstractPhi.add(event);
 
-        FormulaTerm phi = new FormulaTerm(BooleanOperation.AND);
+        FormulaTerm.Builder phiBuilder = FormulaTerm.andBuilder();
         /* make sure that every dependent read event reads the same value as in the original trace */
         for (ReadEvent depRead : trace.getCtrlFlowDependentEvents(event)) {
-            phi.addFormula(getConcreteFeasibilityConstraint(depRead));
+            phiBuilder.add(getConcreteFeasibilityConstraint(depRead));
         }
-        abstractPhi.put(event, phi);
+        abstractPhi.put(event, phiBuilder.build());
         return new AbstractPhiVariable(event);
     }
 
@@ -307,37 +307,38 @@ public class SMTConstraintBuilder {
             Formula case1 = BooleanConstant.FALSE;
             if (thrdImdWrtPred == null &&
                     trace.getInitValueOf(event.getAddr()) == event.getValue()) {
-                FormulaTerm formula = new FormulaTerm(BooleanOperation.AND);
+                FormulaTerm.Builder formulaBuilder = FormulaTerm.andBuilder();
                 for (WriteEvent write : predWriteSet) {
-                    formula.addFormula(getAsstHappensBefore(event, write));
+                    formulaBuilder.add(getAsstHappensBefore(event, write));
                 }
-                case1 = formula;
+                case1 = formulaBuilder.build();
             }
 
             /* case 2: the dependent read reads a previously written value */
-            FormulaTerm case2 = new FormulaTerm(BooleanOperation.OR);
+            FormulaTerm.Builder case2Builder = FormulaTerm.orBuilder();
             for (WriteEvent write : sameValPredWriteSet) {
-                FormulaTerm formula = new FormulaTerm(BooleanOperation.AND,
-                        getAbstractFeasibilityConstraint(write),
+                FormulaTerm.Builder formulaBuilder = FormulaTerm.andBuilder();
+                formulaBuilder.add(getAbstractFeasibilityConstraint(write),
                         getConcreteFeasibilityConstraint(write));
-                case2.addFormula(formula);
-                formula.addFormula(getAsstHappensBefore(write, event));
+                formulaBuilder.add(getAsstHappensBefore(write, event));
                 for (WriteEvent otherWrite : writeEvents) {
                     if (write != otherWrite && !happensBefore(otherWrite, write)
                             && !happensBefore(event, otherWrite)) {
-                        formula.addFormula(new FormulaTerm(BooleanOperation.OR,
+                        formulaBuilder.add(FormulaTerm.OR(
                                 getAsstHappensBefore(otherWrite, write),
                                 getAsstHappensBefore(event, otherWrite)));
                     }
                 }
+                case2Builder.add(formulaBuilder.build());
             }
-            phi = new FormulaTerm(BooleanOperation.OR, case1, case2);
+            phi = FormulaTerm.OR(case1, case2Builder.build());
         } else {
-            phi = new FormulaTerm(BooleanOperation.AND);
+            FormulaTerm.Builder phiBuilder = FormulaTerm.andBuilder();
             for (ReadEvent e : trace.getExtraDataFlowDependentEvents(event)) {
-                phi.addFormula(getAbstractFeasibilityConstraint(e));
-                phi.addFormula(getConcreteFeasibilityConstraint(e));
+                phiBuilder.add(getAbstractFeasibilityConstraint(e),
+                        getConcreteFeasibilityConstraint(e));
             }
+            phi = phiBuilder.build();
         }
         concretePhi.put(event, phi);
 
@@ -363,7 +364,7 @@ public class SMTConstraintBuilder {
         int id = SMTConstraintBuilder.id.incrementAndGet();
         task = new SMTTaskRun(config, id);
 
-        Benchmark benchmark = new Benchmark(benchname, smtlibAssertion);
+        Benchmark benchmark = new Benchmark(benchname, smtlibAssertionBuilder.build());
         SMTLib1Filter filter = new SMTLib1Filter();
         benchmark.accept(filter);
         task.sendMessage(filter.getResult());
@@ -374,23 +375,24 @@ public class SMTConstraintBuilder {
     public boolean isRace(Event e1, Event e2, Formula... casualConstraints) {
         int id = SMTConstraintBuilder.id.incrementAndGet();
         task = new SMTTaskRun(config, id);
-        FormulaTerm raceAssertion = smtlibAssertion.shallowCopy();
-        Benchmark benchmark = new Benchmark(benchname, raceAssertion);
+        FormulaTerm.Builder raceAssertionBuilder = FormulaTerm.andBuilder();
+        raceAssertionBuilder.add(smtlibAssertionBuilder.build());
         for (Entry<MemoryAccessEvent, FormulaTerm> entry : abstractPhi.entrySet()) {
-            raceAssertion.addFormula(new FormulaTerm(BooleanOperation.BOOL_EQUAL,
+            raceAssertionBuilder.add(FormulaTerm.BOOL_EQUAL(
                     new AbstractPhiVariable(entry.getKey()),
                     entry.getValue()));
         }
         for (Entry<MemoryAccessEvent, FormulaTerm> entry : concretePhi.entrySet()) {
-            raceAssertion.addFormula(new FormulaTerm(BooleanOperation.BOOL_EQUAL,
+            raceAssertionBuilder.add(FormulaTerm.BOOL_EQUAL(
                     new ConcretePhiVariable(entry.getKey()),
                     entry.getValue()));
         }
-        raceAssertion.addFormula(new FormulaTerm(BooleanOperation.INT_EQUAL, new OrderVariable(e1), new OrderVariable(e2)));
+        raceAssertionBuilder.add(FormulaTerm.INT_EQUAL(new OrderVariable(e1), new OrderVariable(e2)));
         for (Formula casualConstraint : casualConstraints) {
-            raceAssertion.addFormula(casualConstraint);
+            raceAssertionBuilder.add(casualConstraint);
         }
-        
+
+        Benchmark benchmark = new Benchmark(benchname, raceAssertionBuilder.build());
         SMTLib1Filter filter = new SMTLib1Filter();
         benchmark.accept(filter);
         task.sendMessage(filter.getResult());

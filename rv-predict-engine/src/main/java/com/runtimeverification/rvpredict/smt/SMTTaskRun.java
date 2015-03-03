@@ -35,6 +35,10 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.smt.formula.Formula;
+import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
+import com.runtimeverification.rvpredict.smt.formula.SMTASTNode;
+import com.runtimeverification.rvpredict.smt.visitors.SMTLib1Filter;
 import com.runtimeverification.rvpredict.util.Util;
 
 /**
@@ -46,17 +50,19 @@ import com.runtimeverification.rvpredict.util.Util;
 public class SMTTaskRun {
     protected static String SMT = ".smt";
     protected static String OUT = ".smtout";
+    private final SMTFilter smtFilter;
 
     File outFile, smtFile;
     protected List<String> CMD;
 
-    public Model model;
+    private Model model;
 
-    boolean sat;
+    private boolean sat;
 
-    long timeout;
+    private long timeout;
 
     public SMTTaskRun(Configuration config, int id) {
+        this.smtFilter = SMTFilterFactory.getSMTFilter(config);
         try {
             init(config, id);
 
@@ -167,4 +173,8 @@ public class SMTTaskRun {
 
     }
 
+    public boolean isSat(SMTASTNode formula) {
+        sendMessage(smtFilter.getSMTMessage(formula));
+        return sat;
+    }
 }

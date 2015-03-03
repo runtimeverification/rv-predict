@@ -29,7 +29,6 @@
 package com.runtimeverification.rvpredict.smt;
 
 import com.runtimeverification.rvpredict.smt.formula.*;
-import com.runtimeverification.rvpredict.smt.visitors.SMTLib1Filter;
 import com.runtimeverification.rvpredict.trace.Event;
 import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
@@ -83,12 +82,10 @@ public class SMTConstraintBuilder {
 
     // constraints below
     private final FormulaTerm.Builder smtlibAssertionBuilder = FormulaTerm.andBuilder();
-    private final String benchname;
 
     public SMTConstraintBuilder(Configuration config, Trace trace) {
         this.config = config;
         this.trace = trace;
-        benchname = config.tableName;
     }
 
     private void assertHappensBefore(Event e1, Event e2) {
@@ -363,13 +360,9 @@ public class SMTConstraintBuilder {
     public boolean isSat() {
         int id = SMTConstraintBuilder.id.incrementAndGet();
         task = new SMTTaskRun(config, id);
+        return task.isSat(smtlibAssertionBuilder.build());
 
-        Benchmark benchmark = new Benchmark(benchname, smtlibAssertionBuilder.build());
-        SMTLib1Filter filter = new SMTLib1Filter();
-        benchmark.accept(filter);
-        task.sendMessage(filter.getResult());
 
-        return task.sat;
     }
 
     public boolean isRace(Event e1, Event e2, Formula... casualConstraints) {
@@ -391,12 +384,9 @@ public class SMTConstraintBuilder {
         for (Formula casualConstraint : casualConstraints) {
             raceAssertionBuilder.add(casualConstraint);
         }
-
-        Benchmark benchmark = new Benchmark(benchname, raceAssertionBuilder.build());
-        SMTLib1Filter filter = new SMTLib1Filter();
-        benchmark.accept(filter);
-        task.sendMessage(filter.getResult());
-        return task.sat;
+        
+        
+        return task.isSat(raceAssertionBuilder.build());
     }
 
 }

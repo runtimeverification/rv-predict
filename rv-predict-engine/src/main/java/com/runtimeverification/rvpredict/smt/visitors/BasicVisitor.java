@@ -5,7 +5,8 @@ import com.runtimeverification.rvpredict.smt.formula.*;
 /**
  * Base class for visitors.  Visits all nodes in an AST, but does nothing.
  */
-public class BasicVisitor implements Visitor {
+public abstract class BasicVisitor implements Visitor {
+
     @Override
     public void visit(Benchmark node) {
         node.getAssertion().accept(this);
@@ -23,7 +24,7 @@ public class BasicVisitor implements Visitor {
     }
 
     @Override
-    public void visit(SMTTerm node) {
+    public void visit(SMTTerm<SMTOperation,SMTFormula> node) {
         node.getOperation().accept(this);
         for (SMTFormula term : node.getTerms()) {
             term.accept(this);

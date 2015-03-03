@@ -8,7 +8,7 @@ public interface Visitor {
     public void visit(Benchmark node);
     public void visit(SMTOperation node);
     public void visit(BooleanOperation node);
-    public void visit(SMTTerm node);
+    public void visit(SMTTerm<SMTOperation,SMTFormula> node);
     public void visit(FormulaTerm node);
     public void visit(SMTConstant node);
     public void visit(BooleanConstant node);

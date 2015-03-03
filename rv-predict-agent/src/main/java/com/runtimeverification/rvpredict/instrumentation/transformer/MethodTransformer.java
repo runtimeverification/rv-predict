@@ -61,6 +61,45 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         mv.visitLineNumber(line, start);
     }
 
+    private Label methodStart;
+
+    @Override
+    public void visitCode() {
+        mv.visitCode();
+
+        if (isSynchronized) {
+            methodStart = mv.mark();
+            /* log a MONITOR_ENTER at the start of a synchronized method */
+            logMonitorEnterOrExit(true);
+        }
+    }
+
+    @Override
+    public void visitMaxs(int maxStack, int maxLocals) {
+        if (isSynchronized) {
+            /* if the synchronized method ends abruptly because of ATHROW
+             * instruction or uncaught exception thrown from nested method call,
+             * we need to catch this Throwable, log a MONITOR_EXIT, and re-throw
+             * the Throwable */
+            Label origMethodEnd = mv.mark();
+            mv.catchException(methodStart, origMethodEnd, null);
+            logMonitorEnterOrExit(false);
+            mv.throwException();
+        }
+
+        mv.visitMaxs(maxStack, maxLocals);
+    }
+
+    private void logMonitorEnterOrExit(boolean isEnter) {
+        if (isStatic) {
+            loadClassLiteral();
+        } else {
+            mv.loadThis();
+        }
+        push(getCrntLocId());
+        invokeRTMethod(isEnter ? LOG_MONITOR_ENTER : LOG_MONITOR_EXIT);
+    }
+
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
         ClassFile classFile = Metadata.resolveDeclaringClass(loader, owner, name);
@@ -182,32 +221,31 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
             /* Wrap the method call instruction into a try-finally block with logging code.
              *
-             * tryLabel:
              *     LOG_INVOKE_METHOD
+             * L0:
              *     visitMethodInsn(opcode, owner, name, desc, itf)
              *     LOG_FINISH_METHOD
-             *     goto afterLabel
-             * finallyLabel:
+             *     goto L2
+             * L1:
              *     LOG_FINISH_METHOD
              *     throw exception
-             * afterLabel:
+             * L2:
              *     ...
              */
-            Label tryLabel = mv.mark();
             push(locId);
             invokeRTMethod(LOG_INVOKE_METHOD);
+            Label l0 = mv.mark();
             mv.visitMethodInsn(opcode, owner, name, desc, itf);
             push(locId);
             invokeRTMethod(LOG_FINISH_METHOD);
-            Label afterLabel = mv.newLabel();
-            mv.goTo(afterLabel);
-            Label finallyLabel = mv.newLabel();
-            mv.visitTryCatchBlock(tryLabel, finallyLabel, finallyLabel, null);
-            mv.mark(finallyLabel);
+            Label l2 = mv.newLabel();
+            mv.goTo(l2);
+            Label l1 = mv.mark();
+            mv.catchException(l0, l1, null);
             push(locId);
             invokeRTMethod(LOG_FINISH_METHOD);
             mv.throwException();
-            mv.mark(afterLabel);
+            mv.mark(l2);
         }
     }
 
@@ -242,16 +280,22 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             break;
         }
         case IRETURN: case LRETURN: case FRETURN: case DRETURN:
-        case ARETURN: case RETURN: case ATHROW:
+        case ARETURN: case RETURN:
             if (isSynchronized) {
-                if (isStatic) {
-                    loadClassLiteral();
-                } else {
-                    mv.loadThis();
-                }
-                push(getCrntLocId());
-                invokeRTMethod(LOG_MONITOR_EXIT);
+                /* xRETURN instructions always cause the method to return;
+                 * finally block is copied and placed before xRETURN instruction
+                 * by the Java compiler */
+                logMonitorEnterOrExit(false);
             }
+            mv.visitInsn(opcode);
+            break;
+        case ATHROW:
+            /* do not log a MONITOR_EXIT here because, unlike xRETURN family
+             * instructions, ATHROW does not necessarily result in the exit of
+             * the method; it can be caught later by some exception handler and
+             * leads to multiple MONITOR_EXIT events, so the safe place to log a
+             * MONITOR_EXIT for exceptions thrown inside a synchronized method
+             * is in the exception handler that covers the whole method body */
             mv.visitInsn(opcode);
             break;
         default:
@@ -303,21 +347,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         mv.loadLocal(value, valueType);
         // <stack>... arrayref index value </stack>
         mv.visitInsn(arrayStoreOpcode); // <--- array store happens
-    }
-
-    @Override
-    public void visitCode() {
-        if (isSynchronized) {
-            if (isStatic) {
-                loadClassLiteral();
-            } else {
-                mv.loadThis();
-            }
-            push(getCrntLocId());
-            invokeRTMethod(LOG_MONITOR_ENTER);
-        }
-
-        mv.visitCode();
     }
 
     @Override
@@ -445,6 +474,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
      *         current statement in the instrumented program
      */
     private int getCrntLocId() {
-        return Metadata.getLocationId(locIdPrefix + crntLineNum + ")");
+        return Metadata.getLocationId(locIdPrefix + (crntLineNum == 0 ? "n/a" : crntLineNum) + ")");
     }
 }

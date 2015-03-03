@@ -37,6 +37,7 @@ import com.runtimeverification.rvpredict.util.Logger;
 import com.runtimeverification.rvpredict.violation.Violation;
 
 import java.io.IOException;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Collections;
 import java.util.Set;
 import java.util.Timer;
@@ -66,7 +67,7 @@ public class RVPredict implements LoggingTask {
 
         long startTime = System.currentTimeMillis();
 
-        traceCache = new TraceCache(loggingFactory);
+        traceCache = new TraceCache(config, loggingFactory);
 
         infoTask = new ExecutionInfoTask(this, startTime);
 
@@ -102,10 +103,20 @@ public class RVPredict implements LoggingTask {
             ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(4,
                     new ThreadFactory() {
                         int id = 0;
+                        final UncaughtExceptionHandler eh = new UncaughtExceptionHandler() {
+                            @Override
+                            public void uncaughtException(Thread t, Throwable e) {
+                                System.err.println("Uncaught exception in " + t + ":");
+                                e.printStackTrace();
+                                System.exit(1);
+                            }
+                        };
+
                         @Override
                         public Thread newThread(Runnable r) {
                             Thread t = new Thread(r, "Race Detector " + ++id);
                             t.setDaemon(true);
+                            t.setUncaughtExceptionHandler(eh);
                             return t;
                         }
                     });

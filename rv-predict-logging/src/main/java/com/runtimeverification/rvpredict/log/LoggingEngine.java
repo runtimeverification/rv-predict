@@ -81,7 +81,6 @@ public class LoggingEngine {
     }
 
     public void startPredicting() {
-
         Thread predictionServerThread = new Thread(predictionServer, "Prediction main thread");
         predictionServer.setOwner(predictionServerThread);
         predictionServerThread.setDaemon(true);

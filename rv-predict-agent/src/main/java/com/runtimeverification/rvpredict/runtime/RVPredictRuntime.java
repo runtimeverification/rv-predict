@@ -113,9 +113,6 @@ import com.runtimeverification.rvpredict.util.Constants;
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public final class RVPredictRuntime {
 
-    private static final long MONITOR_C = 42L;
-    private static final long ATOMIC_LOCK_C = 43L;
-
     /**
      * Dummy value used to represent abstract state whose concrete value we do
      * not care about.
@@ -851,7 +848,7 @@ public final class RVPredictRuntime {
         synchronized (atomicBool) {
             saveSyncEvent(EventType.WRITE_LOCK, locId, calcAtomicLockId(atomicBool));
             atomicBool.set(newValue);
-            saveEvent(EventType.READ, locId, System.identityHashCode(atomicBool),
+            saveEvent(EventType.WRITE, locId, System.identityHashCode(atomicBool),
                     -ATOMIC_BOOLEAN_MOCK_VAL_ID, newValue ? 1 : 0);
             saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcAtomicLockId(atomicBool));
         }
@@ -1267,7 +1264,7 @@ public final class RVPredictRuntime {
 
     private static long calcMonitorId(Object obj) {
         // Use low 32bit for object hash and high 32bit for the magic constant.
-        return (MONITOR_C << 32L) + System.identityHashCode(obj);
+        return (Constants.MONITOR_C << 32L) + System.identityHashCode(obj);
     }
 
     /**
@@ -1282,7 +1279,7 @@ public final class RVPredictRuntime {
      */
     private static long calcAtomicLockId(Object atomicVar) {
         // Use low 32bit for object hash and high 32bit for the magic constant.
-        return (ATOMIC_LOCK_C << 32L) + System.identityHashCode(atomicVar);
+        return (Constants.ATOMIC_LOCK_C << 32L) + System.identityHashCode(atomicVar);
     }
 
     private static long calcLockId(Lock lock) {

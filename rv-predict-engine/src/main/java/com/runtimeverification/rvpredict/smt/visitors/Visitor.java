@@ -5,7 +5,6 @@ import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
 import com.runtimeverification.rvpredict.smt.formula.*;
 
 public interface Visitor {
-    public void visit(Benchmark node);
     public void visit(SMTOperation node);
     public void visit(BooleanOperation node);
     public void visit(SMTTerm<SMTOperation,SMTFormula> node);

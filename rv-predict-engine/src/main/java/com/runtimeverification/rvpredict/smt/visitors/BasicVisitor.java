@@ -8,12 +8,6 @@ import com.runtimeverification.rvpredict.smt.formula.*;
 public abstract class BasicVisitor implements Visitor {
 
     @Override
-    public void visit(Benchmark node) {
-        node.getAssertion().accept(this);
-        visit((SMTASTNode) node);
-    }
-
-    @Override
     public void visit(SMTOperation node) {
         visit((SMTASTNode) node);
     }

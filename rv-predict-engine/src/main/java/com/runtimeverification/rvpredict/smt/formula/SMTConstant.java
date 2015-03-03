@@ -12,4 +12,9 @@ public abstract class SMTConstant extends SMTASTNode implements SMTFormula {
     }
 
     public abstract String getValue();
+
+    @Override
+    public String toString() {
+        return getValue();
+    }
 }

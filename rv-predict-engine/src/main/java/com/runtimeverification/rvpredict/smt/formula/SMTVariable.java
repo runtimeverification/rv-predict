@@ -40,4 +40,10 @@ public abstract class SMTVariable extends SMTASTNode implements SMTFormula {
     public int hashCode() {
         return (int) (id ^ (id >>> 32));
     }
+    
+
+    @Override
+    public String toString() {
+        return getNamePrefix() + id;
+    }
 }

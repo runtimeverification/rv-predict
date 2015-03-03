@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.smt.formula;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.runtimeverification.rvpredict.smt.visitors.Visitor;
 
@@ -85,6 +86,13 @@ public class SMTTerm<Operation extends SMTOperation, Formula extends SMTFormula>
             }
         }
         
-        public abstract FormulaTerm build();
+        public abstract SMTTerm<Operation,Formula> build();
+    }
+
+    @Override
+    public String toString() {
+        return "(" + operation + ' ' +
+                Joiner.on(' ').join(terms) +
+                ')';
     }
 }

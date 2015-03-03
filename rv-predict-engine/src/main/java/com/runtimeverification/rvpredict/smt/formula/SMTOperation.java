@@ -59,4 +59,6 @@ public class SMTOperation extends SMTASTNode {
     public Sort[] getArity() {
         return arity;
     }
+    
+    public String toString() { return name;}
 }

@@ -29,8 +29,7 @@ public class EventsProfiler {
 
     private static final ConcurrentMap<String, ClassStat> classNameToStat = Maps.newConcurrentMap();
 
-    public static void updateEventStats(EventType eventType, int locId, int addrl, int addrr,
-            long value) {
+    public static void updateEventStats(EventType eventType, int locId, int addrl, int addrr) {
         String className = Metadata.getLocationClass(locId);
         ClassStat stat = classNameToStat.get(className);
         if (stat == null) {

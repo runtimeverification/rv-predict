@@ -12,7 +12,7 @@ public class BooleanOperation extends SMTOperation {
      * and has unit {@link BooleanConstant#TRUE}
      */
     public static final BooleanOperation AND  =
-            new BooleanOperation("and", true, Sort.Bool) {
+            new BooleanOperation("and", true, Sort.Bool, Sort.Bool) {
                 @Override
                 public SMTConstant getUnit() {
                     return BooleanConstant.TRUE;
@@ -23,7 +23,7 @@ public class BooleanOperation extends SMTOperation {
      * and has unit {@link BooleanConstant#FALSE}
      */
     public static final BooleanOperation OR =
-            new BooleanOperation("or", true, Sort.Bool) {
+            new BooleanOperation("or", true, Sort.Bool, Sort.Bool) {
                 @Override
                 public SMTConstant getUnit() {
                     return BooleanConstant.FALSE;

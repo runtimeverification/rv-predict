@@ -543,7 +543,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         private static final long waiterOffset;
         static {
             try {
-                UNSAFE = sun.misc.Unsafe.getUnsafe();
+                UNSAFE = Unsafe.getUnsafe();
                 Class k = Node.class;
                 itemOffset = UNSAFE.objectFieldOffset
                     (k.getDeclaredField("item"));
@@ -1362,7 +1362,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     private static final long sweepVotesOffset;
     static {
         try {
-            UNSAFE = sun.misc.Unsafe.getUnsafe();
+            UNSAFE = Unsafe.getUnsafe();
             Class k = LinkedTransferQueue.class;
             headOffset = UNSAFE.objectFieldOffset
                 (k.getDeclaredField("head"));

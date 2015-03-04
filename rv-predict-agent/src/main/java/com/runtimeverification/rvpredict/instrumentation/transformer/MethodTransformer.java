@@ -70,7 +70,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         if (isSynchronized) {
             methodStart = mv.mark();
             /* log a MONITOR_ENTER at the start of a synchronized method */
-            logMonitorEnterOrExit(true);
+            onSyncMethodEnterOrExit(true);
         }
     }
 
@@ -83,14 +83,14 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
              * the Throwable */
             Label origMethodEnd = mv.mark();
             mv.catchException(methodStart, origMethodEnd, null);
-            logMonitorEnterOrExit(false);
+            onSyncMethodEnterOrExit(false);
             mv.throwException();
         }
 
         mv.visitMaxs(maxStack, maxLocals);
     }
 
-    private void logMonitorEnterOrExit(boolean isEnter) {
+    private void onSyncMethodEnterOrExit(boolean isEnter) {
         if (isStatic) {
             loadClassLiteral();
         } else {
@@ -285,7 +285,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
                 /* xRETURN instructions always cause the method to return;
                  * finally block is copied and placed before xRETURN instruction
                  * by the Java compiler */
-                logMonitorEnterOrExit(false);
+                onSyncMethodEnterOrExit(false);
             }
             mv.visitInsn(opcode);
             break;

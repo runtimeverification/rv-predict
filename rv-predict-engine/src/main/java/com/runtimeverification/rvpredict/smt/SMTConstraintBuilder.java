@@ -65,8 +65,8 @@ public class SMTConstraintBuilder {
     private final ReachabilityEngine reachEngine = new ReachabilityEngine();
     private final LockSetEngine lockEngine = new LockSetEngine();
 
-    private final Map<MemoryAccessEvent, FormulaTerm> abstractPhi = Maps.newHashMap();
-    private final Map<MemoryAccessEvent, FormulaTerm> concretePhi = Maps.newHashMap();
+    private final Map<MemoryAccessEvent, Formula> abstractPhi = Maps.newHashMap();
+    private final Map<MemoryAccessEvent, Formula> concretePhi = Maps.newHashMap();
 
     /**
      * Avoids infinite recursion when building the abstract feasibility
@@ -119,20 +119,6 @@ public class SMTConstraintBuilder {
         for (List<Event> events : trace.getThreadIdToEventsMap().values()) {
             Event prevEvent = events.get(0);
             for (Event crntEvent : events.subList(1, events.size())) {
-                assertHappensBefore(prevEvent, crntEvent);
-                prevEvent = crntEvent;
-            }
-        }
-    }
-
-    /**
-     * Adds intra-thread must happens-before (MHB) constraints of relaxed PSO
-     * memory model.
-     */
-    public void addPSOIntraThreadConstraints() {
-        for (List<MemoryAccessEvent> nodes : trace.getMemAccessEventsTable().values()) {
-            MemoryAccessEvent prevEvent = nodes.get(0);
-            for (MemoryAccessEvent crntEvent : nodes.subList(1, nodes.size())) {
                 assertHappensBefore(prevEvent, crntEvent);
                 prevEvent = crntEvent;
             }
@@ -271,7 +257,7 @@ public class SMTConstraintBuilder {
         }
         computedConcretePhi.add(event);
 
-        FormulaTerm phi;
+        Formula phi;
         if (event instanceof ReadEvent) {
             List<WriteEvent> writeEvents = trace.getWriteEventsOn(event.getAddr());
 
@@ -330,12 +316,7 @@ public class SMTConstraintBuilder {
             }
             phi = FormulaTerm.OR(case1, case2Builder.build());
         } else {
-            FormulaTerm.Builder phiBuilder = FormulaTerm.andBuilder();
-            for (ReadEvent e : trace.getExtraDataFlowDependentEvents(event)) {
-                phiBuilder.add(getAbstractFeasibilityConstraint(e),
-                        getConcreteFeasibilityConstraint(e));
-            }
-            phi = phiBuilder.build();
+            phi = BooleanConstant.TRUE;
         }
         concretePhi.put(event, phi);
 
@@ -370,12 +351,12 @@ public class SMTConstraintBuilder {
         task = new SMTTaskRun(config, id);
         FormulaTerm.Builder raceAssertionBuilder = FormulaTerm.andBuilder();
         raceAssertionBuilder.add(smtlibAssertionBuilder.build());
-        for (Entry<MemoryAccessEvent, FormulaTerm> entry : abstractPhi.entrySet()) {
+        for (Entry<MemoryAccessEvent, Formula> entry : abstractPhi.entrySet()) {
             raceAssertionBuilder.add(FormulaTerm.BOOL_EQUAL(
                     new AbstractPhiVariable(entry.getKey()),
                     entry.getValue()));
         }
-        for (Entry<MemoryAccessEvent, FormulaTerm> entry : concretePhi.entrySet()) {
+        for (Entry<MemoryAccessEvent, Formula> entry : concretePhi.entrySet()) {
             raceAssertionBuilder.add(FormulaTerm.BOOL_EQUAL(
                     new ConcretePhiVariable(entry.getKey()),
                     entry.getValue()));
@@ -384,8 +365,8 @@ public class SMTConstraintBuilder {
         for (Formula casualConstraint : casualConstraints) {
             raceAssertionBuilder.add(casualConstraint);
         }
-        
-        
+
+
         return task.isSat(raceAssertionBuilder.build());
     }
 

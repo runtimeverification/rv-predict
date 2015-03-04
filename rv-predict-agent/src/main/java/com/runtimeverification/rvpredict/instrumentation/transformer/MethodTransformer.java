@@ -1,6 +1,5 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
-import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
@@ -38,10 +37,8 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private int crntLineNum;
 
-    private final int branchModel;
-
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
-            String name, String desc, int access, ClassLoader loader, Configuration config) {
+            String name, String desc, int access, ClassLoader loader) {
         super(Opcodes.ASM5, new GeneratorAdapter(mv, access, name, desc));
         this.mv = (GeneratorAdapter) super.mv;
         this.className = className;
@@ -50,7 +47,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
         this.loader = loader;
-        this.branchModel = config.branch ? 1 : 0;
         this.locIdPrefix = String.format("%s(%s:", className.replace("/", ".") + "." + name,
                 source == null ? "Unknown" : source);
     }
@@ -347,26 +343,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         mv.loadLocal(value, valueType);
         // <stack>... arrayref index value </stack>
         mv.visitInsn(arrayStoreOpcode); // <--- array store happens
-    }
-
-    @Override
-    public void visitJumpInsn(int opcode, Label label) {
-        if (branchModel == 1) {
-            if (opcode != JSR && opcode != GOTO) {
-                push(getCrntLocId());
-                invokeRTMethod(LOG_BRANCH);
-            }
-        }
-        mv.visitJumpInsn(opcode, label);
-    }
-
-    @Override
-    public void visitTableSwitchInsn(int min, int max, Label dflt, Label... labels) {
-        if (branchModel == 1) {
-            push(getCrntLocId());
-            invokeRTMethod(LOG_BRANCH);
-        }
-        mv.visitTableSwitchInsn(min, max, dflt, labels);
     }
 
     private void push(int... ints) {

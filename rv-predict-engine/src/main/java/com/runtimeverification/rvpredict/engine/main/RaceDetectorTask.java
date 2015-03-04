@@ -48,11 +48,7 @@ public class RaceDetectorTask implements Runnable {
     public void run() {
         SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(RVPredict.getConfig(), trace);
 
-        if (RVPredict.getConfig().rmm_pso) {
-            cnstrBuilder.addPSOIntraThreadConstraints();
-        } else {
-            cnstrBuilder.addIntraThreadConstraints();
-        }
+        cnstrBuilder.addIntraThreadConstraints();
         cnstrBuilder.addProgramOrderAndThreadStartJoinConstraints();
         cnstrBuilder.addLockingConstraints();
         /* enumerate each shared memory address in the trace */
@@ -105,13 +101,11 @@ public class RaceDetectorTask implements Runnable {
                             }
 
                             equivAccBlk.get(memAcc).add(crntMemAcc);
-                            if (!RVPredict.getConfig().branch) {
-                                /* YilongL: without logging branch events, we
-                                 * have to be conservative and end the block
-                                 * when a read event is encountered */
-                                if (crntMemAcc instanceof ReadEvent) {
-                                    break;
-                                }
+                            /* YilongL: without logging branch events, we
+                             * have to be conservative and end the block
+                             * when a read event is encountered */
+                            if (crntMemAcc instanceof ReadEvent) {
+                                break;
                             }
 
                             prevMemAccIdx = crntMemAccIdx;

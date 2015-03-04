@@ -37,6 +37,14 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private int crntLineNum;
 
+    /**
+     * Specifies the number of constructor calls already visited in
+     * {@link #visitMethodInsn}.
+     * <p>
+     * Only meaningful when the method being transformed is a constructor.
+     */
+    private int numOfCtorCall = 0;
+
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
             String name, String desc, int access, ClassLoader loader) {
         super(Opcodes.ASM5, new GeneratorAdapter(mv, access, name, desc));
@@ -93,7 +101,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             mv.loadThis();
         }
         push(getCrntLocId());
-        invokeRTMethod(isEnter ? LOG_MONITOR_ENTER : LOG_MONITOR_EXIT);
+        invokeRtnMethod(isEnter ? LOG_MONITOR_ENTER : LOG_MONITOR_EXIT);
     }
 
     @Override
@@ -143,7 +151,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             // <stack>... value objectref longValue </stack>
             push(varId, 0, locId);
             // <stack>... value objectref longValue varId false locId </stack>
-            invokeRTMethod(LOG_FIELD_ACCESS);
+            invokeRtnMethod(LOG_FIELD_ACCESS);
             // <stack>... value </stack>
             break;
         case PUTSTATIC:
@@ -164,7 +172,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             // <stack>... objectref longValue </stack>
             push(varId, 1, locId);
             // <stack>... objectref longValue varId true locId </stack>
-            invokeRTMethod(LOG_FIELD_ACCESS);
+            invokeRtnMethod(LOG_FIELD_ACCESS);
             // <stack>... </stack>
             if (opcode == PUTFIELD) {
                 mv.loadLocal(objectref, OBJECT_TYPE);
@@ -182,6 +190,12 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+        boolean isSelfCtorCall = false;
+        if ("<init>".equals(methodName) && "<init>".equals(name)) {
+            numOfCtorCall++;
+            isSelfCtorCall = numOfCtorCall == 1;
+        }
+
         int idx = (name + desc).lastIndexOf(')');
         String methodSig = (name + desc).substring(0, idx + 1);
         RVPredictInterceptor interceptor = lookup(opcode, owner, methodSig, loader, itf);
@@ -190,7 +204,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             // <stack>... (objectref)? (arg)* </stack>
             push(locId);
             // <stack>... (objectref)? (arg)* locId </stack>
-            invokeRTMethod(interceptor);
+            invokeRtnMethod(interceptor);
             /* cast the result back to the original return type to pass bytecode
              * verification since an overriding method may specialize the return
              * type */
@@ -201,7 +215,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
                 }
             }
         } else {
-            if (owner.startsWith("[") || "<init>".equals(name)) {
+            if (owner.startsWith("[") || isSelfCtorCall) {
                 mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 return;
             } else {
@@ -229,17 +243,17 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
              *     ...
              */
             push(locId);
-            invokeRTMethod(LOG_INVOKE_METHOD);
+            invokeRtnMethod(LOG_INVOKE_METHOD);
             Label l0 = mv.mark();
             mv.visitMethodInsn(opcode, owner, name, desc, itf);
             push(locId);
-            invokeRTMethod(LOG_FINISH_METHOD);
+            invokeRtnMethod(LOG_FINISH_METHOD);
             Label l2 = mv.newLabel();
             mv.goTo(l2);
             Label l1 = mv.mark();
             mv.catchException(l0, l1, null);
             push(locId);
-            invokeRTMethod(LOG_FINISH_METHOD);
+            invokeRtnMethod(LOG_FINISH_METHOD);
             mv.throwException();
             mv.mark(l2);
         }
@@ -263,7 +277,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             mv.visitInsn(opcode);
             push(getCrntLocId());
             // <stack>... objectref locId </stack>
-            invokeRTMethod(LOG_MONITOR_ENTER);
+            invokeRtnMethod(LOG_MONITOR_ENTER);
             break;
         case MONITOREXIT: {
             /* moniter exit must logged before it happens */
@@ -271,7 +285,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             mv.dup();
             push(getCrntLocId());
             // <stack>... objectref objectref locId </stack>
-            invokeRTMethod(LOG_MONITOR_EXIT);
+            invokeRtnMethod(LOG_MONITOR_EXIT);
             mv.visitInsn(opcode);
             break;
         }
@@ -320,7 +334,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         // <stack>... value arrayref index longValue </stack>
         push(0, getCrntLocId());
         // <stack>... value arrayref index longValue false locId </stack>
-        invokeRTMethod(LOG_ARRAY_ACCESS);
+        invokeRtnMethod(LOG_ARRAY_ACCESS);
         // <stack>... value </stack>
     }
 
@@ -338,7 +352,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         // <stack>... arrayref index array index longValue </stack>
         push(1, getCrntLocId());
         // <stack>... arrayref index array index longValue true locId </stack>
-        invokeRTMethod(LOG_ARRAY_ACCESS);
+        invokeRtnMethod(LOG_ARRAY_ACCESS);
         // <stack>... arrayref index </stack>
         mv.loadLocal(value, valueType);
         // <stack>... arrayref index value </stack>
@@ -351,7 +365,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         }
     }
 
-    private void invokeRTMethod(RVPredictRuntimeMethod rvpredictRTMethod) {
+    private void invokeRtnMethod(RVPredictRuntimeMethod rvpredictRTMethod) {
         mv.invokeStatic(RVPREDICT_RUNTIME_TYPE, rvpredictRTMethod.method);
     }
 

@@ -272,15 +272,16 @@ public class Trace {
                     stacktrace.remove(stacktrace.size() - 1);
                 }
             }
+            stacktrace.add(loggingFactory.getStmtSig(event.getLocId()));
         } else {
             /* event is from previous windows */
             if (initHeldLockToStacktrace.containsKey(event)) {
                 stacktrace.addAll(initHeldLockToStacktrace.get(event));
             } else {
+                stacktrace.add(loggingFactory.getStmtSig(event.getLocId()));
                 stacktrace.add("... stack trace not available ...");
             }
         }
-        stacktrace.add(loggingFactory.getStmtSig(event.getLocId()));
         return stacktrace;
     }
 

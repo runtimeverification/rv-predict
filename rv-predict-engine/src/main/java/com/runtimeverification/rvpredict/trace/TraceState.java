@@ -130,7 +130,7 @@ public class TraceState {
         long value = memAcc.getValue();
         if (memAcc instanceof ReadEvent) {
             long oldVal = getValueAt(addr);
-            if (config.debug) {
+            if (Configuration.debug) {
                 if (value != Constants._0X_DEADBEEFL && value != oldVal) {
                     System.err.printf(
                         String.format("[Warning] logged trace not sequential consistent:%n"

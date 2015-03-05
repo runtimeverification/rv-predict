@@ -132,8 +132,10 @@ public class Agent implements ClassFileTransformer, Constants {
      * "https://github.com/glowroot/glowroot/blob/master/core/src/main/java/org/glowroot/weaving/PreInitializeWeavingClasses.java"
      * >PreInitializeWeavingClasses</a> from Glowroot project.
      */
+    @SuppressWarnings("rawtypes")
     private static void preinitializeClasses() {
         try {
+            new java.util.LinkedHashMap().keySet().iterator();
             Class.forName(ThreadLocalRandom.class.getName());
             Class.forName(RVPredictRuntimeMethods.class.getName());
         } catch (ClassNotFoundException e) {

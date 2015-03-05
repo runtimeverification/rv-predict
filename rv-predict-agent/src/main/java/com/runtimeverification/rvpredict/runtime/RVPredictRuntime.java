@@ -773,7 +773,7 @@ public final class RVPredictRuntime implements Constants {
         synchronized (aqs) {
             saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(aqs),
                     -AQS_MOCK_STATE_ID, newState, 0);
-            invokeMethodHandle(AQS_SET_STATE, aqs);
+            invokeMethodHandle(AQS_SET_STATE, aqs, newState);
         }
     }
 
@@ -785,7 +785,7 @@ public final class RVPredictRuntime implements Constants {
         synchronized (aqs) {
             saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId, System.identityHashCode(aqs),
                     -AQS_MOCK_STATE_ID, (int) invokeMethodHandle(AQS_GET_STATE, aqs), update);
-            return (boolean) invokeMethodHandle(AQS_CAS_STATE, aqs);
+            return (boolean) invokeMethodHandle(AQS_CAS_STATE, aqs, expect, update);
         }
     }
 
@@ -1215,7 +1215,7 @@ public final class RVPredictRuntime implements Constants {
      */
     private static Object invokeMethodHandle(MethodHandle mh, Object... objects) {
         try {
-            return objects.length == 1 ? mh.invoke(objects[0]) : mh.invoke(objects);
+            return mh.invokeWithArguments(objects);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }

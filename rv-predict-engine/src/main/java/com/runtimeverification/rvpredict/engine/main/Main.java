@@ -274,10 +274,7 @@ public class Main {
             }
             Util.redirectInput(agentProc.getOutputStream(), System.in);
 
-            int exitVal = agentProc.waitFor();
-            if (exitVal != 0) {
-                System.exit(exitVal);
-            }
+            agentProc.waitFor();
             Runtime.getRuntime().removeShutdownHook(cleanupAgent);
         } catch (IOException ignored) {
         } catch (InterruptedException e) {

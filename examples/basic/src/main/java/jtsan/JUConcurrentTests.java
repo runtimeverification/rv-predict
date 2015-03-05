@@ -257,6 +257,7 @@ public class JUConcurrentTests {
         };
     }
 
+    @ExcludedTest(reason = "AtomicInteger not yet mocked")
     @RaceTest(expectRace = false,
             description = "Work with LinkedBlockingQueue. Two readers, two writers")
     public void linkedBlockingQueue() {
@@ -304,7 +305,6 @@ public class JUConcurrentTests {
 
         };
     }
-
 
     @RaceTest(expectRace = false,
             description = "Use Lock.lockInteruptibly for acquired a lock")
@@ -829,7 +829,7 @@ public class JUConcurrentTests {
             // negative tests
             tests.arrayBlockingQueue(); // testing the internal of ABQ
             tests.arrayBlockingQueue2(); // testing HB relation imposed by ABQ.put/take
-            tests.linkedBlockingQueue();
+//            tests.linkedBlockingQueue();
             tests.lockInterruptibly();
             tests.reentrantLockInterruptibly();
             tests.countDownLatch();

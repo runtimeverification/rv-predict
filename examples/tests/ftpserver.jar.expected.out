@@ -1,7 +1,5 @@
 (?s)(.*)Race on field org.apache.mina.core.session.AbstractIoSession.attributes between:(\s)*org.apache.mina.core.session.AbstractIoSession.setAttribute\(AbstractIoSession.java:482\)(\s)*org.apache.mina.core.session.AbstractIoSession.setAttributeMap\(AbstractIoSession.java:552\)(.*)
 
-(?s)(.*)Race on field org.apache.mina.core.filterchain.DefaultIoFilterChain\$EntryImpl.nextEntry between:(\s)*org.apache.mina.core.filterchain.DefaultIoFilterChain\$EntryImpl.access\$300\(DefaultIoFilterChain.java:741\)(\s)*org.apache.mina.core.filterchain.DefaultIoFilterChain\$EntryImpl.access\$302\(DefaultIoFilterChain.java:741\)(.*)
-
 (?s)(.*)Race on field org.apache.mina.core.buffer.IoBuffer.allocator between:(\s)*org.apache.mina.core.buffer.IoBuffer.allocate\(IoBuffer.java:218\)(\s)*org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)
 
 (?s)(.*)Race on field org.apache.mina.core.buffer.IoBuffer.allocator between:(\s)*org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:167\)(\s)*org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)

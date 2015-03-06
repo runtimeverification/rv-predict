@@ -24,7 +24,7 @@ public class TraceCache {
 
     private final Map<Long, Pair<EventInputStream, EventItem>> indexes;
 
-    private long nextIdx = 0;
+    private long nextIdx = 1;
 
     private final LoggingFactory loggingFactory;
 
@@ -58,6 +58,7 @@ public class TraceCache {
             InterruptedException {
         Trace trace = new Trace(crntState);
         crntState.setCurrentTraceWindow(trace);
+        assert nextIdx == fromIndex;
         for (nextIdx = fromIndex; nextIdx < toIndex; nextIdx++) {
             EventItem eventItem = getNextEvent();
             if (eventItem == null) {

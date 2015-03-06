@@ -70,7 +70,7 @@ public class RVPredict implements LoggingTask {
 
         long startTime = System.currentTimeMillis();
 
-        traceCache = new TraceCache(config, loggingFactory);
+        traceCache = new TraceCache(loggingFactory);
 
         infoTask = new ExecutionInfoTask(this, startTime);
 

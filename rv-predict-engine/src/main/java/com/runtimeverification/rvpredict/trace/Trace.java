@@ -499,9 +499,8 @@ public class Trace {
             }
         }
 
-        /* remove empty lock regions */
+        /* remove complete yet empty lock regions */
         Table<Long, Long, Event> lockEventTbl = HashBasedTable.create();
-        Set<Long> criticalThreadIds = new HashSet<>();
         Set<Event> criticalLockingEvents = new HashSet<>();
         for (Event event : reducedEvents) {
             long tid = event.getTID();
@@ -514,22 +513,16 @@ public class Trace {
             } else if (event.isUnlockEvent()) {
                 long lockId = ((SyncEvent) event).getSyncObject();
                 Event lock = lockStatus.remove(lockId);
-                if (lock != null) {
-                    if (criticalLockingEvents.contains(lock)) {
-                        criticalLockingEvents.add(event);
-                    }
-                } else {
-                    if (criticalThreadIds.contains(tid)) {
-                        criticalLockingEvents.add(event);
-                    }
+                if (lock == null || criticalLockingEvents.contains(lock)) {
+                    criticalLockingEvents.add(event);
                 }
             } else {
-                criticalThreadIds.add(tid);
                 for (Event e : lockStatus.values()) {
                     criticalLockingEvents.add(e);
                 }
             }
         }
+        criticalLockingEvents.addAll(lockEventTbl.values());
         for (Event event : reducedEvents) {
             if ((event.isLockEvent() || event.isUnlockEvent())
                     && !criticalLockingEvents.contains(event)) {

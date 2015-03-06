@@ -52,11 +52,9 @@ public class TraceState {
 
     private Trace crntTraceWindow;
 
-    private final Configuration config;
     private final LoggingFactory loggingFactory;
 
-    TraceState(Configuration config, LoggingFactory loggingFactory) {
-        this.config = config;
+    TraceState(LoggingFactory loggingFactory) {
         this.loggingFactory = loggingFactory;
     }
 

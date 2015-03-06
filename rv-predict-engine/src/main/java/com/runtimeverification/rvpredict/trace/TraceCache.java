@@ -7,9 +7,11 @@ import com.runtimeverification.rvpredict.log.LoggingFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * Class adding a transparency layer between the prediction engine and the
@@ -19,7 +21,11 @@ import java.util.Map;
  * @author TraianSF
  */
 public class TraceCache {
-    private final Map<Long,Map.Entry<EventInputStream,EventItem>> indexes;
+
+    private final Map<Long, Pair<EventInputStream, EventItem>> indexes;
+
+    private long nextIdx = 1;
+
     private final LoggingFactory loggingFactory;
 
     private final TraceState crntState;
@@ -40,7 +46,7 @@ public class TraceCache {
      * Load trace segment from event {@code fromIndex} to event
      * {@code toIndex-1}. Event number is assumed to start from 1.
      *
-     * @see TraceCache#getEvent(long)
+     * @see TraceCache#getNextEvent()
      * @param fromIndex
      *            low endpoint (inclusive) of the trace segment
      * @param toIndex
@@ -52,10 +58,12 @@ public class TraceCache {
             InterruptedException {
         Trace trace = new Trace(crntState);
         crntState.setCurrentTraceWindow(trace);
-        for (long index = fromIndex; index < toIndex; index++) {
-            EventItem eventItem = getEvent(index);
-            if (eventItem == null)
+        assert nextIdx == fromIndex;
+        for (nextIdx = fromIndex; nextIdx < toIndex; nextIdx++) {
+            EventItem eventItem = getNextEvent();
+            if (eventItem == null) {
                 break;
+            }
             trace.addRawEvent(EventUtils.of(eventItem));
         }
         trace.finishedLoading();
@@ -63,34 +71,40 @@ public class TraceCache {
     }
 
     /**
-     * Returns the event whose unique identifier in the logged
-     * trace is given by {@code index}.
-     * This method assumes the trace is read in sequential order,
-     * hence one of the keys in the {@link #indexes} table is equal
-     * to {@code index}.
-     * Moreover, it is assumed that {@code index < traceSize}.
-     * @param index  index of the event to be read
-     * @return the event requested
+     * Returns the next event in the trace, whose unique identifier in the
+     * logged trace is given by {@link #nextIdx}.
+     * <p>
+     * This method assumes the trace is read in sequential order, hence one of
+     * the keys in the {@link #indexes} table is equal to {@code nextIdx}.
+     * Moreover, it is assumed that {@code nextIdx < traceSize}.
+     *
+     * @return the next event in the trace
      */
-    public EventItem getEvent(long index) throws IOException, InterruptedException {
-        if (!indexes.containsKey(index)) {
-            updateIndexes(index);
-            if (!indexes.containsKey(index)) return null;
+    private EventItem getNextEvent() throws IOException, InterruptedException {
+        if (!indexes.containsKey(nextIdx)) {
+            try {
+                updateIndexes(nextIdx);
+            } catch (EOFException e) {
+                // EOF is expected
+                return null;
+            }
         }
-        Map.Entry<EventInputStream,EventItem> entry = indexes.remove(index);
+        Pair<EventInputStream, EventItem> entry = indexes.remove(nextIdx);
+        if (entry == null) {
+            return null;
+        }
 
-        assert entry != null : "Index not (yet) available. Attempting to read events out of order?";
-        EventItem event = entry.getValue();
+        EventItem nextEvent = entry.getValue();
         try {
-            EventItem newEvent = entry.getKey().readEvent();
-            entry.setValue(newEvent);
-            indexes.put(newEvent.GID, entry);
+            EventItem event = entry.getKey().readEvent();
+            entry.setValue(event);
+            indexes.put(event.GID, entry);
         } catch (EOFException e) {
             // EOF is expected.
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return event;
+        return nextEvent;
     }
 
     private void updateIndexes(long index) throws IOException, InterruptedException {
@@ -99,7 +113,7 @@ public class TraceCache {
             EventInputStream inputStream = loggingFactory.getInputStream();
             if (inputStream == null) return;
             event = inputStream.readEvent();
-            indexes.put(event.GID, new AbstractMap.SimpleEntry<>(inputStream, event));
+            indexes.put(event.GID, MutablePair.of(inputStream, event));
         } while (event.GID != index);
     }
 

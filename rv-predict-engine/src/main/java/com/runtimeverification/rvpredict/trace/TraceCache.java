@@ -7,9 +7,10 @@ import com.runtimeverification.rvpredict.log.LoggingFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * Class adding a transparency layer between the prediction engine and the
@@ -19,7 +20,7 @@ import java.util.Map;
  * @author TraianSF
  */
 public class TraceCache {
-    private final Map<Long,Map.Entry<EventInputStream,EventItem>> indexes;
+    private final Map<Long, Pair<EventInputStream, EventItem>> indexes;
     private final LoggingFactory loggingFactory;
 
     private final TraceState crntState;
@@ -74,12 +75,18 @@ public class TraceCache {
      */
     public EventItem getEvent(long index) throws IOException, InterruptedException {
         if (!indexes.containsKey(index)) {
-            updateIndexes(index);
-            if (!indexes.containsKey(index)) return null;
+            try {
+                updateIndexes(index);
+            } catch (EOFException e) {
+                // EOF is expected
+                return null;
+            }
         }
-        Map.Entry<EventInputStream,EventItem> entry = indexes.remove(index);
+        Pair<EventInputStream, EventItem> entry = indexes.remove(index);
+        if (entry == null) {
+            return null;
+        }
 
-        assert entry != null : "Index not (yet) available. Attempting to read events out of order?";
         EventItem event = entry.getValue();
         try {
             EventItem newEvent = entry.getKey().readEvent();
@@ -99,7 +106,7 @@ public class TraceCache {
             EventInputStream inputStream = loggingFactory.getInputStream();
             if (inputStream == null) return;
             event = inputStream.readEvent();
-            indexes.put(event.GID, new AbstractMap.SimpleEntry<>(inputStream, event));
+            indexes.put(event.GID, Pair.of(inputStream, event));
         } while (event.GID != index);
     }
 

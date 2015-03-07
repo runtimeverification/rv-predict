@@ -145,13 +145,13 @@ public class Agent implements ClassFileTransformer, Constants {
     public byte[] transform(ClassLoader loader, String cname, Class<?> c, ProtectionDomain d,
             byte[] cbuf) throws IllegalClassFormatException {
         try {
-            checkUninterceptedClassLoading(cname, c);
-
             ClassReader cr = new ClassReader(cbuf);
             if (cname == null) {
                 // cname could be null for class like java/lang/invoke/LambdaForm$DMH
                 cname = cr.getClassName();
             }
+
+            checkUninterceptedClassLoading(cname, c);
 
             if (!cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT) && !cname.startsWith("sun")) {
                 ClassFile classFile = ClassFile.getInstance(loader, cname, cbuf);
@@ -164,7 +164,11 @@ public class Agent implements ClassFileTransformer, Constants {
         } catch (Throwable e) {
             /* exceptions during class loading are silently suppressed by default */
             System.err.println("Cannot retransform " + cname + ". Exception: " + e);
-            e.printStackTrace();
+            if (Configuration.debug) {
+                e.printStackTrace();
+                // fail-fast strategy under debug mode
+                System.exit(1);
+            }
             throw e;
         }
     }
@@ -172,16 +176,20 @@ public class Agent implements ClassFileTransformer, Constants {
     private static final Set<String> loadedClasses = new HashSet<>();
 
     private static void checkUninterceptedClassLoading(String cname, Class<?> c) {
-        if (Configuration.verbose) {
-            if (c == null) {
-                System.err.println("[Java-agent] intercepted class load: " + cname);
-            } else {
-                System.err.println("[Java-agent] intercepted class redefinition/retransformation: " + c);
-            }
+        if (Configuration.debug) {
+//            if (c == null) {
+//                System.err.println("[Java-agent] intercepted class load: " + cname);
+//            } else {
+//                System.err.println("[Java-agent] intercepted class redefinition/retransformation: " + c);
+//            }
 
             loadedClasses.add(cname.replace("/", "."));
             for (Class<?> cls : instrumentation.getAllLoadedClasses()) {
-                if (loadedClasses.add(cls.getName()) && !cls.isArray()) {
+                String name = cls.getName();
+                if (loadedClasses.add(name) && !cls.isArray()
+                        && !name.startsWith("com.runtimeverification.rvpredict")
+                        && !name.startsWith("java.lang")
+                        && !name.startsWith("sun.")) {
                     System.err.println("[Java-agent] missed to intercept class load: " + cls);
                 }
             }

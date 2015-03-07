@@ -1,39 +1,39 @@
 /*
- * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 /*
- *
- *
- *
- *
+ * This file is available under and governed by the GNU General Public
+ * License version 2 only, as published by the Free Software Foundation.
+ * However, the following notice accompanied the original version of this
+ * file:
  *
  * Written by Doug Lea with assistance from members of JCP JSR-166
  * Expert Group and released to the public domain, as explained at
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-package com.runtimeverification.rvpredict.util;
+package com.runtimeverification.rvpredict.util.juc;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -44,9 +44,6 @@ import java.util.AbstractQueue;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.function.Consumer;
 
 /**
  * An optionally-bounded {@linkplain BlockingQueue blocking queue} based on
@@ -61,7 +58,7 @@ import java.util.function.Consumer;
  * Linked queues typically have higher throughput than array-based queues but
  * less predictable performance in most concurrent applications.
  *
- * <p>The optional capacity bound constructor argument serves as a
+ * <p> The optional capacity bound constructor argument serves as a
  * way to prevent excessive queue expansion. The capacity, if unspecified,
  * is equal to {@link Integer#MAX_VALUE}.  Linked nodes are
  * dynamically created upon each insertion unless this would bring the
@@ -78,8 +75,9 @@ import java.util.function.Consumer;
  * @since 1.5
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
+ *
  */
-public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
+public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         implements BlockingQueue<E>, java.io.Serializable {
     private static final long serialVersionUID = -6903933977591709194L;
 
@@ -139,13 +137,13 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
     private final int capacity;
 
     /** Current number of elements */
-    private final AtomicInteger count = new AtomicInteger();
+    private final AtomicInteger count = new AtomicInteger(0);
 
     /**
      * Head of linked list.
      * Invariant: head.item == null
      */
-    transient Node<E> head;
+    private transient Node<E> head;
 
     /**
      * Tail of linked list.
@@ -221,7 +219,7 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
     }
 
     /**
-     * Locks to prevent both puts and takes.
+     * Lock to prevent both puts and takes.
      */
     void fullyLock() {
         putLock.lock();
@@ -229,7 +227,7 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
     }
 
     /**
-     * Unlocks to allow both puts and takes.
+     * Unlock to allow both puts and takes.
      */
     void fullyUnlock() {
         takeLock.unlock();
@@ -248,7 +246,7 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
      * Creates a {@code LinkedBlockingQueue} with a capacity of
      * {@link Integer#MAX_VALUE}.
      */
-    public LinkedBlockingQueueCopy() {
+    public LinkedBlockingQueue() {
         this(Integer.MAX_VALUE);
     }
 
@@ -259,7 +257,7 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
      * @throws IllegalArgumentException if {@code capacity} is not greater
      *         than zero
      */
-    public LinkedBlockingQueueCopy(int capacity) {
+    public LinkedBlockingQueue(int capacity) {
         if (capacity <= 0) throw new IllegalArgumentException();
         this.capacity = capacity;
         last = head = new Node<E>(null);
@@ -275,7 +273,7 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
      * @throws NullPointerException if the specified collection or any
      *         of its elements are null
      */
-    public LinkedBlockingQueueCopy(Collection<? extends E> c) {
+    public LinkedBlockingQueue(Collection<? extends E> c) {
         this(Integer.MAX_VALUE);
         final ReentrantLock putLock = this.putLock;
         putLock.lock(); // Never contended, but necessary for visibility
@@ -294,6 +292,7 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
             putLock.unlock();
         }
     }
+
 
     // this doc comment is overridden to remove the reference to collections
     // greater in size than Integer.MAX_VALUE
@@ -338,7 +337,7 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
         // Note: convention in all put/take/etc is to preset local var
         // holding count negative to indicate failure unless set.
         int c = -1;
-        Node<E> node = new Node<E>(e);
+        Node<E> node = new Node(e);
         final ReentrantLock putLock = this.putLock;
         final AtomicInteger count = this.count;
         putLock.lockInterruptibly();
@@ -370,7 +369,7 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
      * necessary up to the specified wait time for space to become available.
      *
      * @return {@code true} if successful, or {@code false} if
-     *         the specified waiting time elapses before space is available
+     *         the specified waiting time elapses before space is available.
      * @throws InterruptedException {@inheritDoc}
      * @throws NullPointerException {@inheritDoc}
      */
@@ -420,7 +419,7 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
         if (count.get() == capacity)
             return false;
         int c = -1;
-        Node<E> node = new Node<E>(e);
+        Node<E> node = new Node(e);
         final ReentrantLock putLock = this.putLock;
         putLock.lock();
         try {
@@ -437,6 +436,7 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
             signalNotEmpty();
         return c >= 0;
     }
+
 
     @Override
     public E take() throws InterruptedException {
@@ -644,7 +644,8 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
      * The following code can be used to dump the queue into a newly
      * allocated array of {@code String}:
      *
-     *  <pre> {@code String[] y = x.toArray(new String[0]);}</pre>
+     * <pre>
+     *     String[] y = x.toArray(new String[0]);</pre>
      *
      * Note that {@code toArray(new Object[0])} is identical in function to
      * {@code toArray()}.
@@ -746,8 +747,6 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
             throw new NullPointerException();
         if (c == this)
             throw new IllegalArgumentException();
-        if (maxElements <= 0)
-            return 0;
         boolean signalNotFull = false;
         final ReentrantLock takeLock = this.takeLock;
         takeLock.lock();
@@ -785,14 +784,18 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
      * Returns an iterator over the elements in this queue in proper sequence.
      * The elements will be returned in order from first (head) to last (tail).
      *
-     * <p>The returned iterator is
-     * <a href="package-summary.html#Weakly"><i>weakly consistent</i></a>.
+     * <p>The returned iterator is a "weakly consistent" iterator that
+     * will never throw {@link java.util.ConcurrentModificationException
+     * ConcurrentModificationException}, and guarantees to traverse
+     * elements as they existed upon construction of the iterator, and
+     * may (but is not guaranteed to) reflect any modifications
+     * subsequent to construction.
      *
      * @return an iterator over the elements in this queue in proper sequence
      */
     @Override
     public Iterator<E> iterator() {
-        return new Itr();
+      return new Itr();
     }
 
     private class Itr implements Iterator<E> {
@@ -801,7 +804,6 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
          * item to hand out so that if hasNext() reports true, we will
          * still have it to return even if lost race with a take etc.
          */
-
         private Node<E> current;
         private Node<E> lastRet;
         private E currentElement;
@@ -878,154 +880,13 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
         }
     }
 
-    /** A customized variant of Spliterators.IteratorSpliterator */
-    static final class LBQSpliterator<E> implements Spliterator<E> {
-        static final int MAX_BATCH = 1 << 25;  // max batch array size;
-        final LinkedBlockingQueueCopy<E> queue;
-        Node<E> current;    // current node; null until initialized
-        int batch;          // batch size for splits
-        boolean exhausted;  // true when no more nodes
-        long est;           // size estimate
-        LBQSpliterator(LinkedBlockingQueueCopy<E> queue) {
-            this.queue = queue;
-            this.est = queue.size();
-        }
-
-        @Override
-        public long estimateSize() { return est; }
-
-        @Override
-        public Spliterator<E> trySplit() {
-            Node<E> h;
-            final LinkedBlockingQueueCopy<E> q = this.queue;
-            int b = batch;
-            int n = (b <= 0) ? 1 : (b >= MAX_BATCH) ? MAX_BATCH : b + 1;
-            if (!exhausted &&
-                ((h = current) != null || (h = q.head.next) != null) &&
-                h.next != null) {
-                Object[] a = new Object[n];
-                int i = 0;
-                Node<E> p = current;
-                q.fullyLock();
-                try {
-                    if (p != null || (p = q.head.next) != null) {
-                        do {
-                            if ((a[i] = p.item) != null)
-                                ++i;
-                        } while ((p = p.next) != null && i < n);
-                    }
-                } finally {
-                    q.fullyUnlock();
-                }
-                if ((current = p) == null) {
-                    est = 0L;
-                    exhausted = true;
-                }
-                else if ((est -= i) < 0L)
-                    est = 0L;
-                if (i > 0) {
-                    batch = i;
-                    return Spliterators.spliterator
-                        (a, 0, i, Spliterator.ORDERED | Spliterator.NONNULL |
-                         Spliterator.CONCURRENT);
-                }
-            }
-            return null;
-        }
-
-        @Override
-        public void forEachRemaining(Consumer<? super E> action) {
-            if (action == null) throw new NullPointerException();
-            final LinkedBlockingQueueCopy<E> q = this.queue;
-            if (!exhausted) {
-                exhausted = true;
-                Node<E> p = current;
-                do {
-                    E e = null;
-                    q.fullyLock();
-                    try {
-                        if (p == null)
-                            p = q.head.next;
-                        while (p != null) {
-                            e = p.item;
-                            p = p.next;
-                            if (e != null)
-                                break;
-                        }
-                    } finally {
-                        q.fullyUnlock();
-                    }
-                    if (e != null)
-                        action.accept(e);
-                } while (p != null);
-            }
-        }
-
-        @Override
-        public boolean tryAdvance(Consumer<? super E> action) {
-            if (action == null) throw new NullPointerException();
-            final LinkedBlockingQueueCopy<E> q = this.queue;
-            if (!exhausted) {
-                E e = null;
-                q.fullyLock();
-                try {
-                    if (current == null)
-                        current = q.head.next;
-                    while (current != null) {
-                        e = current.item;
-                        current = current.next;
-                        if (e != null)
-                            break;
-                    }
-                } finally {
-                    q.fullyUnlock();
-                }
-                if (current == null)
-                    exhausted = true;
-                if (e != null) {
-                    action.accept(e);
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        @Override
-        public int characteristics() {
-            return Spliterator.ORDERED | Spliterator.NONNULL |
-                Spliterator.CONCURRENT;
-        }
-    }
-
     /**
-     * Returns a {@link Spliterator} over the elements in this queue.
+     * Save the state to a stream (that is, serialize it).
      *
-     * <p>The returned spliterator is
-     * <a href="package-summary.html#Weakly"><i>weakly consistent</i></a>.
-     *
-     * <p>The {@code Spliterator} reports {@link Spliterator#CONCURRENT},
-     * {@link Spliterator#ORDERED}, and {@link Spliterator#NONNULL}.
-     *
-     * @implNote
-     * The {@code Spliterator} implements {@code trySplit} to permit limited
-     * parallelism.
-     *
-     * @return a {@code Spliterator} over the elements in this queue
-     * @since 1.8
-     */
-    @Override
-    public Spliterator<E> spliterator() {
-        return new LBQSpliterator<E>(this);
-    }
-
-    /**
-     * Saves this queue to a stream (that is, serializes it).
-     *
-     * @param s the stream
-     * @throws java.io.IOException if an I/O error occurs
      * @serialData The capacity is emitted (int), followed by all of
      * its elements (each an {@code Object}) in the proper order,
      * followed by a null
+     * @param s the stream
      */
     private void writeObject(java.io.ObjectOutputStream s)
         throws java.io.IOException {
@@ -1047,11 +908,10 @@ public class LinkedBlockingQueueCopy<E> extends AbstractQueue<E>
     }
 
     /**
-     * Reconstitutes this queue from a stream (that is, deserializes it).
+     * Reconstitute this queue instance from a stream (that is,
+     * deserialize it).
+     *
      * @param s the stream
-     * @throws ClassNotFoundException if the class of a serialized object
-     *         could not be found
-     * @throws java.io.IOException if an I/O error occurs
      */
     private void readObject(java.io.ObjectInputStream s)
         throws java.io.IOException, ClassNotFoundException {

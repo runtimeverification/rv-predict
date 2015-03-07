@@ -1,7 +1,7 @@
 package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.util.LinkedBlockingQueueCopy;
+import com.runtimeverification.rvpredict.util.juc.LinkedBlockingQueue;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -23,7 +23,7 @@ import java.util.concurrent.BlockingQueue;
  */
 public class OnlineLoggingFactory implements LoggingFactory {
     private static final PipedInputStream END_INPUT_STREAM = new PipedInputStream();
-    private BlockingQueue<PipedInputStream> eventInputStreams = new LinkedBlockingQueueCopy<>();
+    private BlockingQueue<PipedInputStream> eventInputStreams = new LinkedBlockingQueue<>();
 
     @Override
     public EventPipe createEventPipe() {

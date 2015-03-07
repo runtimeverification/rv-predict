@@ -81,6 +81,9 @@ public class Metadata implements Opcodes {
                     if (Configuration.online) {
                         locIdToStmtSig.put(locId, sig);
                     } else {
+                        if (Configuration.profile) {
+                            locIdToStmtSig.put(locId, sig);
+                        }
                         unsavedLocIdToStmtSig.add(Pair.of(locId, sig));
                     }
                 }
@@ -88,6 +91,22 @@ public class Metadata implements Opcodes {
         }
 
         return locId;
+    }
+
+    public static String getLocationClass(int locId) {
+        String stmtSig;
+        synchronized (stmtSigToLocId) {
+            stmtSig = locIdToStmtSig.get(locId);
+        }
+        String className;
+        if (stmtSig != null) {
+            className = stmtSig.substring(0, stmtSig.indexOf("("));
+            className = stmtSig.substring(0, className.lastIndexOf("."));
+        } else {
+            // locId is 0
+            className = "N/A";
+        }
+        return className;
     }
 
     private static String getVariableSignature(String className, String fieldName) {

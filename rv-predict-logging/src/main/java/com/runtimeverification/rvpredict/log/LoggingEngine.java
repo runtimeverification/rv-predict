@@ -28,9 +28,13 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.log;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.trace.EventType;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Class encapsulating functionality for recording events
@@ -40,25 +44,36 @@ import java.io.IOException;
  */
 public class LoggingEngine {
 
-    private final LoggingServer loggingServer;
-    private final LoggingTask predictionServer;
-    private final Configuration config;
     private volatile boolean shutdown = false;
+
     private final LoggingFactory loggingFactory;
 
-    public LoggingEngine(Configuration config, LoggingFactory loggingFactory, LoggingTask predictionServer) {
-        this.config = config;
+    private final LoggingTask predictionServer;
+
+    private final MetadataLogger metadataLogger;
+
+    private final List<EventDisruptor> disruptors = new ArrayList<>();
+
+    private final ThreadLocalDisruptor threadLocalDisruptor = new ThreadLocalDisruptor();
+
+    public LoggingEngine(LoggingFactory loggingFactory, LoggingTask predictionServer) {
         this.loggingFactory = loggingFactory;
         this.predictionServer = predictionServer;
 
-        loggingServer = new LoggingServer(this);
+        metadataLogger = Configuration.online ? null : new MetadataLogger(this);
+    }
+
+    public LoggingFactory getLoggingFactory() {
+        return loggingFactory;
     }
 
     public void startLogging() {
-        Thread loggingServerThread = new Thread(loggingServer, "Logging server");
-        loggingServer.setOwner(loggingServerThread);
-        loggingServerThread.setDaemon(true);
-        loggingServerThread.start();
+        if (!Configuration.online) {
+            Thread metadataLoggerThread = new Thread(metadataLogger, "Metadata logger");
+            metadataLogger.setOwner(metadataLoggerThread);
+            metadataLoggerThread.setDaemon(true);
+            metadataLoggerThread.start();
+        }
     }
 
     /**
@@ -67,7 +82,16 @@ public class LoggingEngine {
      */
     public void finishLogging() throws IOException, InterruptedException {
         shutdown = true;
-        loggingServer.finishLogging();
+
+        Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+        for (EventDisruptor disruptor : disruptors) {
+            disruptor.shutdown();
+        }
+
+        if (!Configuration.online) {
+            metadataLogger.finishLogging();
+        }
+
         if (Configuration.profile) {
             EventsProfiler.printEventStats();
         }
@@ -85,22 +109,26 @@ public class LoggingEngine {
     }
 
     /**
-     * Logs an {@link EventItem} to the trace.
+     * Logs an event item to the trace.
      *
-     * @see EventItem#EventItem(long, long, int, int, int, long, EventType) for
-     *      a more elaborate description of the parameters.
+     * @see {@link EventItem} for a more elaborate description of the
+     *      parameters.
      */
-    public void saveEvent(EventItem eventItem) {
+    public void logEvent(long gid, long tid, int locId, int addrl, int addrr, long value,
+            EventType eventType) {
         if (!shutdown) {
-            loggingServer.writeEvent(eventItem);
+            threadLocalDisruptor.get()
+                    .publishEvent(gid, tid, locId, addrl, addrr, value, eventType);
         }
     }
 
-    public LoggingFactory getLoggingFactory() {
-        return loggingFactory;
+    private class ThreadLocalDisruptor extends ThreadLocal<EventDisruptor> {
+        @Override
+        protected EventDisruptor initialValue() {
+            EventDisruptor disruptor = EventDisruptor.create(loggingFactory);
+            disruptors.add(disruptor);
+            return disruptor;
+       }
     }
 
-    public Configuration getConfig() {
-        return config;
-    }
 }

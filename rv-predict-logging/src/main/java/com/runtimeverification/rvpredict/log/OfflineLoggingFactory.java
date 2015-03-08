@@ -14,8 +14,8 @@ import java.util.zip.GZIPOutputStream;
 /**
  * An implementation of the {@link LoggingFactory} interface used for
  * offline prediction.
- * 
- * Metadata and events are written and read from files in the 
+ *
+ * Metadata and events are written and read from files in the
  * {@link Configuration#outdir} directory.
  *
  * @author Traian SF
@@ -161,11 +161,5 @@ public class OfflineLoggingFactory implements LoggingFactory {
                 new BufferedOutputStream(
                         new FileOutputStream(Paths.get(config.outdir, METADATA_BIN).toFile())));
     }
-
-    @Override
-    public EventPipe createEventPipe() {
-        return new BufferedEventPipe();
-    }
-
 
 }

@@ -50,7 +50,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.EventItem;
 import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.EventsProfiler;
 import com.runtimeverification.rvpredict.metadata.Metadata;
@@ -1439,8 +1438,7 @@ public final class RVPredictRuntime implements Constants {
         if (Configuration.profile) {
             EventsProfiler.updateEventStats(eventType, locId, addrl, addrr);
         } else {
-            EventItem eventItem = new EventItem(gid, tid, locId, addrl, addrr, value, eventType);
-            loggingEngine.saveEvent(eventItem);
+            loggingEngine.logEvent(gid, tid, locId, addrl, addrr, value, eventType);
         }
     }
 

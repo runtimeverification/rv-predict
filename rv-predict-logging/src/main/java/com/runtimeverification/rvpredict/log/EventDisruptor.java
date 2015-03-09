@@ -15,13 +15,19 @@ public class EventDisruptor {
 
     private static final int RING_BUFFER_SIZE = 1024;
 
+    private static final int BATCH_SIZE = 128;
+
     private final Disruptor<EventItem> disruptor;
+
+    private long cursor = -1;
+
+    private long claimed = -1;
 
     private boolean isPublishing;
 
     @SuppressWarnings("unchecked")
     public static EventDisruptor create(LoggingFactory loggingFactory) {
-        /* create the executor to be used by disruptor */
+        /* create the executor */
         ExecutorService executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
@@ -32,6 +38,7 @@ public class EventDisruptor {
             }
         });
 
+        /* create the event handler */
         EventOutputStream outputStream = null;
         try {
             outputStream = loggingFactory.createEventOutputStream();
@@ -60,26 +67,38 @@ public class EventDisruptor {
         isPublishing = true;
 
         RingBuffer<EventItem> ringBuffer = disruptor.getRingBuffer();
-        long sequence = ringBuffer.next();
-        try {
-            EventItem event = ringBuffer.get(sequence);
-            event.GID = gid;
-            event.TID = tid;
-            event.ID  = locId;
-            event.ADDRL = addrl;
-            event.ADDRR = addrr;
-            event.VALUE = value;
-            event.TYPE  = eventType;
-        } finally {
-            ringBuffer.publish(sequence);
-            isPublishing = false;
+        if (cursor == claimed) {
+            if (claimed >= 0) {
+                /* publish the current batch of events */
+                ringBuffer.publish(claimed - BATCH_SIZE + 1, claimed);
+            }
+            /* claim the slots for the next batch of events */
+            claimed = ringBuffer.next(BATCH_SIZE);
         }
+
+        /* commit one more event */
+        cursor++;
+        EventItem event = ringBuffer.get(cursor);
+        event.GID = gid;
+        event.TID = tid;
+        event.ID  = locId;
+        event.ADDRL = addrl;
+        event.ADDRR = addrr;
+        event.VALUE = value;
+        event.TYPE  = eventType;
+
+        /* on shutdown signal */
+        if (gid < 0) {
+            /* flush the current batch of events and shutdown the disruptor */
+            ringBuffer.publish(claimed - BATCH_SIZE + 1, claimed);
+            disruptor.shutdown();
+        }
+
+        isPublishing = false;
     }
 
     public void shutdown() {
-        /* signal the EventWriter to close the output stream */
         publishEvent(-1, 0, 0, 0, 0, 0, null);
-        disruptor.shutdown();
     }
 
 }

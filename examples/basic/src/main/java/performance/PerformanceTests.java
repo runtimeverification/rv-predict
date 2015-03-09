@@ -10,12 +10,12 @@ public class PerformanceTests {
     long x;
 
     private void testLoggingPutField() {
-        for (int i = 0; i < 500000; i++) {
+        for (int i = 0; i < 500000; i++) { // warm up
             x = i;
         }
 
         long startTime = System.currentTimeMillis();
-        for (long i = 0; i < 1000000000l; i++) {
+        for (long i = 0; i < 10000000l; i++) { // loop 10 million times
             x = i;
         }
         long endTime = System.currentTimeMillis();

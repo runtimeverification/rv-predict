@@ -30,9 +30,7 @@ package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.trace.EventType;
-
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Class encapsulating functionality for recording events
@@ -42,7 +40,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class LoggingEngine {
 
-    private final AtomicLong globalEventID  = new AtomicLong(0);
     private final LoggingServer loggingServer;
     private final LoggingTask predictionServer;
     private final Configuration config;
@@ -90,22 +87,13 @@ public class LoggingEngine {
     /**
      * Logs an {@link EventItem} to the trace.
      *
-     * @see EventItem#EventItem(long, long, int, int, int, long, EventType)
-     *      for a more elaborate description of the parameters.
-     *
-     * @param eventType  type of event being recorded
-     * @param id location id of the event
-     * @param addrl  additional information identifying the event
-     * @param addrr additional information identifying the event
-     * @param value data involved in the event
+     * @see EventItem#EventItem(long, long, int, int, int, long, EventType) for
+     *      a more elaborate description of the parameters.
      */
-    public void saveEvent(EventType eventType, int id, int addrl, int addrr, long value) {
-        if (shutdown) return;
-
-        long gid = globalEventID.incrementAndGet();
-        long tid = Thread.currentThread().getId();
-        EventItem e = new EventItem(gid, tid, id, addrl, addrr, value, eventType);
-        loggingServer.writeEvent(e);
+    public void saveEvent(EventItem eventItem) {
+        if (!shutdown) {
+            loggingServer.writeEvent(eventItem);
+        }
     }
 
     public LoggingFactory getLoggingFactory() {

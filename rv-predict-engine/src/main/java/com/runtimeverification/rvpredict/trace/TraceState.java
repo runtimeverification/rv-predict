@@ -52,11 +52,9 @@ public class TraceState {
 
     private Trace crntTraceWindow;
 
-    private final Configuration config;
     private final LoggingFactory loggingFactory;
 
-    TraceState(Configuration config, LoggingFactory loggingFactory) {
-        this.config = config;
+    TraceState(LoggingFactory loggingFactory) {
         this.loggingFactory = loggingFactory;
     }
 
@@ -130,7 +128,7 @@ public class TraceState {
         long value = memAcc.getValue();
         if (memAcc instanceof ReadEvent) {
             long oldVal = getValueAt(addr);
-            if (config.debug) {
+            if (Configuration.debug) {
                 if (value != Constants._0X_DEADBEEFL && value != oldVal) {
                     System.err.printf(
                         String.format("[Warning] logged trace not sequential consistent:%n"

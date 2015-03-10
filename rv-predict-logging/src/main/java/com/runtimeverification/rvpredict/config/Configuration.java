@@ -61,9 +61,7 @@ public class Configuration implements Constants {
      * configurable by the users through the <code>--exclude</code> command option.
      */
      private static String[] DEFAULT_EXCLUDES = new String[] {
-            "java.*",
             "javax.*",
-            "sun.*",
             "sunw.*",
             "com.sun.*",
             "com.ibm.*",
@@ -86,22 +84,9 @@ public class Configuration implements Constants {
                  // array type
                  "[",
 
-                 // JDK classes used by the RV-Predict runtime library
-                 "java/io",
-                 "java/nio",
-                 "java/util/ArrayList",
-                 "java/util/concurrent/atomic/AtomicInteger",
-                 "java/util/concurrent/atomic/AtomicLong",
-                 "java/util/concurrent/ConcurrentHashMap",
-                 "java/util/zip/GZIPOutputStream",
-                 "java/util/regex",
-
                  // Basics of the JDK that everything else is depending on
-                 "sun",
-                 "java/lang",
-
-                 /* we provide complete mocking of the jucl package */
-                 "java/util/concurrent/locks"
+                 "sun/",
+                 "java/"
          };
          IGNORES = getDefaultPatterns(ignores);
      }
@@ -114,6 +99,18 @@ public class Configuration implements Constants {
           * logging a lot; besides, I am interested in seeing what could happen */
          // "java/util/Iterator"
      };
+
+    public static List<Pattern> MUST_INCLUDES;
+    static {
+        String[] mustIncludes = new String[] {
+                "java/util/concurrent/Semaphore",
+                "java/util/concurrent/CountDownLatch",
+                "java/util/concurrent/CyclicBarrier",
+                "java/util/concurrent/ArrayBlockingQueue",
+                "java/util/concurrent/LinkedBlockingQueue"
+        };
+        MUST_INCLUDES = getDefaultPatterns(mustIncludes);
+    }
 
     public final List<Pattern> includeList = new ArrayList<>();
     public final List<Pattern> excludeList = new ArrayList<>();

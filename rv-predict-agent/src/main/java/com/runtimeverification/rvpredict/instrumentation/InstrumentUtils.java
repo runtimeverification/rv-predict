@@ -97,6 +97,16 @@ public class InstrumentUtils implements Opcodes {
             }
         }
 
+        /* the only exception to the IGNORES list */
+        if (!toInstrument) {
+            for (Pattern mustInclude : Configuration.MUST_INCLUDES) {
+                if (mustInclude.matcher(cname).matches()) {
+                    toInstrument = true;
+                    break;
+                }
+            }
+        }
+
         instrumentClass.put(cname, toInstrument);
         return toInstrument;
     }

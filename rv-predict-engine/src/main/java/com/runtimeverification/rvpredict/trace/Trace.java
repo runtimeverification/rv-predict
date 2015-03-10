@@ -416,50 +416,45 @@ public class Trace {
         long tid = event.getTID();
         threadIds.add(tid);
 
-       if (event instanceof MetaEvent) {
-            // do nothing
-        } else {
-            allEvents.add(event);
+        allEvents.add(event);
+        getOrInitEmptyList(threadIdToEvents, tid).add(event);
+        if (event instanceof MemoryAccessEvent) {
+            MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
+            MemoryAddr addr = memAcc.getAddr();
 
-            getOrInitEmptyList(threadIdToEvents, tid).add(event);
-            if (event instanceof MemoryAccessEvent) {
-                MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
-                MemoryAddr addr = memAcc.getAddr();
+            getOrInitEmptyList(memAccessEventsTbl.row(addr), tid).add(memAcc);
 
-                getOrInitEmptyList(memAccessEventsTbl.row(addr), tid).add(memAcc);
-
-                if (event instanceof ReadEvent) {
-                    getOrInitEmptyList(addrToReadEvents, addr).add((ReadEvent) event);
-                } else {
-                    getOrInitEmptyList(addrToWriteEvents, addr).add((WriteEvent) event);
-                }
-            } else if (event instanceof SyncEvent) {
-                SyncEvent syncEvent = (SyncEvent) event;
-
-                Map<Long, List<SyncEvent>> eventsMap = null;
-                switch (syncEvent.getType()) {
-                case START:
-                case PRE_JOIN:
-                case JOIN:
-                case JOIN_MAYBE_FAILED:
-                    eventsMap = threadIdToStartJoinEvents;
-                    break;
-                case WRITE_LOCK:
-                case WRITE_UNLOCK:
-                case READ_LOCK:
-                case READ_UNLOCK:
-                case WAIT_REL:
-                case WAIT_ACQ:
-                    eventsMap = lockIdToSyncEvents;
-                    break;
-                default:
-                    assert false : "unexpected event: " + syncEvent;
-                }
-
-                getOrInitEmptyList(eventsMap, syncEvent.getSyncObject()).add(syncEvent);
+            if (event instanceof ReadEvent) {
+                getOrInitEmptyList(addrToReadEvents, addr).add((ReadEvent) event);
             } else {
-                assert false : "unreachable";
+                getOrInitEmptyList(addrToWriteEvents, addr).add((WriteEvent) event);
             }
+        } else if (event instanceof SyncEvent) {
+            SyncEvent syncEvent = (SyncEvent) event;
+
+            Map<Long, List<SyncEvent>> eventsMap = null;
+            switch (syncEvent.getType()) {
+            case START:
+            case PRE_JOIN:
+            case JOIN:
+            case JOIN_MAYBE_FAILED:
+                eventsMap = threadIdToStartJoinEvents;
+                break;
+            case WRITE_LOCK:
+            case WRITE_UNLOCK:
+            case READ_LOCK:
+            case READ_UNLOCK:
+            case WAIT_REL:
+            case WAIT_ACQ:
+                eventsMap = lockIdToSyncEvents;
+                break;
+            default:
+                assert false : "unexpected event: " + syncEvent;
+            }
+
+            getOrInitEmptyList(eventsMap, syncEvent.getSyncObject()).add(syncEvent);
+        } else {
+            assert false : "unreachable";
         }
     }
 
@@ -499,42 +494,35 @@ public class Trace {
                 if (outermostLockingEvents.contains(event)) {
                     reducedEvents.add(event);
                 }
-            } else {
+            } else if (!(event instanceof MetaEvent)) {
                 reducedEvents.add(event);
             }
         }
 
-        /* remove empty lock regions */
+        /* remove complete yet empty lock regions */
         Table<Long, Long, Event> lockEventTbl = HashBasedTable.create();
-        Set<Long> criticalThreadIds = new HashSet<>();
         Set<Event> criticalLockingEvents = new HashSet<>();
         for (Event event : reducedEvents) {
             long tid = event.getTID();
+            Map<Long, Event> lockStatus = lockEventTbl.row(tid);
+
             if (event.isLockEvent()) {
                 long lockId = ((SyncEvent) event).getSyncObject();
-                Event prevLock = lockEventTbl.put(tid, lockId, event);
+                Event prevLock = lockStatus.put(lockId, event);
                 assert prevLock == null : "Unexpected unmatched lock event: " + prevLock;
             } else if (event.isUnlockEvent()) {
                 long lockId = ((SyncEvent) event).getSyncObject();
-                Event lock = lockEventTbl.remove(tid, lockId);
-                if (lock != null) {
-                    if (criticalLockingEvents.contains(lock)) {
-                        criticalLockingEvents.add(event);
-                    }
-                } else {
-                    if (criticalThreadIds.contains(tid)) {
-                        criticalLockingEvents.add(event);
-                    }
+                Event lock = lockStatus.remove(lockId);
+                if (lock == null || criticalLockingEvents.contains(lock)) {
+                    criticalLockingEvents.add(event);
                 }
             } else {
-                criticalThreadIds.add(tid);
-                for (Event e : lockEventTbl.values()) {
-                    if (e.getTID() == tid) {
-                        criticalLockingEvents.add(e);
-                    }
+                for (Event e : lockStatus.values()) {
+                    criticalLockingEvents.add(e);
                 }
             }
         }
+        criticalLockingEvents.addAll(lockEventTbl.values());
         for (Event event : reducedEvents) {
             if ((event.isLockEvent() || event.isUnlockEvent())
                     && !criticalLockingEvents.contains(event)) {

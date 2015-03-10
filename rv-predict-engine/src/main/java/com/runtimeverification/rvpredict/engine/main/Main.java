@@ -68,7 +68,7 @@ public class Main {
             }
             appArgList.addAll(config.command_line);
 
-            runAgent(config, appArgList, false);
+            runAgent(config, appArgList);
         }
 
         try {
@@ -83,17 +83,17 @@ public class Main {
     }
 
     /**
-     * Formats the RV-Predict specific options from the command line 
+     * Formats the RV-Predict specific options from the command line
      * as a string of options which can be passed to the -javaagent
      * JVM option.
      *
      * It basically iterates through all arguments and builds a string out of them
-     * taking care to wrap any argument containing spaces using 
+     * taking care to wrap any argument containing spaces using
      * {@link #escapeString(String)}.
      *
      * As the default behavior of the agent is to run prediction upon completing
      * logging, the {@code --log} option must be passed to the agent.  Thus, if
-     * the {@code --dir} option was used by the user, it would be replaced by 
+     * the {@code --dir} option was used by the user, it would be replaced by
      * {@code --log}.  If neither  {@code --dir} nor {@code --log} were used, then
      * the {@code --log} option is added to make sure execution is logged in the
      * directory expected by prediction.
@@ -230,9 +230,8 @@ public class Main {
         public void cleanup();
     }
 
-    public static void runAgent(final Configuration config, final List<String> appArgList,
-            final boolean finalRun) {
-        ProcessBuilder processBuilder = new ProcessBuilder(appArgList.toArray(new String[appArgList
+    public static void runAgent(final Configuration config, final List<String> appArgList) {
+        ProcessBuilder agentProcBuilder = new ProcessBuilder(appArgList.toArray(new String[appArgList
                 .size()]));
         String logOutputString = config.log_output;
         boolean logToScreen = false;
@@ -243,8 +242,8 @@ public class Main {
             file = logOutputString;
             String actualOutFile = file + ".out";
             String actualErrFile = file + ".err";
-            processBuilder.redirectError(new File(actualErrFile));
-            processBuilder.redirectOutput(new File(actualOutFile));
+            agentProcBuilder.redirectError(new File(actualErrFile));
+            agentProcBuilder.redirectOutput(new File(actualOutFile));
         }
         try {
             final StringBuilder commandMsg = new StringBuilder();
@@ -258,29 +257,24 @@ public class Main {
                 }
             }
             config.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
-            final Process process = processBuilder.start();
+            final Process agentProc = agentProcBuilder.start();
             Thread cleanupAgent = new Thread() {
                 @Override
                 public void run() {
-                    process.destroy();
-                    if (finalRun) {
-                        config.logger.report("Warning: Logging interrupted by user. \n"
-                                + "Please run the following command to resume prediction:"
-                                + commandMsg.toString(), Logger.MSGTYPE.INFO);
-                    }
+                    agentProc.destroy();
                 }
             };
             Runtime.getRuntime().addShutdownHook(cleanupAgent);
             if (logToScreen) {
-                Util.redirectOutput(process.getErrorStream(), System.err);
-                Util.redirectOutput(process.getInputStream(), System.out);
+                Util.redirectOutput(agentProc.getErrorStream(), System.err);
+                Util.redirectOutput(agentProc.getInputStream(), System.out);
             } else if (file == null) {
-                Util.redirectOutput(process.getErrorStream(), null);
-                Util.redirectOutput(process.getInputStream(), null);
+                Util.redirectOutput(agentProc.getErrorStream(), null);
+                Util.redirectOutput(agentProc.getInputStream(), null);
             }
-            Util.redirectInput(process.getOutputStream(), System.in);
+            Util.redirectInput(agentProc.getOutputStream(), System.in);
 
-            process.waitFor();
+            agentProc.waitFor();
             Runtime.getRuntime().removeShutdownHook(cleanupAgent);
         } catch (IOException ignored) {
         } catch (InterruptedException e) {

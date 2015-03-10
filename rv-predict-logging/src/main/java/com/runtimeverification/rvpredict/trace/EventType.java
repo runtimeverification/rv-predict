@@ -10,6 +10,13 @@ public enum EventType {
     WRITE,
 
     /**
+     * Atomic events that are used only in the front-end.
+     */
+    ATOMIC_READ,
+    ATOMIC_WRITE,
+    ATOMIC_READ_THEN_WRITE,
+
+    /**
      * Event generated after acquiring an intrinsic lock or write lock.
      */
     WRITE_LOCK,

@@ -26,11 +26,6 @@ public class OnlineLoggingFactory implements LoggingFactory {
     private BlockingQueue<PipedInputStream> eventInputStreams = new LinkedBlockingQueue<>();
 
     @Override
-    public EventPipe createEventPipe() {
-        return new SimpleEventPipe();
-    }
-
-    @Override
     public ObjectOutputStream createMetadataOS() throws IOException {
         throw new UnsupportedOperationException("Not implemented for online prediction");
     }

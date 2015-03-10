@@ -69,7 +69,7 @@ public class Agent implements ClassFileTransformer, Constants {
         } else {
             loggingFactory = new OfflineLoggingFactory(config);
         }
-        final LoggingEngine loggingEngine = new LoggingEngine(config, loggingFactory, predictionServer);
+        final LoggingEngine loggingEngine = new LoggingEngine(loggingFactory, predictionServer);
         RVPredictRuntime.init(loggingEngine);
         loggingEngine.startLogging();
         if (Configuration.online) {

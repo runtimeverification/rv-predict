@@ -1,25 +1,14 @@
 package com.runtimeverification.rvpredict.log;
 
-import com.runtimeverification.rvpredict.trace.EventType;
-
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 
 /**
  * Interface for abstracting I/O operations
- * 
+ *
  * @author TraianSF
  */
 public interface LoggingFactory {
-    /**
-     * Creates an {@link EventPipe} used for communicating events from
-     * one (producer) thread to another (logging) thread
-     * @see ThreadLocalEventStream#initialValue() for creation
-     * @see LoggingEngine#saveEvent(EventType, int, int, int, long) 
-     * @see Logger for consumer
-     * @return a new {@link EventPipe}
-     */
-    EventPipe createEventPipe();
 
     /**
      * Creates a new stream for logging metadata.
@@ -45,7 +34,7 @@ public interface LoggingFactory {
      * Retrieves an input stream associated to a stream logging events from an execution.
      * @return the next available {@link EventInputStream} or {@code null}
      *         if there will be no more streams available.
-     * @throws InterruptedException if the thread was interrupted while 
+     * @throws InterruptedException if the thread was interrupted while
      *         waiting for a stream to become available
      * @throws IOException If the next available stream cannot be open.
      */
@@ -57,7 +46,7 @@ public interface LoggingFactory {
     String getStmtSig(int locId);
 
     /**
-     * Metadata accessor: tells whether the field identified by the argument is volatile or not 
+     * Metadata accessor: tells whether the field identified by the argument is volatile or not
      */
     boolean isVolatile(int fieldId);
 

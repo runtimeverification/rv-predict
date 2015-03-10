@@ -17,7 +17,7 @@ public interface LoggingTask extends Runnable {
 
     /**
      * States that the given parameter represents the thread running this task
-     * @param predictionServerThread the thread executing this logging task.
+     * @param ownerThread the thread executing this logging task.
      */
-    void setOwner(Thread predictionServerThread);
+    void setOwner(Thread ownerThread);
 }

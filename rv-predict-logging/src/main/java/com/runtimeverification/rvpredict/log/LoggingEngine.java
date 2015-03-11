@@ -127,6 +127,9 @@ public class LoggingEngine {
         protected EventDisruptor initialValue() {
             synchronized (disruptors) {
                 if (shutdown) {
+                    System.err.printf("[Warning] JVM exits before thread %s finishes;"
+                            + " no trace from this thread is logged.%n",
+                            Thread.currentThread().getName());
                     return null;
                 } else {
                     EventDisruptor disruptor = EventDisruptor.create(loggingFactory);

@@ -99,7 +99,6 @@ public  class Airlinetickets implements Runnable{
  * the selling post:
  * making the sale & checking if limit was reached ( and updating "StopSales" ),
  */
-    @Override
     public void run() {
 
     Num_Of_Seats_Sold++;                          // making the sale
@@ -125,6 +124,3 @@ public  class Airlinetickets implements Runnable{
        	System.out.println(tt);
     }
 }
-
-
-

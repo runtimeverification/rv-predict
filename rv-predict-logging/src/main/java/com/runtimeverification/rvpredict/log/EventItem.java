@@ -1,6 +1,5 @@
 package com.runtimeverification.rvpredict.log;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 
 import com.lmax.disruptor.EventFactory;
@@ -66,7 +65,7 @@ public class EventItem {
         this.TYPE = type;
     }
 
-    public void writeTo(DataOutputStream out) throws IOException {
+    public void writeTo(EventOutputStream out) throws IOException {
         out.writeLong(GID);
         out.writeLong(TID);
         out.writeInt(ID);

@@ -34,7 +34,7 @@ public class OnlineLoggingFactory implements LoggingFactory {
     public EventOutputStream createEventOutputStream() throws IOException {
         final PipedOutputStream outputStream = new PipedOutputStream();
         eventInputStreams.add(new PipedInputStream(outputStream));
-        return new EventOutputStream(outputStream);
+        return null;//new EventOutputStream(outputStream);
     }
 
     @Override
@@ -46,7 +46,8 @@ public class OnlineLoggingFactory implements LoggingFactory {
     public EventInputStream getInputStream() throws InterruptedException {
         PipedInputStream stream = eventInputStreams.take();
         if (stream == END_INPUT_STREAM) return null;
-        return new EventInputStream(stream);
+//        return new EventInputStream(stream);
+        return null;
     }
 
     @Override

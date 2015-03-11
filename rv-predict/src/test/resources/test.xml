@@ -4,13 +4,6 @@
     <test name="ftpserver.jar">
         <runs value="32" />
         <rvarg key="--maxlen" value="3000" />
-        <rvarg value="--simple-report" />
-        <arg key="-jar" value="ftpserver.jar" />
-    </test>
-    <test name="ftpserver.jar">
-        <runs value="32" />
-        <rvarg value="--zip" />
-        <rvarg key="--maxlen" value="3000" />
         <rvarg value="--debug" />
         <rvarg value="--simple-report" />
         <arg key="-jar" value="ftpserver.jar" />

@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+
 import org.apache.tools.ant.DirectoryScanner;
 
 import java.io.*;
@@ -8,8 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 /**
  * An implementation of the {@link LoggingFactory} interface used for
@@ -25,7 +24,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
      * termination for files holding events
      */
     public static final String TRACE_SUFFIX = "trace.bin";
-    public static final String ZIP_EXTENSION = ".gz";
     public static final String METADATA_BIN = "metadata.bin";
     private static final AtomicInteger logFileId = new AtomicInteger();
     private final Configuration config;
@@ -68,14 +66,8 @@ public class OfflineLoggingFactory implements LoggingFactory {
     @Override
     public EventOutputStream createEventOutputStream() throws IOException {
         int id = logFileId.incrementAndGet();
-        OutputStream outputStream = new FileOutputStream(Paths.get(config.outdir,
-                id + "_" + TRACE_SUFFIX
-                        + (config.zip ? ZIP_EXTENSION : "")).toFile());
-        if (config.zip) {
-            outputStream = new GZIPOutputStream(outputStream,true);
-        }
-        return new EventOutputStream(new BufferedOutputStream(
-                outputStream));
+        return new OfflineLoggingEventOutputStream(
+                Paths.get(config.outdir, id + "_" + TRACE_SUFFIX));
     }
 
     @Override
@@ -88,13 +80,8 @@ public class OfflineLoggingFactory implements LoggingFactory {
             inputStreams = new LinkedList<>();
             String[] files = getTraceFiles(config.outdir);
             for (String file : files) {
-                File f = Paths.get(config.outdir, file).toFile();
-                InputStream in = new FileInputStream(f);
-                if (file.endsWith(ZIP_EXTENSION)) {
-                    in = new GZIPInputStream(in);
-                }
-                EventInputStream inputStream = new EventInputStream(
-                        new BufferedInputStream(in));
+                EventInputStream inputStream = new OfflineLoggingEventInputStream(
+                        Paths.get(config.outdir, file));
                 inputStreams.add(inputStream);
             }
         }
@@ -125,9 +112,8 @@ public class OfflineLoggingFactory implements LoggingFactory {
 
     @SuppressWarnings("unchecked")
     public void readMetadata() {
-        try {
-            ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
-                    new FileInputStream(Paths.get(config.outdir, METADATA_BIN).toFile())));
+        try (ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
+                new FileInputStream(Paths.get(config.outdir, METADATA_BIN).toFile())))) {
             List<Map.Entry<Integer, String>> list;
             while (true) {
                 try {

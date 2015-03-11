@@ -14,7 +14,7 @@ import net.jpountz.lz4.LZ4Factory;
  */
 public class OfflineLoggingEventOutputStream extends EventOutputStream {
 
-    public static final int COMPRESS_BLOCK_SIZE = 32 * 1024 * 1024; // 32MB
+    public static final int COMPRESS_BLOCK_SIZE = 8 * 1024 * 1024; // 8MB
 
     private static final LZ4Compressor FAST_COMPRESSOR = LZ4Factory.fastestInstance().fastCompressor();
 

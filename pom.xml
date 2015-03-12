@@ -7,6 +7,7 @@
     <version>1.3-SNAPSHOT</version>
     <modules>
         <module>rv-predict</module>
+        <module>rv-predict-jar</module>
         <module>rv-predict-logging</module>
         <module>rv-predict-agent</module>
         <module>rv-predict-engine</module>

@@ -30,10 +30,9 @@ package com.runtimeverification.rvpredict.config;
 
 import com.beust.jcommander.*;
 import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
-import com.runtimeverification.rvpredict.util.Util;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -297,7 +296,7 @@ public class Configuration implements Constants {
 
     public String constraint_outdir;
 
-    public String tableName = "main";
+    public static final String TABLE_NAME = "main";
 
     final static String opt_smt_solver = "--solver";
     @Parameter(names = opt_smt_solver, description = "Solver command to use (SMT-LIB v1.2)", hidden = true, descriptionKey = "2050")
@@ -442,9 +441,6 @@ public class Configuration implements Constants {
         } else {
             command_line.addAll(argList);
         }
-        if (tableName == null) {
-            tableName = "main";
-        }
         logger = new Logger(this);
     }
 
@@ -500,12 +496,13 @@ public class Configuration implements Constants {
             }
 
             String aDefault = getDefault(parameterDescription);
-            description += Util.spaces(spacesBeforeCnt)
+            description += Strings.repeat(" ", spacesBeforeCnt)
                     + parameterDescription.getNames()
-                    + Util.spaces(spacesAfterCnt)
-                    + Joiner.on("\n" + Util.spaces(4 + max_option_length)).join(parameterDescription.getDescription().split("\\n"))
-                    + (aDefault.isEmpty() ? "" : "\n" + Util.spaces(4)
-                            + Util.spaces(max_option_length) + aDefault);
+                    + Strings.repeat(" ", spacesAfterCnt)
+                    + Joiner.on("\n" + Strings.repeat(" ", 4 + max_option_length)).join(
+                            parameterDescription.getDescription().split("\\n"))
+                    + (aDefault.isEmpty() ? "" : "\n" + Strings.repeat(" ", 4)
+                            + Strings.repeat(" ", max_option_length) + aDefault);
             usageMap.put(descriptionKey, description);
             if (!parameter.hidden()) {
                 shortUsageMap.put(descriptionKey, description);

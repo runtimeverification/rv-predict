@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
@@ -12,8 +13,7 @@ import java.util.concurrent.*;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Joiner;
-import com.runtimeverification.rvpredict.util.Util;
-
+import com.google.common.io.Files;
 import org.junit.Assert;
 
 /**
@@ -62,10 +62,11 @@ public class TestHelper {
         final File inFile = new File(testsPrefix + ".in");
 
         final String[] error = new String[1];
-        
+
         // compile regex patterns
         final List<Pattern> expectedPatterns = new ArrayList<>();
-        for (String regex : Util.convertFileToString(new File(testsPrefix + ".expected.out")).split("(\n|\r)")) {
+        for (String regex : Files.toString(new File(testsPrefix + ".expected.out"),
+                Charset.defaultCharset()).split("(\n|\r)")) {
             if (!regex.isEmpty()) {
                 expectedPatterns.add(Pattern.compile(regex));
             }
@@ -110,11 +111,12 @@ public class TestHelper {
                         int returnCode = process.waitFor();
                         if (expectedPatterns.isEmpty() || error[0] != null) return;
                         if (returnCode != 0) {
-                            error[0] = "Expected no error during " + Arrays.toString(command) + " but received " + returnCode
-                                    + ".\n" + Util.convertFileToString(stderrFile);
+                            error[0] = "Expected no error during " + Arrays.toString(command)
+                                    + " but received " + returnCode + ".\n"
+                                    + Files.toString(stderrFile, Charset.defaultCharset());
                             return;
                         }
-                        String output = Util.convertFileToString(stdoutFile);
+                        String output = Files.toString(stdoutFile, Charset.defaultCharset());
                         synchronized (expectedPatterns) {
                             Iterator<Pattern> iter = expectedPatterns.iterator();
                             while (iter.hasNext()) {
@@ -133,7 +135,7 @@ public class TestHelper {
         while (!pool.isTerminated()) {
             pool.awaitTermination(1, TimeUnit.SECONDS);
         }
-        
+
         if (error[0] != null) {
             Assert.fail(error[0]);
         }

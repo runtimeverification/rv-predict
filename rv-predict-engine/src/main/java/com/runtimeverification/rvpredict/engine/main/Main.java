@@ -1,18 +1,21 @@
 package com.runtimeverification.rvpredict.engine.main;
 
+import com.google.common.base.Strings;
 import com.runtimeverification.rvpredict.config.Configuration;
 
 import org.apache.tools.ant.util.JavaEnvUtils;
 
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.util.Logger;
-import com.runtimeverification.rvpredict.util.Util;
-
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Scanner;
 
 /**
  * @author TraianSF
@@ -20,7 +23,7 @@ import java.util.List;
 public class Main {
 
     public static final int WIDTH = 75;
-    public static final char FILL = '-';
+    public static final String DASH = "-";
 
     public static void main(String[] args) {
 
@@ -135,7 +138,9 @@ public class Main {
     }
 
     public static String center(String msg) {
-        return Util.center(msg, WIDTH, FILL);
+        int fillWidth = WIDTH - msg.length();
+        return "\n" + Strings.repeat(DASH, fillWidth / 2) + msg
+                + Strings.repeat(DASH, (fillWidth + 1) / 2);
     }
 
     public static Thread getPredictionThread(final Configuration commandLine,
@@ -209,13 +214,13 @@ public class Main {
                     try {
                         Process process = finalProcessBuilder.start();
                         if (finalLogToScreen) {
-                            Util.redirectOutput(process.getErrorStream(), System.err);
-                            Util.redirectOutput(process.getInputStream(), System.out);
+                            redirectOutput(process.getErrorStream(), System.err);
+                            redirectOutput(process.getInputStream(), System.out);
                         } else if (finalFile == null) {
-                            Util.redirectOutput(process.getErrorStream(), null);
-                            Util.redirectOutput(process.getInputStream(), null);
+                            redirectOutput(process.getErrorStream(), null);
+                            redirectOutput(process.getInputStream(), null);
                         }
-                        Util.redirectInput(process.getOutputStream(), System.in);
+                        redirectInput(process.getOutputStream(), System.in);
 
                         process.waitFor();
                     } catch (IOException | InterruptedException e) {
@@ -266,13 +271,13 @@ public class Main {
             };
             Runtime.getRuntime().addShutdownHook(cleanupAgent);
             if (logToScreen) {
-                Util.redirectOutput(agentProc.getErrorStream(), System.err);
-                Util.redirectOutput(agentProc.getInputStream(), System.out);
+                redirectOutput(agentProc.getErrorStream(), System.err);
+                redirectOutput(agentProc.getInputStream(), System.out);
             } else if (file == null) {
-                Util.redirectOutput(agentProc.getErrorStream(), null);
-                Util.redirectOutput(agentProc.getInputStream(), null);
+                redirectOutput(agentProc.getErrorStream(), null);
+                redirectOutput(agentProc.getInputStream(), null);
             }
-            Util.redirectInput(agentProc.getOutputStream(), System.in);
+            redirectInput(agentProc.getOutputStream(), System.in);
 
             agentProc.waitFor();
             Runtime.getRuntime().removeShutdownHook(cleanupAgent);
@@ -284,6 +289,44 @@ public class Main {
 
     public static String escapeString(String s) {
         return (s.contains(" ") ? "\\\"" + s + "\\\"" : s);
+    }
+
+    public static void redirectOutput(final InputStream outputStream, final PrintStream redirect) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Scanner scanner = new Scanner(outputStream);
+                while (scanner.hasNextLine()) {
+                    String s = scanner.nextLine();
+                    if (redirect != null) {
+                        redirect.println(s);
+                    }
+                }
+                scanner.close();
+            }
+        }).start();
+    }
+
+    public static Thread redirectInput(final OutputStream inputStream, final InputStream redirect) {
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (redirect != null) {
+                    try {
+                        int ret = -1;
+                        while ((ret = redirect.read()) != -1) {
+                            inputStream.write(ret);
+                            inputStream.flush();
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
+        return thread;
     }
 
 }

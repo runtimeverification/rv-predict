@@ -29,20 +29,6 @@ public class Logger {
             File file = new File(config.outdir);
             file.mkdirs();
             out = new PrintWriter(new FileWriter(config.outdir + "/" + fname, true));
-
-            // String type = "";
-            // if(config.rmm_pso)
-            // type+="pso: ";
-            //
-            // if(config.nobranch)
-            // type += "maximal: ";
-            // else if(config.allconsistent)
-            // type += "Said et al.: ";
-            // else if(config.smtlib1)
-            // type += "maximal-branch (yices): ";
-            // else
-            // type += "maximal-branch (z3): ";
-            // out.println("\n------------------ "+type+rvpredict.config.tableName+" -------------------\n");
         } catch (IOException e) {
             e.printStackTrace();
         }

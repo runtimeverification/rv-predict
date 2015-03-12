@@ -30,16 +30,20 @@ package com.runtimeverification.rvpredict.smt;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.*;
-import java.util.concurrent.*;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import com.google.common.io.Files;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.smt.formula.Formula;
-import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
 import com.runtimeverification.rvpredict.smt.formula.SMTASTNode;
-import com.runtimeverification.rvpredict.smt.visitors.SMTLib1Filter;
-import com.runtimeverification.rvpredict.util.Util;
 
 /**
  * Constraint solving with Z3 solver
@@ -79,9 +83,9 @@ public class SMTTaskRun {
      * @throws IOException
      */
     public void init(Configuration config, int id) throws IOException {
-        smtFile = Util.newOutFile(config.constraint_outdir, config.tableName + "_" + id + SMT);
+        smtFile = newOutFile(config.constraint_outdir, Configuration.TABLE_NAME + "_" + id + SMT);
 
-        outFile = Util.newOutFile(config.constraint_outdir, config.tableName + "_" + id + OUT);
+        outFile = newOutFile(config.constraint_outdir, Configuration.TABLE_NAME + "_" + id + OUT);
 
         String[] quotes = config.smt_solver.split("\"");
         boolean inQuote = false;
@@ -108,11 +112,8 @@ public class SMTTaskRun {
      * @param msg
      */
     public void sendMessage(String msg) {
-        PrintWriter smtWriter = null;
         try {
-            smtWriter = Util.newWriter(smtFile, true);
-            smtWriter.println(msg);
-            smtWriter.close();
+            Files.write(msg, smtFile, Charset.defaultCharset());
 
             // invoke the solver
             exec(outFile, smtFile.getAbsolutePath());
@@ -177,4 +178,22 @@ public class SMTTaskRun {
         sendMessage(smtFilter.getSMTMessage(formula));
         return sat;
     }
+
+    public static File newOutFile(String path, String name) throws IOException {
+
+        File z3Dir = new File(path);
+        // Here comes the existence check
+        if (!z3Dir.exists())
+            z3Dir.mkdirs();
+
+        File f = new File(path, name);
+        if (f.exists()) {
+            f.delete();
+        }
+
+        f.createNewFile();
+
+        return f;
+    }
+
 }

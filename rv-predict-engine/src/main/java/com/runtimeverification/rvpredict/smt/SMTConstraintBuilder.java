@@ -335,15 +335,12 @@ public class SMTConstraintBuilder {
      */
     public boolean happensBefore(Event e1, Event e2) {
         return reachEngine.canReach(e1.getGID(), e2.getGID());
-
     }
 
     public boolean isSat() {
         int id = SMTConstraintBuilder.id.incrementAndGet();
         task = new SMTTaskRun(config, id);
         return task.isSat(smtlibAssertionBuilder.build());
-
-
     }
 
     public boolean isRace(Event e1, Event e2, Formula... casualConstraints) {
@@ -365,7 +362,6 @@ public class SMTConstraintBuilder {
         for (Formula casualConstraint : casualConstraints) {
             raceAssertionBuilder.add(casualConstraint);
         }
-
 
         return task.isSat(raceAssertionBuilder.build());
     }

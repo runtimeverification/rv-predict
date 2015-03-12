@@ -45,21 +45,11 @@ import com.google.common.io.Files;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.smt.formula.SMTASTNode;
 
-/**
- * Constraint solving with Z3 solver
- *
- * @author jeffhuang
- *
- */
 public class SMTTaskRun {
-    protected static String SMT = ".smt";
-    protected static String OUT = ".smtout";
     private final SMTFilter smtFilter;
 
-    File outFile, smtFile;
-    protected List<String> CMD;
-
-    private Model model;
+    private File outFile, smtFile;
+    private List<String> CMD;
 
     private boolean sat;
 
@@ -83,9 +73,9 @@ public class SMTTaskRun {
      * @throws IOException
      */
     public void init(Configuration config, int id) throws IOException {
-        smtFile = newOutFile(config.constraint_outdir, Configuration.TABLE_NAME + "_" + id + SMT);
+        smtFile = newOutFile(config.constraint_outdir, Configuration.TABLE_NAME + "_" + id + ".smt");
 
-        outFile = newOutFile(config.constraint_outdir, Configuration.TABLE_NAME + "_" + id + OUT);
+        outFile = newOutFile(config.constraint_outdir, Configuration.TABLE_NAME + "_" + id + ".smtout");
 
         String[] quotes = config.smt_solver.split("\"");
         boolean inQuote = false;
@@ -118,14 +108,14 @@ public class SMTTaskRun {
             // invoke the solver
             exec(outFile, smtFile.getAbsolutePath());
 
-            model = SMTLIB1ModelReader.read(outFile);
-
-            if (model != null) {
+            String result = Files.readFirstLine(outFile, Charset.defaultCharset());
+            if ("sat".equals(result)) {
                 sat = true;
+            } else if ("unsat".equals(result)) {
+                sat = false;
+            } else {
+                throw new RuntimeException("Unexpected SMT solver result: " + result);
             }
-            // String z3OutFileName = z3OutFile.getAbsolutePath();
-            // retrieveResult(z3OutFileName);
-
         } catch (IOException e) {
             System.err.println(e.getMessage());
 
@@ -157,15 +147,10 @@ public class SMTTaskRun {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         executorService.execute(task);
         try {
-            // Integer i =
             task.get(timeout, TimeUnit.SECONDS);
-
-            // if(i!=0) System.err.println("solver error");
-
         } catch (ExecutionException e) {
             System.err.println(e.getMessage());
             System.exit(-1);
-
         } catch (InterruptedException | TimeoutException e) {
             System.err.println(e.getMessage());
             task.cancel(true);
@@ -180,9 +165,7 @@ public class SMTTaskRun {
     }
 
     public static File newOutFile(String path, String name) throws IOException {
-
         File z3Dir = new File(path);
-        // Here comes the existence check
         if (!z3Dir.exists())
             z3Dir.mkdirs();
 

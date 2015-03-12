@@ -81,6 +81,10 @@ public class Configuration implements Constants {
          String [] ignores = new String[] {
                  COM_RUNTIMEVERIFICATION_RVPREDICT,
 
+                // lz4 library cannot be repackaged because it hard-codes some
+                // of its class names in the implementation
+                 "net/jpountz/",
+
                  // array type
                  "[",
 
@@ -269,10 +273,6 @@ public class Configuration implements Constants {
     @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude." +
             "\nPrefix with + to add to the default excluded packages", hidden = true, descriptionKey = "1030")
     public static String excludes;
-
-    public final static String opt_zip = "--zip";
-    @Parameter(names = opt_zip, description = "Compress traces", hidden = true, descriptionKey = "1060")
-    public boolean zip;
 
     final static String opt_event_profile = "--profile";
     @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1070")

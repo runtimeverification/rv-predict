@@ -74,7 +74,7 @@ public class Reporter
      */
     public void Report(String output, int [] originalArray) throws IOException
     {
-    	
+
         try
         {
             // Creating the output file
@@ -88,16 +88,16 @@ public class Reporter
 //                out.write(printedArray[i] + " ");
 //            out.write(IndicateBug(originalArray));// writing the bug to the output file
 //            out.close();
-            
+
 
             for(int i = 0;i < arrSize;++i) // printing the result array
             	 System.out.print(printedArray[i] + " ");
-            
+
             System.out.println("");
             System.out.println("");
             System.out.println(IndicateBug(originalArray));
             System.out.println("");
-            
+
             if(getFlag())
             	throw new RuntimeException();
         }
@@ -107,10 +107,10 @@ public class Reporter
             throw e;
         }catch(RuntimeException e)
         {
-        	
+
         	e.printStackTrace();
         	"leap_Crashed_with".equals(e);
-        	System.exit(-1);
+
         }
    }
 
@@ -128,7 +128,7 @@ public class Reporter
             }
 
             if(j == arrSize) // in case the number in the original array does not exist in the printed array
-            {    
+            {
             	flag = true;
             	return ("< Bug Found: the number " + originalArray[i] + ", exists in the original array," +
                         " but does not exist in the printed array >");
@@ -142,7 +142,7 @@ public class Reporter
             	flag = true;
                 return ("< Bug Found: The number at place " + (i + 1) + '(' + printedArray[i] + ')'
             + ", is bigger then the number at place " + (i + 2) + '(' + printedArray[i + 1] + ") >");
-        
+
             }
         }
         flag = false;

@@ -42,7 +42,7 @@ public  class Airlinetickets implements Runnable{
  * starting the selling of the tickets:
  * "StopSales" indicates to the airline that the max capacity was sold & that they should stop issuing tickets
  */
-         
+
         for( int i=0; i < Num_of_tickets_issued; i++) {
 
            threadArr[i] = new Thread (this) ;
@@ -72,20 +72,20 @@ public  class Airlinetickets implements Runnable{
         checkResult(str1,str2);
 
      }
-    
+
     public void checkResult(String str1, String str2)
     {
         if (Num_Of_Seats_Sold > Maximum_Capacity)
             try {
-           	 
+
            	 System.out.println(str2);
            	 throw new RuntimeException();
                 //output.write(str2.getBytes());
             } catch (Exception e) {
-           		
+
               		e.printStackTrace();
               		"leap_Crashed_with".equals(e);
-              		System.exit(-1);
+
             }
         else
             try {
@@ -110,7 +110,7 @@ public  class Airlinetickets implements Runnable{
     public static void main(String args[]) {
     	long st,et;
     	st=System.nanoTime();
-    
+
         if (args.length != 2) {
             //throw new Exception();
         	  args = new String[2];
@@ -118,12 +118,9 @@ public  class Airlinetickets implements Runnable{
         	  args[1] = "little";
           }
            new Airlinetickets(args[0],args[1]);
-           
+
            et=System.nanoTime();
           long tt = (et-st)/1000;
-       	System.out.println(tt);	
+       	System.out.println(tt);
     }
 }
-
-
-

@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.util;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventInputStream;
 import com.runtimeverification.rvpredict.log.EventItem;
+import com.runtimeverification.rvpredict.log.OfflineLoggingEventInputStream;
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.trace.Event;
 import com.runtimeverification.rvpredict.trace.EventUtils;
@@ -10,7 +11,6 @@ import com.runtimeverification.rvpredict.trace.EventUtils;
 import java.io.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.zip.GZIPInputStream;
 
 /**
  * Debugging class for dumping the contents of a log file to console.
@@ -33,14 +33,7 @@ public class DumpLogFile {
         configuration.outdir = directory.toString();
         OfflineLoggingFactory loggingFactory = new OfflineLoggingFactory(configuration);
         String file = args[0];
-        File f = new File(file);
-        try {
-            InputStream in = new FileInputStream(f);
-            if (file.endsWith(OfflineLoggingFactory.ZIP_EXTENSION)) {
-                in = new GZIPInputStream(in);
-            }
-            EventInputStream inputStream = new EventInputStream(
-                    new BufferedInputStream(in));
+        try (EventInputStream inputStream = new OfflineLoggingEventInputStream(Paths.get(file))) {
             System.out.println("Dumping events from " + file);
             //noinspection InfiniteLoopStatement
             while (true) {

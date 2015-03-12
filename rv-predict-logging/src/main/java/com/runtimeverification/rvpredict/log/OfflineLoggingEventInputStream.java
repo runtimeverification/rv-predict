@@ -12,7 +12,7 @@ import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 
 /**
- * An event output stream used in offline logging.
+ * An event input stream used in offline logging.
  *
  * @author YilongL
  */

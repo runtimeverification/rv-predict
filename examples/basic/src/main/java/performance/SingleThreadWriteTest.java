@@ -1,15 +1,15 @@
 package performance;
 
 /**
- * Collections of performance tests.
+ * Single thread writing to a field inside a loop.
  *
  * @author YilongL
  */
-public class PerformanceTests {
+public class SingleThreadWriteTest {
 
-    long x;
+    static long x;
 
-    private void testLoggingPutField() {
+    public static void main(String[] args) {
         for (int i = 0; i < 500000; i++) { // warm up
             x = i;
         }
@@ -20,10 +20,6 @@ public class PerformanceTests {
         }
         long endTime = System.currentTimeMillis();
         System.err.println("Time elapsed: " + (endTime - startTime) + "ms");
-    }
-
-    public static void main(String[] args) {
-        new PerformanceTests().testLoggingPutField();
     }
 
 }

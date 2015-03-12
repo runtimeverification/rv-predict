@@ -44,12 +44,6 @@
                             <goal>jarjar</goal>
                         </goals>
                         <configuration>
-                            <overwrite>true</overwrite>
-                            <excludes>
-                                <exclude>junit:junit</exclude>
-                                <exclude>org.hamcrest:*</exclude>
-                                <exclude>com.runtimeverification.predict:z3</exclude>
-                            </excludes>
                             <rules>
                                 <rule>
                                     <pattern>org.objectweb.**.*</pattern>

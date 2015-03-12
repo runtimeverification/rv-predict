@@ -1,10 +1,10 @@
 package com.runtimeverification.rvpredict.log;
 
-import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.locks.LockSupport;
 
+import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.SleepingWaitStrategy;
 import com.lmax.disruptor.dsl.Disruptor;
@@ -26,10 +26,10 @@ public class EventDisruptor {
 
     private volatile boolean isPublishing;
 
-    private volatile boolean shutdown = false;
+    private volatile boolean shutdown;
 
     @SuppressWarnings("unchecked")
-    public static EventDisruptor create(LoggingFactory loggingFactory) {
+    public static EventDisruptor create(EventHandler<EventItem> handler) {
         /* create the executor */
         ExecutorService executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
             @Override
@@ -41,18 +41,9 @@ public class EventDisruptor {
             }
         });
 
-        /* create the event handler */
-        EventOutputStream outputStream = null;
-        try {
-            outputStream = loggingFactory.createEventOutputStream();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        EventWriter eventWriter = new EventWriter(outputStream);
-
         Disruptor<EventItem> disruptor = new Disruptor<>(EventItem.FACTORY, RING_BUFFER_SIZE,
                 executor, ProducerType.SINGLE, new SleepingWaitStrategy());
-        disruptor.handleEventsWith(eventWriter);
+        disruptor.handleEventsWith(handler);
         disruptor.start();
 
         return new EventDisruptor(disruptor);

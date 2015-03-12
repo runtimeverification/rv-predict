@@ -28,6 +28,7 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.log;
 
+import com.lmax.disruptor.EventHandler;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.trace.EventType;
 
@@ -93,7 +94,7 @@ public class LoggingEngine {
         }
 
         if (Configuration.profile) {
-            EventsProfiler.printEventStats();
+            EventProfiler.printEventStats();
         }
 
         if (Configuration.online) {
@@ -132,7 +133,21 @@ public class LoggingEngine {
                             Thread.currentThread().getName());
                     return null;
                 } else {
-                    EventDisruptor disruptor = EventDisruptor.create(loggingFactory);
+                    /* create event handler */
+                    EventHandler<EventItem> handler;
+                    if (Configuration.profile) {
+                        handler = new EventProfiler();
+                    } else {
+                        EventOutputStream outputStream = null;
+                        try {
+                            outputStream = loggingFactory.createEventOutputStream();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                        handler = new EventWriter(outputStream);
+                    }
+
+                    EventDisruptor disruptor = EventDisruptor.create(handler);
                     disruptors.add(disruptor);
                     return disruptor;
                 }

@@ -28,13 +28,13 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.log;
 
-import com.google.common.util.concurrent.Uninterruptibles;
+import com.lmax.disruptor.EventHandler;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.trace.EventType;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Class encapsulating functionality for recording events
@@ -83,9 +83,10 @@ public class LoggingEngine {
     public void finishLogging() throws IOException, InterruptedException {
         shutdown = true;
 
-        Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
-        for (EventDisruptor disruptor : disruptors) {
-            disruptor.shutdown();
+        synchronized (disruptors) {
+            for (EventDisruptor disruptor : disruptors) {
+                disruptor.shutdown();
+            }
         }
 
         if (!Configuration.online) {
@@ -93,19 +94,12 @@ public class LoggingEngine {
         }
 
         if (Configuration.profile) {
-            EventsProfiler.printEventStats();
+            EventProfiler.printEventStats();
         }
 
         if (Configuration.online) {
             predictionServer.finishLogging();
         }
-    }
-
-    public void startPredicting() {
-        Thread predictionServerThread = new Thread(predictionServer, "Prediction main thread");
-        predictionServer.setOwner(predictionServerThread);
-        predictionServerThread.setDaemon(true);
-        predictionServerThread.start();
     }
 
     /**
@@ -116,18 +110,48 @@ public class LoggingEngine {
      */
     public void logEvent(long gid, long tid, int locId, int addrl, int addrr, long value,
             EventType eventType) {
-        if (!shutdown) {
-            threadLocalDisruptor.get()
-                    .publishEvent(gid, tid, locId, addrl, addrr, value, eventType);
+        EventDisruptor disruptor = threadLocalDisruptor.get();
+        if (disruptor != null) {
+            disruptor.publishEvent(gid, tid, locId, addrl, addrr, value, eventType);
         }
+    }
+
+    public void startPredicting() {
+        Thread predictionServerThread = new Thread(predictionServer, "Prediction main thread");
+        predictionServer.setOwner(predictionServerThread);
+        predictionServerThread.setDaemon(true);
+        predictionServerThread.start();
     }
 
     private class ThreadLocalDisruptor extends ThreadLocal<EventDisruptor> {
         @Override
         protected EventDisruptor initialValue() {
-            EventDisruptor disruptor = EventDisruptor.create(loggingFactory);
-            disruptors.add(disruptor);
-            return disruptor;
+            synchronized (disruptors) {
+                if (shutdown) {
+                    System.err.printf("[Warning] JVM exits before thread %s finishes;"
+                            + " no trace from this thread is logged.%n",
+                            Thread.currentThread().getName());
+                    return null;
+                } else {
+                    /* create event handler */
+                    EventHandler<EventItem> handler;
+                    if (Configuration.profile) {
+                        handler = new EventProfiler();
+                    } else {
+                        EventOutputStream outputStream = null;
+                        try {
+                            outputStream = loggingFactory.createEventOutputStream();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                        handler = new EventWriter(outputStream);
+                    }
+
+                    EventDisruptor disruptor = EventDisruptor.create(handler);
+                    disruptors.add(disruptor);
+                    return disruptor;
+                }
+            }
        }
     }
 

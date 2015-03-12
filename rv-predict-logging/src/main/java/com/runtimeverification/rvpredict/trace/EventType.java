@@ -33,12 +33,6 @@ public enum EventType {
     READ_LOCK,
 
     /**
-     * Event generated right before exiting the class initializer code, i.e.
-     * {@code <clinit>}.
-     */
-    CLINIT_EXIT,
-
-    /**
      * Event generated before calling {@code Object#wait}.
      */
     WAIT_REL,
@@ -83,6 +77,12 @@ public enum EventType {
      * {@code <clinit>}.
      */
     CLINIT_ENTER,
+
+    /**
+     * Event generated right before exiting the class initializer code, i.e.
+     * {@code <clinit>}.
+     */
+    CLINIT_EXIT,
 
     INVOKE_METHOD,
 

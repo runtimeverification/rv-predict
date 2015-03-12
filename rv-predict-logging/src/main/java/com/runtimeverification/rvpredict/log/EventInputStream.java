@@ -5,28 +5,20 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Extension of the DataInputStream class specialized for Events
+ * An event input stream lets an application to read {@link EventItem} from an
+ * underlying input stream in a portable way.
+ *
  * @author TraianSF
+ * @author YilongL
  */
-public class EventInputStream extends DataInputStream {
-    /**
-     * Creates an EventInputStream that uses the specified
-     * underlying InputStream.
-     *
-     * @param in the specified input stream
-     */
+public abstract class EventInputStream extends DataInputStream {
+
     public EventInputStream(InputStream in) {
         super(in);
     }
 
-    /**
-     * Reads {@link EventItem#SIZEOF} bytes and returns an {@code EventItem}.
-     *
-     * @return     the {@code EventItem} read.
-     * @exception java.io.EOFException  if this stream reaches the end before reading all the bytes.
-     * @exception  IOException   if an I/O error occurs.
-     */
-    public EventItem readEvent() throws IOException {
+    public final EventItem readEvent() throws IOException {
         return EventItem.readFrom(this);
     }
+
 }

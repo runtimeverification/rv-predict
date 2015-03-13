@@ -33,7 +33,7 @@
             <name>Runtime Verification Snapshot Repository</name>
             <url>http://office.runtimeverification.com:8888/repository/snapshots</url>
             <snapshots>
-                <updatePolicy>always</updatePolicy>
+                <updatePolicy>daily</updatePolicy>
                 <enabled>true</enabled>
             </snapshots>
             <releases><enabled>false</enabled></releases>

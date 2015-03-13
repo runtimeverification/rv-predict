@@ -11,16 +11,13 @@ import com.runtimeverification.rvpredict.config.Configuration.OS;
 
 public class Z3Wrapper implements Solver {
 
-    private final Configuration config;
-
     private final ProcessBuilder pb;
 
     public Z3Wrapper(Configuration config) {
-        this.config = config;
         this.pb = new ProcessBuilder(
             OS.current().getNativeExecutable("z3").getAbsolutePath(),
             "-in",
-            "-smt",
+            "-smt2",
             "-T:" + config.solver_timeout)
             .redirectInput(ProcessBuilder.Redirect.PIPE)
             .redirectOutput(ProcessBuilder.Redirect.PIPE);

@@ -430,7 +430,7 @@ public class Configuration implements Constants {
         } else {
             command_line.addAll(argList);
         }
-        logger = new Logger(this);
+        logger = new Logger();
     }
 
     public void exclusiveOptionsFailure(String opt1, String opt2) {

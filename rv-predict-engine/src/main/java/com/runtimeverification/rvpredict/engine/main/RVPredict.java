@@ -105,7 +105,6 @@ public class RVPredict implements LoggingTask {
             if (violations.size() == 0) {
                 logger.report("No races found.", Logger.MSGTYPE.INFO);
             }
-            logger.closePrinter();
         } catch (InterruptedException e) {
             System.err.println("Error: prediction interrupted.");
             System.err.println(e.getMessage());

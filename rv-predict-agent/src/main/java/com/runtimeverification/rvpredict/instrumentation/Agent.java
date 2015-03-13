@@ -61,11 +61,7 @@ public class Agent implements ClassFileTransformer, Constants {
         RVPredict predictionServer = null;
         if (Configuration.online) {
             loggingFactory = new OnlineLoggingFactory();
-            try {
-                predictionServer = new RVPredict(config, loggingFactory);
-            } catch (IOException | ClassNotFoundException e) {
-                assert false : "These exceptions should only be thrown for offline prediction";
-            }
+            predictionServer = new RVPredict(config, loggingFactory);
         } else {
             loggingFactory = new OfflineLoggingFactory(config);
         }

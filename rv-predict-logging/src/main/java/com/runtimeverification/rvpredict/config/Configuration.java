@@ -340,7 +340,7 @@ public class Configuration implements Constants {
         }
 
         // Detecting a candidate for program options start
-        int max = Arrays.asList(args).indexOf(Configuration.opt_java);
+        int max = Arrays.asList(args).indexOf(opt_java);
         if (max != -1) { // -- was used. Using it as a separator for java
                          // command line
             rvArgs = Arrays.copyOf(args, max);

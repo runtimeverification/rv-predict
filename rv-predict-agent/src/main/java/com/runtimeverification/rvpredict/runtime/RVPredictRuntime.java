@@ -190,9 +190,8 @@ public final class RVPredictRuntime implements Constants {
 
     private RVPredictRuntime() { } // forbid initialization
 
-    // TODO(YilongL): move this method out of the runtime library
-    public static void init(LoggingEngine db) {
-        RVPredictRuntime.loggingEngine = db;
+    public static void init(LoggingEngine loggingEngine) {
+        RVPredictRuntime.loggingEngine = loggingEngine;
     }
 
     public static void logClassInitializerEnter() {

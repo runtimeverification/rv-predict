@@ -1,11 +1,12 @@
 package com.runtimeverification.rvpredict.log;
 
+import com.google.common.collect.Lists;
 import com.runtimeverification.rvpredict.config.Configuration;
 
-import org.apache.tools.ant.DirectoryScanner;
-
 import java.io.*;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -20,9 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Traian SF
  */
 public class OfflineLoggingFactory implements LoggingFactory {
-    /**
-     * termination for files holding events
-     */
+
     public static final String TRACE_SUFFIX = "trace.bin";
     public static final String METADATA_BIN = "metadata.bin";
     private static final AtomicInteger logFileId = new AtomicInteger();
@@ -41,26 +40,22 @@ public class OfflineLoggingFactory implements LoggingFactory {
      * The file names end with {@link OfflineLoggingFactory#TRACE_SUFFIX}, having as a prefix the unique
      * id of the thread generating them.
      */
-    private static String[] getTraceFiles(String directory) {
-        DirectoryScanner scanner = new DirectoryScanner();
-        scanner.setIncludes(new String[]{"*" + TRACE_SUFFIX + "*"});
-        scanner.setBasedir(directory);
-        scanner.setCaseSensitive(false);
-        scanner.scan();
-        return scanner.getIncludedFiles();
-    }
-
-    /**
-     * Cleans all preexisting trace files from the specified <code>directory</code>
-     */
-    public static void removeTraceFiles(String directory) {
-        for (String fname : getTraceFiles(directory)) {
-            try {
-                Files.delete(Paths.get(directory, fname));
+    public static List<Path> getTraceFiles(String directory) {
+        List<Path> result = Lists.newArrayList();
+        Path directoryPath = Paths.get(directory);
+        if (Files.isDirectory(directoryPath)) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(directoryPath)) {
+                for (Path path : stream) {
+                    if (path.toString().endsWith(TRACE_SUFFIX)) {
+                        result.add(path);
+                    }
+                }
             } catch (IOException e) {
-                System.err.println("Cannot delete trace file " + fname + "from dir. " + directory);
+                e.printStackTrace();
             }
         }
+
+        return result;
     }
 
     @Override
@@ -78,10 +73,8 @@ public class OfflineLoggingFactory implements LoggingFactory {
     public EventInputStream getInputStream() throws InterruptedException, IOException {
         if (inputStreams == null) {
             inputStreams = new LinkedList<>();
-            String[] files = getTraceFiles(config.outdir);
-            for (String file : files) {
-                EventInputStream inputStream = new OfflineLoggingEventInputStream(
-                        Paths.get(config.outdir, file));
+            for (Path path : getTraceFiles(config.outdir)) {
+                EventInputStream inputStream = new OfflineLoggingEventInputStream(path);
                 inputStreams.add(inputStream);
             }
         }

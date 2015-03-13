@@ -11,7 +11,7 @@ import java.util.Collection;
 public class SMTLib1Filter implements SMTFilter {
 
     @Override
-    public String getSMTMessage(SMTASTNode node) {
+    public String getSMTQuery(FormulaTerm node) {
         final StringBuilder output = new StringBuilder();
         final Visitor visitor = new Visitor(output);
         output.append("(benchmark test.smt\n");

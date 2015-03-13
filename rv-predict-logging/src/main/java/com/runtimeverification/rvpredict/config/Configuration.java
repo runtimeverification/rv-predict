@@ -294,15 +294,11 @@ public class Configuration implements Constants {
     @Parameter(names = opt_volatile, description = "Check unordered conflict accesses on volatile variables", hidden = true, descriptionKey = "2030")
     public boolean checkVolatile;
 
-    public String constraint_outdir;
-
-    public static final String TABLE_NAME = "main";
-
     final static String opt_smt_solver = "--solver";
-    @Parameter(names = opt_smt_solver, description = "Solver command to use (SMT-LIB v1.2)", hidden = true, descriptionKey = "2050")
-    public String smt_solver = "\"" + OS.current().getNativeExecutable("z3") + "\"" + " -smt";
+    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2050")
+    public String smt_solver = "z3";
 
-    final static String opt_solver_timeout = "--solver_timeout";
+    final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
     public long solver_timeout = 60;
 
@@ -337,7 +333,6 @@ public class Configuration implements Constants {
 
     public void parseArguments(String[] args, boolean checkJava) {
         this.args = args;
-        String fileSeparator = System.getProperty("file.separator");
         jCommander = new JCommander(this);
         jCommander.setProgramName(PROGRAM_NAME);
 
@@ -407,8 +402,6 @@ public class Configuration implements Constants {
                 }
             }
         }
-
-        constraint_outdir = outdir + fileSeparator + "smt";
 
         if (command_line != null) { // if there are unnamed options they should
                                     // all be at the end

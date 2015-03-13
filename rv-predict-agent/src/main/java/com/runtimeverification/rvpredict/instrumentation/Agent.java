@@ -15,7 +15,7 @@ import com.runtimeverification.rvpredict.engine.main.Main;
 import com.runtimeverification.rvpredict.engine.main.RVPredict;
 import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
-import com.runtimeverification.rvpredict.log.OnlineLoggingFactory;
+import com.runtimeverification.rvpredict.log.LoggingTask;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 import org.objectweb.asm.ClassReader;
@@ -57,20 +57,12 @@ public class Agent implements ClassFileTransformer, Constants {
         if (!Configuration.online) {
             OfflineLoggingFactory.removeTraceFiles(config.outdir);
         }
-        LoggingFactory loggingFactory;
-        RVPredict predictionServer = null;
-        if (Configuration.online) {
-            loggingFactory = new OnlineLoggingFactory();
-            predictionServer = new RVPredict(config, loggingFactory);
-        } else {
-            loggingFactory = new OfflineLoggingFactory(config);
-        }
-        final LoggingEngine loggingEngine = new LoggingEngine(loggingFactory, predictionServer);
+        final LoggingEngine loggingEngine = new LoggingEngine(config);
+
         RVPredictRuntime.init(loggingEngine);
         loggingEngine.startLogging();
-        if (Configuration.online) {
-            loggingEngine.startPredicting();
-        }
+        final LoggingTask predictionServer = Configuration.online ? startOnlinePrediction(loggingEngine
+                .getLoggingFactory()) : null;
 
         preinitializeClasses();
 
@@ -99,6 +91,9 @@ public class Agent implements ClassFileTransformer, Constants {
             public void cleanup() {
                 try {
                     loggingEngine.finishLogging();
+                    if (predictionServer != null) {
+                        predictionServer.finishLogging();
+                    }
                 } catch (IOException e) {
                     System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
                     System.err.println(e.getMessage());
@@ -118,6 +113,15 @@ public class Agent implements ClassFileTransformer, Constants {
                         Logger.MSGTYPE.INFO);
             }
         }
+    }
+
+    private static LoggingTask startOnlinePrediction(LoggingFactory loggingFactory) {
+        LoggingTask predictionServer = new RVPredict(config, loggingFactory);
+        Thread predictionServerThread = new Thread(predictionServer, "Prediction main thread");
+        predictionServer.setOwner(predictionServerThread);
+        predictionServerThread.setDaemon(true);
+        predictionServerThread.start();
+        return predictionServer;
     }
 
     /**

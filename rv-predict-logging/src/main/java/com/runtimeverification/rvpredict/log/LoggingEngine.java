@@ -48,19 +48,20 @@ public class LoggingEngine {
 
     private final LoggingFactory loggingFactory;
 
-    private final LoggingTask predictionServer;
-
     private final MetadataLogger metadataLogger;
 
     private final List<EventDisruptor> disruptors = new ArrayList<>();
 
     private final ThreadLocalDisruptor threadLocalDisruptor = new ThreadLocalDisruptor();
 
-    public LoggingEngine(LoggingFactory loggingFactory, LoggingTask predictionServer) {
-        this.loggingFactory = loggingFactory;
-        this.predictionServer = predictionServer;
-
-        metadataLogger = Configuration.online ? null : new MetadataLogger(this);
+    public LoggingEngine(Configuration config) {
+        if (Configuration.online) {
+            this.loggingFactory = new OnlineLoggingFactory();
+            this.metadataLogger = null;
+        } else {
+            this.loggingFactory = new OfflineLoggingFactory(config);
+            this.metadataLogger = new MetadataLogger(this);
+        }
     }
 
     public LoggingFactory getLoggingFactory() {
@@ -96,10 +97,6 @@ public class LoggingEngine {
         if (Configuration.profile) {
             EventProfiler.printEventStats();
         }
-
-        if (predictionServer != null) {
-            predictionServer.finishLogging();
-        }
     }
 
     /**
@@ -114,13 +111,6 @@ public class LoggingEngine {
         if (disruptor != null) {
             disruptor.publishEvent(gid, tid, locId, addrl, addrr, value, eventType);
         }
-    }
-
-    public void startPredicting() {
-        Thread predictionServerThread = new Thread(predictionServer, "Prediction main thread");
-        predictionServer.setOwner(predictionServerThread);
-        predictionServerThread.setDaemon(true);
-        predictionServerThread.start();
     }
 
     private class ThreadLocalDisruptor extends ThreadLocal<EventDisruptor> {

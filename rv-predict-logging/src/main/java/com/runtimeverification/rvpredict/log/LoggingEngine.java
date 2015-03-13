@@ -68,7 +68,7 @@ public class LoggingEngine {
     }
 
     public void startLogging() {
-        if (!Configuration.online) {
+        if (metadataLogger != null) {
             Thread metadataLoggerThread = new Thread(metadataLogger, "Metadata logger");
             metadataLogger.setOwner(metadataLoggerThread);
             metadataLoggerThread.setDaemon(true);
@@ -89,7 +89,7 @@ public class LoggingEngine {
             }
         }
 
-        if (!Configuration.online) {
+        if (metadataLogger != null) {
             metadataLogger.finishLogging();
         }
 
@@ -97,7 +97,7 @@ public class LoggingEngine {
             EventProfiler.printEventStats();
         }
 
-        if (Configuration.online) {
+        if (predictionServer != null) {
             predictionServer.finishLogging();
         }
     }

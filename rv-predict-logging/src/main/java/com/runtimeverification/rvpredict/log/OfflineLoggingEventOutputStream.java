@@ -3,6 +3,8 @@ package com.runtimeverification.rvpredict.log;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import com.runtimeverification.rvpredict.config.Configuration.OS;
+
 import net.jpountz.lz4.LZ4BlockOutputStream;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
@@ -20,7 +22,9 @@ public class OfflineLoggingEventOutputStream extends EventOutputStream {
 
     public OfflineLoggingEventOutputStream(Path path) throws IOException {
         super(new LZ4BlockOutputStream(
-                new MappedByteBufferOutputStream(path),
+                OS.current() == OS.WIN ?
+                    new BufferedChannelOutputStream(path) :
+                    new MappedByteBufferOutputStream(path),
                 COMPRESS_BLOCK_SIZE,
                 FAST_COMPRESSOR));
     }

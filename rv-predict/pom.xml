@@ -10,6 +10,11 @@
     <dependencies>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
+            <artifactId>rv-predict-jar</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>rv-predict-engine</artifactId>
             <version>${project.version}</version>
         </dependency>

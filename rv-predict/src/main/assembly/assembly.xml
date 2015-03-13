@@ -18,7 +18,7 @@
       <moduleSet>
             <useAllReactorProjects>true</useAllReactorProjects>
             <includes>
-                <include>com.runtimeverification.rvpredict:rv-predict-agent</include>
+                <include>com.runtimeverification.rvpredict:rv-predict-jar</include>
             </includes>
             <binaries>
                 <outputDirectory>/lib</outputDirectory>

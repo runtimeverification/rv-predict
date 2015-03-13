@@ -30,10 +30,9 @@ package com.runtimeverification.rvpredict.config;
 
 import com.beust.jcommander.*;
 import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
-import com.runtimeverification.rvpredict.util.Util;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -295,15 +294,11 @@ public class Configuration implements Constants {
     @Parameter(names = opt_volatile, description = "Check unordered conflict accesses on volatile variables", hidden = true, descriptionKey = "2030")
     public boolean checkVolatile;
 
-    public String constraint_outdir;
-
-    public String tableName = "main";
-
     final static String opt_smt_solver = "--solver";
-    @Parameter(names = opt_smt_solver, description = "Solver command to use (SMT-LIB v1.2)", hidden = true, descriptionKey = "2050")
-    public String smt_solver = "\"" + OS.current().getNativeExecutable("z3") + "\"" + " -smt";
+    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2050")
+    public String smt_solver = "z3";
 
-    final static String opt_solver_timeout = "--solver_timeout";
+    final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
     public long solver_timeout = 60;
 
@@ -338,7 +333,6 @@ public class Configuration implements Constants {
 
     public void parseArguments(String[] args, boolean checkJava) {
         this.args = args;
-        String fileSeparator = System.getProperty("file.separator");
         jCommander = new JCommander(this);
         jCommander.setProgramName(PROGRAM_NAME);
 
@@ -409,8 +403,6 @@ public class Configuration implements Constants {
             }
         }
 
-        constraint_outdir = outdir + fileSeparator + "smt";
-
         if (command_line != null) { // if there are unnamed options they should
                                     // all be at the end
             int i = rvArgs.length - 1;
@@ -441,9 +433,6 @@ public class Configuration implements Constants {
             }
         } else {
             command_line.addAll(argList);
-        }
-        if (tableName == null) {
-            tableName = "main";
         }
         logger = new Logger(this);
     }
@@ -500,12 +489,13 @@ public class Configuration implements Constants {
             }
 
             String aDefault = getDefault(parameterDescription);
-            description += Util.spaces(spacesBeforeCnt)
+            description += Strings.repeat(" ", spacesBeforeCnt)
                     + parameterDescription.getNames()
-                    + Util.spaces(spacesAfterCnt)
-                    + Joiner.on("\n" + Util.spaces(4 + max_option_length)).join(parameterDescription.getDescription().split("\\n"))
-                    + (aDefault.isEmpty() ? "" : "\n" + Util.spaces(4)
-                            + Util.spaces(max_option_length) + aDefault);
+                    + Strings.repeat(" ", spacesAfterCnt)
+                    + Joiner.on("\n" + Strings.repeat(" ", 4 + max_option_length)).join(
+                            parameterDescription.getDescription().split("\\n"))
+                    + (aDefault.isEmpty() ? "" : "\n" + Strings.repeat(" ", 4)
+                            + Strings.repeat(" ", max_option_length) + aDefault);
             usageMap.put(descriptionKey, description);
             if (!parameter.hidden()) {
                 shortUsageMap.put(descriptionKey, description);

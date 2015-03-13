@@ -44,26 +44,23 @@ import java.util.Map;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.util.Constants;
 
 public class SMTConstraintBuilder {
 
-    private static AtomicInteger id = new AtomicInteger();// constraint id
-    private SMTTaskRun task;
-
-    private final Configuration config;
-
     private final Trace trace;
 
     private final ReachabilityEngine reachEngine = new ReachabilityEngine();
     private final LockSetEngine lockEngine = new LockSetEngine();
+
+    private final SMTFilter smtFilter;
+
+    private final Solver solver;
 
     private final Map<MemoryAccessEvent, Formula> abstractPhi = Maps.newHashMap();
     private final Map<MemoryAccessEvent, Formula> concretePhi = Maps.newHashMap();
@@ -84,8 +81,9 @@ public class SMTConstraintBuilder {
     private final FormulaTerm.Builder smtlibAssertionBuilder = FormulaTerm.andBuilder();
 
     public SMTConstraintBuilder(Configuration config, Trace trace) {
-        this.config = config;
         this.trace = trace;
+        this.smtFilter = SMTFilterFactory.getSMTFilter(config);
+        this.solver = new Z3Wrapper(config);
     }
 
     private void assertHappensBefore(Event e1, Event e2) {
@@ -335,20 +333,9 @@ public class SMTConstraintBuilder {
      */
     public boolean happensBefore(Event e1, Event e2) {
         return reachEngine.canReach(e1.getGID(), e2.getGID());
-
-    }
-
-    public boolean isSat() {
-        int id = SMTConstraintBuilder.id.incrementAndGet();
-        task = new SMTTaskRun(config, id);
-        return task.isSat(smtlibAssertionBuilder.build());
-
-
     }
 
     public boolean isRace(Event e1, Event e2, Formula... casualConstraints) {
-        int id = SMTConstraintBuilder.id.incrementAndGet();
-        task = new SMTTaskRun(config, id);
         FormulaTerm.Builder raceAssertionBuilder = FormulaTerm.andBuilder();
         raceAssertionBuilder.add(smtlibAssertionBuilder.build());
         for (Entry<MemoryAccessEvent, Formula> entry : abstractPhi.entrySet()) {
@@ -361,13 +348,13 @@ public class SMTConstraintBuilder {
                     new ConcretePhiVariable(entry.getKey()),
                     entry.getValue()));
         }
-        raceAssertionBuilder.add(FormulaTerm.INT_EQUAL(new OrderVariable(e1), new OrderVariable(e2)));
+        raceAssertionBuilder.add(FormulaTerm
+                .INT_EQUAL(new OrderVariable(e1), new OrderVariable(e2)));
         for (Formula casualConstraint : casualConstraints) {
             raceAssertionBuilder.add(casualConstraint);
         }
 
-
-        return task.isSat(raceAssertionBuilder.build());
+        return solver.isSat(smtFilter.getSMTQuery(raceAssertionBuilder.build()));
     }
 
 }

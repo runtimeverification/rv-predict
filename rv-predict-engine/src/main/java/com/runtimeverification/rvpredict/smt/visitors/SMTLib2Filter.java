@@ -6,29 +6,27 @@ import com.runtimeverification.rvpredict.smt.formula.*;
 import java.util.Collection;
 
 /**
- * Filter for dumping the formula in the SMTLIB 1.2 format
+ * Filter for dumping the formula in the SMTLIB 2 format
  */
-public class SMTLib1Filter implements SMTFilter {
+public class SMTLib2Filter implements SMTFilter {
 
     @Override
-    public String getSMTMessage(SMTASTNode node) {
+    public String getSMTQuery(FormulaTerm node) {
         final StringBuilder output = new StringBuilder();
         final Visitor visitor = new Visitor(output);
-        output.append("(benchmark test.smt\n");
-        output.append(" :logic QF_IDL\n");
+        output.append("(set-logic QF_IDL)\n");
         Collection<SMTVariable> variables = VariableCollector.getVariables(node);
         if (!variables.isEmpty()) {
-            output.append(" :extrafuns (\n");
             for (SMTVariable variable : variables) {
-                output.append("  (");
+                output.append("(declare-const ");
                 variable.accept(visitor);
-                output.append(' ').append(variable.getSort()).append(")\n");
+                output.append(" ").append(variable.getSort()).append(")\n");
             }
-            output.append(")\n");
         }
-        output.append(" :formula ");
+        output.append("(assert ");
         node.accept(visitor);
-        output.append(')');
+        output.append(")\n");
+        output.append("(check-sat)");
         return visitor.getResult();
     }
 

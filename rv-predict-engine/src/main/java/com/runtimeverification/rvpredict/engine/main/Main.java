@@ -1,6 +1,5 @@
 package com.runtimeverification.rvpredict.engine.main;
 
-import com.google.common.base.Strings;
 import com.runtimeverification.rvpredict.config.Configuration;
 
 import org.apache.tools.ant.util.JavaEnvUtils;
@@ -22,16 +21,11 @@ import java.util.Scanner;
  */
 public class Main {
 
-    public static final int WIDTH = 75;
-    public static final String DASH = "-";
-
     public static void main(String[] args) {
 
         Configuration config = new Configuration();
 
         config.parseArguments(args, false);
-        boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
-
         if (config.log) {
             if (config.command_line.isEmpty()) {
                 config.logger.report("You must provide a class or a jar to run.",
@@ -64,11 +58,6 @@ public class Main {
             appArgList.add("-ea");
             appArgList.add("-Xbootclasspath/a:" + rvAgent);
             appArgList.add("-javaagent:" + rvAgent + "=" + agentOptions);
-            if (logOutput) {
-                config.logger.report(
-                        center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE),
-                        Logger.MSGTYPE.INFO);
-            }
             appArgList.addAll(config.command_line);
 
             runAgent(config, appArgList);
@@ -119,7 +108,7 @@ public class Main {
 
         if (config.log && (Configuration.verbose || logOutput)) {
             config.logger
-                    .report(center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
+                    .reportCenter(Configuration.LOGGING_PHASE_COMPLETED, Logger.MSGTYPE.INFO);
             config.logger.report(Configuration.TRACE_LOGGED_IN + config.outdir,
                     Logger.MSGTYPE.VERBOSE);
         }
@@ -127,12 +116,6 @@ public class Main {
         if (config.predict && !Configuration.online) {
             new RVPredict(config, new OfflineLoggingFactory(config)).run();
         }
-    }
-
-    public static String center(String msg) {
-        int fillWidth = WIDTH - msg.length();
-        return "\n" + Strings.repeat(DASH, fillWidth / 2) + msg
-                + Strings.repeat(DASH, (fillWidth + 1) / 2);
     }
 
     public static Thread getPredictionThread(final Configuration commandLine,
@@ -197,7 +180,7 @@ public class Main {
                 cleanupAgent.cleanup();
                 if (predict) {
                     if (commandLine.log && (Configuration.verbose || logOutput)) {
-                        commandLine.logger.report(center(Configuration.LOGGING_PHASE_COMPLETED),
+                        commandLine.logger.reportCenter(Configuration.LOGGING_PHASE_COMPLETED,
                                 Logger.MSGTYPE.INFO);
                         commandLine.logger.report(Configuration.TRACE_LOGGED_IN
                                 + commandLine.outdir, Logger.MSGTYPE.VERBOSE);

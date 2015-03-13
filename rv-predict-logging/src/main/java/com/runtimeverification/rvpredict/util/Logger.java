@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.util;
 
+import com.google.common.base.Strings;
 import com.runtimeverification.rvpredict.config.Configuration;
 
 import java.io.File;
@@ -11,6 +12,9 @@ import java.io.PrintWriter;
  * Created by TraianSF on 05.08.2014.
  */
 public class Logger {
+
+    public static final int WIDTH = 75;
+    public static final String DASH = "-";
 
     private PrintWriter out;
     Configuration config;
@@ -41,6 +45,16 @@ public class Logger {
 
     public PrintWriter getPrinter() {
         return out;
+    }
+
+    public static String center(String msg) {
+        int fillWidth = WIDTH - msg.length();
+        return "\n" + Strings.repeat(DASH, fillWidth / 2) + msg
+                + Strings.repeat(DASH, (fillWidth + 1) / 2);
+    }
+
+    public void reportCenter(String msg, MSGTYPE type) {
+        report(center(msg), type);
     }
 
     public synchronized void report(String msg, MSGTYPE type) {

@@ -1,10 +1,12 @@
 package com.runtimeverification.rvpredict.engine.main;
 
+import com.google.common.collect.Lists;
 import com.runtimeverification.rvpredict.config.Configuration;
 
 import org.apache.tools.ant.util.JavaEnvUtils;
 
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,11 +50,11 @@ public class Main {
 
             String agentOptions = getAgentOptions(config);
 
-            List<String> appArgList = Arrays.asList(new String[] {
+            List<String> appArgList = Lists.newArrayList(
                     JAVA_EXECUTABLE,
                     "-ea",
                     "-Xbootclasspath/a:" + RV_PREDICT_JAR,
-                    "-javaagent:" + RV_PREDICT_JAR + "=" + agentOptions });
+                    "-javaagent:" + RV_PREDICT_JAR + "=" + agentOptions);
             appArgList.addAll(config.command_line);
 
             runAgent(config, appArgList);
@@ -113,11 +115,11 @@ public class Main {
         String[] args = commandLine.getArgs();
         ProcessBuilder processBuilder = null;
         if (predict) {
-            List<String> appArgList = Arrays.asList(new String[] {
+            List<String> appArgList = Lists.newArrayList(
                     JAVA_EXECUTABLE,
                     "-cp",
                     RV_PREDICT_JAR,
-                    Main.class.getName() });
+                    Main.class.getName());
             int rvIndex = appArgList.size();
             appArgList.addAll(Arrays.asList(args));
 

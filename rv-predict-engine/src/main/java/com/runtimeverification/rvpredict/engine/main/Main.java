@@ -1,12 +1,12 @@
 package com.runtimeverification.rvpredict.engine.main;
 
-import com.google.common.base.Strings;
 import com.runtimeverification.rvpredict.config.Configuration;
 
 import org.apache.tools.ant.util.JavaEnvUtils;
 
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.util.Logger;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,15 +22,14 @@ import java.util.Scanner;
  */
 public class Main {
 
-    public static final int WIDTH = 75;
-    public static final String DASH = "-";
+    private static final String JAVA_EXECUTABLE = JavaEnvUtils.getJreExecutable("java");
+    private static final String SEPARATOR = System.getProperty("file.separator");
+    private static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "lib"
+            + SEPARATOR + "rv-predict.jar";
 
     public static void main(String[] args) {
-
         Configuration config = new Configuration();
-
         config.parseArguments(args, false);
-        boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
 
         if (config.log) {
             if (config.command_line.isEmpty()) {
@@ -51,24 +50,13 @@ public class Main {
                 }
             }
 
-            String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
-            String basePath = Configuration.getBasePath();
-            String separator = System.getProperty("file.separator");
-            String libPath = basePath + separator + "lib" + separator;
-            String rvAgent = libPath + "rv-predict" + ".jar";
-
             String agentOptions = getAgentOptions(config);
 
             List<String> appArgList = new ArrayList<>();
-            appArgList.add(java);
+            appArgList.add(JAVA_EXECUTABLE);
             appArgList.add("-ea");
-            appArgList.add("-Xbootclasspath/a:" + rvAgent);
-            appArgList.add("-javaagent:" + rvAgent + "=" + agentOptions);
-            if (logOutput) {
-                config.logger.report(
-                        center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE),
-                        Logger.MSGTYPE.INFO);
-            }
+            appArgList.add("-Xbootclasspath/a:" + RV_PREDICT_JAR);
+            appArgList.add("-javaagent:" + RV_PREDICT_JAR + "=" + agentOptions);
             appArgList.addAll(config.command_line);
 
             runAgent(config, appArgList);
@@ -117,19 +105,12 @@ public class Main {
         boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
 
         if (config.log && (Configuration.verbose || logOutput)) {
-            config.logger
-                    .report(center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
+            config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
         }
 
         if (config.predict) {
             new RVPredict(config, new OfflineLoggingFactory(config)).run();
         }
-    }
-
-    public static String center(String msg) {
-        int fillWidth = WIDTH - msg.length();
-        return "\n" + Strings.repeat(DASH, fillWidth / 2) + msg
-                + Strings.repeat(DASH, (fillWidth + 1) / 2);
     }
 
     public static Thread getPredictionThread(final Configuration commandLine,
@@ -140,15 +121,10 @@ public class Main {
         boolean logToScreen = false;
         String file = null;
         if (predict) {
-            String java = JavaEnvUtils.getJreExecutable("java");
-            String basePath = Configuration.getBasePath();
-            String separator = System.getProperty("file.separator");
-            String libPath = basePath + separator + "lib" + separator;
-            String rvEngine = libPath + "rv-predict" + ".jar";
             List<String> appArgList = new ArrayList<>();
-            appArgList.add(java);
+            appArgList.add(JAVA_EXECUTABLE);
             appArgList.add("-cp");
-            appArgList.add(rvEngine);
+            appArgList.add(RV_PREDICT_JAR);
             appArgList.add(Main.class.getName());
             int rvIndex = appArgList.size();
             appArgList.addAll(Arrays.asList(args));
@@ -183,8 +159,7 @@ public class Main {
                 cleanupAgent.cleanup();
                 if (predict) {
                     if (commandLine.log && (Configuration.verbose || logOutput)) {
-                        commandLine.logger.report(center(Configuration.LOGGING_PHASE_COMPLETED),
-                                Logger.MSGTYPE.INFO);
+                        commandLine.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
                     }
 
                     try {

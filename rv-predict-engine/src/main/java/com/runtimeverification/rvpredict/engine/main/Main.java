@@ -5,14 +5,11 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import org.apache.tools.ant.util.JavaEnvUtils;
 
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
-import com.runtimeverification.rvpredict.util.Logger;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
@@ -34,8 +31,7 @@ public class Main {
         config.parseArguments(args, false);
         if (config.log) {
             if (config.command_line.isEmpty()) {
-                config.logger.report("You must provide a class or a jar to run.",
-                        Logger.MSGTYPE.ERROR);
+                config.logger.reportError("You must provide a class or a jar to run.");
                 config.usage();
                 System.exit(1);
             }
@@ -44,8 +40,7 @@ public class Main {
                 outdirFile.mkdir();
             } else {
                 if (!outdirFile.isDirectory()) {
-                    config.logger.report(config.outdir + " is not a directory",
-                            Logger.MSGTYPE.ERROR);
+                    config.logger.reportError(config.outdir + " is not a directory");
                     config.usage();
                     System.exit(1);
                 }
@@ -53,11 +48,11 @@ public class Main {
 
             String agentOptions = getAgentOptions(config);
 
-            List<String> appArgList = new ArrayList<>();
-            appArgList.add(JAVA_EXECUTABLE);
-            appArgList.add("-ea");
-            appArgList.add("-Xbootclasspath/a:" + RV_PREDICT_JAR);
-            appArgList.add("-javaagent:" + RV_PREDICT_JAR + "=" + agentOptions);
+            List<String> appArgList = Arrays.asList(new String[] {
+                    JAVA_EXECUTABLE,
+                    "-ea",
+                    "-Xbootclasspath/a:" + RV_PREDICT_JAR,
+                    "-javaagent:" + RV_PREDICT_JAR + "=" + agentOptions });
             appArgList.addAll(config.command_line);
 
             runAgent(config, appArgList);
@@ -107,8 +102,7 @@ public class Main {
         boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
 
         if (config.log && (Configuration.verbose || logOutput)) {
-            config.logger
-                    .reportCenter(Configuration.LOGGING_PHASE_COMPLETED, Logger.MSGTYPE.INFO);
+            config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
         }
 
         if (config.predict && !Configuration.online) {
@@ -124,11 +118,11 @@ public class Main {
         boolean logToScreen = false;
         String file = null;
         if (predict) {
-            List<String> appArgList = new ArrayList<>();
-            appArgList.add(JAVA_EXECUTABLE);
-            appArgList.add("-cp");
-            appArgList.add(RV_PREDICT_JAR);
-            appArgList.add(Main.class.getName());
+            List<String> appArgList = Arrays.asList(new String[] {
+                    JAVA_EXECUTABLE,
+                    "-cp",
+                    RV_PREDICT_JAR,
+                    Main.class.getName() });
             int rvIndex = appArgList.size();
             appArgList.addAll(Arrays.asList(args));
 
@@ -162,8 +156,7 @@ public class Main {
                 cleanupAgent.cleanup();
                 if (predict) {
                     if (commandLine.log && (Configuration.verbose || logOutput)) {
-                        commandLine.logger.reportCenter(Configuration.LOGGING_PHASE_COMPLETED,
-                                Logger.MSGTYPE.INFO);
+                        commandLine.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
                     }
 
                     try {

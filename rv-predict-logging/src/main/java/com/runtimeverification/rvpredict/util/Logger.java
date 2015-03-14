@@ -18,8 +18,8 @@ public class Logger {
                 + Strings.repeat(DASH, (fillWidth + 1) / 2);
     }
 
-    public void reportCenter(String msg, MSGTYPE type) {
-        report(center(msg), type);
+    public void reportPhase(String msg) {
+        report(center(msg), MSGTYPE.INFO);
     }
 
     public synchronized void report(String msg, MSGTYPE type) {
@@ -46,5 +46,12 @@ public class Logger {
 
     public enum MSGTYPE {
         REAL, POTENTIAL, STATISTICS, INFO, VERBOSE, ERROR
+    }
+
+    public void reportError(String msg) {
+        report(msg, MSGTYPE.ERROR);
+    }
+    public void reportInfo(String msg) {
+        report(msg, MSGTYPE.INFO);
     }
 }

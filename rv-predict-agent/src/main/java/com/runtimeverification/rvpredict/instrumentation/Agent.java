@@ -105,9 +105,7 @@ public class Agent implements ClassFileTransformer, Constants {
     }
 
     private static void printStartupInfo() {
-        config.logger.reportCenter(
-                Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE,
-                Logger.MSGTYPE.INFO);
+        config.logger.reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
         config.logger.report("Log directory: " + config.outdir, Logger.MSGTYPE.INFO);
         if (Configuration.includes != null) {
             config.logger.report("Including: " + config.includeList, Logger.MSGTYPE.INFO);

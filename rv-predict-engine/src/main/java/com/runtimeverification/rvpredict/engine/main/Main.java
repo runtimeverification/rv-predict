@@ -6,6 +6,7 @@ import org.apache.tools.ant.util.JavaEnvUtils;
 
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.util.Logger;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,6 +21,11 @@ import java.util.Scanner;
  * @author TraianSF
  */
 public class Main {
+
+    private static final String JAVA_EXECUTABLE = JavaEnvUtils.getJreExecutable("java");
+    private static final String SEPARATOR = System.getProperty("file.separator");
+    private static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "lib"
+            + SEPARATOR + "rv-predict.jar";
 
     public static void main(String[] args) {
 
@@ -45,19 +51,13 @@ public class Main {
                 }
             }
 
-            String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
-            String basePath = Configuration.getBasePath();
-            String separator = System.getProperty("file.separator");
-            String libPath = basePath + separator + "lib" + separator;
-            String rvAgent = libPath + "rv-predict" + ".jar";
-
             String agentOptions = getAgentOptions(config);
 
             List<String> appArgList = new ArrayList<>();
-            appArgList.add(java);
+            appArgList.add(JAVA_EXECUTABLE);
             appArgList.add("-ea");
-            appArgList.add("-Xbootclasspath/a:" + rvAgent);
-            appArgList.add("-javaagent:" + rvAgent + "=" + agentOptions);
+            appArgList.add("-Xbootclasspath/a:" + RV_PREDICT_JAR);
+            appArgList.add("-javaagent:" + RV_PREDICT_JAR + "=" + agentOptions);
             appArgList.addAll(config.command_line);
 
             runAgent(config, appArgList);
@@ -126,15 +126,10 @@ public class Main {
         boolean logToScreen = false;
         String file = null;
         if (predict) {
-            String java = JavaEnvUtils.getJreExecutable("java");
-            String basePath = Configuration.getBasePath();
-            String separator = System.getProperty("file.separator");
-            String libPath = basePath + separator + "lib" + separator;
-            String rvEngine = libPath + "rv-predict" + ".jar";
             List<String> appArgList = new ArrayList<>();
-            appArgList.add(java);
+            appArgList.add(JAVA_EXECUTABLE);
             appArgList.add("-cp");
-            appArgList.add(rvEngine);
+            appArgList.add(RV_PREDICT_JAR);
             appArgList.add(Main.class.getName());
             int rvIndex = appArgList.size();
             appArgList.addAll(Arrays.asList(args));

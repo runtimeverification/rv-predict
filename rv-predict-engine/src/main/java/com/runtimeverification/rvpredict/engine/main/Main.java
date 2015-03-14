@@ -99,9 +99,7 @@ public class Main {
     }
 
     private static void checkAndPredict(Configuration config) {
-        boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
-
-        if (config.log && (Configuration.verbose || logOutput)) {
+        if (config.log) {
             config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
         }
 
@@ -113,10 +111,7 @@ public class Main {
     public static Thread getPredictionThread(final Configuration commandLine,
             final CleanupAgent cleanupAgent, final boolean predict) {
         String[] args = commandLine.getArgs();
-        final boolean logOutput = commandLine.log_output.equalsIgnoreCase(Configuration.YES);
         ProcessBuilder processBuilder = null;
-        boolean logToScreen = false;
-        String file = null;
         if (predict) {
             List<String> appArgList = Arrays.asList(new String[] {
                     JAVA_EXECUTABLE,
@@ -135,39 +130,22 @@ public class Main {
             }
 
             processBuilder = new ProcessBuilder(appArgList.toArray(args));
-            String logOutputString = commandLine.log_output;
-            if (logOutputString.equalsIgnoreCase(Configuration.YES)) {
-                logToScreen = true;
-            } else if (!logOutputString.equals(Configuration.NO)) {
-                file = logOutputString;
-                String actualOutFile = file + ".out";
-                String actualErrFile = file + ".err";
-                processBuilder.redirectError(new File(actualErrFile));
-                processBuilder.redirectOutput(new File(actualOutFile));
-            }
         }
 
-        final boolean finalLogToScreen = logToScreen;
-        final String finalFile = file;
         final ProcessBuilder finalProcessBuilder = processBuilder;
         return new Thread("CleanUp Agent") {
             @Override
             public void run() {
                 cleanupAgent.cleanup();
                 if (predict) {
-                    if (commandLine.log && (Configuration.verbose || logOutput)) {
+                    if (commandLine.log) {
                         commandLine.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
                     }
 
                     try {
                         Process process = finalProcessBuilder.start();
-                        if (finalLogToScreen) {
-                            redirectOutput(process.getErrorStream(), System.err);
-                            redirectOutput(process.getInputStream(), System.out);
-                        } else if (finalFile == null) {
-                            redirectOutput(process.getErrorStream(), null);
-                            redirectOutput(process.getInputStream(), null);
-                        }
+                        redirectOutput(process.getErrorStream(), System.err);
+                        redirectOutput(process.getInputStream(), System.out);
                         redirectInput(process.getOutputStream(), System.in);
 
                         process.waitFor();
@@ -186,18 +164,6 @@ public class Main {
     public static void runAgent(final Configuration config, final List<String> appArgList) {
         ProcessBuilder agentProcBuilder = new ProcessBuilder(appArgList.toArray(new String[appArgList
                 .size()]));
-        String logOutputString = config.log_output;
-        boolean logToScreen = false;
-        String file = null;
-        if (logOutputString.equalsIgnoreCase(Configuration.YES)) {
-            logToScreen = true;
-        } else if (!logOutputString.equals(Configuration.NO)) {
-            file = logOutputString;
-            String actualOutFile = file + ".out";
-            String actualErrFile = file + ".err";
-            agentProcBuilder.redirectError(new File(actualErrFile));
-            agentProcBuilder.redirectOutput(new File(actualOutFile));
-        }
         try {
             final Process agentProc = agentProcBuilder.start();
             Thread cleanupAgent = new Thread() {
@@ -207,13 +173,8 @@ public class Main {
                 }
             };
             Runtime.getRuntime().addShutdownHook(cleanupAgent);
-            if (logToScreen) {
-                redirectOutput(agentProc.getErrorStream(), System.err);
-                redirectOutput(agentProc.getInputStream(), System.out);
-            } else if (file == null) {
-                redirectOutput(agentProc.getErrorStream(), null);
-                redirectOutput(agentProc.getInputStream(), null);
-            }
+            redirectOutput(agentProc.getErrorStream(), System.err);
+            redirectOutput(agentProc.getInputStream(), System.out);
             redirectInput(agentProc.getOutputStream(), System.in);
 
             agentProc.waitFor();

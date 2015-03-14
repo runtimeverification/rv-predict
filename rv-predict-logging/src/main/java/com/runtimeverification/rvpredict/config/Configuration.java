@@ -280,7 +280,20 @@ public class Configuration implements Constants {
 
     public final static String opt_online = "--online";
     @Parameter(names = opt_online, description = "Run prediction online", hidden = true, descriptionKey = "2005")
-    public static boolean online = false;
+    private static boolean online = false;
+    public static PredictionAlgorithm prediction;
+
+    public enum PredictionAlgorithm {
+        ONLINE, OFFLINE, NONE;
+
+        public boolean isOnline() {
+            return this == ONLINE;
+        }
+        
+        public boolean isOffline() {
+            return this == OFFLINE;
+        }
+    };
 
     final static String opt_max_len = "--maxlen";
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
@@ -397,6 +410,12 @@ public class Configuration implements Constants {
                     System.exit(1);
                 }
             }
+        }
+
+        if (!predict) {
+            prediction = PredictionAlgorithm.NONE;
+        } else {
+            prediction = online ? PredictionAlgorithm.ONLINE : PredictionAlgorithm.OFFLINE;
         }
 
         if (command_line != null) { // if there are unnamed options they should

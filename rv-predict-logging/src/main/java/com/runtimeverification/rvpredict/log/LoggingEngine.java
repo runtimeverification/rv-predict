@@ -55,7 +55,7 @@ public class LoggingEngine {
     private final ThreadLocalDisruptor threadLocalDisruptor = new ThreadLocalDisruptor();
 
     public LoggingEngine(Configuration config) {
-        if (Configuration.online) {
+        if (Configuration.prediction.isOnline()) {
             this.loggingFactory = new OnlineLoggingFactory();
             this.metadataLogger = null;
         } else {

@@ -57,7 +57,7 @@ public class Main {
                     "-javaagent:" + RV_PREDICT_JAR + "=" + agentOptions);
             appArgList.addAll(config.command_line);
 
-            runAgent(config, appArgList);
+            runAgent(appArgList);
         }
 
         checkAndPredict(config);
@@ -105,7 +105,7 @@ public class Main {
             config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
         }
 
-        if (config.predict && !Configuration.online) {
+        if (Configuration.prediction.isOffline()) {
             new RVPredict(config, new OfflineLoggingFactory(config)).run();
         }
     }
@@ -163,7 +163,7 @@ public class Main {
         public void cleanup();
     }
 
-    public static void runAgent(final Configuration config, final List<String> appArgList) {
+    public static void runAgent(final List<String> appArgList) {
         ProcessBuilder agentProcBuilder = new ProcessBuilder(appArgList.toArray(new String[appArgList
                 .size()]));
         try {

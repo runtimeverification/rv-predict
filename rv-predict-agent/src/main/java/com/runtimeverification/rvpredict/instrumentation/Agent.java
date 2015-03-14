@@ -46,8 +46,8 @@ public class Agent implements ClassFileTransformer, Constants {
 
         RVPredictRuntime.init(loggingEngine);
         loggingEngine.startLogging();
-        final LoggingTask predictionServer = Configuration.online ? startOnlinePrediction(loggingEngine
-                .getLoggingFactory()) : null;
+        final LoggingTask predictionServer = Configuration.prediction.isOnline() ?
+                startOnlinePrediction(loggingEngine.getLoggingFactory()) : null;
 
         inst.addTransformer(new Agent(), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {
@@ -86,8 +86,8 @@ public class Agent implements ClassFileTransformer, Constants {
                 }
             }
         };
-        Thread predict = Main.getPredictionThread(config, cleanupAgent, config.predict
-                && !Configuration.online);
+        Thread predict = Main.getPredictionThread(config, cleanupAgent,
+                Configuration.prediction.isOffline());
         Runtime.getRuntime().addShutdownHook(predict);
     }
 

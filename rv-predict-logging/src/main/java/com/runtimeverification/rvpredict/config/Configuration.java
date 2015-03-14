@@ -259,10 +259,6 @@ public class Configuration implements Constants {
     public String log_dir = null;
     public boolean log = true;
 
-    final static String opt_log_output = "--output";
-    @Parameter(names = opt_log_output, description = "Output of the logged execution [yes|no|<file>]", hidden = true, descriptionKey = "1010")
-    public String log_output = YES;
-
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include." +
             "\nPrefix with + to add to the default included packages", hidden = true, descriptionKey = "1025")
@@ -284,7 +280,20 @@ public class Configuration implements Constants {
 
     public final static String opt_online = "--online";
     @Parameter(names = opt_online, description = "Run prediction online", hidden = true, descriptionKey = "2005")
-    public static boolean online = false;
+    private static boolean online = false;
+    public static PredictionAlgorithm prediction;
+
+    public enum PredictionAlgorithm {
+        ONLINE, OFFLINE, NONE;
+
+        public boolean isOnline() {
+            return this == ONLINE;
+        }
+        
+        public boolean isOffline() {
+            return this == OFFLINE;
+        }
+    };
 
     final static String opt_max_len = "--maxlen";
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
@@ -344,7 +353,7 @@ public class Configuration implements Constants {
         }
 
         // Detecting a candidate for program options start
-        int max = Arrays.asList(args).indexOf(Configuration.opt_java);
+        int max = Arrays.asList(args).indexOf(opt_java);
         if (max != -1) { // -- was used. Using it as a separator for java
                          // command line
             rvArgs = Arrays.copyOf(args, max);
@@ -403,6 +412,12 @@ public class Configuration implements Constants {
             }
         }
 
+        if (!predict) {
+            prediction = PredictionAlgorithm.NONE;
+        } else {
+            prediction = online ? PredictionAlgorithm.ONLINE : PredictionAlgorithm.OFFLINE;
+        }
+
         if (command_line != null) { // if there are unnamed options they should
                                     // all be at the end
             int i = rvArgs.length - 1;
@@ -434,7 +449,7 @@ public class Configuration implements Constants {
         } else {
             command_line.addAll(argList);
         }
-        logger = new Logger(this);
+        logger = new Logger();
     }
 
     public void exclusiveOptionsFailure(String opt1, String opt2) {

@@ -1,18 +1,17 @@
 package com.runtimeverification.rvpredict.engine.main;
 
-import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.runtimeverification.rvpredict.config.Configuration;
 
 import org.apache.tools.ant.util.JavaEnvUtils;
 
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
-import com.runtimeverification.rvpredict.util.Logger;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
@@ -22,20 +21,19 @@ import java.util.Scanner;
  */
 public class Main {
 
-    public static final int WIDTH = 75;
-    public static final String DASH = "-";
+    private static final String JAVA_EXECUTABLE = JavaEnvUtils.getJreExecutable("java");
+    private static final String SEPARATOR = System.getProperty("file.separator");
+    private static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "lib"
+            + SEPARATOR + "rv-predict.jar";
 
     public static void main(String[] args) {
 
         Configuration config = new Configuration();
 
         config.parseArguments(args, false);
-        boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
-
         if (config.log) {
             if (config.command_line.isEmpty()) {
-                config.logger.report("You must provide a class or a jar to run.",
-                        Logger.MSGTYPE.ERROR);
+                config.logger.reportError("You must provide a class or a jar to run.");
                 config.usage();
                 System.exit(1);
             }
@@ -44,45 +42,25 @@ public class Main {
                 outdirFile.mkdir();
             } else {
                 if (!outdirFile.isDirectory()) {
-                    config.logger.report(config.outdir + " is not a directory",
-                            Logger.MSGTYPE.ERROR);
+                    config.logger.reportError(config.outdir + " is not a directory");
                     config.usage();
                     System.exit(1);
                 }
             }
 
-            String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
-            String basePath = Configuration.getBasePath();
-            String separator = System.getProperty("file.separator");
-            String libPath = basePath + separator + "lib" + separator;
-            String rvAgent = libPath + "rv-predict" + ".jar";
-
             String agentOptions = getAgentOptions(config);
 
-            List<String> appArgList = new ArrayList<>();
-            appArgList.add(java);
-            appArgList.add("-ea");
-            appArgList.add("-Xbootclasspath/a:" + rvAgent);
-            appArgList.add("-javaagent:" + rvAgent + "=" + agentOptions);
-            if (logOutput) {
-                config.logger.report(
-                        center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE),
-                        Logger.MSGTYPE.INFO);
-            }
+            List<String> appArgList = Lists.newArrayList(
+                    JAVA_EXECUTABLE,
+                    "-ea",
+                    "-Xbootclasspath/a:" + RV_PREDICT_JAR,
+                    "-javaagent:" + RV_PREDICT_JAR + "=" + agentOptions);
             appArgList.addAll(config.command_line);
 
-            runAgent(config, appArgList);
+            runAgent(appArgList);
         }
 
-        try {
-            checkAndPredict(config);
-        } catch (IOException e) {
-            System.err.println("Error while reading the logs.");
-            System.err.println(e.getMessage());
-        } catch (ClassNotFoundException e) {
-            System.err.println("Error: Metadata file corrupted.");
-            System.err.println(e.getMessage());
-        }
+        checkAndPredict(config);
     }
 
     /**
@@ -122,45 +100,26 @@ public class Main {
         return agentOptions.toString();
     }
 
-    private static void checkAndPredict(Configuration config) throws IOException, ClassNotFoundException {
-        boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
-
-        if (config.log && (Configuration.verbose || logOutput)) {
-            config.logger
-                    .report(center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
-            config.logger.report(Configuration.TRACE_LOGGED_IN + config.outdir,
-                    Logger.MSGTYPE.VERBOSE);
+    private static void checkAndPredict(Configuration config) {
+        if (config.log) {
+            config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
         }
 
-        if (config.predict && !Configuration.online) {
+        if (Configuration.prediction.isOffline()) {
             new RVPredict(config, new OfflineLoggingFactory(config)).run();
         }
-    }
-
-    public static String center(String msg) {
-        int fillWidth = WIDTH - msg.length();
-        return "\n" + Strings.repeat(DASH, fillWidth / 2) + msg
-                + Strings.repeat(DASH, (fillWidth + 1) / 2);
     }
 
     public static Thread getPredictionThread(final Configuration commandLine,
             final CleanupAgent cleanupAgent, final boolean predict) {
         String[] args = commandLine.getArgs();
-        final boolean logOutput = commandLine.log_output.equalsIgnoreCase(Configuration.YES);
         ProcessBuilder processBuilder = null;
-        boolean logToScreen = false;
-        String file = null;
         if (predict) {
-            String java = JavaEnvUtils.getJreExecutable("java");
-            String basePath = Configuration.getBasePath();
-            String separator = System.getProperty("file.separator");
-            String libPath = basePath + separator + "lib" + separator;
-            String rvEngine = libPath + "rv-predict" + ".jar";
-            List<String> appArgList = new ArrayList<>();
-            appArgList.add(java);
-            appArgList.add("-cp");
-            appArgList.add(rvEngine);
-            appArgList.add(Main.class.getName());
+            List<String> appArgList = Lists.newArrayList(
+                    JAVA_EXECUTABLE,
+                    "-cp",
+                    RV_PREDICT_JAR,
+                    Main.class.getName());
             int rvIndex = appArgList.size();
             appArgList.addAll(Arrays.asList(args));
 
@@ -173,53 +132,22 @@ public class Main {
             }
 
             processBuilder = new ProcessBuilder(appArgList.toArray(args));
-            String logOutputString = commandLine.log_output;
-            if (logOutputString.equalsIgnoreCase(Configuration.YES)) {
-                logToScreen = true;
-            } else if (!logOutputString.equals(Configuration.NO)) {
-                file = logOutputString;
-                String actualOutFile = file + ".out";
-                String actualErrFile = file + ".err";
-                processBuilder.redirectError(new File(actualErrFile));
-                processBuilder.redirectOutput(new File(actualOutFile));
-            }
-            StringBuilder commandMsg = new StringBuilder();
-            commandMsg.append("Executing command: \n");
-            commandMsg.append("   ");
-            for (String arg : args) {
-                if (arg.contains(" ")) {
-                    commandMsg.append(" \"").append(arg).append("\"");
-                } else {
-                    commandMsg.append(" ").append(arg);
-                }
-            }
-            commandLine.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
         }
 
-        final boolean finalLogToScreen = logToScreen;
-        final String finalFile = file;
         final ProcessBuilder finalProcessBuilder = processBuilder;
         return new Thread("CleanUp Agent") {
             @Override
             public void run() {
                 cleanupAgent.cleanup();
                 if (predict) {
-                    if (commandLine.log && (Configuration.verbose || logOutput)) {
-                        commandLine.logger.report(center(Configuration.LOGGING_PHASE_COMPLETED),
-                                Logger.MSGTYPE.INFO);
-                        commandLine.logger.report(Configuration.TRACE_LOGGED_IN
-                                + commandLine.outdir, Logger.MSGTYPE.VERBOSE);
+                    if (commandLine.log) {
+                        commandLine.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
                     }
 
                     try {
                         Process process = finalProcessBuilder.start();
-                        if (finalLogToScreen) {
-                            redirectOutput(process.getErrorStream(), System.err);
-                            redirectOutput(process.getInputStream(), System.out);
-                        } else if (finalFile == null) {
-                            redirectOutput(process.getErrorStream(), null);
-                            redirectOutput(process.getInputStream(), null);
-                        }
+                        redirectOutput(process.getErrorStream(), System.err);
+                        redirectOutput(process.getInputStream(), System.out);
                         redirectInput(process.getOutputStream(), System.in);
 
                         process.waitFor();
@@ -235,33 +163,10 @@ public class Main {
         public void cleanup();
     }
 
-    public static void runAgent(final Configuration config, final List<String> appArgList) {
+    public static void runAgent(final List<String> appArgList) {
         ProcessBuilder agentProcBuilder = new ProcessBuilder(appArgList.toArray(new String[appArgList
                 .size()]));
-        String logOutputString = config.log_output;
-        boolean logToScreen = false;
-        String file = null;
-        if (logOutputString.equalsIgnoreCase(Configuration.YES)) {
-            logToScreen = true;
-        } else if (!logOutputString.equals(Configuration.NO)) {
-            file = logOutputString;
-            String actualOutFile = file + ".out";
-            String actualErrFile = file + ".err";
-            agentProcBuilder.redirectError(new File(actualErrFile));
-            agentProcBuilder.redirectOutput(new File(actualOutFile));
-        }
         try {
-            final StringBuilder commandMsg = new StringBuilder();
-            commandMsg.append("Executing command: \n");
-            commandMsg.append("   ");
-            for (String arg : appArgList) {
-                if (arg.contains(" ")) {
-                    commandMsg.append(" \"").append(arg).append("\"");
-                } else {
-                    commandMsg.append(" ").append(arg);
-                }
-            }
-            config.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
             final Process agentProc = agentProcBuilder.start();
             Thread cleanupAgent = new Thread() {
                 @Override
@@ -270,13 +175,8 @@ public class Main {
                 }
             };
             Runtime.getRuntime().addShutdownHook(cleanupAgent);
-            if (logToScreen) {
-                redirectOutput(agentProc.getErrorStream(), System.err);
-                redirectOutput(agentProc.getInputStream(), System.out);
-            } else if (file == null) {
-                redirectOutput(agentProc.getErrorStream(), null);
-                redirectOutput(agentProc.getInputStream(), null);
-            }
+            redirectOutput(agentProc.getErrorStream(), System.err);
+            redirectOutput(agentProc.getInputStream(), System.out);
             redirectInput(agentProc.getOutputStream(), System.in);
 
             agentProc.waitFor();

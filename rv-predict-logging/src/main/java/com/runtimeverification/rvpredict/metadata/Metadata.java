@@ -62,7 +62,7 @@ public class Metadata implements Opcodes {
             synchronized (volatileVariableIds) {
                 if (!volatileVariableIds.contains(varId)) {
                     volatileVariableIds.add(varId);
-                    if (!Configuration.online) {
+                    if (!Configuration.prediction.isOnline()) {
                         unsavedVolatileVariableIds.add(varId);
                     }
                 }
@@ -78,7 +78,7 @@ public class Metadata implements Opcodes {
                 if (locId == null) {
                     locId = stmtSigToLocId.size() + 1;
                     stmtSigToLocId.put(sig, locId);
-                    if (Configuration.online) {
+                    if (Configuration.prediction.isOnline()) {
                         locIdToStmtSig.put(locId, sig);
                     } else {
                         if (Configuration.profile) {

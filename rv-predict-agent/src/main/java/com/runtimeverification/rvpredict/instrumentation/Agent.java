@@ -5,6 +5,8 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.ProtectionDomain;
 import java.util.HashSet;
 import java.util.Set;
@@ -15,7 +17,7 @@ import com.runtimeverification.rvpredict.engine.main.Main;
 import com.runtimeverification.rvpredict.engine.main.RVPredict;
 import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
-import com.runtimeverification.rvpredict.log.OnlineLoggingFactory;
+import com.runtimeverification.rvpredict.log.LoggingTask;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 import org.objectweb.asm.ClassReader;
@@ -34,49 +36,18 @@ public class Agent implements ClassFileTransformer, Constants {
 
     public static void premain(String agentArgs, Instrumentation inst) {
         instrumentation = inst;
+        preinitializeClasses();
 
-        if (agentArgs == null) {
-            agentArgs = "";
-        }
-        if (agentArgs.startsWith("\"")) {
-            assert agentArgs.endsWith("\"") : "Argument must be quoted";
-            agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
-        }
-        String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        config.parseArguments(args, false);
+        processAgentArguments(agentArgs);
+        printStartupInfo();
+        initLoggingDirectory();
 
-        final boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
-        config.logger.report("Log directory: " + config.outdir, Logger.MSGTYPE.INFO);
-        if (Configuration.includes != null) {
-            config.logger.report("Including: " + config.includeList, Logger.MSGTYPE.INFO);
-        }
-        if (Configuration.excludes != null) {
-            config.logger.report("Excluding: " + config.excludeList, Logger.MSGTYPE.INFO);
-        }
+        final LoggingEngine loggingEngine = new LoggingEngine(config);
 
-        if (!Configuration.online) {
-            OfflineLoggingFactory.removeTraceFiles(config.outdir);
-        }
-        LoggingFactory loggingFactory;
-        RVPredict predictionServer = null;
-        if (Configuration.online) {
-            loggingFactory = new OnlineLoggingFactory();
-            try {
-                predictionServer = new RVPredict(config, loggingFactory);
-            } catch (IOException | ClassNotFoundException e) {
-                assert false : "These exceptions should only be thrown for offline prediction";
-            }
-        } else {
-            loggingFactory = new OfflineLoggingFactory(config);
-        }
-        final LoggingEngine loggingEngine = new LoggingEngine(loggingFactory, predictionServer);
         RVPredictRuntime.init(loggingEngine);
         loggingEngine.startLogging();
-        if (Configuration.online) {
-            loggingEngine.startPredicting();
-        }
-
-        preinitializeClasses();
+        final LoggingTask predictionServer = Configuration.prediction.isOnline() ?
+                startOnlinePrediction(loggingEngine.getLoggingFactory()) : null;
 
         inst.addTransformer(new Agent(), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {
@@ -103,6 +74,9 @@ public class Agent implements ClassFileTransformer, Constants {
             public void cleanup() {
                 try {
                     loggingEngine.finishLogging();
+                    if (predictionServer != null) {
+                        predictionServer.finishLogging();
+                    }
                 } catch (IOException e) {
                     System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
                     System.err.println(e.getMessage());
@@ -112,16 +86,54 @@ public class Agent implements ClassFileTransformer, Constants {
                 }
             }
         };
-        Thread predict = Main.getPredictionThread(config, cleanupAgent, config.predict && !Configuration.online);
+        Thread predict = Main.getPredictionThread(config, cleanupAgent,
+                Configuration.prediction.isOffline());
         Runtime.getRuntime().addShutdownHook(predict);
+    }
 
-        if (config.predict) {
-            if (logOutput) {
-                config.logger.report(
-                        Main.center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE),
-                        Logger.MSGTYPE.INFO);
+    private static void initLoggingDirectory() {
+        if (config.outdir != null) {
+            String directory = config.outdir;
+            for (Path path : OfflineLoggingFactory.getTraceFiles(directory)) {
+                try {
+                    Files.delete(path);
+                } catch (IOException e) {
+                    System.err.println("Cannot delete trace file " + path + "from dir. " + directory);
+                }
             }
         }
+    }
+
+    private static void printStartupInfo() {
+        config.logger.reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
+        config.logger.report("Log directory: " + config.outdir, Logger.MSGTYPE.INFO);
+        if (Configuration.includes != null) {
+            config.logger.report("Including: " + config.includeList, Logger.MSGTYPE.INFO);
+        }
+        if (Configuration.excludes != null) {
+            config.logger.report("Excluding: " + config.excludeList, Logger.MSGTYPE.INFO);
+        }
+    }
+
+    private static void processAgentArguments(String agentArgs) {
+        if (agentArgs == null) {
+            agentArgs = "";
+        }
+        if (agentArgs.startsWith("\"")) {
+            assert agentArgs.endsWith("\"") : "Argument must be quoted";
+            agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
+        }
+        String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
+        config.parseArguments(args, false);
+    }
+
+    private static LoggingTask startOnlinePrediction(LoggingFactory loggingFactory) {
+        LoggingTask predictionServer = new RVPredict(config, loggingFactory);
+        Thread predictionServerThread = new Thread(predictionServer, "Prediction main thread");
+        predictionServer.setOwner(predictionServerThread);
+        predictionServerThread.setDaemon(true);
+        predictionServerThread.start();
+        return predictionServer;
     }
 
     /**

@@ -31,8 +31,6 @@ package com.runtimeverification.rvpredict.engine.main;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -59,45 +57,14 @@ public class RVPredict implements LoggingTask {
     private final Configuration config;
     private final Logger logger;
     private final TraceCache traceCache;
-    private LoggingFactory loggingFactory;
-    private ExecutionInfoTask infoTask;
+    private final LoggingFactory loggingFactory;
     private Thread owner;
 
-    public RVPredict(Configuration config, LoggingFactory loggingFactory) throws IOException, ClassNotFoundException {
+    public RVPredict(Configuration config, LoggingFactory loggingFactory) {
         this.config = config;
         this.loggingFactory = loggingFactory;
         logger = config.logger;
-
-        long startTime = System.currentTimeMillis();
-
         traceCache = new TraceCache(loggingFactory);
-
-        infoTask = new ExecutionInfoTask(this, startTime);
-
-        addHooks();
-    }
-
-    public void report() {
-        infoTask.run();
-    }
-
-    private void addHooks() {
-        if (!Configuration.online) {
-            // register a shutdown hook to store runtime statistics
-            Runtime.getRuntime().addShutdownHook(
-                    new Thread(infoTask, "Execution Info Task"));
-        }
-
-        // set a timer to timeout in a configured period
-        Timer timer = new Timer(true);
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                logger.report("\n******* Timeout " + config.timeout + " seconds ******",
-                        Logger.MSGTYPE.REAL);// report it
-                System.exit(0);
-            }
-        }, config.timeout * 1000);
     }
 
     @Override
@@ -137,20 +104,20 @@ public class RVPredict implements LoggingTask {
             } while (trace.getSize() == config.windowSize);
 
             shutdownAndAwaitTermination(raceDetectorExecutor);
-            if (Configuration.online) {
-                return;
-            } else {
-                System.exit(0);
+
+            if (violations.size() == 0) {
+                logger.report("No races found.", Logger.MSGTYPE.INFO);
             }
         } catch (InterruptedException e) {
             System.err.println("Error: prediction interrupted.");
             System.err.println(e.getMessage());
+            System.exit(1);
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());
             e.printStackTrace();
+            System.exit(1);
         }
-        System.exit(1);
     }
 
 
@@ -192,7 +159,6 @@ public class RVPredict implements LoggingTask {
     public void finishLogging() throws InterruptedException {
         loggingFactory.finishLogging();
         owner.join();
-        report();
     }
 
     @Override

@@ -208,7 +208,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             /* cast the result back to the original return type to pass bytecode
              * verification since an overriding method may specialize the return
              * type */
-            if (version >= 50) {
+            if ((version & 0xFFFF) >= Opcodes.V1_6) {
                 Type returnType = Type.getType((name + desc).substring(idx + 1));
                 if (!interceptor.method.getReturnType().equals(returnType)) {
                     mv.checkCast(returnType);
@@ -439,7 +439,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     private void loadClassLiteral() {
         /* before Java 5 the bytecode for loading class literal is quite cumbersome */
         Type owner = Type.getObjectType(className);
-        if (version < 49) {
+        if ((version & 0xFFFF) < Opcodes.V1_5) {
             /* `class$` is a special method generated to compute class literal */
             String fieldName = "class$" + className.replace('/', '$');
             mv.getStatic(owner, fieldName, CLASS_TYPE);

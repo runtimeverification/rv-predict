@@ -73,7 +73,7 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
             mv = new ClassInitializerTransformer(mv, access, name, desc);
         }
 
-        if (version < 50) {
+        if ((version & 0xFFFF) < Opcodes.V1_6) {
             mv = new JSRInlinerAdapter(mv, access, name, desc, signature, exceptions);
         }
 

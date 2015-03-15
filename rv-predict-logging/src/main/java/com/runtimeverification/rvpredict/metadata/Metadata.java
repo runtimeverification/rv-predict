@@ -127,16 +127,25 @@ public class Metadata implements Opcodes {
      *         the resolution fails
      */
     public static ClassFile resolveDeclaringClass(ClassLoader loader, String cname, String fname) {
-        ClassFile classFile;
-        do {
-            classFile = ClassFile.getInstance(loader, cname);
+        Deque<String> deque = new ArrayDeque<>();
+        deque.add(cname);
+        while (!deque.isEmpty()) {
+            cname = deque.removeFirst();
+            ClassFile classFile = ClassFile.getInstance(loader, cname);
             if (classFile != null) {
-                cname = classFile.getSuperName();
-            } else {
-                return null;
+                if (classFile.getFieldNames().contains(fname)) {
+                    return classFile;
+                } else {
+                    String superName = classFile.getSuperName();
+                    // the superName of any interface is Object
+                    if (superName != null && !superName.equals("java/lang/Object")) {
+                        deque.addLast(superName);
+                    }
+                    deque.addAll(classFile.getInterfaces());
+                }
             }
-        } while (!classFile.getFieldNames().contains(fname));
-        return classFile;
+        }
+        return null;
     }
 
 }

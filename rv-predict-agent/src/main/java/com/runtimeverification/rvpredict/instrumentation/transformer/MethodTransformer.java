@@ -438,24 +438,11 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private void loadClassLiteral() {
         /* before Java 5 the bytecode for loading class literal is quite cumbersome */
-        Type owner = Type.getObjectType(className);
         if ((version & 0xFFFF) < Opcodes.V1_5) {
-            /* `class$` is a special method generated to compute class literal */
-            String fieldName = "class$" + className.replace('/', '$');
-            mv.getStatic(owner, fieldName, CLASS_TYPE);
-            Label l0 = mv.newLabel();
-            mv.ifNonNull(l0);
             mv.visitLdcInsn(className.replace('/', '.'));
-            mv.invokeStatic(owner, Method.getMethod("Class class$(String)"));
-            mv.dup();
-            mv.putStatic(owner, fieldName, CLASS_TYPE);
-            Label l1 = new Label();
-            mv.goTo(l1);
-            mv.mark(l0);
-            mv.getStatic(owner, fieldName, CLASS_TYPE);
-            mv.mark(l1);
+            mv.invokeStatic(CLASS_TYPE, Method.getMethod("Class forName(String)"));
         } else {
-            mv.visitLdcInsn(owner);
+            mv.visitLdcInsn(Type.getObjectType(className));
         }
     }
 

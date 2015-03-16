@@ -14,6 +14,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Table;
+import com.runtimeverification.rvpredict.config.Configuration;
 
 /**
  * Stores information of a (non-array) class.
@@ -118,9 +119,6 @@ public class ClassFile implements Opcodes {
                 if (isAssignableFrom(superclassFile)) {
                     return true;
                 }
-            } else {
-                System.err.println("[Warning] unable to get class file of " + classFile.supername
-                        + ", superclass of " + classFile.cname);
             }
         }
 
@@ -130,9 +128,6 @@ public class ClassFile implements Opcodes {
                 if (isAssignableFrom(interfaceFile)) {
                     return true;
                 }
-            } else {
-                System.err.println("[Warning] unable to get the class file of " + itf
-                        + ", interface of " + classFile.cname);
             }
         }
 
@@ -231,8 +226,11 @@ public class ClassFile implements Opcodes {
             return getInstance0(loader, cname, null);
         } catch (IOException e) {
             System.err.println("[Warning] unable to locate the class file of " + cname);
-            e.printStackTrace();
-            return null;
+            if (Configuration.debug) {
+                throw new RuntimeException(e);
+            } else {
+                return null;
+            }
         }
     }
 

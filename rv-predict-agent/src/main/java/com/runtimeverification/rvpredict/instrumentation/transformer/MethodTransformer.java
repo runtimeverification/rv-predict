@@ -208,7 +208,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             /* cast the result back to the original return type to pass bytecode
              * verification since an overriding method may specialize the return
              * type */
-            if (version >= 50) {
+            if ((version & 0xFFFF) >= Opcodes.V1_6) {
                 Type returnType = Type.getType((name + desc).substring(idx + 1));
                 if (!interceptor.method.getReturnType().equals(returnType)) {
                     mv.checkCast(returnType);
@@ -438,24 +438,11 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private void loadClassLiteral() {
         /* before Java 5 the bytecode for loading class literal is quite cumbersome */
-        Type owner = Type.getObjectType(className);
-        if (version < 49) {
-            /* `class$` is a special method generated to compute class literal */
-            String fieldName = "class$" + className.replace('/', '$');
-            mv.getStatic(owner, fieldName, CLASS_TYPE);
-            Label l0 = mv.newLabel();
-            mv.ifNonNull(l0);
+        if ((version & 0xFFFF) < Opcodes.V1_5) {
             mv.visitLdcInsn(className.replace('/', '.'));
-            mv.invokeStatic(owner, Method.getMethod("Class class$(String)"));
-            mv.dup();
-            mv.putStatic(owner, fieldName, CLASS_TYPE);
-            Label l1 = new Label();
-            mv.goTo(l1);
-            mv.mark(l0);
-            mv.getStatic(owner, fieldName, CLASS_TYPE);
-            mv.mark(l1);
+            mv.invokeStatic(CLASS_TYPE, Method.getMethod("Class forName(String)"));
         } else {
-            mv.visitLdcInsn(owner);
+            mv.visitLdcInsn(Type.getObjectType(className));
         }
     }
 

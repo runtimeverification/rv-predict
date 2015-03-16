@@ -33,6 +33,12 @@ public enum EventType {
     READ_LOCK,
 
     /**
+     * Event generated before releasing a read lock, i.e.,
+     * {@code ReadWriteLock#readLock()#unlock()}.
+     */
+    READ_UNLOCK,
+
+    /**
      * Event generated before calling {@code Object#wait}.
      */
     WAIT_REL,
@@ -65,12 +71,6 @@ public enum EventType {
      * {@code Thread#join} even when the joining thread is not finished.
      */
     JOIN_MAYBE_FAILED,
-
-    /**
-     * Event generated before releasing a read lock, i.e.,
-     * {@code ReadWriteLock#readLock()#unlock()}.
-     */
-    READ_UNLOCK,
 
     /**
      * Event generated after entering the class initializer code, i.e.

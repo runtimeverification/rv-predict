@@ -56,11 +56,14 @@ public class LoggingEngine {
 
     private final ThreadLocalDisruptor threadLocalDisruptor = new ThreadLocalDisruptor();
 
+    private final FastEventProfiler eventProfiler;
+
     public LoggingEngine(LoggingFactory loggingFactory, LoggingTask predictionServer) {
         this.loggingFactory = loggingFactory;
         this.predictionServer = predictionServer;
 
         metadataLogger = Configuration.online ? null : new MetadataLogger(this);
+        eventProfiler = Configuration.profile ? new FastEventProfiler() : null;
     }
 
     public LoggingFactory getLoggingFactory() {
@@ -94,7 +97,7 @@ public class LoggingEngine {
         }
 
         if (Configuration.profile) {
-            EventProfiler.printEventStats();
+            eventProfiler.printProfilingResult();
         }
 
         if (Configuration.online) {
@@ -108,12 +111,19 @@ public class LoggingEngine {
      * @see {@link EventItem} for a more elaborate description of the
      *      parameters.
      */
-    public void logEvent(long gid, long tid, int locId, int addrl, int addrr, long value,
-            EventType eventType) {
+    public void log(EventType eventType, long gid, long tid, int locId, int addrl, int addrr,
+            long value) {
         EventDisruptor disruptor = threadLocalDisruptor.get();
         if (disruptor != null) {
             disruptor.publishEvent(gid, tid, locId, addrl, addrr, value, eventType);
         }
+    }
+
+    /**
+     * Updates the event profiler with the location of the new event.
+     */
+    public void profile(int locId) {
+        eventProfiler.update(locId);
     }
 
     public void startPredicting() {
@@ -135,17 +145,13 @@ public class LoggingEngine {
                 } else {
                     /* create event handler */
                     EventHandler<EventItem> handler;
-                    if (Configuration.profile) {
-                        handler = new EventProfiler();
-                    } else {
-                        EventOutputStream outputStream = null;
-                        try {
-                            outputStream = loggingFactory.createEventOutputStream();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                        handler = new EventWriter(outputStream);
+                    EventOutputStream outputStream = null;
+                    try {
+                        outputStream = loggingFactory.createEventOutputStream();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
+                    handler = new EventWriter(outputStream);
 
                     EventDisruptor disruptor = EventDisruptor.create(handler);
                     disruptors.add(disruptor);

@@ -1,7 +1,5 @@
 package com.runtimeverification.rvpredict.log;
 
-import java.io.IOException;
-
 import com.runtimeverification.rvpredict.trace.EventType;
 
 /**
@@ -9,13 +7,13 @@ import com.runtimeverification.rvpredict.trace.EventType;
  * @author TraianSF
  */
 public class EventItem {
-    public long GID;
-    public long TID;
-    public int ID;
-    public int ADDRL;
-    public int ADDRR;
-    public long VALUE;
-    public EventType TYPE;
+    public final long GID;
+    public final long TID;
+    public final int ID;
+    public final int ADDRL;
+    public final int ADDRR;
+    public final long VALUE;
+    public final EventType TYPE;
 
     public static final int SIZEOF_LONG = 8;
     public static final int SIZEOF_INT = 4;
@@ -35,8 +33,6 @@ public class EventItem {
             + SIZEOF_EVENT_TYPE //TYPE
             ;
 
-    private EventItem() { }
-
     /**
      * Constructor of the EventItem class
      * @param gid global identifier / primary key of the event
@@ -47,7 +43,7 @@ public class EventItem {
      * @param value value for events carrying a value
      * @param type type of event
      */
-    private EventItem(long gid, long tid, int id, int addrl, int addrr, long value, EventType type) {
+    public EventItem(long gid, long tid, int id, int addrl, int addrr, long value, EventType type) {
         this.GID = gid;
         this.TID = tid;
         this.ID = id;
@@ -57,24 +53,4 @@ public class EventItem {
         this.TYPE = type;
     }
 
-    public void writeTo(EventOutputStream out) throws IOException {
-        out.writeLong(GID);
-        out.writeLong(TID);
-        out.writeInt(ID);
-        out.writeInt(ADDRL);
-        out.writeInt(ADDRR);
-        out.writeLong(VALUE);
-        out.writeByte(TYPE.ordinal());
-    }
-
-    public static EventItem readFrom(EventInputStream in) throws IOException {
-        return new EventItem(
-                in.readLong(),
-                in.readLong(),
-                in.readInt(),
-                in.readInt(),
-                in.readInt(),
-                in.readLong(),
-                EventType.values()[in.readByte()]);
-    }
 }

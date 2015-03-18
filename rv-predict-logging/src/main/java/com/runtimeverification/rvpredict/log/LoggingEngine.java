@@ -81,7 +81,7 @@ public class LoggingEngine {
 
         synchronized (eventWriters) {
             for (EventWriter writer : eventWriters) {
-                writer.shutdown();
+                writer.close();
             }
         }
 

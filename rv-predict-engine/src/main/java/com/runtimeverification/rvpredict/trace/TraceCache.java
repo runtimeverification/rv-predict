@@ -1,6 +1,6 @@
 package com.runtimeverification.rvpredict.trace;
 
-import com.runtimeverification.rvpredict.log.EventInputStream;
+import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.EventItem;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 
@@ -21,7 +21,7 @@ import org.apache.commons.lang3.tuple.Pair;
  */
 public class TraceCache {
 
-    private final Map<Long, Pair<EventInputStream, EventItem>> indexes;
+    private final Map<Long, Pair<EventReader, EventItem>> indexes;
 
     private long nextIdx = 1;
 
@@ -87,7 +87,7 @@ public class TraceCache {
                 return null;
             }
         }
-        Pair<EventInputStream, EventItem> entry = indexes.remove(nextIdx);
+        Pair<EventReader, EventItem> entry = indexes.remove(nextIdx);
         if (entry == null) {
             return null;
         }
@@ -105,13 +105,13 @@ public class TraceCache {
         return nextEvent;
     }
 
-    private void updateIndexes(long index) throws IOException, InterruptedException {
+    private void updateIndexes(long index) throws InterruptedException, IOException {
         EventItem event;
         do {
-            EventInputStream inputStream = loggingFactory.getInputStream();
-            if (inputStream == null) return;
-            event = inputStream.readEvent();
-            indexes.put(event.GID, MutablePair.of(inputStream, event));
+            EventReader reader = loggingFactory.getEventReader();
+            if (reader == null) return;
+            event = reader.readEvent();
+            indexes.put(event.GID, MutablePair.of(reader, event));
         } while (event.GID != index);
     }
 

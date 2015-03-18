@@ -63,10 +63,6 @@
                                     <result>com.runtimeverification.rvpredict.internal.org.objectweb.@1.@2</result>
                                 </rule>
                                 <rule>
-                                    <pattern>com.lmax.**.*</pattern>
-                                    <result>com.runtimeverification.rvpredict.internal.com.lmax.@1.@2</result>
-                                </rule>
-                                <rule>
                                     <pattern>com.beust.**.*</pattern>
                                     <result>com.runtimeverification.rvpredict.internal.com.beust.@1.@2</result>
                                 </rule>

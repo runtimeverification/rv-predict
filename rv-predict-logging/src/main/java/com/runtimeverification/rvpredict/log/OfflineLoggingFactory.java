@@ -6,6 +6,7 @@ import org.apache.tools.ant.DirectoryScanner;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,8 +28,8 @@ public class OfflineLoggingFactory implements LoggingFactory {
     public static final String METADATA_BIN = "metadata.bin";
     private static final AtomicInteger logFileId = new AtomicInteger();
     private final Configuration config;
-    private Collection<EventInputStream> inputStreams;
-    private Iterator<EventInputStream> inputStreamsIterator;
+    private Collection<EventReader> readers;
+    private Iterator<EventReader> readersIter;
     private final Set<Integer> volatileFieldIds = new HashSet<>();
     private final Map<Integer, String> varIdToVarSig = new HashMap<>();
     private final Map<Integer, String> locIdToStmtSig = new HashMap<>();
@@ -64,10 +65,10 @@ public class OfflineLoggingFactory implements LoggingFactory {
     }
 
     @Override
-    public EventOutputStream createEventOutputStream() throws IOException {
+    public EventWriter createEventWriter() throws IOException {
         int id = logFileId.incrementAndGet();
-        return new OfflineLoggingEventOutputStream(
-                Paths.get(config.outdir, id + "_" + TRACE_SUFFIX));
+        Path path = Paths.get(config.outdir, id + "_" + TRACE_SUFFIX);
+        return new EventWriter(path);
     }
 
     @Override
@@ -75,21 +76,20 @@ public class OfflineLoggingFactory implements LoggingFactory {
     }
 
     @Override
-    public EventInputStream getInputStream() throws InterruptedException, IOException {
-        if (inputStreams == null) {
-            inputStreams = new LinkedList<>();
+    public EventReader getEventReader() throws IOException {
+        if (readers == null) {
+            readers = new LinkedList<>();
             String[] files = getTraceFiles(config.outdir);
             for (String file : files) {
-                EventInputStream inputStream = new OfflineLoggingEventInputStream(
-                        Paths.get(config.outdir, file));
-                inputStreams.add(inputStream);
+                EventReader reader = new EventReader(Paths.get(config.outdir, file));
+                readers.add(reader);
             }
         }
-        if (inputStreamsIterator == null) {
-            inputStreamsIterator = inputStreams.iterator();
+        if (readersIter == null) {
+            readersIter = readers.iterator();
         }
-        if (!inputStreamsIterator.hasNext()) return null;
-        return inputStreamsIterator.next();
+        if (!readersIter.hasNext()) return null;
+        return readersIter.next();
     }
 
     @Override

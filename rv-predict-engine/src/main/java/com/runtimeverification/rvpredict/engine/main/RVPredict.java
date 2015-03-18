@@ -82,11 +82,9 @@ public class RVPredict implements LoggingTask {
     }
 
     private void addHooks() {
-        if (!Configuration.online) {
-            // register a shutdown hook to store runtime statistics
-            Runtime.getRuntime().addShutdownHook(
-                    new Thread(infoTask, "Execution Info Task"));
-        }
+        // register a shutdown hook to store runtime statistics
+        Runtime.getRuntime().addShutdownHook(
+                new Thread(infoTask, "Execution Info Task"));
 
         // set a timer to timeout in a configured period
         Timer timer = new Timer(true);
@@ -137,11 +135,7 @@ public class RVPredict implements LoggingTask {
             } while (trace.getSize() == config.windowSize);
 
             shutdownAndAwaitTermination(raceDetectorExecutor);
-            if (Configuration.online) {
-                return;
-            } else {
-                System.exit(0);
-            }
+            System.exit(0);
         } catch (InterruptedException e) {
             System.err.println("Error: prediction interrupted.");
             System.err.println(e.getMessage());

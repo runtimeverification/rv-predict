@@ -18,12 +18,7 @@ public interface LoggingFactory {
      */
     ObjectOutputStream createMetadataOS() throws IOException;
 
-    /**
-     * Creates a new stream for logging events.
-     * @return a new {@link EventOutputStream}
-     * @throws IOException if stream cannot be created.
-     */
-    EventOutputStream createEventOutputStream() throws IOException;
+    EventWriter createEventWriter() throws IOException;
 
     /**
      * method to signal to objects implementing this interface that logging is completed.
@@ -32,13 +27,13 @@ public interface LoggingFactory {
 
     /**
      * Retrieves an input stream associated to a stream logging events from an execution.
-     * @return the next available {@link EventInputStream} or {@code null}
+     * @return the next available {@link EventReader} or {@code null}
      *         if there will be no more streams available.
      * @throws InterruptedException if the thread was interrupted while
      *         waiting for a stream to become available
      * @throws IOException If the next available stream cannot be open.
      */
-    EventInputStream getInputStream() throws InterruptedException, IOException;
+    EventReader getEventReader() throws InterruptedException, IOException;
 
     /**
      * Metadata accessor: retrieves the statement signature given a location identifier
@@ -54,4 +49,5 @@ public interface LoggingFactory {
      * Metadata accessor: retrieves the signature corresponding to a field identifier.
      */
     String getVarSig(int fieldId);
+
 }

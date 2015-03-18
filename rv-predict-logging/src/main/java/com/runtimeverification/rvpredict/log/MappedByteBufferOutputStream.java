@@ -1,4 +1,5 @@
 package com.runtimeverification.rvpredict.log;
+
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 import java.io.IOException;
@@ -26,7 +27,7 @@ public class MappedByteBufferOutputStream extends OutputStream {
 
     private long filePos;
 
-    private int nextChunkSize = INIT_CHUNK_SIZE;
+    private long nextChunkSize = INIT_CHUNK_SIZE;
 
     public MappedByteBufferOutputStream(Path path) throws IOException {
         file = new RandomAccessFile(path.toFile(), "rw");
@@ -44,15 +45,6 @@ public class MappedByteBufferOutputStream extends OutputStream {
 
     @Override
     public void write(byte b[], int off, int len) throws IOException {
-        if (b == null) {
-            throw new NullPointerException();
-        } else if ((off < 0) || (off > b.length) || (len < 0) ||
-                   ((off + len) > b.length) || ((off + len) < 0)) {
-            throw new IndexOutOfBoundsException();
-        } else if (len == 0) {
-            return;
-        }
-
         if (filePos + len > fileLen) {
             grow();
         }
@@ -64,10 +56,11 @@ public class MappedByteBufferOutputStream extends OutputStream {
         long remainingBytes = fileLen - filePos;
         fileLen += nextChunkSize;
         file.setLength(fileLen);
-        buffer = file.getChannel().map(READ_WRITE, filePos, nextChunkSize + remainingBytes);
+        buffer = file.getChannel().map(READ_WRITE, filePos,
+                Math.min(Integer.MAX_VALUE, nextChunkSize + remainingBytes));
         buffer.order(ByteOrder.nativeOrder());
         buffer.position(0);
-        nextChunkSize = nextChunkSize << 1;
+        nextChunkSize = Math.min(Integer.MAX_VALUE, nextChunkSize << 1);
     }
 
     @Override

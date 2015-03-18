@@ -132,7 +132,7 @@ public class Main {
                     Logger.MSGTYPE.VERBOSE);
         }
 
-        if (config.predict && !Configuration.online) {
+        if (config.predict) {
             new RVPredict(config, new OfflineLoggingFactory(config)).run();
         }
     }

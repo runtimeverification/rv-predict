@@ -15,7 +15,6 @@ import com.runtimeverification.rvpredict.engine.main.Main;
 import com.runtimeverification.rvpredict.engine.main.RVPredict;
 import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
-import com.runtimeverification.rvpredict.log.OnlineLoggingFactory;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 import org.objectweb.asm.ClassReader;
@@ -54,27 +53,13 @@ public class Agent implements ClassFileTransformer, Constants {
             config.logger.report("Excluding: " + config.excludeList, Logger.MSGTYPE.INFO);
         }
 
-        if (!Configuration.online) {
-            OfflineLoggingFactory.removeTraceFiles(config.outdir);
-        }
+        OfflineLoggingFactory.removeTraceFiles(config.outdir);
         LoggingFactory loggingFactory;
         RVPredict predictionServer = null;
-        if (Configuration.online) {
-            loggingFactory = new OnlineLoggingFactory();
-            try {
-                predictionServer = new RVPredict(config, loggingFactory);
-            } catch (IOException | ClassNotFoundException e) {
-                assert false : "These exceptions should only be thrown for offline prediction";
-            }
-        } else {
-            loggingFactory = new OfflineLoggingFactory(config);
-        }
+        loggingFactory = new OfflineLoggingFactory(config);
         final LoggingEngine loggingEngine = new LoggingEngine(loggingFactory, predictionServer);
         RVPredictRuntime.init(loggingEngine);
         loggingEngine.startLogging();
-        if (Configuration.online) {
-            loggingEngine.startPredicting();
-        }
 
         preinitializeClasses();
 
@@ -112,7 +97,7 @@ public class Agent implements ClassFileTransformer, Constants {
                 }
             }
         };
-        Thread predict = Main.getPredictionThread(config, cleanupAgent, config.predict && !Configuration.online);
+        Thread predict = Main.getPredictionThread(config, cleanupAgent, config.predict);
         Runtime.getRuntime().addShutdownHook(predict);
 
         if (config.predict) {

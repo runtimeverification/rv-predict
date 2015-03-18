@@ -47,8 +47,6 @@ public class LoggingEngine {
 
     private final LoggingFactory loggingFactory;
 
-    private final LoggingTask predictionServer;
-
     private final MetadataLogger metadataLogger;
 
     private final List<EventWriter> eventWriters = new ArrayList<>();
@@ -59,9 +57,7 @@ public class LoggingEngine {
 
     public LoggingEngine(LoggingFactory loggingFactory, LoggingTask predictionServer) {
         this.loggingFactory = loggingFactory;
-        this.predictionServer = predictionServer;
-
-        metadataLogger = Configuration.online ? null : new MetadataLogger(this);
+        metadataLogger = new MetadataLogger(this);
         eventProfiler = Configuration.profile ? new FastEventProfiler() : null;
     }
 
@@ -70,12 +66,10 @@ public class LoggingEngine {
     }
 
     public void startLogging() {
-        if (!Configuration.online) {
-            Thread metadataLoggerThread = new Thread(metadataLogger, "Metadata logger");
-            metadataLogger.setOwner(metadataLoggerThread);
-            metadataLoggerThread.setDaemon(true);
-            metadataLoggerThread.start();
-        }
+        Thread metadataLoggerThread = new Thread(metadataLogger, "Metadata logger");
+        metadataLogger.setOwner(metadataLoggerThread);
+        metadataLoggerThread.setDaemon(true);
+        metadataLoggerThread.start();
     }
 
     /**
@@ -91,16 +85,10 @@ public class LoggingEngine {
             }
         }
 
-        if (!Configuration.online) {
-            metadataLogger.finishLogging();
-        }
+        metadataLogger.finishLogging();
 
         if (Configuration.profile) {
             eventProfiler.printProfilingResult();
-        }
-
-        if (Configuration.online) {
-            predictionServer.finishLogging();
         }
     }
 
@@ -127,13 +115,6 @@ public class LoggingEngine {
      */
     public void profile(int locId) {
         eventProfiler.update(locId);
-    }
-
-    public void startPredicting() {
-        Thread predictionServerThread = new Thread(predictionServer, "Prediction main thread");
-        predictionServer.setOwner(predictionServerThread);
-        predictionServerThread.setDaemon(true);
-        predictionServerThread.start();
     }
 
     private class ThreadLocalEventWriter extends ThreadLocal<EventWriter> {

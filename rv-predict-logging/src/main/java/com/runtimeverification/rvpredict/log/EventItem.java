@@ -2,7 +2,6 @@ package com.runtimeverification.rvpredict.log;
 
 import java.io.IOException;
 
-import com.lmax.disruptor.EventFactory;
 import com.runtimeverification.rvpredict.trace.EventType;
 
 /**
@@ -35,13 +34,6 @@ public class EventItem {
             + SIZEOF_LONG       //VALUE
             + SIZEOF_EVENT_TYPE //TYPE
             ;
-
-    public static final EventFactory<EventItem> FACTORY = new EventFactory<EventItem>() {
-        @Override
-        public EventItem newInstance() {
-            return new EventItem();
-        }
-    };
 
     private EventItem() { }
 

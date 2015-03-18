@@ -30,7 +30,6 @@ public class OnlineLoggingFactory implements LoggingFactory {
         throw new UnsupportedOperationException("Not implemented for online prediction");
     }
 
-    @Override
     public EventOutputStream createEventOutputStream() throws IOException {
         final PipedOutputStream outputStream = new PipedOutputStream();
         eventInputStreams.add(new PipedInputStream(outputStream));
@@ -63,6 +62,12 @@ public class OnlineLoggingFactory implements LoggingFactory {
     @Override
     public String getVarSig(int fieldId) {
         return Metadata.varSigs.get(fieldId);
+    }
+
+    @Override
+    public EventWriter createEventWriter() throws IOException {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }

@@ -18,12 +18,7 @@ public interface LoggingFactory {
      */
     ObjectOutputStream createMetadataOS() throws IOException;
 
-    /**
-     * Creates a new stream for logging events.
-     * @return a new {@link EventOutputStream}
-     * @throws IOException if stream cannot be created.
-     */
-    EventOutputStream createEventOutputStream() throws IOException;
+    EventWriter createEventWriter() throws IOException;
 
     /**
      * method to signal to objects implementing this interface that logging is completed.
@@ -54,4 +49,5 @@ public interface LoggingFactory {
      * Metadata accessor: retrieves the signature corresponding to a field identifier.
      */
     String getVarSig(int fieldId);
+
 }

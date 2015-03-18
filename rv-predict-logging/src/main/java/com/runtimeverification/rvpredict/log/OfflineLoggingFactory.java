@@ -64,10 +64,10 @@ public class OfflineLoggingFactory implements LoggingFactory {
     }
 
     @Override
-    public EventOutputStream createEventOutputStream() throws IOException {
+    public EventWriter createEventWriter() throws IOException {
         int id = logFileId.incrementAndGet();
-        return new OfflineLoggingEventOutputStream(
-                Paths.get(config.outdir, id + "_" + TRACE_SUFFIX));
+        return new EventWriter(new OfflineLoggingEventOutputStream(Paths.get(config.outdir, id
+                + "_" + TRACE_SUFFIX)));
     }
 
     @Override

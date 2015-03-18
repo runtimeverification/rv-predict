@@ -1,34 +1,49 @@
 package com.runtimeverification.rvpredict.log;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.lmax.disruptor.EventHandler;
+import com.runtimeverification.rvpredict.trace.EventType;
 
-/**
- *
- * @author YilongL
- */
-public class EventWriter implements EventHandler<EventItem> {
+public class EventWriter {
 
-    private final EventOutputStream outputStream;
+    private final EventOutputStream out;
 
-    private boolean closed = false;
+    private boolean isWriting;
 
-    public EventWriter(EventOutputStream outputStream) {
-        this.outputStream = outputStream;
+    private final AtomicBoolean shutdown = new AtomicBoolean(false);
+
+    public EventWriter(EventOutputStream out) {
+        this.out = out;
     }
 
-    @Override
-    public void onEvent(EventItem eventItem, long sequence, boolean endOfBatch)
-            throws IOException {
-        if (!closed) {
-            if (eventItem.GID > 0) {
-                outputStream.writeEvent(eventItem);
-            } else {
-                outputStream.close();
-                closed = true;
-            }
+    public void write(long gid, long tid, int locId, int addrl, int addrr, long value,
+            EventType eventType) throws IOException {
+        if (isWriting) {
+            throw new RuntimeException("This method is not supposed to be reentrant!");
         }
+
+        if (shutdown.get()) {
+            return;
+        }
+
+        isWriting = true;
+        try {
+            out.writeLong(gid);
+            out.writeLong(tid);
+            out.writeInt(locId);
+            out.writeInt(addrl);
+            out.writeInt(addrr);
+            out.writeLong(value);
+            out.writeByte(eventType.ordinal());
+        } finally {
+            isWriting = false;
+        }
+    }
+
+    public void shutdown() throws IOException {
+        shutdown.set(true);
+        out.close();
     }
 
 }

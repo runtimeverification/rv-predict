@@ -28,7 +28,6 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.log;
 
-import com.lmax.disruptor.EventHandler;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.trace.EventType;
 
@@ -52,9 +51,9 @@ public class LoggingEngine {
 
     private final MetadataLogger metadataLogger;
 
-    private final List<EventDisruptor> disruptors = new ArrayList<>();
+    private final List<EventWriter> eventWriters = new ArrayList<>();
 
-    private final ThreadLocalDisruptor threadLocalDisruptor = new ThreadLocalDisruptor();
+    private final ThreadLocalEventWriter threadLocalEventWriter = new ThreadLocalEventWriter();
 
     private final FastEventProfiler eventProfiler;
 
@@ -86,9 +85,9 @@ public class LoggingEngine {
     public void finishLogging() throws IOException, InterruptedException {
         shutdown = true;
 
-        synchronized (disruptors) {
-            for (EventDisruptor disruptor : disruptors) {
-                disruptor.shutdown();
+        synchronized (eventWriters) {
+            for (EventWriter writer : eventWriters) {
+                writer.shutdown();
             }
         }
 
@@ -113,9 +112,13 @@ public class LoggingEngine {
      */
     public void log(EventType eventType, long gid, long tid, int locId, int addrl, int addrr,
             long value) {
-        EventDisruptor disruptor = threadLocalDisruptor.get();
-        if (disruptor != null) {
-            disruptor.publishEvent(gid, tid, locId, addrl, addrr, value, eventType);
+        EventWriter writer = threadLocalEventWriter.get();
+        if (writer != null) {
+            try {
+                writer.write(gid, tid, locId, addrl, addrr, value, eventType);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -133,29 +136,23 @@ public class LoggingEngine {
         predictionServerThread.start();
     }
 
-    private class ThreadLocalDisruptor extends ThreadLocal<EventDisruptor> {
+    private class ThreadLocalEventWriter extends ThreadLocal<EventWriter> {
         @Override
-        protected EventDisruptor initialValue() {
-            synchronized (disruptors) {
+        protected EventWriter initialValue() {
+            synchronized (eventWriters) {
                 if (shutdown) {
-                    System.err.printf("[Warning] JVM exits before thread %s finishes;"
+                    System.err.printf("[Warning] JVM exits before %s finishes;"
                             + " no trace from this thread is logged.%n",
                             Thread.currentThread().getName());
                     return null;
                 } else {
-                    /* create event handler */
-                    EventHandler<EventItem> handler;
-                    EventOutputStream outputStream = null;
                     try {
-                        outputStream = loggingFactory.createEventOutputStream();
+                        EventWriter eventWriter = loggingFactory.createEventWriter();
+                        eventWriters.add(eventWriter);
+                        return eventWriter;
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                    handler = new EventWriter(outputStream);
-
-                    EventDisruptor disruptor = EventDisruptor.create(handler);
-                    disruptors.add(disruptor);
-                    return disruptor;
                 }
             }
        }

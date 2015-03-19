@@ -66,6 +66,11 @@ public class Agent implements ClassFileTransformer, Constants {
         inst.addTransformer(new Agent(), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {
             if (inst.isModifiableClass(c)) {
+                // YilongL: temporary hack to work around JVM crash bug JDK-8075318
+                if (c.getName().startsWith("java.lang.invoke")) {
+                    continue;
+                }
+
                 try {
                     inst.retransformClasses(c);
                 } catch (UnmodifiableClassException e) {

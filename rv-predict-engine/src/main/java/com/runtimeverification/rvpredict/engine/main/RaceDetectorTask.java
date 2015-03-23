@@ -53,6 +53,11 @@ public class RaceDetectorTask implements Runnable {
         cnstrBuilder.addLockingConstraints();
         /* enumerate each shared memory address in the trace */
         for (MemoryAddr addr : trace.getMemAccessEventsTable().rowKeySet()) {
+            /* exclude unsafe address */
+            if (trace.isUnsafeAddress(addr)) {
+                continue;
+            }
+
             /* exclude volatile variable */
             if (!RVPredict.getConfig().checkVolatile && trace.isVolatileField(addr)) {
                 continue;

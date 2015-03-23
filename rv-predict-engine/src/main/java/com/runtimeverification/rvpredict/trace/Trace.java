@@ -40,7 +40,9 @@ import java.util.Set;
 import java.util.List;
 
 import com.google.common.collect.*;
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
+import com.runtimeverification.rvpredict.util.Constants;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a
@@ -139,6 +141,8 @@ public class Trace {
      */
     private final Map<Long, List<MetaEvent>> threadIdToCallStackEvents = Maps.newHashMap();
 
+    private final Set<MemoryAddr> unsafeMemoryAddresses = Sets.newHashSet();
+
     private final LoggingFactory loggingFactory;
 
     /**
@@ -231,6 +235,10 @@ public class Trace {
 
     public boolean isClinitMemoryAccess(MemoryAccessEvent event) {
         return clinitMemAccEvents.contains(event);
+    }
+
+    public boolean isUnsafeAddress(MemoryAddr addr) {
+        return unsafeMemoryAddresses.contains(addr);
     }
 
     /**
@@ -365,8 +373,24 @@ public class Trace {
         if (event instanceof MemoryAccessEvent) {
             MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
             MemoryAddr addr = memAcc.getAddr();
-            addrToInitValue.putIfAbsent(addr, crntState.getValueAt(addr));
-            crntState.updateValueAt(memAcc);
+            long value = memAcc.getValue();
+            long crntVal = crntState.getValueAt(addr);
+            addrToInitValue.putIfAbsent(addr, crntVal);
+            if (event instanceof ReadEvent) {
+                if (value != Constants._0X_DEADBEEFL && value != crntVal) {
+                    if (Configuration.debug) {
+                        System.err.printf(
+                            String.format("[Warning] logged trace not sequential consistent:%n"
+                                    + "  event %s reads a different value than the currently stored value %s%n"
+                                    + "    at %s%n",
+                                    memAcc, crntVal, loggingFactory.getStmtSig(memAcc.getLocId())));
+                    }
+                    crntState.writeValueAt(addr, crntVal);
+                    unsafeMemoryAddresses.add(addr);
+                }
+            } else {
+                crntState.writeValueAt(addr, memAcc.getValue());
+            }
         } else if (event.getType() == EventType.START) {
             crntState.onThreadStart((SyncEvent) event);
         } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {

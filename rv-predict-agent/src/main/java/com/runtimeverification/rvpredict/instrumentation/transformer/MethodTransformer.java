@@ -369,7 +369,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         mv.invokeStatic(RVPREDICT_RUNTIME_TYPE, rvpredictRTMethod.method);
     }
 
-    private Type getValueType(int arrayLoadOrStoreOpcode) {
+    static public Type getValueType(int arrayLoadOrStoreOpcode) {
         switch (arrayLoadOrStoreOpcode) {
         case BALOAD: case BASTORE:
             /* YilongL: see JVM Specification $2.11.1. Types and the Java Virtual Machine

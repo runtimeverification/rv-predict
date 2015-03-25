@@ -57,7 +57,7 @@ public class TraceCache {
         Trace trace = new Trace(crntState);
         crntState.setCurrentTraceWindow(trace);
         assert nextIdx == fromIndex;
-        for (nextIdx = fromIndex; nextIdx < toIndex; nextIdx++) {
+        while (nextIdx < toIndex) {
             EventItem eventItem = getNextEvent();
             if (eventItem == null) {
                 break;
@@ -78,7 +78,7 @@ public class TraceCache {
      *
      * @return the next event in the trace
      */
-    private EventItem getNextEvent() throws IOException, InterruptedException {
+    public EventItem getNextEvent() throws IOException, InterruptedException {
         if (!indexes.containsKey(nextIdx)) {
             try {
                 updateIndexes(nextIdx);
@@ -102,6 +102,7 @@ public class TraceCache {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        nextIdx++;
         return nextEvent;
     }
 

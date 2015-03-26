@@ -49,7 +49,7 @@ public class RaceDetectorTask implements Runnable {
         SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(RVPredict.getConfig(), trace);
 
         cnstrBuilder.addIntraThreadConstraints();
-        cnstrBuilder.addProgramOrderAndThreadStartJoinConstraints();
+        cnstrBuilder.addThreadStartJoinConstraints();
         cnstrBuilder.addLockingConstraints();
         /* enumerate each shared memory address in the trace */
         for (MemoryAddr addr : trace.getMemAccessEventsTable().rowKeySet()) {

@@ -110,24 +110,20 @@ public class SMTConstraintBuilder {
     }
 
     /**
-     * Adds intra-thread must happens-before (MHB) constraints of sequential
-     * consistent memory model.
+     * Adds program order constraints.
      */
     public void addIntraThreadConstraints() {
         for (List<Event> events : trace.getThreadIdToEventsMap().values()) {
-            Event prevEvent = events.get(0);
-            for (Event crntEvent : events.subList(1, events.size())) {
-                assertHappensBefore(prevEvent, crntEvent);
-                prevEvent = crntEvent;
+            for (int i = 1; i < events.size(); i++) {
+                assertHappensBefore(events.get(i - 1), events.get(i));
             }
         }
     }
 
     /**
-     * Adds program order and thread start/join constraints, that is, the must
-     * happens-before constraints (MHB) in the paper.
+     * Adds thread start/join constraints.
      */
-    public void addProgramOrderAndThreadStartJoinConstraints() {
+    public void addThreadStartJoinConstraints() {
         for (List<SyncEvent> startOrJoinEvents : trace.getThreadIdToStartJoinEvents().values()) {
             for (SyncEvent startOrJoin : startOrJoinEvents) {
                 long tid = startOrJoin.getSyncObject();

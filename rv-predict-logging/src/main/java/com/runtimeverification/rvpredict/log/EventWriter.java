@@ -30,7 +30,7 @@ public class EventWriter implements Closeable {
 
     public EventWriter(Path path) throws IOException {
         this.out = new LZ4BlockOutputStream(
-            OS.current() == OS.WIN ?
+            OS.current() == OS.WINDOWS ?
                     new BufferedChannelOutputStream(path) :
                     new MappedByteBufferOutputStream(path),
                 COMPRESS_BLOCK_SIZE,

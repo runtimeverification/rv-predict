@@ -201,47 +201,39 @@ public class Configuration implements Constants {
         return patternList;
     }
 
-    public enum OS {
-        OSX(true, "osx"), UNIX(true, "linux"), UNKNOWN(false, null), WIN(false, "cygwin");
 
-        private OS(boolean isPosix, String libDir) {
+    public enum OS {
+        OSX(true), LINUX(true), UNKNOWN(false), WINDOWS(false);
+
+        private OS(boolean isPosix) {
             this.isPosix = isPosix;
-            String arch = System.getProperty("os.arch");
-            this.libDir = getBasePath() + File.separator + "lib" + File.separator + "native"
-                    + File.separator + libDir + File.separator
-                    + (arch.toLowerCase().contains("64") ? "64" : "32");
         }
 
         public final boolean isPosix;
-        public final String libDir;
 
         public static OS current() {
             String osString = System.getProperty("os.name").toLowerCase();
             if (osString.contains("nix") || osString.contains("nux"))
-                return OS.UNIX;
+                return OS.LINUX;
             else if (osString.contains("win"))
-                return OS.WIN;
+                return OS.WINDOWS;
             else if (osString.contains("mac"))
                 return OS.OSX;
             else
                 return OS.UNKNOWN;
         }
 
-        public File getNativeExecutable(String executable) {
+        public String getNativeExecutable(String executable) {
             if (this == UNKNOWN) {
                 System.err.println("Unknown OS type. " + System.getProperty("os.name")
                         + " not recognized. "
                         + "Please contact RV-Predict developers with details of your OS.");
                 System.exit(1);
             }
-            if (this == WIN) {
+            if (this == WINDOWS) {
                 executable = executable + ".exe";
             }
-            File f = new File(libDir, executable);
-            if (isPosix) {
-                f.setExecutable(true, false);
-            }
-            return f;
+            return executable;
         }
     }
 

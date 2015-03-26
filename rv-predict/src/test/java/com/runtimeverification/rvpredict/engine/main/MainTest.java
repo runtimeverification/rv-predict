@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.engine.main;
 
 import com.runtimeverification.rvpredict.IntegrationTest;
 import com.runtimeverification.rvpredict.TestHelper;
+import com.runtimeverification.rvpredict.config.Configuration;
 import org.junit.experimental.categories.Category;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -46,10 +47,7 @@ public class MainTest {
         return path;
     }
 
-    private static String rvPredictJar = basePath + separator + "lib" + separator + "rv-predict.jar";
-    private static String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
-    private static List<String> rvArgList = Arrays.asList(new String[]{
-            java, "-ea", "-cp", rvPredictJar, Main.class.getName()});
+    private static String binPath = basePath + separator + "bin" + separator;
     private final TestHelper helper;
     private final String name;
     private final int numOfRuns;
@@ -60,7 +58,14 @@ public class MainTest {
         this.name = name;
         this.numOfRuns = numOfRuns;
         helper = new TestHelper(specPath);
-        args = new ArrayList<>(rvArgList);
+        args = new ArrayList<>();
+        if (Configuration.OS.current()== Configuration.OS.WINDOWS) {
+            args.add(binPath + "rv-predict.bat");
+        } else {
+            args.add("/usr/bin/env");
+            args.add("bash");
+            args.add(binPath + "rv-predict.bat");
+        }
         args.addAll(rvArguments);
         args.addAll(arguments);
     }

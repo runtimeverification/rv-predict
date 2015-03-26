@@ -20,7 +20,7 @@ public class Z3Wrapper implements Solver {
     public Z3Wrapper(Configuration config) {
         timeout = config.solver_timeout;
         this.pb = new ProcessBuilder(
-            OS.current().getNativeExecutable("z3").getAbsolutePath(),
+            OS.current().getNativeExecutable("z3"),
             "-in",
             "-smt2",
             "-T:" + timeout)

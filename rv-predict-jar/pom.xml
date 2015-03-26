@@ -55,7 +55,7 @@
                             <excludes>
                                 <exclude>junit:junit</exclude>
                                 <exclude>org.hamcrest:*</exclude>
-                                <exclude>com.runtimeverification.predict:z3</exclude>
+                                <exclude>com.microsoft.z3:*</exclude>
                             </excludes>
                             <rules>
                                 <rule>

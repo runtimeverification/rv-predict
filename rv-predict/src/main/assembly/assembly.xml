@@ -7,11 +7,29 @@
     <includeBaseDirectory>false</includeBaseDirectory>
     <dependencySets>
         <dependencySet>
-            <outputDirectory>/lib</outputDirectory>
+            <outputDirectory>/lib/native</outputDirectory>
             <includes>
-                <include>*:zip:*</include>
+                <include>*:exe:*</include>
             </includes>
-            <unpack>true</unpack>
+            <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}.${artifact.type}</outputFileNameMapping>
+            <fileMode>775</fileMode>
+        </dependencySet>
+        <dependencySet>
+            <outputDirectory>/lib/native</outputDirectory>
+            <includes>
+                <include>*:uexe:*</include>
+            </includes>
+            <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}</outputFileNameMapping>
+            <fileMode>775</fileMode>
+        </dependencySet>
+        <dependencySet>
+            <outputDirectory>/lib/native</outputDirectory>
+            <includes>
+                <include>*:dll:*</include>
+                <include>*:so:*</include>
+                <include>*:dylib:*</include>
+            </includes>
+            <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}.${artifact.type}</outputFileNameMapping>
         </dependencySet>
     </dependencySets>
     <moduleSets>
@@ -87,11 +105,21 @@
             </includes>
         </fileSet>
         <fileSet>
-            <directory>src/main/scripts/</directory>
-            <outputDirectory>/</outputDirectory>
-            <includes>
-                <include>bin/</include>
-            </includes>
+            <directory>${project.build.scriptSourceDirectory}/bin</directory>
+            <outputDirectory>/bin</outputDirectory>
+            <filtered>true</filtered>
+            <fileMode>775</fileMode>
+            <directoryMode>775</directoryMode>
+        </fileSet>
+        <fileSet>
+            <directory>${project.build.scriptSourceDirectory}/lib</directory>
+            <outputDirectory>/lib</outputDirectory>
+            <fileMode>775</fileMode>
+            <directoryMode>775</directoryMode>
+        </fileSet>
+        <fileSet>
+            <directory>${project.build.directory}/lib</directory>
+            <outputDirectory>/lib</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>src/main/resources/</directory>

@@ -459,9 +459,7 @@ public class Trace {
             Map<Long, List<SyncEvent>> eventsMap = null;
             switch (syncEvent.getType()) {
             case START:
-            case PRE_JOIN:
             case JOIN:
-            case JOIN_MAYBE_FAILED:
                 eventsMap = threadIdToStartJoinEvents;
                 break;
             case WRITE_LOCK:

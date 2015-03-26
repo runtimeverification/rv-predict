@@ -387,18 +387,17 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictJoin(Thread thread, long millis, int locId)
             throws InterruptedException {
-        saveSyncEvent(EventType.PRE_JOIN, locId, thread.getId());
         try {
             thread.join(millis);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.JOIN_MAYBE_FAILED, locId, thread.getId());
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(millis == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_FAILED, locId,
-                thread.getId());
+        if (millis == 0) {
+            saveSyncEvent(EventType.JOIN, locId, thread.getId());
+        }
     }
 
     /**
@@ -418,18 +417,17 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictJoin(Thread thread, long millis, int nanos, int locId)
             throws InterruptedException {
-        saveSyncEvent(EventType.PRE_JOIN, locId, thread.getId());
         try {
             thread.join(millis, nanos);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.JOIN_MAYBE_FAILED, locId, thread.getId());
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(millis == 0 && nanos == 0 ? EventType.JOIN : EventType.JOIN_MAYBE_FAILED,
-                locId, thread.getId());
+        if (millis == 0 && nanos == 0) {
+            saveSyncEvent(EventType.JOIN, locId, thread.getId());
+        }
     }
 
     /**
@@ -1438,9 +1436,7 @@ public final class RVPredictRuntime implements Constants {
         case WAIT_REL:
         case WAIT_ACQ:
         case START:
-        case PRE_JOIN:
         case JOIN:
-        case JOIN_MAYBE_FAILED:
         case CLINIT_ENTER:
         case CLINIT_EXIT:
         case INVOKE_METHOD:

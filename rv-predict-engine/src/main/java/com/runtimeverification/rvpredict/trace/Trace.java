@@ -51,6 +51,8 @@ import com.runtimeverification.rvpredict.util.Constants;
  */
 public class Trace {
 
+    private final int capacity;
+
     /**
      * Unprocessed raw events reading from the logging phase.
      */
@@ -150,10 +152,15 @@ public class Trace {
      */
     private final TraceState crntState;
 
-    public Trace(TraceState crntState) {
+    public Trace(TraceState crntState, int capacity) {
         this.crntState = crntState;
+        this.capacity = capacity;
         this.loggingFactory = crntState.getLoggingFactory();
         this.initHeldLockToStacktrace = crntState.getHeldLockStacktraceSnapshot();
+    }
+
+    public int capacity() {
+        return capacity;
     }
 
     public LoggingFactory getLoggingFactory() {

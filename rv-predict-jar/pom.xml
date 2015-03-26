@@ -55,7 +55,9 @@
                             <excludes>
                                 <exclude>junit:junit</exclude>
                                 <exclude>org.hamcrest:*</exclude>
-                                <exclude>com.microsoft.z3:*</exclude>
+                                <exclude>com.microsoft.z3:libz3java</exclude>
+                                <exclude>com.microsoft.z3:libz3</exclude>
+                                <exclude>com.microsoft.z3:z3</exclude>
                             </excludes>
                             <rules>
                                 <rule>

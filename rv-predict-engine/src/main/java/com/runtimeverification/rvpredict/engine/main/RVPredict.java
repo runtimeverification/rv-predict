@@ -108,16 +108,16 @@ public class RVPredict implements LoggingTask {
                 logger.report("No races found.", Logger.MSGTYPE.INFO);
             }
             logger.closePrinter();
-            System.exit(0);
         } catch (InterruptedException e) {
             System.err.println("Error: prediction interrupted.");
             System.err.println(e.getMessage());
+            System.exit(1);
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());
             e.printStackTrace();
+            System.exit(1);
         }
-        System.exit(1);
     }
 
 

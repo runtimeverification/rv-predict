@@ -73,16 +73,7 @@ public class Main {
 
             runAgent(config, appArgList);
         }
-
-        try {
-            checkAndPredict(config);
-        } catch (IOException e) {
-            System.err.println("Error while reading the logs.");
-            System.err.println(e.getMessage());
-        } catch (ClassNotFoundException e) {
-            System.err.println("Error: Metadata file corrupted.");
-            System.err.println(e.getMessage());
-        }
+        checkAndPredict(config);
     }
 
     /**
@@ -122,7 +113,7 @@ public class Main {
         return agentOptions.toString();
     }
 
-    private static void checkAndPredict(Configuration config) throws IOException, ClassNotFoundException {
+    private static void checkAndPredict(Configuration config) {
         boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
 
         if (config.log && (Configuration.verbose || logOutput)) {

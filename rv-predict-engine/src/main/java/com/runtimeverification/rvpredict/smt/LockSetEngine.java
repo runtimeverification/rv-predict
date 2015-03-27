@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-package com.runtimeverification.rvpredict.graph;
+package com.runtimeverification.rvpredict.smt;
 
 import java.util.Collection;
 import java.util.ListIterator;
@@ -41,8 +41,7 @@ import com.runtimeverification.rvpredict.trace.LockRegion;
 import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
 
 /**
- * Engine for computing the Lockset algorithm
- *
+ * Engine for computing the lockset algorithm.
  */
 public class LockSetEngine {
 

@@ -259,10 +259,6 @@ public class Configuration implements Constants {
     public String log_dir = null;
     public boolean log = true;
 
-    final static String opt_log_output = "--output";
-    @Parameter(names = opt_log_output, description = "Output of the logged execution [yes|no|<file>]", hidden = true, descriptionKey = "1010")
-    public String log_output = YES;
-
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include." +
             "\nPrefix with + to add to the default included packages", hidden = true, descriptionKey = "1025")

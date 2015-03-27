@@ -87,9 +87,7 @@ public class Agent implements ClassFileTransformer, Constants {
         Runtime.getRuntime().addShutdownHook(predict);
 
         if (config.predict) {
-            if (config.log_output.equalsIgnoreCase(Configuration.YES)) {
-                config.logger.reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
-            }
+            config.logger.reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
         }
     }
 

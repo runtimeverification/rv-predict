@@ -119,8 +119,6 @@ public class Main {
         if (config.log && (Configuration.verbose || logOutput)) {
             config.logger
                     .report(center(Configuration.LOGGING_PHASE_COMPLETED), Logger.MSGTYPE.INFO);
-            config.logger.report(Configuration.TRACE_LOGGED_IN + config.outdir,
-                    Logger.MSGTYPE.VERBOSE);
         }
 
         if (config.predict) {
@@ -174,17 +172,6 @@ public class Main {
                 processBuilder.redirectError(new File(actualErrFile));
                 processBuilder.redirectOutput(new File(actualOutFile));
             }
-            StringBuilder commandMsg = new StringBuilder();
-            commandMsg.append("Executing command: \n");
-            commandMsg.append("   ");
-            for (String arg : args) {
-                if (arg.contains(" ")) {
-                    commandMsg.append(" \"").append(arg).append("\"");
-                } else {
-                    commandMsg.append(" ").append(arg);
-                }
-            }
-            commandLine.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
         }
 
         final boolean finalLogToScreen = logToScreen;
@@ -198,8 +185,6 @@ public class Main {
                     if (commandLine.log && (Configuration.verbose || logOutput)) {
                         commandLine.logger.report(center(Configuration.LOGGING_PHASE_COMPLETED),
                                 Logger.MSGTYPE.INFO);
-                        commandLine.logger.report(Configuration.TRACE_LOGGED_IN
-                                + commandLine.outdir, Logger.MSGTYPE.VERBOSE);
                     }
 
                     try {
@@ -242,17 +227,6 @@ public class Main {
             agentProcBuilder.redirectOutput(new File(actualOutFile));
         }
         try {
-            final StringBuilder commandMsg = new StringBuilder();
-            commandMsg.append("Executing command: \n");
-            commandMsg.append("   ");
-            for (String arg : appArgList) {
-                if (arg.contains(" ")) {
-                    commandMsg.append(" \"").append(arg).append("\"");
-                } else {
-                    commandMsg.append(" ").append(arg);
-                }
-            }
-            config.logger.report(commandMsg.toString(), Logger.MSGTYPE.VERBOSE);
             final Process agentProc = agentProcBuilder.start();
             Thread cleanupAgent = new Thread() {
                 @Override

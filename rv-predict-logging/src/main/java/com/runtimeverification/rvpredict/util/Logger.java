@@ -1,7 +1,5 @@
 package com.runtimeverification.rvpredict.util;
 
-import com.runtimeverification.rvpredict.config.Configuration;
-
 /**
  * @author TraianSF
  * @author YilongL
@@ -17,20 +15,12 @@ public class Logger {
         case INFO:
             System.out.println(msg);
             break;
-        case STATISTICS:
-        case VERBOSE:
-            if (Configuration.verbose) {
-                System.out.println(msg);
-            }
-            break;
-        case POTENTIAL:
-            break;
         default:
             break;
         }
     }
 
     public enum MSGTYPE {
-        REAL, POTENTIAL, STATISTICS, INFO, VERBOSE, ERROR
+        REAL, INFO, ERROR
     }
 }

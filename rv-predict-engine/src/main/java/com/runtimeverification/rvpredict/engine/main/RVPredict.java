@@ -96,11 +96,9 @@ public class RVPredict implements LoggingTask {
             Trace trace;
             do {
                 trace = traceCache.getTrace(fromIndex, fromIndex += config.windowSize);
-
                 if (trace.hasSharedMemAddr()) {
                     raceDetectorExecutor.execute(new RaceDetectorTask(this, trace));
                 }
-
             } while (trace.getSize() == config.windowSize);
 
             shutdownAndAwaitTermination(raceDetectorExecutor);

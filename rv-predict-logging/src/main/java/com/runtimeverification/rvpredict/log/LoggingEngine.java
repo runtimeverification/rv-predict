@@ -55,7 +55,7 @@ public class LoggingEngine {
 
     private final FastEventProfiler eventProfiler;
 
-    public LoggingEngine(LoggingFactory loggingFactory, LoggingTask predictionServer) {
+    public LoggingEngine(LoggingFactory loggingFactory) {
         this.loggingFactory = loggingFactory;
         metadataLogger = new MetadataLogger(this);
         eventProfiler = Configuration.profile ? new FastEventProfiler() : null;

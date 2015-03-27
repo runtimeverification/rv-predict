@@ -67,6 +67,7 @@
         <rvarg value="--simple-report" />
     </test>
     <test name="bufwriter.BufWriter">
+        <runs value="5" />
         <arg key="-cp" value="basic.jar" />
         <arg value="bufwriter.BufWriter" />
         <rvarg value="--simple-report" />

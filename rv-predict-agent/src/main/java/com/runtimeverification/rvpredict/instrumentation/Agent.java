@@ -5,6 +5,8 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.ProtectionDomain;
 import java.util.HashSet;
 import java.util.Set;
@@ -12,7 +14,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.Main;
-import com.runtimeverification.rvpredict.engine.main.RVPredict;
 import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
@@ -33,35 +34,15 @@ public class Agent implements ClassFileTransformer, Constants {
 
     public static void premain(String agentArgs, Instrumentation inst) {
         instrumentation = inst;
+        preinitializeClasses();
+        processAgentArguments(agentArgs);
+        printStartupInfo();
+        initLoggingDirectory();
 
-        if (agentArgs == null) {
-            agentArgs = "";
-        }
-        if (agentArgs.startsWith("\"")) {
-            assert agentArgs.endsWith("\"") : "Argument must be quoted";
-            agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
-        }
-        String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        config.parseArguments(args, false);
-
-        final boolean logOutput = config.log_output.equalsIgnoreCase(Configuration.YES);
-        config.logger.report("Log directory: " + config.outdir, Logger.MSGTYPE.INFO);
-        if (Configuration.includes != null) {
-            config.logger.report("Including: " + config.includeList, Logger.MSGTYPE.INFO);
-        }
-        if (Configuration.excludes != null) {
-            config.logger.report("Excluding: " + config.excludeList, Logger.MSGTYPE.INFO);
-        }
-
-        OfflineLoggingFactory.removeTraceFiles(config.outdir);
-        LoggingFactory loggingFactory;
-        RVPredict predictionServer = null;
-        loggingFactory = new OfflineLoggingFactory(config);
-        final LoggingEngine loggingEngine = new LoggingEngine(loggingFactory, predictionServer);
+        LoggingFactory loggingFactory = new OfflineLoggingFactory(config);
+        final LoggingEngine loggingEngine = new LoggingEngine(loggingFactory);
         RVPredictRuntime.init(loggingEngine);
         loggingEngine.startLogging();
-
-        preinitializeClasses();
 
         inst.addTransformer(new Agent(), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {
@@ -106,11 +87,7 @@ public class Agent implements ClassFileTransformer, Constants {
         Runtime.getRuntime().addShutdownHook(predict);
 
         if (config.predict) {
-            if (logOutput) {
-                config.logger.report(
-                        Main.center(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE),
-                        Logger.MSGTYPE.INFO);
-            }
+            config.logger.reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
         }
     }
 
@@ -130,6 +107,40 @@ public class Agent implements ClassFileTransformer, Constants {
             Class.forName(RVPredictRuntimeMethods.class.getName());
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static void processAgentArguments(String agentArgs) {
+        if (agentArgs == null) {
+            agentArgs = "";
+        }
+        if (agentArgs.startsWith("\"")) {
+            assert agentArgs.endsWith("\"") : "Argument must be quoted";
+            agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
+        }
+        String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
+        config.parseArguments(args, false);
+    }
+
+    private static void printStartupInfo() {
+        config.logger.reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
+        config.logger.report("Log directory: " + config.outdir, Logger.MSGTYPE.INFO);
+        if (Configuration.includes != null) {
+            config.logger.report("Including: " + config.includeList, Logger.MSGTYPE.INFO);
+        }
+        if (Configuration.excludes != null) {
+            config.logger.report("Excluding: " + config.excludeList, Logger.MSGTYPE.INFO);
+        }
+    }
+
+    private static void initLoggingDirectory() {
+        String directory = config.outdir;
+        for (String fname : OfflineLoggingFactory.getTraceFiles(directory)) {
+            try {
+                Files.delete(Paths.get(directory, fname));
+            } catch (IOException e) {
+                System.err.println("Cannot delete trace file " + fname + "from dir. " + directory);
+            }
         }
     }
 

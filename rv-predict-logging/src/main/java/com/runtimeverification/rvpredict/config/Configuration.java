@@ -259,10 +259,6 @@ public class Configuration implements Constants {
     public String log_dir = null;
     public boolean log = true;
 
-    final static String opt_log_output = "--output";
-    @Parameter(names = opt_log_output, description = "Output of the logged execution [yes|no|<file>]", hidden = true, descriptionKey = "1010")
-    public String log_output = YES;
-
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include." +
             "\nPrefix with + to add to the default included packages", hidden = true, descriptionKey = "1025")
@@ -296,7 +292,7 @@ public class Configuration implements Constants {
 
     final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
-    public long solver_timeout = 60;
+    public long solver_timeout = 10;
 
     final static String opt_timeout = "--timeout";
     @Parameter(names = opt_timeout, description = "RV-Predict timeout in seconds", hidden = true, descriptionKey = "2070")
@@ -340,7 +336,7 @@ public class Configuration implements Constants {
         }
 
         // Detecting a candidate for program options start
-        int max = Arrays.asList(args).indexOf(Configuration.opt_java);
+        int max = Arrays.asList(args).indexOf(opt_java);
         if (max != -1) { // -- was used. Using it as a separator for java
                          // command line
             rvArgs = Arrays.copyOf(args, max);
@@ -430,7 +426,7 @@ public class Configuration implements Constants {
         } else {
             command_line.addAll(argList);
         }
-        logger = new Logger(this);
+        logger = new Logger();
     }
 
     public void exclusiveOptionsFailure(String opt1, String opt2) {

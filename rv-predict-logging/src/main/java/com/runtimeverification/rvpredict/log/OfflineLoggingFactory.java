@@ -5,7 +5,6 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import org.apache.tools.ant.DirectoryScanner;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -42,26 +41,13 @@ public class OfflineLoggingFactory implements LoggingFactory {
      * The file names end with {@link OfflineLoggingFactory#TRACE_SUFFIX}, having as a prefix the unique
      * id of the thread generating them.
      */
-    private static String[] getTraceFiles(String directory) {
+    public static String[] getTraceFiles(String directory) {
         DirectoryScanner scanner = new DirectoryScanner();
         scanner.setIncludes(new String[]{"*" + TRACE_SUFFIX + "*"});
         scanner.setBasedir(directory);
         scanner.setCaseSensitive(false);
         scanner.scan();
         return scanner.getIncludedFiles();
-    }
-
-    /**
-     * Cleans all preexisting trace files from the specified <code>directory</code>
-     */
-    public static void removeTraceFiles(String directory) {
-        for (String fname : getTraceFiles(directory)) {
-            try {
-                Files.delete(Paths.get(directory, fname));
-            } catch (IOException e) {
-                System.err.println("Cannot delete trace file " + fname + "from dir. " + directory);
-            }
-        }
     }
 
     @Override

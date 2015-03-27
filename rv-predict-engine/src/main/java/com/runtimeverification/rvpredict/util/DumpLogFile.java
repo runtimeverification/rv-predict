@@ -34,11 +34,10 @@ public class DumpLogFile {
         String file = args[0];
         try (EventReader reader = new EventReader(Paths.get(file))) {
             System.out.println("Dumping events from " + file);
-            //noinspection InfiniteLoopStatement
             while (true) {
                 EventItem eventItem = reader.readEvent();
                 Event event = EventUtils.of(eventItem);
-                System.out.println(event.toString() + loggingFactory.getStmtSig(event.getLocId()));
+                System.out.printf("%-60s %s%n", event.toString(), loggingFactory.getStmtSig(event.getLocId()));
             }
         } catch (EOFException ignored) {
         } catch (IOException e) {

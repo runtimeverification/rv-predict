@@ -292,7 +292,7 @@ public class Configuration implements Constants {
 
     final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
-    public long solver_timeout = 60;
+    public long solver_timeout = 10;
 
     final static String opt_timeout = "--timeout";
     @Parameter(names = opt_timeout, description = "RV-Predict timeout in seconds", hidden = true, descriptionKey = "2070")

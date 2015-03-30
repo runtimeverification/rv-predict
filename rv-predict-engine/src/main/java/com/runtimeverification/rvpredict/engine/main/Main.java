@@ -4,14 +4,12 @@ import com.runtimeverification.rvpredict.config.Configuration;
 
 import org.apache.tools.ant.util.JavaEnvUtils;
 
-import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -55,7 +53,7 @@ public class Main {
             appArgList.add("-javaagent:" + RV_PREDICT_JAR + "=" + agentOptions);
             appArgList.addAll(config.command_line);
 
-            startApplication(appArgList);
+            execApplication(appArgList);
             config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
         }
 
@@ -101,70 +99,22 @@ public class Main {
         return agentOptions.toString();
     }
 
-    public static Thread getPredictionThread(final Configuration commandLine, LoggingEngine loggingEngine) {
-        String[] args = commandLine.getArgs();
-        ProcessBuilder processBuilder = null;
-        if (commandLine.predict) {
-            List<String> appArgList = new ArrayList<>();
-            appArgList.add(JAVA_EXECUTABLE);
-            appArgList.add("-cp");
-            appArgList.add(RV_PREDICT_JAR);
-            appArgList.add(Main.class.getName());
-            int rvIndex = appArgList.size();
-            appArgList.addAll(Arrays.asList(args));
-
-            int index = appArgList.indexOf(Configuration.opt_outdir);
-            if (index != -1) {
-                appArgList.set(index, Configuration.opt_only_predict);
-            } else {
-                appArgList.add(rvIndex, Configuration.opt_only_predict);
-                appArgList.add(rvIndex+1, commandLine.outdir);
-            }
-
-            processBuilder = new ProcessBuilder(appArgList.toArray(args));
-        }
-
-        final ProcessBuilder finalProcessBuilder = processBuilder;
-        return new Thread("Cleanup Thread") {
-            @Override
-            public void run() {
-                try {
-                    loggingEngine.finishLogging();
-                } catch (IOException e) {
-                    System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
-                    System.err.println(e.getMessage());
-                } catch (InterruptedException e) {
-                    System.err.println("Warning: Execution is being forcefully ended. Log data might be lost.");
-                    System.err.println(e.getMessage());
-                }
-
-                if (commandLine.predict) {
-                    if (commandLine.log) {
-                        commandLine.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
-                    }
-
-                    try {
-                        Process process = finalProcessBuilder.start();
-                        StreamRedirector.redirect(process);
-                        process.waitFor();
-                    } catch (IOException | InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        };
-    }
-
-    private static void startApplication(List<String> args) {
-        Process appProc = null;
+    /**
+     * Executes the application in a subprocess.
+     *
+     * @param args
+     *            arguments to the application
+     */
+    private static void execApplication(List<String> args) {
+        Process process = null;
         try {
-            appProc = new ProcessBuilder(args).start();
-            StreamRedirector.redirect(appProc);
-            appProc.waitFor();
+            process = new ProcessBuilder(args).start();
+            StreamRedirector.redirect(process);
+            process.waitFor();
         } catch (IOException ignored) {
         } catch (InterruptedException e) {
-            if (appProc != null) {
-                appProc.destroy();
+            if (process != null) {
+                process.destroy();
             }
             e.printStackTrace();
         }

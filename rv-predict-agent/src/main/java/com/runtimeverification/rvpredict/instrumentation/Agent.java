@@ -13,7 +13,6 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.engine.main.Main;
 import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
@@ -69,7 +68,20 @@ public class Agent implements ClassFileTransformer, Constants {
         }
         System.out.println("Finished retransforming preloaded classes.");
 
-        Runtime.getRuntime().addShutdownHook(Main.getPredictionThread(config, loggingEngine));
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                try {
+                    loggingEngine.finishLogging();
+                } catch (IOException e) {
+                    System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
+                    System.err.println(e.getMessage());
+                } catch (InterruptedException e) {
+                    System.err.println("Warning: Execution is being forcefully ended. Log data might be lost.");
+                    System.err.println(e.getMessage());
+                }
+            }
+        });
     }
 
     /**

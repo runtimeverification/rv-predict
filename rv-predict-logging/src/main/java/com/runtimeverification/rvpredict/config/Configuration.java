@@ -276,7 +276,23 @@ public class Configuration implements Constants {
     public final static String opt_only_predict = "--predict";
     @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "2000")
     public String predict_dir = null;
-    public boolean predict = true;
+
+    public enum PredictionAlgorithm {
+        ONLINE, OFFLINE, NONE;
+
+        public boolean isOnline() {
+            return this == ONLINE;
+        }
+
+        public boolean isOffline() {
+            return this == OFFLINE;
+        }
+    }
+    public PredictionAlgorithm predictAlgo;
+
+    public final static String opt_online = "--online";
+    @Parameter(names = opt_online, description = "Run prediction online", hidden = true, descriptionKey = "2005")
+    public boolean online = false;
 
     final static String opt_max_len = "--maxlen";
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
@@ -371,6 +387,7 @@ public class Configuration implements Constants {
         initExcludeList();
         initIncludeList();
 
+        predictAlgo = online ? PredictionAlgorithm.ONLINE : PredictionAlgorithm.OFFLINE;
         if (log_dir != null) {
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_only_predict);
@@ -379,7 +396,7 @@ public class Configuration implements Constants {
                     exclusiveOptionsFailure(opt_only_log, opt_outdir);
                 }
                 outdir = Paths.get(log_dir).toAbsolutePath().toString();
-                predict = false;
+                predictAlgo = PredictionAlgorithm.NONE;
             }
         } else {
             if (predict_dir != null) {

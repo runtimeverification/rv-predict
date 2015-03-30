@@ -50,7 +50,7 @@ public class Main {
             config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
         }
 
-        if (config.predict) {
+        if (config.predictAlgo.isOffline()) {
             new RVPredict(config, new OfflineLoggingFactory(config)).run();
         }
     }

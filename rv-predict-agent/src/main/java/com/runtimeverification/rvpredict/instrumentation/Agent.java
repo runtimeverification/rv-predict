@@ -30,7 +30,7 @@ public class Agent implements ClassFileTransformer, Constants {
 
     private static Instrumentation instrumentation;
 
-    public final static Configuration config = new Configuration();
+    public static Configuration config;
 
     public static void premain(String agentArgs, Instrumentation inst) {
         instrumentation = inst;
@@ -100,7 +100,7 @@ public class Agent implements ClassFileTransformer, Constants {
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        config.parseArguments(args, false);
+        config = Configuration.instance(args, false);
     }
 
     private static void printStartupInfo() {

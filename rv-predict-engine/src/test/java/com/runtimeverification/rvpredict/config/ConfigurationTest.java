@@ -7,8 +7,8 @@ public class ConfigurationTest {
 
     @Test
     public void testParseArguments() throws Exception {
-        Configuration configuration = new Configuration();
-        configuration.parseArguments(new String[] { "-v", "--", "-h" }, true);
+        Configuration configuration = Configuration.instance(new String[] { "-v", "--", "-h" },
+                true);
         Assert.assertTrue(configuration.verbose);
         Assert.assertFalse(configuration.help);
         Assert.assertEquals("Java command line size should be 1", 1,

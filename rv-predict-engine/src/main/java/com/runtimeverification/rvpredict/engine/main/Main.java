@@ -29,8 +29,7 @@ public class Main {
             + SEPARATOR + "rv-predict.jar";
 
     public static void main(String[] args) {
-        Configuration config = new Configuration();
-        config.parseArguments(args, false);
+        Configuration config = Configuration.instance(args, false);
 
         if (config.log) {
             if (config.command_line.isEmpty()) {

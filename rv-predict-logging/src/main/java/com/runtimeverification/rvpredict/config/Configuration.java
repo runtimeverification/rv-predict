@@ -323,7 +323,15 @@ public class Configuration implements Constants {
     public final static String opt_java = "--";
     public Logger logger;
 
-    public void parseArguments(String[] args, boolean checkJava) {
+    public static Configuration instance(String[] args, boolean checkJava) {
+        Configuration config = new Configuration();
+        config.parseArguments(args, checkJava);
+        return config;
+    }
+
+    private Configuration() { }
+
+    private void parseArguments(String[] args, boolean checkJava) {
         this.args = args;
         jCommander = new JCommander(this);
         jCommander.setProgramName(PROGRAM_NAME);

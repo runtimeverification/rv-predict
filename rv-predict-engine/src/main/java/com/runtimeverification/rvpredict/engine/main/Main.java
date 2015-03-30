@@ -10,13 +10,9 @@ import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Scanner;
 
 /**
  * @author TraianSF
@@ -59,9 +55,13 @@ public class Main {
             appArgList.add("-javaagent:" + RV_PREDICT_JAR + "=" + agentOptions);
             appArgList.addAll(config.command_line);
 
-            runAgent(config, appArgList);
+            startApplication(appArgList);
+            config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
         }
-        checkAndPredict(config);
+
+        if (config.predict) {
+            new RVPredict(config, new OfflineLoggingFactory(config)).run();
+        }
     }
 
     /**
@@ -101,16 +101,6 @@ public class Main {
         return agentOptions.toString();
     }
 
-    private static void checkAndPredict(Configuration config) {
-        if (config.log) {
-            config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
-        }
-
-        if (config.predict) {
-            new RVPredict(config, new OfflineLoggingFactory(config)).run();
-        }
-    }
-
     public static Thread getPredictionThread(final Configuration commandLine, LoggingEngine loggingEngine) {
         String[] args = commandLine.getArgs();
         ProcessBuilder processBuilder = null;
@@ -135,7 +125,7 @@ public class Main {
         }
 
         final ProcessBuilder finalProcessBuilder = processBuilder;
-        return new Thread("CleanUp Agent") {
+        return new Thread("Cleanup Thread") {
             @Override
             public void run() {
                 try {
@@ -155,10 +145,7 @@ public class Main {
 
                     try {
                         Process process = finalProcessBuilder.start();
-                        redirectOutput(process.getErrorStream(), System.err);
-                        redirectOutput(process.getInputStream(), System.out);
-                        redirectInput(process.getOutputStream(), System.in);
-
+                        StreamRedirector.redirect(process);
                         process.waitFor();
                     } catch (IOException | InterruptedException e) {
                         e.printStackTrace();
@@ -168,70 +155,23 @@ public class Main {
         };
     }
 
-    public static void runAgent(final Configuration config, final List<String> appArgList) {
-        ProcessBuilder agentProcBuilder = new ProcessBuilder(appArgList.toArray(new String[appArgList
-                .size()]));
+    private static void startApplication(List<String> args) {
+        Process appProc = null;
         try {
-            final Process agentProc = agentProcBuilder.start();
-            Thread cleanupAgent = new Thread() {
-                @Override
-                public void run() {
-                    agentProc.destroy();
-                }
-            };
-            Runtime.getRuntime().addShutdownHook(cleanupAgent);
-            redirectOutput(agentProc.getErrorStream(), System.err);
-            redirectOutput(agentProc.getInputStream(), System.out);
-            redirectInput(agentProc.getOutputStream(), System.in);
-
-            agentProc.waitFor();
-            Runtime.getRuntime().removeShutdownHook(cleanupAgent);
+            appProc = new ProcessBuilder(args).start();
+            StreamRedirector.redirect(appProc);
+            appProc.waitFor();
         } catch (IOException ignored) {
         } catch (InterruptedException e) {
+            if (appProc != null) {
+                appProc.destroy();
+            }
             e.printStackTrace();
         }
     }
 
-    public static String escapeString(String s) {
+    private static String escapeString(String s) {
         return (s.contains(" ") ? "\\\"" + s + "\\\"" : s);
-    }
-
-    public static void redirectOutput(final InputStream outputStream, final PrintStream redirect) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Scanner scanner = new Scanner(outputStream);
-                while (scanner.hasNextLine()) {
-                    String s = scanner.nextLine();
-                    if (redirect != null) {
-                        redirect.println(s);
-                    }
-                }
-                scanner.close();
-            }
-        }).start();
-    }
-
-    public static Thread redirectInput(final OutputStream inputStream, final InputStream redirect) {
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                if (redirect != null) {
-                    try {
-                        int ret = -1;
-                        while ((ret = redirect.read()) != -1) {
-                            inputStream.write(ret);
-                            inputStream.flush();
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-        thread.setDaemon(true);
-        thread.start();
-        return thread;
     }
 
 }

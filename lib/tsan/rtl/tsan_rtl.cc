@@ -64,6 +64,13 @@ void WEAK OnInitialize() {}
 
 static char thread_registry_placeholder[sizeof(ThreadRegistry)];
 
+void RVEventFile(u64 gid, u64 tid, u64 id, u64 addrl, u64 addrr, u64 value, const char* type) {
+  SymbolizedStack* frame = SymbolizeCode(id);
+  Printf("<gid:%llx;tid:%lld;id:%llx;addrl:%x;addrr:%x;value:%llx,type:%s @ %s %s:%d>\n", gid, tid, id, addrl, addrr, value, type,
+       frame->info.function, frame->info.file, frame->info.line);
+
+}
+
 static ThreadContextBase *CreateThreadContext(u32 tid) {
   // Map thread trace when context is created.
   MapThreadTrace(GetThreadTrace(tid), TraceSize() * sizeof(Event));
@@ -729,6 +736,9 @@ void MemoryAccess(ThreadState *thr, uptr pc, uptr addr,
       (int)(1 << kAccessSizeLog), kAccessIsWrite, shadow_mem,
       (uptr)shadow_mem[0], (uptr)shadow_mem[1],
       (uptr)shadow_mem[2], (uptr)shadow_mem[3]);
+  RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), pc, 0L, addr, *shadow_mem,
+    kAccessIsWrite?  "WRITE" : "READ");
+
 #if SANITIZER_DEBUG
   if (!IsAppMem(addr)) {
     Printf("Access to non app mem %zx\n", addr);

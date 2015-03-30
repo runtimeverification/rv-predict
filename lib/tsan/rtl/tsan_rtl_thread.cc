@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_placement_new.h"
+
+#include "tsan_symbolize.h"
 #include "tsan_rtl.h"
 #include "tsan_mman.h"
 #include "tsan_platform.h"
@@ -233,6 +235,8 @@ int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
   OnCreatedArgs args = { thr, pc };
   int tid = ctx->thread_registry->CreateThread(uid, detached, thr->tid, &args);
   DPrintf("#%d: ThreadCreate tid=%d uid=%zu\n", thr->tid, tid, uid);
+  RVEventFile(thr->fast_state.epoch(), thr->tid, pc, tid, uid, detached, "START");
+
   StatSet(thr, StatThreadMaxAlive, ctx->thread_registry->GetMaxAliveThreads());
   return tid;
 }
@@ -312,6 +316,8 @@ void ThreadJoin(ThreadState *thr, uptr pc, int tid) {
   CHECK_GT(tid, 0);
   CHECK_LT(tid, kMaxTid);
   DPrintf("#%d: ThreadJoin tid=%d\n", thr->tid, tid);
+  RVEventFile(thr->fast_state.epoch(), thr->tid, pc, tid, 0UL, 0UL, "JOIN");
+
   ctx->thread_registry->JoinThread(tid, thr);
 }
 

@@ -146,6 +146,7 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr) {
 
 void MutexLock(ThreadState *thr, uptr pc, uptr addr, int rec, bool try_lock) {
   DPrintf("#%d: MutexLock %zx rec=%d\n", thr->tid, addr, rec);
+  RVEventFile(thr->fast_state.epoch(), thr->tid, pc, addr>>32, (int)addr, 0, "WRITE_LOCK");
   CHECK_GT(rec, 0);
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);
@@ -191,6 +192,7 @@ void MutexLock(ThreadState *thr, uptr pc, uptr addr, int rec, bool try_lock) {
 
 int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, bool all) {
   DPrintf("#%d: MutexUnlock %zx all=%d\n", thr->tid, addr, all);
+  RVEventFile(thr->fast_state.epoch(), thr->tid, pc, addr>>32, (int)addr, 0, "WRITE_UNLOCK");
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);
   SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
@@ -234,6 +236,7 @@ int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, bool all) {
 
 void MutexReadLock(ThreadState *thr, uptr pc, uptr addr, bool trylock) {
   DPrintf("#%d: MutexReadLock %zx\n", thr->tid, addr);
+  RVEventFile(thr->fast_state.epoch(), thr->tid, pc, addr>>32, (int)addr, 0, "READ_LOCK");
   StatInc(thr, StatMutexReadLock);
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);
@@ -269,6 +272,7 @@ void MutexReadLock(ThreadState *thr, uptr pc, uptr addr, bool trylock) {
 
 void MutexReadUnlock(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexReadUnlock %zx\n", thr->tid, addr);
+  RVEventFile(thr->fast_state.epoch(), thr->tid, pc, addr>>32, (int)addr, 0, "READ_UNLOCK");
   StatInc(thr, StatMutexReadUnlock);
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);

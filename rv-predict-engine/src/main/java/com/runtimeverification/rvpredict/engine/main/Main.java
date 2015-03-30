@@ -22,8 +22,10 @@ public class Main {
     private static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "lib"
             + SEPARATOR + "rv-predict.jar";
 
+    private static Configuration config;
+
     public static void main(String[] args) {
-        Configuration config = Configuration.instance(args, false);
+        config = Configuration.instance(args, false);
 
         if (config.log) {
             if (config.command_line.isEmpty()) {
@@ -44,21 +46,37 @@ public class Main {
                 }
             }
 
-            String agentOptions = getAgentOptions(config);
-
-            List<String> appArgList = new ArrayList<>();
-            appArgList.add(JAVA_EXECUTABLE);
-            appArgList.add("-ea");
-            appArgList.add("-Xbootclasspath/a:" + RV_PREDICT_JAR);
-            appArgList.add("-javaagent:" + RV_PREDICT_JAR + "=" + agentOptions);
-            appArgList.addAll(config.command_line);
-
-            execApplication(appArgList);
+            execApplication();
             config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
         }
 
         if (config.predict) {
             new RVPredict(config, new OfflineLoggingFactory(config)).run();
+        }
+    }
+
+    /**
+     * Executes the application in a subprocess.
+     */
+    private static void execApplication() {
+        List<String> args = new ArrayList<>();
+        args.add(JAVA_EXECUTABLE);
+        args.add("-ea");
+        args.add("-Xbootclasspath/a:" + RV_PREDICT_JAR);
+        args.add("-javaagent:" + RV_PREDICT_JAR + "=" + getAgentArgs());
+        args.addAll(config.command_line);
+
+        Process process = null;
+        try {
+            process = new ProcessBuilder(args).start();
+            StreamRedirector.redirect(process);
+            process.waitFor();
+        } catch (IOException ignored) {
+        } catch (InterruptedException e) {
+            if (process != null) {
+                process.destroy();
+            }
+            e.printStackTrace();
         }
     }
 
@@ -78,10 +96,9 @@ public class Main {
      * the {@code --log} option is added to make sure execution is logged in the
      * directory expected by prediction.
      *
-     * @param config
      * @return the -javaagent options corresponding to the user command line
      */
-    private static String getAgentOptions(Configuration config) {
+    private static String getAgentArgs() {
         boolean hasLogDir = false;
         StringBuilder agentOptions = new StringBuilder();
         for (String arg : config.getRvArgs()) {
@@ -97,27 +114,6 @@ public class Main {
             agentOptions.insert(0, Configuration.opt_only_log + " " + escapeString(config.outdir) + " ");
         }
         return agentOptions.toString();
-    }
-
-    /**
-     * Executes the application in a subprocess.
-     *
-     * @param args
-     *            arguments to the application
-     */
-    private static void execApplication(List<String> args) {
-        Process process = null;
-        try {
-            process = new ProcessBuilder(args).start();
-            StreamRedirector.redirect(process);
-            process.waitFor();
-        } catch (IOException ignored) {
-        } catch (InterruptedException e) {
-            if (process != null) {
-                process.destroy();
-            }
-            e.printStackTrace();
-        }
     }
 
     private static String escapeString(String s) {

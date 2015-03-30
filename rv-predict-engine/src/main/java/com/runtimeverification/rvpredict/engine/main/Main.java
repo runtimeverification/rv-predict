@@ -4,6 +4,7 @@ import com.runtimeverification.rvpredict.config.Configuration;
 
 import org.apache.tools.ant.util.JavaEnvUtils;
 
+import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.util.Logger;
 
@@ -111,11 +112,10 @@ public class Main {
         }
     }
 
-    public static Thread getPredictionThread(final Configuration commandLine,
-            final CleanupAgent cleanupAgent, final boolean predict) {
+    public static Thread getPredictionThread(final Configuration commandLine, LoggingEngine loggingEngine) {
         String[] args = commandLine.getArgs();
         ProcessBuilder processBuilder = null;
-        if (predict) {
+        if (commandLine.predict) {
             List<String> appArgList = new ArrayList<>();
             appArgList.add(JAVA_EXECUTABLE);
             appArgList.add("-cp");
@@ -139,8 +139,17 @@ public class Main {
         return new Thread("CleanUp Agent") {
             @Override
             public void run() {
-                cleanupAgent.cleanup();
-                if (predict) {
+                try {
+                    loggingEngine.finishLogging();
+                } catch (IOException e) {
+                    System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
+                    System.err.println(e.getMessage());
+                } catch (InterruptedException e) {
+                    System.err.println("Warning: Execution is being forcefully ended. Log data might be lost.");
+                    System.err.println(e.getMessage());
+                }
+
+                if (commandLine.predict) {
                     if (commandLine.log) {
                         commandLine.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
                     }
@@ -158,10 +167,6 @@ public class Main {
                 }
             }
         };
-    }
-
-    public interface CleanupAgent {
-        public void cleanup();
     }
 
     public static void runAgent(final Configuration config, final List<String> appArgList) {

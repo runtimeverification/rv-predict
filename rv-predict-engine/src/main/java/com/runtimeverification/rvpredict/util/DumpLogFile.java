@@ -29,7 +29,7 @@ public class DumpLogFile {
         Path path = Paths.get(args[0]).toAbsolutePath();
         Path directory = path.getParent();
         Configuration configuration = Configuration.instance(
-                new String[] { "--dir", directory.toString() }, false);
+                new String[] { "--dir", directory.toString() });
         OfflineLoggingFactory loggingFactory = new OfflineLoggingFactory(configuration);
         String file = args[0];
         try (EventReader reader = new EventReader(Paths.get(file))) {

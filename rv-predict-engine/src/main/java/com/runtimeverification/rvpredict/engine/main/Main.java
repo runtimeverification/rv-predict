@@ -6,6 +6,7 @@ import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.runtimeverification.rvpredict.config.Configuration;
@@ -20,10 +21,10 @@ public class Main {
     private static Configuration config;
 
     public static void main(String[] args) {
-        config = Configuration.instance(args, false);
+        config = Configuration.instance(args);
 
         if (config.isLogging()) {
-            if (config.command_line.isEmpty()) {
+            if (config.getJavaArguments().length == 0) {
                 config.logger.report("You must provide a class or a jar to run.",
                         Logger.MSGTYPE.ERROR);
                 config.usage();
@@ -59,7 +60,7 @@ public class Main {
         args.add("-ea");
         args.add("-Xbootclasspath/a:" + RV_PREDICT_JAR);
         args.add("-javaagent:" + RV_PREDICT_JAR + "=" + getAgentArgs());
-        args.addAll(config.command_line);
+        Collections.addAll(args, config.getJavaArguments());
 
         Process process = null;
         try {
@@ -96,7 +97,7 @@ public class Main {
     private static String getAgentArgs() {
         boolean hasLogDir = false;
         StringBuilder agentOptions = new StringBuilder();
-        for (String arg : config.getRvArgs()) {
+        for (String arg : config.getRVPredictArguments()) {
             if (arg.equals(Configuration.opt_outdir)) {
                 arg = Configuration.opt_only_log;
             }

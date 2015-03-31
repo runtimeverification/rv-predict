@@ -33,6 +33,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -45,6 +46,8 @@ import java.security.CodeSource;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import org.apache.tools.ant.util.JavaEnvUtils;
+
 /**
  * Command line options class for rv-predict Used by JCommander to parse the
  * main program parameters.
@@ -54,6 +57,11 @@ public class Configuration implements Constants {
     public static final String LOGGING_PHASE_COMPLETED = "Logging phase completed.";
     public static final String TRACE_LOGGED_IN = "\tTrace logged in: ";
     public static final String INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE = "Instrumented execution to record the trace";
+
+    private static final String SEPARATOR = System.getProperty("file.separator");
+    public static final String JAVA_EXECUTABLE = JavaEnvUtils.getJreExecutable("java");
+    public static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "lib"
+            + SEPARATOR + "rv-predict.jar";
 
     /**
      * Packages/classes that are excluded from instrumentation by default. These are
@@ -286,6 +294,10 @@ public class Configuration implements Constants {
 
         public boolean isOffline() {
             return this == OFFLINE;
+        }
+
+        public boolean isNone() {
+            return this == NONE;
         }
     }
     public PredictionAlgorithm predictAlgo;

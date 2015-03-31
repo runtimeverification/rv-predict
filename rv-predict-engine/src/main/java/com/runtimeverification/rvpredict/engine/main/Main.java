@@ -1,26 +1,21 @@
 package com.runtimeverification.rvpredict.engine.main;
 
-import com.runtimeverification.rvpredict.config.Configuration;
-
-import org.apache.tools.ant.util.JavaEnvUtils;
-
-import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
-import com.runtimeverification.rvpredict.util.Logger;
+import static com.runtimeverification.rvpredict.config.Configuration.JAVA_EXECUTABLE;
+import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_JAR;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
+import com.runtimeverification.rvpredict.util.Logger;
+
 /**
  * @author TraianSF
  */
 public class Main {
-
-    private static final String JAVA_EXECUTABLE = JavaEnvUtils.getJreExecutable("java");
-    private static final String SEPARATOR = System.getProperty("file.separator");
-    private static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "lib"
-            + SEPARATOR + "rv-predict.jar";
 
     private static Configuration config;
 

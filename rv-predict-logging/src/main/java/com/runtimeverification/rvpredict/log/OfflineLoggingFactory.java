@@ -53,7 +53,7 @@ public class OfflineLoggingFactory implements LoggingFactory {
     @Override
     public EventWriter createEventWriter() throws IOException {
         int id = logFileId.incrementAndGet();
-        Path path = Paths.get(config.outdir, id + "_" + TRACE_SUFFIX);
+        Path path = Paths.get(config.getLogDir(), id + "_" + TRACE_SUFFIX);
         return new EventWriter(path);
     }
 
@@ -65,9 +65,9 @@ public class OfflineLoggingFactory implements LoggingFactory {
     public EventReader getEventReader() throws IOException {
         if (readers == null) {
             readers = new LinkedList<>();
-            String[] files = getTraceFiles(config.outdir);
+            String[] files = getTraceFiles(config.getLogDir());
             for (String file : files) {
-                EventReader reader = new EventReader(Paths.get(config.outdir, file));
+                EventReader reader = new EventReader(Paths.get(config.getLogDir(), file));
                 readers.add(reader);
             }
         }
@@ -99,7 +99,7 @@ public class OfflineLoggingFactory implements LoggingFactory {
     @SuppressWarnings("unchecked")
     public void readMetadata() {
         try (ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
-                new FileInputStream(Paths.get(config.outdir, METADATA_BIN).toFile())))) {
+                new FileInputStream(Paths.get(config.getLogDir(), METADATA_BIN).toFile())))) {
             List<Map.Entry<Integer, String>> list;
             while (true) {
                 try {
@@ -131,7 +131,7 @@ public class OfflineLoggingFactory implements LoggingFactory {
     public ObjectOutputStream createMetadataOS() throws IOException {
         return new ObjectOutputStream(
                 new BufferedOutputStream(
-                        new FileOutputStream(Paths.get(config.outdir, METADATA_BIN).toFile())));
+                        new FileOutputStream(Paths.get(config.getLogDir(), METADATA_BIN).toFile())));
     }
 
 }

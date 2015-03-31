@@ -22,19 +22,19 @@ public class Main {
     public static void main(String[] args) {
         config = Configuration.instance(args, false);
 
-        if (config.log) {
+        if (config.isLogging()) {
             if (config.command_line.isEmpty()) {
                 config.logger.report("You must provide a class or a jar to run.",
                         Logger.MSGTYPE.ERROR);
                 config.usage();
                 System.exit(1);
             }
-            File outdirFile = new File(config.outdir);
+            File outdirFile = new File(config.getLogDir());
             if (!(outdirFile.exists())) {
                 outdirFile.mkdir();
             } else {
                 if (!outdirFile.isDirectory()) {
-                    config.logger.report(config.outdir + " is not a directory",
+                    config.logger.report(config.getLogDir() + " is not a directory",
                             Logger.MSGTYPE.ERROR);
                     config.usage();
                     System.exit(1);
@@ -45,7 +45,7 @@ public class Main {
             config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
         }
 
-        if (config.predictAlgo.isOffline()) {
+        if (config.isOfflinePrediction()) {
             new RVPredict(config, new OfflineLoggingFactory(config)).run();
         }
     }
@@ -106,7 +106,8 @@ public class Main {
             agentOptions.append(escapeString(arg)).append(" ");
         }
         if (!hasLogDir) {
-            agentOptions.insert(0, Configuration.opt_only_log + " " + escapeString(config.outdir) + " ");
+            agentOptions.insert(0,
+                    Configuration.opt_only_log + " " + escapeString(config.getLogDir()) + " ");
         }
         return agentOptions.toString();
     }

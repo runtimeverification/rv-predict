@@ -184,8 +184,8 @@ public class RVPredict implements LoggingTask {
                     System.err.println(e.getMessage());
                 }
 
-                if (config.predictAlgo.isOffline()) {
-                    if (config.log) {
+                if (config.isOfflinePrediction()) {
+                    if (config.isLogging()) {
                         config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
                     }
 
@@ -222,7 +222,7 @@ public class RVPredict implements LoggingTask {
             appArgs.set(index, Configuration.opt_only_predict);
         } else {
             appArgs.add(rvIndex, Configuration.opt_only_predict);
-            appArgs.add(rvIndex + 1, config.outdir);
+            appArgs.add(rvIndex + 1, config.getLogDir());
         }
         return new ProcessBuilder(appArgs).start();
     }

@@ -262,10 +262,18 @@ public class Configuration implements Constants {
     private String[] args;
     private String[] rvArgs;
 
+    public final static String opt_event_profile = "--profile";
+    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1000")
+    public static boolean profile;
+
     public final static String opt_only_log = "--log";
-    @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1000")
-    public String log_dir = null;
-    public boolean log = true;
+    @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1005")
+    private String log_dir = null;
+    private boolean log = true;
+
+    public final static String opt_only_predict = "--predict";
+    @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "1010")
+    private String predict_dir = null;
 
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include." +
@@ -277,34 +285,13 @@ public class Configuration implements Constants {
             "\nPrefix with + to add to the default excluded packages", hidden = true, descriptionKey = "1030")
     public static String excludes;
 
-    final static String opt_event_profile = "--profile";
-    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1070")
-    public static boolean profile;
-
-    public final static String opt_only_predict = "--predict";
-    @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "2000")
-    public String predict_dir = null;
-
-    public enum PredictionAlgorithm {
-        ONLINE, OFFLINE, NONE;
-
-        public boolean isOnline() {
-            return this == ONLINE;
-        }
-
-        public boolean isOffline() {
-            return this == OFFLINE;
-        }
-
-        public boolean isNone() {
-            return this == NONE;
-        }
-    }
-    public PredictionAlgorithm predictAlgo;
+    private final static String ONLINE_PREDICTION = "ONLINE_PREDICTION";
+    private final static String OFFLINE_PREDICTION = "OFFLINE_PREDICTION";
+    private String prediction;
 
     public final static String opt_online = "--online";
     @Parameter(names = opt_online, description = "Run prediction online", hidden = true, descriptionKey = "2005")
-    public boolean online = false;
+    private boolean online;
 
     final static String opt_max_len = "--maxlen";
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
@@ -336,7 +323,7 @@ public class Configuration implements Constants {
 
     public final static String opt_outdir = "--dir";
     @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")
-    public String outdir = null;
+    private String outdir = null;
 
     final static String short_opt_verbose = "-v";
     final static String opt_verbose = "--verbose";
@@ -349,7 +336,7 @@ public class Configuration implements Constants {
     public boolean help;
 
     public final static String opt_java = "--";
-    public Logger logger;
+    public final Logger logger = new Logger();
 
     public static Configuration instance(String[] args, boolean checkJava) {
         Configuration config = new Configuration();
@@ -399,36 +386,64 @@ public class Configuration implements Constants {
         initExcludeList();
         initIncludeList();
 
-        predictAlgo = online ? PredictionAlgorithm.ONLINE : PredictionAlgorithm.OFFLINE;
-        if (log_dir != null) {
+        /* Carefully handle the interaction between options:
+         * 1) 4 different modes: only_profile, only_log, only_predict and log_then_predict;
+         * 2) 2 types of prediction: online and offline;
+         * 3) log directory can be specified or not.
+         *
+         * The following code computes 3 variables, e.g. log, prediction, and log_dir,
+         * to represent the 3 choices above.
+         */
+        if (profile) {                          /* only profile */
+            if (log_dir != null) {
+                exclusiveOptionsFailure(opt_event_profile, opt_only_log);
+            }
+            if (outdir != null) {
+                exclusiveOptionsFailure(opt_event_profile, opt_outdir);
+            }
+            if (predict_dir != null) {
+                exclusiveOptionsFailure(opt_event_profile, opt_only_predict);
+            }
+            if (online) {
+                exclusiveOptionsFailure(opt_event_profile, opt_online);
+            }
+            log = false;
+        } else if (log_dir != null) {           /* only log */
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_only_predict);
-            } else {
-                if (outdir != null) {
-                    exclusiveOptionsFailure(opt_only_log, opt_outdir);
-                }
-                outdir = Paths.get(log_dir).toAbsolutePath().toString();
-                predictAlgo = PredictionAlgorithm.NONE;
             }
-        } else {
-            if (predict_dir != null) {
-                if (outdir != null) {
-                    exclusiveOptionsFailure(opt_only_predict, opt_outdir);
-                }
-                outdir = Paths.get(predict_dir).toAbsolutePath().toString();
-                log = false;
-            } else if (outdir != null) {
-                outdir = Paths.get(outdir).toAbsolutePath().toString();
+            if (outdir != null) {
+                exclusiveOptionsFailure(opt_only_log, opt_outdir);
+            }
+            if (online) {
+                exclusiveOptionsFailure(opt_only_log, opt_online);
+            }
+            log_dir = Paths.get(log_dir).toAbsolutePath().toString();
+        } else if (predict_dir != null) {       /* only predict */
+            if (outdir != null) {
+                exclusiveOptionsFailure(opt_only_predict, opt_outdir);
+            }
+            if (online) {
+                exclusiveOptionsFailure(opt_only_predict, opt_online);
+            }
+            log_dir = Paths.get(predict_dir).toAbsolutePath().toString();
+            log = false;
+            prediction = OFFLINE_PREDICTION;
+        } else {                                /* log then predict */
+            if (online) {
+                log_dir = null;
+                prediction = ONLINE_PREDICTION;
             } else {
                 try {
-                    outdir = Files.createTempDirectory(
-                            Paths.get(System.getProperty("java.io.tmpdir")), "rv-predict")
-                            .toString();
+                    log_dir = outdir == null ? Files.createTempDirectory(
+                            Paths.get(System.getProperty("java.io.tmpdir")), "rv-predict").toString()
+                            : Paths.get(outdir).toAbsolutePath().toString();
                 } catch (IOException e) {
                     System.err.println("Error while attempting to create log dir.");
                     System.err.println(e.getMessage());
                     System.exit(1);
                 }
+                prediction = OFFLINE_PREDICTION;
             }
         }
 
@@ -463,7 +478,6 @@ public class Configuration implements Constants {
         } else {
             command_line.addAll(argList);
         }
-        logger = new Logger();
     }
 
     public void exclusiveOptionsFailure(String opt1, String opt2) {
@@ -556,5 +570,31 @@ public class Configuration implements Constants {
 
     public String[] getRvArgs() {
         return rvArgs;
+    }
+
+    /**
+     * Returns the directory to read and/or write log files.
+     */
+    public String getLogDir() {
+        return log_dir;
+    }
+
+    /**
+     * Checks if the current RV-Predict instance needs to do logging.
+     */
+    public boolean isLogging() {
+        return log;
+    }
+
+    public boolean isOnlinePrediction() {
+        return prediction == ONLINE_PREDICTION;
+    }
+
+    public boolean isOfflinePrediction() {
+        return prediction == OFFLINE_PREDICTION;
+    }
+
+    public boolean noPrediction() {
+        return prediction == null;
     }
 }

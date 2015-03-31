@@ -33,6 +33,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -45,6 +46,8 @@ import java.security.CodeSource;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import org.apache.tools.ant.util.JavaEnvUtils;
+
 /**
  * Command line options class for rv-predict Used by JCommander to parse the
  * main program parameters.
@@ -54,6 +57,11 @@ public class Configuration implements Constants {
     public static final String LOGGING_PHASE_COMPLETED = "Logging phase completed.";
     public static final String TRACE_LOGGED_IN = "\tTrace logged in: ";
     public static final String INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE = "Instrumented execution to record the trace";
+
+    private static final String SEPARATOR = System.getProperty("file.separator");
+    public static final String JAVA_EXECUTABLE = JavaEnvUtils.getJreExecutable("java");
+    public static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "lib"
+            + SEPARATOR + "rv-predict.jar";
 
     /**
      * Packages/classes that are excluded from instrumentation by default. These are
@@ -276,7 +284,27 @@ public class Configuration implements Constants {
     public final static String opt_only_predict = "--predict";
     @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "2000")
     public String predict_dir = null;
-    public boolean predict = true;
+
+    public enum PredictionAlgorithm {
+        ONLINE, OFFLINE, NONE;
+
+        public boolean isOnline() {
+            return this == ONLINE;
+        }
+
+        public boolean isOffline() {
+            return this == OFFLINE;
+        }
+
+        public boolean isNone() {
+            return this == NONE;
+        }
+    }
+    public PredictionAlgorithm predictAlgo;
+
+    public final static String opt_online = "--online";
+    @Parameter(names = opt_online, description = "Run prediction online", hidden = true, descriptionKey = "2005")
+    public boolean online = false;
 
     final static String opt_max_len = "--maxlen";
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
@@ -323,7 +351,15 @@ public class Configuration implements Constants {
     public final static String opt_java = "--";
     public Logger logger;
 
-    public void parseArguments(String[] args, boolean checkJava) {
+    public static Configuration instance(String[] args, boolean checkJava) {
+        Configuration config = new Configuration();
+        config.parseArguments(args, checkJava);
+        return config;
+    }
+
+    private Configuration() { }
+
+    private void parseArguments(String[] args, boolean checkJava) {
         this.args = args;
         jCommander = new JCommander(this);
         jCommander.setProgramName(PROGRAM_NAME);
@@ -363,6 +399,7 @@ public class Configuration implements Constants {
         initExcludeList();
         initIncludeList();
 
+        predictAlgo = online ? PredictionAlgorithm.ONLINE : PredictionAlgorithm.OFFLINE;
         if (log_dir != null) {
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_only_predict);
@@ -371,7 +408,7 @@ public class Configuration implements Constants {
                     exclusiveOptionsFailure(opt_only_log, opt_outdir);
                 }
                 outdir = Paths.get(log_dir).toAbsolutePath().toString();
-                predict = false;
+                predictAlgo = PredictionAlgorithm.NONE;
             }
         } else {
             if (predict_dir != null) {

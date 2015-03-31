@@ -28,8 +28,14 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.engine.main;
 
+import static com.runtimeverification.rvpredict.config.Configuration.JAVA_EXECUTABLE;
+import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_JAR;
+
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -37,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.log.LoggingTask;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -162,4 +169,62 @@ public class RVPredict implements LoggingTask {
     public void setOwner(Thread owner) {
         this.owner = owner;
     }
+
+    public static Thread getPredictionThread(Configuration config, LoggingEngine loggingEngine) {
+        return new Thread("Cleanup Thread") {
+            @Override
+            public void run() {
+                try {
+                    loggingEngine.finishLogging();
+                } catch (IOException e) {
+                    System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
+                    System.err.println(e.getMessage());
+                } catch (InterruptedException e) {
+                    System.err.println("Warning: Execution is being forcefully ended. Log data might be lost.");
+                    System.err.println(e.getMessage());
+                }
+
+                if (config.predictAlgo.isOffline()) {
+                    if (config.log) {
+                        config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
+                    }
+
+                    Process process = null;
+                    try {
+                        process = startPredictionProcess(config);
+                        StreamRedirector.redirect(process);
+                        process.waitFor();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        if (process != null) {
+                            process.destroy();
+                        }
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+    }
+
+    private static Process startPredictionProcess(Configuration config) throws IOException {
+        List<String> appArgs = new ArrayList<>();
+        appArgs.add(JAVA_EXECUTABLE);
+        appArgs.add("-ea");
+        appArgs.add("-cp");
+        appArgs.add(RV_PREDICT_JAR);
+        appArgs.add(Main.class.getName());
+        int rvIndex = appArgs.size();
+        appArgs.addAll(Arrays.asList(config.getArgs()));
+
+        int index = appArgs.indexOf(Configuration.opt_outdir);
+        if (index != -1) {
+            appArgs.set(index, Configuration.opt_only_predict);
+        } else {
+            appArgs.add(rvIndex, Configuration.opt_only_predict);
+            appArgs.add(rvIndex + 1, config.outdir);
+        }
+        return new ProcessBuilder(appArgs).start();
+    }
+
 }

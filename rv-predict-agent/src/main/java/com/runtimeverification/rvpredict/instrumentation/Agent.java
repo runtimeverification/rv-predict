@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.engine.main.Main;
+import com.runtimeverification.rvpredict.engine.main.RVPredict;
 import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
@@ -30,7 +30,7 @@ public class Agent implements ClassFileTransformer, Constants {
 
     private static Instrumentation instrumentation;
 
-    public final static Configuration config = new Configuration();
+    public static Configuration config;
 
     public static void premain(String agentArgs, Instrumentation inst) {
         instrumentation = inst;
@@ -69,26 +69,7 @@ public class Agent implements ClassFileTransformer, Constants {
         }
         System.out.println("Finished retransforming preloaded classes.");
 
-        final Main.CleanupAgent cleanupAgent = new Main.CleanupAgent() {
-            @Override
-            public void cleanup() {
-                try {
-                    loggingEngine.finishLogging();
-                } catch (IOException e) {
-                    System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
-                    System.err.println(e.getMessage());
-                } catch (InterruptedException e) {
-                    System.err.println("Warning: Execution is being forcefully ended. Log data might be lost.");
-                    System.err.println(e.getMessage());
-                }
-            }
-        };
-        Thread predict = Main.getPredictionThread(config, cleanupAgent, config.predict);
-        Runtime.getRuntime().addShutdownHook(predict);
-
-        if (config.predict) {
-            config.logger.reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
-        }
+        Runtime.getRuntime().addShutdownHook(RVPredict.getPredictionThread(config, loggingEngine));
     }
 
     /**
@@ -119,7 +100,7 @@ public class Agent implements ClassFileTransformer, Constants {
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        config.parseArguments(args, false);
+        config = Configuration.instance(args, false);
     }
 
     private static void printStartupInfo() {

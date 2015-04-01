@@ -11,9 +11,9 @@ public class ConfigurationTest {
         Assert.assertTrue(configuration.verbose);
         Assert.assertFalse(configuration.help);
         Assert.assertEquals("Java command line size should be 1", 1,
-                configuration.getJavaArguments().length);
+                configuration.getJavaArguments().size());
         Assert.assertEquals("Java command should just be '-h'", "-h",
-                configuration.getJavaArguments()[0]);
+                configuration.getJavaArguments().get(0));
 
     }
 }

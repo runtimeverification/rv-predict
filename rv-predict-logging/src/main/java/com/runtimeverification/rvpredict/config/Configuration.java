@@ -257,7 +257,8 @@ public class Configuration implements Constants {
 
     private String[] args;
     private String[] rvpredictArgs;
-    @Parameter(description = "[java_options] <java_command_line>")
+    // TODO(YilongL): not sure if we want to use JCommander to help us determine the main parameter
+//    @Parameter(description = "[java_options] <java_command_line>")
     private String[] javaArgs;
 
     public final static String opt_event_profile = "--profile";
@@ -359,7 +360,7 @@ public class Configuration implements Constants {
         /* separate rv-predict arguments */
         int endOfRVArgs = args.length;
         for (int i = 0; i < args.length; i++) {
-            if (args[i].startsWith("-") && !rvpredictOptionNames.contains(args[i])
+            if ((i == 0 || args[i].startsWith("-")) && !rvpredictOptionNames.contains(args[i])
                     || RVPREDICT_ARGS_TERMINATOR.equals(args[i])) {
                 /* stop as soon as we see an unknown option or the terminator */
                 endOfRVArgs = i;
@@ -484,8 +485,7 @@ public class Configuration implements Constants {
         // Computing usage
         max_option_length++;
         String usageHeader = "Usage: " + RV_PREDICT
-                + " [rv_predict_options] [--] "
-                + jCommander.getMainParameterDescription() + "\n";
+                + " [rv_predict_options] [--] [java_options] <java_command_line>\n";
         String usage = usageHeader + "  Options:";
         String shortUsage = usageHeader + "  Common options (use -h -v for a complete list):";
 
@@ -547,8 +547,8 @@ public class Configuration implements Constants {
         return rvpredictArgs;
     }
 
-    public String[] getJavaArguments() {
-        return javaArgs;
+    public List<String> getJavaArguments() {
+        return Arrays.asList(javaArgs);
     }
 
     /**

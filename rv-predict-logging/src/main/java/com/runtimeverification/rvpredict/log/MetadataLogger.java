@@ -3,9 +3,6 @@ package com.runtimeverification.rvpredict.log;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Functionality for recording metadata.
@@ -51,39 +48,11 @@ public class MetadataLogger implements LoggingTask {
         }
     }
 
-    private void saveObject(Object object) throws IOException {
-        metadataOS.writeObject(object);
-    }
-
     /**
      * Flush un-previously-saved metadata to disk.
      */
     private void saveMetaData() {
-        try {
-            /* save <volatileVariable, Id> pairs */
-            synchronized (metadata.volatileVariableIds) {
-                Set<Integer> volatileFieldIds = new HashSet<>(metadata.unsavedVolatileVariableIds);
-                saveObject(volatileFieldIds);
-                metadata.unsavedVolatileVariableIds.clear();
-            }
-
-            /* save <VarSig, VarId> pairs */
-            synchronized (metadata.varSigToVarId) {
-                saveObject(new ArrayList<>(metadata.unsavedVarIdToVarSig));
-                metadata.unsavedVarIdToVarSig.clear();
-            }
-
-            /* save <StmtSig, LocId> pairs */
-            synchronized (metadata.stmtSigToLocId) {
-                saveObject(new ArrayList<>(metadata.unsavedLocIdToStmtSig));
-                metadata.unsavedLocIdToStmtSig.clear();
-            }
-        } catch (IOException e) {
-            System.err.println(e.getMessage());
-            System.err.println("I/O Error while saving metadata." +
-                    " Metadata will be unreadable. Exiting...");
-            System.exit(1);
-        }
+        metadata.writeUnsavedMetadataTo(metadataOS);
     }
 
     /**

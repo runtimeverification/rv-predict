@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.metadata;
 
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,21 +18,21 @@ public class Metadata implements Opcodes {
      * thus, synchronize with their main data-structure counterparts.
      */
 
-    public final Map<String, Integer> varSigToVarId = new ConcurrentHashMap<>();
-    public final List<Pair<Integer, String>> unsavedVarIdToVarSig = new ArrayList<>();
+    private final Map<String, Integer> varSigToVarId = new ConcurrentHashMap<>();
+    private final List<Pair<Integer, String>> unsavedVarIdToVarSig = new ArrayList<>();
 
-    public final ArrayList<String> varSigs = new ArrayList<>(); {
+    private final ArrayList<String> varSigs = new ArrayList<>(); {
         varSigs.ensureCapacity(5000);
         varSigs.add(null);
     }
 
-    public final Map<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
-    public final Map<Integer, String> locIdToStmtSig = new HashMap<>();
-    public final List<Pair<Integer, String>> unsavedLocIdToStmtSig = new ArrayList<>();
+    private final Map<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
+    private final Map<Integer, String> locIdToStmtSig = new HashMap<>();
+    private final List<Pair<Integer, String>> unsavedLocIdToStmtSig = new ArrayList<>();
 
-    public final Set<Integer> volatileVariableIds = Collections
+    private final Set<Integer> volatileVariableIds = Collections
             .newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
-    public final List<Integer> unsavedVolatileVariableIds = new ArrayList<>();
+    private final List<Integer> unsavedVolatileVariableIds = new ArrayList<>();
 
     private static Metadata instance = new Metadata();
 
@@ -109,6 +111,34 @@ public class Metadata implements Opcodes {
 
     private String getVariableSignature(String className, String fieldName) {
         return className + "." + fieldName;
+    }
+
+    public void writeUnsavedMetadataTo(ObjectOutputStream os) {
+        try {
+            /* save <volatileVariable, Id> pairs */
+            synchronized (volatileVariableIds) {
+                Set<Integer> volatileFieldIds = new HashSet<>(unsavedVolatileVariableIds);
+                os.writeObject(volatileFieldIds);
+                unsavedVolatileVariableIds.clear();
+            }
+
+            /* save <VarSig, VarId> pairs */
+            synchronized (varSigToVarId) {
+                os.writeObject(new ArrayList<>(unsavedVarIdToVarSig));
+                unsavedVarIdToVarSig.clear();
+            }
+
+            /* save <StmtSig, LocId> pairs */
+            synchronized (stmtSigToLocId) {
+                os.writeObject(new ArrayList<>(unsavedLocIdToStmtSig));
+                unsavedLocIdToStmtSig.clear();
+            }
+        } catch (IOException e) {
+            System.err.println(e.getMessage());
+            System.err.println("I/O Error while saving metadata." +
+                    " Metadata will be unreadable. Exiting...");
+            System.exit(1);
+        }
     }
 
 }

@@ -257,9 +257,8 @@ public class Configuration implements Constants {
 
     private String[] args;
     private String[] rvpredictArgs;
-    // TODO(YilongL): not sure if we want to use JCommander to help us determine the main parameter
-//    @Parameter(description = "[java_options] <java_command_line>")
-    private String[] javaArgs;
+    @Parameter(description = "[java_options] <java_command_line>")
+    private List<String> javaArgs = new ArrayList<>();
 
     public final static String opt_event_profile = "--profile";
     @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1000")
@@ -357,21 +356,24 @@ public class Configuration implements Constants {
             Collections.addAll(rvpredictOptionNames, parameterDescription.getParameter().names());
         }
 
-        /* separate rv-predict arguments */
-        int endOfRVArgs = args.length;
+        /* attempt to separate rv-predict arguments as much as we can */
+        int endIdx = args.length;
         for (int i = 0; i < args.length; i++) {
-            if ((i == 0 || args[i].startsWith("-")) && !rvpredictOptionNames.contains(args[i])
+            if (args[i].startsWith("-") && !rvpredictOptionNames.contains(args[i])
                     || RVPREDICT_ARGS_TERMINATOR.equals(args[i])) {
                 /* stop as soon as we see an unknown option or the terminator */
-                endOfRVArgs = i;
+                /* JCommander will throw a parsing error upon unknown option; so
+                 * we first separate them manually and then let the JCommander
+                 * deal with main parameter */
+                endIdx = i;
                 break;
             }
         }
-        rvpredictArgs = Arrays.copyOf(args, endOfRVArgs);
 
         /* parse rv-predict arguments */
         try {
-            jCommander.parse(rvpredictArgs);
+            jCommander.parse(Arrays.copyOf(args, endIdx));
+            rvpredictArgs = Arrays.copyOf(args, endIdx - javaArgs.size());
         } catch (ParameterException e) {
             System.err.println("Error: Cannot parse command line arguments.");
             System.err.println(e.getMessage());
@@ -447,13 +449,14 @@ public class Configuration implements Constants {
             }
         }
 
-        int startOfJavaArgs;
-        if (endOfRVArgs < args.length && RVPREDICT_ARGS_TERMINATOR.equals(args[endOfRVArgs])) {
-            startOfJavaArgs = endOfRVArgs + 1;
-        } else {
-            startOfJavaArgs = endOfRVArgs;
+        int startOfJavaArgs = endIdx;
+        if (startOfJavaArgs < args.length
+                && RVPREDICT_ARGS_TERMINATOR.equals(args[startOfJavaArgs])) {
+            startOfJavaArgs++;
         }
-        javaArgs = Arrays.copyOfRange(args, startOfJavaArgs, args.length);
+        for (int i = startOfJavaArgs; i < args.length; i++) {
+            javaArgs.add(args[i]);
+        }
     }
 
     public void exclusiveOptionsFailure(String opt1, String opt2) {
@@ -485,7 +488,8 @@ public class Configuration implements Constants {
         // Computing usage
         max_option_length++;
         String usageHeader = "Usage: " + RV_PREDICT
-                + " [rv_predict_options] [--] [java_options] <java_command_line>\n";
+                + " [rv_predict_options] [--] "
+                + jCommander.getMainParameterDescription() + "\n";
         String usage = usageHeader + "  Options:";
         String shortUsage = usageHeader + "  Common options (use -h -v for a complete list):";
 
@@ -548,7 +552,7 @@ public class Configuration implements Constants {
     }
 
     public List<String> getJavaArguments() {
-        return Arrays.asList(javaArgs);
+        return javaArgs;
     }
 
     /**

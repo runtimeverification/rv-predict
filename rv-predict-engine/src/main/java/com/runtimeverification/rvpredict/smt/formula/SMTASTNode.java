@@ -8,5 +8,5 @@ import com.runtimeverification.rvpredict.smt.visitors.Visitor;
  * @see Visitor
  */
 public abstract class SMTASTNode {
-   public abstract void accept(Visitor visitor);
+   public abstract void accept(Visitor visitor) throws Exception;
 }

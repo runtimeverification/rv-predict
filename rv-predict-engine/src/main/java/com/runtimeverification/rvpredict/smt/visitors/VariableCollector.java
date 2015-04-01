@@ -13,7 +13,7 @@ import java.util.Set;
 public class VariableCollector extends BasicVisitor {
     private final Set<SMTVariable> variableSet = new HashSet<>();
     
-    public static Collection<SMTVariable> getVariables(SMTASTNode node) {
+    public static Collection<SMTVariable> getVariables(SMTASTNode node) throws Exception {
         VariableCollector collector = new VariableCollector();
         node.accept(collector);
         return collector.variableSet;

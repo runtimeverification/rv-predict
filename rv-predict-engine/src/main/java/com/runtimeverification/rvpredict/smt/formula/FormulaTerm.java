@@ -9,57 +9,63 @@ import com.runtimeverification.rvpredict.smt.visitors.Visitor;
 public class FormulaTerm extends SMTTerm<BooleanOperation,SMTFormula> implements Formula {
 
     public static Builder andBuilder() {
-        return builder(BooleanOperation.AND);
+        return AndFormula.builder();
     }
 
     public static Builder orBuilder() {
-        return builder(BooleanOperation.OR);
+        return OrFormula.builder();
     }
 
-    public static FormulaTerm AND(Formula left, Formula right) {
-        return new FormulaTerm(BooleanOperation.AND, left, right);
+    public static AndFormula AND(Formula left, Formula right) {
+        return new AndFormula(left, right);
     }
 
-    public static FormulaTerm OR(Formula left, Formula right) {
-        return new FormulaTerm(BooleanOperation.OR, left, right);
+    public static OrFormula OR(Formula left, Formula right) {
+        return new OrFormula(left, right);
     }
 
-    public static FormulaTerm BOOL_EQUAL(Formula left, Formula right) {
-        return new FormulaTerm(BooleanOperation.BOOL_EQUAL, left, right);
+    public static Equal BOOL_EQUAL(Formula left, Formula right) {
+        return new Equal(left, right);
     }
 
-    public static FormulaTerm INT_EQUAL(OrderVariable left, OrderVariable right) {
-        return new FormulaTerm(BooleanOperation.INT_EQUAL, left, right);
+    public static Equal INT_EQUAL(OrderVariable left, OrderVariable right) {
+        return new Equal(left, right);
     }
 
-    public static FormulaTerm LESS_THAN(OrderVariable left, OrderVariable right) {
-        return new FormulaTerm(BooleanOperation.LESS_THAN, left, right);
+    public static LessThan LESS_THAN(OrderVariable left, OrderVariable right) {
+        return new LessThan(left, right);
     }
 
-    private FormulaTerm(BooleanOperation operation, ImmutableList<SMTFormula> formulas) {
+    protected FormulaTerm(BooleanOperation operation, ImmutableList<SMTFormula> formulas) {
         super(operation, formulas);
     }
 
-    private FormulaTerm(BooleanOperation operation, SMTFormula... terms) {
+    protected FormulaTerm(BooleanOperation operation, SMTFormula... terms) {
         super(operation, terms);
     }
 
-    private static Builder builder(BooleanOperation operation) {
+    protected static Builder builder(BooleanOperation operation) {
         return new Builder(operation);
     }
-    
-   public static final class Builder extends SMTTerm.Builder<BooleanOperation,SMTFormula> {
-        public Builder(BooleanOperation operation) {
+
+    public static final class Builder extends SMTTerm.Builder<BooleanOperation,SMTFormula> {
+        private Builder(BooleanOperation operation) {
             super(operation);
         }
 
         public FormulaTerm build() {
-            return new FormulaTerm(operation, builder.build());
+            return FormulaTerm.of(operation, builder.build());
         }
     }
 
+    private static FormulaTerm of(BooleanOperation operation, ImmutableList<SMTFormula> build) {
+        if (operation == BooleanOperation.AND) return new AndFormula(build);
+        if (operation == BooleanOperation.OR) return new OrFormula(build);
+        return new FormulaTerm(operation, build);
+    }
+
     @Override
-    public void accept(Visitor visitor) {
+    public void accept(Visitor visitor) throws Exception {
         visitor.visit(this);
     }
 }

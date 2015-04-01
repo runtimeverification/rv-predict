@@ -5,20 +5,25 @@ import com.runtimeverification.rvpredict.smt.formula.*;
 /**
  * Base class for visitors.  Visits all nodes in an AST, but does nothing.
  */
-public abstract class BasicVisitor implements Visitor {
+public class BasicVisitor<TResult> implements Visitor<TResult> {
 
     @Override
-    public void visit(SMTOperation node) {
+    public TResult getResult() {
+        return null;
+    }
+
+    @Override
+    public void visit(SMTOperation node) throws Exception {
         visit((SMTASTNode) node);
     }
 
     @Override
-    public void visit(BooleanOperation node) {
+    public void visit(BooleanOperation node) throws Exception {
         visit((SMTOperation) node);
     }
 
     @Override
-    public void visit(SMTTerm<SMTOperation,SMTFormula> node) {
+    public void visit(SMTTerm<SMTOperation,SMTFormula> node) throws Exception {
         node.getOperation().accept(this);
         for (SMTFormula term : node.getTerms()) {
             term.accept(this);
@@ -27,46 +32,71 @@ public abstract class BasicVisitor implements Visitor {
     }
 
     @Override
-    public void visit(FormulaTerm node) {
-        visit((SMTTerm) node);
+    public void visit(AndFormula node) throws Exception {
+        visit((FormulaTerm) node);
     }
 
     @Override
-    public void visit(SMTConstant node) {
+    public void visit(OrFormula node) throws Exception {
+        visit((FormulaTerm) node);
+    }
+
+    @Override
+    public void visit(Not node) throws Exception {
+        visit((FormulaTerm) node);
+    }
+
+    @Override
+    public void visit(LessThan node) throws Exception {
+        visit((FormulaTerm) node);
+    }
+
+    @Override
+    public void visit(Equal node) throws Exception {
+        visit((FormulaTerm) node);
+    }
+
+    @Override
+    public void visit(FormulaTerm node) throws Exception {
+        visit((SMTTerm<BooleanOperation,SMTFormula>) node);
+    }
+
+    @Override
+    public void visit(SMTConstant node) throws Exception {
         visit((SMTASTNode) node);
     }
 
     @Override
-    public void visit(BooleanConstant node) {
+    public void visit(BooleanConstant node) throws Exception {
         visit((SMTConstant) node);
     }
 
     @Override
-    public void visit(SMTVariable node) {
+    public void visit(SMTVariable node) throws Exception {
         visit((SMTASTNode) node);
     }
 
     @Override
-    public void visit(BooleanVariable node) {
+    public void visit(BooleanVariable node) throws Exception {
         visit((SMTVariable) node);
     }
 
     @Override
-    public void visit(AbstractPhiVariable node) {
+    public void visit(AbstractPhiVariable node) throws Exception {
         visit((BooleanVariable) node);
     }
 
     @Override
-    public void visit(ConcretePhiVariable node) {
+    public void visit(ConcretePhiVariable node) throws Exception {
         visit((BooleanVariable) node);
     }
 
     @Override
-    public void visit(OrderVariable node) {
+    public void visit(OrderVariable node) throws Exception {
         visit((SMTVariable) node);
     }
 
     @Override
-    public void visit(SMTASTNode node) {
+    public void visit(SMTASTNode node) throws Exception {
     }
 }

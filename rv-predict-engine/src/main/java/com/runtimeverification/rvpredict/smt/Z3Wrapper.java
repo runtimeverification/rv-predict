@@ -6,16 +6,19 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 
+import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Params;
 import com.microsoft.z3.Status;
-import com.microsoft.z3.Z3Exception;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.config.Configuration.OS;
+import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
+import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 
 public class Z3Wrapper implements Solver {
 
     private final ProcessBuilder pb;
     private final long timeout;
+    private final SMTFilter smtFilter;
 
     public Z3Wrapper(Configuration config) {
         timeout = config.solver_timeout;
@@ -26,16 +29,19 @@ public class Z3Wrapper implements Solver {
             "-T:" + timeout)
             .redirectInput(ProcessBuilder.Redirect.PIPE)
             .redirectOutput(ProcessBuilder.Redirect.PIPE);
+        this.smtFilter = SMTFilterFactory.getSMTFilter(config);
     }
 
     @Override
-    public boolean isSat(String query) {
+    public boolean isSat(FormulaTerm query) {
         return checkQueryWithLibrary(query);
     }
 
-    public boolean checkQueryWithExternalProcess(String query) {
-        String result = "";
+    public boolean checkQueryWithExternalProcess(FormulaTerm formulaTerm) {
+        String result;
+        String query;
         try {
+            query = smtFilter.getSMTQuery(formulaTerm);
             Process z3Process = pb.start();
             BufferedWriter input = new BufferedWriter(new OutputStreamWriter(
                     z3Process.getOutputStream()));
@@ -46,6 +52,9 @@ public class Z3Wrapper implements Solver {
             result = output.readLine();
             z3Process.destroy();
         } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
@@ -61,23 +70,26 @@ public class Z3Wrapper implements Solver {
         }
     }
 
-    public boolean checkQueryWithLibrary(String query) {
+    public boolean checkQueryWithLibrary(FormulaTerm query) {
         boolean result;
         try {
-            com.microsoft.z3.Context context = new com.microsoft.z3.Context();
-            com.microsoft.z3.Solver solver = context.mkSolver();
-            Params params = context.mkParams();
+            com.microsoft.z3.Context ctx = new com.microsoft.z3.Context();
+            final Z3Filter z3Filter = new Z3Filter(ctx);
+
+            BoolExpr formula = z3Filter.filter(query);
+            com.microsoft.z3.Solver solver = ctx.mkSolver();
+            Params params = ctx.mkParams();
             params.add("timeout", timeout);
             solver.setParameters(params);
-            solver.add(context.parseSMTLIB2String(query, null, null, null, null));
+            solver.add(formula);
             result = solver.check() == Status.SATISFIABLE;
-            context.dispose();
-        } catch (Z3Exception e) {
-            System.err.println("failed to translate smtlib expression:\n" + query);
-            return false;
+            ctx.dispose();
         } catch (UnsatisfiedLinkError e) {
             System.err.println(System.getProperty("java.library.path"));
             throw e;
+        } catch (Exception e) {
+            System.err.println("failed to translate smtlib expression:\n" + query);
+            return false;
         }
         return result;
     }

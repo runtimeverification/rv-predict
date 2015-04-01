@@ -14,7 +14,7 @@ public class ConcretePhiVariable extends BooleanVariable {
     }
     
     @Override
-    public void accept(Visitor visitor) {
+    public void accept(Visitor visitor) throws Exception {
         visitor.visit(this);
     }
 

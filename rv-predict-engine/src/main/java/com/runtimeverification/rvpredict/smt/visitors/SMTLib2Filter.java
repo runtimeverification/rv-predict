@@ -11,7 +11,7 @@ import java.util.Collection;
 public class SMTLib2Filter implements SMTFilter {
 
     @Override
-    public String getSMTQuery(FormulaTerm node) {
+    public String getSMTQuery(FormulaTerm node) throws Exception {
         final StringBuilder output = new StringBuilder();
         final Visitor visitor = new Visitor(output);
         output.append("(set-logic QF_IDL)\n");
@@ -31,7 +31,7 @@ public class SMTLib2Filter implements SMTFilter {
     }
 
 
-    private class Visitor extends BasicVisitor {
+    private class Visitor extends BasicVisitor<String> {
         private final StringBuilder output;
 
         public Visitor(StringBuilder output) {
@@ -44,7 +44,7 @@ public class SMTLib2Filter implements SMTFilter {
         }
 
         @Override
-        public void visit(SMTTerm<SMTOperation, SMTFormula> node) {
+        public void visit(SMTTerm<SMTOperation, SMTFormula> node) throws Exception {
             output.append('(');
             node.getOperation().accept(this);
             for (SMTFormula term : node.getTerms()) {
@@ -68,6 +68,7 @@ public class SMTLib2Filter implements SMTFilter {
             output.append(node.getNamePrefix()).append(node.getId());
         }
 
+        @Override
         public String getResult() {
             return output.toString();
         }

@@ -1,5 +1,8 @@
 package com.runtimeverification.rvpredict.instrumentation.transformer;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
@@ -108,7 +111,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-        ClassFile classFile = metadata.resolveDeclaringClass(loader, owner, name);
+        ClassFile classFile = resolveDeclaringClass(loader, owner, name);
         if (classFile == null) {
             System.err.printf("[Warning] field resolution failure; "
                     + "skipped instrumentation of field access %s.%s in class %s%n",
@@ -455,4 +458,40 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     private int getCrntLocId() {
         return metadata.getLocationId(locIdPrefix + (crntLineNum == 0 ? "n/a" : crntLineNum) + ")");
     }
+
+    /**
+     * Resolves the declaring class of a given field.
+     *
+     * @param loader
+     *            the loader that can be used to locate the owner class of the
+     *            field
+     * @param cname
+     *            the field's owner class name
+     * @param fname
+     *            the field's name
+     * @return the {@link ClassFile} of the declaring class or {@code null} if
+     *         the resolution fails
+     */
+    private ClassFile resolveDeclaringClass(ClassLoader loader, String cname, String fname) {
+        Deque<String> deque = new ArrayDeque<>();
+        deque.add(cname);
+        while (!deque.isEmpty()) {
+            cname = deque.removeFirst();
+            ClassFile classFile = ClassFile.getInstance(loader, cname);
+            if (classFile != null) {
+                if (classFile.getFieldNames().contains(fname)) {
+                    return classFile;
+                } else {
+                    String superName = classFile.getSuperName();
+                    // the superName of any interface is Object
+                    if (superName != null && !superName.equals("java/lang/Object")) {
+                        deque.addLast(superName);
+                    }
+                    deque.addAll(classFile.getInterfaces());
+                }
+            }
+        }
+        return null;
+    }
+
 }

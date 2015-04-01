@@ -111,39 +111,4 @@ public class Metadata implements Opcodes {
         return className + "." + fieldName;
     }
 
-    /**
-     * Resolves the declaring class of a given field.
-     *
-     * @param loader
-     *            the loader that can be used to locate the owner class of the
-     *            field
-     * @param cname
-     *            the field's owner class name
-     * @param fname
-     *            the field's name
-     * @return the {@link ClassFile} of the declaring class or {@code null} if
-     *         the resolution fails
-     */
-    public ClassFile resolveDeclaringClass(ClassLoader loader, String cname, String fname) {
-        Deque<String> deque = new ArrayDeque<>();
-        deque.add(cname);
-        while (!deque.isEmpty()) {
-            cname = deque.removeFirst();
-            ClassFile classFile = ClassFile.getInstance(loader, cname);
-            if (classFile != null) {
-                if (classFile.getFieldNames().contains(fname)) {
-                    return classFile;
-                } else {
-                    String superName = classFile.getSuperName();
-                    // the superName of any interface is Object
-                    if (superName != null && !superName.equals("java/lang/Object")) {
-                        deque.addLast(superName);
-                    }
-                    deque.addAll(classFile.getInterfaces());
-                }
-            }
-        }
-        return null;
-    }
-
 }

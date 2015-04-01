@@ -14,38 +14,39 @@ import com.runtimeverification.rvpredict.util.Logger;
 
 /**
  * @author TraianSF
+ * @author YilongL
  */
 public class Main {
 
     private static Configuration config;
 
+    /**
+     * The entry point of RV-Predict when it is started by script.
+     */
     public static void main(String[] args) {
-        config = Configuration.instance(args, false);
+        config = Configuration.instance(args);
 
-        if (config.log) {
-            if (config.command_line.isEmpty()) {
+        if (config.isLogging()) {
+            if (config.getJavaArguments().isEmpty()) {
                 config.logger.report("You must provide a class or a jar to run.",
                         Logger.MSGTYPE.ERROR);
                 config.usage();
                 System.exit(1);
             }
-            File outdirFile = new File(config.outdir);
-            if (!(outdirFile.exists())) {
+            File outdirFile = new File(config.getLogDir());
+            if (!outdirFile.exists()) {
                 outdirFile.mkdir();
-            } else {
-                if (!outdirFile.isDirectory()) {
-                    config.logger.report(config.outdir + " is not a directory",
-                            Logger.MSGTYPE.ERROR);
-                    config.usage();
-                    System.exit(1);
-                }
+            } else  if (!outdirFile.isDirectory()) {
+                config.logger.report(config.getLogDir() + " is not a directory",
+                        Logger.MSGTYPE.ERROR);
+                config.usage();
+                System.exit(1);
             }
 
             execApplication();
-            config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
-        }
-
-        if (config.predictAlgo.isOffline()) {
+        } else {
+            /* must be in only_predict mode */
+            assert config.isOfflinePrediction();
             new RVPredict(config, new OfflineLoggingFactory(config)).run();
         }
     }
@@ -58,8 +59,8 @@ public class Main {
         args.add(JAVA_EXECUTABLE);
         args.add("-ea");
         args.add("-Xbootclasspath/a:" + RV_PREDICT_JAR);
-        args.add("-javaagent:" + RV_PREDICT_JAR + "=" + getAgentArgs());
-        args.addAll(config.command_line);
+        args.add("-javaagent:" + RV_PREDICT_JAR + "=" + createAgentArgs());
+        args.addAll(config.getJavaArguments());
 
         Process process = null;
         try {
@@ -84,35 +85,18 @@ public class Main {
      * taking care to wrap any argument containing spaces using
      * {@link #escapeString(String)}.
      *
-     * As the default behavior of the agent is to run prediction upon completing
-     * logging, the {@code --log} option must be passed to the agent.  Thus, if
-     * the {@code --dir} option was used by the user, it would be replaced by
-     * {@code --log}.  If neither  {@code --dir} nor {@code --log} were used, then
-     * the {@code --log} option is added to make sure execution is logged in the
-     * directory expected by prediction.
-     *
      * @return the -javaagent options corresponding to the user command line
      */
-    private static String getAgentArgs() {
-        boolean hasLogDir = false;
+    private static String createAgentArgs() {
         StringBuilder agentOptions = new StringBuilder();
-        for (String arg : config.getRvArgs()) {
-            if (arg.equals(Configuration.opt_outdir)) {
-                arg = Configuration.opt_only_log;
-            }
-            if (arg.equals(Configuration.opt_only_log)) {
-                hasLogDir = true;
-            }
+        for (String arg : config.getRVPredictArguments()) {
             agentOptions.append(escapeString(arg)).append(" ");
-        }
-        if (!hasLogDir) {
-            agentOptions.insert(0, Configuration.opt_only_log + " " + escapeString(config.outdir) + " ");
         }
         return agentOptions.toString();
     }
 
     private static String escapeString(String s) {
-        return (s.contains(" ") ? "\\\"" + s + "\\\"" : s);
+        return s.contains(" ") ? "\\\"" + s + "\\\"" : s;
     }
 
 }

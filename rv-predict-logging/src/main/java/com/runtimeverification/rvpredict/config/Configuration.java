@@ -253,19 +253,25 @@ public class Configuration implements Constants {
         }
     }
 
-    public static final String PROGRAM_NAME = "rv-predict";
-    public static final String YES = "yes";
-    public static final String NO = "no";
-    @Parameter(description = "<java_command_line>")
-    public List<String> command_line;
+    private static final String RV_PREDICT = "rv-predict";
 
     private String[] args;
-    private String[] rvArgs;
+    private String[] rvpredictArgs;
+    @Parameter(description = "[java_options] <java_command_line>")
+    private List<String> javaArgs = new ArrayList<>();
+
+    public final static String opt_event_profile = "--profile";
+    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1000")
+    public static boolean profile;
 
     public final static String opt_only_log = "--log";
-    @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1000")
-    public String log_dir = null;
-    public boolean log = true;
+    @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1005")
+    private String log_dir = null;
+    private boolean log = true;
+
+    public final static String opt_only_predict = "--predict";
+    @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "1010")
+    private String predict_dir = null;
 
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include." +
@@ -277,34 +283,13 @@ public class Configuration implements Constants {
             "\nPrefix with + to add to the default excluded packages", hidden = true, descriptionKey = "1030")
     public static String excludes;
 
-    final static String opt_event_profile = "--profile";
-    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1070")
-    public static boolean profile;
-
-    public final static String opt_only_predict = "--predict";
-    @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "2000")
-    public String predict_dir = null;
-
-    public enum PredictionAlgorithm {
-        ONLINE, OFFLINE, NONE;
-
-        public boolean isOnline() {
-            return this == ONLINE;
-        }
-
-        public boolean isOffline() {
-            return this == OFFLINE;
-        }
-
-        public boolean isNone() {
-            return this == NONE;
-        }
-    }
-    public PredictionAlgorithm predictAlgo;
+    private final static String ONLINE_PREDICTION = "ONLINE_PREDICTION";
+    private final static String OFFLINE_PREDICTION = "OFFLINE_PREDICTION";
+    private String prediction;
 
     public final static String opt_online = "--online";
     @Parameter(names = opt_online, description = "Run prediction online", hidden = true, descriptionKey = "2005")
-    public boolean online = false;
+    private boolean online;
 
     final static String opt_max_len = "--maxlen";
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
@@ -336,7 +321,7 @@ public class Configuration implements Constants {
 
     public final static String opt_outdir = "--dir";
     @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")
-    public String outdir = null;
+    private String outdir = null;
 
     final static String short_opt_verbose = "-v";
     final static String opt_verbose = "--verbose";
@@ -348,102 +333,51 @@ public class Configuration implements Constants {
     @Parameter(names = { short_opt_help, opt_help }, description = "Print help info", help = true, descriptionKey = "9900")
     public boolean help;
 
-    public final static String opt_java = "--";
-    public Logger logger;
+    private static final String RVPREDICT_ARGS_TERMINATOR = "--";
 
-    public static Configuration instance(String[] args, boolean checkJava) {
+    public final Logger logger = new Logger();
+
+    public static Configuration instance(String[] args) {
         Configuration config = new Configuration();
-        config.parseArguments(args, checkJava);
+        config.parseArguments(args);
         return config;
     }
 
     private Configuration() { }
 
-    private void parseArguments(String[] args, boolean checkJava) {
+    private void parseArguments(String[] args) {
         this.args = args;
         jCommander = new JCommander(this);
-        jCommander.setProgramName(PROGRAM_NAME);
+        jCommander.setProgramName(RV_PREDICT);
 
-        // Collect all parameter names. It would be nice if JCommander provided
-        // this directly.
-        Set<String> options = new HashSet<>();
+        /* collect all parameter names */
+        Set<String> rvpredictOptionNames = new HashSet<>();
         for (ParameterDescription parameterDescription : jCommander.getParameters()) {
-            Collections.addAll(options, parameterDescription.getParameter().names());
+            Collections.addAll(rvpredictOptionNames, parameterDescription.getParameter().names());
         }
 
-        // Detecting a candidate for program options start
-        int max = Arrays.asList(args).indexOf(opt_java);
-        if (max != -1) { // -- was used. Using it as a separator for java
-                         // command line
-            rvArgs = Arrays.copyOf(args, max);
-            max++;
-        } else { // -- was not specified. Look for the first unknown option
-            for (max = 0; max < args.length; max++) {
-                if (args[max].startsWith("-") && !options.contains(args[max]))
-                    break; // the index of the first unknown command
+        /* attempt to separate rv-predict arguments as much as we can */
+        int endIdx = args.length;
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].startsWith("-") && !rvpredictOptionNames.contains(args[i])
+                    || RVPREDICT_ARGS_TERMINATOR.equals(args[i])) {
+                /* stop as soon as we see an unknown option or the terminator */
+                /* JCommander will throw a parsing error upon unknown option; so
+                 * we first separate them manually and then let the JCommander
+                 * deal with main parameter */
+                endIdx = i;
+                break;
             }
-            rvArgs = Arrays.copyOf(args, max);
         }
 
-        // get all rv-predict arguments and (potentially) the first unnamed
-        // program arguments
+        /* parse rv-predict arguments */
         try {
-            jCommander.parse(rvArgs);
+            jCommander.parse(Arrays.copyOf(args, endIdx));
+            rvpredictArgs = Arrays.copyOf(args, endIdx - javaArgs.size());
         } catch (ParameterException e) {
             System.err.println("Error: Cannot parse command line arguments.");
             System.err.println(e.getMessage());
             System.exit(1);
-        }
-
-
-        initExcludeList();
-        initIncludeList();
-
-        predictAlgo = online ? PredictionAlgorithm.ONLINE : PredictionAlgorithm.OFFLINE;
-        if (log_dir != null) {
-            if (predict_dir != null) {
-                exclusiveOptionsFailure(opt_only_log, opt_only_predict);
-            } else {
-                if (outdir != null) {
-                    exclusiveOptionsFailure(opt_only_log, opt_outdir);
-                }
-                outdir = Paths.get(log_dir).toAbsolutePath().toString();
-                predictAlgo = PredictionAlgorithm.NONE;
-            }
-        } else {
-            if (predict_dir != null) {
-                if (outdir != null) {
-                    exclusiveOptionsFailure(opt_only_predict, opt_outdir);
-                }
-                outdir = Paths.get(predict_dir).toAbsolutePath().toString();
-                log = false;
-            } else if (outdir != null) {
-                outdir = Paths.get(outdir).toAbsolutePath().toString();
-            } else {
-                try {
-                    outdir = Files.createTempDirectory(
-                            Paths.get(System.getProperty("java.io.tmpdir")), "rv-predict")
-                            .toString();
-                } catch (IOException e) {
-                    System.err.println("Error while attempting to create log dir.");
-                    System.err.println(e.getMessage());
-                    System.exit(1);
-                }
-            }
-        }
-
-        if (command_line != null) { // if there are unnamed options they should
-                                    // all be at the end
-            int i = rvArgs.length - 1;
-            for (String command : command_line) {
-                if (!command.equals(rvArgs[i--])) {
-                    System.err.println("Error: Unexpected argument " + command
-                            + " among rv-predict options.");
-                    System.err.println("The options terminator '" + opt_java
-                            + "' can be used to separate the java command.");
-                    System.exit(1);
-                }
-            }
         }
 
         if (help) {
@@ -451,19 +385,78 @@ public class Configuration implements Constants {
             System.exit(0);
         }
 
-        List<String> argList = Arrays.asList(Arrays.copyOfRange(args, max, args.length));
-        if (command_line == null) { // otherwise the java command has already
-                                    // started
-            command_line = new ArrayList<>(argList);
-            if (command_line.isEmpty() && log && checkJava) {
-                System.err.println("Error: Java command line is empty.");
-                usage();
-                System.exit(1);
+        initExcludeList();
+        initIncludeList();
+
+        /* Carefully handle the interaction between options:
+         * 1) 4 different modes: only_profile, only_log, only_predict and log_then_predict;
+         * 2) 2 types of prediction: online and offline;
+         * 3) log directory can be specified or not.
+         *
+         * The following code computes 3 variables, e.g. log, prediction, and log_dir,
+         * to represent the 3 choices above.
+         */
+        if (profile) {                          /* only profile */
+            if (log_dir != null) {
+                exclusiveOptionsFailure(opt_event_profile, opt_only_log);
             }
-        } else {
-            command_line.addAll(argList);
+            if (outdir != null) {
+                exclusiveOptionsFailure(opt_event_profile, opt_outdir);
+            }
+            if (predict_dir != null) {
+                exclusiveOptionsFailure(opt_event_profile, opt_only_predict);
+            }
+            if (online) {
+                exclusiveOptionsFailure(opt_event_profile, opt_online);
+            }
+            log = false;
+        } else if (log_dir != null) {           /* only log */
+            if (predict_dir != null) {
+                exclusiveOptionsFailure(opt_only_log, opt_only_predict);
+            }
+            if (outdir != null) {
+                exclusiveOptionsFailure(opt_only_log, opt_outdir);
+            }
+            if (online) {
+                exclusiveOptionsFailure(opt_only_log, opt_online);
+            }
+            log_dir = Paths.get(log_dir).toAbsolutePath().toString();
+        } else if (predict_dir != null) {       /* only predict */
+            if (outdir != null) {
+                exclusiveOptionsFailure(opt_only_predict, opt_outdir);
+            }
+            if (online) {
+                exclusiveOptionsFailure(opt_only_predict, opt_online);
+            }
+            log_dir = Paths.get(predict_dir).toAbsolutePath().toString();
+            log = false;
+            prediction = OFFLINE_PREDICTION;
+        } else {                                /* log then predict */
+            if (online) {
+                log_dir = null;
+                prediction = ONLINE_PREDICTION;
+            } else {
+                try {
+                    log_dir = outdir == null ? Files.createTempDirectory(
+                            Paths.get(System.getProperty("java.io.tmpdir")), RV_PREDICT).toString()
+                            : Paths.get(outdir).toAbsolutePath().toString();
+                } catch (IOException e) {
+                    System.err.println("Error while attempting to create log dir.");
+                    System.err.println(e.getMessage());
+                    System.exit(1);
+                }
+                prediction = OFFLINE_PREDICTION;
+            }
         }
-        logger = new Logger();
+
+        int startOfJavaArgs = endIdx;
+        if (startOfJavaArgs < args.length
+                && RVPREDICT_ARGS_TERMINATOR.equals(args[startOfJavaArgs])) {
+            startOfJavaArgs++;
+        }
+        for (int i = startOfJavaArgs; i < args.length; i++) {
+            javaArgs.add(args[i]);
+        }
     }
 
     public void exclusiveOptionsFailure(String opt1, String opt2) {
@@ -494,8 +487,8 @@ public class Configuration implements Constants {
 
         // Computing usage
         max_option_length++;
-        String usageHeader = "Usage: " + PROGRAM_NAME
-                + " [rv_predict_options] [--] [java_options] "
+        String usageHeader = "Usage: " + RV_PREDICT
+                + " [rv_predict_options] [--] "
                 + jCommander.getMainParameterDescription() + "\n";
         String usage = usageHeader + "  Options:";
         String shortUsage = usageHeader + "  Common options (use -h -v for a complete list):";
@@ -554,7 +547,37 @@ public class Configuration implements Constants {
         return args;
     }
 
-    public String[] getRvArgs() {
-        return rvArgs;
+    public String[] getRVPredictArguments() {
+        return rvpredictArgs;
+    }
+
+    public List<String> getJavaArguments() {
+        return javaArgs;
+    }
+
+    /**
+     * Returns the directory to read and/or write log files.
+     */
+    public String getLogDir() {
+        return log_dir;
+    }
+
+    /**
+     * Checks if the current RV-Predict instance needs to do logging.
+     */
+    public boolean isLogging() {
+        return log;
+    }
+
+    public boolean isOnlinePrediction() {
+        return prediction == ONLINE_PREDICTION;
+    }
+
+    public boolean isOfflinePrediction() {
+        return prediction == OFFLINE_PREDICTION;
+    }
+
+    public boolean noPrediction() {
+        return prediction == null;
     }
 }

@@ -34,7 +34,7 @@ import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -46,6 +46,7 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.log.LoggingTask;
+import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.util.Logger;
@@ -184,8 +185,8 @@ public class RVPredict implements LoggingTask {
                     System.err.println(e.getMessage());
                 }
 
-                if (config.predictAlgo.isOffline()) {
-                    if (config.log) {
+                if (config.isOfflinePrediction()) {
+                    if (config.isLogging()) {
                         config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
                     }
 
@@ -207,24 +208,38 @@ public class RVPredict implements LoggingTask {
         };
     }
 
+    /**
+     * Starts a prediction-only RV-Predict instance in a subprocess.
+     */
     private static Process startPredictionProcess(Configuration config) throws IOException {
         List<String> appArgs = new ArrayList<>();
         appArgs.add(JAVA_EXECUTABLE);
         appArgs.add("-ea");
         appArgs.add("-cp");
         appArgs.add(RV_PREDICT_JAR);
-        appArgs.add(Main.class.getName());
-        int rvIndex = appArgs.size();
-        appArgs.addAll(Arrays.asList(config.getArgs()));
+        appArgs.add(RVPredict.class.getName());
+        int startOfRVArgs = appArgs.size();
+        Collections.addAll(appArgs, config.getArgs());
 
-        int index = appArgs.indexOf(Configuration.opt_outdir);
-        if (index != -1) {
-            appArgs.set(index, Configuration.opt_only_predict);
+        assert config.isOfflinePrediction();
+        /* replace option --dir with --predict */
+        int idx = appArgs.indexOf(Configuration.opt_outdir);
+        if (idx != -1) {
+            appArgs.set(idx, Configuration.opt_only_predict);
         } else {
-            appArgs.add(rvIndex, Configuration.opt_only_predict);
-            appArgs.add(rvIndex + 1, config.outdir);
+            appArgs.add(startOfRVArgs, Configuration.opt_only_predict);
+            appArgs.add(startOfRVArgs + 1, config.getLogDir());
         }
         return new ProcessBuilder(appArgs).start();
+    }
+
+    /**
+     * The entry point of prediction-only RV-Predict started as a subprocess by
+     * {@link RVPredict#startPredictionProcess(Configuration)}.
+     */
+    public static void main(String[] args) {
+        Configuration config = Configuration.instance(args);
+        new RVPredict(config, new OfflineLoggingFactory(config)).run();
     }
 
 }

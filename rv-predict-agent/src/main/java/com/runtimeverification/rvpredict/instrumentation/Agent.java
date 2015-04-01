@@ -100,12 +100,12 @@ public class Agent implements ClassFileTransformer, Constants {
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        config = Configuration.instance(args, false);
+        config = Configuration.instance(args);
     }
 
     private static void printStartupInfo() {
         config.logger.reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
-        config.logger.report("Log directory: " + config.outdir, Logger.MSGTYPE.INFO);
+        config.logger.report("Log directory: " + config.getLogDir(), Logger.MSGTYPE.INFO);
         if (Configuration.includes != null) {
             config.logger.report("Including: " + config.includeList, Logger.MSGTYPE.INFO);
         }
@@ -115,7 +115,7 @@ public class Agent implements ClassFileTransformer, Constants {
     }
 
     private static void initLoggingDirectory() {
-        String directory = config.outdir;
+        String directory = config.getLogDir();
         for (String fname : OfflineLoggingFactory.getTraceFiles(directory)) {
             try {
                 Files.delete(Paths.get(directory, fname));

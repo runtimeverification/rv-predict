@@ -19,6 +19,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private final GeneratorAdapter mv;
 
+    private final Metadata metadata;
     private final ClassLoader loader;
     private final String className;
     private final String methodName;
@@ -55,6 +56,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
         this.loader = loader;
+        this.metadata = Metadata.instance();
         this.locIdPrefix = String.format("%s(%s:", className.replace("/", ".") + "." + name,
                 source == null ? "Unknown" : source);
     }
@@ -106,7 +108,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-        ClassFile classFile = Metadata.resolveDeclaringClass(loader, owner, name);
+        ClassFile classFile = metadata.resolveDeclaringClass(loader, owner, name);
         if (classFile == null) {
             System.err.printf("[Warning] field resolution failure; "
                     + "skipped instrumentation of field access %s.%s in class %s%n",
@@ -122,7 +124,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             return;
         }
 
-        int varId = Metadata.getVariableId(classFile.getClassName(), name);
+        int varId = metadata.getVariableId(classFile.getClassName(), name);
         int locId = getCrntLocId();
 
         Type valueType = Type.getType(desc);
@@ -451,6 +453,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
      *         current statement in the instrumented program
      */
     private int getCrntLocId() {
-        return Metadata.getLocationId(locIdPrefix + (crntLineNum == 0 ? "n/a" : crntLineNum) + ")");
+        return metadata.getLocationId(locIdPrefix + (crntLineNum == 0 ? "n/a" : crntLineNum) + ")");
     }
 }

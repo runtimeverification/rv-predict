@@ -16,6 +16,8 @@ import java.util.Set;
  *  - number of events written so far
  */
 public class MetadataLogger implements LoggingTask {
+
+    private final Metadata metadata;
     private ObjectOutputStream metadataOS;
     private final LoggingEngine loggingEngine;
     private boolean shutdown = false;
@@ -23,6 +25,7 @@ public class MetadataLogger implements LoggingTask {
 
     public MetadataLogger(LoggingEngine engine) {
         loggingEngine = engine;
+        this.metadata = Metadata.instance();
     }
 
     @Override
@@ -58,22 +61,22 @@ public class MetadataLogger implements LoggingTask {
     private void saveMetaData() {
         try {
             /* save <volatileVariable, Id> pairs */
-            synchronized (Metadata.volatileVariableIds) {
-                Set<Integer> volatileFieldIds = new HashSet<>(Metadata.unsavedVolatileVariableIds);
+            synchronized (metadata.volatileVariableIds) {
+                Set<Integer> volatileFieldIds = new HashSet<>(metadata.unsavedVolatileVariableIds);
                 saveObject(volatileFieldIds);
-                Metadata.unsavedVolatileVariableIds.clear();
+                metadata.unsavedVolatileVariableIds.clear();
             }
 
             /* save <VarSig, VarId> pairs */
-            synchronized (Metadata.varSigToVarId) {
-                saveObject(new ArrayList<>(Metadata.unsavedVarIdToVarSig));
-                Metadata.unsavedVarIdToVarSig.clear();
+            synchronized (metadata.varSigToVarId) {
+                saveObject(new ArrayList<>(metadata.unsavedVarIdToVarSig));
+                metadata.unsavedVarIdToVarSig.clear();
             }
 
             /* save <StmtSig, LocId> pairs */
-            synchronized (Metadata.stmtSigToLocId) {
-                saveObject(new ArrayList<>(Metadata.unsavedLocIdToStmtSig));
-                Metadata.unsavedLocIdToStmtSig.clear();
+            synchronized (metadata.stmtSigToLocId) {
+                saveObject(new ArrayList<>(metadata.unsavedLocIdToStmtSig));
+                metadata.unsavedLocIdToStmtSig.clear();
             }
         } catch (IOException e) {
             System.err.println(e.getMessage());

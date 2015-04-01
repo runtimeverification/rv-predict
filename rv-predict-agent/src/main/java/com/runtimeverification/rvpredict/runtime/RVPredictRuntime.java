@@ -131,11 +131,13 @@ public final class RVPredictRuntime implements Constants {
 
     private static final String MOCK_STATE_FIELD = "$state";
 
-    private static int NATIVE_INTERRUPTED_STATUS_VAR_ID = Metadata.getVariableId(
+    private static final Metadata metadata = Metadata.instance();
+
+    private static int NATIVE_INTERRUPTED_STATUS_VAR_ID = metadata.getVariableId(
             "java.lang.Thread", "$interruptedStatus");
-    private static int ATOMIC_BOOLEAN_MOCK_VAL_ID = Metadata.getVariableId(
+    private static int ATOMIC_BOOLEAN_MOCK_VAL_ID = metadata.getVariableId(
             "java.util.concurrent.atomic.AtomicBoolean", "$value");
-    private static int AQS_MOCK_STATE_ID = Metadata.getVariableId(
+    private static int AQS_MOCK_STATE_ID = metadata.getVariableId(
             "java.util.concurrent.locks.AbstractQueuedSynchronizer", MOCK_STATE_FIELD);
 
     private static final MethodHandle SYNC_COLLECTION_GET_MUTEX = getFieldGetter(
@@ -1282,7 +1284,7 @@ public final class RVPredictRuntime implements Constants {
                 saveSyncEvent(EventType.WRITE_LOCK, locId, calcMonitorId(mutex));
                 saveMemAccEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                         System.identityHashCode(backedColl),
-                        -Metadata.getVariableId(backedColl.getClass().getName(), MOCK_STATE_FIELD),
+                        -metadata.getVariableId(backedColl.getClass().getName(), MOCK_STATE_FIELD),
                         DUMMY_VALUE);
                 saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcMonitorId(mutex));
             }
@@ -1291,7 +1293,7 @@ public final class RVPredictRuntime implements Constants {
             Object backedColl = getBackedCollection(collection);
             saveMemAccEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
                     System.identityHashCode(backedColl),
-                    -Metadata.getVariableId(backedColl.getClass().getName(), MOCK_STATE_FIELD),
+                    -metadata.getVariableId(backedColl.getClass().getName(), MOCK_STATE_FIELD),
                     DUMMY_VALUE);
         }
     }

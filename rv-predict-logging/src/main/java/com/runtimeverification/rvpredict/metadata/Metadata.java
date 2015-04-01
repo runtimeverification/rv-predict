@@ -13,30 +13,34 @@ public class Metadata implements Opcodes {
     /**
      * YilongL: Those fields starting with `unsaved` are used for incremental
      * saving of metadata. They are mostly not concurrent data-structures and,
-     * thus, synchronize with their main data-structure counterparts, except for
-     * {@code unsavedThreadIdToName} because we assume thread Id to be unique in
-     * our case.
+     * thus, synchronize with their main data-structure counterparts.
      */
 
-    public static final Map<String, Integer> varSigToVarId = new ConcurrentHashMap<>();
-    public static final List<Pair<Integer, String>> unsavedVarIdToVarSig = new ArrayList<>();
+    public final Map<String, Integer> varSigToVarId = new ConcurrentHashMap<>();
+    public final List<Pair<Integer, String>> unsavedVarIdToVarSig = new ArrayList<>();
 
-    public static final ArrayList<String> varSigs = new ArrayList<>(); {
+    public final ArrayList<String> varSigs = new ArrayList<>(); {
         varSigs.ensureCapacity(5000);
         varSigs.add(null);
     }
 
-    public static final Map<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
-    public static final Map<Integer, String> locIdToStmtSig = new HashMap<>();
-    public static final List<Pair<Integer, String>> unsavedLocIdToStmtSig = new ArrayList<>();
+    public final Map<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
+    public final Map<Integer, String> locIdToStmtSig = new HashMap<>();
+    public final List<Pair<Integer, String>> unsavedLocIdToStmtSig = new ArrayList<>();
 
-    public static final Set<Integer> volatileVariableIds = Collections
+    public final Set<Integer> volatileVariableIds = Collections
             .newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
-    public static final List<Integer> unsavedVolatileVariableIds = new ArrayList<>();
+    public final List<Integer> unsavedVolatileVariableIds = new ArrayList<>();
+
+    private static Metadata instance = new Metadata();
+
+    public static Metadata instance() {
+        return instance;
+    }
 
     private Metadata() { }
 
-    public static int getVariableId(String className, String fieldName) {
+    public int getVariableId(String className, String fieldName) {
         String sig = getVariableSignature(className, fieldName);
         /* YilongL: the following double-checked locking is correct because
          * varSigToId is a ConcurrentHashMap */
@@ -56,8 +60,8 @@ public class Metadata implements Opcodes {
         return variableId;
     }
 
-    public static void addVolatileVariable(String cname, String fname) {
-        int varId = Metadata.getVariableId(cname, fname);
+    public void addVolatileVariable(String cname, String fname) {
+        int varId = getVariableId(cname, fname);
         if (!volatileVariableIds.contains(varId)) {
             synchronized (volatileVariableIds) {
                 if (!volatileVariableIds.contains(varId)) {
@@ -68,7 +72,7 @@ public class Metadata implements Opcodes {
         }
     }
 
-    public static int getLocationId(String sig) {
+    public int getLocationId(String sig) {
         Integer locId = stmtSigToLocId.get(sig);
         if (locId == null) {
             synchronized (stmtSigToLocId) {
@@ -87,7 +91,7 @@ public class Metadata implements Opcodes {
         return locId;
     }
 
-    public static String getLocationClass(int locId) {
+    public String getLocationClass(int locId) {
         String stmtSig;
         synchronized (stmtSigToLocId) {
             stmtSig = locIdToStmtSig.get(locId);
@@ -103,7 +107,7 @@ public class Metadata implements Opcodes {
         return className;
     }
 
-    private static String getVariableSignature(String className, String fieldName) {
+    private String getVariableSignature(String className, String fieldName) {
         return className + "." + fieldName;
     }
 
@@ -120,7 +124,7 @@ public class Metadata implements Opcodes {
      * @return the {@link ClassFile} of the declaring class or {@code null} if
      *         the resolution fails
      */
-    public static ClassFile resolveDeclaringClass(ClassLoader loader, String cname, String fname) {
+    public ClassFile resolveDeclaringClass(ClassLoader loader, String cname, String fname) {
         Deque<String> deque = new ArrayDeque<>();
         deque.add(cname);
         while (!deque.isEmpty()) {

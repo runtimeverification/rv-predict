@@ -21,6 +21,12 @@ public class FastEventProfiler {
 
     private final long[] counter = new long[MAX_NUM_OF_LOCATIONS]; // 8MB
 
+    private final Metadata metadata;
+
+    public FastEventProfiler() {
+        this.metadata = Metadata.instance();
+    }
+
     public void update(int locId) {
         counter[locId]++;
     }
@@ -28,7 +34,7 @@ public class FastEventProfiler {
     public void printProfilingResult() {
         Map<String, Long> map = new HashMap<>();
         for (int locId = 0; locId < counter.length; locId++) {
-            String className = Metadata.getLocationClass(locId);
+            String className = metadata.getLocationClass(locId);
             Long val = map.get(className);
             val = val == null ? counter[locId] : val + counter[locId];
             map.put(className, val);

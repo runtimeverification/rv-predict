@@ -22,9 +22,7 @@ public class EventUtils {
             case WAIT_REL:
             case WAIT_ACQ:
             case START:
-            case PRE_JOIN:
             case JOIN:
-            case JOIN_MAYBE_FAILED:
                 long syncObj = (long)item.ADDRL << 32 | item.ADDRR & 0xFFFFFFFFL;
                 return new SyncEvent(item.GID, item.TID, item.ID, item.TYPE, syncObj);
             case CLINIT_ENTER:

@@ -54,7 +54,7 @@ public class TraceCache {
      */
     public Trace getTrace(long fromIndex, long toIndex) throws IOException,
             InterruptedException {
-        Trace trace = new Trace(crntState);
+        Trace trace = new Trace(crntState, (int) (toIndex - fromIndex));
         crntState.setCurrentTraceWindow(trace);
         assert nextIdx == fromIndex;
         for (nextIdx = fromIndex; nextIdx < toIndex; nextIdx++) {

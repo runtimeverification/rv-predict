@@ -28,19 +28,25 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.engine.main;
 
+import static com.runtimeverification.rvpredict.config.Configuration.JAVA_EXECUTABLE;
+import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_JAR;
+
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.LoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.log.LoggingTask;
+import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.util.Logger;
@@ -59,43 +65,14 @@ public class RVPredict implements LoggingTask {
     private final Configuration config;
     private final Logger logger;
     private final TraceCache traceCache;
-    private LoggingFactory loggingFactory;
-    private ExecutionInfoTask infoTask;
+    private final LoggingFactory loggingFactory;
     private Thread owner;
 
-    public RVPredict(Configuration config, LoggingFactory loggingFactory) throws IOException, ClassNotFoundException {
+    public RVPredict(Configuration config, LoggingFactory loggingFactory) {
         this.config = config;
         this.loggingFactory = loggingFactory;
         logger = config.logger;
-
-        long startTime = System.currentTimeMillis();
-
         traceCache = new TraceCache(loggingFactory);
-
-        infoTask = new ExecutionInfoTask(this, startTime);
-
-        addHooks();
-    }
-
-    public void report() {
-        infoTask.run();
-    }
-
-    private void addHooks() {
-        // register a shutdown hook to store runtime statistics
-        Runtime.getRuntime().addShutdownHook(
-                new Thread(infoTask, "Execution Info Task"));
-
-        // set a timer to timeout in a configured period
-        Timer timer = new Timer(true);
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                logger.report("\n******* Timeout " + config.timeout + " seconds ******",
-                        Logger.MSGTYPE.REAL);// report it
-                System.exit(0);
-            }
-        }, config.timeout * 1000);
     }
 
     @Override
@@ -127,24 +104,25 @@ public class RVPredict implements LoggingTask {
             Trace trace;
             do {
                 trace = traceCache.getTrace(fromIndex, fromIndex += config.windowSize);
-
                 if (trace.hasSharedMemAddr()) {
                     raceDetectorExecutor.execute(new RaceDetectorTask(this, trace));
                 }
-
             } while (trace.getSize() == config.windowSize);
 
             shutdownAndAwaitTermination(raceDetectorExecutor);
-            System.exit(0);
+            if (violations.size() == 0) {
+                logger.report("No races found.", Logger.MSGTYPE.INFO);
+            }
         } catch (InterruptedException e) {
             System.err.println("Error: prediction interrupted.");
             System.err.println(e.getMessage());
+            System.exit(1);
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());
             e.printStackTrace();
+            System.exit(1);
         }
-        System.exit(1);
     }
 
 
@@ -186,11 +164,82 @@ public class RVPredict implements LoggingTask {
     public void finishLogging() throws InterruptedException {
         loggingFactory.finishLogging();
         owner.join();
-        report();
     }
 
     @Override
     public void setOwner(Thread owner) {
         this.owner = owner;
     }
+
+    public static Thread getPredictionThread(Configuration config, LoggingEngine loggingEngine) {
+        return new Thread("Cleanup Thread") {
+            @Override
+            public void run() {
+                try {
+                    loggingEngine.finishLogging();
+                } catch (IOException e) {
+                    System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
+                    System.err.println(e.getMessage());
+                } catch (InterruptedException e) {
+                    System.err.println("Warning: Execution is being forcefully ended. Log data might be lost.");
+                    System.err.println(e.getMessage());
+                }
+
+                if (config.isOfflinePrediction()) {
+                    if (config.isLogging()) {
+                        config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
+                    }
+
+                    Process process = null;
+                    try {
+                        process = startPredictionProcess(config);
+                        StreamRedirector.redirect(process);
+                        process.waitFor();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        if (process != null) {
+                            process.destroy();
+                        }
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+    }
+
+    /**
+     * Starts a prediction-only RV-Predict instance in a subprocess.
+     */
+    private static Process startPredictionProcess(Configuration config) throws IOException {
+        List<String> appArgs = new ArrayList<>();
+        appArgs.add(JAVA_EXECUTABLE);
+        appArgs.add("-ea");
+        appArgs.add("-cp");
+        appArgs.add(RV_PREDICT_JAR);
+        appArgs.add(RVPredict.class.getName());
+        int startOfRVArgs = appArgs.size();
+        Collections.addAll(appArgs, config.getArgs());
+
+        assert config.isOfflinePrediction();
+        /* replace option --dir with --predict */
+        int idx = appArgs.indexOf(Configuration.opt_outdir);
+        if (idx != -1) {
+            appArgs.set(idx, Configuration.opt_only_predict);
+        } else {
+            appArgs.add(startOfRVArgs, Configuration.opt_only_predict);
+            appArgs.add(startOfRVArgs + 1, config.getLogDir());
+        }
+        return new ProcessBuilder(appArgs).start();
+    }
+
+    /**
+     * The entry point of prediction-only RV-Predict started as a subprocess by
+     * {@link RVPredict#startPredictionProcess(Configuration)}.
+     */
+    public static void main(String[] args) {
+        Configuration config = Configuration.instance(args);
+        new RVPredict(config, new OfflineLoggingFactory(config)).run();
+    }
+
 }

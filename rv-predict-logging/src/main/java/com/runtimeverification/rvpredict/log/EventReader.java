@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.log;
 
 import java.io.BufferedInputStream;
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,7 +36,12 @@ public class EventReader implements Closeable {
     }
 
     public final EventItem readEvent() throws IOException {
-        in.read(byteBuffer.array());
+        int bytes = in.read(byteBuffer.array());
+        if (bytes == -1) {
+            throw new EOFException();
+        } else if (bytes < EventItem.SIZEOF) {
+            throw new IOException("Corrupted event item");
+        }
         EventItem eventItem = new EventItem(
                 byteBuffer.getLong(),
                 byteBuffer.getLong(),

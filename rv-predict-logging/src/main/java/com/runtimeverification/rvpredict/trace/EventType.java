@@ -56,21 +56,10 @@ public enum EventType {
     START,
 
     /**
-     * Event generated before calling {@code Thread#join}.
-     */
-    PRE_JOIN,
-
-    /**
      * Event generated after a thread is awakened from {@code Thread#join()}
      * because the joining thread finishes.
      */
     JOIN,
-
-    /**
-     * Event generated after a thread is awakened from some version of
-     * {@code Thread#join} even when the joining thread is not finished.
-     */
-    JOIN_MAYBE_FAILED,
 
     /**
      * Event generated after entering the class initializer code, i.e.

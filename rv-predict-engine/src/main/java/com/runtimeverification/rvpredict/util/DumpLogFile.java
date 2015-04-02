@@ -28,17 +28,16 @@ public class DumpLogFile {
         }
         Path path = Paths.get(args[0]).toAbsolutePath();
         Path directory = path.getParent();
-        Configuration configuration = new Configuration();
-        configuration.outdir = directory.toString();
+        Configuration configuration = Configuration.instance(
+                new String[] { "--dir", directory.toString() });
         OfflineLoggingFactory loggingFactory = new OfflineLoggingFactory(configuration);
         String file = args[0];
         try (EventReader reader = new EventReader(Paths.get(file))) {
             System.out.println("Dumping events from " + file);
-            //noinspection InfiniteLoopStatement
             while (true) {
                 EventItem eventItem = reader.readEvent();
                 Event event = EventUtils.of(eventItem);
-                System.out.println(event.toString() + loggingFactory.getStmtSig(event.getLocId()));
+                System.out.printf("%-60s %s%n", event.toString(), loggingFactory.getStmtSig(event.getLocId()));
             }
         } catch (EOFException ignored) {
         } catch (IOException e) {

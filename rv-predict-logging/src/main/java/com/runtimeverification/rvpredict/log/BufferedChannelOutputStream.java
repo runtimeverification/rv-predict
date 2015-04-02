@@ -36,21 +36,36 @@ public class BufferedChannelOutputStream extends OutputStream {
     public void write(int b) throws IOException {
         buffer.put((byte) b);
         if (!buffer.hasRemaining()) {
-            buffer.flip();
-            channel.write(buffer);
-            buffer.clear();
+            flush();
         }
     }
 
-    // TODO(TraianSF): check if overriding write(byte[],int,int) will further improve performance
+    @Override
+    public void write(byte b[], int off, int len) throws IOException {
+        while (true) {
+            int bytes = Math.min(len, buffer.remaining());
+            buffer.put(b, off, bytes);
+            if (!buffer.hasRemaining()) {
+                flush();
+                len -= bytes;
+                off += bytes;
+            } else {
+                assert len == 0;
+                return;
+            }
+        }
+    }
 
     @Override
-    public void flush() { }
+    public void flush() throws IOException {
+        buffer.flip(); // set to read mode
+        channel.write(buffer);
+        buffer.clear();
+    }
 
     @Override
     public void close() throws IOException {
-        buffer.flip();
-        channel.write(buffer);
+        flush();
         channel.close();
         file.close();
     }

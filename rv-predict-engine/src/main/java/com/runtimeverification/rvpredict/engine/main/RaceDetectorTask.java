@@ -49,10 +49,16 @@ public class RaceDetectorTask implements Runnable {
         SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(RVPredict.getConfig(), trace);
 
         cnstrBuilder.addIntraThreadConstraints();
-        cnstrBuilder.addProgramOrderAndThreadStartJoinConstraints();
+        cnstrBuilder.addThreadStartJoinConstraints();
         cnstrBuilder.addLockingConstraints();
+        cnstrBuilder.finish();
         /* enumerate each shared memory address in the trace */
         for (MemoryAddr addr : trace.getMemAccessEventsTable().rowKeySet()) {
+            /* exclude unsafe address */
+            if (trace.isUnsafeAddress(addr)) {
+                continue;
+            }
+
             /* exclude volatile variable */
             if (!RVPredict.getConfig().checkVolatile && trace.isVolatileField(addr)) {
                 continue;
@@ -150,10 +156,8 @@ public class RaceDetectorTask implements Runnable {
                     }
 
                     /* not a race if one event happens-before the other */
-                    if (fst.getGID() < snd.getGID()
-                            && cnstrBuilder.happensBefore(fst, snd)
-                            || fst.getGID() > snd.getGID()
-                            && cnstrBuilder.happensBefore(snd, fst)) {
+                    if (cnstrBuilder.happensBefore(fst, snd)
+                            || cnstrBuilder.happensBefore(snd, fst)) {
                         continue;
                     }
 

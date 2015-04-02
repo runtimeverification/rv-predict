@@ -14,9 +14,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
-import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
-import com.runtimeverification.rvpredict.util.Constants;
 
 
 // TODO(YilongL): think about the thread-safety about this class
@@ -123,21 +121,7 @@ public class TraceState {
         threadIdToClinitDepth.put(tid, depth);
     }
 
-    public void updateValueAt(MemoryAccessEvent memAcc) {
-        MemoryAddr addr = memAcc.getAddr();
-        long value = memAcc.getValue();
-        if (memAcc instanceof ReadEvent) {
-            long oldVal = getValueAt(addr);
-            if (Configuration.debug) {
-                if (value != Constants._0X_DEADBEEFL && value != oldVal) {
-                    System.err.printf(
-                        String.format("[Warning] logged trace not sequential consistent:%n"
-                                + "  event %s reads a different value than the currently stored value %s%n"
-                                + "    at %s%n",
-                                memAcc, oldVal, loggingFactory.getStmtSig(memAcc.getLocId())));
-                }
-            }
-        }
+    public void writeValueAt(MemoryAddr addr, long value) {
         addrToValue.put(addr, value);
     }
 

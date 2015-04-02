@@ -37,8 +37,6 @@ import com.runtimeverification.rvpredict.trace.LockRegion;
 import com.runtimeverification.rvpredict.trace.ReadEvent;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.WriteEvent;
-import com.runtimeverification.rvpredict.graph.LockSetEngine;
-import com.runtimeverification.rvpredict.graph.ReachabilityEngine;
 
 import java.util.Map;
 import java.util.List;
@@ -55,7 +53,20 @@ public class SMTConstraintBuilder {
 
     private final Trace trace;
 
-    private final ReachabilityEngine reachEngine = new ReachabilityEngine();
+    /**
+     * Maps each event to its group ID in the contracted MHB graph.
+     * <p>
+     * The must-happens-before (MHB) relations form a special DAG where only a
+     * few nodes have more than one outgoing edge. To speed up the reachability
+     * query between two nodes, we first collapsed the DAG as much as possible.
+     */
+    private final int[] groupId;
+
+    /**
+     * Keeps track of the must-happens-before (MHB) relations in paper.
+     */
+    private final TransitiveClosure closure = new TransitiveClosure();
+
     private final LockSetEngine lockEngine = new LockSetEngine();
 
     private final Solver solver;
@@ -80,12 +91,8 @@ public class SMTConstraintBuilder {
 
     public SMTConstraintBuilder(Configuration config, Trace trace) {
         this.trace = trace;
+        this.groupId = new int[trace.capacity()];
         this.solver = new Z3Wrapper(config);
-    }
-
-    private void assertHappensBefore(Event e1, Event e2) {
-        smtlibAssertionBuilder.add(getAsstHappensBefore(e1, e2));
-        reachEngine.addEdge(e1, e2);
     }
 
     private FormulaTerm getAsstHappensBefore(Event event1, Event event2) {
@@ -106,49 +113,67 @@ public class SMTConstraintBuilder {
                 getAsstLockRegionHappensBefore(lockRegion2, lockRegion1)));
     }
 
+    private int getRelativeIdx(Event event) {
+        return (int) ((event.getGID() - 1) % trace.capacity());
+    }
+
+    private int getGroupId(Event e) {
+        return groupId[getRelativeIdx(e)];
+    }
+
+    private void setGroupId(Event e, int id) {
+        groupId[getRelativeIdx(e)] = id;
+    }
+
     /**
-     * Adds intra-thread must happens-before (MHB) constraints of sequential
-     * consistent memory model.
+     * Adds program order constraints.
      */
     public void addIntraThreadConstraints() {
         for (List<Event> events : trace.getThreadIdToEventsMap().values()) {
-            Event prevEvent = events.get(0);
-            for (Event crntEvent : events.subList(1, events.size())) {
-                assertHappensBefore(prevEvent, crntEvent);
-                prevEvent = crntEvent;
+            setGroupId(events.get(0), closure.nextElemId());
+            for (int i = 1; i < events.size(); i++) {
+                Event e1 = events.get(i - 1);
+                Event e2 = events.get(i);
+                smtlibAssertionBuilder.add(getAsstHappensBefore(e1, e2));
+                if (e1.getType() == EventType.START ||
+                    e2.getType() == EventType.START ||
+                    i + 1 == events.size()) {
+                    setGroupId(e2, closure.nextElemId());
+                    closure.addRelation(getGroupId(e1), getGroupId(e2));
+                } else {
+                    setGroupId(e2, getGroupId(e1));
+                }
             }
         }
     }
 
     /**
-     * Adds program order and thread start/join constraints, that is, the must
-     * happens-before constraints (MHB) in the paper.
+     * Adds thread start/join constraints.
      */
-    public void addProgramOrderAndThreadStartJoinConstraints() {
+    public void addThreadStartJoinConstraints() {
         for (List<SyncEvent> startOrJoinEvents : trace.getThreadIdToStartJoinEvents().values()) {
             for (SyncEvent startOrJoin : startOrJoinEvents) {
                 long tid = startOrJoin.getSyncObject();
                 switch (startOrJoin.getType()) {
                 case START:
+                    Event startEvent = startOrJoin;
                     Event fstThrdEvent = trace.getFirstThreadEvent(tid);
                     /* YilongL: it's possible that the first event of the new
                      * thread is not in the current trace */
                     if (fstThrdEvent != null) {
-                        assertHappensBefore(startOrJoin, fstThrdEvent);
+                        smtlibAssertionBuilder.add(getAsstHappensBefore(startEvent, fstThrdEvent));
+                        closure.addRelation(getGroupId(startEvent), getGroupId(fstThrdEvent));
                     }
                     break;
                 case JOIN:
-                    if (startOrJoin.getType() == EventType.JOIN) {
-                        Event lastThrdEvent = trace.getLastThreadEvent(tid);
-                        /* YilongL: it's possible that the last event of the thread
-                         * to join is not in the current trace */
-                        if (lastThrdEvent != null) {
-                            assertHappensBefore(lastThrdEvent, startOrJoin);
-                        }
+                    Event joinEvent = startOrJoin;
+                    Event lastThrdEvent = trace.getLastThreadEvent(tid);
+                    /* YilongL: it's possible that the last event of the thread
+                     * to join is not in the current trace */
+                    if (lastThrdEvent != null) {
+                        smtlibAssertionBuilder.add(getAsstHappensBefore(lastThrdEvent, joinEvent));
+                        closure.addRelation(getGroupId(lastThrdEvent), getGroupId(joinEvent));
                     }
-                    break;
-                case PRE_JOIN:
-                case JOIN_MAYBE_FAILED:
                     break;
                 default:
                     assert false : "unexpected event: " + startOrJoin;
@@ -329,7 +354,7 @@ public class SMTConstraintBuilder {
      * Checks if one event happens before another.
      */
     public boolean happensBefore(Event e1, Event e2) {
-        return reachEngine.canReach(e1.getGID(), e2.getGID());
+        return closure.inRelation(getGroupId(e1), getGroupId(e2));
     }
 
     public boolean isRace(Event e1, Event e2, Formula... casualConstraints) {
@@ -352,6 +377,10 @@ public class SMTConstraintBuilder {
         }
 
         return solver.isSat(raceAssertionBuilder.build());
+    }
+
+    public void finish() {
+        closure.finish();
     }
 
 }

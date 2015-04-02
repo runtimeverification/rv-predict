@@ -44,10 +44,11 @@ public class SMTLib2Filter implements SMTFilter {
         }
 
         @Override
-        public void visit(SMTTerm<SMTOperation, SMTFormula> node) throws Exception {
+        public void visit(SMTTerm node) throws Exception {
+            SMTTerm<SMTOperation, SMTFormula> smtTerm = (SMTTerm<SMTOperation, SMTFormula>) node;
             output.append('(');
             node.getOperation().accept(this);
-            for (SMTFormula term : node.getTerms()) {
+            for (SMTFormula term : smtTerm.getTerms()) {
                 output.append(' ');
                 term.accept(this);
             }

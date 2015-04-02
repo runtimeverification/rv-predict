@@ -101,7 +101,7 @@ public class RVPredict implements LoggingTask {
     @Override
     public void run() {
         try {
-            ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(4,
+            ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(config.multithreaded?4:1,
                     new ThreadFactory() {
                         int id = 0;
                         final UncaughtExceptionHandler eh = new UncaughtExceptionHandler() {

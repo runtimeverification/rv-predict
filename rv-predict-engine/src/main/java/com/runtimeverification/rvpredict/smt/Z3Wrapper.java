@@ -19,35 +19,46 @@ public class Z3Wrapper implements Solver {
     private final ProcessBuilder pb;
     private final long timeout;
     private final SMTFilter smtFilter;
+    private final boolean useLibrary;
 
     public Z3Wrapper(Configuration config) {
+        useLibrary = config.smt_solver.equals("libz3");
         timeout = config.solver_timeout;
-        this.pb = new ProcessBuilder(
-            OS.current().getNativeExecutable("z3"),
-            "-in",
-            "-smt2",
-            "-T:" + timeout)
-            .redirectInput(ProcessBuilder.Redirect.PIPE)
-            .redirectOutput(ProcessBuilder.Redirect.PIPE);
-        this.smtFilter = SMTFilterFactory.getSMTFilter(config);
+        if (!useLibrary) {
+            this.pb = new ProcessBuilder(
+                    OS.current().getNativeExecutable("z3"),
+                    "-in",
+                    "-smt2",
+                    "-T:" + timeout)
+                    .redirectInput(ProcessBuilder.Redirect.PIPE)
+                    .redirectOutput(ProcessBuilder.Redirect.PIPE);
+            this.smtFilter = SMTFilterFactory.getSMTFilter(config);
+        } else {
+            this.pb = null;
+            this.smtFilter = null;
+        }
     }
 
     @Override
     public boolean isSat(FormulaTerm query) {
-        return checkQueryWithLibrary(query);
+        if (useLibrary) {
+            return checkQueryWithLibrary(query);
+        } else {
+            return checkQueryWithExternalProcess(query);
+        }
     }
 
-    public boolean checkQueryWithExternalProcess(FormulaTerm formulaTerm) {
+    public boolean checkQueryWithExternalProcess(FormulaTerm query) {
         String result;
-        String query;
+        String queryString;
         try {
-            query = smtFilter.getSMTQuery(formulaTerm);
+            queryString = smtFilter.getSMTQuery(query);
             Process z3Process = pb.start();
             BufferedWriter input = new BufferedWriter(new OutputStreamWriter(
                     z3Process.getOutputStream()));
             BufferedReader output = new BufferedReader(new InputStreamReader(
                     z3Process.getInputStream()));
-            input.write(query);
+            input.write(queryString);
             input.close();
             result = output.readLine();
             z3Process.destroy();
@@ -64,8 +75,8 @@ public class Z3Wrapper implements Solver {
         } else if ("unsat".equals(result) || "unknown".equals(result)) {
             return false;
         } else {
-            System.err.println("Unexpected Z3 query result:\n" + result);
-            System.err.println("Query:\n" + query);
+            System.err.println("Unexpected Z3 queryString result:\n" + result);
+            System.err.println("Query:\n" + queryString);
             return false;
         }
     }

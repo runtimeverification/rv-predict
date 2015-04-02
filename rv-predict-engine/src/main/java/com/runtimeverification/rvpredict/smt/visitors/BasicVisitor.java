@@ -2,6 +2,8 @@ package com.runtimeverification.rvpredict.smt.visitors;
 
 import com.runtimeverification.rvpredict.smt.formula.*;
 
+import java.util.Objects;
+
 /**
  * Base class for visitors.  Visits all nodes in an AST, but does nothing.
  */
@@ -23,10 +25,11 @@ public class BasicVisitor<TResult> implements Visitor<TResult> {
     }
 
     @Override
-    public void visit(SMTTerm<SMTOperation,SMTFormula> node) throws Exception {
+    public void visit(SMTTerm node) throws Exception {
+        SMTTerm<SMTOperation,SMTFormula> term = (SMTTerm<SMTOperation,SMTFormula>)node;
         node.getOperation().accept(this);
-        for (SMTFormula term : node.getTerms()) {
-            term.accept(this);
+        for (SMTFormula sterm : term.getTerms()) {
+            sterm.accept(this);
         }
         visit((SMTASTNode) node);
     }
@@ -58,7 +61,7 @@ public class BasicVisitor<TResult> implements Visitor<TResult> {
 
     @Override
     public void visit(FormulaTerm node) throws Exception {
-        visit((SMTTerm<BooleanOperation,SMTFormula>) node);
+        visit((SMTTerm) node);
     }
 
     @Override

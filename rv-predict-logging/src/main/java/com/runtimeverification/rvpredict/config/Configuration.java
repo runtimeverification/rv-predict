@@ -283,8 +283,14 @@ public class Configuration implements Constants {
     public boolean checkVolatile;
 
     final static String opt_smt_solver = "--solver";
-    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2050")
+    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3,libz3].", hidden = true, descriptionKey = "2050")
     public String smt_solver = "z3";
+
+    /**
+     * Whether using multithreading in prediction phase is OK.
+     * Not OK if using non-thread-safe libraries (e.g., libz3).
+     */
+    public boolean multithreaded = false;
 
     final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
@@ -423,6 +429,7 @@ public class Configuration implements Constants {
             command_line.addAll(argList);
         }
         logger = new Logger(this);
+        multithreaded = !smt_solver.equals("libz3");
     }
 
     public void exclusiveOptionsFailure(String opt1, String opt2) {

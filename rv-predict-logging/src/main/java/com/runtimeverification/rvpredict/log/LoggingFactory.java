@@ -1,7 +1,6 @@
 package com.runtimeverification.rvpredict.log;
 
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 
 /**
  * Interface for abstracting I/O operations
@@ -9,16 +8,6 @@ import java.io.ObjectOutputStream;
  * @author TraianSF
  */
 public interface LoggingFactory {
-
-    /**
-     * Creates a new stream for logging metadata.
-     * @return a new {@link java.io.ObjectOutputStream} to save metadata into.
-     * @see MetadataLogger
-     * @throws IOException if the stream cannot be created.
-     */
-    ObjectOutputStream createMetadataOS() throws IOException;
-
-    EventWriter createEventWriter() throws IOException;
 
     /**
      * method to signal to objects implementing this interface that logging is completed.

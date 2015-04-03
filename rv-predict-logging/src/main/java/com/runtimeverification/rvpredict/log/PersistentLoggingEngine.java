@@ -28,20 +28,25 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.log;
 
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.util.Constants;
 
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Class encapsulating functionality for recording events
+ * Logging engine that saves events and metadata to disk.
  *
  * @author TraianSF
+ * @author YilongL
  *
  */
 public class PersistentLoggingEngine implements ILoggingEngine, Constants {
@@ -53,7 +58,7 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
      */
     private final AtomicLong globalEventID = new AtomicLong(1);
 
-    private final LoggingFactory loggingFactory;
+    private final Configuration config;
 
     private final Metadata metadata;
 
@@ -61,8 +66,8 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
 
     private final ThreadLocalEventWriter threadLocalEventWriter = new ThreadLocalEventWriter();
 
-    public PersistentLoggingEngine(LoggingFactory loggingFactory, Metadata metadata) {
-        this.loggingFactory = loggingFactory;
+    public PersistentLoggingEngine(Configuration config, Metadata metadata) {
+        this.config = config;
         this.metadata = metadata;
     }
 
@@ -81,9 +86,14 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
             }
         }
 
-        try (ObjectOutputStream os = loggingFactory.createMetadataOS()) {
+        try (ObjectOutputStream os = getMetadataOS()) {
             os.writeObject(metadata);
         }
+    }
+
+    private ObjectOutputStream getMetadataOS() throws IOException {
+        return new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(
+                config.getMetadataPath().toFile())));
     }
 
     /**
@@ -161,7 +171,8 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
                     return null;
                 } else {
                     try {
-                        EventWriter eventWriter = loggingFactory.createEventWriter();
+                        Path path = config.getTraceFilePath(eventWriters.size() + 1);
+                        EventWriter eventWriter = new EventWriter(path);
                         eventWriters.add(eventWriter);
                         return eventWriter;
                     } catch (IOException e) {

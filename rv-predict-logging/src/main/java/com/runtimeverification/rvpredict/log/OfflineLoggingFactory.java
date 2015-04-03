@@ -1,8 +1,6 @@
 package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.metadata.Metadata;
-
 import org.apache.tools.ant.DirectoryScanner;
 
 import java.io.*;
@@ -23,21 +21,12 @@ public class OfflineLoggingFactory implements LoggingFactory {
      * termination for files holding events
      */
     public static final String TRACE_SUFFIX = "trace.bin";
-    public static final String METADATA_BIN = "metadata.bin";
     private final Configuration config;
     private Collection<EventReader> readers;
     private Iterator<EventReader> readersIter;
-    private Metadata metadata;
 
     public OfflineLoggingFactory(Configuration config) {
-        this(config, false);
-    }
-
-    public OfflineLoggingFactory(Configuration config, boolean isWrite) {
         this.config = config;
-        if (!isWrite) {
-            readMetadata();
-        }
     }
 
     /**
@@ -51,10 +40,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
         scanner.setCaseSensitive(false);
         scanner.scan();
         return scanner.getIncludedFiles();
-    }
-
-    @Override
-    public void finishLogging() {
     }
 
     @Override
@@ -72,36 +57,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
         }
         if (!readersIter.hasNext()) return null;
         return readersIter.next();
-    }
-
-    @Override
-    public String getStmtSig(int locId) {
-        return metadata.getLocationSig(locId);
-    }
-
-    @Override
-    public boolean isVolatile(int fieldId) {
-        return metadata.isVolatile(fieldId);
-    }
-
-    @Override
-    public String getVarSig(int fieldId) {
-        return metadata.getVariableSig(fieldId);
-    }
-
-    private void readMetadata() {
-        try (ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
-                new FileInputStream(Paths.get(config.getLogDir(), METADATA_BIN).toFile())))) {
-            metadata = (Metadata) metadataIS.readObject();
-        } catch (FileNotFoundException e) {
-            System.err.println("Error: Metadata file not found.");
-            System.err.println(e.getMessage());
-            System.exit(1);
-        } catch (ClassNotFoundException | IOException e) {
-            System.err.println("Error: Metadata for the logged execution is corrupted.");
-            System.err.println(e.getMessage());
-            System.exit(1);
-        }
     }
 
 }

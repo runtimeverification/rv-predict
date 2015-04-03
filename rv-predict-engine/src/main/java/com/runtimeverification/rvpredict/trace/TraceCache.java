@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.trace;
 import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.EventItem;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -34,10 +35,10 @@ public class TraceCache {
      *
      * @param loggingFactory suppling additional information about the nature of the logs.
      */
-    public TraceCache(LoggingFactory loggingFactory) {
+    public TraceCache(LoggingFactory loggingFactory, Metadata metadata) {
         this.loggingFactory = loggingFactory;
         this.indexes = new HashMap<>();
-        this.crntState = new TraceState(loggingFactory);
+        this.crntState = new TraceState(metadata);
     }
 
     /**

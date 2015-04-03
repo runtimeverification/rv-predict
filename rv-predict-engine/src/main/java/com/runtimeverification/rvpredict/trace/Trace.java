@@ -41,7 +41,7 @@ import java.util.List;
 
 import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.LoggingFactory;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.util.Constants;
 
 /**
@@ -145,7 +145,7 @@ public class Trace {
 
     private final Set<MemoryAddr> unsafeMemoryAddresses = Sets.newHashSet();
 
-    private final LoggingFactory loggingFactory;
+    private final Metadata metadata;
 
     /**
      * Maintains the current values for every location, as recorded into the trace
@@ -155,16 +155,16 @@ public class Trace {
     public Trace(TraceState crntState, int capacity) {
         this.crntState = crntState;
         this.capacity = capacity;
-        this.loggingFactory = crntState.getLoggingFactory();
+        this.metadata = crntState.metadata();
         this.initHeldLockToStacktrace = crntState.getHeldLockStacktraceSnapshot();
+    }
+
+    public Metadata metadata() {
+        return metadata;
     }
 
     public int capacity() {
         return capacity;
-    }
-
-    public LoggingFactory getLoggingFactory() {
-        return loggingFactory;
     }
 
     public boolean hasSharedMemAddr() {
@@ -263,7 +263,7 @@ public class Trace {
         if (event.getGID() >= rawEvents.get(0).getGID()) {
             /* event is in the current window; reassemble its stack trace */
             for (int locId : threadIdToInitThreadStatus.get(tid).stacktrace) {
-                stacktrace.add(loggingFactory.getStmtSig(locId));
+                stacktrace.add(metadata.getLocationSig(locId));
             }
             for (MetaEvent e : threadIdToCallStackEvents.getOrDefault(tid,
                     Collections.<MetaEvent> emptyList())) {
@@ -272,18 +272,18 @@ public class Trace {
                 }
 
                 if (e.getType() == EventType.INVOKE_METHOD) {
-                    stacktrace.add(loggingFactory.getStmtSig(e.getLocId()));
+                    stacktrace.add(metadata.getLocationSig(e.getLocId()));
                 } else {
                     stacktrace.remove(stacktrace.size() - 1);
                 }
             }
-            stacktrace.add(loggingFactory.getStmtSig(event.getLocId()));
+            stacktrace.add(metadata.getLocationSig(event.getLocId()));
         } else {
             /* event is from previous windows */
             if (initHeldLockToStacktrace.containsKey(event)) {
                 stacktrace.addAll(initHeldLockToStacktrace.get(event));
             } else {
-                stacktrace.add(loggingFactory.getStmtSig(event.getLocId()));
+                stacktrace.add(metadata.getLocationSig(event.getLocId()));
                 stacktrace.add("... stack trace not available ...");
             }
         }
@@ -390,7 +390,7 @@ public class Trace {
                             String.format("[Warning] logged trace not sequential consistent:%n"
                                     + "  event %s reads a different value than the currently stored value %s%n"
                                     + "    at %s%n",
-                                    memAcc, crntVal, loggingFactory.getStmtSig(memAcc.getLocId())));
+                                    memAcc, crntVal, metadata.getLocationSig(memAcc.getLocId())));
                     }
                     crntState.writeValueAt(addr, crntVal);
                     unsafeMemoryAddresses.add(addr);
@@ -575,7 +575,7 @@ public class Trace {
      */
     public boolean isVolatileField(MemoryAddr addr) {
         int fieldId = -addr.fieldIdOrArrayIndex();
-        return fieldId > 0 && loggingFactory.isVolatile(fieldId);
+        return fieldId > 0 && metadata.isVolatile(fieldId);
     }
 
     static <K,V> List<V> getOrInitEmptyList(Map<K, List<V>> map, K key) {

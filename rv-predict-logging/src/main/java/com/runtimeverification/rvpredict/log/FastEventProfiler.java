@@ -23,8 +23,8 @@ public class FastEventProfiler {
 
     private final Metadata metadata;
 
-    public FastEventProfiler() {
-        this.metadata = Metadata.singleton();
+    public FastEventProfiler(Metadata metadata) {
+        this.metadata = metadata;
     }
 
     public void update(int locId) {

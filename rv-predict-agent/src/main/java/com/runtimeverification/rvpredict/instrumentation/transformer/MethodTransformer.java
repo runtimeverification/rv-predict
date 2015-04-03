@@ -6,7 +6,7 @@ import java.util.Deque;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
-import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -22,7 +22,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private final GeneratorAdapter mv;
 
-    private final Metadata metadata;
     private final ClassLoader loader;
     private final String className;
     private final String methodName;
@@ -59,7 +58,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
         this.loader = loader;
-        this.metadata = Metadata.singleton();
         this.locIdPrefix = String.format("%s(%s:", className.replace("/", ".") + "." + name,
                 source == null ? "Unknown" : source);
     }
@@ -127,7 +125,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             return;
         }
 
-        int varId = metadata.getVariableId(classFile.getClassName(), name);
+        int varId = RVPredictRuntime.metadata.getVariableId(classFile.getClassName(), name);
         int locId = getCrntLocId();
 
         Type valueType = Type.getType(desc);
@@ -456,7 +454,8 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
      *         current statement in the instrumented program
      */
     private int getCrntLocId() {
-        return metadata.getLocationId(locIdPrefix + (crntLineNum == 0 ? "n/a" : crntLineNum) + ")");
+        return RVPredictRuntime.metadata.getLocationId(locIdPrefix
+                + (crntLineNum == 0 ? "n/a" : crntLineNum) + ")");
     }
 
     /**

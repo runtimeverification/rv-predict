@@ -125,7 +125,7 @@ public final class RVPredictRuntime implements Constants {
 
     private static final String MOCK_STATE_FIELD = "$state";
 
-    private static final Metadata metadata = Metadata.singleton();
+    public static final Metadata metadata = Metadata.singleton();
 
     private static int NATIVE_INTERRUPTED_STATUS_VAR_ID = metadata.getVariableId(
             "java.lang.Thread", "$interruptedStatus");

@@ -33,6 +33,7 @@ import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.util.Constants;
 
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -54,20 +55,24 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
 
     private final LoggingFactory loggingFactory;
 
+    private final Metadata metadata;
+
     private final List<EventWriter> eventWriters = new ArrayList<>();
 
     private final ThreadLocalEventWriter threadLocalEventWriter = new ThreadLocalEventWriter();
 
-    public PersistentLoggingEngine(LoggingFactory loggingFactory) {
+    public PersistentLoggingEngine(LoggingFactory loggingFactory, Metadata metadata) {
         this.loggingFactory = loggingFactory;
+        this.metadata = metadata;
     }
 
     /**
      * Method invoked at the end of the logging task, to insure that
      * all data is recorded before concluding.
+     * @throws IOException
      */
     @Override
-    public void finishLogging() throws IOException, InterruptedException {
+    public void finishLogging() throws IOException {
         shutdown = true;
 
         synchronized (eventWriters) {
@@ -76,7 +81,9 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
             }
         }
 
-        Metadata.singleton().writeTo(loggingFactory.createMetadataOS());
+        try (ObjectOutputStream os = loggingFactory.createMetadataOS()) {
+            os.writeObject(metadata);
+        }
     }
 
     /**

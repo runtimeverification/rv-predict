@@ -44,11 +44,11 @@ public class Agent implements ClassFileTransformer, Constants {
         LoggingFactory loggingFactory = new OfflineLoggingFactory(config, true);
         ILoggingEngine loggingEngine;
         if (config.isProfiling()) {
-            loggingEngine = new ProfilerLoggingEngine();
+            loggingEngine = new ProfilerLoggingEngine(RVPredictRuntime.metadata);
         } else {
             assert config.isLogging();
             loggingEngine = config.isOnlinePrediction() ? null :
-                new PersistentLoggingEngine(loggingFactory);
+                new PersistentLoggingEngine(loggingFactory, RVPredictRuntime.metadata);
         }
         RVPredictRuntime.init(loggingEngine);
 

@@ -16,7 +16,6 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.RVPredict;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.log.PersistentLoggingEngine;
-import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.log.ProfilerLoggingEngine;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
@@ -41,14 +40,13 @@ public class Agent implements ClassFileTransformer, Constants {
         printStartupInfo();
         initLoggingDirectory();
 
-        LoggingFactory loggingFactory = new OfflineLoggingFactory(config, true);
         ILoggingEngine loggingEngine;
         if (config.isProfiling()) {
             loggingEngine = new ProfilerLoggingEngine(RVPredictRuntime.metadata);
         } else {
             assert config.isLogging();
             loggingEngine = config.isOnlinePrediction() ? null :
-                new PersistentLoggingEngine(loggingFactory, RVPredictRuntime.metadata);
+                new PersistentLoggingEngine(config, RVPredictRuntime.metadata);
         }
         RVPredictRuntime.init(loggingEngine);
 

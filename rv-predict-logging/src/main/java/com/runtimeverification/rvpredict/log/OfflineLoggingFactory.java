@@ -6,10 +6,8 @@ import com.runtimeverification.rvpredict.metadata.Metadata;
 import org.apache.tools.ant.DirectoryScanner;
 
 import java.io.*;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * An implementation of the {@link LoggingFactory} interface used for
@@ -26,7 +24,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
      */
     public static final String TRACE_SUFFIX = "trace.bin";
     public static final String METADATA_BIN = "metadata.bin";
-    private static final AtomicInteger logFileId = new AtomicInteger();
     private final Configuration config;
     private Collection<EventReader> readers;
     private Iterator<EventReader> readersIter;
@@ -54,13 +51,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
         scanner.setCaseSensitive(false);
         scanner.scan();
         return scanner.getIncludedFiles();
-    }
-
-    @Override
-    public EventWriter createEventWriter() throws IOException {
-        int id = logFileId.incrementAndGet();
-        Path path = Paths.get(config.getLogDir(), id + "_" + TRACE_SUFFIX);
-        return new EventWriter(path);
     }
 
     @Override
@@ -112,13 +102,6 @@ public class OfflineLoggingFactory implements LoggingFactory {
             System.err.println(e.getMessage());
             System.exit(1);
         }
-    }
-
-    @Override
-    public ObjectOutputStream createMetadataOS() throws IOException {
-        return new ObjectOutputStream(
-                new BufferedOutputStream(
-                        new FileOutputStream(Paths.get(config.getLogDir(), METADATA_BIN).toFile())));
     }
 
 }

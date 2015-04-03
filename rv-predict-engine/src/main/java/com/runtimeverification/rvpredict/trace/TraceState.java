@@ -14,7 +14,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
-import com.runtimeverification.rvpredict.log.LoggingFactory;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 
 
 // TODO(YilongL): think about the thread-safety about this class
@@ -50,14 +50,14 @@ public class TraceState {
 
     private Trace crntTraceWindow;
 
-    private final LoggingFactory loggingFactory;
+    private final Metadata metadata;
 
-    TraceState(LoggingFactory loggingFactory) {
-        this.loggingFactory = loggingFactory;
+    TraceState(Metadata metadata) {
+        this.metadata = metadata;
     }
 
-    public LoggingFactory getLoggingFactory() {
-        return loggingFactory;
+    public Metadata metadata() {
+        return metadata;
     }
 
     public void setCurrentTraceWindow(Trace traceWindow) {

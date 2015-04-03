@@ -51,6 +51,7 @@ import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.log.LoggingTask;
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
 import com.runtimeverification.rvpredict.smt.formula.Formula;
 import com.runtimeverification.rvpredict.trace.Event;
@@ -76,13 +77,13 @@ public class RVPredict implements LoggingTask {
     private final Set<Violation> violations = Sets.newConcurrentHashSet();
     private final Configuration config;
     private final TraceCache traceCache;
-    private final LoggingFactory loggingFactory;
+    private final Metadata metadata;
     private Thread owner;
 
     public RVPredict(Configuration config, LoggingFactory loggingFactory) {
         this.config = config;
-        this.loggingFactory = loggingFactory;
-        traceCache = new TraceCache(loggingFactory);
+        this.metadata = Metadata.readFrom(config.getMetadataPath());
+        traceCache = new TraceCache(loggingFactory, metadata);
     }
 
     @Override
@@ -155,7 +156,6 @@ public class RVPredict implements LoggingTask {
 
     @Override
     public void finishLogging() throws InterruptedException {
-        loggingFactory.finishLogging();
         owner.join();
     }
 
@@ -353,7 +353,7 @@ public class RVPredict implements LoggingTask {
                                 if ((e1 instanceof WriteEvent || e2 instanceof WriteEvent)
                                         && !trace.isClinitMemoryAccess(e1)
                                         && !trace.isClinitMemoryAccess(e2)) {
-                                    potentialRaces.add(new Race(e1, e2, trace, loggingFactory));
+                                    potentialRaces.add(new Race(e1, e2, trace, metadata));
                                 }
                             }
                         }

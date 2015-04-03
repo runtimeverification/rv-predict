@@ -1,6 +1,12 @@
 package com.runtimeverification.rvpredict.metadata;
 
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -79,6 +85,22 @@ public class Metadata implements Serializable {
 
     public boolean isVolatile(int varId) {
         return volatileVarIds.contains(varId);
+    }
+
+    public static Metadata readFrom(Path path) {
+        try (ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
+                new FileInputStream(path.toFile())))) {
+            return (Metadata) metadataIS.readObject();
+        } catch (FileNotFoundException e) {
+            System.err.println("Error: Metadata file not found.");
+            System.err.println(e.getMessage());
+            System.exit(1);
+        } catch (ClassNotFoundException | IOException e) {
+            System.err.println("Error: Metadata for the logged execution is corrupted.");
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
+        return null;
     }
 
 }

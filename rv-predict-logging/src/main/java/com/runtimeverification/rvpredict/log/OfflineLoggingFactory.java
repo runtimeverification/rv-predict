@@ -30,9 +30,7 @@ public class OfflineLoggingFactory implements LoggingFactory {
     private final Configuration config;
     private Collection<EventReader> readers;
     private Iterator<EventReader> readersIter;
-    private Set<Integer> volatileFieldIds;
-    private String[] varIdToVarSig;
-    private String[] locIdToLocSig;
+    private Metadata metadata;
 
     public OfflineLoggingFactory(Configuration config) {
         this(config, false);
@@ -88,27 +86,23 @@ public class OfflineLoggingFactory implements LoggingFactory {
 
     @Override
     public String getStmtSig(int locId) {
-        return locIdToLocSig[locId];
+        return metadata.getLocationSig(locId);
     }
 
     @Override
     public boolean isVolatile(int fieldId) {
-        return volatileFieldIds.contains(fieldId);
+        return metadata.isVolatile(fieldId);
     }
 
     @Override
     public String getVarSig(int fieldId) {
-        return varIdToVarSig[fieldId];
+        return metadata.getVariableSig(fieldId);
     }
 
-    @SuppressWarnings("unchecked")
-    public void readMetadata() {
+    private void readMetadata() {
         try (ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
                 new FileInputStream(Paths.get(config.getLogDir(), METADATA_BIN).toFile())))) {
-            Object[] objects = Metadata.readFrom(metadataIS);
-            volatileFieldIds = (Set<Integer>) objects[0];
-            varIdToVarSig = (String[]) objects[1];
-            locIdToLocSig = (String[]) objects[2];
+            metadata = (Metadata) metadataIS.readObject();
         } catch (FileNotFoundException e) {
             System.err.println("Error: Metadata file not found.");
             System.err.println(e.getMessage());

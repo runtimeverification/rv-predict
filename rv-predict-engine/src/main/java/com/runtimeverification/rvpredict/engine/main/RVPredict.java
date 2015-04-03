@@ -173,9 +173,6 @@ public class RVPredict implements LoggingTask {
                 } catch (IOException e) {
                     System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
                     System.err.println(e.getMessage());
-                } catch (InterruptedException e) {
-                    System.err.println("Warning: Execution is being forcefully ended. Log data might be lost.");
-                    System.err.println(e.getMessage());
                 }
 
                 if (config.isOfflinePrediction()) {

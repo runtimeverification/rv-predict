@@ -266,7 +266,7 @@ public class ClassFile implements Opcodes {
         // TODO(YilongL): is this really the best place to record volatile variables?
         for (String fname : classFile.getFieldNames()) {
             if ((classFile.getFieldAccess(fname) & ACC_VOLATILE) != 0) {
-                Metadata.instance().addVolatileVariable(cname, fname);
+                Metadata.singleton().addVolatileVariable(cname, fname);
             }
         }
 

@@ -47,7 +47,7 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.LoggingEngine;
+import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.log.LoggingTask;
 import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
@@ -164,7 +164,7 @@ public class RVPredict implements LoggingTask {
         this.owner = owner;
     }
 
-    public static Thread getPredictionThread(Configuration config, LoggingEngine loggingEngine) {
+    public static Thread getPredictionThread(Configuration config, ILoggingEngine loggingEngine) {
         return new Thread("Cleanup Thread") {
             @Override
             public void run() {

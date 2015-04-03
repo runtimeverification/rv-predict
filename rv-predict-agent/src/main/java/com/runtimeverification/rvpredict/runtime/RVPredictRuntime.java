@@ -43,14 +43,13 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.LoggingEngine;
+import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.util.Constants;
@@ -114,11 +113,6 @@ import com.runtimeverification.rvpredict.util.Constants;
 public final class RVPredictRuntime implements Constants {
 
     /**
-     * Global ID of the next event.
-     */
-    private final static AtomicLong globalEventID  = new AtomicLong(1);
-
-    /**
      * Dummy value used to represent abstract state whose concrete value we do
      * not care about.
      * <p>
@@ -131,7 +125,7 @@ public final class RVPredictRuntime implements Constants {
 
     private static final String MOCK_STATE_FIELD = "$state";
 
-    private static final Metadata metadata = Metadata.instance();
+    private static final Metadata metadata = Metadata.singleton();
 
     private static int NATIVE_INTERRUPTED_STATUS_VAR_ID = metadata.getVariableId(
             "java.lang.Thread", "$interruptedStatus");
@@ -188,13 +182,12 @@ public final class RVPredictRuntime implements Constants {
      */
     private static final SynchronizedWeakIdentityHashMap<Object, Object> viewToBackedCollection = new SynchronizedWeakIdentityHashMap<>();
 
-    private static LoggingEngine logger;
+    private static ILoggingEngine logger;
 
-    private RVPredictRuntime() { } // forbid initialization
+    private RVPredictRuntime() { } // forbid instantiation
 
-    // TODO(YilongL): move this method out of the runtime library
-    public static void init(LoggingEngine db) {
-        RVPredictRuntime.logger = db;
+    public static void init(ILoggingEngine logger) {
+        RVPredictRuntime.logger = logger;
     }
 
     public static void logClassInitializerEnter() {
@@ -1384,71 +1377,20 @@ public final class RVPredictRuntime implements Constants {
 
     private static void saveMemAccEvent(EventType eventType, int locId, int addrl, int addrr,
             long value) {
-        saveEvent(eventType, locId, addrl, addrr, value, 0);
+        logger.log(eventType, locId, addrl, addrr, value, 0);
     }
 
     private static void saveSyncEvent(EventType eventType, int locId, long syncObj) {
-        saveEvent(eventType, locId, (int)(syncObj >> 32), (int) syncObj, 0, 0);
+        logger.log(eventType, locId, (int)(syncObj >> 32), (int) syncObj, 0, 0);
     }
 
     private static void saveMetaEvent(EventType eventType, int locId) {
-        saveEvent(eventType, locId, 0, 0, 0, 0);
+        logger.log(eventType, locId, 0, 0, 0, 0);
     }
 
     private static void saveAtomicEvent(EventType eventType, int locId, int addrl, int addrr,
             long value1, long value2) {
-        saveEvent(eventType, locId, addrl, addrr, value1, value2);
-    }
-
-    private static void saveEvent(EventType eventType, int locId, int addrl, int addrr,
-            long value1, long value2) {
-        if (Configuration.profile) {
-            logger.profile(locId);
-            return;
-        }
-
-        long tid = Thread.currentThread().getId();
-        long gid;
-        switch (eventType) {
-        case ATOMIC_READ:
-            gid = globalEventID.getAndAdd(3);
-            logger.log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, addrl, 0);
-            logger.log(EventType.READ,         gid + 1, tid, locId, addrl,         addrr, value1);
-            logger.log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, ATOMIC_LOCK_C, addrl, 0);
-            break;
-        case ATOMIC_WRITE:
-            gid = globalEventID.getAndAdd(3);
-            logger.log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, addrl, 0);
-            logger.log(EventType.WRITE,        gid + 1, tid, locId, addrl,         addrr, value1);
-            logger.log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, ATOMIC_LOCK_C, addrl, 0);
-            break;
-        case ATOMIC_READ_THEN_WRITE:
-            gid = globalEventID.getAndAdd(4);
-            logger.log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, addrl, 0);
-            logger.log(EventType.READ,         gid + 1, tid, locId, addrl,         addrr, value1);
-            logger.log(EventType.WRITE,        gid + 2, tid, locId, addrl,         addrr, value2);
-            logger.log(EventType.WRITE_UNLOCK, gid + 3, tid, locId, ATOMIC_LOCK_C, addrl, 0);
-            break;
-        case READ:
-        case WRITE:
-        case WRITE_LOCK:
-        case WRITE_UNLOCK:
-        case READ_LOCK:
-        case READ_UNLOCK:
-        case WAIT_REL:
-        case WAIT_ACQ:
-        case START:
-        case JOIN:
-        case CLINIT_ENTER:
-        case CLINIT_EXIT:
-        case INVOKE_METHOD:
-        case FINISH_METHOD:
-            gid = globalEventID.getAndIncrement();
-            logger.log(eventType, gid, tid, locId, addrl, addrr, value1);
-            break;
-        default:
-            assert false;
-        }
+        logger.log(eventType, locId, addrl, addrr, value1, value2);
     }
 
 }

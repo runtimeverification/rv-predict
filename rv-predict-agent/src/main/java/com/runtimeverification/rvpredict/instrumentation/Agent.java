@@ -14,8 +14,10 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.RVPredict;
-import com.runtimeverification.rvpredict.log.LoggingEngine;
+import com.runtimeverification.rvpredict.log.ILoggingEngine;
+import com.runtimeverification.rvpredict.log.PersistentLoggingEngine;
 import com.runtimeverification.rvpredict.log.LoggingFactory;
+import com.runtimeverification.rvpredict.log.ProfilerLoggingEngine;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 import org.objectweb.asm.ClassReader;
@@ -39,10 +41,16 @@ public class Agent implements ClassFileTransformer, Constants {
         printStartupInfo();
         initLoggingDirectory();
 
-        LoggingFactory loggingFactory = new OfflineLoggingFactory(config);
-        final LoggingEngine loggingEngine = new LoggingEngine(loggingFactory);
+        LoggingFactory loggingFactory = new OfflineLoggingFactory(config, true);
+        ILoggingEngine loggingEngine;
+        if (config.isProfiling()) {
+            loggingEngine = new ProfilerLoggingEngine();
+        } else {
+            assert config.isLogging();
+            loggingEngine = config.isOnlinePrediction() ? null :
+                new PersistentLoggingEngine(loggingFactory);
+        }
         RVPredictRuntime.init(loggingEngine);
-        loggingEngine.startLogging();
 
         inst.addTransformer(new Agent(), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {
@@ -105,22 +113,26 @@ public class Agent implements ClassFileTransformer, Constants {
 
     private static void printStartupInfo() {
         config.logger.reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
-        config.logger.report("Log directory: " + config.getLogDir(), Logger.MSGTYPE.INFO);
-        if (Configuration.includes != null) {
+        if (config.getLogDir() != null) {
+            config.logger.report("Log directory: " + config.getLogDir(), Logger.MSGTYPE.INFO);
+        }
+        if (config.includes != null) {
             config.logger.report("Including: " + config.includeList, Logger.MSGTYPE.INFO);
         }
-        if (Configuration.excludes != null) {
+        if (config.excludes != null) {
             config.logger.report("Excluding: " + config.excludeList, Logger.MSGTYPE.INFO);
         }
     }
 
     private static void initLoggingDirectory() {
         String directory = config.getLogDir();
-        for (String fname : OfflineLoggingFactory.getTraceFiles(directory)) {
-            try {
-                Files.delete(Paths.get(directory, fname));
-            } catch (IOException e) {
-                System.err.println("Cannot delete trace file " + fname + "from dir. " + directory);
+        if (directory != null) {
+            for (String fname : OfflineLoggingFactory.getTraceFiles(directory)) {
+                try {
+                    Files.delete(Paths.get(directory, fname));
+                } catch (IOException e) {
+                    System.err.println("Cannot delete trace file " + fname + "from dir. " + directory);
+                }
             }
         }
     }

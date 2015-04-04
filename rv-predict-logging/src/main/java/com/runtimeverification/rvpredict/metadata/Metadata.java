@@ -40,7 +40,7 @@ public class Metadata implements Serializable {
     /**
      * Note: This method should be used only in a few places and definitely NOT
      * in offline prediction which should get its {@code Metadata} instance from
-     * deserialization.
+     * {@link #readFrom(Path)}.
      *
      * @return a singleton instance of {@code Metadata}.
      */
@@ -87,6 +87,16 @@ public class Metadata implements Serializable {
         return volatileVarIds.contains(varId);
     }
 
+    /**
+     * Deserializes the {@code Metadata} object stored at the specified location.
+     * <p>
+     * This method should only be used in offline prediction to obtain an
+     * instance of {@code Metadata}.
+     *
+     * @param path
+     *            the location where the metadata is stored
+     * @return the {@code Metadata} object
+     */
     public static Metadata readFrom(Path path) {
         try (ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
                 new FileInputStream(path.toFile())))) {

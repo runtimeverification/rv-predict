@@ -48,7 +48,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
-import com.runtimeverification.rvpredict.log.LoggingTask;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
 import com.runtimeverification.rvpredict.smt.formula.Formula;
@@ -70,13 +69,12 @@ import com.runtimeverification.rvpredict.violation.Violation;
  * Splits the log in segments of length {@link Configuration#windowSize},
  * each of them being executed as a {@link RaceDetectorTask} task.
  */
-public class RVPredict implements LoggingTask {
+public class RVPredict {
 
     private final Set<Violation> violations = Sets.newConcurrentHashSet();
     private final Configuration config;
     private final TraceCache traceCache;
     private final Metadata metadata;
-    private Thread owner;
 
     public RVPredict(Configuration config) {
         this.config = config;
@@ -84,8 +82,7 @@ public class RVPredict implements LoggingTask {
         traceCache = new TraceCache(config, metadata);
     }
 
-    @Override
-    public void run() {
+    public void start() {
         try {
             ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(4,
                     new ThreadFactory() {
@@ -146,16 +143,6 @@ public class RVPredict implements LoggingTask {
             // Preserve interrupt status
             Thread.currentThread().interrupt();
         }
-    }
-
-    @Override
-    public void finishLogging() throws InterruptedException {
-        owner.join();
-    }
-
-    @Override
-    public void setOwner(Thread owner) {
-        this.owner = owner;
     }
 
     public static Thread getPredictionThread(Configuration config, ILoggingEngine loggingEngine) {
@@ -223,7 +210,7 @@ public class RVPredict implements LoggingTask {
      */
     public static void main(String[] args) {
         Configuration config = Configuration.instance(args);
-        new RVPredict(config).run();
+        new RVPredict(config).start();
     }
 
     /**

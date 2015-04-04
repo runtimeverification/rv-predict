@@ -19,10 +19,10 @@ import com.runtimeverification.rvpredict.log.PersistentLoggingEngine;
 import com.runtimeverification.rvpredict.log.ProfilerLoggingEngine;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
+import org.apache.tools.ant.DirectoryScanner;
 import org.objectweb.asm.ClassReader;
 
 import com.runtimeverification.rvpredict.instrumentation.transformer.ClassTransformer;
-import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
@@ -125,7 +125,13 @@ public class Agent implements ClassFileTransformer, Constants {
     private static void initLoggingDirectory() {
         String directory = config.getLogDir();
         if (directory != null) {
-            for (String fname : OfflineLoggingFactory.getTraceFiles(directory)) {
+            /* scan all trace files */
+            DirectoryScanner scanner = new DirectoryScanner();
+            scanner.setIncludes(new String[] { "*" + Configuration.TRACE_SUFFIX + "*" });
+            scanner.setBasedir(directory);
+            scanner.scan();
+
+            for (String fname : scanner.getIncludedFiles()) {
                 try {
                     Files.delete(Paths.get(directory, fname));
                 } catch (IOException e) {

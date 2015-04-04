@@ -64,7 +64,7 @@ public class Configuration implements Constants {
     public static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "lib"
             + SEPARATOR + "rv-predict.jar";
 
-    private static final String TRACE_SUFFIX = "trace.bin";
+    public static final String TRACE_SUFFIX = "trace.bin";
 
     private static final String METADATA_BIN = "metadata.bin";
 

@@ -48,9 +48,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
-import com.runtimeverification.rvpredict.log.LoggingFactory;
 import com.runtimeverification.rvpredict.log.LoggingTask;
-import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
 import com.runtimeverification.rvpredict.smt.formula.Formula;
@@ -80,10 +78,10 @@ public class RVPredict implements LoggingTask {
     private final Metadata metadata;
     private Thread owner;
 
-    public RVPredict(Configuration config, LoggingFactory loggingFactory) {
+    public RVPredict(Configuration config) {
         this.config = config;
         this.metadata = Metadata.readFrom(config.getMetadataPath());
-        traceCache = new TraceCache(loggingFactory, metadata);
+        traceCache = new TraceCache(config, metadata);
     }
 
     @Override
@@ -124,10 +122,6 @@ public class RVPredict implements LoggingTask {
             if (violations.size() == 0) {
                 config.logger.report("No races found.", Logger.MSGTYPE.INFO);
             }
-        } catch (InterruptedException e) {
-            System.err.println("Error: prediction interrupted.");
-            System.err.println(e.getMessage());
-            System.exit(1);
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());
@@ -229,7 +223,7 @@ public class RVPredict implements LoggingTask {
      */
     public static void main(String[] args) {
         Configuration config = Configuration.instance(args);
-        new RVPredict(config, new OfflineLoggingFactory(config)).run();
+        new RVPredict(config).run();
     }
 
     /**

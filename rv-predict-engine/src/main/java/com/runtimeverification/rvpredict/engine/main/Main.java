@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.util.Logger;
 
 /**
@@ -50,7 +49,7 @@ public class Main {
         } else {
             /* must be in only_predict mode */
             assert config.isOfflinePrediction();
-            new RVPredict(config, new OfflineLoggingFactory(config)).run();
+            new RVPredict(config).run();
         }
     }
 

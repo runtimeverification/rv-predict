@@ -49,7 +49,7 @@ public class Main {
         } else {
             /* must be in only_predict mode */
             assert config.isOfflinePrediction();
-            new RVPredict(config).run();
+            new RVPredict(config).start();
         }
     }
 

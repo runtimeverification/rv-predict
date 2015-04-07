@@ -30,6 +30,8 @@ public class ClassFile implements Opcodes {
      */
     private static final Table<String, String, ClassFile> classFileTable = HashBasedTable.create();
 
+    private static final Metadata metadata = Metadata.singleton();
+
     /**
      * {@code String} representation of the {@link URL} used to locate this class file.
      */
@@ -263,10 +265,10 @@ public class ClassFile implements Opcodes {
             classFileTable.put(urlString, cname, classFile);
         }
 
-        // TODO(YilongL): is this really the best place to record volatile variables?
+        /* record volatile variables */
         for (String fname : classFile.getFieldNames()) {
             if ((classFile.getFieldAccess(fname) & ACC_VOLATILE) != 0) {
-                Metadata.addVolatileVariable(cname, fname);
+                metadata.addVolatileVariable(cname, fname);
             }
         }
 

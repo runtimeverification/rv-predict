@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
 import com.runtimeverification.rvpredict.util.Logger;
 
 /**
@@ -26,28 +25,31 @@ public class Main {
     public static void main(String[] args) {
         config = Configuration.instance(args);
 
-        if (config.isLogging()) {
+        if (config.isLogging() || config.isProfiling()) {
             if (config.getJavaArguments().isEmpty()) {
                 config.logger.report("You must provide a class or a jar to run.",
                         Logger.MSGTYPE.ERROR);
                 config.usage();
                 System.exit(1);
             }
-            File outdirFile = new File(config.getLogDir());
-            if (!outdirFile.exists()) {
-                outdirFile.mkdir();
-            } else  if (!outdirFile.isDirectory()) {
-                config.logger.report(config.getLogDir() + " is not a directory",
-                        Logger.MSGTYPE.ERROR);
-                config.usage();
-                System.exit(1);
+
+            if (config.isLogging()) {
+                File outdirFile = new File(config.getLogDir());
+                if (!outdirFile.exists()) {
+                    outdirFile.mkdir();
+                } else  if (!outdirFile.isDirectory()) {
+                    config.logger.report(config.getLogDir() + " is not a directory",
+                            Logger.MSGTYPE.ERROR);
+                    config.usage();
+                    System.exit(1);
+                }
             }
 
             execApplication();
         } else {
             /* must be in only_predict mode */
             assert config.isOfflinePrediction();
-            new RVPredict(config, new OfflineLoggingFactory(config)).run();
+            new RVPredict(config).start();
         }
     }
 

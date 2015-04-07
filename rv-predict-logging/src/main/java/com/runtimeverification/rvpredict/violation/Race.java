@@ -32,7 +32,7 @@ import java.util.List;
 
 import com.google.common.base.StandardSystemProperty;
 import com.google.common.collect.Lists;
-import com.runtimeverification.rvpredict.log.LoggingFactory;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.LockObject;
 import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
 import com.runtimeverification.rvpredict.trace.SyncEvent;
@@ -56,7 +56,7 @@ public class Race extends AbstractViolation {
     private final String stmtSig2;
 
     public Race(MemoryAccessEvent e1, MemoryAccessEvent e2, Trace trace,
-            LoggingFactory loggingFactory) {
+            Metadata metadata) {
         if (e1.getLocId() > e2.getLocId()) {
             MemoryAccessEvent tmp = e1;
             e1 = e2;
@@ -69,9 +69,9 @@ public class Race extends AbstractViolation {
         locId1 = e1.getLocId();
         locId2 = e2.getLocId();
         int idx = e1.getAddr().fieldIdOrArrayIndex();
-        varSig = idx < 0 ? loggingFactory.getVarSig(-idx).replace("/", ".") : "#" + idx;
-        stmtSig1 = loggingFactory.getStmtSig(locId1);
-        stmtSig2 = loggingFactory.getStmtSig(locId2);
+        varSig = idx < 0 ? metadata.getVariableSig(-idx).replace("/", ".") : "#" + idx;
+        stmtSig1 = metadata.getLocationSig(locId1);
+        stmtSig2 = metadata.getLocationSig(locId2);
         if (stmtSig1 == null) {
             System.err.println("[Warning]: missing metadata for location ID " + locId1);
         }
@@ -141,7 +141,7 @@ public class Race extends AbstractViolation {
             sb.append(String.format("    T%s is created by T%s%n", tid,
                     startEvent.getTID()));
             sb.append(String.format("        at %s%n",
-                    trace.getLoggingFactory().getStmtSig(startEvent.getLocId())));
+                    trace.metadata().getLocationSig(startEvent.getLocId())));
         } else {
             if (tid == 1) {
                 sb.append(String.format("    T%s is the main thread%n", tid));

@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.log;
 
+import static com.runtimeverification.rvpredict.metadata.Metadata.MAX_NUM_OF_LOCATIONS;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -7,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 /**
@@ -16,10 +19,13 @@ import com.runtimeverification.rvpredict.metadata.Metadata;
  */
 public class FastEventProfiler {
 
-    // this should be enough for more than 1 million lines of code
-    private static final int MAX_NUM_OF_LOCATIONS = 1024 * 1024;
-
     private final long[] counter = new long[MAX_NUM_OF_LOCATIONS]; // 8MB
+
+    private final Metadata metadata;
+
+    public FastEventProfiler(Metadata metadata) {
+        this.metadata = metadata;
+    }
 
     public void update(int locId) {
         counter[locId]++;
@@ -28,7 +34,7 @@ public class FastEventProfiler {
     public void printProfilingResult() {
         Map<String, Long> map = new HashMap<>();
         for (int locId = 0; locId < counter.length; locId++) {
-            String className = Metadata.getLocationClass(locId);
+            String className = getLocationClass(locId);
             Long val = map.get(className);
             val = val == null ? counter[locId] : val + counter[locId];
             map.put(className, val);
@@ -60,6 +66,19 @@ public class FastEventProfiler {
                 break;
             }
         }
+    }
+
+    private String getLocationClass(int locId) {
+        String stmtSig = metadata.getLocationSig(locId);
+        String className;
+        if (stmtSig != null) {
+            className = stmtSig.substring(0, stmtSig.indexOf("("));
+            className = stmtSig.substring(0, className.lastIndexOf("."));
+        } else {
+            // locId is 0
+            className = "N/A";
+        }
+        return className;
     }
 
 }

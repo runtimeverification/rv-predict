@@ -1,145 +1,85 @@
 package com.runtimeverification.rvpredict.metadata;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.lang3.tuple.Pair;
-import org.objectweb.asm.Opcodes;
+public class Metadata {
 
-import com.runtimeverification.rvpredict.config.Configuration;
+    public static final int MAX_NUM_OF_VARIABLES = 1024 * 128;
 
-public class Metadata implements Opcodes {
+    // this should be enough for more than 1 million lines of code
+    public static final int MAX_NUM_OF_LOCATIONS = 1024 * 1024;
 
-    /**
-     * YilongL: Those fields starting with `unsaved` are used for incremental
-     * saving of metadata. They are mostly not concurrent data-structures and,
-     * thus, synchronize with their main data-structure counterparts, except for
-     * {@code unsavedThreadIdToName} because we assume thread Id to be unique in
-     * our case.
-     */
+    private final AtomicInteger nextVarId = new AtomicInteger(1);
 
-    public static final Map<String, Integer> varSigToVarId = new ConcurrentHashMap<>();
-    public static final List<Pair<Integer, String>> unsavedVarIdToVarSig = new ArrayList<>();
+    private final AtomicInteger nextLocId = new AtomicInteger(1);
 
-    public static final ArrayList<String> varSigs = new ArrayList<>(); {
-        varSigs.ensureCapacity(5000);
-        varSigs.add(null);
-    }
+    private final ConcurrentHashMap<String, Integer> varSigToVarId = new ConcurrentHashMap<>();
 
-    public static final Map<String, Integer> stmtSigToLocId = new ConcurrentHashMap<>();
-    public static final Map<Integer, String> locIdToStmtSig = new HashMap<>();
-    public static final List<Pair<Integer, String>> unsavedLocIdToStmtSig = new ArrayList<>();
+    private final String[] varIdToVarSig = new String[MAX_NUM_OF_VARIABLES];
 
-    public static final Set<Integer> volatileVariableIds = Collections
+    private final ConcurrentHashMap<String, Integer> locSigToLocId = new ConcurrentHashMap<>();
+
+    private final String[] locIdToLocSig = new String[MAX_NUM_OF_LOCATIONS];
+
+    protected final Set<Integer> volatileVarIds = Collections
             .newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
-    public static final List<Integer> unsavedVolatileVariableIds = new ArrayList<>();
 
-    private Metadata() { }
+    private static Metadata instance = new Metadata();
 
-    public static int getVariableId(String className, String fieldName) {
-        String sig = getVariableSignature(className, fieldName);
-        /* YilongL: the following double-checked locking is correct because
-         * varSigToId is a ConcurrentHashMap */
-        Integer variableId = varSigToVarId.get(sig);
-        if (variableId == null) {
-            synchronized (varSigToVarId) {
-                variableId = varSigToVarId.get(sig);
-                if (variableId == null) {
-                    variableId = varSigToVarId.size() + 1;
-                    varSigToVarId.put(sig, variableId);
-                    varSigs.add(sig);
-                    unsavedVarIdToVarSig.add(Pair.of(variableId, sig));
-                }
-            }
-        }
-
-        return variableId;
+    public static Metadata singleton() {
+        return instance;
     }
 
-    public static void addVolatileVariable(String cname, String fname) {
-        int varId = Metadata.getVariableId(cname, fname);
-        if (!volatileVariableIds.contains(varId)) {
-            synchronized (volatileVariableIds) {
-                if (!volatileVariableIds.contains(varId)) {
-                    volatileVariableIds.add(varId);
-                    unsavedVolatileVariableIds.add(varId);
-                }
-            }
+    public int getVariableId(String cname, String fname) {
+        String varSig = getVariableSig(cname, fname);
+        Integer varId = varSigToVarId.get(varSig);
+        if (varId == null) {
+            varSigToVarId.putIfAbsent(varSig, nextVarId.getAndIncrement());
+            varId = varSigToVarId.get(varSig);
+            varIdToVarSig[varId] = varSig;
         }
+        return varId;
     }
 
-    public static int getLocationId(String sig) {
-        Integer locId = stmtSigToLocId.get(sig);
+    public void addVolatileVariable(String cname, String fname) {
+        volatileVarIds.add(getVariableId(cname, fname));
+    }
+
+    public int getLocationId(String locSig) {
+        Integer locId = locSigToLocId.get(locSig);
         if (locId == null) {
-            synchronized (stmtSigToLocId) {
-                locId = stmtSigToLocId.get(sig);
-                if (locId == null) {
-                    locId = stmtSigToLocId.size() + 1;
-                    stmtSigToLocId.put(sig, locId);
-                    if (Configuration.profile) {
-                        locIdToStmtSig.put(locId, sig);
-                    }
-                    unsavedLocIdToStmtSig.add(Pair.of(locId, sig));
-                }
-            }
+            locSigToLocId.putIfAbsent(locSig, nextLocId.getAndIncrement());
+            locId = locSigToLocId.get(locSig);
+            locIdToLocSig[locId] = locSig;
         }
-
         return locId;
     }
 
-    public static String getLocationClass(int locId) {
-        String stmtSig;
-        synchronized (stmtSigToLocId) {
-            stmtSig = locIdToStmtSig.get(locId);
-        }
-        String className;
-        if (stmtSig != null) {
-            className = stmtSig.substring(0, stmtSig.indexOf("("));
-            className = stmtSig.substring(0, className.lastIndexOf("."));
-        } else {
-            // locId is 0
-            className = "N/A";
-        }
-        return className;
+    public String getLocationSig(int locId) {
+        return locIdToLocSig[locId];
     }
 
-    private static String getVariableSignature(String className, String fieldName) {
-        return className + "." + fieldName;
+    private String getVariableSig(String cname, String fname) {
+        return cname + "." + fname;
     }
 
-    /**
-     * Resolves the declaring class of a given field.
-     *
-     * @param loader
-     *            the loader that can be used to locate the owner class of the
-     *            field
-     * @param cname
-     *            the field's owner class name
-     * @param fname
-     *            the field's name
-     * @return the {@link ClassFile} of the declaring class or {@code null} if
-     *         the resolution fails
-     */
-    public static ClassFile resolveDeclaringClass(ClassLoader loader, String cname, String fname) {
-        Deque<String> deque = new ArrayDeque<>();
-        deque.add(cname);
-        while (!deque.isEmpty()) {
-            cname = deque.removeFirst();
-            ClassFile classFile = ClassFile.getInstance(loader, cname);
-            if (classFile != null) {
-                if (classFile.getFieldNames().contains(fname)) {
-                    return classFile;
-                } else {
-                    String superName = classFile.getSuperName();
-                    // the superName of any interface is Object
-                    if (superName != null && !superName.equals("java/lang/Object")) {
-                        deque.addLast(superName);
-                    }
-                    deque.addAll(classFile.getInterfaces());
-                }
-            }
+    public void writeTo(ObjectOutputStream os) throws IOException {
+        os.writeObject(new HashSet<>(volatileVarIds));
+        os.writeObject(Arrays.copyOf(varIdToVarSig, nextVarId.get()));
+        os.writeObject(Arrays.copyOf(locIdToLocSig, nextLocId.get()));
+        os.close();
+    }
+
+    public static Object[] readFrom(ObjectInputStream is) throws ClassNotFoundException, IOException {
+        Object[] objects = new Object[3];
+        for (int i = 0; i < objects.length; i++) {
+            objects[i] = is.readObject();
         }
-        return null;
+        return objects;
     }
-
 }

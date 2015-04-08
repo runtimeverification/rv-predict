@@ -28,12 +28,14 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.log;
 
-import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.EventType;
+import com.runtimeverification.rvpredict.util.Constants;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Class encapsulating functionality for recording events
@@ -41,41 +43,30 @@ import java.util.List;
  * @author TraianSF
  *
  */
-public class LoggingEngine {
+public class PersistentLoggingEngine implements ILoggingEngine, Constants {
 
     private volatile boolean shutdown = false;
 
-    private final LoggingFactory loggingFactory;
+    /**
+     * Global ID of the next event.
+     */
+    private final AtomicLong globalEventID = new AtomicLong(1);
 
-    private final MetadataLogger metadataLogger;
+    private final LoggingFactory loggingFactory;
 
     private final List<EventWriter> eventWriters = new ArrayList<>();
 
     private final ThreadLocalEventWriter threadLocalEventWriter = new ThreadLocalEventWriter();
 
-    private final FastEventProfiler eventProfiler;
-
-    public LoggingEngine(LoggingFactory loggingFactory) {
+    public PersistentLoggingEngine(LoggingFactory loggingFactory) {
         this.loggingFactory = loggingFactory;
-        metadataLogger = new MetadataLogger(this);
-        eventProfiler = Configuration.profile ? new FastEventProfiler() : null;
-    }
-
-    public LoggingFactory getLoggingFactory() {
-        return loggingFactory;
-    }
-
-    public void startLogging() {
-        Thread metadataLoggerThread = new Thread(metadataLogger, "Metadata logger");
-        metadataLogger.setOwner(metadataLoggerThread);
-        metadataLoggerThread.setDaemon(true);
-        metadataLoggerThread.start();
     }
 
     /**
      * Method invoked at the end of the logging task, to insure that
      * all data is recorded before concluding.
      */
+    @Override
     public void finishLogging() throws IOException, InterruptedException {
         shutdown = true;
 
@@ -85,11 +76,7 @@ public class LoggingEngine {
             }
         }
 
-        metadataLogger.finishLogging();
-
-        if (Configuration.profile) {
-            eventProfiler.printProfilingResult();
-        }
+        Metadata.singleton().writeTo(loggingFactory.createMetadataOS());
     }
 
     /**
@@ -98,7 +85,53 @@ public class LoggingEngine {
      * @see {@link EventItem} for a more elaborate description of the
      *      parameters.
      */
-    public void log(EventType eventType, long gid, long tid, int locId, int addrl, int addrr,
+    @Override
+    public void log(EventType eventType, int locId, int addrl, int addrr, long value1, long value2) {
+        long tid = Thread.currentThread().getId();
+        long gid;
+        switch (eventType) {
+        case ATOMIC_READ:
+            gid = globalEventID.getAndAdd(3);
+            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, addrl, 0);
+            log(EventType.READ,         gid + 1, tid, locId, addrl,         addrr, value1);
+            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, ATOMIC_LOCK_C, addrl, 0);
+            break;
+        case ATOMIC_WRITE:
+            gid = globalEventID.getAndAdd(3);
+            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, addrl, 0);
+            log(EventType.WRITE,        gid + 1, tid, locId, addrl,         addrr, value1);
+            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, ATOMIC_LOCK_C, addrl, 0);
+            break;
+        case ATOMIC_READ_THEN_WRITE:
+            gid = globalEventID.getAndAdd(4);
+            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, addrl, 0);
+            log(EventType.READ,         gid + 1, tid, locId, addrl,         addrr, value1);
+            log(EventType.WRITE,        gid + 2, tid, locId, addrl,         addrr, value2);
+            log(EventType.WRITE_UNLOCK, gid + 3, tid, locId, ATOMIC_LOCK_C, addrl, 0);
+            break;
+        case READ:
+        case WRITE:
+        case WRITE_LOCK:
+        case WRITE_UNLOCK:
+        case READ_LOCK:
+        case READ_UNLOCK:
+        case WAIT_REL:
+        case WAIT_ACQ:
+        case START:
+        case JOIN:
+        case CLINIT_ENTER:
+        case CLINIT_EXIT:
+        case INVOKE_METHOD:
+        case FINISH_METHOD:
+            gid = globalEventID.getAndIncrement();
+            log(eventType, gid, tid, locId, addrl, addrr, value1);
+            break;
+        default:
+            assert false;
+        }
+    }
+
+    private void log(EventType eventType, long gid, long tid, int locId, int addrl, int addrr,
             long value) {
         EventWriter writer = threadLocalEventWriter.get();
         if (writer != null) {
@@ -108,13 +141,6 @@ public class LoggingEngine {
                 throw new RuntimeException(e);
             }
         }
-    }
-
-    /**
-     * Updates the event profiler with the location of the new event.
-     */
-    public void profile(int locId) {
-        eventProfiler.update(locId);
     }
 
     private class ThreadLocalEventWriter extends ThreadLocal<EventWriter> {

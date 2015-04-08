@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import org.apache.tools.ant.DirectoryScanner;
 
@@ -29,12 +30,19 @@ public class OfflineLoggingFactory implements LoggingFactory {
     private final Configuration config;
     private Collection<EventReader> readers;
     private Iterator<EventReader> readersIter;
-    private final Set<Integer> volatileFieldIds = new HashSet<>();
-    private final Map<Integer, String> varIdToVarSig = new HashMap<>();
-    private final Map<Integer, String> locIdToStmtSig = new HashMap<>();
+    private Set<Integer> volatileFieldIds;
+    private String[] varIdToVarSig;
+    private String[] locIdToLocSig;
 
     public OfflineLoggingFactory(Configuration config) {
+        this(config, false);
+    }
+
+    public OfflineLoggingFactory(Configuration config, boolean isWrite) {
         this.config = config;
+        if (!isWrite) {
+            readMetadata();
+        }
     }
 
     /**
@@ -80,51 +88,36 @@ public class OfflineLoggingFactory implements LoggingFactory {
 
     @Override
     public String getStmtSig(int locId) {
-        if (locIdToStmtSig.isEmpty()) readMetadata();
-        return locIdToStmtSig.get(locId);
+        return locIdToLocSig[locId];
     }
 
     @Override
     public boolean isVolatile(int fieldId) {
-        if (volatileFieldIds.isEmpty()) readMetadata();
         return volatileFieldIds.contains(fieldId);
     }
 
     @Override
     public String getVarSig(int fieldId) {
-        if (varIdToVarSig.isEmpty()) readMetadata();
-        return varIdToVarSig.get(fieldId);
+        return varIdToVarSig[fieldId];
     }
 
     @SuppressWarnings("unchecked")
     public void readMetadata() {
         try (ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
                 new FileInputStream(Paths.get(config.getLogDir(), METADATA_BIN).toFile())))) {
-            List<Map.Entry<Integer, String>> list;
-            while (true) {
-                try {
-                    volatileFieldIds.addAll((Collection<Integer>) metadataIS.readObject());
-                } catch (EOFException e) {
-                    break;
-                }
-                list = (List<Map.Entry<Integer, String>>) metadataIS.readObject();
-                for (Map.Entry<Integer, String> entry : list) {
-                    varIdToVarSig.put(entry.getKey(), entry.getValue());
-                }
-                list = (List<Map.Entry<Integer, String>>) metadataIS.readObject();
-                for (Map.Entry<Integer, String> entry : list) {
-                    locIdToStmtSig.put(entry.getKey(), entry.getValue());
-                }
-            }
-            return;
+            Object[] objects = Metadata.readFrom(metadataIS);
+            volatileFieldIds = (Set<Integer>) objects[0];
+            varIdToVarSig = (String[]) objects[1];
+            locIdToLocSig = (String[]) objects[2];
         } catch (FileNotFoundException e) {
             System.err.println("Error: Metadata file not found.");
             System.err.println(e.getMessage());
+            System.exit(1);
         } catch (ClassNotFoundException | IOException e) {
             System.err.println("Error: Metadata for the logged execution is corrupted.");
             System.err.println(e.getMessage());
+            System.exit(1);
         }
-        System.exit(1);
     }
 
     @Override

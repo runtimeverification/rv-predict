@@ -107,10 +107,10 @@
                         </goals>
                         <configuration>
                             <serverId>rv-site</serverId>
-                            <url>sftp://grigore@ftp.runtimeverification.com/</url>
+                            <url>scp://grigore@ftp.runtimeverification.com/</url>
                             <fromDir>target</fromDir>
                             <includes>rv-predict-installer*.jar</includes>
-                            <toDir>/home/grigore/public_html/runtimeverification.com/predict/${project.version}</toDir>
+                            <toDir>/var/www/predict/${project.version}</toDir>
                         </configuration>
                     </execution>
                 </executions>

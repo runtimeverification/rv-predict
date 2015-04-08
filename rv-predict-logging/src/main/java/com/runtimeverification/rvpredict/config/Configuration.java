@@ -175,7 +175,7 @@ public class Configuration implements Constants {
     }
 
     private void initExcludeList() {
-        String excludes = Configuration.excludes;
+        String excludes = this.excludes;
         if (excludes == null) {
             excludeList.addAll(getDefaultPatterns(DEFAULT_EXCLUDES));
         } else {
@@ -254,7 +254,7 @@ public class Configuration implements Constants {
 
     public final static String opt_event_profile = "--profile";
     @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1000")
-    public static boolean profile;
+    private boolean profile;
 
     public final static String opt_only_log = "--log";
     @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1005")
@@ -268,12 +268,12 @@ public class Configuration implements Constants {
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include." +
             "\nPrefix with + to add to the default included packages", hidden = true, descriptionKey = "1025")
-    public static String includes;
+    public String includes;
 
     public final static String opt_exclude = "--exclude";
     @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude." +
             "\nPrefix with + to add to the default excluded packages", hidden = true, descriptionKey = "1030")
-    public static String excludes;
+    public String excludes;
 
     private final static String ONLINE_PREDICTION = "ONLINE_PREDICTION";
     private final static String OFFLINE_PREDICTION = "OFFLINE_PREDICTION";
@@ -559,6 +559,10 @@ public class Configuration implements Constants {
      */
     public String getLogDir() {
         return log_dir;
+    }
+
+    public boolean isProfiling() {
+        return profile;
     }
 
     /**

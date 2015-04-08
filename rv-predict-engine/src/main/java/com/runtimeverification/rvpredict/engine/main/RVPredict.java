@@ -91,13 +91,10 @@ public class RVPredict implements LoggingTask {
             ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(config.multithreaded?4:1,
                     new ThreadFactory() {
                         int id = 0;
-                        final UncaughtExceptionHandler eh = new UncaughtExceptionHandler() {
-                            @Override
-                            public void uncaughtException(Thread t, Throwable e) {
-                                System.err.println("Uncaught exception in " + t + ":");
-                                e.printStackTrace();
-                                System.exit(1);
-                            }
+                        final UncaughtExceptionHandler eh = (t, e) -> {
+                            System.err.println("Uncaught exception in " + t + ":");
+                            e.printStackTrace();
+                            System.exit(1);
                         };
 
                         @Override

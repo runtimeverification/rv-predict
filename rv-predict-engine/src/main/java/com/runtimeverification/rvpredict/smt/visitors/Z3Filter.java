@@ -46,9 +46,11 @@ public class Z3Filter {
 
         @Override
         public void visit(BooleanConstant constant) throws Z3Exception {
-            if (constant == BooleanConstant.TRUE) result = context.mkTrue();
-            else if (constant == BooleanConstant.FALSE) result = context.mkFalse();
-            else throw new UnsupportedOperationException("Unknown boolean constant " + constant);
+            if (constant == BooleanConstant.TRUE) {
+                result = context.mkTrue();
+            } else if (constant == BooleanConstant.FALSE) {
+                result = context.mkFalse();
+            } else throw new UnsupportedOperationException("Unknown boolean constant " + constant);
         }
 
         public BoolExpr[] transformFormulas(Collection<SMTFormula> smtFormulas) {

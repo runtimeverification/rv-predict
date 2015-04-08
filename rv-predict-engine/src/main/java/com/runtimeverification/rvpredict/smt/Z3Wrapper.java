@@ -84,6 +84,7 @@ public class Z3Wrapper implements Solver {
     public boolean checkQueryWithLibrary(FormulaTerm query) {
         boolean result;
         try {
+            //TODO(TraianSF,YilongL):  Consider making Context thread-local.
             com.microsoft.z3.Context ctx = new com.microsoft.z3.Context();
             final Z3Filter z3Filter = new Z3Filter(ctx);
 

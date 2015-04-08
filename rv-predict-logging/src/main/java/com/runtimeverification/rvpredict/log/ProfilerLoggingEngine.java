@@ -28,6 +28,7 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.log;
 
+import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.EventType;
 
 /**
@@ -36,7 +37,11 @@ import com.runtimeverification.rvpredict.trace.EventType;
  */
 public class ProfilerLoggingEngine implements ILoggingEngine {
 
-    private final FastEventProfiler eventProfiler = new FastEventProfiler();
+    private final FastEventProfiler eventProfiler;
+
+    public ProfilerLoggingEngine(Metadata metadata) {
+        eventProfiler = new FastEventProfiler(metadata);
+    }
 
     @Override
     public void finishLogging() {

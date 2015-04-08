@@ -1,11 +1,13 @@
 package com.runtimeverification.rvpredict.trace;
 
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.EventItem;
-import com.runtimeverification.rvpredict.log.LoggingFactory;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,7 +27,9 @@ public class TraceCache {
 
     private long nextIdx = 1;
 
-    private final LoggingFactory loggingFactory;
+    private int nextLogFileId = 1;
+
+    private final Configuration config;
 
     private final TraceState crntState;
 
@@ -34,10 +38,10 @@ public class TraceCache {
      *
      * @param loggingFactory suppling additional information about the nature of the logs.
      */
-    public TraceCache(LoggingFactory loggingFactory) {
-        this.loggingFactory = loggingFactory;
+    public TraceCache(Configuration config, Metadata metadata) {
+        this.config = config;
         this.indexes = new HashMap<>();
-        this.crntState = new TraceState(loggingFactory);
+        this.crntState = new TraceState(metadata);
     }
 
     /**
@@ -52,8 +56,7 @@ public class TraceCache {
      * @return a {@link Trace} representing the trace segment
      *         read
      */
-    public Trace getTrace(long fromIndex, long toIndex) throws IOException,
-            InterruptedException {
+    public Trace getTrace(long fromIndex, long toIndex) throws IOException {
         Trace trace = new Trace(crntState, (int) (toIndex - fromIndex));
         crntState.setCurrentTraceWindow(trace);
         assert nextIdx == fromIndex;
@@ -78,7 +81,7 @@ public class TraceCache {
      *
      * @return the next event in the trace
      */
-    private EventItem getNextEvent() throws IOException, InterruptedException {
+    private EventItem getNextEvent() throws IOException {
         if (!indexes.containsKey(nextIdx)) {
             try {
                 updateIndexes(nextIdx);
@@ -105,11 +108,14 @@ public class TraceCache {
         return nextEvent;
     }
 
-    private void updateIndexes(long index) throws InterruptedException, IOException {
+    private void updateIndexes(long index) throws IOException {
         EventItem event;
         do {
-            EventReader reader = loggingFactory.getEventReader();
-            if (reader == null) return;
+            Path path = config.getTraceFilePath(nextLogFileId++);
+            if (!path.toFile().exists()) {
+                return;
+            }
+            EventReader reader = new EventReader(path);
             event = reader.readEvent();
             indexes.put(event.GID, MutablePair.of(reader, event));
         } while (event.GID != index);

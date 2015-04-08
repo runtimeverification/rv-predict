@@ -10,7 +10,7 @@ public interface ILoggingEngine {
      * Method invoked at the end of the logging task, to insure that
      * all data is recorded before concluding.
      */
-    void finishLogging() throws IOException, InterruptedException;
+    void finishLogging() throws IOException;
 
     /**
      * Logs an event item to the trace.

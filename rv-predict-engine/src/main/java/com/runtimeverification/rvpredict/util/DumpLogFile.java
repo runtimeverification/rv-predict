@@ -3,7 +3,7 @@ package com.runtimeverification.rvpredict.util;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.EventItem;
-import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.Event;
 import com.runtimeverification.rvpredict.trace.EventUtils;
 
@@ -30,14 +30,14 @@ public class DumpLogFile {
         Path directory = path.getParent();
         Configuration configuration = Configuration.instance(
                 new String[] { "--dir", directory.toString() });
-        OfflineLoggingFactory loggingFactory = new OfflineLoggingFactory(configuration);
+        Metadata metadata = Metadata.readFrom(configuration.getMetadataPath());
         String file = args[0];
         try (EventReader reader = new EventReader(Paths.get(file))) {
             System.out.println("Dumping events from " + file);
             while (true) {
                 EventItem eventItem = reader.readEvent();
                 Event event = EventUtils.of(eventItem);
-                System.out.printf("%-60s %s%n", event.toString(), loggingFactory.getStmtSig(event.getLocId()));
+                System.out.printf("%-60s %s%n", event.toString(), metadata.getLocationSig(event.getLocId()));
             }
         } catch (EOFException ignored) {
         } catch (IOException e) {

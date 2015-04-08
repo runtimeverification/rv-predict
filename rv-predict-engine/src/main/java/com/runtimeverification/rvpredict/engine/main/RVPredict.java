@@ -48,9 +48,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
-import com.runtimeverification.rvpredict.log.LoggingFactory;
-import com.runtimeverification.rvpredict.log.LoggingTask;
-import com.runtimeverification.rvpredict.log.OfflineLoggingFactory;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
 import com.runtimeverification.rvpredict.smt.formula.Formula;
 import com.runtimeverification.rvpredict.trace.Event;
@@ -71,22 +69,20 @@ import com.runtimeverification.rvpredict.violation.Violation;
  * Splits the log in segments of length {@link Configuration#windowSize},
  * each of them being executed as a {@link RaceDetectorTask} task.
  */
-public class RVPredict implements LoggingTask {
+public class RVPredict {
 
     private final Set<Violation> violations = Sets.newConcurrentHashSet();
     private final Configuration config;
     private final TraceCache traceCache;
-    private final LoggingFactory loggingFactory;
-    private Thread owner;
+    private final Metadata metadata;
 
-    public RVPredict(Configuration config, LoggingFactory loggingFactory) {
+    public RVPredict(Configuration config) {
         this.config = config;
-        this.loggingFactory = loggingFactory;
-        traceCache = new TraceCache(loggingFactory);
+        this.metadata = Metadata.readFrom(config.getMetadataPath());
+        traceCache = new TraceCache(config, metadata);
     }
 
-    @Override
-    public void run() {
+    public void start() {
         try {
             ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(config.multithreaded?4:1,
                     new ThreadFactory() {
@@ -120,10 +116,6 @@ public class RVPredict implements LoggingTask {
             if (violations.size() == 0) {
                 config.logger.report("No races found.", Logger.MSGTYPE.INFO);
             }
-        } catch (InterruptedException e) {
-            System.err.println("Error: prediction interrupted.");
-            System.err.println(e.getMessage());
-            System.exit(1);
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());
@@ -150,17 +142,6 @@ public class RVPredict implements LoggingTask {
         }
     }
 
-    @Override
-    public void finishLogging() throws InterruptedException {
-        loggingFactory.finishLogging();
-        owner.join();
-    }
-
-    @Override
-    public void setOwner(Thread owner) {
-        this.owner = owner;
-    }
-
     public static Thread getPredictionThread(Configuration config, ILoggingEngine loggingEngine) {
         return new Thread("Cleanup Thread") {
             @Override
@@ -169,9 +150,6 @@ public class RVPredict implements LoggingTask {
                     loggingEngine.finishLogging();
                 } catch (IOException e) {
                     System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
-                    System.err.println(e.getMessage());
-                } catch (InterruptedException e) {
-                    System.err.println("Warning: Execution is being forcefully ended. Log data might be lost.");
                     System.err.println(e.getMessage());
                 }
 
@@ -229,7 +207,7 @@ public class RVPredict implements LoggingTask {
      */
     public static void main(String[] args) {
         Configuration config = Configuration.instance(args);
-        new RVPredict(config, new OfflineLoggingFactory(config)).run();
+        new RVPredict(config).start();
     }
 
     /**
@@ -353,7 +331,7 @@ public class RVPredict implements LoggingTask {
                                 if ((e1 instanceof WriteEvent || e2 instanceof WriteEvent)
                                         && !trace.isClinitMemoryAccess(e1)
                                         && !trace.isClinitMemoryAccess(e2)) {
-                                    potentialRaces.add(new Race(e1, e2, trace, loggingFactory));
+                                    potentialRaces.add(new Race(e1, e2, trace, metadata));
                                 }
                             }
                         }

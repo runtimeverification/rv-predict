@@ -298,6 +298,7 @@ public class Configuration implements Constants {
     /**
      * Whether using multithreading in prediction phase is OK.
      * Not OK if using non-thread-safe libraries (e.g., libz3).
+     * TODO(TraianSF): Get rid of this option. Apparently libz3 is thread-safe http://stackoverflow.com/questions/25542200/multi-threaded-z3
      */
     public boolean multithreaded = false;
 

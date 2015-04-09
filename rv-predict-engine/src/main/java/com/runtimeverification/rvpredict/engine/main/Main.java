@@ -6,6 +6,8 @@ import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import com.runtimeverification.rvpredict.config.Configuration;
@@ -90,8 +92,12 @@ public class Main {
      * @return the -javaagent options corresponding to the user command line
      */
     private static String createAgentArgs() {
+        return createAgentArgs(Arrays.asList(config.getRVPredictArguments()));
+    }
+
+    static String createAgentArgs(Collection<String> rvPredictArguments) {
         StringBuilder agentOptions = new StringBuilder();
-        for (String arg : config.getRVPredictArguments()) {
+        for (String arg : rvPredictArguments) {
             agentOptions.append(escapeString(arg)).append(" ");
         }
         return agentOptions.toString();

@@ -33,7 +33,7 @@ public class Main {
                 System.exit(1);
             }
 
-            if (config.isLogging()) {
+            if (config.getLogDir() != null) {
                 File outdirFile = new File(config.getLogDir());
                 if (!outdirFile.exists()) {
                     outdirFile.mkdir();

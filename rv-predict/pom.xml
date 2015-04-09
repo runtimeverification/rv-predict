@@ -15,11 +15,6 @@
         </dependency>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>rv-predict-engine</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>rv-predict-agent</artifactId>
             <version>${project.version}</version>
         </dependency>

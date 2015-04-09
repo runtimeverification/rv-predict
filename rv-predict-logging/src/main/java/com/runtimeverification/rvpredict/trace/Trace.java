@@ -355,7 +355,7 @@ public class Trace {
     }
 
     public void addRawEvent(Event event) {
-//        System.err.println(event + " at " + loggingFactory.getStmtSig(event.getLocId()));
+//        System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
         rawEventsBuilder.add(event);
         updateTraceState(event);
 
@@ -443,7 +443,7 @@ public class Trace {
      * @param event
      */
     private void addEvent(Event event) {
-//        System.err.println(event + " at " + loggingFactory.getStmtSig(event.getLocId()));
+//        System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
         long tid = event.getTID();
         threadIds.add(tid);
 

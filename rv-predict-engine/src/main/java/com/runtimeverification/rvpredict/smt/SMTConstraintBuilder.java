@@ -69,8 +69,6 @@ public class SMTConstraintBuilder {
 
     private final LockSetEngine lockEngine = new LockSetEngine();
 
-    private final SMTFilter smtFilter;
-
     private final Solver solver;
 
     private final Map<MemoryAccessEvent, Formula> abstractPhi = Maps.newHashMap();
@@ -89,12 +87,11 @@ public class SMTConstraintBuilder {
     private final Set<MemoryAccessEvent> computedConcretePhi = Sets.newHashSet();
 
     // constraints below
-    private final FormulaTerm.Builder smtlibAssertionBuilder = FormulaTerm.andBuilder();
+    private final FormulaTerm.Builder smtlibAssertionBuilder = AndFormula.andBuilder();
 
     public SMTConstraintBuilder(Configuration config, Trace trace) {
         this.trace = trace;
         this.groupId = new int[trace.capacity()];
-        this.smtFilter = SMTFilterFactory.getSMTFilter(config);
         this.solver = new Z3Wrapper(config);
     }
 
@@ -313,7 +310,7 @@ public class SMTConstraintBuilder {
             Formula case1 = BooleanConstant.FALSE;
             if (thrdImdWrtPred == null &&
                     trace.getInitValueOf(event.getAddr()) == event.getValue()) {
-                FormulaTerm.Builder formulaBuilder = FormulaTerm.andBuilder();
+                FormulaTerm.Builder formulaBuilder = AndFormula.andBuilder();
                 for (WriteEvent write : predWriteSet) {
                     formulaBuilder.add(getAsstHappensBefore(event, write));
                 }
@@ -323,7 +320,7 @@ public class SMTConstraintBuilder {
             /* case 2: the dependent read reads a previously written value */
             FormulaTerm.Builder case2Builder = FormulaTerm.orBuilder();
             for (WriteEvent write : sameValPredWriteSet) {
-                FormulaTerm.Builder formulaBuilder = FormulaTerm.andBuilder();
+                FormulaTerm.Builder formulaBuilder = AndFormula.andBuilder();
                 formulaBuilder.add(getAbstractFeasibilityConstraint(write),
                         getConcreteFeasibilityConstraint(write));
                 formulaBuilder.add(getAsstHappensBefore(write, event));
@@ -361,7 +358,7 @@ public class SMTConstraintBuilder {
     }
 
     public boolean isRace(Event e1, Event e2, Formula... casualConstraints) {
-        FormulaTerm.Builder raceAssertionBuilder = FormulaTerm.andBuilder();
+        FormulaTerm.Builder raceAssertionBuilder = AndFormula.andBuilder();
         raceAssertionBuilder.add(smtlibAssertionBuilder.build());
         for (Entry<MemoryAccessEvent, Formula> entry : abstractPhi.entrySet()) {
             raceAssertionBuilder.add(FormulaTerm.BOOL_EQUAL(
@@ -379,7 +376,7 @@ public class SMTConstraintBuilder {
             raceAssertionBuilder.add(casualConstraint);
         }
 
-        return solver.isSat(smtFilter.getSMTQuery(raceAssertionBuilder.build()));
+        return solver.isSat(raceAssertionBuilder.build());
     }
 
     public void finish() {

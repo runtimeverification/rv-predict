@@ -35,7 +35,7 @@ public class SMTTerm<Operation extends SMTOperation, Formula extends SMTFormula>
     }
 
     @Override
-    public void accept(Visitor visitor) {
+    public void accept(Visitor visitor) throws Exception {
         visitor.visit(this);
     }
 

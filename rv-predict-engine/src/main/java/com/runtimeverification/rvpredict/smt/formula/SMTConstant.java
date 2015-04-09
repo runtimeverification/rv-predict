@@ -7,7 +7,7 @@ import com.runtimeverification.rvpredict.smt.visitors.Visitor;
  */
 public abstract class SMTConstant extends SMTASTNode implements SMTFormula {
     @Override
-    public void accept(Visitor visitor) {
+    public void accept(Visitor visitor) throws Exception {
         visitor.visit(this);
     }
 

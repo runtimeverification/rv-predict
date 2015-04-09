@@ -214,47 +214,39 @@ public class Configuration implements Constants {
         return patternList;
     }
 
-    public enum OS {
-        OSX(true, "osx"), UNIX(true, "linux"), UNKNOWN(false, null), WIN(false, "cygwin");
 
-        private OS(boolean isPosix, String libDir) {
+    public enum OS {
+        OSX(true), LINUX(true), UNKNOWN(false), WINDOWS(false);
+
+        private OS(boolean isPosix) {
             this.isPosix = isPosix;
-            String arch = System.getProperty("os.arch");
-            this.libDir = getBasePath() + File.separator + "lib" + File.separator + "native"
-                    + File.separator + libDir + File.separator
-                    + (arch.toLowerCase().contains("64") ? "64" : "32");
         }
 
         public final boolean isPosix;
-        public final String libDir;
 
         public static OS current() {
             String osString = System.getProperty("os.name").toLowerCase();
             if (osString.contains("nix") || osString.contains("nux"))
-                return OS.UNIX;
+                return OS.LINUX;
             else if (osString.contains("win"))
-                return OS.WIN;
+                return OS.WINDOWS;
             else if (osString.contains("mac"))
                 return OS.OSX;
             else
                 return OS.UNKNOWN;
         }
 
-        public File getNativeExecutable(String executable) {
+        public String getNativeExecutable(String executable) {
             if (this == UNKNOWN) {
                 System.err.println("Unknown OS type. " + System.getProperty("os.name")
                         + " not recognized. "
                         + "Please contact RV-Predict developers with details of your OS.");
                 System.exit(1);
             }
-            if (this == WIN) {
+            if (this == WINDOWS) {
                 executable = executable + ".exe";
             }
-            File f = new File(libDir, executable);
-            if (isPosix) {
-                f.setExecutable(true, false);
-            }
-            return f;
+            return executable;
         }
     }
 
@@ -305,8 +297,15 @@ public class Configuration implements Constants {
     public boolean checkVolatile;
 
     final static String opt_smt_solver = "--solver";
-    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2050")
+    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3,libz3].", hidden = true, descriptionKey = "2050")
     public String smt_solver = "z3";
+
+    /**
+     * Whether using multithreading in prediction phase is OK.
+     * Not OK if using non-thread-safe libraries (e.g., libz3).
+     * TODO(TraianSF): Get rid of this option. Apparently libz3 is thread-safe http://stackoverflow.com/questions/25542200/multi-threaded-z3
+     */
+    public boolean multithreaded = false;
 
     final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
@@ -462,6 +461,7 @@ public class Configuration implements Constants {
         for (int i = startOfJavaArgs; i < args.length; i++) {
             javaArgs.add(args[i]);
         }
+        multithreaded = !smt_solver.equals("libz3");
     }
 
     public void exclusiveOptionsFailure(String opt1, String opt2) {

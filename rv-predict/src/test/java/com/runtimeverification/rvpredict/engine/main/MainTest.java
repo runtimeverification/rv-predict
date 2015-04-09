@@ -47,6 +47,11 @@ public class MainTest {
         return path;
     }
 
+    private static String rvPredictJar = basePath + separator + "lib" + separator + "rv-predict.jar";
+    private static String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
+    private static List<String> agentCommand = Arrays.asList(new String[]{
+            java, "-ea", "-Xbootclasspahth/a:" + rvPredictJar});
+
     private static String binPath = basePath + separator + "bin" + separator;
     private final TestHelper helper;
     private final String name;
@@ -54,19 +59,25 @@ public class MainTest {
     private final List<String> args;
 
 
-    public MainTest(String name, String specPath, int numOfRuns, List<String> rvArguments, List<String> arguments) {
+    public MainTest(String name, String specPath, int numOfRuns, List<String> rvArguments, List<String> arguments,
+                    boolean agentTest) {
         this.name = name;
         this.numOfRuns = numOfRuns;
         helper = new TestHelper(specPath);
         args = new ArrayList<>();
-        if (Configuration.OS.current()== Configuration.OS.WINDOWS) {
-            args.add(binPath + "rv-predict.bat");
+        if (agentTest) {
+            args.addAll(agentCommand);
+            args.add("-javaagent:" + rvPredictJar + "=" + Main.createAgentArgs(rvArguments));
         } else {
-            args.add("/usr/bin/env");
-            args.add("bash");
-            args.add(binPath + "rv-predict");
+            if (Configuration.OS.current() == Configuration.OS.WINDOWS) {
+                args.add(binPath + "rv-predict.bat");
+            } else {
+                args.add("/usr/bin/env");
+                args.add("bash");
+                args.add(binPath + "rv-predict");
+            }
+            args.addAll(rvArguments);
         }
-        args.addAll(rvArguments);
         args.addAll(arguments);
     }
 
@@ -101,12 +112,13 @@ public class MainTest {
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                     Element test = (Element) node;
                     String name = test.getAttribute("name");
+                    boolean agentTest = test.hasAttribute("agent");
                     List<String> arguments = new ArrayList<>();
                     List<String> rvarguments = new ArrayList<>();
                     int numOfRuns = getNumOfRuns(test);
                     processArguments(rvarguments, test.getElementsByTagName("rvarg"));
                     processArguments(arguments, test.getElementsByTagName("arg"));
-                    data.add(new Object[]{ name, examplesPath, numOfRuns, rvarguments, arguments});
+                    data.add(new Object[]{ name, examplesPath, numOfRuns, rvarguments, arguments, agentTest});
                 }
             }
         } catch (ParserConfigurationException | SAXException | IOException e) {

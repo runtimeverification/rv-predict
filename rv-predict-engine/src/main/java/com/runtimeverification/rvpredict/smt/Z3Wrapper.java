@@ -75,8 +75,8 @@ public class Z3Wrapper implements Solver {
         } else if ("unsat".equals(result) || "unknown".equals(result)) {
             return false;
         } else {
-            System.err.println("Unexpected Z3 queryString result:\n" + result);
-            System.err.println("Query:\n" + queryString);
+            System.err.println("Unexpected Z3 query result:\n" + result);
+//            System.err.println("Query:\n" + queryString);
             return false;
         }
     }

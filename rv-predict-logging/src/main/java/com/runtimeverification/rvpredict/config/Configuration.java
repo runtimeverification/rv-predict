@@ -298,7 +298,7 @@ public class Configuration implements Constants {
 
     final static String opt_smt_solver = "--solver";
     @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3,libz3].", hidden = true, descriptionKey = "2050")
-    public String smt_solver = "z3";
+    public String smt_solver = "libz3";
 
     /**
      * Whether using multithreading in prediction phase is OK.

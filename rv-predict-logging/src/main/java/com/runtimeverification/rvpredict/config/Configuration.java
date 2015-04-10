@@ -300,13 +300,6 @@ public class Configuration implements Constants {
     @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3,libz3].", hidden = true, descriptionKey = "2050")
     public String smt_solver = "libz3";
 
-    /**
-     * Whether using multithreading in prediction phase is OK.
-     * Not OK if using non-thread-safe libraries (e.g., libz3).
-     * TODO(TraianSF): Get rid of this option. Apparently libz3 is thread-safe http://stackoverflow.com/questions/25542200/multi-threaded-z3
-     */
-    public boolean multithreaded = false;
-
     final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
     public long solver_timeout = 10;
@@ -461,7 +454,6 @@ public class Configuration implements Constants {
         for (int i = startOfJavaArgs; i < args.length; i++) {
             javaArgs.add(args[i]);
         }
-        multithreaded = !smt_solver.equals("libz3");
     }
 
     public void exclusiveOptionsFailure(String opt1, String opt2) {

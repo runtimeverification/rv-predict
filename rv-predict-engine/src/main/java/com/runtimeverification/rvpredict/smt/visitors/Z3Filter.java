@@ -4,7 +4,6 @@ import com.microsoft.z3.*;
 import com.runtimeverification.rvpredict.smt.formula.*;
 
 import java.util.Collection;
-import java.util.stream.Collectors;
 
 /**
  * @author TraianSF
@@ -50,18 +49,18 @@ public class Z3Filter {
                 result = context.mkTrue();
             } else if (constant == BooleanConstant.FALSE) {
                 result = context.mkFalse();
-            } else throw new UnsupportedOperationException("Unknown boolean constant " + constant);
+            } else {
+                throw new UnsupportedOperationException("Unknown boolean constant " + constant);
+            }
         }
 
-        public BoolExpr[] transformFormulas(Collection<SMTFormula> smtFormulas) {
-            return smtFormulas.stream().map(
-                    smtFormula -> {
-                        try {
-                            return (BoolExpr) transformFormula(smtFormula);
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    }).collect(Collectors.toList()).toArray(new BoolExpr[0]);
+        public BoolExpr[] transformFormulas(Collection<SMTFormula> smtFormulas) throws Exception {
+            BoolExpr[] formulas = new BoolExpr[smtFormulas.size()];
+            int i = 0;
+            for (SMTFormula f : smtFormulas) {
+                formulas[i++] = (BoolExpr) transformFormula(f);
+            }
+            return formulas;
         }
 
         @Override

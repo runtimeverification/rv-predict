@@ -31,6 +31,7 @@ package com.runtimeverification.rvpredict.log;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.LockSupport;
 
 import com.runtimeverification.rvpredict.config.Configuration;
@@ -63,6 +64,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
     private final Set<Violation> violations = new HashSet<>();
 
     private final AtomicInteger globalEventID = new AtomicInteger(0);
+
+    private final LongAdder published = new LongAdder();
 
     private long base = 0;
 
@@ -101,6 +104,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                 if (!closed) {
                     base += nextPos;
                     globalEventID.set(next);
+                    published.reset();
                 }
                 return 0;
                 // CRITICAL SECTION END
@@ -117,15 +121,20 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
     }
 
+    private void publish(int n) {
+        published.add(n);
+    }
+
     private void runRaceDetection(int numOfEventItems) {
+        /* makes sure that all the claimed slots have been published */
+        while (published.sum() < numOfEventItems) {
+            LockSupport.parkNanos(1);
+        }
+
         try {
             Trace trace = new Trace(crntState, config.windowSize);
             crntState.setCurrentTraceWindow(trace);
             for (int i = 0; i < numOfEventItems; i++) {
-                /* YilongL: strictly speaking it's possible (though rather
-                 * unlikely) that the following statement may read a stale value
-                 * of `items[i]' because the thread that claims slot i has not
-                 * finished writing. */
                 trace.addRawEvent(EventUtils.of(items[i]));
             }
             trace.finishedLoading();
@@ -159,18 +168,21 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         case FINISH_METHOD:
             off = claim(1);
             log(eventType, off, tid, locId, addrl, addrr, value1);
+            publish(1);
             break;
         case ATOMIC_READ:
             off = claim(3);
             log(EventType.WRITE_LOCK,   off,     tid, locId, ATOMIC_LOCK_C, addrl, 0);
             log(EventType.READ,         off + 1, tid, locId, addrl,         addrr, value1);
             log(EventType.WRITE_UNLOCK, off + 2, tid, locId, ATOMIC_LOCK_C, addrl, 0);
+            publish(3);
             break;
         case ATOMIC_WRITE:
             off = claim(3);
             log(EventType.WRITE_LOCK,   off,     tid, locId, ATOMIC_LOCK_C, addrl, 0);
             log(EventType.WRITE,        off + 1, tid, locId, addrl,         addrr, value1);
             log(EventType.WRITE_UNLOCK, off + 2, tid, locId, ATOMIC_LOCK_C, addrl, 0);
+            publish(3);
             break;
         case ATOMIC_READ_THEN_WRITE:
             off = claim(4);
@@ -178,6 +190,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             log(EventType.READ,         off + 1, tid, locId, addrl,         addrr, value1);
             log(EventType.WRITE,        off + 2, tid, locId, addrl,         addrr, value2);
             log(EventType.WRITE_UNLOCK, off + 3, tid, locId, ATOMIC_LOCK_C, addrl, 0);
+            publish(4);
             break;
         default:
             assert false;

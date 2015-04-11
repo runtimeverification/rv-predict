@@ -93,9 +93,12 @@ public class Configuration implements Constants {
          String [] ignores = new String[] {
                  COM_RUNTIMEVERIFICATION_RVPREDICT,
 
-                // lz4 library cannot be repackaged because it hard-codes some
-                // of its class names in the implementation
+                 // lz4 library cannot be repackaged because it hard-codes some
+                 // of its class names in the implementation
                  "net/jpountz/",
+
+                 // z3 native library cannot be repackaged
+                 "com/microsoft/z3",
 
                  // array type
                  "[",

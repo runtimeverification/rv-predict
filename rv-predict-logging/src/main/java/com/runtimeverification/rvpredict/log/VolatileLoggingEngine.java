@@ -69,13 +69,20 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
     private long base = 0;
 
+    /**
+     * [0, bound) of the {@link #items} array is used for storing valid event
+     * items. Positions starting from bound are junk area.
+     */
+    private final int bound;
+
     private final EventItem[] items;
 
     public VolatileLoggingEngine(Configuration config, Metadata metadata) {
         this.config = config;
         this.metadata = metadata;
         this.crntState = new TraceState(metadata);
-        this.items = new EventItem[config.windowSize * 2];
+        this.bound = config.windowSize;
+        this.items = new EventItem[bound + 4];
         for (int i = 0; i < items.length; i++) {
             items[i] = new EventItem();
         }
@@ -84,18 +91,23 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
     @Override
     public void finishLogging() {
         closed = true;
-        int n = globalEventID.getAndAdd(config.windowSize);
-        if (n < config.windowSize) {
+        int n = globalEventID.getAndAdd(bound); // block the items array for good
+        if (n <= bound) {
             // CRITICAL SECTION BEGIN
             runRaceDetection(n);
             // CRITICAL SECTION END
+        } else {
+            /* wait for the prediction on the last batch of events to finish */
+            while (globalEventID.get() != n + bound + 1) {
+                LockSupport.parkNanos(1);
+            }
         }
     }
 
     private int claim(int next) {
         int nextPos = globalEventID.getAndAdd(next);
-        if (nextPos + next > config.windowSize) {  // running out of slots
-            if (nextPos <= config.windowSize) {
+        if (nextPos + next > bound) {  // running out of slots
+            if (nextPos <= bound) {
                 // CRITICAL SECTION BEGIN
                 /* first thread that runs out of slots is responsible to run the prediction */
                 runRaceDetection(nextPos);
@@ -103,18 +115,23 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                 /* reset the counter */
                 if (!closed) {
                     base += nextPos;
-                    globalEventID.set(next);
                     published.reset();
+                    // CRITICAL SECTION END
+                    globalEventID.set(next); // must be placed at the end of the critical section
+                    return 0;
+                } else {
+                    /* signal the end of the last prediction */
+                    globalEventID.incrementAndGet();
+                    /* remaining unpublished events will be written to junk area and simply discarded */
+                    return bound;
                 }
-                return 0;
-                // CRITICAL SECTION END
             } else {
                 /* busy waiting until the counter is reset */
-                while (globalEventID.get() >= config.windowSize && !closed) {
+                while (globalEventID.get() >= bound && !closed) {
                     LockSupport.parkNanos(1);
                 }
                 /* try again, small chance to fail and get into busy waiting again */
-                return closed ? 0 : claim(next);
+                return closed ? bound : claim(next);
             }
         } else {    // on success
             return nextPos;
@@ -132,7 +149,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
 
         try {
-            Trace trace = new Trace(crntState, config.windowSize);
+            Trace trace = new Trace(crntState, bound);
             crntState.setCurrentTraceWindow(trace);
             for (int i = 0; i < numOfEventItems; i++) {
                 trace.addRawEvent(EventUtils.of(items[i]));
@@ -143,7 +160,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             }
         } catch (Throwable e) {
             e.printStackTrace();
-            System.exit(1);
+            /* cannot use System.exit because it may lead to deadlock */
+            Runtime.getRuntime().halt(1);
         }
     }
 

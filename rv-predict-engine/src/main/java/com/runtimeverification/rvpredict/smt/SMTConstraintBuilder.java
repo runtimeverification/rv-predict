@@ -87,7 +87,7 @@ public class SMTConstraintBuilder {
     private final Set<MemoryAccessEvent> computedConcretePhi = Sets.newHashSet();
 
     // constraints below
-    private final FormulaTerm.Builder smtlibAssertionBuilder = AndFormula.andBuilder();
+    private final FormulaTerm.Builder smtlibAssertionBuilder = FormulaTerm.andBuilder();
 
     public SMTConstraintBuilder(Configuration config, Trace trace) {
         this.trace = trace;
@@ -310,7 +310,7 @@ public class SMTConstraintBuilder {
             Formula case1 = BooleanConstant.FALSE;
             if (thrdImdWrtPred == null &&
                     trace.getInitValueOf(event.getAddr()) == event.getValue()) {
-                FormulaTerm.Builder formulaBuilder = AndFormula.andBuilder();
+                FormulaTerm.Builder formulaBuilder = FormulaTerm.andBuilder();
                 for (WriteEvent write : predWriteSet) {
                     formulaBuilder.add(getAsstHappensBefore(event, write));
                 }
@@ -320,7 +320,7 @@ public class SMTConstraintBuilder {
             /* case 2: the dependent read reads a previously written value */
             FormulaTerm.Builder case2Builder = FormulaTerm.orBuilder();
             for (WriteEvent write : sameValPredWriteSet) {
-                FormulaTerm.Builder formulaBuilder = AndFormula.andBuilder();
+                FormulaTerm.Builder formulaBuilder = FormulaTerm.andBuilder();
                 formulaBuilder.add(getAbstractFeasibilityConstraint(write),
                         getConcreteFeasibilityConstraint(write));
                 formulaBuilder.add(getAsstHappensBefore(write, event));
@@ -358,7 +358,7 @@ public class SMTConstraintBuilder {
     }
 
     public boolean isRace(Event e1, Event e2, Formula... casualConstraints) {
-        FormulaTerm.Builder raceAssertionBuilder = AndFormula.andBuilder();
+        FormulaTerm.Builder raceAssertionBuilder = FormulaTerm.andBuilder();
         raceAssertionBuilder.add(smtlibAssertionBuilder.build());
         for (Entry<MemoryAccessEvent, Formula> entry : abstractPhi.entrySet()) {
             raceAssertionBuilder.add(FormulaTerm.BOOL_EQUAL(

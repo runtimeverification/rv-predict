@@ -7,8 +7,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 
 import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
 import com.microsoft.z3.Params;
 import com.microsoft.z3.Status;
+import com.microsoft.z3.Z3Exception;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.config.Configuration.OS;
 import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
@@ -75,17 +77,29 @@ public class Z3Wrapper implements Solver {
         } else if ("unsat".equals(result) || "unknown".equals(result)) {
             return false;
         } else {
-            System.err.println("Unexpected Z3 queryString result:\n" + result);
-            System.err.println("Query:\n" + queryString);
+            System.err.println("Unexpected Z3 query result:\n" + result);
+//            System.err.println("Query:\n" + queryString);
             return false;
         }
     }
 
+    private static final ThreadLocal<Context> context = new ThreadLocal<Context>() {
+        @Override
+        protected synchronized Context initialValue() {
+            try {
+                // Z3 (or just the Java API?) doesn't play nice when Context
+                // objects are created concurrently
+                return new Context();
+            } catch (Z3Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    };
+
     public boolean checkQueryWithLibrary(FormulaTerm query) {
         boolean result;
         try {
-            //TODO(TraianSF,YilongL):  Consider making Context thread-local.
-            com.microsoft.z3.Context ctx = new com.microsoft.z3.Context();
+            Context ctx = context.get();
             final Z3Filter z3Filter = new Z3Filter(ctx);
 
             BoolExpr formula = z3Filter.filter(query);

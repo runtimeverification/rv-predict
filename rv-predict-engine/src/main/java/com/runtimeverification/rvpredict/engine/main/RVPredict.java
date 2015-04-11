@@ -84,7 +84,8 @@ public class RVPredict {
 
     public void start() {
         try {
-            ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(config.multithreaded?4:1,
+            ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(
+                    4,
                     new ThreadFactory() {
                         int id = 0;
                         final UncaughtExceptionHandler eh = (t, e) -> {

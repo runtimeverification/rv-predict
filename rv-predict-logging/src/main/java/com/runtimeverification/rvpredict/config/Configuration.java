@@ -289,7 +289,7 @@ public class Configuration implements Constants {
 
     public final static String opt_online = "--online";
     @Parameter(names = opt_online, description = "Run prediction online", hidden = true, descriptionKey = "2005")
-    private boolean online = true;
+    private boolean online;
 
     final static String opt_max_len = "--maxlen";
     @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")

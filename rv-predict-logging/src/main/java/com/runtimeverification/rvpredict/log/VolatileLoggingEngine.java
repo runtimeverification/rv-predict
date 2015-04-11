@@ -42,6 +42,7 @@ import com.runtimeverification.rvpredict.trace.EventUtils;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceState;
 import com.runtimeverification.rvpredict.util.Constants;
+import com.runtimeverification.rvpredict.util.Logger;
 import com.runtimeverification.rvpredict.violation.Violation;
 
 /**
@@ -101,6 +102,10 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             while (globalEventID.get() != n + bound + 1) {
                 LockSupport.parkNanos(1);
             }
+        }
+
+        if (violations.isEmpty()) {
+            config.logger.report("No races found.", Logger.MSGTYPE.INFO);
         }
     }
 

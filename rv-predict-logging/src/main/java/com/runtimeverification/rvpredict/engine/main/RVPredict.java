@@ -103,7 +103,7 @@ public class RVPredict {
             } while (trace.getSize() == config.windowSize);
 
             shutdownAndAwaitTermination(raceDetectorExecutor);
-            if (violations.size() == 0) {
+            if (violations.isEmpty()) {
                 config.logger.report("No races found.", Logger.MSGTYPE.INFO);
             }
         } catch (IOException e) {

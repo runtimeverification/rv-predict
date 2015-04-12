@@ -39,13 +39,16 @@ public class EventReader implements Closeable {
     }
 
     public final EventItem readEvent() throws IOException {
-        int bytes = in.read(byteBuffer.array());
-        if (bytes == -1) {
-            lastReadEvent = null;
-            throw new EOFException();
-        } else if (bytes < EventItem.SIZEOF) {
-            lastReadEvent = null;
-            throw new IOException("Corrupted event item");
+        int bytes;
+        int off = 0;
+        int len = EventItem.SIZEOF;
+        while ((bytes = in.read(byteBuffer.array(), off, len)) != len) {
+            if (bytes == -1) {
+                lastReadEvent = null;
+                throw new EOFException();
+            }
+            off += bytes;
+            len -= bytes;
         }
         lastReadEvent = new EventItem(
                 byteBuffer.getLong(),

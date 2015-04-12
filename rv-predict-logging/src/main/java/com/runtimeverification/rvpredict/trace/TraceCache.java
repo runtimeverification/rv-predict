@@ -40,7 +40,7 @@ public class TraceCache {
     }
 
     public void setup() throws IOException {
-        int logFileId = 1;
+        int logFileId = 0;
         while (true) {
             Path path = config.getTraceFilePath(logFileId++);
             if (!path.toFile().exists()) {

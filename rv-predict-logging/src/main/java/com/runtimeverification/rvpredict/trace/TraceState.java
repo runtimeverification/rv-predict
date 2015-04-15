@@ -52,7 +52,7 @@ public class TraceState {
 
     private final Metadata metadata;
 
-    TraceState(Metadata metadata) {
+    public TraceState(Metadata metadata) {
         this.metadata = metadata;
     }
 

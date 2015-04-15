@@ -56,7 +56,7 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
     /**
      * Global ID of the next event.
      */
-    private final AtomicLong globalEventID = new AtomicLong(1);
+    private final AtomicLong globalEventID = new AtomicLong(0);
 
     private final Configuration config;
 
@@ -71,11 +71,6 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
         this.metadata = metadata;
     }
 
-    /**
-     * Method invoked at the end of the logging task, to insure that
-     * all data is recorded before concluding.
-     * @throws IOException
-     */
     @Override
     public void finishLogging() throws IOException {
         shutdown = true;
@@ -96,17 +91,28 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
                 config.getMetadataPath().toFile())));
     }
 
-    /**
-     * Logs an event item to the trace.
-     *
-     * @see {@link EventItem} for a more elaborate description of the
-     *      parameters.
-     */
     @Override
     public void log(EventType eventType, int locId, int addrl, int addrr, long value1, long value2) {
         long tid = Thread.currentThread().getId();
         long gid;
         switch (eventType) {
+        case READ:
+        case WRITE:
+        case WRITE_LOCK:
+        case WRITE_UNLOCK:
+        case READ_LOCK:
+        case READ_UNLOCK:
+        case WAIT_REL:
+        case WAIT_ACQ:
+        case START:
+        case JOIN:
+        case CLINIT_ENTER:
+        case CLINIT_EXIT:
+        case INVOKE_METHOD:
+        case FINISH_METHOD:
+            gid = globalEventID.getAndIncrement();
+            log(eventType, gid, tid, locId, addrl, addrr, value1);
+            break;
         case ATOMIC_READ:
             gid = globalEventID.getAndAdd(3);
             log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, addrl, 0);
@@ -125,23 +131,6 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
             log(EventType.READ,         gid + 1, tid, locId, addrl,         addrr, value1);
             log(EventType.WRITE,        gid + 2, tid, locId, addrl,         addrr, value2);
             log(EventType.WRITE_UNLOCK, gid + 3, tid, locId, ATOMIC_LOCK_C, addrl, 0);
-            break;
-        case READ:
-        case WRITE:
-        case WRITE_LOCK:
-        case WRITE_UNLOCK:
-        case READ_LOCK:
-        case READ_UNLOCK:
-        case WAIT_REL:
-        case WAIT_ACQ:
-        case START:
-        case JOIN:
-        case CLINIT_ENTER:
-        case CLINIT_EXIT:
-        case INVOKE_METHOD:
-        case FINISH_METHOD:
-            gid = globalEventID.getAndIncrement();
-            log(eventType, gid, tid, locId, addrl, addrr, value1);
             break;
         default:
             assert false;

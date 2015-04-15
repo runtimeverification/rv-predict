@@ -7,17 +7,17 @@ import com.runtimeverification.rvpredict.trace.EventType;
  * @author TraianSF
  */
 public class EventItem {
-    public final long GID;
-    public final long TID;
-    public final int ID;
-    public final int ADDRL;
-    public final int ADDRR;
-    public final long VALUE;
-    public final EventType TYPE;
+    public long GID;
+    public long TID;
+    public int ID;
+    public int ADDRL;
+    public int ADDRR;
+    public long VALUE;
+    public EventType TYPE;
 
-    public static final int SIZEOF_LONG = 8;
-    public static final int SIZEOF_INT = 4;
-    public static final int SIZEOF_EVENT_TYPE = 1;
+    private static final int SIZEOF_LONG = 8;
+    private static final int SIZEOF_INT = 4;
+    private static final int SIZEOF_EVENT_TYPE = 1;
 
     /**
      * constant representing the size of the event item on disk (no. of bytes).
@@ -32,6 +32,8 @@ public class EventItem {
             + SIZEOF_LONG       //VALUE
             + SIZEOF_EVENT_TYPE //TYPE
             ;
+
+    public EventItem() { }
 
     /**
      * Constructor of the EventItem class

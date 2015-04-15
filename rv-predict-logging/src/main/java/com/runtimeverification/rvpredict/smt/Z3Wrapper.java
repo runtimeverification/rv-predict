@@ -111,7 +111,9 @@ public class Z3Wrapper implements Solver {
             result = solver.check() == Status.SATISFIABLE;
             ctx.dispose();
         } catch (UnsatisfiedLinkError e) {
-            System.err.println(System.getProperty("java.library.path"));
+            System.err.println(this.getClass().getClassLoader() != null ?
+                    System.getProperty("java.library.path") :
+                    System.getProperty("sun.boot.library.path"));
             throw e;
         } catch (Exception e) {
             System.err.println("failed to translate smtlib expression:\n" + query);

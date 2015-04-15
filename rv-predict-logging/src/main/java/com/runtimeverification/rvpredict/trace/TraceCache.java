@@ -25,7 +25,7 @@ public class TraceCache {
 
     private final Map<Long, Pair<EventReader, EventItem>> indexes;
 
-    private long nextIdx = 1;
+    private long nextIdx = 0;
 
     private int nextLogFileId = 1;
 
@@ -46,7 +46,7 @@ public class TraceCache {
 
     /**
      * Load trace segment from event {@code fromIndex} to event
-     * {@code toIndex-1}. Event number is assumed to start from 1.
+     * {@code toIndex-1}. Event number is assumed to start from 0.
      *
      * @see TraceCache#getNextEvent()
      * @param fromIndex

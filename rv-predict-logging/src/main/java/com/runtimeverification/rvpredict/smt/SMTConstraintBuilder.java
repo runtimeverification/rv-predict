@@ -114,7 +114,7 @@ public class SMTConstraintBuilder {
     }
 
     private int getRelativeIdx(Event event) {
-        return (int) ((event.getGID() - 1) % trace.capacity());
+        return (int) (event.getGID() % trace.capacity());
     }
 
     private int getGroupId(Event e) {

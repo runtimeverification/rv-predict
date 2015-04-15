@@ -35,7 +35,7 @@ public class Main {
                 System.exit(1);
             }
 
-            if (config.isLogging()) {
+            if (config.getLogDir() != null) {
                 File outdirFile = new File(config.getLogDir());
                 if (!outdirFile.exists()) {
                     outdirFile.mkdir();
@@ -63,6 +63,13 @@ public class Main {
         args.add(JAVA_EXECUTABLE);
         args.add("-ea");
         args.add("-Xbootclasspath/a:" + RV_PREDICT_JAR);
+        String bootLibPath = "";
+        for (String nativeLibPath : System.getProperty("java.library.path").split(":")) {
+            if (nativeLibPath.contains("rv-predict/lib/native")) {
+                bootLibPath += ":" + nativeLibPath;
+            }
+        }
+        args.add("-Dsun.boot.library.path=" + bootLibPath);
         args.add("-javaagent:" + RV_PREDICT_JAR + "=" + createAgentArgs());
         args.addAll(config.getJavaArguments());
 

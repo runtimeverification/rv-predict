@@ -177,13 +177,18 @@ else()
       test_target_arch(powerpc64le "" "-m64")
     endif()
   elseif("${LLVM_NATIVE_ARCH}" STREQUAL "Mips")
+    # Gcc doesn't accept -m32/-m64 so we do the next best thing and use
+    # -mips32r2/-mips64r2. We don't use -mips1/-mips3 because we want to match
+    # clang's default CPU's. In the 64-bit case, we must also specify the ABI
+    # since the default ABI differs between gcc and clang.
+    # FIXME: Ideally, we would build the N32 library too.
     if("${COMPILER_RT_TEST_TARGET_ARCH}" MATCHES "mipsel|mips64el")
       # regex for mipsel, mips64el
-      test_target_arch(mipsel "" "-m32")
-      test_target_arch(mips64el "" "-m64")
+      test_target_arch(mipsel "" "-mips32r2")
+      test_target_arch(mips64el "" "-mips64r2 -mabi=n64")
     else()
-      test_target_arch(mips "" "-m32")
-      test_target_arch(mips64 "" "-m64")
+      test_target_arch(mips "" "-mips32r2")
+      test_target_arch(mips64 "" "-mips64r2 -mabi=n64")
     endif()
   elseif("${COMPILER_RT_TEST_TARGET_ARCH}" MATCHES "arm")
     test_target_arch(arm "" "-march=armv7-a")
@@ -221,9 +226,11 @@ endfunction()
 # Architectures supported by compiler-rt libraries.
 filter_available_targets(SANITIZER_COMMON_SUPPORTED_ARCH
   x86_64 i386 i686 powerpc64 powerpc64le arm aarch64 mips mips64 mipsel mips64el)
-# LSan common files should be available on all architectures supported
+# LSan and UBSan common files should be available on all architectures supported
 # by other sanitizers (even if they build into dummy object files).
 filter_available_targets(LSAN_COMMON_SUPPORTED_ARCH
+  ${SANITIZER_COMMON_SUPPORTED_ARCH})
+filter_available_targets(UBSAN_COMMON_SUPPORTED_ARCH
   ${SANITIZER_COMMON_SUPPORTED_ARCH})
 filter_available_targets(ASAN_SUPPORTED_ARCH
   x86_64 i386 i686 powerpc64 powerpc64le arm mips mipsel mips64 mips64el)
@@ -233,7 +240,8 @@ filter_available_targets(MSAN_SUPPORTED_ARCH x86_64 mips64 mips64el)
 filter_available_targets(PROFILE_SUPPORTED_ARCH x86_64 i386 i686 arm mips mips64
   mipsel mips64el aarch64 powerpc64 powerpc64le)
 filter_available_targets(TSAN_SUPPORTED_ARCH x86_64 mips64 mips64el)
-filter_available_targets(UBSAN_SUPPORTED_ARCH x86_64 i386 i686 arm aarch64 mips mipsel mips64 mips64el)
+filter_available_targets(UBSAN_SUPPORTED_ARCH x86_64 i386 i686 arm aarch64 mips
+  mipsel mips64 mips64el powerpc64 powerpc64le)
 
 if(ANDROID)
   set(OS_NAME "Android")
@@ -305,3 +313,10 @@ else()
   set(COMPILER_RT_HAS_UBSAN FALSE)
 endif()
 
+# -msse3 flag is not valid for Mips therefore clang gives a warning
+# message with -msse3. But check_c_compiler_flags() checks only for
+# compiler error messages. Therefore COMPILER_RT_HAS_MSSE3_FLAG turns out to be
+# true on Mips, so we make it false here.
+if("${LLVM_NATIVE_ARCH}" STREQUAL "Mips")
+  set(COMPILER_RT_HAS_MSSE3_FLAG FALSE)
+endif()

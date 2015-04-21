@@ -277,6 +277,13 @@ ScopedInterceptor::~ScopedInterceptor() {
 # define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION_VER(func, ver)
 #endif
 
+#define READ_STRING_OF_LEN(thr, pc, s, len, n)                 \
+  MemoryAccessRange((thr), (pc), (uptr)(s),                         \
+    common_flags()->strict_string_checks ? (len) + 1 : (n), false)
+
+#define READ_STRING(thr, pc, s, n)                             \
+    READ_STRING_OF_LEN((thr), (pc), (s), internal_strlen(s), (n))
+
 #define BLOCK_REAL(name) (BlockingCall(thr), REAL(name))
 
 struct BlockingCall {
@@ -708,8 +715,9 @@ TSAN_INTERCEPTOR(void*, memmove, void *dst, void *src, uptr n) {
 TSAN_INTERCEPTOR(char*, strchr, char *s, int c) {
   SCOPED_TSAN_INTERCEPTOR(strchr, s, c);
   char *res = REAL(strchr)(s, c);
-  uptr len = res ? (char*)res - (char*)s + 1 : internal_strlen(s) + 1;
-  MemoryAccessRange(thr, pc, (uptr)s, len, false);
+  uptr len = internal_strlen(s);
+  uptr n = res ? (char*)res - (char*)s + 1 : len + 1;
+  READ_STRING_OF_LEN(thr, pc, s, len, n);
   return res;
 }
 
@@ -717,7 +725,7 @@ TSAN_INTERCEPTOR(char*, strchrnul, char *s, int c) {
   SCOPED_TSAN_INTERCEPTOR(strchrnul, s, c);
   char *res = REAL(strchrnul)(s, c);
   uptr len = (char*)res - (char*)s + 1;
-  MemoryAccessRange(thr, pc, (uptr)s, len, false);
+  READ_STRING(thr, pc, s, len);
   return res;
 }
 
@@ -808,8 +816,11 @@ TSAN_INTERCEPTOR(void*, mmap64, void *addr, long_t sz, int prot,
 
 TSAN_INTERCEPTOR(int, munmap, void *addr, long_t sz) {
   SCOPED_TSAN_INTERCEPTOR(munmap, addr, sz);
-  DontNeedShadowFor((uptr)addr, sz);
-  ctx->metamap.ResetRange(thr, pc, (uptr)addr, (uptr)sz);
+  if (sz != 0) {
+    // If sz == 0, munmap will return EINVAL and don't unmap any memory.
+    DontNeedShadowFor((uptr)addr, sz);
+    ctx->metamap.ResetRange(thr, pc, (uptr)addr, (uptr)sz);
+  }
   int res = REAL(munmap)(addr, sz);
   return res;
 }
@@ -924,8 +935,8 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
     ThreadIgnoreEnd(thr, 0);
     while ((tid = atomic_load(&p->tid, memory_order_acquire)) == 0)
       pthread_yield();
-    atomic_store(&p->tid, 0, memory_order_release);
     ThreadStart(thr, tid, GetTid());
+    atomic_store(&p->tid, 0, memory_order_release);
   }
   void *res = callback(param);
   // Prevent the callback from being tail called,
@@ -973,6 +984,13 @@ TSAN_INTERCEPTOR(int, pthread_create,
   if (res == 0) {
     int tid = ThreadCreate(thr, pc, *(uptr*)th, detached);
     CHECK_NE(tid, 0);
+    // Synchronization on p.tid serves two purposes:
+    // 1. ThreadCreate must finish before the new thread starts.
+    //    Otherwise the new thread can call pthread_detach, but the pthread_t
+    //    identifier is not yet registered in ThreadRegistry by ThreadCreate.
+    // 2. ThreadStart must finish before this thread continues.
+    //    Otherwise, this thread can call pthread_detach and reset thr->sync
+    //    before the new thread got a chance to acquire from it in ThreadStart.
     atomic_store(&p.tid, tid, memory_order_release);
     while (atomic_load(&p.tid, memory_order_acquire) != 0)
       pthread_yield();
@@ -1045,13 +1063,25 @@ static void *init_cond(void *c, bool force = false) {
 }
 
 struct CondMutexUnlockCtx {
+  ScopedInterceptor *si;
   ThreadState *thr;
   uptr pc;
   void *m;
 };
 
 static void cond_mutex_unlock(CondMutexUnlockCtx *arg) {
+  // pthread_cond_wait interceptor has enabled async signal delivery
+  // (see BlockingCall below). Disable async signals since we are running
+  // tsan code. Also ScopedInterceptor and BlockingCall destructors won't run
+  // since the thread is cancelled, so we have to manually execute them
+  // (the thread still can run some user code due to pthread_cleanup_push).
+  ThreadSignalContext *ctx = SigCtx(arg->thr);
+  CHECK_EQ(atomic_load(&ctx->in_blocking_func, memory_order_relaxed), 1);
+  atomic_store(&ctx->in_blocking_func, 0, memory_order_relaxed);
   MutexLock(arg->thr, arg->pc, (uptr)arg->m);
+  // Undo BlockingCall ctor effects.
+  arg->thr->ignore_interceptors--;
+  arg->si->~ScopedInterceptor();
 }
 
 INTERCEPTOR(int, pthread_cond_init, void *c, void *a) {
@@ -1066,12 +1096,17 @@ INTERCEPTOR(int, pthread_cond_wait, void *c, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_cond_wait, cond, m);
   MutexUnlock(thr, pc, (uptr)m);
   MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
-  CondMutexUnlockCtx arg = {thr, pc, m};
+  CondMutexUnlockCtx arg = {&si, thr, pc, m};
+  int res = 0;
   // This ensures that we handle mutex lock even in case of pthread_cancel.
   // See test/tsan/cond_cancel.cc.
-  int res = call_pthread_cancel_with_cleanup(
-      (int(*)(void *c, void *m, void *abstime))REAL(pthread_cond_wait),
-      cond, m, 0, (void(*)(void *arg))cond_mutex_unlock, &arg);
+  {
+    // Enable signal delivery while the thread is blocked.
+    BlockingCall bc(thr);
+    res = call_pthread_cancel_with_cleanup(
+        (int(*)(void *c, void *m, void *abstime))REAL(pthread_cond_wait),
+        cond, m, 0, (void(*)(void *arg))cond_mutex_unlock, &arg);
+  }
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
   MutexLock(thr, pc, (uptr)m);
@@ -1083,12 +1118,16 @@ INTERCEPTOR(int, pthread_cond_timedwait, void *c, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_cond_timedwait, cond, m, abstime);
   MutexUnlock(thr, pc, (uptr)m);
   MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
-  CondMutexUnlockCtx arg = {thr, pc, m};
+  CondMutexUnlockCtx arg = {&si, thr, pc, m};
+  int res = 0;
   // This ensures that we handle mutex lock even in case of pthread_cancel.
   // See test/tsan/cond_cancel.cc.
-  int res = call_pthread_cancel_with_cleanup(
-      REAL(pthread_cond_timedwait), cond, m, abstime,
-      (void(*)(void *arg))cond_mutex_unlock, &arg);
+  {
+    BlockingCall bc(thr);
+    res = call_pthread_cancel_with_cleanup(
+        REAL(pthread_cond_timedwait), cond, m, abstime,
+        (void(*)(void *arg))cond_mutex_unlock, &arg);
+  }
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
   MutexLock(thr, pc, (uptr)m);
@@ -1395,6 +1434,7 @@ TSAN_INTERCEPTOR(int, sem_getvalue, void *s, int *sval) {
 #if !SANITIZER_FREEBSD
 TSAN_INTERCEPTOR(int, __xstat, int version, const char *path, void *buf) {
   SCOPED_TSAN_INTERCEPTOR(__xstat, version, path, buf);
+  READ_STRING(thr, pc, path, 0);
   return REAL(__xstat)(version, path, buf);
 }
 #define TSAN_MAYBE_INTERCEPT___XSTAT TSAN_INTERCEPT(__xstat)
@@ -1405,9 +1445,11 @@ TSAN_INTERCEPTOR(int, __xstat, int version, const char *path, void *buf) {
 TSAN_INTERCEPTOR(int, stat, const char *path, void *buf) {
 #if SANITIZER_FREEBSD
   SCOPED_TSAN_INTERCEPTOR(stat, path, buf);
+  READ_STRING(thr, pc, path, 0);
   return REAL(stat)(path, buf);
 #else
   SCOPED_TSAN_INTERCEPTOR(__xstat, 0, path, buf);
+  READ_STRING(thr, pc, path, 0);
   return REAL(__xstat)(0, path, buf);
 #endif
 }
@@ -1415,6 +1457,7 @@ TSAN_INTERCEPTOR(int, stat, const char *path, void *buf) {
 #if !SANITIZER_FREEBSD
 TSAN_INTERCEPTOR(int, __xstat64, int version, const char *path, void *buf) {
   SCOPED_TSAN_INTERCEPTOR(__xstat64, version, path, buf);
+  READ_STRING(thr, pc, path, 0);
   return REAL(__xstat64)(version, path, buf);
 }
 #define TSAN_MAYBE_INTERCEPT___XSTAT64 TSAN_INTERCEPT(__xstat64)
@@ -1425,6 +1468,7 @@ TSAN_INTERCEPTOR(int, __xstat64, int version, const char *path, void *buf) {
 #if !SANITIZER_FREEBSD
 TSAN_INTERCEPTOR(int, stat64, const char *path, void *buf) {
   SCOPED_TSAN_INTERCEPTOR(__xstat64, 0, path, buf);
+  READ_STRING(thr, pc, path, 0);
   return REAL(__xstat64)(0, path, buf);
 }
 #define TSAN_MAYBE_INTERCEPT_STAT64 TSAN_INTERCEPT(stat64)
@@ -1435,6 +1479,7 @@ TSAN_INTERCEPTOR(int, stat64, const char *path, void *buf) {
 #if !SANITIZER_FREEBSD
 TSAN_INTERCEPTOR(int, __lxstat, int version, const char *path, void *buf) {
   SCOPED_TSAN_INTERCEPTOR(__lxstat, version, path, buf);
+  READ_STRING(thr, pc, path, 0);
   return REAL(__lxstat)(version, path, buf);
 }
 #define TSAN_MAYBE_INTERCEPT___LXSTAT TSAN_INTERCEPT(__lxstat)
@@ -1445,9 +1490,11 @@ TSAN_INTERCEPTOR(int, __lxstat, int version, const char *path, void *buf) {
 TSAN_INTERCEPTOR(int, lstat, const char *path, void *buf) {
 #if SANITIZER_FREEBSD
   SCOPED_TSAN_INTERCEPTOR(lstat, path, buf);
+  READ_STRING(thr, pc, path, 0);
   return REAL(lstat)(path, buf);
 #else
   SCOPED_TSAN_INTERCEPTOR(__lxstat, 0, path, buf);
+  READ_STRING(thr, pc, path, 0);
   return REAL(__lxstat)(0, path, buf);
 #endif
 }
@@ -1455,6 +1502,7 @@ TSAN_INTERCEPTOR(int, lstat, const char *path, void *buf) {
 #if !SANITIZER_FREEBSD
 TSAN_INTERCEPTOR(int, __lxstat64, int version, const char *path, void *buf) {
   SCOPED_TSAN_INTERCEPTOR(__lxstat64, version, path, buf);
+  READ_STRING(thr, pc, path, 0);
   return REAL(__lxstat64)(version, path, buf);
 }
 #define TSAN_MAYBE_INTERCEPT___LXSTAT64 TSAN_INTERCEPT(__lxstat64)
@@ -1465,6 +1513,7 @@ TSAN_INTERCEPTOR(int, __lxstat64, int version, const char *path, void *buf) {
 #if !SANITIZER_FREEBSD
 TSAN_INTERCEPTOR(int, lstat64, const char *path, void *buf) {
   SCOPED_TSAN_INTERCEPTOR(__lxstat64, 0, path, buf);
+  READ_STRING(thr, pc, path, 0);
   return REAL(__lxstat64)(0, path, buf);
 }
 #define TSAN_MAYBE_INTERCEPT_LSTAT64 TSAN_INTERCEPT(lstat64)
@@ -1524,6 +1573,7 @@ TSAN_INTERCEPTOR(int, fstat64, int fd, void *buf) {
 
 TSAN_INTERCEPTOR(int, open, const char *name, int flags, int mode) {
   SCOPED_TSAN_INTERCEPTOR(open, name, flags, mode);
+  READ_STRING(thr, pc, name, 0);
   int fd = REAL(open)(name, flags, mode);
   if (fd >= 0)
     FdFileCreate(thr, pc, fd);
@@ -1533,6 +1583,7 @@ TSAN_INTERCEPTOR(int, open, const char *name, int flags, int mode) {
 #if !SANITIZER_FREEBSD
 TSAN_INTERCEPTOR(int, open64, const char *name, int flags, int mode) {
   SCOPED_TSAN_INTERCEPTOR(open64, name, flags, mode);
+  READ_STRING(thr, pc, name, 0);
   int fd = REAL(open64)(name, flags, mode);
   if (fd >= 0)
     FdFileCreate(thr, pc, fd);
@@ -1545,6 +1596,7 @@ TSAN_INTERCEPTOR(int, open64, const char *name, int flags, int mode) {
 
 TSAN_INTERCEPTOR(int, creat, const char *name, int mode) {
   SCOPED_TSAN_INTERCEPTOR(creat, name, mode);
+  READ_STRING(thr, pc, name, 0);
   int fd = REAL(creat)(name, mode);
   if (fd >= 0)
     FdFileCreate(thr, pc, fd);
@@ -1554,6 +1606,7 @@ TSAN_INTERCEPTOR(int, creat, const char *name, int mode) {
 #if !SANITIZER_FREEBSD
 TSAN_INTERCEPTOR(int, creat64, const char *name, int mode) {
   SCOPED_TSAN_INTERCEPTOR(creat64, name, mode);
+  READ_STRING(thr, pc, name, 0);
   int fd = REAL(creat64)(name, mode);
   if (fd >= 0)
     FdFileCreate(thr, pc, fd);

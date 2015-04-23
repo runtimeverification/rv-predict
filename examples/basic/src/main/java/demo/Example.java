@@ -55,7 +55,7 @@ public class Example {
 	
 	static class MyThread extends Thread
 	{
-		
+
 		public void run()
 		{
 			

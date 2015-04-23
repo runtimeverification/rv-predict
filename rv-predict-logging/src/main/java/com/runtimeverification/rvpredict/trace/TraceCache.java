@@ -29,7 +29,7 @@ public class TraceCache {
 
     private int nextLogFileId = 1;
 
-    private final Configuration config;
+    protected final Configuration config;
 
     private final TraceState crntState;
 
@@ -81,7 +81,7 @@ public class TraceCache {
      *
      * @return the next event in the trace
      */
-    private EventItem getNextEvent() throws IOException {
+    protected EventItem getNextEvent() throws IOException {
         if (!indexes.containsKey(nextIdx)) {
             try {
                 updateIndexes(nextIdx);

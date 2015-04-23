@@ -273,6 +273,10 @@ public class Configuration implements Constants {
     @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "1010")
     private String predict_dir = null;
 
+    public final static String opt_llvm_predict = "--llvm-predict";
+    @Parameter(names = opt_llvm_predict, description = "Run prediction on given llvm trace", descriptionKey = "1020")
+    private String llvm_trace_file = null;
+
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include." +
             "\nPrefix with + to add to the default included packages", hidden = true, descriptionKey = "1025")
@@ -285,6 +289,7 @@ public class Configuration implements Constants {
 
     private final static String ONLINE_PREDICTION = "ONLINE_PREDICTION";
     private final static String OFFLINE_PREDICTION = "OFFLINE_PREDICTION";
+    private static final String LLVM_PREDICTION = "LLVM_PREDICTION";
     private String prediction;
 
     public final static String opt_online = "--online";
@@ -389,7 +394,7 @@ public class Configuration implements Constants {
         initIncludeList();
 
         /* Carefully handle the interaction between options:
-         * 1) 4 different modes: only_profile, only_log, only_predict and log_then_predict;
+         * 1) 5 different modes: only_profile, only_log, only_predict, only_llvm_prediict, and log_then_predict;
          * 2) 2 types of prediction: online and offline;
          * 3) log directory can be specified or not.
          *
@@ -406,6 +411,9 @@ public class Configuration implements Constants {
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_only_predict);
             }
+            if (llvm_trace_file != null) {
+                exclusiveOptionsFailure(opt_event_profile, opt_llvm_predict);
+            }
             if (online) {
                 exclusiveOptionsFailure(opt_event_profile, opt_online);
             }
@@ -413,6 +421,9 @@ public class Configuration implements Constants {
         } else if (log_dir != null) {           /* only log */
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_only_predict);
+            }
+            if (llvm_trace_file != null) {
+                exclusiveOptionsFailure(opt_only_log, opt_llvm_predict);
             }
             if (outdir != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_outdir);
@@ -422,6 +433,9 @@ public class Configuration implements Constants {
             }
             log_dir = Paths.get(log_dir).toAbsolutePath().toString();
         } else if (predict_dir != null) {       /* only predict */
+            if (llvm_trace_file != null) {
+                exclusiveOptionsFailure(opt_only_predict, opt_llvm_predict);
+            }
             if (outdir != null) {
                 exclusiveOptionsFailure(opt_only_predict, opt_outdir);
             }
@@ -431,6 +445,16 @@ public class Configuration implements Constants {
             log_dir = Paths.get(predict_dir).toAbsolutePath().toString();
             log = false;
             prediction = OFFLINE_PREDICTION;
+        }  else if (llvm_trace_file != null) {       /* only predict */
+            if (outdir != null) {
+                exclusiveOptionsFailure(opt_llvm_predict, opt_outdir);
+            }
+            if (online) {
+                exclusiveOptionsFailure(opt_llvm_predict, opt_online);
+            }
+            log_dir = Paths.get(llvm_trace_file).toAbsolutePath().toString();
+            log = false;
+            prediction = LLVM_PREDICTION;
         } else {                                /* log then predict */
             if (online) {
                 log_dir = null;
@@ -587,6 +611,10 @@ public class Configuration implements Constants {
 
     public boolean isOfflinePrediction() {
         return prediction == OFFLINE_PREDICTION;
+    }
+
+    public boolean isLLVMPrediction() {
+        return prediction == LLVM_PREDICTION;
     }
 
     public boolean noPrediction() {

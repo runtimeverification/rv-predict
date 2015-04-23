@@ -49,8 +49,6 @@ public class Main {
 
             execApplication();
         } else {
-            /* must be in only_predict mode */
-            assert config.isOfflinePrediction();
             new RVPredict(config).start();
         }
     }

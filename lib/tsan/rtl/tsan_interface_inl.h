@@ -52,8 +52,9 @@ void __tsan_write8(void *addr) {
 
 void __tsan_vptr_update(void **vptr_p, void *new_val) {
   CHECK_EQ(sizeof(vptr_p), 8);
+  ThreadState *thr = cur_thread();
+  RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), CALLERPC, 0L, (uptr)vptr_p, (u64)new_val, "WRITE");
   if (*vptr_p != new_val) {
-    ThreadState *thr = cur_thread();
     thr->is_vptr_access = true;
     MemoryWrite(thr, CALLERPC, (uptr)vptr_p, kSizeLog8);
     thr->is_vptr_access = false;
@@ -69,11 +70,15 @@ void __tsan_vptr_read(void **vptr_p) {
 }
 
 void __tsan_func_entry(void *pc) {
-  FuncEntry(cur_thread(), (uptr)pc);
+  ThreadState *thr = cur_thread();
+  RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), CALLERPC, 0UL, 0UL, 0UL, "INVOKE_METHOD");
+  FuncEntry(thr, (uptr)pc);
 }
 
 void __tsan_func_exit() {
-  FuncExit(cur_thread());
+  ThreadState *thr = cur_thread();
+  RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), CALLERPC, 0UL, 0UL, 0UL, "FINISH_METHOD");
+  FuncExit(thr);
 }
 
 void __tsan_read_range(void *addr, uptr size) {

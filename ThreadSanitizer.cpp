@@ -408,7 +408,7 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
   int Idx = getMemoryAccessFuncIndex(Addr, DL);
   if (Idx < 0)
     return false;
-  if (IsWrite && isVtableAccess(I)) {
+  if (IsWrite/* && isVtableAccess(I)*/) {
     DEBUG(dbgs() << "  VPTR : " << *I << "\n");
     Value *StoredValue = cast<StoreInst>(I)->getValueOperand();
     // StoredValue may be a vector type if we are storing several vptrs at once.

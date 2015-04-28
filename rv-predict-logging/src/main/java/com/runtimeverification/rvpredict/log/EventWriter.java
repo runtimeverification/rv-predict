@@ -26,7 +26,7 @@ public class EventWriter implements Closeable {
 
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
-    private final ByteBuffer byteBuffer = ByteBuffer.allocate(EventItem.SIZEOF);
+    private final ByteBuffer byteBuffer = ByteBuffer.allocate(Event.SIZEOF);
 
     public EventWriter(Path path) throws IOException {
         this.out = new LZ4BlockOutputStream(

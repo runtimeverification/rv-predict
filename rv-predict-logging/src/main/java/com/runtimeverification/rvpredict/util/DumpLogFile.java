@@ -2,7 +2,7 @@ package com.runtimeverification.rvpredict.util;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventReader;
-import com.runtimeverification.rvpredict.log.EventItem;
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import java.io.*;
 import java.nio.file.Path;
@@ -32,7 +32,7 @@ public class DumpLogFile {
         try (EventReader reader = new EventReader(Paths.get(file))) {
             System.out.println("Dumping events from " + file);
             while (true) {
-                EventItem event = reader.readEvent();
+                Event event = reader.readEvent();
                 System.out.printf("%-60s %s%n", event.toString(), metadata.getLocationSig(event.getLocId()));
             }
         } catch (EOFException ignored) {

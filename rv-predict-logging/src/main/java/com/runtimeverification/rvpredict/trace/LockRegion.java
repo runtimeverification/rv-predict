@@ -28,18 +28,18 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.trace;
 
-import com.runtimeverification.rvpredict.log.EventItem;
+import com.runtimeverification.rvpredict.log.Event;
 
 public class LockRegion {
-    private final EventItem lock;
-    private final EventItem unlock;
+    private final Event lock;
+    private final Event unlock;
 
     private final long lockId;
     private final long threadId;
 
     private boolean isReadLocked = false;
 
-    public LockRegion(EventItem lock, EventItem unlock) {
+    public LockRegion(Event lock, Event unlock) {
         assert lock == null || lock.doLock();
         assert unlock == null || unlock.doUnlock();
         this.lock = lock;
@@ -65,11 +65,11 @@ public class LockRegion {
         }
     }
 
-    public EventItem getLock() {
+    public Event getLock() {
         return lock;
     }
 
-    public EventItem getUnlock() {
+    public Event getUnlock() {
         return unlock;
     }
 

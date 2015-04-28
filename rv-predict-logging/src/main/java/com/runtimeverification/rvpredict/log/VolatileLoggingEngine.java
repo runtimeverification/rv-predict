@@ -70,21 +70,21 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
     private long base = 0;
 
     /**
-     * [0, bound) of the {@link #items} array is used for storing valid event
+     * [0, bound) of the {@link #events} array is used for storing valid event
      * items. Positions starting from bound are junk area.
      */
     private final int bound;
 
-    private final EventItem[] items;
+    private final Event[] events;
 
     public VolatileLoggingEngine(Configuration config, Metadata metadata) {
         this.config = config;
         this.metadata = metadata;
         this.crntState = new TraceState(metadata);
         this.bound = config.windowSize;
-        this.items = new EventItem[bound + 4];
-        for (int i = 0; i < items.length; i++) {
-            items[i] = new EventItem();
+        this.events = new Event[bound + 4];
+        for (int i = 0; i < events.length; i++) {
+            events[i] = new Event();
         }
     }
 
@@ -146,17 +146,17 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         published.add(n);
     }
 
-    private void runRaceDetection(int numOfEventItems) {
+    private void runRaceDetection(int numOfEvents) {
         /* makes sure that all the claimed slots have been published */
-        while (published.sum() < numOfEventItems) {
+        while (published.sum() < numOfEvents) {
             LockSupport.parkNanos(1);
         }
 
         try {
             Trace trace = new Trace(crntState, bound);
             crntState.setCurrentTraceWindow(trace);
-            for (int i = 0; i < numOfEventItems; i++) {
-                trace.addRawEvent(items[i].copy());
+            for (int i = 0; i < numOfEvents; i++) {
+                trace.addRawEvent(events[i].copy());
             }
             trace.finishedLoading();
             if (trace.hasSharedMemAddr()) {
@@ -221,14 +221,14 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
     private void log(EventType eventType, int offset, long tid, int locId, int addrl, int addrr,
             long value) {
-        EventItem item = items[offset];
-        item.GID = base + offset;
-        item.TID = tid;
-        item.ID = locId;
-        item.ADDRL = addrl;
-        item.ADDRR = addrr;
-        item.VALUE = value;
-        item.TYPE = eventType;
+        Event event = events[offset];
+        event.GID = base + offset;
+        event.TID = tid;
+        event.ID = locId;
+        event.ADDRL = addrl;
+        event.ADDRR = addrr;
+        event.VALUE = value;
+        event.TYPE = eventType;
     }
 
 }

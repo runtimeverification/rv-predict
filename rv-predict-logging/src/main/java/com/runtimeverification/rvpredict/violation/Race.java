@@ -32,7 +32,7 @@ import java.util.List;
 
 import com.google.common.base.StandardSystemProperty;
 import com.google.common.collect.Lists;
-import com.runtimeverification.rvpredict.log.EventItem;
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.LockObject;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -43,8 +43,8 @@ import com.runtimeverification.rvpredict.trace.Trace;
  */
 public class Race extends AbstractViolation {
 
-    private final EventItem e1;
-    private final EventItem e2;
+    private final Event e1;
+    private final Event e2;
     private final Trace trace;
 
     private final int locId1;
@@ -53,10 +53,10 @@ public class Race extends AbstractViolation {
     private final String stmtSig1;
     private final String stmtSig2;
 
-    public Race(EventItem e1, EventItem e2, Trace trace,
+    public Race(Event e1, Event e2, Trace trace,
             Metadata metadata) {
         if (e1.getLocId() > e2.getLocId()) {
-            EventItem tmp = e1;
+            Event tmp = e1;
             e1 = e2;
             e2 = tmp;
         }
@@ -123,7 +123,7 @@ public class Race extends AbstractViolation {
         return sb.toString();
     }
 
-    private void generateMemAccReport(EventItem e, StringBuilder sb) {
+    private void generateMemAccReport(Event e, StringBuilder sb) {
         long tid = e.getTID();
         List<LockObject> heldLocks = trace.getHeldLocksAt(e);
         sb.append(String.format("    Concurrent %s in thread T%s (locks held: {%s})%n",
@@ -134,7 +134,7 @@ public class Race extends AbstractViolation {
             sb.append(String.format("        at %s%n", s));
         }
 
-        EventItem startEvent = trace.getStartEventOf(e.getTID());
+        Event startEvent = trace.getStartEventOf(e.getTID());
         if (startEvent != null) {
             sb.append(String.format("    T%s is created by T%s%n", tid,
                     startEvent.getTID()));

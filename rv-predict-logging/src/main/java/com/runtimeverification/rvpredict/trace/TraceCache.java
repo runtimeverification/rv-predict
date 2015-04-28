@@ -2,7 +2,7 @@ package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventReader;
-import com.runtimeverification.rvpredict.log.EventItem;
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.EOFException;
@@ -28,7 +28,7 @@ public class TraceCache {
 
     private final List<EventReader> readers = new ArrayList<>();
 
-    private final EventItem[] items;
+    private final Event[] events;
 
     /**
      * Creates a new {@code TraceCahce} structure for a trace log.
@@ -36,7 +36,7 @@ public class TraceCache {
     public TraceCache(Configuration config, Metadata metadata) {
         this.config = config;
         this.crntState = new TraceState(metadata);
-        this.items = new EventItem[config.windowSize];
+        this.events = new Event[config.windowSize];
     }
 
     public void setup() throws IOException {
@@ -58,39 +58,39 @@ public class TraceCache {
      * @return a {@link Trace} representing the trace segment read
      */
     public Trace getTrace(long fromIndex) throws IOException {
-        Arrays.fill(items, null);
-        long toIndex = fromIndex + items.length;
+        Arrays.fill(events, null);
+        long toIndex = fromIndex + events.length;
 
         /* sort readers by their last read events */
         readers.sort((r1, r2) -> Long.compare(r1.lastReadEvent().GID, r2.lastReadEvent().GID));
         Iterator<EventReader> iter = readers.iterator();
-        EventItem item;
+        Event event;
         while (iter.hasNext()) {
             EventReader reader = iter.next();
-            if ((item = reader.lastReadEvent()).GID >= toIndex) {
+            if ((event = reader.lastReadEvent()).GID >= toIndex) {
                 break;
             }
 
-            assert item.GID >= fromIndex;
+            assert event.GID >= fromIndex;
             do {
-                items[(int) (item.GID % items.length)] = item;
+                events[(int) (event.GID % events.length)] = event;
                 try {
-                    item = reader.readEvent();
+                    event = reader.readEvent();
                 } catch (EOFException e) {
                     iter.remove();
                     break;
                 }
-            } while (item.GID < toIndex);
+            } while (event.GID < toIndex);
         }
 
         /* finish reading events and create the Trace object */
         Trace trace = new Trace(crntState, config.windowSize);
         crntState.setCurrentTraceWindow(trace);
-        for (int i = 0; i < items.length; i++) {
-            if (items[i] == null) {
+        for (int i = 0; i < events.length; i++) {
+            if (events[i] == null) {
                 break;
             }
-            trace.addRawEvent(items[i]);
+            trace.addRawEvent(events[i]);
         }
         trace.finishedLoading();
         return trace;

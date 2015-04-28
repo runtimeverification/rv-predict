@@ -15,7 +15,7 @@ import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 
 /**
- * An event input stream lets an application to read {@link EventItem} from an
+ * An event input stream lets an application to read {@link Event} from an
  * underlying input stream in a portable way.
  *
  * @author TraianSF
@@ -28,9 +28,9 @@ public class EventReader implements Closeable {
 
     private final LZ4BlockInputStream in;
 
-    private final ByteBuffer byteBuffer = ByteBuffer.allocate(EventItem.SIZEOF);
+    private final ByteBuffer byteBuffer = ByteBuffer.allocate(Event.SIZEOF);
 
-    private EventItem lastReadEvent;
+    private Event lastReadEvent;
 
     public EventReader(Path path) throws IOException {
         in = new LZ4BlockInputStream(new BufferedInputStream(new FileInputStream(path.toFile()),
@@ -38,10 +38,10 @@ public class EventReader implements Closeable {
         readEvent();
     }
 
-    public final EventItem readEvent() throws IOException {
+    public final Event readEvent() throws IOException {
         int bytes;
         int off = 0;
-        int len = EventItem.SIZEOF;
+        int len = Event.SIZEOF;
         while ((bytes = in.read(byteBuffer.array(), off, len)) != len) {
             if (bytes == -1) {
                 lastReadEvent = null;
@@ -50,7 +50,7 @@ public class EventReader implements Closeable {
             off += bytes;
             len -= bytes;
         }
-        lastReadEvent = new EventItem(
+        lastReadEvent = new Event(
                 byteBuffer.getLong(),
                 byteBuffer.getLong(),
                 byteBuffer.getInt(),
@@ -62,7 +62,7 @@ public class EventReader implements Closeable {
         return lastReadEvent;
     }
 
-    public EventItem lastReadEvent() {
+    public Event lastReadEvent() {
         return lastReadEvent;
     }
 

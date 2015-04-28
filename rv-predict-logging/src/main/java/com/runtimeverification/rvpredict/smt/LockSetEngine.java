@@ -35,7 +35,7 @@ import java.util.List;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
-import com.runtimeverification.rvpredict.log.EventItem;
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.trace.LockRegion;
 
 /**
@@ -73,7 +73,7 @@ public class LockSetEngine {
     /**
      * Checks if two given {@code MemoryAccessEvent}'s hold a common lock.
      */
-    public boolean hasCommonLock(EventItem e1, EventItem e2) {
+    public boolean hasCommonLock(Event e1, Event e2) {
         assert e1.getTID() != e2.getTID();
 
         for (Long lockId : lockTbl.rowKeySet()) {
@@ -89,7 +89,7 @@ public class LockSetEngine {
         return false;
     }
 
-    private LockRegion getLockRegion(EventItem e, long lockId) {
+    private LockRegion getLockRegion(Event e, long lockId) {
         // TODO(YilongL): optimize this method when necessary
         List<LockRegion> lockRegions = lockTbl.get(lockId, e.getTID());
         if (lockRegions != null) {

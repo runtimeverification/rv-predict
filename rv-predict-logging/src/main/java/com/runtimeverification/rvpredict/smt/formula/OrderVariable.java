@@ -1,6 +1,6 @@
 package com.runtimeverification.rvpredict.smt.formula;
 
-import com.runtimeverification.rvpredict.log.EventItem;
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.smt.visitors.Visitor;
 
 public class OrderVariable extends SMTVariable implements SMTFormula {
@@ -9,7 +9,7 @@ public class OrderVariable extends SMTVariable implements SMTFormula {
      */
     public static final String O = "o";
 
-    public OrderVariable(EventItem event) {
+    public OrderVariable(Event event) {
         super(event);
     }
 

@@ -1,12 +1,12 @@
 package com.runtimeverification.rvpredict.smt.formula;
 
-import com.runtimeverification.rvpredict.log.EventItem;
+import com.runtimeverification.rvpredict.log.Event;
 
 /**
  * Common functionality for Boolean variables.
  */
 public abstract class BooleanVariable extends SMTVariable implements Formula {
-    public BooleanVariable(EventItem event) {
+    public BooleanVariable(Event event) {
         super(event);
     }
 

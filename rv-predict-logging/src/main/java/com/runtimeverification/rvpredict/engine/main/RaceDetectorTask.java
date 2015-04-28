@@ -9,7 +9,7 @@ import java.util.Set;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.EventItem;
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
 import com.runtimeverification.rvpredict.smt.formula.Formula;
@@ -91,30 +91,30 @@ public class RaceDetectorTask implements Runnable {
             }
 
             /* group equivalent reads and writes into memory access blocks */
-            Map<EventItem, List<EventItem>> equivAccBlk = new LinkedHashMap<>();
-            for (Map.Entry<Long, List<EventItem>> entry : trace
+            Map<Event, List<Event>> equivAccBlk = new LinkedHashMap<>();
+            for (Map.Entry<Long, List<Event>> entry : trace
                     .getMemAccessEventsTable().row(addr).entrySet()) {
                 // TODO(YilongL): the extensive use of List#indexOf could be a performance problem later
 
                 long crntTID = entry.getKey();
-                List<EventItem> memAccEvents = entry.getValue();
+                List<Event> memAccEvents = entry.getValue();
 
-                List<EventItem> crntThrdEvents = trace.getThreadEvents(crntTID);
+                List<Event> crntThrdEvents = trace.getThreadEvents(crntTID);
 
-                ListIterator<EventItem> iter = memAccEvents.listIterator();
+                ListIterator<Event> iter = memAccEvents.listIterator();
                 while (iter.hasNext()) {
-                    EventItem memAcc = iter.next();
+                    Event memAcc = iter.next();
                     equivAccBlk.put(memAcc, Lists.newArrayList(memAcc));
                     if (memAcc.isWrite()) {
                         int prevMemAccIdx = crntThrdEvents.indexOf(memAcc);
 
                         while (iter.hasNext()) {
-                            EventItem crntMemAcc = iter.next();
+                            Event crntMemAcc = iter.next();
                             int crntMemAccIdx = crntThrdEvents.indexOf(crntMemAcc);
 
                             /* ends the block if there is sync/branch-event in between */
                             boolean memAccOnly = true;
-                            for (EventItem e : crntThrdEvents.subList(prevMemAccIdx + 1, crntMemAccIdx)) {
+                            for (Event e : crntThrdEvents.subList(prevMemAccIdx + 1, crntMemAccIdx)) {
                                 memAccOnly = memAccOnly && e.isReadOrWrite();
                             }
                             if (!memAccOnly) {
@@ -137,16 +137,16 @@ public class RaceDetectorTask implements Runnable {
             }
 
             /* check memory access pairs */
-            for (EventItem fst : equivAccBlk.keySet()) {
-                for (EventItem snd : equivAccBlk.keySet()) {
+            for (Event fst : equivAccBlk.keySet()) {
+                for (Event snd : equivAccBlk.keySet()) {
                     if (fst.getTID() >= snd.getTID()) {
                         continue;
                     }
 
                     /* skip if all potential data races are already known */
                     Set<Race> potentialRaces = Sets.newHashSet();
-                    for (EventItem e1 : equivAccBlk.get(fst)) {
-                        for (EventItem e2 : equivAccBlk.get(snd)) {
+                    for (Event e1 : equivAccBlk.get(fst)) {
+                        for (Event e2 : equivAccBlk.get(snd)) {
                             if ((e1.isWrite() || e2.isWrite())
                                     && !trace.isClinitMemoryAccess(e1)
                                     && !trace.isClinitMemoryAccess(e2)) {

@@ -1,6 +1,6 @@
 package com.runtimeverification.rvpredict.smt.formula;
 
-import com.runtimeverification.rvpredict.log.EventItem;
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.smt.visitors.Visitor;
 
 public final class AbstractPhiVariable extends BooleanVariable {
@@ -9,7 +9,7 @@ public final class AbstractPhiVariable extends BooleanVariable {
      */
     private static final String PHI_A = "phi_a";
 
-    public AbstractPhiVariable(EventItem event) {
+    public AbstractPhiVariable(Event event) {
         super(event);
     }
 

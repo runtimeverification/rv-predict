@@ -7,7 +7,7 @@ import com.runtimeverification.rvpredict.trace.MemoryAddr;
  * Class for representing an event as it is recorded in the log
  * @author TraianSF
  */
-public class EventItem {
+public class Event {
     public long GID;
     public long TID;
     public int ID;
@@ -34,10 +34,9 @@ public class EventItem {
             + SIZEOF_EVENT_TYPE //TYPE
             ;
 
-    public EventItem() { }
+    public Event() { }
 
     /**
-     * Constructor of the EventItem class
      * @param gid global identifier / primary key of the event
      * @param tid thread identifier primary key
      * @param id statement location identifier
@@ -46,7 +45,7 @@ public class EventItem {
      * @param value value for events carrying a value
      * @param type type of event
      */
-    public EventItem(long gid, long tid, int id, int addrl, int addrr, long value, EventType type) {
+    public Event(long gid, long tid, int id, int addrl, int addrr, long value, EventType type) {
         this.GID = gid;
         this.TID = tid;
         this.ID = id;
@@ -132,8 +131,8 @@ public class EventItem {
 
     @Override
     public boolean equals(Object object) {
-        if (object instanceof EventItem) {
-            return GID == ((EventItem) object).GID;
+        if (object instanceof Event) {
+            return GID == ((Event) object).GID;
         } else {
             return false;
         }
@@ -159,8 +158,8 @@ public class EventItem {
         }
     }
 
-    public EventItem copy() {
-        return new EventItem(GID, TID, ID, ADDRL, ADDRR, VALUE, TYPE);
+    public Event copy() {
+        return new Event(GID, TID, ID, ADDRL, ADDRR, VALUE, TYPE);
     }
 
 }

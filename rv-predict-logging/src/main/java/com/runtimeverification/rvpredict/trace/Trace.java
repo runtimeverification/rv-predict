@@ -304,11 +304,11 @@ public class Trace {
             }
 
             EventType type = e.getType();
-            if (EventType.isLock(type)) {
+            if (type.isLockType()) {
                 long lockId = e.getSyncObject();
                 map.putIfAbsent(lockId, new ArrayDeque<EventItem>());
                 map.get(lockId).add(e);
-            } else if (EventType.isUnlock(type)) {
+            } else if (type.isUnlockType()) {
                 long lockId = e.getSyncObject();
                 EventItem lock = map.get(lockId).removeLast();
                 assert lock.getTID() == tid && lock.getSyncObject() == lockId;
@@ -361,9 +361,8 @@ public class Trace {
         updateTraceState(event);
 
         if (event.isReadOrWrite()) {
-            MemoryAddr addr = event.getAddr();
-            getOrInitEmptySet(event.isRead() ?
-                    addrToReadThreads : addrToWriteThreads, addr).add(event.getTID());
+            getOrInitEmptySet(event.isRead() ? addrToReadThreads : addrToWriteThreads,
+                    event.getAddr()).add(event.getTID());
             if (crntState.isInsideClassInitializer(event.getTID())) {
                 clinitMemAccEvents.add(event);
             }
@@ -399,9 +398,9 @@ public class Trace {
             }
         } else if (event.isStart()) {
             crntState.onThreadStart(event);
-        } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
+        } else if (event.getType().isLockType() || event.getType().isUnlockType()) {
             long lockId = event.getSyncObject();
-            if (EventType.isLock(event.getType())) {
+            if (event.getType().isLockType()) {
                 crntState.acquireLock(event);
                 if (crntState.getLockCount(tid, lockId) == 1) {
                     outermostLockingEvents.add(event);
@@ -510,11 +509,10 @@ public class Trace {
         List<EventItem> reducedEvents = new ArrayList<>();
         for (EventItem event : rawEvents) {
             if (event.isReadOrWrite()) {
-                MemoryAddr addr = event.getAddr();
-                if (sharedMemAddr.contains(addr)) {
+                if (sharedMemAddr.contains(event.getAddr())) {
                     reducedEvents.add(event);
                 }
-            } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
+            } else if (event.getType().isLockType() || event.getType().isUnlockType()) {
                 if (outermostLockingEvents.contains(event)) {
                     reducedEvents.add(event);
                 }
@@ -530,11 +528,11 @@ public class Trace {
             long tid = event.getTID();
             Map<Long, EventItem> lockStatus = lockEventTbl.row(tid);
 
-            if (event.isLockEvent()) {
+            if (event.doLock()) {
                 long lockId = event.getSyncObject();
                 EventItem prevLock = lockStatus.put(lockId, event);
                 assert prevLock == null : "Unexpected unmatched lock event: " + prevLock;
-            } else if (event.isUnlockEvent()) {
+            } else if (event.doUnlock()) {
                 long lockId = event.getSyncObject();
                 EventItem lock = lockStatus.remove(lockId);
                 if (lock == null || criticalLockingEvents.contains(lock)) {
@@ -548,7 +546,7 @@ public class Trace {
         }
         criticalLockingEvents.addAll(lockEventTbl.values());
         for (EventItem event : reducedEvents) {
-            if ((event.isLockEvent() || event.isUnlockEvent())
+            if ((event.doLock() || event.doUnlock())
                     && !criticalLockingEvents.contains(event)) {
                 continue;
             }

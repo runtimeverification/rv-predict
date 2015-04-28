@@ -107,7 +107,7 @@ public class EventItem {
      * {@link EventType#READ_LOCK}, or {@link EventType#WAIT_ACQ}; otherwise,
      * {@code false}.
      */
-    public boolean isLockEvent() {
+    public boolean doLock() {
         return TYPE == EventType.READ_LOCK || TYPE == EventType.WRITE_LOCK
                 || TYPE == EventType.WAIT_ACQ;
     }
@@ -117,7 +117,7 @@ public class EventItem {
      * {@link EventType#WRITE_UNLOCK}, {@link EventType#READ_UNLOCK}, or
      * {@link EventType#WAIT_REL}; otherwise, {@code false}.
      */
-    public boolean isUnlockEvent() {
+    public boolean doUnlock() {
         return TYPE == EventType.READ_UNLOCK || TYPE == EventType.WRITE_UNLOCK
                 || TYPE == EventType.WAIT_REL;
     }

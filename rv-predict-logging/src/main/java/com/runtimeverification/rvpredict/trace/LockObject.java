@@ -16,7 +16,7 @@ public class LockObject {
     private final EventItem lockEvent;
 
     public static LockObject create(EventItem lockEvent) {
-        assert EventType.isLock(lockEvent.getType());
+        assert lockEvent.getType().isLockType();
 
         long lockId = lockEvent.getSyncObject();
         int upper32 = (int)(lockId >> 32);

@@ -79,7 +79,7 @@ public class TraceState {
     }
 
     public void acquireLock(EventItem lock) {
-        assert EventType.isLock(lock.getType());
+        assert lock.getType().isLockType();
         long tid = lock.getTID();
         long lockId = lock.getSyncObject();
         Deque<EventItem> locks = lockTable.get(tid, lockId);
@@ -91,11 +91,11 @@ public class TraceState {
     }
 
     public void releaseLock(EventItem unlock) {
-        assert EventType.isUnlock(unlock.getType());
+        assert unlock.getType().isUnlockType();
         long tid = unlock.getTID();
         long lockId = unlock.getSyncObject();
         EventItem lock = lockTable.get(tid, lockId).removeLast();
-        assert EventType.isLock(lock.getType());
+        assert lock.getType().isLockType();
     }
 
     public boolean isInsideClassInitializer(long tid) {

@@ -77,12 +77,12 @@ public enum EventType {
 
     FINISH_METHOD;
 
-    public static boolean isLock(EventType type) {
-        return type == WRITE_LOCK || type == READ_LOCK;
+    public boolean isLockType() {
+        return this == WRITE_LOCK || this == READ_LOCK;
     }
 
-    public static boolean isUnlock(EventType type) {
-        return type == WRITE_UNLOCK || type == READ_UNLOCK;
+    public boolean isUnlockType() {
+        return this == WRITE_UNLOCK || this == READ_UNLOCK;
     }
 
     public boolean isSyncType() {

@@ -38,7 +38,6 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.RaceDetectorTask;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.EventType;
-import com.runtimeverification.rvpredict.trace.EventUtils;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceState;
 import com.runtimeverification.rvpredict.util.Constants;
@@ -157,7 +156,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             Trace trace = new Trace(crntState, bound);
             crntState.setCurrentTraceWindow(trace);
             for (int i = 0; i < numOfEventItems; i++) {
-                trace.addRawEvent(EventUtils.of(items[i]));
+                trace.addRawEvent(items[i].copy());
             }
             trace.finishedLoading();
             if (trace.hasSharedMemAddr()) {

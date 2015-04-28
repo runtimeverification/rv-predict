@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.trace;
 
+import com.runtimeverification.rvpredict.log.EventItem;
 import com.runtimeverification.rvpredict.util.Constants;
 
 public class LockObject {
@@ -12,9 +13,9 @@ public class LockObject {
 
     private final int objectHashCode;
 
-    private final SyncEvent lockEvent;
+    private final EventItem lockEvent;
 
-    public static LockObject create(SyncEvent lockEvent) {
+    public static LockObject create(EventItem lockEvent) {
         assert EventType.isLock(lockEvent.getType());
 
         long lockId = lockEvent.getSyncObject();
@@ -36,13 +37,13 @@ public class LockObject {
         return new LockObject(type, lower32, lockEvent);
     }
 
-    private LockObject(Type type, int objectHashCode, SyncEvent lockEvent) {
+    private LockObject(Type type, int objectHashCode, EventItem lockEvent) {
         this.type = type;
         this.objectHashCode = objectHashCode;
         this.lockEvent = lockEvent;
     }
 
-    public SyncEvent getLockEvent() {
+    public EventItem getLockEvent() {
         return lockEvent;
     }
 

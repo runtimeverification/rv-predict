@@ -9,15 +9,12 @@ import java.util.Set;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.EventItem;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
 import com.runtimeverification.rvpredict.smt.formula.Formula;
-import com.runtimeverification.rvpredict.trace.Event;
-import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
 import com.runtimeverification.rvpredict.trace.MemoryAddr;
-import com.runtimeverification.rvpredict.trace.ReadEvent;
 import com.runtimeverification.rvpredict.trace.Trace;
-import com.runtimeverification.rvpredict.trace.WriteEvent;
 import com.runtimeverification.rvpredict.util.Logger;
 import com.runtimeverification.rvpredict.violation.Race;
 import com.runtimeverification.rvpredict.violation.Violation;
@@ -94,31 +91,31 @@ public class RaceDetectorTask implements Runnable {
             }
 
             /* group equivalent reads and writes into memory access blocks */
-            Map<MemoryAccessEvent, List<MemoryAccessEvent>> equivAccBlk = new LinkedHashMap<MemoryAccessEvent, List<MemoryAccessEvent>>();
-            for (Map.Entry<Long, List<MemoryAccessEvent>> entry : trace
+            Map<EventItem, List<EventItem>> equivAccBlk = new LinkedHashMap<>();
+            for (Map.Entry<Long, List<EventItem>> entry : trace
                     .getMemAccessEventsTable().row(addr).entrySet()) {
                 // TODO(YilongL): the extensive use of List#indexOf could be a performance problem later
 
                 long crntTID = entry.getKey();
-                List<MemoryAccessEvent> memAccEvents = entry.getValue();
+                List<EventItem> memAccEvents = entry.getValue();
 
-                List<Event> crntThrdEvents = trace.getThreadEvents(crntTID);
+                List<EventItem> crntThrdEvents = trace.getThreadEvents(crntTID);
 
-                ListIterator<MemoryAccessEvent> iter = memAccEvents.listIterator();
+                ListIterator<EventItem> iter = memAccEvents.listIterator();
                 while (iter.hasNext()) {
-                    MemoryAccessEvent memAcc = iter.next();
+                    EventItem memAcc = iter.next();
                     equivAccBlk.put(memAcc, Lists.newArrayList(memAcc));
-                    if (memAcc instanceof WriteEvent) {
+                    if (memAcc.isWrite()) {
                         int prevMemAccIdx = crntThrdEvents.indexOf(memAcc);
 
                         while (iter.hasNext()) {
-                            MemoryAccessEvent crntMemAcc = iter.next();
+                            EventItem crntMemAcc = iter.next();
                             int crntMemAccIdx = crntThrdEvents.indexOf(crntMemAcc);
 
                             /* ends the block if there is sync/branch-event in between */
                             boolean memAccOnly = true;
-                            for (Event e : crntThrdEvents.subList(prevMemAccIdx + 1, crntMemAccIdx)) {
-                                memAccOnly = memAccOnly && (e instanceof MemoryAccessEvent);
+                            for (EventItem e : crntThrdEvents.subList(prevMemAccIdx + 1, crntMemAccIdx)) {
+                                memAccOnly = memAccOnly && e.isReadOrWrite();
                             }
                             if (!memAccOnly) {
                                 iter.previous();
@@ -129,7 +126,7 @@ public class RaceDetectorTask implements Runnable {
                             /* YilongL: without logging branch events, we
                              * have to be conservative and end the block
                              * when a read event is encountered */
-                            if (crntMemAcc instanceof ReadEvent) {
+                            if (crntMemAcc.isRead()) {
                                 break;
                             }
 
@@ -140,17 +137,17 @@ public class RaceDetectorTask implements Runnable {
             }
 
             /* check memory access pairs */
-            for (MemoryAccessEvent fst : equivAccBlk.keySet()) {
-                for (MemoryAccessEvent snd : equivAccBlk.keySet()) {
+            for (EventItem fst : equivAccBlk.keySet()) {
+                for (EventItem snd : equivAccBlk.keySet()) {
                     if (fst.getTID() >= snd.getTID()) {
                         continue;
                     }
 
                     /* skip if all potential data races are already known */
                     Set<Race> potentialRaces = Sets.newHashSet();
-                    for (MemoryAccessEvent e1 : equivAccBlk.get(fst)) {
-                        for (MemoryAccessEvent e2 : equivAccBlk.get(snd)) {
-                            if ((e1 instanceof WriteEvent || e2 instanceof WriteEvent)
+                    for (EventItem e1 : equivAccBlk.get(fst)) {
+                        for (EventItem e2 : equivAccBlk.get(snd)) {
+                            if ((e1.isWrite() || e2.isWrite())
                                     && !trace.isClinitMemoryAccess(e1)
                                     && !trace.isClinitMemoryAccess(e2)) {
                                 potentialRaces.add(new Race(e1, e2, trace, metadata));

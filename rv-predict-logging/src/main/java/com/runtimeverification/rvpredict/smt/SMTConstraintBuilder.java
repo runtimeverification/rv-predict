@@ -28,16 +28,11 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.smt;
 
+import com.runtimeverification.rvpredict.log.EventItem;
 import com.runtimeverification.rvpredict.smt.formula.*;
-import com.runtimeverification.rvpredict.trace.Event;
 import com.runtimeverification.rvpredict.trace.EventType;
-import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
-import com.runtimeverification.rvpredict.trace.SyncEvent;
 import com.runtimeverification.rvpredict.trace.LockRegion;
-import com.runtimeverification.rvpredict.trace.ReadEvent;
 import com.runtimeverification.rvpredict.trace.Trace;
-import com.runtimeverification.rvpredict.trace.WriteEvent;
-
 import java.util.Map;
 import java.util.List;
 import java.util.Map.Entry;
@@ -71,20 +66,20 @@ public class SMTConstraintBuilder {
 
     private final Solver solver;
 
-    private final Map<MemoryAccessEvent, Formula> abstractPhi = Maps.newHashMap();
-    private final Map<MemoryAccessEvent, Formula> concretePhi = Maps.newHashMap();
+    private final Map<EventItem, Formula> abstractPhi = Maps.newHashMap();
+    private final Map<EventItem, Formula> concretePhi = Maps.newHashMap();
 
     /**
      * Avoids infinite recursion when building the abstract feasibility
      * constraint of a {@link MemoryAccessEvent}.
      */
-    private final Set<MemoryAccessEvent> computedAbstractPhi = Sets.newHashSet();
+    private final Set<EventItem> computedAbstractPhi = Sets.newHashSet();
 
     /**
      * Avoids infinite recursion when building the concrete feasibility
      * constraint of a {@link MemoryAccessEvent}.
      */
-    private final Set<MemoryAccessEvent> computedConcretePhi = Sets.newHashSet();
+    private final Set<EventItem> computedConcretePhi = Sets.newHashSet();
 
     // constraints below
     private final FormulaTerm.Builder smtlibAssertionBuilder = FormulaTerm.andBuilder();
@@ -95,13 +90,13 @@ public class SMTConstraintBuilder {
         this.solver = new Z3Wrapper(config);
     }
 
-    private FormulaTerm getAsstHappensBefore(Event event1, Event event2) {
+    private FormulaTerm getAsstHappensBefore(EventItem event1, EventItem event2) {
         return FormulaTerm.LESS_THAN(new OrderVariable(event1), new OrderVariable(event2));
     }
 
     private FormulaTerm getAsstLockRegionHappensBefore(LockRegion lockRegion1, LockRegion lockRegion2) {
-        SyncEvent unlock = lockRegion1.getUnlock();
-        SyncEvent lock = lockRegion2.getLock();
+        EventItem unlock = lockRegion1.getUnlock();
+        EventItem lock = lockRegion2.getLock();
         return getAsstHappensBefore(
                 unlock != null ? unlock : trace.getLastThreadEvent(lockRegion1.getThreadId()),
                 lock != null ? lock : trace.getFirstThreadEvent(lockRegion2.getThreadId()));
@@ -113,15 +108,15 @@ public class SMTConstraintBuilder {
                 getAsstLockRegionHappensBefore(lockRegion2, lockRegion1)));
     }
 
-    private int getRelativeIdx(Event event) {
+    private int getRelativeIdx(EventItem event) {
         return (int) (event.getGID() % trace.capacity());
     }
 
-    private int getGroupId(Event e) {
+    private int getGroupId(EventItem e) {
         return groupId[getRelativeIdx(e)];
     }
 
-    private void setGroupId(Event e, int id) {
+    private void setGroupId(EventItem e, int id) {
         groupId[getRelativeIdx(e)] = id;
     }
 
@@ -129,11 +124,11 @@ public class SMTConstraintBuilder {
      * Adds program order constraints.
      */
     public void addIntraThreadConstraints() {
-        for (List<Event> events : trace.getThreadIdToEventsMap().values()) {
+        for (List<EventItem> events : trace.getThreadIdToEventsMap().values()) {
             setGroupId(events.get(0), closure.nextElemId());
             for (int i = 1; i < events.size(); i++) {
-                Event e1 = events.get(i - 1);
-                Event e2 = events.get(i);
+                EventItem e1 = events.get(i - 1);
+                EventItem e2 = events.get(i);
                 smtlibAssertionBuilder.add(getAsstHappensBefore(e1, e2));
                 if (e1.getType() == EventType.START ||
                     e2.getType() == EventType.START ||
@@ -151,13 +146,13 @@ public class SMTConstraintBuilder {
      * Adds thread start/join constraints.
      */
     public void addThreadStartJoinConstraints() {
-        for (List<SyncEvent> startOrJoinEvents : trace.getThreadIdToStartJoinEvents().values()) {
-            for (SyncEvent startOrJoin : startOrJoinEvents) {
+        for (List<EventItem> startOrJoinEvents : trace.getThreadIdToStartJoinEvents().values()) {
+            for (EventItem startOrJoin : startOrJoinEvents) {
                 long tid = startOrJoin.getSyncObject();
                 switch (startOrJoin.getType()) {
                 case START:
-                    Event startEvent = startOrJoin;
-                    Event fstThrdEvent = trace.getFirstThreadEvent(tid);
+                    EventItem startEvent = startOrJoin;
+                    EventItem fstThrdEvent = trace.getFirstThreadEvent(tid);
                     /* YilongL: it's possible that the first event of the new
                      * thread is not in the current trace */
                     if (fstThrdEvent != null) {
@@ -166,8 +161,8 @@ public class SMTConstraintBuilder {
                     }
                     break;
                 case JOIN:
-                    Event joinEvent = startOrJoin;
-                    Event lastThrdEvent = trace.getLastThreadEvent(tid);
+                    EventItem joinEvent = startOrJoin;
+                    EventItem lastThrdEvent = trace.getLastThreadEvent(tid);
                     /* YilongL: it's possible that the last event of the thread
                      * to join is not in the current trace */
                     if (lastThrdEvent != null) {
@@ -187,13 +182,13 @@ public class SMTConstraintBuilder {
      */
     public void addLockingConstraints() {
         /* enumerate the locking events on each lock */
-        for (List<SyncEvent> syncEvents : trace.getLockObjToSyncEvents().values()) {
-            Map<Long, SyncEvent> threadIdToPrevLockOrUnlock = Maps.newHashMap();
+        for (List<EventItem> syncEvents : trace.getLockObjToSyncEvents().values()) {
+            Map<Long, EventItem> threadIdToPrevLockOrUnlock = Maps.newHashMap();
             List<LockRegion> lockRegions = Lists.newArrayList();
 
-            for (SyncEvent syncEvent : syncEvents) {
+            for (EventItem syncEvent : syncEvents) {
                 long tid = syncEvent.getTID();
-                SyncEvent prevLockOrUnlock = threadIdToPrevLockOrUnlock.get(tid);
+                EventItem prevLockOrUnlock = threadIdToPrevLockOrUnlock.get(tid);
                 assert prevLockOrUnlock == null
                     || !(prevLockOrUnlock.isLockEvent() && syncEvent.isLockEvent())
                     || !(prevLockOrUnlock.isUnlockEvent() && syncEvent.isUnlockEvent()) :
@@ -217,9 +212,9 @@ public class SMTConstraintBuilder {
                 }
             }
 
-            for (SyncEvent lockOrUnlock : threadIdToPrevLockOrUnlock.values()) {
+            for (EventItem lockOrUnlock : threadIdToPrevLockOrUnlock.values()) {
                 if (lockOrUnlock.isLockEvent()) {
-                    SyncEvent lock = lockOrUnlock;
+                    EventItem lock = lockOrUnlock;
                     lockRegions.add(new LockRegion(lock, null));
                 }
             }
@@ -249,7 +244,7 @@ public class SMTConstraintBuilder {
      * however, this {@code event} is allowed to read or write a different value
      * than in the original trace.
      */
-    public Formula getAbstractFeasibilityConstraint(MemoryAccessEvent event) {
+    public Formula getAbstractFeasibilityConstraint(EventItem event) {
         if (computedAbstractPhi.contains(event)) {
             return new AbstractPhiVariable(event);
         }
@@ -257,7 +252,7 @@ public class SMTConstraintBuilder {
 
         FormulaTerm.Builder phiBuilder = FormulaTerm.andBuilder();
         /* make sure that every dependent read event reads the same value as in the original trace */
-        for (ReadEvent depRead : trace.getCtrlFlowDependentEvents(event)) {
+        for (EventItem depRead : trace.getCtrlFlowDependentEvents(event)) {
             phiBuilder.add(getConcreteFeasibilityConstraint(depRead));
         }
         abstractPhi.put(event, phiBuilder.build());
@@ -269,7 +264,7 @@ public class SMTConstraintBuilder {
      * the same as in the original trace <b>if</b> the corresponding data-abstract
      * feasibility constraint is also satisfied.
      */
-    private Formula getConcreteFeasibilityConstraint(MemoryAccessEvent event) {
+    private Formula getConcreteFeasibilityConstraint(EventItem event) {
         if (computedConcretePhi.contains(event)) {
             return new ConcretePhiVariable(event);
         } else if (event.getValue() == Constants._0X_DEADBEEFL) {
@@ -278,14 +273,14 @@ public class SMTConstraintBuilder {
         computedConcretePhi.add(event);
 
         Formula phi;
-        if (event instanceof ReadEvent) {
-            List<WriteEvent> writeEvents = trace.getWriteEventsOn(event.getAddr());
+        if (event.isRead()) {
+            List<EventItem> writeEvents = trace.getWriteEventsOn(event.getAddr());
 
             /* thread immediate write predecessor */
-            WriteEvent thrdImdWrtPred = null;
+            EventItem thrdImdWrtPred = null;
             /* predecessor write set: all write events whose values could be read by `depRead' */
-            List<WriteEvent> predWriteSet = Lists.newArrayList();
-            for (WriteEvent write : writeEvents) {
+            List<EventItem> predWriteSet = Lists.newArrayList();
+            for (EventItem write : writeEvents) {
                 if (write.getTID() == event.getTID()) {
                     if (write.getGID() < event.getGID()) {
                         thrdImdWrtPred = write;
@@ -299,8 +294,8 @@ public class SMTConstraintBuilder {
             }
 
             /* predecessor write set of same value */
-            List<WriteEvent> sameValPredWriteSet = Lists.newArrayList();
-            for (WriteEvent write : predWriteSet) {
+            List<EventItem> sameValPredWriteSet = Lists.newArrayList();
+            for (EventItem write : predWriteSet) {
                 if (write.getValue() == event.getValue()) {
                     sameValPredWriteSet.add(write);
                 }
@@ -311,7 +306,7 @@ public class SMTConstraintBuilder {
             if (thrdImdWrtPred == null &&
                     trace.getInitValueOf(event.getAddr()) == event.getValue()) {
                 FormulaTerm.Builder formulaBuilder = FormulaTerm.andBuilder();
-                for (WriteEvent write : predWriteSet) {
+                for (EventItem write : predWriteSet) {
                     formulaBuilder.add(getAsstHappensBefore(event, write));
                 }
                 case1 = formulaBuilder.build();
@@ -319,12 +314,12 @@ public class SMTConstraintBuilder {
 
             /* case 2: the dependent read reads a previously written value */
             FormulaTerm.Builder case2Builder = FormulaTerm.orBuilder();
-            for (WriteEvent write : sameValPredWriteSet) {
+            for (EventItem write : sameValPredWriteSet) {
                 FormulaTerm.Builder formulaBuilder = FormulaTerm.andBuilder();
                 formulaBuilder.add(getAbstractFeasibilityConstraint(write),
                         getConcreteFeasibilityConstraint(write));
                 formulaBuilder.add(getAsstHappensBefore(write, event));
-                for (WriteEvent otherWrite : writeEvents) {
+                for (EventItem otherWrite : writeEvents) {
                     if (write != otherWrite && !happensBefore(otherWrite, write)
                             && !happensBefore(event, otherWrite)) {
                         formulaBuilder.add(FormulaTerm.OR(
@@ -346,26 +341,26 @@ public class SMTConstraintBuilder {
     /**
      * Checks if two {@code MemoryAccessEvent} hold a common lock.
      */
-    public boolean hasCommonLock(MemoryAccessEvent e1, MemoryAccessEvent e2) {
+    public boolean hasCommonLock(EventItem e1, EventItem e2) {
         return lockEngine.hasCommonLock(e1, e2);
     }
 
     /**
      * Checks if one event happens before another.
      */
-    public boolean happensBefore(Event e1, Event e2) {
+    public boolean happensBefore(EventItem e1, EventItem e2) {
         return closure.inRelation(getGroupId(e1), getGroupId(e2));
     }
 
-    public boolean isRace(Event e1, Event e2, Formula... casualConstraints) {
+    public boolean isRace(EventItem e1, EventItem e2, Formula... casualConstraints) {
         FormulaTerm.Builder raceAssertionBuilder = FormulaTerm.andBuilder();
         raceAssertionBuilder.add(smtlibAssertionBuilder.build());
-        for (Entry<MemoryAccessEvent, Formula> entry : abstractPhi.entrySet()) {
+        for (Entry<EventItem, Formula> entry : abstractPhi.entrySet()) {
             raceAssertionBuilder.add(FormulaTerm.BOOL_EQUAL(
                     new AbstractPhiVariable(entry.getKey()),
                     entry.getValue()));
         }
-        for (Entry<MemoryAccessEvent, Formula> entry : concretePhi.entrySet()) {
+        for (Entry<EventItem, Formula> entry : concretePhi.entrySet()) {
             raceAssertionBuilder.add(FormulaTerm.BOOL_EQUAL(
                     new ConcretePhiVariable(entry.getKey()),
                     entry.getValue()));

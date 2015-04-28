@@ -90,7 +90,7 @@ public class TraceCache {
             if (items[i] == null) {
                 break;
             }
-            trace.addRawEvent(EventUtils.of(items[i]));
+            trace.addRawEvent(items[i]);
         }
         trace.finishedLoading();
         return trace;

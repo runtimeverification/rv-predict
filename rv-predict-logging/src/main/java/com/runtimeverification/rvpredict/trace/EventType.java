@@ -84,4 +84,12 @@ public enum EventType {
     public static boolean isUnlock(EventType type) {
         return type == WRITE_UNLOCK || type == READ_UNLOCK;
     }
+
+    public boolean isSyncType() {
+        return WRITE_LOCK.ordinal() <= this.ordinal() && this.ordinal() <= JOIN.ordinal();
+    }
+
+    public boolean isMetaType() {
+        return CLINIT_ENTER.ordinal() <= this.ordinal() && this.ordinal() <= FINISH_METHOD.ordinal();
+    }
 }

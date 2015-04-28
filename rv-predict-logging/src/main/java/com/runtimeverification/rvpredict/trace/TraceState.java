@@ -14,6 +14,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
+import com.runtimeverification.rvpredict.log.EventItem;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 
@@ -39,14 +40,14 @@ public class TraceState {
      * Table indexed by thread ID and lock object respectively. This table
      * records the current lock status of each thread.
      */
-    private final Table<Long, Long, Deque<SyncEvent>> lockTable = HashBasedTable.create();
+    private final Table<Long, Long, Deque<EventItem>> lockTable = HashBasedTable.create();
 
     /**
      * Map from currently held lock to the stack trace at the time it is first acquired.
      */
-    private final Map<SyncEvent, List<String>> lockHeldToStacktrace = Maps.newHashMap();
+    private final Map<EventItem, List<String>> lockHeldToStacktrace = Maps.newHashMap();
 
-    private final Map<Long, SyncEvent> threadIdToStartEvent = Maps.newHashMap();
+    private final Map<Long, EventItem> threadIdToStartEvent = Maps.newHashMap();
 
     private Trace crntTraceWindow;
 
@@ -65,25 +66,23 @@ public class TraceState {
         this.crntTraceWindow = traceWindow;
     }
 
-    public void invokeMethod(Event event) {
+    public void invokeMethod(EventItem event) {
         assert event.getType() == EventType.INVOKE_METHOD;
         Trace.getOrInitEmptyList(threadIdToStacktrace, event.getTID()).add(event.getLocId());
     }
 
-    public void finishMethod(Event event) {
+    public void finishMethod(EventItem event) {
         assert event.getType() == EventType.FINISH_METHOD;
         List<Integer> stacktrace = threadIdToStacktrace.get(event.getTID());
         int locId = stacktrace.remove(stacktrace.size() - 1);
         assert locId == event.getLocId();
     }
 
-    public void acquireLock(Event event) {
-        assert EventType.isLock(event.getType());
-
-        SyncEvent lock = (SyncEvent) event;
+    public void acquireLock(EventItem lock) {
+        assert EventType.isLock(lock.getType());
         long tid = lock.getTID();
         long lockId = lock.getSyncObject();
-        Deque<SyncEvent> locks = lockTable.get(tid, lockId);
+        Deque<EventItem> locks = lockTable.get(tid, lockId);
         if (locks == null) {
             locks = new ArrayDeque<>();
             lockTable.put(tid, lockId, locks);
@@ -91,12 +90,11 @@ public class TraceState {
         locks.add(lock);
     }
 
-    public void releaseLock(Event event) {
-        assert EventType.isUnlock(event.getType());
-        SyncEvent unlock = (SyncEvent) event;
+    public void releaseLock(EventItem unlock) {
+        assert EventType.isUnlock(unlock.getType());
         long tid = unlock.getTID();
         long lockId = unlock.getSyncObject();
-        Event lock = lockTable.get(tid, lockId).removeLast();
+        EventItem lock = lockTable.get(tid, lockId).removeLast();
         assert EventType.isLock(lock.getType());
     }
 
@@ -130,13 +128,13 @@ public class TraceState {
     }
 
     public int getLockCount(long threadId, long lockId) {
-        Deque<SyncEvent> deque = lockTable.get(threadId, lockId);
+        Deque<EventItem> deque = lockTable.get(threadId, lockId);
         return deque == null ? 0 : deque.size();
     }
 
-    public Map<Long, List<SyncEvent>> getLockStatusSnapshot(long threadId) {
-        ImmutableMap.Builder<Long, List<SyncEvent>> builder = ImmutableMap.builder();
-        for (Map.Entry<Long, Deque<SyncEvent>> e : lockTable.row(threadId).entrySet()) {
+    public Map<Long, List<EventItem>> getLockStatusSnapshot(long threadId) {
+        ImmutableMap.Builder<Long, List<EventItem>> builder = ImmutableMap.builder();
+        for (Map.Entry<Long, Deque<EventItem>> e : lockTable.row(threadId).entrySet()) {
             builder.put(e.getKey(), ImmutableList.copyOf(e.getValue()));
         }
         return builder.build();
@@ -147,18 +145,18 @@ public class TraceState {
         return stacktrace == null ? ImmutableList.<Integer>of() : ImmutableList.copyOf(stacktrace);
     }
 
-    public Map<SyncEvent, List<String>> getHeldLockStacktraceSnapshot() {
-        ImmutableMap.Builder<SyncEvent, List<String>> builder = ImmutableMap.builder();
-        for (Map.Entry<SyncEvent, List<String>> entry : lockHeldToStacktrace.entrySet()) {
+    public Map<EventItem, List<String>> getHeldLockStacktraceSnapshot() {
+        ImmutableMap.Builder<EventItem, List<String>> builder = ImmutableMap.builder();
+        for (Map.Entry<EventItem, List<String>> entry : lockHeldToStacktrace.entrySet()) {
             builder.put(entry.getKey(), ImmutableList.copyOf(entry.getValue()));
         }
         return builder.build();
     }
 
-    private Set<SyncEvent> getHeldLocks() {
-        Set<SyncEvent> locksHeld = Sets.newHashSet();
-        for (Table.Cell<Long, Long, Deque<SyncEvent>> cell : lockTable.cellSet()) {
-            Deque<SyncEvent> deque = cell.getValue();
+    private Set<EventItem> getHeldLocks() {
+        Set<EventItem> locksHeld = Sets.newHashSet();
+        for (Table.Cell<Long, Long, Deque<EventItem>> cell : lockTable.cellSet()) {
+            Deque<EventItem> deque = cell.getValue();
             if (!deque.isEmpty()) {
                 locksHeld.add(deque.peek());
             }
@@ -167,9 +165,9 @@ public class TraceState {
     }
 
     public void finishLoading() {
-        Set<SyncEvent> locksHeld = getHeldLocks();
+        Set<EventItem> locksHeld = getHeldLocks();
         lockHeldToStacktrace.keySet().retainAll(locksHeld);
-        for (SyncEvent lock : locksHeld) {
+        for (EventItem lock : locksHeld) {
             lockHeldToStacktrace.putIfAbsent(lock, crntTraceWindow.getStacktraceAt(lock));
         }
 
@@ -177,12 +175,12 @@ public class TraceState {
         crntTraceWindow = null;
     }
 
-    public void onThreadStart(SyncEvent startEvent) {
+    public void onThreadStart(EventItem startEvent) {
         assert startEvent.getType() == EventType.START;
         threadIdToStartEvent.put(startEvent.getSyncObject(), startEvent);
     }
 
-    public SyncEvent getThreadStartEvent(long threadId) {
+    public EventItem getThreadStartEvent(long threadId) {
         return threadIdToStartEvent.get(threadId);
     }
 

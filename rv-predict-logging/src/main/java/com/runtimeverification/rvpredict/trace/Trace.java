@@ -41,6 +41,7 @@ import java.util.List;
 
 import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.EventItem;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.util.Constants;
 
@@ -56,8 +57,8 @@ public class Trace {
     /**
      * Unprocessed raw events reading from the logging phase.
      */
-    private ImmutableList<Event> rawEvents = null;
-    private final ImmutableList.Builder<Event> rawEventsBuilder = ImmutableList.builder();
+    private ImmutableList<EventItem> rawEvents = null;
+    private final ImmutableList.Builder<EventItem> rawEventsBuilder = ImmutableList.builder();
 
     /**
      * Read threads on each address. Only used in filtering thread-local
@@ -79,37 +80,37 @@ public class Trace {
     private final Set<Long> threadIds = new HashSet<>();
 
     // fulltrace represents all the critical events in the global order
-    private final List<Event> allEvents = new ArrayList<>();
+    private final List<EventItem> allEvents = new ArrayList<>();
 
     /**
      * Events of each thread.
      */
-    private final Map<Long, List<Event>> threadIdToEvents = new HashMap<>();
+    private final Map<Long, List<EventItem>> threadIdToEvents = new HashMap<>();
 
     /**
      * Start/Join events indexed by the ID of its target thread to join/start.
      */
-    private final Map<Long, List<SyncEvent>> threadIdToStartJoinEvents = new HashMap<>();
+    private final Map<Long, List<EventItem>> threadIdToStartJoinEvents = new HashMap<>();
 
     /**
      * Wait/Notify/Lock/Unlock events indexed by the involved lock object.
      */
-    private final Map<Long, List<SyncEvent>> lockIdToSyncEvents = new HashMap<>();
+    private final Map<Long, List<EventItem>> lockIdToSyncEvents = new HashMap<>();
 
     /**
      * Read events on each address.
      */
-    private final Map<MemoryAddr, List<ReadEvent>> addrToReadEvents = new HashMap<>();
+    private final Map<MemoryAddr, List<EventItem>> addrToReadEvents = new HashMap<>();
 
     /**
      * Write events on each address.
      */
-    private final Map<MemoryAddr, List<WriteEvent>> addrToWriteEvents = new HashMap<>();
+    private final Map<MemoryAddr, List<EventItem>> addrToWriteEvents = new HashMap<>();
 
     /**
      * Lists of {@code MemoryAccessEvent}'s indexed by address and thread ID.
      */
-    private final Table<MemoryAddr, Long, List<MemoryAccessEvent>> memAccessEventsTbl = HashBasedTable.create();
+    private final Table<MemoryAddr, Long, List<EventItem>> memAccessEventsTbl = HashBasedTable.create();
 
     /**
      * The initial value at all addresses referenced in this trace segment. It
@@ -125,23 +126,23 @@ public class Trace {
      */
     private final Map<Long, ThreadStatus> threadIdToInitThreadStatus = Maps.newHashMap();
 
-    private final Map<SyncEvent, List<String>> initHeldLockToStacktrace;
+    private final Map<EventItem, List<String>> initHeldLockToStacktrace;
 
     /**
      * Set of {@code MemoryAccessEvent}'s that happen during class initialization.
      */
-    private final Set<MemoryAccessEvent> clinitMemAccEvents = Sets.newHashSet();
+    private final Set<EventItem> clinitMemAccEvents = Sets.newHashSet();
 
     /**
      * Set of outermost LOCK/UNLOCK events.
      */
-    private final Set<SyncEvent> outermostLockingEvents = Sets.newHashSet();
+    private final Set<EventItem> outermostLockingEvents = Sets.newHashSet();
 
     /**
      * Map from thread Id to {@link EventType#INVOKE_METHOD} and
      * {@link EventType#FINISH_METHOD} events.
      */
-    private final Map<Long, List<MetaEvent>> threadIdToCallStackEvents = Maps.newHashMap();
+    private final Map<Long, List<EventItem>> threadIdToCallStackEvents = Maps.newHashMap();
 
     private final Set<MemoryAddr> unsafeMemoryAddresses = Sets.newHashSet();
 
@@ -171,7 +172,7 @@ public class Trace {
         return !sharedMemAddr.isEmpty();
     }
 
-    public List<Event> getAllEvents() {
+    public List<EventItem> getAllEvents() {
         return allEvents;
     }
 
@@ -188,13 +189,13 @@ public class Trace {
         return initValue;
     }
 
-    public Event getFirstThreadEvent(long threadId) {
-        List<Event> events = getThreadEvents(threadId);
+    public EventItem getFirstThreadEvent(long threadId) {
+        List<EventItem> events = getThreadEvents(threadId);
         return events.isEmpty() ? null : events.get(0);
     }
 
-    public Event getLastThreadEvent(long threadId) {
-        List<Event> events = getThreadEvents(threadId);
+    public EventItem getLastThreadEvent(long threadId) {
+        List<EventItem> events = getThreadEvents(threadId);
         return events.isEmpty() ? null : events.get(events.size() - 1);
     }
 
@@ -202,45 +203,45 @@ public class Trace {
         return threadIds;
     }
 
-    public List<Event> getThreadEvents(long threadId) {
-        List<Event> events = threadIdToEvents.get(threadId);
-        return events == null ? Lists.<Event>newArrayList() : events;
+    public List<EventItem> getThreadEvents(long threadId) {
+        List<EventItem> events = threadIdToEvents.get(threadId);
+        return events == null ? Lists.<EventItem>newArrayList() : events;
     }
 
-    public Event getNextThreadEvent(Event event) {
-        List<Event> events = getThreadEvents(event.getTID());
+    public EventItem getNextThreadEvent(EventItem event) {
+        List<EventItem> events = getThreadEvents(event.getTID());
         int nextThrdEventIdx = events.indexOf(event) + 1;
         assert nextThrdEventIdx > 0;
         return events.size() == nextThrdEventIdx ? null : events.get(nextThrdEventIdx);
     }
 
-    public Map<Long, List<Event>> getThreadIdToEventsMap() {
+    public Map<Long, List<EventItem>> getThreadIdToEventsMap() {
         return threadIdToEvents;
     }
 
-    public Map<Long, List<SyncEvent>> getThreadIdToStartJoinEvents() {
+    public Map<Long, List<EventItem>> getThreadIdToStartJoinEvents() {
         return threadIdToStartJoinEvents;
     }
 
-    public Map<Long, List<SyncEvent>> getLockObjToSyncEvents() {
+    public Map<Long, List<EventItem>> getLockObjToSyncEvents() {
         return lockIdToSyncEvents;
     }
 
-    public List<ReadEvent> getReadEventsOn(MemoryAddr addr) {
-        List<ReadEvent> events = addrToReadEvents.get(addr);
-        return events == null ? Lists.<ReadEvent>newArrayList() : events;
+    public List<EventItem> getReadEventsOn(MemoryAddr addr) {
+        List<EventItem> events = addrToReadEvents.get(addr);
+        return events == null ? Lists.<EventItem>newArrayList() : events;
     }
 
-    public List<WriteEvent> getWriteEventsOn(MemoryAddr addr) {
-        List<WriteEvent> events = addrToWriteEvents.get(addr);
-        return events == null ? Lists.<WriteEvent>newArrayList() : events;
+    public List<EventItem> getWriteEventsOn(MemoryAddr addr) {
+        List<EventItem> events = addrToWriteEvents.get(addr);
+        return events == null ? Lists.<EventItem>newArrayList() : events;
     }
 
-    public Table<MemoryAddr, Long, List<MemoryAccessEvent>> getMemAccessEventsTable() {
+    public Table<MemoryAddr, Long, List<EventItem>> getMemAccessEventsTable() {
         return memAccessEventsTbl;
     }
 
-    public boolean isClinitMemoryAccess(MemoryAccessEvent event) {
+    public boolean isClinitMemoryAccess(EventItem event) {
         return clinitMemAccEvents.contains(event);
     }
 
@@ -257,7 +258,7 @@ public class Trace {
      * @return a {@code List} of stack trace element represented in
      *         {@code String}s
      */
-    public List<String> getStacktraceAt(Event event) {
+    public List<String> getStacktraceAt(EventItem event) {
         long tid = event.getTID();
         List<String> stacktrace = Lists.newArrayList();
         if (event.getGID() >= rawEvents.get(0).getGID()) {
@@ -265,8 +266,8 @@ public class Trace {
             for (int locId : threadIdToInitThreadStatus.get(tid).stacktrace) {
                 stacktrace.add(metadata.getLocationSig(locId));
             }
-            for (MetaEvent e : threadIdToCallStackEvents.getOrDefault(tid,
-                    Collections.<MetaEvent> emptyList())) {
+            for (EventItem e : threadIdToCallStackEvents.getOrDefault(tid,
+                    Collections.<EventItem> emptyList())) {
                 if (e.getGID() >= event.getGID()) {
                     break;
                 }
@@ -290,32 +291,32 @@ public class Trace {
         return stacktrace;
     }
 
-    public List<LockObject> getHeldLocksAt(MemoryAccessEvent memAcc) {
+    public List<LockObject> getHeldLocksAt(EventItem memAcc) {
         long tid = memAcc.getTID();
-        Map<Long, Deque<SyncEvent>> map = Maps.newHashMap();
-        for (Map.Entry<Long, List<SyncEvent>> entry : threadIdToInitThreadStatus.get(tid).lockStatus
+        Map<Long, Deque<EventItem>> map = Maps.newHashMap();
+        for (Map.Entry<Long, List<EventItem>> entry : threadIdToInitThreadStatus.get(tid).lockStatus
                 .entrySet()) {
             map.put(entry.getKey(), new ArrayDeque<>(entry.getValue()));
         }
-        for (Event e : getThreadEvents(tid)) {
+        for (EventItem e : getThreadEvents(tid)) {
             if (e.getGID() >= memAcc.getGID()) {
                 break;
             }
 
             EventType type = e.getType();
             if (EventType.isLock(type)) {
-                long lockId = ((SyncEvent) e).getSyncObject();
-                map.putIfAbsent(lockId, new ArrayDeque<SyncEvent>());
-                map.get(lockId).add((SyncEvent) e);
+                long lockId = e.getSyncObject();
+                map.putIfAbsent(lockId, new ArrayDeque<EventItem>());
+                map.get(lockId).add(e);
             } else if (EventType.isUnlock(type)) {
-                long lockId = ((SyncEvent) e).getSyncObject();
-                SyncEvent lock = map.get(lockId).removeLast();
+                long lockId = e.getSyncObject();
+                EventItem lock = map.get(lockId).removeLast();
                 assert lock.getTID() == tid && lock.getSyncObject() == lockId;
             }
         }
 
         List<LockObject> lockObjects = Lists.newArrayList();
-        for (Deque<SyncEvent> deque : map.values()) {
+        for (Deque<EventItem> deque : map.values()) {
             if (!deque.isEmpty()) {
                 lockObjects.add(LockObject.create(deque.peek()));
             }
@@ -329,7 +330,7 @@ public class Trace {
         return lockObjects;
     }
 
-    public SyncEvent getStartEventOf(long tid) {
+    public EventItem getStartEventOf(long tid) {
         return threadIdToInitThreadStatus.get(tid).startEvent;
     }
 
@@ -339,82 +340,79 @@ public class Trace {
      * events that happen-before the given event have to be included
      * conservatively.
      */
-    public List<ReadEvent> getCtrlFlowDependentEvents(MemoryAccessEvent memAccEvent) {
-        List<ReadEvent> readEvents = new ArrayList<>();
-        for (Event e : getThreadEvents(memAccEvent.getTID())) {
+    public List<EventItem> getCtrlFlowDependentEvents(EventItem memAccEvent) {
+        List<EventItem> readEvents = new ArrayList<>();
+        for (EventItem e : getThreadEvents(memAccEvent.getTID())) {
             if (e.getGID() >= memAccEvent.getGID()) {
                 break;
             }
 
-            if (e instanceof ReadEvent) {
-                readEvents.add((ReadEvent) e);
+            if (e.isRead()) {
+                readEvents.add(e);
             }
         }
 
         return readEvents;
     }
 
-    public void addRawEvent(Event event) {
+    public void addRawEvent(EventItem event) {
 //        System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
         rawEventsBuilder.add(event);
         updateTraceState(event);
 
-        if (event instanceof MemoryAccessEvent) {
-            MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
-            MemoryAddr addr = memAcc.getAddr();
-            getOrInitEmptySet(event instanceof ReadEvent ?
+        if (event.isReadOrWrite()) {
+            MemoryAddr addr = event.getAddr();
+            getOrInitEmptySet(event.isRead() ?
                     addrToReadThreads : addrToWriteThreads, addr).add(event.getTID());
             if (crntState.isInsideClassInitializer(event.getTID())) {
-                clinitMemAccEvents.add(memAcc);
+                clinitMemAccEvents.add(event);
             }
         }
     }
 
-    private void updateTraceState(Event event) {
+    private void updateTraceState(EventItem event) {
         long tid = event.getTID();
         if (!threadIdToInitThreadStatus.containsKey(tid)) {
             ThreadStatus initThreadInfo = getCurrentThreadStatus(tid);
             threadIdToInitThreadStatus.putIfAbsent(tid, initThreadInfo);
         }
 
-        if (event instanceof MemoryAccessEvent) {
-            MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
-            MemoryAddr addr = memAcc.getAddr();
-            long value = memAcc.getValue();
+        if (event.isReadOrWrite()) {
+            MemoryAddr addr = event.getAddr();
+            long value = event.getValue();
             long crntVal = crntState.getValueAt(addr);
             addrToInitValue.putIfAbsent(addr, crntVal);
-            if (event instanceof ReadEvent) {
+            if (event.isRead()) {
                 if (value != Constants._0X_DEADBEEFL && value != crntVal) {
                     if (Configuration.debug) {
                         System.err.printf(
                             String.format("[Warning] logged trace not sequential consistent:%n"
                                     + "  event %s reads a different value than the currently stored value %s%n"
                                     + "    at %s%n",
-                                    memAcc, crntVal, metadata.getLocationSig(memAcc.getLocId())));
+                                    event, crntVal, metadata.getLocationSig(event.getLocId())));
                     }
                     crntState.writeValueAt(addr, crntVal);
                     unsafeMemoryAddresses.add(addr);
                 }
             } else {
-                crntState.writeValueAt(addr, memAcc.getValue());
+                crntState.writeValueAt(addr, event.getValue());
             }
-        } else if (event.getType() == EventType.START) {
-            crntState.onThreadStart((SyncEvent) event);
+        } else if (event.isStart()) {
+            crntState.onThreadStart(event);
         } else if (EventType.isLock(event.getType()) || EventType.isUnlock(event.getType())) {
-            SyncEvent syncEvent = (SyncEvent) event;
-            long lockId = syncEvent.getSyncObject();
+            long lockId = event.getSyncObject();
             if (EventType.isLock(event.getType())) {
                 crntState.acquireLock(event);
                 if (crntState.getLockCount(tid, lockId) == 1) {
-                    outermostLockingEvents.add(syncEvent);
+                    outermostLockingEvents.add(event);
                 }
             } else {
                 crntState.releaseLock(event);
                 if (crntState.getLockCount(tid, lockId) == 0) {
-                    outermostLockingEvents.add(syncEvent);
+                    outermostLockingEvents.add(event);
                 }
             }
-        } else if (event instanceof MetaEvent) {
+        } else if (event.isMetaEvent()) {
             EventType eventType = event.getType();
             if (eventType == EventType.CLINIT_ENTER) {
                 crntState.incClinitDepth(tid);
@@ -422,10 +420,10 @@ public class Trace {
                 crntState.decClinitDepth(tid);
             } else if (eventType == EventType.INVOKE_METHOD) {
                 crntState.invokeMethod(event);
-                getOrInitEmptyList(threadIdToCallStackEvents, tid).add((MetaEvent) event);
+                getOrInitEmptyList(threadIdToCallStackEvents, tid).add(event);
             } else if (eventType == EventType.FINISH_METHOD) {
                 crntState.finishMethod(event);
-                getOrInitEmptyList(threadIdToCallStackEvents, tid).add((MetaEvent) event);
+                getOrInitEmptyList(threadIdToCallStackEvents, tid).add(event);
             } else {
                 assert false : "unreachable";
             }
@@ -442,29 +440,26 @@ public class Trace {
      *
      * @param event
      */
-    private void addEvent(Event event) {
+    private void addEvent(EventItem event) {
 //        System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
         long tid = event.getTID();
         threadIds.add(tid);
 
         allEvents.add(event);
         getOrInitEmptyList(threadIdToEvents, tid).add(event);
-        if (event instanceof MemoryAccessEvent) {
-            MemoryAccessEvent memAcc = (MemoryAccessEvent) event;
-            MemoryAddr addr = memAcc.getAddr();
+        if (event.isReadOrWrite()) {
+            MemoryAddr addr = event.getAddr();
 
-            getOrInitEmptyList(memAccessEventsTbl.row(addr), tid).add(memAcc);
+            getOrInitEmptyList(memAccessEventsTbl.row(addr), tid).add(event);
 
-            if (event instanceof ReadEvent) {
-                getOrInitEmptyList(addrToReadEvents, addr).add((ReadEvent) event);
+            if (event.isRead()) {
+                getOrInitEmptyList(addrToReadEvents, addr).add(event);
             } else {
-                getOrInitEmptyList(addrToWriteEvents, addr).add((WriteEvent) event);
+                getOrInitEmptyList(addrToWriteEvents, addr).add(event);
             }
-        } else if (event instanceof SyncEvent) {
-            SyncEvent syncEvent = (SyncEvent) event;
-
-            Map<Long, List<SyncEvent>> eventsMap = null;
-            switch (syncEvent.getType()) {
+        } else if (event.isSyncEvent()) {
+            Map<Long, List<EventItem>> eventsMap = null;
+            switch (event.getType()) {
             case START:
             case JOIN:
                 eventsMap = threadIdToStartJoinEvents;
@@ -478,10 +473,10 @@ public class Trace {
                 eventsMap = lockIdToSyncEvents;
                 break;
             default:
-                assert false : "unexpected event: " + syncEvent;
+                assert false : "unexpected event: " + event;
             }
 
-            getOrInitEmptyList(eventsMap, syncEvent.getSyncObject()).add(syncEvent);
+            getOrInitEmptyList(eventsMap, event.getSyncObject()).add(event);
         } else {
             assert false : "unreachable";
         }
@@ -512,10 +507,10 @@ public class Trace {
             }
         }
 
-        List<Event> reducedEvents = new ArrayList<>();
-        for (Event event : rawEvents) {
-            if (event instanceof MemoryAccessEvent) {
-                MemoryAddr addr = ((MemoryAccessEvent) event).getAddr();
+        List<EventItem> reducedEvents = new ArrayList<>();
+        for (EventItem event : rawEvents) {
+            if (event.isReadOrWrite()) {
+                MemoryAddr addr = event.getAddr();
                 if (sharedMemAddr.contains(addr)) {
                     reducedEvents.add(event);
                 }
@@ -523,36 +518,36 @@ public class Trace {
                 if (outermostLockingEvents.contains(event)) {
                     reducedEvents.add(event);
                 }
-            } else if (!(event instanceof MetaEvent)) {
+            } else if (!event.isMetaEvent()) {
                 reducedEvents.add(event);
             }
         }
 
         /* remove complete yet empty lock regions */
-        Table<Long, Long, Event> lockEventTbl = HashBasedTable.create();
-        Set<Event> criticalLockingEvents = new HashSet<>();
-        for (Event event : reducedEvents) {
+        Table<Long, Long, EventItem> lockEventTbl = HashBasedTable.create();
+        Set<EventItem> criticalLockingEvents = new HashSet<>();
+        for (EventItem event : reducedEvents) {
             long tid = event.getTID();
-            Map<Long, Event> lockStatus = lockEventTbl.row(tid);
+            Map<Long, EventItem> lockStatus = lockEventTbl.row(tid);
 
             if (event.isLockEvent()) {
-                long lockId = ((SyncEvent) event).getSyncObject();
-                Event prevLock = lockStatus.put(lockId, event);
+                long lockId = event.getSyncObject();
+                EventItem prevLock = lockStatus.put(lockId, event);
                 assert prevLock == null : "Unexpected unmatched lock event: " + prevLock;
             } else if (event.isUnlockEvent()) {
-                long lockId = ((SyncEvent) event).getSyncObject();
-                Event lock = lockStatus.remove(lockId);
+                long lockId = event.getSyncObject();
+                EventItem lock = lockStatus.remove(lockId);
                 if (lock == null || criticalLockingEvents.contains(lock)) {
                     criticalLockingEvents.add(event);
                 }
             } else {
-                for (Event e : lockStatus.values()) {
+                for (EventItem e : lockStatus.values()) {
                     criticalLockingEvents.add(e);
                 }
             }
         }
         criticalLockingEvents.addAll(lockEventTbl.values());
-        for (Event event : reducedEvents) {
+        for (EventItem event : reducedEvents) {
             if ((event.isLockEvent() || event.isUnlockEvent())
                     && !criticalLockingEvents.contains(event)) {
                 continue;
@@ -599,11 +594,11 @@ public class Trace {
     private static class ThreadStatus {
 
         private final List<Integer> stacktrace;
-        private final SyncEvent startEvent;
-        private final Map<Long, List<SyncEvent>> lockStatus;
+        private final EventItem startEvent;
+        private final Map<Long, List<EventItem>> lockStatus;
 
-        private ThreadStatus(List<Integer> stacktrace, SyncEvent startEvent,
-                Map<Long, List<SyncEvent>> lockStatus) {
+        private ThreadStatus(List<Integer> stacktrace, EventItem startEvent,
+                Map<Long, List<EventItem>> lockStatus) {
             this.stacktrace = stacktrace;
             this.startEvent = startEvent;
             this.lockStatus = lockStatus;

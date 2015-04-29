@@ -8,117 +8,92 @@ import com.runtimeverification.rvpredict.metadata.Metadata;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-
-import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.commons.lang3.tuple.Pair;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * Class adding a transparency layer between the prediction engine and the
  * filesystem holding the trace log.
- * A trace log consists from a collection of streams, each holding all the events
- * corresponding to a single thread.
+ *
  * @author TraianSF
+ * @author YilongL
  */
 public class TraceCache {
-
-    private final Map<Long, Pair<EventReader, EventItem>> indexes;
-
-    private long nextIdx = 0;
-
-    private int nextLogFileId = 1;
 
     private final Configuration config;
 
     private final TraceState crntState;
 
+    private final List<EventReader> readers = new ArrayList<>();
+
+    private final EventItem[] items;
+
     /**
      * Creates a new {@code TraceCahce} structure for a trace log.
-     *
-     * @param loggingFactory suppling additional information about the nature of the logs.
      */
     public TraceCache(Configuration config, Metadata metadata) {
         this.config = config;
-        this.indexes = new HashMap<>();
         this.crntState = new TraceState(metadata);
+        this.items = new EventItem[config.windowSize];
+    }
+
+    public void setup() throws IOException {
+        int logFileId = 0;
+        while (true) {
+            Path path = config.getTraceFilePath(logFileId++);
+            if (!path.toFile().exists()) {
+                break;
+            }
+            readers.add(new EventReader(path));
+        }
     }
 
     /**
-     * Load trace segment from event {@code fromIndex} to event
-     * {@code toIndex-1}. Event number is assumed to start from 0.
+     * Load trace segment starting from event {@code fromIndex}.
      *
-     * @see TraceCache#getNextEvent()
      * @param fromIndex
      *            low endpoint (inclusive) of the trace segment
-     * @param toIndex
-     *            high endpoint (exclusive) of the trace segment
-     * @return a {@link Trace} representing the trace segment
-     *         read
+     * @return a {@link Trace} representing the trace segment read
      */
-    public Trace getTrace(long fromIndex, long toIndex) throws IOException {
-        Trace trace = new Trace(crntState, (int) (toIndex - fromIndex));
-        crntState.setCurrentTraceWindow(trace);
-        assert nextIdx == fromIndex;
-        for (nextIdx = fromIndex; nextIdx < toIndex; nextIdx++) {
-            EventItem eventItem = getNextEvent();
-            if (eventItem == null) {
+    public Trace getTrace(long fromIndex) throws IOException {
+        Arrays.fill(items, null);
+        long toIndex = fromIndex + items.length;
+
+        /* sort readers by their last read events */
+        readers.sort((r1, r2) -> Long.compare(r1.lastReadEvent().GID, r2.lastReadEvent().GID));
+        Iterator<EventReader> iter = readers.iterator();
+        EventItem item;
+        while (iter.hasNext()) {
+            EventReader reader = iter.next();
+            if ((item = reader.lastReadEvent()).GID >= toIndex) {
                 break;
             }
-            trace.addRawEvent(EventUtils.of(eventItem));
+
+            assert item.GID >= fromIndex;
+            do {
+                items[(int) (item.GID % items.length)] = item;
+                try {
+                    item = reader.readEvent();
+                } catch (EOFException e) {
+                    iter.remove();
+                    break;
+                }
+            } while (item.GID < toIndex);
+        }
+
+        /* finish reading events and create the Trace object */
+        Trace trace = new Trace(crntState, config.windowSize);
+        crntState.setCurrentTraceWindow(trace);
+        for (int i = 0; i < items.length; i++) {
+            if (items[i] == null) {
+                break;
+            }
+            trace.addRawEvent(EventUtils.of(items[i]));
         }
         trace.finishedLoading();
         return trace;
-    }
-
-    /**
-     * Returns the next event in the trace, whose unique identifier in the
-     * logged trace is given by {@link #nextIdx}.
-     * <p>
-     * This method assumes the trace is read in sequential order, hence one of
-     * the keys in the {@link #indexes} table is equal to {@code nextIdx}.
-     * Moreover, it is assumed that {@code nextIdx < traceSize}.
-     *
-     * @return the next event in the trace
-     */
-    private EventItem getNextEvent() throws IOException {
-        if (!indexes.containsKey(nextIdx)) {
-            try {
-                updateIndexes(nextIdx);
-            } catch (EOFException e) {
-                // EOF is expected
-                return null;
-            }
-        }
-        Pair<EventReader, EventItem> entry = indexes.remove(nextIdx);
-        if (entry == null) {
-            return null;
-        }
-
-        EventItem nextEvent = entry.getValue();
-        try {
-            EventItem event = entry.getKey().readEvent();
-            entry.setValue(event);
-            indexes.put(event.GID, entry);
-        } catch (EOFException e) {
-            // EOF is expected.
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return nextEvent;
-    }
-
-    private void updateIndexes(long index) throws IOException {
-        EventItem event;
-        do {
-            Path path = config.getTraceFilePath(nextLogFileId++);
-            if (!path.toFile().exists()) {
-                return;
-            }
-            EventReader reader = new EventReader(path);
-            event = reader.readEvent();
-            indexes.put(event.GID, MutablePair.of(reader, event));
-        } while (event.GID != index);
     }
 
 }

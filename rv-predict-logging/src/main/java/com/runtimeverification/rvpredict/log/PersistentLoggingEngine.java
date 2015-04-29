@@ -160,7 +160,7 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
                     return null;
                 } else {
                     try {
-                        Path path = config.getTraceFilePath(eventWriters.size() + 1);
+                        Path path = config.getTraceFilePath(eventWriters.size());
                         EventWriter eventWriter = new EventWriter(path);
                         eventWriters.add(eventWriter);
                         return eventWriter;

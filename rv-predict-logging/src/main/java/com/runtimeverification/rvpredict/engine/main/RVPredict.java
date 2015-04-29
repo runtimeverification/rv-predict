@@ -72,6 +72,7 @@ public class RVPredict {
 
     public void start() {
         try {
+            traceCache.setup();
             ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(
                     4,
                     new ThreadFactory() {
@@ -95,7 +96,8 @@ public class RVPredict {
             // process the trace window by window
             Trace trace;
             do {
-                trace = traceCache.getTrace(fromIndex, fromIndex += config.windowSize);
+                trace = traceCache.getTrace(fromIndex);
+                fromIndex += config.windowSize;
                 if (trace.hasSharedMemAddr()) {
                     raceDetectorExecutor.execute(new RaceDetectorTask(config, metadata, trace,
                             violations));

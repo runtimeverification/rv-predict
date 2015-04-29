@@ -30,19 +30,27 @@ public class EventReader implements Closeable {
 
     private final ByteBuffer byteBuffer = ByteBuffer.allocate(EventItem.SIZEOF);
 
+    private EventItem lastReadEvent;
+
     public EventReader(Path path) throws IOException {
         in = new LZ4BlockInputStream(new BufferedInputStream(new FileInputStream(path.toFile()),
                 EventWriter.COMPRESS_BLOCK_SIZE), FAST_DECOMPRESSOR);
+        readEvent();
     }
 
     public final EventItem readEvent() throws IOException {
-        int bytes = in.read(byteBuffer.array());
-        if (bytes == -1) {
-            throw new EOFException();
-        } else if (bytes < EventItem.SIZEOF) {
-            throw new IOException("Corrupted event item");
+        int bytes;
+        int off = 0;
+        int len = EventItem.SIZEOF;
+        while ((bytes = in.read(byteBuffer.array(), off, len)) != len) {
+            if (bytes == -1) {
+                lastReadEvent = null;
+                throw new EOFException();
+            }
+            off += bytes;
+            len -= bytes;
         }
-        EventItem eventItem = new EventItem(
+        lastReadEvent = new EventItem(
                 byteBuffer.getLong(),
                 byteBuffer.getLong(),
                 byteBuffer.getInt(),
@@ -51,7 +59,11 @@ public class EventReader implements Closeable {
                 byteBuffer.getLong(),
                 EventType.values()[byteBuffer.get()]);
         byteBuffer.clear();
-        return eventItem;
+        return lastReadEvent;
+    }
+
+    public EventItem lastReadEvent() {
+        return lastReadEvent;
     }
 
     @Override

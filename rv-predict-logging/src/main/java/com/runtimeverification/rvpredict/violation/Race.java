@@ -32,12 +32,10 @@ import java.util.List;
 
 import com.google.common.base.StandardSystemProperty;
 import com.google.common.collect.Lists;
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.LockObject;
-import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
-import com.runtimeverification.rvpredict.trace.SyncEvent;
 import com.runtimeverification.rvpredict.trace.Trace;
-import com.runtimeverification.rvpredict.trace.WriteEvent;
 
 /**
  * Data race violation
@@ -45,8 +43,8 @@ import com.runtimeverification.rvpredict.trace.WriteEvent;
  */
 public class Race extends AbstractViolation {
 
-    private final MemoryAccessEvent e1;
-    private final MemoryAccessEvent e2;
+    private final Event e1;
+    private final Event e2;
     private final Trace trace;
 
     private final int locId1;
@@ -55,10 +53,10 @@ public class Race extends AbstractViolation {
     private final String stmtSig1;
     private final String stmtSig2;
 
-    public Race(MemoryAccessEvent e1, MemoryAccessEvent e2, Trace trace,
+    public Race(Event e1, Event e2, Trace trace,
             Metadata metadata) {
         if (e1.getLocId() > e2.getLocId()) {
-            MemoryAccessEvent tmp = e1;
+            Event tmp = e1;
             e1 = e2;
             e2 = tmp;
         }
@@ -125,18 +123,18 @@ public class Race extends AbstractViolation {
         return sb.toString();
     }
 
-    private void generateMemAccReport(MemoryAccessEvent e, StringBuilder sb) {
+    private void generateMemAccReport(Event e, StringBuilder sb) {
         long tid = e.getTID();
         List<LockObject> heldLocks = trace.getHeldLocksAt(e);
         sb.append(String.format("    Concurrent %s in thread T%s (locks held: {%s})%n",
-                e instanceof WriteEvent ? "write" : "read",
+                e.isWrite() ? "write" : "read",
                 tid,
                 getHeldLocksReport(heldLocks)));
         for (String s : Lists.reverse(trace.getStacktraceAt(e))) {
             sb.append(String.format("        at %s%n", s));
         }
 
-        SyncEvent startEvent = trace.getStartEventOf(e.getTID());
+        Event startEvent = trace.getStartEventOf(e.getTID());
         if (startEvent != null) {
             sb.append(String.format("    T%s is created by T%s%n", tid,
                     startEvent.getTID()));

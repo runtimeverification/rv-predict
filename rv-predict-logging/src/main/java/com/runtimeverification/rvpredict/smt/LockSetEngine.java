@@ -35,10 +35,8 @@ import java.util.List;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
-
-import com.runtimeverification.rvpredict.trace.Event;
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.trace.LockRegion;
-import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
 
 /**
  * Engine for computing the lockset algorithm.
@@ -75,7 +73,7 @@ public class LockSetEngine {
     /**
      * Checks if two given {@code MemoryAccessEvent}'s hold a common lock.
      */
-    public boolean hasCommonLock(MemoryAccessEvent e1, MemoryAccessEvent e2) {
+    public boolean hasCommonLock(Event e1, Event e2) {
         assert e1.getTID() != e2.getTID();
 
         for (Long lockId : lockTbl.rowKeySet()) {

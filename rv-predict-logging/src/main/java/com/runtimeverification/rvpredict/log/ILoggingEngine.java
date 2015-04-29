@@ -2,8 +2,6 @@ package com.runtimeverification.rvpredict.log;
 
 import java.io.IOException;
 
-import com.runtimeverification.rvpredict.trace.EventType;
-
 public interface ILoggingEngine {
 
     /**
@@ -13,9 +11,9 @@ public interface ILoggingEngine {
     void finishLogging() throws IOException;
 
     /**
-     * Logs an event item to the trace.
+     * Logs an event to the trace.
      *
-     * @see {@link EventItem} for a more elaborate description of the
+     * @see {@link Event} for a more elaborate description of the
      *      parameters.
      */
     void log(EventType eventType, int locId, int addrl, int addrr, long value1, long value2);

@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.trace;
+package com.runtimeverification.rvpredict.log;
 
 /**
  * Enumeration of all types of events considered during logging and prediction.
@@ -77,11 +77,19 @@ public enum EventType {
 
     FINISH_METHOD;
 
-    public static boolean isLock(EventType type) {
-        return type == WRITE_LOCK || type == READ_LOCK;
+    public boolean isLockType() {
+        return this == WRITE_LOCK || this == READ_LOCK;
     }
 
-    public static boolean isUnlock(EventType type) {
-        return type == WRITE_UNLOCK || type == READ_UNLOCK;
+    public boolean isUnlockType() {
+        return this == WRITE_UNLOCK || this == READ_UNLOCK;
+    }
+
+    public boolean isSyncType() {
+        return WRITE_LOCK.ordinal() <= this.ordinal() && this.ordinal() <= JOIN.ordinal();
+    }
+
+    public boolean isMetaType() {
+        return CLINIT_ENTER.ordinal() <= this.ordinal() && this.ordinal() <= FINISH_METHOD.ordinal();
     }
 }

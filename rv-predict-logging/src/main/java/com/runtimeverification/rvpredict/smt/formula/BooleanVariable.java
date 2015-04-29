@@ -1,6 +1,6 @@
 package com.runtimeverification.rvpredict.smt.formula;
 
-import com.runtimeverification.rvpredict.trace.Event;
+import com.runtimeverification.rvpredict.log.Event;
 
 /**
  * Common functionality for Boolean variables.

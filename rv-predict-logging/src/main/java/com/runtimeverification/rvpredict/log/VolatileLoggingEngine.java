@@ -221,13 +221,13 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
     private void log(EventType eventType, int offset, long tid, int locId, int addrl, int addrr,
             long value) {
         Event event = events[offset];
-        event.GID = base + offset;
-        event.TID = tid;
-        event.ID = locId;
-        event.ADDRL = addrl;
-        event.ADDRR = addrr;
-        event.VALUE = value;
-        event.TYPE = eventType;
+        event.setGID(base + offset);
+        event.setTID(tid);
+        event.setLocId(locId);
+        event.setAddrl(addrl);
+        event.setAddrr(addrr);
+        event.setValue(value);
+        event.setType(eventType);
     }
 
 }

@@ -7,13 +7,13 @@ import com.runtimeverification.rvpredict.trace.MemoryAddr;
  * @author TraianSF
  */
 public class Event {
-    public long GID;
-    public long TID;
-    public int ID;
-    public int ADDRL;
-    public int ADDRR;
-    public long VALUE;
-    public EventType TYPE;
+    private long GID;
+    private long TID;
+    private int ID;
+    private int ADDRL;
+    private int ADDRR;
+    private long VALUE;
+    private EventType TYPE;
 
     private static final int SIZEOF_LONG = 8;
     private static final int SIZEOF_INT = 4;
@@ -58,20 +58,48 @@ public class Event {
         return GID;
     }
 
+    public void setGID(long gid) {
+        GID = gid;
+    }
+
     public long getTID() {
         return TID;
+    }
+
+    public void setTID(long tid) {
+        TID = tid;
     }
 
     public int getLocId() {
         return ID;
     }
 
+    public void setLocId(int locId) {
+        ID = locId;
+    }
+
     public long getValue() {
         return VALUE;
     }
 
+    public void setValue(long value) {
+        VALUE = value;
+    }
+
     public EventType getType() {
         return TYPE;
+    }
+
+    public void setType(EventType type) {
+        TYPE = type;
+    }
+
+    public void setAddrl(int addrl) {
+        ADDRL = addrl;
+    }
+
+    public void setAddrr(int addrr) {
+        ADDRR = addrr;
     }
 
     public MemoryAddr getAddr() {

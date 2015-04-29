@@ -62,25 +62,25 @@ public class TraceCache {
         long toIndex = fromIndex + events.length;
 
         /* sort readers by their last read events */
-        readers.sort((r1, r2) -> Long.compare(r1.lastReadEvent().GID, r2.lastReadEvent().GID));
+        readers.sort((r1, r2) -> Long.compare(r1.lastReadEvent().getGID(), r2.lastReadEvent().getGID()));
         Iterator<EventReader> iter = readers.iterator();
         Event event;
         while (iter.hasNext()) {
             EventReader reader = iter.next();
-            if ((event = reader.lastReadEvent()).GID >= toIndex) {
+            if ((event = reader.lastReadEvent()).getGID() >= toIndex) {
                 break;
             }
 
-            assert event.GID >= fromIndex;
+            assert event.getGID() >= fromIndex;
             do {
-                events[(int) (event.GID % events.length)] = event;
+                events[(int) (event.getGID() % events.length)] = event;
                 try {
                     event = reader.readEvent();
                 } catch (EOFException e) {
                     iter.remove();
                     break;
                 }
-            } while (event.GID < toIndex);
+            } while (event.getGID() < toIndex);
         }
 
         /* finish reading events and create the Trace object */

@@ -42,6 +42,7 @@ import java.util.List;
 import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.util.Constants;
 
@@ -396,7 +397,7 @@ public class Trace {
             } else {
                 crntState.writeValueAt(addr, event.getValue());
             }
-        } else if (event.isStart()) {
+        } else if (event.isThreadStart()) {
             crntState.onThreadStart(event);
         } else if (event.getType().isLockType() || event.getType().isUnlockType()) {
             long lockId = event.getSyncObject();
@@ -528,11 +529,11 @@ public class Trace {
             long tid = event.getTID();
             Map<Long, Event> lockStatus = lockEventTbl.row(tid);
 
-            if (event.doLock()) {
+            if (event.acqLock()) {
                 long lockId = event.getSyncObject();
                 Event prevLock = lockStatus.put(lockId, event);
                 assert prevLock == null : "Unexpected unmatched lock event: " + prevLock;
-            } else if (event.doUnlock()) {
+            } else if (event.relLock()) {
                 long lockId = event.getSyncObject();
                 Event lock = lockStatus.remove(lockId);
                 if (lock == null || criticalLockingEvents.contains(lock)) {
@@ -546,7 +547,7 @@ public class Trace {
         }
         criticalLockingEvents.addAll(lockEventTbl.values());
         for (Event event : reducedEvents) {
-            if ((event.doLock() || event.doUnlock())
+            if ((event.acqLock() || event.relLock())
                     && !criticalLockingEvents.contains(event)) {
                 continue;
             }

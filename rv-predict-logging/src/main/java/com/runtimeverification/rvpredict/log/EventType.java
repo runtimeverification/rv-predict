@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.trace;
+package com.runtimeverification.rvpredict.log;
 
 /**
  * Enumeration of all types of events considered during logging and prediction.

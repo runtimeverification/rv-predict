@@ -12,7 +12,6 @@ import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 
 import com.runtimeverification.rvpredict.config.Configuration.OS;
-import com.runtimeverification.rvpredict.trace.EventType;
 
 public class EventWriter implements Closeable {
 

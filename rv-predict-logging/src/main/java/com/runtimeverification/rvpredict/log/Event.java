@@ -1,6 +1,5 @@
 package com.runtimeverification.rvpredict.log;
 
-import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.trace.MemoryAddr;
 
 /**
@@ -97,7 +96,7 @@ public class Event {
         return isRead() || isWrite();
     }
 
-    public boolean isStart() {
+    public boolean isThreadStart() {
         return TYPE == EventType.START;
     }
 
@@ -106,7 +105,7 @@ public class Event {
      * {@link EventType#READ_LOCK}, or {@link EventType#WAIT_ACQ}; otherwise,
      * {@code false}.
      */
-    public boolean doLock() {
+    public boolean acqLock() {
         return TYPE == EventType.READ_LOCK || TYPE == EventType.WRITE_LOCK
                 || TYPE == EventType.WAIT_ACQ;
     }
@@ -116,7 +115,7 @@ public class Event {
      * {@link EventType#WRITE_UNLOCK}, {@link EventType#READ_UNLOCK}, or
      * {@link EventType#WAIT_REL}; otherwise, {@code false}.
      */
-    public boolean doUnlock() {
+    public boolean relLock() {
         return TYPE == EventType.READ_UNLOCK || TYPE == EventType.WRITE_UNLOCK
                 || TYPE == EventType.WAIT_REL;
     }

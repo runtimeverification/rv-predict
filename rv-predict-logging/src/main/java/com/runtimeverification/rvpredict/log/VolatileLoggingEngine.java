@@ -37,7 +37,6 @@ import java.util.concurrent.locks.LockSupport;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.RaceDetectorTask;
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceState;
 import com.runtimeverification.rvpredict.util.Constants;

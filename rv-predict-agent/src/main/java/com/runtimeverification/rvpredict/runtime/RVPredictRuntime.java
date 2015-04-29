@@ -49,9 +49,9 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.util.Constants;
 
 /**

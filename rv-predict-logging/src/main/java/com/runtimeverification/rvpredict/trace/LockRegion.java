@@ -29,6 +29,7 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.log.EventType;
 
 public class LockRegion {
     private final Event lock;
@@ -40,8 +41,8 @@ public class LockRegion {
     private boolean isReadLocked = false;
 
     public LockRegion(Event lock, Event unlock) {
-        assert lock == null || lock.doLock();
-        assert unlock == null || unlock.doUnlock();
+        assert lock == null || lock.acqLock();
+        assert unlock == null || unlock.relLock();
         this.lock = lock;
         this.unlock = unlock;
         if (lock != null) {

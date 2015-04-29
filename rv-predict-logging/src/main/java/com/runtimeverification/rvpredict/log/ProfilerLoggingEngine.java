@@ -29,7 +29,6 @@
 package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.trace.EventType;
 
 /**
  *

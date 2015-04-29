@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.util.Constants;
 
 public class LockObject {

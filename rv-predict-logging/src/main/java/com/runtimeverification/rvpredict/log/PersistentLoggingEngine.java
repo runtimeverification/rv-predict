@@ -30,7 +30,6 @@ package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.util.Constants;
 
 import java.io.BufferedOutputStream;

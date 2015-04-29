@@ -2,8 +2,6 @@ package com.runtimeverification.rvpredict.log;
 
 import java.io.IOException;
 
-import com.runtimeverification.rvpredict.trace.EventType;
-
 public interface ILoggingEngine {
 
     /**

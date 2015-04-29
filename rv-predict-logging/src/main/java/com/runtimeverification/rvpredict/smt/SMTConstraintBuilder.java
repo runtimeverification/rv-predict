@@ -29,10 +29,11 @@
 package com.runtimeverification.rvpredict.smt;
 
 import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.smt.formula.*;
-import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.trace.LockRegion;
 import com.runtimeverification.rvpredict.trace.Trace;
+
 import java.util.Map;
 import java.util.List;
 import java.util.Map.Entry;
@@ -190,8 +191,8 @@ public class SMTConstraintBuilder {
                 long tid = syncEvent.getTID();
                 Event prevLockOrUnlock = threadIdToPrevLockOrUnlock.get(tid);
                 assert prevLockOrUnlock == null
-                    || !(prevLockOrUnlock.doLock() && syncEvent.doLock())
-                    || !(prevLockOrUnlock.doUnlock() && syncEvent.doUnlock()) :
+                    || !(prevLockOrUnlock.acqLock() && syncEvent.acqLock())
+                    || !(prevLockOrUnlock.relLock() && syncEvent.relLock()) :
                     "Unexpected consecutive lock/unlock events:\n" + prevLockOrUnlock + ", " + syncEvent;
 
                 switch (syncEvent.getType()) {
@@ -213,7 +214,7 @@ public class SMTConstraintBuilder {
             }
 
             for (Event lockOrUnlock : threadIdToPrevLockOrUnlock.values()) {
-                if (lockOrUnlock.doLock()) {
+                if (lockOrUnlock.acqLock()) {
                     Event lock = lockOrUnlock;
                     lockRegions.add(new LockRegion(lock, null));
                 }

@@ -87,7 +87,7 @@ public class SMTConstraintBuilder {
 
     public SMTConstraintBuilder(Configuration config, Trace trace) {
         this.trace = trace;
-        this.groupId = new int[trace.capacity()];
+        this.groupId = new int[trace.getSize()];
         this.solver = new Z3Wrapper(config);
     }
 
@@ -110,7 +110,7 @@ public class SMTConstraintBuilder {
     }
 
     private int getRelativeIdx(Event event) {
-        return (int) (event.getGID() % trace.capacity());
+        return (int) (event.getGID() % trace.getSize());
     }
 
     private int getGroupId(Event e) {

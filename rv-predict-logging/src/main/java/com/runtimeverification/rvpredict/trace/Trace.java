@@ -53,13 +53,9 @@ import com.runtimeverification.rvpredict.util.Constants;
  */
 public class Trace {
 
-    private final int capacity;
+    private int numOfEvents;
 
-    /**
-     * Unprocessed raw events reading from the logging phase.
-     */
-    private ImmutableList<Event> rawEvents = null;
-    private final ImmutableList.Builder<Event> rawEventsBuilder = ImmutableList.builder();
+    private Event[] events;
 
     /**
      * Read threads on each address. Only used in filtering thread-local
@@ -156,17 +152,12 @@ public class Trace {
 
     public Trace(TraceState crntState, int capacity) {
         this.crntState = crntState;
-        this.capacity = capacity;
         this.metadata = crntState.metadata();
         this.initHeldLockToStacktrace = crntState.getHeldLockStacktraceSnapshot();
     }
 
     public Metadata metadata() {
         return metadata;
-    }
-
-    public int capacity() {
-        return capacity;
     }
 
     public boolean hasSharedMemAddr() {
@@ -262,7 +253,7 @@ public class Trace {
     public List<String> getStacktraceAt(Event event) {
         long tid = event.getTID();
         List<String> stacktrace = Lists.newArrayList();
-        if (event.getGID() >= rawEvents.get(0).getGID()) {
+        if (event.getGID() >= events[0].getGID()) {
             /* event is in the current window; reassemble its stack trace */
             for (int locId : threadIdToInitThreadStatus.get(tid).stacktrace) {
                 stacktrace.add(metadata.getLocationSig(locId));
@@ -356,9 +347,18 @@ public class Trace {
         return readEvents;
     }
 
-    public void addRawEvent(Event event) {
+    public void setEvents(Event[] events, int numOfEvents) {
+        this.numOfEvents = numOfEvents;
+        this.events = events;
+        for (int i = 0; i < numOfEvents; i++) {
+            // TODO(YilongL): avoid doing copy here
+            addRawEvent(events[i].copy());
+        }
+        finishedLoading();
+    }
+
+    private void addRawEvent(Event event) {
 //        System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
-        rawEventsBuilder.add(event);
         updateTraceState(event);
 
         if (event.isReadOrWrite()) {
@@ -486,8 +486,7 @@ public class Trace {
      * Once trace is completely loaded, remove local data accesses and process
      * the remaining trace.
      */
-    public void finishedLoading() {
-        rawEvents = rawEventsBuilder.build();
+    private void finishedLoading() {
         crntState.finishLoading();
 
         /* compute memory addresses that are accessed by more than one thread
@@ -508,7 +507,8 @@ public class Trace {
         }
 
         List<Event> reducedEvents = new ArrayList<>();
-        for (Event event : rawEvents) {
+        for (int i = 0; i < numOfEvents; i++) {
+            Event event = events[i];
             if (event.isReadOrWrite()) {
                 if (sharedMemAddr.contains(event.getAddr())) {
                     reducedEvents.add(event);
@@ -556,7 +556,7 @@ public class Trace {
     }
 
     public int getSize() {
-        return rawEvents.size();
+        return numOfEvents;
     }
 
     /**

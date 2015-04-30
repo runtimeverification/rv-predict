@@ -54,18 +54,25 @@ public class TraceState {
 
     private final Metadata metadata;
 
-    public TraceState(Metadata metadata) {
+    private final int windowSize;
+
+    public TraceState(Metadata metadata, int windowSize) {
         this.metadata = metadata;
+        this.windowSize = windowSize;
     }
 
     public Metadata metadata() {
         return metadata;
     }
 
-    public void setCurrentTraceWindow(Trace traceWindow) {
-        assert crntTraceWindow == null;
-        this.crntTraceWindow = traceWindow;
+    public Trace initNextTraceWindow() {
+        return crntTraceWindow = new Trace(this, windowSize);
     }
+
+//    public void setCurrentTraceWindow(Trace traceWindow) {
+//        assert crntTraceWindow == null;
+//        this.crntTraceWindow = traceWindow;
+//    }
 
     public void invokeMethod(Event event) {
         assert event.getType() == EventType.INVOKE_METHOD;
@@ -171,9 +178,6 @@ public class TraceState {
         for (Event lock : locksHeld) {
             lockHeldToStacktrace.putIfAbsent(lock, crntTraceWindow.getStacktraceAt(lock));
         }
-
-        /* detach the state from the trace window */
-        crntTraceWindow = null;
     }
 
     public void onThreadStart(Event startEvent) {

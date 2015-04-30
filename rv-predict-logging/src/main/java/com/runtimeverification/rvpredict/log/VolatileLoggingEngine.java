@@ -79,7 +79,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
     public VolatileLoggingEngine(Configuration config, Metadata metadata) {
         this.config = config;
         this.metadata = metadata;
-        this.crntState = new TraceState(metadata);
+        this.crntState = new TraceState(metadata, config.windowSize);
         this.bound = config.windowSize;
         this.events = new Event[bound + 4];
         for (int i = 0; i < events.length; i++) {
@@ -152,12 +152,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
 
         try {
-            Trace trace = new Trace(crntState, bound);
-            crntState.setCurrentTraceWindow(trace);
-            for (int i = 0; i < numOfEvents; i++) {
-                trace.addRawEvent(events[i].copy());
-            }
-            trace.finishedLoading();
+            Trace trace = crntState.initNextTraceWindow();
+            trace.setEvents(events, numOfEvents);
             if (trace.hasSharedMemAddr()) {
                 new RaceDetectorTask(config, metadata, trace, violations).run();
             }

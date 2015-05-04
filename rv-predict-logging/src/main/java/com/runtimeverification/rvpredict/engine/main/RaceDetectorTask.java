@@ -69,24 +69,9 @@ public class RaceDetectorTask implements Runnable {
         cnstrBuilder.addLockingConstraints();
         cnstrBuilder.finish();
         /* enumerate each shared memory address in the trace */
-        for (MemoryAddr addr : trace.getMemAccessEventsTable().rowKeySet()) {
-            /* exclude unsafe address */
-            if (trace.isUnsafeAddress(addr)) {
-                continue;
-            }
-
+        for (MemoryAddr addr : trace.getMemoryAddresses()) {
             /* exclude volatile variable */
-            if (!config.checkVolatile && trace.isVolatileField(addr)) {
-                continue;
-            }
-
-            /* skip if there is no write event */
-            if (trace.getWriteEventsOn(addr).isEmpty()) {
-                continue;
-            }
-
-            /* skip if there is only one thread */
-            if (trace.getMemAccessEventsTable().row(addr).size() == 1) {
+            if (!config.checkVolatile && metadata.isVolatile(addr)) {
                 continue;
             }
 
@@ -99,7 +84,7 @@ public class RaceDetectorTask implements Runnable {
                 long crntTID = entry.getKey();
                 List<Event> memAccEvents = entry.getValue();
 
-                List<Event> crntThrdEvents = trace.getThreadEvents(crntTID);
+                List<Event> crntThrdEvents = trace.getEvents(crntTID);
 
                 ListIterator<Event> iter = memAccEvents.listIterator();
                 while (iter.hasNext()) {
@@ -148,8 +133,8 @@ public class RaceDetectorTask implements Runnable {
                     for (Event e1 : equivAccBlk.get(fst)) {
                         for (Event e2 : equivAccBlk.get(snd)) {
                             if ((e1.isWrite() || e2.isWrite())
-                                    && !trace.isClinitMemoryAccess(e1)
-                                    && !trace.isClinitMemoryAccess(e2)) {
+                                    && !trace.isInsideClassInitializer(e1)
+                                    && !trace.isInsideClassInitializer(e2)) {
                                 potentialRaces.add(new Race(e1, e2, trace, metadata));
                             }
                         }

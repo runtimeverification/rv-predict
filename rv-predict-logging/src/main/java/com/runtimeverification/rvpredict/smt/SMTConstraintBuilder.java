@@ -99,8 +99,8 @@ public class SMTConstraintBuilder {
         Event unlock = lockRegion1.getUnlock();
         Event lock = lockRegion2.getLock();
         return getAsstHappensBefore(
-                unlock != null ? unlock : trace.getLastThreadEvent(lockRegion1.getThreadId()),
-                lock != null ? lock : trace.getFirstThreadEvent(lockRegion2.getThreadId()));
+                unlock != null ? unlock : trace.getLastEvent(lockRegion1.getThreadId()),
+                lock != null ? lock : trace.getFirstEvent(lockRegion2.getThreadId()));
     }
 
     private void assertMutualExclusion(LockRegion lockRegion1, LockRegion lockRegion2) {
@@ -125,7 +125,7 @@ public class SMTConstraintBuilder {
      * Adds program order constraints.
      */
     public void addIntraThreadConstraints() {
-        for (List<Event> events : trace.getThreadIdToEventsMap().values()) {
+        for (List<Event> events : trace.perThreadView()) {
             setGroupId(events.get(0), closure.nextElemId());
             for (int i = 1; i < events.size(); i++) {
                 Event e1 = events.get(i - 1);
@@ -147,33 +147,31 @@ public class SMTConstraintBuilder {
      * Adds thread start/join constraints.
      */
     public void addThreadStartJoinConstraints() {
-        for (List<Event> startOrJoinEvents : trace.getThreadIdToStartJoinEvents().values()) {
-            for (Event startOrJoin : startOrJoinEvents) {
-                long tid = startOrJoin.getSyncObject();
-                switch (startOrJoin.getType()) {
-                case START:
-                    Event startEvent = startOrJoin;
-                    Event fstThrdEvent = trace.getFirstThreadEvent(tid);
-                    /* YilongL: it's possible that the first event of the new
-                     * thread is not in the current trace */
-                    if (fstThrdEvent != null) {
-                        smtlibAssertionBuilder.add(getAsstHappensBefore(startEvent, fstThrdEvent));
-                        closure.addRelation(getGroupId(startEvent), getGroupId(fstThrdEvent));
-                    }
-                    break;
-                case JOIN:
-                    Event joinEvent = startOrJoin;
-                    Event lastThrdEvent = trace.getLastThreadEvent(tid);
-                    /* YilongL: it's possible that the last event of the thread
-                     * to join is not in the current trace */
-                    if (lastThrdEvent != null) {
-                        smtlibAssertionBuilder.add(getAsstHappensBefore(lastThrdEvent, joinEvent));
-                        closure.addRelation(getGroupId(lastThrdEvent), getGroupId(joinEvent));
-                    }
-                    break;
-                default:
-                    assert false : "unexpected event: " + startOrJoin;
+        for (Event event : trace.getStartJoinEvents()) {
+            long tid = event.getSyncObject();
+            switch (event.getType()) {
+            case START:
+                Event startEvent = event;
+                Event fstThrdEvent = trace.getFirstEvent(tid);
+                /* YilongL: it's possible that the first event of the new
+                 * thread is not in the current trace */
+                if (fstThrdEvent != null) {
+                    smtlibAssertionBuilder.add(getAsstHappensBefore(startEvent, fstThrdEvent));
+                    closure.addRelation(getGroupId(startEvent), getGroupId(fstThrdEvent));
                 }
+                break;
+            case JOIN:
+                Event joinEvent = event;
+                Event lastThrdEvent = trace.getLastEvent(tid);
+                /* YilongL: it's possible that the last event of the thread
+                 * to join is not in the current trace */
+                if (lastThrdEvent != null) {
+                    smtlibAssertionBuilder.add(getAsstHappensBefore(lastThrdEvent, joinEvent));
+                    closure.addRelation(getGroupId(lastThrdEvent), getGroupId(joinEvent));
+                }
+                break;
+            default:
+                assert false : "unexpected event: " + event;
             }
         }
     }
@@ -183,33 +181,33 @@ public class SMTConstraintBuilder {
      */
     public void addLockingConstraints() {
         /* enumerate the locking events on each lock */
-        for (List<Event> syncEvents : trace.getLockObjToSyncEvents().values()) {
+        for (List<Event> events : trace.getLockEventsCollection()) {
             Map<Long, Event> threadIdToPrevLockOrUnlock = Maps.newHashMap();
             List<LockRegion> lockRegions = Lists.newArrayList();
 
-            for (Event syncEvent : syncEvents) {
-                long tid = syncEvent.getTID();
+            for (Event event : events) {
+                long tid = event.getTID();
                 Event prevLockOrUnlock = threadIdToPrevLockOrUnlock.get(tid);
                 assert prevLockOrUnlock == null
-                    || !(prevLockOrUnlock.acqLock() && syncEvent.acqLock())
-                    || !(prevLockOrUnlock.relLock() && syncEvent.relLock()) :
-                    "Unexpected consecutive lock/unlock events:\n" + prevLockOrUnlock + ", " + syncEvent;
+                    || !(prevLockOrUnlock.acqLock() && event.acqLock())
+                    || !(prevLockOrUnlock.relLock() && event.relLock()) :
+                    "Unexpected consecutive lock/unlock events:\n" + prevLockOrUnlock + ", " + event;
 
-                switch (syncEvent.getType()) {
+                switch (event.getType()) {
                 case WRITE_LOCK:
                 case READ_LOCK:
                 case WAIT_ACQ:
-                    threadIdToPrevLockOrUnlock.put(tid, syncEvent);
+                    threadIdToPrevLockOrUnlock.put(tid, event);
                     break;
 
                 case WRITE_UNLOCK:
                 case READ_UNLOCK:
                 case WAIT_REL:
-                    lockRegions.add(new LockRegion(threadIdToPrevLockOrUnlock.put(tid, syncEvent),
-                            syncEvent));
+                    lockRegions.add(new LockRegion(threadIdToPrevLockOrUnlock.put(tid, event),
+                            event));
                     break;
                 default:
-                    assert false : "Unexpected synchronization event: " + syncEvent;
+                    assert false : "Unexpected synchronization event: " + event;
                 }
             }
 

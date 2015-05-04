@@ -12,6 +12,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.runtimeverification.rvpredict.trace.MemoryAddr;
+
 @SuppressWarnings("serial")
 public class Metadata implements Serializable {
 
@@ -83,8 +85,17 @@ public class Metadata implements Serializable {
         volatileVarIds.add(getVariableId(cname, fname));
     }
 
-    public boolean isVolatile(int varId) {
-        return volatileVarIds.contains(varId);
+    /**
+     * Checks if a memory address is volatile.
+     *
+     * @param addr
+     *            the memory address
+     * @return {@code true} if the address is {@code volatile}; otherwise,
+     *         {@code false}
+     */
+    public boolean isVolatile(MemoryAddr addr) {
+        int varId = addr.fieldIdOrArrayIndex();
+        return varId < 0 && volatileVarIds.contains(-varId);
     }
 
     /**

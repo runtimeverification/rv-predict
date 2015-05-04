@@ -114,7 +114,7 @@ public class Trace {
      */
     private final Map<Long, ThreadStatus> threadIdToInitThreadStatus = Maps.newHashMap();
 
-    private final Map<Event, List<String>> initHeldLockToStacktrace;
+    private final Map<Event, List<Integer>> initHeldLockToStacktrace;
 
     /**
      * Set of {@code MemoryAccessEvent}'s that happen during class initialization.
@@ -227,16 +227,16 @@ public class Trace {
      *
      * @param event
      *            the event
-     * @return a {@code List} of stack trace element represented in
-     *         {@code String}s
+     * @return a {@code List} of stack trace element represented as location
+     *         ID's; {@code -1} represents missing stack trace elements
      */
-    public List<String> getStacktraceAt(Event event) {
+    public List<Integer> getStacktraceAt(Event event) {
         long tid = event.getTID();
-        List<String> stacktrace = Lists.newArrayList();
+        List<Integer> stacktrace = Lists.newArrayList();
         if (event.getGID() >= minGID) {
             /* event is in the current window; reassemble its stack trace */
             for (int locId : threadIdToInitThreadStatus.get(tid).stacktrace) {
-                stacktrace.add(metadata.getLocationSig(locId));
+                stacktrace.add(locId);
             }
             for (Event e : threadIdToCallStackEvents.getOrDefault(tid,
                     Collections.<Event> emptyList())) {
@@ -245,19 +245,19 @@ public class Trace {
                 }
 
                 if (e.getType() == EventType.INVOKE_METHOD) {
-                    stacktrace.add(metadata.getLocationSig(e.getLocId()));
+                    stacktrace.add(e.getLocId());
                 } else {
                     stacktrace.remove(stacktrace.size() - 1);
                 }
             }
-            stacktrace.add(metadata.getLocationSig(event.getLocId()));
+            stacktrace.add(event.getLocId());
         } else {
             /* event is from previous windows */
             if (initHeldLockToStacktrace.containsKey(event)) {
                 stacktrace.addAll(initHeldLockToStacktrace.get(event));
             } else {
-                stacktrace.add(metadata.getLocationSig(event.getLocId()));
-                stacktrace.add("... stack trace not available ...");
+                stacktrace.add(event.getLocId());
+                stacktrace.add(-1);
             }
         }
         return stacktrace;

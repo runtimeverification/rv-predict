@@ -46,7 +46,7 @@ public class TraceState {
     /**
      * Map from currently held lock to the stack trace at the time it is first acquired.
      */
-    private final Map<Event, List<String>> lockHeldToStacktrace = Maps.newHashMap();
+    private final Map<Event, List<Integer>> lockHeldToStacktrace = Maps.newHashMap();
 
     private final Map<Long, Event> threadIdToStartEvent = Maps.newHashMap();
 
@@ -145,9 +145,9 @@ public class TraceState {
         return stacktrace == null ? ImmutableList.<Integer>of() : ImmutableList.copyOf(stacktrace);
     }
 
-    public Map<Event, List<String>> getHeldLockStacktraceSnapshot() {
-        ImmutableMap.Builder<Event, List<String>> builder = ImmutableMap.builder();
-        for (Map.Entry<Event, List<String>> entry : lockHeldToStacktrace.entrySet()) {
+    public Map<Event, List<Integer>> getHeldLockStacktraceSnapshot() {
+        ImmutableMap.Builder<Event, List<Integer>> builder = ImmutableMap.builder();
+        for (Map.Entry<Event, List<Integer>> entry : lockHeldToStacktrace.entrySet()) {
             builder.put(entry.getKey(), ImmutableList.copyOf(entry.getValue()));
         }
         return builder.build();

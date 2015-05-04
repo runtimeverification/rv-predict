@@ -39,7 +39,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.List;
-
 import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
@@ -307,15 +306,15 @@ public class Trace {
     }
 
     /**
-     * Gets control-flow dependent events of a given {@code MemoryAccessEvent}.
-     * Without any knowledge about the control flow of the program, all read
-     * events that happen-before the given event have to be included
-     * conservatively.
+     * Gets control-flow dependent events of a given {@code Event}. Without any
+     * knowledge about the control flow of the program, all read events that
+     * happen-before the given event have to be included conservatively.
      */
-    public List<Event> getCtrlFlowDependentEvents(Event memAccEvent) {
+    public List<Event> getCtrlFlowDependentEvents(Event event) {
+        // TODO(YilongL): optimize this!
         List<Event> readEvents = new ArrayList<>();
-        for (Event e : getEvents(memAccEvent.getTID())) {
-            if (e.getGID() >= memAccEvent.getGID()) {
+        for (Event e : getEvents(event.getTID())) {
+            if (e.getGID() >= event.getGID()) {
                 break;
             }
 
@@ -340,8 +339,7 @@ public class Trace {
     private void updateTraceState(Event event) {
         long tid = event.getTID();
         if (!threadIdToInitThreadStatus.containsKey(tid)) {
-            ThreadStatus initThreadInfo = getCurrentThreadStatus(tid);
-            threadIdToInitThreadStatus.putIfAbsent(tid, initThreadInfo);
+            threadIdToInitThreadStatus.put(tid, getCurrentThreadStatus(tid));
         }
 
         // TODO(YilongL): consider moving code for updating trace state inside TraceState

@@ -31,7 +31,6 @@ package com.runtimeverification.rvpredict.violation;
 import java.util.List;
 
 import com.google.common.base.StandardSystemProperty;
-import com.google.common.collect.Lists;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.LockObject;
@@ -130,7 +129,7 @@ public class Race extends AbstractViolation {
                 e.isWrite() ? "write" : "read",
                 tid,
                 getHeldLocksReport(heldLocks)));
-        for (Integer locId : Lists.reverse(trace.getStacktraceAt(e))) {
+        for (Integer locId : trace.getStacktraceAt(e)) {
             String sig = locId >= 0 ? trace.metadata().getLocationSig(locId) : "... not available ...";
             sb.append(String.format("        at %s%n", sig));
         }
@@ -153,7 +152,7 @@ public class Race extends AbstractViolation {
             sb.append(String.format("    Locks acquired by this thread (reporting in chronological order):%n"));
             for (LockObject lock : heldLocks) {
                 sb.append(String.format("      %s%n", lock));
-                for (Integer locId : Lists.reverse(trace.getStacktraceAt(lock.getLockEvent()))) {
+                for (Integer locId : trace.getStacktraceAt(lock.getLockEvent())) {
                     String sig = locId >= 0 ? trace.metadata().getLocationSig(locId)
                             : "... not available ...";
                     sb.append(String.format("        at %s%n", sig));

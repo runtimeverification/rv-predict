@@ -108,8 +108,6 @@ public class Trace {
      */
     private final Map<Long, ThreadStatus> threadIdToInitThreadStatus = Maps.newHashMap();
 
-    private final Map<Event, List<Integer>> initHeldLockToStacktrace;
-
     /**
      * Set of {@code MemoryAccessEvent}'s that happen during class initialization.
      */
@@ -136,7 +134,6 @@ public class Trace {
     public Trace(TraceState crntState, Event[] events, int numOfEvents) {
         this.state = crntState;
         this.metadata = crntState.metadata();
-        this.initHeldLockToStacktrace = crntState.getHeldLockStacktraceSnapshot();
         this.numOfEvents = numOfEvents;
         this.minGID = numOfEvents > 0 ? events[0].getGID() : -1;
         for (int i = 0; i < numOfEvents; i++) {
@@ -226,16 +223,16 @@ public class Trace {
      *
      * @param event
      *            the event
-     * @return a {@code List} of stack trace element represented as location
+     * @return a {@code Deque} of stack trace element represented as location
      *         ID's; {@code -1} represents missing stack trace elements
      */
-    public List<Integer> getStacktraceAt(Event event) {
+    public Deque<Integer> getStacktraceAt(Event event) {
         long tid = event.getTID();
-        List<Integer> stacktrace = Lists.newArrayList();
+        Deque<Integer> stacktrace = new ArrayDeque<>();
         if (event.getGID() >= minGID) {
             /* event is in the current window; reassemble its stack trace */
             for (int locId : threadIdToInitThreadStatus.get(tid).stacktrace) {
-                stacktrace.add(locId);
+                stacktrace.addFirst(locId);
             }
             for (Event e : threadIdToCallStackEvents.getOrDefault(tid,
                     Collections.<Event> emptyList())) {
@@ -244,20 +241,16 @@ public class Trace {
                 }
 
                 if (e.getType() == EventType.INVOKE_METHOD) {
-                    stacktrace.add(e.getLocId());
+                    stacktrace.addFirst(e.getLocId());
                 } else {
-                    stacktrace.remove(stacktrace.size() - 1);
+                    stacktrace.removeFirst();
                 }
             }
-            stacktrace.add(event.getLocId());
+            stacktrace.addFirst(event.getLocId());
         } else {
             /* event is from previous windows */
-            if (initHeldLockToStacktrace.containsKey(event)) {
-                stacktrace.addAll(initHeldLockToStacktrace.get(event));
-            } else {
-                stacktrace.add(event.getLocId());
-                stacktrace.add(-1);
-            }
+            stacktrace.add(event.getLocId());
+            stacktrace.add(-1);
         }
         return stacktrace;
     }

@@ -54,9 +54,9 @@ import com.runtimeverification.rvpredict.util.Constants;
  */
 public class Trace {
 
-    private int numOfEvents;
+    private final int numOfEvents;
 
-    private Event[] events;
+    private final long minGID;
 
     /**
      * Read threads on each address. Only used in filtering thread-local
@@ -139,10 +139,17 @@ public class Trace {
      */
     private final TraceState state;
 
-    public Trace(TraceState crntState, int capacity) {
+    public Trace(TraceState crntState, Event[] events, int numOfEvents) {
         this.state = crntState;
         this.metadata = crntState.metadata();
         this.initHeldLockToStacktrace = crntState.getHeldLockStacktraceSnapshot();
+        this.numOfEvents = numOfEvents;
+        this.minGID = events[0].getGID();
+        for (int i = 0; i < numOfEvents; i++) {
+            // TODO(YilongL): avoid doing copy here
+            addRawEvent(events[i].copy());
+        }
+        finalize(events);
     }
 
     public Metadata metadata() {
@@ -226,7 +233,7 @@ public class Trace {
     public List<String> getStacktraceAt(Event event) {
         long tid = event.getTID();
         List<String> stacktrace = Lists.newArrayList();
-        if (event.getGID() >= events[0].getGID()) {
+        if (event.getGID() >= minGID) {
             /* event is in the current window; reassemble its stack trace */
             for (int locId : threadIdToInitThreadStatus.get(tid).stacktrace) {
                 stacktrace.add(metadata.getLocationSig(locId));
@@ -318,16 +325,6 @@ public class Trace {
         }
 
         return readEvents;
-    }
-
-    public void setEvents(Event[] events, int numOfEvents) {
-        this.numOfEvents = numOfEvents;
-        this.events = events;
-        for (int i = 0; i < numOfEvents; i++) {
-            // TODO(YilongL): avoid doing copy here
-            addRawEvent(events[i].copy());
-        }
-        finishedLoading();
     }
 
     private void addRawEvent(Event event) {
@@ -453,9 +450,7 @@ public class Trace {
      * Once trace is completely loaded, remove local data accesses and process
      * the remaining trace.
      */
-    private void finishedLoading() {
-        state.finishLoading();
-
+    private void finalize(Event[] events) {
         /* compute memory addresses that are accessed by more than one thread
          * and with at least one write access */
         for (MemoryAddr addr : Iterables.concat(addrToReadThreads.keySet(),

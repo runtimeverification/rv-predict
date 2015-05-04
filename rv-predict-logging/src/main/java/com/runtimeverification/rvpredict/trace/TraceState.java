@@ -50,29 +50,21 @@ public class TraceState {
 
     private final Map<Long, Event> threadIdToStartEvent = Maps.newHashMap();
 
-    private Trace crntTraceWindow;
-
     private final Metadata metadata;
 
-    private final int windowSize;
-
-    public TraceState(Metadata metadata, int windowSize) {
+    public TraceState(Metadata metadata) {
         this.metadata = metadata;
-        this.windowSize = windowSize;
     }
 
     public Metadata metadata() {
         return metadata;
     }
 
-    public Trace initNextTraceWindow() {
-        return crntTraceWindow = new Trace(this, windowSize);
+    public Trace initNextTraceWindow(Event[] events, int numOfEvents) {
+        Trace crntTraceWindow = new Trace(this, events, numOfEvents);
+        finishLoading(crntTraceWindow);
+        return crntTraceWindow;
     }
-
-//    public void setCurrentTraceWindow(Trace traceWindow) {
-//        assert crntTraceWindow == null;
-//        this.crntTraceWindow = traceWindow;
-//    }
 
     public void invokeMethod(Event event) {
         assert event.getType() == EventType.INVOKE_METHOD;
@@ -172,7 +164,7 @@ public class TraceState {
         return locksHeld;
     }
 
-    public void finishLoading() {
+    public void finishLoading(Trace crntTraceWindow) {
         Set<Event> locksHeld = getHeldLocks();
         lockHeldToStacktrace.keySet().retainAll(locksHeld);
         for (Event lock : locksHeld) {

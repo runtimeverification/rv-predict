@@ -35,7 +35,7 @@ public class TraceCache {
      */
     public TraceCache(Configuration config, Metadata metadata) {
         this.config = config;
-        this.crntState = new TraceState(metadata, config.windowSize);
+        this.crntState = new TraceState(metadata);
         this.events = new Event[config.windowSize];
     }
 
@@ -84,7 +84,6 @@ public class TraceCache {
         }
 
         /* finish reading events and create the Trace object */
-        Trace trace = crntState.initNextTraceWindow();
         int numOfEvents = events.length;
         for (int i = 0; i < events.length; i++) {
             if (events[i] == null) {
@@ -92,8 +91,7 @@ public class TraceCache {
                 break;
             }
         }
-        trace.setEvents(events, numOfEvents);
-        return trace;
+        return crntState.initNextTraceWindow(events, numOfEvents);
     }
 
 }

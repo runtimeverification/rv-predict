@@ -62,11 +62,6 @@
         <arg value="array.Test" />
         <rvarg value="--simple-report" />
     </test>
-    <test name="input.MyScanner">
-        <arg key="-cp" value="basic.jar" />
-        <arg value="input.MyScanner" />
-        <rvarg value="--simple-report" />
-    </test>
     <test name="airlinetickets.Airlinetickets">
         <runs value="32" />
         <arg key="-cp" value="basic.jar" />

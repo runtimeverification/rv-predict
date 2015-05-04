@@ -144,7 +144,7 @@ public class Trace {
         this.metadata = crntState.metadata();
         this.initHeldLockToStacktrace = crntState.getHeldLockStacktraceSnapshot();
         this.numOfEvents = numOfEvents;
-        this.minGID = events[0].getGID();
+        this.minGID = numOfEvents > 0 ? events[0].getGID() : -1;
         for (int i = 0; i < numOfEvents; i++) {
             // TODO(YilongL): avoid doing copy here
             addRawEvent(events[i].copy());

@@ -153,7 +153,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
         try {
             Trace trace = crntState.initNextTraceWindow(events, numOfEvents);
-            if (trace.hasSharedMemAddr()) {
+            if (trace.mayContainRaces()) {
                 new RaceDetectorTask(config, metadata, trace, violations).run();
             }
         } catch (Throwable e) {

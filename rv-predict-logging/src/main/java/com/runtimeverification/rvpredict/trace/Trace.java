@@ -71,11 +71,6 @@ public class Trace {
     private final Map<MemoryAddr, Set<Long>> addrToWriteThreads = new HashMap<>();
 
     /**
-     * Shared memory locations.
-     */
-    private final Set<MemoryAddr> sharedMemAddr = new HashSet<>();
-
-    /**
      * Events of each thread.
      */
     private final Map<Long, List<Event>> threadIdToEvents = new HashMap<>();
@@ -147,7 +142,7 @@ public class Trace {
         this.minGID = numOfEvents > 0 ? events[0].getGID() : -1;
         for (int i = 0; i < numOfEvents; i++) {
             // TODO(YilongL): avoid doing copy here
-            addRawEvent(events[i].copy());
+            process(events[i].copy());
         }
         finalize(events);
     }
@@ -160,8 +155,11 @@ public class Trace {
         return numOfEvents;
     }
 
-    public boolean hasSharedMemAddr() {
-        return !sharedMemAddr.isEmpty();
+    public boolean mayContainRaces() {
+        // This method can be further improved to skip an entire window ASAP
+        // For example, if this window contains no race candidate determined
+        // by some static analysis then we can safely skip it
+        return !memAccessEventsTbl.isEmpty();
     }
 
     /**
@@ -327,7 +325,7 @@ public class Trace {
         return readEvents;
     }
 
-    private void addRawEvent(Event event) {
+    private void process(Event event) {
 //        System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
         updateTraceState(event);
 
@@ -453,6 +451,7 @@ public class Trace {
     private void finalize(Event[] events) {
         /* compute memory addresses that are accessed by more than one thread
          * and with at least one write access */
+        Set<MemoryAddr> sharedMemAddr = new HashSet<>();
         for (MemoryAddr addr : Iterables.concat(addrToReadThreads.keySet(),
                 addrToWriteThreads.keySet())) {
             Set<Long> wrtThrdIds = addrToWriteThreads.get(addr);

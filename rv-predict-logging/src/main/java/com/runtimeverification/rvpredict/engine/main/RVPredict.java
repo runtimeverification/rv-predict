@@ -98,7 +98,7 @@ public class RVPredict {
             do {
                 trace = traceCache.getTrace(fromIndex);
                 fromIndex += config.windowSize;
-                if (trace.hasSharedMemAddr()) {
+                if (trace.mayContainRaces()) {
                     raceDetectorExecutor.execute(new RaceDetectorTask(config, metadata, trace,
                             violations));
                 }

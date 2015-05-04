@@ -203,6 +203,7 @@ public class Trace {
     }
 
     public List<Event> getWriteEventsOn(MemoryAddr addr) {
+        // TODO(YilongL): consider index write events based on both memory address and value
         List<Event> events = addrToWriteEvents.get(addr);
         return events == null ? Lists.<Event>newArrayList() : events;
     }
@@ -212,6 +213,7 @@ public class Trace {
     }
 
     public Table<MemoryAddr, Long, List<Event>> getMemAccessEventsTable() {
+        // TODO(YilongL): the API of Trace should not expose the memory access events table
         return memAccessEventsTbl;
     }
 
@@ -342,6 +344,7 @@ public class Trace {
             threadIdToInitThreadStatus.putIfAbsent(tid, initThreadInfo);
         }
 
+        // TODO(YilongL): consider moving code for updating trace state inside TraceState
         if (event.isReadOrWrite()) {
             MemoryAddr addr = event.getAddr();
             long value = event.getValue();
@@ -421,7 +424,7 @@ public class Trace {
             if (event.isWrite()) {
                 getOrInitEmptyList(addrToWriteEvents, addr).add(event);
             }
-        } else if (event.isSyncEvent()) {
+        } else {
             switch (event.getType()) {
             case START:
             case JOIN:
@@ -438,9 +441,6 @@ public class Trace {
             default:
                 assert false : "unexpected event: " + event;
             }
-
-        } else {
-            assert false : "unreachable";
         }
     }
 

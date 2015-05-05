@@ -1,7 +1,5 @@
 package com.runtimeverification.rvpredict.trace;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -38,7 +36,7 @@ public class TraceState {
      * Table indexed by thread ID and lock object respectively. This table
      * records the current lock status of each thread.
      */
-    private final Table<Long, Long, Deque<Event>> lockTable = HashBasedTable.create();
+    private final Table<Long, Long, LockState> lockTable = HashBasedTable.create();
 
     private final Metadata metadata;
 
@@ -70,20 +68,22 @@ public class TraceState {
         assert lock.getType().isLockType();
         long tid = lock.getTID();
         long lockId = lock.getSyncObject();
-        Deque<Event> locks = lockTable.get(tid, lockId);
-        if (locks == null) {
-            locks = new ArrayDeque<>();
-            lockTable.put(tid, lockId, locks);
+        LockState lockState = lockTable.get(tid, lockId);
+        if (lockState == null) {
+            lockState = new LockState(lock);
+            lockTable.put(tid, lockId, lockState);
         }
-        locks.add(lock);
+        lockState.incLevel();
     }
 
     public void releaseLock(Event unlock) {
         assert unlock.getType().isUnlockType();
-        long tid = unlock.getTID();
-        long lockId = unlock.getSyncObject();
-        Event lock = lockTable.get(tid, lockId).removeLast();
-        assert lock.getType().isLockType();
+        lockTable.get(unlock.getTID(), unlock.getSyncObject()).decLevel();
+    }
+
+    public int getLockEntranceLevel(long tid, long lockId) {
+        LockState lockState = lockTable.get(tid, lockId);
+        return lockState == null ? 0 : lockState.level();
     }
 
     public boolean isInsideClassInitializer(long tid) {
@@ -115,15 +115,10 @@ public class TraceState {
         return addrToValue.getOrDefault(addr, 0L);
     }
 
-    public int getLockCount(long threadId, long lockId) {
-        Deque<Event> deque = lockTable.get(threadId, lockId);
-        return deque == null ? 0 : deque.size();
-    }
-
-    public Map<Long, List<Event>> getLockStatusSnapshot(long threadId) {
-        ImmutableMap.Builder<Long, List<Event>> builder = ImmutableMap.builder();
-        for (Map.Entry<Long, Deque<Event>> e : lockTable.row(threadId).entrySet()) {
-            builder.put(e.getKey(), ImmutableList.copyOf(e.getValue()));
+    public Map<Long, LockState> getLockStatusSnapshot(long threadId) {
+        ImmutableMap.Builder<Long, LockState> builder = ImmutableMap.builder();
+        for (Map.Entry<Long, LockState> e : lockTable.row(threadId).entrySet()) {
+            builder.put(e.getKey(), e.getValue().copy());
         }
         return builder.build();
     }

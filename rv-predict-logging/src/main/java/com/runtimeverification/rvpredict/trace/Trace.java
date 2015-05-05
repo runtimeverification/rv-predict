@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.List;
+
 import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
@@ -250,34 +251,34 @@ public class Trace {
         return stacktrace;
     }
 
-    public List<LockObject> getHeldLocksAt(Event memAcc) {
-        long tid = memAcc.getTID();
-        Map<Long, Deque<Event>> map = Maps.newHashMap();
-        for (Map.Entry<Long, List<Event>> entry : threadIdToInitThreadStatus.get(tid).lockStatus
+    public List<LockObject> getHeldLocksAt(Event event) {
+        long tid = event.getTID();
+        Map<Long, LockState> map = Maps.newHashMap();
+        for (Map.Entry<Long, LockState> entry : threadIdToInitThreadStatus.get(tid).lockStatus
                 .entrySet()) {
-            map.put(entry.getKey(), new ArrayDeque<>(entry.getValue()));
+            map.put(entry.getKey(), entry.getValue().copy());
         }
         for (Event e : getEvents(tid)) {
-            if (e.getGID() >= memAcc.getGID()) {
+            if (e.getGID() >= event.getGID()) {
                 break;
             }
 
-            EventType type = e.getType();
-            if (type.isLockType()) {
+            if (e.getType().isLockType()) {
                 long lockId = e.getSyncObject();
-                map.putIfAbsent(lockId, new ArrayDeque<Event>());
-                map.get(lockId).add(e);
-            } else if (type.isUnlockType()) {
-                long lockId = e.getSyncObject();
-                Event lock = map.get(lockId).removeLast();
-                assert lock.getTID() == tid && lock.getSyncObject() == lockId;
+                LockState lockState = map.get(lockId);
+                if (lockState == null) {
+                    map.put(lockId, lockState = new LockState(e));
+                }
+                lockState.incLevel();
+            } else if (e.getType().isUnlockType()) {
+                map.get(e.getSyncObject()).decLevel();
             }
         }
 
         List<LockObject> lockObjects = Lists.newArrayList();
-        for (Deque<Event> deque : map.values()) {
-            if (!deque.isEmpty()) {
-                lockObjects.add(LockObject.create(deque.peek()));
+        for (LockState lockState : map.values()) {
+            if (lockState.level() > 0) {
+                lockObjects.add(LockObject.create(lockState.lock()));
             }
         }
         Collections.sort(lockObjects, new Comparator<LockObject>() {
@@ -354,12 +355,12 @@ public class Trace {
             long lockId = event.getSyncObject();
             if (event.getType().isLockType()) {
                 state.acquireLock(event);
-                if (state.getLockCount(tid, lockId) == 1) {
+                if (state.getLockEntranceLevel(tid, lockId) == 1) {
                     outermostLockingEvents.add(event);
                 }
             } else {
                 state.releaseLock(event);
-                if (state.getLockCount(tid, lockId) == 0) {
+                if (state.getLockEntranceLevel(tid, lockId) == 0) {
                     outermostLockingEvents.add(event);
                 }
             }
@@ -515,9 +516,9 @@ public class Trace {
     private static class ThreadStatus {
 
         private final List<Integer> stacktrace;
-        private final Map<Long, List<Event>> lockStatus;
+        private final Map<Long, LockState> lockStatus;
 
-        private ThreadStatus(List<Integer> stacktrace, Map<Long, List<Event>> lockStatus) {
+        private ThreadStatus(List<Integer> stacktrace, Map<Long, LockState> lockStatus) {
             this.stacktrace = stacktrace;
             this.lockStatus = lockStatus;
         }

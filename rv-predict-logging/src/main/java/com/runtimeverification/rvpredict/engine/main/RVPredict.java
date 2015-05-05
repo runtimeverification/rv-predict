@@ -73,8 +73,7 @@ public class RVPredict {
     public void start() {
         try {
             traceCache.setup();
-            ExecutorService raceDetectorExecutor = Executors.newFixedThreadPool(
-                    4,
+            ExecutorService raceDetectorExecutor = Executors.newSingleThreadExecutor(
                     new ThreadFactory() {
                         int id = 0;
                         final UncaughtExceptionHandler eh = (t, e) -> {

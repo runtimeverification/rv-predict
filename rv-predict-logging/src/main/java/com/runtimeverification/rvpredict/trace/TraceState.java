@@ -40,8 +40,6 @@ public class TraceState {
      */
     private final Table<Long, Long, Deque<Event>> lockTable = HashBasedTable.create();
 
-    private final Map<Long, Event> threadIdToStartEvent = Maps.newHashMap();
-
     private final Metadata metadata;
 
     public TraceState(Metadata metadata) {
@@ -133,15 +131,6 @@ public class TraceState {
     public List<Integer> getStacktraceSnapshot(long threadId) {
         List<Integer> stacktrace = threadIdToStacktrace.get(threadId);
         return stacktrace == null ? ImmutableList.<Integer>of() : ImmutableList.copyOf(stacktrace);
-    }
-
-    public void onThreadStart(Event startEvent) {
-        assert startEvent.getType() == EventType.START;
-        threadIdToStartEvent.put(startEvent.getSyncObject(), startEvent);
-    }
-
-    public Event getThreadStartEvent(long threadId) {
-        return threadIdToStartEvent.get(threadId);
     }
 
 }

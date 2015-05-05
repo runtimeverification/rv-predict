@@ -124,22 +124,23 @@ public class Race extends AbstractViolation {
 
     private void generateMemAccReport(Event e, StringBuilder sb) {
         long tid = e.getTID();
+        Metadata metadata = trace.metadata();
         List<LockObject> heldLocks = trace.getHeldLocksAt(e);
         sb.append(String.format("    Concurrent %s in thread T%s (locks held: {%s})%n",
                 e.isWrite() ? "write" : "read",
                 tid,
                 getHeldLocksReport(heldLocks)));
         for (Integer locId : trace.getStacktraceAt(e)) {
-            String sig = locId >= 0 ? trace.metadata().getLocationSig(locId) : "... not available ...";
+            String sig = locId >= 0 ? metadata.getLocationSig(locId) : "... not available ...";
             sb.append(String.format("        at %s%n", sig));
         }
 
-        Event startEvent = trace.getStartEventOf(e.getTID());
-        if (startEvent != null) {
-            sb.append(String.format("    T%s is created by T%s%n", tid,
-                    startEvent.getTID()));
-            sb.append(String.format("        at %s%n",
-                    trace.metadata().getLocationSig(startEvent.getLocId())));
+        long parentTID = metadata.getParentTID(tid);
+        if (parentTID > 0) {
+            int locId = metadata.getThreadCreationLocId(tid);
+            sb.append(String.format("    T%s is created by T%s%n", tid, parentTID));
+            sb.append(String.format("        at %s%n", locId >= 0 ? metadata.getLocationSig(locId)
+                    : "unknown location"));
         } else {
             if (tid == 1) {
                 sb.append(String.format("    T%s is the main thread%n", tid));
@@ -153,7 +154,7 @@ public class Race extends AbstractViolation {
             for (LockObject lock : heldLocks) {
                 sb.append(String.format("      %s%n", lock));
                 for (Integer locId : trace.getStacktraceAt(lock.getLockEvent())) {
-                    String sig = locId >= 0 ? trace.metadata().getLocationSig(locId)
+                    String sig = locId >= 0 ? metadata.getLocationSig(locId)
                             : "... not available ...";
                     sb.append(String.format("        at %s%n", sig));
                 }

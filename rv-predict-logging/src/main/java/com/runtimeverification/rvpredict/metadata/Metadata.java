@@ -8,9 +8,12 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.commons.lang3.tuple.Pair;
 
 import com.runtimeverification.rvpredict.trace.MemoryAddr;
 
@@ -36,6 +39,8 @@ public class Metadata implements Serializable {
 
     private final Set<Integer> volatileVarIds = Collections
             .newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
+
+    private final Map<Long, Pair<Long, Integer>> tidToCreationInfo = new ConcurrentHashMap<>();
 
     private static final Metadata instance = new Metadata();
 
@@ -96,6 +101,20 @@ public class Metadata implements Serializable {
     public boolean isVolatile(MemoryAddr addr) {
         int varId = addr.fieldIdOrArrayIndex();
         return varId < 0 && volatileVarIds.contains(-varId);
+    }
+
+    public void addThreadCreationInfo(long childTID, long parentTID, int locId) {
+        tidToCreationInfo.put(childTID, Pair.of(parentTID, locId));
+    }
+
+    public long getParentTID(long tid) {
+        Pair<Long, Integer> info = tidToCreationInfo.get(tid);
+        return info == null ? 0 : info.getLeft();
+    }
+
+    public int getThreadCreationLocId(long tid) {
+        Pair<Long, Integer> info = tidToCreationInfo.get(tid);
+        return info == null ? -1 : info.getRight();
     }
 
     /**

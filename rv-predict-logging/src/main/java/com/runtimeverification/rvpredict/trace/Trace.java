@@ -294,10 +294,6 @@ public class Trace {
         return lockObjects;
     }
 
-    public Event getStartEventOf(long tid) {
-        return state.getThreadStartEvent(tid);
-    }
-
     /**
      * Gets control-flow dependent events of a given {@code Event}. Without any
      * knowledge about the control flow of the program, all read events that
@@ -359,8 +355,6 @@ public class Trace {
             if (state.isInsideClassInitializer(tid)) {
                 clinitEvents.add(event);
             }
-        } else if (event.isThreadStart()) {
-            state.onThreadStart(event);
         } else if (event.getType().isLockType() || event.getType().isUnlockType()) {
             long lockId = event.getSyncObject();
             if (event.getType().isLockType()) {

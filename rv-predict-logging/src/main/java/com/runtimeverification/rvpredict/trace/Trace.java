@@ -103,11 +103,11 @@ public class Trace {
     private final Map<MemoryAddr, Long> addrToInitValue = Maps.newHashMap();
 
     /**
-     * The initial stack trace for all threads referenced in this trace segment.
+     * The initial states for all threads referenced in this trace segment.
      * It is computed as the value in the {@link #state} before the first
-     * event of that thread occurring in this trace segment.
+     * event of that thread occurs in this trace segment.
      */
-    private final Map<Long, ThreadStatus> threadIdToInitThreadStatus = Maps.newHashMap();
+    private final Map<Long, ThreadState> tidToThreadState = Maps.newHashMap();
 
     /**
      * Set of {@code MemoryAccessEvent}'s that happen during class initialization.
@@ -228,7 +228,7 @@ public class Trace {
         Deque<Integer> stacktrace = new ArrayDeque<>();
         if (gid >= events[0].getGID()) {
             /* event is in the current window; reassemble its stack trace */
-            for (int locId : threadIdToInitThreadStatus.get(tid).stacktrace) {
+            for (int locId : tidToThreadState.get(tid).getStacktrace()) {
                 stacktrace.addFirst(locId);
             }
             for (Event e : getEvents(tid)) {
@@ -254,9 +254,8 @@ public class Trace {
     public List<LockObject> getHeldLocksAt(Event event) {
         long tid = event.getTID();
         Map<Long, LockState> map = Maps.newHashMap();
-        for (Map.Entry<Long, LockState> entry : threadIdToInitThreadStatus.get(tid).lockStatus
-                .entrySet()) {
-            map.put(entry.getKey(), entry.getValue().copy());
+        for (LockState lockState : tidToThreadState.get(tid).getLockStates()) {
+            map.put(lockState.lock().getSyncObject(), lockState.copy());
         }
         for (Event e : getEvents(tid)) {
             if (e.getGID() >= event.getGID()) {
@@ -323,9 +322,7 @@ public class Trace {
 
     private void updateTraceState(Event event) {
         long tid = event.getTID();
-        if (!threadIdToInitThreadStatus.containsKey(tid)) {
-            threadIdToInitThreadStatus.put(tid, getCurrentThreadStatus(tid));
-        }
+        tidToThreadState.computeIfAbsent(tid, state::getThreadStateSnapshot);
 
         // TODO(YilongL): consider moving code for updating trace state inside TraceState
         if (event.isReadOrWrite()) {
@@ -378,11 +375,6 @@ public class Trace {
                 assert false : "unreachable";
             }
         }
-    }
-
-    private ThreadStatus getCurrentThreadStatus(long tid) {
-        return new ThreadStatus(state.getStacktraceSnapshot(tid),
-                state.getLockStatusSnapshot(tid));
     }
 
     /**
@@ -511,17 +503,6 @@ public class Trace {
         }
         map.put(key, value);
         return value;
-    }
-
-    private static class ThreadStatus {
-
-        private final List<Integer> stacktrace;
-        private final Map<Long, LockState> lockStatus;
-
-        private ThreadStatus(List<Integer> stacktrace, Map<Long, LockState> lockStatus) {
-            this.stacktrace = stacktrace;
-            this.lockStatus = lockStatus;
-        }
     }
 
 }

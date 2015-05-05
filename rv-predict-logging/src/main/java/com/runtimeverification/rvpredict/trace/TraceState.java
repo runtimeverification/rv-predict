@@ -1,12 +1,11 @@
 package com.runtimeverification.rvpredict.trace;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.log.Event;
@@ -115,17 +114,16 @@ public class TraceState {
         return addrToValue.getOrDefault(addr, 0L);
     }
 
-    public Map<Long, LockState> getLockStatusSnapshot(long threadId) {
-        ImmutableMap.Builder<Long, LockState> builder = ImmutableMap.builder();
-        for (Map.Entry<Long, LockState> e : lockTable.row(threadId).entrySet()) {
-            builder.put(e.getKey(), e.getValue().copy());
+    public ThreadState getThreadStateSnapshot(long tid) {
+        /* copy stack trace */
+        List<Integer> stacktrace = threadIdToStacktrace.get(tid);
+        stacktrace = stacktrace == null ? new ArrayList<>() : new ArrayList<>(stacktrace);
+        /* copy each lock state */
+        List<LockState> lockStates = new ArrayList<>();
+        for (LockState lockState : lockTable.row(tid).values()) {
+            lockStates.add(lockState.copy());
         }
-        return builder.build();
-    }
-
-    public List<Integer> getStacktraceSnapshot(long threadId) {
-        List<Integer> stacktrace = threadIdToStacktrace.get(threadId);
-        return stacktrace == null ? ImmutableList.<Integer>of() : ImmutableList.copyOf(stacktrace);
+        return new ThreadState(stacktrace, lockStates);
     }
 
 }

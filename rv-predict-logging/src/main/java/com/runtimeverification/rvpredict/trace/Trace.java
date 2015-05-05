@@ -55,7 +55,7 @@ public class Trace {
 
     private final int numOfEvents;
 
-    private final long minGID;
+    private final Event[] events;
 
     /**
      * Read threads on each address. Only used in filtering thread-local
@@ -118,12 +118,6 @@ public class Trace {
      */
     private final Set<Event> outermostLockingEvents = Sets.newHashSet();
 
-    /**
-     * Map from thread Id to {@link EventType#INVOKE_METHOD} and
-     * {@link EventType#FINISH_METHOD} events.
-     */
-    private final Map<Long, List<Event>> threadIdToCallStackEvents = Maps.newHashMap();
-
     private final Metadata metadata;
 
     /**
@@ -135,10 +129,11 @@ public class Trace {
         this.state = crntState;
         this.metadata = crntState.metadata();
         this.numOfEvents = numOfEvents;
-        this.minGID = numOfEvents > 0 ? events[0].getGID() : -1;
+        this.events = new Event[numOfEvents];
         for (int i = 0; i < numOfEvents; i++) {
-            // TODO(YilongL): avoid doing copy here
-            process(events[i].copy());
+            // TODO(YilongL): avoid doing copy as much as possible
+            this.events[i] = events[i].copy();
+            process(this.events[i]);
         }
         finalize(events);
     }
@@ -228,21 +223,21 @@ public class Trace {
      */
     public Deque<Integer> getStacktraceAt(Event event) {
         long tid = event.getTID();
+        long gid = event.getGID();
         Deque<Integer> stacktrace = new ArrayDeque<>();
-        if (event.getGID() >= minGID) {
+        if (gid >= events[0].getGID()) {
             /* event is in the current window; reassemble its stack trace */
             for (int locId : threadIdToInitThreadStatus.get(tid).stacktrace) {
                 stacktrace.addFirst(locId);
             }
-            for (Event e : threadIdToCallStackEvents.getOrDefault(tid,
-                    Collections.<Event> emptyList())) {
-                if (e.getGID() >= event.getGID()) {
+            for (Event e : getEvents(tid)) {
+                if (e.getGID() >= gid) {
                     break;
                 }
 
                 if (e.getType() == EventType.INVOKE_METHOD) {
                     stacktrace.addFirst(e.getLocId());
-                } else {
+                } else if (e.getType() == EventType.FINISH_METHOD) {
                     stacktrace.removeFirst();
                 }
             }
@@ -376,10 +371,8 @@ public class Trace {
                 state.decClinitDepth(tid);
             } else if (eventType == EventType.INVOKE_METHOD) {
                 state.invokeMethod(event);
-                getOrInitEmptyList(threadIdToCallStackEvents, tid).add(event);
             } else if (eventType == EventType.FINISH_METHOD) {
                 state.finishMethod(event);
-                getOrInitEmptyList(threadIdToCallStackEvents, tid).add(event);
             } else {
                 assert false : "unreachable";
             }

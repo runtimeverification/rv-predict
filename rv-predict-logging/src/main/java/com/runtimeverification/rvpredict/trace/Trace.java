@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.List;
+import java.util.function.Function;
 
 import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.config.Configuration;
@@ -178,8 +179,7 @@ public class Trace {
     }
 
     public List<Event> getEvents(long tid) {
-        List<Event> events = threadIdToEvents.get(tid);
-        return events == null ? Lists.<Event>newArrayList() : events;
+        return threadIdToEvents.getOrDefault(tid, Collections.emptyList());
     }
 
     public Collection<List<Event>> perThreadView() {
@@ -196,8 +196,7 @@ public class Trace {
 
     public List<Event> getWriteEventsOn(MemoryAddr addr) {
         // TODO(YilongL): consider index write events based on both memory address and value
-        List<Event> events = addrToWriteEvents.get(addr);
-        return events == null ? Lists.<Event>newArrayList() : events;
+        return addrToWriteEvents.getOrDefault(addr, Collections.emptyList());
     }
 
     public Set<MemoryAddr> getMemoryAddresses() {
@@ -315,8 +314,8 @@ public class Trace {
         updateTraceState(event);
 
         if (event.isReadOrWrite()) {
-            getOrInitEmptySet(event.isRead() ? addrToReadThreads : addrToWriteThreads,
-                    event.getAddr()).add(event.getTID());
+            (event.isRead() ? addrToReadThreads : addrToWriteThreads).computeIfAbsent(
+                    event.getAddr(), p -> new HashSet<>()).add(event.getTID());
         }
     }
 
@@ -377,6 +376,8 @@ public class Trace {
         }
     }
 
+    private static final Function<Object, ? extends List<Event>> NEW_EVENT_LIST = p -> new ArrayList<>();
+
     /**
      * add a new filtered event to the trace in the order of its appearance
      *
@@ -386,14 +387,14 @@ public class Trace {
 //        System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
         long tid = event.getTID();
 
-        getOrInitEmptyList(threadIdToEvents, tid).add(event);
+        threadIdToEvents.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
         if (event.isReadOrWrite()) {
             MemoryAddr addr = event.getAddr();
 
-            getOrInitEmptyList(memAccessEventsTbl.row(addr), tid).add(event);
+            memAccessEventsTbl.row(addr).computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
 
             if (event.isWrite()) {
-                getOrInitEmptyList(addrToWriteEvents, addr).add(event);
+                addrToWriteEvents.computeIfAbsent(addr, NEW_EVENT_LIST).add(event);
             }
         } else {
             switch (event.getType()) {
@@ -407,7 +408,7 @@ public class Trace {
             case READ_UNLOCK:
             case WAIT_REL:
             case WAIT_ACQ:
-                getOrInitEmptyList(lockIdToLockEvents, event.getSyncObject()).add(event);
+                lockIdToLockEvents.computeIfAbsent(event.getSyncObject(), NEW_EVENT_LIST).add(event);
                 break;
             default:
                 assert false : "unexpected event: " + event;
@@ -485,24 +486,6 @@ public class Trace {
             }
             addEvent(event);
         }
-    }
-
-    static <K,V> List<V> getOrInitEmptyList(Map<K, List<V>> map, K key) {
-        List<V> value = map.get(key);
-        if (value == null) {
-            value = Lists.newArrayList();
-        }
-        map.put(key, value);
-        return value;
-    }
-
-    private static <K,V> Set<V> getOrInitEmptySet(Map<K, Set<V>> map, K key) {
-        Set<V> value = map.get(key);
-        if (value == null) {
-            value = Sets.newHashSet();
-        }
-        map.put(key, value);
-        return value;
     }
 
 }

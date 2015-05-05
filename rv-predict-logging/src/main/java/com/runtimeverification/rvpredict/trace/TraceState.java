@@ -53,7 +53,8 @@ public class TraceState {
 
     public void invokeMethod(Event event) {
         assert event.getType() == EventType.INVOKE_METHOD;
-        Trace.getOrInitEmptyList(threadIdToStacktrace, event.getTID()).add(event.getLocId());
+        threadIdToStacktrace.computeIfAbsent(event.getTID(), p -> new ArrayList<>())
+            .add(event.getLocId());
     }
 
     public void finishMethod(Event event) {

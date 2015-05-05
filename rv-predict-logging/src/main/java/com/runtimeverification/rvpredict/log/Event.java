@@ -6,7 +6,7 @@ import com.runtimeverification.rvpredict.trace.MemoryAddr;
  * Class for representing an event as it is recorded in the log
  * @author TraianSF
  */
-public class Event {
+public class Event implements Comparable<Event> {
     private long GID;
     private long TID;
     private int ID;
@@ -163,6 +163,11 @@ public class Event {
         } else {
             return false;
         }
+    }
+
+    @Override
+    public int compareTo(Event e) {
+        return Long.compare(getGID(), e.getGID());
     }
 
     @Override

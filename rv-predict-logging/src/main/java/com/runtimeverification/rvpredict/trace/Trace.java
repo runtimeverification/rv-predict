@@ -32,7 +32,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,6 +39,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.config.Configuration;
@@ -227,20 +227,14 @@ public class Trace {
         Deque<Integer> stacktrace = new ArrayDeque<>();
         if (gid >= events[0].getGID()) {
             /* event is in the current window; reassemble its stack trace */
-            for (int locId : tidToThreadState.get(tid).getStacktrace()) {
-                stacktrace.addFirst(locId);
-            }
-            for (Event e : getEvents(tid)) {
-                if (e.getGID() >= gid) {
-                    break;
-                }
-
+            tidToThreadState.get(tid).getStacktrace().forEach(stacktrace::addFirst);
+            getEvents(tid).stream().filter(e -> e.getGID() < gid).forEach(e -> {
                 if (e.getType() == EventType.INVOKE_METHOD) {
                     stacktrace.addFirst(e.getLocId());
                 } else if (e.getType() == EventType.FINISH_METHOD) {
                     stacktrace.removeFirst();
                 }
-            }
+            });
             stacktrace.addFirst(event.getLocId());
         } else {
             /* event is from previous windows */
@@ -252,39 +246,26 @@ public class Trace {
 
     public List<LockObject> getHeldLocksAt(Event event) {
         long tid = event.getTID();
-        Map<Long, LockState> map = Maps.newHashMap();
-        for (LockState lockState : tidToThreadState.get(tid).getLockStates()) {
-            map.put(lockState.lock().getSyncObject(), lockState.copy());
-        }
+        Map<Long, LockState> lockIdToLockState = tidToThreadState.get(tid).getLockStates().stream()
+                .collect(Collectors.toMap(ls -> ls.lock().getSyncObject(), LockState::copy));
         for (Event e : getEvents(tid)) {
             if (e.getGID() >= event.getGID()) {
                 break;
             }
 
             if (e.getType().isLockType()) {
-                long lockId = e.getSyncObject();
-                LockState lockState = map.get(lockId);
-                if (lockState == null) {
-                    map.put(lockId, lockState = new LockState(e));
-                }
-                lockState.incLevel();
+                lockIdToLockState.computeIfAbsent(e.getSyncObject(), p -> new LockState(e))
+                        .incLevel();
             } else if (e.getType().isUnlockType()) {
-                map.get(e.getSyncObject()).decLevel();
+                lockIdToLockState.get(e.getSyncObject()).decLevel();
             }
         }
 
-        List<LockObject> lockObjects = Lists.newArrayList();
-        for (LockState lockState : map.values()) {
-            if (lockState.level() > 0) {
-                lockObjects.add(LockObject.create(lockState.lock()));
-            }
-        }
-        Collections.sort(lockObjects, new Comparator<LockObject>() {
-            @Override
-            public int compare(LockObject o1, LockObject o2) {
-                return Long.compare(o1.getLockEvent().getGID(), o2.getLockEvent().getGID());
-            }
-        });
+        List<LockObject> lockObjects = lockIdToLockState.values().stream()
+                .filter(lockState -> lockState.level() > 0)
+                .map(lockState -> LockObject.create(lockState.lock())).collect(Collectors.toList());
+        Collections.sort(lockObjects, (LockObject o1, LockObject o2) -> o1.getLockEvent()
+                .compareTo(o2.getLockEvent()));
         return lockObjects;
     }
 

@@ -228,13 +228,16 @@ public class Trace {
         if (gid >= events[0].getGID()) {
             /* event is in the current window; reassemble its stack trace */
             tidToThreadState.get(tid).getStacktrace().forEach(stacktrace::addFirst);
-            getEvents(tid).stream().filter(e -> e.getGID() < gid).forEach(e -> {
-                if (e.getType() == EventType.INVOKE_METHOD) {
-                    stacktrace.addFirst(e.getLocId());
-                } else if (e.getType() == EventType.FINISH_METHOD) {
-                    stacktrace.removeFirst();
+            for (Event e : events) {
+                if (e.getGID() >= event.getGID()) break;
+                if (e.getTID() == tid) {
+                    if (e.getType() == EventType.INVOKE_METHOD) {
+                        stacktrace.addFirst(e.getLocId());
+                    } else if (e.getType() == EventType.FINISH_METHOD) {
+                        stacktrace.removeFirst();
+                    }
                 }
-            });
+            }
             stacktrace.addFirst(event.getLocId());
         } else {
             /* event is from previous windows */
@@ -249,10 +252,7 @@ public class Trace {
         Map<Long, LockState> lockIdToLockState = tidToThreadState.get(tid).getLockStates().stream()
                 .collect(Collectors.toMap(ls -> ls.lock().getSyncObject(), LockState::copy));
         for (Event e : getEvents(tid)) {
-            if (e.getGID() >= event.getGID()) {
-                break;
-            }
-
+            if (e.getGID() >= event.getGID()) break;
             if (e.getType().isLockType()) {
                 lockIdToLockState.computeIfAbsent(e.getSyncObject(), p -> new LockState(e))
                         .incLevel();

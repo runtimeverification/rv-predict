@@ -42,11 +42,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.*;
-import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.util.Constants;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a
@@ -57,19 +55,9 @@ public class Trace {
 
     private final int numOfEvents;
 
+    private final long baseGID;
+
     private final Event[] events;
-
-    /**
-     * Read threads on each address. Only used in filtering thread-local
-     * {@link MemoryAccessEvent}s.
-     */
-    private final Map<MemoryAddr, Set<Long>> addrToReadThreads = new HashMap<>();
-
-    /**
-     * Write threads on each address. Only used in filtering thread-local
-     * {@link MemoryAccessEvent}s.
-     */
-    private final Map<MemoryAddr, Set<Long>> addrToWriteThreads = new HashMap<>();
 
     /**
      * Events of each thread.
@@ -97,11 +85,9 @@ public class Trace {
     private final Table<MemoryAddr, Long, List<Event>> memAccessEventsTbl = HashBasedTable.create();
 
     /**
-     * The initial value at all addresses referenced in this trace segment. It
-     * is computed as the value in the {@link #state} before the first
-     * access occurring in this trace segment.
+     * Map from memory addresses referenced in this trace segment to their states.
      */
-    private final Map<MemoryAddr, Long> addrToInitValue = Maps.newHashMap();
+    private final Map<MemoryAddr, MemoryAddrState> addrToState = Maps.newHashMap();
 
     /**
      * The initial states for all threads referenced in this trace segment.
@@ -111,14 +97,14 @@ public class Trace {
     private final Map<Long, ThreadState> tidToThreadState = Maps.newHashMap();
 
     /**
+     * Map from thread ID to outermost lock pairs.
+     */
+    private final Map<Long, Map<Event, Event>> tidToLockPairs = Maps.newHashMap();
+
+    /**
      * Set of {@code MemoryAccessEvent}'s that happen during class initialization.
      */
     private final Set<Event> clinitEvents = Sets.newHashSet();
-
-    /**
-     * Set of outermost LOCK/UNLOCK events.
-     */
-    private final Set<Event> outermostLockingEvents = Sets.newHashSet();
 
     private final Metadata metadata;
 
@@ -131,13 +117,9 @@ public class Trace {
         this.state = crntState;
         this.metadata = crntState.metadata();
         this.numOfEvents = numOfEvents;
-        this.events = new Event[numOfEvents];
-        for (int i = 0; i < numOfEvents; i++) {
-            // TODO(YilongL): avoid doing copy as much as possible
-            this.events[i] = events[i].copy();
-            process(this.events[i]);
-        }
-        finalize(events);
+        this.events = events;
+        this.baseGID = numOfEvents > 0 ? events[0].getGID() : -1;
+        processEvents();
     }
 
     public Metadata metadata() {
@@ -162,10 +144,8 @@ public class Trace {
      *            the address
      * @return the initial value
      */
-    public Long getInitValueOf(MemoryAddr addr) {
-        Long initValue = addrToInitValue.get(addr);
-        assert initValue != null : "All values in the trace should have been set in addRawEvent";
-        return initValue;
+    public long getInitValueOf(MemoryAddr addr) {
+        return addrToState.get(addr).initVal;
     }
 
     public Event getFirstEvent(long tid) {
@@ -225,11 +205,12 @@ public class Trace {
         long tid = event.getTID();
         long gid = event.getGID();
         Deque<Integer> stacktrace = new ArrayDeque<>();
-        if (gid >= events[0].getGID()) {
+        if (gid >= baseGID) {
             /* event is in the current window; reassemble its stack trace */
             tidToThreadState.get(tid).getStacktrace().forEach(stacktrace::addFirst);
-            for (Event e : events) {
-                if (e.getGID() >= event.getGID()) break;
+            for (int i = 0; i < numOfEvents; i++) {
+                Event e = events[i];
+                if (e.getGID() >= gid) break;
                 if (e.getTID() == tid) {
                     if (e.getType() == EventType.INVOKE_METHOD) {
                         stacktrace.addFirst(e.getLocId());
@@ -247,26 +228,28 @@ public class Trace {
         return stacktrace;
     }
 
-    public List<LockObject> getHeldLocksAt(Event event) {
+    /**
+     * Returns the locks held by the owner thread when a given {@code Event} occurs.
+     */
+    public List<Event> getHeldLocksAt(Event event) {
         long tid = event.getTID();
         Map<Long, LockState> lockIdToLockState = tidToThreadState.get(tid).getLockStates().stream()
                 .collect(Collectors.toMap(ls -> ls.lock().getSyncObject(), LockState::copy));
         for (Event e : getEvents(tid)) {
             if (e.getGID() >= event.getGID()) break;
             if (e.getType().isLockType()) {
-                lockIdToLockState.computeIfAbsent(e.getSyncObject(), p -> new LockState(e))
-                        .incLevel();
+                lockIdToLockState.computeIfAbsent(e.getSyncObject(), p -> new LockState())
+                        .acquire(e);
             } else if (e.getType().isUnlockType()) {
-                lockIdToLockState.get(e.getSyncObject()).decLevel();
+                lockIdToLockState.get(e.getSyncObject()).release();
             }
         }
 
-        List<LockObject> lockObjects = lockIdToLockState.values().stream()
+        List<Event> lockEvents = lockIdToLockState.values().stream()
                 .filter(lockState -> lockState.level() > 0)
-                .map(lockState -> LockObject.create(lockState.lock())).collect(Collectors.toList());
-        Collections.sort(lockObjects, (LockObject o1, LockObject o2) -> o1.getLockEvent()
-                .compareTo(o2.getLockEvent()));
-        return lockObjects;
+                .map(LockState::lock).collect(Collectors.toList());
+        Collections.sort(lockEvents, (e1, e2) -> e1.compareTo(e2));
+        return lockEvents;
     }
 
     /**
@@ -278,10 +261,7 @@ public class Trace {
         // TODO(YilongL): optimize this!
         List<Event> readEvents = new ArrayList<>();
         for (Event e : getEvents(event.getTID())) {
-            if (e.getGID() >= event.getGID()) {
-                break;
-            }
-
+            if (e.getGID() >= event.getGID()) break;
             if (e.isRead()) {
                 readEvents.add(e);
             }
@@ -290,70 +270,156 @@ public class Trace {
         return readEvents;
     }
 
-    private void process(Event event) {
-//        System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
-        updateTraceState(event);
-
-        if (event.isReadOrWrite()) {
-            (event.isRead() ? addrToReadThreads : addrToWriteThreads).computeIfAbsent(
-                    event.getAddr(), p -> new HashSet<>()).add(event.getTID());
-        }
-    }
-
-    private void updateTraceState(Event event) {
-        long tid = event.getTID();
-        tidToThreadState.computeIfAbsent(tid, state::getThreadStateSnapshot);
-
-        // TODO(YilongL): consider moving code for updating trace state inside TraceState
-        if (event.isReadOrWrite()) {
-            MemoryAddr addr = event.getAddr();
-            long value = event.getValue();
-            long crntVal = state.getValueAt(addr);
-            addrToInitValue.putIfAbsent(addr, crntVal);
-            if (event.isRead()) {
-                if (value != Constants._0X_DEADBEEFL && value != crntVal) {
-                    if (Configuration.debug) {
-                        System.err.printf(
-                            String.format("[Warning] logged trace not sequential consistent:%n"
-                                    + "  event %s reads a different value than the currently stored value %s%n"
-                                    + "    at %s%n",
-                                    event, crntVal, metadata.getLocationSig(event.getLocId())));
-                    }
-                    state.writeValueAt(addr, crntVal);
-                }
-            } else {
-                state.writeValueAt(addr, event.getValue());
-            }
-
+    private void processEvents() {
+        /// PHASE 1
+        for (int i = 0; i < numOfEvents; i++) {
+            Event event = events[i];
+            long tid = event.getTID();
+            tidToThreadState.computeIfAbsent(tid, state::getThreadStateSnapshot);
             if (state.isInsideClassInitializer(tid)) {
                 clinitEvents.add(event);
             }
-        } else if (event.getType().isLockType() || event.getType().isUnlockType()) {
-            long lockId = event.getSyncObject();
-            if (event.getType().isLockType()) {
-                state.acquireLock(event);
-                if (state.getLockEntranceLevel(tid, lockId) == 1) {
-                    outermostLockingEvents.add(event);
+
+            if (event.isReadOrWrite()) {
+                /* update memory address state */
+                MemoryAddrState st = addrToState.computeIfAbsent(event.getAddr(),
+                        addr -> new MemoryAddrState(state.getValueAt(addr)));
+                if (event.isRead()) {
+                    st.readBy(tid);
+                } else {
+                    st.writtenBy(tid, i);
                 }
+            } else if (event.isSyncEvent()) {
+                if (event.getType().isLockType()) {
+                    event = event.copy();
+                    if (state.acquireLock(event).level() == 1) {
+                        tidToLockPairs.computeIfAbsent(tid, p -> new HashMap<>())
+                            .put(event, null);
+                    }
+                } else if (event.getType().isUnlockType()) {
+                    LockState st = state.releaseLock(event);
+                    if (st.level() == 0) {
+                        tidToLockPairs.computeIfAbsent(tid, p -> new HashMap<>())
+                            .put(st.lock(), event);
+                    }
+                }
+            } else if (event.isMetaEvent()) {
+                state.onMetaEvent(event);
             } else {
-                state.releaseLock(event);
-                if (state.getLockEntranceLevel(tid, lockId) == 0) {
-                    outermostLockingEvents.add(event);
+                throw new IllegalStateException();
+            }
+        }
+
+        /* update memory address value */
+        addrToState.forEach((addr, st) -> {
+            if (st.lastWrite >= 0) {
+                state.writeValueAt(addr, events[st.lastWrite].getValue());
+            }
+        });
+
+        /* compute shared memory addresses */
+        Set<MemoryAddr> sharedAddr = new HashSet<>();
+        addrToState.forEach((addr, state) -> {
+            if (state.isWriteShared()) {
+                sharedAddr.add(addr);
+            }
+        });
+
+        /// PHASE 2
+        if (!sharedAddr.isEmpty()) {
+            long baseGID = events[0].getGID();
+            boolean[] critical = new boolean[numOfEvents];
+            Map<Long, Map<Integer, Integer>> tidToOpenLockIndices = new HashMap<>();
+            tidToLockPairs.forEach((tid, pairs) -> {
+                Map<Integer, Integer> indices = new HashMap<>();
+                tidToOpenLockIndices.put(tid, indices);
+                pairs.forEach((l, r) -> {
+                    if (l.getGID() < baseGID) {
+                        indices.put(getEventOffset(l), r == null ? null : getEventOffset(r));
+                    }
+                });
+            });
+
+            for (int i = 0; i < numOfEvents; i++) {
+                Event event = events[i];
+                long tid = event.getTID();
+                if (event.isReadOrWrite()) {
+                    critical[i] = sharedAddr.contains(event.getAddr());
+                } else if (event.isSyncEvent()) {
+                    if (event.getType().isLockType()) {
+                        if (tidToLockPairs.get(tid).containsKey(event)) {
+                            Event unlock = tidToLockPairs.get(tid).get(event);
+                            tidToOpenLockIndices.get(tid).put(i,
+                                    unlock == null ? null : getEventOffset(unlock));
+                        }
+                    } else if (event.getType().isUnlockType()) {
+                        tidToOpenLockIndices.get(tid).values().remove(i);
+                    } else {
+                        critical[i] = true;
+                    }
+                } else {
+                    // MetaEvents are not critical
+                }
+
+                if (critical[i]) {
+                    Map<Integer, Integer> indices = tidToOpenLockIndices.get(tid);
+                    if (indices != null) {
+                        indices.forEach((l, r) -> {
+                            if (l >= 0) {
+                                critical[l] = true;
+                            }
+                            if (r != null) {
+                                critical[r] = true;
+                            }
+                        });
+                        indices.clear();
+                    }
                 }
             }
-        } else if (event.isMetaEvent()) {
-            EventType eventType = event.getType();
-            if (eventType == EventType.CLINIT_ENTER) {
-                state.incClinitDepth(tid);
-            } else if (eventType == EventType.CLINIT_EXIT) {
-                state.decClinitDepth(tid);
-            } else if (eventType == EventType.INVOKE_METHOD) {
-                state.invokeMethod(event);
-            } else if (eventType == EventType.FINISH_METHOD) {
-                state.finishMethod(event);
-            } else {
-                assert false : "unreachable";
+
+            /* finally commit all critical events into this window */
+            for (int i = 0; i < numOfEvents; i++) {
+                if (critical[i]) {
+                    addEvent(events[i]);
+                }
             }
+        }
+    }
+
+    private int getEventOffset(Event event) {
+        return (int) (event.getGID() - baseGID);
+    }
+
+    private static class MemoryAddrState {
+        int lastWrite = -1;
+        final long initVal;
+        long reader1, reader2;
+        long writer1, writer2;
+
+        MemoryAddrState(long value) {
+            initVal = value;
+        }
+
+        void readBy(long tid) {
+            if (reader1 == 0) {
+                reader1 = tid;
+            } else if (reader1 != tid && reader2 == 0) {
+                reader2 = tid;
+            }
+        }
+
+        void writtenBy(long tid, int idx) {
+            lastWrite = idx;
+            if (writer1 == 0) {
+                writer1 = tid;
+            } else if (writer1 != tid && writer2 == 0) {
+                writer2 = tid;
+            }
+        }
+
+        boolean isWriteShared() {
+            return writer2 != 0 || writer1 != 0
+                    && (reader1 != 0 && reader1 != writer1 || reader2 != 0 && reader2 != writer1);
         }
     }
 
@@ -394,78 +460,6 @@ public class Trace {
             default:
                 assert false : "unexpected event: " + event;
             }
-        }
-    }
-
-    /**
-     * Once trace is completely loaded, remove local data accesses and process
-     * the remaining trace.
-     */
-    private void finalize(Event[] events) {
-        /* compute memory addresses that are accessed by more than one thread
-         * and with at least one write access */
-        Set<MemoryAddr> sharedMemAddr = new HashSet<>();
-        for (MemoryAddr addr : Iterables.concat(addrToReadThreads.keySet(),
-                addrToWriteThreads.keySet())) {
-            Set<Long> wrtThrdIds = addrToWriteThreads.get(addr);
-            if (wrtThrdIds != null && !wrtThrdIds.isEmpty()) {
-                if (wrtThrdIds.size() > 1) {
-                    sharedMemAddr.add(addr);
-                } else {
-                    Set<Long> readThrdIds = addrToReadThreads.get(addr);
-                    if (readThrdIds != null && Sets.union(wrtThrdIds, readThrdIds).size() > 1) {
-                        sharedMemAddr.add(addr);
-                    }
-                }
-            }
-        }
-
-        List<Event> reducedEvents = new ArrayList<>();
-        for (int i = 0; i < numOfEvents; i++) {
-            Event event = events[i];
-            if (event.isReadOrWrite()) {
-                if (sharedMemAddr.contains(event.getAddr())) {
-                    reducedEvents.add(event);
-                }
-            } else if (event.getType().isLockType() || event.getType().isUnlockType()) {
-                if (outermostLockingEvents.contains(event)) {
-                    reducedEvents.add(event);
-                }
-            } else if (!event.isMetaEvent()) {
-                reducedEvents.add(event);
-            }
-        }
-
-        /* remove complete yet empty lock regions */
-        Table<Long, Long, Event> lockEventTbl = HashBasedTable.create();
-        Set<Event> criticalLockingEvents = new HashSet<>();
-        for (Event event : reducedEvents) {
-            long tid = event.getTID();
-            Map<Long, Event> lockStatus = lockEventTbl.row(tid);
-
-            if (event.acqLock()) {
-                long lockId = event.getSyncObject();
-                Event prevLock = lockStatus.put(lockId, event);
-                assert prevLock == null : "Unexpected unmatched lock event: " + prevLock;
-            } else if (event.relLock()) {
-                long lockId = event.getSyncObject();
-                Event lock = lockStatus.remove(lockId);
-                if (lock == null || criticalLockingEvents.contains(lock)) {
-                    criticalLockingEvents.add(event);
-                }
-            } else {
-                for (Event e : lockStatus.values()) {
-                    criticalLockingEvents.add(e);
-                }
-            }
-        }
-        criticalLockingEvents.addAll(lockEventTbl.values());
-        for (Event event : reducedEvents) {
-            if ((event.acqLock() || event.relLock())
-                    && !criticalLockingEvents.contains(event)) {
-                continue;
-            }
-            addEvent(event);
         }
     }
 

@@ -1,15 +1,17 @@
 package com.runtimeverification.rvpredict.trace;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 
@@ -24,12 +26,12 @@ public class TraceState {
     /**
      * Map form thread ID to the current level of class initialization.
      */
-    private final Map<Long, MutableInt> threadIdToClinitDepth = Maps.newHashMap();
+    private final Map<Long, MutableInt> tidToClinitDepth = Maps.newHashMap();
 
     /**
      * Map from thread ID to the current stack trace elements.
      */
-    private final Map<Long, List<Integer>> threadIdToStacktrace = Maps.newHashMap();
+    private final Map<Long, Deque<Integer>> tidToStacktrace = Maps.newHashMap();
 
     /**
      * Table indexed by thread ID and lock object respectively. This table
@@ -51,60 +53,47 @@ public class TraceState {
         return new Trace(this, events, numOfEvents);
     }
 
-    public void invokeMethod(Event event) {
-        assert event.getType() == EventType.INVOKE_METHOD;
-        threadIdToStacktrace.computeIfAbsent(event.getTID(), p -> new ArrayList<>())
-            .add(event.getLocId());
-    }
-
-    public void finishMethod(Event event) {
-        assert event.getType() == EventType.FINISH_METHOD;
-        List<Integer> stacktrace = threadIdToStacktrace.get(event.getTID());
-        int locId = stacktrace.remove(stacktrace.size() - 1);
-        assert locId == event.getLocId();
-    }
-
-    public void acquireLock(Event lock) {
+    public LockState acquireLock(Event lock) {
         assert lock.getType().isLockType();
-        long tid = lock.getTID();
-        long lockId = lock.getSyncObject();
-        LockState lockState = lockTable.get(tid, lockId);
-        if (lockState == null) {
-            lockState = new LockState(lock);
-            lockTable.put(tid, lockId, lockState);
-        }
-        lockState.incLevel();
+        LockState st = lockTable.row(lock.getTID()).computeIfAbsent(lock.getSyncObject(),
+                p -> new LockState());
+        st.acquire(lock);
+        return st;
     }
 
-    public void releaseLock(Event unlock) {
+    public LockState releaseLock(Event unlock) {
         assert unlock.getType().isUnlockType();
-        lockTable.get(unlock.getTID(), unlock.getSyncObject()).decLevel();
+        LockState st = lockTable.get(unlock.getTID(), unlock.getSyncObject());
+        st.release();
+        return st;
     }
 
-    public int getLockEntranceLevel(long tid, long lockId) {
-        LockState lockState = lockTable.get(tid, lockId);
-        return lockState == null ? 0 : lockState.level();
+    public void onMetaEvent(Event event) {
+        long tid = event.getTID();
+        switch (event.getType()) {
+        case CLINIT_ENTER:
+            tidToClinitDepth.computeIfAbsent(tid, p -> new MutableInt()).increment();
+            break;
+        case CLINIT_EXIT:
+            tidToClinitDepth.get(tid).decrement();
+            break;
+        case INVOKE_METHOD:
+            tidToStacktrace.computeIfAbsent(tid, p -> new ArrayDeque<>())
+                .add(event.getLocId());
+            break;
+        case FINISH_METHOD:
+            int locId = tidToStacktrace.get(tid).removeLast();
+            if (locId != event.getLocId()) {
+                throw new IllegalStateException("Unmatched method entry/exit events!");
+            }
+            break;
+        default:
+            throw new IllegalArgumentException("Unexpected event type: " + event.getType());
+        }
     }
 
     public boolean isInsideClassInitializer(long tid) {
-        MutableInt level = threadIdToClinitDepth.get(tid);
-        return level != null && level.intValue() > 0;
-    }
-
-    public void incClinitDepth(long tid) {
-        MutableInt depth = threadIdToClinitDepth.get(tid);
-        if (depth == null) {
-            depth = new MutableInt();
-        }
-        depth.increment();
-        threadIdToClinitDepth.put(tid, depth);
-    }
-
-    public void decClinitDepth(long tid) {
-        MutableInt depth = threadIdToClinitDepth.get(tid);
-        assert depth != null && depth.intValue() > 0;
-        depth.decrement();
-        threadIdToClinitDepth.put(tid, depth);
+        return tidToClinitDepth.computeIfAbsent(tid, p -> new MutableInt(0)).intValue() > 0;
     }
 
     public void writeValueAt(MemoryAddr addr, long value) {
@@ -117,8 +106,8 @@ public class TraceState {
 
     public ThreadState getThreadStateSnapshot(long tid) {
         /* copy stack trace */
-        List<Integer> stacktrace = threadIdToStacktrace.get(tid);
-        stacktrace = stacktrace == null ? new ArrayList<>() : new ArrayList<>(stacktrace);
+        Deque<Integer> stacktrace = tidToStacktrace.get(tid);
+        stacktrace = stacktrace == null ? new ArrayDeque<>() : new ArrayDeque<>(stacktrace);
         /* copy each lock state */
         List<LockState> lockStates = new ArrayList<>();
         for (LockState lockState : lockTable.row(tid).values()) {

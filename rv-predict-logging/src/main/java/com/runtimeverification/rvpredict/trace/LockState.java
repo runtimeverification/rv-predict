@@ -4,13 +4,9 @@ import com.runtimeverification.rvpredict.log.Event;
 
 public class LockState {
 
-    private final Event lock;
+    private Event lock;
 
     private int level = 0;
-
-    public LockState(Event lock) {
-        this.lock = lock;
-    }
 
     public Event lock() {
         return lock;
@@ -20,19 +16,21 @@ public class LockState {
         return level;
     }
 
-    public void incLevel() {
-        level++;
+    public void acquire(Event lock) {
+        if (level++ == 0) {
+            this.lock = lock;
+        }
     }
 
-    public void decLevel() {
-        level--;
-        if (level < 0) {
+    public void release() {
+        if (--level < 0) {
             throw new IllegalStateException("Lock entrance level cannot be less than 0!");
         }
     }
 
     public LockState copy() {
-        LockState copy = new LockState(lock);
+        LockState copy = new LockState();
+        copy.lock = lock;
         copy.level = level;
         return copy;
     }

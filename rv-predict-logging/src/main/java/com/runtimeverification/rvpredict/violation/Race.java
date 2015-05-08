@@ -32,9 +32,10 @@ import java.util.List;
 
 import com.google.common.base.StandardSystemProperty;
 import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.trace.LockObject;
 import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.util.Constants;
 
 /**
  * Data race violation
@@ -60,8 +61,8 @@ public class Race extends AbstractViolation {
             e2 = tmp;
         }
 
-        this.e1 = e1;
-        this.e2 = e2;
+        this.e1 = e1.copy();
+        this.e2 = e2.copy();
         this.trace = trace;
         locId1 = e1.getLocId();
         locId2 = e2.getLocId();
@@ -125,7 +126,7 @@ public class Race extends AbstractViolation {
     private void generateMemAccReport(Event e, StringBuilder sb) {
         long tid = e.getTID();
         Metadata metadata = trace.metadata();
-        List<LockObject> heldLocks = trace.getHeldLocksAt(e);
+        List<Event> heldLocks = trace.getHeldLocksAt(e);
         sb.append(String.format("    Concurrent %s in thread T%s (locks held: {%s})%n",
                 e.isWrite() ? "write" : "read",
                 tid,
@@ -151,9 +152,9 @@ public class Race extends AbstractViolation {
 
         if (!heldLocks.isEmpty()) {
             sb.append(String.format("    Locks acquired by this thread (reporting in chronological order):%n"));
-            for (LockObject lock : heldLocks) {
-                sb.append(String.format("      %s%n", lock));
-                for (Integer locId : trace.getStacktraceAt(lock.getLockEvent())) {
+            for (Event lock : heldLocks) {
+                sb.append(String.format("      %s%n", getLockRepresentation(lock)));
+                for (Integer locId : trace.getStacktraceAt(lock)) {
                     String sig = locId >= 0 ? metadata.getLocationSig(locId)
                             : "... not available ...";
                     sb.append(String.format("        at %s%n", sig));
@@ -162,17 +163,34 @@ public class Race extends AbstractViolation {
         }
     }
 
-    private String getHeldLocksReport(List<LockObject> heldLocks) {
+    private String getHeldLocksReport(List<Event> heldLocks) {
         StringBuilder sb = new StringBuilder();
         if (!heldLocks.isEmpty()) {
             for (int i = 0; i < heldLocks.size(); i++) {
                 if (i > 0) {
                     sb.append(", ");
                 }
-                sb.append(heldLocks.get(i));
+                sb.append(getLockRepresentation(heldLocks.get(i)));
             }
         }
         return sb.toString();
+    }
+
+    private String getLockRepresentation(Event lock) {
+        long lockId = lock.getSyncObject();
+        int upper32 = (int)(lockId >> 32);
+        int lower32 = (int) lockId;
+        if (lock.getType() == EventType.READ_LOCK) {
+            assert upper32 == 0;
+            return "ReadLock@" + lower32;
+        } else {
+            if (upper32 == 0) {
+                return "WriteLock@" + lower32;
+            } else {
+                assert upper32 == Constants.MONITOR_C;
+                return "Monitor@" + lower32;
+            }
+        }
     }
 
 }

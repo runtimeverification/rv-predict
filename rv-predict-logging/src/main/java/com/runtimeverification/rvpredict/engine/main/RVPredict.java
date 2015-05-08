@@ -32,15 +32,10 @@ import static com.runtimeverification.rvpredict.config.Configuration.JAVA_EXECUT
 import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_JAR;
 
 import java.io.IOException;
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
@@ -48,7 +43,6 @@ import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.util.Logger;
-import com.runtimeverification.rvpredict.util.juc.Executors;
 import com.runtimeverification.rvpredict.violation.Violation;
 
 /**
@@ -73,24 +67,6 @@ public class RVPredict {
     public void start() {
         try {
             traceCache.setup();
-            ExecutorService raceDetectorExecutor = Executors.newSingleThreadExecutor(
-                    new ThreadFactory() {
-                        int id = 0;
-                        final UncaughtExceptionHandler eh = (t, e) -> {
-                            System.err.println("Uncaught exception in " + t + ":");
-                            e.printStackTrace();
-                            System.exit(1);
-                        };
-
-                        @Override
-                        public Thread newThread(Runnable r) {
-                            Thread t = new Thread(r, "Race Detector " + ++id);
-                            t.setDaemon(true);
-                            t.setUncaughtExceptionHandler(eh);
-                            return t;
-                        }
-                    });
-
             long fromIndex = 0;
             // process the trace window by window
             Trace trace;
@@ -98,12 +74,10 @@ public class RVPredict {
                 trace = traceCache.getTrace(fromIndex);
                 fromIndex += config.windowSize;
                 if (trace.mayContainRaces()) {
-                    raceDetectorExecutor.execute(new RaceDetectorTask(config, metadata, trace,
-                            violations));
+                    new RaceDetectorTask(config, metadata, trace, violations).run();
                 }
             } while (trace.getSize() == config.windowSize);
 
-            shutdownAndAwaitTermination(raceDetectorExecutor);
             if (violations.isEmpty()) {
                 config.logger.report("No races found.", Logger.MSGTYPE.INFO);
             }
@@ -112,24 +86,6 @@ public class RVPredict {
             System.err.println(e.getMessage());
             e.printStackTrace();
             System.exit(1);
-        }
-    }
-
-    private void shutdownAndAwaitTermination(ExecutorService pool) {
-        pool.shutdown(); // Disable new tasks from being submitted
-        try {
-            // Wait a while for existing tasks to terminate
-            if (!pool.awaitTermination(config.timeout, TimeUnit.SECONDS)) {
-                pool.shutdownNow(); // Cancel currently executing tasks
-                // Wait a while for tasks to respond to being cancelled
-                if (!pool.awaitTermination(config.timeout, TimeUnit.SECONDS))
-                    System.err.println("Pool did not terminate");
-            }
-        } catch (InterruptedException ie) {
-            // (Re-)Cancel if current thread also interrupted
-            pool.shutdownNow();
-            // Preserve interrupt status
-            Thread.currentThread().interrupt();
         }
     }
 

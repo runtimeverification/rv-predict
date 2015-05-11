@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.google.common.collect.HashBasedTable;
@@ -96,6 +95,10 @@ public class TraceState {
         return tidToClinitDepth.computeIfAbsent(tid, p -> new MutableInt(0)).intValue() > 0;
     }
 
+    public boolean hasThreadInsideClinit() {
+        return tidToClinitDepth.values().stream().anyMatch(d -> d.intValue() > 0);
+    }
+
     public void writeValueAt(MemoryAddr addr, long value) {
         addrToValue.put(addr, value);
     }
@@ -104,15 +107,17 @@ public class TraceState {
         return addrToValue.getOrDefault(addr, 0L);
     }
 
+    public ThreadState getThreadState(long tid) {
+        return new ThreadState(tidToStacktrace.get(tid), lockTable.row(tid).values());
+    }
+
     public ThreadState getThreadStateSnapshot(long tid) {
         /* copy stack trace */
         Deque<Integer> stacktrace = tidToStacktrace.get(tid);
         stacktrace = stacktrace == null ? new ArrayDeque<>() : new ArrayDeque<>(stacktrace);
         /* copy each lock state */
         List<LockState> lockStates = new ArrayList<>();
-        for (LockState lockState : lockTable.row(tid).values()) {
-            lockStates.add(lockState.copy());
-        }
+        lockTable.row(tid).values().forEach(st -> lockStates.add(st.copy()));
         return new ThreadState(stacktrace, lockStates);
     }
 

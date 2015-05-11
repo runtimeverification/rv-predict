@@ -1,14 +1,14 @@
 package com.runtimeverification.rvpredict.trace;
 
+import java.util.Collection;
 import java.util.Deque;
-import java.util.List;
 
 class ThreadState {
 
     private final Deque<Integer> stacktrace;
-    private final List<LockState> lockStates;
+    private final Collection<LockState> lockStates;
 
-    ThreadState(Deque<Integer> stacktrace, List<LockState> lockStates) {
+    ThreadState(Deque<Integer> stacktrace, Collection<LockState> lockStates) {
         this.stacktrace = stacktrace;
         this.lockStates = lockStates;
     }
@@ -17,7 +17,7 @@ class ThreadState {
         return stacktrace;
     }
 
-    List<LockState> getLockStates() {
+    Collection<LockState> getLockStates() {
         return lockStates;
     }
 

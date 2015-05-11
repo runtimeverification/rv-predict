@@ -207,7 +207,8 @@ public class Trace {
         Deque<Integer> stacktrace = new ArrayDeque<>();
         if (gid >= baseGID) {
             /* event is in the current window; reassemble its stack trace */
-            tidToThreadState.get(tid).getStacktrace().forEach(stacktrace::addFirst);
+            tidToThreadState.getOrDefault(tid, state.getThreadState(tid)).getStacktrace()
+                    .forEach(stacktrace::addFirst);
             for (int i = 0; i < numOfEvents; i++) {
                 Event e = events[i];
                 if (e.getGID() >= gid) break;
@@ -233,7 +234,8 @@ public class Trace {
      */
     public List<Event> getHeldLocksAt(Event event) {
         long tid = event.getTID();
-        Map<Long, LockState> lockIdToLockState = tidToThreadState.get(tid).getLockStates().stream()
+        Map<Long, LockState> lockIdToLockState = tidToThreadState
+                .getOrDefault(tid, state.getThreadState(tid)).getLockStates().stream()
                 .collect(Collectors.toMap(ls -> ls.lock().getSyncObject(), LockState::copy));
         for (Event e : getEvents(tid)) {
             if (e.getGID() >= event.getGID()) break;
@@ -272,12 +274,14 @@ public class Trace {
 
     private void processEvents() {
         /// PHASE 1
+        boolean hasThreadInsideClinit = state.hasThreadInsideClinit();
         for (int i = 0; i < numOfEvents; i++) {
             Event event = events[i];
             long tid = event.getTID();
-            tidToThreadState.computeIfAbsent(tid, state::getThreadStateSnapshot);
-            if (state.isInsideClassInitializer(tid)) {
-                clinitEvents.add(event);
+            if (hasThreadInsideClinit) {
+                if (state.isInsideClassInitializer(tid)) {
+                    clinitEvents.add(event);
+                }
             }
 
             if (event.isReadOrWrite()) {
@@ -291,12 +295,14 @@ public class Trace {
                 }
             } else if (event.isSyncEvent()) {
                 if (event.isLock()) {
+                    tidToThreadState.computeIfAbsent(tid, state::getThreadStateSnapshot);
                     event = event.copy();
                     if (state.acquireLock(event).level() == 1) {
                         tidToLockPairs.computeIfAbsent(tid, p -> new HashMap<>())
                             .put(event, null);
                     }
                 } else if (event.isUnlock()) {
+                    tidToThreadState.computeIfAbsent(tid, state::getThreadStateSnapshot);
                     LockState st = state.releaseLock(event);
                     if (st.level() == 0) {
                         tidToLockPairs.computeIfAbsent(tid, p -> new HashMap<>())
@@ -304,7 +310,16 @@ public class Trace {
                     }
                 }
             } else if (event.isMetaEvent()) {
+                EventType type = event.getType();
+                if (type == EventType.INVOKE_METHOD || type == EventType.FINISH_METHOD) {
+                    tidToThreadState.computeIfAbsent(tid, state::getThreadStateSnapshot);
+                }
                 state.onMetaEvent(event);
+                if (type == EventType.CLINIT_ENTER) {
+                    hasThreadInsideClinit = true;
+                } else if (type == EventType.CLINIT_EXIT) {
+                    hasThreadInsideClinit = state.hasThreadInsideClinit();
+                }
             } else {
                 throw new IllegalStateException();
             }

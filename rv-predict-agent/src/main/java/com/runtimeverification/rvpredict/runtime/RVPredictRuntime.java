@@ -184,9 +184,12 @@ public final class RVPredictRuntime implements Constants {
 
     private static ILoggingEngine logger;
 
+    private static Configuration config;
+
     private RVPredictRuntime() { } // forbid instantiation
 
-    public static void init(ILoggingEngine logger) {
+    public static void init(Configuration config, ILoggingEngine logger) {
+        RVPredictRuntime.config = config;
         RVPredictRuntime.logger = logger;
     }
 
@@ -199,11 +202,15 @@ public final class RVPredictRuntime implements Constants {
     }
 
     public static void logInvokeMethod(int locId) {
-        saveMetaEvent(EventType.INVOKE_METHOD, locId);
+        if (!config.simple_report) {
+            saveMetaEvent(EventType.INVOKE_METHOD, locId);
+        }
     }
 
     public static void logFinishMethod(int locId) {
-        saveMetaEvent(EventType.FINISH_METHOD, locId);
+        if (!config.simple_report) {
+            saveMetaEvent(EventType.FINISH_METHOD, locId);
+        }
     }
 
     /**

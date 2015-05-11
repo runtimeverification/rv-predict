@@ -231,17 +231,17 @@ public final class RVPredictRuntime implements Constants {
     public static void rvPredictWait(Object object, long timeout, int locId)
             throws InterruptedException {
         long monitorId = calcMonitorId(object);
-        saveSyncEvent(EventType.WAIT_REL, locId, monitorId);
+        saveSyncEvent(EventType.WRITE_UNLOCK, locId, monitorId);
         try {
             object.wait(timeout);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.WAIT_ACQ, locId, monitorId);
+            saveSyncEvent(EventType.WRITE_LOCK, locId, monitorId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(EventType.WAIT_ACQ, locId, monitorId);
+        saveSyncEvent(EventType.WRITE_LOCK, locId, monitorId);
     }
 
     /**
@@ -260,17 +260,17 @@ public final class RVPredictRuntime implements Constants {
     public static void rvPredictWait(Object object, long timeout, int nano, int locId)
             throws InterruptedException {
         long monitorId = calcMonitorId(object);
-        saveSyncEvent(EventType.WAIT_REL, locId, monitorId);
+        saveSyncEvent(EventType.WRITE_UNLOCK, locId, monitorId);
         try {
             object.wait(timeout, nano);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.WAIT_ACQ, locId, monitorId);
+            saveSyncEvent(EventType.WRITE_LOCK, locId, monitorId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(EventType.WAIT_ACQ, locId, monitorId);
+        saveSyncEvent(EventType.WRITE_LOCK, locId, monitorId);
     }
 
     /**
@@ -658,17 +658,17 @@ public final class RVPredictRuntime implements Constants {
     public static void rvPredictConditionAwait(Condition condition, int locId)
             throws InterruptedException {
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveSyncEvent(EventType.WAIT_REL, locId, lockId);
+        saveSyncEvent(EventType.WRITE_UNLOCK, locId, lockId);
         try {
             condition.await();
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
+            saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
     }
 
     /**
@@ -678,17 +678,17 @@ public final class RVPredictRuntime implements Constants {
             int locId) throws InterruptedException {
         boolean result;
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveSyncEvent(EventType.WAIT_REL, locId, lockId);
+        saveSyncEvent(EventType.WRITE_UNLOCK, locId, lockId);
         try {
             result = condition.await(time, unit);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
+            saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
         return result;
     }
 
@@ -699,17 +699,17 @@ public final class RVPredictRuntime implements Constants {
             int locId) throws InterruptedException {
         long result;
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveSyncEvent(EventType.WAIT_REL, locId, lockId);
+        saveSyncEvent(EventType.WRITE_UNLOCK, locId, lockId);
         try {
             result = condition.awaitNanos(nanosTimeout);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
+            saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
         return result;
     }
 
@@ -720,17 +720,17 @@ public final class RVPredictRuntime implements Constants {
             throws InterruptedException {
         boolean result;
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveSyncEvent(EventType.WAIT_REL, locId, lockId);
+        saveSyncEvent(EventType.WRITE_UNLOCK, locId, lockId);
         try {
             result = condition.awaitUntil(deadline);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
+            saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
         return result;
     }
 
@@ -739,9 +739,9 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictConditionAwaitUninterruptibly(Condition condition, int locId) {
         long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveSyncEvent(EventType.WAIT_REL, locId, lockId);
+        saveSyncEvent(EventType.WRITE_UNLOCK, locId, lockId);
         condition.awaitUninterruptibly();
-        saveSyncEvent(EventType.WAIT_ACQ, locId, lockId);
+        saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
     }
 
     /**

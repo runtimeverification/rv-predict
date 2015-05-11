@@ -41,8 +41,8 @@ public class LockRegion {
     private boolean isReadLocked = false;
 
     public LockRegion(Event lock, Event unlock) {
-        assert lock == null || lock.acqLock();
-        assert unlock == null || unlock.relLock();
+        assert lock == null || lock.isLock();
+        assert unlock == null || unlock.isUnlock();
         this.lock = lock;
         this.unlock = unlock;
         if (lock != null) {

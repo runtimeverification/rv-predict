@@ -237,10 +237,10 @@ public class Trace {
                 .collect(Collectors.toMap(ls -> ls.lock().getSyncObject(), LockState::copy));
         for (Event e : getEvents(tid)) {
             if (e.getGID() >= event.getGID()) break;
-            if (e.getType().isLockType()) {
+            if (e.isLock()) {
                 lockIdToLockState.computeIfAbsent(e.getSyncObject(), p -> new LockState())
                         .acquire(e);
-            } else if (e.getType().isUnlockType()) {
+            } else if (e.isUnlock()) {
                 lockIdToLockState.get(e.getSyncObject()).release();
             }
         }
@@ -290,13 +290,13 @@ public class Trace {
                     st.writtenBy(tid, i);
                 }
             } else if (event.isSyncEvent()) {
-                if (event.getType().isLockType()) {
+                if (event.isLock()) {
                     event = event.copy();
                     if (state.acquireLock(event).level() == 1) {
                         tidToLockPairs.computeIfAbsent(tid, p -> new HashMap<>())
                             .put(event, null);
                     }
-                } else if (event.getType().isUnlockType()) {
+                } else if (event.isUnlock()) {
                     LockState st = state.releaseLock(event);
                     if (st.level() == 0) {
                         tidToLockPairs.computeIfAbsent(tid, p -> new HashMap<>())
@@ -346,13 +346,13 @@ public class Trace {
                 if (event.isReadOrWrite()) {
                     critical[i] = sharedAddr.contains(event.getAddr());
                 } else if (event.isSyncEvent()) {
-                    if (event.getType().isLockType()) {
+                    if (event.isLock()) {
                         if (tidToLockPairs.get(tid).containsKey(event)) {
                             Event unlock = tidToLockPairs.get(tid).get(event);
                             tidToOpenLockIndices.get(tid).put(i,
                                     unlock == null ? null : getEventOffset(unlock));
                         }
-                    } else if (event.getType().isUnlockType()) {
+                    } else if (event.isUnlock()) {
                         tidToOpenLockIndices.get(tid).values().remove(i);
                     } else {
                         critical[i] = true;
@@ -453,8 +453,6 @@ public class Trace {
             case WRITE_UNLOCK:
             case READ_LOCK:
             case READ_UNLOCK:
-            case WAIT_REL:
-            case WAIT_ACQ:
                 lockIdToLockEvents.computeIfAbsent(event.getSyncObject(), NEW_EVENT_LIST).add(event);
                 break;
             default:

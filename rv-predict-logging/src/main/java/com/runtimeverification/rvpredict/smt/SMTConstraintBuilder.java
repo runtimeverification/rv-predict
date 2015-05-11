@@ -189,20 +189,18 @@ public class SMTConstraintBuilder {
                 long tid = event.getTID();
                 Event prevLockOrUnlock = threadIdToPrevLockOrUnlock.get(tid);
                 assert prevLockOrUnlock == null
-                    || !(prevLockOrUnlock.acqLock() && event.acqLock())
-                    || !(prevLockOrUnlock.relLock() && event.relLock()) :
+                    || !(prevLockOrUnlock.isLock() && event.isLock())
+                    || !(prevLockOrUnlock.isUnlock() && event.isUnlock()) :
                     "Unexpected consecutive lock/unlock events:\n" + prevLockOrUnlock + ", " + event;
 
                 switch (event.getType()) {
                 case WRITE_LOCK:
                 case READ_LOCK:
-                case WAIT_ACQ:
                     threadIdToPrevLockOrUnlock.put(tid, event);
                     break;
 
                 case WRITE_UNLOCK:
                 case READ_UNLOCK:
-                case WAIT_REL:
                     lockRegions.add(new LockRegion(threadIdToPrevLockOrUnlock.put(tid, event),
                             event));
                     break;
@@ -212,7 +210,7 @@ public class SMTConstraintBuilder {
             }
 
             for (Event lockOrUnlock : threadIdToPrevLockOrUnlock.values()) {
-                if (lockOrUnlock.acqLock()) {
+                if (lockOrUnlock.isLock()) {
                     Event lock = lockOrUnlock;
                     lockRegions.add(new LockRegion(lock, null));
                 }

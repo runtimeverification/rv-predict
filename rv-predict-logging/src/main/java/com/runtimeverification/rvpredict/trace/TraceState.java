@@ -54,7 +54,7 @@ public class TraceState {
     }
 
     public LockState acquireLock(Event lock) {
-        assert lock.getType().isLockType();
+        assert lock.isLock();
         LockState st = lockTable.row(lock.getTID()).computeIfAbsent(lock.getSyncObject(),
                 p -> new LockState());
         st.acquire(lock);
@@ -62,7 +62,7 @@ public class TraceState {
     }
 
     public LockState releaseLock(Event unlock) {
-        assert unlock.getType().isUnlockType();
+        assert unlock.isUnlock();
         LockState st = lockTable.get(unlock.getTID(), unlock.getSyncObject());
         st.release();
         return st;

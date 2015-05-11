@@ -48,6 +48,8 @@ import com.runtimeverification.rvpredict.util.Logger;
  */
 public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
+    private static final int INFINITY = Integer.MAX_VALUE / 2;
+
     private final Configuration config;
 
     private volatile boolean closed = false;
@@ -91,7 +93,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             // CRITICAL SECTION END
         } else {
             /* wait for the prediction on the last batch of events to finish */
-            while (globalEventID.get() != n + bound + 1) {
+            while (globalEventID.get() < INFINITY) {
                 LockSupport.parkNanos(1);
             }
         }
@@ -118,7 +120,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                     return 0;
                 } else {
                     /* signal the end of the last prediction */
-                    globalEventID.incrementAndGet();
+                    globalEventID.set(INFINITY);
                     /* remaining unpublished events will be written to junk area and simply discarded */
                     return bound;
                 }

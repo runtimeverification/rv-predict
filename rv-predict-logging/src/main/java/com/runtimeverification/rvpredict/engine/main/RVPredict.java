@@ -35,33 +35,31 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.util.Logger;
-import com.runtimeverification.rvpredict.violation.Violation;
 
 /**
  * Class for predicting violations from a logged execution.
  *
  * Splits the log in segments of length {@link Configuration#windowSize},
- * each of them being executed as a {@link RaceDetectorTask} task.
+ * each of them being executed as a {@link RaceDetector} task.
  */
 public class RVPredict {
 
-    private final Set<Violation> violations = Sets.newConcurrentHashSet();
     private final Configuration config;
     private final TraceCache traceCache;
     private final Metadata metadata;
+    private final RaceDetector detector;
 
     public RVPredict(Configuration config) {
         this.config = config;
         this.metadata = Metadata.readFrom(config.getMetadataPath());
         traceCache = new TraceCache(config, metadata);
+        this.detector = new RaceDetector(config, metadata);
     }
 
     public void start() {
@@ -73,12 +71,10 @@ public class RVPredict {
             do {
                 trace = traceCache.getTrace(fromIndex);
                 fromIndex += config.windowSize;
-                if (trace.mayContainRaces()) {
-                    new RaceDetectorTask(config, metadata, trace, violations).run();
-                }
+                detector.run(trace);
             } while (trace.getSize() == config.windowSize);
 
-            if (violations.isEmpty()) {
+            if (detector.getRaces().isEmpty()) {
                 config.logger.report("No races found.", Logger.MSGTYPE.INFO);
             }
         } catch (IOException e) {

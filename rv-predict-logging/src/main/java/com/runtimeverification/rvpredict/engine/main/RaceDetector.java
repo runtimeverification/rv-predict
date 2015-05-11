@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.engine.main;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ListIterator;
@@ -17,7 +19,6 @@ import com.runtimeverification.rvpredict.trace.MemoryAddr;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Logger;
 import com.runtimeverification.rvpredict.violation.Race;
-import com.runtimeverification.rvpredict.violation.Violation;
 
 /**
  * Detects data races from a given {@link Trace} object.
@@ -42,26 +43,29 @@ import com.runtimeverification.rvpredict.violation.Violation;
  *
  * @author YilongL
  */
-public class RaceDetectorTask implements Runnable {
+public class RaceDetector {
 
     private final Configuration config;
 
     private final Metadata metadata;
 
-    private final Trace trace;
+    private final Set<Race> races;
 
-    private final Set<Violation> violations;
-
-    public RaceDetectorTask(Configuration config, Metadata metadata, Trace trace,
-            Set<Violation> violations) {
+    public RaceDetector(Configuration config, Metadata metadata) {
         this.config = config;
         this.metadata = metadata;
-        this.trace = trace;
-        this.violations = violations;
+        this.races = new HashSet<>();
     }
 
-    @Override
-    public void run() {
+    public Set<Race> getRaces() {
+        return Collections.unmodifiableSet(races);
+    }
+
+    public void run(Trace trace) {
+        if (!trace.mayContainRaces()) {
+            return;
+        }
+
         SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config, trace);
 
         cnstrBuilder.addIntraThreadConstraints();
@@ -141,7 +145,7 @@ public class RaceDetectorTask implements Runnable {
                     }
                     boolean hasFreshRace = false;
                     for (Race potentialRace : potentialRaces) {
-                        hasFreshRace = !violations.contains(potentialRace);
+                        hasFreshRace = !races.contains(potentialRace);
                         if (hasFreshRace) break;
                     }
                     if (!hasFreshRace) {
@@ -169,7 +173,7 @@ public class RaceDetectorTask implements Runnable {
 
                     if (cnstrBuilder.isRace(fst, snd, causalConstraints)) {
                         for (Race race : potentialRaces) {
-                            if (violations.add(race)) {
+                            if (races.add(race)) {
                                 String report = config.simple_report ?
                                         race.toString() : race.generateRaceReport();
                                 config.logger.report(report, Logger.MSGTYPE.REAL);

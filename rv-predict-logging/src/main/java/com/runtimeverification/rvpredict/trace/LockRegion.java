@@ -35,32 +35,28 @@ public class LockRegion {
     private final Event lock;
     private final Event unlock;
 
+    private final long tid;
     private final long lockId;
-    private final long threadId;
 
     private boolean isReadLocked = false;
 
     public LockRegion(Event lock, Event unlock) {
-        assert lock == null || lock.isLock();
-        assert unlock == null || unlock.isUnlock();
         this.lock = lock;
         this.unlock = unlock;
+
         if (lock != null) {
-            lockId = lock.getSyncObject();
-            threadId = lock.getTID();
+            tid = lock.getTID();
+            lockId = lock.getLockId();
             if (lock.getType() == EventType.READ_LOCK) {
-                assert unlock == null || unlock.getType() == EventType.READ_UNLOCK :
-                    "Expected no PRE_WAIT event inside read lock region; but found: "
-                        + unlock;
+                if (unlock != null && unlock.getType() != EventType.READ_UNLOCK) {
+                    throw new IllegalArgumentException("Unmatched lock pairs: " + lock + " & " + unlock);
+                }
                 isReadLocked = true;
             }
         } else {
-            lockId = unlock.getSyncObject();
-            threadId = unlock.getTID();
+            tid = unlock.getTID();
+            lockId = unlock.getLockId();
             if (unlock.getType() == EventType.READ_UNLOCK) {
-                assert lock == null || lock.getType() == EventType.READ_LOCK :
-                    "Expected no WAIT* event inside read lock region; but found: "
-                        + lock;
                 isReadLocked = true;
             }
         }
@@ -74,12 +70,16 @@ public class LockRegion {
         return unlock;
     }
 
-    public long getLockObj() {
+    public long getLockId() {
         return lockId;
     }
 
-    public long getThreadId() {
-        return threadId;
+    public long getTID() {
+        return tid;
+    }
+
+    public boolean isWriteLocked() {
+        return !isReadLocked;
     }
 
     @Override
@@ -87,7 +87,4 @@ public class LockRegion {
         return String.format("<%s, %s>", lock, unlock);
     }
 
-    public boolean isWriteLocked() {
-        return !isReadLocked;
-    }
 }

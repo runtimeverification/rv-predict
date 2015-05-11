@@ -52,8 +52,8 @@ public class LockSetEngine {
     }
 
     public void add(LockRegion lockRegion) {
-        long lockId = lockRegion.getLockObj();
-        long threadId = lockRegion.getThreadId();
+        long lockId = lockRegion.getLockId();
+        long threadId = lockRegion.getTID();
         List<LockRegion> lockRegions = lockTbl.get(lockId, threadId);
         if (lockRegions == null) {
             lockRegions = Lists.newArrayList();

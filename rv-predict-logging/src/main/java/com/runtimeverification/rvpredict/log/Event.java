@@ -112,6 +112,11 @@ public class Event implements Comparable<Event> {
         return (long)ADDRL << 32 | ADDRR & 0xFFFFFFFFL;
     }
 
+    public long getLockId() {
+        assert isLock() || isUnlock();
+        return getSyncObject();
+    }
+
     public boolean isRead() {
         return TYPE == EventType.READ;
     }

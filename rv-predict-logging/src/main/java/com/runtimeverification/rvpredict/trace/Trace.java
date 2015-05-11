@@ -70,11 +70,6 @@ public class Trace {
     private final List<Event> startJoinEvents = new ArrayList<>();
 
     /**
-     * Wait/Lock/Unlock events indexed by the involved lock object.
-     */
-    private final Map<Long, List<Event>> lockIdToLockEvents = new HashMap<>();
-
-    /**
      * Write events on each address.
      */
     private final Map<MemoryAddr, List<Event>> addrToWriteEvents = new HashMap<>();
@@ -97,9 +92,9 @@ public class Trace {
     private final Map<Long, ThreadState> tidToThreadState = Maps.newHashMap();
 
     /**
-     * Map from thread ID to outermost lock pairs.
+     * Map from lock ID to critical lock pairs.
      */
-    private final Map<Long, Map<Event, Event>> tidToLockPairs = Maps.newHashMap();
+    private final Map<Long, List<LockRegion>> lockIdToLockRegions = Maps.newHashMap();
 
     /**
      * Set of {@code MemoryAccessEvent}'s that happen during class initialization.
@@ -170,8 +165,8 @@ public class Trace {
         return startJoinEvents;
     }
 
-    public Collection<List<Event>> getLockEventsCollection() {
-        return lockIdToLockEvents.values();
+    public Map<Long, List<LockRegion>> getLockIdToLockRegions() {
+        return lockIdToLockRegions;
     }
 
     public List<Event> getWriteEventsOn(MemoryAddr addr) {
@@ -274,6 +269,7 @@ public class Trace {
 
     private void processEvents() {
         /// PHASE 1
+        Map<Long, Map<Event, Event>> tidToLockPairs = Maps.newHashMap();
         boolean hasThreadInsideClinit = state.hasThreadInsideClinit();
         for (int i = 0; i < numOfEvents; i++) {
             Event event = events[i];
@@ -380,12 +376,22 @@ public class Trace {
                     Map<Integer, Integer> indices = tidToOpenLockIndices.get(tid);
                     if (indices != null) {
                         indices.forEach((l, r) -> {
+                            Event lock, unlock;
                             if (l >= 0) {
                                 critical[l] = true;
+                                lock = events[l];
+                            } else {
+                                lock = null;
                             }
                             if (r != null) {
                                 critical[r] = true;
+                                unlock = events[r];
+                            } else {
+                                unlock = null;
                             }
+                            lockIdToLockRegions.computeIfAbsent(
+                                    lock != null ? lock.getLockId() : unlock.getLockId(),
+                                    p -> new ArrayList<>()).add(new LockRegion(lock, unlock));
                         });
                         indices.clear();
                     }
@@ -468,10 +474,9 @@ public class Trace {
             case WRITE_UNLOCK:
             case READ_LOCK:
             case READ_UNLOCK:
-                lockIdToLockEvents.computeIfAbsent(event.getSyncObject(), NEW_EVENT_LIST).add(event);
                 break;
             default:
-                assert false : "unexpected event: " + event;
+                throw new IllegalArgumentException("Unexpected event: " + event);
             }
         }
     }

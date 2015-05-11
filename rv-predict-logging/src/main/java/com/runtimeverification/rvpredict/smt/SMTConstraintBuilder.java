@@ -99,8 +99,8 @@ public class SMTConstraintBuilder {
         Event unlock = lockRegion1.getUnlock();
         Event lock = lockRegion2.getLock();
         return getAsstHappensBefore(
-                unlock != null ? unlock : trace.getLastEvent(lockRegion1.getThreadId()),
-                lock != null ? lock : trace.getFirstEvent(lockRegion2.getThreadId()));
+                unlock != null ? unlock : trace.getLastEvent(lockRegion1.getTID()),
+                lock != null ? lock : trace.getFirstEvent(lockRegion2.getTID()));
     }
 
     private void assertMutualExclusion(LockRegion lockRegion1, LockRegion lockRegion2) {
@@ -180,58 +180,19 @@ public class SMTConstraintBuilder {
      * Adds lock mutual exclusion constraints.
      */
     public void addLockingConstraints() {
-        /* enumerate the locking events on each lock */
-        for (List<Event> events : trace.getLockEventsCollection()) {
-            Map<Long, Event> threadIdToPrevLockOrUnlock = Maps.newHashMap();
-            List<LockRegion> lockRegions = Lists.newArrayList();
-
-            for (Event event : events) {
-                long tid = event.getTID();
-                Event prevLockOrUnlock = threadIdToPrevLockOrUnlock.get(tid);
-                assert prevLockOrUnlock == null
-                    || !(prevLockOrUnlock.isLock() && event.isLock())
-                    || !(prevLockOrUnlock.isUnlock() && event.isUnlock()) :
-                    "Unexpected consecutive lock/unlock events:\n" + prevLockOrUnlock + ", " + event;
-
-                switch (event.getType()) {
-                case WRITE_LOCK:
-                case READ_LOCK:
-                    threadIdToPrevLockOrUnlock.put(tid, event);
-                    break;
-
-                case WRITE_UNLOCK:
-                case READ_UNLOCK:
-                    lockRegions.add(new LockRegion(threadIdToPrevLockOrUnlock.put(tid, event),
-                            event));
-                    break;
-                default:
-                    assert false : "Unexpected synchronization event: " + event;
-                }
-            }
-
-            for (Event lockOrUnlock : threadIdToPrevLockOrUnlock.values()) {
-                if (lockOrUnlock.isLock()) {
-                    Event lock = lockOrUnlock;
-                    lockRegions.add(new LockRegion(lock, null));
-                }
-            }
-
+        trace.getLockIdToLockRegions().forEach((lockId, lockRegions) -> {
             lockEngine.addAll(lockRegions);
 
             /* assert lock regions mutual exclusion */
-            assertLockMutex(lockRegions);
-        }
-    }
-
-    private void assertLockMutex(List<LockRegion> lockRegions) {
-        for (LockRegion lockRegion1 : lockRegions) {
-            for (LockRegion lockRegion2 : lockRegions) {
-                if (lockRegion1.getThreadId() < lockRegion2.getThreadId()
-                        && (lockRegion1.isWriteLocked() || lockRegion2.isWriteLocked())) {
-                    assertMutualExclusion(lockRegion1, lockRegion2);
-                }
-            }
-        }
+            lockRegions.forEach(lr1 -> {
+                lockRegions.forEach(lr2 -> {
+                    if (lr1.getTID() < lr2.getTID()
+                            && (lr1.isWriteLocked() || lr2.isWriteLocked())) {
+                        assertMutualExclusion(lr1, lr2);
+                    }
+                });
+            });
+        });
     }
 
     /**

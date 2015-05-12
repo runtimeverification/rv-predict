@@ -29,3 +29,5 @@
 (?s)(.*)Race on an array access between:(\s)*jtsan.EasyTests\$15.thread1\(EasyTests.java:333\)(\s)*jtsan.EasyTests\$15.thread2\(EasyTests.java:343\)(.*)
 
 (?s)(.*)Race on an array access between:(\s)*jtsan.EasyTests\$16.thread1\(EasyTests.java:361\)(\s)*jtsan.EasyTests\$16.thread2\(EasyTests.java:366\)(.*)
+
+(?s)(.*)Race on field jtsan.ThreadRunner.sharedVar between:(\s)*jtsan.EasyTests\$17\$1.run\(EasyTests.java:382\)(\s)*jtsan.EasyTests\$17.thread1\(EasyTests.java:387\)(.*)

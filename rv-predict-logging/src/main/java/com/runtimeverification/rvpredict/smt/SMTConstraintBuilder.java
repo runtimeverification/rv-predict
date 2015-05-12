@@ -29,7 +29,6 @@
 package com.runtimeverification.rvpredict.smt;
 
 import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.smt.formula.*;
 import com.runtimeverification.rvpredict.trace.LockRegion;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -112,7 +111,7 @@ public class SMTConstraintBuilder {
     }
 
     private int getRelativeIdx(Event event) {
-        return (int) (event.getGID() % trace.getSize());
+        return (int) (event.getGID() - trace.getBaseGID());
     }
 
     private int getGroupId(Event e) {
@@ -133,9 +132,8 @@ public class SMTConstraintBuilder {
                 Event e1 = events.get(i - 1);
                 Event e2 = events.get(i);
                 smtlibAssertionBuilder.add(getAsstHappensBefore(e1, e2));
-                if (e1.getType() == EventType.START ||
-                    e2.getType() == EventType.START ||
-                    i + 1 == events.size()) {
+                /* every group should start with a join event and end with a start event */
+                if (e1.isStart() || e2.isJoin()) {
                     setGroupId(e2, closure.nextElemId());
                     closure.addRelation(getGroupId(e1), getGroupId(e2));
                 } else {
@@ -150,13 +148,13 @@ public class SMTConstraintBuilder {
      */
     public void addThreadStartJoinConstraints() {
         Iterables.concat(trace.perThreadView()).forEach(event -> {
-            if (event.getType() == EventType.START) {
+            if (event.isStart()) {
                 Event fst = trace.getFirstEvent(event.getSyncObject());
                 if (fst != null) {
                     smtlibAssertionBuilder.add(getAsstHappensBefore(event, fst));
                     closure.addRelation(getGroupId(event), getGroupId(fst));
                 }
-            } else if (event.getType() == EventType.JOIN) {
+            } else if (event.isJoin()) {
                 Event last = trace.getLastEvent(event.getSyncObject());
                 if (last != null) {
                     smtlibAssertionBuilder.add(getAsstHappensBefore(last, event));

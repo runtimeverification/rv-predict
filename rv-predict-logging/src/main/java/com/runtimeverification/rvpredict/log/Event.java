@@ -129,8 +129,12 @@ public class Event implements Comparable<Event> {
         return isRead() || isWrite();
     }
 
-    public boolean isThreadStart() {
+    public boolean isStart() {
         return TYPE == EventType.START;
+    }
+
+    public boolean isJoin() {
+        return TYPE == EventType.JOIN;
     }
 
     /**

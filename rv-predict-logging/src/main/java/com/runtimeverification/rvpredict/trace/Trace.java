@@ -116,6 +116,10 @@ public class Trace {
         return metadata;
     }
 
+    public long getBaseGID() {
+        return baseGID;
+    }
+
     public int getSize() {
         return numOfEvents;
     }

@@ -108,7 +108,8 @@ public class TraceState {
     }
 
     public ThreadState getThreadState(long tid) {
-        return new ThreadState(tidToStacktrace.get(tid), lockTable.row(tid).values());
+        return new ThreadState(tidToStacktrace.getOrDefault(tid, new ArrayDeque<>()),
+                lockTable.row(tid).values());
     }
 
     public ThreadState getThreadStateSnapshot(long tid) {

@@ -70,9 +70,9 @@ public class Trace {
     private final Map<MemoryAddr, List<Event>> addrToWriteEvents = Maps.newHashMap();
 
     /**
-     * Lists of {@code MemoryAccessEvent}'s indexed by address and thread ID.
+     * List of memory access blocks.
      */
-    private final Table<MemoryAddr, Long, List<Event>> memAccessEventsTbl = HashBasedTable.create();
+    private final List<MemoryAccessBlock> memoryAccessBlocks = Lists.newArrayList();
 
     /**
      * Map from memory addresses referenced in this trace segment to their states.
@@ -128,7 +128,7 @@ public class Trace {
         // This method can be further improved to skip an entire window ASAP
         // For example, if this window contains no race candidate determined
         // by some static analysis then we can safely skip it
-        return !memAccessEventsTbl.isEmpty();
+        return !memoryAccessBlocks.isEmpty();
     }
 
     /**
@@ -168,13 +168,8 @@ public class Trace {
         return addrToWriteEvents.getOrDefault(addr, Collections.emptyList());
     }
 
-    public Set<MemoryAddr> getMemoryAddresses() {
-        return memAccessEventsTbl.rowKeySet();
-    }
-
-    public Table<MemoryAddr, Long, List<Event>> getMemAccessEventsTable() {
-        // TODO(YilongL): the API of Trace should not expose the memory access events table
-        return memAccessEventsTbl;
+    public List<MemoryAccessBlock> getMemoryAccessBlocks() {
+        return memoryAccessBlocks;
     }
 
     public boolean isInsideClassInitializer(Event event) {
@@ -261,6 +256,8 @@ public class Trace {
         return readEvents;
     }
 
+    private static final Function<Object, ? extends List<Event>> NEW_EVENT_LIST = p -> new ArrayList<>();
+
     private void processEvents() {
         /// PHASE 1
         Map<Long, Map<Event, Event>> tidToLockPairs = Maps.newHashMap();
@@ -332,7 +329,6 @@ public class Trace {
 
         /// PHASE 2
         if (!sharedAddr.isEmpty()) {
-            long baseGID = events[0].getGID();
             boolean[] critical = new boolean[numOfEvents];
             Map<Long, Map<Integer, Integer>> tidToOpenLockIndices = new HashMap<>();
             tidToLockPairs.forEach((tid, pairs) -> {
@@ -392,12 +388,39 @@ public class Trace {
                 }
             }
 
-            /* finally commit all critical events into this window */
+            /* commit all critical events into this window */
+            Map<Long, List<Event>> tidToCrntBlock = new HashMap<>();
             for (int i = 0; i < numOfEvents; i++) {
                 if (critical[i]) {
-                    addCriticalEvent(events[i]);
+                    Event event = events[i];
+//                    System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
+                    long tid = event.getTID();
+                    tidToEvents.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
+                    if (event.isWrite()) {
+                        addrToWriteEvents.computeIfAbsent(event.getAddr(), NEW_EVENT_LIST).add(event);
+                    }
+
+                    if (!event.isWrite()) {
+                        /* end the current block */
+                        List<Event> oldValue = tidToCrntBlock.put(tid, new ArrayList<>());
+                        if (oldValue != null && !oldValue.isEmpty()) {
+                            memoryAccessBlocks.add(new MemoryAccessBlock(oldValue));
+                        }
+                        if (event.isRead()) {
+                            memoryAccessBlocks.add(new MemoryAccessBlock(Collections
+                                    .singletonList(event)));
+                        }
+                    } else {
+                        /* append to the current block */
+                        tidToCrntBlock.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
+                    }
                 }
             }
+            tidToCrntBlock.values().forEach(blk -> {
+                if (!blk.isEmpty()) {
+                    memoryAccessBlocks.add(new MemoryAccessBlock(blk));
+                }
+            });
         }
     }
 
@@ -435,21 +458,6 @@ public class Trace {
         boolean isWriteShared() {
             return writer2 != 0 || writer1 != 0
                     && (reader1 != 0 && reader1 != writer1 || reader2 != 0 && reader2 != writer1);
-        }
-    }
-
-    private static final Function<Object, ? extends List<Event>> NEW_EVENT_LIST = p -> new ArrayList<>();
-
-    private void addCriticalEvent(Event event) {
-//        System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
-        long tid = event.getTID();
-        tidToEvents.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
-        if (event.isReadOrWrite()) {
-            MemoryAddr addr = event.getAddr();
-            memAccessEventsTbl.row(addr).computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
-            if (event.isWrite()) {
-                addrToWriteEvents.computeIfAbsent(addr, NEW_EVENT_LIST).add(event);
-            }
         }
     }
 

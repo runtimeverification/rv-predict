@@ -2,19 +2,15 @@ package com.runtimeverification.rvpredict.engine.main;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
 import java.util.Set;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
-import com.runtimeverification.rvpredict.smt.formula.Formula;
+import com.runtimeverification.rvpredict.trace.MemoryAccessBlock;
 import com.runtimeverification.rvpredict.trace.MemoryAddr;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Logger;
@@ -72,116 +68,56 @@ public class RaceDetector {
         cnstrBuilder.addThreadStartJoinConstraints();
         cnstrBuilder.addLockingConstraints();
         cnstrBuilder.finish();
-        /* enumerate each shared memory address in the trace */
-        for (MemoryAddr addr : trace.getMemoryAddresses()) {
-            /* exclude volatile variable */
-            if (!config.checkVolatile && metadata.isVolatile(addr)) {
-                continue;
-            }
 
-            /* group equivalent reads and writes into memory access blocks */
-            Map<Event, List<Event>> equivAccBlk = new LinkedHashMap<>();
-            for (Map.Entry<Long, List<Event>> entry : trace
-                    .getMemAccessEventsTable().row(addr).entrySet()) {
-                // TODO(YilongL): the extensive use of List#indexOf could be a performance problem later
+        for (MemoryAccessBlock blk1 : trace.getMemoryAccessBlocks()) {
+            for (MemoryAccessBlock blk2 : trace.getMemoryAccessBlocks()) {
+               if (blk1.getTID() >= blk2.getTID()) {
+                   continue;
+               }
 
-                long crntTID = entry.getKey();
-                List<Event> memAccEvents = entry.getValue();
+               /* skip if all potential data races that are already known */
+               Set<Race> potentialRaces = Sets.newHashSet();
+               blk1.forEach(e1 -> {
+                  blk2.forEach(e2 -> {
+                      MemoryAddr addr = e1.getAddr();
+                      if ((e1.isWrite() || e2.isWrite())
+                              && addr.equals(e2.getAddr())
+                              && (config.checkVolatile || !metadata.isVolatile(addr))
+                              && !trace.isInsideClassInitializer(e1)
+                              && !trace.isInsideClassInitializer(e2)) {
+                          potentialRaces.add(new Race(e1, e2, trace, metadata));
+                      }
+                  });
+               });
+               if (races.containsAll(potentialRaces)) {
+                   continue;
+               }
 
-                List<Event> crntThrdEvents = trace.getEvents(crntTID);
+               /* not a race if the two events hold a common lock */
+               Event e1 = Iterables.getFirst(blk1, null);
+               Event e2 = Iterables.getFirst(blk2, null);
+               if (cnstrBuilder.hasCommonLock(e1, e2)) {
+                   continue;
+               }
 
-                ListIterator<Event> iter = memAccEvents.listIterator();
-                while (iter.hasNext()) {
-                    Event memAcc = iter.next();
-                    equivAccBlk.put(memAcc, Lists.newArrayList(memAcc));
-                    if (memAcc.isWrite()) {
-                        int prevMemAccIdx = crntThrdEvents.indexOf(memAcc);
+               /* not a race if one event happens-before the other */
+               if (cnstrBuilder.happensBefore(e1, e2)
+                       || cnstrBuilder.happensBefore(e2, e1)) {
+                   continue;
+               }
 
-                        while (iter.hasNext()) {
-                            Event crntMemAcc = iter.next();
-                            int crntMemAccIdx = crntThrdEvents.indexOf(crntMemAcc);
+               /* start building constraints for MCM */
+               if (cnstrBuilder.isRace(e1, e2)) {
+                   potentialRaces.forEach(race -> {
+                       if (races.add(race)) {
+                           String report = config.simple_report ?
+                                   race.toString() : race.generateRaceReport();
+                           config.logger.report(report, Logger.MSGTYPE.REAL);
+                       }
+                   });
+               }
 
-                            /* ends the block if there is sync/branch-event in between */
-                            boolean memAccOnly = true;
-                            for (Event e : crntThrdEvents.subList(prevMemAccIdx + 1, crntMemAccIdx)) {
-                                memAccOnly = memAccOnly && e.isReadOrWrite();
-                            }
-                            if (!memAccOnly) {
-                                iter.previous();
-                                break;
-                            }
-
-                            equivAccBlk.get(memAcc).add(crntMemAcc);
-                            /* YilongL: without logging branch events, we
-                             * have to be conservative and end the block
-                             * when a read event is encountered */
-                            if (crntMemAcc.isRead()) {
-                                break;
-                            }
-
-                            prevMemAccIdx = crntMemAccIdx;
-                        }
-                    }
-                }
-            }
-
-            /* check memory access pairs */
-            for (Event fst : equivAccBlk.keySet()) {
-                for (Event snd : equivAccBlk.keySet()) {
-                    if (fst.getTID() >= snd.getTID()) {
-                        continue;
-                    }
-
-                    /* skip if all potential data races are already known */
-                    Set<Race> potentialRaces = Sets.newHashSet();
-                    for (Event e1 : equivAccBlk.get(fst)) {
-                        for (Event e2 : equivAccBlk.get(snd)) {
-                            if ((e1.isWrite() || e2.isWrite())
-                                    && !trace.isInsideClassInitializer(e1)
-                                    && !trace.isInsideClassInitializer(e2)) {
-                                potentialRaces.add(new Race(e1, e2, trace, metadata));
-                            }
-                        }
-                    }
-                    boolean hasFreshRace = false;
-                    for (Race potentialRace : potentialRaces) {
-                        hasFreshRace = !races.contains(potentialRace);
-                        if (hasFreshRace) break;
-                    }
-                    if (!hasFreshRace) {
-                        /* YilongL: note that this could lead to miss of data
-                         * races if their signatures are the same */
-                        continue;
-                    }
-
-                    /* not a race if the two events hold a common lock */
-                    if (cnstrBuilder.hasCommonLock(fst, snd)) {
-                        continue;
-                    }
-
-                    /* not a race if one event happens-before the other */
-                    if (cnstrBuilder.happensBefore(fst, snd)
-                            || cnstrBuilder.happensBefore(snd, fst)) {
-                        continue;
-                    }
-
-                    /* start building constraints for MCM */
-                    Formula[] causalConstraints = new Formula[]{
-                            cnstrBuilder.getPhiAbs(fst),
-                            cnstrBuilder.getPhiAbs(snd)
-                    };
-
-                    if (cnstrBuilder.isRace(fst, snd, causalConstraints)) {
-                        for (Race race : potentialRaces) {
-                            if (races.add(race)) {
-                                String report = config.simple_report ?
-                                        race.toString() : race.generateRaceReport();
-                                config.logger.report(report, Logger.MSGTYPE.REAL);
-                            }
-                        }
-                    }
-                }
-            }
+           }
         }
     }
 

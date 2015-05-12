@@ -35,7 +35,6 @@ import com.runtimeverification.rvpredict.trace.Trace;
 
 import java.util.Map;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.Set;
 
@@ -288,26 +287,21 @@ public class SMTConstraintBuilder {
         return closure.inRelation(getGroupId(e1), getGroupId(e2));
     }
 
-    public boolean isRace(Event e1, Event e2, Formula... casualConstraints) {
-        FormulaTerm.Builder raceAssertionBuilder = FormulaTerm.andBuilder();
-        raceAssertionBuilder.add(smtlibAssertionBuilder.build());
-        for (Entry<Event, Formula> entry : abstractPhi.entrySet()) {
-            raceAssertionBuilder.add(FormulaTerm.BOOL_EQUAL(
-                    new AbstractPhiVariable(entry.getKey()),
-                    entry.getValue()));
-        }
-        for (Entry<Event, Formula> entry : concretePhi.entrySet()) {
-            raceAssertionBuilder.add(FormulaTerm.BOOL_EQUAL(
-                    new ConcretePhiVariable(entry.getKey()),
-                    entry.getValue()));
-        }
-        raceAssertionBuilder.add(FormulaTerm
+    public boolean isRace(Event e1, Event e2) {
+        FormulaTerm.Builder raceAsstBuilder = FormulaTerm.andBuilder();
+        raceAsstBuilder.add(smtlibAssertionBuilder.build());
+        raceAsstBuilder.add(getPhiAbs(e1));
+        raceAsstBuilder.add(getPhiAbs(e2));
+        abstractPhi.forEach((e, phi) -> {
+            raceAsstBuilder.add(FormulaTerm.BOOL_EQUAL(new AbstractPhiVariable(e), phi));
+        });
+        concretePhi.forEach((e, phi) -> {
+            raceAsstBuilder.add(FormulaTerm.BOOL_EQUAL(new ConcretePhiVariable(e), phi));
+        });
+        raceAsstBuilder.add(FormulaTerm
                 .INT_EQUAL(new OrderVariable(e1), new OrderVariable(e2)));
-        for (Formula casualConstraint : casualConstraints) {
-            raceAssertionBuilder.add(casualConstraint);
-        }
 
-        return solver.isSat(raceAssertionBuilder.build());
+        return solver.isSat(raceAsstBuilder.build());
     }
 
     public void finish() {

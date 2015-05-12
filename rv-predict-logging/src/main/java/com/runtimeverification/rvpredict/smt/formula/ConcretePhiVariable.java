@@ -1,7 +1,7 @@
 package com.runtimeverification.rvpredict.smt.formula;
 
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.smt.visitors.Visitor;
-import com.runtimeverification.rvpredict.trace.Event;
 
 public class ConcretePhiVariable extends BooleanVariable {
     /**
@@ -12,7 +12,7 @@ public class ConcretePhiVariable extends BooleanVariable {
     public ConcretePhiVariable(Event event) {
        super(event);
     }
-    
+
     @Override
     public void accept(Visitor visitor) throws Exception {
         visitor.visit(this);

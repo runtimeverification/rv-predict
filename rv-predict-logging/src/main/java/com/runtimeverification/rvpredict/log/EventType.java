@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.trace;
+package com.runtimeverification.rvpredict.log;
 
 /**
  * Enumeration of all types of events considered during logging and prediction.
@@ -39,18 +39,6 @@ public enum EventType {
     READ_UNLOCK,
 
     /**
-     * Event generated before calling {@code Object#wait}.
-     */
-    WAIT_REL,
-
-    /**
-     * Event generated after a thread is awakened from {@code Object#wait} for
-     * whatever reason (e.g., spurious wakeup, being notified, or being
-     * interrupted).
-     */
-    WAIT_ACQ,
-
-    /**
      * Event generated before calling {@code Thread#start()}.
      */
     START,
@@ -77,11 +65,11 @@ public enum EventType {
 
     FINISH_METHOD;
 
-    public static boolean isLock(EventType type) {
-        return type == WRITE_LOCK || type == READ_LOCK;
+    public boolean isSyncType() {
+        return WRITE_LOCK.ordinal() <= this.ordinal() && this.ordinal() <= JOIN.ordinal();
     }
 
-    public static boolean isUnlock(EventType type) {
-        return type == WRITE_UNLOCK || type == READ_UNLOCK;
+    public boolean isMetaType() {
+        return CLINIT_ENTER.ordinal() <= this.ordinal() && this.ordinal() <= FINISH_METHOD.ordinal();
     }
 }

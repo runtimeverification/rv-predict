@@ -30,7 +30,6 @@ package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.trace.EventType;
 import com.runtimeverification.rvpredict.util.Constants;
 
 import java.io.BufferedOutputStream;
@@ -102,8 +101,6 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
         case WRITE_UNLOCK:
         case READ_LOCK:
         case READ_UNLOCK:
-        case WAIT_REL:
-        case WAIT_ACQ:
         case START:
         case JOIN:
         case CLINIT_ENTER:
@@ -160,7 +157,7 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
                     return null;
                 } else {
                     try {
-                        Path path = config.getTraceFilePath(eventWriters.size() + 1);
+                        Path path = config.getTraceFilePath(eventWriters.size());
                         EventWriter eventWriter = new EventWriter(path);
                         eventWriters.add(eventWriter);
                         return eventWriter;

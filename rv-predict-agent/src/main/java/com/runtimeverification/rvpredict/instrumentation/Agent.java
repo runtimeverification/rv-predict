@@ -50,7 +50,7 @@ public class Agent implements ClassFileTransformer, Constants {
                 new VolatileLoggingEngine(config, RVPredictRuntime.metadata) :
                 new PersistentLoggingEngine(config, RVPredictRuntime.metadata);
         }
-        RVPredictRuntime.init(loggingEngine);
+        RVPredictRuntime.init(config, loggingEngine);
 
         inst.addTransformer(new Agent(), true);
         for (Class<?> c : inst.getAllLoadedClasses()) {

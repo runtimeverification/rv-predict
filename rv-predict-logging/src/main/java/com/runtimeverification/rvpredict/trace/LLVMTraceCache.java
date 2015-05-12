@@ -1,7 +1,8 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.EventItem;
+import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.BufferedReader;
@@ -15,17 +16,29 @@ import java.util.concurrent.atomic.AtomicLong;
 public class LLVMTraceCache extends TraceCache {
     private BufferedReader traceFile = null;
     private final Metadata metadata;
-    private static AtomicLong globalId = new AtomicLong(0);
+    private static AtomicLong globalId = new AtomicLong(-1);
     public LLVMTraceCache(Configuration config, Metadata metadata) {
         super(config, metadata);
         this.metadata = metadata;
     }
 
     @Override
-    protected EventItem getNextEvent() throws IOException {
-        if (traceFile == null) {
-            traceFile = new BufferedReader(new FileReader(config.getLogDir()));
+    public void setup() throws IOException {
+        traceFile = new BufferedReader(new FileReader(config.getLogDir()));
+    }
+
+
+    @Override
+    protected void readEvents(long fromIndex, long toIndex) throws IOException {
+        for (long i = fromIndex; i < toIndex; i++) {
+            Event event = getNextEvent();
+            if (event == null) break;
+            assert i == event.getGID();
+            events[((int) (i % events.length))] = event;
         }
+    }
+
+    protected Event getNextEvent() throws IOException {
         String line;
         do {
             line = traceFile.readLine();
@@ -49,7 +62,7 @@ public class LLVMTraceCache extends TraceCache {
                 gid, tid, id, addrl, addrr, value, type.toString(), fn, file, ln);
         gid = globalId.incrementAndGet();
         id = metadata.getLocationId(String.format("<id:%d;fn:%s;file:%s;line:%d>", id, fn, file, ln));
-        return new EventItem(gid, tid, (int) id, (int) addrl, (int) addrr, value, type);
+        return new Event(gid, tid, (int) id, (int) addrl, (int) addrr, value, type);
 
     }
 

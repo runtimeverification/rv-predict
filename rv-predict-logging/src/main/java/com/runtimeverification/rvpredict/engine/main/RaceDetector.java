@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.engine.main;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ListIterator;
@@ -9,18 +11,14 @@ import java.util.Set;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
 import com.runtimeverification.rvpredict.smt.formula.Formula;
-import com.runtimeverification.rvpredict.trace.Event;
-import com.runtimeverification.rvpredict.trace.MemoryAccessEvent;
 import com.runtimeverification.rvpredict.trace.MemoryAddr;
-import com.runtimeverification.rvpredict.trace.ReadEvent;
 import com.runtimeverification.rvpredict.trace.Trace;
-import com.runtimeverification.rvpredict.trace.WriteEvent;
 import com.runtimeverification.rvpredict.util.Logger;
 import com.runtimeverification.rvpredict.violation.Race;
-import com.runtimeverification.rvpredict.violation.Violation;
 
 /**
  * Detects data races from a given {@link Trace} object.
@@ -45,26 +43,29 @@ import com.runtimeverification.rvpredict.violation.Violation;
  *
  * @author YilongL
  */
-public class RaceDetectorTask implements Runnable {
+public class RaceDetector {
 
     private final Configuration config;
 
     private final Metadata metadata;
 
-    private final Trace trace;
+    private final Set<Race> races;
 
-    private final Set<Violation> violations;
-
-    public RaceDetectorTask(Configuration config, Metadata metadata, Trace trace,
-            Set<Violation> violations) {
+    public RaceDetector(Configuration config, Metadata metadata) {
         this.config = config;
         this.metadata = metadata;
-        this.trace = trace;
-        this.violations = violations;
+        this.races = new HashSet<>();
     }
 
-    @Override
-    public void run() {
+    public Set<Race> getRaces() {
+        return Collections.unmodifiableSet(races);
+    }
+
+    public void run(Trace trace) {
+        if (!trace.mayContainRaces()) {
+            return;
+        }
+
         SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config, trace);
 
         cnstrBuilder.addIntraThreadConstraints();
@@ -72,53 +73,38 @@ public class RaceDetectorTask implements Runnable {
         cnstrBuilder.addLockingConstraints();
         cnstrBuilder.finish();
         /* enumerate each shared memory address in the trace */
-        for (MemoryAddr addr : trace.getMemAccessEventsTable().rowKeySet()) {
-            /* exclude unsafe address */
-            if (trace.isUnsafeAddress(addr)) {
-                continue;
-            }
-
+        for (MemoryAddr addr : trace.getMemoryAddresses()) {
             /* exclude volatile variable */
-            if (!config.checkVolatile && trace.isVolatileField(addr)) {
-                continue;
-            }
-
-            /* skip if there is no write event */
-            if (trace.getWriteEventsOn(addr).isEmpty()) {
-                continue;
-            }
-
-            /* skip if there is only one thread */
-            if (trace.getMemAccessEventsTable().row(addr).size() == 1) {
+            if (!config.checkVolatile && metadata.isVolatile(addr)) {
                 continue;
             }
 
             /* group equivalent reads and writes into memory access blocks */
-            Map<MemoryAccessEvent, List<MemoryAccessEvent>> equivAccBlk = new LinkedHashMap<MemoryAccessEvent, List<MemoryAccessEvent>>();
-            for (Map.Entry<Long, List<MemoryAccessEvent>> entry : trace
+            Map<Event, List<Event>> equivAccBlk = new LinkedHashMap<>();
+            for (Map.Entry<Long, List<Event>> entry : trace
                     .getMemAccessEventsTable().row(addr).entrySet()) {
                 // TODO(YilongL): the extensive use of List#indexOf could be a performance problem later
 
                 long crntTID = entry.getKey();
-                List<MemoryAccessEvent> memAccEvents = entry.getValue();
+                List<Event> memAccEvents = entry.getValue();
 
-                List<Event> crntThrdEvents = trace.getThreadEvents(crntTID);
+                List<Event> crntThrdEvents = trace.getEvents(crntTID);
 
-                ListIterator<MemoryAccessEvent> iter = memAccEvents.listIterator();
+                ListIterator<Event> iter = memAccEvents.listIterator();
                 while (iter.hasNext()) {
-                    MemoryAccessEvent memAcc = iter.next();
+                    Event memAcc = iter.next();
                     equivAccBlk.put(memAcc, Lists.newArrayList(memAcc));
-                    if (memAcc instanceof WriteEvent) {
+                    if (memAcc.isWrite()) {
                         int prevMemAccIdx = crntThrdEvents.indexOf(memAcc);
 
                         while (iter.hasNext()) {
-                            MemoryAccessEvent crntMemAcc = iter.next();
+                            Event crntMemAcc = iter.next();
                             int crntMemAccIdx = crntThrdEvents.indexOf(crntMemAcc);
 
                             /* ends the block if there is sync/branch-event in between */
                             boolean memAccOnly = true;
                             for (Event e : crntThrdEvents.subList(prevMemAccIdx + 1, crntMemAccIdx)) {
-                                memAccOnly = memAccOnly && (e instanceof MemoryAccessEvent);
+                                memAccOnly = memAccOnly && e.isReadOrWrite();
                             }
                             if (!memAccOnly) {
                                 iter.previous();
@@ -129,7 +115,7 @@ public class RaceDetectorTask implements Runnable {
                             /* YilongL: without logging branch events, we
                              * have to be conservative and end the block
                              * when a read event is encountered */
-                            if (crntMemAcc instanceof ReadEvent) {
+                            if (crntMemAcc.isRead()) {
                                 break;
                             }
 
@@ -140,26 +126,26 @@ public class RaceDetectorTask implements Runnable {
             }
 
             /* check memory access pairs */
-            for (MemoryAccessEvent fst : equivAccBlk.keySet()) {
-                for (MemoryAccessEvent snd : equivAccBlk.keySet()) {
+            for (Event fst : equivAccBlk.keySet()) {
+                for (Event snd : equivAccBlk.keySet()) {
                     if (fst.getTID() >= snd.getTID()) {
                         continue;
                     }
 
                     /* skip if all potential data races are already known */
                     Set<Race> potentialRaces = Sets.newHashSet();
-                    for (MemoryAccessEvent e1 : equivAccBlk.get(fst)) {
-                        for (MemoryAccessEvent e2 : equivAccBlk.get(snd)) {
-                            if ((e1 instanceof WriteEvent || e2 instanceof WriteEvent)
-                                    && !trace.isClinitMemoryAccess(e1)
-                                    && !trace.isClinitMemoryAccess(e2)) {
+                    for (Event e1 : equivAccBlk.get(fst)) {
+                        for (Event e2 : equivAccBlk.get(snd)) {
+                            if ((e1.isWrite() || e2.isWrite())
+                                    && !trace.isInsideClassInitializer(e1)
+                                    && !trace.isInsideClassInitializer(e2)) {
                                 potentialRaces.add(new Race(e1, e2, trace, metadata));
                             }
                         }
                     }
                     boolean hasFreshRace = false;
                     for (Race potentialRace : potentialRaces) {
-                        hasFreshRace = !violations.contains(potentialRace);
+                        hasFreshRace = !races.contains(potentialRace);
                         if (hasFreshRace) break;
                     }
                     if (!hasFreshRace) {
@@ -181,13 +167,13 @@ public class RaceDetectorTask implements Runnable {
 
                     /* start building constraints for MCM */
                     Formula[] causalConstraints = new Formula[]{
-                            cnstrBuilder.getAbstractFeasibilityConstraint(fst),
-                            cnstrBuilder.getAbstractFeasibilityConstraint(snd)
+                            cnstrBuilder.getPhiAbs(fst),
+                            cnstrBuilder.getPhiAbs(snd)
                     };
 
                     if (cnstrBuilder.isRace(fst, snd, causalConstraints)) {
                         for (Race race : potentialRaces) {
-                            if (violations.add(race)) {
+                            if (races.add(race)) {
                                 String report = config.simple_report ?
                                         race.toString() : race.generateRaceReport();
                                 config.logger.report(report, Logger.MSGTYPE.REAL);

@@ -40,6 +40,7 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.Set;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -148,33 +149,21 @@ public class SMTConstraintBuilder {
      * Adds thread start/join constraints.
      */
     public void addThreadStartJoinConstraints() {
-        for (Event event : trace.getStartJoinEvents()) {
-            long tid = event.getSyncObject();
-            switch (event.getType()) {
-            case START:
-                Event startEvent = event;
-                Event fstThrdEvent = trace.getFirstEvent(tid);
-                /* YilongL: it's possible that the first event of the new
-                 * thread is not in the current trace */
-                if (fstThrdEvent != null) {
-                    smtlibAssertionBuilder.add(getAsstHappensBefore(startEvent, fstThrdEvent));
-                    closure.addRelation(getGroupId(startEvent), getGroupId(fstThrdEvent));
+        Iterables.concat(trace.perThreadView()).forEach(event -> {
+            if (event.getType() == EventType.START) {
+                Event fst = trace.getFirstEvent(event.getSyncObject());
+                if (fst != null) {
+                    smtlibAssertionBuilder.add(getAsstHappensBefore(event, fst));
+                    closure.addRelation(getGroupId(event), getGroupId(fst));
                 }
-                break;
-            case JOIN:
-                Event joinEvent = event;
-                Event lastThrdEvent = trace.getLastEvent(tid);
-                /* YilongL: it's possible that the last event of the thread
-                 * to join is not in the current trace */
-                if (lastThrdEvent != null) {
-                    smtlibAssertionBuilder.add(getAsstHappensBefore(lastThrdEvent, joinEvent));
-                    closure.addRelation(getGroupId(lastThrdEvent), getGroupId(joinEvent));
+            } else if (event.getType() == EventType.JOIN) {
+                Event last = trace.getLastEvent(event.getSyncObject());
+                if (last != null) {
+                    smtlibAssertionBuilder.add(getAsstHappensBefore(last, event));
+                    closure.addRelation(getGroupId(last), getGroupId(event));
                 }
-                break;
-            default:
-                assert false : "unexpected event: " + event;
             }
-        }
+        });
     }
 
     /**

@@ -65,11 +65,6 @@ public class Trace {
     private final Map<Long, List<Event>> tidToEvents = Maps.newHashMap();
 
     /**
-     * List of START/JOIN events in this window.
-     */
-    private final List<Event> startJoinEvents = new ArrayList<>();
-
-    /**
      * Map from memory addresses to write events ordered by global ID.
      */
     private final Map<MemoryAddr, List<Event>> addrToWriteEvents = Maps.newHashMap();
@@ -159,10 +154,6 @@ public class Trace {
 
     public Collection<List<Event>> perThreadView() {
         return tidToEvents.values();
-    }
-
-    public List<Event> getStartJoinEvents() {
-        return startJoinEvents;
     }
 
     public Map<Long, List<LockRegion>> getLockIdToLockRegions() {
@@ -400,7 +391,7 @@ public class Trace {
             /* finally commit all critical events into this window */
             for (int i = 0; i < numOfEvents; i++) {
                 if (critical[i]) {
-                    addEvent(events[i]);
+                    addCriticalEvent(events[i]);
                 }
             }
         }
@@ -445,37 +436,15 @@ public class Trace {
 
     private static final Function<Object, ? extends List<Event>> NEW_EVENT_LIST = p -> new ArrayList<>();
 
-    /**
-     * add a new filtered event to the trace in the order of its appearance
-     *
-     * @param event
-     */
-    private void addEvent(Event event) {
+    private void addCriticalEvent(Event event) {
 //        System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
         long tid = event.getTID();
-
         tidToEvents.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
         if (event.isReadOrWrite()) {
             MemoryAddr addr = event.getAddr();
-
             memAccessEventsTbl.row(addr).computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
-
             if (event.isWrite()) {
                 addrToWriteEvents.computeIfAbsent(addr, NEW_EVENT_LIST).add(event);
-            }
-        } else {
-            switch (event.getType()) {
-            case START:
-            case JOIN:
-                startJoinEvents.add(event);
-                break;
-            case WRITE_LOCK:
-            case WRITE_UNLOCK:
-            case READ_LOCK:
-            case READ_UNLOCK:
-                break;
-            default:
-                throw new IllegalArgumentException("Unexpected event: " + event);
             }
         }
     }

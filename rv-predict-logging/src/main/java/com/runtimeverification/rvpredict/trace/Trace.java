@@ -60,9 +60,9 @@ public class Trace {
     private final Event[] events;
 
     /**
-     * Events of each thread.
+     * Map from thread ID to critical events.
      */
-    private final Map<Long, List<Event>> threadIdToEvents = new HashMap<>();
+    private final Map<Long, List<Event>> tidToEvents = Maps.newHashMap();
 
     /**
      * List of START/JOIN events in this window.
@@ -70,9 +70,9 @@ public class Trace {
     private final List<Event> startJoinEvents = new ArrayList<>();
 
     /**
-     * Write events on each address.
+     * Map from memory addresses to write events ordered by global ID.
      */
-    private final Map<MemoryAddr, List<Event>> addrToWriteEvents = new HashMap<>();
+    private final Map<MemoryAddr, List<Event>> addrToWriteEvents = Maps.newHashMap();
 
     /**
      * Lists of {@code MemoryAccessEvent}'s indexed by address and thread ID.
@@ -144,21 +144,21 @@ public class Trace {
     }
 
     public Event getFirstEvent(long tid) {
-        List<Event> events = threadIdToEvents.get(tid);
+        List<Event> events = tidToEvents.get(tid);
         return events == null ? null : events.get(0);
     }
 
     public Event getLastEvent(long tid) {
-        List<Event> events = threadIdToEvents.get(tid);
+        List<Event> events = tidToEvents.get(tid);
         return events == null ? null : events.get(events.size() - 1);
     }
 
     public List<Event> getEvents(long tid) {
-        return threadIdToEvents.getOrDefault(tid, Collections.emptyList());
+        return tidToEvents.getOrDefault(tid, Collections.emptyList());
     }
 
     public Collection<List<Event>> perThreadView() {
-        return threadIdToEvents.values();
+        return tidToEvents.values();
     }
 
     public List<Event> getStartJoinEvents() {
@@ -169,8 +169,7 @@ public class Trace {
         return lockIdToLockRegions;
     }
 
-    public List<Event> getWriteEventsOn(MemoryAddr addr) {
-        // TODO(YilongL): consider index write events based on both memory address and value
+    public List<Event> getWriteEvents(MemoryAddr addr) {
         return addrToWriteEvents.getOrDefault(addr, Collections.emptyList());
     }
 
@@ -455,7 +454,7 @@ public class Trace {
 //        System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
         long tid = event.getTID();
 
-        threadIdToEvents.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
+        tidToEvents.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
         if (event.isReadOrWrite()) {
             MemoryAddr addr = event.getAddr();
 

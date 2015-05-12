@@ -167,8 +167,8 @@ public class RaceDetector {
 
                     /* start building constraints for MCM */
                     Formula[] causalConstraints = new Formula[]{
-                            cnstrBuilder.getAbstractFeasibilityConstraint(fst),
-                            cnstrBuilder.getAbstractFeasibilityConstraint(snd)
+                            cnstrBuilder.getPhiAbs(fst),
+                            cnstrBuilder.getPhiAbs(snd)
                     };
 
                     if (cnstrBuilder.isRace(fst, snd, causalConstraints)) {

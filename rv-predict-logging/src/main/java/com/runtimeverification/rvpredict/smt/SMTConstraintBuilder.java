@@ -37,6 +37,7 @@ import com.runtimeverification.rvpredict.trace.Trace;
 import java.util.Map;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 import java.util.Set;
 
 import com.google.common.collect.Lists;
@@ -202,7 +203,7 @@ public class SMTConstraintBuilder {
      * however, this {@code event} is allowed to read or write a different value
      * than in the original trace.
      */
-    public Formula getAbstractFeasibilityConstraint(Event event) {
+    public Formula getPhiAbs(Event event) {
         if (computedAbstractPhi.contains(event)) {
             return new AbstractPhiVariable(event);
         }
@@ -211,7 +212,7 @@ public class SMTConstraintBuilder {
         FormulaTerm.Builder phiBuilder = FormulaTerm.andBuilder();
         /* make sure that every dependent read event reads the same value as in the original trace */
         for (Event depRead : trace.getCtrlFlowDependentEvents(event)) {
-            phiBuilder.add(getConcreteFeasibilityConstraint(depRead));
+            phiBuilder.add(getPhiConc(depRead));
         }
         abstractPhi.put(event, phiBuilder.build());
         return new AbstractPhiVariable(event);
@@ -222,7 +223,7 @@ public class SMTConstraintBuilder {
      * the same as in the original trace <b>if</b> the corresponding data-abstract
      * feasibility constraint is also satisfied.
      */
-    private Formula getConcreteFeasibilityConstraint(Event event) {
+    private Formula getPhiConc(Event event) {
         if (computedConcretePhi.contains(event)) {
             return new ConcretePhiVariable(event);
         } else if (event.getValue() == Constants._0X_DEADBEEFL) {
@@ -232,61 +233,51 @@ public class SMTConstraintBuilder {
 
         Formula phi;
         if (event.isRead()) {
-            List<Event> writeEvents = trace.getWriteEventsOn(event.getAddr());
+            List<Event> writeEvents = trace.getWriteEvents(event.getAddr());
 
-            /* thread immediate write predecessor */
-            Event thrdImdWrtPred = null;
-            /* predecessor write set: all write events whose values could be read by `depRead' */
-            List<Event> predWriteSet = Lists.newArrayList();
+            // all write events that could interfere with the read event
+            List<Event> predWrites = Lists.newArrayList();
+            Event sameThreadPredWrite = null;
             for (Event write : writeEvents) {
                 if (write.getTID() == event.getTID()) {
                     if (write.getGID() < event.getGID()) {
-                        thrdImdWrtPred = write;
+                        sameThreadPredWrite = write;
                     }
                 } else if (!happensBefore(event, write)) {
-                    predWriteSet.add(write);
+                    predWrites.add(write);
                 }
             }
-            if (thrdImdWrtPred != null) {
-                predWriteSet.add(thrdImdWrtPred);
+            if (sameThreadPredWrite != null) {
+                predWrites.add(sameThreadPredWrite);
             }
 
-            /* predecessor write set of same value */
-            List<Event> sameValPredWriteSet = Lists.newArrayList();
-            for (Event write : predWriteSet) {
-                if (write.getValue() == event.getValue()) {
-                    sameValPredWriteSet.add(write);
-                }
-            }
+            // all write events whose values could be read by the read event
+            List<Event> sameValPredWrites = predWrites.stream()
+                    .filter(w -> w.getValue() == event.getValue()).collect(Collectors.toList());
 
-            /* case 1: the dependent read reads the initial value */
+            /* case 1: the read event reads the initial value */
             Formula case1 = BooleanConstant.FALSE;
-            if (thrdImdWrtPred == null &&
+            if (sameThreadPredWrite == null &&
                     trace.getInitValueOf(event.getAddr()) == event.getValue()) {
-                FormulaTerm.Builder formulaBuilder = FormulaTerm.andBuilder();
-                for (Event write : predWriteSet) {
-                    formulaBuilder.add(getAsstHappensBefore(event, write));
-                }
-                case1 = formulaBuilder.build();
+                FormulaTerm.Builder builder = FormulaTerm.andBuilder();
+                predWrites.forEach(w -> builder.add(getAsstHappensBefore(event, w)));
+                case1 = builder.build();
             }
 
-            /* case 2: the dependent read reads a previously written value */
+            /* case 2: the read event reads a previously written value */
             FormulaTerm.Builder case2Builder = FormulaTerm.orBuilder();
-            for (Event write : sameValPredWriteSet) {
-                FormulaTerm.Builder formulaBuilder = FormulaTerm.andBuilder();
-                formulaBuilder.add(getAbstractFeasibilityConstraint(write),
-                        getConcreteFeasibilityConstraint(write));
-                formulaBuilder.add(getAsstHappensBefore(write, event));
-                for (Event otherWrite : writeEvents) {
-                    if (write != otherWrite && !happensBefore(otherWrite, write)
-                            && !happensBefore(event, otherWrite)) {
-                        formulaBuilder.add(FormulaTerm.OR(
-                                getAsstHappensBefore(otherWrite, write),
-                                getAsstHappensBefore(event, otherWrite)));
+            sameValPredWrites.forEach(w1 -> {
+                FormulaTerm.Builder builder = FormulaTerm.andBuilder();
+                builder.add(getPhiAbs(w1), getPhiConc(w1));
+                builder.add(getAsstHappensBefore(w1, event));
+                predWrites.forEach(w2 -> {
+                    if (w2.getValue() != w1.getValue() && !happensBefore(w2, w1)) {
+                        builder.add(FormulaTerm.OR(getAsstHappensBefore(w2, w1),
+                                getAsstHappensBefore(event, w2)));
                     }
-                }
-                case2Builder.add(formulaBuilder.build());
-            }
+                });
+                case2Builder.add(builder.build());
+            });
             phi = FormulaTerm.OR(case1, case2Builder.build());
         } else {
             phi = BooleanConstant.TRUE;

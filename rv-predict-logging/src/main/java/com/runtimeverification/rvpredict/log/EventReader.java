@@ -52,8 +52,7 @@ public class EventReader implements Closeable {
                 byteBuffer.getLong(),
                 byteBuffer.getLong(),
                 byteBuffer.getInt(),
-                byteBuffer.getInt(),
-                byteBuffer.getInt(),
+                byteBuffer.getLong(),
                 byteBuffer.getLong(),
                 EventType.values()[byteBuffer.get()]);
         byteBuffer.clear();

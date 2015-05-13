@@ -210,8 +210,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         event.setGID(base + offset);
         event.setTID(tid);
         event.setLocId(locId);
-        event.setAddrl(addrl);
-        event.setAddrr(addrr);
+        event.setAddr((long)addrl << 32 | addrr & 0xFFFFFFFFL);
         event.setValue(value);
         event.setType(eventType);
     }

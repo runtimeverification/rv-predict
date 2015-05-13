@@ -20,7 +20,7 @@ public class TraceState {
     /**
      * Map from memory address to its value.
      */
-    private final Map<MemoryAddr, Long> addrToValue = Maps.newHashMap();
+    private final Map<Long, Long> addrToValue = Maps.newHashMap();
 
     /**
      * Map form thread ID to the current level of class initialization.
@@ -99,11 +99,11 @@ public class TraceState {
         return tidToClinitDepth.values().stream().anyMatch(d -> d.intValue() > 0);
     }
 
-    public void writeValueAt(MemoryAddr addr, long value) {
+    public void writeValueAt(long addr, long value) {
         addrToValue.put(addr, value);
     }
 
-    public long getValueAt(MemoryAddr addr) {
+    public long getValueAt(long addr) {
         return addrToValue.getOrDefault(addr, 0L);
     }
 

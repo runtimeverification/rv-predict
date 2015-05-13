@@ -67,7 +67,7 @@ public class Trace {
     /**
      * Map from memory addresses to write events ordered by global ID.
      */
-    private final Map<MemoryAddr, List<Event>> addrToWriteEvents = Maps.newHashMap();
+    private final Map<Long, List<Event>> addrToWriteEvents = Maps.newHashMap();
 
     /**
      * List of memory access blocks.
@@ -77,7 +77,7 @@ public class Trace {
     /**
      * Map from memory addresses referenced in this trace segment to their states.
      */
-    private final Map<MemoryAddr, MemoryAddrState> addrToState = Maps.newHashMap();
+    private final Map<Long, MemoryAddrState> addrToState = Maps.newHashMap();
 
     /**
      * The initial states for all threads referenced in this trace segment.
@@ -138,7 +138,7 @@ public class Trace {
      *            the address
      * @return the initial value
      */
-    public long getInitValueOf(MemoryAddr addr) {
+    public long getInitValueOf(long addr) {
         return addrToState.get(addr).initVal;
     }
 
@@ -164,7 +164,7 @@ public class Trace {
         return lockIdToLockRegions;
     }
 
-    public List<Event> getWriteEvents(MemoryAddr addr) {
+    public List<Event> getWriteEvents(long addr) {
         return addrToWriteEvents.getOrDefault(addr, Collections.emptyList());
     }
 
@@ -324,7 +324,7 @@ public class Trace {
         });
 
         /* compute shared memory addresses */
-        Set<MemoryAddr> sharedAddr = new HashSet<>();
+        Set<Long> sharedAddr = new HashSet<>();
         addrToState.forEach((addr, state) -> {
             if (state.isWriteShared()) {
                 sharedAddr.add(addr);
@@ -410,7 +410,7 @@ public class Trace {
                         if (event.isRead()) {
                             /* Optimization: merge consecutive read events that are equivalent */
                             endCrntBlock = !(lastEvent != null && lastEvent.isRead()
-                                    && lastEvent.getAddr().equals(event.getAddr())
+                                    && lastEvent.getAddr() == event.getAddr()
                                     && lastEvent.getValue() == event.getValue());
                         } else {
                             endCrntBlock = lastEvent != null && lastEvent.isRead();

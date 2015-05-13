@@ -70,7 +70,7 @@ public class Trace {
     /**
      * Map from memory addresses to write events ordered by global ID.
      */
-    private final Map<Long, List<Event>> addrToWriteEvents = Maps.newHashMap();
+    private final Long2ObjectMap<List<Event>> addrToWriteEvents = new Long2ObjectLinkedOpenHashMap<>();
 
     /**
      * List of memory access blocks.

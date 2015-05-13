@@ -1,10 +1,14 @@
 package com.runtimeverification.rvpredict.trace;
 
+import it.unimi.dsi.fastutil.longs.Long2LongMap;
+import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.google.common.collect.HashBasedTable;
@@ -20,7 +24,7 @@ public class TraceState {
     /**
      * Map from memory address to its value.
      */
-    private final Map<Long, Long> addrToValue = Maps.newHashMap();
+    private final Long2LongMap addrToValue = new Long2LongOpenHashMap();
 
     /**
      * Map form thread ID to the current level of class initialization.
@@ -104,7 +108,8 @@ public class TraceState {
     }
 
     public long getValueAt(long addr) {
-        return addrToValue.getOrDefault(addr, 0L);
+        // the default value of Long2LongMap is 0
+        return addrToValue.get(addr);
     }
 
     public ThreadState getThreadState(long tid) {

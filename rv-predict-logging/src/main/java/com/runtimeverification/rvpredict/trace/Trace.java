@@ -28,6 +28,9 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.trace;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -77,7 +80,7 @@ public class Trace {
     /**
      * Map from memory addresses referenced in this trace segment to their states.
      */
-    private final Map<Long, MemoryAddrState> addrToState = Maps.newHashMap();
+    private final Long2ObjectMap<MemoryAddrState> addrToState = new Long2ObjectLinkedOpenHashMap<>();
 
     /**
      * The initial states for all threads referenced in this trace segment.

@@ -399,24 +399,42 @@ public class Trace {
                     Event event = events[i];
 //                    System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
                     long tid = event.getTID();
+
+                    /* update memory access blocks */
+                    boolean endCrntBlock;
+                    if (event.isSyncEvent()) {
+                        endCrntBlock = true;
+                    } else if (event.isReadOrWrite()) {
+                        Event lastEvent = Iterables.getLast(
+                                tidToEvents.getOrDefault(tid, Collections.emptyList()), null);
+                        if (event.isRead()) {
+                            /* Optimization: merge consecutive read events that are equivalent */
+                            endCrntBlock = !(lastEvent != null && lastEvent.isRead()
+                                    && lastEvent.getAddr().equals(event.getAddr())
+                                    && lastEvent.getValue() == event.getValue());
+                        } else {
+                            endCrntBlock = lastEvent != null && lastEvent.isRead();
+                        }
+                    } else {
+                        throw new IllegalStateException("Unexpected critical event: " + event);
+                    }
+                    if (endCrntBlock) {
+                        /* end the current block and then start a new one */
+                        List<Event> oldBlk = tidToCrntBlock.get(tid);
+                        if (oldBlk != null && !oldBlk.isEmpty()) {
+                            memoryAccessBlocks.add(new MemoryAccessBlock(oldBlk));
+                            tidToCrntBlock.put(tid, new ArrayList<>());
+                        }
+                    }
+                    if (event.isReadOrWrite()) {
+                        /* append to the current block */
+                        tidToCrntBlock.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
+                    }
+
+                    /* update tidToEvents & addrToWriteEvents */
                     tidToEvents.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
                     if (event.isWrite()) {
                         addrToWriteEvents.computeIfAbsent(event.getAddr(), NEW_EVENT_LIST).add(event);
-                    }
-
-                    if (!event.isWrite()) {
-                        /* end the current block */
-                        List<Event> oldValue = tidToCrntBlock.put(tid, new ArrayList<>());
-                        if (oldValue != null && !oldValue.isEmpty()) {
-                            memoryAccessBlocks.add(new MemoryAccessBlock(oldValue));
-                        }
-                        if (event.isRead()) {
-                            memoryAccessBlocks.add(new MemoryAccessBlock(Collections
-                                    .singletonList(event)));
-                        }
-                    } else {
-                        /* append to the current block */
-                        tidToCrntBlock.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
                     }
                 }
             }

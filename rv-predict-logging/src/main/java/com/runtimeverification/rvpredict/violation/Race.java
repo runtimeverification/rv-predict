@@ -66,7 +66,7 @@ public class Race extends AbstractViolation {
         this.trace = trace;
         locId1 = e1.getLocId();
         locId2 = e2.getLocId();
-        int idx = (int) e1.getAddr();
+        int idx = e1.getFieldIdOrArrayIndex();
         varSig = idx < 0 ? metadata.getVariableSig(-idx).replace("/", ".") : "#" + idx;
         stmtSig1 = metadata.getLocationSig(locId1);
         stmtSig2 = metadata.getLocationSig(locId2);

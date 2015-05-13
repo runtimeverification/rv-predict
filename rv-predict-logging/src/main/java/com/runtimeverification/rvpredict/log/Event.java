@@ -99,6 +99,10 @@ public class Event implements Comparable<Event> {
         return ADDR;
     }
 
+    public int getFieldIdOrArrayIndex() {
+        return (int) getAddr();
+    }
+
     public long getSyncObject() {
         assert getType().isSyncType();
         return ADDR;
@@ -177,7 +181,7 @@ public class Event implements Comparable<Event> {
     public String toString() {
         if (isReadOrWrite()) {
             int addrl = (int) (ADDR >> 32);
-            int addrr = (int) ADDR;
+            int addrr = getFieldIdOrArrayIndex();
             String addr = addrr < 0 ?
                     Integer.toHexString(addrl) + "." + -addrr :
                     Integer.toHexString(addrl) + "[" + addrr + "]";

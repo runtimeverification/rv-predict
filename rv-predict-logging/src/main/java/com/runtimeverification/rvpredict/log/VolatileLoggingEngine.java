@@ -157,7 +157,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
     }
 
     @Override
-    public void log(EventType eventType, int locId, int addrl, int addrr, long value1, long value2) {
+    public void log(EventType eventType, int locId, long addr, long value1, long value2) {
         long tid = Thread.currentThread().getId();
         int off;
         switch (eventType) {
@@ -174,29 +174,29 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         case INVOKE_METHOD:
         case FINISH_METHOD:
             off = claim(1);
-            log(eventType, off, tid, locId, addrl, addrr, value1);
+            log(eventType, off, tid, locId, addr, value1);
             publish(1);
             break;
         case ATOMIC_READ:
             off = claim(3);
-            log(EventType.WRITE_LOCK,   off,     tid, locId, ATOMIC_LOCK_C, addrl, 0);
-            log(EventType.READ,         off + 1, tid, locId, addrl,         addrr, value1);
-            log(EventType.WRITE_UNLOCK, off + 2, tid, locId, ATOMIC_LOCK_C, addrl, 0);
+            log(EventType.WRITE_LOCK,   off,     tid, locId, getAtomicLockId(addr), 0);
+            log(EventType.READ,         off + 1, tid, locId, addr, value1);
+            log(EventType.WRITE_UNLOCK, off + 2, tid, locId, getAtomicLockId(addr), 0);
             publish(3);
             break;
         case ATOMIC_WRITE:
             off = claim(3);
-            log(EventType.WRITE_LOCK,   off,     tid, locId, ATOMIC_LOCK_C, addrl, 0);
-            log(EventType.WRITE,        off + 1, tid, locId, addrl,         addrr, value1);
-            log(EventType.WRITE_UNLOCK, off + 2, tid, locId, ATOMIC_LOCK_C, addrl, 0);
+            log(EventType.WRITE_LOCK,   off,     tid, locId, getAtomicLockId(addr), 0);
+            log(EventType.WRITE,        off + 1, tid, locId, addr, value1);
+            log(EventType.WRITE_UNLOCK, off + 2, tid, locId, getAtomicLockId(addr), 0);
             publish(3);
             break;
         case ATOMIC_READ_THEN_WRITE:
             off = claim(4);
-            log(EventType.WRITE_LOCK,   off,     tid, locId, ATOMIC_LOCK_C, addrl, 0);
-            log(EventType.READ,         off + 1, tid, locId, addrl,         addrr, value1);
-            log(EventType.WRITE,        off + 2, tid, locId, addrl,         addrr, value2);
-            log(EventType.WRITE_UNLOCK, off + 3, tid, locId, ATOMIC_LOCK_C, addrl, 0);
+            log(EventType.WRITE_LOCK,   off,     tid, locId, getAtomicLockId(addr), 0);
+            log(EventType.READ,         off + 1, tid, locId, addr, value1);
+            log(EventType.WRITE,        off + 2, tid, locId, addr, value2);
+            log(EventType.WRITE_UNLOCK, off + 3, tid, locId, getAtomicLockId(addr), 0);
             publish(4);
             break;
         default:
@@ -204,13 +204,16 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
     }
 
-    private void log(EventType eventType, int offset, long tid, int locId, int addrl, int addrr,
-            long value) {
+    private long getAtomicLockId(long addr) {
+        return (long) ATOMIC_LOCK_C << 32 | ((int) (addr >> 32)) & 0xFFFFFFFFL;
+    }
+
+    private void log(EventType eventType, int offset, long tid, int locId, long addr, long value) {
         Event event = events[offset];
         event.setGID(base + offset);
         event.setTID(tid);
         event.setLocId(locId);
-        event.setAddr((long)addrl << 32 | addrr & 0xFFFFFFFFL);
+        event.setAddr(addr);
         event.setValue(value);
         event.setType(eventType);
     }

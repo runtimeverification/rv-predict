@@ -36,7 +36,7 @@ public class EventWriter implements Closeable {
                 FAST_COMPRESSOR);
     }
 
-    public void write(long gid, long tid, int locId, int addrl, int addrr, long value,
+    public void write(long gid, long tid, int locId, long addr, long value,
             EventType eventType) throws IOException {
         if (isWriting) {
             throw new RuntimeException("This method is not supposed to be reentrant!");
@@ -51,8 +51,7 @@ public class EventWriter implements Closeable {
             byteBuffer.putLong(gid)
                 .putLong(tid)
                 .putInt(locId)
-                .putInt(addrl)
-                .putInt(addrr)
+                .putLong(addr)
                 .putLong(value)
                 .put((byte) eventType.ordinal());
             out.write(byteBuffer.array());

@@ -276,7 +276,7 @@ public class Trace {
                 MemoryAddrState st = addrToState.computeIfAbsent(event.getAddr(),
                         addr -> new MemoryAddrState(state.getValueAt(addr)));
                 if (event.isRead()) {
-                    st.readBy(tid);
+                    st.readBy(tid, i);
                 } else {
                     st.writtenBy(tid, i);
                 }
@@ -314,8 +314,12 @@ public class Trace {
 
         /* update memory address value */
         addrToState.forEach((addr, st) -> {
-            if (st.lastWrite >= 0) {
-                state.writeValueAt(addr, events[st.lastWrite].getValue());
+            int lastAccess = Math.max(st.lastRead, st.lastWrite);
+            if (lastAccess >= 0) {
+                /* use the value of the last access to update state, instead of
+                 * that of the last write, to recover from potential missing
+                 * write events */
+                state.writeValueAt(addr, events[lastAccess].getValue());
             }
         });
 
@@ -429,6 +433,7 @@ public class Trace {
     }
 
     private static class MemoryAddrState {
+        int lastRead = -1;
         int lastWrite = -1;
         final long initVal;
         long reader1, reader2;
@@ -438,7 +443,8 @@ public class Trace {
             initVal = value;
         }
 
-        void readBy(long tid) {
+        void readBy(long tid, int idx) {
+            lastRead = idx;
             if (reader1 == 0) {
                 reader1 = tid;
             } else if (reader1 != tid && reader2 == 0) {

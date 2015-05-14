@@ -28,20 +28,16 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.log;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.LockSupport;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.engine.main.RaceDetectorTask;
+import com.runtimeverification.rvpredict.engine.main.RaceDetector;
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceState;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
-import com.runtimeverification.rvpredict.violation.Violation;
 
 /**
  * Logging engine that processes events and then send them over for online
@@ -52,15 +48,13 @@ import com.runtimeverification.rvpredict.violation.Violation;
  */
 public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
-    private final Configuration config;
+    private static final int INFINITY = Integer.MAX_VALUE / 2;
 
-    private final Metadata metadata;
+    private final Configuration config;
 
     private volatile boolean closed = false;
 
     private final TraceState crntState;
-
-    private final Set<Violation> violations = new HashSet<>();
 
     private final AtomicInteger globalEventID = new AtomicInteger(0);
 
@@ -76,15 +70,17 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
     private final Event[] events;
 
+    private final RaceDetector detector;
+
     public VolatileLoggingEngine(Configuration config, Metadata metadata) {
         this.config = config;
-        this.metadata = metadata;
         this.crntState = new TraceState(metadata);
         this.bound = config.windowSize;
         this.events = new Event[bound + 4];
         for (int i = 0; i < events.length; i++) {
             events[i] = new Event();
         }
+        this.detector = new RaceDetector(config, metadata);
     }
 
     @Override
@@ -97,12 +93,12 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             // CRITICAL SECTION END
         } else {
             /* wait for the prediction on the last batch of events to finish */
-            while (globalEventID.get() != n + bound + 1) {
+            while (globalEventID.get() < INFINITY) {
                 LockSupport.parkNanos(1);
             }
         }
 
-        if (violations.isEmpty()) {
+        if (detector.getRaces().isEmpty()) {
             config.logger.report("No races found.", Logger.MSGTYPE.INFO);
         }
     }
@@ -124,7 +120,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                     return 0;
                 } else {
                     /* signal the end of the last prediction */
-                    globalEventID.incrementAndGet();
+                    globalEventID.set(INFINITY);
                     /* remaining unpublished events will be written to junk area and simply discarded */
                     return bound;
                 }
@@ -152,15 +148,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
 
         try {
-            Trace trace = new Trace(crntState, bound);
-            crntState.setCurrentTraceWindow(trace);
-            for (int i = 0; i < numOfEvents; i++) {
-                trace.addRawEvent(events[i].copy());
-            }
-            trace.finishedLoading();
-            if (trace.hasSharedMemAddr()) {
-                new RaceDetectorTask(config, metadata, trace, violations).run();
-            }
+            detector.run(crntState.initNextTraceWindow(events, numOfEvents));
         } catch (Throwable e) {
             e.printStackTrace();
             /* cannot use System.exit because it may lead to deadlock */
@@ -179,8 +167,6 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         case WRITE_UNLOCK:
         case READ_LOCK:
         case READ_UNLOCK:
-        case WAIT_REL:
-        case WAIT_ACQ:
         case START:
         case JOIN:
         case CLINIT_ENTER:

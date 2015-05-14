@@ -368,6 +368,32 @@ public class EasyTests {
         };
     }
 
+    @RaceTest(expectRace = true,
+            description = "Write to the shared variable before joining the child thread")
+    public void incorrectJoin() {
+        new ThreadRunner(1) {
+
+            @Override
+            public void thread1() {
+                Thread t = new Thread() {
+                    @Override
+                    public void run() {
+                        synchronized (this) {
+                            sharedVar = 42;
+                        }
+                    }
+                };
+                t.start();
+                sharedVar = 43;
+                try {
+                    t.join();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+        };
+    }
 
     //------------------ Negative tests ---------------------
 
@@ -853,6 +879,7 @@ public class EasyTests {
             tests.systemArrayCopy3();
             tests.systemArrayCopyException();
             tests.volatileArray();
+            tests.incorrectJoin();
         } else {
             // negative tests
             tests.noOperation();

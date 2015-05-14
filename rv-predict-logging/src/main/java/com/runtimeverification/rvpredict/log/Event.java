@@ -6,7 +6,7 @@ import com.runtimeverification.rvpredict.trace.MemoryAddr;
  * Class for representing an event as it is recorded in the log
  * @author TraianSF
  */
-public class Event {
+public class Event implements Comparable<Event> {
     private long GID;
     private long TID;
     private int ID;
@@ -112,6 +112,11 @@ public class Event {
         return (long)ADDRL << 32 | ADDRR & 0xFFFFFFFFL;
     }
 
+    public long getLockId() {
+        assert isLock() || isUnlock();
+        return getSyncObject();
+    }
+
     public boolean isRead() {
         return TYPE == EventType.READ;
     }
@@ -124,28 +129,29 @@ public class Event {
         return isRead() || isWrite();
     }
 
-    public boolean isThreadStart() {
+    public boolean isStart() {
         return TYPE == EventType.START;
     }
 
+    public boolean isJoin() {
+        return TYPE == EventType.JOIN;
+    }
+
     /**
-     * Returns {@code true} if this event has type {@link EventType#WRITE_LOCK},
-     * {@link EventType#READ_LOCK}, or {@link EventType#WAIT_ACQ}; otherwise,
-     * {@code false}.
+     * Returns {@code true} if this event has type {@link EventType#WRITE_LOCK}
+     * or {@link EventType#READ_LOCK}; otherwise, {@code false}.
      */
-    public boolean acqLock() {
-        return TYPE == EventType.READ_LOCK || TYPE == EventType.WRITE_LOCK
-                || TYPE == EventType.WAIT_ACQ;
+    public boolean isLock() {
+        return TYPE == EventType.READ_LOCK || TYPE == EventType.WRITE_LOCK;
     }
 
     /**
      * Returns {@code true} if this event has type
-     * {@link EventType#WRITE_UNLOCK}, {@link EventType#READ_UNLOCK}, or
-     * {@link EventType#WAIT_REL}; otherwise, {@code false}.
+     * {@link EventType#WRITE_UNLOCK} or {@link EventType#READ_UNLOCK};
+     * otherwise, {@code false}.
      */
-    public boolean relLock() {
-        return TYPE == EventType.READ_UNLOCK || TYPE == EventType.WRITE_UNLOCK
-                || TYPE == EventType.WAIT_REL;
+    public boolean isUnlock() {
+        return TYPE == EventType.READ_UNLOCK || TYPE == EventType.WRITE_UNLOCK;
     }
 
     public boolean isSyncEvent() {
@@ -163,6 +169,11 @@ public class Event {
         } else {
             return false;
         }
+    }
+
+    @Override
+    public int compareTo(Event e) {
+        return Long.compare(getGID(), e.getGID());
     }
 
     @Override

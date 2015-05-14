@@ -39,18 +39,6 @@ public enum EventType {
     READ_UNLOCK,
 
     /**
-     * Event generated before calling {@code Object#wait}.
-     */
-    WAIT_REL,
-
-    /**
-     * Event generated after a thread is awakened from {@code Object#wait} for
-     * whatever reason (e.g., spurious wakeup, being notified, or being
-     * interrupted).
-     */
-    WAIT_ACQ,
-
-    /**
      * Event generated before calling {@code Thread#start()}.
      */
     START,
@@ -76,14 +64,6 @@ public enum EventType {
     INVOKE_METHOD,
 
     FINISH_METHOD;
-
-    public boolean isLockType() {
-        return this == WRITE_LOCK || this == READ_LOCK;
-    }
-
-    public boolean isUnlockType() {
-        return this == WRITE_UNLOCK || this == READ_UNLOCK;
-    }
 
     public boolean isSyncType() {
         return WRITE_LOCK.ordinal() <= this.ordinal() && this.ordinal() <= JOIN.ordinal();

@@ -101,8 +101,6 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
         case WRITE_UNLOCK:
         case READ_LOCK:
         case READ_UNLOCK:
-        case WAIT_REL:
-        case WAIT_ACQ:
         case START:
         case JOIN:
         case CLINIT_ENTER:

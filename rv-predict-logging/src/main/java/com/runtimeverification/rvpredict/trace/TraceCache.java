@@ -84,16 +84,14 @@ public class TraceCache {
         }
 
         /* finish reading events and create the Trace object */
-        Trace trace = new Trace(crntState, config.windowSize);
-        crntState.setCurrentTraceWindow(trace);
+        int numOfEvents = events.length;
         for (int i = 0; i < events.length; i++) {
             if (events[i] == null) {
+                numOfEvents = i;
                 break;
             }
-            trace.addRawEvent(events[i]);
         }
-        trace.finishedLoading();
-        return trace;
+        return crntState.initNextTraceWindow(events, numOfEvents);
     }
 
 }

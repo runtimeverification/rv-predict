@@ -1385,20 +1385,23 @@ public final class RVPredictRuntime implements Constants {
 
     private static void saveMemAccEvent(EventType eventType, int locId, int addrl, int addrr,
             long value) {
-        logger.log(eventType, locId, addrl, addrr, value, 0);
+        logger.log(eventType, locId, concat(addrl, addrr), value, 0);
     }
 
     private static void saveSyncEvent(EventType eventType, int locId, long syncObj) {
-        logger.log(eventType, locId, (int)(syncObj >> 32), (int) syncObj, 0, 0);
+        logger.log(eventType, locId, syncObj, 0, 0);
     }
 
     private static void saveMetaEvent(EventType eventType, int locId) {
-        logger.log(eventType, locId, 0, 0, 0, 0);
+        logger.log(eventType, locId, 0, 0, 0);
     }
 
     private static void saveAtomicEvent(EventType eventType, int locId, int addrl, int addrr,
             long value1, long value2) {
-        logger.log(eventType, locId, addrl, addrr, value1, value2);
+        logger.log(eventType, locId, concat(addrl, addrr), value1, value2);
     }
 
+    private static long concat(int upper32, int lower32) {
+        return (long) upper32 << 32 | lower32 & 0xFFFFFFFFL;
+    }
 }

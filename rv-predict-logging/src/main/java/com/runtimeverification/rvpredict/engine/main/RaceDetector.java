@@ -11,7 +11,6 @@ import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
 import com.runtimeverification.rvpredict.trace.MemoryAccessBlock;
-import com.runtimeverification.rvpredict.trace.MemoryAddr;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Logger;
 import com.runtimeverification.rvpredict.violation.Race;
@@ -79,10 +78,9 @@ public class RaceDetector {
                Set<Race> potentialRaces = Sets.newHashSet();
                blk1.forEach(e1 -> {
                   blk2.forEach(e2 -> {
-                      MemoryAddr addr = e1.getAddr();
                       if ((e1.isWrite() || e2.isWrite())
-                              && addr.equals(e2.getAddr())
-                              && (config.checkVolatile || !metadata.isVolatile(addr))
+                              && e1.getAddr() == e2.getAddr()
+                              && (config.checkVolatile || !metadata.isVolatile(e1.getAddr()))
                               && !trace.isInsideClassInitializer(e1)
                               && !trace.isInsideClassInitializer(e2)) {
                           potentialRaces.add(new Race(e1, e2, trace, metadata));

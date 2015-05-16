@@ -250,8 +250,8 @@ struct LocationMetadata {
 
   void parse(MDNode *MDN) {
     assert(MDN->getNumOperands() == 3);
-    MDString *MDFilename = cast<MDString>(MDN->getOperand(0));
-    Filename = MDFilename->getString();
+    MDString *DIFilename = cast<MDString>(MDN->getOperand(0));
+    Filename = DIFilename->getString();
     LineNo =
         mdconst::extract<ConstantInt>(MDN->getOperand(1))->getLimitedValue();
     ColumnNo =
@@ -1452,16 +1452,10 @@ bool AddressSanitizer::doInitialization(Module &M) {
   IntptrTy = Type::getIntNTy(*C, LongSize);
   TargetTriple = Triple(M.getTargetTriple());
 
-  AsanCtorFunction =
-      Function::Create(FunctionType::get(Type::getVoidTy(*C), false),
-                       GlobalValue::InternalLinkage, kAsanModuleCtorName, &M);
-  BasicBlock *AsanCtorBB = BasicBlock::Create(*C, "", AsanCtorFunction);
-  // call __asan_init in the module ctor.
-  IRBuilder<> IRB(ReturnInst::Create(*C, AsanCtorBB));
-  AsanInitFunction = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction(kAsanInitName, IRB.getVoidTy(), nullptr));
-  AsanInitFunction->setLinkage(Function::ExternalLinkage);
-  IRB.CreateCall(AsanInitFunction);
+  std::tie(AsanCtorFunction, AsanInitFunction) =
+      createSanitizerCtorAndInitFunctions(M, kAsanModuleCtorName, kAsanInitName,
+                                          /*InitArgTypes=*/{},
+                                          /*InitArgs=*/{});
 
   Mapping = getShadowMapping(TargetTriple, LongSize);
 
@@ -1946,8 +1940,7 @@ AllocaInst *FunctionStackPoisoner::findAllocaForValue(Value *V) {
   if (CastInst *CI = dyn_cast<CastInst>(V))
     Res = findAllocaForValue(CI->getOperand(0));
   else if (PHINode *PN = dyn_cast<PHINode>(V)) {
-    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-      Value *IncValue = PN->getIncomingValue(i);
+    for (Value *IncValue : PN->incoming_values()) {
       // Allow self-referencing phi-nodes.
       if (IncValue == PN) continue;
       AllocaInst *IncValueAI = findAllocaForValue(IncValue);

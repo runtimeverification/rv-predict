@@ -50,18 +50,13 @@ public class SMTConstraintBuilder {
     private final Trace trace;
 
     /**
-     * Maps each event to its group ID in the contracted MHB graph.
+     * Keeps track of the must-happen-before (MHB) relations in paper.
      * <p>
-     * The must-happens-before (MHB) relations form a special DAG where only a
+     * The must-happen-before (MHB) relations form a special DAG where only a
      * few nodes have more than one outgoing edge. To speed up the reachability
      * query between two nodes, we first collapsed the DAG as much as possible.
      */
-    private final int[] groupId;
-
-    /**
-     * Keeps track of the must-happens-before (MHB) relations in paper.
-     */
-    private final TransitiveClosure mhbClosure = new TransitiveClosure();
+    private TransitiveClosure mhbClosure;
 
     private final LockSetEngine lockEngine = new LockSetEngine();
 
@@ -87,7 +82,6 @@ public class SMTConstraintBuilder {
 
     public SMTConstraintBuilder(Configuration config, Trace trace) {
         this.trace = trace;
-        this.groupId = new int[trace.getSize()];
         this.solver = new Z3Wrapper(config);
     }
 
@@ -113,31 +107,25 @@ public class SMTConstraintBuilder {
         return (int) (event.getGID() - trace.getBaseGID());
     }
 
-    private int getGroupId(Event e) {
-        return groupId[getRelativeIdx(e)];
-    }
-
-    private void setGroupId(Event e, int id) {
-        groupId[getRelativeIdx(e)] = id;
-    }
-
     /**
      * Adds must-happen-before (MHB) constraints.
      */
     public void addPhiMHB() {
+        TransitiveClosure.Builder mhbClosureBuilder = TransitiveClosure.builder(trace.getSize());
+
         /* build intra-thread program order constraint */
         for (List<Event> events : trace.perThreadView()) {
-            setGroupId(events.get(0), mhbClosure.getAndIncrementElementID());
+            mhbClosureBuilder.createNewGroup(getRelativeIdx(events.get(0)));
             for (int i = 1; i < events.size(); i++) {
                 Event e1 = events.get(i - 1);
                 Event e2 = events.get(i);
                 formulaBuilder.add(getAsstHappensBefore(e1, e2));
                 /* every group should start with a join event and end with a start event */
                 if (e1.isStart() || e2.isJoin()) {
-                    setGroupId(e2, mhbClosure.getAndIncrementElementID());
-                    mhbClosure.addRelation(getGroupId(e1), getGroupId(e2));
+                    mhbClosureBuilder.createNewGroup(getRelativeIdx(e2));
+                    mhbClosureBuilder.addRelation(getRelativeIdx(e1), getRelativeIdx(e2));
                 } else {
-                    setGroupId(e2, getGroupId(e1));
+                    mhbClosureBuilder.addToGroup(getRelativeIdx(e2), getRelativeIdx(e1));
                 }
             }
         }
@@ -148,16 +136,18 @@ public class SMTConstraintBuilder {
                 Event fst = trace.getFirstEvent(event.getSyncObject());
                 if (fst != null) {
                     formulaBuilder.add(getAsstHappensBefore(event, fst));
-                    mhbClosure.addRelation(getGroupId(event), getGroupId(fst));
+                    mhbClosureBuilder.addRelation(getRelativeIdx(event), getRelativeIdx(fst));
                 }
             } else if (event.isJoin()) {
                 Event last = trace.getLastEvent(event.getSyncObject());
                 if (last != null) {
                     formulaBuilder.add(getAsstHappensBefore(last, event));
-                    mhbClosure.addRelation(getGroupId(last), getGroupId(event));
+                    mhbClosureBuilder.addRelation(getRelativeIdx(last), getRelativeIdx(event));
                 }
             }
         });
+
+        mhbClosure = mhbClosureBuilder.build();
     }
 
     /**
@@ -281,7 +271,7 @@ public class SMTConstraintBuilder {
      * Checks if one event happens before another.
      */
     public boolean happensBefore(Event e1, Event e2) {
-        return mhbClosure.inRelation(getGroupId(e1), getGroupId(e2));
+        return mhbClosure.inRelation(getRelativeIdx(e1), getRelativeIdx(e2));
     }
 
     public boolean isRace(Event e1, Event e2) {
@@ -299,10 +289,6 @@ public class SMTConstraintBuilder {
                 .INT_EQUAL(new OrderVariable(e1), new OrderVariable(e2)));
 
         return solver.isSat(raceAsstBuilder.build());
-    }
-
-    public void finish() {
-        mhbClosure.finish();
     }
 
 }

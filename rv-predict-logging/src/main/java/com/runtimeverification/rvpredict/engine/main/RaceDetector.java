@@ -65,7 +65,6 @@ public class RaceDetector {
 
         cnstrBuilder.addPhiMHB();
         cnstrBuilder.addPhiLock();
-        cnstrBuilder.finish();
 
         for (MemoryAccessBlock blk1 : trace.getMemoryAccessBlocks()) {
             for (MemoryAccessBlock blk2 : trace.getMemoryAccessBlocks()) {

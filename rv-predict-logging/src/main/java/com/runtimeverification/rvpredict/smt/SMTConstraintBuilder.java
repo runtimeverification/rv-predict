@@ -168,7 +168,7 @@ public class SMTConstraintBuilder {
      */
     public void addLockingConstraints() {
         trace.getLockIdToLockRegions().forEach((lockId, lockRegions) -> {
-            lockEngine.addAll(lockRegions);
+            lockRegions.forEach(lockEngine::add);
 
             /* assert lock regions mutual exclusion */
             lockRegions.forEach(lr1 -> {

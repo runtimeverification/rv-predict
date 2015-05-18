@@ -37,9 +37,22 @@ append_no_rtti_flag(ASAN_CFLAGS)
 set(ASAN_COMMON_DEFINITIONS
   ASAN_HAS_EXCEPTIONS=1)
 
+set(ASAN_DYNAMIC_LINK_FLAGS)
+
 if(ANDROID)
   list(APPEND ASAN_COMMON_DEFINITIONS
     ASAN_LOW_MEMORY=1)
+# On Android, -z global does not do what it is documented to do.
+# On Android, -z global moves the library ahead in the lookup order,
+# placing it right after the LD_PRELOADs. This is used to compensate for the fact
+# that Android linker does not look at the dependencies of the main executable
+# that aren't dependencies of the current DSO when resolving symbols from said DSO.
+# As a net result, this allows running ASan executables without LD_PRELOAD-ing the
+# ASan runtime library.
+# The above is applicable to L MR1 or newer.
+  if (COMPILER_RT_HAS_Z_GLOBAL)
+    list(APPEND ASAN_DYNAMIC_LINK_FLAGS -Wl,-z,global)
+  endif()
 endif()
 
 set(ASAN_DYNAMIC_DEFINITIONS
@@ -132,6 +145,17 @@ else()
       DEFS ${ASAN_COMMON_DEFINITIONS})
     add_dependencies(asan clang_rt.asan-preinit-${arch})
 
+    if (UNIX AND NOT ${arch} MATCHES "i386|i686")
+      add_sanitizer_rt_version_list(clang_rt.asan-dynamic-${arch}
+                                    LIB clang_rt.asan-${arch} clang_rt.asan_cxx-${arch}
+                                    EXTRA asan.syms.extra)
+      add_dependencies(asan clang_rt.asan-dynamic-${arch}-version-list)
+      set(VERSION_SCRIPT_FLAG
+           -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/clang_rt.asan-dynamic-${arch}.vers)
+    else()
+      set(VERSION_SCRIPT_FLAG)
+    endif()
+
     if (WIN32)
       set(SHARED_ASAN_NAME clang_rt.asan_dynamic-${arch}${COMPILER_RT_OS_SUFFIX})
     else()
@@ -143,11 +167,14 @@ else()
               $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>
               ${ASAN_COMMON_RUNTIME_OBJECTS}
       CFLAGS ${ASAN_DYNAMIC_CFLAGS}
+      LINKFLAGS ${ASAN_DYNAMIC_LINK_FLAGS}
+                ${VERSION_SCRIPT_FLAG}
       DEFS ${ASAN_DYNAMIC_DEFINITIONS})
     target_link_libraries(clang_rt.asan-dynamic-${arch} ${ASAN_DYNAMIC_LIBS})
     add_dependencies(asan clang_rt.asan-dynamic-${arch})
 
     if (UNIX AND NOT ${arch} MATCHES "i386|i686")
+      add_dependencies(clang_rt.asan-dynamic-${arch} clang_rt.asan-dynamic-${arch}-version-list)
       add_sanitizer_rt_symbols(clang_rt.asan_cxx-${arch})
       add_dependencies(asan clang_rt.asan_cxx-${arch}-symbols)
       add_sanitizer_rt_symbols(clang_rt.asan-${arch} asan.syms.extra)

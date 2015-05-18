@@ -47,22 +47,21 @@ public class LLVMTraceCache extends TraceCache {
             return null;
         }
         String[] parts = line.substring(line.indexOf('<') + 1, line.lastIndexOf('>')).split(";");
-        assert parts.length == 10;
+        assert parts.length == 9;
         long gid = parseLong("gid", parts[0]);
         long tid = parseLong("tid", parts[1]);
         long id = parseLong("id", parts[2]);
-        long addrl = parseLong("addrl", parts[3]);
-        long addrr = parseLong("addrr", parts[4]);
-        long value = parseLong("value", parts[5]);
-        EventType type = parseType("type", parts[6]);
-        String fn = parseString("fn", parts[7]);
-        String file = parseString("file", parts[8]);
-        int ln = (int) parseLong("line", parts[9]);
-        System.out.printf("<gid:%d;tid:%d;id:%d;addrl:%d;addrr:%d;value:%d;type:%s;fn:%s;file:%s;line:%d>%n",
-                gid, tid, id, addrl, addrr, value, type.toString(), fn, file, ln);
+        long addr = parseLong("addr", parts[3]);
+        long value = parseLong("value", parts[4]);
+        EventType type = parseType("type", parts[5]);
+        String fn = parseString("fn", parts[6]);
+        String file = parseString("file", parts[7]);
+        int ln = (int) parseLong("line", parts[8]);
+        System.out.printf("<gid:%d;tid:%d;id:%d;addr:%d;value:%d;type:%s;fn:%s;file:%s;line:%d>%n",
+                gid, tid, id, addr, value, type.toString(), fn, file, ln);
         gid = globalId.incrementAndGet();
         id = metadata.getLocationId(String.format("<id:%d;fn:%s;file:%s;line:%d>", id, fn, file, ln));
-        return new Event(gid, tid, (int) id, (int) addrl, (int) addrr, value, type);
+        return new Event(gid, tid, (int) id, addr, value, type);
 
     }
 

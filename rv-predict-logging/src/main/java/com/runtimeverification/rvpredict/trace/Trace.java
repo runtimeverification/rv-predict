@@ -28,6 +28,9 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.trace;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -67,17 +70,17 @@ public class Trace {
     /**
      * Map from memory addresses to write events ordered by global ID.
      */
-    private final Map<MemoryAddr, List<Event>> addrToWriteEvents = Maps.newHashMap();
+    private final Long2ObjectMap<List<Event>> addrToWriteEvents = new Long2ObjectLinkedOpenHashMap<>();
 
     /**
-     * Lists of {@code MemoryAccessEvent}'s indexed by address and thread ID.
+     * List of memory access blocks.
      */
-    private final Table<MemoryAddr, Long, List<Event>> memAccessEventsTbl = HashBasedTable.create();
+    private final List<MemoryAccessBlock> memoryAccessBlocks = Lists.newArrayList();
 
     /**
      * Map from memory addresses referenced in this trace segment to their states.
      */
-    private final Map<MemoryAddr, MemoryAddrState> addrToState = Maps.newHashMap();
+    private final Long2ObjectMap<MemoryAddrState> addrToState = new Long2ObjectLinkedOpenHashMap<>();
 
     /**
      * The initial states for all threads referenced in this trace segment.
@@ -128,7 +131,7 @@ public class Trace {
         // This method can be further improved to skip an entire window ASAP
         // For example, if this window contains no race candidate determined
         // by some static analysis then we can safely skip it
-        return !memAccessEventsTbl.isEmpty();
+        return !memoryAccessBlocks.isEmpty();
     }
 
     /**
@@ -138,7 +141,7 @@ public class Trace {
      *            the address
      * @return the initial value
      */
-    public long getInitValueOf(MemoryAddr addr) {
+    public long getInitValueOf(long addr) {
         return addrToState.get(addr).initVal;
     }
 
@@ -164,17 +167,12 @@ public class Trace {
         return lockIdToLockRegions;
     }
 
-    public List<Event> getWriteEvents(MemoryAddr addr) {
+    public List<Event> getWriteEvents(long addr) {
         return addrToWriteEvents.getOrDefault(addr, Collections.emptyList());
     }
 
-    public Set<MemoryAddr> getMemoryAddresses() {
-        return memAccessEventsTbl.rowKeySet();
-    }
-
-    public Table<MemoryAddr, Long, List<Event>> getMemAccessEventsTable() {
-        // TODO(YilongL): the API of Trace should not expose the memory access events table
-        return memAccessEventsTbl;
+    public List<MemoryAccessBlock> getMemoryAccessBlocks() {
+        return memoryAccessBlocks;
     }
 
     public boolean isInsideClassInitializer(Event event) {
@@ -261,6 +259,8 @@ public class Trace {
         return readEvents;
     }
 
+    private static final Function<Object, ? extends List<Event>> NEW_EVENT_LIST = p -> new ArrayList<>();
+
     private void processEvents() {
         /// PHASE 1
         Map<Long, Map<Event, Event>> tidToLockPairs = Maps.newHashMap();
@@ -279,7 +279,7 @@ public class Trace {
                 MemoryAddrState st = addrToState.computeIfAbsent(event.getAddr(),
                         addr -> new MemoryAddrState(state.getValueAt(addr)));
                 if (event.isRead()) {
-                    st.readBy(tid);
+                    st.readBy(tid, i);
                 } else {
                     st.writtenBy(tid, i);
                 }
@@ -317,13 +317,17 @@ public class Trace {
 
         /* update memory address value */
         addrToState.forEach((addr, st) -> {
-            if (st.lastWrite >= 0) {
-                state.writeValueAt(addr, events[st.lastWrite].getValue());
+            int lastAccess = Math.max(st.lastRead, st.lastWrite);
+            if (lastAccess >= 0) {
+                /* use the value of the last access to update state, instead of
+                 * that of the last write, to recover from potential missing
+                 * write events */
+                state.writeValueAt(addr, events[lastAccess].getValue());
             }
         });
 
         /* compute shared memory addresses */
-        Set<MemoryAddr> sharedAddr = new HashSet<>();
+        Set<Long> sharedAddr = new HashSet<>();
         addrToState.forEach((addr, state) -> {
             if (state.isWriteShared()) {
                 sharedAddr.add(addr);
@@ -332,7 +336,6 @@ public class Trace {
 
         /// PHASE 2
         if (!sharedAddr.isEmpty()) {
-            long baseGID = events[0].getGID();
             boolean[] critical = new boolean[numOfEvents];
             Map<Long, Map<Integer, Integer>> tidToOpenLockIndices = new HashMap<>();
             tidToLockPairs.forEach((tid, pairs) -> {
@@ -392,12 +395,57 @@ public class Trace {
                 }
             }
 
-            /* finally commit all critical events into this window */
+            /* commit all critical events into this window */
+            Map<Long, List<Event>> tidToCrntBlock = new HashMap<>();
             for (int i = 0; i < numOfEvents; i++) {
                 if (critical[i]) {
-                    addCriticalEvent(events[i]);
+                    Event event = events[i];
+//                    System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
+                    long tid = event.getTID();
+
+                    /* update memory access blocks */
+                    boolean endCrntBlock;
+                    if (event.isSyncEvent()) {
+                        endCrntBlock = true;
+                    } else if (event.isReadOrWrite()) {
+                        Event lastEvent = Iterables.getLast(
+                                tidToEvents.getOrDefault(tid, Collections.emptyList()), null);
+                        if (event.isRead()) {
+                            /* Optimization: merge consecutive read events that are equivalent */
+                            endCrntBlock = !(lastEvent != null && lastEvent.isRead()
+                                    && lastEvent.getAddr() == event.getAddr()
+                                    && lastEvent.getValue() == event.getValue());
+                        } else {
+                            endCrntBlock = lastEvent != null && lastEvent.isRead();
+                        }
+                    } else {
+                        throw new IllegalStateException("Unexpected critical event: " + event);
+                    }
+                    if (endCrntBlock) {
+                        /* end the current block and then start a new one */
+                        List<Event> oldBlk = tidToCrntBlock.get(tid);
+                        if (oldBlk != null && !oldBlk.isEmpty()) {
+                            memoryAccessBlocks.add(new MemoryAccessBlock(oldBlk));
+                            tidToCrntBlock.put(tid, new ArrayList<>());
+                        }
+                    }
+                    if (event.isReadOrWrite()) {
+                        /* append to the current block */
+                        tidToCrntBlock.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
+                    }
+
+                    /* update tidToEvents & addrToWriteEvents */
+                    tidToEvents.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
+                    if (event.isWrite()) {
+                        addrToWriteEvents.computeIfAbsent(event.getAddr(), NEW_EVENT_LIST).add(event);
+                    }
                 }
             }
+            tidToCrntBlock.values().forEach(blk -> {
+                if (!blk.isEmpty()) {
+                    memoryAccessBlocks.add(new MemoryAccessBlock(blk));
+                }
+            });
         }
     }
 
@@ -406,6 +454,7 @@ public class Trace {
     }
 
     private static class MemoryAddrState {
+        int lastRead = -1;
         int lastWrite = -1;
         final long initVal;
         long reader1, reader2;
@@ -415,7 +464,8 @@ public class Trace {
             initVal = value;
         }
 
-        void readBy(long tid) {
+        void readBy(long tid, int idx) {
+            lastRead = idx;
             if (reader1 == 0) {
                 reader1 = tid;
             } else if (reader1 != tid && reader2 == 0) {
@@ -435,21 +485,6 @@ public class Trace {
         boolean isWriteShared() {
             return writer2 != 0 || writer1 != 0
                     && (reader1 != 0 && reader1 != writer1 || reader2 != 0 && reader2 != writer1);
-        }
-    }
-
-    private static final Function<Object, ? extends List<Event>> NEW_EVENT_LIST = p -> new ArrayList<>();
-
-    private void addCriticalEvent(Event event) {
-//        System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
-        long tid = event.getTID();
-        tidToEvents.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
-        if (event.isReadOrWrite()) {
-            MemoryAddr addr = event.getAddr();
-            memAccessEventsTbl.row(addr).computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
-            if (event.isWrite()) {
-                addrToWriteEvents.computeIfAbsent(addr, NEW_EVENT_LIST).add(event);
-            }
         }
     }
 

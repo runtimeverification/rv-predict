@@ -1,7 +1,5 @@
 package com.runtimeverification.rvpredict.log;
 
-import com.runtimeverification.rvpredict.trace.MemoryAddr;
-
 /**
  * Class for representing an event as it is recorded in the log
  * @author TraianSF
@@ -10,8 +8,7 @@ public class Event implements Comparable<Event> {
     private long GID;
     private long TID;
     private int ID;
-    private int ADDRL;
-    private int ADDRR;
+    private long ADDR;
     private long VALUE;
     private EventType TYPE;
 
@@ -44,12 +41,11 @@ public class Event implements Comparable<Event> {
      * @param value value for events carrying a value
      * @param type type of event
      */
-    public Event(long gid, long tid, int id, int addrl, int addrr, long value, EventType type) {
+    public Event(long gid, long tid, int id, long addr, long value, EventType type) {
         this.GID = gid;
         this.TID = tid;
         this.ID = id;
-        this.ADDRL = addrl;
-        this.ADDRR = addrr;
+        this.ADDR = addr;
         this.VALUE = value;
         this.TYPE = type;
     }
@@ -94,22 +90,22 @@ public class Event implements Comparable<Event> {
         TYPE = type;
     }
 
-    public void setAddrl(int addrl) {
-        ADDRL = addrl;
+    public void setAddr(long addr) {
+        ADDR = addr;
     }
 
-    public void setAddrr(int addrr) {
-        ADDRR = addrr;
-    }
-
-    public MemoryAddr getAddr() {
+    public long getAddr() {
         assert isReadOrWrite();
-        return new MemoryAddr(ADDRL, ADDRR);
+        return ADDR;
+    }
+
+    public int getFieldIdOrArrayIndex() {
+        return (int) getAddr();
     }
 
     public long getSyncObject() {
         assert getType().isSyncType();
-        return (long)ADDRL << 32 | ADDRR & 0xFFFFFFFFL;
+        return ADDR;
     }
 
     public long getLockId() {
@@ -184,7 +180,12 @@ public class Event implements Comparable<Event> {
     @Override
     public String toString() {
         if (isReadOrWrite()) {
-            return String.format("(%s, E%s, T%s, L%s, %s, %s)", TYPE, GID, TID, ID, getAddr(),
+            int addrl = (int) (ADDR >> 32);
+            int addrr = getFieldIdOrArrayIndex();
+            String addr = addrr < 0 ?
+                    Integer.toHexString(addrl) + "." + -addrr :
+                    Integer.toHexString(addrl) + "[" + addrr + "]";
+            return String.format("(%s, E%s, T%s, L%s, %s, %s)", TYPE, GID, TID, ID, addr,
                     Long.toHexString(VALUE));
         } else if (isSyncEvent()) {
             return String.format("(%s, E%s, T%s, L%s, %s)", TYPE, GID, TID, ID,
@@ -197,7 +198,7 @@ public class Event implements Comparable<Event> {
     }
 
     public Event copy() {
-        return new Event(GID, TID, ID, ADDRL, ADDRR, VALUE, TYPE);
+        return new Event(GID, TID, ID, ADDR, VALUE, TYPE);
     }
 
 }

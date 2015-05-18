@@ -176,7 +176,7 @@ public class SMTConstraintBuilder {
      * however, this {@code event} is allowed to read or write a different value
      * than in the original trace.
      */
-    public Formula getPhiAbs(Event event) {
+    private Formula getPhiAbs(Event event) {
         if (computedAbstractPhi.contains(event)) {
             return new AbstractPhiVariable(event);
         }
@@ -261,20 +261,19 @@ public class SMTConstraintBuilder {
     }
 
     /**
-     * Checks if two {@code MemoryAccessEvent} hold a common lock.
-     */
-    public boolean hasCommonLock(Event e1, Event e2) {
-        return lockEngine.hasCommonLock(e1, e2);
-    }
-
-    /**
      * Checks if one event happens before another.
      */
-    public boolean happensBefore(Event e1, Event e2) {
+    private boolean happensBefore(Event e1, Event e2) {
         return mhbClosure.inRelation(getRelativeIdx(e1), getRelativeIdx(e2));
     }
 
     public boolean isRace(Event e1, Event e2) {
+        /* not a race if the two events hold a common lock or one event
+         * happens-before the other */
+        if (lockEngine.hasCommonLock(e1, e2) || happensBefore(e1, e2) || happensBefore(e2, e1)) {
+            return false;
+        }
+
         FormulaTerm.Builder raceAsstBuilder = FormulaTerm.andBuilder();
         raceAsstBuilder.add(formulaBuilder.build());
         raceAsstBuilder.add(getPhiAbs(e1));

@@ -7,7 +7,6 @@ import java.util.Set;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
 import com.runtimeverification.rvpredict.trace.MemoryAccessBlock;
@@ -89,21 +88,9 @@ public class RaceDetector {
                    continue;
                }
 
-               /* not a race if the two events hold a common lock */
-               Event e1 = Iterables.getFirst(blk1, null);
-               Event e2 = Iterables.getFirst(blk2, null);
-               if (cnstrBuilder.hasCommonLock(e1, e2)) {
-                   continue;
-               }
-
-               /* not a race if one event happens-before the other */
-               if (cnstrBuilder.happensBefore(e1, e2)
-                       || cnstrBuilder.happensBefore(e2, e1)) {
-                   continue;
-               }
-
                /* start building constraints for MCM */
-               if (cnstrBuilder.isRace(e1, e2)) {
+                if (cnstrBuilder.isRace(Iterables.getFirst(blk1, null),
+                        Iterables.getFirst(blk2, null))) {
                    potentialRaces.forEach(race -> {
                        if (races.add(race)) {
                            String report = config.simple_report ?

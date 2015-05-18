@@ -604,7 +604,7 @@ void PrintMatchedBenignRaces();
 # define DPrintf2(...)
 #endif
 
-void RVEventFile(u64 gid, u64 tid, u64 id, u64 addrl, u64 addrr, u64 value, const char* type);
+void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 value, const char* type);
 
 u32 CurrentStackId(ThreadState *thr, uptr pc);
 ReportStack *SymbolizeStackId(u32 stack_id);

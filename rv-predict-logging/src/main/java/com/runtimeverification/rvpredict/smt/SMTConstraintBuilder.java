@@ -61,7 +61,7 @@ public class SMTConstraintBuilder {
     /**
      * Keeps track of the must-happens-before (MHB) relations in paper.
      */
-    private final TransitiveClosure closure = new TransitiveClosure();
+    private final TransitiveClosure mhbClosure = new TransitiveClosure();
 
     private final LockSetEngine lockEngine = new LockSetEngine();
 
@@ -83,7 +83,7 @@ public class SMTConstraintBuilder {
     private final Set<Event> computedConcretePhi = Sets.newHashSet();
 
     // constraints below
-    private final FormulaTerm.Builder smtlibAssertionBuilder = FormulaTerm.andBuilder();
+    private final FormulaTerm.Builder formulaBuilder = FormulaTerm.andBuilder();
 
     public SMTConstraintBuilder(Configuration config, Trace trace) {
         this.trace = trace;
@@ -103,8 +103,8 @@ public class SMTConstraintBuilder {
                 lock != null ? lock : trace.getFirstEvent(lockRegion2.getTID()));
     }
 
-    private void assertMutualExclusion(LockRegion lockRegion1, LockRegion lockRegion2) {
-        smtlibAssertionBuilder.add(FormulaTerm.OR(
+    private void assertMutex(LockRegion lockRegion1, LockRegion lockRegion2) {
+        formulaBuilder.add(FormulaTerm.OR(
                 getAsstLockRegionHappensBefore(lockRegion1, lockRegion2),
                 getAsstLockRegionHappensBefore(lockRegion2, lockRegion1)));
     }
@@ -122,42 +122,39 @@ public class SMTConstraintBuilder {
     }
 
     /**
-     * Adds program order constraints.
+     * Adds must-happen-before (MHB) constraints.
      */
-    public void addIntraThreadConstraints() {
+    public void addPhiMHB() {
+        /* build intra-thread program order constraint */
         for (List<Event> events : trace.perThreadView()) {
-            setGroupId(events.get(0), closure.nextElemId());
+            setGroupId(events.get(0), mhbClosure.getAndIncrementElementID());
             for (int i = 1; i < events.size(); i++) {
                 Event e1 = events.get(i - 1);
                 Event e2 = events.get(i);
-                smtlibAssertionBuilder.add(getAsstHappensBefore(e1, e2));
+                formulaBuilder.add(getAsstHappensBefore(e1, e2));
                 /* every group should start with a join event and end with a start event */
                 if (e1.isStart() || e2.isJoin()) {
-                    setGroupId(e2, closure.nextElemId());
-                    closure.addRelation(getGroupId(e1), getGroupId(e2));
+                    setGroupId(e2, mhbClosure.getAndIncrementElementID());
+                    mhbClosure.addRelation(getGroupId(e1), getGroupId(e2));
                 } else {
                     setGroupId(e2, getGroupId(e1));
                 }
             }
         }
-    }
 
-    /**
-     * Adds thread start/join constraints.
-     */
-    public void addThreadStartJoinConstraints() {
+        /* build inter-thread synchronization constraint */
         Iterables.concat(trace.perThreadView()).forEach(event -> {
             if (event.isStart()) {
                 Event fst = trace.getFirstEvent(event.getSyncObject());
                 if (fst != null) {
-                    smtlibAssertionBuilder.add(getAsstHappensBefore(event, fst));
-                    closure.addRelation(getGroupId(event), getGroupId(fst));
+                    formulaBuilder.add(getAsstHappensBefore(event, fst));
+                    mhbClosure.addRelation(getGroupId(event), getGroupId(fst));
                 }
             } else if (event.isJoin()) {
                 Event last = trace.getLastEvent(event.getSyncObject());
                 if (last != null) {
-                    smtlibAssertionBuilder.add(getAsstHappensBefore(last, event));
-                    closure.addRelation(getGroupId(last), getGroupId(event));
+                    formulaBuilder.add(getAsstHappensBefore(last, event));
+                    mhbClosure.addRelation(getGroupId(last), getGroupId(event));
                 }
             }
         });
@@ -166,7 +163,7 @@ public class SMTConstraintBuilder {
     /**
      * Adds lock mutual exclusion constraints.
      */
-    public void addLockingConstraints() {
+    public void addPhiLock() {
         trace.getLockIdToLockRegions().forEach((lockId, lockRegions) -> {
             lockRegions.forEach(lockEngine::add);
 
@@ -175,7 +172,7 @@ public class SMTConstraintBuilder {
                 lockRegions.forEach(lr2 -> {
                     if (lr1.getTID() < lr2.getTID()
                             && (lr1.isWriteLocked() || lr2.isWriteLocked())) {
-                        assertMutualExclusion(lr1, lr2);
+                        assertMutex(lr1, lr2);
                     }
                 });
             });
@@ -284,12 +281,12 @@ public class SMTConstraintBuilder {
      * Checks if one event happens before another.
      */
     public boolean happensBefore(Event e1, Event e2) {
-        return closure.inRelation(getGroupId(e1), getGroupId(e2));
+        return mhbClosure.inRelation(getGroupId(e1), getGroupId(e2));
     }
 
     public boolean isRace(Event e1, Event e2) {
         FormulaTerm.Builder raceAsstBuilder = FormulaTerm.andBuilder();
-        raceAsstBuilder.add(smtlibAssertionBuilder.build());
+        raceAsstBuilder.add(formulaBuilder.build());
         raceAsstBuilder.add(getPhiAbs(e1));
         raceAsstBuilder.add(getPhiAbs(e2));
         abstractPhi.forEach((e, phi) -> {
@@ -305,7 +302,7 @@ public class SMTConstraintBuilder {
     }
 
     public void finish() {
-        closure.finish();
+        mhbClosure.finish();
     }
 
 }

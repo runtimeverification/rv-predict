@@ -8,7 +8,7 @@ import com.google.common.collect.Lists;
 
 public class TransitiveClosure {
 
-    private int nextElemId = 0;
+    private int elementID = 0;
 
     private boolean finalized;
 
@@ -16,11 +16,11 @@ public class TransitiveClosure {
 
     private boolean[][] inRelation;
 
-    public int nextElemId() {
+    public int getAndIncrementElementID() {
         if (finalized) {
-            throw new RuntimeException("The transitive closure has been finalized.");
+            throw new IllegalStateException("The transitive closure has been finalized.");
         }
-        return nextElemId++;
+        return elementID++;
     }
 
     public void addRelation(int x, int y) {
@@ -39,13 +39,13 @@ public class TransitiveClosure {
 
     public void finish() {
         finalized = true;
-        inRelation = new boolean[nextElemId][nextElemId];
+        inRelation = new boolean[elementID][elementID];
         for (Pair<Integer, Integer> relation : relations) {
             inRelation[relation.getLeft()][relation.getRight()] = true;
         }
-        for (int k = 0; k < nextElemId; k++) {
-            for (int x = 0; x < nextElemId; x++) {
-                for (int y = 0; y < nextElemId; y++) {
+        for (int k = 0; k < elementID; k++) {
+            for (int x = 0; x < elementID; x++) {
+                for (int y = 0; y < elementID; y++) {
                     inRelation[x][y] = inRelation[x][y] || inRelation[x][k] && inRelation[k][y];
                 }
             }

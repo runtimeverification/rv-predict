@@ -63,9 +63,8 @@ public class RaceDetector {
 
         SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config, trace);
 
-        cnstrBuilder.addIntraThreadConstraints();
-        cnstrBuilder.addThreadStartJoinConstraints();
-        cnstrBuilder.addLockingConstraints();
+        cnstrBuilder.addPhiMHB();
+        cnstrBuilder.addPhiLock();
         cnstrBuilder.finish();
 
         for (MemoryAccessBlock blk1 : trace.getMemoryAccessBlocks()) {

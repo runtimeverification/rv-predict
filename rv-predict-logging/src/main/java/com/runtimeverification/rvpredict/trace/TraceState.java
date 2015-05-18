@@ -1,8 +1,6 @@
 package com.runtimeverification.rvpredict.trace;
 
-import it.unimi.dsi.fastutil.longs.Long2LongMap;
-import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
-
+import it.unimi.dsi.fastutil.longs.Long2LongLinkedOpenHashMap;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -22,9 +20,18 @@ import com.runtimeverification.rvpredict.metadata.Metadata;
 public class TraceState {
 
     /**
+     * Limit the maximum number of entries in the {@link #addrToValue} map in
+     * order to avoid {@link OutOfMemoryError}.
+     * <p>
+     * TODO(YilongL): modify the code for building formula accordingly to avoid
+     * invalidating the entire window because of missing initial value.
+     */
+    private static final int NUM_OF_ADDR = 32 * 1024;
+
+    /**
      * Map from memory address to its value.
      */
-    private final Long2LongMap addrToValue = new Long2LongOpenHashMap();
+    private final Long2LongLinkedOpenHashMap addrToValue = new Long2LongLinkedOpenHashMap(NUM_OF_ADDR);
 
     /**
      * Map form thread ID to the current level of class initialization.
@@ -104,12 +111,15 @@ public class TraceState {
     }
 
     public void writeValueAt(long addr, long value) {
-        addrToValue.put(addr, value);
+        addrToValue.putAndMoveToFirst(addr, value);
+        if (addrToValue.size() > NUM_OF_ADDR) {
+            addrToValue.removeLastLong();
+        }
     }
 
     public long getValueAt(long addr) {
         // the default value of Long2LongMap is 0
-        return addrToValue.get(addr);
+        return addrToValue.getAndMoveToFirst(addr);
     }
 
     public ThreadState getThreadState(long tid) {

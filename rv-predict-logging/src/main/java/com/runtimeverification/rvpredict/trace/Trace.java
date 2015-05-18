@@ -355,13 +355,15 @@ public class Trace {
                     critical[i] = sharedAddr.contains(event.getAddr());
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
-                        if (tidToLockPairs.get(tid).containsKey(event)) {
+                        if (tidToLockPairs.getOrDefault(tid, Collections.emptyMap())
+                                .containsKey(event)) {
                             Event unlock = tidToLockPairs.get(tid).get(event);
                             tidToOpenLockIndices.get(tid).put(i,
                                     unlock == null ? null : getEventOffset(unlock));
                         }
                     } else if (event.isUnlock()) {
-                        tidToOpenLockIndices.get(tid).values().remove(i);
+                        tidToOpenLockIndices.getOrDefault(tid, Collections.emptyMap()).values()
+                                .remove(i);
                     } else {
                         critical[i] = true;
                     }

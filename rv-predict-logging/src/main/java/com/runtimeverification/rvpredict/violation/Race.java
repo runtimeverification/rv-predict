@@ -38,8 +38,13 @@ import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Constants;
 
 /**
- * Data race violation
+ * Represents a data race. A data race is uniquely identified by the two memory
+ * access events that it consists of. However, different races can have
+ * identical race signature, which is given by {@link Race#toString()}. For the
+ * purpose of race detection, we are more interested in races that have
+ * different signatures.
  *
+ * @author YilongL
  */
 public class Race {
 
@@ -48,7 +53,7 @@ public class Race {
     private final Trace trace;
 
     public Race(Event e1, Event e2, Trace trace) {
-        if (e1.getLocId() > e2.getLocId()) {
+        if (e1.getGID() > e2.getGID()) {
             Event tmp = e1;
             e1 = e2;
             e2 = tmp;
@@ -61,7 +66,7 @@ public class Race {
 
     @Override
     public int hashCode() {
-        return e1.getLocId() * 17 + e2.getLocId();
+        return e1.hashCode() * 31 + e2.hashCode();
     }
 
     @Override
@@ -71,7 +76,14 @@ public class Race {
         }
 
         Race otherRace = (Race) object;
-        return e1.getLocId() == otherRace.e1.getLocId() && e2.getLocId() == otherRace.e2.getLocId();
+        return e1.equals(otherRace.e1) && e2.equals(otherRace.e2);
+    }
+
+    @Override
+    public String toString() {
+        int min = Math.min(e1.getLocId(), e2.getLocId());
+        int max = Math.max(e1.getLocId(), e2.getLocId());
+        return "Race(" + min + "," + max + ")";
     }
 
     private String getRaceLocationSig() {
@@ -79,8 +91,7 @@ public class Race {
         return idx < 0 ? trace.metadata().getVariableSig(-idx).replace("/", ".") : "#" + idx;
     }
 
-    @Override
-    public String toString() {
+    public String generateSimpleRaceReport() {
         String stmtSig1 = trace.metadata().getLocationSig(e1.getLocId());
         String stmtSig2 = trace.metadata().getLocationSig(e2.getLocId());
         if (stmtSig1.compareTo(stmtSig2) > 0) {
@@ -88,7 +99,6 @@ public class Race {
             stmtSig1 = stmtSig2;
             stmtSig2 = tmp;
         }
-
 
         String locSig = getRaceLocationSig();
         return String.format("Race on %s between%s",
@@ -98,7 +108,8 @@ public class Race {
                 String.format(":%n    %s%n    %s%n", stmtSig1, stmtSig2));
     }
 
-    public String generateRaceReport() {
+
+    public String generateDetailedRaceReport() {
         String locSig = getRaceLocationSig();
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("Possible data race on %s: {{{%n",

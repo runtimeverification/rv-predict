@@ -80,7 +80,7 @@ public class RaceDetector {
                               && (config.checkVolatile || !metadata.isVolatile(e1.getAddr()))
                               && !trace.isInsideClassInitializer(e1)
                               && !trace.isInsideClassInitializer(e2)) {
-                          potentialRaces.add(new Race(e1, e2, trace, metadata));
+                          potentialRaces.add(new Race(e1, e2, trace));
                       }
                   });
                });

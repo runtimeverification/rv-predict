@@ -41,20 +41,13 @@ import com.runtimeverification.rvpredict.util.Constants;
  * Data race violation
  *
  */
-public class Race extends AbstractViolation {
+public class Race {
 
     private final Event e1;
     private final Event e2;
     private final Trace trace;
 
-    private final int locId1;
-    private final int locId2;
-    private final String varSig;
-    private final String stmtSig1;
-    private final String stmtSig2;
-
-    public Race(Event e1, Event e2, Trace trace,
-            Metadata metadata) {
+    public Race(Event e1, Event e2, Trace trace) {
         if (e1.getLocId() > e2.getLocId()) {
             Event tmp = e1;
             e1 = e2;
@@ -64,23 +57,11 @@ public class Race extends AbstractViolation {
         this.e1 = e1.copy();
         this.e2 = e2.copy();
         this.trace = trace;
-        locId1 = e1.getLocId();
-        locId2 = e2.getLocId();
-        int idx = e1.getFieldIdOrArrayIndex();
-        varSig = idx < 0 ? metadata.getVariableSig(-idx).replace("/", ".") : "#" + idx;
-        stmtSig1 = metadata.getLocationSig(locId1);
-        stmtSig2 = metadata.getLocationSig(locId2);
-        if (stmtSig1 == null) {
-            System.err.println("[Warning]: missing metadata for location ID " + locId1);
-        }
-        if (stmtSig2 == null) {
-            System.err.println("[Warning]: missing metadata for location ID " + locId2);
-        }
     }
 
     @Override
     public int hashCode() {
-        return locId1 * 17 + locId2;
+        return e1.getLocId() * 17 + e2.getLocId();
     }
 
     @Override
@@ -90,30 +71,38 @@ public class Race extends AbstractViolation {
         }
 
         Race otherRace = (Race) object;
-        return locId1 == otherRace.locId1 && locId2 == otherRace.locId2;
+        return e1.getLocId() == otherRace.e1.getLocId() && e2.getLocId() == otherRace.e2.getLocId();
+    }
+
+    private String getRaceLocationSig() {
+        int idx = e1.getFieldIdOrArrayIndex();
+        return idx < 0 ? trace.metadata().getVariableSig(-idx).replace("/", ".") : "#" + idx;
     }
 
     @Override
     public String toString() {
-        String stmtSig1 = this.stmtSig1;
-        String stmtSig2 = this.stmtSig2;
+        String stmtSig1 = trace.metadata().getLocationSig(e1.getLocId());
+        String stmtSig2 = trace.metadata().getLocationSig(e2.getLocId());
         if (stmtSig1.compareTo(stmtSig2) > 0) {
             String tmp = stmtSig1;
             stmtSig1 = stmtSig2;
             stmtSig2 = tmp;
         }
 
+
+        String locSig = getRaceLocationSig();
         return String.format("Race on %s between%s",
-            varSig.startsWith("#") ? "an array access" : "field " + varSig,
+            locSig.startsWith("#") ? "an array access" : "field " + locSig,
             stmtSig1.equals(stmtSig2) ?
                 String.format(" two instances of:%n    %s%n", stmtSig1) :
                 String.format(":%n    %s%n    %s%n", stmtSig1, stmtSig2));
     }
 
     public String generateRaceReport() {
+        String locSig = getRaceLocationSig();
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("Possible data race on %s: {{{%n",
-                (varSig.startsWith("#") ? "array element " : "field ") + varSig));
+                (locSig.startsWith("#") ? "array element " : "field ") + locSig));
 
         generateMemAccReport(e1, sb);
         sb.append(StandardSystemProperty.LINE_SEPARATOR.value());

@@ -10,8 +10,9 @@ import com.runtimeverification.rvpredict.log.Event;
  * constraint.
  * <p>
  * Without further control-flow information of the target program, every
- * {@code MemoryAccessBlock} contains at most one read event which must be last
- * event in the block.
+ * {@code MemoryAccessBlock} either contains at most one read event which must
+ * be last event in the block or solely consists of consecutive read events that
+ * differ only in their global ID.
  *
  * @author YilongL
  *

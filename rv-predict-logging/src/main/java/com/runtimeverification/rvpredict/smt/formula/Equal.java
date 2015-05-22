@@ -6,11 +6,11 @@ import com.runtimeverification.rvpredict.smt.visitors.Visitor;
  * @author TraianSF
  */
 public class Equal extends FormulaTerm {
-    protected Equal(OrderVariable left, OrderVariable right) {
+    protected Equal(IntFormula left, IntFormula right) {
         super(BooleanOperation.INT_EQUAL, left, right);
     }
 
-    protected Equal(Formula left, Formula right) {
+    protected Equal(BoolFormula left, BoolFormula right) {
         super(BooleanOperation.BOOL_EQUAL, left, right);
     }
 

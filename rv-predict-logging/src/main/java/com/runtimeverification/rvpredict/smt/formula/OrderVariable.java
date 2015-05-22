@@ -3,7 +3,7 @@ package com.runtimeverification.rvpredict.smt.formula;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.smt.visitors.Visitor;
 
-public class OrderVariable extends SMTVariable implements SMTFormula {
+public class OrderVariable extends SMTVariable implements IntFormula {
     /**
      * Prefix for naming variables belonging to this class.
      */
@@ -23,8 +23,4 @@ public class OrderVariable extends SMTVariable implements SMTFormula {
         return O;
     }
 
-    @Override
-    public Sort getSort() {
-        return Sort.Int;
-    }
 }

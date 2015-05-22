@@ -28,21 +28,29 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.smt;
 
-import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.smt.formula.*;
-import com.runtimeverification.rvpredict.trace.LockRegion;
-import com.runtimeverification.rvpredict.trace.Trace;
+import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.BOOL_EQUAL;
+import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.LESS_THAN;
+import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.OR;
 
-import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.smt.formula.AbstractPhiVariable;
+import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
+import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
+import com.runtimeverification.rvpredict.smt.formula.ConcretePhiVariable;
+import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
+import com.runtimeverification.rvpredict.smt.formula.OrderVariable;
+import com.runtimeverification.rvpredict.trace.LockRegion;
+import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Constants;
 
 public class SMTConstraintBuilder {
@@ -62,8 +70,8 @@ public class SMTConstraintBuilder {
 
     private final Solver solver;
 
-    private final Map<Event, Formula> abstractPhi = Maps.newHashMap();
-    private final Map<Event, Formula> concretePhi = Maps.newHashMap();
+    private final Map<Event, BoolFormula> abstractPhi = Maps.newHashMap();
+    private final Map<Event, BoolFormula> concretePhi = Maps.newHashMap();
 
     /**
      * Avoids infinite recursion when building the abstract feasibility
@@ -77,6 +85,8 @@ public class SMTConstraintBuilder {
      */
     private final Set<Event> computedConcretePhi = Sets.newHashSet();
 
+    private final Map<Event, OrderVariable> eventToOrderVar = new HashMap<>();
+
     // constraints below
     private final FormulaTerm.Builder formulaBuilder = FormulaTerm.andBuilder();
 
@@ -85,8 +95,12 @@ public class SMTConstraintBuilder {
         this.solver = new Z3Wrapper(config);
     }
 
+    private OrderVariable getOrderVariable(Event event) {
+        return eventToOrderVar.computeIfAbsent(event, p -> new OrderVariable(event));
+    }
+
     private FormulaTerm getAsstHappensBefore(Event event1, Event event2) {
-        return FormulaTerm.LESS_THAN(new OrderVariable(event1), new OrderVariable(event2));
+        return LESS_THAN(getOrderVariable(event1), getOrderVariable(event2));
     }
 
     private FormulaTerm getAsstLockRegionHappensBefore(LockRegion lockRegion1, LockRegion lockRegion2) {
@@ -98,7 +112,7 @@ public class SMTConstraintBuilder {
     }
 
     private void assertMutex(LockRegion lockRegion1, LockRegion lockRegion2) {
-        formulaBuilder.add(FormulaTerm.OR(
+        formulaBuilder.add(OR(
                 getAsstLockRegionHappensBefore(lockRegion1, lockRegion2),
                 getAsstLockRegionHappensBefore(lockRegion2, lockRegion1)));
     }
@@ -114,7 +128,7 @@ public class SMTConstraintBuilder {
         TransitiveClosure.Builder mhbClosureBuilder = TransitiveClosure.builder(trace.getSize());
 
         /* build intra-thread program order constraint */
-        for (List<Event> events : trace.perThreadView()) {
+        trace.threadViews().forEach(events -> {
             mhbClosureBuilder.createNewGroup(getRelativeIdx(events.get(0)));
             for (int i = 1; i < events.size(); i++) {
                 Event e1 = events.get(i - 1);
@@ -128,10 +142,10 @@ public class SMTConstraintBuilder {
                     mhbClosureBuilder.addToGroup(getRelativeIdx(e2), getRelativeIdx(e1));
                 }
             }
-        }
+        });
 
         /* build inter-thread synchronization constraint */
-        Iterables.concat(trace.perThreadView()).forEach(event -> {
+        trace.getInterThreadSyncEvents().forEach(event -> {
             if (event.isStart()) {
                 Event fst = trace.getFirstEvent(event.getSyncObject());
                 if (fst != null) {
@@ -176,7 +190,7 @@ public class SMTConstraintBuilder {
      * however, this {@code event} is allowed to read or write a different value
      * than in the original trace.
      */
-    private Formula getPhiAbs(Event event) {
+    private BoolFormula getPhiAbs(Event event) {
         if (computedAbstractPhi.contains(event)) {
             return new AbstractPhiVariable(event);
         }
@@ -196,7 +210,7 @@ public class SMTConstraintBuilder {
      * the same as in the original trace <b>if</b> the corresponding data-abstract
      * feasibility constraint is also satisfied.
      */
-    private Formula getPhiConc(Event event) {
+    private BoolFormula getPhiConc(Event event) {
         if (computedConcretePhi.contains(event)) {
             return new ConcretePhiVariable(event);
         } else if (event.getValue() == Constants._0X_DEADBEEFL) {
@@ -204,7 +218,7 @@ public class SMTConstraintBuilder {
         }
         computedConcretePhi.add(event);
 
-        Formula phi;
+        BoolFormula phi;
         if (event.isRead()) {
             List<Event> writeEvents = trace.getWriteEvents(event.getAddr());
 
@@ -229,7 +243,7 @@ public class SMTConstraintBuilder {
                     .filter(w -> w.getValue() == event.getValue()).collect(Collectors.toList());
 
             /* case 1: the read event reads the initial value */
-            Formula case1 = BooleanConstant.FALSE;
+            BoolFormula case1 = BooleanConstant.FALSE;
             if (sameThreadPredWrite == null &&
                     trace.getInitValueOf(event.getAddr()) == event.getValue()) {
                 FormulaTerm.Builder builder = FormulaTerm.andBuilder();
@@ -245,13 +259,13 @@ public class SMTConstraintBuilder {
                 builder.add(getAsstHappensBefore(w1, event));
                 predWrites.forEach(w2 -> {
                     if (w2.getValue() != w1.getValue() && !happensBefore(w2, w1)) {
-                        builder.add(FormulaTerm.OR(getAsstHappensBefore(w2, w1),
+                        builder.add(OR(getAsstHappensBefore(w2, w1),
                                 getAsstHappensBefore(event, w2)));
                     }
                 });
                 case2Builder.add(builder.build());
             });
-            phi = FormulaTerm.OR(case1, case2Builder.build());
+            phi = OR(case1, case2Builder.build());
         } else {
             phi = BooleanConstant.TRUE;
         }
@@ -279,13 +293,13 @@ public class SMTConstraintBuilder {
         raceAsstBuilder.add(getPhiAbs(e1));
         raceAsstBuilder.add(getPhiAbs(e2));
         abstractPhi.forEach((e, phi) -> {
-            raceAsstBuilder.add(FormulaTerm.BOOL_EQUAL(new AbstractPhiVariable(e), phi));
+            raceAsstBuilder.add(BOOL_EQUAL(new AbstractPhiVariable(e), phi));
         });
         concretePhi.forEach((e, phi) -> {
-            raceAsstBuilder.add(FormulaTerm.BOOL_EQUAL(new ConcretePhiVariable(e), phi));
+            raceAsstBuilder.add(BOOL_EQUAL(new ConcretePhiVariable(e), phi));
         });
         raceAsstBuilder.add(FormulaTerm
-                .INT_EQUAL(new OrderVariable(e1), new OrderVariable(e2)));
+                .INT_EQUAL(getOrderVariable(e1), getOrderVariable(e2)));
 
         return solver.isSat(raceAsstBuilder.build());
     }

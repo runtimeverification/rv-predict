@@ -159,8 +159,16 @@ public class Trace {
         return tidToEvents.getOrDefault(tid, Collections.emptyList());
     }
 
-    public Collection<List<Event>> perThreadView() {
+    public Collection<List<Event>> threadViews() {
         return tidToEvents.values();
+    }
+
+    public List<Event> getInterThreadSyncEvents() {
+        List<Event> events = new ArrayList<>();
+        tidToEvents.values().forEach(l -> {
+            l.stream().filter(e -> e.isStart() || e.isJoin()).forEach(events::add);
+        });
+        return events;
     }
 
     public Map<Long, List<LockRegion>> getLockIdToLockRegions() {

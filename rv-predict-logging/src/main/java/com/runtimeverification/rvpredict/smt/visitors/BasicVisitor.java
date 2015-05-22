@@ -73,6 +73,11 @@ public class BasicVisitor<TResult> implements Visitor<TResult> {
     }
 
     @Override
+    public void visit(IntConstant node) throws Exception {
+        visit((SMTConstant) node);
+    }
+
+    @Override
     public void visit(SMTVariable node) throws Exception {
         visit((SMTASTNode) node);
     }

@@ -5,13 +5,9 @@ import com.runtimeverification.rvpredict.log.Event;
 /**
  * Common functionality for Boolean variables.
  */
-public abstract class BooleanVariable extends SMTVariable implements Formula {
+public abstract class BooleanVariable extends SMTVariable implements BoolFormula {
     public BooleanVariable(Event event) {
         super(event);
     }
 
-    @Override
-    public Sort getSort() {
-        return Sort.Bool;
-    }
 }

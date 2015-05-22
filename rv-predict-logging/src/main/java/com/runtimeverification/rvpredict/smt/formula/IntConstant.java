@@ -2,12 +2,11 @@ package com.runtimeverification.rvpredict.smt.formula;
 
 import com.runtimeverification.rvpredict.smt.visitors.Visitor;
 
-public class BooleanConstant extends SMTConstant implements BoolFormula {
-    public static final BooleanConstant TRUE = new BooleanConstant(true);
-    public static final BooleanConstant FALSE = new BooleanConstant(false);
-    private final boolean value;
+public class IntConstant extends SMTConstant implements IntFormula {
 
-    private BooleanConstant(boolean value) {
+    private final long value;
+
+    public IntConstant(long value) {
         this.value = value;
     }
 

@@ -19,7 +19,6 @@ public interface Visitor<TResult> {
     void visit(IntConstant node) throws Exception;
     void visit(SMTVariable node) throws Exception;
     void visit(BooleanVariable node) throws Exception;
-    void visit(AbstractPhiVariable node) throws Exception;
     void visit(ConcretePhiVariable node) throws Exception;
     void visit(OrderVariable node) throws Exception;
     void visit(SMTASTNode node) throws Exception;

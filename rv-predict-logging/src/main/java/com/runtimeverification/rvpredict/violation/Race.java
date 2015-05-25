@@ -64,6 +64,14 @@ public class Race {
         this.trace = trace;
     }
 
+    public Event firstEvent() {
+        return e1;
+    }
+
+    public Event secondEvent() {
+        return e2;
+    }
+
     @Override
     public int hashCode() {
         return e1.hashCode() * 31 + e2.hashCode();

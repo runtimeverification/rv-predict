@@ -16,12 +16,12 @@ public class FormulaTerm extends SMTTerm<BooleanOperation,SMTFormula> implements
         return OrFormula.builder();
     }
 
-    public static AndFormula AND(BoolFormula... formulas) {
-        return new AndFormula(formulas);
+    public static AndFormula AND(BoolFormula left, BoolFormula right) {
+        return new AndFormula(left, right);
     }
 
-    public static OrFormula OR(BoolFormula... formulas) {
-        return new OrFormula(formulas);
+    public static OrFormula OR(BoolFormula left, BoolFormula right) {
+        return new OrFormula(left, right);
     }
 
     public static Equal BOOL_EQUAL(BoolFormula left, BoolFormula right) {

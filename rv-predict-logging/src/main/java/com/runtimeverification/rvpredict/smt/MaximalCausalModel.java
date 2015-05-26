@@ -201,10 +201,9 @@ public class MaximalCausalModel {
                     /* case 1: read is infeasible */
                     phiE.add(LESS_THAN(M, O_r));
                     /* case 2: read is feasible */
-                    phiE.add(AND(LESS_THAN(O_r, M), getPhiConc(block)));
+                    phiE.add(getPhiConc(block));
                     /* case 3: read is data-abstract feasible */
                     FormulaTerm.Builder case3 = FormulaTerm.andBuilder();
-                    case3.add(LESS_THAN(O_r, M));
                     if (i > 0) {
                         case3.add(getPhiAbs(block));
                     }

@@ -17,17 +17,9 @@
         <arg key="-jar" value="ftpserver.jar" />
     </test>
     
-     <test name="demo.Example">
+    <test name="demo.Example">
         <arg key="-cp" value="basic.jar" />
         <arg value="demo.Example" />
-        <rvarg key="--include" value="a.b" />
-        <rvarg value="--simple-report" />
-    </test>
-     <test name="demo.Example">
-        <arg key="-cp" value="basic.jar" />
-        <arg value="demo.Example" />
-        <rvarg key="--maxlen" value="5000" />
-        <rvarg key="--exclude" value="x" />
         <rvarg value="--simple-report" />
     </test>
     

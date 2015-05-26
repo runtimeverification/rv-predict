@@ -77,6 +77,7 @@
         <rvarg value="--simple-report" />
         <arg key="-cp" value="basic.jar" />
         <arg value="bubblesort.BubbleSort" />
+        <rvarg key="--maxlen" value="500" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA">
         <runs value="64" />

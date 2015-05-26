@@ -30,12 +30,12 @@ package com.runtimeverification.rvpredict.smt;
 
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.Lists;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Params;
 import com.microsoft.z3.Status;
@@ -242,13 +242,10 @@ public class MaximalCausalModel {
     private BoolFormula getPhiSC(Event read) {
         FormulaTerm.Builder phiSC = FormulaTerm.orBuilder();
 
-        // all write events that write to the memory location of the read event
-        List<Event> writeEvents = trace.getWriteEvents(read.getAddr());
-
         // all write events that could interfere with the read event
-        List<Event> predWrites = Lists.newArrayList();
+        List<Event> predWrites = new ArrayList<>();
         Event sameThreadPredWrite = null;
-        for (Event write : writeEvents) {
+        for (Event write : trace.getWriteEvents(read.getAddr())) {
             if (write.getTID() == read.getTID()) {
                 if (write.getGID() < read.getGID()) {
                     sameThreadPredWrite = write;

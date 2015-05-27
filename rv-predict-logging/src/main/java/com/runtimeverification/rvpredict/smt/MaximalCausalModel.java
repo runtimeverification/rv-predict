@@ -45,7 +45,6 @@ import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
 import com.runtimeverification.rvpredict.smt.formula.ConcretePhiVariable;
 import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
-import com.runtimeverification.rvpredict.smt.formula.IntConstant;
 import com.runtimeverification.rvpredict.smt.formula.OrderVariable;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.LockRegion;
@@ -55,13 +54,6 @@ import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.violation.Race;
 
 public class MaximalCausalModel {
-
-    /**
-     * Inlining M as a large integer is faster than declaring it as an order
-     * variable with fixed value, which is again much faster than declaring it
-     * as an order variable with unknown value.
-     */
-    private static final IntConstant M = new IntConstant(Long.MAX_VALUE / 1024);
 
     private final Trace trace;
 
@@ -98,7 +90,6 @@ public class MaximalCausalModel {
         MaximalCausalModel model = new MaximalCausalModel(trace);
         model.addPhiMHB();
         model.addPhiLock();
-        model.addPhiE();
         return model;
     }
 
@@ -190,37 +181,6 @@ public class MaximalCausalModel {
         });
     }
 
-    private void addPhiE() {
-        trace.memoryAccessBlocksByThreadID().forEach((tid, blocks) -> {
-            for (int i = 0; i < blocks.size(); i++) {
-                MemoryAccessBlock block = blocks.get(i);
-                Event read = block.getFirstRead();
-                if (read != null) {
-                    FormulaTerm.Builder phiE = FormulaTerm.orBuilder();
-                    OrderVariable O_r = OrderVariable.get(read);
-                    /* case 1: read is infeasible */
-                    phiE.add(LESS_THAN(M, O_r));
-                    /* case 2: read is feasible */
-                    phiE.add(getPhiConc(block));
-                    /* case 3: read is data-abstract feasible */
-                    FormulaTerm.Builder case3 = FormulaTerm.andBuilder();
-                    if (i > 0) {
-                        case3.add(getPhiAbs(block));
-                    }
-                    if (i + 1 < blocks.size()) {
-                        Event nextEvent = blocks.get(i + 1).getFirst();
-                        case3.add(LESS_THAN(M, OrderVariable.get(nextEvent)));
-                    }
-                    phiE.add(case3.build());
-                    /* add Phi_e to Phi_tau */
-                    phiTau.add(phiE.build());
-                }
-            }
-        });
-
-        readToPhiConc.forEach((e, phi) -> phiTau.add(BOOL_EQUAL(new ConcretePhiVariable(e), phi)));
-    }
-
     private BoolFormula getPhiConc(MemoryAccessBlock block) {
         Event read = block.getFirstRead();
         if (read == null) {
@@ -304,8 +264,11 @@ public class MaximalCausalModel {
     private BoolFormula getRaceAssertion(Race race) {
         Event e1 = race.firstEvent();
         Event e2 = race.secondEvent();
-        return AND(INT_EQUAL(OrderVariable.get(e1), OrderVariable.get(e2)),
-                LESS_THAN(OrderVariable.get(e1), M));
+        FormulaTerm.Builder raceAsst = FormulaTerm.andBuilder();
+        raceAsst.add(INT_EQUAL(OrderVariable.get(e1), OrderVariable.get(e2)),
+                getPhiAbs(trace.getMemoryAccessBlock(e1)),
+                getPhiAbs(trace.getMemoryAccessBlock(e2)));
+        return raceAsst.build();
     }
 
     /**
@@ -318,13 +281,11 @@ public class MaximalCausalModel {
      * @return a map from race signatures to real race instances
      */
     public Map<String, Race> checkRaceSuspects(Map<String, List<Race>> sigToRaceSuspects, int timeout) {
-        /* build phiRace */
-        FormulaTerm.Builder phiRace = FormulaTerm.orBuilder();
+        /* specialize the maximal causal model based on race queries */
         Map<Race, BoolFormula> suspectToAsst = new HashMap<>();
-        sigToRaceSuspects.values().forEach(candidates -> {
-           candidates.removeIf(p -> !checkPecanCondition(p));
-                    candidates.forEach(p -> phiRace.add(suspectToAsst.computeIfAbsent(p,
-                            this::getRaceAssertion)));
+        sigToRaceSuspects.values().forEach(suspects -> {
+            suspects.removeIf(p -> !checkPecanCondition(p));
+            suspects.forEach(p -> suspectToAsst.computeIfAbsent(p, this::getRaceAssertion));
         });
         sigToRaceSuspects.entrySet().removeIf(e -> e.getValue().isEmpty());
 //        sigToRaceSuspects.forEach((sig, l) -> System.err.println(sig + ": " + l.size()));
@@ -333,28 +294,29 @@ public class MaximalCausalModel {
         Z3Filter z3filter = new Z3Filter(z3Context);
         com.microsoft.z3.Solver solver;
         try {
+            /* setup the solver */
             // mkSimpleSolver < mkSolver < mkSolver("QF_IDL")
             solver = z3Context.mkSimpleSolver();
             Params params = z3Context.mkParams();
             params.add("timeout", timeout * 1000);
             solver.setParameters(params);
+
+            /* translate our formula into Z3 AST format */
             solver.add(z3filter.filter(phiTau.build()));
-            solver.add(z3filter.filter(phiRace.build()));
-//            System.err.println(z3filter.filter(phiTau.build()));
-//            System.err.println(z3filter.filter(phiRace.build()));
-            Status status = solver.check();
-//            System.err.println(status);
-            if (status == Status.SATISFIABLE) {
-                for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
-                    for (Race race : entry.getValue()) {
-                        solver.push();
-                        solver.add(z3filter.filter(suspectToAsst.get(race)));
-                        boolean isRace = solver.check() == Status.SATISFIABLE;
-                        solver.pop();
-                        if (isRace) {
-                            result.put(entry.getKey(), race);
-                            break;
-                        }
+            for (Map.Entry<Event, BoolFormula> entry : readToPhiConc.entrySet()) {
+                solver.add(z3filter.filter(BOOL_EQUAL(new ConcretePhiVariable(entry.getKey()),
+                        entry.getValue())));
+            }
+            /* check race suspects */
+            for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
+                for (Race race : entry.getValue()) {
+                    solver.push();
+                    solver.add(z3filter.filter(suspectToAsst.get(race)));
+                    boolean isRace = solver.check() == Status.SATISFIABLE;
+                    solver.pop();
+                    if (isRace) {
+                        result.put(entry.getKey(), race);
+                        break;
                     }
                 }
             }

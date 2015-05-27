@@ -70,7 +70,7 @@
         <arg key="-cp" value="basic.jar" />
         <arg value="bufwriter.BufWriter" />
         <rvarg value="--simple-report" />
-        <rvarg key="--solver-timeout" value="10" />
+        <rvarg key="--maxlen" value="500" />
     </test>
     <test name="bubblesort.BubbleSort">
         <runs value="64" />

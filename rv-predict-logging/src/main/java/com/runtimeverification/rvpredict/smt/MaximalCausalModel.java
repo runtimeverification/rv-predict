@@ -223,7 +223,9 @@ public class MaximalCausalModel {
 
     private BoolFormula getPhiConc(MemoryAccessBlock block) {
         Event read = block.getFirstRead();
-        if (read == null || read.getValue() == Constants._0X_DEADBEEFL) {
+        if (read == null) {
+            return getPhiAbs(block);
+        } else if (read.getValue() == Constants._0X_DEADBEEFL) {
             return BooleanConstant.TRUE;
         } else {
             if (!readToPhiConc.containsKey(read)) {

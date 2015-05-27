@@ -443,8 +443,11 @@ public class Trace {
                 endCrntBlock = true;
             } else if (event.isReadOrWrite()) {
                 if (event.isRead()) {
-                    /* Optimization: merge consecutive read events that are equivalent */
-                    endCrntBlock = !(lastEvent != null && lastEvent.isRead()
+                    /* do not end the block if the previous event is a write or
+                     * a duplicate read (i.e., a read event that differs only in
+                     * global ID) */
+                    endCrntBlock = lastEvent != null &&
+                            !(lastEvent.isWrite() || lastEvent.isRead()
                             && lastEvent.getAddr() == event.getAddr()
                             && lastEvent.getValue() == event.getValue());
                 } else {

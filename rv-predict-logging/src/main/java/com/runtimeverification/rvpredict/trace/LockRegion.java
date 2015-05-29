@@ -82,6 +82,11 @@ public class LockRegion {
         return !isReadLocked;
     }
 
+    public boolean include(Event e) {
+        return tid == e.getTID() && (lock == null || lock.compareTo(e) < 0)
+                && (unlock == null || unlock.compareTo(e) > 0);
+    }
+
     @Override
     public String toString() {
         return String.format("<%s, %s>", lock, unlock);

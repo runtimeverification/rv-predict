@@ -6,7 +6,7 @@ import com.runtimeverification.rvpredict.smt.visitors.Visitor;
  * @author TraianSF
  */
 public class Not extends FormulaTerm {
-    protected Not(Formula expr) {
+    protected Not(BoolFormula expr) {
         super(BooleanOperation.NOT, expr);
     }
 

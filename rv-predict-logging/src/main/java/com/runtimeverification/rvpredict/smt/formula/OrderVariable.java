@@ -3,14 +3,18 @@ package com.runtimeverification.rvpredict.smt.formula;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.smt.visitors.Visitor;
 
-public class OrderVariable extends SMTVariable implements SMTFormula {
+public class OrderVariable extends SMTVariable implements IntFormula {
     /**
      * Prefix for naming variables belonging to this class.
      */
-    public static final String O = "o";
+    private static final String O = "o";
 
-    public OrderVariable(Event event) {
-        super(event);
+    public static OrderVariable get(Event event) {
+        return new OrderVariable(event);
+    }
+
+    private OrderVariable(Event event) {
+        super(event.getGID());
     }
 
     @Override
@@ -23,8 +27,4 @@ public class OrderVariable extends SMTVariable implements SMTFormula {
         return O;
     }
 
-    @Override
-    public Sort getSort() {
-        return Sort.Int;
-    }
 }

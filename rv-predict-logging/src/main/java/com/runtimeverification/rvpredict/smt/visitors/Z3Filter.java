@@ -16,7 +16,7 @@ public class Z3Filter {
         visitor = new Visitor();
     }
 
-    public BoolExpr filter(Formula formula) throws Exception {
+    public BoolExpr filter(BoolFormula formula) throws Exception {
         return (BoolExpr) visitor.transformFormula(formula);
     }
 
@@ -41,6 +41,11 @@ public class Z3Filter {
         @Override
         public void visit(OrderVariable variable) throws Z3Exception {
             result = context.mkIntConst(variable.getNamePrefix() + variable.getId());
+        }
+
+        @Override
+        public void visit(IntConstant constant) throws Z3Exception {
+            result = context.mkInt(constant.getValue());
         }
 
         @Override

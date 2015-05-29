@@ -1,55 +1,74 @@
 package com.runtimeverification.rvpredict.smt;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-import com.google.common.collect.Lists;
-
 public class TransitiveClosure {
 
-    private int nextElemId = 0;
+    /**
+     * Map from ID to its group ID in the contracted graph.
+     */
+    private final int[] idToGroupId;
 
-    private boolean finalized;
+    /**
+     * Relation matrix indexed by group ID.
+     */
+    private final boolean[][] relation;
 
-    private final List<Pair<Integer, Integer>> relations = Lists.newArrayList();
-
-    private boolean[][] inRelation;
-
-    public int nextElemId() {
-        if (finalized) {
-            throw new RuntimeException("The transitive closure has been finalized.");
-        }
-        return nextElemId++;
-    }
-
-    public void addRelation(int x, int y) {
-        if (finalized) {
-            throw new RuntimeException("The transitive closure has been finalized.");
-        }
-        relations.add(Pair.of(x, y));
+    private TransitiveClosure(int[] idToGroupId, boolean[][] inRelation) {
+        this.idToGroupId = idToGroupId;
+        this.relation = inRelation;
     }
 
     public boolean inRelation(int x, int y) {
-        if (!finalized) {
-            throw new RuntimeException("The transitive closure has not been finalized.");
-        }
-        return inRelation[x][y];
+        return relation[idToGroupId[x]][idToGroupId[y]];
     }
 
-    public void finish() {
-        finalized = true;
-        inRelation = new boolean[nextElemId][nextElemId];
-        for (Pair<Integer, Integer> relation : relations) {
-            inRelation[relation.getLeft()][relation.getRight()] = true;
+    public static Builder builder(int size) {
+        return new Builder(size);
+    }
+
+    public static class Builder {
+
+        private int numOfGroups = 0;
+
+        private final int[] idToGroupId;
+
+        private final List<Pair<Integer, Integer>> relations = new ArrayList<>();
+
+        private Builder(int size) {
+            idToGroupId = new int[size];
         }
-        for (int k = 0; k < nextElemId; k++) {
-            for (int x = 0; x < nextElemId; x++) {
-                for (int y = 0; y < nextElemId; y++) {
-                    inRelation[x][y] = inRelation[x][y] || inRelation[x][k] && inRelation[k][y];
+
+        public void createNewGroup(int id) {
+            idToGroupId[id] = numOfGroups++;
+        }
+
+        /**
+         * Add node {@code y} to the group of node {@code x}.
+         */
+        public void addToGroup(int y, int x) {
+            idToGroupId[y] = idToGroupId[x];
+        }
+
+        public void addRelation(int x, int y) {
+            relations.add(Pair.of(x, y));
+        }
+
+        public TransitiveClosure build() {
+            boolean[][] f = new boolean[numOfGroups][numOfGroups];
+            relations.forEach(p -> f[idToGroupId[p.getLeft()]][idToGroupId[p.getRight()]] = true);
+            for (int k = 0; k < numOfGroups; k++) {
+                for (int x = 0; x < numOfGroups; x++) {
+                    for (int y = 0; y < numOfGroups; y++) {
+                        f[x][y] = f[x][y] || f[x][k] && f[k][y];
+                    }
                 }
             }
+
+            return new TransitiveClosure(idToGroupId, f);
         }
     }
-
 }

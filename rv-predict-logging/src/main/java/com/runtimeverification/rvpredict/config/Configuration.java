@@ -300,16 +300,12 @@ public class Configuration implements Constants {
     public boolean checkVolatile;
 
     final static String opt_smt_solver = "--solver";
-    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3,libz3].", hidden = true, descriptionKey = "2050")
-    public String smt_solver = "libz3";
+    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2050")
+    public String smt_solver = "z3";
 
     final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
-    public long solver_timeout = 10;
-
-    final static String opt_timeout = "--timeout";
-    @Parameter(names = opt_timeout, description = "RV-Predict timeout in seconds", hidden = true, descriptionKey = "2070")
-    public long timeout = 3600;
+    public int solver_timeout = 60;
 
     final static String opt_simple_report = "--simple-report";
     @Parameter(names = opt_simple_report, description = "Output simple data race report", hidden = true, descriptionKey = "2080")

@@ -4,14 +4,6 @@
     <test name="ftpserver.jar">
         <runs value="32" />
         <rvarg key="--maxlen" value="2000" />
-        <rvarg key="--solver" value="z3" />
-        <rvarg value="--debug" />
-        <rvarg value="--simple-report" />
-        <arg key="-jar" value="ftpserver.jar" />
-    </test>
-    <test name="ftpserver.jar">
-        <runs value="32" />
-        <rvarg key="--maxlen" value="2000" />
         <rvarg value="--debug" />
         <rvarg value="--simple-report" />
         <arg key="-jar" value="ftpserver.jar" />
@@ -25,28 +17,14 @@
         <arg key="-jar" value="ftpserver.jar" />
     </test>
     
-     <test name="demo.Example">
+    <test name="demo.Example">
         <arg key="-cp" value="basic.jar" />
         <arg value="demo.Example" />
-        <rvarg key="--include" value="a.b" />
-        <rvarg value="--simple-report" />
-    </test>
-     <test name="demo.Example">
-        <arg key="-cp" value="basic.jar" />
-        <arg value="demo.Example" />
-        <rvarg key="--maxlen" value="5000" />
-        <rvarg key="--exclude" value="x" />
         <rvarg value="--simple-report" />
     </test>
     
     <test name="SpringExample.jar">
         <arg key="-jar" value="SpringExample.jar" />
-        <rvarg value="--debug" />
-        <rvarg value="--simple-report" />
-    </test>
-    <test agent="true" name="SpringExample.jar">
-        <arg key="-jar" value="SpringExample.jar" />
-        <rvarg key="--solver" value="z3" />
         <rvarg value="--debug" />
         <rvarg value="--simple-report" />
     </test>
@@ -69,9 +47,10 @@
         <rvarg value="--simple-report" />
     </test>
     <test name="boundedbuffer.BoundedBuffer">
-        <runs value="256" />
+        <runs value="32" />
         <arg key="-cp" value="basic.jar" />
         <arg value="boundedbuffer.BoundedBuffer" />
+        <rvarg key="--maxlen" value="500" />
         <rvarg value="--simple-report" />
     </test>
     <test name="mergesort.MergeSort">
@@ -91,12 +70,14 @@
         <arg key="-cp" value="basic.jar" />
         <arg value="bufwriter.BufWriter" />
         <rvarg value="--simple-report" />
+        <rvarg key="--maxlen" value="500" />
     </test>
     <test name="bubblesort.BubbleSort">
         <runs value="64" />
         <rvarg value="--simple-report" />
         <arg key="-cp" value="basic.jar" />
         <arg value="bubblesort.BubbleSort" />
+        <rvarg key="--maxlen" value="500" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA">
         <runs value="64" />

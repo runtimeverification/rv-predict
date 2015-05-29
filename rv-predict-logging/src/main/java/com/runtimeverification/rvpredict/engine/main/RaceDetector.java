@@ -1,16 +1,14 @@
 package com.runtimeverification.rvpredict.engine.main;
 
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
-import com.runtimeverification.rvpredict.trace.MemoryAccessBlock;
+import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Logger;
 import com.runtimeverification.rvpredict.violation.Race;
@@ -42,18 +40,45 @@ public class RaceDetector {
 
     private final Configuration config;
 
-    private final Metadata metadata;
+    private final Map<String, Race> sigToRealRace = new HashMap<>();
 
-    private final Set<Race> races;
-
-    public RaceDetector(Configuration config, Metadata metadata) {
+    public RaceDetector(Configuration config) {
         this.config = config;
-        this.metadata = metadata;
-        this.races = new HashSet<>();
     }
 
+    /**
+     * Returns a set of all detected races.
+     */
     public Set<Race> getRaces() {
-        return Collections.unmodifiableSet(races);
+        return new HashSet<>(sigToRealRace.values());
+    }
+
+    private Map<String, List<Race>> computeUnknownRaceSuspects(Trace trace) {
+        Map<String, List<Race>> sigToRaceCandidates = new HashMap<>();
+        trace.eventsByThreadID().forEach((tid1, events1) -> {
+           trace.eventsByThreadID().forEach((tid2, events2) -> {
+               if (tid1 < tid2) {
+                   events1.forEach(e1 -> {
+                      events2.forEach(e2 -> {
+                          if ((e1.isWrite() && e2.isReadOrWrite() ||
+                                  e1.isReadOrWrite() && e2.isWrite())
+                                  && e1.getAddr() == e2.getAddr()
+                                  && (config.checkVolatile || !trace.metadata().isVolatile(e1.getAddr()))
+                                  && !trace.isInsideClassInitializer(e1)
+                                  && !trace.isInsideClassInitializer(e2)) {
+                              Race race = new Race(e1, e2, trace);
+                              String raceSig = race.toString();
+                              if (!sigToRealRace.containsKey(raceSig)) {
+                                  sigToRaceCandidates.computeIfAbsent(raceSig,
+                                          x -> new ArrayList<>()).add(race);
+                              }
+                          }
+                      });
+                   });
+               }
+           });
+        });
+        return sigToRaceCandidates;
     }
 
     public void run(Trace trace) {
@@ -61,62 +86,18 @@ public class RaceDetector {
             return;
         }
 
-        SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config, trace);
-
-        cnstrBuilder.addIntraThreadConstraints();
-        cnstrBuilder.addThreadStartJoinConstraints();
-        cnstrBuilder.addLockingConstraints();
-        cnstrBuilder.finish();
-
-        for (MemoryAccessBlock blk1 : trace.getMemoryAccessBlocks()) {
-            for (MemoryAccessBlock blk2 : trace.getMemoryAccessBlocks()) {
-               if (blk1.getTID() >= blk2.getTID()) {
-                   continue;
-               }
-
-               /* skip if all potential data races that are already known */
-               Set<Race> potentialRaces = Sets.newHashSet();
-               blk1.forEach(e1 -> {
-                  blk2.forEach(e2 -> {
-                      if ((e1.isWrite() || e2.isWrite())
-                              && e1.getAddr() == e2.getAddr()
-                              && (config.checkVolatile || !metadata.isVolatile(e1.getAddr()))
-                              && !trace.isInsideClassInitializer(e1)
-                              && !trace.isInsideClassInitializer(e2)) {
-                          potentialRaces.add(new Race(e1, e2, trace, metadata));
-                      }
-                  });
-               });
-               if (races.containsAll(potentialRaces)) {
-                   continue;
-               }
-
-               /* not a race if the two events hold a common lock */
-               Event e1 = Iterables.getFirst(blk1, null);
-               Event e2 = Iterables.getFirst(blk2, null);
-               if (cnstrBuilder.hasCommonLock(e1, e2)) {
-                   continue;
-               }
-
-               /* not a race if one event happens-before the other */
-               if (cnstrBuilder.happensBefore(e1, e2)
-                       || cnstrBuilder.happensBefore(e2, e1)) {
-                   continue;
-               }
-
-               /* start building constraints for MCM */
-               if (cnstrBuilder.isRace(e1, e2)) {
-                   potentialRaces.forEach(race -> {
-                       if (races.add(race)) {
-                           String report = config.simple_report ?
-                                   race.toString() : race.generateRaceReport();
-                           config.logger.report(report, Logger.MSGTYPE.REAL);
-                       }
-                   });
-               }
-
-           }
+        Map<String, List<Race>> sigToRaceSuspects = computeUnknownRaceSuspects(trace);
+        if (sigToRaceSuspects.isEmpty()) {
+            return;
         }
-    }
 
+        Map<String, Race> result = MaximalCausalModel.create(trace)
+                .checkRaceSuspects(sigToRaceSuspects, config.solver_timeout);
+        sigToRealRace.putAll(result);
+        result.forEach((sig, race) -> {
+            String report = config.simple_report ? race.generateSimpleRaceReport() : race
+                    .generateDetailedRaceReport();
+            config.logger.report(report, Logger.MSGTYPE.REAL);
+        });
+    }
 }

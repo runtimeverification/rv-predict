@@ -80,7 +80,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         for (int i = 0; i < events.length; i++) {
             events[i] = new Event();
         }
-        this.detector = new RaceDetector(config, metadata);
+        this.detector = new RaceDetector(config);
     }
 
     @Override

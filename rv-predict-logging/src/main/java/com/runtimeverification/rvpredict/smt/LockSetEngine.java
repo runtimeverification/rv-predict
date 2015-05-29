@@ -28,13 +28,13 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.smt;
 
-import java.util.Collection;
-import java.util.ListIterator;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Table;
+import com.google.common.collect.Iterables;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.trace.LockRegion;
 
@@ -43,45 +43,34 @@ import com.runtimeverification.rvpredict.trace.LockRegion;
  */
 public class LockSetEngine {
 
-    private Table<Long, Long, List<LockRegion>> lockTbl = HashBasedTable.create();
+    private Map<Long, Map<Long, List<LockRegion>>> lockIdToTidToLockRegions = new HashMap<>();
 
-    public void addAll(Collection<LockRegion> lockRegions) {
-        for (LockRegion lockRegion : lockRegions) {
-            add(lockRegion);
+    public void add(LockRegion region) {
+        List<LockRegion> regions = lockIdToTidToLockRegions
+                .computeIfAbsent(region.getLockId(), p -> new HashMap<>())
+                .computeIfAbsent(region.getTID(), p -> new ArrayList<>());
+        LockRegion last = Iterables.getLast(regions, null);
+        if (last != null && region.getLock().getGID() <= last.getUnlock().getGID()) {
+            throw new IllegalArgumentException(
+                    "Unexpected overlapping lock regions: " + last + " & " + region);
         }
-    }
-
-    public void add(LockRegion lockRegion) {
-        long lockId = lockRegion.getLockId();
-        long threadId = lockRegion.getTID();
-        List<LockRegion> lockRegions = lockTbl.get(lockId, threadId);
-        if (lockRegions == null) {
-            lockRegions = Lists.newArrayList();
-            lockTbl.put(lockId, threadId, lockRegions);
-        }
-
-        ListIterator<LockRegion> iter = lockRegions.listIterator(lockRegions.size());
-        if (iter.hasPrevious()) {
-            LockRegion prevLockRegion = iter.previous();
-            assert lockRegion.getLock().getGID() > prevLockRegion.getUnlock().getGID() :
-                "unexpected overlapping lock region: " + prevLockRegion + " and " + lockRegion;
-        }
-
-        lockRegions.add(lockRegion);
+        regions.add(region);
     }
 
     /**
-     * Checks if two given {@code MemoryAccessEvent}'s hold a common lock.
+     * Checks if two given {@code Event}'s hold a common lock.
      */
     public boolean hasCommonLock(Event e1, Event e2) {
-        assert e1.getTID() != e2.getTID();
+        if (e1.getTID() == e2.getTID()) {
+            throw new IllegalArgumentException();
+        }
 
-        for (Long lockId : lockTbl.rowKeySet()) {
+        for (long lockId : lockIdToTidToLockRegions.keySet()) {
             /* check if both events hold lockId */
-            LockRegion lockRegion1 = getLockRegion(e1, lockId);
-            LockRegion lockRegion2 = getLockRegion(e2, lockId);
-            if (lockRegion1 != null && lockRegion2 != null
-                    && (lockRegion1.isWriteLocked() || lockRegion2.isWriteLocked())) {
+            LockRegion r1 = getLockRegion(e1, lockId);
+            LockRegion r2 = getLockRegion(e2, lockId);
+            if (r1 != null && r2 != null
+                    && (r1.isWriteLocked() || r2.isWriteLocked())) {
                 return true;
             }
         }
@@ -90,18 +79,10 @@ public class LockSetEngine {
     }
 
     private LockRegion getLockRegion(Event e, long lockId) {
-        // TODO(YilongL): optimize this method when necessary
-        List<LockRegion> lockRegions = lockTbl.get(lockId, e.getTID());
-        if (lockRegions != null) {
-            for (LockRegion lockRegion : lockRegions) {
-                if (lockRegion.getLock() == null || lockRegion.getLock().getGID() < e.getGID()) {
-                    if (lockRegion.getUnlock() == null
-                            || e.getGID() < lockRegion.getUnlock().getGID()) {
-                        return lockRegion;
-                    }
-                } else {
-                    return null;
-                }
+        for (LockRegion region : lockIdToTidToLockRegions.get(lockId).getOrDefault(e.getTID(),
+                Collections.emptyList())) {
+            if (region.include(e)) {
+                return region;
             }
         }
         return null;

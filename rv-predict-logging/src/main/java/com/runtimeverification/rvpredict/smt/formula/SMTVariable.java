@@ -1,7 +1,5 @@
 package com.runtimeverification.rvpredict.smt.formula;
 
-import com.runtimeverification.rvpredict.log.Event;
-
 /**
  * Type of variables. Common functionality for both Boolean and sorted variables.
  * A variable is uniquely identified by its {@link #id} and by its class type
@@ -11,8 +9,8 @@ public abstract class SMTVariable extends SMTASTNode implements SMTFormula {
 
     private final long id;
 
-    protected SMTVariable(Event event) {
-        this.id = event.getGID();
+    protected SMTVariable(long id) {
+        this.id = id;
     }
 
     /**

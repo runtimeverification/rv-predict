@@ -33,7 +33,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -62,20 +61,22 @@ public class Trace {
 
     private final Event[] events;
 
+    private boolean hasCriticalWrite;
+
     /**
      * Map from thread ID to critical events.
      */
     private final Map<Long, List<Event>> tidToEvents = Maps.newHashMap();
 
     /**
+     * Map from thread ID to critical memory access events grouped into blocks.
+     */
+    private final Map<Long, List<MemoryAccessBlock>> tidToMemoryAccessBlocks = new HashMap<>();
+
+    /**
      * Map from memory addresses to write events ordered by global ID.
      */
     private final Long2ObjectMap<List<Event>> addrToWriteEvents = new Long2ObjectLinkedOpenHashMap<>();
-
-    /**
-     * List of memory access blocks.
-     */
-    private final List<MemoryAccessBlock> memoryAccessBlocks = Lists.newArrayList();
 
     /**
      * Map from memory addresses referenced in this trace segment to their states.
@@ -131,7 +132,7 @@ public class Trace {
         // This method can be further improved to skip an entire window ASAP
         // For example, if this window contains no race candidate determined
         // by some static analysis then we can safely skip it
-        return !memoryAccessBlocks.isEmpty();
+        return hasCriticalWrite;
     }
 
     /**
@@ -159,8 +160,43 @@ public class Trace {
         return tidToEvents.getOrDefault(tid, Collections.emptyList());
     }
 
-    public Collection<List<Event>> perThreadView() {
-        return tidToEvents.values();
+    public Map<Long, List<Event>> eventsByThreadID() {
+        return tidToEvents;
+    }
+
+    public Map<Long, List<MemoryAccessBlock>> memoryAccessBlocksByThreadID() {
+        return tidToMemoryAccessBlocks;
+    }
+
+    /**
+     * Returns the {@link MemoryAccessBlock} that {@code event} belongs to.
+     */
+    public MemoryAccessBlock getMemoryAccessBlock(Event event) {
+        List<MemoryAccessBlock> l = tidToMemoryAccessBlocks.get(event.getTID());
+        /* doing binary search on l */
+        int low = 0;
+        int high = l.size() - 1;
+
+        while (low <= high) {
+            int mid = (low + high) >>> 1;
+            MemoryAccessBlock midVal = l.get(mid);
+            if (midVal.getLast().compareTo(event) < 0) {
+                low = mid + 1;
+            } else if (midVal.getFirst().compareTo(event) > 0) {
+                high = mid - 1;
+            } else {
+                return l.get(mid); // key found
+            }
+        }
+        throw new IllegalArgumentException("No such block!");
+    }
+
+    public List<Event> getInterThreadSyncEvents() {
+        List<Event> events = new ArrayList<>();
+        tidToEvents.values().forEach(l -> {
+            l.stream().filter(e -> e.isStart() || e.isJoin()).forEach(events::add);
+        });
+        return events;
     }
 
     public Map<Long, List<LockRegion>> getLockIdToLockRegions() {
@@ -169,10 +205,6 @@ public class Trace {
 
     public List<Event> getWriteEvents(long addr) {
         return addrToWriteEvents.getOrDefault(addr, Collections.emptyList());
-    }
-
-    public List<MemoryAccessBlock> getMemoryAccessBlocks() {
-        return memoryAccessBlocks;
     }
 
     public boolean isInsideClassInitializer(Event event) {
@@ -239,24 +271,6 @@ public class Trace {
                 .map(LockState::lock).collect(Collectors.toList());
         Collections.sort(lockEvents, (e1, e2) -> e1.compareTo(e2));
         return lockEvents;
-    }
-
-    /**
-     * Gets control-flow dependent events of a given {@code Event}. Without any
-     * knowledge about the control flow of the program, all read events that
-     * happen-before the given event have to be included conservatively.
-     */
-    public List<Event> getCtrlFlowDependentEvents(Event event) {
-        // TODO(YilongL): optimize this!
-        List<Event> readEvents = new ArrayList<>();
-        for (Event e : getEvents(event.getTID())) {
-            if (e.getGID() >= event.getGID()) break;
-            if (e.isRead()) {
-                readEvents.add(e);
-            }
-        }
-
-        return readEvents;
     }
 
     private static final Function<Object, ? extends List<Event>> NEW_EVENT_LIST = p -> new ArrayList<>();
@@ -398,57 +412,71 @@ public class Trace {
             }
 
             /* commit all critical events into this window */
-            Map<Long, List<Event>> tidToCrntBlock = new HashMap<>();
             for (int i = 0; i < numOfEvents; i++) {
                 if (critical[i]) {
                     Event event = events[i];
 //                    System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
                     long tid = event.getTID();
 
-                    /* update memory access blocks */
-                    boolean endCrntBlock;
-                    if (event.isSyncEvent()) {
-                        endCrntBlock = true;
-                    } else if (event.isReadOrWrite()) {
-                        Event lastEvent = Iterables.getLast(
-                                tidToEvents.getOrDefault(tid, Collections.emptyList()), null);
-                        if (event.isRead()) {
-                            /* Optimization: merge consecutive read events that are equivalent */
-                            endCrntBlock = !(lastEvent != null && lastEvent.isRead()
-                                    && lastEvent.getAddr() == event.getAddr()
-                                    && lastEvent.getValue() == event.getValue());
-                        } else {
-                            endCrntBlock = lastEvent != null && lastEvent.isRead();
-                        }
-                    } else {
-                        throw new IllegalStateException("Unexpected critical event: " + event);
-                    }
-                    if (endCrntBlock) {
-                        /* end the current block and then start a new one */
-                        List<Event> oldBlk = tidToCrntBlock.get(tid);
-                        if (oldBlk != null && !oldBlk.isEmpty()) {
-                            memoryAccessBlocks.add(new MemoryAccessBlock(oldBlk));
-                            tidToCrntBlock.put(tid, new ArrayList<>());
-                        }
-                    }
-                    if (event.isReadOrWrite()) {
-                        /* append to the current block */
-                        tidToCrntBlock.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
-                    }
-
                     /* update tidToEvents & addrToWriteEvents */
                     tidToEvents.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
                     if (event.isWrite()) {
+                        hasCriticalWrite = true;
                         addrToWriteEvents.computeIfAbsent(event.getAddr(), NEW_EVENT_LIST).add(event);
                     }
                 }
             }
-            tidToCrntBlock.values().forEach(blk -> {
-                if (!blk.isEmpty()) {
-                    memoryAccessBlocks.add(new MemoryAccessBlock(blk));
-                }
-            });
+
+            /* compute more derivative information */
+            if (hasCriticalWrite) {
+                tidToEvents.forEach((tid, events) -> tidToMemoryAccessBlocks.put(tid,
+                        divideMemoryAccessBlocks(events)));
+            }
         }
+    }
+
+    private List<MemoryAccessBlock> divideMemoryAccessBlocks(List<Event> events) {
+        List<MemoryAccessBlock> blocks = new ArrayList<>();
+        MemoryAccessBlock lastBlock = null;
+        List<Event> crntBlock = new ArrayList<>();
+        Event lastEvent = null;
+        for (Event event : events) {
+            /* update memory access blocks */
+            boolean endCrntBlock;
+            if (event.isSyncEvent()) {
+                endCrntBlock = true;
+            } else if (event.isReadOrWrite()) {
+                if (event.isRead()) {
+                    /* do not end the block if the previous event is a write or
+                     * a duplicate read (i.e., a read event that differs only in
+                     * global ID) */
+                    endCrntBlock = lastEvent != null &&
+                            !(lastEvent.isWrite() || lastEvent.isRead()
+                            && lastEvent.getAddr() == event.getAddr()
+                            && lastEvent.getValue() == event.getValue());
+                } else {
+                    endCrntBlock = lastEvent != null && lastEvent.isRead();
+                }
+            } else {
+                throw new IllegalStateException("Unexpected critical event: " + event);
+            }
+            if (endCrntBlock && !crntBlock.isEmpty()) {
+                /* end the current block and then start a new one */
+                blocks.add(lastBlock = new MemoryAccessBlock(crntBlock, lastBlock));
+                crntBlock = new ArrayList<>();
+            }
+            if (event.isReadOrWrite()) {
+                /* append to the current block */
+                crntBlock.add(event);
+            }
+            lastEvent = event;
+        }
+
+        if (!crntBlock.isEmpty()) {
+            blocks.add(new MemoryAccessBlock(crntBlock, lastBlock));
+        }
+
+        return blocks;
     }
 
     private int getEventOffset(Event event) {

@@ -59,7 +59,7 @@ public class RVPredict {
         this.config = config;
         this.metadata = Metadata.readFrom(config.getMetadataPath());
         traceCache = new TraceCache(config, metadata);
-        this.detector = new RaceDetector(config, metadata);
+        this.detector = new RaceDetector(config);
     }
 
     public void start() {

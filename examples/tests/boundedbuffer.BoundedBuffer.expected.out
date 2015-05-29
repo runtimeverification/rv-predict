@@ -8,6 +8,16 @@
 
 (?s)(.*)Race on field boundedbuffer.BoundedBuffer._finish between:(\s)*boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:291\)(\s)*boundedbuffer.Consumer.run\(BoundedBuffer.java:400\)(.*)
 
-(?s)(.*)Race on field boundedbuffer.BoundedBuffer._finish between:(\s)*boundedbuffer.Consumer.run\(BoundedBuffer.java:400\)(\s)*boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)
+(?s)(.*)Race on field boundedbuffer.BoundedBuffer._finish between:(\s)*boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:294\)(\s)*boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)
+
+(?s)(.*)Race on field boundedbuffer.BoundedBuffer._finish between:(\s)*boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:294\)(\s)*boundedbuffer.Consumer.run\(BoundedBuffer.java:400\)(.*)
+
+(?s)(.*)Race on field boundedbuffer.BoundedBuffer._finish between:(\s)*boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:302\)(\s)*boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)
+
+(?s)(.*)Race on field boundedbuffer.BoundedBuffer._finish between:(\s)*boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:302\)(\s)*boundedbuffer.Consumer.run\(BoundedBuffer.java:400\)(.*)
 
 (?s)(.*)Race on field boundedbuffer.BoundedBuffer._finish between:(\s)*boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:291\)(\s)*boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)
+
+(?s)(.*)Race on field boundedbuffer.BoundedBuffer._finish between:(\s)*boundedbuffer.Consumer.run\(BoundedBuffer.java:400\)(\s)*boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)
+
+(?s)(.*)Race on field boundedbuffer.BoundedBuffer._finish between two instances of:(\s)*boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)

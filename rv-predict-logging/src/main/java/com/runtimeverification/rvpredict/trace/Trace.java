@@ -168,8 +168,12 @@ public class Trace {
         return tidToMemoryAccessBlocks;
     }
 
+    /**
+     * Returns the {@link MemoryAccessBlock} that {@code event} belongs to.
+     */
     public MemoryAccessBlock getMemoryAccessBlock(Event event) {
         List<MemoryAccessBlock> l = tidToMemoryAccessBlocks.get(event.getTID());
+        /* doing binary search on l */
         int low = 0;
         int high = l.size() - 1;
 

@@ -28,6 +28,11 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.log;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.LockSupport;
@@ -35,6 +40,7 @@ import java.util.concurrent.locks.LockSupport;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.RaceDetector;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.TraceState;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
@@ -58,36 +64,45 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
     private final AtomicInteger globalEventID = new AtomicInteger(0);
 
-    private final LongAdder published = new LongAdder();
+    private final LongAdder finalized = new LongAdder();
 
     private long base = 0;
 
-    /**
-     * [0, bound) of the {@link #events} array is used for storing valid event
-     * items. Positions starting from bound are junk area.
-     */
-    private final int bound;
+    private final int windowSize;
 
-    private final Event[] events;
+    /**
+     * Buffers that are alive so far.
+     * <p>
+     * TODO(YilongL): optimize for the case where the number of threads is large.
+     */
+    private final Set<Buffer> activeBuffers = Collections.synchronizedSet(Collections
+            .newSetFromMap(new WeakHashMap<Buffer, Boolean>()));
+
+    private final ThreadLocal<Buffer> threadLocalBuffer = new ThreadLocal<Buffer>() {
+        @Override
+        protected Buffer initialValue() {
+            Buffer buffer = new Buffer(windowSize);
+            activeBuffers.add(buffer);
+            return buffer;
+        }
+    };
 
     private final RaceDetector detector;
 
     public VolatileLoggingEngine(Configuration config, Metadata metadata) {
         this.config = config;
         this.crntState = new TraceState(metadata);
-        this.bound = config.windowSize;
-        this.events = new Event[bound + 4];
-        for (int i = 0; i < events.length; i++) {
-            events[i] = new Event();
-        }
+        this.windowSize = config.windowSize;
         this.detector = new RaceDetector(config);
     }
 
     @Override
     public void finishLogging() {
+        /* After we close this logging engine, the remaining events in the
+         * buffer that have not acquired GIDs will be lost. */
         closed = true;
-        int n = globalEventID.getAndAdd(bound); // block the items array for good
-        if (n <= bound) {
+        int n = globalEventID.getAndAdd(windowSize); // block the GID counter for good
+        if (n <= windowSize) {
             // CRITICAL SECTION BEGIN
             runRaceDetection(n);
             // CRITICAL SECTION END
@@ -103,52 +118,61 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
     }
 
-    private int claim(int next) {
-        int nextPos = globalEventID.getAndAdd(next);
-        if (nextPos + next > bound) {  // running out of slots
-            if (nextPos <= bound) {
+    /**
+     * Claims next {@code n} consecutive GIDs.
+     *
+     * @param n
+     *            the number of consecutive GIDs to claim
+     * @return the first GID acquired
+     */
+    private long claimGID(int n) {
+        int numOfEvents = globalEventID.getAndAdd(n);
+        if (numOfEvents + n > windowSize) {  // running out of slots
+            if (numOfEvents <= windowSize) {
                 // CRITICAL SECTION BEGIN
                 /* first thread that runs out of slots is responsible to run the prediction */
-                runRaceDetection(nextPos);
+                runRaceDetection(numOfEvents);
 
                 /* reset the counter */
                 if (!closed) {
-                    base += nextPos;
-                    published.reset();
+                    base += numOfEvents;
+                    finalized.reset();
+                    activeBuffers.forEach(Buffer::consume);
                     // CRITICAL SECTION END
-                    globalEventID.set(next); // must be placed at the end of the critical section
-                    return 0;
+                    globalEventID.set(n); // must be placed at the end of the critical section
+                    return base;
                 } else {
                     /* signal the end of the last prediction */
                     globalEventID.set(INFINITY);
-                    /* remaining unpublished events will be written to junk area and simply discarded */
-                    return bound;
+                    return Integer.MIN_VALUE;
                 }
             } else {
                 /* busy waiting until the counter is reset */
-                while (globalEventID.get() >= bound && !closed) {
+                while (globalEventID.get() >= windowSize && !closed) {
                     LockSupport.parkNanos(1);
                 }
                 /* try again, small chance to fail and get into busy waiting again */
-                return closed ? bound : claim(next);
+                return closed ? Integer.MIN_VALUE : claimGID(n);
             }
         } else {    // on success
-            return nextPos;
+            return base + numOfEvents;
         }
     }
 
-    private void publish(int n) {
-        published.add(n);
-    }
-
     private void runRaceDetection(int numOfEvents) {
-        /* makes sure that all the claimed slots have been published */
-        while (published.sum() < numOfEvents) {
+        /* makes sure that all the events have been finalized */
+        while (finalized.sum() < numOfEvents) {
             LockSupport.parkNanos(1);
         }
 
         try {
-            detector.run(crntState.initNextTraceWindow(events, numOfEvents));
+            List<RawTrace> rawTraces = new ArrayList<>();
+            activeBuffers.forEach(b -> {
+                if (!b.isEmpty()) {
+                    rawTraces.add(new RawTrace(b.start, b.cursor, b.events));
+                }
+            });
+            detector.run(crntState.initNextTraceWindow(rawTraces));
         } catch (Throwable e) {
             e.printStackTrace();
             /* cannot use System.exit because it may lead to deadlock */
@@ -158,64 +182,181 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
     @Override
     public void log(EventType eventType, int locId, long addr, long value1, long value2) {
-        long tid = Thread.currentThread().getId();
-        int off;
-        switch (eventType) {
-        case READ:
-        case WRITE:
-        case WRITE_LOCK:
-        case WRITE_UNLOCK:
-        case READ_LOCK:
-        case READ_UNLOCK:
-        case START:
-        case JOIN:
-        case CLINIT_ENTER:
-        case CLINIT_EXIT:
-        case INVOKE_METHOD:
-        case FINISH_METHOD:
-            off = claim(1);
-            log(eventType, off, tid, locId, addr, value1);
-            publish(1);
-            break;
-        case ATOMIC_READ:
-            off = claim(3);
-            log(EventType.WRITE_LOCK,   off,     tid, locId, getAtomicLockId(addr), 0);
-            log(EventType.READ,         off + 1, tid, locId, addr, value1);
-            log(EventType.WRITE_UNLOCK, off + 2, tid, locId, getAtomicLockId(addr), 0);
-            publish(3);
-            break;
-        case ATOMIC_WRITE:
-            off = claim(3);
-            log(EventType.WRITE_LOCK,   off,     tid, locId, getAtomicLockId(addr), 0);
-            log(EventType.WRITE,        off + 1, tid, locId, addr, value1);
-            log(EventType.WRITE_UNLOCK, off + 2, tid, locId, getAtomicLockId(addr), 0);
-            publish(3);
-            break;
-        case ATOMIC_READ_THEN_WRITE:
-            off = claim(4);
-            log(EventType.WRITE_LOCK,   off,     tid, locId, getAtomicLockId(addr), 0);
-            log(EventType.READ,         off + 1, tid, locId, addr, value1);
-            log(EventType.WRITE,        off + 2, tid, locId, addr, value2);
-            log(EventType.WRITE_UNLOCK, off + 3, tid, locId, getAtomicLockId(addr), 0);
-            publish(4);
-            break;
-        default:
-            assert false;
+        threadLocalBuffer.get().append(eventType, locId, addr, value1, value2);
+    }
+
+    /**
+     * Thread-local buffer used to store events generated by a thread.
+     * <p>
+     * Besides the thread associated with this buffer, thread responsible for
+     * running race detection at the end of each window also accesses this
+     * buffer through {@link Buffer#consume()} and {@link Buffer#isEmpty()}.
+     * <p>
+     * The key to avoid data-race is to use a sufficiently large circular array
+     * to store events so that:
+     * <li>{@link Buffer#start} is only accessed by the race detection thread;</li>
+     * <li>{@link Buffer#end} is only accessed by the logging thread;</li>
+     * <li>{@code start} and {@code end} never overlap.</li>
+     * <p>
+     * This way, the conflict accesses can only occur at {@link Buffer#cursor}
+     * between {@link Buffer#finalizeEvents()} and
+     * {@code Buffer.consume()/isEmpty()}. However, the race detection thread
+     * only accesses {@code cursor} after blocking the GID counter and all
+     * on-going {@code finalizeEvents()} finish, while the logging thread only
+     * accesses {@code cursor} after successfully acquiring GIDs and before
+     * incrementing the {@link finalized} counter. Therefore, it is impossible
+     * for the two threads to access {@code cursor} concurrently.
+     *
+     * @author YilongL
+     */
+    private class Buffer {
+
+        /**
+         * Maximum number of events that can be delayed to acquire GID.
+         */
+        static final int THRESHOLD = 16;
+
+        final long tid;
+
+        /**
+         * Circular array used to store events.
+         */
+        final Event[] events;
+
+        /**
+         * The (inclusive) start index of the events in circular array.
+         */
+        int start;
+
+        /**
+         * The (exclusive) end index of the events that have acquired GIDs
+         * (i.e., finalized events), and the (inclusive) start index of the
+         * events that have not yet acquired GIDs.
+         */
+        int cursor;
+
+        /**
+         * The (exclusive) end index of the events in circular array.
+         */
+        int end;
+
+        Buffer(int bound) {
+            tid = Thread.currentThread().getId();
+            events = new Event[1 << (32 - Integer.numberOfLeadingZeros(bound + THRESHOLD - 1))];
+            for (int i = 0; i < events.length; i++) {
+                events[i] = new Event();
+                events[i].setTID(tid);
+            }
         }
-    }
 
-    private long getAtomicLockId(long addr) {
-        return (long) ATOMIC_LOCK_C << 32 | ((int) (addr >> 32)) & 0xFFFFFFFFL;
-    }
+        /**
+         * Returns if there is more finalized events.
+         */
+        boolean isEmpty() {
+            return cursor == start;
+        }
 
-    private void log(EventType eventType, int offset, long tid, int locId, long addr, long value) {
-        Event event = events[offset];
-        event.setGID(base + offset);
-        event.setTID(tid);
-        event.setLocId(locId);
-        event.setAddr(addr);
-        event.setValue(value);
-        event.setType(eventType);
+        /**
+         * Consumes all finalized events.
+         */
+        void consume() {
+            start = cursor;
+        }
+
+        long getAtomicLockId(long addr) {
+            return (long) ATOMIC_LOCK_C << 32 | ((int) (addr >> 32)) & 0xFFFFFFFFL;
+        }
+
+        /**
+         * Appends a new event to the end of the circular array and finalizes
+         * pending events when necessary.
+         * <p>
+         * Basically, there are two types of events that can be delayed to be
+         * finalized without compromising the soundness of our model:
+         * <li>thread-local events that have no effects outside its thread;</li>
+         * <li>events that are logged only after they happen.</li>
+         * <p>
+         * Theoretically speaking, these two types of events can be delayed as
+         * much as we like. But in practice, we use the {@link #THRESHOLD} to
+         * limit the maximum number of events that can be delayed to make the
+         * logged trace look closer to the execution.
+         */
+        void append(EventType eventType, int locId, long addr, long value1, long value2) {
+            switch (eventType) {
+            case READ:
+            case WRITE_LOCK:
+            case READ_LOCK:
+            case JOIN:
+            case CLINIT_ENTER:
+            case CLINIT_EXIT:
+            case INVOKE_METHOD:
+            case FINISH_METHOD:
+                log(eventType, locId, addr, value1);
+                if (numOfUnfinalizedEvents() >= THRESHOLD) {
+                    finalizeEvents();
+                }
+                break;
+            case WRITE:
+            case WRITE_UNLOCK:
+            case READ_UNLOCK:
+            case START:
+                log(eventType, locId, addr, value1);
+                finalizeEvents();
+                break;
+            case ATOMIC_READ:
+                log(EventType.WRITE_LOCK,   locId, getAtomicLockId(addr), 0);
+                log(EventType.READ,         locId, addr, value1);
+                log(EventType.WRITE_UNLOCK, locId, getAtomicLockId(addr), 0);
+                finalizeEvents();
+                break;
+            case ATOMIC_WRITE:
+                log(EventType.WRITE_LOCK,   locId, getAtomicLockId(addr), 0);
+                log(EventType.WRITE,        locId, addr, value1);
+                log(EventType.WRITE_UNLOCK, locId, getAtomicLockId(addr), 0);
+                finalizeEvents();
+                break;
+            case ATOMIC_READ_THEN_WRITE:
+                log(EventType.WRITE_LOCK,   locId, getAtomicLockId(addr), 0);
+                log(EventType.READ,         locId, addr, value1);
+                log(EventType.WRITE,        locId, addr, value2);
+                log(EventType.WRITE_UNLOCK, locId, getAtomicLockId(addr), 0);
+                finalizeEvents();
+                break;
+            default:
+                assert false;
+            }
+        }
+
+        private void log(EventType eventType, int locId, long addr, long value) {
+            Event event = events[end];
+            end = inc(end);
+            event.setLocId(locId);
+            event.setAddr(addr);
+            event.setValue(value);
+            event.setType(eventType);
+        }
+
+        void finalizeEvents() {
+            int d = numOfUnfinalizedEvents();
+            long gid = claimGID(d);
+            int p = cursor;
+            cursor = end;
+            for (int i = 0; i < d; i++) {
+                events[p].setGID(gid++);
+                p = inc(p);
+            }
+            finalized.add(d);
+        }
+
+        int inc(int p) {
+            return (p + 1 == events.length ? 0 : p + 1);
+        }
+
+        int numOfUnfinalizedEvents() {
+            int d = end - cursor;
+            return d >= 0 ? d : d + events.length;
+        }
+
     }
 
 }

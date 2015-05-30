@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.trace;
 
 import it.unimi.dsi.fastutil.longs.Long2LongLinkedOpenHashMap;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -8,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.mutable.MutableInt;
-
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
@@ -59,8 +59,8 @@ public class TraceState {
         return metadata;
     }
 
-    public Trace initNextTraceWindow(Event[] events, int numOfEvents) {
-        return new Trace(this, events, numOfEvents);
+    public Trace initNextTraceWindow(List<RawTrace> rawTraces) {
+        return new Trace(this, rawTraces);
     }
 
     public LockState acquireLock(Event lock) {
@@ -104,10 +104,6 @@ public class TraceState {
 
     public boolean isInsideClassInitializer(long tid) {
         return tidToClinitDepth.computeIfAbsent(tid, p -> new MutableInt(0)).intValue() > 0;
-    }
-
-    public boolean hasThreadInsideClinit() {
-        return tidToClinitDepth.values().stream().anyMatch(d -> d.intValue() > 0);
     }
 
     public void writeValueAt(long addr, long value) {

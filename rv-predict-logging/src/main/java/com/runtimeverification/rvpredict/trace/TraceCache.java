@@ -9,7 +9,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -28,15 +27,12 @@ public class TraceCache {
 
     private final List<EventReader> readers = new ArrayList<>();
 
-    private final Event[] events;
-
     /**
      * Creates a new {@code TraceCahce} structure for a trace log.
      */
     public TraceCache(Configuration config, Metadata metadata) {
         this.config = config;
         this.crntState = new TraceState(metadata);
-        this.events = new Event[config.windowSize];
     }
 
     public void setup() throws IOException {
@@ -58,8 +54,8 @@ public class TraceCache {
      * @return a {@link Trace} representing the trace segment read
      */
     public Trace getTrace(long fromIndex) throws IOException {
-        Arrays.fill(events, null);
-        long toIndex = fromIndex + events.length;
+        long toIndex = fromIndex + config.windowSize;
+        List<RawTrace> rawTraces = new ArrayList<>();
 
         /* sort readers by their last read events */
         readers.sort((r1, r2) -> Long.compare(r1.lastReadEvent().getGID(), r2.lastReadEvent().getGID()));
@@ -72,8 +68,10 @@ public class TraceCache {
             }
 
             assert event.getGID() >= fromIndex;
+            Event[] events = new Event[config.windowSize];
+            int p = 0;
             do {
-                events[(int) (event.getGID() % events.length)] = event;
+                events[p++] = event;
                 try {
                     event = reader.readEvent();
                 } catch (EOFException e) {
@@ -81,17 +79,11 @@ public class TraceCache {
                     break;
                 }
             } while (event.getGID() < toIndex);
+            rawTraces.add(new RawTrace(0, p, events));
         }
 
         /* finish reading events and create the Trace object */
-        int numOfEvents = events.length;
-        for (int i = 0; i < events.length; i++) {
-            if (events[i] == null) {
-                numOfEvents = i;
-                break;
-            }
-        }
-        return crntState.initNextTraceWindow(events, numOfEvents);
+        return crntState.initNextTraceWindow(rawTraces);
     }
 
 }

@@ -150,7 +150,7 @@ public class Trace {
      * @return the initial value
      */
     public long getInitValueOf(long addr) {
-        return addrToState.get(addr).initVal;
+        return addrToState.get(addr).initialValue();
     }
 
     public Event getFirstEvent(long tid) {
@@ -306,7 +306,7 @@ public class Trace {
                         // revise SingleThreadWriteTest to introduce more addresses
                         addrToState.put(addr, st = new MemoryAddrState(state.getValueAt(addr)));
                     }
-                    st.touchBy(event);
+                    st.touch(event);
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
                         event = event.copy();
@@ -335,18 +335,7 @@ public class Trace {
 
         /* update memory address value */
         addrToState.forEach((addr, st) -> {
-            Event lastAccess;
-            if (st.lastWrite == null) {
-                lastAccess = st.lastRead;
-            } else if (st.lastRead == null) {
-                lastAccess = st.lastWrite;
-            } else {
-                lastAccess = st.lastRead.getGID() < st.lastWrite.getGID() ? st.lastWrite : st.lastRead;
-            }
-            /* use the value of the last access to update state, instead of
-             * that of the last write, to recover from potential missing
-             * write events */
-            state.writeValueAt(addr, lastAccess.getValue());
+            state.writeValueAt(addr, st.finalValue());
         });
 
         /* compute shared memory addresses */
@@ -483,46 +472,6 @@ public class Trace {
         }
 
         return blocks;
-    }
-
-    private static class MemoryAddrState {
-        Event lastRead;
-        Event lastWrite;
-        final long initVal;
-        long reader1, reader2;
-        long writer1, writer2;
-
-        MemoryAddrState(long initVal) {
-            this.initVal = initVal;
-        }
-
-        void touchBy(Event event) {
-            long tid = event.getTID();
-            if (event.isRead()) {
-                if (lastRead == null || lastRead.getGID() < event.getGID()) {
-                    lastRead = event;
-                }
-                if (reader1 == 0) {
-                    reader1 = tid;
-                } else if (reader1 != tid && reader2 == 0) {
-                    reader2 = tid;
-                }
-            } else {
-                if (lastWrite == null || lastWrite.getGID() < event.getGID()) {
-                    lastWrite = event;
-                }
-                if (writer1 == 0) {
-                    writer1 = tid;
-                } else if (writer1 != tid && writer2 == 0) {
-                    writer2 = tid;
-                }
-            }
-        }
-
-        boolean isWriteShared() {
-            return writer2 != 0 || writer1 != 0
-                    && (reader1 != 0 && reader1 != writer1 || reader2 != 0 && reader2 != writer1);
-        }
     }
 
 }

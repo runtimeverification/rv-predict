@@ -17,13 +17,19 @@ public class RawTrace {
 
     private final int size;
 
+    private final int mask;
+
     private final Event[] events;
 
     public RawTrace(int start, int end, Event[] events) {
         this.tid = events[start].getTID();
         this.start = start;
-        this.size = end >= start ? end - start : end - start + events.length;
+        this.mask = events.length - 1;
+        this.size = (end - start + events.length) & mask;
         this.events = events;
+        if ((events.length & mask) != 0) {
+            throw new IllegalArgumentException("The length of events must be a power of two!");
+        }
     }
 
     public long getTID() {
@@ -42,8 +48,7 @@ public class RawTrace {
      * Returns the index of the {@code n}-th event.
      */
     private int getIndex(int n) {
-        n += start;
-        return n >= events.length ? n - events.length : n;
+        return (n + start) & mask;
     }
 
     /**

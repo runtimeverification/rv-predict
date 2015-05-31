@@ -223,6 +223,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
          */
         final Event[] events;
 
+        final int length;
+
         /**
          * The (inclusive) start index of the events in circular array.
          */
@@ -242,8 +244,9 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
         Buffer(int bound) {
             tid = Thread.currentThread().getId();
-            events = new Event[1 << (32 - Integer.numberOfLeadingZeros(bound + THRESHOLD - 1))];
-            for (int i = 0; i < events.length; i++) {
+            length = 1 << (32 - Integer.numberOfLeadingZeros(bound + THRESHOLD - 1));
+            events = new Event[length];
+            for (int i = 0; i < length; i++) {
                 events[i] = new Event();
                 events[i].setTID(tid);
             }
@@ -345,12 +348,12 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
 
         int inc(int p) {
-            return (p + 1 == events.length ? 0 : p + 1);
+            return (p + 1 == length ? 0 : p + 1);
         }
 
         int numOfUnfinalizedEvents() {
             int d = end - cursor;
-            return d >= 0 ? d : d + events.length;
+            return d >= 0 ? d : d + length;
         }
 
     }

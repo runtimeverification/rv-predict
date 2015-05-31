@@ -57,6 +57,8 @@ public class Trace {
 
     private final long baseGID;
 
+    private final int size;
+
     private final List<RawTrace> rawTraces;
 
     private boolean hasCriticalWrite;
@@ -74,12 +76,12 @@ public class Trace {
     /**
      * Map from memory addresses to write events ordered by global ID.
      */
-    private final Long2ObjectMap<List<Event>> addrToWriteEvents = new Long2ObjectLinkedOpenHashMap<>();
+    private final Long2ObjectMap<List<Event>> addrToWriteEvents;
 
     /**
      * Map from memory addresses referenced in this trace segment to their states.
      */
-    private final Long2ObjectMap<MemoryAddrState> addrToState = new Long2ObjectLinkedOpenHashMap<>();
+    private final Long2ObjectMap<MemoryAddrState> addrToState;
 
     /**
      * The initial states for all threads referenced in this trace segment.
@@ -105,6 +107,7 @@ public class Trace {
 
     public Trace(TraceState state, List<RawTrace> rawTraces) {
         this.state = state;
+        this.size = rawTraces.stream().collect(Collectors.summingInt(RawTrace::size));
         this.rawTraces = rawTraces;
         if (rawTraces.isEmpty()) {
             baseGID = -1;
@@ -115,6 +118,8 @@ public class Trace {
             }
             baseGID = min;
         }
+        addrToState = new Long2ObjectLinkedOpenHashMap<>(size);
+        addrToWriteEvents = new Long2ObjectLinkedOpenHashMap<>();
         processEvents();
     }
 
@@ -127,7 +132,7 @@ public class Trace {
     }
 
     public int getSize() {
-        return rawTraces.stream().collect(Collectors.summingInt(RawTrace::size));
+        return size;
     }
 
     public boolean mayContainRaces() {

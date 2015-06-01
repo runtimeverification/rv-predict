@@ -40,7 +40,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.*;
@@ -279,8 +278,6 @@ public class Trace {
         return lockEvents;
     }
 
-    private static final Function<Object, ? extends List<Event>> NEW_EVENT_LIST = p -> new ArrayList<>();
-
     private void processEvents() {
         /// PHASE 1
         Map<Long, Map<Event, Event>> tidToLockPairs = Maps.newHashMap();
@@ -302,9 +299,7 @@ public class Trace {
                     // use the primitive type api instead of computeIfAbsent
                     MemoryAddrState st = addrToState.get(addr);
                     if (st == null) {
-                        // TODO(YilongL): revisit the use of object pool here
-                        // revise SingleThreadWriteTest to introduce more addresses
-                        addrToState.put(addr, st = new MemoryAddrState(state.getValueAt(addr)));
+                        addrToState.put(addr, st = new MemoryAddrState());
                     }
                     st.touch(event);
                 } else if (event.isSyncEvent()) {
@@ -333,17 +328,18 @@ public class Trace {
             }
         }
 
+        /* compute shared memory addresses and their initial values */
+        Set<Long> sharedAddr = new HashSet<>();
+        addrToState.forEach((addr, st) -> {
+            if (st.isWriteShared()) {
+                st.setInitialValue(state.getValueAt(addr));
+                sharedAddr.add(addr);
+            }
+        });
+
         /* update memory address value */
         addrToState.forEach((addr, st) -> {
             state.writeValueAt(addr, st.finalValue());
-        });
-
-        /* compute shared memory addresses */
-        Set<Long> sharedAddr = new HashSet<>();
-        addrToState.forEach((addr, state) -> {
-            if (state.isWriteShared()) {
-                sharedAddr.add(addr);
-            }
         });
 
         /// PHASE 2
@@ -413,7 +409,8 @@ public class Trace {
                         events.add(event);
                         if (event.isWrite()) {
                             hasCriticalWrite = true;
-                            addrToWriteEvents.computeIfAbsent(event.getAddr(), NEW_EVENT_LIST).add(event);
+                            addrToWriteEvents.computeIfAbsent(event.getAddr(),
+                                    p -> new ArrayList<>()).add(event);
                         }
                     }
                     if (!events.isEmpty()) {

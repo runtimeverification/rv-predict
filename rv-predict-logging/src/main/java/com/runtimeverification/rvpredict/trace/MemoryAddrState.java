@@ -4,11 +4,11 @@ import com.runtimeverification.rvpredict.log.Event;
 
 public class MemoryAddrState {
     private Event lastAccess;
-    private final long initVal;
+    private long initVal;
     private long reader1, reader2;
     private long writer1, writer2;
 
-    public MemoryAddrState(long initVal) {
+    public void setInitialValue(long initVal) {
         this.initVal = initVal;
     }
 

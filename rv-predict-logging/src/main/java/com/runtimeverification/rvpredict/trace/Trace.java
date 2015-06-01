@@ -328,17 +328,15 @@ public class Trace {
             }
         }
 
-        /* compute shared memory addresses and their initial values */
         Set<Long> sharedAddr = new HashSet<>();
         addrToState.forEach((addr, st) -> {
+            /* compute shared memory addresses and their initial values */
             if (st.isWriteShared()) {
                 st.setInitialValue(state.getValueAt(addr));
                 sharedAddr.add(addr);
             }
-        });
 
-        /* update memory address value */
-        addrToState.forEach((addr, st) -> {
+            /* update memory address value */
             Event lastWrite = st.lastWrite();
             if (lastWrite != null) {
                 state.writeValueAt(addr, lastWrite.getValue());

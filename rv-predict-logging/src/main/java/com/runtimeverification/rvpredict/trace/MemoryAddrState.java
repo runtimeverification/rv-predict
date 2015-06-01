@@ -41,8 +41,11 @@ public class MemoryAddrState {
     }
 
     public boolean isWriteShared() {
-        return writer2 != 0 || writer1 != 0
-                && (reader1 != 0 && reader1 != writer1 || reader2 != 0 && reader2 != writer1);
+        if (writer1 == 0) { // most common case: no write at all
+            return false;
+        } else {
+            return writer2 != 0 || reader1 != 0 && reader1 != writer1 || reader2 != 0;
+        }
     }
 
 }

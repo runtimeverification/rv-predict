@@ -339,7 +339,10 @@ public class Trace {
 
         /* update memory address value */
         addrToState.forEach((addr, st) -> {
-            state.writeValueAt(addr, st.finalValue());
+            Event lastWrite = st.lastWrite();
+            if (lastWrite != null) {
+                state.writeValueAt(addr, lastWrite.getValue());
+            }
         });
 
         /// PHASE 2

@@ -10,8 +10,10 @@ public interface Constants {
 
     String COM_RUNTIMEVERIFICATION_RVPREDICT = "com/runtimeverification/rvpredict";
 
-    int ATOMIC_LOCK_C = 43;
+    byte JUC_LOCK_C = 0;
 
-    int MONITOR_C = 42;
+    byte MONITOR_C = 42;
+
+    byte ATOMIC_LOCK_C = 43;
 
 }

@@ -16,6 +16,6 @@ public interface ILoggingEngine {
      * @see {@link Event} for a more elaborate description of the
      *      parameters.
      */
-    void log(EventType eventType, int locId, long addr, long value1, long value2);
+    void log(EventType eventType, int locId, int addr1, int addr2, long value1, long value2);
 
 }

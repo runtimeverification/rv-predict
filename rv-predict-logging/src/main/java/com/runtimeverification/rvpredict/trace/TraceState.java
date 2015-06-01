@@ -9,9 +9,11 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.mutable.MutableInt;
+
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
@@ -51,12 +53,24 @@ public class TraceState {
 
     private final Metadata metadata;
 
-    public TraceState(Metadata metadata) {
+    private final MemoryAddrToStateMap reusableAddrToState;
+
+    public TraceState(Configuration config, Metadata metadata) {
         this.metadata = metadata;
+        this.reusableAddrToState = new MemoryAddrToStateMap(config.windowSize);
     }
 
     public Metadata metadata() {
         return metadata;
+    }
+
+    /**
+     * Returns a (reusable) instance of the {@link MemoryAddrToStateMap} for the
+     * current {@link Trace}.
+     */
+    public MemoryAddrToStateMap memoryAddrToStateMap() {
+        reusableAddrToState.clear();
+        return reusableAddrToState;
     }
 
     public Trace initNextTraceWindow(List<RawTrace> rawTraces) {

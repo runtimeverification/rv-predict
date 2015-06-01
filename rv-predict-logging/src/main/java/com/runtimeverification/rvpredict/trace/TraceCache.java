@@ -32,7 +32,7 @@ public class TraceCache {
      */
     public TraceCache(Configuration config, Metadata metadata) {
         this.config = config;
-        this.crntState = new TraceState(metadata);
+        this.crntState = new TraceState(config, metadata);
     }
 
     public void setup() throws IOException {

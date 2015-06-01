@@ -91,7 +91,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
     public VolatileLoggingEngine(Configuration config, Metadata metadata) {
         this.config = config;
-        this.crntState = new TraceState(metadata);
+        this.crntState = new TraceState(config, metadata);
         this.windowSize = config.windowSize;
         this.detector = new RaceDetector(config);
     }

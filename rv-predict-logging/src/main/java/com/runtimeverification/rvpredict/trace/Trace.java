@@ -46,6 +46,7 @@ import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.trace.MemoryAddrToStateMap.EntryIterator;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a
@@ -80,7 +81,7 @@ public class Trace {
     /**
      * Map from memory addresses referenced in this trace segment to their states.
      */
-    private final Long2ObjectMap<MemoryAddrState> addrToState;
+    private final MemoryAddrToStateMap addrToState;
 
     /**
      * The initial states for all threads referenced in this trace segment.
@@ -117,7 +118,7 @@ public class Trace {
             }
             baseGID = min;
         }
-        addrToState = new Long2ObjectLinkedOpenHashMap<>(size);
+        addrToState = state.memoryAddrToStateMap();
         addrToWriteEvents = new Long2ObjectLinkedOpenHashMap<>();
         processEvents();
     }
@@ -295,12 +296,7 @@ public class Trace {
 
                 if (event.isReadOrWrite()) {
                     /* update memory address state */
-                    long addr = event.getAddr();
-                    // use the primitive type api instead of computeIfAbsent
-                    MemoryAddrState st = addrToState.get(addr);
-                    if (st == null) {
-                        addrToState.put(addr, st = new MemoryAddrState());
-                    }
+                    MemoryAddrState st = addrToState.computeIfAbsent(event.getAddr());
                     st.touch(event);
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
@@ -329,7 +325,10 @@ public class Trace {
         }
 
         Set<Long> sharedAddr = new HashSet<>();
-        addrToState.forEach((addr, st) -> {
+        for (EntryIterator iter = addrToState.iterator(); iter.hasNext(); iter.incCursor()) {
+            long addr = iter.getNextKey();
+            MemoryAddrState st = iter.getNextValue();
+
             /* compute shared memory addresses and their initial values */
             if (st.isWriteShared()) {
                 st.setInitialValue(state.getValueAt(addr));
@@ -341,7 +340,7 @@ public class Trace {
             if (lastWrite != null) {
                 state.writeValueAt(addr, lastWrite.getValue());
             }
-        });
+        }
 
         /// PHASE 2
         if (!sharedAddr.isEmpty()) {

@@ -28,9 +28,6 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.trace;
 
-import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -66,17 +63,19 @@ public class Trace {
     /**
      * Map from thread ID to critical events.
      */
-    private final Map<Long, List<Event>> tidToEvents = Maps.newHashMap();
+    private final Map<Long, List<Event>> tidToEvents;
 
     /**
      * Map from thread ID to critical memory access events grouped into blocks.
      */
-    private final Map<Long, List<MemoryAccessBlock>> tidToMemoryAccessBlocks = new HashMap<>();
+    private final Map<Long, List<MemoryAccessBlock>> tidToMemoryAccessBlocks;
 
     /**
-     * Map from memory addresses to write events ordered by global ID.
+     * The initial states for all threads referenced in this trace segment.
+     * It is computed as the value in the {@link #state} before the first
+     * event of that thread occurs in this trace segment.
      */
-    private final Long2ObjectMap<List<Event>> addrToWriteEvents;
+    private final Map<Long, ThreadState> tidToThreadState;
 
     /**
      * Map from memory addresses referenced in this trace segment to their states.
@@ -84,31 +83,44 @@ public class Trace {
     private final MemoryAddrToStateMap addrToState;
 
     /**
-     * The initial states for all threads referenced in this trace segment.
-     * It is computed as the value in the {@link #state} before the first
-     * event of that thread occurs in this trace segment.
+     * Map from memory addresses to write events ordered by global ID.
      */
-    private final Map<Long, ThreadState> tidToThreadState = Maps.newHashMap();
+    private final Map<Long, List<Event>> addrToWriteEvents;
 
     /**
      * Map from lock ID to critical lock pairs.
      */
-    private final Map<Long, List<LockRegion>> lockIdToLockRegions = Maps.newHashMap();
+    private final Map<Long, List<LockRegion>> lockIdToLockRegions;
 
     /**
      * Set of {@code MemoryAccessEvent}'s that happen during class initialization.
      */
-    private final Set<Event> clinitEvents = Sets.newHashSet();
+    private final Set<Event> clinitEvents;
 
     /**
      * Maintains the current values for every location, as recorded into the trace
      */
     private final TraceState state;
 
-    public Trace(TraceState state, List<RawTrace> rawTraces) {
+    public Trace(TraceState state, List<RawTrace> rawTraces,
+            Map<Long, List<Event>> tidToEvents,
+            Map<Long, List<MemoryAccessBlock>> tidToMemoryAccessBlocks,
+            Map<Long, ThreadState> tidToThreadState,
+            MemoryAddrToStateMap addrToState,
+            Map<Long, List<Event>> addrToWriteEvents,
+            Map<Long, List<LockRegion>> lockIdToLockRegions,
+            Set<Event> clinitEvents) {
         this.state = state;
         this.size = rawTraces.stream().collect(Collectors.summingInt(RawTrace::size));
         this.rawTraces = rawTraces;
+        this.tidToEvents = tidToEvents;
+        this.tidToMemoryAccessBlocks = tidToMemoryAccessBlocks;
+        this.tidToThreadState = tidToThreadState;
+        this.addrToState = addrToState;
+        this.addrToWriteEvents = addrToWriteEvents;
+        this.lockIdToLockRegions = lockIdToLockRegions;
+        this.clinitEvents = clinitEvents;
+
         if (rawTraces.isEmpty()) {
             baseGID = -1;
         } else {
@@ -118,8 +130,6 @@ public class Trace {
             }
             baseGID = min;
         }
-        addrToState = state.memoryAddrToStateMap();
-        addrToWriteEvents = new Long2ObjectLinkedOpenHashMap<>();
         processEvents();
     }
 

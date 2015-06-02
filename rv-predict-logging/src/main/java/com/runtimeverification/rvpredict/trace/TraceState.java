@@ -3,13 +3,15 @@ package com.runtimeverification.rvpredict.trace;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
@@ -17,6 +19,8 @@ import com.runtimeverification.rvpredict.metadata.Metadata;
 
 // TODO(YilongL): think about the thread-safety about this class
 public class TraceState {
+
+    private static final int DEFAULT_NUM_OF_THREADS = 32;
 
     /**
      * Limit the maximum number of entries in the {@link #addrToValue} map in
@@ -32,12 +36,12 @@ public class TraceState {
     /**
      * Map form thread ID to the current level of class initialization.
      */
-    private final Map<Long, MutableInt> tidToClinitDepth = Maps.newHashMap();
+    private final Map<Long, MutableInt> tidToClinitDepth = new HashMap<>(DEFAULT_NUM_OF_THREADS);
 
     /**
      * Map from thread ID to the current stack trace elements.
      */
-    private final Map<Long, Deque<Integer>> tidToStacktrace = Maps.newHashMap();
+    private final Map<Long, Deque<Integer>> tidToStacktrace = new HashMap<>(DEFAULT_NUM_OF_THREADS);
 
     /**
      * Table indexed by thread ID and lock object respectively. This table
@@ -47,28 +51,51 @@ public class TraceState {
 
     private final Metadata metadata;
 
-    private final MemoryAddrToStateMap reusableAddrToState;
+    private final Map<Long, List<Event>> t_tidToEvents;
+
+    private final Map<Long, List<MemoryAccessBlock>> t_tidToMemoryAccessBlocks;
+
+    private final Map<Long, ThreadState> t_tidToThreadState;
+
+    private final MemoryAddrToStateMap t_addrToState;
+
+    private final Map<Long, List<Event>> t_addrToWriteEvents;
+
+    private final Map<Long, List<LockRegion>> t_lockIdToLockRegions;
+
+    private final Set<Event> t_clinitEvents;
 
     public TraceState(Configuration config, Metadata metadata) {
         this.metadata = metadata;
-        this.reusableAddrToState = new MemoryAddrToStateMap(config.windowSize);
+        this.t_tidToEvents             = new HashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_tidToMemoryAccessBlocks = new HashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_tidToThreadState        = new HashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_addrToState             = new MemoryAddrToStateMap(config.windowSize);
+        this.t_addrToWriteEvents       = new HashMap<>(config.windowSize);
+        this.t_lockIdToLockRegions     = new HashMap<>(config.windowSize >> 1);
+        this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
     }
 
     public Metadata metadata() {
         return metadata;
     }
 
-    /**
-     * Returns a (reusable) instance of the {@link MemoryAddrToStateMap} for the
-     * current {@link Trace}.
-     */
-    public MemoryAddrToStateMap memoryAddrToStateMap() {
-        reusableAddrToState.clear();
-        return reusableAddrToState;
-    }
-
     public Trace initNextTraceWindow(List<RawTrace> rawTraces) {
-        return new Trace(this, rawTraces);
+        t_tidToEvents.clear();
+        t_tidToMemoryAccessBlocks.clear();
+        t_tidToThreadState.clear();
+        t_addrToState.clear();
+        t_addrToWriteEvents.clear();
+        t_lockIdToLockRegions.clear();
+        t_clinitEvents.clear();
+        return new Trace(this, rawTraces,
+                t_tidToEvents,
+                t_tidToMemoryAccessBlocks,
+                t_tidToThreadState,
+                t_addrToState,
+                t_addrToWriteEvents,
+                t_lockIdToLockRegions,
+                t_clinitEvents);
     }
 
     public LockState acquireLock(Event lock) {

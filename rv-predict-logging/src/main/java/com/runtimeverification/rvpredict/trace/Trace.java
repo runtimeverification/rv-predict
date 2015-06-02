@@ -55,11 +55,9 @@ import com.runtimeverification.rvpredict.metadata.Metadata;
  */
 public class Trace {
 
-    private final int numOfEvents;
-
     private final long baseGID;
 
-    private final Event[] events;
+    private final List<RawTrace> rawTraces;
 
     private boolean hasCriticalWrite;
 
@@ -100,24 +98,28 @@ public class Trace {
      */
     private final Set<Event> clinitEvents = Sets.newHashSet();
 
-    private final Metadata metadata;
-
     /**
      * Maintains the current values for every location, as recorded into the trace
      */
     private final TraceState state;
 
-    public Trace(TraceState crntState, Event[] events, int numOfEvents) {
-        this.state = crntState;
-        this.metadata = crntState.metadata();
-        this.numOfEvents = numOfEvents;
-        this.events = events;
-        this.baseGID = numOfEvents > 0 ? events[0].getGID() : -1;
+    public Trace(TraceState state, List<RawTrace> rawTraces) {
+        this.state = state;
+        this.rawTraces = rawTraces;
+        if (rawTraces.isEmpty()) {
+            baseGID = -1;
+        } else {
+            long min = Long.MAX_VALUE;
+            for (RawTrace t : rawTraces) {
+                min = Math.min(min, t.getMinGID());
+            }
+            baseGID = min;
+        }
         processEvents();
     }
 
     public Metadata metadata() {
-        return metadata;
+        return state.metadata();
     }
 
     public long getBaseGID() {
@@ -125,7 +127,7 @@ public class Trace {
     }
 
     public int getSize() {
-        return numOfEvents;
+        return rawTraces.stream().collect(Collectors.summingInt(RawTrace::size));
     }
 
     public boolean mayContainRaces() {
@@ -228,15 +230,14 @@ public class Trace {
             /* event is in the current window; reassemble its stack trace */
             tidToThreadState.getOrDefault(tid, state.getThreadState(tid)).getStacktrace()
                     .forEach(stacktrace::addFirst);
-            for (int i = 0; i < numOfEvents; i++) {
-                Event e = events[i];
+            RawTrace t = rawTraces.stream().filter(p -> p.getTID() == tid).findAny().get();
+            for (int i = 0; i < t.size(); i++) {
+                Event e = t.event(i);
                 if (e.getGID() >= gid) break;
-                if (e.getTID() == tid) {
-                    if (e.getType() == EventType.INVOKE_METHOD) {
-                        stacktrace.addFirst(e.getLocId());
-                    } else if (e.getType() == EventType.FINISH_METHOD) {
-                        stacktrace.removeFirst();
-                    }
+                if (e.getType() == EventType.INVOKE_METHOD) {
+                    stacktrace.addFirst(e.getLocId());
+                } else if (e.getType() == EventType.FINISH_METHOD) {
+                    stacktrace.removeFirst();
                 }
             }
             stacktrace.addFirst(event.getLocId());
@@ -278,66 +279,69 @@ public class Trace {
     private void processEvents() {
         /// PHASE 1
         Map<Long, Map<Event, Event>> tidToLockPairs = Maps.newHashMap();
-        boolean hasThreadInsideClinit = state.hasThreadInsideClinit();
-        for (int i = 0; i < numOfEvents; i++) {
-            Event event = events[i];
-            long tid = event.getTID();
-            if (hasThreadInsideClinit) {
-                if (state.isInsideClassInitializer(tid)) {
+        for (RawTrace rawTrace : rawTraces) {
+            long tid = rawTrace.getTID();
+            Map<Event, Event> lockPairs = tidToLockPairs.computeIfAbsent(tid, p -> new HashMap<>());
+            tidToThreadState.put(tid, state.getThreadStateSnapshot(tid));
+            boolean isInsideClinit = state.isInsideClassInitializer(tid);
+
+            for (int i = 0; i < rawTrace.size(); i++) {
+                Event event = rawTrace.event(i);
+                if (isInsideClinit) {
                     clinitEvents.add(event);
                 }
-            }
 
-            if (event.isReadOrWrite()) {
-                /* update memory address state */
-                MemoryAddrState st = addrToState.computeIfAbsent(event.getAddr(),
-                        addr -> new MemoryAddrState(state.getValueAt(addr)));
-                if (event.isRead()) {
-                    st.readBy(tid, i);
+                if (event.isReadOrWrite()) {
+                    /* update memory address state */
+                    long addr = event.getAddr();
+                    // use the primitive type api instead of computeIfAbsent
+                    MemoryAddrState st = addrToState.get(addr);
+                    if (st == null) {
+                        // TODO(YilongL): revisit the use of object pool here
+                        // revise SingleThreadWriteTest to introduce more addresses
+                        addrToState.put(addr, st = new MemoryAddrState(state.getValueAt(addr)));
+                    }
+                    st.touchBy(event);
+                } else if (event.isSyncEvent()) {
+                    if (event.isLock()) {
+                        event = event.copy();
+                        if (state.acquireLock(event).level() == 1) {
+                            lockPairs.put(event, null);
+                        }
+                    } else if (event.isUnlock()) {
+                        LockState st = state.releaseLock(event);
+                        if (st.level() == 0) {
+                            lockPairs.put(st.lock(), event);
+                        }
+                    }
+                } else if (event.isMetaEvent()) {
+                    state.onMetaEvent(event);
+                    EventType type = event.getType();
+                    if (type == EventType.CLINIT_ENTER) {
+                        isInsideClinit = true;
+                    } else if (type == EventType.CLINIT_EXIT) {
+                        isInsideClinit = state.isInsideClassInitializer(tid);
+                    }
                 } else {
-                    st.writtenBy(tid, i);
+                    throw new IllegalStateException();
                 }
-            } else if (event.isSyncEvent()) {
-                if (event.isLock()) {
-                    tidToThreadState.computeIfAbsent(tid, state::getThreadStateSnapshot);
-                    event = event.copy();
-                    if (state.acquireLock(event).level() == 1) {
-                        tidToLockPairs.computeIfAbsent(tid, p -> new HashMap<>())
-                            .put(event, null);
-                    }
-                } else if (event.isUnlock()) {
-                    tidToThreadState.computeIfAbsent(tid, state::getThreadStateSnapshot);
-                    LockState st = state.releaseLock(event);
-                    if (st.level() == 0) {
-                        tidToLockPairs.computeIfAbsent(tid, p -> new HashMap<>())
-                            .put(st.lock(), event);
-                    }
-                }
-            } else if (event.isMetaEvent()) {
-                EventType type = event.getType();
-                if (type == EventType.INVOKE_METHOD || type == EventType.FINISH_METHOD) {
-                    tidToThreadState.computeIfAbsent(tid, state::getThreadStateSnapshot);
-                }
-                state.onMetaEvent(event);
-                if (type == EventType.CLINIT_ENTER) {
-                    hasThreadInsideClinit = true;
-                } else if (type == EventType.CLINIT_EXIT) {
-                    hasThreadInsideClinit = state.hasThreadInsideClinit();
-                }
-            } else {
-                throw new IllegalStateException();
             }
         }
 
         /* update memory address value */
         addrToState.forEach((addr, st) -> {
-            int lastAccess = Math.max(st.lastRead, st.lastWrite);
-            if (lastAccess >= 0) {
-                /* use the value of the last access to update state, instead of
-                 * that of the last write, to recover from potential missing
-                 * write events */
-                state.writeValueAt(addr, events[lastAccess].getValue());
+            Event lastAccess;
+            if (st.lastWrite == null) {
+                lastAccess = st.lastRead;
+            } else if (st.lastRead == null) {
+                lastAccess = st.lastWrite;
+            } else {
+                lastAccess = st.lastRead.getGID() < st.lastWrite.getGID() ? st.lastWrite : st.lastRead;
             }
+            /* use the value of the last access to update state, instead of
+             * that of the last write, to recover from potential missing
+             * write events */
+            state.writeValueAt(addr, lastAccess.getValue());
         });
 
         /* compute shared memory addresses */
@@ -350,55 +354,49 @@ public class Trace {
 
         /// PHASE 2
         if (!sharedAddr.isEmpty()) {
-            boolean[] critical = new boolean[numOfEvents];
-            Map<Long, Map<Integer, Integer>> tidToOpenLockIndices = new HashMap<>();
-            tidToLockPairs.forEach((tid, pairs) -> {
-                Map<Integer, Integer> indices = new HashMap<>();
-                tidToOpenLockIndices.put(tid, indices);
-                pairs.forEach((l, r) -> {
+            for (RawTrace rawTrace : rawTraces) {
+                long tid = rawTrace.getTID();
+                boolean[] critical = new boolean[rawTrace.size()];
+                Map<Event, Event> openLockPairs = new HashMap<>();
+                Map<Event, Event> lockPairs = tidToLockPairs.getOrDefault(tid,
+                        Collections.emptyMap());
+                lockPairs.forEach((l, r) -> {
                     if (l.getGID() < baseGID) {
-                        indices.put(getEventOffset(l), r == null ? null : getEventOffset(r));
+                        openLockPairs.put(l, r);
                     }
                 });
-            });
 
-            for (int i = 0; i < numOfEvents; i++) {
-                Event event = events[i];
-                long tid = event.getTID();
-                if (event.isReadOrWrite()) {
-                    critical[i] = sharedAddr.contains(event.getAddr());
-                } else if (event.isSyncEvent()) {
-                    if (event.isLock()) {
-                        if (tidToLockPairs.getOrDefault(tid, Collections.emptyMap())
-                                .containsKey(event)) {
-                            Event unlock = tidToLockPairs.get(tid).get(event);
-                            tidToOpenLockIndices.get(tid).put(i,
-                                    unlock == null ? null : getEventOffset(unlock));
+                for (int i = 0; i < rawTrace.size(); i++) {
+                    Event event = rawTrace.event(i);
+                    if (event.isReadOrWrite()) {
+                        critical[i] = sharedAddr.contains(event.getAddr());
+                    } else if (event.isSyncEvent()) {
+                        if (event.isLock()) {
+                            if (lockPairs.containsKey(event)) {
+                                Event unlock = lockPairs.get(event);
+                                openLockPairs.put(event, unlock);
+                            }
+                        } else if (event.isUnlock()) {
+                            openLockPairs.values().remove(event);
+                        } else {
+                            critical[i] = true;
                         }
-                    } else if (event.isUnlock()) {
-                        tidToOpenLockIndices.getOrDefault(tid, Collections.emptyMap()).values()
-                                .remove(i);
                     } else {
-                        critical[i] = true;
+                        // MetaEvents are not critical
                     }
-                } else {
-                    // MetaEvents are not critical
-                }
 
-                if (critical[i]) {
-                    Map<Integer, Integer> indices = tidToOpenLockIndices.get(tid);
-                    if (indices != null) {
-                        indices.forEach((l, r) -> {
+                    if (critical[i]) {
+                        openLockPairs.forEach((l, r) -> {
                             Event lock, unlock;
-                            if (l >= 0) {
-                                critical[l] = true;
-                                lock = events[l];
+                            if (l.getGID() >= baseGID) {
+                                critical[rawTrace.find(l)] = true;
+                                lock = l;
                             } else {
                                 lock = null;
                             }
                             if (r != null) {
-                                critical[r] = true;
-                                unlock = events[r];
+                                critical[rawTrace.find(r)] = true;
+                                unlock = r;
                             } else {
                                 unlock = null;
                             }
@@ -406,23 +404,26 @@ public class Trace {
                                     lock != null ? lock.getLockId() : unlock.getLockId(),
                                     p -> new ArrayList<>()).add(new LockRegion(lock, unlock));
                         });
-                        indices.clear();
+                        openLockPairs.clear();
                     }
                 }
-            }
 
-            /* commit all critical events into this window */
-            for (int i = 0; i < numOfEvents; i++) {
-                if (critical[i]) {
-                    Event event = events[i];
-//                    System.err.println(event + " at " + metadata.getLocationSig(event.getLocId()));
-                    long tid = event.getTID();
+                /* commit all critical events into this window */
+                List<Event> events = new ArrayList<>();
+                for (int i = 0; i < rawTrace.size(); i++) {
+                    if (critical[i]) {
+                        Event event = rawTrace.event(i);
+//                        System.err.println(event + " at " + metadata().getLocationSig(event.getLocId()));
 
-                    /* update tidToEvents & addrToWriteEvents */
-                    tidToEvents.computeIfAbsent(tid, NEW_EVENT_LIST).add(event);
-                    if (event.isWrite()) {
-                        hasCriticalWrite = true;
-                        addrToWriteEvents.computeIfAbsent(event.getAddr(), NEW_EVENT_LIST).add(event);
+                        /* update tidToEvents & addrToWriteEvents */
+                        events.add(event);
+                        if (event.isWrite()) {
+                            hasCriticalWrite = true;
+                            addrToWriteEvents.computeIfAbsent(event.getAddr(), NEW_EVENT_LIST).add(event);
+                        }
+                    }
+                    if (!events.isEmpty()) {
+                        tidToEvents.put(tid, events);
                     }
                 }
             }
@@ -479,36 +480,37 @@ public class Trace {
         return blocks;
     }
 
-    private int getEventOffset(Event event) {
-        return (int) (event.getGID() - baseGID);
-    }
-
     private static class MemoryAddrState {
-        int lastRead = -1;
-        int lastWrite = -1;
+        Event lastRead;
+        Event lastWrite;
         final long initVal;
         long reader1, reader2;
         long writer1, writer2;
 
-        MemoryAddrState(long value) {
-            initVal = value;
+        MemoryAddrState(long initVal) {
+            this.initVal = initVal;
         }
 
-        void readBy(long tid, int idx) {
-            lastRead = idx;
-            if (reader1 == 0) {
-                reader1 = tid;
-            } else if (reader1 != tid && reader2 == 0) {
-                reader2 = tid;
-            }
-        }
-
-        void writtenBy(long tid, int idx) {
-            lastWrite = idx;
-            if (writer1 == 0) {
-                writer1 = tid;
-            } else if (writer1 != tid && writer2 == 0) {
-                writer2 = tid;
+        void touchBy(Event event) {
+            long tid = event.getTID();
+            if (event.isRead()) {
+                if (lastRead == null || lastRead.getGID() < event.getGID()) {
+                    lastRead = event;
+                }
+                if (reader1 == 0) {
+                    reader1 = tid;
+                } else if (reader1 != tid && reader2 == 0) {
+                    reader2 = tid;
+                }
+            } else {
+                if (lastWrite == null || lastWrite.getGID() < event.getGID()) {
+                    lastWrite = event;
+                }
+                if (writer1 == 0) {
+                    writer1 = tid;
+                } else if (writer1 != tid && writer2 == 0) {
+                    writer2 = tid;
+                }
             }
         }
 

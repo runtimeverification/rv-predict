@@ -292,8 +292,9 @@ public class Configuration implements Constants {
     private boolean online;
 
     final static String opt_max_len = "--maxlen";
-    @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
+    @Parameter(names = opt_max_len, description = "Window size (must be >= 64)", hidden = true, descriptionKey = "2010")
     public int windowSize = 1000;
+    private static int MIN_WINDOW_SIZE = 64;
 
     final static String opt_volatile = "--volatile";
     @Parameter(names = opt_volatile, description = "Check unordered conflict accesses on volatile variables", hidden = true, descriptionKey = "2030")
@@ -444,6 +445,9 @@ public class Configuration implements Constants {
                 prediction = OFFLINE_PREDICTION;
             }
         }
+
+        /* set window size */
+        windowSize = Math.max(windowSize, MIN_WINDOW_SIZE);
 
         int startOfJavaArgs = endIdx;
         if (startOfJavaArgs < args.length

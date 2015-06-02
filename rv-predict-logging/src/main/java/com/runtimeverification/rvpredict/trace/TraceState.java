@@ -15,16 +15,12 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
-
 // TODO(YilongL): think about the thread-safety about this class
 public class TraceState {
 
     /**
      * Limit the maximum number of entries in the {@link #addrToValue} map in
      * order to avoid {@link OutOfMemoryError}.
-     * <p>
-     * TODO(YilongL): modify the code for building formula accordingly to avoid
-     * invalidating the entire window because of missing initial value.
      */
     private static final int NUM_OF_ADDR = 32 * 1024;
 

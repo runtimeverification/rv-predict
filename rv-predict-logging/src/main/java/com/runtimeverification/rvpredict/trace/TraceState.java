@@ -1,7 +1,5 @@
 package com.runtimeverification.rvpredict.trace;
 
-import it.unimi.dsi.fastutil.longs.Long2LongLinkedOpenHashMap;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -33,7 +31,7 @@ public class TraceState {
     /**
      * Map from memory address to its value.
      */
-    private final Long2LongLinkedOpenHashMap addrToValue = new Long2LongLinkedOpenHashMap(NUM_OF_ADDR);
+    private final MemoryAddrToValueMap addrToValue = new MemoryAddrToValueMap(NUM_OF_ADDR);
 
     /**
      * Map form thread ID to the current level of class initialization.
@@ -121,15 +119,12 @@ public class TraceState {
     }
 
     public void writeValueAt(long addr, long value) {
-        addrToValue.putAndMoveToFirst(addr, value);
-        if (addrToValue.size() > NUM_OF_ADDR) {
-            addrToValue.removeLastLong();
-        }
+        addrToValue.put(addr, value);
     }
 
     public long getValueAt(long addr) {
-        // the default value of Long2LongMap is 0
-        return addrToValue.getAndMoveToFirst(addr);
+        // the default return value is 0
+        return addrToValue.get(addr);
     }
 
     public ThreadState getThreadState(long tid) {

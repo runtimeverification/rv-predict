@@ -36,12 +36,14 @@ public class TraceState {
     /**
      * Map form thread ID to the current level of class initialization.
      */
-    private final Map<Long, MutableInt> tidToClinitDepth = new HashMap<>(DEFAULT_NUM_OF_THREADS);
+    private final ThreadIDToObjectMap<MutableInt> tidToClinitDepth = new ThreadIDToObjectMap<>(
+            DEFAULT_NUM_OF_THREADS, MutableInt::new);
 
     /**
      * Map from thread ID to the current stack trace elements.
      */
-    private final Map<Long, Deque<Integer>> tidToStacktrace = new HashMap<>(DEFAULT_NUM_OF_THREADS);
+    private final ThreadIDToObjectMap<Deque<Integer>> tidToStacktrace = new ThreadIDToObjectMap<>(
+            DEFAULT_NUM_OF_THREADS, ArrayDeque::new);
 
     /**
      * Table indexed by thread ID and lock object respectively. This table
@@ -59,7 +61,7 @@ public class TraceState {
 
     private final MemoryAddrToStateMap t_addrToState;
 
-    private final Map<Long, List<Event>> t_addrToWriteEvents;
+    private final MemoryAddrToObjectMap<List<Event>> t_addrToWriteEvents;
 
     private final Map<Long, List<LockRegion>> t_lockIdToLockRegions;
 
@@ -71,7 +73,7 @@ public class TraceState {
         this.t_tidToMemoryAccessBlocks = new HashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToThreadState        = new HashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_addrToState             = new MemoryAddrToStateMap(config.windowSize);
-        this.t_addrToWriteEvents       = new HashMap<>(config.windowSize);
+        this.t_addrToWriteEvents       = new MemoryAddrToObjectMap<>(config.windowSize, ArrayList::new);
         this.t_lockIdToLockRegions     = new HashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
     }
@@ -117,14 +119,13 @@ public class TraceState {
         long tid = event.getTID();
         switch (event.getType()) {
         case CLINIT_ENTER:
-            tidToClinitDepth.computeIfAbsent(tid, p -> new MutableInt()).increment();
+            tidToClinitDepth.computeIfAbsent(tid).increment();
             break;
         case CLINIT_EXIT:
             tidToClinitDepth.get(tid).decrement();
             break;
         case INVOKE_METHOD:
-            tidToStacktrace.computeIfAbsent(tid, p -> new ArrayDeque<>())
-                .add(event.getLocId());
+            tidToStacktrace.computeIfAbsent(tid).add(event.getLocId());
             break;
         case FINISH_METHOD:
             int locId = tidToStacktrace.get(tid).removeLast();
@@ -138,7 +139,7 @@ public class TraceState {
     }
 
     public boolean isInsideClassInitializer(long tid) {
-        return tidToClinitDepth.computeIfAbsent(tid, p -> new MutableInt(0)).intValue() > 0;
+        return tidToClinitDepth.computeIfAbsent(tid).intValue() > 0;
     }
 
     public void writeValueAt(long addr, long value) {
@@ -151,8 +152,7 @@ public class TraceState {
     }
 
     public ThreadState getThreadState(long tid) {
-        return new ThreadState(tidToStacktrace.getOrDefault(tid, new ArrayDeque<>()),
-                lockTable.row(tid).values());
+        return new ThreadState(tidToStacktrace.computeIfAbsent(tid), lockTable.row(tid).values());
     }
 
     public ThreadState getThreadStateSnapshot(long tid) {

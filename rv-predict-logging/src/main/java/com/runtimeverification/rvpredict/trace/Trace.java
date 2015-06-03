@@ -43,7 +43,6 @@ import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.trace.MemoryAddrToStateMap.EntryIterator;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a
@@ -85,7 +84,7 @@ public class Trace {
     /**
      * Map from memory addresses to write events ordered by global ID.
      */
-    private final Map<Long, List<Event>> addrToWriteEvents;
+    private final LongToObjectMap<List<Event>> addrToWriteEvents;
 
     /**
      * Map from lock ID to critical lock pairs.
@@ -107,7 +106,7 @@ public class Trace {
             Map<Long, List<MemoryAccessBlock>> tidToMemoryAccessBlocks,
             Map<Long, ThreadState> tidToThreadState,
             MemoryAddrToStateMap addrToState,
-            Map<Long, List<Event>> addrToWriteEvents,
+            LongToObjectMap<List<Event>> addrToWriteEvents,
             Map<Long, List<LockRegion>> lockIdToLockRegions,
             Set<Event> clinitEvents) {
         this.state = state;
@@ -221,7 +220,7 @@ public class Trace {
     }
 
     public List<Event> getWriteEvents(long addr) {
-        return addrToWriteEvents.getOrDefault(addr, Collections.emptyList());
+        return addrToWriteEvents.get(addr);
     }
 
     public boolean isInsideClassInitializer(Event event) {
@@ -335,7 +334,8 @@ public class Trace {
         }
 
         Set<Long> sharedAddr = new HashSet<>();
-        for (EntryIterator iter = addrToState.iterator(); iter.hasNext(); iter.incCursor()) {
+        for (LongToObjectMap<MemoryAddrState>.EntryIterator iter = addrToState.iterator();
+                iter.hasNext(); iter.incCursor()) {
             long addr = iter.getNextKey();
             MemoryAddrState st = iter.getNextValue();
 
@@ -419,8 +419,7 @@ public class Trace {
                         events.add(event);
                         if (event.isWrite()) {
                             hasCriticalWrite = true;
-                            addrToWriteEvents.computeIfAbsent(event.getAddr(),
-                                    p -> new ArrayList<>()).add(event);
+                            addrToWriteEvents.computeIfAbsent(event.getAddr()).add(event);
                         }
                     }
                     if (!events.isEmpty()) {

@@ -2,25 +2,25 @@ package com.runtimeverification.rvpredict.trace;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
-// TODO(YilongL): think about the thread-safety about this class
 public class TraceState {
 
     private static final int DEFAULT_NUM_OF_THREADS = 32;
+
+    private static final int DEFAULT_NUM_OF_LOCKS = 32;
 
     /**
      * Limit the maximum number of entries in the {@link #addrToValue} map in
@@ -46,10 +46,10 @@ public class TraceState {
             DEFAULT_NUM_OF_THREADS, ArrayDeque::new);
 
     /**
-     * Table indexed by thread ID and lock object respectively. This table
-     * records the current lock status of each thread.
+     * Map from (thread ID, lock ID) to lock state.
      */
-    private final Table<Long, Long, LockState> lockTable = HashBasedTable.create();
+    private final Map<Long, Map<Long, LockState>> tidToLockIdToLockState = new LinkedHashMap<>(
+            DEFAULT_NUM_OF_THREADS);
 
     private final Metadata metadata;
 
@@ -69,12 +69,12 @@ public class TraceState {
 
     public TraceState(Configuration config, Metadata metadata) {
         this.metadata = metadata;
-        this.t_tidToEvents             = new HashMap<>(DEFAULT_NUM_OF_THREADS);
-        this.t_tidToMemoryAccessBlocks = new HashMap<>(DEFAULT_NUM_OF_THREADS);
-        this.t_tidToThreadState        = new HashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_tidToThreadState        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_addrToState             = new MemoryAddrToStateMap(config.windowSize);
         this.t_addrToWriteEvents       = new MemoryAddrToObjectMap<>(config.windowSize, ArrayList::new);
-        this.t_lockIdToLockRegions     = new HashMap<>(config.windowSize >> 1);
+        this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
     }
 
@@ -101,16 +101,15 @@ public class TraceState {
     }
 
     public LockState acquireLock(Event lock) {
-        assert lock.isLock();
-        LockState st = lockTable.row(lock.getTID()).computeIfAbsent(lock.getSyncObject(),
-                p -> new LockState());
+        LockState st = tidToLockIdToLockState.computeIfAbsent(lock.getTID(),
+                p -> new LinkedHashMap<>(DEFAULT_NUM_OF_LOCKS)).computeIfAbsent(
+                lock.getSyncObject(), p -> new LockState());
         st.acquire(lock);
         return st;
     }
 
     public LockState releaseLock(Event unlock) {
-        assert unlock.isUnlock();
-        LockState st = lockTable.get(unlock.getTID(), unlock.getSyncObject());
+        LockState st = tidToLockIdToLockState.get(unlock.getTID()).get(unlock.getSyncObject());
         st.release();
         return st;
     }
@@ -152,7 +151,8 @@ public class TraceState {
     }
 
     public ThreadState getThreadState(long tid) {
-        return new ThreadState(tidToStacktrace.computeIfAbsent(tid), lockTable.row(tid).values());
+        return new ThreadState(tidToStacktrace.computeIfAbsent(tid),
+                tidToLockIdToLockState.getOrDefault(tid, Collections.emptyMap()).values());
     }
 
     public ThreadState getThreadStateSnapshot(long tid) {
@@ -161,7 +161,8 @@ public class TraceState {
         stacktrace = stacktrace == null ? new ArrayDeque<>() : new ArrayDeque<>(stacktrace);
         /* copy each lock state */
         List<LockState> lockStates = new ArrayList<>();
-        lockTable.row(tid).values().forEach(st -> lockStates.add(st.copy()));
+        tidToLockIdToLockState.getOrDefault(tid, Collections.emptyMap()).values()
+                .forEach(st -> lockStates.add(st.copy()));
         return new ThreadState(stacktrace, lockStates);
     }
 

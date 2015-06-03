@@ -3,6 +3,25 @@ package com.runtimeverification.rvpredict.trace;
 import java.util.Arrays;
 import java.util.function.Supplier;
 
+/**
+ * Base class of our various specialized long-to-Object map implementations.
+ * <p>
+ * This class and its subclasses are not meant to be general-purpose map
+ * implementation and, thus, do not implement the {@link Map} interface.
+ * <p>
+ * There are several benefits to have our own custom map implementation:
+ * <li>primitive {@code long} as key type</li>
+ * <li>specialized hash function based on the source of the keys (e.g., memory
+ * location, thread ID)</li>
+ * <li>easy to profile collision rate</li>
+ * <li>very fast (since only need to support a few operations)</li>
+ * <p>
+ *
+ * @author YilongL
+ *
+ * @param <T>
+ *            the type of mapped values
+ */
 public abstract class LongToObjectMap<T> {
 
     private final int size;

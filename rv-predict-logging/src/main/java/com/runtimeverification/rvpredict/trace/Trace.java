@@ -43,6 +43,7 @@ import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a

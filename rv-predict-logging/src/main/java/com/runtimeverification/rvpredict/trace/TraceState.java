@@ -15,6 +15,10 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToObjectMap;
+import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
+import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToValueMap;
+import com.runtimeverification.rvpredict.trace.maps.ThreadIDToObjectMap;
 
 public class TraceState {
 

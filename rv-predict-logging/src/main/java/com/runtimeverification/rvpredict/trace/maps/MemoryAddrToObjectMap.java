@@ -1,6 +1,8 @@
-package com.runtimeverification.rvpredict.trace;
+package com.runtimeverification.rvpredict.trace.maps;
 
 import java.util.function.Supplier;
+
+import com.runtimeverification.rvpredict.trace.LongToObjectMap;
 
 /**
  * Map from long value that represents memory address to Object.

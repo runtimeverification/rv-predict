@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.trace;
+package com.runtimeverification.rvpredict.trace.maps;
 
 import java.util.Arrays;
 

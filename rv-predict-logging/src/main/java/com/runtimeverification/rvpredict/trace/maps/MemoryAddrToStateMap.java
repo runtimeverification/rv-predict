@@ -1,4 +1,6 @@
-package com.runtimeverification.rvpredict.trace;
+package com.runtimeverification.rvpredict.trace.maps;
+
+import com.runtimeverification.rvpredict.trace.MemoryAddrState;
 
 /**
  * Specializes the {@link MemoryAddrToObjectMap} implementation to the specific

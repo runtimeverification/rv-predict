@@ -28,9 +28,6 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.trace;
 
-import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,13 +37,13 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a
@@ -57,6 +54,8 @@ public class Trace {
 
     private final long baseGID;
 
+    private final int size;
+
     private final List<RawTrace> rawTraces;
 
     private boolean hasCriticalWrite;
@@ -64,48 +63,64 @@ public class Trace {
     /**
      * Map from thread ID to critical events.
      */
-    private final Map<Long, List<Event>> tidToEvents = Maps.newHashMap();
+    private final Map<Long, List<Event>> tidToEvents;
 
     /**
      * Map from thread ID to critical memory access events grouped into blocks.
      */
-    private final Map<Long, List<MemoryAccessBlock>> tidToMemoryAccessBlocks = new HashMap<>();
-
-    /**
-     * Map from memory addresses to write events ordered by global ID.
-     */
-    private final Long2ObjectMap<List<Event>> addrToWriteEvents = new Long2ObjectLinkedOpenHashMap<>();
-
-    /**
-     * Map from memory addresses referenced in this trace segment to their states.
-     */
-    private final Long2ObjectMap<MemoryAddrState> addrToState = new Long2ObjectLinkedOpenHashMap<>();
+    private final Map<Long, List<MemoryAccessBlock>> tidToMemoryAccessBlocks;
 
     /**
      * The initial states for all threads referenced in this trace segment.
      * It is computed as the value in the {@link #state} before the first
      * event of that thread occurs in this trace segment.
      */
-    private final Map<Long, ThreadState> tidToThreadState = Maps.newHashMap();
+    private final Map<Long, ThreadState> tidToThreadState;
+
+    /**
+     * Map from memory addresses referenced in this trace segment to their states.
+     */
+    private final MemoryAddrToStateMap addrToState;
+
+    /**
+     * Map from memory addresses to write events ordered by global ID.
+     */
+    private final LongToObjectMap<List<Event>> addrToWriteEvents;
 
     /**
      * Map from lock ID to critical lock pairs.
      */
-    private final Map<Long, List<LockRegion>> lockIdToLockRegions = Maps.newHashMap();
+    private final Map<Long, List<LockRegion>> lockIdToLockRegions;
 
     /**
      * Set of {@code MemoryAccessEvent}'s that happen during class initialization.
      */
-    private final Set<Event> clinitEvents = Sets.newHashSet();
+    private final Set<Event> clinitEvents;
 
     /**
      * Maintains the current values for every location, as recorded into the trace
      */
     private final TraceState state;
 
-    public Trace(TraceState state, List<RawTrace> rawTraces) {
+    public Trace(TraceState state, List<RawTrace> rawTraces,
+            Map<Long, List<Event>> tidToEvents,
+            Map<Long, List<MemoryAccessBlock>> tidToMemoryAccessBlocks,
+            Map<Long, ThreadState> tidToThreadState,
+            MemoryAddrToStateMap addrToState,
+            LongToObjectMap<List<Event>> addrToWriteEvents,
+            Map<Long, List<LockRegion>> lockIdToLockRegions,
+            Set<Event> clinitEvents) {
         this.state = state;
+        this.size = rawTraces.stream().collect(Collectors.summingInt(RawTrace::size));
         this.rawTraces = rawTraces;
+        this.tidToEvents = tidToEvents;
+        this.tidToMemoryAccessBlocks = tidToMemoryAccessBlocks;
+        this.tidToThreadState = tidToThreadState;
+        this.addrToState = addrToState;
+        this.addrToWriteEvents = addrToWriteEvents;
+        this.lockIdToLockRegions = lockIdToLockRegions;
+        this.clinitEvents = clinitEvents;
+
         if (rawTraces.isEmpty()) {
             baseGID = -1;
         } else {
@@ -127,7 +142,7 @@ public class Trace {
     }
 
     public int getSize() {
-        return rawTraces.stream().collect(Collectors.summingInt(RawTrace::size));
+        return size;
     }
 
     public boolean mayContainRaces() {
@@ -145,7 +160,7 @@ public class Trace {
      * @return the initial value
      */
     public long getInitValueOf(long addr) {
-        return addrToState.get(addr).initVal;
+        return addrToState.get(addr).initialValue();
     }
 
     public Event getFirstEvent(long tid) {
@@ -206,7 +221,7 @@ public class Trace {
     }
 
     public List<Event> getWriteEvents(long addr) {
-        return addrToWriteEvents.getOrDefault(addr, Collections.emptyList());
+        return addrToWriteEvents.get(addr);
     }
 
     public boolean isInsideClassInitializer(Event event) {
@@ -274,8 +289,6 @@ public class Trace {
         return lockEvents;
     }
 
-    private static final Function<Object, ? extends List<Event>> NEW_EVENT_LIST = p -> new ArrayList<>();
-
     private void processEvents() {
         /// PHASE 1
         Map<Long, Map<Event, Event>> tidToLockPairs = Maps.newHashMap();
@@ -293,15 +306,8 @@ public class Trace {
 
                 if (event.isReadOrWrite()) {
                     /* update memory address state */
-                    long addr = event.getAddr();
-                    // use the primitive type api instead of computeIfAbsent
-                    MemoryAddrState st = addrToState.get(addr);
-                    if (st == null) {
-                        // TODO(YilongL): revisit the use of object pool here
-                        // revise SingleThreadWriteTest to introduce more addresses
-                        addrToState.put(addr, st = new MemoryAddrState(state.getValueAt(addr)));
-                    }
-                    st.touchBy(event);
+                    MemoryAddrState st = addrToState.computeIfAbsent(event.getAddr());
+                    st.touch(event);
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
                         event = event.copy();
@@ -328,29 +334,24 @@ public class Trace {
             }
         }
 
-        /* update memory address value */
-        addrToState.forEach((addr, st) -> {
-            Event lastAccess;
-            if (st.lastWrite == null) {
-                lastAccess = st.lastRead;
-            } else if (st.lastRead == null) {
-                lastAccess = st.lastWrite;
-            } else {
-                lastAccess = st.lastRead.getGID() < st.lastWrite.getGID() ? st.lastWrite : st.lastRead;
-            }
-            /* use the value of the last access to update state, instead of
-             * that of the last write, to recover from potential missing
-             * write events */
-            state.writeValueAt(addr, lastAccess.getValue());
-        });
-
-        /* compute shared memory addresses */
         Set<Long> sharedAddr = new HashSet<>();
-        addrToState.forEach((addr, state) -> {
-            if (state.isWriteShared()) {
+        for (LongToObjectMap<MemoryAddrState>.EntryIterator iter = addrToState.iterator();
+                iter.hasNext(); iter.incCursor()) {
+            long addr = iter.getNextKey();
+            MemoryAddrState st = iter.getNextValue();
+
+            /* compute shared memory addresses and their initial values */
+            if (st.isWriteShared()) {
+                st.setInitialValue(state.getValueAt(addr));
                 sharedAddr.add(addr);
             }
-        });
+
+            /* update memory address value */
+            Event lastWrite = st.lastWrite();
+            if (lastWrite != null) {
+                state.writeValueAt(addr, lastWrite.getValue());
+            }
+        }
 
         /// PHASE 2
         if (!sharedAddr.isEmpty()) {
@@ -419,7 +420,7 @@ public class Trace {
                         events.add(event);
                         if (event.isWrite()) {
                             hasCriticalWrite = true;
-                            addrToWriteEvents.computeIfAbsent(event.getAddr(), NEW_EVENT_LIST).add(event);
+                            addrToWriteEvents.computeIfAbsent(event.getAddr()).add(event);
                         }
                     }
                     if (!events.isEmpty()) {
@@ -478,46 +479,6 @@ public class Trace {
         }
 
         return blocks;
-    }
-
-    private static class MemoryAddrState {
-        Event lastRead;
-        Event lastWrite;
-        final long initVal;
-        long reader1, reader2;
-        long writer1, writer2;
-
-        MemoryAddrState(long initVal) {
-            this.initVal = initVal;
-        }
-
-        void touchBy(Event event) {
-            long tid = event.getTID();
-            if (event.isRead()) {
-                if (lastRead == null || lastRead.getGID() < event.getGID()) {
-                    lastRead = event;
-                }
-                if (reader1 == 0) {
-                    reader1 = tid;
-                } else if (reader1 != tid && reader2 == 0) {
-                    reader2 = tid;
-                }
-            } else {
-                if (lastWrite == null || lastWrite.getGID() < event.getGID()) {
-                    lastWrite = event;
-                }
-                if (writer1 == 0) {
-                    writer1 = tid;
-                } else if (writer1 != tid && writer2 == 0) {
-                    writer2 = tid;
-                }
-            }
-        }
-
-        boolean isWriteShared() {
-            return writer2 != 0 || writer1 != 0
-                    && (reader1 != 0 && reader1 != writer1 || reader2 != 0 && reader2 != writer1);
-        }
     }
 
 }

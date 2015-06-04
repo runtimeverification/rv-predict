@@ -91,7 +91,7 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
     }
 
     @Override
-    public void log(EventType eventType, int locId, long addr, long value1, long value2) {
+    public void log(EventType eventType, int locId, int addr1, int addr2, long value1, long value2) {
         long tid = Thread.currentThread().getId();
         long gid;
         switch (eventType) {
@@ -108,42 +108,38 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
         case INVOKE_METHOD:
         case FINISH_METHOD:
             gid = globalEventID.getAndIncrement();
-            log(eventType, gid, tid, locId, addr, value1);
+            log(eventType, gid, tid, locId, addr1, addr2, value1);
             break;
         case ATOMIC_READ:
             gid = globalEventID.getAndAdd(3);
-            log(EventType.WRITE_LOCK,   gid,     tid, locId, getAtomicLockId(addr), 0);
-            log(EventType.READ,         gid + 1, tid, locId, addr, value1);
-            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, getAtomicLockId(addr), 0);
+            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, addr1, 0);
+            log(EventType.READ,         gid + 1, tid, locId, addr1, addr2, value1);
+            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, ATOMIC_LOCK_C, addr1, 0);
             break;
         case ATOMIC_WRITE:
             gid = globalEventID.getAndAdd(3);
-            log(EventType.WRITE_LOCK,   gid,     tid, locId, getAtomicLockId(addr), 0);
-            log(EventType.WRITE,        gid + 1, tid, locId, addr, value1);
-            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, getAtomicLockId(addr), 0);
+            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, addr1, 0);
+            log(EventType.WRITE,        gid + 1, tid, locId, addr1, addr2, value1);
+            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, ATOMIC_LOCK_C, addr1, 0);
             break;
         case ATOMIC_READ_THEN_WRITE:
             gid = globalEventID.getAndAdd(4);
-            log(EventType.WRITE_LOCK,   gid,     tid, locId, getAtomicLockId(addr), 0);
-            log(EventType.READ,         gid + 1, tid, locId, addr, value1);
-            log(EventType.WRITE,        gid + 2, tid, locId, addr, value2);
-            log(EventType.WRITE_UNLOCK, gid + 3, tid, locId, getAtomicLockId(addr), 0);
+            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, addr1, 0);
+            log(EventType.READ,         gid + 1, tid, locId, addr1, addr2, value1);
+            log(EventType.WRITE,        gid + 2, tid, locId, addr1, addr2, value2);
+            log(EventType.WRITE_UNLOCK, gid + 3, tid, locId, ATOMIC_LOCK_C, addr1, 0);
             break;
         default:
             assert false;
         }
     }
 
-    private long getAtomicLockId(long addr) {
-        return (long) ATOMIC_LOCK_C << 32 | ((int) (addr >> 32)) & 0xFFFFFFFFL;
-    }
-
-    private void log(EventType eventType, long gid, long tid, int locId, long addr,
+    private void log(EventType eventType, long gid, long tid, int locId, int addr1, int addr2,
             long value) {
         EventWriter writer = threadLocalEventWriter.get();
         if (writer != null) {
             try {
-                writer.write(gid, tid, locId, addr, value, eventType);
+                writer.write(gid, tid, locId, (long) addr1 << 32 | addr2 & 0xFFFFFFFFL, value, eventType);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

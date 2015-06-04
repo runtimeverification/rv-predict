@@ -220,12 +220,22 @@ public class MaximalCausalModel {
         }
 
         // all write events whose values could be read by the read event
+        long readValue = read.getValue();
         List<Event> sameValPredWrites = predWrites.stream()
-                .filter(w -> w.getValue() == read.getValue()).collect(Collectors.toList());
+                .filter(w -> w.getValue() == readValue).collect(Collectors.toList());
+
+        /* case 0: Phi_SC is UNSAT because of the missing initial value (or write events) */
+        long initialValue = trace.getInitValueOf(read.getAddr());
+        if (sameThreadPredWrite == null && initialValue != readValue && sameValPredWrites.isEmpty()) {
+            /* 1. when sameThreadPredWrite != null, it doesn't matter if the
+             *    initial value is missing
+             * 2. it's less likely for a write event to be missing
+             */
+            return BooleanConstant.TRUE;
+        }
 
         /* case 1: the read event reads the initial value */
-        if (sameThreadPredWrite == null &&
-                trace.getInitValueOf(read.getAddr()) == read.getValue()) {
+        if (sameThreadPredWrite == null && initialValue == readValue) {
             FormulaTerm.Builder case1 = FormulaTerm.andBuilder();
             predWrites.forEach(w -> case1.add(getAsstHappensBefore(read, w)));
             phiSC.add(case1.build());

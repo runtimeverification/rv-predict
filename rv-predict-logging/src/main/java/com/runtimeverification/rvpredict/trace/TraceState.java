@@ -1,58 +1,85 @@
 package com.runtimeverification.rvpredict.trace;
 
-import it.unimi.dsi.fastutil.longs.Long2LongLinkedOpenHashMap;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.mutable.MutableInt;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Table;
+
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToObjectMap;
+import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
+import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToValueMap;
+import com.runtimeverification.rvpredict.trace.maps.ThreadIDToObjectMap;
 
-
-// TODO(YilongL): think about the thread-safety about this class
 public class TraceState {
+
+    private static final int DEFAULT_NUM_OF_THREADS = 32;
+
+    private static final int DEFAULT_NUM_OF_LOCKS = 32;
 
     /**
      * Limit the maximum number of entries in the {@link #addrToValue} map in
      * order to avoid {@link OutOfMemoryError}.
-     * <p>
-     * TODO(YilongL): modify the code for building formula accordingly to avoid
-     * invalidating the entire window because of missing initial value.
      */
     private static final int NUM_OF_ADDR = 32 * 1024;
 
     /**
      * Map from memory address to its value.
      */
-    private final Long2LongLinkedOpenHashMap addrToValue = new Long2LongLinkedOpenHashMap(NUM_OF_ADDR);
+    private final MemoryAddrToValueMap addrToValue = new MemoryAddrToValueMap(NUM_OF_ADDR);
 
     /**
      * Map form thread ID to the current level of class initialization.
      */
-    private final Map<Long, MutableInt> tidToClinitDepth = Maps.newHashMap();
+    private final ThreadIDToObjectMap<MutableInt> tidToClinitDepth = new ThreadIDToObjectMap<>(
+            DEFAULT_NUM_OF_THREADS, MutableInt::new);
 
     /**
      * Map from thread ID to the current stack trace elements.
      */
-    private final Map<Long, Deque<Integer>> tidToStacktrace = Maps.newHashMap();
+    private final ThreadIDToObjectMap<Deque<Integer>> tidToStacktrace = new ThreadIDToObjectMap<>(
+            DEFAULT_NUM_OF_THREADS, ArrayDeque::new);
 
     /**
-     * Table indexed by thread ID and lock object respectively. This table
-     * records the current lock status of each thread.
+     * Map from (thread ID, lock ID) to lock state.
      */
-    private final Table<Long, Long, LockState> lockTable = HashBasedTable.create();
+    private final Map<Long, Map<Long, LockState>> tidToLockIdToLockState = new LinkedHashMap<>(
+            DEFAULT_NUM_OF_THREADS);
 
     private final Metadata metadata;
 
-    public TraceState(Metadata metadata) {
+    private final Map<Long, List<Event>> t_tidToEvents;
+
+    private final Map<Long, List<MemoryAccessBlock>> t_tidToMemoryAccessBlocks;
+
+    private final Map<Long, ThreadState> t_tidToThreadState;
+
+    private final MemoryAddrToStateMap t_addrToState;
+
+    private final MemoryAddrToObjectMap<List<Event>> t_addrToWriteEvents;
+
+    private final Map<Long, List<LockRegion>> t_lockIdToLockRegions;
+
+    private final Set<Event> t_clinitEvents;
+
+    public TraceState(Configuration config, Metadata metadata) {
         this.metadata = metadata;
+        this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_tidToThreadState        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_addrToState             = new MemoryAddrToStateMap(config.windowSize);
+        this.t_addrToWriteEvents       = new MemoryAddrToObjectMap<>(config.windowSize, ArrayList::new);
+        this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
+        this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
     }
 
     public Metadata metadata() {
@@ -60,20 +87,33 @@ public class TraceState {
     }
 
     public Trace initNextTraceWindow(List<RawTrace> rawTraces) {
-        return new Trace(this, rawTraces);
+        t_tidToEvents.clear();
+        t_tidToMemoryAccessBlocks.clear();
+        t_tidToThreadState.clear();
+        t_addrToState.clear();
+        t_addrToWriteEvents.clear();
+        t_lockIdToLockRegions.clear();
+        t_clinitEvents.clear();
+        return new Trace(this, rawTraces,
+                t_tidToEvents,
+                t_tidToMemoryAccessBlocks,
+                t_tidToThreadState,
+                t_addrToState,
+                t_addrToWriteEvents,
+                t_lockIdToLockRegions,
+                t_clinitEvents);
     }
 
     public LockState acquireLock(Event lock) {
-        assert lock.isLock();
-        LockState st = lockTable.row(lock.getTID()).computeIfAbsent(lock.getSyncObject(),
-                p -> new LockState());
+        LockState st = tidToLockIdToLockState.computeIfAbsent(lock.getTID(),
+                p -> new LinkedHashMap<>(DEFAULT_NUM_OF_LOCKS)).computeIfAbsent(
+                lock.getSyncObject(), p -> new LockState());
         st.acquire(lock);
         return st;
     }
 
     public LockState releaseLock(Event unlock) {
-        assert unlock.isUnlock();
-        LockState st = lockTable.get(unlock.getTID(), unlock.getSyncObject());
+        LockState st = tidToLockIdToLockState.get(unlock.getTID()).get(unlock.getSyncObject());
         st.release();
         return st;
     }
@@ -82,14 +122,13 @@ public class TraceState {
         long tid = event.getTID();
         switch (event.getType()) {
         case CLINIT_ENTER:
-            tidToClinitDepth.computeIfAbsent(tid, p -> new MutableInt()).increment();
+            tidToClinitDepth.computeIfAbsent(tid).increment();
             break;
         case CLINIT_EXIT:
             tidToClinitDepth.get(tid).decrement();
             break;
         case INVOKE_METHOD:
-            tidToStacktrace.computeIfAbsent(tid, p -> new ArrayDeque<>())
-                .add(event.getLocId());
+            tidToStacktrace.computeIfAbsent(tid).add(event.getLocId());
             break;
         case FINISH_METHOD:
             int locId = tidToStacktrace.get(tid).removeLast();
@@ -103,24 +142,21 @@ public class TraceState {
     }
 
     public boolean isInsideClassInitializer(long tid) {
-        return tidToClinitDepth.computeIfAbsent(tid, p -> new MutableInt(0)).intValue() > 0;
+        return tidToClinitDepth.computeIfAbsent(tid).intValue() > 0;
     }
 
     public void writeValueAt(long addr, long value) {
-        addrToValue.putAndMoveToFirst(addr, value);
-        if (addrToValue.size() > NUM_OF_ADDR) {
-            addrToValue.removeLastLong();
-        }
+        addrToValue.put(addr, value);
     }
 
     public long getValueAt(long addr) {
-        // the default value of Long2LongMap is 0
-        return addrToValue.getAndMoveToFirst(addr);
+        // the default return value is 0
+        return addrToValue.get(addr);
     }
 
     public ThreadState getThreadState(long tid) {
-        return new ThreadState(tidToStacktrace.getOrDefault(tid, new ArrayDeque<>()),
-                lockTable.row(tid).values());
+        return new ThreadState(tidToStacktrace.computeIfAbsent(tid),
+                tidToLockIdToLockState.getOrDefault(tid, Collections.emptyMap()).values());
     }
 
     public ThreadState getThreadStateSnapshot(long tid) {
@@ -129,7 +165,8 @@ public class TraceState {
         stacktrace = stacktrace == null ? new ArrayDeque<>() : new ArrayDeque<>(stacktrace);
         /* copy each lock state */
         List<LockState> lockStates = new ArrayList<>();
-        lockTable.row(tid).values().forEach(st -> lockStates.add(st.copy()));
+        tidToLockIdToLockState.getOrDefault(tid, Collections.emptyMap()).values()
+                .forEach(st -> lockStates.add(st.copy()));
         return new ThreadState(stacktrace, lockStates);
     }
 

@@ -76,10 +76,6 @@
                                     <pattern>com.google.**.*</pattern>
                                     <result>com.runtimeverification.rvpredict.internal.com.google.@1.@2</result>
                                 </rule>
-                                <rule>
-                                    <pattern>it.unimi.dsi.**.*</pattern>
-                                    <result>com.runtimeverification.rvpredict.internal.it.unimi.dsi.@1.@2</result>
-                                </rule>
                             </rules>
                         </configuration>
                     </execution>

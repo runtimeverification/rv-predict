@@ -32,7 +32,7 @@ public class TraceCache {
      */
     public TraceCache(Configuration config, Metadata metadata) {
         this.config = config;
-        this.crntState = new TraceState(metadata);
+        this.crntState = new TraceState(config, metadata);
     }
 
     public void setup() throws IOException {
@@ -68,7 +68,8 @@ public class TraceCache {
             }
 
             assert event.getGID() >= fromIndex;
-            Event[] events = new Event[config.windowSize];
+            int length = 1 << (32 - Integer.numberOfLeadingZeros(config.windowSize - 1));
+            Event[] events = new Event[length];
             int p = 0;
             do {
                 events[p++] = event;

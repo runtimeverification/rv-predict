@@ -91,7 +91,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
     public VolatileLoggingEngine(Configuration config, Metadata metadata) {
         this.config = config;
-        this.crntState = new TraceState(metadata);
+        this.crntState = new TraceState(config, metadata);
         this.windowSize = config.windowSize;
         this.detector = new RaceDetector(config);
     }
@@ -181,8 +181,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
     }
 
     @Override
-    public void log(EventType eventType, int locId, long addr, long value1, long value2) {
-        threadLocalBuffer.get().append(eventType, locId, addr, value1, value2);
+    public void log(EventType eventType, int locId, int addr1, int addr2, long value1, long value2) {
+        threadLocalBuffer.get().append(eventType, locId, addr1, addr2, value1, value2);
     }
 
     /**
@@ -218,6 +218,10 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
         final long tid;
 
+        final int length;
+
+        final int mask;
+
         /**
          * Circular array used to store events.
          */
@@ -242,8 +246,10 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
         Buffer(int bound) {
             tid = Thread.currentThread().getId();
-            events = new Event[1 << (32 - Integer.numberOfLeadingZeros(bound + THRESHOLD - 1))];
-            for (int i = 0; i < events.length; i++) {
+            length = 1 << (32 - Integer.numberOfLeadingZeros(bound + THRESHOLD - 1));
+            mask = length - 1;
+            events = new Event[length];
+            for (int i = 0; i < length; i++) {
                 events[i] = new Event();
                 events[i].setTID(tid);
             }
@@ -263,10 +269,6 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             start = cursor;
         }
 
-        long getAtomicLockId(long addr) {
-            return (long) ATOMIC_LOCK_C << 32 | ((int) (addr >> 32)) & 0xFFFFFFFFL;
-        }
-
         /**
          * Appends a new event to the end of the circular array and finalizes
          * pending events when necessary.
@@ -281,7 +283,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
          * limit the maximum number of events that can be delayed to make the
          * logged trace look closer to the execution.
          */
-        void append(EventType eventType, int locId, long addr, long value1, long value2) {
+        void append(EventType eventType, int locId, int addr1, int addr2, long value1, long value2) {
             switch (eventType) {
             case READ:
             case WRITE_LOCK:
@@ -291,7 +293,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             case CLINIT_EXIT:
             case INVOKE_METHOD:
             case FINISH_METHOD:
-                log(eventType, locId, addr, value1);
+                log(eventType, locId, addr1, addr2, value1);
                 if (numOfUnfinalizedEvents() >= THRESHOLD) {
                     finalizeEvents();
                 }
@@ -300,26 +302,26 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             case WRITE_UNLOCK:
             case READ_UNLOCK:
             case START:
-                log(eventType, locId, addr, value1);
+                log(eventType, locId, addr1, addr2, value1);
                 finalizeEvents();
                 break;
             case ATOMIC_READ:
-                log(EventType.WRITE_LOCK,   locId, getAtomicLockId(addr), 0);
-                log(EventType.READ,         locId, addr, value1);
-                log(EventType.WRITE_UNLOCK, locId, getAtomicLockId(addr), 0);
+                log(EventType.WRITE_LOCK,   locId, ATOMIC_LOCK_C, addr1, 0);
+                log(EventType.READ,         locId, addr1, addr2, value1);
+                log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, addr1, 0);
                 finalizeEvents();
                 break;
             case ATOMIC_WRITE:
-                log(EventType.WRITE_LOCK,   locId, getAtomicLockId(addr), 0);
-                log(EventType.WRITE,        locId, addr, value1);
-                log(EventType.WRITE_UNLOCK, locId, getAtomicLockId(addr), 0);
+                log(EventType.WRITE_LOCK,   locId, ATOMIC_LOCK_C, addr1, 0);
+                log(EventType.WRITE,        locId, addr1, addr2, value1);
+                log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, addr1, 0);
                 finalizeEvents();
                 break;
             case ATOMIC_READ_THEN_WRITE:
-                log(EventType.WRITE_LOCK,   locId, getAtomicLockId(addr), 0);
-                log(EventType.READ,         locId, addr, value1);
-                log(EventType.WRITE,        locId, addr, value2);
-                log(EventType.WRITE_UNLOCK, locId, getAtomicLockId(addr), 0);
+                log(EventType.WRITE_LOCK,   locId, ATOMIC_LOCK_C, addr1, 0);
+                log(EventType.READ,         locId, addr1, addr2, value1);
+                log(EventType.WRITE,        locId, addr1, addr2, value2);
+                log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, addr1, 0);
                 finalizeEvents();
                 break;
             default:
@@ -327,11 +329,11 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             }
         }
 
-        private void log(EventType eventType, int locId, long addr, long value) {
+        private void log(EventType eventType, int locId, int addr1, int addr2, long value) {
             Event event = events[end];
             end = inc(end);
             event.setLocId(locId);
-            event.setAddr(addr);
+            event.setAddr((long) addr1 << 32 | addr2 & 0xFFFFFFFFL);
             event.setValue(value);
             event.setType(eventType);
         }
@@ -349,12 +351,11 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
 
         int inc(int p) {
-            return (p + 1 == events.length ? 0 : p + 1);
+            return (p + 1) & mask;
         }
 
         int numOfUnfinalizedEvents() {
-            int d = end - cursor;
-            return d >= 0 ? d : d + events.length;
+            return (end - cursor + length) & mask;
         }
 
     }

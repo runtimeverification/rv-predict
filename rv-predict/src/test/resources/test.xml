@@ -80,8 +80,7 @@
         <rvarg key="--maxlen" value="500" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA">
-        <runs value="64" />
-        <rvarg key="--maxlen" value="3000" />
+        <rvarg key="--maxlen" value="50000" />
         <rvarg value="--simple-report" />
         <arg key="-cp" value="basic.jar" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />

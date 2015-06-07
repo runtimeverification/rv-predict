@@ -271,19 +271,19 @@ public class Trace {
         long tid = event.getTID();
         Map<Long, LockState> lockIdToLockState = tidToThreadState
                 .getOrDefault(tid, state.getThreadState(tid)).getLockStates().stream()
-                .collect(Collectors.toMap(ls -> ls.lock().getSyncObject(), LockState::copy));
+                .collect(Collectors.toMap(ls -> ls.lockId(), LockState::copy));
         for (Event e : getEvents(tid)) {
             if (e.getGID() >= event.getGID()) break;
             if (e.isLock()) {
-                lockIdToLockState.computeIfAbsent(e.getSyncObject(), p -> new LockState())
+                lockIdToLockState.computeIfAbsent(e.getLockId(), LockState::new)
                         .acquire(e);
             } else if (e.isUnlock()) {
-                lockIdToLockState.get(e.getSyncObject()).release();
+                lockIdToLockState.get(e.getLockId()).release(e);
             }
         }
 
         List<Event> lockEvents = lockIdToLockState.values().stream()
-                .filter(lockState -> lockState.level() > 0)
+                .filter(LockState::isAcquired)
                 .map(LockState::lock).collect(Collectors.toList());
         Collections.sort(lockEvents, (e1, e2) -> e1.compareTo(e2));
         return lockEvents;
@@ -310,13 +310,11 @@ public class Trace {
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
                         event = event.copy();
-                        // TODO(YilongL): lock state need to differentiate read & write lock
-                        if (state.acquireLock(event).level() == 1) {
+                        if (state.acquireLock(event) == 1) {
                             outermostLockEvents.add(event);
                         }
                     } else if (event.isUnlock()) {
-                        LockState st = state.releaseLock(event);
-                        if (st.level() == 0) {
+                        if (state.releaseLock(event) == 0) {
                             outermostLockEvents.add(event);
                         }
                     }

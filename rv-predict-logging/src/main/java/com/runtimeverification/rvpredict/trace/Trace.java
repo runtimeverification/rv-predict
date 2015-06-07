@@ -39,10 +39,10 @@ import java.util.Set;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.*;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToObjectMap;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
 
 /**
@@ -58,7 +58,7 @@ public class Trace {
 
     private final List<RawTrace> rawTraces;
 
-    private boolean hasCriticalWrite;
+    private boolean hasCriticalEvent;
 
     /**
      * Map from thread ID to critical events.
@@ -149,7 +149,7 @@ public class Trace {
         // This method can be further improved to skip an entire window ASAP
         // For example, if this window contains no race candidate determined
         // by some static analysis then we can safely skip it
-        return hasCriticalWrite;
+        return hasCriticalEvent;
     }
 
     /**
@@ -291,10 +291,9 @@ public class Trace {
 
     private void processEvents() {
         /// PHASE 1
-        Map<Long, Map<Event, Event>> tidToLockPairs = Maps.newHashMap();
+        Set<Event> outermostLockEvents = new HashSet<>(getSize() / 10);
         for (RawTrace rawTrace : rawTraces) {
             long tid = rawTrace.getTID();
-            Map<Event, Event> lockPairs = tidToLockPairs.computeIfAbsent(tid, p -> new HashMap<>());
             tidToThreadState.put(tid, state.getThreadStateSnapshot(tid));
             boolean isInsideClinit = state.isInsideClassInitializer(tid);
 
@@ -311,13 +310,14 @@ public class Trace {
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
                         event = event.copy();
+                        // TODO(YilongL): lock state need to differentiate read & write lock
                         if (state.acquireLock(event).level() == 1) {
-                            lockPairs.put(event, null);
+                            outermostLockEvents.add(event);
                         }
                     } else if (event.isUnlock()) {
                         LockState st = state.releaseLock(event);
                         if (st.level() == 0) {
-                            lockPairs.put(st.lock(), event);
+                            outermostLockEvents.add(event);
                         }
                     }
                 } else if (event.isMetaEvent()) {
@@ -356,85 +356,144 @@ public class Trace {
         /// PHASE 2
         if (!sharedAddr.isEmpty()) {
             for (RawTrace rawTrace : rawTraces) {
-                long tid = rawTrace.getTID();
-                boolean[] critical = new boolean[rawTrace.size()];
-                Map<Event, Event> openLockPairs = new HashMap<>();
-                Map<Event, Event> lockPairs = tidToLockPairs.getOrDefault(tid,
-                        Collections.emptyMap());
-                lockPairs.forEach((l, r) -> {
-                    if (l.getGID() < baseGID) {
-                        openLockPairs.put(l, r);
-                    }
-                });
-
+                /* step 1: remove thread-local events and nested lock events */
+                int tmp_size = 0;
+                Event[] tmp_events = new Event[rawTrace.size()];
                 for (int i = 0; i < rawTrace.size(); i++) {
                     Event event = rawTrace.event(i);
                     if (event.isReadOrWrite()) {
-                        critical[i] = sharedAddr.contains(event.getAddr());
+                        if (sharedAddr.contains(event.getAddr())) {
+                            tmp_events[tmp_size++] = event;
+                        }
                     } else if (event.isSyncEvent()) {
-                        if (event.isLock()) {
-                            if (lockPairs.containsKey(event)) {
-                                Event unlock = lockPairs.get(event);
-                                openLockPairs.put(event, unlock);
+                        if (event.isLock() || event.isUnlock()) {
+                            if (outermostLockEvents.contains(event)) {
+                                tmp_events[tmp_size++] = event;
                             }
-                        } else if (event.isUnlock()) {
-                            openLockPairs.values().remove(event);
+                        } else {
+                            tmp_events[tmp_size++] = event;
+                        }
+                    } else {
+                        // MetaEvents are thrown away
+                    }
+                }
+
+                /* step 2: remove recurrent patterns and empty lock regions */
+                MemoryAddrToObjectMap<Integer> addrToLastReadIdx = new MemoryAddrToObjectMap<>(
+                        sharedAddr.size());
+                Map<Long, Integer> lockIdToOpenReadLockIdx = new HashMap<>();
+                Map<Long, Integer> lockIdToOpenWriteLockIdx = new HashMap<>();
+                Set<Integer> pendingLockIndexes = new HashSet<>();
+                boolean[] critical = new boolean[tmp_size];
+                boolean hasCritical = false;
+                for (int i = 0; i < tmp_size; i++) {
+                    Event event = tmp_events[i];
+                    if (event.isRead()) {
+                        Integer lastReadIdx = addrToLastReadIdx.put(event.getAddr(), i);
+                        if (lastReadIdx != null) {
+                            // TODO(YilongL): formal proof of this optimization
+                            int nextIdx = skipRecurrentPatterns(tmp_events, tmp_size, lastReadIdx, i);
+                            if (nextIdx != i) {
+                                i = nextIdx - 1;
+                                continue;
+                            } else {
+                                critical[i] = true;
+                            }
                         } else {
                             critical[i] = true;
                         }
+                    } else if (event.isWrite()) {
+                        critical[i] = true;
+                    } else if (event.isLock()) {
+                        /* whether a lock event is critical cannot be determined immediately */
+                        (event.isReadLock() ? lockIdToOpenReadLockIdx : lockIdToOpenWriteLockIdx)
+                                .put(event.getLockId(), i);
+                        pendingLockIndexes.add(i);
+                    } else if (event.isUnlock()) {
+                        Integer idx = (event.isReadLock() ?
+                                lockIdToOpenReadLockIdx : lockIdToOpenWriteLockIdx)
+                                .remove(event.getLockId());
+                        List<LockRegion> lockRegions = lockIdToLockRegions.computeIfAbsent(
+                                event.getLockId(), p -> new ArrayList<>());
+                        if (idx == null) {
+                            critical[i] = hasCritical;
+                            lockRegions.add(new LockRegion(null, event));
+                        } else {
+                            critical[i] = critical[idx];
+                            lockRegions.add(new LockRegion(tmp_events[idx], event));
+                        }
                     } else {
-                        // MetaEvents are not critical
+                        critical[i] = true;
                     }
 
                     if (critical[i]) {
-                        openLockPairs.forEach((l, r) -> {
-                            Event lock, unlock;
-                            if (l.getGID() >= baseGID) {
-                                critical[rawTrace.find(l)] = true;
-                                lock = l;
-                            } else {
-                                lock = null;
-                            }
-                            if (r != null) {
-                                critical[rawTrace.find(r)] = true;
-                                unlock = r;
-                            } else {
-                                unlock = null;
-                            }
-                            lockIdToLockRegions.computeIfAbsent(
-                                    lock != null ? lock.getLockId() : unlock.getLockId(),
-                                    p -> new ArrayList<>()).add(new LockRegion(lock, unlock));
-                        });
-                        openLockPairs.clear();
+                        hasCritical = true;
+                        pendingLockIndexes.forEach(idx -> critical[idx] = true);
+                        pendingLockIndexes.clear();
                     }
                 }
 
                 /* commit all critical events into this window */
                 List<Event> events = new ArrayList<>();
-                for (int i = 0; i < rawTrace.size(); i++) {
+                for (int i = 0; i < tmp_size; i++) {
                     if (critical[i]) {
-                        Event event = rawTrace.event(i);
+                        Event event = tmp_events[i];
 //                        System.err.println(event + " at " + metadata().getLocationSig(event.getLocId()));
 
                         /* update tidToEvents & addrToWriteEvents */
                         events.add(event);
                         if (event.isWrite()) {
-                            hasCriticalWrite = true;
                             addrToWriteEvents.computeIfAbsent(event.getAddr()).add(event);
                         }
                     }
-                    if (!events.isEmpty()) {
-                        tidToEvents.put(tid, events);
-                    }
+                }
+
+                if (!events.isEmpty()) {
+                    hasCriticalEvent = true;
+                    tidToEvents.put(rawTrace.getTID(), events);
+                    tidToMemoryAccessBlocks.put(rawTrace.getTID(), divideMemoryAccessBlocks(events));
                 }
             }
+        }
+    }
 
-            /* compute more derivative information */
-            if (hasCriticalWrite) {
-                tidToEvents.forEach((tid, events) -> tidToMemoryAccessBlocks.put(tid,
-                        divideMemoryAccessBlocks(events)));
+    /**
+     * Fast forward the event index to skip recurrent patterns generated by
+     * wait-notify or busy-wait loop.
+     *
+     * @param events
+     *            the events array
+     * @param size
+     *            the number of events in the array
+     * @param idx0
+     *            the initial index of the first occurrence of the potential
+     *            pattern
+     * @param idx1
+     *            the initial index of the (consecutive) second occurrence of
+     *            the potential pattern
+     * @param i
+     * @return the new event index
+     */
+    private static int skipRecurrentPatterns(Event[] events, int size, int idx0, int idx1) {
+        int len = idx1 - idx0;
+        int nextIdx = idx1;
+        while (testRecurrentPattern(events, size, idx0, nextIdx, len)) {
+            nextIdx += len;
+        }
+        return nextIdx;
+    }
+
+    private static boolean testRecurrentPattern(Event[] events, int size, int idx0, int idx1,
+            int len) {
+        if (idx1 + len >= size) {
+            return false;
+        }
+        for (int i = 0; i < len; i++) {
+            if (!events[idx0 + i].isSimilarTo(events[idx1 + i])) {
+                return false;
             }
         }
+        return true;
     }
 
     private List<MemoryAccessBlock> divideMemoryAccessBlocks(List<Event> events) {
@@ -451,7 +510,7 @@ public class Trace {
                 if (event.isRead()) {
                     /* do not end the block if the previous event is a write or
                      * a duplicate read (i.e., a read event that differs only in
-                     * global ID) */
+                     * global ID and location ID) */
                     endCrntBlock = lastEvent != null &&
                             !(lastEvent.isWrite() || lastEvent.isRead()
                             && lastEvent.getAddr() == event.getAddr()

@@ -141,6 +141,14 @@ public class Event implements Comparable<Event> {
         return TYPE == EventType.READ_LOCK || TYPE == EventType.WRITE_LOCK;
     }
 
+    public boolean isReadLock() {
+        return TYPE == EventType.READ_LOCK;
+    }
+
+    public boolean isWriteLock() {
+        return TYPE == EventType.WRITE_LOCK;
+    }
+
     /**
      * Returns {@code true} if this event has type
      * {@link EventType#WRITE_UNLOCK} or {@link EventType#READ_UNLOCK};
@@ -150,12 +158,24 @@ public class Event implements Comparable<Event> {
         return TYPE == EventType.READ_UNLOCK || TYPE == EventType.WRITE_UNLOCK;
     }
 
+    public boolean isReadUnlock() {
+        return TYPE == EventType.READ_UNLOCK;
+    }
+
+    public boolean isWriteUnlock() {
+        return TYPE == EventType.WRITE_UNLOCK;
+    }
+
     public boolean isSyncEvent() {
         return TYPE.isSyncType();
     }
 
     public boolean isMetaEvent() {
         return TYPE.isMetaType();
+    }
+
+    public boolean isSimilarTo(Event event) {
+        return TYPE == event.TYPE && ID == event.ID && ADDR == event.ADDR && VALUE == event.VALUE;
     }
 
     @Override

@@ -51,6 +51,9 @@ public abstract class LongToObjectMap<T> {
     protected abstract int hash(long key);
 
     protected T newValue() {
+        if (newValue == null) {
+            throw new UnsupportedOperationException("No supplier function available!");
+        }
         return newValue.get();
     }
 
@@ -67,7 +70,7 @@ public abstract class LongToObjectMap<T> {
             p = (p + 1) & mask;
         }
         // should never happen
-        return null;
+        throw new IllegalStateException();
     }
 
     public T get(long key) {
@@ -79,7 +82,30 @@ public abstract class LongToObjectMap<T> {
             p = (p + 1) & mask;
         }
         // should never happen
-        return null;
+        throw new IllegalStateException();
+    }
+
+    public T put(long key, T value) {
+        if (value == null) {
+            throw new NullPointerException();
+        }
+
+        int p = hash(key);
+        for (int i = 0; i < size; i++) {
+            if (values[p] == null) {
+                keys[p] = key;
+                values[p] = value;
+                entryIndexes[numOfEntries++] = p;
+                return null;
+            } else if (key == keys[p]) {
+                T oldValue = values[p];
+                values[p] = value;
+                return oldValue;
+            }
+            p = (p + 1) & mask;
+        }
+        // should never happen
+        throw new IllegalStateException();
     }
 
     public void clear() {

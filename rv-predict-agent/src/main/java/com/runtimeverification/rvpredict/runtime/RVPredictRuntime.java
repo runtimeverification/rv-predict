@@ -608,7 +608,7 @@ public final class RVPredictRuntime implements Constants {
             boolean acquired = lock.tryLock(time, unit);
             if (acquired) {
                 onBlockingMethodNormalReturn(locId);
-                saveLockEvent(EventType.WRITE_LOCK, locId, JUC_LOCK_C, getRealLock(lock));
+                saveLockEvent(getLockEventType(lock), locId, JUC_LOCK_C, getRealLock(lock));
             }
             return acquired;
         } catch (InterruptedException e) {

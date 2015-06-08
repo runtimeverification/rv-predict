@@ -287,9 +287,9 @@ public class Configuration implements Constants {
     private final static String OFFLINE_PREDICTION = "OFFLINE_PREDICTION";
     private String prediction;
 
-    public final static String opt_online = "--online";
-    @Parameter(names = opt_online, description = "Run prediction online", hidden = true, descriptionKey = "2005")
-    private boolean online;
+    public final static String opt_offline = "--offline";
+    @Parameter(names = opt_offline, description = "Run prediction offline", hidden = true, descriptionKey = "2005")
+    private boolean offline;
 
     final static String opt_max_len = "--maxlen";
     @Parameter(names = opt_max_len, description = "Window size (must be >= 64)", hidden = true, descriptionKey = "2010")
@@ -403,8 +403,8 @@ public class Configuration implements Constants {
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_only_predict);
             }
-            if (online) {
-                exclusiveOptionsFailure(opt_event_profile, opt_online);
+            if (offline) {
+                exclusiveOptionsFailure(opt_event_profile, opt_offline);
             }
             log = false;
         } else if (log_dir != null) {           /* only log */
@@ -414,22 +414,19 @@ public class Configuration implements Constants {
             if (outdir != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_outdir);
             }
-            if (online) {
-                exclusiveOptionsFailure(opt_only_log, opt_online);
+            if (offline) {
+                exclusiveOptionsFailure(opt_only_log, opt_offline);
             }
             log_dir = Paths.get(log_dir).toAbsolutePath().toString();
         } else if (predict_dir != null) {       /* only predict */
             if (outdir != null) {
                 exclusiveOptionsFailure(opt_only_predict, opt_outdir);
             }
-            if (online) {
-                exclusiveOptionsFailure(opt_only_predict, opt_online);
-            }
             log_dir = Paths.get(predict_dir).toAbsolutePath().toString();
             log = false;
             prediction = OFFLINE_PREDICTION;
         } else {                                /* log then predict */
-            if (online) {
+            if (!offline) {
                 log_dir = null;
                 prediction = ONLINE_PREDICTION;
             } else {

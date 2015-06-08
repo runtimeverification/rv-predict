@@ -17,6 +17,10 @@ public class MemoryAddrToObjectMap<T> extends LongToObjectMap<T> {
         super(expected, newValue);
     }
 
+    public MemoryAddrToObjectMap(int expected) {
+        super(expected, null);
+    }
+
     /**
      * The high 32 bit value that obtains from {@code System.identityHashCode}
      * is already random. The bitwise {@code xor} operation is then used to

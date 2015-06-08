@@ -104,18 +104,18 @@ public class TraceState {
                 t_clinitEvents);
     }
 
-    public LockState acquireLock(Event lock) {
+    public int acquireLock(Event lock) {
         LockState st = tidToLockIdToLockState.computeIfAbsent(lock.getTID(),
                 p -> new LinkedHashMap<>(DEFAULT_NUM_OF_LOCKS)).computeIfAbsent(
-                lock.getSyncObject(), p -> new LockState());
+                lock.getLockId(), LockState::new);
         st.acquire(lock);
-        return st;
+        return lock.isReadLock() ? st.readLockLevel() : st.writeLockLevel();
     }
 
-    public LockState releaseLock(Event unlock) {
-        LockState st = tidToLockIdToLockState.get(unlock.getTID()).get(unlock.getSyncObject());
-        st.release();
-        return st;
+    public int releaseLock(Event unlock) {
+        LockState st = tidToLockIdToLockState.get(unlock.getTID()).get(unlock.getLockId());
+        st.release(unlock);
+        return unlock.isReadUnlock() ? st.readLockLevel() : st.writeLockLevel();
     }
 
     public void onMetaEvent(Event event) {

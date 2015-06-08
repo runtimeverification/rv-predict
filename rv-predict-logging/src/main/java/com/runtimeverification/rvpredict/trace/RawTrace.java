@@ -58,23 +58,4 @@ public class RawTrace {
         return events[getIndex(n)];
     }
 
-    public int find(Event key) {
-        int low = 0;
-        int high = size - 1;
-
-        while (low <= high) {
-            int mid = (low + high) >>> 1;
-            Event midVal = events[getIndex(mid)];
-            int cmp = midVal.compareTo(key);
-
-            if (cmp < 0)
-                low = mid + 1;
-            else if (cmp > 0)
-                high = mid - 1;
-            else
-                return mid; // key found
-        }
-        throw new IllegalArgumentException("Event not found!");
-    }
-
 }

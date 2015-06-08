@@ -185,7 +185,7 @@ public class Race {
     }
 
     private String getLockRepresentation(Event lock) {
-        long lockId = lock.getSyncObject();
+        long lockId = lock.getLockId();
         int upper32 = (int)(lockId >> 32);
         int lower32 = (int) lockId;
         if (lock.getType() == EventType.READ_LOCK) {

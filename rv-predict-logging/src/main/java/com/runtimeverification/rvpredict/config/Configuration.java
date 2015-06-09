@@ -173,6 +173,18 @@ public class Configuration implements Constants {
         return null;
     }
 
+    public static Path getNativeLibraryPath() {
+        Path nativePath = Paths.get(getBasePath(), "lib", "native");
+        OS os = OS.current();
+        String arch = System.getProperty("os.arch").equals("x86") ? "32" : "64";
+        switch(os) {
+            case OSX: nativePath = nativePath.resolve("osx");break;
+            case WINDOWS: nativePath = nativePath.resolve("windows"+arch);break;
+            default: nativePath = nativePath.resolve("linux"+arch);
+        }
+        return nativePath;
+    }
+
     private void initIncludeList() {
         if (includes != null) {
             for (String include : includes.replace('.', '/').split(",")) {

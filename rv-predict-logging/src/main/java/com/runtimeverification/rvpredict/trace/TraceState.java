@@ -15,9 +15,7 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToObjectMap;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
-import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToValueMap;
 import com.runtimeverification.rvpredict.trace.maps.ThreadIDToObjectMap;
 
 public class TraceState {
@@ -25,17 +23,6 @@ public class TraceState {
     private static final int DEFAULT_NUM_OF_THREADS = 32;
 
     private static final int DEFAULT_NUM_OF_LOCKS = 32;
-
-    /**
-     * Limit the maximum number of entries in the {@link #addrToValue} map in
-     * order to avoid {@link OutOfMemoryError}.
-     */
-    private static final int NUM_OF_ADDR = 32 * 1024;
-
-    /**
-     * Map from memory address to its value.
-     */
-    private final MemoryAddrToValueMap addrToValue = new MemoryAddrToValueMap(NUM_OF_ADDR);
 
     /**
      * Map form thread ID to the current level of class initialization.
@@ -65,7 +52,7 @@ public class TraceState {
 
     private final MemoryAddrToStateMap t_addrToState;
 
-    private final MemoryAddrToObjectMap<List<Event>> t_addrToWriteEvents;
+    private final Map<Long, Map<Long, List<Event>>> t_tidToAddrToEvents;
 
     private final Map<Long, List<LockRegion>> t_lockIdToLockRegions;
 
@@ -77,7 +64,7 @@ public class TraceState {
         this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToThreadState        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_addrToState             = new MemoryAddrToStateMap(config.windowSize);
-        this.t_addrToWriteEvents       = new MemoryAddrToObjectMap<>(config.windowSize, ArrayList::new);
+        this.t_tidToAddrToEvents       = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
     }
@@ -91,7 +78,7 @@ public class TraceState {
         t_tidToMemoryAccessBlocks.clear();
         t_tidToThreadState.clear();
         t_addrToState.clear();
-        t_addrToWriteEvents.clear();
+        t_tidToAddrToEvents.clear();
         t_lockIdToLockRegions.clear();
         t_clinitEvents.clear();
         return new Trace(this, rawTraces,
@@ -99,7 +86,7 @@ public class TraceState {
                 t_tidToMemoryAccessBlocks,
                 t_tidToThreadState,
                 t_addrToState,
-                t_addrToWriteEvents,
+                t_tidToAddrToEvents,
                 t_lockIdToLockRegions,
                 t_clinitEvents);
     }
@@ -143,15 +130,6 @@ public class TraceState {
 
     public boolean isInsideClassInitializer(long tid) {
         return tidToClinitDepth.computeIfAbsent(tid).intValue() > 0;
-    }
-
-    public void writeValueAt(long addr, long value) {
-        addrToValue.put(addr, value);
-    }
-
-    public long getValueAt(long addr) {
-        // the default return value is 0
-        return addrToValue.get(addr);
     }
 
     public ThreadState getThreadState(long tid) {

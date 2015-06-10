@@ -121,16 +121,15 @@ public class MaximalCausalModel {
         this.trace = trace;
     }
 
-    private FormulaTerm getAsstHappensBefore(Event event1, Event event2) {
+    private BoolFormula getAsstHappensBefore(Event event1, Event event2) {
         return LESS_THAN(OrderVariable.get(event1), OrderVariable.get(event2));
     }
 
-    private FormulaTerm getAsstLockRegionHappensBefore(LockRegion lockRegion1, LockRegion lockRegion2) {
+    private BoolFormula getAsstLockRegionHappensBefore(LockRegion lockRegion1, LockRegion lockRegion2) {
         Event unlock = lockRegion1.getUnlock();
         Event lock = lockRegion2.getLock();
-        return getAsstHappensBefore(
-                unlock != null ? unlock : trace.getLastEvent(lockRegion1.getTID()),
-                lock != null ? lock : trace.getFirstEvent(lockRegion2.getTID()));
+        return (unlock == null || lock == null) ? BooleanConstant.FALSE :
+            getAsstHappensBefore(unlock, lock);
     }
 
     private void assertMutex(LockRegion lockRegion1, LockRegion lockRegion2) {

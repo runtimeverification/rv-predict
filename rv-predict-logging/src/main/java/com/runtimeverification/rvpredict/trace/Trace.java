@@ -413,12 +413,10 @@ public class Trace {
                                 .remove(event.getLockId());
                         List<LockRegion> lockRegions = lockIdToLockRegions.computeIfAbsent(
                                 event.getLockId(), p -> new ArrayList<>());
-                        if (idx == null) {
-                            critical[i] = hasCritical;
-                            lockRegions.add(new LockRegion(null, event));
-                        } else {
-                            critical[i] = critical[idx];
-                            lockRegions.add(new LockRegion(tmp_events[idx], event));
+                        critical[i] = idx == null ? hasCritical : critical[idx];
+                        if (critical[i]) {
+                            lockRegions.add(new LockRegion(idx == null ? null : tmp_events[idx],
+                                    event));
                         }
                     } else {
                         critical[i] = true;

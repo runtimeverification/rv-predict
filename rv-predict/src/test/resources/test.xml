@@ -54,14 +54,8 @@
         <rvarg key="--maxlen" value="500" />
         <rvarg value="--simple-report" />
     </test>
-    <test name="mergesort.MergeSort">
-        <runs value="512" />
-        <arg key="-cp" value="basic.jar" />
-        <arg value="mergesort.MergeSort" />
-        <rvarg value="--simple-report" />
-    </test>
     <test name="critical.Critical">
-        <runs value="2" />
+        <runs value="8" />
         <arg key="-cp" value="basic.jar" />
         <arg value="critical.Critical" />
         <rvarg value="--simple-report" />

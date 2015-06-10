@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
@@ -86,7 +87,7 @@ public class Trace {
     /**
      * Map from (thread ID, memory address) to write events.
      */
-    private final Map<Long, Map<Long, List<Event>>> tidToAddrToWriteEvents;
+    private final Table<Long, Long, List<Event>> tidToAddrToWriteEvents;
 
     /**
      * Map from lock ID to critical lock pairs.
@@ -108,7 +109,7 @@ public class Trace {
             Map<Long, List<MemoryAccessBlock>> tidToMemoryAccessBlocks,
             Map<Long, ThreadState> tidToThreadState,
             MemoryAddrToStateMap addrToState,
-            Map<Long, Map<Long, List<Event>>> tidToAddrToEvents,
+            Table<Long, Long, List<Event>> tidToAddrToEvents,
             Map<Long, List<LockRegion>> lockIdToLockRegions,
             Set<Event> clinitEvents) {
         this.state = state;
@@ -207,20 +208,12 @@ public class Trace {
     }
 
     public Iterable<Event> getWriteEvents(long addr) {
-        Iterable<Event> writes = Collections.emptyList();
-        for (Map<Long, List<Event>> addrToWrites : tidToAddrToWriteEvents.values()) {
-            List<Event> list = addrToWrites.get(addr);
-            if (list != null && !list.isEmpty()) {
-                writes = Iterables.concat(writes, list);
-            }
-        }
-        return writes;
+        return Iterables.concat(tidToAddrToWriteEvents.column(addr).values());
     }
 
     private Event getPrevWrite(long gid, long tid, long addr) {
-        List<Event> list = tidToAddrToWriteEvents.getOrDefault(tid, Collections.emptyMap())
-                .getOrDefault(addr, Collections.emptyList());
-        if (list.isEmpty() || list.get(0).getGID() >= gid) {
+        List<Event> list = tidToAddrToWriteEvents.get(tid, addr);
+        if (list == null || list.isEmpty() || list.get(0).getGID() >= gid) {
             return null;
         }
 
@@ -252,7 +245,7 @@ public class Trace {
 
     public Event getAllThreadsPrevWrite(Event read) {
         Event prevWrite = null;
-        for (long tid : tidToAddrToWriteEvents.keySet()) {
+        for (long tid : tidToAddrToWriteEvents.rowKeySet()) {
            Event e = getPrevWrite(read.getGID(), tid, read.getAddr());
            if (prevWrite == null || e != null && e.getGID() < prevWrite.getGID()) {
                prevWrite = e;
@@ -473,7 +466,7 @@ public class Trace {
                         /* update tidToEvents & tidToAddrToWriteEvents */
                         events.add(event);
                         if (event.isWrite()) {
-                            tidToAddrToWriteEvents.computeIfAbsent(event.getTID(), p -> new HashMap<>())
+                            tidToAddrToWriteEvents.row(event.getTID())
                                     .computeIfAbsent(event.getAddr(), p -> new ArrayList<>())
                                     .add(event);
                         }

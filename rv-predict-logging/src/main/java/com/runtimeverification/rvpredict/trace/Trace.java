@@ -443,13 +443,15 @@ public class Trace {
                         }
                     }
                 }
-
                 if (!events.isEmpty()) {
                     hasCriticalEvent = true;
                     tidToEvents.put(rawTrace.getTID(), events);
                     tidToMemoryAccessBlocks.put(rawTrace.getTID(), divideMemoryAccessBlocks(events));
                 }
             }
+
+            /* sort lock regions for better performance of constraint solving */
+            lockIdToLockRegions.values().forEach(regions -> Collections.sort(regions));
         }
     }
 

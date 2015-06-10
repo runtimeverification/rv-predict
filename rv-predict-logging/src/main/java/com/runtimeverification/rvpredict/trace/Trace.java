@@ -324,6 +324,8 @@ public class Trace {
     }
 
     private void processEvents() {
+        boolean isSingleThreaded = rawTraces.size() < 2;
+
         /// PHASE 1
         Set<Event> outermostLockEvents = new HashSet<>(getSize() / 10);
         for (RawTrace rawTrace : rawTraces) {
@@ -339,8 +341,10 @@ public class Trace {
 
                 if (event.isReadOrWrite()) {
                     /* update memory address state */
-                    MemoryAddrState st = addrToState.computeIfAbsent(event.getAddr());
-                    st.touch(event);
+                    if (!isSingleThreaded) {
+                        MemoryAddrState st = addrToState.computeIfAbsent(event.getAddr());
+                        st.touch(event);
+                    }
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
                         event = event.copy();

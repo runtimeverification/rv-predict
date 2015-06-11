@@ -444,12 +444,11 @@ public class Trace {
                                 .remove(event.getLockId());
                         pendingLockIndexes.remove(idx);
 
-                        List<LockRegion> lockRegions = lockIdToLockRegions.computeIfAbsent(
-                                event.getLockId(), p -> new ArrayList<>());
                         critical[i] = idx == null ? hasCritical : critical[idx];
                         if (critical[i]) {
-                            lockRegions.add(new LockRegion(idx == null ? null : tmp_events[idx],
-                                    event));
+                            lockIdToLockRegions.computeIfAbsent(event.getLockId(),
+                                    p -> new ArrayList<>()).add(
+                                    new LockRegion(idx == null ? null : tmp_events[idx], event));
                         }
                     } else {
                         critical[i] = true;

@@ -442,6 +442,8 @@ public class Trace {
                         Integer idx = (event.isReadLock() ?
                                 lockIdToOpenReadLockIdx : lockIdToOpenWriteLockIdx)
                                 .remove(event.getLockId());
+                        pendingLockIndexes.remove(idx);
+
                         List<LockRegion> lockRegions = lockIdToLockRegions.computeIfAbsent(
                                 event.getLockId(), p -> new ArrayList<>());
                         critical[i] = idx == null ? hasCritical : critical[idx];

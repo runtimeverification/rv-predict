@@ -316,10 +316,6 @@ public class Configuration implements Constants {
     @Parameter(names = opt_debug, description = "Output developer debugging information", hidden = true, descriptionKey = "2090")
     public static boolean debug = false;
 
-    public final static String opt_outdir = "--dir";
-    @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")
-    private String outdir = null;
-
     final static String short_opt_verbose = "-v";
     final static String opt_verbose = "--verbose";
     @Parameter(names = { short_opt_verbose, opt_verbose }, description = "Generate more verbose output", descriptionKey = "9000")
@@ -397,9 +393,6 @@ public class Configuration implements Constants {
             if (log_dir != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_only_log);
             }
-            if (outdir != null) {
-                exclusiveOptionsFailure(opt_event_profile, opt_outdir);
-            }
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_only_predict);
             }
@@ -411,36 +404,24 @@ public class Configuration implements Constants {
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_only_predict);
             }
-            if (outdir != null) {
-                exclusiveOptionsFailure(opt_only_log, opt_outdir);
-            }
             if (offline) {
                 exclusiveOptionsFailure(opt_only_log, opt_offline);
             }
             log_dir = Paths.get(log_dir).toAbsolutePath().toString();
         } else if (predict_dir != null) {       /* only predict */
-            if (outdir != null) {
-                exclusiveOptionsFailure(opt_only_predict, opt_outdir);
-            }
             log_dir = Paths.get(predict_dir).toAbsolutePath().toString();
             log = false;
             prediction = OFFLINE_PREDICTION;
         } else {                                /* log then predict */
-            if (!offline) {
-                log_dir = null;
-                prediction = ONLINE_PREDICTION;
-            } else {
-                try {
-                    log_dir = outdir == null ? Files.createTempDirectory(
-                            Paths.get(System.getProperty("java.io.tmpdir")), RV_PREDICT).toString()
-                            : Paths.get(outdir).toAbsolutePath().toString();
-                } catch (IOException e) {
-                    System.err.println("Error while attempting to create log dir.");
-                    System.err.println(e.getMessage());
-                    System.exit(1);
-                }
-                prediction = OFFLINE_PREDICTION;
+            try {
+                log_dir = Files.createTempDirectory(
+                        Paths.get(System.getProperty("java.io.tmpdir")), RV_PREDICT).toString();
+            } catch (IOException e) {
+                System.err.println("Error while attempting to create log dir.");
+                System.err.println(e.getMessage());
+                System.exit(1);
             }
+            prediction = offline ? OFFLINE_PREDICTION : ONLINE_PREDICTION;
         }
 
         /* set window size */

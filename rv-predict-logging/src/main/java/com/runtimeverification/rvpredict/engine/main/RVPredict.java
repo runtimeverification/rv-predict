@@ -133,14 +133,8 @@ public class RVPredict {
         Collections.addAll(appArgs, config.getArgs());
 
         assert config.isOfflinePrediction();
-        /* replace option --dir with --predict */
-        int idx = appArgs.indexOf(Configuration.opt_outdir);
-        if (idx != -1) {
-            appArgs.set(idx, Configuration.opt_only_predict);
-        } else {
-            appArgs.add(startOfRVArgs, Configuration.opt_only_predict);
-            appArgs.add(startOfRVArgs + 1, config.getLogDir());
-        }
+        appArgs.add(startOfRVArgs, Configuration.opt_only_predict);
+        appArgs.add(startOfRVArgs + 1, config.getLogDir());
         return new ProcessBuilder(appArgs).start();
     }
 

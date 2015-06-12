@@ -122,7 +122,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
 
         if (detector.getRaces().isEmpty()) {
-            config.logger.report("No races found.", Logger.MSGTYPE.INFO);
+            config.logger().report("No races found.", Logger.MSGTYPE.INFO);
         }
     }
 
@@ -186,7 +186,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             }
             detector.run(crntState.initNextTraceWindow(rawTraces));
         } catch (Throwable e) {
-            e.printStackTrace();
+            e.printStackTrace(config.logger().debug());
             /* cannot use System.exit because it may lead to deadlock */
             Runtime.getRuntime().halt(1);
         }

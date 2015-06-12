@@ -75,7 +75,7 @@ public class RVPredict {
             } while (trace.getSize() == config.windowSize);
 
             if (detector.getRaces().isEmpty()) {
-                config.logger.report("No races found.", Logger.MSGTYPE.INFO);
+                config.logger().report("No races found.", Logger.MSGTYPE.INFO);
             }
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
@@ -98,7 +98,7 @@ public class RVPredict {
 
                 if (config.isOfflinePrediction()) {
                     if (config.isLogging()) {
-                        config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
+                        config.logger().reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
                     }
 
                     Process process = null;

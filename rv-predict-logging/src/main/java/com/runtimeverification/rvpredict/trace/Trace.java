@@ -46,6 +46,7 @@ import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToObjectMap;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
+import com.runtimeverification.rvpredict.util.Logger;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a
@@ -133,6 +134,10 @@ public class Trace {
             baseGID = min;
         }
         processEvents();
+    }
+
+    public Logger logger() {
+        return state.logger();
     }
 
     public Metadata metadata() {
@@ -384,6 +389,8 @@ public class Trace {
 
         /// PHASE 2
         if (!sharedAddr.isEmpty()) {
+//            logger().debug().println("start processing: " + baseGID);
+
             for (RawTrace rawTrace : rawTraces) {
                 /* step 1: remove thread-local events and nested lock events */
                 int tmp_size = 0;
@@ -466,7 +473,7 @@ public class Trace {
                 for (int i = 0; i < tmp_size; i++) {
                     if (critical[i]) {
                         Event event = tmp_events[i];
-//                        System.err.println(event + " at " + metadata().getLocationSig(event.getLocId()));
+//                        logger().debug().println(event + " at " + metadata().getLocationSig(event.getLocId()));
 
                         /* update tidToEvents & tidToAddrToWriteEvents */
                         events.add(event);

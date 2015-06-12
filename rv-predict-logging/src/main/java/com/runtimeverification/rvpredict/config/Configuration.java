@@ -35,6 +35,7 @@ import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -328,7 +329,7 @@ public class Configuration implements Constants {
 
     private static final String RVPREDICT_ARGS_TERMINATOR = "--";
 
-    public final Logger logger = new Logger();
+    private final Logger logger = new Logger();
 
     public static Configuration instance(String[] args) {
         Configuration config = new Configuration();
@@ -422,6 +423,15 @@ public class Configuration implements Constants {
                 System.exit(1);
             }
             prediction = offline ? OFFLINE_PREDICTION : ONLINE_PREDICTION;
+        }
+
+        if (log_dir != null) {
+            try {
+                logger.setLogDir(log_dir);
+            } catch (FileNotFoundException e) {
+                System.err.println("Error while attempting to create the logger.");
+                System.exit(1);
+            }
         }
 
         /* set window size */
@@ -531,6 +541,10 @@ public class Configuration implements Constants {
 
     public List<String> getJavaArguments() {
         return javaArgs;
+    }
+
+    public Logger logger() {
+        return logger;
     }
 
     /**

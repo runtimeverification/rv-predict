@@ -112,15 +112,15 @@ public class Agent implements ClassFileTransformer, Constants {
     }
 
     private static void printStartupInfo() {
-        config.logger.reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
+        config.logger().reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
         if (config.getLogDir() != null) {
-            config.logger.report("Log directory: " + config.getLogDir(), Logger.MSGTYPE.INFO);
+            config.logger().report("Log directory: " + config.getLogDir(), Logger.MSGTYPE.INFO);
         }
         if (config.includes != null) {
-            config.logger.report("Including: " + config.includeList, Logger.MSGTYPE.INFO);
+            config.logger().report("Including: " + config.includeList, Logger.MSGTYPE.INFO);
         }
         if (config.excludes != null) {
-            config.logger.report("Excluding: " + config.excludeList, Logger.MSGTYPE.INFO);
+            config.logger().report("Excluding: " + config.excludeList, Logger.MSGTYPE.INFO);
         }
     }
 
@@ -165,9 +165,9 @@ public class Agent implements ClassFileTransformer, Constants {
             return null;
         } catch (Throwable e) {
             /* exceptions during class loading are silently suppressed by default */
-            System.err.println("Cannot retransform " + cname + ". Exception: " + e);
+            config.logger().debug().println("Cannot retransform " + cname + ". Exception: " + e);
             if (Configuration.debug) {
-                e.printStackTrace();
+                e.printStackTrace(config.logger().debug());
                 // fail-fast strategy under debug mode
                 System.exit(1);
             }

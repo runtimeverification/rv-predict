@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Params;
 import com.microsoft.z3.Status;
@@ -302,7 +303,7 @@ public class MaximalCausalModel {
             suspects.forEach(p -> suspectToAsst.computeIfAbsent(p, this::getRaceAssertion));
         });
         sigToRaceSuspects.entrySet().removeIf(e -> e.getValue().isEmpty());
-//        sigToRaceSuspects.forEach((sig, l) -> System.err.println(sig + ": " + l.size()));
+//        sigToRaceSuspects.forEach((sig, l) -> trace.logger().debug().println(sig + ": " + l.size()));
 
         Map<String, Race> result = new HashMap<>();
         Z3Filter z3filter = new Z3Filter(z3Context);

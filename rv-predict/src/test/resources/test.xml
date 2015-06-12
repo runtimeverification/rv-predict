@@ -29,6 +29,12 @@
         <rvarg value="--debug" />
         <rvarg value="--simple-report" />
     </test>
+    <test agent="true" name="SpringExample.jar">
+        <arg key="-jar" value="SpringExample.jar" />
+        <rvarg key="--maxlen" value="6000" />
+        <rvarg value="--debug" />
+        <rvarg value="--simple-report" />
+    </test>
     
     <test name="account.Account">
         <runs value="64" />

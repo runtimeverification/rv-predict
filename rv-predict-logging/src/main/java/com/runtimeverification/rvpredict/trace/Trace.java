@@ -442,12 +442,13 @@ public class Trace {
                         Integer idx = (event.isReadLock() ?
                                 lockIdToOpenReadLockIdx : lockIdToOpenWriteLockIdx)
                                 .remove(event.getLockId());
-                        List<LockRegion> lockRegions = lockIdToLockRegions.computeIfAbsent(
-                                event.getLockId(), p -> new ArrayList<>());
+                        pendingLockIndexes.remove(idx);
+
                         critical[i] = idx == null ? hasCritical : critical[idx];
                         if (critical[i]) {
-                            lockRegions.add(new LockRegion(idx == null ? null : tmp_events[idx],
-                                    event));
+                            lockIdToLockRegions.computeIfAbsent(event.getLockId(),
+                                    p -> new ArrayList<>()).add(
+                                    new LockRegion(idx == null ? null : tmp_events[idx], event));
                         }
                     } else {
                         critical[i] = true;

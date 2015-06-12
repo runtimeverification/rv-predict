@@ -39,6 +39,8 @@ import java.util.Set;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
@@ -83,9 +85,9 @@ public class Trace {
     private final MemoryAddrToStateMap addrToState;
 
     /**
-     * Map from memory addresses to write events ordered by global ID.
+     * Map from (thread ID, memory address) to write events.
      */
-    private final LongToObjectMap<List<Event>> addrToWriteEvents;
+    private final Table<Long, Long, List<Event>> tidToAddrToWriteEvents;
 
     /**
      * Map from lock ID to critical lock pairs.
@@ -107,7 +109,7 @@ public class Trace {
             Map<Long, List<MemoryAccessBlock>> tidToMemoryAccessBlocks,
             Map<Long, ThreadState> tidToThreadState,
             MemoryAddrToStateMap addrToState,
-            LongToObjectMap<List<Event>> addrToWriteEvents,
+            Table<Long, Long, List<Event>> tidToAddrToEvents,
             Map<Long, List<LockRegion>> lockIdToLockRegions,
             Set<Event> clinitEvents) {
         this.state = state;
@@ -117,7 +119,7 @@ public class Trace {
         this.tidToMemoryAccessBlocks = tidToMemoryAccessBlocks;
         this.tidToThreadState = tidToThreadState;
         this.addrToState = addrToState;
-        this.addrToWriteEvents = addrToWriteEvents;
+        this.tidToAddrToWriteEvents = tidToAddrToEvents;
         this.lockIdToLockRegions = lockIdToLockRegions;
         this.clinitEvents = clinitEvents;
 
@@ -150,17 +152,6 @@ public class Trace {
         // For example, if this window contains no race candidate determined
         // by some static analysis then we can safely skip it
         return hasCriticalEvent;
-    }
-
-    /**
-     * Gets the initial value of a memory address.
-     *
-     * @param addr
-     *            the address
-     * @return the initial value
-     */
-    public long getInitValueOf(long addr) {
-        return addrToState.get(addr).initialValue();
     }
 
     public Event getFirstEvent(long tid) {
@@ -216,12 +207,55 @@ public class Trace {
         return events;
     }
 
-    public Map<Long, List<LockRegion>> getLockIdToLockRegions() {
-        return lockIdToLockRegions;
+    public Iterable<Event> getWriteEvents(long addr) {
+        return Iterables.concat(tidToAddrToWriteEvents.column(addr).values());
     }
 
-    public List<Event> getWriteEvents(long addr) {
-        return addrToWriteEvents.get(addr);
+    private Event getPrevWrite(long gid, long tid, long addr) {
+        List<Event> list = tidToAddrToWriteEvents.get(tid, addr);
+        if (list == null || list.isEmpty() || list.get(0).getGID() >= gid) {
+            return null;
+        }
+
+        /* binary-searching the latest write before gid */
+        Event e = null;
+        int low = 0;
+        int high = list.size() - 1;
+        while (low <= high) {
+            int mid = (low + high) >>> 1;
+            Event midVal = list.get(mid);
+            int cmp = Long.compare(midVal.getGID(), gid);
+
+            if (cmp < 0) {
+                low = mid + 1;
+                e = midVal;
+            } else if (cmp > 0) {
+                high = mid - 1;
+            } else {
+                break;
+            }
+        }
+
+        return e;
+    }
+
+    public Event getSameThreadPrevWrite(Event read) {
+        return getPrevWrite(read.getGID(), read.getTID(), read.getAddr());
+    }
+
+    public Event getAllThreadsPrevWrite(Event read) {
+        Event prevWrite = null;
+        for (long tid : tidToAddrToWriteEvents.rowKeySet()) {
+           Event e = getPrevWrite(read.getGID(), tid, read.getAddr());
+           if (prevWrite == null || e != null && e.getGID() < prevWrite.getGID()) {
+               prevWrite = e;
+           }
+        }
+        return prevWrite;
+    }
+
+    public Map<Long, List<LockRegion>> getLockIdToLockRegions() {
+        return lockIdToLockRegions;
     }
 
     public boolean isInsideClassInitializer(Event event) {
@@ -290,6 +324,8 @@ public class Trace {
     }
 
     private void processEvents() {
+        boolean isSingleThreaded = rawTraces.size() < 2;
+
         /// PHASE 1
         Set<Event> outermostLockEvents = new HashSet<>(getSize() / 10);
         for (RawTrace rawTrace : rawTraces) {
@@ -305,8 +341,10 @@ public class Trace {
 
                 if (event.isReadOrWrite()) {
                     /* update memory address state */
-                    MemoryAddrState st = addrToState.computeIfAbsent(event.getAddr());
-                    st.touch(event);
+                    if (!isSingleThreaded) {
+                        MemoryAddrState st = addrToState.computeIfAbsent(event.getAddr());
+                        st.touch(event);
+                    }
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
                         event = event.copy();
@@ -338,16 +376,9 @@ public class Trace {
             long addr = iter.getNextKey();
             MemoryAddrState st = iter.getNextValue();
 
-            /* compute shared memory addresses and their initial values */
+            /* compute shared memory addresses */
             if (st.isWriteShared()) {
-                st.setInitialValue(state.getValueAt(addr));
                 sharedAddr.add(addr);
-            }
-
-            /* update memory address value */
-            Event lastWrite = st.lastWrite();
-            if (lastWrite != null) {
-                state.writeValueAt(addr, lastWrite.getValue());
             }
         }
 
@@ -436,10 +467,12 @@ public class Trace {
                         Event event = tmp_events[i];
 //                        System.err.println(event + " at " + metadata().getLocationSig(event.getLocId()));
 
-                        /* update tidToEvents & addrToWriteEvents */
+                        /* update tidToEvents & tidToAddrToWriteEvents */
                         events.add(event);
                         if (event.isWrite()) {
-                            addrToWriteEvents.computeIfAbsent(event.getAddr()).add(event);
+                            tidToAddrToWriteEvents.row(event.getTID())
+                                    .computeIfAbsent(event.getAddr(), p -> new ArrayList<>())
+                                    .add(event);
                         }
                     }
                 }

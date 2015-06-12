@@ -34,8 +34,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Params;
 import com.microsoft.z3.Status;
@@ -97,21 +95,18 @@ public class MaximalCausalModel {
         this.trace = trace;
     }
 
-    private BoolFormula getAsstHappensBefore(Event event1, Event event2) {
+    private BoolFormula HB(Event event1, Event event2) {
         return LESS_THAN(OrderVariable.get(event1), OrderVariable.get(event2));
     }
 
-    private BoolFormula getAsstLockRegionHappensBefore(LockRegion lockRegion1, LockRegion lockRegion2) {
+    private BoolFormula HB(LockRegion lockRegion1, LockRegion lockRegion2) {
         Event unlock = lockRegion1.getUnlock();
         Event lock = lockRegion2.getLock();
-        return (unlock == null || lock == null) ? BooleanConstant.FALSE :
-            getAsstHappensBefore(unlock, lock);
+        return (unlock == null || lock == null) ? BooleanConstant.FALSE : HB(unlock, lock);
     }
 
-    private void assertMutex(LockRegion lockRegion1, LockRegion lockRegion2) {
-        phiTau.add(OR(
-                getAsstLockRegionHappensBefore(lockRegion1, lockRegion2),
-                getAsstLockRegionHappensBefore(lockRegion2, lockRegion1)));
+    private BoolFormula MUTEX(LockRegion lockRegion1, LockRegion lockRegion2) {
+        return OR(HB(lockRegion1, lockRegion2), HB(lockRegion2, lockRegion1));
     }
 
     private int getRelativeIdx(Event event) {
@@ -130,7 +125,7 @@ public class MaximalCausalModel {
             for (int i = 1; i < events.size(); i++) {
                 Event e1 = events.get(i - 1);
                 Event e2 = events.get(i);
-                phiTau.add(getAsstHappensBefore(e1, e2));
+                phiTau.add(HB(e1, e2));
                 /* every group should start with a join event and end with a start event */
                 if (e1.isStart() || e2.isJoin()) {
                     mhbClosureBuilder.createNewGroup(getRelativeIdx(e2));
@@ -146,13 +141,13 @@ public class MaximalCausalModel {
             if (event.isStart()) {
                 Event fst = trace.getFirstEvent(event.getSyncObject());
                 if (fst != null) {
-                    phiTau.add(getAsstHappensBefore(event, fst));
+                    phiTau.add(HB(event, fst));
                     mhbClosureBuilder.addRelation(getRelativeIdx(event), getRelativeIdx(fst));
                 }
             } else if (event.isJoin()) {
                 Event last = trace.getLastEvent(event.getSyncObject());
                 if (last != null) {
-                    phiTau.add(getAsstHappensBefore(last, event));
+                    phiTau.add(HB(last, event));
                     mhbClosureBuilder.addRelation(getRelativeIdx(last), getRelativeIdx(event));
                 }
             }
@@ -173,7 +168,7 @@ public class MaximalCausalModel {
                 lockRegions.forEach(lr2 -> {
                     if (lr1.getTID() < lr2.getTID()
                             && (lr1.isWriteLocked() || lr2.isWriteLocked())) {
-                        assertMutex(lr1, lr2);
+                        phiTau.add(MUTEX(lr1, lr2));
                     }
                 });
             });
@@ -200,60 +195,70 @@ public class MaximalCausalModel {
     }
 
     private BoolFormula getPhiSC(Event read) {
-        FormulaTerm.Builder phiSC = FormulaTerm.orBuilder();
-
-        // all write events that could interfere with the read event
-        List<Event> predWrites = new ArrayList<>();
-        Event sameThreadPredWrite = null;
-        for (Event write : trace.getWriteEvents(read.getAddr())) {
-            if (write.getTID() == read.getTID()) {
-                if (write.getGID() < read.getGID()) {
-                    sameThreadPredWrite = write;
+        /* compute all the write events that could interfere with the read event */
+        List<Event> diffThreadSameAddrSameValWrites = new ArrayList<>();
+        List<Event> diffThreadSameAddrDiffValWrites = new ArrayList<>();
+        trace.getWriteEvents(read.getAddr()).forEach(write -> {
+            if (write.getTID() != read.getTID() && !happensBefore(read, write)) {
+                if (write.getValue() == read.getValue()) {
+                    diffThreadSameAddrSameValWrites.add(write);
+                } else {
+                    diffThreadSameAddrDiffValWrites.add(write);
                 }
-            } else if (!happensBefore(read, write)) {
-                predWrites.add(write);
+            }
+        });
+
+        Event sameThreadPrevWrite = trace.getSameThreadPrevWrite(read);
+        if (sameThreadPrevWrite != null) {
+            /* sameThreadPrevWrite is available in the current window */
+            if (read.getValue() == sameThreadPrevWrite.getValue()) {
+                /* the read value is the same as sameThreadPrevWrite */
+                FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                diffThreadSameAddrDiffValWrites.forEach(
+                    w -> and.add(OR(HB(w, sameThreadPrevWrite), HB(read, w)))
+                );
+                return and.build();
+            } else {
+                /* the read value is different from sameThreadPrevWrite */
+                FormulaTerm.Builder or = FormulaTerm.orBuilder();
+                diffThreadSameAddrSameValWrites.forEach(w1 -> {
+                    FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                    and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
+                    and.add(HB(sameThreadPrevWrite, w1), HB(w1, read));
+                    diffThreadSameAddrDiffValWrites.forEach(w2 -> {
+                        if (!happensBefore(w2, w1)) {
+                            and.add(OR(HB(w2, w1), HB(read, w2)));
+                        }
+                    });
+                    or.add(and.build());
+                });
+                return or.build();
+            }
+        } else {
+            /* sameThreadPrevWrite is unavailable in the current window */
+            Event diffThreadPrevWrite = trace.getAllThreadsPrevWrite(read);
+            if (diffThreadPrevWrite == null) {
+                /* the initial value of this address must be read.getValue() */
+                FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                diffThreadSameAddrDiffValWrites.forEach(w -> and.add(HB(read, w)));
+                return and.build();
+            } else {
+                /* the initial value of this address is unknown */
+                FormulaTerm.Builder or = FormulaTerm.orBuilder();
+                diffThreadSameAddrSameValWrites.forEach(w1 -> {
+                    FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                    and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
+                    and.add(HB(w1, read));
+                    diffThreadSameAddrDiffValWrites.forEach(w2 -> {
+                        if (!happensBefore(w2, w1)) {
+                            and.add(OR(HB(w2, w1), HB(read, w2)));
+                        }
+                    });
+                    or.add(and.build());
+                });
+                return or.build();
             }
         }
-        if (sameThreadPredWrite != null) {
-            predWrites.add(sameThreadPredWrite);
-        }
-
-        // all write events whose values could be read by the read event
-        long readValue = read.getValue();
-        List<Event> sameValPredWrites = predWrites.stream()
-                .filter(w -> w.getValue() == readValue).collect(Collectors.toList());
-
-        /* case 0: Phi_SC is UNSAT because of the missing initial value (or write events) */
-        long initialValue = trace.getInitValueOf(read.getAddr());
-        if (sameThreadPredWrite == null && initialValue != readValue && sameValPredWrites.isEmpty()) {
-            /* 1. when sameThreadPredWrite != null, it doesn't matter if the
-             *    initial value is missing
-             * 2. it's less likely for a write event to be missing
-             */
-            return BooleanConstant.TRUE;
-        }
-
-        /* case 1: the read event reads the initial value */
-        if (sameThreadPredWrite == null && initialValue == readValue) {
-            FormulaTerm.Builder case1 = FormulaTerm.andBuilder();
-            predWrites.forEach(w -> case1.add(getAsstHappensBefore(read, w)));
-            phiSC.add(case1.build());
-        }
-
-        /* case 2: the read event reads a previously written value */
-        sameValPredWrites.forEach(w1 -> {
-            FormulaTerm.Builder case2 = FormulaTerm.andBuilder();
-            case2.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
-            case2.add(getAsstHappensBefore(w1, read));
-            predWrites.forEach(w2 -> {
-                if (w2.getValue() != w1.getValue() && !happensBefore(w2, w1)) {
-                    case2.add(OR(getAsstHappensBefore(w2, w1),
-                            getAsstHappensBefore(read, w2)));
-                }
-            });
-            phiSC.add(case2.build());
-        });
-        return phiSC.build();
     }
 
     /**

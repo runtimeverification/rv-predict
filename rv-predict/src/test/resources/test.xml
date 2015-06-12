@@ -25,6 +25,7 @@
     
     <test name="SpringExample.jar">
         <arg key="-jar" value="SpringExample.jar" />
+        <rvarg key="--maxlen" value="6000" />
         <rvarg value="--debug" />
         <rvarg value="--simple-report" />
     </test>
@@ -53,14 +54,8 @@
         <rvarg key="--maxlen" value="500" />
         <rvarg value="--simple-report" />
     </test>
-    <test name="mergesort.MergeSort">
-        <runs value="512" />
-        <arg key="-cp" value="basic.jar" />
-        <arg value="mergesort.MergeSort" />
-        <rvarg value="--simple-report" />
-    </test>
     <test name="critical.Critical">
-        <runs value="2" />
+        <runs value="8" />
         <arg key="-cp" value="basic.jar" />
         <arg value="critical.Critical" />
         <rvarg value="--simple-report" />

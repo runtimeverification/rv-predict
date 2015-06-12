@@ -31,12 +31,15 @@ package com.runtimeverification.rvpredict.config;
 import com.beust.jcommander.*;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.microsoft.z3.Context;
+import com.microsoft.z3.Z3Exception;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -183,6 +186,38 @@ public class Configuration implements Constants {
             default: nativePath = nativePath.resolve("linux"+arch);
         }
         return nativePath;
+    }
+
+    public static Context getZ3Context() {
+        Context context = null;
+        try {
+            String libz3 = OS.current() == OS.WINDOWS ? "libz3" : "z3";
+            try {
+                // Very dirty hack to add our native libraries dir to the array of system paths
+                // dependent on the implementation of java.lang.ClassLoader (although that seems pretty consistent)
+                //TODO: Might actually be better to alter and recompile the z3 java bindings
+                Field sysPathsField = ClassLoader.class.getDeclaredField("sys_paths");
+                sysPathsField.setAccessible(true);
+                String[] sysPaths = (String[]) sysPathsField.get(null);
+                String oldPath = sysPaths[0];
+                sysPaths[0] = getNativeLibraryPath().toString();
+
+                System.loadLibrary(libz3);
+                context = new Context();
+
+                //restoring the previous system path
+                sysPaths[0] = oldPath;
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+                throw  new RuntimeException();
+            } catch (NoSuchFieldException e) {
+                e.printStackTrace();
+                throw  new RuntimeException();
+            }
+        } catch (Z3Exception e) {
+            throw new RuntimeException();
+        }
+        return context;
     }
 
     private void initIncludeList() {

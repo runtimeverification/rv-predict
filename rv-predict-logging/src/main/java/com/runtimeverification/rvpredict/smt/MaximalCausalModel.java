@@ -30,7 +30,6 @@ package com.runtimeverification.rvpredict.smt;
 
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.*;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,7 +39,6 @@ import java.util.stream.Collectors;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Params;
 import com.microsoft.z3.Status;
-import com.microsoft.z3.Z3Exception;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
@@ -83,31 +81,7 @@ public class MaximalCausalModel {
     private static Context z3Context;
 
     static {
-        try {
-            String libz3 = Configuration.OS.current() == Configuration.OS.WINDOWS ? "libz3" : "z3";
-            try {
-                // Very dirty hack to add our native libraries dir to the array of system paths
-                // dependent on the implementation of java.lang.ClassLoader (although that seems pretty consistent)
-                //TODO: Might actually be better to alter and recompile the z3 java bindings
-                Field sysPathsField = ClassLoader.class.getDeclaredField("sys_paths");
-                sysPathsField.setAccessible(true);
-                String[] sysPaths = (String[]) sysPathsField.get(null);
-                String oldPath = sysPaths[0];
-                sysPaths[0] = Configuration.getNativeLibraryPath().toString();
-
-                System.loadLibrary(libz3);
-                z3Context = new Context();
-
-                //restoring the previous system path
-                sysPaths[0] = oldPath;
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (NoSuchFieldException e) {
-                e.printStackTrace();
-            }
-        } catch (Z3Exception e) {
-            throw new RuntimeException();
-        }
+        z3Context = Configuration.getZ3Context();
     }
 
     public static MaximalCausalModel create(Trace trace) {

@@ -72,8 +72,7 @@ public class RaceDetector {
                 .checkRaceSuspects(sigToRaceSuspects, config.solver_timeout);
         sigToRealRace.putAll(result);
         result.forEach((sig, race) -> {
-            String report = config.simple_report ? race.generateSimpleRaceReport() : race
-                    .generateDetailedRaceReport();
+            String report = race.generateRaceReport();
             reports.add(report);
             config.logger().reportRace(report);
         });

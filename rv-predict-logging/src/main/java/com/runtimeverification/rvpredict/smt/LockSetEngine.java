@@ -43,7 +43,7 @@ import com.runtimeverification.rvpredict.trace.LockRegion;
  */
 public class LockSetEngine {
 
-    private Map<Long, Map<Long, List<LockRegion>>> lockIdToTidToLockRegions = new HashMap<>();
+    private final Map<Long, Map<Long, List<LockRegion>>> lockIdToTidToLockRegions = new HashMap<>();
 
     public void add(LockRegion region) {
         List<LockRegion> regions = lockIdToTidToLockRegions

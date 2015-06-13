@@ -389,8 +389,6 @@ public class Trace {
 
         /// PHASE 2
         if (!sharedAddr.isEmpty()) {
-//            logger().debug().println("start processing: " + baseGID);
-
             for (RawTrace rawTrace : rawTraces) {
                 /* step 1: remove thread-local events and nested lock events */
                 int tmp_size = 0;

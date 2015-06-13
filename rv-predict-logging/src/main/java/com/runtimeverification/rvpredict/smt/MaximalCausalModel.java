@@ -308,6 +308,7 @@ public class MaximalCausalModel {
             return Collections.emptyMap();
         }
 
+//        trace.logger().debug().println("start analyzing: " + trace.getBaseGID());
 //        sigToRaceSuspects.forEach((sig, l) -> trace.logger().debug().println(sig + ": " + l.size()));
 
         Map<String, Race> result = new HashMap<>();

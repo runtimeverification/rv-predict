@@ -451,9 +451,9 @@ public class Trace {
 
                         critical[i] = idx == null ? hasCritical : critical[idx];
                         if (critical[i]) {
-                            lockIdToLockRegions.computeIfAbsent(event.getLockId(),
-                                    p -> new ArrayList<>()).add(
-                                    new LockRegion(idx == null ? null : tmp_events[idx], event));
+                            lockIdToLockRegions
+                                .computeIfAbsent(event.getLockId(), p -> new ArrayList<>())
+                                .add(new LockRegion(idx == null ? null : tmp_events[idx], event));
                         }
                     } else {
                         critical[i] = true;
@@ -465,6 +465,14 @@ public class Trace {
                         pendingLockIndexes.clear();
                     }
                 }
+                Iterables.concat(lockIdToOpenReadLockIdx.values(),
+                        lockIdToOpenWriteLockIdx.values()).forEach(idx -> {
+                   if (critical[idx]) {
+                       lockIdToLockRegions
+                           .computeIfAbsent(tmp_events[idx].getLockId(), p -> new ArrayList<>())
+                           .add(new LockRegion(tmp_events[idx], null));
+                   }
+                });
 
                 /* commit all critical events into this window */
                 List<Event> events = new ArrayList<>();

@@ -30,6 +30,7 @@ package com.runtimeverification.rvpredict.trace;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -60,8 +61,6 @@ public class Trace {
     private final int size;
 
     private final List<RawTrace> rawTraces;
-
-    private boolean hasCriticalEvent;
 
     /**
      * Map from thread ID to critical events.
@@ -156,7 +155,7 @@ public class Trace {
         // This method can be further improved to skip an entire window ASAP
         // For example, if this window contains no race candidate determined
         // by some static analysis then we can safely skip it
-        return hasCriticalEvent;
+        return !tidToEvents.isEmpty();
     }
 
     public Event getFirstEvent(long tid) {
@@ -419,7 +418,7 @@ public class Trace {
                 Map<Long, Integer> lockIdToOpenWriteLockIdx = new HashMap<>();
                 Set<Integer> pendingLockIndexes = new HashSet<>();
                 boolean[] critical = new boolean[tmp_size];
-                boolean hasCritical = false;
+                int numOfCriticalEvents = 0;
                 for (int i = 0; i < tmp_size; i++) {
                     Event event = tmp_events[i];
                     if (event.isRead()) {
@@ -449,7 +448,7 @@ public class Trace {
                                 .remove(event.getLockId());
                         pendingLockIndexes.remove(idx);
 
-                        critical[i] = idx == null ? hasCritical : critical[idx];
+                        critical[i] = idx == null ? numOfCriticalEvents > 0 : critical[idx];
                         if (critical[i]) {
                             lockIdToLockRegions
                                 .computeIfAbsent(event.getLockId(), p -> new ArrayList<>())
@@ -460,7 +459,8 @@ public class Trace {
                     }
 
                     if (critical[i]) {
-                        hasCritical = true;
+                        numOfCriticalEvents++;
+                        numOfCriticalEvents += pendingLockIndexes.size();
                         pendingLockIndexes.forEach(idx -> critical[idx] = true);
                         pendingLockIndexes.clear();
                     }
@@ -475,14 +475,14 @@ public class Trace {
                 });
 
                 /* commit all critical events into this window */
-                List<Event> events = new ArrayList<>();
-                for (int i = 0; i < tmp_size; i++) {
+                Event[] events = new Event[numOfCriticalEvents];
+                for (int i = 0, c = 0; i < tmp_size; i++) {
                     if (critical[i]) {
                         Event event = tmp_events[i];
 //                        logger().debug().println(event + " at " + metadata().getLocationSig(event.getLocId()));
 
                         /* update tidToEvents & tidToAddrToWriteEvents */
-                        events.add(event);
+                        events[c++] = event;
                         if (event.isWrite()) {
                             tidToAddrToWriteEvents.row(event.getTID())
                                     .computeIfAbsent(event.getAddr(), p -> new ArrayList<>())
@@ -490,10 +490,10 @@ public class Trace {
                         }
                     }
                 }
-                if (!events.isEmpty()) {
-                    hasCriticalEvent = true;
-                    tidToEvents.put(rawTrace.getTID(), events);
-                    tidToMemoryAccessBlocks.put(rawTrace.getTID(), divideMemoryAccessBlocks(events));
+                if (numOfCriticalEvents > 0) {
+                    List<Event> list = Arrays.asList(events);
+                    tidToEvents.put(rawTrace.getTID(), list);
+                    tidToMemoryAccessBlocks.put(rawTrace.getTID(), divideMemoryAccessBlocks(list));
                 }
             }
 

@@ -444,7 +444,7 @@ public class Trace {
                                 .put(event.getLockId(), i);
                         pendingLockIndexes.add(i);
                     } else if (event.isUnlock()) {
-                        Integer idx = (event.isReadLock() ?
+                        Integer idx = (event.isReadUnlock() ?
                                 lockIdToOpenReadLockIdx : lockIdToOpenWriteLockIdx)
                                 .remove(event.getLockId());
                         pendingLockIndexes.remove(idx);

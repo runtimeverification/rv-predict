@@ -1,11 +1,11 @@
-(?s)(.*)Race on an array access between:(\s)*bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:63\)(\s)*bubblesort.OneBubble.run\(OneBubble.java:51\)(.*)
+(?s)(.*)Possible data race on array element #(\d)*: \{\{\{(.*)---->  at bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:63\)(.*)---->  at bubblesort.OneBubble.run\(OneBubble.java:51\)(.*)\}\}\}
 
-(?s)(.*)Race on an array access between:(\s)*bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:64\)(\s)*bubblesort.OneBubble.run\(OneBubble.java:51\)(.*)
+(?s)(.*)Possible data race on array element #(\d)*: \{\{\{(.*)---->  at bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:64\)(.*)---->  at bubblesort.OneBubble.run\(OneBubble.java:51\)(.*)\}\}\}
 
-(?s)(.*)Race on an array access between:(\s)*bubblesort.BubbleSortImpl.PrintArray\(BubbleSortImpl.java:99\)(\s)*bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:63\)(.*)
+(?s)(.*)Possible data race on array element #(\d)*: \{\{\{(.*)---->  at bubblesort.BubbleSortImpl.PrintArray\(BubbleSortImpl.java:99\)(.*)---->  at bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:63\)(.*)\}\}\}
 
-(?s)(.*)Race on an array access between:(\s)*bubblesort.BubbleSortImpl.PrintArray\(BubbleSortImpl.java:99\)(\s)*bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:64\)(.*)
+(?s)(.*)Possible data race on array element #(\d)*: \{\{\{(.*)---->  at bubblesort.BubbleSortImpl.PrintArray\(BubbleSortImpl.java:99\)(.*)---->  at bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:64\)(.*)\}\}\}
 
-(?s)(.*)Race on an array access between:(\s)*bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:64\)(\s)*bubblesort.Reporter.IndicateBug\(Reporter.java:126\)(.*)
+(?s)(.*)Possible data race on array element #(\d)*: \{\{\{(.*)---->  at bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:64\)(.*)---->  at bubblesort.Reporter.IndicateBug\(Reporter.java:126\)(.*)\}\}\}
 
-(?s)(.*)Race on an array access between:(\s)*bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:63\)(\s)*bubblesort.Reporter.IndicateBug\(Reporter.java:126\)(.*)
+(?s)(.*)Possible data race on array element #(\d)*: \{\{\{(.*)---->  at bubblesort.OneBubble.SwapConsecutives\(OneBubble.java:63\)(.*)---->  at bubblesort.Reporter.IndicateBug\(Reporter.java:126\)(.*)\}\}\}

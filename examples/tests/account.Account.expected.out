@@ -1,7 +1,7 @@
-(?s)(.*)Race on field account.BankAccount.Balance between:(\s)*account.Account.Service\(Account.java:97\)(\s)*account.Account.go\(Account.java:67\)(.*)
+(?s)(.*)Possible data race on field account.BankAccount.Balance: \{\{\{(.*)---->  at account.Account.Service\(Account.java:97\)(.*)---->  at account.Account.go\(Account.java:67\)(.*)\}\}\}
 
-(?s)(.*)Race on field account.Account.Bank_Total between two instances of:(\s)*account.Account.Service\(Account.java:98\)(.*)
+(?s)(.*)Possible data race on field account.Account.Bank_Total: \{\{\{(.*)---->  at account.Account.Service\(Account.java:98\)(.*)---->  at account.Account.Service\(Account.java:98\)(.*)\}\}\}
 
-(?s)(.*)Race on field account.Account.Bank_Total between:(\s)*account.Account.Service\(Account.java:98\)(\s)*account.Account.checkResult\(Account.java:75\)(.*)
+(?s)(.*)Possible data race on field account.Account.Bank_Total: \{\{\{(.*)---->  at account.Account.Service\(Account.java:98\)(.*)---->  at account.Account.checkResult\(Account.java:75\)(.*)\}\}\}
 
-(?s)(.*)Race on field account.Account.Bank_Total between:(\s)*account.Account.Service\(Account.java:98\)(\s)*account.Account.checkResult\(Account.java:76\)(.*)
+(?s)(.*)Possible data race on field account.Account.Bank_Total: \{\{\{(.*)---->  at account.Account.Service\(Account.java:98\)(.*)---->  at account.Account.checkResult\(Account.java:76\)(.*)\}\}\}

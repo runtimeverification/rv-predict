@@ -1,3 +1,3 @@
-(?s)(.*)Race on an array access between:(\s)*benchmarks.moldyn.TournamentBarrier.DoBarrier\(TournamentBarrier.java:76\)(\s)*benchmarks.moldyn.TournamentBarrier.DoBarrier\(TournamentBarrier.java:78\)(.*)
+(?s)(.*)Possible data race on array element #(\d)*: \{\{\{(.*)---->  at benchmarks.moldyn.TournamentBarrier.DoBarrier\(TournamentBarrier.java:76\)(.*)---->  at benchmarks.moldyn.TournamentBarrier.DoBarrier\(TournamentBarrier.java:78\)(.*)\}\}\}
 
-(?s)(.*)Race on an array access between:(\s)*benchmarks.moldyn.TournamentBarrier.DoBarrier\(TournamentBarrier.java:65\)(\s)*benchmarks.moldyn.TournamentBarrier.DoBarrier\(TournamentBarrier.java:76\)(.*)
+(?s)(.*)Possible data race on array element #(\d)*: \{\{\{(.*)---->  at benchmarks.moldyn.TournamentBarrier.DoBarrier\(TournamentBarrier.java:65\)(.*)---->  at benchmarks.moldyn.TournamentBarrier.DoBarrier\(TournamentBarrier.java:76\)(.*)\}\}\}

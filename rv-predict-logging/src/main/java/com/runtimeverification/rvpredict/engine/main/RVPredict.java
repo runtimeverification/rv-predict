@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
@@ -74,8 +75,11 @@ public class RVPredict {
                 detector.run(trace);
             } while (trace.getSize() == config.windowSize);
 
-            if (detector.getRaces().isEmpty()) {
+            List<String> reports = detector.getRaceReports();
+            if (reports.isEmpty()) {
                 config.logger().report("No races found.", Logger.MSGTYPE.INFO);
+            } else {
+                reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
             }
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");

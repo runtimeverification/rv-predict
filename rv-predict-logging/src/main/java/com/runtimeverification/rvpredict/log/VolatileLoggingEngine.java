@@ -214,13 +214,14 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
      * <li>{@code start} and {@code end} never overlap.</li>
      * <p>
      * This way, the conflict accesses can only occur at {@link Buffer#cursor}
-     * between {@link Buffer#finalizeEvents()} and
-     * {@code Buffer.consume()/isEmpty()}. However, the race detection thread
-     * only accesses {@code cursor} after blocking the GID counter and all
-     * on-going {@code finalizeEvents()} finish, while the logging thread only
-     * accesses {@code cursor} after successfully acquiring GIDs and before
-     * incrementing the {@link finalized} counter. Therefore, it is impossible
-     * for the two threads to access {@code cursor} concurrently.
+     * between {@link Buffer#finalizeEvents()}, which writes to {@code cursor},
+     * and {@code Buffer.consume()/isEmpty()}, which reads from {@code cursor}.
+     * However, the race detection thread only reads {@code cursor} after
+     * blocking the GID counter and all on-going {@code finalizeEvents()}
+     * finish, while the logging thread only writes to {@code cursor} after
+     * successfully acquiring GIDs and before incrementing the {@link finalized}
+     * counter. Therefore, it is impossible for the two threads to access
+     * {@code cursor} concurrently.
      *
      * @author YilongL
      */
@@ -261,16 +262,28 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
          */
         int end;
 
+        /**
+         * Number of call stack events during the current buffering period.
+         */
+        int numOfCallStackEvents;
+
         Buffer(int bound) {
             tid = Thread.currentThread().getId();
             isDaemon = Thread.currentThread().isDaemon();
-            length = 1 << (32 - Integer.numberOfLeadingZeros(bound + THRESHOLD - 1));
+            length = getCircularArrayLength(bound);
             mask = length - 1;
             events = new Event[length];
             for (int i = 0; i < length; i++) {
                 events[i] = new Event();
                 events[i].setTID(tid);
             }
+        }
+
+        private int getCircularArrayLength(int bound) {
+            // reserve extra slots for call stack events
+            // TODO(YilongL): how to determine the number of extra slots?
+            int x = (config.simple_report ? bound : bound << 2) + THRESHOLD;
+            return Math.max(1 << (32 - Integer.numberOfLeadingZeros(x)), 1024);
         }
 
         /**
@@ -309,12 +322,21 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             case JOIN:
             case CLINIT_ENTER:
             case CLINIT_EXIT:
-            case INVOKE_METHOD:
-            case FINISH_METHOD:
                 log(eventType, locId, addr1, addr2, value1);
                 if (numOfUnfinalizedEvents() >= THRESHOLD) {
                     finalizeEvents();
                 }
+                break;
+            case FINISH_METHOD:
+                int last = prev(end);
+                if (cursor != end && events[last].isInvokeMethod()) {
+                    numOfCallStackEvents--;
+                    end = last;
+                    break;
+                }
+            case INVOKE_METHOD:
+                numOfCallStackEvents++;
+                log(eventType, locId, addr1, addr2, value1);
                 break;
             case WRITE:
             case WRITE_UNLOCK:
@@ -349,7 +371,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
         private void log(EventType eventType, int locId, int addr1, int addr2, long value) {
             Event event = events[end];
-            end = inc(end);
+            end = next(end);
             event.setLocId(locId);
             event.setAddr((long) addr1 << 32 | addr2 & 0xFFFFFFFFL);
             event.setValue(value);
@@ -357,18 +379,32 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
 
         void finalizeEvents() {
-            int d = numOfUnfinalizedEvents();
+            int d = numOfUnfinalizedEvents() - numOfCallStackEvents;
             long gid = claimGID(d);
             int p = cursor;
             cursor = end;
-            for (int i = 0; i < d; i++) {
-                events[p].setGID(gid++);
-                p = inc(p);
+            if (numOfCallStackEvents == 0) {
+                for (int i = 0; i < d; i++) {
+                    events[p].setGID(gid++);
+                    p = next(p);
+                }
+            } else {
+                for (int i = 0; i < d + numOfCallStackEvents; i++) {
+                    /* a dirty hack based on the fact that we never use the GID
+                     * of a MetaEvent */
+                    events[p].setGID(events[p].isCallStackEvent() ? gid : gid++);
+                    p = next(p);
+                }
             }
+            numOfCallStackEvents = 0;
             finalized.add(d);
         }
 
-        int inc(int p) {
+        int prev(int p) {
+            return (p + mask) & mask;
+        }
+
+        int next(int p) {
             return (p + 1) & mask;
         }
 

@@ -111,10 +111,6 @@ public class MaximalCausalModel {
         return OR(HB(lockRegion1, lockRegion2), HB(lockRegion2, lockRegion1));
     }
 
-    private int getRelativeIdx(Event event) {
-        return (int) (event.getGID() - trace.getBaseGID());
-    }
-
     /**
      * Adds must-happen-before (MHB) constraints.
      */
@@ -123,17 +119,17 @@ public class MaximalCausalModel {
 
         /* build intra-thread program order constraint */
         trace.eventsByThreadID().forEach((tid, events) -> {
-            mhbClosureBuilder.createNewGroup(getRelativeIdx(events.get(0)));
+            mhbClosureBuilder.createNewGroup(events.get(0));
             for (int i = 1; i < events.size(); i++) {
                 Event e1 = events.get(i - 1);
                 Event e2 = events.get(i);
                 phiTau.add(HB(e1, e2));
                 /* every group should start with a join event and end with a start event */
                 if (e1.isStart() || e2.isJoin()) {
-                    mhbClosureBuilder.createNewGroup(getRelativeIdx(e2));
-                    mhbClosureBuilder.addRelation(getRelativeIdx(e1), getRelativeIdx(e2));
+                    mhbClosureBuilder.createNewGroup(e2);
+                    mhbClosureBuilder.addRelation(e1, e2);
                 } else {
-                    mhbClosureBuilder.addToGroup(getRelativeIdx(e2), getRelativeIdx(e1));
+                    mhbClosureBuilder.addToGroup(e2, e1);
                 }
             }
         });
@@ -144,13 +140,13 @@ public class MaximalCausalModel {
                 Event fst = trace.getFirstEvent(event.getSyncObject());
                 if (fst != null) {
                     phiTau.add(HB(event, fst));
-                    mhbClosureBuilder.addRelation(getRelativeIdx(event), getRelativeIdx(fst));
+                    mhbClosureBuilder.addRelation(event, fst);
                 }
             } else if (event.isJoin()) {
                 Event last = trace.getLastEvent(event.getSyncObject());
                 if (last != null) {
                     phiTau.add(HB(last, event));
-                    mhbClosureBuilder.addRelation(getRelativeIdx(last), getRelativeIdx(event));
+                    mhbClosureBuilder.addRelation(last, event);
                 }
             }
         });
@@ -267,7 +263,7 @@ public class MaximalCausalModel {
      * Checks if one event happens before another.
      */
     private boolean happensBefore(Event e1, Event e2) {
-        return mhbClosure.inRelation(getRelativeIdx(e1), getRelativeIdx(e2));
+        return mhbClosure.inRelation(e1, e2);
     }
 
     private boolean failPecanCheck(Race race) {

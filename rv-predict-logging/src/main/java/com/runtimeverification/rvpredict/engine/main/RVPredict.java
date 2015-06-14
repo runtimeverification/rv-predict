@@ -69,11 +69,14 @@ public class RVPredict {
             long fromIndex = 0;
             // process the trace window by window
             Trace trace;
-            do {
-                trace = traceCache.getTrace(fromIndex);
-                fromIndex += config.windowSize;
-                detector.run(trace);
-            } while (trace.getSize() == config.windowSize);
+            while (true) {
+                if ((trace = traceCache.getTrace(fromIndex)) != null) {
+                    fromIndex += config.windowSize;
+                    detector.run(trace);
+                } else {
+                    break;
+                }
+            }
 
             List<String> reports = detector.getRaceReports();
             if (reports.isEmpty()) {

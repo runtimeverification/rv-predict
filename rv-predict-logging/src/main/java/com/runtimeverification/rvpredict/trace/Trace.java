@@ -113,7 +113,6 @@ public class Trace {
             Map<Long, List<LockRegion>> lockIdToLockRegions,
             Set<Event> clinitEvents) {
         this.state = state;
-        this.size = rawTraces.stream().collect(Collectors.summingInt(RawTrace::size));
         this.rawTraces = rawTraces;
         this.tidToEvents = tidToEvents;
         this.tidToMemoryAccessBlocks = tidToMemoryAccessBlocks;
@@ -133,6 +132,7 @@ public class Trace {
             baseGID = min;
         }
         processEvents();
+        this.size = tidToEvents.values().stream().collect(Collectors.summingInt(List::size));
     }
 
     public Logger logger() {
@@ -331,7 +331,7 @@ public class Trace {
         boolean isSingleThreaded = rawTraces.size() < 2;
 
         /// PHASE 1
-        Set<Event> outermostLockEvents = new HashSet<>(getSize() / 10);
+        Set<Event> outermostLockEvents = new HashSet<>();
         for (RawTrace rawTrace : rawTraces) {
             long tid = rawTrace.getTID();
             tidToThreadState.put(tid, state.getThreadStateSnapshot(tid));

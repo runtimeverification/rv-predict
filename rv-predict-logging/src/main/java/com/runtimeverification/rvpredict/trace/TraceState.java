@@ -18,6 +18,7 @@ import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
 import com.runtimeverification.rvpredict.trace.maps.ThreadIDToObjectMap;
+import com.runtimeverification.rvpredict.util.Logger;
 
 public class TraceState {
 
@@ -61,7 +62,10 @@ public class TraceState {
 
     private final Set<Event> t_clinitEvents;
 
+    private final Logger logger;
+
     public TraceState(Configuration config, Metadata metadata) {
+        this.logger = config.logger();
         this.metadata = metadata;
         this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
@@ -71,6 +75,10 @@ public class TraceState {
                                             DEFAULT_NUM_OF_ADDR);
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
+    }
+
+    public Logger logger() {
+        return logger;
     }
 
     public Metadata metadata() {

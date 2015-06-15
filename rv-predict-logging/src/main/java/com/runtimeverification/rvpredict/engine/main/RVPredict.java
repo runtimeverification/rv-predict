@@ -75,7 +75,7 @@ public class RVPredict {
             } while (trace.getSize() == config.windowSize);
 
             if (detector.getRaces().isEmpty()) {
-                config.logger.report("No races found.", Logger.MSGTYPE.INFO);
+                config.logger().report("No races found.", Logger.MSGTYPE.INFO);
             }
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
@@ -98,7 +98,7 @@ public class RVPredict {
 
                 if (config.isOfflinePrediction()) {
                     if (config.isLogging()) {
-                        config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
+                        config.logger().reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
                     }
 
                     Process process = null;
@@ -133,14 +133,8 @@ public class RVPredict {
         Collections.addAll(appArgs, config.getArgs());
 
         assert config.isOfflinePrediction();
-        /* replace option --dir with --predict */
-        int idx = appArgs.indexOf(Configuration.opt_outdir);
-        if (idx != -1) {
-            appArgs.set(idx, Configuration.opt_only_predict);
-        } else {
-            appArgs.add(startOfRVArgs, Configuration.opt_only_predict);
-            appArgs.add(startOfRVArgs + 1, config.getLogDir());
-        }
+        appArgs.add(startOfRVArgs, Configuration.opt_only_predict);
+        appArgs.add(startOfRVArgs + 1, config.getLogDir());
         return new ProcessBuilder(appArgs).start();
     }
 

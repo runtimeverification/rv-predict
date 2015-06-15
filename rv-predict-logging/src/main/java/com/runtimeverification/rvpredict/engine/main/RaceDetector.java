@@ -97,7 +97,7 @@ public class RaceDetector {
         result.forEach((sig, race) -> {
             String report = config.simple_report ? race.generateSimpleRaceReport() : race
                     .generateDetailedRaceReport();
-            config.logger.report(report, Logger.MSGTYPE.REAL);
+            config.logger().report(report, Logger.MSGTYPE.REAL);
         });
     }
 }

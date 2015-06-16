@@ -89,9 +89,11 @@ public class Race {
 
     @Override
     public String toString() {
-        int min = Math.min(e1.getLocId(), e2.getLocId());
-        int max = Math.max(e1.getLocId(), e2.getLocId());
-        return "Race(" + min + "," + max + ")";
+        int addr = e1.getFieldIdOrArrayIndex() < 0 ? e1.getFieldIdOrArrayIndex() :
+            e1.getObjectHashCode();
+        int loc1 = Math.min(e1.getLocId(), e2.getLocId());
+        int loc2 = Math.max(e1.getLocId(), e2.getLocId());
+        return "Race(" + addr + "," + loc1 + "," + loc2 + ")";
     }
 
     private String getRaceLocationSig() {

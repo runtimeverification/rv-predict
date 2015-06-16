@@ -99,6 +99,10 @@ public class Event implements Comparable<Event> {
         return ADDR;
     }
 
+    public int getObjectHashCode() {
+        return (int) (getAddr() >> 32);
+    }
+
     public int getFieldIdOrArrayIndex() {
         return (int) getAddr();
     }

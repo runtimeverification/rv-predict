@@ -51,7 +51,7 @@
         <runs value="32" />
         <arg key="-cp" value="basic.jar" />
         <arg value="boundedbuffer.BoundedBuffer" />
-        <rvarg key="--maxlen" value="500" />
+        <rvarg key="--maxlen" value="800" />
         <rvarg value="--simple-report" />
     </test>
     <test name="critical.Critical">

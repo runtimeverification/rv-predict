@@ -31,6 +31,7 @@ package com.runtimeverification.rvpredict.smt;
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -269,11 +270,11 @@ public class MaximalCausalModel {
         return mhbClosure.inRelation(getRelativeIdx(e1), getRelativeIdx(e2));
     }
 
-    private boolean checkPecanCondition(Race race) {
+    private boolean failPecanCheck(Race race) {
         Event e1 = race.firstEvent();
         Event e2 = race.secondEvent();
-        return !locksetEngine.hasCommonLock(e1, e2) && !happensBefore(e1, e2)
-                && !happensBefore(e2, e1);
+        return locksetEngine.hasCommonLock(e1, e2) || happensBefore(e1, e2)
+                || happensBefore(e2, e1);
     }
 
     private BoolFormula getRaceAssertion(Race race) {
@@ -299,10 +300,15 @@ public class MaximalCausalModel {
         /* specialize the maximal causal model based on race queries */
         Map<Race, BoolFormula> suspectToAsst = new HashMap<>();
         sigToRaceSuspects.values().forEach(suspects -> {
-            suspects.removeIf(p -> !checkPecanCondition(p));
+            suspects.removeIf(this::failPecanCheck);
             suspects.forEach(p -> suspectToAsst.computeIfAbsent(p, this::getRaceAssertion));
         });
         sigToRaceSuspects.entrySet().removeIf(e -> e.getValue().isEmpty());
+        if (sigToRaceSuspects.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+//        trace.logger().debug().println("start analyzing: " + trace.getBaseGID());
 //        sigToRaceSuspects.forEach((sig, l) -> trace.logger().debug().println(sig + ": " + l.size()));
 
         Map<String, Race> result = new HashMap<>();

@@ -17,10 +17,12 @@ public class Logger {
     private static final String DASH    =   "-";
 
     private PrintStream debug = System.err;
+    private PrintStream result;
 
     public void setLogDir(String logDir) throws FileNotFoundException {
         // TODO(YilongL): make sure this log file doesn't grow out of control
         debug = new PrintStream(new FileOutputStream(Paths.get(logDir, "debug.log").toFile()));
+        result = new PrintStream(new FileOutputStream(Paths.get(logDir, "result.txt").toFile()));
     }
 
     public void reportPhase(String phaseMsg) {
@@ -35,6 +37,10 @@ public class Logger {
 
     public PrintStream debug() {
         return debug;
+    }
+
+    public void reportRace(String report) {
+        result.println(report);
     }
 
     public synchronized void report(String msg, MSGTYPE type) {

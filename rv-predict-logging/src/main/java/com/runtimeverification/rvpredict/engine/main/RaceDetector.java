@@ -75,6 +75,7 @@ public class RaceDetector {
             String report = config.simple_report ? race.generateSimpleRaceReport() : race
                     .generateDetailedRaceReport();
             reports.add(report);
+            config.logger().reportRace(report);
         });
     }
 }

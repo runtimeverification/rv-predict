@@ -104,7 +104,7 @@ public class Race {
     public String generateRaceReport() {
         String locSig = getRaceLocationSig();
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Possible data race on %s: {{{%n",
+        sb.append(String.format("Data race on %s: {{{%n",
                 (locSig.startsWith("#") ? "array element " : "field ") + locSig));
 
         if (trace.metadata().getLocationSig(e1.getLocId())

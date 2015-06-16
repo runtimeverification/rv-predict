@@ -1,1 +1,1 @@
-(?s)(.*)Race on field HelloWorld.x between:(\s)*HelloWorld\$MyThread.run\(HelloWorld.java:40\)(\s)*HelloWorld.printHello\(HelloWorld.java:23\)(.*)
+(?s)(.*)Data race on field HelloWorld.x: \{\{\{(.*)---->  at HelloWorld\$MyThread.run\(HelloWorld.java:40\)(.*)---->  at HelloWorld.printHello\(HelloWorld.java:23\)(.*)\}\}\}

@@ -1,11 +1,11 @@
-(?s)(.*)Race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold between two instances of:(\s)*airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)
+(?s)(.*)Data race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold: \{\{\{(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)\}\}\}
 
-(?s)(.*)Race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold between:(\s)*airlinetickets.Airlinetickets.go\(Airlinetickets.java:62\)(\s)*airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)
+(?s)(.*)Data race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold: \{\{\{(.*)---->  at airlinetickets.Airlinetickets.go\(Airlinetickets.java:62\)(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)\}\}\}
 
-(?s)(.*)Race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold between:(\s)*airlinetickets.Airlinetickets.go\(Airlinetickets.java:62\)(\s)*airlinetickets.Airlinetickets.run\(Airlinetickets.java:106\)(.*)
+(?s)(.*)Data race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold: \{\{\{(.*)---->  at airlinetickets.Airlinetickets.go\(Airlinetickets.java:62\)(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:106\)(.*)\}\}\}
 
-(?s)(.*)Race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold between:(\s)*airlinetickets.Airlinetickets.go\(Airlinetickets.java:63\)(\s)*airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)
+(?s)(.*)Data race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold: \{\{\{(.*)---->  at airlinetickets.Airlinetickets.go\(Airlinetickets.java:63\)(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)\}\}\}
 
-(?s)(.*)Race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold between:(\s)*airlinetickets.Airlinetickets.checkResult\(Airlinetickets.java:78\)(\s)*airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)
+(?s)(.*)Data race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold: \{\{\{(.*)---->  at airlinetickets.Airlinetickets.checkResult\(Airlinetickets.java:78\)(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)\}\}\}
 
-(?s)(.*)Race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold between:(\s)*airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(\s)*airlinetickets.Airlinetickets.run\(Airlinetickets.java:106\)(.*)
+(?s)(.*)Data race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold: \{\{\{(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:106\)(.*)\}\}\}

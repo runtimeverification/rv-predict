@@ -101,33 +101,22 @@ public class Race {
         return idx < 0 ? trace.metadata().getVariableSig(-idx).replace("/", ".") : "#" + idx;
     }
 
-    public String generateSimpleRaceReport() {
-        String stmtSig1 = trace.metadata().getLocationSig(e1.getLocId());
-        String stmtSig2 = trace.metadata().getLocationSig(e2.getLocId());
-        if (stmtSig1.compareTo(stmtSig2) > 0) {
-            String tmp = stmtSig1;
-            stmtSig1 = stmtSig2;
-            stmtSig2 = tmp;
-        }
-
-        String locSig = getRaceLocationSig();
-        return String.format("Race on %s between%s",
-            locSig.startsWith("#") ? "an array access" : "field " + locSig,
-            stmtSig1.equals(stmtSig2) ?
-                String.format(" two instances of:%n    %s%n", stmtSig1) :
-                String.format(":%n    %s%n    %s%n", stmtSig1, stmtSig2));
-    }
-
-
-    public String generateDetailedRaceReport() {
+    public String generateRaceReport() {
         String locSig = getRaceLocationSig();
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Possible data race on %s: {{{%n",
+        sb.append(String.format("Data race on %s: {{{%n",
                 (locSig.startsWith("#") ? "array element " : "field ") + locSig));
 
-        generateMemAccReport(e1, sb);
-        sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
-        generateMemAccReport(e2, sb);
+        if (trace.metadata().getLocationSig(e1.getLocId())
+                .compareTo(trace.metadata().getLocationSig(e2.getLocId())) <= 0) {
+            generateMemAccReport(e1, sb);
+            sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
+            generateMemAccReport(e2, sb);
+        } else {
+            generateMemAccReport(e2, sb);
+            sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
+            generateMemAccReport(e1, sb);
+        }
 
         sb.append(String.format("}}}%n"));
         return sb.toString();
@@ -141,9 +130,11 @@ public class Race {
                 e.isWrite() ? "write" : "read",
                 tid,
                 getHeldLocksReport(heldLocks)));
+        boolean isTopmostStack = true;
         for (Integer locId : trace.getStacktraceAt(e)) {
             String sig = locId >= 0 ? metadata.getLocationSig(locId) : "... not available ...";
-            sb.append(String.format("        at %s%n", sig));
+            sb.append(String.format(" %s  at %s%n", isTopmostStack ? "---->" : "     ", sig));
+            isTopmostStack = false;
         }
 
         long parentTID = metadata.getParentTID(tid);

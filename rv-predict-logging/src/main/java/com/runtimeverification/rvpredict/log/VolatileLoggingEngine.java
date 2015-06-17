@@ -282,7 +282,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         private int getCircularArrayLength(int bound) {
             // reserve extra slots for call stack events
             // TODO(YilongL): how to determine the number of extra slots?
-            int x = (config.simple_report ? bound : bound << 2) + THRESHOLD;
+            int x = (config.stacks ? bound << 2 : bound) + THRESHOLD;
             return Math.max(1 << (32 - Integer.numberOfLeadingZeros(x)), 1024);
         }
 

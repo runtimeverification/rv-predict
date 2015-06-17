@@ -77,7 +77,7 @@ public class TraceCache {
 
             assert event.getGID() >= fromIndex;
             int capacity = getNextPowerOfTwo(config.windowSize - 1);
-            if (!config.simple_report) {
+            if (config.stacks) {
                 capacity <<= 1;
             }
             List<Event> events = new ArrayList<>(capacity);

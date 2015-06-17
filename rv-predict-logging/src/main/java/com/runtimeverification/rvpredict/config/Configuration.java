@@ -261,10 +261,6 @@ public class Configuration implements Constants {
     @Parameter(description = "[java_options] <java_command_line>")
     private List<String> javaArgs = new ArrayList<>();
 
-    public final static String opt_event_profile = "--profile";
-    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1000")
-    private boolean profile;
-
     public final static String opt_only_log = "--log";
     @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1005")
     private String log_dir = null;
@@ -273,6 +269,10 @@ public class Configuration implements Constants {
     public final static String opt_only_predict = "--predict";
     @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "1010")
     private String predict_dir = null;
+
+    public final static String opt_event_profile = "--profile";
+    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1015")
+    private boolean profile;
 
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include." +
@@ -297,9 +297,9 @@ public class Configuration implements Constants {
     public int windowSize = 1000;
     private static int MIN_WINDOW_SIZE = 64;
 
-    final static String opt_volatile = "--volatile";
-    @Parameter(names = opt_volatile, description = "Check unordered conflict accesses on volatile variables", hidden = true, descriptionKey = "2030")
-    public boolean checkVolatile;
+    final static String opt_stacks = "--stacks";
+    @Parameter(names = opt_stacks, description = "Record call stack events and compute stack traces in race report", hidden = true, descriptionKey = "2030")
+    public boolean stacks = false;
 
     final static String opt_smt_solver = "--solver";
     @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2050")
@@ -308,10 +308,6 @@ public class Configuration implements Constants {
     final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
     public int solver_timeout = 60;
-
-    final static String opt_simple_report = "--simple-report";
-    @Parameter(names = opt_simple_report, description = "Output simple data race report", hidden = true, descriptionKey = "2080")
-    public boolean simple_report = false;
 
     final static String opt_debug = "--debug";
     @Parameter(names = opt_debug, description = "Output developer debugging information", hidden = true, descriptionKey = "2090")

@@ -40,7 +40,7 @@ public class RaceDetector {
                           if ((e1.isWrite() && e2.isReadOrWrite() ||
                                   e1.isReadOrWrite() && e2.isWrite())
                                   && e1.getAddr() == e2.getAddr()
-                                  && (config.checkVolatile || !trace.metadata().isVolatile(e1.getAddr()))
+                                  && !trace.metadata().isVolatile(e1.getAddr())
                                   && !trace.isInsideClassInitializer(e1)
                                   && !trace.isInsideClassInitializer(e2)) {
                               Race race = new Race(e1, e2, trace);

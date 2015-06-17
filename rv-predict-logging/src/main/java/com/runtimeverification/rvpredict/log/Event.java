@@ -178,6 +178,14 @@ public class Event implements Comparable<Event> {
         return TYPE.isMetaType();
     }
 
+    public boolean isCallStackEvent() {
+        return TYPE == EventType.INVOKE_METHOD || TYPE == EventType.FINISH_METHOD;
+    }
+
+    public boolean isInvokeMethod() {
+        return TYPE == EventType.INVOKE_METHOD;
+    }
+
     public boolean isSimilarTo(Event event) {
         return TYPE == event.TYPE && ID == event.ID && ADDR == event.ADDR && VALUE == event.VALUE;
     }

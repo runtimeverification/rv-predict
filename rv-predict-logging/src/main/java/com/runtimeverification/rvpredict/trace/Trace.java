@@ -312,10 +312,10 @@ public class Trace {
                 .collect(Collectors.toMap(ls -> ls.lockId(), LockState::copy));
         for (Event e : getEvents(tid)) {
             if (e.getGID() >= event.getGID()) break;
-            if (e.isLock()) {
+            if (e.isLock() && !e.isWaitAcq()) {
                 lockIdToLockState.computeIfAbsent(e.getLockId(), LockState::new)
                         .acquire(e);
-            } else if (e.isUnlock()) {
+            } else if (e.isUnlock() && !e.isWaitRel()) {
                 lockIdToLockState.get(e.getLockId()).release(e);
             }
         }
@@ -351,12 +351,20 @@ public class Trace {
                     }
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
-                        event = event.copy();
-                        if (state.acquireLock(event) == 1) {
+                        if (event.isWaitAcq()) {
                             outermostLockEvents.add(event);
+                        } else {
+                            event = event.copy();
+                            if (state.acquireLock(event) == 1) {
+                                outermostLockEvents.add(event);
+                            }
                         }
                     } else if (event.isUnlock()) {
-                        if (state.releaseLock(event) == 0) {
+                        if (event.isWaitRel()) {
+                            // a WAIT_REL event can be matched with one or more
+                            // lock events because locks can be reentrant
+                            outermostLockEvents.add(event);
+                        } else if (state.releaseLock(event) == 0) {
                             outermostLockEvents.add(event);
                         }
                     }

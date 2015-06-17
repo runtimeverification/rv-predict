@@ -319,6 +319,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             case READ:
             case WRITE_LOCK:
             case READ_LOCK:
+            case WAIT_ACQ:
             case JOIN:
             case CLINIT_ENTER:
             case CLINIT_EXIT:
@@ -341,6 +342,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             case WRITE:
             case WRITE_UNLOCK:
             case READ_UNLOCK:
+            case WAIT_REL:
             case START:
                 log(eventType, locId, addr1, addr2, value1);
                 finalizeEvents();

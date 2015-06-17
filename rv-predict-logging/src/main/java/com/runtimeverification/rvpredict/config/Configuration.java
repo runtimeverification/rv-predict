@@ -297,10 +297,6 @@ public class Configuration implements Constants {
     public int windowSize = 1000;
     private static int MIN_WINDOW_SIZE = 64;
 
-    final static String opt_volatile = "--volatile";
-    @Parameter(names = opt_volatile, description = "Check unordered conflict accesses on volatile variables", hidden = true, descriptionKey = "2030")
-    public boolean checkVolatile;
-
     final static String opt_smt_solver = "--solver";
     @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2050")
     public String smt_solver = "z3";

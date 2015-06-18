@@ -16,6 +16,8 @@ import java.util.function.Supplier;
  * <li>easy to profile collision rate</li>
  * <li>very fast (since only need to support a few operations)</li>
  * <p>
+ * <em>Limitation: the maximum number of keys of this map is now fixed.</em>
+ * <p>
  *
  * @author YilongL
  *
@@ -69,8 +71,7 @@ public abstract class LongToObjectMap<T> {
             }
             p = (p + 1) & mask;
         }
-        // should never happen
-        throw new IllegalStateException();
+        throw new UnsupportedOperationException("Automatic grow operation not implemented!");
     }
 
     public T get(long key) {
@@ -81,8 +82,7 @@ public abstract class LongToObjectMap<T> {
             }
             p = (p + 1) & mask;
         }
-        // should never happen
-        throw new IllegalStateException();
+        throw new UnsupportedOperationException("Automatic grow operation not implemented!");
     }
 
     public T put(long key, T value) {
@@ -104,8 +104,7 @@ public abstract class LongToObjectMap<T> {
             }
             p = (p + 1) & mask;
         }
-        // should never happen
-        throw new IllegalStateException();
+        throw new UnsupportedOperationException("Automatic grow operation not implemented!");
     }
 
     public void clear() {

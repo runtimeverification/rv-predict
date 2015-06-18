@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.log;
 
+import com.runtimeverification.rvpredict.util.Constants;
+
 /**
  * Class for representing an event as it is recorded in the log
  * @author TraianSF
@@ -181,6 +183,10 @@ public class Event implements Comparable<Event> {
         return TYPE == EventType.WAIT_REL;
     }
 
+    public boolean isLockTypeMonitor() {
+        return (int) (getLockId() >> 32) == Constants.MONITOR_C;
+    }
+
     public boolean isSyncEvent() {
         return TYPE.isSyncType();
     }
@@ -212,7 +218,16 @@ public class Event implements Comparable<Event> {
 
     @Override
     public int compareTo(Event e) {
-        return Long.compare(getGID(), e.getGID());
+        int result = Long.compare(getGID(), e.getGID());
+        if (result == 0) {
+            // YilongL: dirty hack to deal with the imprecise GID of call stack event
+            if (isCallStackEvent()) {
+                return e.isCallStackEvent() ? 0 : -1;
+            } else {
+                return e.isCallStackEvent() ? 1 : 0;
+            }
+        }
+        return result;
     }
 
     @Override

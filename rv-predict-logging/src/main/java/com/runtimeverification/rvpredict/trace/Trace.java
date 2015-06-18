@@ -47,7 +47,6 @@ import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToObjectMap;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
-import com.runtimeverification.rvpredict.util.Logger;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a
@@ -133,10 +132,6 @@ public class Trace {
         }
         processEvents();
         this.size = tidToEvents.values().stream().collect(Collectors.summingInt(List::size));
-    }
-
-    public Logger logger() {
-        return state.logger();
     }
 
     public Metadata metadata() {
@@ -272,32 +267,33 @@ public class Trace {
      *
      * @param event
      *            the event
-     * @return a {@code Deque} of stack trace element represented as location
-     *         ID's; {@code -1} represents missing stack trace elements
+     * @return a {@code Deque} of call stack events
      */
-    public Deque<Integer> getStacktraceAt(Event event) {
+    public Deque<Event> getStacktraceAt(Event event) {
         long tid = event.getTID();
         long gid = event.getGID();
-        Deque<Integer> stacktrace = new ArrayDeque<>();
-        if (gid >= baseGID) {
+        Deque<Event> stacktrace = new ArrayDeque<>();
+        if (!state.config().stacks) {
+            stacktrace.add(event);
+        } else if (gid >= baseGID) {
             /* event is in the current window; reassemble its stack trace */
-            tidToThreadState.getOrDefault(tid, state.getThreadState(tid)).getStacktrace()
+            tidToThreadState.getOrDefault(tid, new ThreadState()).getStacktrace()
                     .forEach(stacktrace::addFirst);
             RawTrace t = rawTraces.stream().filter(p -> p.getTID() == tid).findAny().get();
             for (int i = 0; i < t.size(); i++) {
                 Event e = t.event(i);
                 if (e.getGID() >= gid) break;
                 if (e.getType() == EventType.INVOKE_METHOD) {
-                    stacktrace.addFirst(e.getLocId());
+                    stacktrace.addFirst(e);
                 } else if (e.getType() == EventType.FINISH_METHOD) {
                     stacktrace.removeFirst();
                 }
             }
-            stacktrace.addFirst(event.getLocId());
+            stacktrace.addFirst(event);
         } else {
             /* event is from previous windows */
-            stacktrace.add(event.getLocId());
-            stacktrace.add(-1);
+            stacktrace.add(event);
+            stacktrace.add(new Event(0, 0, -1, 0, 0, EventType.INVOKE_METHOD));
         }
         return stacktrace;
     }
@@ -308,9 +304,11 @@ public class Trace {
     public List<Event> getHeldLocksAt(Event event) {
         long tid = event.getTID();
         Map<Long, LockState> lockIdToLockState = tidToThreadState
-                .getOrDefault(tid, state.getThreadState(tid)).getLockStates().stream()
-                .collect(Collectors.toMap(ls -> ls.lockId(), LockState::copy));
-        for (Event e : getEvents(tid)) {
+                .getOrDefault(tid, new ThreadState()).getLockStates().stream()
+                .collect(Collectors.toMap(LockState::lockId, LockState::copy));
+        RawTrace t = rawTraces.stream().filter(p -> p.getTID() == tid).findAny().get();
+        for (int i = 0; i < t.size(); i++) {
+            Event e = t.event(i);
             if (e.getGID() >= event.getGID()) break;
             if (e.isLock() && !e.isWaitAcq()) {
                 lockIdToLockState.computeIfAbsent(e.getLockId(), LockState::new)
@@ -323,7 +321,7 @@ public class Trace {
         List<Event> lockEvents = lockIdToLockState.values().stream()
                 .filter(LockState::isAcquired)
                 .map(LockState::lock).collect(Collectors.toList());
-        Collections.sort(lockEvents, (e1, e2) -> e1.compareTo(e2));
+        Collections.sort(lockEvents);
         return lockEvents;
     }
 
@@ -353,11 +351,8 @@ public class Trace {
                     if (event.isLock()) {
                         if (event.isWaitAcq()) {
                             outermostLockEvents.add(event);
-                        } else {
-                            event = event.copy();
-                            if (state.acquireLock(event) == 1) {
-                                outermostLockEvents.add(event);
-                            }
+                        } else if (state.acquireLock(event) == 1) {
+                            outermostLockEvents.add(event);
                         }
                     } else if (event.isUnlock()) {
                         if (event.isWaitRel()) {

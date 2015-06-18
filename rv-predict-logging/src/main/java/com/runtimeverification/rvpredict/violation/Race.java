@@ -28,6 +28,8 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.violation;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.StandardSystemProperty;
@@ -131,10 +133,19 @@ public class Race {
                 tid,
                 getHeldLocksReport(heldLocks)));
         boolean isTopmostStack = true;
-        for (Integer locId : trace.getStacktraceAt(e)) {
-            String sig = locId >= 0 ? metadata.getLocationSig(locId) : "... not available ...";
-            sb.append(String.format(" %s  at %s%n", isTopmostStack ? "---->" : "     ", sig));
-            isTopmostStack = false;
+        List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
+        heldLocks.stream().filter(Event::isLockTypeMonitor).forEach(stacktrace::add);
+        Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
+        for (Event elem : stacktrace) {
+            String locSig = elem.getLocId() != -1 ? metadata.getLocationSig(elem.getLocId())
+                    : "... not available ...";
+            if (elem.isLock()) {
+                sb.append(String.format("        - locked Monitor@%s at %s %n",
+                        lockIdToHexString(elem.getLockId()), locSig));
+            } else {
+                sb.append(String.format(" %s  at %s%n", isTopmostStack ? "---->" : "     ", locSig));
+                isTopmostStack = false;
+            }
         }
 
         long parentTID = metadata.getParentTID(tid);
@@ -151,14 +162,15 @@ public class Race {
             }
         }
 
+        heldLocks.removeIf(Event::isLockTypeMonitor);
         if (!heldLocks.isEmpty()) {
             sb.append(String.format("    Locks acquired by this thread (reporting in chronological order):%n"));
             for (Event lock : heldLocks) {
                 sb.append(String.format("      %s%n", getLockRepresentation(lock)));
-                for (Integer locId : trace.getStacktraceAt(lock)) {
-                    String sig = locId >= 0 ? metadata.getLocationSig(locId)
+                for (Event elem : trace.getStacktraceAt(lock)) {
+                    String locSig = elem.getLocId() != -1 ? metadata.getLocationSig(elem.getLocId())
                             : "... not available ...";
-                    sb.append(String.format("        at %s%n", sig));
+                    sb.append(String.format("        at %s%n", locSig));
                 }
             }
         }
@@ -177,10 +189,14 @@ public class Race {
         return sb.toString();
     }
 
+    private String lockIdToHexString(long lockId) {
+        return Integer.toHexString((int) lockId);
+    }
+
     private String getLockRepresentation(Event lock) {
         long lockId = lock.getLockId();
         int upper32 = (int)(lockId >> 32);
-        int lower32 = (int) lockId;
+        String lower32 = lockIdToHexString(lockId);
         if (lock.getType() == EventType.READ_LOCK) {
             assert upper32 == 0;
             return "ReadLock@" + lower32;

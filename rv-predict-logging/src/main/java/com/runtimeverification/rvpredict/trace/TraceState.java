@@ -18,7 +18,6 @@ import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
 import com.runtimeverification.rvpredict.trace.maps.ThreadIDToObjectMap;
-import com.runtimeverification.rvpredict.util.Logger;
 
 public class TraceState {
 
@@ -37,7 +36,7 @@ public class TraceState {
     /**
      * Map from thread ID to the current stack trace elements.
      */
-    private final ThreadIDToObjectMap<Deque<Integer>> tidToStacktrace = new ThreadIDToObjectMap<>(
+    private final ThreadIDToObjectMap<Deque<Event>> tidToStacktrace = new ThreadIDToObjectMap<>(
             DEFAULT_NUM_OF_THREADS, ArrayDeque::new);
 
     /**
@@ -45,6 +44,8 @@ public class TraceState {
      */
     private final Table<Long, Long, LockState> tidToLockIdToLockState = HashBasedTable.create(
             DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_LOCKS);
+
+    private final Configuration config;
 
     private final Metadata metadata;
 
@@ -62,10 +63,8 @@ public class TraceState {
 
     private final Set<Event> t_clinitEvents;
 
-    private final Logger logger;
-
     public TraceState(Configuration config, Metadata metadata) {
-        this.logger = config.logger();
+        this.config = config;
         this.metadata = metadata;
         this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
@@ -77,8 +76,8 @@ public class TraceState {
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
     }
 
-    public Logger logger() {
-        return logger;
+    public Configuration config() {
+        return config;
     }
 
     public Metadata metadata() {
@@ -104,6 +103,7 @@ public class TraceState {
     }
 
     public int acquireLock(Event lock) {
+        lock = lock.copy();
         LockState st = tidToLockIdToLockState.row(lock.getTID())
                 .computeIfAbsent(lock.getLockId(), LockState::new);
         st.acquire(lock);
@@ -126,10 +126,10 @@ public class TraceState {
             tidToClinitDepth.get(tid).decrement();
             break;
         case INVOKE_METHOD:
-            tidToStacktrace.computeIfAbsent(tid).add(event.getLocId());
+            tidToStacktrace.computeIfAbsent(tid).add(event.copy());
             break;
         case FINISH_METHOD:
-            int locId = tidToStacktrace.get(tid).removeLast();
+            int locId = tidToStacktrace.get(tid).removeLast().getLocId();
             if (locId != event.getLocId()) {
                 throw new IllegalStateException("Unmatched method entry/exit events!");
             }
@@ -143,14 +143,9 @@ public class TraceState {
         return tidToClinitDepth.computeIfAbsent(tid).intValue() > 0;
     }
 
-    public ThreadState getThreadState(long tid) {
-        return new ThreadState(tidToStacktrace.computeIfAbsent(tid),
-                tidToLockIdToLockState.row(tid).values());
-    }
-
     public ThreadState getThreadStateSnapshot(long tid) {
         /* copy stack trace */
-        Deque<Integer> stacktrace = tidToStacktrace.get(tid);
+        Deque<Event> stacktrace = tidToStacktrace.get(tid);
         stacktrace = stacktrace == null ? new ArrayDeque<>() : new ArrayDeque<>(stacktrace);
         /* copy each lock state */
         List<LockState> lockStates = new ArrayList<>();

@@ -237,17 +237,17 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictWait(Object object, long timeout, int locId)
             throws InterruptedException {
-        saveLockEvent(EventType.WRITE_UNLOCK, locId, MONITOR_C, object);
+        saveLockEvent(EventType.WAIT_REL, locId, MONITOR_C, object);
         try {
             object.wait(timeout);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WRITE_LOCK, locId, MONITOR_C, object);
+            saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WRITE_LOCK, locId, MONITOR_C, object);
+        saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
     }
 
     /**
@@ -265,17 +265,17 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictWait(Object object, long timeout, int nano, int locId)
             throws InterruptedException {
-        saveLockEvent(EventType.WRITE_UNLOCK, locId, MONITOR_C, object);
+        saveLockEvent(EventType.WAIT_REL, locId, MONITOR_C, object);
         try {
             object.wait(timeout, nano);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WRITE_LOCK, locId, MONITOR_C, object);
+            saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WRITE_LOCK, locId, MONITOR_C, object);
+        saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
     }
 
     /**
@@ -663,17 +663,17 @@ public final class RVPredictRuntime implements Constants {
     public static void rvPredictConditionAwait(Condition condition, int locId)
             throws InterruptedException {
         Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WRITE_UNLOCK, locId, JUC_LOCK_C, lock);
+        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
         try {
             condition.await();
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WRITE_LOCK, locId, JUC_LOCK_C, lock);
+            saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WRITE_LOCK, locId, JUC_LOCK_C, lock);
+        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
     }
 
     /**
@@ -683,17 +683,17 @@ public final class RVPredictRuntime implements Constants {
             int locId) throws InterruptedException {
         boolean result;
         Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WRITE_UNLOCK, locId, JUC_LOCK_C, lock);
+        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
         try {
             result = condition.await(time, unit);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WRITE_LOCK, locId, JUC_LOCK_C, lock);
+            saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WRITE_LOCK, locId, JUC_LOCK_C, lock);
+        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
         return result;
     }
 
@@ -704,17 +704,17 @@ public final class RVPredictRuntime implements Constants {
             int locId) throws InterruptedException {
         long result;
         Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WRITE_UNLOCK, locId, JUC_LOCK_C, lock);
+        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
         try {
             result = condition.awaitNanos(nanosTimeout);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WRITE_LOCK, locId, JUC_LOCK_C, lock);
+            saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WRITE_LOCK, locId, JUC_LOCK_C, lock);
+        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
         return result;
     }
 
@@ -725,17 +725,17 @@ public final class RVPredictRuntime implements Constants {
             throws InterruptedException {
         boolean result;
         Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WRITE_UNLOCK, locId, JUC_LOCK_C, lock);
+        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
         try {
             result = condition.awaitUntil(deadline);
         } catch (InterruptedException e) {
             onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WRITE_LOCK, locId, JUC_LOCK_C, lock);
+            saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
             throw e;
         }
 
         onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WRITE_LOCK, locId, JUC_LOCK_C, lock);
+        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
         return result;
     }
 
@@ -744,9 +744,9 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictConditionAwaitUninterruptibly(Condition condition, int locId) {
         Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WRITE_UNLOCK, locId, JUC_LOCK_C, lock);
+        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
         condition.awaitUninterruptibly();
-        saveLockEvent(EventType.WRITE_LOCK, locId, JUC_LOCK_C, lock);
+        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
     }
 
     /**

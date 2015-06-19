@@ -21,7 +21,7 @@ import com.runtimeverification.rvpredict.trace.maps.ThreadIDToObjectMap;
 
 public class TraceState {
 
-    private static final int DEFAULT_NUM_OF_THREADS = 32;
+    private static final int DEFAULT_NUM_OF_THREADS = 1024;
 
     private static final int DEFAULT_NUM_OF_ADDR = 128;
 

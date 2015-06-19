@@ -37,6 +37,7 @@ import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
@@ -307,10 +308,6 @@ public class Configuration implements Constants {
     @Parameter(description = "[java_options] <java_command_line>")
     private List<String> javaArgs = new ArrayList<>();
 
-    public final static String opt_event_profile = "--profile";
-    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1000")
-    private boolean profile;
-
     public final static String opt_only_log = "--log";
     @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1005")
     private String log_dir = null;
@@ -319,6 +316,10 @@ public class Configuration implements Constants {
     public final static String opt_only_predict = "--predict";
     @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "1010")
     private String predict_dir = null;
+
+    public final static String opt_event_profile = "--profile";
+    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1015")
+    private boolean profile;
 
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include." +
@@ -343,9 +344,9 @@ public class Configuration implements Constants {
     public int windowSize = 1000;
     private static int MIN_WINDOW_SIZE = 64;
 
-    final static String opt_volatile = "--volatile";
-    @Parameter(names = opt_volatile, description = "Check unordered conflict accesses on volatile variables", hidden = true, descriptionKey = "2030")
-    public boolean checkVolatile;
+    final static String opt_stacks = "--stacks";
+    @Parameter(names = opt_stacks, description = "Record call stack events and compute stack traces in race report", hidden = true, descriptionKey = "2030")
+    public boolean stacks = false;
 
     final static String opt_smt_solver = "--solver";
     @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2050")
@@ -355,17 +356,9 @@ public class Configuration implements Constants {
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
     public int solver_timeout = 60;
 
-    final static String opt_simple_report = "--simple-report";
-    @Parameter(names = opt_simple_report, description = "Output simple data race report", hidden = true, descriptionKey = "2080")
-    public boolean simple_report = false;
-
     final static String opt_debug = "--debug";
     @Parameter(names = opt_debug, description = "Output developer debugging information", hidden = true, descriptionKey = "2090")
     public static boolean debug = false;
-
-    public final static String opt_outdir = "--dir";
-    @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")
-    private String outdir = null;
 
     final static String short_opt_verbose = "-v";
     final static String opt_verbose = "--verbose";
@@ -379,7 +372,7 @@ public class Configuration implements Constants {
 
     private static final String RVPREDICT_ARGS_TERMINATOR = "--";
 
-    public final Logger logger = new Logger();
+    private final Logger logger = new Logger();
 
     public static Configuration instance(String[] args) {
         Configuration config = new Configuration();
@@ -444,9 +437,6 @@ public class Configuration implements Constants {
             if (log_dir != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_only_log);
             }
-            if (outdir != null) {
-                exclusiveOptionsFailure(opt_event_profile, opt_outdir);
-            }
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_only_predict);
             }
@@ -458,35 +448,32 @@ public class Configuration implements Constants {
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_only_predict);
             }
-            if (outdir != null) {
-                exclusiveOptionsFailure(opt_only_log, opt_outdir);
-            }
             if (offline) {
                 exclusiveOptionsFailure(opt_only_log, opt_offline);
             }
             log_dir = Paths.get(log_dir).toAbsolutePath().toString();
         } else if (predict_dir != null) {       /* only predict */
-            if (outdir != null) {
-                exclusiveOptionsFailure(opt_only_predict, opt_outdir);
-            }
             log_dir = Paths.get(predict_dir).toAbsolutePath().toString();
             log = false;
             prediction = OFFLINE_PREDICTION;
         } else {                                /* log then predict */
-            if (!offline) {
-                log_dir = null;
-                prediction = ONLINE_PREDICTION;
-            } else {
-                try {
-                    log_dir = outdir == null ? Files.createTempDirectory(
-                            Paths.get(System.getProperty("java.io.tmpdir")), RV_PREDICT).toString()
-                            : Paths.get(outdir).toAbsolutePath().toString();
-                } catch (IOException e) {
-                    System.err.println("Error while attempting to create log dir.");
-                    System.err.println(e.getMessage());
-                    System.exit(1);
-                }
-                prediction = OFFLINE_PREDICTION;
+            try {
+                log_dir = Files.createTempDirectory(
+                        Paths.get(System.getProperty("java.io.tmpdir")), RV_PREDICT).toString();
+            } catch (IOException e) {
+                System.err.println("Error while attempting to create log dir.");
+                System.err.println(e.getMessage());
+                System.exit(1);
+            }
+            prediction = offline ? OFFLINE_PREDICTION : ONLINE_PREDICTION;
+        }
+
+        if (log_dir != null) {
+            try {
+                logger.setLogDir(log_dir);
+            } catch (FileNotFoundException e) {
+                System.err.println("Error while attempting to create the logger.");
+                System.exit(1);
             }
         }
 
@@ -597,6 +584,10 @@ public class Configuration implements Constants {
 
     public List<String> getJavaArguments() {
         return javaArgs;
+    }
+
+    public Logger logger() {
+        return logger;
     }
 
     /**

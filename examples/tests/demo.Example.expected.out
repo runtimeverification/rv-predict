@@ -1,1 +1,1 @@
-(?s)(.*)Race on field demo.Example.x between:(\s)*demo.Example\$MyThread.run\(Example.java:68\)(\s)*demo.Example.main\(Example.java:51\)(.*)
+(?s)(.*)Data race on field demo.Example.x: \{\{\{(.*)---->  at demo.Example\$MyThread.run\(Example.java:68\)(.*)---->  at demo.Example.main\(Example.java:51\)(.*)\}\}\}

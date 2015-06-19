@@ -28,6 +28,8 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.violation;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.StandardSystemProperty;
@@ -89,9 +91,11 @@ public class Race {
 
     @Override
     public String toString() {
-        int min = Math.min(e1.getLocId(), e2.getLocId());
-        int max = Math.max(e1.getLocId(), e2.getLocId());
-        return "Race(" + min + "," + max + ")";
+        int addr = e1.getFieldIdOrArrayIndex() < 0 ? e1.getFieldIdOrArrayIndex() :
+            e1.getObjectHashCode();
+        int loc1 = Math.min(e1.getLocId(), e2.getLocId());
+        int loc2 = Math.max(e1.getLocId(), e2.getLocId());
+        return "Race(" + addr + "," + loc1 + "," + loc2 + ")";
     }
 
     private String getRaceLocationSig() {
@@ -99,33 +103,22 @@ public class Race {
         return idx < 0 ? trace.metadata().getVariableSig(-idx).replace("/", ".") : "#" + idx;
     }
 
-    public String generateSimpleRaceReport() {
-        String stmtSig1 = trace.metadata().getLocationSig(e1.getLocId());
-        String stmtSig2 = trace.metadata().getLocationSig(e2.getLocId());
-        if (stmtSig1.compareTo(stmtSig2) > 0) {
-            String tmp = stmtSig1;
-            stmtSig1 = stmtSig2;
-            stmtSig2 = tmp;
-        }
-
-        String locSig = getRaceLocationSig();
-        return String.format("Race on %s between%s",
-            locSig.startsWith("#") ? "an array access" : "field " + locSig,
-            stmtSig1.equals(stmtSig2) ?
-                String.format(" two instances of:%n    %s%n", stmtSig1) :
-                String.format(":%n    %s%n    %s%n", stmtSig1, stmtSig2));
-    }
-
-
-    public String generateDetailedRaceReport() {
+    public String generateRaceReport() {
         String locSig = getRaceLocationSig();
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Possible data race on %s: {{{%n",
+        sb.append(String.format("Data race on %s: {{{%n",
                 (locSig.startsWith("#") ? "array element " : "field ") + locSig));
 
-        generateMemAccReport(e1, sb);
-        sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
-        generateMemAccReport(e2, sb);
+        if (trace.metadata().getLocationSig(e1.getLocId())
+                .compareTo(trace.metadata().getLocationSig(e2.getLocId())) <= 0) {
+            generateMemAccReport(e1, sb);
+            sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
+            generateMemAccReport(e2, sb);
+        } else {
+            generateMemAccReport(e2, sb);
+            sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
+            generateMemAccReport(e1, sb);
+        }
 
         sb.append(String.format("}}}%n"));
         return sb.toString();
@@ -139,9 +132,20 @@ public class Race {
                 e.isWrite() ? "write" : "read",
                 tid,
                 getHeldLocksReport(heldLocks)));
-        for (Integer locId : trace.getStacktraceAt(e)) {
-            String sig = locId >= 0 ? metadata.getLocationSig(locId) : "... not available ...";
-            sb.append(String.format("        at %s%n", sig));
+        boolean isTopmostStack = true;
+        List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
+        heldLocks.stream().filter(Event::isLockTypeMonitor).forEach(stacktrace::add);
+        Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
+        for (Event elem : stacktrace) {
+            String locSig = elem.getLocId() != -1 ? metadata.getLocationSig(elem.getLocId())
+                    : "... not available ...";
+            if (elem.isLock()) {
+                sb.append(String.format("        - locked Monitor@%s at %s %n",
+                        lockIdToHexString(elem.getLockId()), locSig));
+            } else {
+                sb.append(String.format(" %s  at %s%n", isTopmostStack ? "---->" : "     ", locSig));
+                isTopmostStack = false;
+            }
         }
 
         long parentTID = metadata.getParentTID(tid);
@@ -158,14 +162,15 @@ public class Race {
             }
         }
 
+        heldLocks.removeIf(Event::isLockTypeMonitor);
         if (!heldLocks.isEmpty()) {
             sb.append(String.format("    Locks acquired by this thread (reporting in chronological order):%n"));
             for (Event lock : heldLocks) {
                 sb.append(String.format("      %s%n", getLockRepresentation(lock)));
-                for (Integer locId : trace.getStacktraceAt(lock)) {
-                    String sig = locId >= 0 ? metadata.getLocationSig(locId)
+                for (Event elem : trace.getStacktraceAt(lock)) {
+                    String locSig = elem.getLocId() != -1 ? metadata.getLocationSig(elem.getLocId())
                             : "... not available ...";
-                    sb.append(String.format("        at %s%n", sig));
+                    sb.append(String.format("        at %s%n", locSig));
                 }
             }
         }
@@ -184,10 +189,14 @@ public class Race {
         return sb.toString();
     }
 
+    private String lockIdToHexString(long lockId) {
+        return Integer.toHexString((int) lockId);
+    }
+
     private String getLockRepresentation(Event lock) {
         long lockId = lock.getLockId();
         int upper32 = (int)(lockId >> 32);
-        int lower32 = (int) lockId;
+        String lower32 = lockIdToHexString(lockId);
         if (lock.getType() == EventType.READ_LOCK) {
             assert upper32 == 0;
             return "ReadLock@" + lower32;

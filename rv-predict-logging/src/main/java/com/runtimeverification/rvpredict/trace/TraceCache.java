@@ -47,18 +47,26 @@ public class TraceCache {
     }
 
     /**
+     * Returns the power of two that is greater than the given integer.
+     */
+    private int getNextPowerOfTwo(int x) {
+        return 1 << (32 - Integer.numberOfLeadingZeros(x));
+    }
+
+    /**
      * Load trace segment starting from event {@code fromIndex}.
      *
      * @param fromIndex
      *            low endpoint (inclusive) of the trace segment
-     * @return a {@link Trace} representing the trace segment read
+     * @return a {@link Trace} representing the trace segment read or
+     *         {@code null} if the end of file is reached
      */
     public Trace getTrace(long fromIndex) throws IOException {
         long toIndex = fromIndex + config.windowSize;
         List<RawTrace> rawTraces = new ArrayList<>();
 
         /* sort readers by their last read events */
-        readers.sort((r1, r2) -> Long.compare(r1.lastReadEvent().getGID(), r2.lastReadEvent().getGID()));
+        readers.sort((r1, r2) -> r1.lastReadEvent().compareTo(r2.lastReadEvent()));
         Iterator<EventReader> iter = readers.iterator();
         Event event;
         while (iter.hasNext()) {
@@ -68,11 +76,13 @@ public class TraceCache {
             }
 
             assert event.getGID() >= fromIndex;
-            int length = 1 << (32 - Integer.numberOfLeadingZeros(config.windowSize - 1));
-            Event[] events = new Event[length];
-            int p = 0;
+            int capacity = getNextPowerOfTwo(config.windowSize - 1);
+            if (config.stacks) {
+                capacity <<= 1;
+            }
+            List<Event> events = new ArrayList<>(capacity);
             do {
-                events[p++] = event;
+                events.add(event);
                 try {
                     event = reader.readEvent();
                 } catch (EOFException e) {
@@ -80,11 +90,12 @@ public class TraceCache {
                     break;
                 }
             } while (event.getGID() < toIndex);
-            rawTraces.add(new RawTrace(0, p, events));
+            int length = getNextPowerOfTwo(events.size());
+            rawTraces.add(new RawTrace(0, events.size(), events.toArray(new Event[length])));
         }
 
         /* finish reading events and create the Trace object */
-        return crntState.initNextTraceWindow(rawTraces);
+        return rawTraces.isEmpty() ? null : crntState.initNextTraceWindow(rawTraces);
     }
 
 }

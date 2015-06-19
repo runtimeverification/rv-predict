@@ -34,7 +34,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.collect.Iterables;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.trace.LockRegion;
 
@@ -43,18 +42,13 @@ import com.runtimeverification.rvpredict.trace.LockRegion;
  */
 public class LockSetEngine {
 
-    private Map<Long, Map<Long, List<LockRegion>>> lockIdToTidToLockRegions = new HashMap<>();
+    private final Map<Long, Map<Long, List<LockRegion>>> lockIdToTidToLockRegions = new HashMap<>();
 
     public void add(LockRegion region) {
-        List<LockRegion> regions = lockIdToTidToLockRegions
+        lockIdToTidToLockRegions
                 .computeIfAbsent(region.getLockId(), p -> new HashMap<>())
-                .computeIfAbsent(region.getTID(), p -> new ArrayList<>());
-        LockRegion last = Iterables.getLast(regions, null);
-        if (last != null && region.getLock().getGID() <= last.getUnlock().getGID()) {
-            throw new IllegalArgumentException(
-                    "Unexpected overlapping lock regions: " + last + " & " + region);
-        }
-        regions.add(region);
+                .computeIfAbsent(region.getTID(), p -> new ArrayList<>())
+                .add(region);
     }
 
     /**
@@ -79,12 +73,20 @@ public class LockSetEngine {
     }
 
     private LockRegion getLockRegion(Event e, long lockId) {
+        /* given a lockId, an event can be protected by at most one write-locked
+         * region and one read-locked region (due to reentrant read-write lock
+         * downgrading); always prefer to return the write-locked region */
+        LockRegion result = null;
         for (LockRegion region : lockIdToTidToLockRegions.get(lockId).getOrDefault(e.getTID(),
                 Collections.emptyList())) {
             if (region.include(e)) {
-                return region;
+                if (region.isWriteLocked()) {
+                    return region;
+                } else if (result == null) {
+                    result = region;
+                }
             }
         }
-        return null;
+        return result;
     }
 }

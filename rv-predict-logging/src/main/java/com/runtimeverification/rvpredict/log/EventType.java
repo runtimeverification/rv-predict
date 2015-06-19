@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.log;
 
+import java.util.concurrent.locks.Condition;
+
 /**
  * Enumeration of all types of events considered during logging and prediction.
  *
@@ -37,6 +39,19 @@ public enum EventType {
      * {@code ReadWriteLock#readLock()#unlock()}.
      */
     READ_UNLOCK,
+
+    /**
+     * Event generated before calling {@link Object#wait()} or
+     * {@link Condition#await()}.
+     */
+    WAIT_REL,
+
+    /**
+     * Event generated after a thread is awakened from {@link Object#wait()} or
+     * {@link Condition#await()} for whatever reason (e.g., spurious wakeup,
+     * being notified, or being interrupted).
+     */
+    WAIT_ACQ,
 
     /**
      * Event generated before calling {@code Thread#start()}.

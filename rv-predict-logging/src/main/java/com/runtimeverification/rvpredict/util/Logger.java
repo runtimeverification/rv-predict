@@ -35,8 +35,12 @@ public class Logger {
                 + Strings.repeat(DASH, (fillWidth + 1) / 2);
     }
 
-    public PrintStream debug() {
-        return debug;
+    public void debug(String msg) {
+        debug.println(msg);
+    }
+
+    public void debug(Throwable e) {
+        e.printStackTrace(debug);
     }
 
     public void reportRace(String report) {

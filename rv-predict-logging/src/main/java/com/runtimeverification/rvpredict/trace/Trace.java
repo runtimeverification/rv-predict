@@ -47,6 +47,7 @@ import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToObjectMap;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
+import com.runtimeverification.rvpredict.util.Logger;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a
@@ -136,6 +137,10 @@ public class Trace {
 
     public Metadata metadata() {
         return state.metadata();
+    }
+
+    public Logger logger() {
+        return state.config().logger();
     }
 
     public long getBaseGID() {

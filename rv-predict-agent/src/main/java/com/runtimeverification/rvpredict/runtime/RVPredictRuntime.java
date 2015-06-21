@@ -754,6 +754,9 @@ public final class RVPredictRuntime implements Constants {
      */
     public static int rvPredictAbstractQueuedSynchronizerGetState(AbstractQueuedSynchronizer aqs,
             int locId) {
+        // the synchronization block is to ensure that if this getState reads
+        // the value set by some compareAndSetState, that compareAndSetState is
+        // logged before this getState
         synchronized (aqs) {
             int result = (int) invokeMethodHandle(AQS_GET_STATE, aqs);
             saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(aqs),
@@ -767,22 +770,36 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictAbstractQueuedSynchronizerSetState(AbstractQueuedSynchronizer aqs,
             int newState, int locId) {
-        synchronized (aqs) {
-            saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(aqs),
-                    -AQS_MOCK_STATE_ID, newState, 0);
-            invokeMethodHandle(AQS_SET_STATE, aqs, newState);
-        }
+        saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(aqs),
+                -AQS_MOCK_STATE_ID, newState, 0);
+        invokeMethodHandle(AQS_SET_STATE, aqs, newState);
     }
 
     /**
      * {@link AbstractQueuedSynchronizer#compareAndSetState(int, int)}
      */
-    public static boolean rvPredictAbstractQueuedSynchronizerCASState(AbstractQueuedSynchronizer aqs,
-            int expect, int update, int locId) {
-        synchronized (aqs) {
-            saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId, System.identityHashCode(aqs),
-                    -AQS_MOCK_STATE_ID, (int) invokeMethodHandle(AQS_GET_STATE, aqs), update);
-            return (boolean) invokeMethodHandle(AQS_CAS_STATE, aqs, expect, update);
+    public static boolean rvPredictAbstractQueuedSynchronizerCASState(
+            AbstractQueuedSynchronizer aqs, int expect, int update, int locId) {
+        for (;;) {
+            synchronized (aqs) {
+                if ((boolean) invokeMethodHandle(AQS_CAS_STATE, aqs, expect, update)) {
+                    saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
+                            System.identityHashCode(aqs), -AQS_MOCK_STATE_ID, expect, update);
+                    return true;
+                }
+            }
+
+            int actual = (int) invokeMethodHandle(AQS_GET_STATE, aqs);
+            if (actual != expect) {
+                saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(aqs),
+                        -AQS_MOCK_STATE_ID, actual, 0);
+                return false;
+            } else {
+                // if "actual == expect", it would be unsound to log an
+                // ATOMIC_READ event that reads `expect' and return false
+                // because when we match this read with some write of the same
+                // value this CAS should really succeed and return true
+            }
         }
     }
 
@@ -802,11 +819,9 @@ public final class RVPredictRuntime implements Constants {
      * {@link AtomicBoolean#set(boolean)}
      */
     public static void rvPredictAtomicBoolSet(AtomicBoolean atomicBool, boolean newValue, int locId) {
-        synchronized (atomicBool) {
-            saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(atomicBool),
-                    -ATOMIC_BOOLEAN_MOCK_VAL_ID, bool2int(newValue), 0);
-            atomicBool.set(newValue);
-        }
+        saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(atomicBool),
+                -ATOMIC_BOOLEAN_MOCK_VAL_ID, bool2int(newValue), 0);
+        atomicBool.set(newValue);
     }
 
     /**
@@ -829,12 +844,18 @@ public final class RVPredictRuntime implements Constants {
     public static boolean rvPredictAtomicBoolCAS(AtomicBoolean atomicBool, boolean expect,
             boolean update, int locId) {
         synchronized (atomicBool) {
-            boolean result = atomicBool.compareAndSet(expect, update);
-            saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
-                    System.identityHashCode(atomicBool), -ATOMIC_BOOLEAN_MOCK_VAL_ID,
-                    result ? bool2int(expect) : bool2int(!expect), bool2int(update));
-            return result;
+            if (atomicBool.compareAndSet(expect, update)) {
+                saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
+                        System.identityHashCode(atomicBool), -ATOMIC_BOOLEAN_MOCK_VAL_ID,
+                        bool2int(expect), bool2int(update));
+                return true;
+            }
         }
+
+        saveAtomicEvent(EventType.ATOMIC_READ, locId,
+                System.identityHashCode(atomicBool), -ATOMIC_BOOLEAN_MOCK_VAL_ID,
+                bool2int(!expect), 0);
+        return false;
     }
 
     /**

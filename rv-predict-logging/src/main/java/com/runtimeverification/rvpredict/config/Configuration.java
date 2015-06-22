@@ -113,11 +113,8 @@ public class Configuration implements Constants {
 
      public static String[] MOCKS = new String[] {
          "java/util/Collection",
-         "java/util/Map"
-
-         /* YilongL: do not exclude Iterator because it's not likely to slow down
-          * logging a lot; besides, I am interested in seeing what could happen */
-         // "java/util/Iterator"
+         "java/util/Map",
+         "java/util/Iterator"
      };
 
     public static List<Pattern> MUST_INCLUDES;

@@ -126,7 +126,8 @@ public class Configuration implements Constants {
                 "java/util/concurrent/CountDownLatch$Sync",
                 "java/util/concurrent/CyclicBarrier",
                 "java/util/concurrent/ArrayBlockingQueue",
-                "java/util/concurrent/LinkedBlockingQueue"
+                "java/util/concurrent/LinkedBlockingQueue",
+                "java/util/concurrent/FutureTask"
         };
         MUST_INCLUDES = getDefaultPatterns(mustIncludes);
     }

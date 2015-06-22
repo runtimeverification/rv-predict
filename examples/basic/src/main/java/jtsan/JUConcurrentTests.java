@@ -842,7 +842,7 @@ public class JUConcurrentTests {
             tests.atomicInteger();
             tests.concurrentHashMap();
             tests.fifoMutexUser();
-//            tests.futureTask();
+            tests.futureTask();
 //            tests.synchronousQueue();
         }
     }

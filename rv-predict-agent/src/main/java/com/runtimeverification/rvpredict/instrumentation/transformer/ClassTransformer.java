@@ -11,6 +11,8 @@ import com.runtimeverification.rvpredict.config.Configuration;
 
 public class ClassTransformer extends ClassVisitor implements Opcodes {
 
+    private final Configuration config;
+
     private final ClassLoader loader;
 
     private String className;
@@ -18,10 +20,10 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
 
     private int version;
 
-    public static byte[] transform(ClassLoader loader, byte[] cbuf) {
+    public static byte[] transform(ClassLoader loader, byte[] cbuf, Configuration config) {
         ClassReader cr = new ClassReader(cbuf);
         ClassWriter cw = new ClassWriter(cr, loader);
-        ClassTransformer transformer = new ClassTransformer(cw, loader);
+        ClassTransformer transformer = new ClassTransformer(cw, loader, config);
         cr.accept(transformer, ClassReader.EXPAND_FRAMES);
 
         byte[] result = cw.toByteArray();
@@ -33,11 +35,12 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
         return result;
     }
 
-    private ClassTransformer(ClassWriter cw, ClassLoader loader) {
+    private ClassTransformer(ClassWriter cw, ClassLoader loader, Configuration config) {
         super(ASM5, cw);
         assert cw != null;
 
         this.loader = loader;
+        this.config = config;
     }
 
     @Override
@@ -66,7 +69,7 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
          * infinite recursion at runtime */
         if ((access & ACC_BRIDGE) == 0) {
             mv = new MethodTransformer(mv, source, className, version, name, desc, access,
-                    loader);
+                    loader, config.logger());
         }
 
         if ("<clinit>".equals(name)) {

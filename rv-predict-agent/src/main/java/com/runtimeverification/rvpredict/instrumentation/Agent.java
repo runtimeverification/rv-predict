@@ -158,16 +158,16 @@ public class Agent implements ClassFileTransformer, Constants {
             if (!cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT) && !cname.startsWith("sun")) {
                 ClassFile classFile = ClassFile.getInstance(loader, cname, cbuf);
                 if (InstrumentUtils.needToInstrument(classFile)) {
-                    byte[] transformed = ClassTransformer.transform(loader, cbuf);
+                    byte[] transformed = ClassTransformer.transform(loader, cbuf, config);
                     return transformed;
                 }
             }
             return null;
         } catch (Throwable e) {
             /* exceptions during class loading are silently suppressed by default */
-            config.logger().debug().println("Cannot retransform " + cname + ". Exception: " + e);
+            config.logger().debug("Cannot retransform " + cname + ". Exception: " + e);
             if (Configuration.debug) {
-                e.printStackTrace(config.logger().debug());
+                config.logger().debug(e);
                 // fail-fast strategy under debug mode
                 System.exit(1);
             }
@@ -192,7 +192,7 @@ public class Agent implements ClassFileTransformer, Constants {
                         && !name.startsWith("com.runtimeverification.rvpredict")
                         && !name.startsWith("java.lang")
                         && !name.startsWith("sun.")) {
-                    System.err.println("[Java-agent] missed to intercept class load: " + cls);
+                    config.logger().debug("[Java-agent] missed to intercept class load: " + cls);
                 }
             }
         }

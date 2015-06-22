@@ -49,7 +49,7 @@
     <panels>
         <!-- First, check RV key and make sure it validates properly -->
         <panel classname="UserInputPanel" id="rvkey">
-            <validator classname="com.izforge.izpack.panels.rvkey.RVKeyValidator"/> 
+            <validator classname="com.izforge.izpack.panels.rvkey.RVKeyValidator"/>
         </panel>
         <panel classname="LicencePanel"/>
         <panel classname="TargetPanel"/>
@@ -71,6 +71,7 @@
             <executable targetfile="$INSTALL_PATH/bin/rv-predict-gui.bat" keep="true" stage="never" />
             <executable targetfile="$INSTALL_PATH/bin/rv-predict" keep="true" stage="never" />
             <executable targetfile="$INSTALL_PATH/bin/rv-predict.bat" keep="true" stage="never" />
+            <executable targetfile="$INSTALL_PATH/lib/checkJava" keep="true" stage="never" />
         </pack>
         <pack name="Examples" required="no" installGroups="New Application" >
             <description>Example Java programs illustrating RV-Predict's features.</description>

@@ -7,6 +7,7 @@ import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
+import com.runtimeverification.rvpredict.util.Logger;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -27,6 +28,8 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     private final String methodName;
     private final int version;
     private final String locIdPrefix;
+
+    private final Logger logger;
 
     /**
      * Specifies whether the visited method is synchronized.
@@ -49,7 +52,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     private int numOfCtorCall = 0;
 
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
-            String name, String desc, int access, ClassLoader loader) {
+            String name, String desc, int access, ClassLoader loader, Logger logger) {
         super(Opcodes.ASM5, new GeneratorAdapter(mv, access, name, desc));
         this.mv = (GeneratorAdapter) super.mv;
         this.className = className;
@@ -58,6 +61,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
         this.loader = loader;
+        this.logger = logger;
         this.locIdPrefix = String.format("%s(%s:", className.replace("/", ".") + "." + name,
                 source == null ? "Unknown" : source);
     }
@@ -224,7 +228,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             } else {
                 ClassFile classFile = ClassFile.getInstance(loader, owner);
                 if (classFile == null) {
-                    System.err.println("[Warning] unable to locate the class file of " + owner
+                    logger.debug("[Warning] unable to locate the class file of " + owner
                             + " while transforming " + className + "." + methodName);
                 } else if (!needToInstrument(classFile)) {
                     mv.visitMethodInsn(opcode, owner, name, desc, itf);

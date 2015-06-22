@@ -189,7 +189,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             }
             detector.run(crntState.initNextTraceWindow(rawTraces));
         } catch (Throwable e) {
-            e.printStackTrace(config.logger().debug());
+            config.logger().debug(e);
             /* cannot use System.exit because it may lead to deadlock */
             Runtime.getRuntime().halt(1);
         }

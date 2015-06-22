@@ -53,6 +53,7 @@ public class RVPredictRuntimeMethods {
     private static final String JUCL_RW_LOCK    =   "java/util/concurrent/locks/ReadWriteLock";
     private static final String JUCL_AQS        =   "java/util/concurrent/locks/AbstractQueuedSynchronizer";
     private static final String JUCA_ATOMIC_BOOL    =   "java/util/concurrent/atomic/AtomicBoolean";
+    private static final String JUCA_ATOMIC_INTEGER =   "java/util/concurrent/atomic/AtomicInteger";
 
     /*
      * Map from method signature to possible {@link RVPredictInterceptor}'s.
@@ -206,6 +207,27 @@ public class RVPredictRuntimeMethods {
     public static final RVPredictInterceptor RVPREDICT_ATOMIC_BOOL_GAS =
             register(VIRTUAL, JUCA_ATOMIC_BOOL, "getAndSet", "rvPredictAtomicBoolGAS", Z);
 
+    // java.util.concurrent.atomic.AtomicInteger
+    public static final RVPredictInterceptor RVPREDICT_ATOMIC_INTEGER_GET =
+            register(VIRTUAL, JUCA_ATOMIC_INTEGER, "get", "rvPredictAtomicIntegerGet");
+    public static final RVPredictInterceptor RVPREDICT_ATOMIC_INTEGER_SET =
+            register(VIRTUAL, JUCA_ATOMIC_INTEGER, "set", "rvPredictAtomicIntegerSet", I);
+    public static final RVPredictInterceptor RVPREDICT_ATOMIC_INTEGER_CAS =
+            register(VIRTUAL, JUCA_ATOMIC_INTEGER, "compareAndSet", "rvPredictAtomicIntegerCAS", I, I);
+    public static final RVPredictInterceptor RVPREDICT_ATOMIC_INTEGER_GAS =
+            register(VIRTUAL, JUCA_ATOMIC_INTEGER, "getAndSet", "rvPredictAtomicIntegerGAS", I);
+    public static final RVPredictInterceptor RVPREDICT_ATOMIC_INTEGER_GAA =
+            register(VIRTUAL, JUCA_ATOMIC_INTEGER, "getAndAdd", "rvPredictAtomicIntegerGetAndAdd", I);
+    public static final RVPredictInterceptor RVPREDICT_ATOMIC_INTEGER_GAI =
+            register(VIRTUAL, JUCA_ATOMIC_INTEGER, "getAndIncrement", "rvPredictAtomicIntegerGetAndInc");
+    public static final RVPredictInterceptor RVPREDICT_ATOMIC_INTEGER_GAD =
+            register(VIRTUAL, JUCA_ATOMIC_INTEGER, "getAndDecrement", "rvPredictAtomicIntegerGetAndDec");
+    public static final RVPredictInterceptor RVPREDICT_ATOMIC_INTEGER_AAG =
+            register(VIRTUAL, JUCA_ATOMIC_INTEGER, "addAndGet", "rvPredictAtomicIntegerAddAndGet", I);
+    public static final RVPredictInterceptor RVPREDICT_ATOMIC_INTEGER_IAG =
+            register(VIRTUAL, JUCA_ATOMIC_INTEGER, "incrementAndGet", "rvPredictAtomicIntegerIncAndGet");
+    public static final RVPredictInterceptor RVPREDICT_ATOMIC_INTEGER_DAG =
+            register(VIRTUAL, JUCA_ATOMIC_INTEGER, "decrementAndGet", "rvPredictAtomicIntegerDecAndGet");
 
     /** Short-hand for {@link RVPredictRuntimeMethod#create(String, Class...)}. */
     private static RVPredictRuntimeMethod init(String name, Class<?>... parameterTypes) {

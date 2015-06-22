@@ -148,6 +148,7 @@
         <arg value="jtsan.JUCollectionTests" />
         <arg value="positive" />
         <rvarg value="--stacks" />
+        <rvarg key="--include" value="jtsan.JUCollectionTests$DelegatedIterator" />
     </test>
     <test name="jtsan.JUCollectionTests-negative">
         <arg key="-cp" value="basic.jar" />

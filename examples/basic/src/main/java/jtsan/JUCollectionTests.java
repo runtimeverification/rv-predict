@@ -241,9 +241,9 @@ public class JUCollectionTests {
         };
     }
 
-    @ExcludedTest(reason = "not worth to instrument Map.Entry implementation")
+    @ExcludedTest(reason = "not worth to mock Map.Entry to detect race on each separate entry")
     @RaceTest(expectRace = true,
-            description = "Test instrumentation of map entry")
+            description = "Test mocking of map entry")
     public void mapEntry() {
         new ThreadRunner(2) {
 

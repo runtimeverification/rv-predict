@@ -9,10 +9,10 @@ RV-Predict requires Java Runtime Environment 1.7 or higher.
 Installation
 ------------
 
-Download the installer from the `RV-Predict website`_, execute it
-and follow the installation instructions.  Remember to add the ``bin``
-directory under the RV-Predict installation directory to your ``PATH``
-environment variable.
+Download the installer from the `RV-Predict website`_ and execute it
+with ``java -jar <installer>``, following all instructions. Remember 
+to add the ``bin`` directory under the RV-Predict installation 
+directory to your ``PATH`` environment variable.
 
 Running RV-Predict
 ------------------

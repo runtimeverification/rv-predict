@@ -73,33 +73,63 @@ observed:
 .. code-block:: none
 
     ----------------Instrumented execution to record the trace-----------------
+    Log directory: /tmp/rv-predict7274661192308018898
+    Finished retransforming preloaded classes.
     Bank system started
     loop: 2
-    sum: -174
     loop: 2
     sum: 256
-    sum: -33
+    sum: -174
     sum: 76
+    sum: -33
     ..
     End of the week.
     Bank records = 125, accounts balance = 125.
     Records match.
+    Data race on field account.Account.Bank_Total: {{{
+        Concurrent write in thread T10 (locks held: {})
+     ---->  at account.Account.Service(Account.java:98)
+        T10 is created by T1
+            at account.Account.go(Account.java:46)
 
-    -------------------------Logging phase completed.--------------------------
-    Race on field account.BankAccount.Balance between:
-            account.Account.go(Account.java:67)
-            account.Account.Service(Account.java:97)
+        Concurrent read in thread T1 (locks held: {})
+     ---->  at account.Account.checkResult(Account.java:75)
+        T1 is the main thread
+    }}}
 
-    Race on field account.Account.Bank_Total between two instances of:
-            account.Account.Service(Account.java:98)
+    Data race on field account.Account.Bank_Total: {{{
+        Concurrent write in thread T10 (locks held: {})
+     ---->  at account.Account.Service(Account.java:98)
+        T10 is created by T1
+            at account.Account.go(Account.java:46)
+    
+        Concurrent read in thread T1 (locks held: {})
+     ---->  at account.Account.checkResult(Account.java:76)
+        T1 is the main thread
+    }}}
 
-    Race on field account.Account.Bank_Total between:
-            account.Account.checkResult(Account.java:75)
-            account.Account.Service(Account.java:98)
-
-    Race on field account.Account.Bank_Total between:
-            account.Account.checkResult(Account.java:76)
-            account.Account.Service(Account.java:98)
+    Data race on field account.BankAccount.Balance: {{{
+        Concurrent write in thread T10 (locks held: {})
+     ---->  at account.Account.Service(Account.java:97)
+        T10 is created by T1
+            at account.Account.go(Account.java:46)
+    
+        Concurrent read in thread T1 (locks held: {})
+     ---->  at account.Account.go(Account.java:67)
+        T1 is the main thread
+    }}}
+    
+    Data race on field account.Account.Bank_Total: {{{
+        Concurrent write in thread T10 (locks held: {})
+     ---->  at account.Account.Service(Account.java:98)
+        T10 is created by T1
+            at account.Account.go(Account.java:46)
+    
+        Concurrent read in thread T11 (locks held: {})
+     ---->  at account.Account.Service(Account.java:98)
+        T11 is created by T1
+            at account.Account.go(Account.java:46)
+    }}}
 
 
 Interpreting the results
@@ -125,28 +155,30 @@ A race description usually follows the syntax
 
 .. code-block:: none
 
-    Race on field <field_name> between:
-            <method_name>(<file_name>:<line_number>)
-            <method_name>(<file_name>:<line_number>)
+    Data race on field <field_name>: {{{
+        Concurrent <operation> on thread <thread_number> (locks held: {<locks>})
+     ---->  at <method_name>(<file_name>:<line_number>)
+
+        Concurrent <operation> on thread <thread_number> (locks held: {<locks>})
+     ---->  at <method_name>(<file_name>:<line_number>)
+    }}}
 
 which presents the fully qualified name of the field on which the race occurred
 (``<field_name>``) and the two racing locations identified as frames on the
 method call stack: fully qualified name of the method (``<method_name>``), file
 containing the location (``<file_name>``) and line number where the unprotected
-field access occurred (``<line_number>``).
-
-If the race occurs between accesses at the same location, the syntax is:
-
-.. code-block:: none
-
-    Race on field <field_name> between two instances of:
-            <method_name>(<file_name>:<line_number>)
+field access occurred (``<line_number>``). The description also presents the
+type of race (``<operation>``), which can be write-write or read-write, and
+provides details about the threads and locks involved (``<thread_number>`` and
+``<locks>``). 
 
 Finally, if the race is due to an array access, the text ``field <field_name>``
 is replaced by ``an array access`` in the messages above.
 
-If no races are found, then the message ``No races found.`` is displayed.
-
+If no races are found, then the message ``No races found.`` is displayed. The 
+races are logged in the log directory printed at the beginning of the report
+(``/tmp/rv-predict7274661192308018898``) in ``report.txt``, and any errors or
+stacktraces are recorded in ``debug.log``.
 
 SpringExample.jar
 -----------------

@@ -202,7 +202,7 @@ Normal Run
     log4j:WARN Please initialize the log4j system properly.
     log4j:WARN See http://logging.apache.org/log4j/1.2/faq.html#noconfig for more info.
     Hello ! World
-    1
+    0
 
 RV-Predict Run
 ~~~~~~~~~~~~~~
@@ -210,19 +210,25 @@ RV-Predict Run
 
 .. code-block:: none
 
-    rv-predict -jar examples/SpringExample.jar
-
     ----------------Instrumented execution to record the trace-----------------
+    Log directory: /tmp/rv-predict3777313530719533961
+    Finished retransforming preloaded classes.
     log4j:WARN No appenders could be found for logger (org.springframework.context.support.ClassPathXmlApplicationContext).
     log4j:WARN Please initialize the log4j system properly.
     log4j:WARN See http://logging.apache.org/log4j/1.2/faq.html#noconfig for more info.
     Hello ! World
-    1
+    0
+    Data race on field HelloWorld.x: {{{
+        Concurrent read in thread T10 (locks held: {})
+     ---->  at HelloWorld$MyThread.run(HelloWorld.java:40)
+        T10 is created by T1
+            at HelloWorld.printHello(HelloWorld.java:19)
 
-    -------------------------Logging phase completed.--------------------------
-    Race on field HelloWorld.x between:
-            HelloWorld$MyThread.run(HelloWorld.java:40)
-            HelloWorld.printHello(HelloWorld.java:23)
+        Concurrent write in thread T1 (locks held: {Monitor@57af006c})
+     ---->  at HelloWorld.printHello(HelloWorld.java:23)
+            - locked Monitor@57af006c at HelloWorld.printHello(HelloWorld.java:21) 
+        T1 is the main thread
+    }}}
 
 
 .. _Spring Framework: http://projects.spring.io/spring-framework/

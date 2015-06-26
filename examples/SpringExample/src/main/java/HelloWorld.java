@@ -20,7 +20,7 @@ public class HelloWorld {
 
         synchronized(lock)
         {
-            x=0;//race here
+            x=1;//race here
         }
 
     }
@@ -33,11 +33,11 @@ public class HelloWorld {
 
             synchronized(lock)
             {
-                x++;
+                x=0;
             }
 
             //race here, may throw divide by zero exception
-            System.out.println(1/x);
+            System.out.println(x);
 
         }
     }

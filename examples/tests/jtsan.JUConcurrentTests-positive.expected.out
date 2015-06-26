@@ -5,3 +5,9 @@
 (?s)(.*)Data race on field jtsan.ThreadRunner.sharedVar: \{\{\{(.*)---->  at jtsan.JUConcurrentTests\$3.thread1\(JUConcurrentTests.java:130\)(.*)---->  at jtsan.JUConcurrentTests\$3.thread1\(JUConcurrentTests.java:131\)(.*)\}\}\}
 
 (?s)(.*)Data race on field jtsan.ThreadRunner.sharedVar: \{\{\{(.*)---->  at jtsan.JUConcurrentTests\$4.thread1\(JUConcurrentTests.java:160\)(.*)---->  at jtsan.JUConcurrentTests\$4.thread2\(JUConcurrentTests.java:168\)(.*)\}\}\}
+
+(?s)(.*)Data race on field jtsan.ThreadRunner.sharedVar: \{\{\{(.*)---->  at jtsan.JUConcurrentTests\$5.thread1\(JUConcurrentTests.java:188\)(.*)---->  at jtsan.JUConcurrentTests\$5.thread2\(JUConcurrentTests.java:199\)(.*)\}\}\}
+
+(?s)(.*)Data race on field jtsan.ThreadRunner.sharedVar: \{\{\{(.*)---->  at jtsan.JUConcurrentTests\$5.thread2\(JUConcurrentTests.java:199\)(.*)---->  at jtsan.JUConcurrentTests\$5.thread3\(JUConcurrentTests.java:206\)(.*)\}\}\}
+
+(?s)(.*)Data race on field jtsan.ThreadRunner.sharedVar: \{\{\{(.*)---->  at jtsan.JUConcurrentTests\$5.thread1\(JUConcurrentTests.java:188\)(.*)---->  at jtsan.JUConcurrentTests\$5.thread3\(JUConcurrentTests.java:206\)(.*)\}\}\}

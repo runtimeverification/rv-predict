@@ -171,6 +171,43 @@ public class JUConcurrentTests {
         };
     }
 
+    @RaceTest(expectRace = false,
+            description = "No HB relation imposed by BlockingQueue")
+    public void blockingQueueWrong() {
+        new ThreadRunner(3) {
+
+            LinkedBlockingQueue<Integer> bq;
+
+            @Override
+            public void setUp() {
+                bq = new LinkedBlockingQueue<>();
+            }
+
+            @Override
+            public void thread1() {
+                sharedVar = 1;
+                try {
+                    bq.put(1);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException("Exception in blockingQueueWrong test", ex);
+                }
+            }
+
+            @Override
+            public void thread2() {
+                if (!bq.contains(2)) {
+                    sharedVar = 2;
+                }
+            }
+
+            @Override
+            public void thread3() {
+                if (!bq.remove(2)) {
+                    sharedVar = 3;
+                }
+            }
+        };
+    }
 
     //------------------ Negative tests ---------------------
 
@@ -258,24 +295,28 @@ public class JUConcurrentTests {
     }
 
     @RaceTest(expectRace = false,
-            description = "Work with LinkedBlockingQueue. Two readers, two writers")
+            description = "Test HB relation imposed by LinkedBlockingQueue")
     public void linkedBlockingQueue() {
-        final int iter = 10;
-        new ThreadRunner(4) {
+        new ThreadRunner(2) {
 
             LinkedBlockingQueue<Integer> lbq;
 
+            int x, y, z;
+
             @Override
             public void setUp() {
-                lbq = new LinkedBlockingQueue<>();
+                lbq = new LinkedBlockingQueue<>(1);
             }
 
             @Override
             public void thread1() {
                 try {
-                    for (int i = 0; i < iter; i++) {
-                        lbq.put(i);
-                    }
+                    x = 1;
+                    lbq.put(1);
+                    y = 1;
+                    lbq.put(1);
+                    z = 1;
+                    lbq.put(1);
                 } catch (InterruptedException ex) {
                     throw new RuntimeException("Exception in linkedBlockingQueue test", ex);
                 }
@@ -284,24 +325,18 @@ public class JUConcurrentTests {
             @Override
             public void thread2() {
                 try {
-                    for (int i = 0; i < iter; i++) {
-                        Integer o = lbq.take();
-                    }
+                    lbq.take();
                 } catch (InterruptedException ex) {
                     throw new RuntimeException("Exception in linkedBlockingQueue test", ex);
                 }
-            }
+                x = 2;
 
-            @Override
-            public void thread3() {
-                thread1();
-            }
+                while (!lbq.remove(1)) {}
+                y = 2;
 
-            @Override
-            public void thread4() {
-                thread2();
+                while (!lbq.contains(1)) {}
+                z = 2;
             }
-
         };
     }
 
@@ -824,6 +859,7 @@ public class JUConcurrentTests {
             tests.differentLocksWW2();
             tests.cyclicBarrierWrong();
             tests.lockNeMonitor();
+            tests.blockingQueueWrong();
         } else {
             // negative tests
             tests.arrayBlockingQueue(); // testing the internal of ABQ

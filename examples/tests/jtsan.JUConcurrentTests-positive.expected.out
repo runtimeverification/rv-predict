@@ -11,3 +11,5 @@
 (?s)(.*)Data race on field jtsan.ThreadRunner.sharedVar: \{\{\{(.*)---->  at jtsan.JUConcurrentTests\$5.thread2\(JUConcurrentTests.java:199\)(.*)---->  at jtsan.JUConcurrentTests\$5.thread3\(JUConcurrentTests.java:206\)(.*)\}\}\}
 
 (?s)(.*)Data race on field jtsan.ThreadRunner.sharedVar: \{\{\{(.*)---->  at jtsan.JUConcurrentTests\$5.thread1\(JUConcurrentTests.java:188\)(.*)---->  at jtsan.JUConcurrentTests\$5.thread3\(JUConcurrentTests.java:206\)(.*)\}\}\}
+
+(?s)(.*)Data race on field jtsan.ThreadRunner.sharedVar: \{\{\{(.*)---->  at jtsan.JUConcurrentTests\$6.thread1\(JUConcurrentTests.java:226\)(.*)---->  at jtsan.JUConcurrentTests\$6.thread2\(JUConcurrentTests.java:237\)(.*)\}\}\}

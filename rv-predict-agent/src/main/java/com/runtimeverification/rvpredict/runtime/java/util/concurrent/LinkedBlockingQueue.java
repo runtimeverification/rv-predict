@@ -196,6 +196,8 @@ public class LinkedBlockingQueue<E> extends java.util.concurrent.LinkedBlockingQ
     }
 
     private static int calcElementId(Node<?> node) {
+        if (node.item == null) 
+            throw new NullPointerException();
         return System.identityHashCode(node) ^ System.identityHashCode(node.item);
     }
     

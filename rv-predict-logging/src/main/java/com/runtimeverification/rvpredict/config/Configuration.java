@@ -117,8 +117,9 @@ public class Configuration implements Constants {
         "java/util/Iterator"
     };
 
-    public final static Set<String> MUST_REPLACE = new HashSet<>(
-            Arrays.asList("java/util/concurrent/LinkedBlockingQueue"));
+    public final static Set<String> MUST_REPLACE = new HashSet<>(Arrays.asList(
+            "java/util/concurrent/ArrayBlockingQueue", 
+            "java/util/concurrent/LinkedBlockingQueue"));
 
     public final static List<Pattern> MUST_INCLUDES;
     static {
@@ -128,7 +129,6 @@ public class Configuration implements Constants {
                 "java/util/concurrent/Semaphore$NonfairSync",
                 "java/util/concurrent/CountDownLatch$Sync",
                 "java/util/concurrent/CyclicBarrier",
-                "java/util/concurrent/ArrayBlockingQueue",
                 "java/util/concurrent/FutureTask"
         };
         MUST_INCLUDES = getDefaultPatterns(mustIncludes);

@@ -140,6 +140,7 @@
         <arg key="-cp" value="basic.jar" />
         <arg value="jtsan.JUConcurrentTests" />
         <arg value="negative" />
+        <rvarg key="--maxlen" value="3000" />
         <rvarg value="--stacks" />
     </test>
 

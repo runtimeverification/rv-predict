@@ -145,14 +145,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             return;
         }
 
-        // Temporary hack: do not instrument any field access in FutureTask
-        // because it uses Unsafe intrinsics extensively
-        // TODO(YilongL): get rid of this hack
-        if (className.equals("java/util/concurrent/FutureTask")) {
-            mv.visitFieldInsn(opcode, owner, name, desc);
-            return;
-        }
-
         int varId = RVPredictRuntime.metadata.getVariableId(classFile.getClassName(), name);
         int locId = getCrntLocId();
 

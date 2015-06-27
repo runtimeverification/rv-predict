@@ -129,8 +129,7 @@ public class Configuration implements Constants {
                 "java/util/concurrent/Semaphore$FairSync",
                 "java/util/concurrent/Semaphore$NonfairSync",
                 "java/util/concurrent/CountDownLatch$Sync",
-                "java/util/concurrent/CyclicBarrier",
-                "java/util/concurrent/FutureTask"
+                "java/util/concurrent/CyclicBarrier"
         };
         MUST_INCLUDES = getDefaultPatterns(mustIncludes);
     }

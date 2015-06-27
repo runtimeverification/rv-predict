@@ -121,16 +121,18 @@ public class Configuration implements Constants {
             "java/util/concurrent/ArrayBlockingQueue", 
             "java/util/concurrent/LinkedBlockingQueue",
             "java/util/concurrent/SynchronousQueue",
+            "java/util/concurrent/CountDownLatch",
+            "java/util/concurrent/CyclicBarrier",
             "java/util/concurrent/FutureTask"));
 
     public final static List<Pattern> MUST_INCLUDES;
     static {
         String[] mustIncludes = new String[] {
-                "java/util/concurrent/Semaphore$Sync",
-                "java/util/concurrent/Semaphore$FairSync",
-                "java/util/concurrent/Semaphore$NonfairSync",
-                "java/util/concurrent/CountDownLatch$Sync",
-                "java/util/concurrent/CyclicBarrier"
+            "java/util/concurrent/Semaphore$Sync",
+            "java/util/concurrent/Semaphore$FairSync",
+            "java/util/concurrent/Semaphore$NonfairSync",
+            "com/runtimeverification/rvpredict/runtime/java/util/concurrent/CountDownLatch$Sync",
+            "com/runtimeverification/rvpredict/runtime/java/util/concurrent/CyclicBarrier"
         };
         MUST_INCLUDES = getDefaultPatterns(mustIncludes);
     }

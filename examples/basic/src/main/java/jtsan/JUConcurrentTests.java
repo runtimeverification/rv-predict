@@ -16,7 +16,6 @@
 /* Copyright (c) 2014 Runtime Verification Inc. All Rights Reserved. */
 
 package jtsan;
-
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
@@ -24,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Exchanger;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
@@ -854,6 +854,48 @@ public class JUConcurrentTests {
             }
         };
     }
+    
+    @RaceTest(expectRace = false, description = "Test Exchanger")
+    public void exchanger() {
+        final Exchanger<Integer> exchanger = new Exchanger<>();
+        final int iteration = 10;
+        new ThreadRunner(2) {
+
+            int x, y;
+            
+            @Override
+            public void thread1() {
+                try {
+                    for (int i = 0; i < iteration; i++) {
+                        if (i % 2 == 0) {
+                            x++;
+                        } else {
+                            y++;
+                        }
+                        exchanger.exchange(0);
+                    }
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            @Override
+            public void thread2() {
+                try {
+                    for (int i = 0; i < iteration; i++) {
+                        if (i % 2 == 0) {
+                            y++;
+                        } else {
+                            x++;
+                        }
+                        exchanger.exchange(0);
+                    }
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+    }
 
     public static void main(String[] args) {
         JUConcurrentTests tests = new JUConcurrentTests();
@@ -885,6 +927,7 @@ public class JUConcurrentTests {
             tests.fifoMutexUser();
             tests.futureTask();
             tests.synchronousQueue();
+            tests.exchanger();
         }
     }
 

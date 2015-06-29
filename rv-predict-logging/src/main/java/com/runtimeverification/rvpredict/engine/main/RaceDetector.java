@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
 import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.violation.Race;
 
 /**
@@ -14,7 +16,7 @@ import com.runtimeverification.rvpredict.violation.Race;
  *
  * @author YilongL
  */
-public class RaceDetector {
+public class RaceDetector implements Constants {
 
     private final Configuration config;
 
@@ -41,6 +43,8 @@ public class RaceDetector {
                                   e1.isReadOrWrite() && e2.isWrite())
                                   && e1.getAddr() == e2.getAddr()
                                   && !trace.metadata().isVolatile(e1.getAddr())
+                                  && !trace.metadata().getLocationSig(e1.getLocId())
+                                      .startsWith("java.util.concurrent")
                                   && !trace.isInsideClassInitializer(e1)
                                   && !trace.isInsideClassInitializer(e2)) {
                               Race race = new Race(e1, e2, trace);

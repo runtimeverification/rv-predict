@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.instrumentation.transformer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
@@ -20,6 +21,8 @@ import static com.runtimeverification.rvpredict.instrumentation.InstrumentUtils.
 import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
 
 public class MethodTransformer extends MethodVisitor implements Opcodes {
+
+    private static final String RVPREDICT_RUNTIME_PKG_PREFIX = "com/runtimeverification/rvpredict/runtime/";
 
     private final GeneratorAdapter mv;
 
@@ -109,6 +112,19 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         }
         push(getCrntLocId());
         invokeRtnMethod(isEnter ? LOG_MONITOR_ENTER : LOG_MONITOR_EXIT);
+    }
+
+    @Override
+    public void visitTypeInsn(int opcode, String type) {
+        if (opcode == NEW) {
+            if (Configuration.MUST_REPLACE.contains(type)) {
+                String replace = RVPREDICT_RUNTIME_PKG_PREFIX + type;
+                if (!replace.equals(className)) {
+                    type = replace;
+                }
+            }
+        }
+        mv.visitTypeInsn(opcode, type);
     }
 
     @Override
@@ -205,6 +221,15 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+        if (Configuration.MUST_REPLACE.contains(owner) && "<init>".equals(name)) {
+            String replace = RVPREDICT_RUNTIME_PKG_PREFIX + owner;
+            if (!replace.equals(className)) {
+                /* substitute standard library class with our modified version
+                 * to avoid polluting the standard library */
+                owner = replace;
+            }
+        }
+
         boolean isSelfCtorCall = false;
         if ("<init>".equals(methodName) && "<init>".equals(name)) {
             numOfCtorCall++;

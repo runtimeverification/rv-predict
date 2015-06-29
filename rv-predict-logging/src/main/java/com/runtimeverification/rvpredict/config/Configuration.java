@@ -73,51 +73,55 @@ public class Configuration implements Constants {
      * Packages/classes that are excluded from instrumentation by default. These are
      * configurable by the users through the <code>--exclude</code> command option.
      */
-     private static String[] DEFAULT_EXCLUDES = new String[] {
-            "javax.*",
-            "sunw.*",
-            "com.sun.*",
-            "com.ibm.*",
-            "com.apple.*",
-            "apple.awt.*",
-            "org.xml.*",
-            "jdk.internal.*"
+    private static String[] DEFAULT_EXCLUDES = new String[] {
+        "javax.*",
+        "sunw.*",
+        "com.sun.*",
+        "com.ibm.*",
+        "com.apple.*",
+        "apple.awt.*",
+        "org.xml.*",
+        "jdk.internal.*"
     };
 
-     /**
-      * Packages/classes that need to be excluded from instrumentation. These are
-      * not configurable by the users because including them for instrumentation
-      * almost certainly leads to crash.
-      */
-     public static List<Pattern> IGNORES;
-     static {
-         String [] ignores = new String[] {
-                 COM_RUNTIMEVERIFICATION_RVPREDICT,
+    /**
+     * Packages/classes that need to be excluded from instrumentation. These are
+     * not configurable by the users because including them for instrumentation
+     * almost certainly leads to crash.
+     */
+    public static List<Pattern> IGNORES;
+    static {
+        String [] ignores = new String[] {
+                COM_RUNTIMEVERIFICATION_RVPREDICT,
 
-                 // lz4 library cannot be repackaged because it hard-codes some
-                 // of its class names in the implementation
-                 "net/jpountz/",
+                // lz4 library cannot be repackaged because it hard-codes some
+                // of its class names in the implementation
+                "net/jpountz/",
 
-                 // z3 native library cannot be repackaged
-                 "com/microsoft/z3",
+                // z3 native library cannot be repackaged
+                "com/microsoft/z3",
 
-                 // array type
-                 "[",
+                // array type
+                "[",
 
-                 // Basics of the JDK that everything else is depending on
-                 "sun/",
-                 "java/"
-         };
-         IGNORES = getDefaultPatterns(ignores);
-     }
+                // Basics of the JDK that everything else is depending on
+                "sun/",
+                "java/"
+        };
+        IGNORES = getDefaultPatterns(ignores);
+    }
 
-     public static String[] MOCKS = new String[] {
-         "java/util/Collection",
-         "java/util/Map",
-         "java/util/Iterator"
-     };
+    public final static String[] MOCKS = new String[] {
+        "java/util/Collection",
+        "java/util/Map",
+        "java/util/Iterator"
+    };
 
-    public static List<Pattern> MUST_INCLUDES;
+    public final static Set<String> MUST_REPLACE = new HashSet<>(Arrays.asList(
+            "java/util/concurrent/ArrayBlockingQueue", 
+            "java/util/concurrent/LinkedBlockingQueue"));
+
+    public final static List<Pattern> MUST_INCLUDES;
     static {
         String[] mustIncludes = new String[] {
                 "java/util/concurrent/Semaphore$Sync",
@@ -125,8 +129,6 @@ public class Configuration implements Constants {
                 "java/util/concurrent/Semaphore$NonfairSync",
                 "java/util/concurrent/CountDownLatch$Sync",
                 "java/util/concurrent/CyclicBarrier",
-                "java/util/concurrent/ArrayBlockingQueue",
-                "java/util/concurrent/LinkedBlockingQueue",
                 "java/util/concurrent/FutureTask"
         };
         MUST_INCLUDES = getDefaultPatterns(mustIncludes);

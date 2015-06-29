@@ -40,7 +40,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
@@ -1033,6 +1035,41 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
+     * Mocks the high-level happens-before relation between
+     * {@link BlockingQueue} actions:
+     *
+     * <pre>
+     * Actions in a thread prior to placing an object into any concurrent
+     * collection happen-before actions subsequent to the access or removal of
+     * that element from the collection in another thread.
+     * </pre>
+     *
+     * @param queue
+     *            the blocking queue
+     * @param elementId
+     *            an unique identifier of the element to add
+     * @param value
+     *            the number of that element in the blocking queue
+     * @param locId
+     *            the location ID
+     */
+    public static void rvPredictBlockingQueueAddElement(BlockingQueue queue, int elementId,
+            int value, int locId) {
+        saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(queue), -elementId, ++value);
+    }
+
+    public static void rvPredictBlockingQueueAccessElement(BlockingQueue queue, int elementId,
+            int value, int locId) {
+        saveMemAccEvent(EventType.READ, locId, System.identityHashCode(queue), -elementId, value);
+    }
+
+    public static void rvPredictBlockingQueueRemoveElement(BlockingQueue queue, int elementId,
+            int value, int locId) {
+        saveMemAccEvent(EventType.READ, locId, System.identityHashCode(queue), -elementId, value--);
+        saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(queue), -elementId, value);
+    }
+
+    /**
      * Logs the events produced by invoking
      * {@code System#arraycopy(Object, int, Object, int, int)}.
      *
@@ -1458,6 +1495,8 @@ public final class RVPredictRuntime implements Constants {
     public static void mockCollectionAccess(Object collection, boolean isWrite, int locId) {
         String className = collection.getClass().getName();
         if (collection instanceof Vector || collection instanceof Hashtable
+                || collection instanceof BlockingQueue
+                || collection instanceof ConcurrentMap
                 || className.startsWith("java.util.concurrent.")) {
             /* non-wrapper thread-safe collections */
             return;
@@ -1576,7 +1615,7 @@ public final class RVPredictRuntime implements Constants {
         logger.log(eventType, locId, addrl, addrr, value, 0);
     }
 
-    public static void saveThreadSyncEvent(EventType eventType, int locId, long tid) {
+    private static void saveThreadSyncEvent(EventType eventType, int locId, long tid) {
         logger.log(eventType, locId, (int) (tid >> 32), (int) tid, 0, 0);
     }
 

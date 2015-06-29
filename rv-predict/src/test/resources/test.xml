@@ -158,6 +158,19 @@
         <rvarg value="--stacks" />
     </test>
 
+    <test name="jtsan.ExecutorTests-positive">
+        <arg key="-cp" value="basic.jar" />
+        <arg value="jtsan.ExecutorTests" />
+        <arg value="positive" />
+        <rvarg value="--stacks" />
+    </test>
+    <test name="jtsan.ExecutorTests-negative">
+        <arg key="-cp" value="basic.jar" />
+        <arg value="jtsan.ExecutorTests" />
+        <arg value="negative" />
+        <rvarg value="--stacks" />
+    </test>
+
     <test name="instrumentation.InstrumentationTests">
         <arg key="-cp" value="basic.jar" />
         <arg value="instrumentation.InstrumentationTests" />

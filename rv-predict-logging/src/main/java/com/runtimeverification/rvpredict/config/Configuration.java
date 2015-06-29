@@ -111,7 +111,10 @@ public class Configuration implements Constants {
             "java/util/concurrent/CountDownLatch",
             "java/util/concurrent/CyclicBarrier",
             "java/util/concurrent/Exchanger",
-            "java/util/concurrent/FutureTask"));
+            "java/util/concurrent/FutureTask",
+            "java/util/concurrent/ThreadPoolExecutor",
+            "java/util/concurrent/RejectedExecutionHandler",
+            "java/util/concurrent/Executors"));
 
     public final static List<Pattern> MUST_INCLUDES;
     static {

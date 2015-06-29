@@ -1557,7 +1557,7 @@ public final class RVPredictRuntime implements Constants {
         logger.log(eventType, locId, addrl, addrr, value, 0);
     }
 
-    private static void saveThreadSyncEvent(EventType eventType, int locId, long tid) {
+    public static void saveThreadSyncEvent(EventType eventType, int locId, long tid) {
         logger.log(eventType, locId, (int) (tid >> 32), (int) tid, 0, 0);
     }
 

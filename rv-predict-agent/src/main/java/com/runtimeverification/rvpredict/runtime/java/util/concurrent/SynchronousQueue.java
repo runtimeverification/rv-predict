@@ -36,6 +36,7 @@
 
 package com.runtimeverification.rvpredict.runtime.java.util.concurrent;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
@@ -85,13 +86,13 @@ import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
  * @author Doug Lea and Bill Scherer and Michael Scott
  * @param <E> the type of elements held in this collection
  */
-public class SynchronousQueue<E> extends java.util.concurrent.SynchronousQueue<E>
-    implements java.io.Serializable {
+public class SynchronousQueue<E> extends AbstractQueue<E>
+    implements BlockingQueue<E>, java.io.Serializable {
     private static final long serialVersionUID = -3223113410248163686L;
 
     private static final int RVPREDICT_SYNCQ_LOC_ID = RVPredictRuntime.metadata
             .getLocationId("java.util.concurrent.SynchronousQueue(SynchronousQueue.java:n/a)");
-    
+
     // RV-Predict logging methods
 
     private final transient Map<E, AtomicBoolean> _rvpredict_transfer_elem_map = new ConcurrentHashMap<>();
@@ -111,7 +112,7 @@ public class SynchronousQueue<E> extends java.util.concurrent.SynchronousQueue<E
                 System.identityHashCode(elemAdded));
         elemAdded.set(true);
     }
-    
+
     private void _rvpredict_remove_element(E e) {
         AtomicBoolean elemAdded;
         while ((elemAdded = _rvpredict_transfer_elem_map.remove(e)) == null)
@@ -339,7 +340,7 @@ public class SynchronousQueue<E> extends java.util.concurrent.SynchronousQueue<E
 
         /** The head (top) of the stack */
         volatile SNode head;
-        
+
         boolean casHead(SNode h, SNode nh) {
             return h == head &&
                 UNSAFE.compareAndSwapObject(this, headOffset, h, nh);
@@ -360,7 +361,7 @@ public class SynchronousQueue<E> extends java.util.concurrent.SynchronousQueue<E
         }
 
         final transient SynchronousQueue<E> _rvpredict_sync_queue;
-        
+
         TransferStack(SynchronousQueue<E> _rvpredict_sync_queue) {
             this._rvpredict_sync_queue = _rvpredict_sync_queue;
         }
@@ -658,8 +659,8 @@ public class SynchronousQueue<E> extends java.util.concurrent.SynchronousQueue<E
          * when it was cancelled.
          */
         transient volatile QNode cleanMe;
-        
-        final transient SynchronousQueue<E> _rvpredict_sync_queue; 
+
+        final transient SynchronousQueue<E> _rvpredict_sync_queue;
 
         TransferQueue(SynchronousQueue<E> _rvpredict_sync_queue) {
             QNode h = new QNode(null, false); // initialize to dummy node.

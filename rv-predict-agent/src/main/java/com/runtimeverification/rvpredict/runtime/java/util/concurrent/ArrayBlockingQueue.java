@@ -35,9 +35,11 @@
 
 package com.runtimeverification.rvpredict.runtime.java.util.concurrent;
 
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.AbstractQueue;
 import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -86,8 +88,8 @@ import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
  */
-public class ArrayBlockingQueue<E> extends java.util.concurrent.ArrayBlockingQueue<E>
-        implements java.io.Serializable {
+public class ArrayBlockingQueue<E> extends AbstractQueue<E>
+    implements BlockingQueue<E>, java.io.Serializable {
 
     /**
      * Serialization ID. This class relies on default serialization
@@ -96,7 +98,7 @@ public class ArrayBlockingQueue<E> extends java.util.concurrent.ArrayBlockingQue
      * necessary here.
      */
     private static final long serialVersionUID = -817911632652898426L;
-    
+
     private static final int RVPREDICT_ABQ_LOC_ID = RVPredictRuntime.metadata
             .getLocationId("java.util.concurrent.ArrayBlockingQueue(ArrayBlockingQueue.java:n/a)");
 
@@ -132,7 +134,7 @@ public class ArrayBlockingQueue<E> extends java.util.concurrent.ArrayBlockingQue
      * iterator state.
      */
     transient Itrs itrs = null;
-    
+
     /**
      * Map from element in this queue to the number of its occurrences.
      * <p>
@@ -140,9 +142,9 @@ public class ArrayBlockingQueue<E> extends java.util.concurrent.ArrayBlockingQue
      * No additional synchronization is needed.
      */
     private final Map<Object, MutableInt> _rvpredict_elem_to_count = new IdentityHashMap<>();
-    
+
     // RV-Predict logging methods
-    
+
     private static int calcElementId(Object e) {
         checkNotNull(e);
         return System.identityHashCode(e);
@@ -154,12 +156,12 @@ public class ArrayBlockingQueue<E> extends java.util.concurrent.ArrayBlockingQue
                 count.intValue(), RVPREDICT_ABQ_LOC_ID);
         count.increment();
     }
-    
+
     private static void _rvpredict_access_element(ArrayBlockingQueue<?> queue, Object e) {
         RVPredictRuntime.rvPredictBlockingQueueAccessElement(queue, calcElementId(e),
                 queue._rvpredict_elem_to_count.get(e).getValue(), RVPREDICT_ABQ_LOC_ID);
     }
-    
+
     private static void _rvpredict_remove_element(ArrayBlockingQueue<?> queue, Object e) {
         MutableInt count = queue._rvpredict_elem_to_count.get(e);
         RVPredictRuntime.rvPredictBlockingQueueRemoveElement(queue, calcElementId(e),
@@ -197,7 +199,7 @@ public class ArrayBlockingQueue<E> extends java.util.concurrent.ArrayBlockingQue
         if (v == null)
             throw new NullPointerException();
     }
-    
+
     /**
      * Inserts element at current put position, advances, and signals.
      * Call only when holding lock.
@@ -301,7 +303,6 @@ public class ArrayBlockingQueue<E> extends java.util.concurrent.ArrayBlockingQue
      * @throws IllegalArgumentException if {@code capacity < 1}
      */
     public ArrayBlockingQueue(int capacity, boolean fair) {
-        super(1, true); // RVPREDICT: hack to bypass compilation error
         if (capacity <= 0)
             throw new IllegalArgumentException();
         this.items = new Object[capacity];

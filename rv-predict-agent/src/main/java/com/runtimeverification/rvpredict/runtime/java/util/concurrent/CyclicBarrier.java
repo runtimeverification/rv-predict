@@ -139,7 +139,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @author Doug Lea
  */
-public class CyclicBarrier extends java.util.concurrent.CyclicBarrier {
+public class CyclicBarrier {
     /**
      * Each use of the barrier is represented as a generation instance.
      * The generation changes whenever the barrier is tripped, or
@@ -278,7 +278,6 @@ public class CyclicBarrier extends java.util.concurrent.CyclicBarrier {
      * @throws IllegalArgumentException if {@code parties} is less than 1
      */
     public CyclicBarrier(int parties, Runnable barrierAction) {
-        super(1, null); // RVPredict: hack to bypass compilation error
         if (parties <= 0) throw new IllegalArgumentException();
         this.parties = parties;
         this.count = parties;

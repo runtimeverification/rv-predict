@@ -38,6 +38,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.LockSupport;
@@ -69,8 +70,8 @@ import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
  * @author Doug Lea
  * @param <V> The result type returned by this FutureTask's {@code get} methods
  */
-public class FutureTask<V> extends java.util.concurrent.FutureTask<V> {
-    
+public class FutureTask<V> implements RunnableFuture<V> {
+
     private static final int RVPREDICT_FUTURE_TASK_LOC_ID = RVPredictRuntime.metadata
             .getLocationId("java.util.concurrent.FutureTask(FutureTask.java:n/a)");
     private static final int RVPREDICT_FUTURE_TASK_OUTCOME = RVPredictRuntime.metadata
@@ -121,15 +122,15 @@ public class FutureTask<V> extends java.util.concurrent.FutureTask<V> {
     private volatile Thread runner;
     /** Treiber stack of waiting threads */
     private volatile WaitNode waiters;
-    
+
     // RV-Predict logging methods
-    
+
     private void _rvpredict_set_outcome() {
         RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_FUTURE_TASK_LOC_ID,
                 System.identityHashCode(this), -RVPREDICT_FUTURE_TASK_OUTCOME,
                 System.identityHashCode(outcome));
     }
-    
+
     private void _rvpredict_get_outcome() {
         RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_FUTURE_TASK_LOC_ID,
                 System.identityHashCode(this), -RVPREDICT_FUTURE_TASK_OUTCOME,
@@ -161,7 +162,6 @@ public class FutureTask<V> extends java.util.concurrent.FutureTask<V> {
      * @throws NullPointerException if the callable is null
      */
     public FutureTask(Callable<V> callable) {
-        super(callable); // RVPredict: hack to bypass compilation error
         if (callable == null)
             throw new NullPointerException();
         this.callable = callable;

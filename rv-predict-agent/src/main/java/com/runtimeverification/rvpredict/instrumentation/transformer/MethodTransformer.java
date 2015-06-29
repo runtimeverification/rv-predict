@@ -8,6 +8,7 @@ import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
+import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import org.objectweb.asm.Label;
@@ -21,8 +22,6 @@ import static com.runtimeverification.rvpredict.instrumentation.InstrumentUtils.
 import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
 
 public class MethodTransformer extends MethodVisitor implements Opcodes {
-
-    private static final String RVPREDICT_RUNTIME_PKG_PREFIX = "com/runtimeverification/rvpredict/runtime/";
 
     private final GeneratorAdapter mv;
 
@@ -114,15 +113,16 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         invokeRtnMethod(isEnter ? LOG_MONITOR_ENTER : LOG_MONITOR_EXIT);
     }
 
+    private boolean replaceStandardLibraryClass(String type) {
+        // TODO(YilongL): this might not be rigorous enough
+        return Configuration.MUST_REPLACE.contains(type)
+                && !className.startsWith(Constants.RVPREDICT_RUNTIME_PKG_PREFIX);
+    }
+
     @Override
     public void visitTypeInsn(int opcode, String type) {
-        if (opcode == NEW) {
-            if (Configuration.MUST_REPLACE.contains(type)) {
-                String replace = RVPREDICT_RUNTIME_PKG_PREFIX + type;
-                if (!replace.equals(className)) {
-                    type = replace;
-                }
-            }
+        if (opcode == NEW && replaceStandardLibraryClass(type)) {
+            type = Constants.RVPREDICT_RUNTIME_PKG_PREFIX + type;
         }
         mv.visitTypeInsn(opcode, type);
     }
@@ -213,13 +213,8 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-        if (Configuration.MUST_REPLACE.contains(owner) && "<init>".equals(name)) {
-            String replace = RVPREDICT_RUNTIME_PKG_PREFIX + owner;
-            if (!replace.equals(className)) {
-                /* substitute standard library class with our modified version
-                 * to avoid polluting the standard library */
-                owner = replace;
-            }
+        if (replaceStandardLibraryClass(owner)) {
+            owner = Constants.RVPREDICT_RUNTIME_PKG_PREFIX + owner;
         }
 
         boolean isSelfCtorCall = false;

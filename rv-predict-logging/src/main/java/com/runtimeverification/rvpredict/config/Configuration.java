@@ -77,7 +77,7 @@ public class Configuration implements Constants {
     public static List<Pattern> IGNORES;
     static {
         String [] ignores = new String[] {
-                COM_RUNTIMEVERIFICATION_RVPREDICT,
+                RVPREDICT_PKG_PREFIX,
 
                 // lz4 library cannot be repackaged because it hard-codes some
                 // of its class names in the implementation

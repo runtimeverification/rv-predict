@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.instrumentation;
+package com.runtimeverification.rvpredict.instrument;
 
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 import org.objectweb.asm.commons.Method;

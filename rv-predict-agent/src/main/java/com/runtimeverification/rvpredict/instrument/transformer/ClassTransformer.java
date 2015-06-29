@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.instrumentation.transformer;
+package com.runtimeverification.rvpredict.instrument.transformer;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -9,7 +9,7 @@ import org.objectweb.asm.commons.JSRInlinerAdapter;
 import org.objectweb.asm.util.CheckClassAdapter;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.instrumentation.InstrumentUtils;
+import com.runtimeverification.rvpredict.instrument.InstrumentUtils;
 
 public class ClassTransformer extends ClassVisitor implements Opcodes {
 

@@ -35,11 +35,14 @@
  */
 
 package com.runtimeverification.rvpredict.runtime.java.util.concurrent;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.*;
 
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 /**
@@ -90,12 +93,8 @@ public class SynchronousQueue<E> extends java.util.concurrent.SynchronousQueue<E
             .getLocationId("java.util.concurrent.SynchronousQueue(SynchronousQueue.java:n/a)");
     
     // RV-Predict logging methods
-    
-    /**
-     * Ensures that {@link SynchronousQueue#_rvpredict_add_element(Object)} gets
-     * to log before {@link SynchronousQueue#_rvpredict_remove_element(Object)}.
-     */
-    private volatile transient Object _rvpredict_transfer_elem = null;
+
+    private final transient Map<E, AtomicBoolean> _rvpredict_transfer_elem_map = new ConcurrentHashMap<>();
 
     private static int calcElementId(Object e) {
         if (e == null)
@@ -104,20 +103,24 @@ public class SynchronousQueue<E> extends java.util.concurrent.SynchronousQueue<E
     }
 
     private void _rvpredict_add_element(E e) {
-        if (_rvpredict_transfer_elem != null)
-            throw new IllegalStateException();
-        RVPredictRuntime.rvPredictBlockingQueueAddElement(this, calcElementId(e), 0,
-                RVPREDICT_SYNCQ_LOC_ID);
-        _rvpredict_transfer_elem = e;
+        AtomicBoolean elemAdded = new AtomicBoolean(false);
+        while (_rvpredict_transfer_elem_map.putIfAbsent(e, elemAdded) != null)
+            Thread.yield();
+        RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_SYNCQ_LOC_ID,
+                System.identityHashCode(this), calcElementId(e),
+                System.identityHashCode(elemAdded));
+        elemAdded.set(true);
     }
     
     private void _rvpredict_remove_element(E e) {
-        while (_rvpredict_transfer_elem == null) Thread.yield();
-        if (_rvpredict_transfer_elem != e) 
-            throw new IllegalStateException();
-        RVPredictRuntime.rvPredictBlockingQueueRemoveElement(this, calcElementId(e), 1,
-                RVPREDICT_SYNCQ_LOC_ID);
-        _rvpredict_transfer_elem = null;
+        AtomicBoolean elemAdded;
+        while ((elemAdded = _rvpredict_transfer_elem_map.remove(e)) == null)
+            Thread.yield();
+        while (!elemAdded.get())
+            Thread.yield();
+        RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_SYNCQ_LOC_ID,
+                System.identityHashCode(this), calcElementId(e),
+                System.identityHashCode(elemAdded));
     }
 
     /*
@@ -758,12 +761,13 @@ public class SynchronousQueue<E> extends java.util.concurrent.SynchronousQueue<E
                             s.item = s;
                         s.waiter = null;
                     }
-                    if (x != null) {
-                        _rvpredict_sync_queue._rvpredict_remove_element((E)x);
+                    E _rvpredict_elem = (x != null) ? (E)x : e;
+                    if (isData) {
+                        _rvpredict_sync_queue._rvpredict_add_element(_rvpredict_elem);
                     } else {
-                        _rvpredict_sync_queue._rvpredict_add_element(e);
+                        _rvpredict_sync_queue._rvpredict_remove_element(_rvpredict_elem);
                     }
-                    return (x != null) ? (E)x : e;
+                    return _rvpredict_elem;
                 } else {                            // complementary-mode
                     QNode m = h.next;               // node to fulfill
                     if (t != tail || m == null || h != head)
@@ -779,12 +783,13 @@ public class SynchronousQueue<E> extends java.util.concurrent.SynchronousQueue<E
 
                     advanceHead(h, m);              // successfully fulfilled
                     LockSupport.unpark(m.waiter);
-                    if (x != null) {
-                        _rvpredict_sync_queue._rvpredict_remove_element((E)x);
+                    E _rvpredict_elem = (x != null) ? (E)x : e;
+                    if (isData) {
+                        _rvpredict_sync_queue._rvpredict_add_element(_rvpredict_elem);
                     } else {
-                        _rvpredict_sync_queue._rvpredict_add_element(e);
+                        _rvpredict_sync_queue._rvpredict_remove_element(_rvpredict_elem);
                     }
-                    return (x != null) ? (E)x : e;
+                    return _rvpredict_elem;
                 }
             }
         }

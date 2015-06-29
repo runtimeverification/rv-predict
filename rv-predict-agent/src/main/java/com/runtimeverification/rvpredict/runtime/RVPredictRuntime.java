@@ -1610,7 +1610,7 @@ public final class RVPredictRuntime implements Constants {
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
     }
 
-    private static void saveMemAccEvent(EventType eventType, int locId, int addrl, int addrr,
+    public static void saveMemAccEvent(EventType eventType, int locId, int addrl, int addrr,
             long value) {
         logger.log(eventType, locId, addrl, addrr, value, 0);
     }

@@ -820,13 +820,20 @@ public class JUConcurrentTests {
     @ExcludedTest(reason = "SynchronousQueue is not supported yet")
     @RaceTest(expectRace = false, description = "Test SynchronousQueue")
     public void synchronousQueue() {
-        final SynchronousQueue<String> queue = new SynchronousQueue<String>();
+        final SynchronousQueue<Integer> queue = new SynchronousQueue<>();
         new ThreadRunner(2) {
+            
+            int x, y, z;
+
             @Override
             public void thread1() {
                 try {
-                    sharedVar++;
-                    queue.put(new String("test"));
+                    x = 1;
+                    queue.put(1);
+                    y = 1;
+                    queue.put(1);
+                    z = 1;
+                    queue.put(1);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -835,8 +842,12 @@ public class JUConcurrentTests {
             @Override
             public void thread2() {
                 try {
-                    String s = queue.take();
-                    sharedVar++;
+                    queue.take();
+                    x = 2;
+                    queue.take();
+                    y = 2;
+                    queue.take();
+                    z = 2;
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -873,7 +884,7 @@ public class JUConcurrentTests {
             tests.concurrentHashMap();
             tests.fifoMutexUser();
             tests.futureTask();
-//            tests.synchronousQueue();
+            tests.synchronousQueue();
         }
     }
 

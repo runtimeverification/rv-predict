@@ -13,6 +13,7 @@ import org.objectweb.asm.Type;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
+import com.runtimeverification.rvpredict.util.Constants;
 
 public class InstrumentUtils implements Opcodes {
 
@@ -109,6 +110,28 @@ public class InstrumentUtils implements Opcodes {
 
         instrumentClass.put(cname, toInstrument);
         return toInstrument;
+    }
+
+    /**
+     * Returns a new string resulting from replacing all occurrences of
+     * {@link Configuration#MUST_REPLACE} in the old string with their
+     * {@code RV-Predict} counterparts.
+     *
+     * @param className
+     *            the internal name of the class being transformed
+     * @param literal
+     *            the string literal which represents an internal name, a type
+     *            descriptor, or a type signature
+     * @return the new string
+     */
+    public static String replaceStandardLibraryClass(String className, String literal) {
+        if (literal != null && !className.startsWith(Constants.RVPREDICT_RUNTIME_PKG_PREFIX)) {
+            for (String stdlibClass : Configuration.MUST_REPLACE) {
+                literal = literal.replace(stdlibClass, Constants.RVPREDICT_RUNTIME_PKG_PREFIX
+                        + stdlibClass);
+            }
+        }
+        return literal;
     }
 
 }

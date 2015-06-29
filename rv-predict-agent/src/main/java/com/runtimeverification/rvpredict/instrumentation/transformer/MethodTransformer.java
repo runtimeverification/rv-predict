@@ -3,14 +3,14 @@ package com.runtimeverification.rvpredict.instrumentation.transformer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.instrumentation.InstrumentUtils;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
-import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -113,22 +113,38 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         invokeRtnMethod(isEnter ? LOG_MONITOR_ENTER : LOG_MONITOR_EXIT);
     }
 
-    private boolean replaceStandardLibraryClass(String type) {
-        // TODO(YilongL): this might not be rigorous enough
-        return Configuration.MUST_REPLACE.contains(type)
-                && !className.startsWith(Constants.RVPREDICT_RUNTIME_PKG_PREFIX);
+    private String replaceStandardLibraryClass(String literal) {
+        return InstrumentUtils.replaceStandardLibraryClass(className, literal);
+    }
+
+    @Override
+    public void visitLocalVariable(String name, String desc, String signature, Label start,
+            Label end, int index) {
+        mv.visitLocalVariable(name, replaceStandardLibraryClass(desc),
+                replaceStandardLibraryClass(signature), start, end, index);
     }
 
     @Override
     public void visitTypeInsn(int opcode, String type) {
-        if (opcode == NEW && replaceStandardLibraryClass(type)) {
-            type = Constants.RVPREDICT_RUNTIME_PKG_PREFIX + type;
-        }
-        mv.visitTypeInsn(opcode, type);
+        mv.visitTypeInsn(opcode, replaceStandardLibraryClass(type));
+    }
+
+    @Override
+    public void visitInvokeDynamicInsn(String name, String desc, Handle bsm,
+            Object... bsmArgs) {
+        mv.visitInvokeDynamicInsn(name, replaceStandardLibraryClass(desc), bsm, bsmArgs);
+    }
+
+    @Override
+    public void visitMultiANewArrayInsn(String desc, int dims) {
+        mv.visitMultiANewArrayInsn(replaceStandardLibraryClass(desc), dims);
     }
 
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
+        owner = replaceStandardLibraryClass(owner);
+        desc = replaceStandardLibraryClass(desc);
+
         ClassFile classFile = resolveDeclaringClass(loader, owner, name);
         if (classFile == null) {
             System.err.printf("[Warning] field resolution failure; "
@@ -213,9 +229,8 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-        if (replaceStandardLibraryClass(owner)) {
-            owner = Constants.RVPREDICT_RUNTIME_PKG_PREFIX + owner;
-        }
+        owner = replaceStandardLibraryClass(owner);
+        desc = replaceStandardLibraryClass(desc);
 
         boolean isSelfCtorCall = false;
         if ("<init>".equals(methodName) && "<init>".equals(name)) {

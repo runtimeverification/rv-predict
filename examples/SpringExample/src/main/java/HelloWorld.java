@@ -36,7 +36,6 @@ public class HelloWorld {
                 x=0;
             }
 
-            //race here, may throw divide by zero exception
             System.out.println(x);
 
         }

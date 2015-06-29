@@ -73,8 +73,8 @@ observed:
 .. code-block:: none
 
     ----------------Instrumented execution to record the trace-----------------
-    Log directory: /tmp/rv-predict7274661192308018898
-    Finished retransforming preloaded classes.
+    [RV-Predict] Log directory: /tmp/rv-predict7274661192308018898
+    [RV-Predict] Finished retransforming preloaded classes.
     Bank system started
     loop: 2
     loop: 2
@@ -155,22 +155,21 @@ A race description usually follows the syntax
 
 .. code-block:: none
 
-    Data race on field <field_name>: {{{
-        Concurrent <operation> on thread <thread_number> (locks held: {<locks>})
+    Data race on field <racey_memory_location>: {{{
+        Concurrent <read|write> on thread <thread_id> (locks held: {<locks>})
      ---->  at <method_name>(<file_name>:<line_number>)
 
-        Concurrent <operation> on thread <thread_number> (locks held: {<locks>})
+        Concurrent <read|write> on thread <thread_id> (locks held: {<locks>})
      ---->  at <method_name>(<file_name>:<line_number>)
     }}}
-
 which presents the fully qualified name of the field on which the race occurred
-(``<field_name>``) and the two racing locations identified as frames on the
-method call stack: fully qualified name of the method (``<method_name>``), file
-containing the location (``<file_name>``) and line number where the unprotected
-field access occurred (``<line_number>``). The description also presents the
-type of race (``<operation>``), which can be write-write or read-write, and
-provides details about the threads and locks involved (``<thread_number>`` and
-``<locks>``). 
+(``<racey_memory_location>``), which is either a field or an array element, and
+the two racing locations identified as frames on the method call stack: fully
+qualified name of the method (``<method_name>``), file containing the location
+(``<file_name>``) and line number where the unprotected field access occurred
+(``<line_number>``). The description also presents the type of race, which can
+be write-write or read-write, and provides details about the threads and locks
+involved (``<thread_number>`` and ``<locks>``).
 
 Finally, if the race is due to an array access, the text ``field <field_name>``
 is replaced by ``an array access`` in the messages above.
@@ -178,7 +177,8 @@ is replaced by ``an array access`` in the messages above.
 If no races are found, then the message ``No races found.`` is displayed. The 
 races are logged in the log directory printed at the beginning of the report
 (``/tmp/rv-predict7274661192308018898``) in ``report.txt``, and any errors or
-stacktraces are recorded in ``debug.log``.
+stacktraces are recorded in ``debug.log``. Users can specify a different log
+directory with the ``--logs`` flag.
 
 SpringExample.jar
 -----------------

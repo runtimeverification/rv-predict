@@ -43,10 +43,7 @@ import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
@@ -141,8 +138,6 @@ public final class RVPredictRuntime implements Constants {
             "java.util.concurrent.atomic.AtomicInteger", "$value");
     private static int AQS_MOCK_STATE_ID = metadata.getVariableId(
             "java.util.concurrent.locks.AbstractQueuedSynchronizer", MOCK_STATE_FIELD);
-    private static int FUTURE_TASK_STATE_ID = metadata.getVariableId(
-            "java.util.concurrent.FutureTask", MOCK_STATE_FIELD);
 
     private static final MethodHandle SYNC_COLLECTION_GET_MUTEX = getFieldGetter(
             Collections.synchronizedCollection(Collections.EMPTY_LIST).getClass(), "mutex");
@@ -152,8 +147,6 @@ public final class RVPredictRuntime implements Constants {
     private static final MethodHandle AQS_GET_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "getState");
     private static final MethodHandle AQS_SET_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "setState", int.class);
     private static final MethodHandle AQS_CAS_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "compareAndSetState", int.class, int.class);
-    private static final MethodHandle FUTURE_TASK_SET = getMethodHandle(FutureTask.class, "set", Object.class);
-    private static final MethodHandle FUTURE_TASK_SET_EXCEPTION = getMethodHandle(FutureTask.class, "setException", Throwable.class);
 
     private static MethodHandle getFieldGetter(Class<?> cls, String name) {
         try {
@@ -980,58 +973,6 @@ public final class RVPredictRuntime implements Constants {
      */
     public static int rvPredictAtomicIntegerDecAndGet(AtomicInteger atomicInt, int locId) {
         return rvPredictAtomicIntegerAddAndGet(atomicInt, -1, locId);
-    }
-
-    /**
-     * {@link FutureTask#set(Object)}
-     */
-    public static void rvPredictFutureTaskSet(FutureTask futureTask, Object value, int locId) {
-        saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(futureTask),
-                -FUTURE_TASK_STATE_ID, 1, 0);
-        invokeMethodHandle(FUTURE_TASK_SET, futureTask, value);
-    }
-
-    /**
-     * {@link FutureTask#setException(Object)}
-     */
-    public static void rvPredictFutureTaskSetException(FutureTask futureTask, Throwable e, int locId) {
-        saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(futureTask),
-                -FUTURE_TASK_STATE_ID, 1, 0);
-        invokeMethodHandle(FUTURE_TASK_SET_EXCEPTION, futureTask, e);
-    }
-
-    /**
-     * {@link FutureTask#get()}
-     */
-    public static Object rvPredictFutureTaskGet(FutureTask futureTask, int locId)
-            throws InterruptedException, ExecutionException {
-        Object result;
-        try {
-            result = futureTask.get();
-        } catch (ExecutionException e) {
-            throw e;
-        } finally {
-            saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(futureTask),
-                    -FUTURE_TASK_STATE_ID, 1, 0);
-        }
-        return result;
-    }
-
-    /**
-     * {@link FutureTask#get(long,TimeUnit)}
-     */
-    public static Object rvPredictFutureTaskGet(FutureTask futureTask, long timeout, TimeUnit unit,
-            int locId) throws InterruptedException, ExecutionException, TimeoutException {
-        Object result;
-        try {
-            result = futureTask.get(timeout, unit);
-        } catch (ExecutionException e) {
-            throw e;
-        } finally {
-            saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(futureTask),
-                    -FUTURE_TASK_STATE_ID, 1, 0);
-        }
-        return result;
     }
 
     /**

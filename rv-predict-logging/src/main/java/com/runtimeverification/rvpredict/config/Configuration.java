@@ -120,7 +120,8 @@ public class Configuration implements Constants {
     public final static Set<String> MUST_REPLACE = new HashSet<>(Arrays.asList(
             "java/util/concurrent/ArrayBlockingQueue", 
             "java/util/concurrent/LinkedBlockingQueue",
-            "java/util/concurrent/SynchronousQueue"));
+            "java/util/concurrent/SynchronousQueue",
+            "java/util/concurrent/FutureTask"));
 
     public final static List<Pattern> MUST_INCLUDES;
     static {
@@ -129,8 +130,7 @@ public class Configuration implements Constants {
                 "java/util/concurrent/Semaphore$FairSync",
                 "java/util/concurrent/Semaphore$NonfairSync",
                 "java/util/concurrent/CountDownLatch$Sync",
-                "java/util/concurrent/CyclicBarrier",
-                "java/util/concurrent/FutureTask"
+                "java/util/concurrent/CyclicBarrier"
         };
         MUST_INCLUDES = getDefaultPatterns(mustIncludes);
     }

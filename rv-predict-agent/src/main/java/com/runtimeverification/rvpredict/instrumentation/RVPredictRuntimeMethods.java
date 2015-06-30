@@ -54,7 +54,6 @@ public class RVPredictRuntimeMethods {
     private static final String JUCL_AQS        =   "java/util/concurrent/locks/AbstractQueuedSynchronizer";
     private static final String JUCA_ATOMIC_BOOL    =   "java/util/concurrent/atomic/AtomicBoolean";
     private static final String JUCA_ATOMIC_INTEGER =   "java/util/concurrent/atomic/AtomicInteger";
-    private static final String JUC_FUTURE_TASK     =   "java/util/concurrent/FutureTask";
 
     /*
      * Map from method signature to possible {@link RVPredictInterceptor}'s.
@@ -229,16 +228,6 @@ public class RVPredictRuntimeMethods {
             register(VIRTUAL, JUCA_ATOMIC_INTEGER, "incrementAndGet", "rvPredictAtomicIntegerIncAndGet");
     public static final RVPredictInterceptor RVPREDICT_ATOMIC_INTEGER_DAG =
             register(VIRTUAL, JUCA_ATOMIC_INTEGER, "decrementAndGet", "rvPredictAtomicIntegerDecAndGet");
-
-    // java.util.concurrent.FutureTask
-    public static final RVPredictInterceptor RVPREDICT_FUTURE_TASK_SET =
-            register(VIRTUAL, JUC_FUTURE_TASK, "set", "rvPredictFutureTaskSet", O);
-    public static final RVPredictInterceptor RVPREDICT_FUTURE_TASK_SET_EXCEPTION =
-            register(VIRTUAL, JUC_FUTURE_TASK, "setException", "rvPredictFutureTaskSetException", Throwable.class);
-    public static final RVPredictInterceptor RVPREDICT_FUTURE_TASK_GET =
-            register(VIRTUAL, JUC_FUTURE_TASK, "get", "rvPredictFutureTaskGet");
-    public static final RVPredictInterceptor RVPREDICT_FUTURE_TASK_GET_TIMED =
-            register(VIRTUAL, JUC_FUTURE_TASK, "get", "rvPredictFutureTaskGet", J, TimeUnit.class);
 
     /** Short-hand for {@link RVPredictRuntimeMethod#create(String, Class...)}. */
     private static RVPredictRuntimeMethod init(String name, Class<?>... parameterTypes) {

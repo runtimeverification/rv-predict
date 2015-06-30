@@ -70,21 +70,6 @@ public class Configuration implements Constants {
     private static final String METADATA_BIN = "metadata.bin";
 
     /**
-     * Packages/classes that are excluded from instrumentation by default. These are
-     * configurable by the users through the <code>--exclude</code> command option.
-     */
-    private static String[] DEFAULT_EXCLUDES = new String[] {
-        "javax.*",
-        "sunw.*",
-        "com.sun.*",
-        "com.ibm.*",
-        "com.apple.*",
-        "apple.awt.*",
-        "org.xml.*",
-        "jdk.internal.*"
-    };
-
-    /**
      * Packages/classes that need to be excluded from instrumentation. These are
      * not configurable by the users because including them for instrumentation
      * almost certainly leads to crash.
@@ -106,7 +91,9 @@ public class Configuration implements Constants {
 
                 // Basics of the JDK that everything else is depending on
                 "sun/",
-                "java/"
+                "com/sun",
+                "java/",
+                "jdk/internal"
         };
         IGNORES = getDefaultPatterns(ignores);
     }
@@ -204,19 +191,10 @@ public class Configuration implements Constants {
     }
 
     private void initExcludeList() {
-        String excludes = this.excludes;
-        if (excludes == null) {
-            excludeList.addAll(getDefaultPatterns(DEFAULT_EXCLUDES));
-        } else {
-            excludes = excludes.trim();
-            if (excludes.charAt(0) == '+') { // initialize excludeList with default patterns
-                excludes = excludes.substring(1);
-                excludeList.addAll(getDefaultPatterns(DEFAULT_EXCLUDES));
-            }
+        if (excludes != null) {
             for (String exclude : excludes.replace('.', '/').split(",")) {
-                exclude = exclude.trim();
-                if (!exclude.isEmpty())
-                    excludeList.add(createClassPattern(exclude));
+                if (exclude.isEmpty()) continue;
+                excludeList.add(createClassPattern(exclude));
             }
         }
     }
@@ -308,8 +286,8 @@ public class Configuration implements Constants {
     public String includes;
 
     public final static String opt_exclude = "--exclude";
-    @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude." +
-            "\nPrefix with + to add to the default excluded packages", descriptionKey = "2100")
+    @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude.",
+            descriptionKey = "2100")
     public String excludes;
 
     final static String opt_window_size = "--window";

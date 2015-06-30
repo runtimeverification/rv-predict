@@ -875,9 +875,27 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
 
     // RVPredict logging methods
 
-    private final transient List<Long> _rvpredict_started_worker_threads = new ArrayList<>();
+    private final List<Long> _rvpredict_started_worker_threads = new ArrayList<>();
 
-    private void _rvpredict_start_worker_thread(Thread t) {
+    /**
+     * Checks if the work queue is instrumented in order to capture the
+     * following happens-before guarantee:
+     * <pre>
+     * Actions in a thread prior to the submission of a Runnable to an Executor
+     * happen-before its execution begins. Similarly for Callables submitted to
+     * an ExecutorService.
+     * </pre>
+     */
+    private BlockingQueue<Runnable> _rvpredict_check_work_queue(
+            BlockingQueue<Runnable> workQueue) {
+        if (!workQueue.getClass().getPackage().toString()
+                .equals(ThreadPoolExecutor.class.getPackage().toString())) {
+            throw new IllegalArgumentException();
+        }
+        return workQueue;
+    }
+
+    private synchronized void _rvpredict_start_worker_thread(Thread t) {
         RVPredictRuntime.saveThreadSyncEvent(EventType.START,
                 RVPREDICT_THREAD_POOL_EXECUTOR_LOC_ID, t.getId());
         RVPredictRuntime.metadata.addThreadCreationInfo(t.getId(), Thread.currentThread().getId(),
@@ -1339,7 +1357,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
             throw new NullPointerException();
         this.corePoolSize = corePoolSize;
         this.maximumPoolSize = maximumPoolSize;
-        this.workQueue = workQueue;
+        this.workQueue = _rvpredict_check_work_queue(workQueue);
         this.keepAliveTime = unit.toNanos(keepAliveTime);
         this.threadFactory = threadFactory;
         this.handler = handler;

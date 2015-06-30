@@ -40,8 +40,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;                   // FIXME: REMOVE THIS IMPORT
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;            // RVPredict: use the original LBQ
-import java.util.concurrent.SynchronousQueue;               // RVPredict: use the original SyncQueue
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;    // FIXME: REMOVE THIS IMPORT

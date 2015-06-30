@@ -162,14 +162,16 @@ A race description usually follows the syntax
         Concurrent <read|write> on thread <thread_id> (locks held: {<locks>})
      ---->  at <method_name>(<file_name>:<line_number>)
     }}}
-which presents the fully qualified name of the field on which the race occurred
-(``<racey_memory_location>``), which is either a field or an array element, and
-the two racing locations identified as frames on the method call stack: fully
-qualified name of the method (``<method_name>``), file containing the location
-(``<file_name>``) and line number where the unprotected field access occurred
-(``<line_number>``). The description also presents the type of race, which can
-be write-write or read-write, and provides details about the threads and locks
-involved (``<thread_number>`` and ``<locks>``).
+
+which presents the fully qualified name of the location at which the race
+occurred (``<racey_memory_location>``), which is either a field or an array
+element, and the stacktraces of the two memory accesses in race. The stacktrace
+is presented in the same format as in Java: each stacktrace element contains the
+fully qualified name of the method (``<method_name>``), file containing the
+location (``<file_name>``) and line number (``<line_number>``). The description
+also presents the type of race, which can be write-write or read-write, and
+provides details about the threads and locks involved (``<thread_number>`` and
+``<locks>``).
 
 Finally, if the race is due to an array access, the text ``field <field_name>``
 is replaced by ``an array access`` in the messages above.
@@ -211,8 +213,8 @@ RV-Predict Run
 .. code-block:: none
 
     ----------------Instrumented execution to record the trace-----------------
-    Log directory: /tmp/rv-predict3777313530719533961
-    Finished retransforming preloaded classes.
+    [RV-Predict] Log directory: /tmp/rv-predict3777313530719533961
+    [RV-Predict] Finished retransforming preloaded classes.
     log4j:WARN No appenders could be found for logger (org.springframework.context.support.ClassPathXmlApplicationContext).
     log4j:WARN Please initialize the log4j system properly.
     log4j:WARN See http://logging.apache.org/log4j/1.2/faq.html#noconfig for more info.

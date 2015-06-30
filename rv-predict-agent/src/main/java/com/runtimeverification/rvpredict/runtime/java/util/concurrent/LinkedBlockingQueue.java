@@ -37,16 +37,11 @@ package com.runtimeverification.rvpredict.runtime.java.util.concurrent;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicInteger;       // RVPredict: use the original AtomicInteger
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.AbstractQueue;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.Spliterator;
-import java.util.Spliterators;
 import java.util.function.Consumer;
+import java.util.*;
 
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 

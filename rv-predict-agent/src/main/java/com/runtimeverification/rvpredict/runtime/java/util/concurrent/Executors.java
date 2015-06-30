@@ -48,15 +48,14 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;    // FIXME: REMOVE THI
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.security.PrivilegedActionException;
 import java.security.AccessControlException;
-
 import sun.security.util.SecurityConstants;
+import com.runtimeverification.rvpredict.runtime.java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Factory and utility methods for {@link Executor}, {@link

@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicInteger;       // RVPredict: use the original AtomicInteger
 import java.util.*;
 
 import com.runtimeverification.rvpredict.log.EventType;
@@ -325,10 +325,10 @@ import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
  * @author Doug Lea
  */
 public class ThreadPoolExecutor extends AbstractExecutorService {
-    
+
     private static final int RVPREDICT_THREAD_POOL_EXECUTOR_LOC_ID = RVPredictRuntime.metadata
             .getLocationId("java.util.concurrent.ThreadPoolExecutor(ThreadPoolExecutor.java:n/a)");
-    
+
     /**
      * The main pool control state, ctl, is an atomic integer packing
      * two conceptual fields
@@ -872,7 +872,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
         }
         return taskList;
     }
-    
+
     // RVPredict logging methods
 
     private final transient List<Long> _rvpredict_started_worker_threads = new ArrayList<>();
@@ -987,7 +987,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
         }
         return workerStarted;
     }
-    
+
     /**
      * Rolls back the worker thread creation.
      * - removes worker from workers, if present

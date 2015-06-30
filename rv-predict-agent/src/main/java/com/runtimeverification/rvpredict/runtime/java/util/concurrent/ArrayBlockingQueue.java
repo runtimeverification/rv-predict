@@ -39,18 +39,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.AbstractQueue;
-import java.util.Collection;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.lang.ref.WeakReference;
-import java.util.Spliterators;
-import java.util.Spliterator;
-
 import org.apache.commons.lang3.mutable.MutableInt;
-
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 /**

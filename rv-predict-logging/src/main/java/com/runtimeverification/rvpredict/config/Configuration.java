@@ -118,7 +118,7 @@ public class Configuration implements Constants {
     };
 
     public final static Set<String> MUST_REPLACE = new HashSet<>(Arrays.asList(
-            "java/util/concurrent/ArrayBlockingQueue", 
+            "java/util/concurrent/ArrayBlockingQueue",
             "java/util/concurrent/LinkedBlockingQueue",
             "java/util/concurrent/SynchronousQueue",
             "java/util/concurrent/FutureTask"));
@@ -281,56 +281,56 @@ public class Configuration implements Constants {
     @Parameter(description = "[java_options] <java_command_line>")
     private List<String> javaArgs = new ArrayList<>();
 
-    public final static String opt_only_log = "--log";
-    @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1005")
-    private String log_dir = null;
-    private boolean log = true;
-
-    public final static String opt_only_predict = "--predict";
-    @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "1010")
-    private String predict_dir = null;
-
-    public final static String opt_event_profile = "--profile";
-    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1015")
-    private boolean profile;
-
-    public final static String opt_include = "--include";
-    @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include." +
-            "\nPrefix with + to add to the default included packages", hidden = true, descriptionKey = "1025")
-    public String includes;
-
-    public final static String opt_exclude = "--exclude";
-    @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude." +
-            "\nPrefix with + to add to the default excluded packages", hidden = true, descriptionKey = "1030")
-    public String excludes;
-
     private final static String ONLINE_PREDICTION = "ONLINE_PREDICTION";
     private final static String OFFLINE_PREDICTION = "OFFLINE_PREDICTION";
     private String prediction;
 
     public final static String opt_offline = "--offline";
-    @Parameter(names = opt_offline, description = "Run prediction offline", hidden = true, descriptionKey = "2005")
+    @Parameter(names = opt_offline, description = "Run prediction offline", descriptionKey = "1000")
     private boolean offline;
 
-    final static String opt_max_len = "--maxlen";
-    @Parameter(names = opt_max_len, description = "Window size (must be >= 64)", hidden = true, descriptionKey = "2010")
+    public final static String opt_only_log = "--log";
+    @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1100")
+    private String log_dir = null;
+    private boolean log = true;
+
+    public final static String opt_only_predict = "--predict";
+    @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "1200")
+    private String predict_dir = null;
+
+    public final static String opt_event_profile = "--profile";
+    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1300")
+    private boolean profile;
+
+    public final static String opt_include = "--include";
+    @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include.",
+            descriptionKey = "2000")
+    public String includes;
+
+    public final static String opt_exclude = "--exclude";
+    @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude." +
+            "\nPrefix with + to add to the default excluded packages", descriptionKey = "2100")
+    public String excludes;
+
+    final static String opt_window_size = "--window";
+    @Parameter(names = opt_window_size, description = "Window size (must be >= 64)", descriptionKey = "2200")
     public int windowSize = 1000;
     private static int MIN_WINDOW_SIZE = 64;
 
     final static String opt_stacks = "--stacks";
-    @Parameter(names = opt_stacks, description = "Record call stack events and compute stack traces in race report", hidden = true, descriptionKey = "2030")
+    @Parameter(names = opt_stacks, description = "Record call stack events and compute stack traces in race report", descriptionKey = "2300")
     public boolean stacks = false;
 
     final static String opt_smt_solver = "--solver";
-    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2050")
+    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2400")
     public String smt_solver = "z3";
 
     final static String opt_solver_timeout = "--solver-timeout";
-    @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
+    @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2500")
     public int solver_timeout = 60;
 
     final static String opt_debug = "--debug";
-    @Parameter(names = opt_debug, description = "Output developer debugging information", hidden = true, descriptionKey = "2090")
+    @Parameter(names = opt_debug, description = "Output developer debugging information", hidden = true, descriptionKey = "3000")
     public static boolean debug = false;
 
     final static String short_opt_verbose = "-v";

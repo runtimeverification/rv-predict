@@ -105,6 +105,7 @@ public class Configuration implements Constants {
     };
 
     public final static Set<String> MUST_REPLACE = new HashSet<>(Arrays.asList(
+            "java/util/concurrent/atomic/AtomicBoolean",
             "java/util/concurrent/ArrayBlockingQueue",
             "java/util/concurrent/LinkedBlockingQueue",
             "java/util/concurrent/SynchronousQueue",

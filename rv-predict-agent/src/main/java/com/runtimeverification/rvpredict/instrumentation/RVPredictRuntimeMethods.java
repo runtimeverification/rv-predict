@@ -52,7 +52,6 @@ public class RVPredictRuntimeMethods {
     private static final String JUCL_CONDITION  =   "java/util/concurrent/locks/Condition";
     private static final String JUCL_RW_LOCK    =   "java/util/concurrent/locks/ReadWriteLock";
     private static final String JUCL_AQS        =   "java/util/concurrent/locks/AbstractQueuedSynchronizer";
-    private static final String JUCA_ATOMIC_BOOL    =   "java/util/concurrent/atomic/AtomicBoolean";
     private static final String JUCA_ATOMIC_INTEGER =   "java/util/concurrent/atomic/AtomicInteger";
 
     /*
@@ -196,16 +195,6 @@ public class RVPredictRuntimeMethods {
             register(VIRTUAL, JUCL_AQS, "setState", "rvPredictAbstractQueuedSynchronizerSetState", I);
     public static final RVPredictInterceptor RVPREDICT_AQS_CASSTATE  =
             register(VIRTUAL, JUCL_AQS, "compareAndSetState", "rvPredictAbstractQueuedSynchronizerCASState", I, I);
-
-    // java.util.concurrent.atomic.AtomicBoolean
-    public static final RVPredictInterceptor RVPREDICT_ATOMIC_BOOL_GET =
-            register(VIRTUAL, JUCA_ATOMIC_BOOL, "get", "rvPredictAtomicBoolGet");
-    public static final RVPredictInterceptor RVPREDICT_ATOMIC_BOOL_SET =
-            register(VIRTUAL, JUCA_ATOMIC_BOOL, "set", "rvPredictAtomicBoolSet", Z);
-    public static final RVPredictInterceptor RVPREDICT_ATOMIC_BOOL_CAS =
-            register(VIRTUAL, JUCA_ATOMIC_BOOL, "compareAndSet", "rvPredictAtomicBoolCAS", Z, Z);
-    public static final RVPredictInterceptor RVPREDICT_ATOMIC_BOOL_GAS =
-            register(VIRTUAL, JUCA_ATOMIC_BOOL, "getAndSet", "rvPredictAtomicBoolGAS", Z);
 
     // java.util.concurrent.atomic.AtomicInteger
     public static final RVPredictInterceptor RVPREDICT_ATOMIC_INTEGER_GET =

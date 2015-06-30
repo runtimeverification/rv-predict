@@ -44,7 +44,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Condition;
@@ -132,8 +131,6 @@ public final class RVPredictRuntime implements Constants {
 
     private static int NATIVE_INTERRUPTED_STATUS_VAR_ID = metadata.getVariableId(
             "java.lang.Thread", "$interruptedStatus");
-    private static int ATOMIC_BOOLEAN_MOCK_VAL_ID = metadata.getVariableId(
-            "java.util.concurrent.atomic.AtomicBoolean", "$value");
     private static int ATOMIC_INTEGER_MOCK_VAL_ID = metadata.getVariableId(
             "java.util.concurrent.atomic.AtomicInteger", "$value");
     private static int AQS_MOCK_STATE_ID = metadata.getVariableId(
@@ -806,61 +803,6 @@ public final class RVPredictRuntime implements Constants {
                 // value this CAS should really succeed and return true
             }
         }
-    }
-
-    /**
-     * {@link AtomicBoolean#get()}
-     */
-    public static boolean rvPredictAtomicBoolGet(AtomicBoolean atomicBool, int locId) {
-        synchronized (atomicBool) {
-            boolean result = atomicBool.get();
-            saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(atomicBool),
-                    -ATOMIC_BOOLEAN_MOCK_VAL_ID, bool2int(result), 0);
-            return result;
-        }
-    }
-
-    /**
-     * {@link AtomicBoolean#set(boolean)}
-     */
-    public static void rvPredictAtomicBoolSet(AtomicBoolean atomicBool, boolean newValue, int locId) {
-        saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(atomicBool),
-                -ATOMIC_BOOLEAN_MOCK_VAL_ID, bool2int(newValue), 0);
-        atomicBool.set(newValue);
-    }
-
-    /**
-     * {@link AtomicBoolean#getAndSet(boolean)}
-     */
-    public static boolean rvPredictAtomicBoolGAS(AtomicBoolean atomicBool, boolean newValue,
-            int locId) {
-        synchronized (atomicBool) {
-            boolean result = atomicBool.getAndSet(newValue);
-            saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
-                    System.identityHashCode(atomicBool), -ATOMIC_BOOLEAN_MOCK_VAL_ID,
-                    bool2int(result), bool2int(newValue));
-            return result;
-        }
-    }
-
-    /**
-     * {@link AtomicBoolean#compareAndSet(boolean, boolean)}
-     */
-    public static boolean rvPredictAtomicBoolCAS(AtomicBoolean atomicBool, boolean expect,
-            boolean update, int locId) {
-        synchronized (atomicBool) {
-            if (atomicBool.compareAndSet(expect, update)) {
-                saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
-                        System.identityHashCode(atomicBool), -ATOMIC_BOOLEAN_MOCK_VAL_ID,
-                        bool2int(expect), bool2int(update));
-                return true;
-            }
-        }
-
-        saveAtomicEvent(EventType.ATOMIC_READ, locId,
-                System.identityHashCode(atomicBool), -ATOMIC_BOOLEAN_MOCK_VAL_ID,
-                bool2int(!expect), 0);
-        return false;
     }
 
     /**
@@ -1572,7 +1514,7 @@ public final class RVPredictRuntime implements Constants {
         logger.log(eventType, locId, 0, 0, 0, 0);
     }
 
-    private static void saveAtomicEvent(EventType eventType, int locId, int addrl, int addrr,
+    public static void saveAtomicEvent(EventType eventType, int locId, int addrl, int addrr,
             long value1, long value2) {
         logger.log(eventType, locId, addrl, addrr, value1, value2);
     }

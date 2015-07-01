@@ -108,13 +108,18 @@ public class Configuration implements Constants {
     };
 
     public final static Set<String> MUST_REPLACE = new HashSet<>(Arrays.asList(
+            "java/util/concurrent/atomic/AtomicBoolean",
+            "java/util/concurrent/atomic/AtomicInteger",
             "java/util/concurrent/ArrayBlockingQueue",
             "java/util/concurrent/LinkedBlockingQueue",
             "java/util/concurrent/SynchronousQueue",
             "java/util/concurrent/CountDownLatch",
             "java/util/concurrent/CyclicBarrier",
             "java/util/concurrent/Exchanger",
-            "java/util/concurrent/FutureTask"));
+            "java/util/concurrent/FutureTask",
+            "java/util/concurrent/ThreadPoolExecutor",
+            "java/util/concurrent/RejectedExecutionHandler",
+            "java/util/concurrent/Executors"));
 
     public final static List<Pattern> MUST_INCLUDES;
     static {
@@ -461,7 +466,8 @@ public class Configuration implements Constants {
             try {
                 logger.setLogDir(log_dir);
             } catch (FileNotFoundException e) {
-                System.err.println("Error while attempting to create the logger.");
+                logger.report("Error while attempting to create the logger: directory not found",
+                        Logger.MSGTYPE.ERROR);
                 System.exit(1);
             }
         }

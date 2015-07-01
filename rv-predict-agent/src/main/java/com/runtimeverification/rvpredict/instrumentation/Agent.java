@@ -75,7 +75,7 @@ public class Agent implements ClassFileTransformer, Constants {
                  * accessed by a specific bytecode instruction `arraylength'. */
             }
         }
-        System.out.println("Finished retransforming preloaded classes.");
+        config.logger().report("Finished retransforming preloaded classes.", Logger.MSGTYPE.INFO);
 
         Runtime.getRuntime().addShutdownHook(RVPredict.getPredictionThread(config, loggingEngine));
     }
@@ -137,7 +137,9 @@ public class Agent implements ClassFileTransformer, Constants {
                 try {
                     Files.delete(Paths.get(directory, fname));
                 } catch (IOException e) {
-                    System.err.println("Cannot delete trace file " + fname + "from dir. " + directory);
+                    config.logger().report(
+                            "Cannot delete trace file " + fname + "from dir. " + directory,
+                            Logger.MSGTYPE.ERROR);
                 }
             }
         }

@@ -108,7 +108,7 @@ import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
  * @param <V> The type of objects that may be exchanged
  */
 public class Exchanger<V> extends java.util.concurrent.Exchanger<V> {
-    
+
     private static final int RVPREDICT_EXCHANGER_LOC_ID = RVPredictRuntime.metadata
             .getLocationId("java.util.concurrent.Exchanger(Exchanger.java:n/a)");
 
@@ -328,7 +328,7 @@ public class Exchanger<V> extends java.util.concurrent.Exchanger<V> {
         volatile Thread parked; // Set to this thread when parked, else null
         volatile long matchTID; // RVPredict: ID of the releasing thread
         final long ownerTID;    // RVPredict: ID of this thread
-        
+
         Node() { ownerTID = Thread.currentThread().getId(); }
     }
 
@@ -362,9 +362,9 @@ public class Exchanger<V> extends java.util.concurrent.Exchanger<V> {
     private volatile int bound;
 
     // RVPredict logging methods
-    
+
     private final transient ConcurrentHashMap<Long, CyclicBarrier> _rvpredict_barrier_map = new ConcurrentHashMap<>();
-    
+
     private void _rvpredict_set_matchTID(Node node, long matchTID) {
         node.matchTID = matchTID;
     }
@@ -378,11 +378,18 @@ public class Exchanger<V> extends java.util.concurrent.Exchanger<V> {
         long partner = participant.get().matchTID;
         CyclicBarrier barrier;
         if (self < partner) {
-            _rvpredict_barrier_map.put(self, barrier = new CyclicBarrier(2));
-        } else {
+            if (_rvpredict_barrier_map.put(self, barrier = new CyclicBarrier(2)) != null) {
+                throw new IllegalStateException();
+            }
+        } else if (self > partner) {
+            if (partner == 0) {
+                throw new IllegalStateException();
+            }
             while ((barrier = _rvpredict_barrier_map.remove(partner)) == null) {
                 Thread.yield();
             }
+        } else {
+            throw new IllegalStateException();
         }
 
         long value = System.identityHashCode(barrier);

@@ -124,9 +124,9 @@ public class Configuration implements Constants {
     public final static List<Pattern> MUST_INCLUDES;
     static {
         String[] mustIncludes = new String[] {
-            "java/util/concurrent/Semaphore$Sync",
-            "java/util/concurrent/Semaphore$FairSync",
-            "java/util/concurrent/Semaphore$NonfairSync",
+            "com/runtimeverification/rvpredict/runtime/java/util/concurrent/Semaphore$Sync",
+            "com/runtimeverification/rvpredict/runtime/java/util/concurrent/Semaphore$FairSync",
+            "com/runtimeverification/rvpredict/runtime/java/util/concurrent/Semaphore$NonfairSync",
             "com/runtimeverification/rvpredict/runtime/java/util/concurrent/CountDownLatch$Sync",
             "com/runtimeverification/rvpredict/runtime/java/util/concurrent/CyclicBarrier"
         };

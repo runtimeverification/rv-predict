@@ -39,7 +39,7 @@ import java.util.Map;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Params;
 import com.microsoft.z3.Status;
-import com.microsoft.z3.Z3Exception;
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
@@ -78,12 +78,10 @@ public class MaximalCausalModel {
      */
     private final FormulaTerm.Builder phiTau = FormulaTerm.andBuilder();
 
-    private static Context z3Context; {
-        try {
-            z3Context = new Context();
-        } catch (Z3Exception e) {
-            throw new RuntimeException();
-        }
+    private static Context z3Context;
+
+    static {
+        z3Context = Configuration.getZ3Context();
     }
 
     public static MaximalCausalModel create(Trace trace) {

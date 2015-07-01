@@ -996,7 +996,8 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictBlockingQueueAddElement(BlockingQueue queue, int elementId,
             int value, int locId) {
-        saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(queue), -elementId, ++value);
+        saveMemAccEvent(EventType.READ, locId, System.identityHashCode(queue), -elementId, value++);
+        saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(queue), -elementId, value);
     }
 
     public static void rvPredictBlockingQueueAccessElement(BlockingQueue queue, int elementId,

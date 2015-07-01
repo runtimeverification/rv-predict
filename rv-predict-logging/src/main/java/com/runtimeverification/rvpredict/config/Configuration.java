@@ -431,7 +431,8 @@ public class Configuration implements Constants {
             try {
                 logger.setLogDir(log_dir);
             } catch (FileNotFoundException e) {
-                System.err.println("Error while attempting to create the logger.");
+                logger.report("Error while attempting to create the logger: directory not found",
+                        Logger.MSGTYPE.ERROR);
                 System.exit(1);
             }
         }

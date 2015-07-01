@@ -96,7 +96,7 @@ public class AtomicInteger extends Number implements java.io.Serializable {
     }
 
     private void _rvpredict_atomic_read_then_write(int oldValue, int newValue) {
-        RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_WRITE, RVPREDICT_ATOMIC_INTEGER_LOC_ID,
+        RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, RVPREDICT_ATOMIC_INTEGER_LOC_ID,
                 System.identityHashCode(this), -RVPREDICT_ATOMIC_INTEGER_VALUE_ID, oldValue, newValue);
     }
 

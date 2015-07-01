@@ -36,7 +36,8 @@
 package com.runtimeverification.rvpredict.runtime.java.util.concurrent;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.AbstractQueuedSynchronizer;
+
+import com.runtimeverification.rvpredict.runtime.java.util.concurrent.locks.AbstractQueuedSynchronizer;
 
 /**
  * A counting semaphore.  Conceptually, a semaphore maintains a set of

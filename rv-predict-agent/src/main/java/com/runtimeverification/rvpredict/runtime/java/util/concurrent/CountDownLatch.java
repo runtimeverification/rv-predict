@@ -35,7 +35,8 @@
 
 package com.runtimeverification.rvpredict.runtime.java.util.concurrent;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.AbstractQueuedSynchronizer;
+
+import com.runtimeverification.rvpredict.runtime.java.util.concurrent.locks.AbstractQueuedSynchronizer;
 
 /**
  * A synchronization aid that allows one or more threads to wait until

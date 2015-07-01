@@ -287,7 +287,7 @@ public class Trace {
             RawTrace t = rawTraces.stream().filter(p -> p.getTID() == tid).findAny().get();
             for (int i = 0; i < t.size(); i++) {
                 Event e = t.event(i);
-                if (e.getGID() >= gid) break;
+                if (e.getGID() > gid) break;
                 if (e.getType() == EventType.INVOKE_METHOD) {
                     stacktrace.addFirst(e);
                 } else if (e.getType() == EventType.FINISH_METHOD) {

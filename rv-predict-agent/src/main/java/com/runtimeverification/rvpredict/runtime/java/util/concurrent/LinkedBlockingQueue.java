@@ -35,10 +35,12 @@
 
 package com.runtimeverification.rvpredict.runtime.java.util.concurrent;
 
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.AbstractQueue;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -79,13 +81,13 @@ import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
  */
-public class LinkedBlockingQueue<E> extends java.util.concurrent.LinkedBlockingQueue<E>
-        implements java.io.Serializable {
+public class LinkedBlockingQueue<E> extends AbstractQueue<E>
+        implements BlockingQueue<E>, java.io.Serializable {
     private static final long serialVersionUID = -6903933977591709194L;
 
     private static final int RVPREDICT_LBQ_LOC_ID = RVPredictRuntime.metadata
             .getLocationId("java.util.concurrent.LinkedBlockingQueue(LinkedBlockingQueue.java:n/a)");
-    
+
     /*
      * A variant of the "two lock queue" algorithm.  The putLock gates
      * entry to put (and offer), and has an associated condition for
@@ -196,11 +198,11 @@ public class LinkedBlockingQueue<E> extends java.util.concurrent.LinkedBlockingQ
     }
 
     private static int calcElementId(Node<?> node) {
-        if (node.item == null) 
+        if (node.item == null)
             throw new NullPointerException();
         return System.identityHashCode(node) ^ System.identityHashCode(node.item);
     }
-    
+
     private static void _rvpredict_add_element(LinkedBlockingQueue<?> queue, Node<?> node) {
         RVPredictRuntime.rvPredictBlockingQueueAddElement(queue, calcElementId(node), 0,
                 RVPREDICT_LBQ_LOC_ID);
@@ -210,7 +212,7 @@ public class LinkedBlockingQueue<E> extends java.util.concurrent.LinkedBlockingQ
         RVPredictRuntime.rvPredictBlockingQueueAccessElement(queue, calcElementId(node), 1,
                 RVPREDICT_LBQ_LOC_ID);
     }
-    
+
     private static void _rvpredict_remove_element(LinkedBlockingQueue<?> queue, Node<?> node) {
         RVPredictRuntime.rvPredictBlockingQueueRemoveElement(queue, calcElementId(node), 1,
                 RVPREDICT_LBQ_LOC_ID);

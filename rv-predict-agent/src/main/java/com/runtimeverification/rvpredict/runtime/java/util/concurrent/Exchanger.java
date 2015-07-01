@@ -107,7 +107,7 @@ import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
  * @author Doug Lea and Bill Scherer and Michael Scott
  * @param <V> The type of objects that may be exchanged
  */
-public class Exchanger<V> extends java.util.concurrent.Exchanger<V> {
+public class Exchanger<V> {
 
     private static final int RVPREDICT_EXCHANGER_LOC_ID = RVPredictRuntime.metadata
             .getLocationId("java.util.concurrent.Exchanger(Exchanger.java:n/a)");

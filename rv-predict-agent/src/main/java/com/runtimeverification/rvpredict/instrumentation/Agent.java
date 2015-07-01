@@ -157,8 +157,8 @@ public class Agent implements ClassFileTransformer, Constants {
 
             checkUninterceptedClassLoading(cname, c);
 
-            if (!cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT) && !cname.startsWith("sun")
-                    || cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT_RUNTIME)) {
+            if (!cname.startsWith(RVPREDICT_PKG_PREFIX) && !cname.startsWith("sun")
+                    || cname.startsWith(RVPREDICT_RUNTIME_PKG_PREFIX)) {
                 ClassFile classFile = ClassFile.getInstance(loader, cname, cbuf);
                 if (InstrumentUtils.needToInstrument(classFile)) {
                     byte[] transformed = ClassTransformer.transform(loader, cbuf, config);

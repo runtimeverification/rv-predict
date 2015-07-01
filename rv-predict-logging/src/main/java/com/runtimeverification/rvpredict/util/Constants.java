@@ -8,9 +8,9 @@ public interface Constants {
 
     long _0X_DEADBEEFL = 0xDEADBEEFL;
 
-    String COM_RUNTIMEVERIFICATION_RVPREDICT = "com/runtimeverification/rvpredict";
+    String RVPREDICT_PKG_PREFIX = "com/runtimeverification/rvpredict/";
     
-    String COM_RUNTIMEVERIFICATION_RVPREDICT_RUNTIME = "com/runtimeverification/rvpredict/runtime";
+    String RVPREDICT_RUNTIME_PKG_PREFIX = "com/runtimeverification/rvpredict/runtime/";
 
     byte JUC_LOCK_C = 0;
 

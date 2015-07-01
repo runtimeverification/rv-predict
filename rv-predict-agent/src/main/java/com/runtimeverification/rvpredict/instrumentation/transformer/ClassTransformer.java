@@ -2,12 +2,14 @@ package com.runtimeverification.rvpredict.instrumentation.transformer;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.commons.JSRInlinerAdapter;
 import org.objectweb.asm.util.CheckClassAdapter;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.instrumentation.InstrumentUtils;
 
 public class ClassTransformer extends ClassVisitor implements Opcodes {
 
@@ -43,12 +45,17 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
         this.config = config;
     }
 
+    private String replaceStandardLibraryClass(String literal) {
+        return InstrumentUtils.replaceStandardLibraryClass(className, literal);
+    }
+
     @Override
     public void visit(int version, int access, String name, String signature, String superName,
             String[] interfaces) {
         className = name;
         this.version = version;
-        cv.visit(version, access, name, signature, superName, interfaces);
+        cv.visit(version, access, name, replaceStandardLibraryClass(signature),
+                replaceStandardLibraryClass(superName), interfaces);
     }
 
     @Override
@@ -58,8 +65,23 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
     }
 
     @Override
+    public void visitOuterClass(String owner, String name, String desc) {
+        cv.visitOuterClass(owner, name, replaceStandardLibraryClass(desc));
+    }
+
+    @Override
+    public FieldVisitor visitField(int access, String name, String desc,
+            String signature, Object value) {
+        return cv.visitField(access, name, replaceStandardLibraryClass(desc),
+                replaceStandardLibraryClass(signature), value);
+    }
+
+    @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature,
             String[] exceptions) {
+        desc = replaceStandardLibraryClass(desc);
+        signature = replaceStandardLibraryClass(signature);
+
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
         assert mv != null;
 

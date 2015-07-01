@@ -154,7 +154,7 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  * @since 1.5
  * @author Doug Lea
  */
-public class CountDownLatch extends java.util.concurrent.CountDownLatch {
+public class CountDownLatch {
     /**
      * Synchronization control For CountDownLatch.
      * Uses AQS state to represent count.
@@ -197,7 +197,6 @@ public class CountDownLatch extends java.util.concurrent.CountDownLatch {
      * @throws IllegalArgumentException if {@code count} is negative
      */
     public CountDownLatch(int count) {
-        super(0); // RVPredict: hack to bypass compilation error
         if (count < 0) throw new IllegalArgumentException("count < 0");
         this.sync = new Sync(count);
     }

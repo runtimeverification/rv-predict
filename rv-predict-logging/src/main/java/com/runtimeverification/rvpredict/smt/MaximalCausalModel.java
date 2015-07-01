@@ -216,19 +216,25 @@ public class MaximalCausalModel {
                 return and.build();
             } else {
                 /* the read value is different from sameThreadPrevWrite */
-                FormulaTerm.Builder or = FormulaTerm.orBuilder();
-                diffThreadSameAddrSameValWrites.forEach(w1 -> {
-                    FormulaTerm.Builder and = FormulaTerm.andBuilder();
-                    and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
-                    and.add(HB(sameThreadPrevWrite, w1), HB(w1, read));
-                    diffThreadSameAddrDiffValWrites.forEach(w2 -> {
-                        if (!happensBefore(w2, w1)) {
-                            and.add(OR(HB(w2, w1), HB(read, w2)));
-                        }
+                if (!diffThreadSameAddrSameValWrites.isEmpty()) {
+                    FormulaTerm.Builder or = FormulaTerm.orBuilder();
+                    diffThreadSameAddrSameValWrites.forEach(w1 -> {
+                        FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                        and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
+                        and.add(HB(sameThreadPrevWrite, w1), HB(w1, read));
+                        diffThreadSameAddrDiffValWrites.forEach(w2 -> {
+                            if (!happensBefore(w2, w1)) {
+                                and.add(OR(HB(w2, w1), HB(read, w2)));
+                            }
+                        });
+                        or.add(and.build());
                     });
-                    or.add(and.build());
-                });
-                return or.build();
+                    return or.build();
+                } else {
+                    /* the read-write consistency constraint is UNSAT */
+                    trace.logger().debug("Missing write events on " + read.getAddr());
+                    return BooleanConstant.TRUE;
+                }
             }
         } else {
             /* sameThreadPrevWrite is unavailable in the current window */
@@ -240,19 +246,25 @@ public class MaximalCausalModel {
                 return and.build();
             } else {
                 /* the initial value of this address is unknown */
-                FormulaTerm.Builder or = FormulaTerm.orBuilder();
-                diffThreadSameAddrSameValWrites.forEach(w1 -> {
-                    FormulaTerm.Builder and = FormulaTerm.andBuilder();
-                    and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
-                    and.add(HB(w1, read));
-                    diffThreadSameAddrDiffValWrites.forEach(w2 -> {
-                        if (!happensBefore(w2, w1)) {
-                            and.add(OR(HB(w2, w1), HB(read, w2)));
-                        }
+                if (!diffThreadSameAddrSameValWrites.isEmpty()) {
+                    FormulaTerm.Builder or = FormulaTerm.orBuilder();
+                    diffThreadSameAddrSameValWrites.forEach(w1 -> {
+                        FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                        and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
+                        and.add(HB(w1, read));
+                        diffThreadSameAddrDiffValWrites.forEach(w2 -> {
+                            if (!happensBefore(w2, w1)) {
+                                and.add(OR(HB(w2, w1), HB(read, w2)));
+                            }
+                        });
+                        or.add(and.build());
                     });
-                    or.add(and.build());
-                });
-                return or.build();
+                    return or.build();
+                } else {
+                    /* the read-write consistency constraint is UNSAT */
+                    trace.logger().debug("Missing write events on " + read.getAddr());
+                    return BooleanConstant.TRUE;
+                }
             }
         }
     }

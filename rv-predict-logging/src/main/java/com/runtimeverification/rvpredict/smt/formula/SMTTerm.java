@@ -15,7 +15,7 @@ public class SMTTerm<Operation extends SMTOperation, Formula extends SMTFormula>
 
     /**
      * Builds a new term given an {@code operation} and a list of {@code terms} as arguments.
-     * 
+     *
      * Checks that the given terms match the {@link SMTOperation#arity} of the operation.
      * @param operation
      * @param terms
@@ -28,7 +28,7 @@ public class SMTTerm<Operation extends SMTOperation, Formula extends SMTFormula>
             assert terms[i].getSort() == arity[i] : "Sort not matching arity";
         }
     }
-    
+
     protected SMTTerm(Operation operation, ImmutableList<Formula> terms) {
         this.operation = operation;
         this.terms = terms;
@@ -60,7 +60,7 @@ public class SMTTerm<Operation extends SMTOperation, Formula extends SMTFormula>
     public static abstract class Builder<Operation extends SMTOperation,Formula extends SMTFormula> {
         protected final Operation operation;
         protected final ImmutableList.Builder<Formula> builder;
-        int size;
+        private int size;
 
         protected Builder(Operation operation) {
             this.operation = operation;
@@ -85,7 +85,7 @@ public class SMTTerm<Operation extends SMTOperation, Formula extends SMTFormula>
                 size++;
             }
         }
-        
+
         public abstract SMTTerm<Operation,Formula> build();
     }
 

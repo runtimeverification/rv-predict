@@ -1,3 +1,9 @@
+## Installing
+To install without running integration tests (recommended) simply run
+`mvn package` in the project root, with the flag `-DskipTests` to skip unit
+tests. 
+
+## Usage
 It is recommended to add RV-Predict/bin to your PATH.
 	
 Invoke `rv-predict` on a class as you would invoke the Java interpreter:
@@ -11,6 +17,7 @@ You can also invoke `rv-predict` as a Java agent:
 
     java -javaagent:<rvPath>/lib/rv-predict.jar ...
 
+## Misc
 Additional documentation can be found online on the
 [RV-Predict website](http://runtimeverification.com/predict/docs).
 

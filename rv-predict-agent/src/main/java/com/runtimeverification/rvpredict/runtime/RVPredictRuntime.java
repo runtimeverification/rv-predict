@@ -40,9 +40,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -131,6 +134,8 @@ public final class RVPredictRuntime implements Constants {
             "java.lang.Thread", "$interruptedStatus");
     private static int ATOMIC_BOOLEAN_MOCK_VAL_ID = metadata.getVariableId(
             "java.util.concurrent.atomic.AtomicBoolean", "$value");
+    private static int ATOMIC_INTEGER_MOCK_VAL_ID = metadata.getVariableId(
+            "java.util.concurrent.atomic.AtomicInteger", "$value");
     private static int AQS_MOCK_STATE_ID = metadata.getVariableId(
             "java.util.concurrent.locks.AbstractQueuedSynchronizer", MOCK_STATE_FIELD);
 
@@ -754,6 +759,9 @@ public final class RVPredictRuntime implements Constants {
      */
     public static int rvPredictAbstractQueuedSynchronizerGetState(AbstractQueuedSynchronizer aqs,
             int locId) {
+        // the synchronization block is to ensure that if this getState reads
+        // the value set by some compareAndSetState, that compareAndSetState is
+        // logged before this getState
         synchronized (aqs) {
             int result = (int) invokeMethodHandle(AQS_GET_STATE, aqs);
             saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(aqs),
@@ -767,22 +775,36 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictAbstractQueuedSynchronizerSetState(AbstractQueuedSynchronizer aqs,
             int newState, int locId) {
-        synchronized (aqs) {
-            saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(aqs),
-                    -AQS_MOCK_STATE_ID, newState, 0);
-            invokeMethodHandle(AQS_SET_STATE, aqs, newState);
-        }
+        saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(aqs),
+                -AQS_MOCK_STATE_ID, newState, 0);
+        invokeMethodHandle(AQS_SET_STATE, aqs, newState);
     }
 
     /**
      * {@link AbstractQueuedSynchronizer#compareAndSetState(int, int)}
      */
-    public static boolean rvPredictAbstractQueuedSynchronizerCASState(AbstractQueuedSynchronizer aqs,
-            int expect, int update, int locId) {
-        synchronized (aqs) {
-            saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId, System.identityHashCode(aqs),
-                    -AQS_MOCK_STATE_ID, (int) invokeMethodHandle(AQS_GET_STATE, aqs), update);
-            return (boolean) invokeMethodHandle(AQS_CAS_STATE, aqs, expect, update);
+    public static boolean rvPredictAbstractQueuedSynchronizerCASState(
+            AbstractQueuedSynchronizer aqs, int expect, int update, int locId) {
+        for (;;) {
+            synchronized (aqs) {
+                if ((boolean) invokeMethodHandle(AQS_CAS_STATE, aqs, expect, update)) {
+                    saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
+                            System.identityHashCode(aqs), -AQS_MOCK_STATE_ID, expect, update);
+                    return true;
+                }
+            }
+
+            int actual = (int) invokeMethodHandle(AQS_GET_STATE, aqs);
+            if (actual != expect) {
+                saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(aqs),
+                        -AQS_MOCK_STATE_ID, actual, 0);
+                return false;
+            } else {
+                // if "actual == expect", it would be unsound to log an
+                // ATOMIC_READ event that reads `expect' and return false
+                // because when we match this read with some write of the same
+                // value this CAS should really succeed and return true
+            }
         }
     }
 
@@ -802,11 +824,9 @@ public final class RVPredictRuntime implements Constants {
      * {@link AtomicBoolean#set(boolean)}
      */
     public static void rvPredictAtomicBoolSet(AtomicBoolean atomicBool, boolean newValue, int locId) {
-        synchronized (atomicBool) {
-            saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(atomicBool),
-                    -ATOMIC_BOOLEAN_MOCK_VAL_ID, bool2int(newValue), 0);
-            atomicBool.set(newValue);
-        }
+        saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(atomicBool),
+                -ATOMIC_BOOLEAN_MOCK_VAL_ID, bool2int(newValue), 0);
+        atomicBool.set(newValue);
     }
 
     /**
@@ -829,12 +849,166 @@ public final class RVPredictRuntime implements Constants {
     public static boolean rvPredictAtomicBoolCAS(AtomicBoolean atomicBool, boolean expect,
             boolean update, int locId) {
         synchronized (atomicBool) {
-            boolean result = atomicBool.compareAndSet(expect, update);
-            saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
-                    System.identityHashCode(atomicBool), -ATOMIC_BOOLEAN_MOCK_VAL_ID,
-                    result ? bool2int(expect) : bool2int(!expect), bool2int(update));
+            if (atomicBool.compareAndSet(expect, update)) {
+                saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
+                        System.identityHashCode(atomicBool), -ATOMIC_BOOLEAN_MOCK_VAL_ID,
+                        bool2int(expect), bool2int(update));
+                return true;
+            }
+        }
+
+        saveAtomicEvent(EventType.ATOMIC_READ, locId,
+                System.identityHashCode(atomicBool), -ATOMIC_BOOLEAN_MOCK_VAL_ID,
+                bool2int(!expect), 0);
+        return false;
+    }
+
+    /**
+     * {@link AtomicInteger#get()}
+     */
+    public static int rvPredictAtomicIntegerGet(AtomicInteger atomicInt, int locId) {
+        synchronized (atomicInt) {
+            int result = atomicInt.get();
+            saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(atomicInt),
+                    -ATOMIC_INTEGER_MOCK_VAL_ID, result, 0);
             return result;
         }
+    }
+
+    /**
+     * {@link AtomicInteger#set(int)}
+     */
+    public static void rvPredictAtomicIntegerSet(AtomicInteger atomicInt, int newValue, int locId) {
+        saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(atomicInt),
+                -ATOMIC_INTEGER_MOCK_VAL_ID, newValue, 0);
+        atomicInt.set(newValue);
+    }
+
+    /**
+     * {@link AtomicInteger#getAndSet(int)}
+     */
+    public static int rvPredictAtomicIntegerGAS(AtomicInteger atomicInt, int newValue, int locId) {
+        synchronized (atomicInt) {
+            int result = atomicInt.getAndSet(newValue);
+            saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
+                    System.identityHashCode(atomicInt), -ATOMIC_INTEGER_MOCK_VAL_ID, result,
+                    newValue);
+            return result;
+        }
+    }
+
+    /**
+     * {@link AtomicInteger#compareAndSet(int, int)}
+     */
+    public static boolean rvPredictAtomicIntegerCAS(AtomicInteger atomicInt, int expect,
+            int update, int locId) {
+        for (;;) {
+            synchronized (atomicInt) {
+                if (atomicInt.compareAndSet(expect, update)) {
+                    saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
+                            System.identityHashCode(atomicInt), -ATOMIC_INTEGER_MOCK_VAL_ID,
+                            expect, update);
+                    return true;
+                }
+            }
+
+            int actual = atomicInt.get();
+            if (actual != expect) {
+                saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(atomicInt),
+                        -ATOMIC_INTEGER_MOCK_VAL_ID, actual, 0);
+                return false;
+            }
+        }
+    }
+
+    /**
+     * {@link AtomicInteger#getAndAdd(int)}
+     */
+    public static int rvPredictAtomicIntegerGetAndAdd(AtomicInteger atomicInt, int delta, int locId) {
+        synchronized (atomicInt) {
+            int result = atomicInt.getAndAdd(delta);
+            saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
+                    System.identityHashCode(atomicInt), -ATOMIC_INTEGER_MOCK_VAL_ID, result, result
+                            + delta);
+            return result;
+        }
+    }
+
+    /**
+     * {@link AtomicInteger#getAndIncrement()}
+     */
+    public static int rvPredictAtomicIntegerGetAndInc(AtomicInteger atomicInt, int locId) {
+        return rvPredictAtomicIntegerGetAndAdd(atomicInt, 1, locId);
+    }
+
+    /**
+     * {@link AtomicInteger#getAndDecrement()}
+     */
+    public static int rvPredictAtomicIntegerGetAndDec(AtomicInteger atomicInt, int locId) {
+        return rvPredictAtomicIntegerGetAndAdd(atomicInt, -1, locId);
+    }
+
+    /**
+     * {@link AtomicInteger#addAndGet(int)}
+     */
+    public static int rvPredictAtomicIntegerAddAndGet(AtomicInteger atomicInt, int delta, int locId) {
+        synchronized (atomicInt) {
+            int result = atomicInt.addAndGet(delta);
+            saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
+                    System.identityHashCode(atomicInt), -ATOMIC_INTEGER_MOCK_VAL_ID,
+                    result - delta, result);
+            return result;
+        }
+    }
+
+    /**
+     * {@link AtomicInteger#incrementAndGet()}
+     */
+    public static int rvPredictAtomicIntegerIncAndGet(AtomicInteger atomicInt, int locId) {
+        return rvPredictAtomicIntegerAddAndGet(atomicInt, 1, locId);
+    }
+
+    /**
+     * {@link AtomicInteger#decrementAndGet()}
+     */
+    public static int rvPredictAtomicIntegerDecAndGet(AtomicInteger atomicInt, int locId) {
+        return rvPredictAtomicIntegerAddAndGet(atomicInt, -1, locId);
+    }
+
+    /**
+     * Mocks the high-level happens-before relation between
+     * {@link BlockingQueue} actions:
+     *
+     * <pre>
+     * Actions in a thread prior to placing an object into any concurrent
+     * collection happen-before actions subsequent to the access or removal of
+     * that element from the collection in another thread.
+     * </pre>
+     *
+     * @param queue
+     *            the blocking queue
+     * @param elementId
+     *            an unique identifier of the element to add
+     * @param value
+     *            the number of that element in the blocking queue
+     * @param locId
+     *            the location ID
+     */
+    public static void rvPredictBlockingQueueAddElement(BlockingQueue queue, int elementId,
+            int value, int locId) {
+        saveMemAccEvent(EventType.READ, locId, System.identityHashCode(queue), -elementId, value++);
+        saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(queue), -elementId, value);
+    }
+
+    public static void rvPredictBlockingQueueAccessElement(BlockingQueue queue, int elementId,
+            int value, int locId) {
+        saveMemAccEvent(EventType.READ, locId, System.identityHashCode(queue), -elementId, value);
+    }
+
+    public static void rvPredictBlockingQueueRemoveElement(BlockingQueue queue, int elementId,
+            int value, int locId) {
+        saveMemAccEvent(EventType.READ, locId, System.identityHashCode(queue), -elementId, value--);
+        saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(queue), -elementId, value);
     }
 
     /**
@@ -1263,6 +1437,8 @@ public final class RVPredictRuntime implements Constants {
     public static void mockCollectionAccess(Object collection, boolean isWrite, int locId) {
         String className = collection.getClass().getName();
         if (collection instanceof Vector || collection instanceof Hashtable
+                || collection instanceof BlockingQueue
+                || collection instanceof ConcurrentMap
                 || className.startsWith("java.util.concurrent.")) {
             /* non-wrapper thread-safe collections */
             return;
@@ -1376,12 +1552,12 @@ public final class RVPredictRuntime implements Constants {
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
     }
 
-    private static void saveMemAccEvent(EventType eventType, int locId, int addrl, int addrr,
+    public static void saveMemAccEvent(EventType eventType, int locId, int addrl, int addrr,
             long value) {
         logger.log(eventType, locId, addrl, addrr, value, 0);
     }
 
-    public static void saveThreadSyncEvent(EventType eventType, int locId, long tid) {
+    private static void saveThreadSyncEvent(EventType eventType, int locId, long tid) {
         logger.log(eventType, locId, (int) (tid >> 32), (int) tid, 0, 0);
     }
 

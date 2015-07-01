@@ -14,7 +14,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Table;
-import com.runtimeverification.rvpredict.config.Configuration;
 
 /**
  * Stores information of a (non-array) class.
@@ -215,8 +214,8 @@ public class ClassFile implements Opcodes {
      * locate it. And that is what the {@code loader} is for.
      *
      * @param loader
-     *            the initiating loader of the class, may be null if the
-     *            bootstrap loader
+     *            the initiating loader of the class, may be {@code null} if it
+     *            is the bootstrap loader
      * @param cname
      *            the name of the class in the internal form of fully qualified
      *            class and interface names
@@ -227,12 +226,7 @@ public class ClassFile implements Opcodes {
         try {
             return getInstance0(loader, cname, null);
         } catch (IOException e) {
-            System.err.println("[Warning] unable to locate the class file of " + cname);
-            if (Configuration.debug) {
-                throw new RuntimeException(e);
-            } else {
-                return null;
-            }
+            return null;
         }
     }
 

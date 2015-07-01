@@ -13,6 +13,7 @@ import com.google.common.base.Strings;
  */
 public class Logger {
 
+    private static final String RV_PREDICT_CONSOLE_PREFIX = "[RV-Predict] ";
     private static final int    WIDTH   =   75;
     private static final String DASH    =   "-";
 
@@ -26,7 +27,7 @@ public class Logger {
     }
 
     public void reportPhase(String phaseMsg) {
-        report(center(phaseMsg), MSGTYPE.INFO);
+        report(center(phaseMsg), MSGTYPE.PHASE);
     }
 
     private static String center(String msg) {
@@ -35,8 +36,12 @@ public class Logger {
                 + Strings.repeat(DASH, (fillWidth + 1) / 2);
     }
 
-    public PrintStream debug() {
-        return debug;
+    public void debug(String msg) {
+        debug.println(msg);
+    }
+
+    public void debug(Throwable e) {
+        e.printStackTrace(debug);
     }
 
     public void reportRace(String report) {
@@ -46,10 +51,13 @@ public class Logger {
     public synchronized void report(String msg, MSGTYPE type) {
         switch (type) {
         case ERROR:
-            System.err.println(msg);
+            System.err.println(RV_PREDICT_CONSOLE_PREFIX+ msg);
             break;
-        case REAL:
         case INFO:
+            System.out.println(RV_PREDICT_CONSOLE_PREFIX + msg);
+            break;
+        case PHASE:
+        case REAL:
             System.out.println(msg);
             break;
         default:
@@ -58,7 +66,7 @@ public class Logger {
     }
 
     public enum MSGTYPE {
-        REAL, INFO, ERROR
+        REAL, INFO, PHASE, ERROR
     }
 
 }

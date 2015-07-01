@@ -75,7 +75,7 @@ public class Agent implements ClassFileTransformer, Constants {
                  * accessed by a specific bytecode instruction `arraylength'. */
             }
         }
-        System.out.println("Finished retransforming preloaded classes.");
+        config.logger().report("Finished retransforming preloaded classes.", Logger.MSGTYPE.INFO);
 
         Runtime.getRuntime().addShutdownHook(RVPredict.getPredictionThread(config, loggingEngine));
     }
@@ -137,7 +137,9 @@ public class Agent implements ClassFileTransformer, Constants {
                 try {
                     Files.delete(Paths.get(directory, fname));
                 } catch (IOException e) {
-                    System.err.println("Cannot delete trace file " + fname + "from dir. " + directory);
+                    config.logger().report(
+                            "Cannot delete trace file " + fname + "from dir. " + directory,
+                            Logger.MSGTYPE.ERROR);
                 }
             }
         }
@@ -155,19 +157,20 @@ public class Agent implements ClassFileTransformer, Constants {
 
             checkUninterceptedClassLoading(cname, c);
 
-            if (!cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT) && !cname.startsWith("sun")) {
+            if (!cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT) && !cname.startsWith("sun")
+                    || cname.startsWith(COM_RUNTIMEVERIFICATION_RVPREDICT_RUNTIME)) {
                 ClassFile classFile = ClassFile.getInstance(loader, cname, cbuf);
                 if (InstrumentUtils.needToInstrument(classFile)) {
-                    byte[] transformed = ClassTransformer.transform(loader, cbuf);
+                    byte[] transformed = ClassTransformer.transform(loader, cbuf, config);
                     return transformed;
                 }
             }
             return null;
         } catch (Throwable e) {
             /* exceptions during class loading are silently suppressed by default */
-            config.logger().debug().println("Cannot retransform " + cname + ". Exception: " + e);
+            config.logger().debug("Cannot retransform " + cname + ". Exception: " + e);
             if (Configuration.debug) {
-                e.printStackTrace(config.logger().debug());
+                config.logger().debug(e);
                 // fail-fast strategy under debug mode
                 System.exit(1);
             }
@@ -192,7 +195,7 @@ public class Agent implements ClassFileTransformer, Constants {
                         && !name.startsWith("com.runtimeverification.rvpredict")
                         && !name.startsWith("java.lang")
                         && !name.startsWith("sun.")) {
-                    System.err.println("[Java-agent] missed to intercept class load: " + cls);
+                    config.logger().debug("[Java-agent] missed to intercept class load: " + cls);
                 }
             }
         }

@@ -1,11 +1,11 @@
-package com.runtimeverification.rvpredict.instrumentation.transformer;
+package com.runtimeverification.rvpredict.instrument.transformer;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import com.runtimeverification.rvpredict.instrumentation.InstrumentUtils;
-import com.runtimeverification.rvpredict.instrumentation.RVPredictInterceptor;
-import com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethod;
+import com.runtimeverification.rvpredict.instrument.InstrumentUtils;
+import com.runtimeverification.rvpredict.instrument.RVPredictInterceptor;
+import com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 import com.runtimeverification.rvpredict.util.Logger;
@@ -18,8 +18,8 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.Method;
 
-import static com.runtimeverification.rvpredict.instrumentation.InstrumentUtils.*;
-import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
+import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.*;
+import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.*;
 
 public class MethodTransformer extends MethodVisitor implements Opcodes {
 

@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.instrumentation;
+package com.runtimeverification.rvpredict.instrument;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.objectweb.asm.Opcodes;
 
-import com.runtimeverification.rvpredict.instrumentation.transformer.MethodTransformer;
+import com.runtimeverification.rvpredict.instrument.transformer.MethodTransformer;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 

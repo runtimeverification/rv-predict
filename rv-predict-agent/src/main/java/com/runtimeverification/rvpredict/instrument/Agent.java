@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.instrumentation;
+package com.runtimeverification.rvpredict.instrument;
 
 import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
@@ -23,7 +23,7 @@ import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 import org.apache.tools.ant.DirectoryScanner;
 import org.objectweb.asm.ClassReader;
 
-import com.runtimeverification.rvpredict.instrumentation.transformer.ClassTransformer;
+import com.runtimeverification.rvpredict.instrument.transformer.ClassTransformer;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;

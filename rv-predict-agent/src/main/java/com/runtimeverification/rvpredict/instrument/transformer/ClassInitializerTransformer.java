@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.instrumentation.transformer;
+package com.runtimeverification.rvpredict.instrument.transformer;
 
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -6,8 +6,8 @@ import org.objectweb.asm.commons.AdviceAdapter;
 
 import com.runtimeverification.rvpredict.log.EventType;
 
-import static com.runtimeverification.rvpredict.instrumentation.InstrumentUtils.*;
-import static com.runtimeverification.rvpredict.instrumentation.RVPredictRuntimeMethods.*;
+import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.*;
+import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.*;
 
 /**
  * Injects code that logs {@link EventType#CLINIT_ENTER} and

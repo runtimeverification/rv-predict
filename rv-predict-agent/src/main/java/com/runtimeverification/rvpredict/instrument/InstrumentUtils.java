@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.instrumentation;
+package com.runtimeverification.rvpredict.instrument;
 
 import java.io.File;
 import java.io.FileOutputStream;

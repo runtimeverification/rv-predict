@@ -1,4 +1,4 @@
-package com.runtimeverification.rvpredict.instrumentation.transformer;
+package com.runtimeverification.rvpredict.instrument.transformer;
 
 import org.objectweb.asm.ClassReader;
 

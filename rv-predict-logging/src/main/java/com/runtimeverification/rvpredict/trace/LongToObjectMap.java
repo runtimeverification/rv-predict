@@ -26,7 +26,7 @@ import java.util.function.Supplier;
  */
 public abstract class LongToObjectMap<T> {
 
-    private final int size;
+    protected final int capacity;
 
     protected final int mask;
 
@@ -34,19 +34,19 @@ public abstract class LongToObjectMap<T> {
 
     private final T[] values;
 
-    private int numOfEntries;
+    protected int size;
 
     private final int[] entryIndexes;
 
-    private final Supplier<T> newValue;
+    protected final Supplier<T> newValue;
 
     @SuppressWarnings("unchecked")
     public LongToObjectMap(int expected, Supplier<T> newValue) {
-        size = 1 << (32 - Integer.numberOfLeadingZeros(expected * 2 - 1));
-        mask = size - 1;
-        keys = new long[size];
-        values = (T[]) new Object[size];
-        entryIndexes = new int[size];
+        capacity = 1 << (32 - Integer.numberOfLeadingZeros(expected * 2 - 1));
+        mask = capacity - 1;
+        keys = new long[capacity];
+        values = (T[]) new Object[capacity];
+        entryIndexes = new int[capacity];
         this.newValue = newValue;
     }
 
@@ -59,12 +59,16 @@ public abstract class LongToObjectMap<T> {
         return newValue.get();
     }
 
-    public T computeIfAbsent(long key) {
+    public final boolean isFull() {
+        return capacity == size;
+    }
+
+    public final T computeIfAbsent(long key) {
         int p = hash(key);
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < capacity; i++) {
             if (values[p] == null) {
                 keys[p] = key;
-                entryIndexes[numOfEntries++] = p;
+                entryIndexes[size++] = p;
                 return values[p] = newValue();
             } else if (key == keys[p]) {
                 return values[p];
@@ -74,28 +78,28 @@ public abstract class LongToObjectMap<T> {
         throw new UnsupportedOperationException("Automatic grow operation not implemented!");
     }
 
-    public T get(long key) {
+    public final T get(long key) {
         int p = hash(key);
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < capacity; i++) {
             if (values[p] == null || key == keys[p]) {
                 return values[p];
             }
             p = (p + 1) & mask;
         }
-        throw new UnsupportedOperationException("Automatic grow operation not implemented!");
+        return null;
     }
 
-    public T put(long key, T value) {
+    public final T put(long key, T value) {
         if (value == null) {
             throw new NullPointerException();
         }
 
         int p = hash(key);
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < capacity; i++) {
             if (values[p] == null) {
                 keys[p] = key;
                 values[p] = value;
-                entryIndexes[numOfEntries++] = p;
+                entryIndexes[size++] = p;
                 return null;
             } else if (key == keys[p]) {
                 T oldValue = values[p];
@@ -107,17 +111,23 @@ public abstract class LongToObjectMap<T> {
         throw new UnsupportedOperationException("Automatic grow operation not implemented!");
     }
 
-    public void clear() {
+    protected final void putAll(LongToObjectMap<T> m) {
+        for (int i = 0; i < m.size; i++) {
+            put(m.keys[m.entryIndexes[i]], m.values[m.entryIndexes[i]]);
+        }
+    }
+
+    public final void clear() {
         // only need to clear the values array
-        numOfEntries = 0;
+        size = 0;
         Arrays.fill(values, null);
     }
 
-    public EntryIterator iterator() {
+    public final EntryIterator iterator() {
         return new EntryIterator();
     }
 
-    public class EntryIterator {
+    public final class EntryIterator {
 
         private int p;
 
@@ -126,7 +136,7 @@ public abstract class LongToObjectMap<T> {
         }
 
         public boolean hasNext() {
-            return p != numOfEntries;
+            return p != size;
         }
 
         public long getNextKey() {

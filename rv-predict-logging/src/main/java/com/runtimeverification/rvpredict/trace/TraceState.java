@@ -30,13 +30,13 @@ public class TraceState {
     /**
      * Map form thread ID to the current level of class initialization.
      */
-    private final ThreadIDToObjectMap<MutableInt> tidToClinitDepth = new ThreadIDToObjectMap<>(
+    private ThreadIDToObjectMap<MutableInt> tidToClinitDepth = new ThreadIDToObjectMap<>(
             DEFAULT_NUM_OF_THREADS, MutableInt::new);
 
     /**
      * Map from thread ID to the current stack trace elements.
      */
-    private final ThreadIDToObjectMap<Deque<Event>> tidToStacktrace = new ThreadIDToObjectMap<>(
+    private ThreadIDToObjectMap<Deque<Event>> tidToStacktrace = new ThreadIDToObjectMap<>(
             DEFAULT_NUM_OF_THREADS, ArrayDeque::new);
 
     /**
@@ -121,12 +121,14 @@ public class TraceState {
         switch (event.getType()) {
         case CLINIT_ENTER:
             tidToClinitDepth.computeIfAbsent(tid).increment();
+            tidToClinitDepth = ThreadIDToObjectMap.growOnFull(tidToClinitDepth);
             break;
         case CLINIT_EXIT:
             tidToClinitDepth.get(tid).decrement();
             break;
         case INVOKE_METHOD:
             tidToStacktrace.computeIfAbsent(tid).add(event.copy());
+            tidToStacktrace = ThreadIDToObjectMap.growOnFull(tidToStacktrace);
             break;
         case FINISH_METHOD:
             int locId = tidToStacktrace.get(tid).removeLast().getLocId();
@@ -140,7 +142,11 @@ public class TraceState {
     }
 
     public boolean isInsideClassInitializer(long tid) {
-        return tidToClinitDepth.computeIfAbsent(tid).intValue() > 0;
+        try {
+            return tidToClinitDepth.computeIfAbsent(tid).intValue() > 0;
+        } finally {
+            tidToClinitDepth = ThreadIDToObjectMap.growOnFull(tidToClinitDepth);
+        }
     }
 
     public ThreadState getThreadStateSnapshot(long tid) {

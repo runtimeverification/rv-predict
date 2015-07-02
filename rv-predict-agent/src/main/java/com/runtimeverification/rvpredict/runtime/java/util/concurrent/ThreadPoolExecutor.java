@@ -39,7 +39,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.AbstractQueuedSynchronizer;
+import java.util.concurrent.locks.AbstractQueuedSynchronizer;   // RVPredict: use the original AQS
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.atomic.AtomicInteger;       // RVPredict: use the original AtomicInteger
@@ -888,10 +888,10 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      */
     private BlockingQueue<Runnable> _rvpredict_check_work_queue(
             BlockingQueue<Runnable> workQueue) {
-        if (!workQueue.getClass().getPackage().toString()
-                .equals(ThreadPoolExecutor.class.getPackage().toString())) {
-            throw new IllegalArgumentException();
-        }
+        // TODO(YilongL): enable this check
+//        if (workQueue.getClass().getPackage().toString().equals("java.util.concurrent")) {
+//            throw new IllegalArgumentException();
+//        }
         return workQueue;
     }
 

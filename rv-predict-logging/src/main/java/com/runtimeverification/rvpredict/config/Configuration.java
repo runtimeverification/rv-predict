@@ -110,24 +110,23 @@ public class Configuration implements Constants {
     public final static Set<String> MUST_REPLACE = new HashSet<>(Arrays.asList(
             "java/util/concurrent/atomic/AtomicBoolean",
             "java/util/concurrent/atomic/AtomicInteger",
+            "java/util/concurrent/locks/AbstractQueuedSynchronizer",
             "java/util/concurrent/ArrayBlockingQueue",
             "java/util/concurrent/LinkedBlockingQueue",
             "java/util/concurrent/SynchronousQueue",
+            "java/util/concurrent/Semaphore",
             "java/util/concurrent/CountDownLatch",
             "java/util/concurrent/CyclicBarrier",
             "java/util/concurrent/Exchanger",
             "java/util/concurrent/FutureTask",
             "java/util/concurrent/ThreadPoolExecutor",
+            "java/util/concurrent/ScheduledThreadPoolExecutor",
             "java/util/concurrent/RejectedExecutionHandler",
             "java/util/concurrent/Executors"));
 
     public final static List<Pattern> MUST_INCLUDES;
     static {
         String[] mustIncludes = new String[] {
-            "java/util/concurrent/Semaphore$Sync",
-            "java/util/concurrent/Semaphore$FairSync",
-            "java/util/concurrent/Semaphore$NonfairSync",
-            "com/runtimeverification/rvpredict/runtime/java/util/concurrent/CountDownLatch$Sync",
             "com/runtimeverification/rvpredict/runtime/java/util/concurrent/CyclicBarrier"
         };
         MUST_INCLUDES = getDefaultPatterns(mustIncludes);

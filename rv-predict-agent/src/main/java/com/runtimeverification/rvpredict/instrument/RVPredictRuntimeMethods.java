@@ -51,7 +51,6 @@ public class RVPredictRuntimeMethods {
     private static final String JUCL_LOCK       =   "java/util/concurrent/locks/Lock";
     private static final String JUCL_CONDITION  =   "java/util/concurrent/locks/Condition";
     private static final String JUCL_RW_LOCK    =   "java/util/concurrent/locks/ReadWriteLock";
-    private static final String JUCL_AQS        =   "java/util/concurrent/locks/AbstractQueuedSynchronizer";
 
     /*
      * Map from method signature to possible {@link RVPredictInterceptor}'s.
@@ -186,14 +185,6 @@ public class RVPredictRuntimeMethods {
             register(INTERFACE, JUCL_RW_LOCK, "readLock", "rvPredictReadWriteLockReadLock");
     public static final RVPredictInterceptor RVPREDICT_RW_LOCK_WRITE_LOCK =
             register(INTERFACE, JUCL_RW_LOCK, "writeLock", "rvPredictReadWriteLockWriteLock");
-
-    // java.util.concurrent.locks.AbstractQueueSynchronizer
-    public static final RVPredictInterceptor RVPREDICT_AQS_GETSTATE  =
-            register(VIRTUAL, JUCL_AQS, "getState", "rvPredictAbstractQueuedSynchronizerGetState");
-    public static final RVPredictInterceptor RVPREDICT_AQS_SETSTATE  =
-            register(VIRTUAL, JUCL_AQS, "setState", "rvPredictAbstractQueuedSynchronizerSetState", I);
-    public static final RVPredictInterceptor RVPREDICT_AQS_CASSTATE  =
-            register(VIRTUAL, JUCL_AQS, "compareAndSetState", "rvPredictAbstractQueuedSynchronizerCASState", I, I);
 
     /** Short-hand for {@link RVPredictRuntimeMethod#create(String, Class...)}. */
     private static RVPredictRuntimeMethod init(String name, Class<?>... parameterTypes) {

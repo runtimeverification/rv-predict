@@ -42,7 +42,6 @@ import java.util.concurrent.ForkJoinPool;                   // FIXME: REMOVE THI
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;    // FIXME: REMOVE THIS IMPORT
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;

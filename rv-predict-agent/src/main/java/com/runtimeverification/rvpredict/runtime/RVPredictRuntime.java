@@ -31,7 +31,6 @@ package com.runtimeverification.rvpredict.runtime;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -44,7 +43,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -130,17 +128,11 @@ public final class RVPredictRuntime implements Constants {
 
     private static int NATIVE_INTERRUPTED_STATUS_VAR_ID = metadata.getVariableId(
             "java.lang.Thread", "$interruptedStatus");
-    private static int AQS_MOCK_STATE_ID = metadata.getVariableId(
-            "java.util.concurrent.locks.AbstractQueuedSynchronizer", MOCK_STATE_FIELD);
 
     private static final MethodHandle SYNC_COLLECTION_GET_MUTEX = getFieldGetter(
             Collections.synchronizedCollection(Collections.EMPTY_LIST).getClass(), "mutex");
     private static final MethodHandle SYNC_MAP_GET_MUTEX = getFieldGetter(
             Collections.synchronizedMap(Collections.EMPTY_MAP).getClass(), "mutex");
-
-    private static final MethodHandle AQS_GET_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "getState");
-    private static final MethodHandle AQS_SET_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "setState", int.class);
-    private static final MethodHandle AQS_CAS_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "compareAndSetState", int.class, int.class);
 
     private static MethodHandle getFieldGetter(Class<?> cls, String name) {
         try {
@@ -148,18 +140,6 @@ public final class RVPredictRuntime implements Constants {
             field.setAccessible(true);
             return MethodHandles.lookup().unreflectGetter(field);
         } catch (NoSuchFieldException | SecurityException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static MethodHandle getMethodHandle(Class<?> cls, String name,
-            Class<?>... parameterTypes) {
-        try {
-            Method method = cls.getDeclaredMethod(name, parameterTypes);
-            method.setAccessible(true);
-            return MethodHandles.lookup().unreflect(method);
-        } catch (NoSuchMethodException | SecurityException | IllegalAccessException e) {
-            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -746,60 +726,6 @@ public final class RVPredictRuntime implements Constants {
         saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
         condition.awaitUninterruptibly();
         saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-    }
-
-    /**
-     * {@link AbstractQueuedSynchronizer#getState()}
-     */
-    public static int rvPredictAbstractQueuedSynchronizerGetState(AbstractQueuedSynchronizer aqs,
-            int locId) {
-        // the synchronization block is to ensure that if this getState reads
-        // the value set by some compareAndSetState, that compareAndSetState is
-        // logged before this getState
-        synchronized (aqs) {
-            int result = (int) invokeMethodHandle(AQS_GET_STATE, aqs);
-            saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(aqs),
-                    -AQS_MOCK_STATE_ID, result, 0);
-            return result;
-        }
-    }
-
-    /**
-     * {@link AbstractQueuedSynchronizer#setState(int)}
-     */
-    public static void rvPredictAbstractQueuedSynchronizerSetState(AbstractQueuedSynchronizer aqs,
-            int newState, int locId) {
-        saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(aqs),
-                -AQS_MOCK_STATE_ID, newState, 0);
-        invokeMethodHandle(AQS_SET_STATE, aqs, newState);
-    }
-
-    /**
-     * {@link AbstractQueuedSynchronizer#compareAndSetState(int, int)}
-     */
-    public static boolean rvPredictAbstractQueuedSynchronizerCASState(
-            AbstractQueuedSynchronizer aqs, int expect, int update, int locId) {
-        for (;;) {
-            synchronized (aqs) {
-                if ((boolean) invokeMethodHandle(AQS_CAS_STATE, aqs, expect, update)) {
-                    saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
-                            System.identityHashCode(aqs), -AQS_MOCK_STATE_ID, expect, update);
-                    return true;
-                }
-            }
-
-            int actual = (int) invokeMethodHandle(AQS_GET_STATE, aqs);
-            if (actual != expect) {
-                saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(aqs),
-                        -AQS_MOCK_STATE_ID, actual, 0);
-                return false;
-            } else {
-                // if "actual == expect", it would be unsound to log an
-                // ATOMIC_READ event that reads `expect' and return false
-                // because when we match this read with some write of the same
-                // value this CAS should really succeed and return true
-            }
-        }
     }
 
     /**

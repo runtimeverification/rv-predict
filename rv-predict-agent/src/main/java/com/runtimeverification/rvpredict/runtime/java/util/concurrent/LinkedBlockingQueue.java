@@ -43,6 +43,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.*;
 
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 /**
@@ -192,25 +193,35 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         }
     }
 
-    private static int calcElementId(Node<?> node) {
-        if (node.item == null)
-            throw new NullPointerException();
-        return System.identityHashCode(node) ^ System.identityHashCode(node.item);
+    /**
+     * {@link Node#item} can only be nulled out after constructor. This means
+     * {@linkplain Node} instance is never reused and we can safely use the
+     * identity hashcode to uniquely identify an element in the queue.
+     */
+    private int calcElementId(Node<E> node) {
+        return System.identityHashCode(node);
     }
 
-    private static void _rvpredict_add_element(LinkedBlockingQueue<?> queue, Node<?> node) {
-        RVPredictRuntime.rvPredictBlockingQueueAddElement(queue, calcElementId(node), 0,
-                RVPREDICT_LBQ_LOC_ID);
+    private void _rvpredict_add_element(Node<E> node) {
+        // assert putLock.isHeldByCurrentThread();
+        RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_LBQ_LOC_ID,
+                System.identityHashCode(this), calcElementId(node), 0);
+        RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_LBQ_LOC_ID,
+                System.identityHashCode(this), calcElementId(node), 1);
     }
 
-    private static void _rvpredict_access_elememt(LinkedBlockingQueue<?> queue, Node<?> node) {
-        RVPredictRuntime.rvPredictBlockingQueueAccessElement(queue, calcElementId(node), 1,
-                RVPREDICT_LBQ_LOC_ID);
+    private void _rvpredict_access_elememt(Node<E> node) {
+        // assert isFullyLocked();
+        RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_LBQ_LOC_ID,
+                System.identityHashCode(this), calcElementId(node), 1);
     }
 
-    private static void _rvpredict_remove_element(LinkedBlockingQueue<?> queue, Node<?> node) {
-        RVPredictRuntime.rvPredictBlockingQueueRemoveElement(queue, calcElementId(node), 1,
-                RVPREDICT_LBQ_LOC_ID);
+    private void _rvpredict_remove_element(Node<E> node) {
+        // assert takeLock.isHeldByCurrentThread();
+        RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_LBQ_LOC_ID,
+                System.identityHashCode(this), calcElementId(node), 1);
+        RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_LBQ_LOC_ID,
+                System.identityHashCode(this), calcElementId(node), 0);
     }
 
     /**
@@ -221,7 +232,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
     private void enqueue(Node<E> node) {
         // assert putLock.isHeldByCurrentThread();
         // assert last.next == null;
-        _rvpredict_add_element(this, node);
+        _rvpredict_add_element(node);
         last = last.next = node;
     }
 
@@ -237,8 +248,8 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         Node<E> first = h.next;
         h.next = h; // help GC
         head = first;
-        _rvpredict_remove_element(this, first);
         E x = first.item;
+        _rvpredict_remove_element(first);
         first.item = null;
         return x;
     }
@@ -259,13 +270,13 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         putLock.unlock();
     }
 
-//     /**
-//      * Tells whether both locks are held by current thread.
-//      */
-//     boolean isFullyLocked() {
-//         return (putLock.isHeldByCurrentThread() &&
-//                 takeLock.isHeldByCurrentThread());
-//     }
+     /**
+      * Tells whether both locks are held by current thread.
+      */
+     boolean isFullyLocked() {
+         return (putLock.isHeldByCurrentThread() &&
+                 takeLock.isHeldByCurrentThread());
+     }
 
     /**
      * Creates a {@code LinkedBlockingQueue} with a capacity of
@@ -536,7 +547,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
             if (first == null)
                 return null;
             else {
-                _rvpredict_access_elememt(this, first);
+                _rvpredict_access_elememt(first);
                 return first.item;
             }
         } finally {
@@ -551,7 +562,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         // assert isFullyLocked();
         // p.next is not changed, to allow iterators that are
         // traversing p to maintain their weak-consistency guarantee.
-        _rvpredict_remove_element(this, p);
+        _rvpredict_remove_element(p);
         p.item = null;
         trail.next = p.next;
         if (last == p)
@@ -603,7 +614,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         try {
             for (Node<E> p = head.next; p != null; p = p.next)
                 if (o.equals(p.item)) {
-                    _rvpredict_access_elememt(this, p);
+                    _rvpredict_access_elememt(p);
                     return true;
                 }
             return false;
@@ -632,7 +643,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
             Object[] a = new Object[size];
             int k = 0;
             for (Node<E> p = head.next; p != null; p = p.next) {
-                _rvpredict_access_elememt(this, p);
+                _rvpredict_access_elememt(p);
                 a[k++] = p.item;
             }
             return a;
@@ -687,7 +698,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
 
             int k = 0;
             for (Node<E> p = head.next; p != null; p = p.next) {
-                _rvpredict_access_elememt(this, p);
+                _rvpredict_access_elememt(p);
                 a[k++] = (T)p.item;
             }
             if (a.length > k)
@@ -708,7 +719,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
             StringBuilder sb = new StringBuilder();
             sb.append('[');
             for (;;) {
-                _rvpredict_access_elememt(this, p);
+                _rvpredict_access_elememt(p);
                 E e = p.item;
                 sb.append(e == this ? "(this Collection)" : e);
                 p = p.next;
@@ -730,7 +741,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         try {
             for (Node<E> p, h = head; (p = h.next) != null; h = p) {
                 h.next = h;
-                _rvpredict_remove_element(this, p);
+                _rvpredict_remove_element(p);
                 p.item = null;
             }
             head = last;
@@ -777,7 +788,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
                 while (i < n) {
                     Node<E> p = h.next;
                     c.add(p.item);
-                    _rvpredict_remove_element(this, p);
+                    _rvpredict_remove_element(p);
                     p.item = null;
                     h.next = h;
                     h = p;
@@ -835,7 +846,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         }
 
         public boolean hasNext() {
-            _rvpredict_access_elememt(LinkedBlockingQueue.this, current);
+            LinkedBlockingQueue.this._rvpredict_access_elememt(current);
             return current != null;
         }
 
@@ -923,7 +934,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
                 try {
                     if (p != null || (p = q.head.next) != null) {
                         do {
-                            _rvpredict_access_elememt(q, p);
+                            q._rvpredict_access_elememt(p);
                             if ((a[i] = p.item) != null)
                                 ++i;
                         } while ((p = p.next) != null && i < n);
@@ -960,7 +971,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
                         if (p == null)
                             p = q.head.next;
                         while (p != null) {
-                            _rvpredict_access_elememt(q, p);
+                            q._rvpredict_access_elememt(p);
                             e = p.item;
                             p = p.next;
                             if (e != null)
@@ -985,8 +996,8 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
                     if (current == null)
                         current = q.head.next;
                     while (current != null) {
+                        q._rvpredict_access_elememt(current);
                         e = current.item;
-                        _rvpredict_access_elememt(q, current);
                         current = current.next;
                         if (e != null)
                             break;

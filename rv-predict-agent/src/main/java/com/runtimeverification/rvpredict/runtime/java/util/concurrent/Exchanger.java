@@ -35,7 +35,6 @@
  */
 
 package com.runtimeverification.rvpredict.runtime.java.util.concurrent;
-import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
@@ -363,10 +362,17 @@ public class Exchanger<V> {
 
     // RVPredict logging methods
 
-    private final transient ConcurrentHashMap<Long, CyclicBarrier> _rvpredict_barrier_map = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, CyclicBarrier> _rvpredict_barrier_map = new ConcurrentHashMap<>();
 
-    private void _rvpredict_set_matchTID(Node node, long matchTID) {
-        node.matchTID = matchTID;
+    /**
+     * Sets the two nodes' {@link Node#matchTID} to each other.
+     * <p>
+     * This method should be called right before the volatile write of
+     * {@code Node#match} to ensure visibility.
+     */
+    private void _rvpredict_pair_up(Node p, Node q) {
+        p.matchTID = q.ownerTID;
+        q.matchTID = p.ownerTID;
     }
 
     private int calcChannelId(long threadID, Object item) {
@@ -374,36 +380,35 @@ public class Exchanger<V> {
     }
 
     private void _rvpredict_exchange(Object exchange, Object receive) {
-        long self = Thread.currentThread().getId();
-        long partner = participant.get().matchTID;
+        Node node = participant.get();
+        long self = node.ownerTID;
+        long partner = node.matchTID;
+        if (partner == 0) {
+            throw new IllegalStateException("The partner thread ID has not been set!");
+        }
+
         CyclicBarrier barrier;
         if (self < partner) {
-            if (_rvpredict_barrier_map.put(self, barrier = new CyclicBarrier(2)) != null) {
-                throw new IllegalStateException();
+            if (_rvpredict_barrier_map.putIfAbsent(self, barrier = new CyclicBarrier(2)) != null) {
+                throw new IllegalStateException("The previous cyclic barrier has not been removed!");
             }
         } else if (self > partner) {
-            if (partner == 0) {
-                throw new IllegalStateException();
-            }
-            while ((barrier = _rvpredict_barrier_map.remove(partner)) == null) {
+            while ((barrier = _rvpredict_barrier_map.remove(partner)) == null)
                 Thread.yield();
-            }
         } else {
             throw new IllegalStateException();
         }
 
-        long value = System.identityHashCode(barrier);
-        RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_EXCHANGER_LOC_ID,
-                System.identityHashCode(this), calcChannelId(self, exchange), value);
-
         try {
+            long value = System.identityHashCode(barrier);
+            RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_EXCHANGER_LOC_ID,
+                    System.identityHashCode(this), calcChannelId(self, exchange), value);
             barrier.await();
-        } catch (InterruptedException | BrokenBarrierException e) {
+            RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_EXCHANGER_LOC_ID,
+                    System.identityHashCode(this), calcChannelId(partner, receive), value);
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
-        RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_EXCHANGER_LOC_ID,
-                System.identityHashCode(this), calcChannelId(partner, receive), value);
     }
 
     /**
@@ -423,12 +428,11 @@ public class Exchanger<V> {
             Node q = (Node)U.getObjectVolatile(a, j = (i << ASHIFT) + ABASE);
             if (q != null && U.compareAndSwapObject(a, j, q, null)) {
                 Object v = q.item;                     // release
+                _rvpredict_pair_up(p, q);
                 q.match = item;
-                _rvpredict_set_matchTID(q, Thread.currentThread().getId());
                 Thread w = q.parked;
                 if (w != null)
                     U.unpark(w);
-                _rvpredict_set_matchTID(p, q.ownerTID);
                 return v;
             }
             else if (i <= (m = (b = bound) & MMASK) && q == null) {
@@ -520,12 +524,11 @@ public class Exchanger<V> {
             if ((q = slot) != null) {
                 if (U.compareAndSwapObject(this, SLOT, q, null)) {
                     Object v = q.item;
+                    _rvpredict_pair_up(p, q);
                     q.match = item;
-                    _rvpredict_set_matchTID(q, t.getId());
                     Thread w = q.parked;
                     if (w != null)
                         U.unpark(w);
-                    _rvpredict_set_matchTID(p, q.ownerTID);
                     return v;
                 }
                 // create arena on contention, but continue until slot null

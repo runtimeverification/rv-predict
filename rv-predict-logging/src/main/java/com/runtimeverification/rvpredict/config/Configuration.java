@@ -120,6 +120,7 @@ public class Configuration implements Constants {
             "java/util/concurrent/Exchanger",
             "java/util/concurrent/FutureTask",
             "java/util/concurrent/ThreadPoolExecutor",
+            "java/util/concurrent/ScheduledThreadPoolExecutor",
             "java/util/concurrent/RejectedExecutionHandler",
             "java/util/concurrent/Executors"));
 

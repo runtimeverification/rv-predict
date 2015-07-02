@@ -15,4 +15,13 @@ public final class ThreadIDToObjectMap<T> extends LongToObjectMap<T> {
         return (int) (key & mask);
     }
 
+    public static <T> ThreadIDToObjectMap<T> growOnFull(ThreadIDToObjectMap<T> map) {
+        if (map.size == map.capacity) {
+            ThreadIDToObjectMap<T> oldMap = map;
+            map = new ThreadIDToObjectMap<>(map.capacity << 1, map.newValue);
+            map.putAll(oldMap);
+        }
+        return map;
+    }
+
 }

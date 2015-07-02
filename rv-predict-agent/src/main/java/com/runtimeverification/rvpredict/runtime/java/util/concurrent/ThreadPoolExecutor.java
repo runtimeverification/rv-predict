@@ -888,10 +888,10 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      */
     private BlockingQueue<Runnable> _rvpredict_check_work_queue(
             BlockingQueue<Runnable> workQueue) {
-        if (!workQueue.getClass().getPackage().toString()
-                .equals(ThreadPoolExecutor.class.getPackage().toString())) {
-            throw new IllegalArgumentException();
-        }
+        // TODO(YilongL): enable this check
+//        if (workQueue.getClass().getPackage().toString().equals("java.util.concurrent")) {
+//            throw new IllegalArgumentException();
+//        }
         return workQueue;
     }
 

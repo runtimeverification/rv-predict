@@ -29,6 +29,7 @@
 package com.runtimeverification.rvpredict.log;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -74,15 +75,13 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
      * <p>
      * TODO(YilongL): optimize for the case where the number of threads is large.
      */
-    private final Set<Buffer> activeBuffers = new HashSet<>(64);
+    private final Set<Buffer> activeBuffers = Collections.synchronizedSet(new HashSet<>(256));
 
     private final ThreadLocal<Buffer> threadLocalBuffer = new ThreadLocal<Buffer>() {
         @Override
         protected Buffer initialValue() {
             Buffer buffer = new Buffer(windowSize);
-            synchronized (activeBuffers) {
-                activeBuffers.add(buffer);
-            }
+            activeBuffers.add(buffer);
             return buffer;
         }
     };
@@ -99,13 +98,15 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
     @Override
     public void finishLogging() {
         /* After we close this logging engine, the remaining events in the
-         * daemon buffers that have not acquired GIDs will be lost. */
-        synchronized (activeBuffers) {
-            activeBuffers.forEach(b -> {
-                /* There is no race on `b' because non-daemon threads must have
-                 * died at this point. */
-               if (!b.isDaemon) b.finalizeEvents();
-            });
+         * buffers that have not acquired GIDs will be lost. */
+        for (Buffer buf : activeBuffers.toArray(new Buffer[0])) {
+            /* We create an array copy of the buffer set first to avoid locking
+             * `activeBuffers' because the thread running race detection also
+             * needs to lock the the buffer set before it is done. */
+            if (!buf.owner.isAlive()) {
+                /* There is no race on `buf' because the owner thread is already dead */
+                buf.finalizeEvents();
+            }
         }
 
         closed = true;
@@ -148,9 +149,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                 if (!closed) {
                     base += numOfEvents;
                     finalized.reset();
-                    synchronized (activeBuffers) {
-                        activeBuffers.forEach(Buffer::consume);
-                    }
+                    activeBuffers.forEach(Buffer::consume);
                     // CRITICAL SECTION END
                     globalEventID.set(n); // must be placed at the end of the critical section
                     return base;
@@ -180,13 +179,11 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
         try {
             List<RawTrace> rawTraces = new ArrayList<>();
-            synchronized (activeBuffers) {
-                activeBuffers.forEach(b -> {
-                    if (!b.isEmpty()) {
-                        rawTraces.add(new RawTrace(b.start, b.cursor, b.events));
-                    }
-                });
-            }
+            activeBuffers.forEach(b -> {
+                if (!b.isEmpty()) {
+                    rawTraces.add(new RawTrace(b.start, b.cursor, b.events));
+                }
+            });
             detector.run(crntState.initNextTraceWindow(rawTraces));
         } catch (Throwable e) {
             config.logger().debug(e);
@@ -232,9 +229,9 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
          */
         static final int THRESHOLD = 16;
 
-        final long tid;
+        final Thread owner;
 
-        final boolean isDaemon;
+        final long tid;
 
         final int length;
 
@@ -268,8 +265,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         int numOfCallStackEvents;
 
         Buffer(int bound) {
-            tid = Thread.currentThread().getId();
-            isDaemon = Thread.currentThread().isDaemon();
+            owner = Thread.currentThread();
+            tid = owner.getId();
             length = getCircularArrayLength(bound);
             mask = length - 1;
             events = new Event[length];
@@ -416,12 +413,10 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
         @Override
         protected void finalize() {
-            synchronized (activeBuffers) {
-                /* remove itself from the `activeBuffers' so that the finalizer
-                 * thread and the cleanup thread running finishLogging() will
-                 * not call finalizeEvents() on this buffer concurrently. */
-                activeBuffers.remove(this);
-            }
+            /* remove itself from the `activeBuffers' so that the finalizer
+             * thread and the cleanup thread running finishLogging() will
+             * not call finalizeEvents() on this buffer concurrently. */
+            activeBuffers.remove(this);
             finalizeEvents();
         }
 

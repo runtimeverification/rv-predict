@@ -113,6 +113,7 @@ public class Configuration implements Constants {
             "java/util/concurrent/locks/AbstractQueuedSynchronizer",
             "java/util/concurrent/ArrayBlockingQueue",
             "java/util/concurrent/LinkedBlockingQueue",
+            "java/util/concurrent/PriorityBlockingQueue",
             "java/util/concurrent/SynchronousQueue",
             "java/util/concurrent/Semaphore",
             "java/util/concurrent/CountDownLatch",

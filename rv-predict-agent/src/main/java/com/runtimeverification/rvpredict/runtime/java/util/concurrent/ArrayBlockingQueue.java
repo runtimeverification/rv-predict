@@ -41,7 +41,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.*;
 import java.lang.ref.WeakReference;
-import org.apache.commons.lang3.mutable.MutableInt;
+
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 /**
@@ -96,6 +97,12 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
     /** The queued items */
     final Object[] items;
 
+    /** RVPredict: map each queued item to a unique element ID */
+    final int[] elem_id;
+
+    /** RVPredict: element ID counter */
+    int elem_id_counter = 1;
+
     /** items index for next take, poll, peek or remove */
     int takeIndex;
 
@@ -126,41 +133,36 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      */
     transient Itrs itrs = null;
 
-    /**
-     * Map from element in this queue to the number of its occurrences.
-     * <p>
-     * Access to this map are guarded by the concurrency control of this queue.
-     * No additional synchronization is needed.
-     */
-    private final Map<Object, MutableInt> _rvpredict_elem_to_count = new IdentityHashMap<>();
-
     // RV-Predict logging methods
 
-    private static int calcElementId(Object e) {
-        checkNotNull(e);
-        return System.identityHashCode(e);
+    /**
+     * Called only when an "interior" remove happens.
+     */
+    private void _rvpredict_move_elem_id(int dest, int src) {
+        elem_id[dest] = elem_id[src];
     }
 
-    private static void _rvpredict_add_element(ArrayBlockingQueue<?> queue, Object e) {
-        MutableInt count = queue._rvpredict_elem_to_count.computeIfAbsent(e, x -> new MutableInt(0));
-        RVPredictRuntime.rvPredictBlockingQueueAddElement(queue, calcElementId(e),
-                count.intValue(), RVPREDICT_ABQ_LOC_ID);
-        count.increment();
+    private void _rvpredict_add_element(int idx) {
+        // assert lock.isHeldByCurrentThread();
+        elem_id[idx] = elem_id_counter++;
+        RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_ABQ_LOC_ID,
+                System.identityHashCode(this), elem_id[idx], 0);
+        RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_ABQ_LOC_ID,
+                System.identityHashCode(this), elem_id[idx], 1);
     }
 
-    private static void _rvpredict_access_element(ArrayBlockingQueue<?> queue, Object e) {
-        RVPredictRuntime.rvPredictBlockingQueueAccessElement(queue, calcElementId(e),
-                queue._rvpredict_elem_to_count.get(e).getValue(), RVPREDICT_ABQ_LOC_ID);
+    private void _rvpredict_access_element(int idx) {
+        // assert lock.isHeldByCurrentThread();
+        RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_ABQ_LOC_ID,
+                System.identityHashCode(this), elem_id[idx], 1);
     }
 
-    private static void _rvpredict_remove_element(ArrayBlockingQueue<?> queue, Object e) {
-        MutableInt count = queue._rvpredict_elem_to_count.get(e);
-        RVPredictRuntime.rvPredictBlockingQueueRemoveElement(queue, calcElementId(e),
-                count.intValue(), RVPREDICT_ABQ_LOC_ID);
-        count.decrement();
-        if (count.intValue() == 0) {
-            queue._rvpredict_elem_to_count.remove(e);
-        }
+    private void _rvpredict_remove_element(int idx) {
+        // assert lock.isHeldByCurrentThread();
+        RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_ABQ_LOC_ID,
+                System.identityHashCode(this), elem_id[idx], 1);
+        RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_ABQ_LOC_ID,
+                System.identityHashCode(this), elem_id[idx], 0);
     }
 
     // Internal helper methods
@@ -177,7 +179,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      */
     @SuppressWarnings("unchecked")
     final E itemAt(int i) {
-        _rvpredict_access_element(this, items[i]);
+        _rvpredict_access_element(i);
         return (E) items[i];
     }
 
@@ -199,7 +201,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         // assert lock.getHoldCount() == 1;
         // assert items[putIndex] == null;
         final Object[] items = this.items;
-        _rvpredict_add_element(this, x);
+        _rvpredict_add_element(putIndex);
         items[putIndex] = x;
         if (++putIndex == items.length)
             putIndex = 0;
@@ -217,7 +219,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         final Object[] items = this.items;
         @SuppressWarnings("unchecked")
         E x = (E) items[takeIndex];
-        _rvpredict_remove_element(this, x);
+        _rvpredict_remove_element(takeIndex);
         items[takeIndex] = null;
         if (++takeIndex == items.length)
             takeIndex = 0;
@@ -237,7 +239,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         // assert lock.getHoldCount() == 1;
         // assert items[removeIndex] != null;
         // assert removeIndex >= 0 && removeIndex < items.length;
-        _rvpredict_remove_element(this, items[removeIndex]);
+        _rvpredict_remove_element(removeIndex);
         final Object[] items = this.items;
         if (removeIndex == takeIndex) {
             // removing front item; just advance
@@ -258,6 +260,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
                     next = 0;
                 if (next != putIndex) {
                     items[i] = items[next];
+                    _rvpredict_move_elem_id(i, next);
                     i = next;
                 } else {
                     items[i] = null;
@@ -297,6 +300,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         if (capacity <= 0)
             throw new IllegalArgumentException();
         this.items = new Object[capacity];
+        this.elem_id = new int[capacity];
         lock = new ReentrantLock(fair);
         notEmpty = lock.newCondition();
         notFull =  lock.newCondition();
@@ -329,7 +333,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
             try {
                 for (E e : c) {
                     checkNotNull(e);
-                    _rvpredict_add_element(this, e);
+                    _rvpredict_add_element(i);
                     items[i++] = e;
                 }
             } catch (ArrayIndexOutOfBoundsException ex) {
@@ -578,7 +582,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
                 int i = takeIndex;
                 do {
                     if (o.equals(items[i])) {
-                        _rvpredict_access_element(this, items[i]);
+                        _rvpredict_access_element(i);
                         return true;
                     }
                     if (++i == items.length)
@@ -678,7 +682,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
                 System.arraycopy(items, 0, a, n, count - n);
             }
             for (int i = takeIndex; i < takeIndex + count; i++) {
-                _rvpredict_access_element(this, items[i % items.length]);
+                _rvpredict_access_element(i % items.length);
             }
             if (len > count)
                 a[count] = null;
@@ -701,7 +705,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
             sb.append('[');
             for (int i = takeIndex; ; ) {
                 Object e = items[i];
-                _rvpredict_access_element(this, e);
+                _rvpredict_access_element(i);
                 sb.append(e == this ? "(this Collection)" : e);
                 if (--k == 0)
                     return sb.append(']').toString();
@@ -728,7 +732,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
                 final int putIndex = this.putIndex;
                 int i = takeIndex;
                 do {
-                    _rvpredict_remove_element(this, items[i]);
+                    _rvpredict_remove_element(i);
                     items[i] = null;
                     if (++i == items.length)
                         i = 0;
@@ -779,7 +783,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
                     @SuppressWarnings("unchecked")
                     E x = (E) items[take];
                     c.add(x);
-                    _rvpredict_remove_element(this, x);
+                    _rvpredict_remove_element(take);
                     items[take] = null;
                     if (++take == items.length)
                         take = 0;

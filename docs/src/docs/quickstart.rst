@@ -47,6 +47,15 @@ Passing options to the agent can be done as standard for agents:
 using  ``-javaagent:<rvPath>/lib/rv-predict.jar="<opts>"``, where ``<opts>``
 are RV-Predict options.
 
+The agent uses the z3_ library as a constraint solver.  Therefore,  the ``z3``
+libraries need to be accessible from the library path.
+To ensure that for Linux/OSX systems (not necessary for Windows), please go to
+the ``<rvPath>/lib`` directory and ``source`` the ``setenv`` script:
+
+::
+
+  <rvPath>/lib$ source setenv
+
 Integration with Maven
 ``````````````````````
 For Maven-based projects which have tests, one can simply run ``mvn test``,
@@ -74,18 +83,26 @@ similar to the following:
 Replace ``${surefire-version}`` with the exact surefire plugin version
 used by the project (e.g., ``2.16``).
 
-Adding the ``-javaagent`` option is the only change needed to an existing
-project and tests can still be run with ``mvn test``.
+Adding the ``-javaagent`` and ``-Xbootclasspath`` options are the only changes
+needed to an existing project and tests can still be run with ``mvn test``.
 
 Integration with IDEs
 `````````````````````
 
 Generic instructions
-  the ``-javaagent`` option needs to be added to the VM options of your Run/Debug Configurations.
+  the ``-javaagent`` and ``-Xbootclasspath`` options need to be added to the VM
+  options of your Run/Debug Configurations.
 Eclipse
-  From the menu select **Run** -> **Run Configurations** -> (then you select the configuration that you are running) -> select **Arguments** tab -> enter ``-javaagent:<rvPath>/lib/rv-predict.jar`` into the **VM arguments** field.
+  From the menu select **Run** -> **Run Configurations** ->
+  (then you select the configuration that you are running) ->
+  select **Arguments** tab -> enter
+  ``-javaagent:<rvPath>/lib/rv-predict.jar -Xbootclasspath/a:<rvPath>/lib/rv-predict.jar``
+  into the **VM arguments** field.
 IntelliJ IDEA
-  From the menu select **Run** -> **Edit Configurations** -> (then you select the configuration that you are running) -> enter ``-javaagent:<rvPath>/lib/rv-predict.jar`` into the **VM options:** field.
+  From the menu select **Run** -> **Edit Configurations** ->
+  (then you select the configuration that you are running) -> enter
+  ``-javaagent:<rvPath>/lib/rv-predict.jar -Xbootclasspath/a:<rvPath>/lib/rv-predict.jar``
+  into the **VM options:** field.
 
 
 Tuning RV-Predict

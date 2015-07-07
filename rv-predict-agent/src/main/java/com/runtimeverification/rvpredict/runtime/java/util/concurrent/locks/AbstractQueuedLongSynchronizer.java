@@ -48,267 +48,45 @@ import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 import sun.misc.Unsafe;
 
 /**
- * Provides a framework for implementing blocking locks and related
- * synchronizers (semaphores, events, etc) that rely on
- * first-in-first-out (FIFO) wait queues.  This class is designed to
- * be a useful basis for most kinds of synchronizers that rely on a
- * single atomic {@code int} value to represent state. Subclasses
- * must define the protected methods that change this state, and which
- * define what that state means in terms of this object being acquired
- * or released.  Given these, the other methods in this class carry
- * out all queuing and blocking mechanics. Subclasses can maintain
- * other state fields, but only the atomically updated {@code int}
- * value manipulated using methods {@link #getState}, {@link
- * #setState} and {@link #compareAndSetState} is tracked with respect
- * to synchronization.
+ * A version of {@link AbstractQueuedSynchronizer} in
+ * which synchronization state is maintained as a {@code long}.
+ * This class has exactly the same structure, properties, and methods
+ * as {@code AbstractQueuedSynchronizer} with the exception
+ * that all state-related parameters and results are defined
+ * as {@code long} rather than {@code int}. This class
+ * may be useful when creating synchronizers such as
+ * multilevel locks and barriers that require
+ * 64 bits of state.
  *
- * <p>Subclasses should be defined as non-public internal helper
- * classes that are used to implement the synchronization properties
- * of their enclosing class.  Class
- * {@code AbstractQueuedSynchronizer} does not implement any
- * synchronization interface.  Instead it defines methods such as
- * {@link #acquireInterruptibly} that can be invoked as
- * appropriate by concrete locks and related synchronizers to
- * implement their public methods.
+ * <p>See {@link AbstractQueuedSynchronizer} for usage
+ * notes and examples.
  *
- * <p>This class supports either or both a default <em>exclusive</em>
- * mode and a <em>shared</em> mode. When acquired in exclusive mode,
- * attempted acquires by other threads cannot succeed. Shared mode
- * acquires by multiple threads may (but need not) succeed. This class
- * does not &quot;understand&quot; these differences except in the
- * mechanical sense that when a shared mode acquire succeeds, the next
- * waiting thread (if one exists) must also determine whether it can
- * acquire as well. Threads waiting in the different modes share the
- * same FIFO queue. Usually, implementation subclasses support only
- * one of these modes, but both can come into play for example in a
- * {@link ReadWriteLock}. Subclasses that support only exclusive or
- * only shared modes need not define the methods supporting the unused mode.
- *
- * <p>This class defines a nested {@link ConditionObject} class that
- * can be used as a {@link Condition} implementation by subclasses
- * supporting exclusive mode for which method {@link
- * #isHeldExclusively} reports whether synchronization is exclusively
- * held with respect to the current thread, method {@link #release}
- * invoked with the current {@link #getState} value fully releases
- * this object, and {@link #acquire}, given this saved state value,
- * eventually restores this object to its previous acquired state.  No
- * {@code AbstractQueuedSynchronizer} method otherwise creates such a
- * condition, so if this constraint cannot be met, do not use it.  The
- * behavior of {@link ConditionObject} depends of course on the
- * semantics of its synchronizer implementation.
- *
- * <p>This class provides inspection, instrumentation, and monitoring
- * methods for the internal queue, as well as similar methods for
- * condition objects. These can be exported as desired into classes
- * using an {@code AbstractQueuedSynchronizer} for their
- * synchronization mechanics.
- *
- * <p>Serialization of this class stores only the underlying atomic
- * integer maintaining state, so deserialized objects have empty
- * thread queues. Typical subclasses requiring serializability will
- * define a {@code readObject} method that restores this to a known
- * initial state upon deserialization.
- *
- * <h3>Usage</h3>
- *
- * <p>To use this class as the basis of a synchronizer, redefine the
- * following methods, as applicable, by inspecting and/or modifying
- * the synchronization state using {@link #getState}, {@link
- * #setState} and/or {@link #compareAndSetState}:
- *
- * <ul>
- * <li> {@link #tryAcquire}
- * <li> {@link #tryRelease}
- * <li> {@link #tryAcquireShared}
- * <li> {@link #tryReleaseShared}
- * <li> {@link #isHeldExclusively}
- * </ul>
- *
- * Each of these methods by default throws {@link
- * UnsupportedOperationException}.  Implementations of these methods
- * must be internally thread-safe, and should in general be short and
- * not block. Defining these methods is the <em>only</em> supported
- * means of using this class. All other methods are declared
- * {@code final} because they cannot be independently varied.
- *
- * <p>You may also find the inherited methods from {@link
- * AbstractOwnableSynchronizer} useful to keep track of the thread
- * owning an exclusive synchronizer.  You are encouraged to use them
- * -- this enables monitoring and diagnostic tools to assist users in
- * determining which threads hold locks.
- *
- * <p>Even though this class is based on an internal FIFO queue, it
- * does not automatically enforce FIFO acquisition policies.  The core
- * of exclusive synchronization takes the form:
- *
- * <pre>
- * Acquire:
- *     while (!tryAcquire(arg)) {
- *        <em>enqueue thread if it is not already queued</em>;
- *        <em>possibly block current thread</em>;
- *     }
- *
- * Release:
- *     if (tryRelease(arg))
- *        <em>unblock the first queued thread</em>;
- * </pre>
- *
- * (Shared mode is similar but may involve cascading signals.)
- *
- * <p id="barging">Because checks in acquire are invoked before
- * enqueuing, a newly acquiring thread may <em>barge</em> ahead of
- * others that are blocked and queued.  However, you can, if desired,
- * define {@code tryAcquire} and/or {@code tryAcquireShared} to
- * disable barging by internally invoking one or more of the inspection
- * methods, thereby providing a <em>fair</em> FIFO acquisition order.
- * In particular, most fair synchronizers can define {@code tryAcquire}
- * to return {@code false} if {@link #hasQueuedPredecessors} (a method
- * specifically designed to be used by fair synchronizers) returns
- * {@code true}.  Other variations are possible.
- *
- * <p>Throughput and scalability are generally highest for the
- * default barging (also known as <em>greedy</em>,
- * <em>renouncement</em>, and <em>convoy-avoidance</em>) strategy.
- * While this is not guaranteed to be fair or starvation-free, earlier
- * queued threads are allowed to recontend before later queued
- * threads, and each recontention has an unbiased chance to succeed
- * against incoming threads.  Also, while acquires do not
- * &quot;spin&quot; in the usual sense, they may perform multiple
- * invocations of {@code tryAcquire} interspersed with other
- * computations before blocking.  This gives most of the benefits of
- * spins when exclusive synchronization is only briefly held, without
- * most of the liabilities when it isn't. If so desired, you can
- * augment this by preceding calls to acquire methods with
- * "fast-path" checks, possibly prechecking {@link #hasContended}
- * and/or {@link #hasQueuedThreads} to only do so if the synchronizer
- * is likely not to be contended.
- *
- * <p>This class provides an efficient and scalable basis for
- * synchronization in part by specializing its range of use to
- * synchronizers that can rely on {@code int} state, acquire, and
- * release parameters, and an internal FIFO wait queue. When this does
- * not suffice, you can build synchronizers from a lower level using
- * {@link java.util.concurrent.atomic atomic} classes, your own custom
- * {@link java.util.Queue} classes, and {@link LockSupport} blocking
- * support.
- *
- * <h3>Usage Examples</h3>
- *
- * <p>Here is a non-reentrant mutual exclusion lock class that uses
- * the value zero to represent the unlocked state, and one to
- * represent the locked state. While a non-reentrant lock
- * does not strictly require recording of the current owner
- * thread, this class does so anyway to make usage easier to monitor.
- * It also supports conditions and exposes
- * one of the instrumentation methods:
- *
- *  <pre> {@code
- * class Mutex implements Lock, java.io.Serializable {
- *
- *   // Our internal helper class
- *   private static class Sync extends AbstractQueuedSynchronizer {
- *     // Reports whether in locked state
- *     protected boolean isHeldExclusively() {
- *       return getState() == 1;
- *     }
- *
- *     // Acquires the lock if state is zero
- *     public boolean tryAcquire(int acquires) {
- *       assert acquires == 1; // Otherwise unused
- *       if (compareAndSetState(0, 1)) {
- *         setExclusiveOwnerThread(Thread.currentThread());
- *         return true;
- *       }
- *       return false;
- *     }
- *
- *     // Releases the lock by setting state to zero
- *     protected boolean tryRelease(int releases) {
- *       assert releases == 1; // Otherwise unused
- *       if (getState() == 0) throw new IllegalMonitorStateException();
- *       setExclusiveOwnerThread(null);
- *       setState(0);
- *       return true;
- *     }
- *
- *     // Provides a Condition
- *     Condition newCondition() { return new ConditionObject(); }
- *
- *     // Deserializes properly
- *     private void readObject(ObjectInputStream s)
- *         throws IOException, ClassNotFoundException {
- *       s.defaultReadObject();
- *       setState(0); // reset to unlocked state
- *     }
- *   }
- *
- *   // The sync object does all the hard work. We just forward to it.
- *   private final Sync sync = new Sync();
- *
- *   public void lock()                { sync.acquire(1); }
- *   public boolean tryLock()          { return sync.tryAcquire(1); }
- *   public void unlock()              { sync.release(1); }
- *   public Condition newCondition()   { return sync.newCondition(); }
- *   public boolean isLocked()         { return sync.isHeldExclusively(); }
- *   public boolean hasQueuedThreads() { return sync.hasQueuedThreads(); }
- *   public void lockInterruptibly() throws InterruptedException {
- *     sync.acquireInterruptibly(1);
- *   }
- *   public boolean tryLock(long timeout, TimeUnit unit)
- *       throws InterruptedException {
- *     return sync.tryAcquireNanos(1, unit.toNanos(timeout));
- *   }
- * }}</pre>
- *
- * <p>Here is a latch class that is like a
- * {@link java.util.concurrent.CountDownLatch CountDownLatch}
- * except that it only requires a single {@code signal} to
- * fire. Because a latch is non-exclusive, it uses the {@code shared}
- * acquire and release methods.
- *
- *  <pre> {@code
- * class BooleanLatch {
- *
- *   private static class Sync extends AbstractQueuedSynchronizer {
- *     boolean isSignalled() { return getState() != 0; }
- *
- *     protected int tryAcquireShared(int ignore) {
- *       return isSignalled() ? 1 : -1;
- *     }
- *
- *     protected boolean tryReleaseShared(int ignore) {
- *       setState(1);
- *       return true;
- *     }
- *   }
- *
- *   private final Sync sync = new Sync();
- *   public boolean isSignalled() { return sync.isSignalled(); }
- *   public void signal()         { sync.releaseShared(1); }
- *   public void await() throws InterruptedException {
- *     sync.acquireSharedInterruptibly(1);
- *   }
- * }}</pre>
- *
- * @since 1.5
+ * @since 1.6
  * @author Doug Lea
  */
-public abstract class AbstractQueuedSynchronizer
+public abstract class AbstractQueuedLongSynchronizer
     extends AbstractOwnableSynchronizer
     implements java.io.Serializable {
 
-    private static final long serialVersionUID = 7373984972572414691L;
+    private static final long serialVersionUID = 7373984972572414692L;
 
-    private static final int RVPREDICT_AQS_LOC_ID = RVPredictRuntime.metadata
-            .getLocationId("java.util.concurrent.locks.AbstractQueuedSynchronizer(AbstractQueuedSynchronizer.java:n/a)");
-    private static final int RVPREDICT_AQS_STATE_ID = RVPredictRuntime.metadata.getVariableId(
-            "java.util.concurrent.locks.AbstractQueuedSynchronizer", "state");
+    private static final int RVPREDICT_AQLS_LOC_ID = RVPredictRuntime.metadata
+            .getLocationId("java.util.concurrent.locks.AbstractQueuedLongSynchronizer(AbstractQueuedLongSynchronizer.java:n/a)");
+    private static final int RVPREDICT_AQLS_STATE_ID = RVPredictRuntime.metadata.getVariableId(
+            "java.util.concurrent.locks.AbstractQueuedLongSynchronizer", "state");
+
+    /*
+      To keep sources in sync, the remainder of this source file is
+      exactly cloned from AbstractQueuedSynchronizer, replacing class
+      name and changing ints related with sync state to longs. Please
+      keep it that way.
+    */
 
     /**
-     * Creates a new {@code AbstractQueuedSynchronizer} instance
+     * Creates a new {@code AbstractQueuedLongSynchronizer} instance
      * with initial synchronization state of zero.
      */
-    protected AbstractQueuedSynchronizer() { }
+    protected AbstractQueuedLongSynchronizer() { }
 
     /**
      * Wait queue node class.
@@ -542,7 +320,7 @@ public abstract class AbstractQueuedSynchronizer
     /**
      * The synchronization state.
      */
-    private volatile int state;
+    private volatile long state;
 
     // RV-Predict logging methods
 
@@ -553,44 +331,44 @@ public abstract class AbstractQueuedSynchronizer
      */
     private final Object _rvpredict_sync = new Object();
 
-    private void _rvpredict_atomic_read(int value) {
-        RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_READ, RVPREDICT_AQS_LOC_ID,
-                System.identityHashCode(this), -RVPREDICT_AQS_STATE_ID, value, 0);
+    private void _rvpredict_atomic_read(long value) {
+        RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_READ, RVPREDICT_AQLS_LOC_ID,
+                System.identityHashCode(this), -RVPREDICT_AQLS_STATE_ID, value, 0);
     }
 
-    private void _rvpredict_atomic_write(int value) {
-        RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_WRITE, RVPREDICT_AQS_LOC_ID,
-                System.identityHashCode(this), -RVPREDICT_AQS_STATE_ID, value, 0);
+    private void _rvpredict_atomic_write(long value) {
+        RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_WRITE, RVPREDICT_AQLS_LOC_ID,
+                System.identityHashCode(this), -RVPREDICT_AQLS_STATE_ID, value, 0);
     }
 
-    private void _rvpredict_atomic_read_then_write(int oldValue, int newValue) {
-        RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, RVPREDICT_AQS_LOC_ID,
-                System.identityHashCode(this), -RVPREDICT_AQS_STATE_ID, oldValue, newValue);
+    private void _rvpredict_atomic_read_then_write(long oldValue, long newValue) {
+        RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, RVPREDICT_AQLS_LOC_ID,
+                System.identityHashCode(this), -RVPREDICT_AQLS_STATE_ID, oldValue, newValue);
     }
 
-    private int _rvpredict_get_state() {
+    private long _rvpredict_get_state() {
         synchronized (_rvpredict_sync) {
-            int state = this.state;
+            long state = this.state;
             _rvpredict_atomic_read(state);
             return state;
         }
     }
 
-    private void _rvpredict_set_state(int newState) {
+    private void _rvpredict_set_state(long newState) {
         _rvpredict_atomic_write(newState);
         state = newState;
     }
 
-    private boolean _rvpredict_cas_state(int expect, int update) {
+    private boolean _rvpredict_cas_state(long expect, long update) {
         for (;;) {
             synchronized (_rvpredict_sync) {
-                if (unsafe.compareAndSwapInt(this, stateOffset, expect, update)) {
+                if (unsafe.compareAndSwapLong(this, stateOffset, expect, update)) {
                     _rvpredict_atomic_read_then_write(expect, update);
                     return true;
                 }
             }
 
-            int actual = state;
+            long actual = state;
             if (expect != actual) {
                 _rvpredict_atomic_read(actual);
                 return false;
@@ -603,7 +381,7 @@ public abstract class AbstractQueuedSynchronizer
      * This operation has memory semantics of a {@code volatile} read.
      * @return current state value
      */
-    protected final int getState() {
+    protected final long getState() {
         return _rvpredict_get_state();
     }
 
@@ -612,7 +390,7 @@ public abstract class AbstractQueuedSynchronizer
      * This operation has memory semantics of a {@code volatile} write.
      * @param newState the new state value
      */
-    protected final void setState(int newState) {
+    protected final void setState(long newState) {
         _rvpredict_set_state(newState);
     }
 
@@ -627,7 +405,7 @@ public abstract class AbstractQueuedSynchronizer
      * @return {@code true} if successful. False return indicates that the actual
      *         value was not equal to the expected value.
      */
-    protected final boolean compareAndSetState(int expect, int update) {
+    protected final boolean compareAndSetState(long expect, long update) {
         // See below for intrinsics setup to support this
         return _rvpredict_cas_state(expect, update);
     }
@@ -771,7 +549,7 @@ public abstract class AbstractQueuedSynchronizer
      * @param node the node
      * @param propagate the return value from a tryAcquireShared
      */
-    private void setHeadAndPropagate(Node node, int propagate) {
+    private void setHeadAndPropagate(Node node, long propagate) {
         Node h = head; // Record old head for check below
         setHead(node);
         /*
@@ -920,7 +698,7 @@ public abstract class AbstractQueuedSynchronizer
      * @param arg the acquire argument
      * @return {@code true} if interrupted while waiting
      */
-    final boolean acquireQueued(final Node node, int arg) {
+    final boolean acquireQueued(final Node node, long arg) {
         boolean failed = true;
         try {
             boolean interrupted = false;
@@ -946,7 +724,7 @@ public abstract class AbstractQueuedSynchronizer
      * Acquires in exclusive interruptible mode.
      * @param arg the acquire argument
      */
-    private void doAcquireInterruptibly(int arg)
+    private void doAcquireInterruptibly(long arg)
         throws InterruptedException {
         final Node node = addWaiter(Node.EXCLUSIVE);
         boolean failed = true;
@@ -976,7 +754,7 @@ public abstract class AbstractQueuedSynchronizer
      * @param nanosTimeout max wait time
      * @return {@code true} if acquired
      */
-    private boolean doAcquireNanos(int arg, long nanosTimeout)
+    private boolean doAcquireNanos(long arg, long nanosTimeout)
             throws InterruptedException {
         if (nanosTimeout <= 0L)
             return false;
@@ -1011,7 +789,7 @@ public abstract class AbstractQueuedSynchronizer
      * Acquires in shared uninterruptible mode.
      * @param arg the acquire argument
      */
-    private void doAcquireShared(int arg) {
+    private void doAcquireShared(long arg) {
         final Node node = addWaiter(Node.SHARED);
         boolean failed = true;
         try {
@@ -1019,7 +797,7 @@ public abstract class AbstractQueuedSynchronizer
             for (;;) {
                 final Node p = node.predecessor();
                 if (p == head) {
-                    int r = tryAcquireShared(arg);
+                    long r = tryAcquireShared(arg);
                     if (r >= 0) {
                         setHeadAndPropagate(node, r);
                         p.next = null; // help GC
@@ -1043,7 +821,7 @@ public abstract class AbstractQueuedSynchronizer
      * Acquires in shared interruptible mode.
      * @param arg the acquire argument
      */
-    private void doAcquireSharedInterruptibly(int arg)
+    private void doAcquireSharedInterruptibly(long arg)
         throws InterruptedException {
         final Node node = addWaiter(Node.SHARED);
         boolean failed = true;
@@ -1051,7 +829,7 @@ public abstract class AbstractQueuedSynchronizer
             for (;;) {
                 final Node p = node.predecessor();
                 if (p == head) {
-                    int r = tryAcquireShared(arg);
+                    long r = tryAcquireShared(arg);
                     if (r >= 0) {
                         setHeadAndPropagate(node, r);
                         p.next = null; // help GC
@@ -1076,7 +854,7 @@ public abstract class AbstractQueuedSynchronizer
      * @param nanosTimeout max wait time
      * @return {@code true} if acquired
      */
-    private boolean doAcquireSharedNanos(int arg, long nanosTimeout)
+    private boolean doAcquireSharedNanos(long arg, long nanosTimeout)
             throws InterruptedException {
         if (nanosTimeout <= 0L)
             return false;
@@ -1087,7 +865,7 @@ public abstract class AbstractQueuedSynchronizer
             for (;;) {
                 final Node p = node.predecessor();
                 if (p == head) {
-                    int r = tryAcquireShared(arg);
+                    long r = tryAcquireShared(arg);
                     if (r >= 0) {
                         setHeadAndPropagate(node, r);
                         p.next = null; // help GC
@@ -1138,7 +916,7 @@ public abstract class AbstractQueuedSynchronizer
      *         correctly.
      * @throws UnsupportedOperationException if exclusive mode is not supported
      */
-    protected boolean tryAcquire(int arg) {
+    protected boolean tryAcquire(long arg) {
         throw new UnsupportedOperationException();
     }
 
@@ -1164,7 +942,7 @@ public abstract class AbstractQueuedSynchronizer
      *         correctly.
      * @throws UnsupportedOperationException if exclusive mode is not supported
      */
-    protected boolean tryRelease(int arg) {
+    protected boolean tryRelease(long arg) {
         throw new UnsupportedOperationException();
     }
 
@@ -1200,7 +978,7 @@ public abstract class AbstractQueuedSynchronizer
      *         correctly.
      * @throws UnsupportedOperationException if shared mode is not supported
      */
-    protected int tryAcquireShared(int arg) {
+    protected long tryAcquireShared(long arg) {
         throw new UnsupportedOperationException();
     }
 
@@ -1225,7 +1003,7 @@ public abstract class AbstractQueuedSynchronizer
      *         correctly.
      * @throws UnsupportedOperationException if shared mode is not supported
      */
-    protected boolean tryReleaseShared(int arg) {
+    protected boolean tryReleaseShared(long arg) {
         throw new UnsupportedOperationException();
     }
 
@@ -1260,7 +1038,7 @@ public abstract class AbstractQueuedSynchronizer
      *        {@link #tryAcquire} but is otherwise uninterpreted and
      *        can represent anything you like.
      */
-    public final void acquire(int arg) {
+    public final void acquire(long arg) {
         if (!tryAcquire(arg) &&
             acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
             selfInterrupt();
@@ -1280,7 +1058,7 @@ public abstract class AbstractQueuedSynchronizer
      *        can represent anything you like.
      * @throws InterruptedException if the current thread is interrupted
      */
-    public final void acquireInterruptibly(int arg)
+    public final void acquireInterruptibly(long arg)
             throws InterruptedException {
         if (Thread.interrupted())
             throw new InterruptedException();
@@ -1305,7 +1083,7 @@ public abstract class AbstractQueuedSynchronizer
      * @return {@code true} if acquired; {@code false} if timed out
      * @throws InterruptedException if the current thread is interrupted
      */
-    public final boolean tryAcquireNanos(int arg, long nanosTimeout)
+    public final boolean tryAcquireNanos(long arg, long nanosTimeout)
             throws InterruptedException {
         if (Thread.interrupted())
             throw new InterruptedException();
@@ -1323,7 +1101,7 @@ public abstract class AbstractQueuedSynchronizer
      *        can represent anything you like.
      * @return the value returned from {@link #tryRelease}
      */
-    public final boolean release(int arg) {
+    public final boolean release(long arg) {
         if (tryRelease(arg)) {
             Node h = head;
             if (h != null && h.waitStatus != 0)
@@ -1344,7 +1122,7 @@ public abstract class AbstractQueuedSynchronizer
      *        {@link #tryAcquireShared} but is otherwise uninterpreted
      *        and can represent anything you like.
      */
-    public final void acquireShared(int arg) {
+    public final void acquireShared(long arg) {
         if (tryAcquireShared(arg) < 0)
             doAcquireShared(arg);
     }
@@ -1362,7 +1140,7 @@ public abstract class AbstractQueuedSynchronizer
      * you like.
      * @throws InterruptedException if the current thread is interrupted
      */
-    public final void acquireSharedInterruptibly(int arg)
+    public final void acquireSharedInterruptibly(long arg)
             throws InterruptedException {
         if (Thread.interrupted())
             throw new InterruptedException();
@@ -1386,7 +1164,7 @@ public abstract class AbstractQueuedSynchronizer
      * @return {@code true} if acquired; {@code false} if timed out
      * @throws InterruptedException if the current thread is interrupted
      */
-    public final boolean tryAcquireSharedNanos(int arg, long nanosTimeout)
+    public final boolean tryAcquireSharedNanos(long arg, long nanosTimeout)
             throws InterruptedException {
         if (Thread.interrupted())
             throw new InterruptedException();
@@ -1403,7 +1181,7 @@ public abstract class AbstractQueuedSynchronizer
      *        and can represent anything you like.
      * @return the value returned from {@link #tryReleaseShared}
      */
-    public final boolean releaseShared(int arg) {
+    public final boolean releaseShared(long arg) {
         if (tryReleaseShared(arg)) {
             doReleaseShared();
             return true;
@@ -1550,7 +1328,7 @@ public abstract class AbstractQueuedSynchronizer
      * due to the queue being empty.
      *
      * <p>This method is designed to be used by a fair synchronizer to
-     * avoid <a href="AbstractQueuedSynchronizer#barging">barging</a>.
+     * avoid <a href="AbstractQueuedSynchronizer.html#barging">barging</a>.
      * Such a synchronizer's {@link #tryAcquire} method should return
      * {@code false}, and its {@link #tryAcquireShared} method should
      * return a negative value, if this method returns {@code true}
@@ -1679,7 +1457,7 @@ public abstract class AbstractQueuedSynchronizer
      * @return a string identifying this synchronizer, as well as its state
      */
     public String toString() {
-        int s = getState();
+        long s = getState();
         String q  = hasQueuedThreads() ? "non" : "";
         return super.toString() +
             "[State = " + s + ", " + q + "empty queue]";
@@ -1782,10 +1560,10 @@ public abstract class AbstractQueuedSynchronizer
      * @param node the condition node for this wait
      * @return previous sync state
      */
-    final int fullyRelease(Node node) {
+    final long fullyRelease(Node node) {
         boolean failed = true;
         try {
-            int savedState = getState();
+            long savedState = getState();
             if (release(savedState)) {
                 failed = false;
                 return savedState;
@@ -1880,7 +1658,7 @@ public abstract class AbstractQueuedSynchronizer
 
     /**
      * Condition implementation for a {@link
-     * AbstractQueuedSynchronizer} serving as the basis of a {@link
+     * AbstractQueuedLongSynchronizer} serving as the basis of a {@link
      * Lock} implementation.
      *
      * <p>Method documentation for this class describes mechanics,
@@ -1888,10 +1666,12 @@ public abstract class AbstractQueuedSynchronizer
      * and Condition users. Exported versions of this class will in
      * general need to be accompanied by documentation describing
      * condition semantics that rely on those of the associated
-     * {@code AbstractQueuedSynchronizer}.
+     * {@code AbstractQueuedLongSynchronizer}.
      *
      * <p>This class is Serializable, but all fields are transient,
      * so deserialized conditions have no waiters.
+     *
+     * @since 1.6
      */
     public class ConditionObject implements Condition, java.io.Serializable {
         private static final long serialVersionUID = 1173984872572414699L;
@@ -2036,7 +1816,7 @@ public abstract class AbstractQueuedSynchronizer
          */
         public final void awaitUninterruptibly() {
             Node node = addConditionWaiter();
-            int savedState = fullyRelease(node);
+            long savedState = fullyRelease(node);
             boolean interrupted = false;
             while (!isOnSyncQueue(node)) {
                 LockSupport.park(this);
@@ -2099,7 +1879,7 @@ public abstract class AbstractQueuedSynchronizer
             if (Thread.interrupted())
                 throw new InterruptedException();
             Node node = addConditionWaiter();
-            int savedState = fullyRelease(node);
+            long savedState = fullyRelease(node);
             int interruptMode = 0;
             while (!isOnSyncQueue(node)) {
                 LockSupport.park(this);
@@ -2132,7 +1912,7 @@ public abstract class AbstractQueuedSynchronizer
             if (Thread.interrupted())
                 throw new InterruptedException();
             Node node = addConditionWaiter();
-            int savedState = fullyRelease(node);
+            long savedState = fullyRelease(node);
             final long deadline = System.nanoTime() + nanosTimeout;
             int interruptMode = 0;
             while (!isOnSyncQueue(node)) {
@@ -2175,7 +1955,7 @@ public abstract class AbstractQueuedSynchronizer
             if (Thread.interrupted())
                 throw new InterruptedException();
             Node node = addConditionWaiter();
-            int savedState = fullyRelease(node);
+            long savedState = fullyRelease(node);
             boolean timedout = false;
             int interruptMode = 0;
             while (!isOnSyncQueue(node)) {
@@ -2216,7 +1996,7 @@ public abstract class AbstractQueuedSynchronizer
             if (Thread.interrupted())
                 throw new InterruptedException();
             Node node = addConditionWaiter();
-            int savedState = fullyRelease(node);
+            long savedState = fullyRelease(node);
             final long deadline = System.nanoTime() + nanosTimeout;
             boolean timedout = false;
             int interruptMode = 0;
@@ -2248,13 +2028,13 @@ public abstract class AbstractQueuedSynchronizer
          *
          * @return {@code true} if owned
          */
-        final boolean isOwnedBy(AbstractQueuedSynchronizer sync) {
-            return sync == AbstractQueuedSynchronizer.this;
+        final boolean isOwnedBy(AbstractQueuedLongSynchronizer sync) {
+            return sync == AbstractQueuedLongSynchronizer.this;
         }
 
         /**
          * Queries whether any threads are waiting on this condition.
-         * Implements {@link AbstractQueuedSynchronizer#hasWaiters(ConditionObject)}.
+         * Implements {@link AbstractQueuedLongSynchronizer#hasWaiters(ConditionObject)}.
          *
          * @return {@code true} if there are any waiting threads
          * @throws IllegalMonitorStateException if {@link #isHeldExclusively}
@@ -2273,7 +2053,7 @@ public abstract class AbstractQueuedSynchronizer
         /**
          * Returns an estimate of the number of threads waiting on
          * this condition.
-         * Implements {@link AbstractQueuedSynchronizer#getWaitQueueLength(ConditionObject)}.
+         * Implements {@link AbstractQueuedLongSynchronizer#getWaitQueueLength(ConditionObject)}.
          *
          * @return the estimated number of waiting threads
          * @throws IllegalMonitorStateException if {@link #isHeldExclusively}
@@ -2293,7 +2073,7 @@ public abstract class AbstractQueuedSynchronizer
         /**
          * Returns a collection containing those threads that may be
          * waiting on this Condition.
-         * Implements {@link AbstractQueuedSynchronizer#getWaitingThreads(ConditionObject)}.
+         * Implements {@link AbstractQueuedLongSynchronizer#getWaitingThreads(ConditionObject)}.
          *
          * @return the collection of threads
          * @throws IllegalMonitorStateException if {@link #isHeldExclusively}
@@ -2317,7 +2097,7 @@ public abstract class AbstractQueuedSynchronizer
     /**
      * Setup to support compareAndSet. We need to natively implement
      * this here: For the sake of permitting future enhancements, we
-     * cannot explicitly subclass AtomicInteger, which would be
+     * cannot explicitly subclass AtomicLong, which would be
      * efficient and useful otherwise. So, as the lesser of evils, we
      * natively implement using hotspot intrinsics API. And while we
      * are at it, we do the same for other CASable fields (which could
@@ -2333,11 +2113,11 @@ public abstract class AbstractQueuedSynchronizer
     static {
         try {
             stateOffset = unsafe.objectFieldOffset
-                (AbstractQueuedSynchronizer.class.getDeclaredField("state"));
+                (AbstractQueuedLongSynchronizer.class.getDeclaredField("state"));
             headOffset = unsafe.objectFieldOffset
-                (AbstractQueuedSynchronizer.class.getDeclaredField("head"));
+                (AbstractQueuedLongSynchronizer.class.getDeclaredField("head"));
             tailOffset = unsafe.objectFieldOffset
-                (AbstractQueuedSynchronizer.class.getDeclaredField("tail"));
+                (AbstractQueuedLongSynchronizer.class.getDeclaredField("tail"));
             waitStatusOffset = unsafe.objectFieldOffset
                 (Node.class.getDeclaredField("waitStatus"));
             nextOffset = unsafe.objectFieldOffset

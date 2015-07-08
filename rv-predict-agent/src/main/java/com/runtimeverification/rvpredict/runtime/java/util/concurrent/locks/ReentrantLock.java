@@ -282,12 +282,12 @@ public class ReentrantLock implements Lock, java.io.Serializable {
 
     private void _rvpredict_lock() {
         RVPredictRuntime.saveLockEvent(EventType.WRITE_LOCK, RVPREDICT_REENTRANT_LOCK_LOC_ID,
-                JUC_LOCK_C, this);
+                JUC_LOCK_C, sync);
     }
 
     private void _rvpredict_unlock() {
         RVPredictRuntime.saveLockEvent(EventType.WRITE_UNLOCK, RVPREDICT_REENTRANT_LOCK_LOC_ID,
-                JUC_LOCK_C, this);
+                JUC_LOCK_C, sync);
     }
 
     /**
@@ -531,7 +531,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
      * @return the Condition object
      */
     public Condition newCondition() {
-        return new _rvpredict_condition_wrapper(this, sync.newCondition());
+        return new _rvpredict_condition_wrapper(sync, sync.newCondition());
     }
 
     /**

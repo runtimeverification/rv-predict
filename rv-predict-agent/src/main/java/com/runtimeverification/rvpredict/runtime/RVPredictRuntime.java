@@ -39,12 +39,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
@@ -141,9 +136,6 @@ public final class RVPredictRuntime implements Constants {
             throw new RuntimeException(e);
         }
     }
-
-    private static final ConcurrentHashMap<Lock, ReadWriteLock> readLockToRWLock = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<Lock, ReadWriteLock> writeLockToRWLock = new ConcurrentHashMap<>();
 
     /**
      * Map from iterator to its associated iterable (if any).
@@ -510,118 +502,6 @@ public final class RVPredictRuntime implements Constants {
         saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
         return interrupted;
-    }
-
-    /**
-     * Logs the {@code LOCK} event produced by invoking {@code Lock#lock()}.
-     *
-     * @param lock
-     *            the lock to acquire
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static void rvPredictLock(Lock lock, int locId) {
-        lock.lock();
-        saveLockEvent(getLockEventType(lock), locId, JUC_LOCK_C, getRealLock(lock));
-    }
-
-    /**
-     * Logs events produced by invoking {@code Lock#lockInterruptibly()}.
-     *
-     * @param lock
-     *            the lock to acquire
-     * @param locId
-     *            the location identifier of the event
-     *
-     * @throws InterruptedException
-     *             see {@link Lock#lockInterruptibly()}
-     */
-    public static void rvPredictLockInterruptibly(Lock lock, int locId) throws InterruptedException {
-        try {
-            lock.lockInterruptibly();
-            onBlockingMethodNormalReturn(locId);
-            saveLockEvent(getLockEventType(lock), locId, JUC_LOCK_C, getRealLock(lock));
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            throw e;
-        }
-    }
-
-    /**
-     * Logs the {@code LOCK} event produced by invoking {@code Lock#tryLock()}.
-     *
-     * @param lock
-     *            the lock to acquire
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static boolean rvPredictTryLock(Lock lock, int locId) {
-        boolean acquired = lock.tryLock();
-        if (acquired) {
-            saveLockEvent(getLockEventType(lock), locId, JUC_LOCK_C, getRealLock(lock));
-        }
-        return acquired;
-    }
-
-    /**
-     * Logs events produced by invoking {@code Lock#tryLock(long, TimeUnit)}.
-     *
-     * @param lock
-     *            the lock to acquire
-     * @param time
-     *            first argument of {@code Lock#tryLock(long, TimeUnit)}
-     * @param unit
-     *            second argument of {@code Lock#tryLock(long, TimeUnit)}.
-     * @param locId
-     *            the location identifier of the event
-     *
-     * @throws InterruptedException
-     *             see {@link Lock#tryLock(long, TimeUnit)}
-     */
-    public static boolean rvPredictTryLock(Lock lock, long time, TimeUnit unit, int locId)
-            throws InterruptedException {
-        try {
-            boolean acquired = lock.tryLock(time, unit);
-            if (acquired) {
-                onBlockingMethodNormalReturn(locId);
-                saveLockEvent(getLockEventType(lock), locId, JUC_LOCK_C, getRealLock(lock));
-            }
-            return acquired;
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            throw e;
-        }
-    }
-
-    /**
-     * Logs the {@code UNLOCK} event produced by invoking {@code Lock#Unlock()}.
-     *
-     * @param lock
-     *            the lock to release
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static void rvPredictUnlock(Lock lock, int locId) {
-        saveLockEvent(getUnlockEventType(lock), locId, JUC_LOCK_C, getRealLock(lock));
-        lock.unlock();
-    }
-
-    /**
-     * {@link ReadWriteLock#readLock()}
-     */
-    public static Lock rvPredictReadWriteLockReadLock(ReadWriteLock readWriteLock, int locId) {
-        Lock readLock = readWriteLock.readLock();
-        readLockToRWLock.putIfAbsent(readLock, readWriteLock);
-        return readLock;
-    }
-
-    /**
-     * {@link ReadWriteLock#writeLock()}
-     */
-    public static Lock rvPredictReadWriteLockWriteLock(ReadWriteLock readWriteLock, int locId) {
-        Lock writeLock = readWriteLock.writeLock();
-        writeLockToRWLock.putIfAbsent(writeLock, readWriteLock);
-        return writeLock;
     }
 
     /**
@@ -1007,27 +887,6 @@ public final class RVPredictRuntime implements Constants {
 
     private static int bool2int(boolean b) {
         return b ? 1 : 0;
-    }
-
-    private static Object getRealLock(Lock lock) {
-        if (readLockToRWLock.containsKey(lock)) {
-            /* get the associated ReadWriteLock for read lock */
-            return readLockToRWLock.get(lock);
-        } else if (writeLockToRWLock.containsKey(lock)) {
-            /* get the associated ReadWriteLock for write lock */
-            return writeLockToRWLock.get(lock);
-        } else {
-            /* normal lock */
-            return lock;
-        }
-    }
-
-    private static EventType getLockEventType(Lock lock) {
-        return readLockToRWLock.containsKey(lock) ? EventType.READ_LOCK : EventType.WRITE_LOCK;
-    }
-
-    private static EventType getUnlockEventType(Lock lock) {
-        return readLockToRWLock.containsKey(lock) ? EventType.READ_UNLOCK : EventType.WRITE_UNLOCK;
     }
 
     private static void mockCollectionReadAccess(Object collection, int locId) {

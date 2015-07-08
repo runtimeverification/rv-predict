@@ -5,8 +5,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
 import org.objectweb.asm.Opcodes;
 
 import com.runtimeverification.rvpredict.instrument.transformer.MethodTransformer;
@@ -47,8 +45,6 @@ public class RVPredictRuntimeMethods {
     private static final String JU_COLLECTION   =   "java/util/Collection";
     private static final String JU_MAP          =   "java/util/Map";
     private static final String JU_COLLECTIONS  =   "java/util/Collections";
-    private static final String JUCL_LOCK       =   "java/util/concurrent/locks/Lock";
-    private static final String JUCL_RW_LOCK    =   "java/util/concurrent/locks/ReadWriteLock";
 
     /*
      * Map from method signature to possible {@link RVPredictInterceptor}'s.
@@ -150,25 +146,6 @@ public class RVPredictRuntimeMethods {
             register(STATIC, JU_COLLECTIONS, "synchronizedCollection", "rvPredictSynchronizedCollection", Collection.class);
     public static final RVPredictInterceptor RVPREDICT_SYNC_MAP           =
             register(STATIC, JU_COLLECTIONS, "synchronizedMap", "rvPredictSynchronizedMap", Map.class);
-
-    // java.util.concurrent.locks.Lock methods
-    // note that this doesn't provide mocks for methods specific in concrete lock implementation
-    public static final RVPredictInterceptor RVPREDICT_LOCK               =
-            register(INTERFACE, JUCL_LOCK, "lock", "rvPredictLock");
-    public static final RVPredictInterceptor RVPREDICT_LOCK_INTERRUPTIBLY =
-            register(INTERFACE, JUCL_LOCK, "lockInterruptibly", "rvPredictLockInterruptibly");
-    public static final RVPredictInterceptor RVPREDICT_TRY_LOCK           =
-            register(INTERFACE, JUCL_LOCK, "tryLock", "rvPredictTryLock");
-    public static final RVPredictInterceptor RVPREDICT_TRY_LOCK_TIMEOUT   =
-            register(INTERFACE, JUCL_LOCK, "tryLock", "rvPredictTryLock", J, TimeUnit.class);
-    public static final RVPredictInterceptor RVPREDICT_UNLOCK             =
-            register(INTERFACE, JUCL_LOCK, "unlock", "rvPredictUnlock");
-
-    // java.util.concurrent.locks.ReadWriteLock methods
-    public static final RVPredictInterceptor RVPREDICT_RW_LOCK_READ_LOCK  =
-            register(INTERFACE, JUCL_RW_LOCK, "readLock", "rvPredictReadWriteLockReadLock");
-    public static final RVPredictInterceptor RVPREDICT_RW_LOCK_WRITE_LOCK =
-            register(INTERFACE, JUCL_RW_LOCK, "writeLock", "rvPredictReadWriteLockWriteLock");
 
     /** Short-hand for {@link RVPredictRuntimeMethod#create(String, Class...)}. */
     private static RVPredictRuntimeMethod init(String name, Class<?>... parameterTypes) {

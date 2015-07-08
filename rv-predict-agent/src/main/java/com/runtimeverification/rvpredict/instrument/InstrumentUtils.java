@@ -17,6 +17,7 @@ import com.runtimeverification.rvpredict.util.Constants;
 
 public class InstrumentUtils implements Opcodes {
 
+    private static final String PLACE_HOLDER = "[PLACE_HOLDER]";
     public static final Type OBJECT_TYPE    = Type.getObjectType("java/lang/Object");
     public static final Type CLASS_TYPE     = Type.getObjectType("java/lang/Class");
     public static final Type JL_FLOAT_TYPE  = Type.getObjectType("java/lang/Float");
@@ -127,7 +128,9 @@ public class InstrumentUtils implements Opcodes {
     public static String replaceStandardLibraryClass(String className, String literal) {
         if (literal != null && !className.startsWith(Constants.RVPREDICT_RUNTIME_PKG_PREFIX)) {
             for (String stdlibClass : Configuration.MUST_REPLACE) {
-                literal = literal.replace(stdlibClass, Constants.RVPREDICT_RUNTIME_PKG_PREFIX
+                literal = literal.replace("edu/emory/mathcs/backport/" + stdlibClass, PLACE_HOLDER);
+                literal = literal.replace(stdlibClass, PLACE_HOLDER);
+                literal = literal.replace(PLACE_HOLDER, Constants.RVPREDICT_RUNTIME_PKG_PREFIX
                         + stdlibClass);
             }
         }

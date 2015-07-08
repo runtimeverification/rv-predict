@@ -33,20 +33,13 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
@@ -143,10 +136,6 @@ public final class RVPredictRuntime implements Constants {
             throw new RuntimeException(e);
         }
     }
-
-    private static final ConcurrentHashMap<Lock, ReadWriteLock> readLockToRWLock = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<Lock, ReadWriteLock> writeLockToRWLock = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<Condition, Lock> conditionToLock = new ConcurrentHashMap<>();
 
     /**
      * Map from iterator to its associated iterable (if any).
@@ -513,219 +502,6 @@ public final class RVPredictRuntime implements Constants {
         saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
                 -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
         return interrupted;
-    }
-
-    /**
-     * Logs the {@code LOCK} event produced by invoking {@code Lock#lock()}.
-     *
-     * @param lock
-     *            the lock to acquire
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static void rvPredictLock(Lock lock, int locId) {
-        lock.lock();
-        saveLockEvent(getLockEventType(lock), locId, JUC_LOCK_C, getRealLock(lock));
-    }
-
-    /**
-     * Logs events produced by invoking {@code Lock#lockInterruptibly()}.
-     *
-     * @param lock
-     *            the lock to acquire
-     * @param locId
-     *            the location identifier of the event
-     *
-     * @throws InterruptedException
-     *             see {@link Lock#lockInterruptibly()}
-     */
-    public static void rvPredictLockInterruptibly(Lock lock, int locId) throws InterruptedException {
-        try {
-            lock.lockInterruptibly();
-            onBlockingMethodNormalReturn(locId);
-            saveLockEvent(getLockEventType(lock), locId, JUC_LOCK_C, getRealLock(lock));
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            throw e;
-        }
-    }
-
-    /**
-     * Logs the {@code LOCK} event produced by invoking {@code Lock#tryLock()}.
-     *
-     * @param lock
-     *            the lock to acquire
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static boolean rvPredictTryLock(Lock lock, int locId) {
-        boolean acquired = lock.tryLock();
-        if (acquired) {
-            saveLockEvent(getLockEventType(lock), locId, JUC_LOCK_C, getRealLock(lock));
-        }
-        return acquired;
-    }
-
-    /**
-     * Logs events produced by invoking {@code Lock#tryLock(long, TimeUnit)}.
-     *
-     * @param lock
-     *            the lock to acquire
-     * @param time
-     *            first argument of {@code Lock#tryLock(long, TimeUnit)}
-     * @param unit
-     *            second argument of {@code Lock#tryLock(long, TimeUnit)}.
-     * @param locId
-     *            the location identifier of the event
-     *
-     * @throws InterruptedException
-     *             see {@link Lock#tryLock(long, TimeUnit)}
-     */
-    public static boolean rvPredictTryLock(Lock lock, long time, TimeUnit unit, int locId)
-            throws InterruptedException {
-        try {
-            boolean acquired = lock.tryLock(time, unit);
-            if (acquired) {
-                onBlockingMethodNormalReturn(locId);
-                saveLockEvent(getLockEventType(lock), locId, JUC_LOCK_C, getRealLock(lock));
-            }
-            return acquired;
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            throw e;
-        }
-    }
-
-    /**
-     * Logs the {@code UNLOCK} event produced by invoking {@code Lock#Unlock()}.
-     *
-     * @param lock
-     *            the lock to release
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static void rvPredictUnlock(Lock lock, int locId) {
-        saveLockEvent(getUnlockEventType(lock), locId, JUC_LOCK_C, getRealLock(lock));
-        lock.unlock();
-    }
-
-    /**
-     * {@link Lock#newCondition()}
-     */
-    public static Condition rvPredictLockNewCondition(Lock lock, int locId) {
-        Condition condition = lock.newCondition();
-        conditionToLock.putIfAbsent(condition, lock);
-        return condition;
-    }
-
-    /**
-     * {@link ReadWriteLock#readLock()}
-     */
-    public static Lock rvPredictReadWriteLockReadLock(ReadWriteLock readWriteLock, int locId) {
-        Lock readLock = readWriteLock.readLock();
-        readLockToRWLock.putIfAbsent(readLock, readWriteLock);
-        return readLock;
-    }
-
-    /**
-     * {@link ReadWriteLock#writeLock()}
-     */
-    public static Lock rvPredictReadWriteLockWriteLock(ReadWriteLock readWriteLock, int locId) {
-        Lock writeLock = readWriteLock.writeLock();
-        writeLockToRWLock.putIfAbsent(writeLock, readWriteLock);
-        return writeLock;
-    }
-
-    /**
-     * {@link Condition#await()}
-     */
-    public static void rvPredictConditionAwait(Condition condition, int locId)
-            throws InterruptedException {
-        Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
-        try {
-            condition.await();
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-            throw e;
-        }
-
-        onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-    }
-
-    /**
-     * {@link Condition#await(long, TimeUnit)}
-     */
-    public static boolean rvPredictConditionAwait(Condition condition, long time, TimeUnit unit,
-            int locId) throws InterruptedException {
-        boolean result;
-        Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
-        try {
-            result = condition.await(time, unit);
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-            throw e;
-        }
-
-        onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-        return result;
-    }
-
-    /**
-     * {@link Condition#awaitNanos(long)}
-     */
-    public static long rvPredictConditionAwaitNanos(Condition condition, long nanosTimeout,
-            int locId) throws InterruptedException {
-        long result;
-        Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
-        try {
-            result = condition.awaitNanos(nanosTimeout);
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-            throw e;
-        }
-
-        onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-        return result;
-    }
-
-    /**
-     * {@link Condition#awaitUntil(Date)}
-     */
-    public static boolean rvPredictConditionAwaitUntil(Condition condition, Date deadline, int locId)
-            throws InterruptedException {
-        boolean result;
-        Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
-        try {
-            result = condition.awaitUntil(deadline);
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-            throw e;
-        }
-
-        onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-        return result;
-    }
-
-    /**
-     * {@link Condition#awaitUninterruptibly()}
-     */
-    public static void rvPredictConditionAwaitUninterruptibly(Condition condition, int locId) {
-        Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
-        condition.awaitUninterruptibly();
-        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
     }
 
     /**
@@ -1113,27 +889,6 @@ public final class RVPredictRuntime implements Constants {
         return b ? 1 : 0;
     }
 
-    private static Object getRealLock(Lock lock) {
-        if (readLockToRWLock.containsKey(lock)) {
-            /* get the associated ReadWriteLock for read lock */
-            return readLockToRWLock.get(lock);
-        } else if (writeLockToRWLock.containsKey(lock)) {
-            /* get the associated ReadWriteLock for write lock */
-            return writeLockToRWLock.get(lock);
-        } else {
-            /* normal lock */
-            return lock;
-        }
-    }
-
-    private static EventType getLockEventType(Lock lock) {
-        return readLockToRWLock.containsKey(lock) ? EventType.READ_LOCK : EventType.WRITE_LOCK;
-    }
-
-    private static EventType getUnlockEventType(Lock lock) {
-        return readLockToRWLock.containsKey(lock) ? EventType.READ_UNLOCK : EventType.WRITE_UNLOCK;
-    }
-
     private static void mockCollectionReadAccess(Object collection, int locId) {
         mockCollectionAccess(collection, false, locId);
     }
@@ -1278,9 +1033,9 @@ public final class RVPredictRuntime implements Constants {
         logger.log(eventType, locId, (int) (tid >> 32), (int) tid, 0, 0);
     }
 
-    private static void saveLockEvent(EventType eventType, int locId, byte LOCK_TYPE, Object lock) {
+    public static void saveLockEvent(EventType eventType, int locId, byte LOCK_TYPE, Object lock) {
         if (lock == null) {
-            throw new IllegalArgumentException("Lock object cannot be null!");
+            throw new NullPointerException();
         }
         logger.log(eventType, locId, LOCK_TYPE, System.identityHashCode(lock), 0, 0);
     }

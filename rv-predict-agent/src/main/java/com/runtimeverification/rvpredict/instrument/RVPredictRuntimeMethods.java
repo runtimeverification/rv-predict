@@ -2,7 +2,6 @@ package com.runtimeverification.rvpredict.instrument;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +48,6 @@ public class RVPredictRuntimeMethods {
     private static final String JU_MAP          =   "java/util/Map";
     private static final String JU_COLLECTIONS  =   "java/util/Collections";
     private static final String JUCL_LOCK       =   "java/util/concurrent/locks/Lock";
-    private static final String JUCL_CONDITION  =   "java/util/concurrent/locks/Condition";
     private static final String JUCL_RW_LOCK    =   "java/util/concurrent/locks/ReadWriteLock";
 
     /*
@@ -165,20 +163,6 @@ public class RVPredictRuntimeMethods {
             register(INTERFACE, JUCL_LOCK, "tryLock", "rvPredictTryLock", J, TimeUnit.class);
     public static final RVPredictInterceptor RVPREDICT_UNLOCK             =
             register(INTERFACE, JUCL_LOCK, "unlock", "rvPredictUnlock");
-    public static final RVPredictInterceptor RVPREDICT_LOCK_NEW_COND      =
-            register(INTERFACE, JUCL_LOCK, "newCondition", "rvPredictLockNewCondition");
-
-    // java.util.concurrent.locks.Condition methods
-    public static final RVPredictInterceptor RVPREDICT_COND_AWAIT         =
-            register(INTERFACE, JUCL_CONDITION, "await", "rvPredictConditionAwait");
-    public static final RVPredictInterceptor RVPREDICT_COND_AWAIT_TIMEOUT =
-            register(INTERFACE, JUCL_CONDITION, "await", "rvPredictConditionAwait", J, TimeUnit.class);
-    public static final RVPredictInterceptor RVPREDICT_COND_AWAIT_NANOS   =
-            register(INTERFACE, JUCL_CONDITION, "awaitNanos", "rvPredictConditionAwaitNanos", J);
-    public static final RVPredictInterceptor RVPREDICT_COND_AWAIT_UNINTERRUPTIBLY =
-            register(INTERFACE, JUCL_CONDITION, "awaitUninterruptibly", "rvPredictConditionAwaitUninterruptibly");
-    public static final RVPredictInterceptor RVPREDICT_COND_AWAIT_UNTIL   =
-            register(INTERFACE, JUCL_CONDITION, "awaitUntil", "rvPredictConditionAwaitUntil", Date.class);
 
     // java.util.concurrent.locks.ReadWriteLock methods
     public static final RVPredictInterceptor RVPREDICT_RW_LOCK_READ_LOCK  =

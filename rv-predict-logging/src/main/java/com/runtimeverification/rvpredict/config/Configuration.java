@@ -112,6 +112,7 @@ public class Configuration implements Constants {
             "java/util/concurrent/atomic/AtomicInteger",
             "java/util/concurrent/locks/AbstractQueuedSynchronizer",
             "java/util/concurrent/locks/AbstractQueuedLongSynchronizer",
+            "java/util/concurrent/locks/ReentrantLock",
             "java/util/concurrent/ArrayBlockingQueue",
             "java/util/concurrent/LinkedBlockingQueue",
             "java/util/concurrent/PriorityBlockingQueue",

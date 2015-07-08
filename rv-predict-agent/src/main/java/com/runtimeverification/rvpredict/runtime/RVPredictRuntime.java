@@ -33,7 +33,6 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
@@ -43,7 +42,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
@@ -146,7 +144,6 @@ public final class RVPredictRuntime implements Constants {
 
     private static final ConcurrentHashMap<Lock, ReadWriteLock> readLockToRWLock = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Lock, ReadWriteLock> writeLockToRWLock = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<Condition, Lock> conditionToLock = new ConcurrentHashMap<>();
 
     /**
      * Map from iterator to its associated iterable (if any).
@@ -610,15 +607,6 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * {@link Lock#newCondition()}
-     */
-    public static Condition rvPredictLockNewCondition(Lock lock, int locId) {
-        Condition condition = lock.newCondition();
-        conditionToLock.putIfAbsent(condition, lock);
-        return condition;
-    }
-
-    /**
      * {@link ReadWriteLock#readLock()}
      */
     public static Lock rvPredictReadWriteLockReadLock(ReadWriteLock readWriteLock, int locId) {
@@ -634,98 +622,6 @@ public final class RVPredictRuntime implements Constants {
         Lock writeLock = readWriteLock.writeLock();
         writeLockToRWLock.putIfAbsent(writeLock, readWriteLock);
         return writeLock;
-    }
-
-    /**
-     * {@link Condition#await()}
-     */
-    public static void rvPredictConditionAwait(Condition condition, int locId)
-            throws InterruptedException {
-        Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
-        try {
-            condition.await();
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-            throw e;
-        }
-
-        onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-    }
-
-    /**
-     * {@link Condition#await(long, TimeUnit)}
-     */
-    public static boolean rvPredictConditionAwait(Condition condition, long time, TimeUnit unit,
-            int locId) throws InterruptedException {
-        boolean result;
-        Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
-        try {
-            result = condition.await(time, unit);
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-            throw e;
-        }
-
-        onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-        return result;
-    }
-
-    /**
-     * {@link Condition#awaitNanos(long)}
-     */
-    public static long rvPredictConditionAwaitNanos(Condition condition, long nanosTimeout,
-            int locId) throws InterruptedException {
-        long result;
-        Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
-        try {
-            result = condition.awaitNanos(nanosTimeout);
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-            throw e;
-        }
-
-        onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-        return result;
-    }
-
-    /**
-     * {@link Condition#awaitUntil(Date)}
-     */
-    public static boolean rvPredictConditionAwaitUntil(Condition condition, Date deadline, int locId)
-            throws InterruptedException {
-        boolean result;
-        Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
-        try {
-            result = condition.awaitUntil(deadline);
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-            throw e;
-        }
-
-        onBlockingMethodNormalReturn(locId);
-        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
-        return result;
-    }
-
-    /**
-     * {@link Condition#awaitUninterruptibly()}
-     */
-    public static void rvPredictConditionAwaitUninterruptibly(Condition condition, int locId) {
-        Lock lock = conditionToLock.get(condition);
-        saveLockEvent(EventType.WAIT_REL, locId, JUC_LOCK_C, lock);
-        condition.awaitUninterruptibly();
-        saveLockEvent(EventType.WAIT_ACQ, locId, JUC_LOCK_C, lock);
     }
 
     /**
@@ -1278,9 +1174,9 @@ public final class RVPredictRuntime implements Constants {
         logger.log(eventType, locId, (int) (tid >> 32), (int) tid, 0, 0);
     }
 
-    private static void saveLockEvent(EventType eventType, int locId, byte LOCK_TYPE, Object lock) {
+    public static void saveLockEvent(EventType eventType, int locId, byte LOCK_TYPE, Object lock) {
         if (lock == null) {
-            throw new IllegalArgumentException("Lock object cannot be null!");
+            throw new NullPointerException();
         }
         logger.log(eventType, locId, LOCK_TYPE, System.identityHashCode(lock), 0, 0);
     }

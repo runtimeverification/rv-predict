@@ -36,7 +36,7 @@
 package com.runtimeverification.rvpredict.runtime.java.util.concurrent.locks;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.AbstractOwnableSynchronizer;
-import java.util.concurrent.locks.Condition; // FIXME: remove this import
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.LockSupport;
 import java.util.ArrayList;
 import java.util.Collection;

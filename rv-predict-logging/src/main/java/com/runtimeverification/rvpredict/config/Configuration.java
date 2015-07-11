@@ -132,6 +132,8 @@ public class Configuration implements Constants {
             "java/util/concurrent/ForkJoinTask",
             "java/util/concurrent/ForkJoinWorkerThread",
             "java/util/concurrent/CountedCompleter", // FIXME: handle the HB edge imposed by CountedCompleter
+            "java/util/concurrent/RecursiveAction",
+            "java/util/concurrent/RecursiveTask",
             "java/util/concurrent/ThreadLocalRandom"));
 
     public final static List<Pattern> MUST_INCLUDES;

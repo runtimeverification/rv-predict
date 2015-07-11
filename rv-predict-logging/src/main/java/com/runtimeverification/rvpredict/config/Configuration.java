@@ -110,6 +110,7 @@ public class Configuration implements Constants {
     public final static Set<String> MUST_REPLACE = new HashSet<>(Arrays.asList(
             "java/util/concurrent/atomic/AtomicBoolean",
             "java/util/concurrent/atomic/AtomicInteger",
+            // TODO: handle the other AtomicX classes
             "java/util/concurrent/locks/AbstractQueuedSynchronizer",
             "java/util/concurrent/locks/AbstractQueuedLongSynchronizer",
             "java/util/concurrent/locks/ReentrantLock",
@@ -119,11 +120,14 @@ public class Configuration implements Constants {
             "java/util/concurrent/LinkedBlockingQueue",
             "java/util/concurrent/PriorityBlockingQueue",
             "java/util/concurrent/SynchronousQueue",
+            // TODO: handle the other BlockingQueue's
             "java/util/concurrent/Semaphore",
             "java/util/concurrent/CountDownLatch",
             "java/util/concurrent/CyclicBarrier",
             "java/util/concurrent/Exchanger",
+            // TODO: handle Phaser
             "java/util/concurrent/FutureTask",
+            // TODO: handle CompletableFuture from Java 8
             "java/util/concurrent/ThreadPoolExecutor",
             "java/util/concurrent/ScheduledThreadPoolExecutor",
             "java/util/concurrent/RejectedExecutionHandler",

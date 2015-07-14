@@ -128,10 +128,10 @@ public class Configuration implements Constants {
             "java/util/concurrent/ScheduledThreadPoolExecutor",
             "java/util/concurrent/RejectedExecutionHandler",
             "java/util/concurrent/Executors",
-            "java/util/concurrent/ForkJoinPool",
+            "java/util/concurrent/ForkJoinPool", // FIXME: handle the HB edge imposed by WorkQueue properly
             "java/util/concurrent/ForkJoinTask",
             "java/util/concurrent/ForkJoinWorkerThread",
-            "java/util/concurrent/CountedCompleter",
+            "java/util/concurrent/CountedCompleter", // FIXME: handle the HB edge imposed by CountedCompleter
             "java/util/concurrent/ThreadLocalRandom"));
 
     public final static List<Pattern> MUST_INCLUDES;

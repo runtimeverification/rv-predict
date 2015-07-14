@@ -52,6 +52,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 import java.lang.reflect.Constructor;
 
+import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
+
 /**
  * Abstract base class for tasks that run within a {@link ForkJoinPool}.
  * A {@code ForkJoinTask} is a thread-like entity that is much
@@ -211,6 +214,11 @@ import java.lang.reflect.Constructor;
  */
 public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
 
+    private static final int RVPREDICT_FJ_TASK_LOC_ID = RVPredictRuntime.metadata
+            .getLocationId("java.util.concurrent.ForkJoinTask(ForkJoinTask.java:n/a)");
+    private static final int RVPREDICT_FJ_TASK_COMPLETE = RVPredictRuntime.metadata
+            .getVariableId("java.util.concurrent.ForkJoinTask", "$complete");
+
     /*
      * See the internal documentation of class ForkJoinPool for a
      * general implementation overview.  ForkJoinTasks are mainly
@@ -256,6 +264,18 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     static final int SIGNAL      = 0x00010000;  // must be >= 1 << 16
     static final int SMASK       = 0x0000ffff;  // short bits for tags
 
+    // RV-Predict logging methods
+
+    private void _rvpredict_set_completion() {
+        RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_FJ_TASK_LOC_ID,
+                System.identityHashCode(this), -RVPREDICT_FJ_TASK_COMPLETE, 1);
+    }
+
+    private void _rvpredict_get_completion() {
+        RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_FJ_TASK_LOC_ID,
+                System.identityHashCode(this), -RVPREDICT_FJ_TASK_COMPLETE, 1);
+    }
+
     /**
      * Marks completion and wakes up threads waiting to join this
      * task.
@@ -268,6 +288,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
             if ((s = status) < 0)
                 return s;
             if (U.compareAndSwapInt(this, STATUS, s, s | completion)) {
+                _rvpredict_set_completion();
                 if ((s >>> 16) != 0)
                     synchronized (this) { notifyAll(); }
                 return completion;
@@ -371,6 +392,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
                 }
             }
         }
+        _rvpredict_get_completion();
         return s;
     }
 
@@ -382,13 +404,17 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      * @return status upon completion
      */
     private int doJoin() {
-        int s; Thread t; ForkJoinWorkerThread wt; ForkJoinPool.WorkQueue w;
-        return (s = status) < 0 ? s :
-            ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread) ?
-            (w = (wt = (ForkJoinWorkerThread)t).workQueue).
-            tryUnpush(this) && (s = doExec()) < 0 ? s :
-            wt.pool.awaitJoin(w, this, 0L) :
-            externalAwaitDone();
+        try {
+            int s; Thread t; ForkJoinWorkerThread wt; ForkJoinPool.WorkQueue w;
+            return (s = status) < 0 ? s :
+                ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread) ?
+                (w = (wt = (ForkJoinWorkerThread)t).workQueue).
+                tryUnpush(this) && (s = doExec()) < 0 ? s :
+                wt.pool.awaitJoin(w, this, 0L) :
+                externalAwaitDone();
+        } finally {
+            _rvpredict_get_completion();
+        }
     }
 
     /**
@@ -397,12 +423,16 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      * @return status upon completion
      */
     private int doInvoke() {
-        int s; Thread t; ForkJoinWorkerThread wt;
-        return (s = doExec()) < 0 ? s :
-            ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread) ?
-            (wt = (ForkJoinWorkerThread)t).pool.
-            awaitJoin(wt.workQueue, this, 0L) :
-            externalAwaitDone();
+        try {
+            int s; Thread t; ForkJoinWorkerThread wt;
+            return (s = doExec()) < 0 ? s :
+                ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread) ?
+                (wt = (ForkJoinWorkerThread)t).pool.
+                awaitJoin(wt.workQueue, this, 0L) :
+                externalAwaitDone();
+        } finally {
+            _rvpredict_get_completion();
+        }
     }
 
     // Exception table support
@@ -827,7 +857,6 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
             invokeAll(tasks.toArray(new ForkJoinTask<?>[tasks.size()]));
             return tasks;
         }
-        @SuppressWarnings("unchecked")
         List<? extends ForkJoinTask<?>> ts =
             (List<? extends ForkJoinTask<?>>) tasks;
         Throwable ex = null;
@@ -1059,12 +1088,15 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
             s = status;
         if ((s &= DONE_MASK) != NORMAL) {
             Throwable ex;
-            if (s == CANCELLED)
-                throw new CancellationException();
             if (s != EXCEPTIONAL)
                 throw new TimeoutException();
+            _rvpredict_get_completion();
+            if (s == CANCELLED)
+                throw new CancellationException();
             if ((ex = getThrowableException()) != null)
                 throw new ExecutionException(ex);
+        } else {
+            _rvpredict_get_completion();
         }
         return getRawResult();
     }

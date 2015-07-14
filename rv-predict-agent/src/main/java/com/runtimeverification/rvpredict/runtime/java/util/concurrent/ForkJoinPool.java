@@ -52,6 +52,9 @@ import java.security.AccessControlContext;
 import java.security.ProtectionDomain;
 import java.security.Permissions;
 
+import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
+
 /**
  * An {@link ExecutorService} for running {@link ForkJoinTask}s.
  * A {@code ForkJoinPool} provides the entry point for submissions
@@ -166,6 +169,9 @@ import java.security.Permissions;
  */
 @sun.misc.Contended
 public class ForkJoinPool extends AbstractExecutorService {
+
+    private static final int RVPREDICT_FJP_LOC_ID = RVPredictRuntime.metadata
+            .getLocationId("java.util.concurrent.ForkJoinPool(ForkJoinPool.java:n/a)");
 
     /*
      * Implementation Overview
@@ -1463,6 +1469,23 @@ public class ForkJoinPool extends AbstractExecutorService {
         }
     }
 
+    // RV-Predict loggging methods
+
+    private final List<Long> _rvpredict_started_worker_threads = new ArrayList<>();
+
+    private synchronized void _rvpredict_start_worker_thread(Thread t) {
+        RVPredictRuntime.saveThreadSyncEvent(EventType.START,
+                RVPREDICT_FJP_LOC_ID, t.getId());
+        RVPredictRuntime.metadata.addThreadCreationInfo(t.getId(), Thread.currentThread().getId(),
+                RVPREDICT_FJP_LOC_ID);
+        _rvpredict_started_worker_threads.add(t.getId());
+    }
+
+    private void _rvpredict_join_worker_threads() {
+        _rvpredict_started_worker_threads.forEach(tid -> RVPredictRuntime.saveThreadSyncEvent(
+                EventType.JOIN, RVPREDICT_FJP_LOC_ID, tid));
+    }
+
     // Creating, registering and deregistering workers
 
     /**
@@ -1478,6 +1501,7 @@ public class ForkJoinPool extends AbstractExecutorService {
         ForkJoinWorkerThread wt = null;
         try {
             if (fac != null && (wt = fac.newThread(this)) != null) {
+                _rvpredict_start_worker_thread(wt);
                 wt.start();
                 return true;
             }
@@ -3121,15 +3145,19 @@ public class ForkJoinPool extends AbstractExecutorService {
             return false;
         }
         long nanos = unit.toNanos(timeout);
-        if (isTerminated())
+        if (isTerminated()) {
+            _rvpredict_join_worker_threads();
             return true;
+        }
         if (nanos <= 0L)
             return false;
         long deadline = System.nanoTime() + nanos;
         synchronized (this) {
             for (;;) {
-                if (isTerminated())
+                if (isTerminated()) {
+                    _rvpredict_join_worker_threads();
                     return true;
+                }
                 if (nanos <= 0L)
                     return false;
                 long millis = TimeUnit.NANOSECONDS.toMillis(nanos);

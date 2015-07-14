@@ -127,7 +127,12 @@ public class Configuration implements Constants {
             "java/util/concurrent/ThreadPoolExecutor",
             "java/util/concurrent/ScheduledThreadPoolExecutor",
             "java/util/concurrent/RejectedExecutionHandler",
-            "java/util/concurrent/Executors"));
+            "java/util/concurrent/Executors",
+            "java/util/concurrent/ForkJoinPool",
+            "java/util/concurrent/ForkJoinTask",
+            "java/util/concurrent/ForkJoinWorkerThread",
+            "java/util/concurrent/CountedCompleter",
+            "java/util/concurrent/ThreadLocalRandom"));
 
     public final static List<Pattern> MUST_INCLUDES;
     static {

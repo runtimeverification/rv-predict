@@ -319,13 +319,7 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * Logs the {@code START} event produced by invoking {@code thread.start()}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code start()} method is
-     *            invoked
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#start()}
      */
     public static void rvPredictStart(Thread thread, int locId) {
         saveThreadSyncEvent(EventType.START, locId, thread.getId());
@@ -334,29 +328,30 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * Logs the {@code JOIN} event produced by invoking {@code thread.join()}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code join()} method is
-     *            invoked
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#isAlive()}
+     * <p>
+     * <i>Thread termination rule:</i> Any action in a thread happens before any
+     * other thread detects that thread has terminated, either by successfully
+     * return from {@link Thread#join()} or by {@link Thread#isAlive()}
+     * returning false.
+     */
+    public static boolean rvPredictIsAlive(Thread thread, int locId) {
+        if (!thread.isAlive()) {
+            saveThreadSyncEvent(EventType.JOIN, locId, thread.getId());
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * {@link Thread#join()}
      */
     public static void rvPredictJoin(Thread thread, int locId) throws InterruptedException {
         rvPredictJoin(thread, 0, locId);
     }
 
     /**
-     * Logs the {@code JOIN} event produced by invoking
-     * {@code thread.join(long)}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code join(long)} method is
-     *            invoked
-     * @param millis
-     *            the first argument of {@code thread.join(long)}
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#join(long)}
      */
     public static void rvPredictJoin(Thread thread, long millis, int locId)
             throws InterruptedException {
@@ -373,19 +368,7 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * Logs the {@code JOIN} event produced by invoking
-     * {@code thread.join(long, int)}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code join(long, int)} method
-     *            is invoked
-     * @param millis
-     *            the first argument of {@code thread.join(long, int)}
-     * @param nanos
-     *            the second argument of {@code thread.join(long, int)}
-     * @param locId
-     *            the location identifier of the event
-     *
+     * {@link Thread#join(long, int)}
      */
     public static void rvPredictJoin(Thread thread, long millis, int nanos, int locId)
             throws InterruptedException {
@@ -402,12 +385,7 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * Logs the events produced by invoking {@code Thread#sleep(long)}.
-     *
-     * @param millis
-     *            the first argument of {@code Thread#sleep(long)}
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#sleep(long)}
      */
     public static void rvPredictSleep(long millis, int locId) throws InterruptedException {
         try {
@@ -418,14 +396,7 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * Logs the events produced by invoking {@code Thread#sleep(long, int)}.
-     *
-     * @param millis
-     *            the first argument of {@code Thread#sleep(long, int)}
-     * @param nanos
-     *            the second argument of {@code Thread#sleep(long, int)}
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#sleep(long,int)}
      */
     public static void rvPredictSleep(long millis, int nanos, int locId)
             throws InterruptedException {
@@ -437,13 +408,7 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * Logs the events produced by invoking {@code thread.interrupt()}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code interrupt()} method is
-     *            invoked
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#interrupt()}
      */
     public static void rvPredictInterrupt(Thread thread, int locId) {
         if (thread != Thread.currentThread()) {
@@ -454,13 +419,7 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * Logs the events produced by invoking {@code thread.isInterrupted()}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code isInterrupted()} method
-     *            is invoked
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#isInterrupted()}
      */
     public static boolean rvPredictIsInterrupted(Thread thread, int locId) {
         boolean result = thread.isInterrupted();
@@ -469,10 +428,7 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * Logs the events produced by invoking {@code Thread#interrupted()}.
-     *
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#interrupted()}
      */
     public static boolean rvPredictInterrupted(int locId) {
         boolean result = Thread.interrupted();
@@ -507,11 +463,7 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * Logs the events produced by invoking
-     * {@code System#arraycopy(Object, int, Object, int, int)}.
-     *
-     * @param locId
-     *            the location identifier of the event
+     * {@link System#arraycopy(Object,int,Object,int,int)}
      */
     public static void rvPredictSystemArraycopy(Object src, int srcPos, Object dest, int destPos,
             int length, int locId) {

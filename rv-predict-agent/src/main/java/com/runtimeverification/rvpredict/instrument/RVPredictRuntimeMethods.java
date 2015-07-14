@@ -56,6 +56,8 @@ public class RVPredictRuntimeMethods {
     // Thread methods
     public static final RVPredictInterceptor RVPREDICT_START              =
             register(VIRTUAL, JL_THREAD, "start", "rvPredictStart");
+    public static final RVPredictInterceptor RVPREDICT_IS_ALIVE           =
+            register(VIRTUAL, JL_THREAD, "isAlive", "rvPredictIsAlive");
     public static final RVPredictInterceptor RVPREDICT_JOIN               =
             register(VIRTUAL, JL_THREAD, "join", "rvPredictJoin");
     public static final RVPredictInterceptor RVPREDICT_JOIN_TIMEOUT       =

@@ -119,7 +119,13 @@ public final class RVPredictRuntime implements Constants {
 
     public static final Metadata metadata = Metadata.singleton();
 
-    private static int NATIVE_INTERRUPTED_STATUS_VAR_ID = metadata.getVariableId(
+    /**
+     * <em>Interruption rule:</em> A thread calling interrupt on another thread
+     * happens before the interrupted thread detects the interrupt (either by
+     * having {@code InterruptedException} thrown, or invoking
+     * {@link Thread#isInterrupted()} or {@link Thread#interrupted()}).
+     */
+    private static int THREAD_INTERRUPTED_STATUS_VAR_ID = metadata.getVariableId(
             "java.lang.Thread", "$interruptedStatus");
 
     private static final MethodHandle SYNC_COLLECTION_GET_MUTEX = getFieldGetter(
@@ -209,12 +215,11 @@ public final class RVPredictRuntime implements Constants {
         try {
             object.wait(timeout);
         } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
+            clearInterruptedStatus(Thread.currentThread(), locId);
             saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
             throw e;
         }
 
-        onBlockingMethodNormalReturn(locId);
         saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
     }
 
@@ -237,12 +242,11 @@ public final class RVPredictRuntime implements Constants {
         try {
             object.wait(timeout, nano);
         } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
+            clearInterruptedStatus(Thread.currentThread(), locId);
             saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
             throw e;
         }
 
-        onBlockingMethodNormalReturn(locId);
         saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
     }
 
@@ -315,13 +319,7 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * Logs the {@code START} event produced by invoking {@code thread.start()}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code start()} method is
-     *            invoked
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#start()}
      */
     public static void rvPredictStart(Thread thread, int locId) {
         saveThreadSyncEvent(EventType.START, locId, thread.getId());
@@ -330,186 +328,142 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * Logs the {@code JOIN} event produced by invoking {@code thread.join()}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code join()} method is
-     *            invoked
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#isAlive()}
+     * <p>
+     * <i>Thread termination rule:</i> Any action in a thread happens before any
+     * other thread detects that thread has terminated, either by successfully
+     * return from {@link Thread#join()} or by {@link Thread#isAlive()}
+     * returning false.
+     */
+    public static boolean rvPredictIsAlive(Thread thread, int locId) {
+        if (!thread.isAlive()) {
+            saveThreadSyncEvent(EventType.JOIN, locId, thread.getId());
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * {@link Thread#join()}
      */
     public static void rvPredictJoin(Thread thread, int locId) throws InterruptedException {
         rvPredictJoin(thread, 0, locId);
     }
 
     /**
-     * Logs the {@code JOIN} event produced by invoking
-     * {@code thread.join(long)}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code join(long)} method is
-     *            invoked
-     * @param millis
-     *            the first argument of {@code thread.join(long)}
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#join(long)}
      */
     public static void rvPredictJoin(Thread thread, long millis, int locId)
             throws InterruptedException {
         try {
             thread.join(millis);
         } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
+            clearInterruptedStatus(Thread.currentThread(), locId);
             throw e;
         }
 
-        onBlockingMethodNormalReturn(locId);
         if (millis == 0) {
             saveThreadSyncEvent(EventType.JOIN, locId, thread.getId());
         }
     }
 
     /**
-     * Logs the {@code JOIN} event produced by invoking
-     * {@code thread.join(long, int)}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code join(long, int)} method
-     *            is invoked
-     * @param millis
-     *            the first argument of {@code thread.join(long, int)}
-     * @param nanos
-     *            the second argument of {@code thread.join(long, int)}
-     * @param locId
-     *            the location identifier of the event
-     *
+     * {@link Thread#join(long, int)}
      */
     public static void rvPredictJoin(Thread thread, long millis, int nanos, int locId)
             throws InterruptedException {
         try {
             thread.join(millis, nanos);
         } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
+            clearInterruptedStatus(Thread.currentThread(), locId);
             throw e;
         }
 
-        onBlockingMethodNormalReturn(locId);
         if (millis == 0 && nanos == 0) {
             saveThreadSyncEvent(EventType.JOIN, locId, thread.getId());
         }
     }
 
     /**
-     * Logs the events produced by invoking {@code Thread#sleep(long)}.
-     *
-     * @param millis
-     *            the first argument of {@code Thread#sleep(long)}
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#sleep(long)}
      */
     public static void rvPredictSleep(long millis, int locId) throws InterruptedException {
         try {
             Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            throw e;
+        } finally {
+            clearInterruptedStatus(Thread.currentThread(), locId);
         }
     }
 
     /**
-     * Logs the events produced by invoking {@code Thread#sleep(long, int)}.
-     *
-     * @param millis
-     *            the first argument of {@code Thread#sleep(long, int)}
-     * @param nanos
-     *            the second argument of {@code Thread#sleep(long, int)}
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#sleep(long,int)}
      */
     public static void rvPredictSleep(long millis, int nanos, int locId)
             throws InterruptedException {
         try {
             Thread.sleep(millis, nanos);
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            throw e;
+        } finally {
+            clearInterruptedStatus(Thread.currentThread(), locId);
         }
     }
 
     /**
-     * Logs the events produced by invoking {@code thread.interrupt()}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code interrupt()} method is
-     *            invoked
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#interrupt()}
      */
     public static void rvPredictInterrupt(Thread thread, int locId) {
-        try {
-            if (thread != Thread.currentThread()) {
-                thread.checkAccess();
+        if (thread != Thread.currentThread()) {
+            thread.checkAccess();
+        }
+        setInterruptedStatus(thread, locId);
+        thread.interrupt();
+    }
+
+    /**
+     * {@link Thread#isInterrupted()}
+     */
+    public static boolean rvPredictIsInterrupted(Thread thread, int locId) {
+        boolean result = thread.isInterrupted();
+        testInterruptedStatus(thread, result, false /* reset */, locId);
+        return result;
+    }
+
+    /**
+     * {@link Thread#interrupted()}
+     */
+    public static boolean rvPredictInterrupted(int locId) {
+        boolean result = Thread.interrupted();
+        testInterruptedStatus(Thread.currentThread(), result, true /* reset */, locId);
+        return result;
+    }
+
+    private static void setInterruptedStatus(Thread t, int locId) {
+        saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(t),
+                -THREAD_INTERRUPTED_STATUS_VAR_ID, 1, 0);
+    }
+
+    private static void clearInterruptedStatus(Thread t, int locId) {
+        saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(t),
+                -THREAD_INTERRUPTED_STATUS_VAR_ID, 0, 0);
+    }
+
+    private static void testInterruptedStatus(Thread t, boolean isInterrupted,
+            boolean clearInterrupted, int locId) {
+        if (clearInterrupted) {
+            if (isInterrupted) {
+                saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
+                        System.identityHashCode(t), -THREAD_INTERRUPTED_STATUS_VAR_ID, 1, 0);
+            } else {
+                saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(t),
+                        -THREAD_INTERRUPTED_STATUS_VAR_ID, 0, 0);
             }
-
-            /* TODO(YilongL): Interrupting a thread that is not alive need not
-             * have any effect; yet I am not sure how to model such case
-             * precisely so I just assume interrupted status will be set to true
-             */
-
-            /*
-             * make sure the write on interrupted status is logged before the
-             * read-and-clear events generated by the blocking method
-             */
-            saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(thread),
-                    -NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
-            thread.interrupt();
-        } catch (SecurityException e) {
-            throw e;
+        } else {
+            saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(t),
+                    -THREAD_INTERRUPTED_STATUS_VAR_ID, bool2int(isInterrupted), 0);
         }
     }
 
     /**
-     * Logs the events produced by invoking {@code thread.isInterrupted()}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code isInterrupted()} method
-     *            is invoked
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static boolean rvPredictIsInterrupted(Thread thread, int locId) {
-        boolean isInterrupted = thread.isInterrupted();
-        /*
-         * the interrupted status is like an imaginary shared variable so we
-         * need to record access to it to preserve soundness
-         */
-        saveMemAccEvent(EventType.READ, locId, System.identityHashCode(thread),
-                -NATIVE_INTERRUPTED_STATUS_VAR_ID, bool2int(isInterrupted));
-        return isInterrupted;
-    }
-
-    /**
-     * Logs the events produced by invoking {@code Thread#interrupted()}.
-     *
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static boolean rvPredictInterrupted(int locId) {
-        boolean interrupted = Thread.interrupted();
-        saveMemAccEvent(EventType.READ, locId, 0, -NATIVE_INTERRUPTED_STATUS_VAR_ID, interrupted ? 1
-                : 0);
-        /* clear interrupted status */
-        saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
-                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-        return interrupted;
-    }
-
-    /**
-     * Logs the events produced by invoking
-     * {@code System#arraycopy(Object, int, Object, int, int)}.
-     *
-     * @param locId
-     *            the location identifier of the event
+     * {@link System#arraycopy(Object,int,Object,int,int)}
      */
     public static void rvPredictSystemArraycopy(Object src, int srcPos, Object dest, int destPos,
             int length, int locId) {
@@ -995,33 +949,6 @@ public final class RVPredictRuntime implements Constants {
                 view = backedColl;
             }
         }
-    }
-
-    /**
-     * Logs events produced by blocking methods being interrupted. In
-     * particular, this means that 1) the interrupted status of the current
-     * thread has to be true and 2) the interrupted status must then be cleared.
-     *
-     * @param locId
-     *            the location ID
-     */
-    private static void onBlockingMethodInterrupted(int locId) {
-        Thread crntThread = Thread.currentThread();
-        /* require interrupted status to be true at the moment */
-        saveMemAccEvent(EventType.READ, locId, System.identityHashCode(crntThread),
-                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
-        /* clear interrupted status */
-        saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
-                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-    }
-
-    private static void onBlockingMethodNormalReturn(int locId) {
-        /* YilongL: it's possible that another thread interrupts this thread and
-         * logs the write of interrupted status to 1 before this read. Thus, the
-         * logged global trace could violate read-write consistency on the
-         * imaginary interrupted status field */
-        saveMemAccEvent(EventType.READ, locId, System.identityHashCode(Thread.currentThread()),
-                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
     }
 
     public static void saveMemAccEvent(EventType eventType, int locId, int addrl, int addrr,

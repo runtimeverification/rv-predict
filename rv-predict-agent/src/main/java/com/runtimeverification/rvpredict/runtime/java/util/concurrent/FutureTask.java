@@ -74,8 +74,8 @@ public class FutureTask<V> implements RunnableFuture<V> {
 
     private static final int RVPREDICT_FUTURE_TASK_LOC_ID = RVPredictRuntime.metadata
             .getLocationId("java.util.concurrent.FutureTask(FutureTask.java:n/a)");
-    private static final int RVPREDICT_FUTURE_TASK_OUTCOME = RVPredictRuntime.metadata
-            .getVariableId("java.util.concurrent.FutureTask", "outcome");
+    private static final int RVPREDICT_FUTURE_TASK_COMPLETION = RVPredictRuntime.metadata
+            .getVariableId("java.util.concurrent.FutureTask", "$outcome");
 
     /*
      * Revision notes: This differs from previous versions of this
@@ -125,16 +125,14 @@ public class FutureTask<V> implements RunnableFuture<V> {
 
     // RV-Predict logging methods
 
-    private void _rvpredict_set_outcome() {
+    private void _rvpredict_set_completion() {
         RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_FUTURE_TASK_LOC_ID,
-                System.identityHashCode(this), -RVPREDICT_FUTURE_TASK_OUTCOME,
-                System.identityHashCode(outcome));
+                System.identityHashCode(this), -RVPREDICT_FUTURE_TASK_COMPLETION, 1);
     }
 
-    private void _rvpredict_get_outcome() {
+    private void _rvpredict_get_completion() {
         RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_FUTURE_TASK_LOC_ID,
-                System.identityHashCode(this), -RVPREDICT_FUTURE_TASK_OUTCOME,
-                System.identityHashCode(outcome));
+                System.identityHashCode(this), -RVPREDICT_FUTURE_TASK_COMPLETION, 1);
     }
 
     /**
@@ -145,10 +143,9 @@ public class FutureTask<V> implements RunnableFuture<V> {
     @SuppressWarnings("unchecked")
     private V report(int s) throws ExecutionException {
         Object x = outcome;
-        if (s == NORMAL) {
-            _rvpredict_get_outcome();
+        _rvpredict_get_completion();
+        if (s == NORMAL)
             return (V)x;
-        }
         if (s >= CANCELLED)
             throw new CancellationException();
         throw new ExecutionException((Throwable)x);
@@ -260,7 +257,6 @@ public class FutureTask<V> implements RunnableFuture<V> {
     protected void set(V v) {
         if (UNSAFE.compareAndSwapInt(this, stateOffset, NEW, COMPLETING)) {
             outcome = v;
-            _rvpredict_set_outcome();
             UNSAFE.putOrderedInt(this, stateOffset, NORMAL); // final state
             finishCompletion();
         }
@@ -279,7 +275,6 @@ public class FutureTask<V> implements RunnableFuture<V> {
     protected void setException(Throwable t) {
         if (UNSAFE.compareAndSwapInt(this, stateOffset, NEW, COMPLETING)) {
             outcome = t;
-            _rvpredict_set_outcome();
             UNSAFE.putOrderedInt(this, stateOffset, EXCEPTIONAL); // final state
             finishCompletion();
         }
@@ -395,6 +390,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
      * nulls out callable.
      */
     private void finishCompletion() {
+        _rvpredict_set_completion();
         // assert state > COMPLETING;
         for (WaitNode q; (q = waiters) != null;) {
             if (UNSAFE.compareAndSwapObject(this, waitersOffset, q, null)) {

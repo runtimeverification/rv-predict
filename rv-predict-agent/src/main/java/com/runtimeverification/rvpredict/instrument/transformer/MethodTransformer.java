@@ -161,6 +161,12 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             return;
         }
 
+        /* fixes issue: https://github.com/runtimeverification/rv-predict/issues/458 */
+        if ("<init>".equals(methodName) && opcode == PUTFIELD && numOfCtorCall == 0) {
+            mv.visitFieldInsn(opcode, owner, name, desc);
+            return;
+        }
+
         int varId = RVPredictRuntime.metadata.getVariableId(classFile.getClassName(), name);
         int locId = getCrntLocId();
 

@@ -75,7 +75,7 @@
         <rvarg key="--window" value="500" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA">
-        <rvarg key="--window" value="50000" />
+        <rvarg key="--window" value="10000" />
         <rvarg value="--stacks" />
         <arg key="-cp" value="basic.jar" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />

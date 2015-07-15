@@ -34,7 +34,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.runtimeverification.rvpredict.engine.main.GUIMain</mainClass>
+                            <mainClass>com.runtimeverification.rvpredict.main.engine.GUIMain</mainClass>
                         </manifest>
                         <manifestEntries>
                             <Premain-Class>com.runtimeverification.rvpredict.instrument.Agent</Premain-Class>
@@ -43,6 +43,7 @@
                     </archive>
                 </configuration>
             </plugin>
+
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>jarjar-maven-plugin</artifactId>
@@ -81,6 +82,71 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+                        <plugin>
+                <groupId>com.github.wvengen</groupId>
+                <artifactId>proguard-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>proguard</goal></goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!-- Our application is so big that ProGuard had ran out of memory -->
+                    <maxMemory>1024m</maxMemory>
+
+                    <!-- File with proguard configuration -->
+                    <proguardInclude>${basedir}/proguard.conf</proguardInclude>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>com.runtimeverification.rvpredict</groupId>
+                            <artifactId>rv-predict-agent</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>com.runtimeverification.rvpredict</groupId>
+                            <artifactId>rv-predict-logging</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>org.apache.commons</groupId>
+                            <artifactId>commons-collections4</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>com.beust</groupId>
+                            <artifactId>jcommander</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>org.apache.ant</groupId>
+                            <artifactId>ant</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>org.apache.commons</groupId>
+                            <artifactId>commons-lang3</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>org.ow2.asm</groupId>
+                            <artifactId>asm-all</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>com.google.guava</groupId>
+                            <artifactId>guava</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>net.jpountz.lz4</groupId>
+                            <artifactId>lz4</artifactId>
+                        </exclusion>
+
+                        <exclusion>
+                            <groupId>com.microsoft.z3</groupId>
+                            <artifactId>com.microsoft.z3</artifactId>
+                        </exclusion>
+                        <!-- And so on -->
+                    </exclusions>
+
+                    <libs>
+                        <lib>${java.home}/lib/rt.jar</lib>
+                    </libs>
+                </configuration>
             </plugin>
         </plugins>
     </build>

@@ -51,14 +51,12 @@ public class Logger {
     public synchronized void report(String msg, MSGTYPE type) {
         switch (type) {
         case ERROR:
-            System.err.println(RV_PREDICT_CONSOLE_PREFIX+ msg);
-            break;
         case INFO:
-            System.out.println(RV_PREDICT_CONSOLE_PREFIX + msg);
+            System.err.println(RV_PREDICT_CONSOLE_PREFIX + msg);
             break;
         case PHASE:
         case REAL:
-            System.out.println(msg);
+            System.err.println(msg);
             break;
         default:
             break;

@@ -92,6 +92,10 @@ public class Configuration implements Constants {
                 // array type
                 "[",
 
+                // immutable classes
+                "cOm/google/common/collect/Immutable".replace("O", "o"), // hack to trick the repackage tool
+                "scala/collection/immutable/",
+
                 // Basics of the JDK that everything else is depending on
                 "sun/",
                 "com/sun",

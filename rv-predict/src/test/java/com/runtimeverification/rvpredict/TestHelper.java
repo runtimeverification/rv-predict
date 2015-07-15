@@ -116,7 +116,7 @@ public class TestHelper {
                                     + Files.toString(stderrFile, Charset.defaultCharset());
                             return;
                         }
-                        String output = Files.toString(stdoutFile, Charset.defaultCharset());
+                        String output = Files.toString(stderrFile, Charset.defaultCharset());
                         synchronized (expectedPatterns) {
                             Iterator<Pattern> iter = expectedPatterns.iterator();
                             while (iter.hasNext()) {

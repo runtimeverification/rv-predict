@@ -28,13 +28,12 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <artifactId>maven-jar-plugin</artifactId>
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.runtimeverification.rvpredict.main.engine.GUIMain</mainClass>
+                            <mainClass>com.runtimeverification.rvpredict.engine.main.GUIMain</mainClass>
                         </manifest>
                         <manifestEntries>
                             <Premain-Class>com.runtimeverification.rvpredict.instrument.Agent</Premain-Class>
@@ -43,7 +42,6 @@
                     </archive>
                 </configuration>
             </plugin>
-
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>jarjar-maven-plugin</artifactId>

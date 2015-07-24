@@ -271,9 +271,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
                 if (classFile == null) {
                     logger.debug("[Warning] unable to locate the class file of " + owner
                             + " while transforming " + className + "." + methodName);
-                } else if (!needToInstrument(classFile)) {
-                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
-                    return;
                 }
             }
 

@@ -29,11 +29,10 @@ public class TestHelper {
 
     /**
      * Initializes the {@code basePath} field to the parent directory of the specified file path
-     * @param filePath  path to the file which prompted this test, used to establish working dir
+     * @param modulePath  path to the file which prompted this test, used to establish working dir
      */
-    public TestHelper(String filePath)   {
-        FileSystem fileSystem = FileSystems.getDefault();
-        this.basePath = fileSystem.getPath(filePath);
+    public TestHelper(Path modulePath)   {
+        this.basePath = modulePath;
         basePathFile = basePath.toFile();
 
     }

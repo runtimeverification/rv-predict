@@ -2,142 +2,142 @@
 <!-- Copyright (c) 2014 Runtime Verification Inc. All Rights Reserved. -->
 <tests>
     <test name="ftpserver.jar">
+        <module value="ftpserver" />
         <runs value="32" />
         <rvarg key="--window" value="2000" />
         <rvarg value="--debug" />
         <rvarg value="--stacks" />
-        <arg key="-jar" value="ftpserver.jar" />
     </test>
     <test name="ftpserver.jar">
+        <module value="ftpserver" />
         <runs value="32" />
         <rvarg key="--window" value="2000" />
         <rvarg value="--offline" />
         <rvarg value="--debug" />
         <rvarg value="--stacks" />
-        <arg key="-jar" value="ftpserver.jar" />
     </test>
     
     <test name="demo.Example">
-        <arg key="-cp" value="basic.jar" />
+        <module value="basic" />
         <arg value="demo.Example" />
         <rvarg value="--stacks" />
     </test>
     
     <test name="SpringExample.jar">
-        <arg key="-jar" value="SpringExample.jar" />
+        <module value="SpringExample" />
         <rvarg key="--window" value="6000" />
         <rvarg value="--debug" />
         <rvarg value="--stacks" />
     </test>
     
     <test name="account.Account">
+        <module value="basic" />
         <runs value="64" />
-        <arg key="-cp" value="basic.jar" />
         <arg value="account.Account" />
         <rvarg value="--stacks" />
     </test>
     <test name="array.Test">
-        <arg key="-cp" value="basic.jar" />
+        <module value="basic" />
         <arg value="array.Test" />
         <rvarg value="--stacks" />
     </test>
     <test name="airlinetickets.Airlinetickets">
+        <module value="basic" />
         <runs value="32" />
-        <arg key="-cp" value="basic.jar" />
         <arg value="airlinetickets.Airlinetickets" />
         <rvarg value="--stacks" />
     </test>
     <test name="boundedbuffer.BoundedBuffer">
+        <module value="basic" />
         <runs value="32" />
-        <arg key="-cp" value="basic.jar" />
         <arg value="boundedbuffer.BoundedBuffer" />
         <rvarg key="--window" value="800" />
         <rvarg value="--stacks" />
     </test>
     <test name="critical.Critical">
+        <module value="basic" />
         <runs value="8" />
-        <arg key="-cp" value="basic.jar" />
         <arg value="critical.Critical" />
         <rvarg value="--stacks" />
     </test>
     <test name="bufwriter.BufWriter">
+        <module value="basic" />
         <runs value="5" />
-        <arg key="-cp" value="basic.jar" />
         <arg value="bufwriter.BufWriter" />
         <rvarg value="--stacks" />
         <rvarg key="--window" value="500" />
     </test>
     <test name="bubblesort.BubbleSort">
+        <module value="basic" />
         <runs value="64" />
         <rvarg value="--stacks" />
-        <arg key="-cp" value="basic.jar" />
         <arg value="bubblesort.BubbleSort" />
         <rvarg key="--window" value="500" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA">
+        <module value="basic" />
         <rvarg key="--window" value="10000" />
         <rvarg value="--stacks" />
-        <arg key="-cp" value="basic.jar" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />
     </test>
     <test name="benchmarks.JGFMonteCarloBenchSizeA">
-        <arg key="-cp" value="basic.jar" />
+        <module value="basic" />
         <arg value="benchmarks.JGFMonteCarloBenchSizeA" />
         <rvarg value="--stacks" />
     </test>
     <test name="benchmarks.JGFMolDynBenchSizeA">
-        <arg key="-cp" value="basic.jar" />
+        <module value="basic" />
         <arg value="benchmarks.JGFMolDynBenchSizeA" />
         <rvarg value="--stacks" />
     </test>
 
     <test name="jtsan.EasyTests-positive">
-        <arg key="-cp" value="basic.jar" />
+        <module value="jtsan" />
         <arg value="jtsan.EasyTests" />
         <arg value="positive" />
         <rvarg value="--stacks" />
     </test>
-        <test name="jtsan.EasyTests-negative">
-        <arg key="-cp" value="basic.jar" />
+    <test name="jtsan.EasyTests-negative">
+        <module value="jtsan" />
         <arg value="jtsan.EasyTests" />
         <arg value="negative" />
         <rvarg value="--stacks" />
     </test>
 
     <test name="jtsan.MediumTests-positive">
-        <arg key="-cp" value="basic.jar" />
+        <module value="jtsan" />
         <arg value="jtsan.MediumTests" />
         <arg value="positive" />
         <rvarg value="--stacks" />
     </test>
     <test name="jtsan.MediumTests-negative">
-        <arg key="-cp" value="basic.jar" />
+        <module value="jtsan" />
         <arg value="jtsan.MediumTests" />
         <arg value="negative" />
         <rvarg value="--stacks" />
     </test>
 
     <test name="jtsan.CustomTests-positive">
-        <arg key="-cp" value="basic.jar" />
+        <module value="jtsan" />
         <arg value="jtsan.CustomTests" />
         <arg value="positive" />
         <rvarg value="--stacks" />
     </test>
-        <test name="jtsan.CustomTests-negative">
-        <arg key="-cp" value="basic.jar" />
+    <test name="jtsan.CustomTests-negative">
+        <module value="jtsan" />
         <arg value="jtsan.CustomTests" />
         <arg value="negative" />
         <rvarg value="--stacks" />
     </test>
 
     <test name="jtsan.JUConcurrentTests-positive">
-        <arg key="-cp" value="basic.jar" />
+        <module value="jtsan" />
         <arg value="jtsan.JUConcurrentTests" />
         <arg value="positive" />
         <rvarg value="--stacks" />
     </test>
     <test name="jtsan.JUConcurrentTests-negative">
-        <arg key="-cp" value="basic.jar" />
+        <module value="jtsan" />
         <arg value="jtsan.JUConcurrentTests" />
         <arg value="negative" />
         <rvarg key="--window" value="3000" />
@@ -145,34 +145,34 @@
     </test>
 
     <test name="jtsan.JUCollectionTests-positive">
-        <arg key="-cp" value="basic.jar" />
+        <module value="jtsan" />
         <arg value="jtsan.JUCollectionTests" />
         <arg value="positive" />
         <rvarg value="--stacks" />
         <rvarg key="--include" value="jtsan.JUCollectionTests$DelegatedIterator" />
     </test>
     <test name="jtsan.JUCollectionTests-negative">
-        <arg key="-cp" value="basic.jar" />
+        <module value="jtsan" />
         <arg value="jtsan.JUCollectionTests" />
         <arg value="negative" />
         <rvarg value="--stacks" />
     </test>
 
     <test name="jtsan.ExecutorTests-positive">
-        <arg key="-cp" value="basic.jar" />
+        <module value="jtsan" />
         <arg value="jtsan.ExecutorTests" />
         <arg value="positive" />
         <rvarg value="--stacks" />
     </test>
     <test name="jtsan.ExecutorTests-negative">
-        <arg key="-cp" value="basic.jar" />
+        <module value="jtsan" />
         <arg value="jtsan.ExecutorTests" />
         <arg value="negative" />
         <rvarg value="--stacks" />
     </test>
 
     <test name="instrumentation.InstrumentationTests">
-        <arg key="-cp" value="basic.jar" />
+        <module value="basic" />
         <arg value="instrumentation.InstrumentationTests" />
     </test>
 

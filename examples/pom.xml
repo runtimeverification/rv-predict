@@ -12,6 +12,7 @@
         <module>basic</module>
         <module>SpringExample</module>
         <module>jtsan</module>
+        <module>ftpserver</module>
     </modules>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

@@ -6,10 +6,8 @@ package com.runtimeverification.rvpredict.util;
  */
 public interface Constants {
 
-    long _0X_DEADBEEFL = 0xDEADBEEFL;
-
     String RVPREDICT_PKG_PREFIX = "com/runtimeverification/rvpredict/";
-    
+
     String RVPREDICT_RUNTIME_PKG_PREFIX = "com/runtimeverification/rvpredict/runtime/";
 
     byte JUC_LOCK_C = 0;

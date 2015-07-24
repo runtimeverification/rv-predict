@@ -50,7 +50,6 @@ import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.LockRegion;
 import com.runtimeverification.rvpredict.trace.MemoryAccessBlock;
 import com.runtimeverification.rvpredict.trace.Trace;
-import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.violation.Race;
 
 public class MaximalCausalModel {
@@ -175,8 +174,6 @@ public class MaximalCausalModel {
         Event read = block.getFirstRead();
         if (read == null) {
             return getPhiAbs(block);
-        } else if (read.getValue() == Constants._0X_DEADBEEFL) {
-            return BooleanConstant.TRUE;
         } else {
             if (!readToPhiConc.containsKey(read)) {
                 readToPhiConc.put(read, null);

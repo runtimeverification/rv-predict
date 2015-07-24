@@ -99,7 +99,7 @@
                     <groups>com.runtimeverification.rvpredict.IntegrationTest</groups>
                     <systemPropertyVariables>
                         <rvPath>${project.parent.build.directory}/release/${project.artifactId}</rvPath>
-                        <examplesPath>${project.basedir}/examples</examplesPath>
+                        <examplesPath>${project.parent.basedir}/examples</examplesPath>
                         <rvVersion>${version}</rvVersion>
                     </systemPropertyVariables>
                 </configuration>

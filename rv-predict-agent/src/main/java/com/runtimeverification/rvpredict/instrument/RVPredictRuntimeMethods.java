@@ -46,6 +46,7 @@ public class RVPredictRuntimeMethods {
     private static final String JU_LIST         =   "java/util/List";
     private static final String JU_LISTITERATOR =   "java/util/ListIterator";
     private static final String JU_MAP          =   "java/util/Map";
+    private static final String JU_STACK        =   "java/util/Stack";
     private static final String JU_COLLECTIONS  =   "java/util/Collections";
 
     /*
@@ -160,6 +161,16 @@ public class RVPredictRuntimeMethods {
             register(INTERFACE, JU_MAP, "keySet", "rvPredictMapKeySet");
     public static final RVPredictInterceptor RVPREDICT_MAP_VALUES         =
             register(INTERFACE, JU_MAP, "values", "rvPredictMapValues");
+
+    // TODO: java.util.Vector methods
+
+    // java.util.Stack methods
+    public static final RVPredictInterceptor RVPREFDICT_STACK_PUSH        =
+            register(VIRTUAL, JU_STACK, "push", "rvPredictStackPush", O);
+    public static final RVPredictInterceptor RVPREFDICT_STACK_POP         =
+            register(VIRTUAL, JU_STACK, "pop", "rvPredictStackPop");
+    public static final RVPredictInterceptor RVPREFDICT_STACK_Peek        =
+            register(VIRTUAL, JU_STACK, "peek", "rvPredictStackPeek");
 
     // java.util.Collections wrapper methods
     public static final RVPredictInterceptor RVPREDICT_SYNC_COLLECTION    =

@@ -17,3 +17,5 @@
 (?s)(.*)Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$10.thread1\(JUCollectionTests.java:277\)(.*)---->  at jtsan.JUCollectionTests\$10.thread2\(JUCollectionTests.java:282\)(.*)\}\}\}
 
 (?s)(.*)Data race on field java.util.HashMap.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$11.thread1\(JUCollectionTests.java:303\)(.*)---->  at jtsan.JUCollectionTests\$11.thread2\(JUCollectionTests.java:308\)(.*)\}\}\}
+
+(?s)(.*)Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$12.thread1\(JUCollectionTests.java:323\)(.*)---->  at jtsan.JUCollectionTests\$12.thread2\(JUCollectionTests.java:328\)(.*)\}\}\}

@@ -1,13 +1,15 @@
 <?xml version="1.0"?>
 <!-- Copyright (c) 2014 Runtime Verification Inc. All Rights Reserved. -->
 <tests>
-    <test name="ftpserver.jar" module="ftpserver" jar>
+    <test name="ftpserver.jar" module="ftpserver">
+        <jar/>
         <runs value="32" />
         <rvarg key="--window" value="2000" />
         <rvarg value="--debug" />
         <rvarg value="--stacks" />
     </test>
-    <test name="ftpserver.jar" module="ftpserver" jar>
+    <test name="ftpserver.jar" module="ftpserver">
+        <jar/>
         <runs value="32" />
         <rvarg key="--window" value="2000" />
         <rvarg value="--offline" />
@@ -20,7 +22,8 @@
         <rvarg value="--stacks" />
     </test>
     
-    <test name="SpringExample.jar" module="SpringExample" jar>
+    <test name="SpringExample.jar" module="SpringExample">
+        <jar/>
         <rvarg key="--window" value="6000" />
         <rvarg value="--debug" />
         <rvarg value="--stacks" />

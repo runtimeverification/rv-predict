@@ -117,7 +117,7 @@ public class MainTest {
                     String module = test.getAttribute("module");
                     Path modulePath = Paths.get(examplesPath, module);
                     String jar = modulePath.resolve("target").resolve(module + "-" + version + "-" + "jar-with-dependencies.jar").toString();
-                    boolean isJar = test.hasAttribute("jar");
+                    boolean isJar = test.getElementsByTagName("jar").getLength() != 0;
                     boolean agentTest = test.hasAttribute("agent");
                     List<String> arguments = new ArrayList<>();
                     List<String> rvarguments = new ArrayList<>();

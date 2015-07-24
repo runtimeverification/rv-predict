@@ -25,15 +25,6 @@ public class JUCollectionTests {
             @Override
             public void thread1() {
                 collection.add(1);
-                collection.addAll(Collections.singleton(2));
-                collection.remove(1);
-                collection.removeAll(Collections.singleton(2));
-                collection.contains(1);
-                collection.containsAll(Collections.singleton(1));
-                collection.retainAll(Collections.singleton(1));
-                collection.clear();
-                collection.toArray();
-                collection.toArray(new Integer[2]);
             }
 
             @Override
@@ -189,12 +180,6 @@ public class JUCollectionTests {
             @Override
             public void thread1() {
                 map.get(0);
-                map.put(1, 1);
-                map.putAll(Collections.singletonMap(2, 2));
-                map.containsKey(1);
-                map.containsValue(1);
-                map.remove(1);
-                map.clear();
             }
 
             @Override
@@ -222,16 +207,7 @@ public class JUCollectionTests {
             public void thread1() {
                 shortSleep();
                 Set<Integer> keySet = map.keySet();
-                keySet.remove(0);               // modify key set view
                 for (Integer key : keySet) {};  // access key set view via iterator
-
-                Collection<Integer> values = map.values();
-                values.remove(0);               // modify value collection view
-                for (Integer val : values) {};  // access value collection view via iterator
-
-                Set<Entry<Integer, Integer>> entrySet = map.entrySet();
-                Iterator<Entry<Integer, Integer>> iter = entrySet.iterator();
-                Entry<Integer, Integer> e = iter.next(); // read access via iterator
             }
 
             @Override
@@ -268,24 +244,6 @@ public class JUCollectionTests {
         };
     }
 
-    @RaceTest(expectRace = false,
-            description = "Test instrumentation of Collections$SynchronizedX classes")
-    public void synchronizedCollections() {
-        final Collection<Integer> c = Collections.synchronizedCollection(new ArrayList<Integer>());
-        new ThreadRunner(2) {
-
-            @Override
-            public void thread1() {
-                c.add(1);
-            }
-
-            @Override
-            public void thread2() {
-                c.contains(1);
-            }
-        };
-    }
-
     @RaceTest(expectRace = true,
             description = "two threads access through two different synchronized views")
     public void differentSynchronizedViews() {
@@ -316,8 +274,7 @@ public class JUCollectionTests {
 
             @Override
             public void thread1() {
-                c.iterator().hasNext(); // explicit iterator
-                for (Integer i : c) {}; // implicit iterator
+                c.iterator().hasNext();
             }
 
             @Override
@@ -335,27 +292,15 @@ public class JUCollectionTests {
         new ThreadRunner(2) {
 
             Set<Integer> keySet;
-            Collection<Integer> values;
-            Set<Entry<Integer, Integer>> entrySet;
 
             @Override
             public void setUp() {
                 keySet = m.keySet();
-                values = m.values();
-                entrySet = m.entrySet();
             }
 
             @Override
             public void thread1() {
-                keySet.iterator().hasNext(); // explicit iterator of key set view
-                for (Integer i : keySet) {}; // implicit iterator of key set view
                 synchronized (keySet) { keySet.iterator().hasNext(); } // should sync on m not keySet
-                values.iterator().hasNext(); // explicit iterator of values view
-                for (Integer i : values) {}; // implicit iterator of values view
-                synchronized (values) { values.iterator().hasNext(); } // should sync on m not values
-                entrySet.iterator().hasNext(); // explicit iterator of entry set view
-                for (Entry<?, ?> e : entrySet) {}; // implicit iterator of entry set view
-                synchronized (entrySet) { entrySet.iterator().hasNext(); } // should sync on m not entrySet
             }
 
             @Override
@@ -365,27 +310,7 @@ public class JUCollectionTests {
         };
     }
 
-    @RaceTest(expectRace = false,
-            description = "iterate over the collection views of a synchronized map with proper synchronization")
-    public void syncMapIterateCollectionView() {
-        final Map<Integer, Integer> m = Collections.synchronizedMap(new HashMap<Integer, Integer>());
-
-        new ThreadRunner(2) {
-
-            @Override
-            public void thread1() {
-                synchronized (m) { m.keySet().iterator().hasNext(); }
-                synchronized (m) { m.values().iterator().hasNext(); }
-                synchronized (m) { m.entrySet().iterator().hasNext(); }
-            }
-
-            @Override
-            public void thread2() {
-                m.put(2, 2);
-            }
-        };
-    }
-
+    @ExcludedTest(reason = "cannot intercept constructor")
     @RaceTest(expectRace = true,
             description = "test instrumentation of conversion constructor")
     public void conversionCtor() {
@@ -409,20 +334,36 @@ public class JUCollectionTests {
         };
     }
 
-    @RaceTest(expectRace = true,
-            description = "test instrumentation of conversion constructor")
-    public void conversionCtorSync() {
+    @RaceTest(expectRace = false,
+            description = "Test instrumentation of Collections$SynchronizedX classes")
+    public void synchronizedCollections() {
+        final Collection<Integer> c = Collections.synchronizedCollection(new ArrayList<Integer>());
+        new ThreadRunner(2) {
+
+            @Override
+            public void thread1() {
+                c.add(1);
+            }
+
+            @Override
+            public void thread2() {
+                c.contains(1);
+            }
+        };
+    }
+
+    @RaceTest(expectRace = false,
+            description = "iterate over the collection views of a synchronized map with proper synchronization")
+    public void syncMapIterateCollectionView() {
         final Map<Integer, Integer> m = Collections.synchronizedMap(new HashMap<Integer, Integer>());
 
         new ThreadRunner(2) {
 
             @Override
             public void thread1() {
-                new ArrayList<>(m.keySet());
-                new LinkedList<>(m.entrySet());
-                new HashSet<>(m.values());
-                new HashMap<>(m);
-                new TreeMap<>(m);
+                synchronized (m) { m.keySet().iterator().hasNext(); }
+                synchronized (m) { m.values().iterator().hasNext(); }
+                synchronized (m) { m.entrySet().iterator().hasNext(); }
             }
 
             @Override

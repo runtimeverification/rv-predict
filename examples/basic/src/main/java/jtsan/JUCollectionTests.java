@@ -310,6 +310,26 @@ public class JUCollectionTests {
         };
     }
 
+    @RaceTest(expectRace = true,
+            description = "list iterator")
+    public void listIterator() {
+        List<Integer> list = new ArrayList<>();
+        list.add(1);
+
+        new ThreadRunner(2) {
+
+            @Override
+            public void thread1() {
+                list.listIterator(0).hasPrevious();
+            }
+
+            @Override
+            public void thread2() {
+                list.add(2);
+            }
+        };
+    }
+
     @ExcludedTest(reason = "cannot intercept constructor")
     @RaceTest(expectRace = true,
             description = "test instrumentation of conversion constructor")
@@ -387,6 +407,7 @@ public class JUCollectionTests {
             tests.differentSynchronizedViews();
             tests.iterateSyncCollectionWrong();
             tests.syncMapIterateCollectionViewWrong();
+            tests.listIterator();
 //            tests.conversionCtor();
         } else {
             // negative tests

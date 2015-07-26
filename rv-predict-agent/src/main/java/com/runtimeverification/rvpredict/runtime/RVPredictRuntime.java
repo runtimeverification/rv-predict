@@ -35,10 +35,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 
@@ -601,11 +604,26 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Iterator rvPredictIterableGetIterator(Iterable iterable, int locId) {
         Iterator iterator = iterable.iterator();
-        Iterable value = iteratorToIterable.put(iterator, iterable);
-        if (value != null) {
-            config.logger().debug("Iterator " + iterator + " was already bound to " + value);
-        }
+        iteratorToIterable.put(iterator, iterable);
         return iterator;
+    }
+
+    /**
+     * {@link List#listIterator()}
+     */
+    public static ListIterator rvPredictListGetListIterator(List list, int locId) {
+        ListIterator listItr = list.listIterator();
+        iteratorToIterable.put(listItr, list);
+        return listItr;
+    }
+
+    /**
+     * {@link List#listIterator(int)}
+     */
+    public static ListIterator rvPredictListGetListIterator(List list, int index, int locId) {
+        ListIterator listItr = list.listIterator(index);
+        iteratorToIterable.put(listItr, list);
+        return listItr;
     }
 
     /**
@@ -632,6 +650,44 @@ public final class RVPredictRuntime implements Constants {
     public static void rvPredictIteratorRemove(Iterator iterator, int locId) {
         writeUsingIterator(iterator, locId, () -> {
             iterator.remove();
+            return null;
+        });
+    }
+
+    /**
+     * {@link ListIterator#hasPrevious()}
+     */
+    public static boolean rvPredictListIteratorHasPrevious(ListIterator listItr, int locId) {
+        return readUsingIterator(listItr, locId, () -> {
+            return listItr.hasPrevious();
+        });
+    }
+
+    /**
+     * {@link ListIterator#previous()}
+     */
+    public static Object rvPredictListIteratorPrevious(ListIterator listItr, int locId) {
+        return readUsingIterator(listItr, locId, () -> {
+            return listItr.previous();
+        });
+    }
+
+    /**
+     * {@link ListIterator#add(Object)}
+     */
+    public static void rvPredictListIteratorAdd(ListIterator listItr, Object e, int locId) {
+        writeUsingIterator(listItr, locId, () -> {
+            listItr.add(e);
+            return null;
+        });
+    }
+
+    /**
+     * {@link ListIterator#set(Object)}
+     */
+    public static void rvPredictListIteratorSet(ListIterator listItr, Object e, int locId) {
+        writeUsingIterator(listItr, locId, () -> {
+            listItr.set(e);
             return null;
         });
     }
@@ -953,6 +1009,8 @@ public final class RVPredictRuntime implements Constants {
         }
     }
 
+    private static Set<String> DEBUG_ORPHAN_ITERATORS = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
     /**
      * Returns the {@link Collection} or {@link Map} that a given
      * {@link Iterator} is accessing or {@code null} if the accessed collection
@@ -962,7 +1020,9 @@ public final class RVPredictRuntime implements Constants {
         Iterable iterable = iteratorToIterable.get(iterator);
         if (iterable == null) {
             /* not all iterators are created by Iterable.iterator() */
-            config.logger().debug("Unable to find the collection accessed by " + iterator);
+            if (DEBUG_ORPHAN_ITERATORS.add(iterator.getClass().getName())) {
+                config.logger().debug("Unable to find the collection accessed by " + iterator);
+            }
             return null;
         } else {
             return getBackingCollection(iterable);

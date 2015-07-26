@@ -43,6 +43,8 @@ public class RVPredictRuntimeMethods {
     private static final String JL_ITERABLE     =   "java/lang/Iterable";
     private static final String JU_ITERATOR     =   "java/util/Iterator";
     private static final String JU_COLLECTION   =   "java/util/Collection";
+    private static final String JU_LIST         =   "java/util/List";
+    private static final String JU_LISTITERATOR =   "java/util/ListIterator";
     private static final String JU_MAP          =   "java/util/Map";
     private static final String JU_COLLECTIONS  =   "java/util/Collections";
 
@@ -98,6 +100,22 @@ public class RVPredictRuntimeMethods {
             register(INTERFACE, JU_ITERATOR, "next", "rvPredictIteratorNext");
     public static final RVPredictInterceptor RVPREDICT_ITERATOR_REMOVE    =
             register(INTERFACE, JU_ITERATOR, "remove", "rvPredictIteratorRemove");
+
+    // java.util.List
+    public static final RVPredictInterceptor RVPREDICT_LIST_LISTITERATOR  =
+            register(INTERFACE, JU_LIST, "listIterator", "rvPredictListGetListIterator");
+    public static final RVPredictInterceptor RVPREDICT_LIST_LISTITERATOR_IDX  =
+            register(INTERFACE, JU_LIST, "listIterator", "rvPredictListGetListIterator", I);
+
+    // java.util.ListIterator methods
+    public static final RVPredictInterceptor RVPREDICT_LISTITERATOR_HAS_PREVIOUS  =
+            register(INTERFACE, JU_LISTITERATOR, "hasPrevious", "rvPredictListIteratorHasPrevious");
+    public static final RVPredictInterceptor RVPREDICT_LISTITERATOR_PREVIOUS  =
+            register(INTERFACE, JU_LISTITERATOR, "previous", "rvPredictListIteratorPrevious");
+    public static final RVPredictInterceptor RVPREDICT_LISTITERATOR_ADD  =
+            register(INTERFACE, JU_LISTITERATOR, "add", "rvPredictListIteratorAdd", O);
+    public static final RVPredictInterceptor RVPREDICT_LISTITERATOR_SET  =
+            register(INTERFACE, JU_LISTITERATOR, "set", "rvPredictListIteratorSet", O);
 
     // java.util.Collection methods
     public static final RVPredictInterceptor RVPREDICT_COLLECTION_ADD     =

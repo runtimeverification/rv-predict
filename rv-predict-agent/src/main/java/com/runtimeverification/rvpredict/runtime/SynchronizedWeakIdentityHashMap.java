@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.function.Function;
 
 import org.apache.commons.collections4.map.AbstractReferenceMap.ReferenceStrength;
 import org.apache.commons.collections4.map.ReferenceIdentityMap;
@@ -89,6 +90,12 @@ public class SynchronizedWeakIdentityHashMap<K, V> implements Map<K, V> {
     @Override
     public synchronized Collection<V> values() {
         return m.values();
+    }
+
+    @Override
+    public synchronized V computeIfAbsent(K key,
+            Function<? super K, ? extends V> mappingFunction) {
+        return m.computeIfAbsent(key, mappingFunction);
     }
 
     @Override

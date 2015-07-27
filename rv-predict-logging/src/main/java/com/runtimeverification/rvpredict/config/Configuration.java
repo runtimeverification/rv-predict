@@ -354,12 +354,12 @@ public class Configuration implements Constants {
     private boolean profile;
 
     public final static String opt_include = "--include";
-    @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include.",
+    @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include",
             descriptionKey = "2000")
     public String includes;
 
     public final static String opt_exclude = "--exclude";
-    @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude.",
+    @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude",
             descriptionKey = "2100")
     public String excludes;
 
@@ -373,7 +373,7 @@ public class Configuration implements Constants {
     public boolean stacks = false;
 
     public final static String opt_suppress = "--suppress";
-    @Parameter(names = opt_suppress, description = "Suppress race reports on the given (comma-separated) list of fields.",
+    @Parameter(names = opt_suppress, description = "Suppress race reports on the given (comma-separated) list of fields",
             descriptionKey = "2400")
     private String suppresses;
 

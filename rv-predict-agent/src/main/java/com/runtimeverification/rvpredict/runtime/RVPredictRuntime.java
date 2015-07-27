@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -891,6 +892,33 @@ public final class RVPredictRuntime implements Constants {
         Map syncMap = Collections.synchronizedMap(map);
         viewToBackingCollection.put(syncMap, map);
         return syncMap;
+    }
+
+    /**
+     * {@link Stack#push(Object)}
+     */
+    public static Object rvPredictStackPush(Stack stack, Object e, int locId) {
+        return logCollectionWriteAccess(stack, locId, () -> {
+            return stack.push(e);
+        });
+    }
+
+    /**
+     * {@link Stack#pop()}
+     */
+    public static Object rvPredictStackPop(Stack stack, int locId) {
+        return logCollectionWriteAccess(stack, locId, () -> {
+            return stack.pop();
+        });
+    }
+
+    /**
+     * {@link Stack#peek()}
+     */
+    public static Object rvPredictStackPeek(Stack stack, int locId) {
+        return logCollectionWriteAccess(stack, locId, () -> {
+            return stack.peek();
+        });
     }
 
     private static int bool2int(boolean b) {

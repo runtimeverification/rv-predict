@@ -20,12 +20,22 @@
         </dependency>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>SpringExample</artifactId>
+            <artifactId>ftpserver</artifactId>
             <version>${project.version}</version>
         </dependency>
-         <dependency>
+        <dependency>
+            <groupId>com.runtimeverification.rvpredict</groupId>
+            <artifactId>jtsan</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>basic</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.runtimeverification.rvpredict</groupId>
+            <artifactId>SpringExample</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

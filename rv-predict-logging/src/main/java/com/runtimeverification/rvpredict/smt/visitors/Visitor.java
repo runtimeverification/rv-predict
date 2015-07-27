@@ -1,5 +1,4 @@
 package com.runtimeverification.rvpredict.smt.visitors;
-// Copyright (c) 2012-2015 K Team. All Rights Reserved.
 
 import com.runtimeverification.rvpredict.smt.formula.*;
 

@@ -19,6 +19,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,7 +36,8 @@ import java.util.List;
 public class MainTest {
     private static String basePath = System.getProperty("rvPath");
     private static String separator = System.getProperty("file.separator");
-    private static String examplesPath = basePath + separator + "examples";
+    private static String examplesPath = System.getProperty("examplesPath");
+    private static String version = System.getProperty("rvVersion");
 
     private static String getTestConfigPath() {
         String path = null;
@@ -59,11 +61,11 @@ public class MainTest {
     private final List<String> args;
 
 
-    public MainTest(String name, String specPath, int numOfRuns, List<String> rvArguments, List<String> arguments,
+    public MainTest(String name, Path modulePath, int numOfRuns, List<String> rvArguments, List<String> arguments,
                     boolean agentTest) {
         this.name = name;
         this.numOfRuns = numOfRuns;
-        helper = new TestHelper(specPath);
+        helper = new TestHelper(modulePath);
         args = new ArrayList<>();
         if (agentTest) {
             args.addAll(agentCommand);
@@ -91,7 +93,7 @@ public class MainTest {
         System.out.printf("Testing %s %d times\n\t Running arguments: %s\n", name, numOfRuns, args);
         String[] args = new String[this.args.size()];
         this.args.toArray(args);
-        int n = helper.testCommand("tests/" + name, numOfRuns, args);
+        int n = helper.testCommand("src/test/resources/" + name, numOfRuns, args);
         System.out.printf("Testing %s done after %s runs.\n", name, n);
     }
 
@@ -112,13 +114,23 @@ public class MainTest {
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                     Element test = (Element) node;
                     String name = test.getAttribute("name");
+                    String module = test.getAttribute("module");
+                    Path modulePath = Paths.get(examplesPath, module);
+                    String jar = modulePath.resolve("target").resolve(module + "-" + version + "-" + "jar-with-dependencies.jar").toString();
+                    boolean isJar = test.getElementsByTagName("jar").getLength() != 0;
                     boolean agentTest = test.hasAttribute("agent");
                     List<String> arguments = new ArrayList<>();
                     List<String> rvarguments = new ArrayList<>();
                     int numOfRuns = getNumOfRuns(test);
                     processArguments(rvarguments, test.getElementsByTagName("rvarg"));
+                    if (isJar) {
+                        arguments.add("-jar");
+                    } else {
+                        arguments.add("-cp");
+                    }
+                    arguments.add(jar);
                     processArguments(arguments, test.getElementsByTagName("arg"));
-                    data.add(new Object[]{ name, examplesPath, numOfRuns, rvarguments, arguments, agentTest});
+                    data.add(new Object[]{name, modulePath, numOfRuns, rvarguments, arguments, agentTest});
                 }
             }
         } catch (ParserConfigurationException | SAXException | IOException e) {

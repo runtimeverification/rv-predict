@@ -23,7 +23,7 @@
         <module>rv-predict-jar</module>
         <module>rv-predict-logging</module>
         <module>rv-predict-agent</module>
-        <module>examples</module>
+        <module>rv-predict-tests</module>
         <module>rv-predict-installer</module>
     </modules>
     <url>http://www.runtimeverification.com</url>

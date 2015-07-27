@@ -25,7 +25,7 @@
         </dependency>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>jtsan</artifactId>
+            <artifactId>examples</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -109,7 +109,7 @@
                     <groups>com.runtimeverification.rvpredict.IntegrationTest</groups>
                     <systemPropertyVariables>
                         <rvPath>${project.parent.build.directory}/release/${project.artifactId}</rvPath>
-                        <examplesPath>${project.parent.basedir}/examples</examplesPath>
+                        <examplesPath>${project.parent.basedir}/rv-predict-tests</examplesPath>
                         <rvVersion>${version}</rvVersion>
                     </systemPropertyVariables>
                 </configuration>

@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<!-- Copyright (c) 2014 K Team. All Rights Reserved. -->
 <assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
@@ -54,7 +53,7 @@
         <moduleSet>
             <useAllReactorProjects>true</useAllReactorProjects>
             <includes>
-                <include>com.runtimeverification.rvpredict:basic</include>
+                <include>com.runtimeverification.rvpredict:examples</include>
                 <include>com.runtimeverification.rvpredict:SpringExample</include>
             </includes>
             <binaries>
@@ -86,15 +85,14 @@
             <includes>
                 <include>LICENSE*</include>
                 <include>README*</include>
-                <include>examples/basic-examples-list.txt</include>
-                <include>examples/tests/**</include>
             </includes>
         </fileSet>
          <fileSet>
-            <directory>../examples/basic/src</directory>
-            <outputDirectory>/examples/basic-src</outputDirectory>
+            <directory>../rv-predict-tests/examples</directory>
+            <outputDirectory>/examples</outputDirectory>
             <includes>
-                <include>**</include>
+                <include>examples-list.txt</include>
+                <include>src/**</include>
             </includes>
         </fileSet>
         <fileSet>

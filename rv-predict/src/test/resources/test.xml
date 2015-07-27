@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!-- Copyright (c) 2014 Runtime Verification Inc. All Rights Reserved. -->
-<tests>
+<basic>
     <test name="ftpserver.jar" module="ftpserver">
         <jar/>
         <runs value="32" />
@@ -17,7 +17,7 @@
         <rvarg value="--stacks" />
     </test>
     
-    <test name="demo.Example" module="basic">
+    <test name="demo.Example" module="examples">
         <arg value="demo.Example" />
         <rvarg value="--stacks" />
     </test>
@@ -29,120 +29,120 @@
         <rvarg value="--stacks" />
     </test>
     
-    <test name="account.Account" module="basic">
+    <test name="account.Account" module="examples">
         <runs value="64" />
         <arg value="account.Account" />
         <rvarg value="--stacks" />
     </test>
-    <test name="array.Test" module="basic">
+    <test name="array.Test" module="examples">
         <arg value="array.Test" />
         <rvarg value="--stacks" />
     </test>
-    <test name="airlinetickets.Airlinetickets" module="basic">
+    <test name="airlinetickets.Airlinetickets" module="examples">
         <runs value="32" />
         <arg value="airlinetickets.Airlinetickets" />
         <rvarg value="--stacks" />
     </test>
-    <test name="boundedbuffer.BoundedBuffer" module="basic">
+    <test name="boundedbuffer.BoundedBuffer" module="examples">
         <runs value="32" />
         <arg value="boundedbuffer.BoundedBuffer" />
         <rvarg key="--window" value="800" />
         <rvarg value="--stacks" />
     </test>
-    <test name="critical.Critical" module="basic">
+    <test name="critical.Critical" module="examples">
         <runs value="8" />
         <arg value="critical.Critical" />
         <rvarg value="--stacks" />
     </test>
-    <test name="bufwriter.BufWriter" module="basic">
+    <test name="bufwriter.BufWriter" module="examples">
         <runs value="5" />
         <arg value="bufwriter.BufWriter" />
         <rvarg value="--stacks" />
         <rvarg key="--window" value="500" />
     </test>
-    <test name="bubblesort.BubbleSort" module="basic">
+    <test name="bubblesort.BubbleSort" module="examples">
         <runs value="64" />
         <rvarg value="--stacks" />
         <arg value="bubblesort.BubbleSort" />
         <rvarg key="--window" value="500" />
     </test>
-    <test name="benchmarks.JGFRayTracerBenchSizeA" module="basic">
+    <test name="benchmarks.JGFRayTracerBenchSizeA" module="examples">
         <rvarg key="--window" value="10000" />
         <rvarg value="--stacks" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />
     </test>
-    <test name="benchmarks.JGFMonteCarloBenchSizeA" module="basic">
+    <test name="benchmarks.JGFMonteCarloBenchSizeA" module="examples">
         <arg value="benchmarks.JGFMonteCarloBenchSizeA" />
         <rvarg value="--stacks" />
     </test>
-    <test name="benchmarks.JGFMolDynBenchSizeA" module="basic">
+    <test name="benchmarks.JGFMolDynBenchSizeA" module="examples">
         <arg value="benchmarks.JGFMolDynBenchSizeA" />
         <rvarg value="--stacks" />
     </test>
 
-    <test name="jtsan.EasyTests-positive" module="jtsan">
+    <test name="jtsan.EasyTests-positive" module="basic">
         <arg value="jtsan.EasyTests" />
         <arg value="positive" />
         <rvarg value="--stacks" />
     </test>
-    <test name="jtsan.EasyTests-negative" module="jtsan">
+    <test name="jtsan.EasyTests-negative" module="basic">
         <arg value="jtsan.EasyTests" />
         <arg value="negative" />
         <rvarg value="--stacks" />
     </test>
 
-    <test name="jtsan.MediumTests-positive" module="jtsan">
+    <test name="jtsan.MediumTests-positive" module="basic">
         <arg value="jtsan.MediumTests" />
         <arg value="positive" />
         <rvarg value="--stacks" />
     </test>
-    <test name="jtsan.MediumTests-negative" module="jtsan">
+    <test name="jtsan.MediumTests-negative" module="basic">
         <arg value="jtsan.MediumTests" />
         <arg value="negative" />
         <rvarg value="--stacks" />
     </test>
 
-    <test name="jtsan.CustomTests-positive" module="jtsan">
+    <test name="jtsan.CustomTests-positive" module="basic">
         <arg value="jtsan.CustomTests" />
         <arg value="positive" />
         <rvarg value="--stacks" />
     </test>
-    <test name="jtsan.CustomTests-negative" module="jtsan">
+    <test name="jtsan.CustomTests-negative" module="basic">
         <arg value="jtsan.CustomTests" />
         <arg value="negative" />
         <rvarg value="--stacks" />
     </test>
 
-    <test name="jtsan.JUConcurrentTests-positive" module="jtsan">
+    <test name="jtsan.JUConcurrentTests-positive" module="basic">
         <arg value="jtsan.JUConcurrentTests" />
         <arg value="positive" />
         <rvarg value="--stacks" />
     </test>
-    <test name="jtsan.JUConcurrentTests-negative" module="jtsan">
+    <test name="jtsan.JUConcurrentTests-negative" module="basic">
         <arg value="jtsan.JUConcurrentTests" />
         <arg value="negative" />
         <rvarg key="--window" value="3000" />
         <rvarg value="--stacks" />
     </test>
 
-    <test name="jtsan.JUCollectionTests-positive" module="jtsan">
+    <test name="jtsan.JUCollectionTests-positive" module="basic">
         <arg value="jtsan.JUCollectionTests" />
         <arg value="positive" />
         <rvarg value="--stacks" />
         <rvarg key="--include" value="jtsan.JUCollectionTests$DelegatedIterator" />
     </test>
-    <test name="jtsan.JUCollectionTests-negative" module="jtsan">
+    <test name="jtsan.JUCollectionTests-negative" module="basic">
         <arg value="jtsan.JUCollectionTests" />
         <arg value="negative" />
         <rvarg value="--stacks" />
     </test>
 
-    <test name="jtsan.ExecutorTests-positive" module="jtsan">
+    <test name="jtsan.ExecutorTests-positive" module="basic">
         <arg value="jtsan.ExecutorTests" />
         <arg value="positive" />
         <rvarg value="--stacks" />
     </test>
-    <test name="jtsan.ExecutorTests-negative" module="jtsan">
+    <test name="jtsan.ExecutorTests-negative" module="basic">
         <arg value="jtsan.ExecutorTests" />
         <arg value="negative" />
         <rvarg value="--stacks" />
@@ -152,4 +152,4 @@
         <arg value="instrumentation.InstrumentationTests" />
     </test>
 
-</tests>
+</basic>

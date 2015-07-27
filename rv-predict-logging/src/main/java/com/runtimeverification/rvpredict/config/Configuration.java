@@ -154,6 +154,7 @@ public class Configuration implements Constants {
 
     public final List<Pattern> includeList = new ArrayList<>();
     public final List<Pattern> excludeList = new ArrayList<>();
+    public final Set<String> suppressList = new HashSet<>();
 
     private JCommander jCommander;
 
@@ -261,6 +262,16 @@ public class Configuration implements Constants {
         }
     }
 
+    private void initSuppressList() {
+        if (suppresses != null) {
+            for (String suppress : suppresses.replace('.', '/').split(",")) {
+                if (!suppress.isEmpty()) {
+                    suppressList.add(suppress.replace('/', '.'));
+                }
+            }
+        }
+    }
+
     /**
      * Creates a {@link java.util.regex.Pattern} list from a String array
      * describing packages/classes using file pattern conventions ({@code *}
@@ -361,12 +372,17 @@ public class Configuration implements Constants {
     @Parameter(names = opt_stacks, description = "Record call stack events and compute stack traces in race report", descriptionKey = "2300")
     public boolean stacks = false;
 
+    public final static String opt_suppress = "--suppress";
+    @Parameter(names = opt_suppress, description = "Suppress race reports on the given (comma-separated) list of fields.",
+            descriptionKey = "2400")
+    private String suppresses;
+
     final static String opt_smt_solver = "--solver";
-    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2400")
+    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2500")
     public String smt_solver = "z3";
 
     final static String opt_solver_timeout = "--solver-timeout";
-    @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2500")
+    @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2600")
     public int solver_timeout = 60;
 
     final static String opt_debug = "--debug";
@@ -437,6 +453,7 @@ public class Configuration implements Constants {
 
         initExcludeList();
         initIncludeList();
+        initSuppressList();
 
         /* Carefully handle the interaction between options:
          * 1) 4 different modes: only_profile, only_log, only_predict and log_then_predict;

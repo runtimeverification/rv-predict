@@ -98,7 +98,7 @@ public class Race {
         return "Race(" + addr + "," + loc1 + "," + loc2 + ")";
     }
 
-    private String getRaceLocationSig() {
+    public String getRaceLocationSig() {
         int idx = e1.getFieldIdOrArrayIndex();
         return idx < 0 ? trace.metadata().getVariableSig(-idx).replace("/", ".") : "#" + idx;
     }

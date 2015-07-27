@@ -125,14 +125,16 @@ option when invoking RV-Predict:
 
           --predict          Run prediction on logs from given directory
 
-          --include          Comma separated list of packages to include.
+          --include          Comma separated list of packages to include
 
-          --exclude          Comma separated list of packages to exclude.
+          --exclude          Comma separated list of packages to exclude
 
           --window           Window size (must be >= 64)
                              Default: 1000
 
           --stacks           Record call stack events and compute stack traces in race report
+
+          --suppress         Suppress race reports on the given (comma-separated) list of fields
 
       -v, --verbose          Generate more verbose output
 
@@ -147,6 +149,10 @@ option when invoking RV-Predict:
    options and java command line are no longer necessary.
 -  the ``--stacks`` option can be used to generate more detailed race report
    with stacktraces
+-  the ``--window <size>`` (default: ``1000``) option instructs RV-Predict to
+   find races between events with the largest distance of `size` in the logged
+   trace.  The larger the ``size`` is, the more races are expected to be detected,
+   and the more time RV-Predict will take.
 -  ``--`` can be used as a terminator for the RV-Predict options.
 
 Advanced options
@@ -169,10 +175,6 @@ displayed by ``rv-predict -h -v`` are not sufficient:
    number and distribution of events generated from the instrumented classes.
 -  the ``--solver <solver>`` option instructs RV-Predict to use a different SMT
    solver for handling SMT queries.
--  the ``--window <size>`` (default: ``1000``) option instructs RV-Predict to
-   find races between events with the largest distance of `size` in the logged
-   trace.  The larger the ``size`` is, the more races are expected to be detected,
-   and the more time RV-Predict will take.
 
 Additionally, the ``RV_OPTS`` environment variable can be used to specify
 extra options to the Java Virtual Machine running rv-predict (e.g.,  for

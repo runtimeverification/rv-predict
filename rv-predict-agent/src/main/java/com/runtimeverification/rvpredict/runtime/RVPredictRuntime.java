@@ -35,11 +35,18 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Supplier;
+
+import org.apache.commons.lang3.mutable.MutableInt;
+
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
@@ -104,17 +111,6 @@ import com.runtimeverification.rvpredict.util.Constants;
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public final class RVPredictRuntime implements Constants {
 
-    /**
-     * Dummy value used to represent abstract state whose concrete value we do
-     * not care about.
-     * <p>
-     * <b>Note:</b> since we always return 0 as the initial value for all
-     * tracked variables, the prediction engine has to understand this dummy
-     * value to avoid generating read-write consistency constraint on abstract
-     * state.
-     */
-    private static final long DUMMY_VALUE = Constants._0X_DEADBEEFL;
-
     private static final String MOCK_STATE_FIELD = "$state";
 
     public static final Metadata metadata = Metadata.singleton();
@@ -154,7 +150,9 @@ public final class RVPredictRuntime implements Constants {
      * {@link java.util.Map} interface and the range views provided in the {@link java.util.List},
      * {@link java.util.SortedSet}, and {@link java.util.SortedMap} interfaces.
      */
-    private static final SynchronizedWeakIdentityHashMap<Object, Object> viewToBackedCollection = new SynchronizedWeakIdentityHashMap<>();
+    private static final SynchronizedWeakIdentityHashMap<Object, Object> viewToBackingCollection = new SynchronizedWeakIdentityHashMap<>();
+
+    private static final SynchronizedWeakIdentityHashMap<Object, MutableInt> collectionToState = new SynchronizedWeakIdentityHashMap<>();
 
     private static ILoggingEngine logger;
 
@@ -606,181 +604,248 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Iterator rvPredictIterableGetIterator(Iterable iterable, int locId) {
         Iterator iterator = iterable.iterator();
-        Iterable value = iteratorToIterable.put(iterator, iterable);
-        if (value != null && Configuration.verbose) {
-            System.err.println("[Runtime] error: iterator " + iterator
-                    + " was already bound to " + value);
-        }
+        iteratorToIterable.put(iterator, iterable);
         return iterator;
+    }
+
+    /**
+     * {@link List#listIterator()}
+     */
+    public static ListIterator rvPredictListGetListIterator(List list, int locId) {
+        ListIterator listItr = list.listIterator();
+        iteratorToIterable.put(listItr, list);
+        return listItr;
+    }
+
+    /**
+     * {@link List#listIterator(int)}
+     */
+    public static ListIterator rvPredictListGetListIterator(List list, int index, int locId) {
+        ListIterator listItr = list.listIterator(index);
+        iteratorToIterable.put(listItr, list);
+        return listItr;
     }
 
     /**
      * {@link Iterator#hasNext()}
      */
     public static boolean rvPredictIteratorHasNext(Iterator iterator, int locId) {
-        boolean result = iterator.hasNext();
-        readUsingIterator(iterator, locId);
-        return result;
+        return readUsingIterator(iterator, locId, () -> {
+            return iterator.hasNext();
+        });
     }
 
     /**
      * {@link Iterator#next()}
      */
     public static Object rvPredictIteratorNext(Iterator iterator, int locId) {
-        Object result = iterator.next();
-        readUsingIterator(iterator, locId);
-        return result;
+        return readUsingIterator(iterator, locId, () -> {
+            return iterator.next();
+        });
     }
 
     /**
      * {@link Iterator#remove()}
      */
     public static void rvPredictIteratorRemove(Iterator iterator, int locId) {
-        writeUsingIterator(iterator, locId);
-        iterator.remove();
+        writeUsingIterator(iterator, locId, () -> {
+            iterator.remove();
+            return null;
+        });
+    }
+
+    /**
+     * {@link ListIterator#hasPrevious()}
+     */
+    public static boolean rvPredictListIteratorHasPrevious(ListIterator listItr, int locId) {
+        return readUsingIterator(listItr, locId, () -> {
+            return listItr.hasPrevious();
+        });
+    }
+
+    /**
+     * {@link ListIterator#previous()}
+     */
+    public static Object rvPredictListIteratorPrevious(ListIterator listItr, int locId) {
+        return readUsingIterator(listItr, locId, () -> {
+            return listItr.previous();
+        });
+    }
+
+    /**
+     * {@link ListIterator#add(Object)}
+     */
+    public static void rvPredictListIteratorAdd(ListIterator listItr, Object e, int locId) {
+        writeUsingIterator(listItr, locId, () -> {
+            listItr.add(e);
+            return null;
+        });
+    }
+
+    /**
+     * {@link ListIterator#set(Object)}
+     */
+    public static void rvPredictListIteratorSet(ListIterator listItr, Object e, int locId) {
+        writeUsingIterator(listItr, locId, () -> {
+            listItr.set(e);
+            return null;
+        });
     }
 
     /**
      * {@link Collection#add(Object)}
      */
     public static boolean rvPredictCollectionAdd(Collection collection, Object e, int locId) {
-        mockCollectionWriteAccess(collection, locId);
-        return collection.add(e);
+        return logCollectionWriteAccess(collection, locId, () -> {
+            return collection.add(e);
+        });
     }
 
     /**
      * {@link Collection#addAll(Collection)}
      */
     public static boolean rvPredictCollectionAddAll(Collection collection, Collection c, int locId) {
-        mockCollectionWriteAccess(collection, locId);
-        return collection.addAll(c);
+        return logCollectionWriteAccess(collection, locId, () -> {
+            return collection.addAll(c);
+        });
     }
 
     /**
      * {@link Collection#remove(Object)}
      */
     public static boolean rvPredictCollectionRemove(Collection collection, Object e, int locId) {
-        mockCollectionWriteAccess(collection, locId);
-        return collection.remove(e);
+        return logCollectionWriteAccess(collection, locId, () -> {
+            return collection.remove(e);
+        });
     }
 
     /**
      * {@link Collection#removeAll(Collection)}
      */
     public static boolean rvPredictCollectionRemoveAll(Collection collection, Collection c, int locId) {
-        mockCollectionWriteAccess(collection, locId);
-        return collection.removeAll(c);
+        return logCollectionWriteAccess(collection, locId, () -> {
+            return collection.removeAll(c);
+        });
     }
 
     /**
      * {@link Collection#retainAll(Collection)}
      */
     public static boolean rvPredictCollectionRetainAll(Collection collection, Collection c, int locId) {
-        mockCollectionWriteAccess(collection, locId);
-        return collection.retainAll(c);
+        return logCollectionWriteAccess(collection, locId, () -> {
+            return collection.retainAll(c);
+        });
     }
 
     /**
      * {@link Collection#contains(Object)}
      */
     public static boolean rvPredictCollectionContains(Collection collection, Object e, int locId) {
-        boolean result = collection.contains(e);
-        mockCollectionReadAccess(collection, locId);
-        return result;
+        return logCollectionReadAccess(collection, locId, () -> {
+            return collection.contains(e);
+        });
     }
 
     /**
      * {@link Collection#containsAll(Collection)}
      */
     public static boolean rvPredictCollectionContainsAll(Collection collection, Collection c, int locId) {
-        boolean result = collection.containsAll(c);
-        mockCollectionReadAccess(collection, locId);
-        return result;
+        return logCollectionReadAccess(collection, locId, () -> {
+            return collection.containsAll(c);
+        });
     }
 
     /**
      * {@link java.util.Collection#clear()}
      */
     public static void rvPredictCollectionClear(Collection collection, int locId) {
-        mockCollectionWriteAccess(collection, locId);
-        collection.clear();
+        logCollectionWriteAccess(collection, locId, () -> {
+            collection.clear();
+            return null;
+        });
     }
 
     /**
      * {@link Collection#toArray()}
      */
     public static Object[] rvPredictCollectionToArray(Collection collection, int locId) {
-        Object[] result = collection.toArray();
-        mockCollectionReadAccess(collection, locId);
-        return result;
+        return logCollectionReadAccess(collection, locId, () -> {
+            return collection.toArray();
+        });
     }
 
     /**
      * {@link Collection#toArray(Object[])}
      */
     public static Object[] rvPredictCollectionToArray(Collection collection, Object[] a, int locId) {
-        Object[] result = collection.toArray(a);
-        mockCollectionReadAccess(collection, locId);
-        return result;
+        return logCollectionReadAccess(collection, locId, () -> {
+            return collection.toArray(a);
+        });
     }
 
     /**
      * {@link Map#get(Object)}
      */
     public static Object rvPredictMapGet(Map map, Object key, int locId) {
-        Object result = map.get(key);
-        mockCollectionReadAccess(map, locId);
-        return result;
+        return logCollectionReadAccess(map, locId, () -> {
+            return map.get(key);
+        });
     }
 
     /**
      * {@link Map#put(Object, Object)}
      */
     public static Object rvPredictMapPut(Map map, Object key, Object value, int locId) {
-        mockCollectionWriteAccess(map, locId);
-        return map.put(key, value);
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.put(key, value);
+        });
     }
 
     /**
      * {@link Map#putAll(Map)}
      */
     public static void rvPredictMapPutAll(Map map, Map m, int locId) {
-        mockCollectionWriteAccess(map, locId);
-        map.putAll(m);
+        logCollectionWriteAccess(map, locId, () -> {
+            map.putAll(m);
+            return null;
+        });
     }
 
     /**
      * {@link Map#remove(Object)}
      */
     public static Object rvPredictMapRemove(Map map, Object key, int locId) {
-        mockCollectionWriteAccess(map, locId);
-        return map.remove(key);
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.remove(key);
+        });
     }
 
     /**
      * {@link Map#containsKey(Object)}
      */
     public static boolean rvPredictMapContainsKey(Map map, Object key, int locId) {
-        boolean result = map.containsKey(key);
-        mockCollectionReadAccess(map, locId);
-        return result;
+        return logCollectionReadAccess(map, locId, () -> {
+            return map.containsKey(key);
+        });
     }
 
     /**
      * {@link Map#containsValue(Object)}
      */
     public static boolean rvPredictMapContainsValue(Map map, Object value, int locId) {
-        boolean result = map.containsValue(value);
-        mockCollectionReadAccess(map, locId);
-        return result;
+        return logCollectionReadAccess(map, locId, () -> {
+            return map.containsValue(value);
+        });
     }
 
     /**
      * {@link Map#clear()}
      */
     public static void rvPredictMapClear(Map map, int locId) {
-        mockCollectionWriteAccess(map, locId);
-        map.clear();
+        logCollectionWriteAccess(map, locId, () -> {
+            map.clear();
+            return null;
+        });
     }
 
     /**
@@ -788,7 +853,7 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Set rvPredictMapEntrySet(Map map, int locId) {
         Set result = map.entrySet();
-        viewToBackedCollection.put(result, map);
+        viewToBackingCollection.put(result, map);
         return result;
     }
 
@@ -797,7 +862,7 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Set rvPredictMapKeySet(Map map, int locId) {
         Set result = map.keySet();
-        viewToBackedCollection.put(result, map);
+        viewToBackingCollection.put(result, map);
         return result;
     }
 
@@ -806,7 +871,7 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Collection rvPredictMapValues(Map map, int locId) {
         Collection result = map.values();
-        viewToBackedCollection.put(result, map);
+        viewToBackingCollection.put(result, map);
         return result;
     }
 
@@ -815,7 +880,7 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Collection rvPredictSynchronizedCollection(Collection collection, int locId) {
         Collection syncCollection = Collections.synchronizedCollection(collection);
-        viewToBackedCollection.put(syncCollection, collection);
+        viewToBackingCollection.put(syncCollection, collection);
         return syncCollection;
     }
 
@@ -824,31 +889,20 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Map rvPredictSynchronizedMap(Map map, int locId) {
         Map syncMap = Collections.synchronizedMap(map);
-        viewToBackedCollection.put(syncMap, map);
+        viewToBackingCollection.put(syncMap, map);
         return syncMap;
-    }
-
-    /**
-     * Shorthand for {@link MethodHandle#invoke(Object...)}.
-     */
-    private static Object invokeMethodHandle(MethodHandle mh, Object... objects) {
-        try {
-            return mh.invokeWithArguments(objects);
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private static int bool2int(boolean b) {
         return b ? 1 : 0;
     }
 
-    private static void mockCollectionReadAccess(Object collection, int locId) {
-        mockCollectionAccess(collection, false, locId);
+    private static <T> T logCollectionReadAccess(Object collection, int locId, Supplier<T> closure) {
+        return logCollectionAccess(collection, false, locId, closure);
     }
 
-    private static void mockCollectionWriteAccess(Object collection, int locId) {
-        mockCollectionAccess(collection, true, locId);
+    private static <T> T logCollectionWriteAccess(Object collection, int locId, Supplier<T> closure) {
+        return logCollectionAccess(collection, true, locId, closure);
     }
 
     /**
@@ -860,48 +914,85 @@ public final class RVPredictRuntime implements Constants {
      * @param locId
      *            the location identifier
      */
-    public static void mockCollectionAccess(Object collection, boolean isWrite, int locId) {
-        String className = collection.getClass().getName();
-        if (collection instanceof Vector || collection instanceof Hashtable
-                || collection instanceof BlockingQueue
-                || collection instanceof ConcurrentMap
-                || className.startsWith("java.util.concurrent.")) {
-            /* non-wrapper thread-safe collections */
-            return;
-        } else if (className.startsWith("java.util.Collections$Synchronized")) {
-            /* thread-safe collection wrapper */
-            Object mutex;
-            mutex = collection instanceof Collection ?
-                invokeMethodHandle(SYNC_COLLECTION_GET_MUTEX, collection) :
-                invokeMethodHandle(SYNC_MAP_GET_MUTEX, collection);
+    public static <T> T logCollectionAccess(Object collection, boolean isWrite, int locId,
+            Supplier<T> closure) {
+        String cname = collection.getClass().getName();
+        if (cname.startsWith("com.runtimeverification")) {
+            /* skip our own runtime library class which has been manually instrumented */
+            return closure.get();
+        }
 
-            Object backedColl = getBackedCollection(collection);
-            synchronized (mutex) {
-                saveLockEvent(EventType.WRITE_LOCK, locId, MONITOR_C, mutex);
-                saveMemAccEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
-                        System.identityHashCode(backedColl),
-                        -metadata.getVariableId(backedColl.getClass().getName(), MOCK_STATE_FIELD),
-                        DUMMY_VALUE);
-                saveLockEvent(EventType.WRITE_UNLOCK, locId, MONITOR_C, mutex);
+        Object backingColl = getBackingCollection(collection);
+        MutableInt state = getCollectionState(backingColl);
+
+        Object mutex = null;
+        boolean isThreadSafe = true;
+        if (collection instanceof Vector || collection instanceof Hashtable) {
+            mutex = collection;
+        } else if (collection instanceof BlockingQueue
+                || collection instanceof ConcurrentMap
+                || cname.contains("Concurrent")) {
+            mutex = state;
+        } else if (cname.startsWith("java.util.Collections$Synchronized")) {
+            try {
+                mutex = collection instanceof Collection
+                        ? SYNC_COLLECTION_GET_MUTEX.invoke(collection)
+                        : SYNC_MAP_GET_MUTEX.invoke(collection);
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
             }
         } else {
-            /* thread-unsafe collection */
-            Object backedColl = getBackedCollection(collection);
-            saveMemAccEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
-                    System.identityHashCode(backedColl),
-                    -metadata.getVariableId(backedColl.getClass().getName(), MOCK_STATE_FIELD),
-                    DUMMY_VALUE);
+            /* unknown collection; assume non-thread-safe */
+            mutex = state;
+            isThreadSafe = false;
         }
+
+        int addrl = System.identityHashCode(backingColl);
+        int addrr = -metadata.getVariableId(backingColl.getClass().getName(), MOCK_STATE_FIELD);
+        synchronized (mutex) {
+            int value = state.intValue();
+            if (isThreadSafe) {
+                saveLockEvent(EventType.WRITE_LOCK, locId, MONITOR_C, mutex);
+            }
+            if (isWrite) {
+                state.increment();
+                saveMemAccEvent(EventType.READ, locId, addrl, addrr, value);
+                saveMemAccEvent(EventType.WRITE, locId, addrl, addrr, value + 1);
+            } else {
+                saveMemAccEvent(EventType.READ, locId, addrl, addrr, value);
+            }
+            if (isThreadSafe) {
+                saveLockEvent(EventType.WRITE_UNLOCK, locId, MONITOR_C, mutex);
+            }
+            return closure.get();
+        }
+    }
+
+    /**
+     * Gets the backing {@link Collection} or {@link Map} of a given view.
+     */
+    private static Object getBackingCollection(Object view) {
+        Object backingColl;
+        while ((backingColl = viewToBackingCollection.get(view)) != null) {
+            view = backingColl;
+        }
+        return view;
+    }
+
+    private static MutableInt getCollectionState(Object collection) {
+        return collectionToState.computeIfAbsent(collection, x -> new MutableInt(0));
     }
 
     /**
      * Logs write event generated by accessing some collection (e.g.
      * {@link Collection}, {@link Map}, etc.) using an {@link Iterator}.
      */
-    private static void writeUsingIterator(Iterator iterator, int locId) {
+    private static <T> T writeUsingIterator(Iterator iterator, int locId, Supplier<T> closure) {
         Object collection = resolveAccessedCollection(iterator);
         if (collection != null) {
-            mockCollectionWriteAccess(collection, locId);
+            return logCollectionWriteAccess(collection, locId, closure);
+        } else {
+            return closure.get();
         }
     }
 
@@ -909,12 +1000,16 @@ public final class RVPredictRuntime implements Constants {
      * Logs read event generated by accessing some collection (e.g.
      * {@link Collection}, {@link Map}, etc.) using an {@link Iterator}.
      */
-    private static void readUsingIterator(Iterator iterator, int locId) {
+    private static <T> T readUsingIterator(Iterator iterator, int locId, Supplier<T> closure) {
         Object collection = resolveAccessedCollection(iterator);
         if (collection != null) {
-            mockCollectionReadAccess(collection, locId);
+            return logCollectionReadAccess(collection, locId, closure);
+        } else {
+            return closure.get();
         }
     }
+
+    private static Set<String> DEBUG_ORPHAN_ITERATORS = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /**
      * Returns the {@link Collection} or {@link Map} that a given
@@ -924,30 +1019,13 @@ public final class RVPredictRuntime implements Constants {
     private static Object resolveAccessedCollection(Iterator iterator) {
         Iterable iterable = iteratorToIterable.get(iterator);
         if (iterable == null) {
-            if (Configuration.verbose) {
-                /* this is possible because not all iterators are created by
-                 * Iterable.iterator() */
-                System.err.println("[Runtime] Unable to find the collection associated with " + iterator);
+            /* not all iterators are created by Iterable.iterator() */
+            if (DEBUG_ORPHAN_ITERATORS.add(iterator.getClass().getName())) {
+                config.logger().debug("Unable to find the collection accessed by " + iterator);
             }
             return null;
         } else {
-            return getBackedCollection(iterable);
-        }
-    }
-
-    /**
-     * Gets the backing {@link Collection} or {@link Map} of a given view.
-     */
-    private static Object getBackedCollection(Object view) {
-        assert view != null;
-        Object backedColl;
-        while (true) {
-            backedColl = viewToBackedCollection.get(view);
-            if (backedColl == null) {
-                return view;
-            } else {
-                view = backedColl;
-            }
+            return getBackingCollection(iterable);
         }
     }
 

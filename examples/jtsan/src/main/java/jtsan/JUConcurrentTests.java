@@ -732,30 +732,25 @@ public class JUConcurrentTests {
     }
 
     @RaceTest(expectRace = false,
-            description = "ConcurrentHashMap accesses")
+            description = "ConcurrentHashMap put/get")
     public void concurrentHashMap() {
         final ConcurrentHashMap<Integer, Integer> map = new ConcurrentHashMap<>();
-        new ThreadRunner(4) {
+        new ThreadRunner(2) {
 
             @Override
             public void thread1() {
+                sharedVar = 1;
                 map.put(1, 1);
             }
 
             @Override
             public void thread2() {
-                map.put(1, 2);
+                while (map.get(1) == null) {
+                    Thread.yield();
+                }
+                sharedVar = 2;
             }
 
-            @Override
-            public void thread3() {
-                thread2();
-            }
-
-            @Override
-            public void thread4() {
-                thread1();
-            }
         };
     }
 

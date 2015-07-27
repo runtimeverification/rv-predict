@@ -48,10 +48,12 @@ public class RaceDetector implements Constants {
                                   && !trace.isInsideClassInitializer(e1)
                                   && !trace.isInsideClassInitializer(e2)) {
                               Race race = new Race(e1, e2, trace);
-                              String raceSig = race.toString();
-                              if (!sigToRealRace.containsKey(raceSig)) {
-                                  sigToRaceCandidates.computeIfAbsent(raceSig,
-                                          x -> new ArrayList<>()).add(race);
+                              if (!config.suppressList.contains(race.getRaceLocationSig())) {
+                                  String raceSig = race.toString();
+                                  if (!sigToRealRace.containsKey(raceSig)) {
+                                      sigToRaceCandidates.computeIfAbsent(raceSig,
+                                              x -> new ArrayList<>()).add(race);
+                                  }
                               }
                           }
                       });

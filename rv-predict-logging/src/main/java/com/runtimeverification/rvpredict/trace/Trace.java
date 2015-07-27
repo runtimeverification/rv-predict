@@ -487,7 +487,7 @@ public class Trace {
                 for (int i = 0, c = 0; i < tmp_size; i++) {
                     if (critical[i]) {
                         Event event = tmp_events[i];
-//                        logger().debug().println(event + " at " + metadata().getLocationSig(event.getLocId()));
+//                        logger().debug(event + " at " + metadata().getLocationSig(event.getLocId()));
 
                         /* update tidToEvents & tidToAddrToWriteEvents */
                         events[c++] = event;

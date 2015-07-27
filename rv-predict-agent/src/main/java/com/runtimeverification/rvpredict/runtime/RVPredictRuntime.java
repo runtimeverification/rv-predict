@@ -48,6 +48,7 @@ import java.util.function.Supplier;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
+import com.google.common.collect.MapMaker;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
@@ -143,17 +144,21 @@ public final class RVPredictRuntime implements Constants {
     /**
      * Map from iterator to its associated iterable (if any).
      */
-    private static final SynchronizedWeakIdentityHashMap<Iterator, Iterable> iteratorToIterable = new SynchronizedWeakIdentityHashMap<>();
+    private static final ConcurrentMap<Iterator, Iterable> iteratorToIterable = new MapMaker()
+            .weakKeys().makeMap();
 
     /**
      * Map from view to its backed collection. There are two kinds of view in
      * the Java Collections Framework: the collection views provided in the
-     * {@link java.util.Map} interface and the range views provided in the {@link java.util.List},
-     * {@link java.util.SortedSet}, and {@link java.util.SortedMap} interfaces.
+     * {@link java.util.Map} interface and the range views provided in the
+     * {@link java.util.List}, {@link java.util.SortedSet}, and
+     * {@link java.util.SortedMap} interfaces.
      */
-    private static final SynchronizedWeakIdentityHashMap<Object, Object> viewToBackingCollection = new SynchronizedWeakIdentityHashMap<>();
+    private static final ConcurrentMap<Object, Object> viewToBackingCollection = new MapMaker()
+            .weakKeys().makeMap();
 
-    private static final SynchronizedWeakIdentityHashMap<Object, MutableInt> collectionToState = new SynchronizedWeakIdentityHashMap<>();
+    private static final ConcurrentMap<Object, MutableInt> collectionToState = new MapMaker()
+            .weakKeys().makeMap();
 
     private static ILoggingEngine logger;
 

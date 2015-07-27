@@ -2,13 +2,11 @@ Running Examples
 ================
 
 RV-Predict comes with a suite of small benchmark examples which can be
-found in ``examples/basic.jar``, whose source code is in
-``examples/basic-src``.  The file ``examples/basic-examples-list.txt``
-lists all runnable classes in ``examples/basic.jar``.
+found in ``examples/examples.jar``, whose source code is in
+``examples/src``.  The file ``examples/examples-list.txt``
+lists all runnable classes in ``examples/examples.jar``.
 Additionally, a `Spring Framework`_ example (``examples/SpringExample.jar``) is
-provided to show how RV-Predict can handle multiple class-loaders, as well
-as a more complex example based on the `Apache FtpServer`_
-(``examples/ftpserver.jar``).
+provided to show how RV-Predict can handle multiple class-loaders.
 
 account.Account
 ---------------
@@ -29,7 +27,7 @@ Running command:
 
 .. code-block:: none
 
-    java -cp examples/basic.jar account.Account
+    java -cp examples/examples.jar account.Account
 
 Expected output:
 
@@ -55,13 +53,13 @@ To invoke RV-Predict on the Account class, simply replace
 
 .. code-block:: none
 
-    rv-predict -cp examples/basic.jar account.Account
+    rv-predict -cp examples/examples.jar account.Account
 
 If preferring RV-Predict's agent mode, the similar command would be:
 
  .. code-block:: none
 
-    java -javaagent:<rvPath>/lib/rv-predict.jar -cp examples/basic.jar account.Account
+    java -javaagent:<rvPath>/lib/rv-predict.jar -cp examples/examples.jar account.Account
 
 
 As previously, a complete execution output of the Account class is generated,
@@ -241,4 +239,3 @@ Check out more examples at `Detecting popular data races in Java using RV-Predic
 
 .. _Detecting popular data races in Java using RV-Predict : https://runtimeverification.com/blog/?p=58
 .. _Spring Framework: http://projects.spring.io/spring-framework/
-.. _Apache FtpServer: http://mina.apache.org/ftpserver-project/

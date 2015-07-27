@@ -91,6 +91,7 @@ public class TestHelper {
             }
         };
         ExecutorService pool = new ThreadPoolExecutor(4,4,0, TimeUnit.SECONDS, workQueue);
+        List<String> outputs = new ArrayList<>();
         for (n = 0; n < numOfRuns && !expectedPatterns.isEmpty(); n++) {
             pool.execute(new Runnable() {
                 @Override
@@ -118,6 +119,7 @@ public class TestHelper {
                         }
                         String output = Files.toString(stderrFile, Charset.defaultCharset());
                         synchronized (expectedPatterns) {
+                            outputs.add(output);
                             Iterator<Pattern> iter = expectedPatterns.iterator();
                             while (iter.hasNext()) {
                                 if (iter.next().matcher(output).find()) {
@@ -141,7 +143,7 @@ public class TestHelper {
         }
 
         Assert.assertTrue("Unable to match regular expressions: \n\t" +
-                        Joiner.on("\n\t").skipNulls().join(expectedPatterns),
+                        Joiner.on("\n\t").skipNulls().join(expectedPatterns) + "\n\t" + outputs,
                 expectedPatterns.isEmpty());
         return n;
     }

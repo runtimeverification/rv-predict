@@ -233,5 +233,12 @@ RV-Predict Run
     }}}
 
 
+More Examples
+-------------
+
+Check out more examples at `Detecting popular data races in Java using RV-Predict`_.
+
+
+.. _Detecting popular data races in Java using RV-Predict : https://runtimeverification.com/blog/?p=58
 .. _Spring Framework: http://projects.spring.io/spring-framework/
 .. _Apache FtpServer: http://mina.apache.org/ftpserver-project/

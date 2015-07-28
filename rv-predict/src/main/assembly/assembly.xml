@@ -54,7 +54,6 @@
             <useAllReactorProjects>true</useAllReactorProjects>
             <includes>
                 <include>com.runtimeverification.rvpredict:examples</include>
-                <include>com.runtimeverification.rvpredict:SpringExample</include>
             </includes>
             <binaries>
                 <attachmentClassifier>jar-with-dependencies</attachmentClassifier>

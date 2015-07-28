@@ -165,9 +165,9 @@ Explanation:
 -  the ``--exclude`` option tells RV-Predict to exclude the given packages
    from instrumentation.
 -  the ``--window <size>`` (default: ``1000``) option tells RV-Predict to
-   find races between events with the largest distance of `size` in the logged
-   trace.  The larger the ``size`` is, the more races are expected to be detected,
-   and the more time RV-Predict will take.
+   find races between events with the largest distance of ``<size>`` in the
+   logged trace.  The larger the ``<size>`` is, the more races are expected
+   to be detected, and the more time RV-Predict will take.
 -  the ``--stacks`` option tells RV-Predict to record call stack events that
    can be used to compute stack traces in the race report.
 -  the ``--suppress`` option tells RV-Predict to suppress race reports on

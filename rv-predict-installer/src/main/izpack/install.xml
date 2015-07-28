@@ -62,8 +62,8 @@
     <packs>
         <pack name="RV-Predict" required="yes" installGroups="New Application" >
             <description>Required RV-Predict libraries and executables.</description>
-            <singlefile src="README.md" target="$INSTALL_PATH/README"/>
-            <file src="LICENSE" targetdir="$INSTALL_PATH"/>
+            <singlefile src="README.md" target="$INSTALL_PATH/README.md"/>
+            <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>
             <file src="bin" targetdir="$INSTALL_PATH"/>
             <file src="docs" targetdir="$INSTALL_PATH"/>
             <fileset dir="lib" targetdir="$INSTALL_PATH/lib"/>

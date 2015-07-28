@@ -16,25 +16,20 @@
         <rvarg value="--debug" />
         <rvarg value="--stacks" />
     </test>
-    
-    <test name="demo.Example" module="examples">
-        <arg value="demo.Example" />
-        <rvarg value="--stacks" />
-    </test>
-    
+
     <test name="SpringExample.jar" module="SpringExample">
         <jar/>
         <rvarg key="--window" value="6000" />
         <rvarg value="--debug" />
         <rvarg value="--stacks" />
     </test>
-    
+
     <test name="account.Account" module="examples">
         <runs value="64" />
         <arg value="account.Account" />
         <rvarg value="--stacks" />
     </test>
-    <test name="array.Test" module="examples">
+    <test name="array.Test" module="basic">
         <arg value="array.Test" />
         <rvarg value="--stacks" />
     </test>
@@ -42,29 +37,6 @@
         <runs value="32" />
         <arg value="airlinetickets.Airlinetickets" />
         <rvarg value="--stacks" />
-    </test>
-    <test name="boundedbuffer.BoundedBuffer" module="examples">
-        <runs value="32" />
-        <arg value="boundedbuffer.BoundedBuffer" />
-        <rvarg key="--window" value="800" />
-        <rvarg value="--stacks" />
-    </test>
-    <test name="critical.Critical" module="examples">
-        <runs value="8" />
-        <arg value="critical.Critical" />
-        <rvarg value="--stacks" />
-    </test>
-    <test name="bufwriter.BufWriter" module="examples">
-        <runs value="5" />
-        <arg value="bufwriter.BufWriter" />
-        <rvarg value="--stacks" />
-        <rvarg key="--window" value="500" />
-    </test>
-    <test name="bubblesort.BubbleSort" module="examples">
-        <runs value="64" />
-        <rvarg value="--stacks" />
-        <arg value="bubblesort.BubbleSort" />
-        <rvarg key="--window" value="500" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA" module="examples">
         <rvarg key="--window" value="10000" />
@@ -78,6 +50,34 @@
     <test name="benchmarks.JGFMolDynBenchSizeA" module="examples">
         <arg value="benchmarks.JGFMolDynBenchSizeA" />
         <rvarg value="--stacks" />
+    </test>
+    
+    <test name="demo.Example" module="basic">
+        <arg value="demo.Example" />
+        <rvarg value="--stacks" />
+    </test>
+    <test name="boundedbuffer.BoundedBuffer" module="basic">
+        <runs value="32" />
+        <arg value="boundedbuffer.BoundedBuffer" />
+        <rvarg key="--window" value="800" />
+        <rvarg value="--stacks" />
+    </test>
+    <test name="critical.Critical" module="basic">
+        <runs value="8" />
+        <arg value="critical.Critical" />
+        <rvarg value="--stacks" />
+    </test>
+    <test name="bufwriter.BufWriter" module="basic">
+        <runs value="5" />
+        <arg value="bufwriter.BufWriter" />
+        <rvarg value="--stacks" />
+        <rvarg key="--window" value="500" />
+    </test>
+    <test name="bubblesort.BubbleSort" module="basic">
+        <runs value="64" />
+        <rvarg value="--stacks" />
+        <arg value="bubblesort.BubbleSort" />
+        <rvarg key="--window" value="500" />
     </test>
 
     <test name="jtsan.EasyTests-positive" module="basic">

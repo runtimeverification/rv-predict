@@ -394,6 +394,11 @@ public class Configuration implements Constants {
     @Parameter(names = { short_opt_verbose, opt_verbose }, description = "Generate more verbose output", descriptionKey = "9000")
     public static boolean verbose;
 
+    final static String opt_version = "--version";
+    @Parameter(names = opt_version, description = "Print product version and exit", descriptionKey = "9100")
+    public static boolean display_version;
+    private static final String RV_PREDICT_VERSION = "1.4";
+
     final static String short_opt_help = "-h";
     final static String opt_help = "--help";
     @Parameter(names = { short_opt_help, opt_help }, description = "Print help info", help = true, descriptionKey = "9900")
@@ -448,6 +453,10 @@ public class Configuration implements Constants {
 
         if (help) {
             usage();
+            System.exit(0);
+        }
+        if (display_version) {
+            System.out.println("RV-Predict version " + RV_PREDICT_VERSION);
             System.exit(0);
         }
 

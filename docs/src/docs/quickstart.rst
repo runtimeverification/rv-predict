@@ -138,6 +138,8 @@ option when invoking RV-Predict:
 
       -v, --verbose          Generate more verbose output
 
+          --version          Print product version and exit
+
       -h, --help             Print help info
 
 -  the ``--log <dir>`` option can be used to tell RV-Predict that the execution

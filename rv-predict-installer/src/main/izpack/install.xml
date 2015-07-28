@@ -39,7 +39,7 @@
         <res id="CustomLangPack.xml_eng" src="res/izpack-rv-eng-lang.xml"/>
         <!-- User input spec defining RV key inputs -->
         <res id="userInputSpec.xml" src="res/userInputSpec.xml"/>
-        <res id="LicencePanel.licence" src="LICENSE"/>
+        <res id="LicencePanel.licence" src="LICENSE.md"/>
         <res id="HTMLFinishInfoPanel.finish" src="res/rvdependencies/finish.html"/>
         <res id="Heading.image" src="res/images/predict.png"/>
 <!--        <res id="TargetPanel.dir.windows" src="res/windows-installpath.txt"/> -->

@@ -10,7 +10,8 @@ Installation
 ------------
 
 Download the installer from the `RV-Predict website`_ and execute it
-with ``java -jar <installer>``, following all instructions. Remember
+with ``java -jar <installer>`` (unless your browser executes it
+automatically upon download), following all instructions. Remember
 to add the ``bin`` directory under the RV-Predict installation
 directory to your ``PATH`` environment variable.
 
@@ -29,10 +30,14 @@ RV-Predict is invoked as follows:
 
 .. code-block:: none
 
-    rv-predict [options] class [args...]        #(to predict races in a class), or
-    rv-predict [options] -jar jarfile [args...] #(to predict races in an executable jar)
+        rv-predict [rv_predict_options] [--] [java_options] class [args...]
+            (to predict races in a class)
+    or  rv-predict [rv_predict_options] [--] [java_options] -jar jarfile [args...]
+            (to predict races in an executable jar file)
 
-where ``[options]`` include both RV-Predict and Java specific options.
+where ``[rv_predict_options]`` are RV-Predict options and ``[java_options]`` are
+normal Java options. Whenever it might cause confusion, the optional ``--`` can
+be used as a terminator for the RV-Predict options.
 
 
 As an agent
@@ -44,8 +49,8 @@ requires adding the ``-javaagent:<rvPath>/lib/rv-predict.jar`` option
 and the ``-Xbootclasspath/a:<rvPath>/lib/rv-predict.jar`` option to
 your Java command line.
 Passing options to the agent can be done as standard for agents:
-using  ``-javaagent:<rvPath>/lib/rv-predict.jar="<opts>"``, where ``<opts>``
-are RV-Predict options.
+using  ``-javaagent:<rvPath>/lib/rv-predict.jar="<rv_predict_options>"``,
+where ``<rv_predict_options>`` are RV-Predict options.
 
 The agent uses the z3_ library as a constraint solver.  Therefore,  the ``z3``
 libraries need to be accessible from the library path.
@@ -142,19 +147,32 @@ option when invoking RV-Predict:
 
       -h, --help             Print help info
 
--  the ``--log <dir>`` option can be used to tell RV-Predict that the execution
-   should be logged in the ``<dir>`` directory and that the prediction phase
-   should be skipped.
--  the ``--predict <dir>`` option can be used to tell RV-Predict to skip the
-   logging phase, using the logged trace from the ``<dir>`` directory to run
-   the prediction algorithms on.  When using this option, specifying the java
-   options and java command line are no longer necessary.
--  the ``--stacks`` option can be used to generate more detailed race report
-   with stacktraces
--  the ``--window <size>`` (default: ``1000``) option instructs RV-Predict to
+Explanation:
+
+-  the ``--offline`` option tells RV-Predict to store the logged execution
+   trace on disk and only run the prediction algorithm after the application
+   terminates.
+-  the ``--log <dir>`` option tells RV-Predict that the execution should be
+   logged in the ``<dir>`` directory and that the prediction phase should be
+   skipped.
+-  the ``--predict <dir>`` option tells RV-Predict to skip the logging phase,
+   using the logged trace from the ``<dir>`` directory to run the prediction
+   algorithms.  When using this option, specifying the java options and java
+   command line are no longer necessary.
+-  the ``--include`` option tells RV-Predict to include the given packages
+   in instrumentation; this option takes precedence over the following
+   ``--exclude`` option.
+-  the ``--exclude`` option tells RV-Predict to exclude the given packages
+   from instrumentation.
+-  the ``--window <size>`` (default: ``1000``) option tells RV-Predict to
    find races between events with the largest distance of `size` in the logged
    trace.  The larger the ``size`` is, the more races are expected to be detected,
    and the more time RV-Predict will take.
+-  the ``--stacks`` option tells RV-Predict to record call stack events that
+   can be used to compute stack traces in the race report.
+-  the ``--suppress`` option tells RV-Predict to suppress race reports on
+   the given fields; only used when the user is absolutely certain that the
+   data race to be suppressed is benign.
 -  ``--`` can be used as a terminator for the RV-Predict options.
 
 Advanced options
@@ -178,14 +196,19 @@ displayed by ``rv-predict -h -v`` are not sufficient:
 -  the ``--solver <solver>`` option instructs RV-Predict to use a different SMT
    solver for handling SMT queries.
 
-Additionally, the ``RV_OPTS`` environment variable can be used to specify
-extra options to the Java Virtual Machine running rv-predict (e.g.,  for
-increasing the memory limit).
+Additionally, the ``RV_OPTS`` environment variable can be used to implicitly
+pass extra options to the Java Virtual Machine running RV-Predict. RV-Predict
+will pick up these Java options upon start-up. For example,
+``RV_OPTS=-Xss32m -Xms1g -Xmx3g`` sets the thread stack size of the JVM to be 32MB,
+initial heap size to be 1G, and maximum heap size to be 3G. Of course, you can
+still explicitly pass ``-Xss32m`` as a Java option as described in the previous
+section.
+
 
 Enhancing prediction power
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To be effective, RV-Predict tries to keep a good balance between efficiency
+By default, RV-Predict tries to keep a good balance between efficiency
 and prediction power.  Nevertheless, while the default settings were
 engineered to work for most common cases, there might be cases where
 user input could improve the prediction process.  We provide several
@@ -224,7 +247,7 @@ Program does not seem to terminate
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Problem
-  The execution of the program takes too long when run using RV-Predict
+  The execution of the program takes too long when run using RV-Predict.
 
 Reason
   It could be due to the overhead required by RV-Predict analysis, or due to a
@@ -243,9 +266,9 @@ Problem
   trace when running my program with RV-Predict.
 
 Reason
-  Because the execution trace is done through a Java Agent, the code logging the
-  execution runs as part of the logged application itself.  Hence, the
-  call stack of the logging code adds on top of the call stack of the logged process.
+  The execution trace to be analyzed is collected by RV-Predict using a Java agent,
+  which means that the call stack of the logging module adds on top of the call stack
+  of the original application.
 
 Advice
   Try increasing the stack size of the logged program by passing the ``-Xss``

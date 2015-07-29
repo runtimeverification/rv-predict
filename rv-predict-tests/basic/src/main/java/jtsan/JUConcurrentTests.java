@@ -21,6 +21,7 @@ import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
@@ -723,6 +724,31 @@ public class JUConcurrentTests {
         };
     }
 
+    private static class VolatileIntFieldClass {
+        volatile int v;
+    }
+
+    @RaceTest(expectRace = false,
+            description = "update through AtomicIntegerFieldUpdater")
+    public void atomicIntegerFieldUpdater() {
+        final AtomicIntegerFieldUpdater<VolatileIntFieldClass> updater = AtomicIntegerFieldUpdater
+                .newUpdater(VolatileIntFieldClass.class, "v");
+        final VolatileIntFieldClass value = new VolatileIntFieldClass();
+        new ThreadRunner(2) {
+            @Override
+            public void thread1() {
+                sharedVar = 1;
+                updater.getAndAdd(value, 2);
+            }
+
+            @Override
+            public void thread2() {
+                while (updater.get(value) != 2) Thread.yield();
+                sharedVar = 2;
+            }
+        };
+    }
+
     @RaceTest(expectRace = false,
             description = "ConcurrentHashMap put/get")
     public void concurrentHashMap() {
@@ -943,6 +969,7 @@ public class JUConcurrentTests {
             tests.reentrantLockSimple();
             tests.tryLock2();
             tests.atomicInteger();
+            tests.atomicIntegerFieldUpdater();
             tests.concurrentHashMap();
             tests.fifoMutexUser();
             tests.futureTask();

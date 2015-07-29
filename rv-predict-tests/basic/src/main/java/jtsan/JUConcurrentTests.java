@@ -707,26 +707,18 @@ public class JUConcurrentTests {
             description = "AtomicInteger increment")
     public void atomicInteger() {
         final AtomicInteger i = new AtomicInteger();
-        new ThreadRunner(4) {
+        new ThreadRunner(2) {
 
             @Override
             public void thread1() {
-                i.incrementAndGet();
+                sharedVar = 1;
+                i.getAndAdd(2);
             }
 
             @Override
             public void thread2() {
-                thread1();
-            }
-
-            @Override
-            public void thread3() {
-                thread1();
-            }
-
-            @Override
-            public void thread4() {
-                thread1();
+                while (i.get() != 2) Thread.yield();
+                sharedVar = 2;
             }
         };
     }

@@ -1087,4 +1087,15 @@ public final class RVPredictRuntime implements Constants {
         logger.log(eventType, locId, addrl, addrr, value1, value2);
     }
 
+    /**
+     * Similar to
+     * {@link RVPredictRuntime#saveAtomicEvent(EventType, int, int, int, long, long)}
+     * , but allows the caller to provide an atomic lock ID that is different
+     * from {@code addrl}.
+     */
+    public static void saveAtomicEvent(EventType eventType, int locId, int addrl, int addrr,
+            long value1, long value2, int atomLock) {
+        logger.log(eventType, locId, addrl, addrr, value1, value2, atomLock);
+    }
+
 }

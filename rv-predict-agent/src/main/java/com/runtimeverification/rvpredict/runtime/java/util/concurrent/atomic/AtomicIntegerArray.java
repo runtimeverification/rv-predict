@@ -114,21 +114,27 @@ public class AtomicIntegerArray implements java.io.Serializable {
     }
 
     private void _rvpredict_atomic_read(long offset, int value) {
+        int addrl = System.identityHashCode(array);
+        int addrr = arrayIndex(offset);
+        int atomLock = addrl ^ addrr;
         RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_READ,
-                RVPREDICT_ATOMIC_INTEGER_ARRAY_LOC_ID, System.identityHashCode(array),
-                arrayIndex(offset), value, 0);
+                RVPREDICT_ATOMIC_INTEGER_ARRAY_LOC_ID, addrl, addrr, value, 0, atomLock);
     }
 
     private void _rvpredict_atomic_write(long offset, int value) {
+        int addrl = System.identityHashCode(array);
+        int addrr = arrayIndex(offset);
+        int atomLock = addrl ^ addrr;
         RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_WRITE,
-                RVPREDICT_ATOMIC_INTEGER_ARRAY_LOC_ID, System.identityHashCode(array),
-                arrayIndex(offset), value, 0);
+                RVPREDICT_ATOMIC_INTEGER_ARRAY_LOC_ID, addrl, addrr, value, 0, atomLock);
     }
 
     private void _rvpredict_atomic_read_then_write(long offset, int oldValue, int newValue) {
+        int addrl = System.identityHashCode(array);
+        int addrr = arrayIndex(offset);
+        int atomLock = addrl ^ addrr;
         RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE,
-                RVPREDICT_ATOMIC_INTEGER_ARRAY_LOC_ID, System.identityHashCode(array),
-                arrayIndex(offset), oldValue, newValue);
+                RVPREDICT_ATOMIC_INTEGER_ARRAY_LOC_ID, addrl, addrr, oldValue, newValue, atomLock);
     }
 
     private int _rvpredict_get_value(long offset) {

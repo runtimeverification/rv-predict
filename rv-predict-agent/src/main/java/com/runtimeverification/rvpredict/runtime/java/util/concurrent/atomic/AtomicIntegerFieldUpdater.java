@@ -456,19 +456,20 @@ public abstract class AtomicIntegerFieldUpdater<T> {
         private void _rvpredict_atomic_read(T obj, int value) {
             RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_READ,
                     RVPREDICT_ATOMIC_INTEGER_FIELD_UPDATER_LOC_ID, System.identityHashCode(obj),
-                    -_rvpredict_atom_int_field_id, value, 0);
+                    -_rvpredict_atom_int_field_id, value, 0, System.identityHashCode(this));
         }
 
         private void _rvpredict_atomic_write(T obj, int value) {
             RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_WRITE,
                     RVPREDICT_ATOMIC_INTEGER_FIELD_UPDATER_LOC_ID, System.identityHashCode(obj),
-                    -_rvpredict_atom_int_field_id, value, 0);
+                    -_rvpredict_atom_int_field_id, value, 0, System.identityHashCode(this));
         }
 
         private void _rvpredict_atomic_read_then_write(T obj, int oldValue, int newValue) {
             RVPredictRuntime.saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE,
                     RVPREDICT_ATOMIC_INTEGER_FIELD_UPDATER_LOC_ID, System.identityHashCode(obj),
-                    -_rvpredict_atom_int_field_id, oldValue, newValue);
+                    -_rvpredict_atom_int_field_id, oldValue, newValue,
+                    System.identityHashCode(this));
         }
 
         private int _rvpredict_get_value(T obj) {

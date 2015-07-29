@@ -72,6 +72,9 @@
                     <configuration>
                         <source>1.8</source>
                         <target>1.8</target>
+                        <compilerArguments>
+                            <bootclasspath>${java.home}/lib/rt.jar</bootclasspath>
+                        </compilerArguments>
                     </configuration>
                 </plugin>
                 <plugin>

@@ -749,6 +749,32 @@ public class JUConcurrentTests {
     }
 
     @RaceTest(expectRace = false,
+            description = "working with AtomicIntegerArray")
+    public void atomicIntegerArray() {
+        final AtomicIntegerArray atomicInts = new AtomicIntegerArray(100);
+        new ThreadRunner(3) {
+            @Override
+            public void thread1() {
+                sharedVar = 1;
+                atomicInts.incrementAndGet(56);
+            }
+
+            @Override
+            public void thread2() {
+                while (atomicInts.get(56) != 1) Thread.yield();
+                sharedVar = 2;
+                atomicInts.addAndGet(78, 5);
+            }
+
+            @Override
+            public void thread3() {
+                while (atomicInts.get(78) != 5) Thread.yield();
+                sharedVar = 3;
+            }
+        };
+    }
+
+    @RaceTest(expectRace = false,
             description = "ConcurrentHashMap put/get")
     public void concurrentHashMap() {
         final ConcurrentHashMap<Integer, Integer> map = new ConcurrentHashMap<>();
@@ -969,6 +995,7 @@ public class JUConcurrentTests {
             tests.tryLock2();
             tests.atomicInteger();
             tests.atomicIntegerFieldUpdater();
+            tests.atomicIntegerArray();
             tests.concurrentHashMap();
             tests.fifoMutexUser();
             tests.futureTask();

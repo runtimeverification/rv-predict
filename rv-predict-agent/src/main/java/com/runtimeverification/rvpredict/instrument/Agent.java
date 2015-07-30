@@ -160,7 +160,7 @@ public class Agent implements ClassFileTransformer, Constants {
 
             if (cname.equals("java/lang/Thread")) {
                 return ClassTransformer.transform(loader, cbuf, config,
-                        TransformStrategy.INTERCEPTION);
+                        TransformStrategy.THREAD);
             } else if (!cname.startsWith(RVPREDICT_PKG_PREFIX) && !cname.startsWith("sun")
                     || cname.startsWith(RVPREDICT_RUNTIME_PKG_PREFIX)) {
                 ClassFile classFile = ClassFile.getInstance(loader, cname, cbuf);

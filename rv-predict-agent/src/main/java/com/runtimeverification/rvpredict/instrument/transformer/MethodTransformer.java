@@ -251,7 +251,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         String methodSig = (name + desc).substring(0, idx + 1);
         RVPredictInterceptor interceptor;
         int locId = getCrntLocId();
-        if (strategy.interceptMethodCall()
+        if (strategy.interceptMethodCall(name)
                 && (interceptor = lookup(opcode, owner, methodSig, loader, itf)) != null) {
             // <stack>... (objectref)? (arg)* </stack>
             push(locId);

@@ -6,7 +6,9 @@ package com.runtimeverification.rvpredict.instrument.transformer;
  * @author YilongL
  */
 public enum TransformStrategy {
-    FULL, INTERCEPTION;
+    FULL,
+
+    THREAD;
 
     public boolean logMemoryAccess() {
         return this == FULL;
@@ -24,8 +26,8 @@ public enum TransformStrategy {
         return this == FULL;
     }
 
-    public boolean interceptMethodCall() {
-        return this == FULL || this == INTERCEPTION;
+    public boolean interceptMethodCall(String methodName) {
+        return this == FULL || (this == THREAD && methodName.equals("start0"));
     }
 
 }

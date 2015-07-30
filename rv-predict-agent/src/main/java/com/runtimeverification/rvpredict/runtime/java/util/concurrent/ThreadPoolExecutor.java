@@ -896,10 +896,6 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
     }
 
     private synchronized void _rvpredict_start_worker_thread(Thread t) {
-        RVPredictRuntime.saveThreadSyncEvent(EventType.START,
-                RVPREDICT_THREAD_POOL_EXECUTOR_LOC_ID, t.getId());
-        RVPredictRuntime.metadata.addThreadCreationInfo(t.getId(), Thread.currentThread().getId(),
-                RVPREDICT_THREAD_POOL_EXECUTOR_LOC_ID);
         _rvpredict_started_worker_threads.add(t.getId());
     }
 

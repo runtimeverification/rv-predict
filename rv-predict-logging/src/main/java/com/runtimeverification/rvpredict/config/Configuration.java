@@ -535,6 +535,32 @@ public class Configuration implements Constants {
         System.exit(1);
     }
 
+
+    String lineWrap(String text,int LineWidth)
+    {
+        StringBuilder builder = new StringBuilder();
+        Scanner scanner = new Scanner(text);
+        while (scanner.hasNextLine()) {
+            int spaceLeft = LineWidth;
+            int spaceWidth = 2;
+            String line = scanner.nextLine();
+            StringTokenizer st=new StringTokenizer(line);
+            while (st.hasMoreTokens()) {
+                String word = st.nextToken();
+                if ((word.length() + spaceWidth) > spaceLeft) {
+                    builder.append("\n");
+                    spaceLeft = LineWidth - word.length();
+                } else {
+                    spaceLeft -= (word.length() + spaceWidth);
+                }
+                builder.append(word);
+                builder.append(' ');
+            }
+            builder.append("\n");
+        }
+        return builder.toString();
+    }
+
     public void usage() {
         /*
          * -- can be used as a terminator for the rv-predict specific options.
@@ -586,7 +612,7 @@ public class Configuration implements Constants {
                     + parameterDescription.getNames()
                     + Strings.repeat(" ", spacesAfterCnt)
                     + Joiner.on("\n" + Strings.repeat(" ", 4 + max_option_length)).join(
-                            parameterDescription.getDescription().split("\\n"))
+                            lineWrap(parameterDescription.getDescription(),80-max_option_length).split("\\n"))
                     + (aDefault.isEmpty() ? "" : "\n" + Strings.repeat(" ", 4)
                             + Strings.repeat(" ", max_option_length) + aDefault);
             usageMap.put(descriptionKey, description);

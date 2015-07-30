@@ -57,8 +57,8 @@ public class RVPredictRuntimeMethods {
     private static final Map<String, List<RVPredictInterceptor>> VIRTUAL_METHOD_INTERCEPTION = new HashMap<>();
 
     // Thread methods
-    public static final RVPredictInterceptor RVPREDICT_START              =
-            register(VIRTUAL, JL_THREAD, "start", "rvPredictStart");
+    public static final RVPredictInterceptor RVPREDICT_START0             =
+            register(SPECIAL, JL_THREAD, "start0", "rvPredictStart0");
     public static final RVPredictInterceptor RVPREDICT_IS_ALIVE           =
             register(VIRTUAL, JL_THREAD, "isAlive", "rvPredictIsAlive");
     public static final RVPredictInterceptor RVPREDICT_JOIN               =

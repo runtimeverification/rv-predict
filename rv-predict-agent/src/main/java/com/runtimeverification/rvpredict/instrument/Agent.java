@@ -24,6 +24,7 @@ import org.apache.tools.ant.DirectoryScanner;
 import org.objectweb.asm.ClassReader;
 
 import com.runtimeverification.rvpredict.instrument.transformer.ClassTransformer;
+import com.runtimeverification.rvpredict.instrument.transformer.TransformStrategy;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
@@ -157,11 +158,15 @@ public class Agent implements ClassFileTransformer, Constants {
 
             checkUninterceptedClassLoading(cname, c);
 
-            if (!cname.startsWith(RVPREDICT_PKG_PREFIX) && !cname.startsWith("sun")
+            if (cname.equals("java/lang/Thread")) {
+                return ClassTransformer.transform(loader, cbuf, config,
+                        TransformStrategy.INTERCEPTION);
+            } else if (!cname.startsWith(RVPREDICT_PKG_PREFIX) && !cname.startsWith("sun")
                     || cname.startsWith(RVPREDICT_RUNTIME_PKG_PREFIX)) {
                 ClassFile classFile = ClassFile.getInstance(loader, cname, cbuf);
                 if (InstrumentUtils.needToInstrument(classFile)) {
-                    byte[] transformed = ClassTransformer.transform(loader, cbuf, config);
+                    byte[] transformed = ClassTransformer.transform(loader, cbuf, config,
+                            TransformStrategy.FULL);
                     return transformed;
                 }
             }

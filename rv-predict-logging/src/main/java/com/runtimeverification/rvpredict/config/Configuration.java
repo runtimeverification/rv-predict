@@ -535,9 +535,7 @@ public class Configuration implements Constants {
         System.exit(1);
     }
 
-
-    private String lineWrap(String text,int lineWidth)
-    {
+    private String lineWrap(String text,int lineWidth) {
         StringBuilder builder = new StringBuilder();
         Scanner scanner = new Scanner(text);
         while (scanner.hasNextLine()) {

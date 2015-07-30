@@ -536,12 +536,12 @@ public class Configuration implements Constants {
     }
 
 
-    String lineWrap(String text,int LineWidth)
+    private String lineWrap(String text,int lineWidth)
     {
         StringBuilder builder = new StringBuilder();
         Scanner scanner = new Scanner(text);
         while (scanner.hasNextLine()) {
-            int spaceLeft = LineWidth;
+            int spaceLeft = lineWidth;
             int spaceWidth = 2;
             String line = scanner.nextLine();
             StringTokenizer st=new StringTokenizer(line);
@@ -549,7 +549,7 @@ public class Configuration implements Constants {
                 String word = st.nextToken();
                 if ((word.length() + spaceWidth) > spaceLeft) {
                     builder.append("\n");
-                    spaceLeft = LineWidth - word.length();
+                    spaceLeft = lineWidth - word.length();
                 } else {
                     spaceLeft -= (word.length() + spaceWidth);
                 }

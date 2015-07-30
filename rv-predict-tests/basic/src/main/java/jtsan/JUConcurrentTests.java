@@ -19,12 +19,12 @@ package jtsan;
 
 import java.util.Queue;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 
 
 
@@ -707,26 +707,69 @@ public class JUConcurrentTests {
             description = "AtomicInteger increment")
     public void atomicInteger() {
         final AtomicInteger i = new AtomicInteger();
-        new ThreadRunner(4) {
+        new ThreadRunner(2) {
 
             @Override
             public void thread1() {
-                i.incrementAndGet();
+                sharedVar = 1;
+                i.getAndAdd(2);
             }
 
             @Override
             public void thread2() {
-                thread1();
+                while (i.get() != 2) Thread.yield();
+                sharedVar = 2;
+            }
+        };
+    }
+
+    private static class VolatileIntFieldClass {
+        volatile int v;
+    }
+
+    @RaceTest(expectRace = false,
+            description = "update through AtomicIntegerFieldUpdater")
+    public void atomicIntegerFieldUpdater() {
+        final AtomicIntegerFieldUpdater<VolatileIntFieldClass> updater = AtomicIntegerFieldUpdater
+                .newUpdater(VolatileIntFieldClass.class, "v");
+        final VolatileIntFieldClass value = new VolatileIntFieldClass();
+        new ThreadRunner(2) {
+            @Override
+            public void thread1() {
+                sharedVar = 1;
+                updater.getAndAdd(value, 2);
+            }
+
+            @Override
+            public void thread2() {
+                while (updater.get(value) != 2) Thread.yield();
+                sharedVar = 2;
+            }
+        };
+    }
+
+    @RaceTest(expectRace = false,
+            description = "working with AtomicIntegerArray")
+    public void atomicIntegerArray() {
+        final AtomicIntegerArray atomicInts = new AtomicIntegerArray(100);
+        new ThreadRunner(3) {
+            @Override
+            public void thread1() {
+                sharedVar = 1;
+                atomicInts.incrementAndGet(56);
+            }
+
+            @Override
+            public void thread2() {
+                while (atomicInts.get(56) != 1) Thread.yield();
+                sharedVar = 2;
+                atomicInts.addAndGet(78, 5);
             }
 
             @Override
             public void thread3() {
-                thread1();
-            }
-
-            @Override
-            public void thread4() {
-                thread1();
+                while (atomicInts.get(78) != 5) Thread.yield();
+                sharedVar = 3;
             }
         };
     }
@@ -951,6 +994,8 @@ public class JUConcurrentTests {
             tests.reentrantLockSimple();
             tests.tryLock2();
             tests.atomicInteger();
+            tests.atomicIntegerFieldUpdater();
+            tests.atomicIntegerArray();
             tests.concurrentHashMap();
             tests.fifoMutexUser();
             tests.futureTask();

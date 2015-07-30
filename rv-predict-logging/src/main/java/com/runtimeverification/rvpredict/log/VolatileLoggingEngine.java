@@ -193,8 +193,9 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
     }
 
     @Override
-    public void log(EventType eventType, int locId, int addr1, int addr2, long value1, long value2) {
-        threadLocalBuffer.get().append(eventType, locId, addr1, addr2, value1, value2);
+    public void log(EventType eventType, int locId, int addr1, int addr2, long value1, long value2,
+            int extra) {
+        threadLocalBuffer.get().append(eventType, locId, addr1, addr2, value1, value2, extra);
     }
 
     /**
@@ -311,7 +312,9 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
          * limit the maximum number of events that can be delayed to make the
          * logged trace look closer to the execution.
          */
-        void append(EventType eventType, int locId, int addr1, int addr2, long value1, long value2) {
+        void append(EventType eventType, int locId, int addr1, int addr2, long value1, long value2,
+                int extra) {
+            int atomLock;
             switch (eventType) {
             case READ:
             case WRITE_LOCK:
@@ -345,22 +348,25 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                 finalizeEvents();
                 break;
             case ATOMIC_READ:
-                log(EventType.WRITE_LOCK,   locId, ATOMIC_LOCK_C, addr1, 0);
+                atomLock = extra > 0 ? extra : addr1;
+                log(EventType.WRITE_LOCK,   locId, ATOMIC_LOCK_C, atomLock, 0);
                 log(EventType.READ,         locId, addr1, addr2, value1);
-                log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, addr1, 0);
+                log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
                 finalizeEvents();
                 break;
             case ATOMIC_WRITE:
-                log(EventType.WRITE_LOCK,   locId, ATOMIC_LOCK_C, addr1, 0);
+                atomLock = extra > 0 ? extra : addr1;
+                log(EventType.WRITE_LOCK,   locId, ATOMIC_LOCK_C, atomLock, 0);
                 log(EventType.WRITE,        locId, addr1, addr2, value1);
-                log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, addr1, 0);
+                log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
                 finalizeEvents();
                 break;
             case ATOMIC_READ_THEN_WRITE:
-                log(EventType.WRITE_LOCK,   locId, ATOMIC_LOCK_C, addr1, 0);
+                atomLock = extra > 0 ? extra : addr1;
+                log(EventType.WRITE_LOCK,   locId, ATOMIC_LOCK_C, atomLock, 0);
                 log(EventType.READ,         locId, addr1, addr2, value1);
                 log(EventType.WRITE,        locId, addr1, addr2, value2);
-                log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, addr1, 0);
+                log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
                 finalizeEvents();
                 break;
             default:

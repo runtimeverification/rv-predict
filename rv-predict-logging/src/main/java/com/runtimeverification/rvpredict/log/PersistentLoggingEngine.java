@@ -91,9 +91,11 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
     }
 
     @Override
-    public void log(EventType eventType, int locId, int addr1, int addr2, long value1, long value2) {
+    public void log(EventType eventType, int locId, int addr1, int addr2, long value1, long value2,
+            int extra) {
         long tid = Thread.currentThread().getId();
         long gid;
+        int atomLock;
         switch (eventType) {
         case READ:
         case WRITE:
@@ -117,22 +119,25 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
             break;
         case ATOMIC_READ:
             gid = globalEventID.getAndAdd(3);
-            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, addr1, 0);
+            atomLock = extra > 0 ? extra : addr1;
+            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, atomLock, 0);
             log(EventType.READ,         gid + 1, tid, locId, addr1, addr2, value1);
-            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, ATOMIC_LOCK_C, addr1, 0);
+            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, ATOMIC_LOCK_C, atomLock, 0);
             break;
         case ATOMIC_WRITE:
             gid = globalEventID.getAndAdd(3);
-            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, addr1, 0);
+            atomLock = extra > 0 ? extra : addr1;
+            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, atomLock, 0);
             log(EventType.WRITE,        gid + 1, tid, locId, addr1, addr2, value1);
-            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, ATOMIC_LOCK_C, addr1, 0);
+            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, ATOMIC_LOCK_C, atomLock, 0);
             break;
         case ATOMIC_READ_THEN_WRITE:
             gid = globalEventID.getAndAdd(4);
-            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, addr1, 0);
+            atomLock = extra > 0 ? extra : addr1;
+            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, atomLock, 0);
             log(EventType.READ,         gid + 1, tid, locId, addr1, addr2, value1);
             log(EventType.WRITE,        gid + 2, tid, locId, addr1, addr2, value2);
-            log(EventType.WRITE_UNLOCK, gid + 3, tid, locId, ATOMIC_LOCK_C, addr1, 0);
+            log(EventType.WRITE_UNLOCK, gid + 3, tid, locId, ATOMIC_LOCK_C, atomLock, 0);
             break;
         default:
             assert false;

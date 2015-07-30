@@ -48,7 +48,8 @@ public class ProfilerLoggingEngine implements ILoggingEngine {
     }
 
     @Override
-    public void log(EventType eventType, int locId, int addr1, int addr2, long value1, long value2) {
+    public void log(EventType eventType, int locId, int addr1, int addr2, long value1, long value2,
+            int extra) {
         eventProfiler.update(locId);
     }
 

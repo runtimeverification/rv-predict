@@ -5,6 +5,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
 import org.objectweb.asm.Opcodes;
 
 import com.runtimeverification.rvpredict.instrument.transformer.MethodTransformer;
@@ -141,24 +145,46 @@ public class RVPredictRuntimeMethods {
             register(INTERFACE, JU_COLLECTION, "toArray", "rvPredictCollectionToArray", Object[].class);
 
     // java.util.Map methods
-    public static final RVPredictInterceptor RVPREDICT_MAP_GET            =
-            register(INTERFACE, JU_MAP, "get", "rvPredictMapGet", O);
-    public static final RVPredictInterceptor RVPREDICT_MAP_PUT            =
-            register(INTERFACE, JU_MAP, "put", "rvPredictMapPut", O, O);
-    public static final RVPredictInterceptor RVPREDICT_MAP_PUT_ALL        =
-            register(INTERFACE, JU_MAP, "putAll", "rvPredictMapPutAll", Map.class);
-    public static final RVPredictInterceptor RVPREDICT_MAP_REMOVE         =
-            register(INTERFACE, JU_MAP, "remove", "rvPredictMapRemove", O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_CLEAR          =
+            register(INTERFACE, JU_MAP, "clear", "rvPredictMapClear");
+    public static final RVPredictInterceptor RVPREDICT_MAP_COMPUTE        =
+            register(INTERFACE, JU_MAP, "compute", "rvPredictMapCompute", O, BiFunction.class);
+    public static final RVPredictInterceptor RVPREDICT_MAP_COMPUTE_IF_ABSENT =
+            register(INTERFACE, JU_MAP, "computeIfAbsent", "rvPredictMapComputeIfAbsent", O, Function.class);
+    public static final RVPredictInterceptor RVPREDICT_MAP_COMPUTE_IF_PRESENT =
+            register(INTERFACE, JU_MAP, "computeIfPresent", "rvPredictMapComputeIfPresent", O, BiFunction.class);
     public static final RVPredictInterceptor RVPREDICT_MAP_CONTAINS_KEY   =
             register(INTERFACE, JU_MAP, "containsKey", "rvPredictMapContainsKey", O);
     public static final RVPredictInterceptor RVPREDICT_MAP_CONTAINS_VAL   =
             register(INTERFACE, JU_MAP, "containsValue", "rvPredictMapContainsValue", O);
-    public static final RVPredictInterceptor RVPREDICT_MAP_CLEAR          =
-            register(INTERFACE, JU_MAP, "clear", "rvPredictMapClear");
     public static final RVPredictInterceptor RVPREDICT_MAP_ENTRY_SET      =
             register(INTERFACE, JU_MAP, "entrySet", "rvPredictMapEntrySet");
+    public static final RVPredictInterceptor RVPREDICT_MAP_FOR_EACH       =
+            register(INTERFACE, JU_MAP, "forEach", "rvPredictMapForEach", BiConsumer.class);
+    public static final RVPredictInterceptor RVPREDICT_MAP_GET            =
+            register(INTERFACE, JU_MAP, "get", "rvPredictMapGet", O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_GET_OR_DEFAULT =
+            register(INTERFACE, JU_MAP, "getOrDefault", "rvPredictMapGetOrDefault", O, O);
     public static final RVPredictInterceptor RVPREDICT_MAP_KEY_SET        =
             register(INTERFACE, JU_MAP, "keySet", "rvPredictMapKeySet");
+    public static final RVPredictInterceptor RVPREDICT_MAP_MERGE          =
+            register(INTERFACE, JU_MAP, "merge", "rvPredictMapMerge", O, O, BiFunction.class);
+    public static final RVPredictInterceptor RVPREDICT_MAP_PUT            =
+            register(INTERFACE, JU_MAP, "put", "rvPredictMapPut", O, O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_PUT_ALL        =
+            register(INTERFACE, JU_MAP, "putAll", "rvPredictMapPutAll", Map.class);
+    public static final RVPredictInterceptor RVPREDICT_MAP_PUT_IF_ABSENT  =
+            register(INTERFACE, JU_MAP, "putIfAbsent", "rvPredictMapPutIfAbsent", O, O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_REMOVE_KEY     =
+            register(INTERFACE, JU_MAP, "remove", "rvPredictMapRemove", O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_REMOVE_ENTRY   =
+            register(INTERFACE, JU_MAP, "remove", "rvPredictMapRemove", O, O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_REPLACE        =
+            register(INTERFACE, JU_MAP, "replace", "rvPredictMapReplace", O, O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_REPLACE2       =
+            register(INTERFACE, JU_MAP, "replace", "rvPredictMapReplace", O, O, O);
+    public static final RVPredictInterceptor RVPREDICT_MAP_REPLACE_ALL    =
+            register(INTERFACE, JU_MAP, "replaceAll", "rvPredictMapReplaceAll", BiFunction.class);
     public static final RVPredictInterceptor RVPREDICT_MAP_VALUES         =
             register(INTERFACE, JU_MAP, "values", "rvPredictMapValues");
 

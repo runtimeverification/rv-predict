@@ -783,7 +783,7 @@ public class JUConcurrentTests {
             @Override
             public void thread1() {
                 sharedVar = 1;
-                map.put(1, 1);
+                map.putIfAbsent(1, 1);
             }
 
             @Override

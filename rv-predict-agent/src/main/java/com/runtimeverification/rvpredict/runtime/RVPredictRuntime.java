@@ -42,6 +42,9 @@ import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -784,11 +787,71 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
+     * {@link Map#compute(Object, BiFunction)}
+     */
+    public static Object rvPredictMapCompute(Map map, Object key, BiFunction remappingFunction,
+            int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.compute(key, remappingFunction);
+        });
+    }
+
+    /**
+     * {@link Map#computeIfAbsent(Object, Function)}
+     */
+    public static Object rvPredictMapComputeIfAbsent(Map map, Object key, Function mappingFunction,
+            int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.computeIfAbsent(key, mappingFunction);
+        });
+    }
+
+    /**
+     * {@link Map#computeIfPresent(Object, BiFunction)}
+     */
+    public static Object rvPredictMapComputeIfPresent(Map map, Object key, BiFunction remappingFunction,
+            int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.computeIfPresent(key, remappingFunction);
+        });
+    }
+
+    /**
+     * {@link Map#forEach(BiConsumer)}
+     */
+    public static void rvPredictMapForEach(Map map, BiConsumer action, int locId) {
+        logCollectionReadAccess(map, locId, () -> {
+            map.forEach(action);
+            return null;
+        });
+    }
+
+    /**
+     * {@link Map#merge(Object, Object, BiFunction)}
+     */
+    public static Object rvPredictMapMerge(Map map, Object key, Object value,
+            BiFunction remappingFunction, int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.merge(key, value, remappingFunction);
+        });
+    }
+
+    /**
      * {@link Map#get(Object)}
      */
     public static Object rvPredictMapGet(Map map, Object key, int locId) {
         return logCollectionReadAccess(map, locId, () -> {
             return map.get(key);
+        });
+    }
+
+    /**
+     * {@link Map#getOrDefault(Object, Object)}
+     */
+    public static Object rvPredictMapGetOrDefault(Map map, Object key, Object defaultVal,
+            int locId) {
+        return logCollectionReadAccess(map, locId, () -> {
+            return map.getOrDefault(key, defaultVal);
         });
     }
 
@@ -812,11 +875,58 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
+     * {@link Map#putIfAbsent(Object, Object)}
+     */
+    public static Object rvPredictMapPutIfAbsent(Map map, Object key, Object value, int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.putIfAbsent(key, value);
+        });
+    }
+
+    /**
      * {@link Map#remove(Object)}
      */
     public static Object rvPredictMapRemove(Map map, Object key, int locId) {
         return logCollectionWriteAccess(map, locId, () -> {
             return map.remove(key);
+        });
+    }
+
+    /**
+     * {@link Map#remove(Object, Object)}
+     */
+    public static boolean rvPredictMapRemove(Map map, Object key, Object value, int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.remove(key, value);
+        });
+    }
+
+    /**
+     * {@link Map#replace(Object, Object)}
+     */
+    public static Object rvPredictMapReplace(Map map, Object key, Object value, int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.replace(key, value);
+        });
+    }
+
+    /**
+     * {@link Map#replace(Object, Object, Object)}
+     */
+    public static boolean rvPredictMapReplace(Map map, Object key, Object oldValue, Object newValue,
+            int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.replace(key, oldValue, newValue);
+        });
+    }
+
+    /**
+     * {@link Map#replaceAll(BiFunction)}
+     */
+    public static void rvPredictMapReplaceAll(Map map, BiFunction function, int locId) {
+        logCollectionWriteAccess(map, locId, () -> {
+            map.replaceAll(function);
+            return null;
         });
     }
 

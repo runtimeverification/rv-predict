@@ -29,8 +29,6 @@
 package com.runtimeverification.rvpredict.runtime;
 
 import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Hashtable;
@@ -126,20 +124,11 @@ public final class RVPredictRuntime implements Constants {
     private static int THREAD_INTERRUPTED_STATUS_VAR_ID = metadata.getVariableId(
             "java.lang.Thread", "$interruptedStatus");
 
-    private static final MethodHandle SYNC_COLLECTION_GET_MUTEX = getFieldGetter(
+    private static final MethodHandle SYNC_COLLECTION_GET_MUTEX = Helper.getFieldGetter(
             Collections.synchronizedCollection(Collections.EMPTY_LIST).getClass(), "mutex");
-    private static final MethodHandle SYNC_MAP_GET_MUTEX = getFieldGetter(
+    private static final MethodHandle SYNC_MAP_GET_MUTEX = Helper.getFieldGetter(
             Collections.synchronizedMap(Collections.EMPTY_MAP).getClass(), "mutex");
-
-    private static MethodHandle getFieldGetter(Class<?> cls, String name) {
-        try {
-            Field field = cls.getDeclaredField(name);
-            field.setAccessible(true);
-            return MethodHandles.lookup().unreflectGetter(field);
-        } catch (NoSuchFieldException | SecurityException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
+    private static final MethodHandle THREAD_START0 = Helper.getMethodHandle(Thread.class, "start0");
 
     /**
      * Map from iterator to its associated iterable (if any).
@@ -323,12 +312,17 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * {@link Thread#start()}
+     * {@link Thread#start0()}
      */
-    public static void rvPredictStart(Thread thread, int locId) {
+    public static void rvPredictStart0(Thread thread, int locId) {
+        locId = metadata.getLocationId(new Throwable().getStackTrace()[2].toString());
         saveThreadSyncEvent(EventType.START, locId, thread.getId());
         metadata.addThreadCreationInfo(thread.getId(), Thread.currentThread().getId(), locId);
-        thread.start();
+        try {
+            THREAD_START0.invoke(thread);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**

@@ -15,6 +15,8 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
 
     private final Configuration config;
 
+    private final TransformStrategy strategy;
+
     private final ClassLoader loader;
 
     private String className;
@@ -22,10 +24,11 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
 
     private int version;
 
-    public static byte[] transform(ClassLoader loader, byte[] cbuf, Configuration config) {
+    public static byte[] transform(ClassLoader loader, byte[] cbuf, Configuration config,
+            TransformStrategy strategy) {
         ClassReader cr = new ClassReader(cbuf);
         ClassWriter cw = new ClassWriter(cr, loader);
-        ClassTransformer transformer = new ClassTransformer(cw, loader, config);
+        ClassTransformer transformer = new ClassTransformer(cw, loader, config, strategy);
         cr.accept(transformer, ClassReader.EXPAND_FRAMES);
 
         byte[] result = cw.toByteArray();
@@ -37,16 +40,19 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
         return result;
     }
 
-    private ClassTransformer(ClassWriter cw, ClassLoader loader, Configuration config) {
+    private ClassTransformer(ClassWriter cw, ClassLoader loader, Configuration config,
+            TransformStrategy strategy) {
         super(ASM5, cw);
         assert cw != null;
 
         this.loader = loader;
         this.config = config;
+        this.strategy = strategy;
     }
 
     private String replaceStandardLibraryClass(String literal) {
-        return InstrumentUtils.replaceStandardLibraryClass(className, literal);
+        return strategy.replaceStandardLibraryClass()
+                ? InstrumentUtils.replaceStandardLibraryClass(className, literal) : literal;
     }
 
     @Override
@@ -85,13 +91,15 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
         assert mv != null;
 
-        mv = new ExceptionHandlerSorter(mv, access, name, desc, signature, exceptions);
+        if (strategy.logCallStackEvent()) {
+            mv = new ExceptionHandlerSorter(mv, access, name, desc, signature, exceptions);
+        }
 
         /* do not instrument synthesized bridge method; otherwise, it may cause
          * infinite recursion at runtime */
         if ((access & ACC_BRIDGE) == 0) {
             mv = new MethodTransformer(mv, source, className, version, name, desc, access,
-                    loader, config.logger());
+                    loader, config.logger(), strategy);
         }
 
         if ("<clinit>".equals(name)) {

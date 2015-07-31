@@ -33,6 +33,8 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private final Logger logger;
 
+    private final TransformStrategy strategy;
+
     /**
      * Specifies whether the visited method is synchronized.
      */
@@ -54,7 +56,8 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     private int numOfCtorCall = 0;
 
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
-            String name, String desc, int access, ClassLoader loader, Logger logger) {
+            String name, String desc, int access, ClassLoader loader, Logger logger,
+            TransformStrategy strategy) {
         super(Opcodes.ASM5, new GeneratorAdapter(mv, access, name, desc));
         this.mv = (GeneratorAdapter) super.mv;
         this.className = className;
@@ -64,6 +67,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         this.isStatic = (access & ACC_STATIC) != 0;
         this.loader = loader;
         this.logger = logger;
+        this.strategy = strategy;
         this.locIdPrefix = String.format("%s(%s:", className.replace("/", ".") + "." + name,
                 source == null ? "Unknown" : source);
     }
@@ -80,7 +84,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     public void visitCode() {
         mv.visitCode();
 
-        if (isSynchronized) {
+        if (isSynchronized && strategy.logMonitorEvent()) {
             methodStart = mv.mark();
             /* log a MONITOR_ENTER at the start of a synchronized method */
             onSyncMethodEnterOrExit(true);
@@ -89,7 +93,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitMaxs(int maxStack, int maxLocals) {
-        if (isSynchronized) {
+        if (isSynchronized && strategy.logMonitorEvent()) {
             /* if the synchronized method ends abruptly because of ATHROW
              * instruction or uncaught exception thrown from nested method call,
              * we need to catch this Throwable, log a MONITOR_EXIT, and re-throw
@@ -114,7 +118,8 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     }
 
     private String replaceStandardLibraryClass(String literal) {
-        return InstrumentUtils.replaceStandardLibraryClass(className, literal);
+        return strategy.replaceStandardLibraryClass() ?
+                InstrumentUtils.replaceStandardLibraryClass(className, literal) : literal;
     }
 
     @Override
@@ -144,18 +149,16 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
         owner = replaceStandardLibraryClass(owner);
         desc = replaceStandardLibraryClass(desc);
-
         ClassFile classFile = resolveDeclaringClass(loader, owner, name);
         if (classFile == null) {
-            System.err.printf("[Warning] field resolution failure; "
-                    + "skipped instrumentation of field access %s.%s in class %s%n",
-                    owner, name, className);
+            logger.debug(String.format("Unable to resolve field %s.%s in class %s", owner, name,
+                    className));
             mv.visitFieldInsn(opcode, owner, name, desc);
             return;
         }
 
         /* Optimization: https://github.com/runtimeverification/rv-predict/issues/314 */
-        if ((classFile.getFieldAccess(name) & ACC_FINAL) != 0
+        if (!strategy.logMemoryAccess() || (classFile.getFieldAccess(name) & ACC_FINAL) != 0
                 || !needToInstrument(classFile)) {
             mv.visitFieldInsn(opcode, owner, name, desc);
             return;
@@ -246,9 +249,10 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
         int idx = (name + desc).lastIndexOf(')');
         String methodSig = (name + desc).substring(0, idx + 1);
-        RVPredictInterceptor interceptor = lookup(opcode, owner, methodSig, loader, itf);
+        RVPredictInterceptor interceptor;
         int locId = getCrntLocId();
-        if (interceptor != null) {
+        if (strategy.interceptMethodCall(name)
+                && (interceptor = lookup(opcode, owner, methodSig, loader, itf)) != null) {
             // <stack>... (objectref)? (arg)* </stack>
             push(locId);
             // <stack>... (objectref)? (arg)* locId </stack>
@@ -263,7 +267,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
                 }
             }
         } else {
-            if (owner.startsWith("[") || isSelfCtorCall) {
+            if (owner.startsWith("[") || isSelfCtorCall || !strategy.logCallStackEvent()) {
                 mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 return;
             } else {
@@ -316,27 +320,35 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             logArrayStore(opcode);
             break;
         case MONITORENTER:
-            /* moniter enter must logged after it happens */
-            // <stack>... objectref </stack>
-            mv.dup();
-            mv.visitInsn(opcode);
-            push(getCrntLocId());
-            // <stack>... objectref locId </stack>
-            invokeRtnMethod(LOG_MONITOR_ENTER);
+            if (strategy.logMonitorEvent()) {
+                /* moniter enter must logged after it happens */
+                // <stack>... objectref </stack>
+                mv.dup();
+                mv.visitInsn(opcode);
+                push(getCrntLocId());
+                // <stack>... objectref locId </stack>
+                invokeRtnMethod(LOG_MONITOR_ENTER);
+            } else {
+                mv.visitInsn(opcode);
+            }
             break;
         case MONITOREXIT: {
-            /* moniter exit must logged before it happens */
-            // <stack>... objectref </stack>
-            mv.dup();
-            push(getCrntLocId());
-            // <stack>... objectref objectref locId </stack>
-            invokeRtnMethod(LOG_MONITOR_EXIT);
-            mv.visitInsn(opcode);
+            if (strategy.logMonitorEvent()) {
+                /* moniter exit must logged before it happens */
+                // <stack>... objectref </stack>
+                mv.dup();
+                push(getCrntLocId());
+                // <stack>... objectref objectref locId </stack>
+                invokeRtnMethod(LOG_MONITOR_EXIT);
+                mv.visitInsn(opcode);
+            } else {
+                mv.visitInsn(opcode);
+            }
             break;
         }
         case IRETURN: case LRETURN: case FRETURN: case DRETURN:
         case ARETURN: case RETURN:
-            if (isSynchronized) {
+            if (isSynchronized && strategy.logMonitorEvent()) {
                 /* xRETURN instructions always cause the method to return;
                  * finally block is copied and placed before xRETURN instruction
                  * by the Java compiler */
@@ -363,44 +375,50 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
      * Array load must be logged after it happens.
      */
     private void logArrayLoad(int arrayLoadOpcode) {
-        Type valueType = getValueType(arrayLoadOpcode);
-        // <stack>... arrayref index </stack>
-        mv.dup2();
-        // <stack>... arrayref index arrayref index </stack>
-        mv.visitInsn(arrayLoadOpcode); // <--- array load happens
-        // <stack>... arrayref index value </stack>
-        if (valueType.getSize() == 1) {
-            mv.dupX2();
+        if (strategy.logMemoryAccess()) {
+            Type valueType = getValueType(arrayLoadOpcode);
+            // <stack>... arrayref index </stack>
+            mv.dup2();
+            // <stack>... arrayref index arrayref index </stack>
+            mv.visitInsn(arrayLoadOpcode); // <--- array load happens
+            // <stack>... arrayref index value </stack>
+            if (valueType.getSize() == 1) {
+                mv.dupX2();
+            } else {
+                mv.dup2X2();
+            }
+            // <stack>... value arrayref index value </stack>
+            calcLongValue(valueType);
+            // <stack>... value arrayref index longValue </stack>
+            push(0, getCrntLocId());
+            // <stack>... value arrayref index longValue false locId </stack>
+            invokeRtnMethod(LOG_ARRAY_ACCESS);
+            // <stack>... value </stack>
         } else {
-            mv.dup2X2();
+            mv.visitInsn(arrayLoadOpcode);
         }
-        // <stack>... value arrayref index value </stack>
-        calcLongValue(valueType);
-        // <stack>... value arrayref index longValue </stack>
-        push(0, getCrntLocId());
-        // <stack>... value arrayref index longValue false locId </stack>
-        invokeRtnMethod(LOG_ARRAY_ACCESS);
-        // <stack>... value </stack>
     }
 
     /**
      * Array store must be logged before it happens.
      */
     private void logArrayStore(int arrayStoreOpcode) {
-        Type valueType = getValueType(arrayStoreOpcode);
-        // <stack>... arrayref index value </stack>
-        int value = storeNewLocal(valueType);
-        // <stack>... arrayref index </stack>
-        mv.dup2();
-        mv.loadLocal(value, valueType);
-        calcLongValue(valueType);
-        // <stack>... arrayref index array index longValue </stack>
-        push(1, getCrntLocId());
-        // <stack>... arrayref index array index longValue true locId </stack>
-        invokeRtnMethod(LOG_ARRAY_ACCESS);
-        // <stack>... arrayref index </stack>
-        mv.loadLocal(value, valueType);
-        // <stack>... arrayref index value </stack>
+        if (strategy.logMemoryAccess()) {
+            Type valueType = getValueType(arrayStoreOpcode);
+            // <stack>... arrayref index value </stack>
+            int value = storeNewLocal(valueType);
+            // <stack>... arrayref index </stack>
+            mv.dup2();
+            mv.loadLocal(value, valueType);
+            calcLongValue(valueType);
+            // <stack>... arrayref index array index longValue </stack>
+            push(1, getCrntLocId());
+            // <stack>... arrayref index array index longValue true locId </stack>
+            invokeRtnMethod(LOG_ARRAY_ACCESS);
+            // <stack>... arrayref index </stack>
+            mv.loadLocal(value, valueType);
+            // <stack>... arrayref index value </stack>
+        }
         mv.visitInsn(arrayStoreOpcode); // <--- array store happens
     }
 

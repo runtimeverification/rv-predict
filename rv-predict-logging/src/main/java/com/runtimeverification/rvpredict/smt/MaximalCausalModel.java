@@ -206,11 +206,29 @@ public class MaximalCausalModel {
             /* sameThreadPrevWrite is available in the current window */
             if (read.getValue() == sameThreadPrevWrite.getValue()) {
                 /* the read value is the same as sameThreadPrevWrite */
-                FormulaTerm.Builder and = FormulaTerm.andBuilder();
-                diffThreadSameAddrDiffValWrites.forEach(
-                    w -> and.add(OR(HB(w, sameThreadPrevWrite), HB(read, w)))
-                );
-                return and.build();
+                FormulaTerm.Builder or = FormulaTerm.orBuilder();
+
+                { /* case 1: read the value written in the same thread */
+                    FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                    diffThreadSameAddrDiffValWrites
+                            .forEach(w -> and.add(OR(HB(w, sameThreadPrevWrite), HB(read, w))));
+                    or.add(and.build());
+                }
+
+                /* case 2: read the value written in another thread  */
+                diffThreadSameAddrSameValWrites.forEach(w1 -> {
+                    if (!happensBefore(w1, sameThreadPrevWrite)) {
+                        FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                        and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
+                        diffThreadSameAddrDiffValWrites.forEach(w2 -> {
+                            if (!happensBefore(w2, w1) && !happensBefore(w2, sameThreadPrevWrite)) {
+                                and.add(OR(HB(w2, w1), HB(read, w2)));
+                            }
+                        });
+                        or.add(and.build());
+                    }
+                });
+                return or.build();
             } else {
                 /* the read value is different from sameThreadPrevWrite */
                 if (!diffThreadSameAddrSameValWrites.isEmpty()) {

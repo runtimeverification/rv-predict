@@ -51,6 +51,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
+
 import java.security.AccessControlContext;
 import java.security.ProtectionDomain;
 import java.security.Permissions;
@@ -858,6 +861,7 @@ public class ForkJoinPool extends AbstractExecutorService {
          * @throws RejectedExecutionException if array cannot be resized
          */
         final void push(ForkJoinTask<?> task) {
+            _rvpredict_before_push(task);
             ForkJoinTask<?>[] a; ForkJoinPool p;
             int b = base, s = top, n;
             if ((a = array) != null) {    // ignore if queue removed
@@ -2386,6 +2390,17 @@ public class ForkJoinPool extends AbstractExecutorService {
         }
     }
 
+    // RV-Predict logging methods
+    private static final int RVPREDICT_FJP_LOC_ID = RVPredictRuntime.metadata
+            .getLocationId("java.util.concurrent.ForkJoinPool(ForkJoinPool.java:n/a)");
+    static final int RVPREDICT_FJ_TASK_NUM_OF_PUSH = RVPredictRuntime.metadata
+            .getVariableId("java.util.concurrent.ForkJoinTask", "_rvpredict_num_of_push");
+
+    private static void _rvpredict_before_push(ForkJoinTask<?> task) {
+        RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_FJP_LOC_ID,
+                System.identityHashCode(task), -RVPREDICT_FJ_TASK_NUM_OF_PUSH, ++task._rvpredict_num_of_push);
+    }
+
     /**
      * Tries to add the given task to a submission queue at
      * submitter's current queue. Only the (vastly) most common path
@@ -2395,6 +2410,7 @@ public class ForkJoinPool extends AbstractExecutorService {
      * @param task the task. Caller must ensure non-null.
      */
     final void externalPush(ForkJoinTask<?> task) {
+        _rvpredict_before_push(task);
         WorkQueue[] ws; WorkQueue q; int m;
         int r = ThreadLocalRandom.getProbe();
         int rs = runState;

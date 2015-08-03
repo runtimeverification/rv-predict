@@ -45,6 +45,7 @@ import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
 import com.runtimeverification.rvpredict.smt.formula.ConcretePhiVariable;
 import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
+import com.runtimeverification.rvpredict.smt.formula.IntConstant;
 import com.runtimeverification.rvpredict.smt.formula.OrderVariable;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.LockRegion;
@@ -349,6 +350,8 @@ public class MaximalCausalModel {
                 solver.add(z3filter.filter(BOOL_EQUAL(new ConcretePhiVariable(entry.getKey()),
                         entry.getValue())));
             }
+//            checkTraceConsistency(z3filter, solver);
+
             /* check race suspects */
             for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
                 for (Race race : entry.getValue()) {
@@ -363,10 +366,40 @@ public class MaximalCausalModel {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
 
         return result;
+    }
+
+    /**
+     * Checks if the logged trace is in a consistent state.
+     */
+    @SuppressWarnings("unused")
+    private void checkTraceConsistency(Z3Filter z3filter, com.microsoft.z3.Solver solver)
+            throws Exception {
+        List<MemoryAccessBlock> blks = new ArrayList<>();
+        trace.memoryAccessBlocksByThreadID().values().forEach(l -> blks.addAll(l));
+        Collections.sort(blks);
+
+        solver.push();
+        /* simply assign the GID of an event to its order variable */
+        for (List<Event> l : trace.eventsByThreadID().values()) {
+            for (Event event : l) {
+                solver.add(z3filter.filter(
+                        INT_EQUAL(OrderVariable.get(event), new IntConstant(event.getGID()))));
+            }
+        }
+
+        /* assert that all events should be concretely feasible */
+        for (MemoryAccessBlock blk : blks) {
+            solver.add(z3filter.filter(getPhiConc(blk)));
+        }
+
+        if (solver.check() != Status.SATISFIABLE) {
+            throw new RuntimeException("Inconsistent trace!");
+        }
+        solver.pop();
     }
 
 }

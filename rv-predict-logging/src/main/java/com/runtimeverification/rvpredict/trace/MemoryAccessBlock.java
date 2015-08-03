@@ -17,7 +17,7 @@ import com.runtimeverification.rvpredict.log.Event;
  * @author YilongL
  *
  */
-public class MemoryAccessBlock implements Iterable<Event> {
+public class MemoryAccessBlock implements Iterable<Event>, Comparable<MemoryAccessBlock> {
 
     private final List<Event> events;
 
@@ -66,6 +66,11 @@ public class MemoryAccessBlock implements Iterable<Event> {
 
     public Event getFirstRead() {
         return firstRead;
+    }
+
+    @Override
+    public int compareTo(MemoryAccessBlock blk) {
+        return getFirst().compareTo(blk.getFirst());
     }
 
 }

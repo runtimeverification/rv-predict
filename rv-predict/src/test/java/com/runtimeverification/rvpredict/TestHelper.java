@@ -67,6 +67,7 @@ public class TestHelper {
         final List<Pattern> expectedPatterns = new ArrayList<>();
         for (String regex : Files.toString(new File(testsPrefix + ".expected.out"),
                 Charset.defaultCharset()).split("(\n|\r)")) {
+            regex = regex.trim();
             if (!regex.isEmpty()) {
                 expectedPatterns.add(Pattern.compile(regex));
             }
@@ -95,7 +96,8 @@ public class TestHelper {
                                 + " but received " + returnCode + ".\n"
                                 + output);
                     } else {
-                        expectedPatterns.removeIf(p -> p.matcher(output).find());
+                        extractRaceReports(output).forEach(report ->
+                            expectedPatterns.removeIf(p -> p.matcher(report).matches()));
                     }
                     tasksDone.add(task);
                 }
@@ -108,6 +110,24 @@ public class TestHelper {
                         Joiner.on("\n\t").skipNulls().join(expectedPatterns) + "\n\t" + outputs,
                 expectedPatterns.isEmpty());
         return numOfDoneTasks;
+    }
+
+    private static List<String> extractRaceReports(String output) {
+        List<String> result = new ArrayList<>();
+        int fromIdx = 0;
+        while (true) {
+            int posStartAnchor = output.indexOf("Data race on ", fromIdx);
+            if (posStartAnchor < 0) {
+                break;
+            }
+            int posEndAnchor = output.indexOf("}}}", posStartAnchor) + "}}}".length();
+            result.add(output.substring(posStartAnchor, posEndAnchor));
+            fromIdx = posEndAnchor + 1;
+        }
+        if (result.isEmpty()) {
+            result.add("No races found");
+        }
+        return result;
     }
 
     private static class Task implements Callable<Integer> {

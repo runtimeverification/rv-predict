@@ -1,5 +1,5 @@
-(?s)(.*)Data race on field jtsan.ExecutorTests.sharedVar: \{\{\{(.*)---->  at jtsan.ExecutorTests.lambda\$fixedThreadPoolRaceyTasks\$1\(ExecutorTests.java:23\)(.*)---->  at jtsan.ExecutorTests.lambda\$fixedThreadPoolRaceyTasks\$1\(ExecutorTests.java:23\)(.*)\}\}\}
+Data race on field jtsan.ExecutorTests.sharedVar: \{\{\{(.*)---->  at jtsan.ExecutorTests.lambda\$fixedThreadPoolRaceyTasks\$1\(ExecutorTests.java:23\)(.*)---->  at jtsan.ExecutorTests.lambda\$fixedThreadPoolRaceyTasks\$1\(ExecutorTests.java:23\)(.*)\}\}\}
 
-(?s)(.*)Data race on field jtsan.ExecutorTests.sharedVar: \{\{\{(.*)---->  at jtsan.ExecutorTests.lambda\$cachedThreadPoolRaceyTasks\$2\(ExecutorTests.java:33\)(.*)---->  at jtsan.ExecutorTests.lambda\$cachedThreadPoolRaceyTasks\$2\(ExecutorTests.java:33\)(.*)\}\}\}
+Data race on field jtsan.ExecutorTests.sharedVar: \{\{\{(.*)---->  at jtsan.ExecutorTests.lambda\$cachedThreadPoolRaceyTasks\$2\(ExecutorTests.java:33\)(.*)---->  at jtsan.ExecutorTests.lambda\$cachedThreadPoolRaceyTasks\$2\(ExecutorTests.java:33\)(.*)\}\}\}
 
-(?s)(.*)Data race on field jtsan.ExecutorTests.sharedVar: \{\{\{(.*)---->  at jtsan.ExecutorTests.lambda\$shutdownWrong\$3\(ExecutorTests.java:44\)(.*)---->  at jtsan.ExecutorTests.lambda\$shutdownWrong\$3\(ExecutorTests.java:44\)(.*)\}\}\}
+Data race on field jtsan.ExecutorTests.sharedVar: \{\{\{(.*)---->  at jtsan.ExecutorTests.lambda\$shutdownWrong\$3\(ExecutorTests.java:44\)(.*)---->  at jtsan.ExecutorTests.lambda\$shutdownWrong\$3\(ExecutorTests.java:44\)(.*)\}\}\}

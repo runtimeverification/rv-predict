@@ -69,7 +69,7 @@ public class TestHelper {
                 Charset.defaultCharset()).split("(\n|\r)")) {
             regex = regex.trim();
             if (!regex.isEmpty()) {
-                expectedPatterns.add(Pattern.compile(regex));
+                expectedPatterns.add(Pattern.compile(regex, Pattern.DOTALL));
             }
         }
 

@@ -93,7 +93,13 @@ public class MainTest {
         System.out.printf("Testing %s %d times\n\t Running arguments: %s\n", name, numOfRuns, args);
         String[] args = new String[this.args.size()];
         this.args.toArray(args);
-        int n = helper.testCommand("src/test/resources/" + name, numOfRuns, args);
+        int n;
+        try {
+            n = helper.testCommand("src/test/resources/" + name, numOfRuns, args);
+        } catch (Exception e) {
+            e.printStackTrace(System.out);
+            throw e;
+        }
         System.out.printf("Testing %s done after %s runs.\n", name, n);
     }
 

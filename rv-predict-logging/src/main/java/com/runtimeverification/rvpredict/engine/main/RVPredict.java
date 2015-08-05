@@ -108,16 +108,22 @@ public class RVPredict {
                         config.logger().reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
                     }
 
-                    Process process = null;
+                    Process proc = null;
                     try {
-                        process = startPredictionProcess(config);
-                        StreamRedirector.redirect(process);
-                        process.waitFor();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
-                        if (process != null) {
-                            process.destroy();
+                        proc = startPredictionProcess(config);
+                        StreamGobbler errorGobbler = StreamGobbler.spawn(proc.getErrorStream(), System.err);
+                        StreamGobbler outputGobbler = StreamGobbler.spawn(proc.getInputStream(), System.out);
+
+                        proc.waitFor();
+
+                        // the join() here is necessary even if the gobbler
+                        // threads are non-daemon because we are already in the
+                        // shutdown hook
+                        errorGobbler.join();
+                        outputGobbler.join();
+                    } catch (IOException | InterruptedException e) {
+                        if (proc != null) {
+                            proc.destroy();
                         }
                         e.printStackTrace();
                     }

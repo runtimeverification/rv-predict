@@ -1,7 +1,7 @@
-(?s)(.*)Data race on field account.BankAccount.Balance: \{\{\{(.*)---->  at account.Account.Service\(Account.java:97\)(.*)---->  at account.Account.go\(Account.java:67\)(.*)\}\}\}
+Data race on field account.BankAccount.Balance: \{\{\{(.*)---->  at account.Account.Service\(Account.java:97\)(.*)---->  at account.Account.go\(Account.java:67\)(.*)\}\}\}
 
-(?s)(.*)Data race on field account.Account.Bank_Total: \{\{\{(.*)---->  at account.Account.Service\(Account.java:98\)(.*)---->  at account.Account.Service\(Account.java:98\)(.*)\}\}\}
+Data race on field account.Account.Bank_Total: \{\{\{(.*)---->  at account.Account.Service\(Account.java:98\)(.*)---->  at account.Account.Service\(Account.java:98\)(.*)\}\}\}
 
-(?s)(.*)Data race on field account.Account.Bank_Total: \{\{\{(.*)---->  at account.Account.Service\(Account.java:98\)(.*)---->  at account.Account.checkResult\(Account.java:75\)(.*)\}\}\}
+Data race on field account.Account.Bank_Total: \{\{\{(.*)---->  at account.Account.Service\(Account.java:98\)(.*)---->  at account.Account.checkResult\(Account.java:75\)(.*)\}\}\}
 
-(?s)(.*)Data race on field account.Account.Bank_Total: \{\{\{(.*)---->  at account.Account.Service\(Account.java:98\)(.*)---->  at account.Account.checkResult\(Account.java:76\)(.*)\}\}\}
+Data race on field account.Account.Bank_Total: \{\{\{(.*)---->  at account.Account.Service\(Account.java:98\)(.*)---->  at account.Account.checkResult\(Account.java:76\)(.*)\}\}\}

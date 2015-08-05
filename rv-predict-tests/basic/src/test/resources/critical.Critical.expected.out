@@ -1,15 +1,15 @@
-(?s)(.*)Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:49\)(.*)---->  at critical.Section.run\(Critical.java:60\)(.*)\}\}\}
+Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:49\)(.*)---->  at critical.Section.run\(Critical.java:60\)(.*)\}\}\}
 
-(?s)(.*)Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:49\)(.*)---->  at critical.Section.run\(Critical.java:62\)(.*)\}\}\}
+Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:49\)(.*)---->  at critical.Section.run\(Critical.java:62\)(.*)\}\}\}
 
-(?s)(.*)Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:49\)(.*)---->  at critical.Section.run\(Critical.java:64\)(.*)\}\}\}
+Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:49\)(.*)---->  at critical.Section.run\(Critical.java:64\)(.*)\}\}\}
 
-(?s)(.*)Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:51\)(.*)---->  at critical.Section.run\(Critical.java:60\)(.*)\}\}\}
+Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:51\)(.*)---->  at critical.Section.run\(Critical.java:60\)(.*)\}\}\}
 
-(?s)(.*)Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:51\)(.*)---->  at critical.Section.run\(Critical.java:64\)(.*)\}\}\}
+Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:51\)(.*)---->  at critical.Section.run\(Critical.java:64\)(.*)\}\}\}
 
-(?s)(.*)Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:54\)(.*)---->  at critical.Section.run\(Critical.java:60\)(.*)\}\}\}
+Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:54\)(.*)---->  at critical.Section.run\(Critical.java:60\)(.*)\}\}\}
 
-(?s)(.*)Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:54\)(.*)---->  at critical.Section.run\(Critical.java:62\)(.*)\}\}\}
+Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:54\)(.*)---->  at critical.Section.run\(Critical.java:62\)(.*)\}\}\}
 
-(?s)(.*)Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:54\)(.*)---->  at critical.Section.run\(Critical.java:64\)(.*)\}\}\}
+Data race on field critical.Critical.turn: \{\{\{(.*)---->  at critical.Section.run\(Critical.java:54\)(.*)---->  at critical.Section.run\(Critical.java:64\)(.*)\}\}\}

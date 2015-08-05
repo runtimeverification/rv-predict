@@ -1,21 +1,21 @@
-(?s)(.*)Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$1.thread1\(JUCollectionTests.java:27\)(.*)---->  at jtsan.JUCollectionTests\$1.thread2\(JUCollectionTests.java:32\)(.*)\}\}\}
+Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$1.thread1\(JUCollectionTests.java:27\)(.*)---->  at jtsan.JUCollectionTests\$1.thread2\(JUCollectionTests.java:32\)(.*)\}\}\}
 
-(?s)(.*)Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$2.thread1\(JUCollectionTests.java:55\)(.*)---->  at jtsan.JUCollectionTests\$2.thread2\(JUCollectionTests.java:62\)(.*)\}\}\}
+Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$2.thread1\(JUCollectionTests.java:55\)(.*)---->  at jtsan.JUCollectionTests\$2.thread2\(JUCollectionTests.java:62\)(.*)\}\}\}
 
-(?s)(.*)Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$3.thread1\(JUCollectionTests.java:85\)(.*)---->  at jtsan.JUCollectionTests\$3.thread2\(JUCollectionTests.java:95\)(.*)\}\}\}
+Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$3.thread1\(JUCollectionTests.java:85\)(.*)---->  at jtsan.JUCollectionTests\$3.thread2\(JUCollectionTests.java:95\)(.*)\}\}\}
 
-(?s)(.*)Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$5.thread2\(JUCollectionTests.java:169\)(.*)---->  at jtsan.JUCollectionTests\$DelegatedIterator.hasNext\(JUCollectionTests.java:139\)(.*)\}\}\}
+Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$5.thread2\(JUCollectionTests.java:169\)(.*)---->  at jtsan.JUCollectionTests\$DelegatedIterator.hasNext\(JUCollectionTests.java:139\)(.*)\}\}\}
 
-(?s)(.*)Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$5.thread2\(JUCollectionTests.java:169\)(.*)---->  at jtsan.JUCollectionTests\$DelegatedIterator.next\(JUCollectionTests.java:144\)(.*)\}\}\}
+Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$5.thread2\(JUCollectionTests.java:169\)(.*)---->  at jtsan.JUCollectionTests\$DelegatedIterator.next\(JUCollectionTests.java:144\)(.*)\}\}\}
 
-(?s)(.*)Data race on field java.util.HashMap.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$6.thread1\(JUCollectionTests.java:182\)(.*)---->  at jtsan.JUCollectionTests\$6.thread2\(JUCollectionTests.java:187\)(.*)\}\}\}
+Data race on field java.util.HashMap.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$6.thread1\(JUCollectionTests.java:182\)(.*)---->  at jtsan.JUCollectionTests\$6.thread2\(JUCollectionTests.java:187\)(.*)\}\}\}
 
-(?s)(.*)Data race on field java.util.HashMap.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$7.thread1\(JUCollectionTests.java:210\)(.*)---->  at jtsan.JUCollectionTests\$7.thread2\(JUCollectionTests.java:215\)(.*)\}\}\}
+Data race on field java.util.HashMap.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$7.thread1\(JUCollectionTests.java:210\)(.*)---->  at jtsan.JUCollectionTests\$7.thread2\(JUCollectionTests.java:215\)(.*)\}\}\}
 
-(?s)(.*)Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$9.thread1\(JUCollectionTests.java:255\)(.*)---->  at jtsan.JUCollectionTests\$9.thread2\(JUCollectionTests.java:260\)(.*)\}\}\}
+Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$9.thread1\(JUCollectionTests.java:255\)(.*)---->  at jtsan.JUCollectionTests\$9.thread2\(JUCollectionTests.java:260\)(.*)\}\}\}
 
-(?s)(.*)Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$10.thread1\(JUCollectionTests.java:277\)(.*)---->  at jtsan.JUCollectionTests\$10.thread2\(JUCollectionTests.java:282\)(.*)\}\}\}
+Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$10.thread1\(JUCollectionTests.java:277\)(.*)---->  at jtsan.JUCollectionTests\$10.thread2\(JUCollectionTests.java:282\)(.*)\}\}\}
 
-(?s)(.*)Data race on field java.util.HashMap.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$11.thread1\(JUCollectionTests.java:303\)(.*)---->  at jtsan.JUCollectionTests\$11.thread2\(JUCollectionTests.java:308\)(.*)\}\}\}
+Data race on field java.util.HashMap.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$11.thread1\(JUCollectionTests.java:303\)(.*)---->  at jtsan.JUCollectionTests\$11.thread2\(JUCollectionTests.java:308\)(.*)\}\}\}
 
-(?s)(.*)Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$12.thread1\(JUCollectionTests.java:323\)(.*)---->  at jtsan.JUCollectionTests\$12.thread2\(JUCollectionTests.java:328\)(.*)\}\}\}
+Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.JUCollectionTests\$12.thread1\(JUCollectionTests.java:323\)(.*)---->  at jtsan.JUCollectionTests\$12.thread2\(JUCollectionTests.java:328\)(.*)\}\}\}

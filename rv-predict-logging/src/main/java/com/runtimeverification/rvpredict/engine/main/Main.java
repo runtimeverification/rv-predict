@@ -5,11 +5,11 @@ import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.util.Logger;
 
@@ -70,8 +70,14 @@ public class Main {
         Process process = null;
         try {
             process = new ProcessBuilder(args).start();
-            StreamRedirector.redirect(process);
+            StreamGobbler errorGobbler = StreamGobbler.spawn(process.getErrorStream(), System.err);
+            StreamGobbler outputGobbler = StreamGobbler.spawn(process.getInputStream(), System.out);
+            StreamGobbler.spawn(System.in, new PrintStream(process.getOutputStream()), true /* flush */);
+
             process.waitFor();
+
+            errorGobbler.join();
+            outputGobbler.join();
         } catch (IOException ignored) {
         } catch (InterruptedException e) {
             if (process != null) {

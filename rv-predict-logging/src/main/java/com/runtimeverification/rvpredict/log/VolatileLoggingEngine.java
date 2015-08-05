@@ -29,6 +29,7 @@
 package com.runtimeverification.rvpredict.log;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -73,8 +74,6 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
     /**
      * Buffers that are alive so far.
-     * <p>
-     * TODO(YilongL): optimize for the case where the number of threads is large.
      */
     private final Set<Buffer> activeBuffers = Collections.newSetFromMap(new MapMaker().makeMap());
 
@@ -87,6 +86,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
     };
 
+    private final Thread bufferCleaner;
+
     private final RaceDetector detector;
 
     public VolatileLoggingEngine(Configuration config, Metadata metadata) {
@@ -94,6 +95,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         this.crntState = new TraceState(config, metadata);
         this.windowSize = config.windowSize;
         this.detector = new RaceDetector(config);
+        bufferCleaner = new BufferCleaner();
+        bufferCleaner.start();
     }
 
     @Override
@@ -419,11 +422,11 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         /**
          * Finalizes the last batch of events in this buffer.
          * <p>
-         * Only the cleanup thread, the JVM finalizer thread, and the thread
-         * joining {@link Buffer#owner} may call this method. It is critical
-         * that when they call this method, thread {@code owner} is already
-         * dead. Otherwise, we would have data races on the fields of this
-         * buffer.
+         * Only the cleanup thread, the {@link BufferCleaner} thread, and the
+         * thread joining {@link Buffer#owner} may call this method. It is
+         * critical that when they call this method, thread {@code owner} is
+         * already dead. Otherwise, we would have data races on the fields of
+         * this buffer.
          */
         void finalizeRemainingEvents() {
             if (owner.isAlive()) {
@@ -433,12 +436,34 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                 finalizeEvents();
             }
         }
+    }
 
-        @Override
-        protected void finalize() {
-            finalizeRemainingEvents();
+    private class BufferCleaner extends Thread {
+
+        BufferCleaner() {
+            super();
+            setDaemon(true);
         }
 
+        @Override
+        public void run() {
+            while (true) {
+                Iterator<Buffer> itr = activeBuffers.iterator();
+                while (itr.hasNext()) {
+                    Buffer b;
+                    if (!(b = itr.next()).owner.isAlive()) {
+                        /* take care of unfinalized events */
+                        b.finalizeRemainingEvents();
+                        /* if there is no finalized events either then this
+                         * buffer has no use */
+                        if (b.isEmpty()) {
+                            itr.remove();
+                        }
+                    }
+                }
+                LockSupport.parkNanos(100000000L); // sleep 100 ms
+            }
+        }
     }
 
 }

@@ -39,7 +39,8 @@
         <rvarg value="--stacks" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA" module="examples">
-        <rvarg key="--window" value="10000" />
+        <runs value="8" />
+        <rvarg key="--window" value="5000" />
         <rvarg value="--stacks" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />
     </test>

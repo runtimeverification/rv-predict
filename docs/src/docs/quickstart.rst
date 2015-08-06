@@ -137,9 +137,13 @@ option when invoking RV-Predict:
           --window           Window size (must be >= 64)
                              Default: 1000
 
-          --stacks           Record call stack events and compute stack traces in race report
+          --stacks           Record call stack events and compute stack traces
+                             in race report
 
-          --suppress         Suppress race reports on the given (comma-separated) list of fields
+          --suppress         Suppress race reports on the fields that match
+                             the given (comma-separated) list of regular
+                             expressions
+                             Default:
 
       -v, --verbose          Generate more verbose output
 
@@ -171,8 +175,9 @@ Explanation:
 -  the ``--stacks`` option tells RV-Predict to record call stack events that
    can be used to compute stack traces in the race report.
 -  the ``--suppress`` option tells RV-Predict to suppress race reports on
-   the given fields; only used when the user is absolutely certain that the
-   data race to be suppressed is benign.
+   the fields that match the given regular expression patterns; only used
+   when the user is absolutely certain that the data race to be suppressed
+   is benign.
 -  ``--`` can be used as a terminator for the RV-Predict options.
 
 Advanced options

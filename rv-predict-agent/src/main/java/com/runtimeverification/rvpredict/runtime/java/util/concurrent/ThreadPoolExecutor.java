@@ -45,6 +45,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.atomic.AtomicInteger;       // RVPredict: use the original AtomicInteger
 import java.util.*;
 
+import com.google.common.collect.MapMaker;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
@@ -875,7 +876,11 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
 
     // RVPredict logging methods
 
-    private final List<Long> _rvpredict_started_worker_threads = new ArrayList<>();
+    private final Set<Thread> _rvpredict_worker_threads = Collections
+            .newSetFromMap(new MapMaker().weakKeys().makeMap());
+
+    private final List<Long> _rvpredict_worker_thread_ids = Collections
+            .synchronizedList(new ArrayList<>());
 
     /**
      * Checks if the work queue is instrumented in order to capture the
@@ -896,11 +901,22 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
     }
 
     private synchronized void _rvpredict_start_worker_thread(Thread t) {
-        _rvpredict_started_worker_threads.add(t.getId());
+        _rvpredict_worker_threads.add(t);
+        _rvpredict_worker_thread_ids.add(t.getId());
     }
 
     private void _rvpredict_join_worker_threads() {
-        _rvpredict_started_worker_threads.forEach(tid -> RVPredictRuntime.saveThreadSyncEvent(
+        _rvpredict_worker_threads.forEach(t -> {
+            while (true) {
+                try {
+                    t.join();
+                    break;
+                } catch (InterruptedException e) {
+                    e.printStackTrace(); // shouldn't happen
+                }
+            }
+        });
+        _rvpredict_worker_thread_ids.forEach(tid -> RVPredictRuntime.saveThreadSyncEvent(
                 EventType.JOIN, RVPREDICT_THREAD_POOL_EXECUTOR_LOC_ID, tid));
     }
 

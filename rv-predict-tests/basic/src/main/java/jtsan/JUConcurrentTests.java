@@ -985,16 +985,25 @@ public class JUConcurrentTests {
         IntStream.range(0, 10).parallel().forEach(i -> set.contains(i));
     }
 
+    private static class S {
+        int elems = 0;
+
+        void accumulator(int elem) {
+            elems = 0;
+        }
+
+        void combiner(S s) {
+            elems = s.elems;
+        }
+    }
+
     @RaceTest(expectRace = false, description = "Parallel stream mutable reduction")
     public void mutableReduction() {
         new ThreadRunner(1) {
             @Override
             public void thread1() {
-                Set<Integer> set = IntStream.range(0, 100).boxed().collect(Collectors.toSet());
-                set.parallelStream().collect(
-                    HashSet::new,
-                    (s, e) -> { s.add(e); },
-                    (s1, s2) -> { s1.addAll(s2); });
+                IntStream.range(0, 100).boxed().collect(Collectors.toSet()).parallelStream()
+                        .collect(S::new, S::accumulator, S::combiner);
             }
         };
     }

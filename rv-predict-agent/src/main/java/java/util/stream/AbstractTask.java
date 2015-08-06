@@ -28,6 +28,9 @@ import java.util.Spliterator;
 import java.util.concurrent.CountedCompleter;
 import java.util.concurrent.ForkJoinPool;
 
+import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
+
 /**
  * Abstract base class for most fork-join tasks used to implement stream ops.
  * Manages splitting logic, tracking of child tasks, and intermediate results.
@@ -195,6 +198,29 @@ abstract class AbstractTask<P_IN, P_OUT, R,
                 (targetSize = suggestTargetSize(sizeEstimate)));
     }
 
+    // RV-Predict logging methods
+
+    private static final int RVPREDICT_ABSTRACT_TASK_LOC_ID = RVPredictRuntime.metadata
+            .getLocationId("java.util.stream.AbstractTask(AbstractTask.java:n/a)");
+
+    private static final int RVPREDICT_ABSTRACT_TASK_RESULT_ID = RVPredictRuntime.metadata
+            .getVariableId("java.util.stream.AbstractTask", "localResult");
+
+    private R _rvpredict_get_result() {
+        R result = localResult;
+        RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_ABSTRACT_TASK_LOC_ID,
+                System.identityHashCode(this), -RVPREDICT_ABSTRACT_TASK_RESULT_ID,
+                System.identityHashCode(result));
+        return result;
+    }
+
+    private void _rvpredict_set_result(R result) {
+        RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_ABSTRACT_TASK_LOC_ID,
+                System.identityHashCode(this), -RVPREDICT_ABSTRACT_TASK_RESULT_ID,
+                System.identityHashCode(result));
+        localResult = result;
+    }
+
     /**
      * Returns the local result, if any. Subclasses should use
      * {@link #setLocalResult(Object)} and {@link #getLocalResult()} to manage
@@ -206,7 +232,7 @@ abstract class AbstractTask<P_IN, P_OUT, R,
      */
     @Override
     public R getRawResult() {
-        return localResult;
+        return _rvpredict_get_result();
     }
 
     /**
@@ -230,7 +256,7 @@ abstract class AbstractTask<P_IN, P_OUT, R,
      * {@link #setLocalResult}
      */
     protected R getLocalResult() {
-        return localResult;
+        return _rvpredict_get_result();
     }
 
     /**
@@ -240,7 +266,7 @@ abstract class AbstractTask<P_IN, P_OUT, R,
      * @param localResult local result for this node
      */
     protected void setLocalResult(R localResult) {
-        this.localResult = localResult;
+        _rvpredict_set_result(localResult);
     }
 
     /**

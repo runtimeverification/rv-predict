@@ -515,6 +515,9 @@ public class Trace {
             /* sort lock regions for better performance of constraint solving */
             lockIdToLockRegions.values().forEach(regions -> Collections.sort(regions));
         }
+
+//        tidToEvents.values().stream().flatMap(List::stream).sorted().forEach(event -> System.err
+//                .println((event + " at " + metadata().getLocationSig(event.getLocId()))));
     }
 
     /**

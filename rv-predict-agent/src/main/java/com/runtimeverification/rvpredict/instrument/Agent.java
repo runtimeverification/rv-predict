@@ -165,7 +165,8 @@ public class Agent implements ClassFileTransformer, Constants {
                         TransformStrategy.THREAD);
             } else if (cname.startsWith("java/util/concurrent/ForkJoinPool")
                     || cname.startsWith("java/util/concurrent/ForkJoinTask")
-                    || cname.startsWith("java/util/concurrent/CountedCompleter")) {
+                    || cname.startsWith("java/util/concurrent/CountedCompleter")
+                    || cname.startsWith("java/util/stream/AbstractTask")) {
                 String AGENT_CLASS = "com/runtimeverification/rvpredict/instrument/Agent";
                 return Resources.toByteArray(new URL(ClassLoader.getSystemClassLoader()
                         .getResource(AGENT_CLASS + ".class").toString().replace(AGENT_CLASS, cname)));

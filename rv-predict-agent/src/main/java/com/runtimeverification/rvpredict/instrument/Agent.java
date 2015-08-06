@@ -9,6 +9,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.ProtectionDomain;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -192,7 +193,7 @@ public class Agent implements ClassFileTransformer, Constants {
         }
     }
 
-    private static final Set<String> loadedClasses = new HashSet<>();
+    private static final Set<String> loadedClasses = Collections.synchronizedSet(new HashSet<>());
 
     private static void checkUninterceptedClassLoading(String cname, Class<?> c) {
         if (Configuration.debug) {

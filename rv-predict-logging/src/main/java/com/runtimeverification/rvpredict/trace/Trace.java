@@ -516,8 +516,9 @@ public class Trace {
             lockIdToLockRegions.values().forEach(regions -> Collections.sort(regions));
         }
 
-//        tidToEvents.values().stream().flatMap(List::stream).sorted().forEach(event -> System.err
-//                .println((event + " at " + metadata().getLocationSig(event.getLocId()))));
+        /* debugging code: print out events in order */
+//        tidToEvents.values().stream().flatMap(List::stream).sorted().forEach(event -> logger()
+//                .debug((event + " at " + metadata().getLocationSig(event.getLocId()))));
     }
 
     /**

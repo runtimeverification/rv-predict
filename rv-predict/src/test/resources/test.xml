@@ -117,6 +117,7 @@
     <test name="jtsan.JUConcurrentTests-positive" module="basic">
         <arg value="jtsan.JUConcurrentTests" />
         <arg value="positive" />
+        <rvarg key="--window" value="5000" />
         <rvarg value="--stacks" />
     </test>
     <test name="jtsan.JUConcurrentTests-negative" module="basic">

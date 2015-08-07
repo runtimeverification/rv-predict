@@ -32,6 +32,12 @@ public class RaceDetector implements Constants {
         return reports;
     }
 
+    private boolean isThreadSafeLocation(Trace trace, int locId) {
+        String locationSig = trace.metadata().getLocationSig(locId);
+        return locationSig.startsWith("java.util.concurrent")
+            || locationSig.startsWith("java.util.stream");
+    }
+
     private Map<String, List<Race>> computeUnknownRaceSuspects(Trace trace) {
         Map<String, List<Race>> sigToRaceCandidates = new HashMap<>();
         trace.eventsByThreadID().forEach((tid1, events1) -> {
@@ -43,8 +49,7 @@ public class RaceDetector implements Constants {
                                   e1.isReadOrWrite() && e2.isWrite())
                                   && e1.getAddr() == e2.getAddr()
                                   && !trace.metadata().isVolatile(e1.getAddr())
-                                  && !trace.metadata().getLocationSig(e1.getLocId())
-                                      .startsWith("java.util.concurrent")
+                                  && !isThreadSafeLocation(trace, e1.getLocId())
                                   && !trace.isInsideClassInitializer(e1)
                                   && !trace.isInsideClassInitializer(e2)) {
                               Race race = new Race(e1, e2, trace);

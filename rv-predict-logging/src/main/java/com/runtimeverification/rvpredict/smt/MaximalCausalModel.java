@@ -45,6 +45,7 @@ import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
 import com.runtimeverification.rvpredict.smt.formula.ConcretePhiVariable;
 import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
+import com.runtimeverification.rvpredict.smt.formula.IntConstant;
 import com.runtimeverification.rvpredict.smt.formula.OrderVariable;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.LockRegion;
@@ -206,11 +207,29 @@ public class MaximalCausalModel {
             /* sameThreadPrevWrite is available in the current window */
             if (read.getValue() == sameThreadPrevWrite.getValue()) {
                 /* the read value is the same as sameThreadPrevWrite */
-                FormulaTerm.Builder and = FormulaTerm.andBuilder();
-                diffThreadSameAddrDiffValWrites.forEach(
-                    w -> and.add(OR(HB(w, sameThreadPrevWrite), HB(read, w)))
-                );
-                return and.build();
+                FormulaTerm.Builder or = FormulaTerm.orBuilder();
+
+                { /* case 1: read the value written in the same thread */
+                    FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                    diffThreadSameAddrDiffValWrites
+                            .forEach(w -> and.add(OR(HB(w, sameThreadPrevWrite), HB(read, w))));
+                    or.add(and.build());
+                }
+
+                /* case 2: read the value written in another thread  */
+                diffThreadSameAddrSameValWrites.forEach(w1 -> {
+                    if (!happensBefore(w1, sameThreadPrevWrite)) {
+                        FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                        and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
+                        diffThreadSameAddrDiffValWrites.forEach(w2 -> {
+                            if (!happensBefore(w2, w1) && !happensBefore(w2, sameThreadPrevWrite)) {
+                                and.add(OR(HB(w2, w1), HB(read, w2)));
+                            }
+                        });
+                        or.add(and.build());
+                    }
+                });
+                return or.build();
             } else {
                 /* the read value is different from sameThreadPrevWrite */
                 if (!diffThreadSameAddrSameValWrites.isEmpty()) {
@@ -331,6 +350,8 @@ public class MaximalCausalModel {
                 solver.add(z3filter.filter(BOOL_EQUAL(new ConcretePhiVariable(entry.getKey()),
                         entry.getValue())));
             }
+//            checkTraceConsistency(z3filter, solver);
+
             /* check race suspects */
             for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
                 for (Race race : entry.getValue()) {
@@ -345,10 +366,40 @@ public class MaximalCausalModel {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
 
         return result;
+    }
+
+    /**
+     * Checks if the logged trace is in a consistent state.
+     */
+    @SuppressWarnings("unused")
+    private void checkTraceConsistency(Z3Filter z3filter, com.microsoft.z3.Solver solver)
+            throws Exception {
+        List<MemoryAccessBlock> blks = new ArrayList<>();
+        trace.memoryAccessBlocksByThreadID().values().forEach(l -> blks.addAll(l));
+        Collections.sort(blks);
+
+        solver.push();
+        /* simply assign the GID of an event to its order variable */
+        for (List<Event> l : trace.eventsByThreadID().values()) {
+            for (Event event : l) {
+                solver.add(z3filter.filter(
+                        INT_EQUAL(OrderVariable.get(event), new IntConstant(event.getGID()))));
+            }
+        }
+
+        /* assert that all events should be concretely feasible */
+        for (MemoryAccessBlock blk : blks) {
+            solver.add(z3filter.filter(getPhiConc(blk)));
+        }
+
+        if (solver.check() != Status.SATISFIABLE) {
+            throw new RuntimeException("Inconsistent trace!");
+        }
+        solver.pop();
     }
 
 }

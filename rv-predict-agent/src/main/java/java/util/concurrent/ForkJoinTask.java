@@ -33,7 +33,7 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-package com.runtimeverification.rvpredict.runtime.java.util.concurrent;
+package java.util.concurrent;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -50,10 +50,11 @@ import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
-import java.lang.reflect.Constructor;
 
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
+
+import java.lang.reflect.Constructor;
 
 /**
  * Abstract base class for tasks that run within a {@link ForkJoinPool}.
@@ -266,6 +267,14 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
 
     // RV-Predict logging methods
 
+    int _rvpredict_num_of_push;
+
+    private void _rvpredict_before_exec() {
+        RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_FJ_TASK_LOC_ID,
+                System.identityHashCode(this), -ForkJoinPool.RVPREDICT_FJ_TASK_NUM_OF_PUSH,
+                _rvpredict_num_of_push);
+    }
+
     private void _rvpredict_set_completion() {
         RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_FJ_TASK_LOC_ID,
                 System.identityHashCode(this), -RVPREDICT_FJ_TASK_COMPLETE, 1);
@@ -307,6 +316,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         int s; boolean completed;
         if ((s = status) >= 0) {
             try {
+                _rvpredict_before_exec();
                 completed = exec();
             } catch (Throwable rex) {
                 return setExceptionalCompletion(rex);

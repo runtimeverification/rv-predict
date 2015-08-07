@@ -17,15 +17,15 @@
 
 package jtsan;
 
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 
 /**
@@ -161,7 +161,7 @@ public class JUConcurrentTests {
         };
     }
 
-    @RaceTest(expectRace = false,
+    @RaceTest(expectRace = true,
             description = "No HB relation imposed by LinkedBlockingQueue")
     public void linkedBlockingQueueWrong() {
         new ThreadRunner(3) {
@@ -199,7 +199,7 @@ public class JUConcurrentTests {
         };
     }
 
-    @RaceTest(expectRace = false,
+    @RaceTest(expectRace = true,
             description = "No HB relation imposed by ArrayBlockingQueue")
     public void arrayBlockingQueueWrong() {
         new ThreadRunner(2) {
@@ -226,6 +226,17 @@ public class JUConcurrentTests {
                 if (!abq.remove(2)) {
                     sharedVar = 2;
                 }
+            }
+        };
+    }
+
+    @RaceTest(expectRace = true,
+            description = "stateful lambda expressions without additional synchronization")
+    public void statefulLambdaExpr() {
+        new ThreadRunner(1) {
+            @Override
+            public void thread1() {
+                IntStream.range(0, 10).parallel().forEach(x -> sharedVar++ );
             }
         };
     }
@@ -967,6 +978,41 @@ public class JUConcurrentTests {
         };
     }
 
+    @RaceTest(expectRace = false, description = "Stateless lambda expression")
+    public void statelessLambdaExpr() {
+        Set<Integer> set = new HashSet<>();
+        set.add(0); // no race between this write and the following read in F/J tasks
+        IntStream.range(0, 10).parallel().forEach(i -> set.contains(i));
+    }
+
+    private static class S {
+        int elems = 0;
+
+        void accumulator(int elem) {
+            elems = 0;
+        }
+
+        void combiner(S s) {
+            elems = s.elems;
+        }
+    }
+
+    @RaceTest(expectRace = false, description = "Parallel stream mutable reduction")
+    public void mutableReduction() {
+        new ThreadRunner(1) {
+            @Override
+            public void thread1() {
+                IntStream.range(0, 100).boxed().collect(Collectors.toSet()).parallelStream()
+                        .collect(S::new, S::accumulator, S::combiner);
+            }
+        };
+    }
+
+    private JUConcurrentTests() {
+        /* trigger the initialization of the common fork join pool */
+        IntStream.range(0, 100).parallel().average();
+    }
+
     public static void main(String[] args) {
         JUConcurrentTests tests = new JUConcurrentTests();
         // positive tests
@@ -978,6 +1024,7 @@ public class JUConcurrentTests {
             tests.lockNeMonitor();
             tests.linkedBlockingQueueWrong();
             tests.arrayBlockingQueueWrong();
+            tests.statefulLambdaExpr();
         } else {
             // negative tests
             tests.arrayBlockingQueue();
@@ -1001,6 +1048,8 @@ public class JUConcurrentTests {
             tests.futureTask();
             tests.synchronousQueue();
             tests.exchanger();
+            tests.statelessLambdaExpr();
+            tests.mutableReduction();
         }
     }
 

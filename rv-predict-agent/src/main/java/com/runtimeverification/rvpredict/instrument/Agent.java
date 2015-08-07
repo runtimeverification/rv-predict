@@ -5,13 +5,16 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.ProtectionDomain;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
+import com.google.common.io.Resources;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.RVPredict;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
@@ -161,6 +164,13 @@ public class Agent implements ClassFileTransformer, Constants {
             if (cname.equals("java/lang/Thread")) {
                 return ClassTransformer.transform(loader, cbuf, config,
                         TransformStrategy.THREAD);
+            } else if (cname.startsWith("java/util/concurrent/ForkJoinPool")
+                    || cname.startsWith("java/util/concurrent/ForkJoinTask")
+                    || cname.startsWith("java/util/concurrent/CountedCompleter")
+                    || cname.startsWith("java/util/stream/AbstractTask")) {
+                String AGENT_CLASS = "com/runtimeverification/rvpredict/instrument/Agent";
+                return Resources.toByteArray(new URL(ClassLoader.getSystemClassLoader()
+                        .getResource(AGENT_CLASS + ".class").toString().replace(AGENT_CLASS, cname)));
             } else if (!cname.startsWith(RVPREDICT_PKG_PREFIX) && !cname.startsWith("sun")
                     || cname.startsWith(RVPREDICT_RUNTIME_PKG_PREFIX)) {
                 ClassFile classFile = ClassFile.getInstance(loader, cname, cbuf);
@@ -179,11 +189,11 @@ public class Agent implements ClassFileTransformer, Constants {
                 // fail-fast strategy under debug mode
                 System.exit(1);
             }
-            throw e;
+            throw new RuntimeException(e);
         }
     }
 
-    private static final Set<String> loadedClasses = new HashSet<>();
+    private static final Set<String> loadedClasses = Collections.synchronizedSet(new HashSet<>());
 
     private static void checkUninterceptedClassLoading(String cname, Class<?> c) {
         if (Configuration.debug) {

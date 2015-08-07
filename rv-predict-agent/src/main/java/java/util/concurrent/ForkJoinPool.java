@@ -33,7 +33,7 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-package com.runtimeverification.rvpredict.runtime.java.util.concurrent;
+package java.util.concurrent;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
@@ -41,19 +41,22 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.security.AccessControlContext;
-import java.security.ProtectionDomain;
-import java.security.Permissions;
 
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
+
+import java.security.AccessControlContext;
+import java.security.ProtectionDomain;
+import java.security.Permissions;
 
 /**
  * An {@link ExecutorService} for running {@link ForkJoinTask}s.
@@ -169,9 +172,6 @@ import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
  */
 @sun.misc.Contended
 public class ForkJoinPool extends AbstractExecutorService {
-
-    private static final int RVPREDICT_FJP_LOC_ID = RVPredictRuntime.metadata
-            .getLocationId("java.util.concurrent.ForkJoinPool(ForkJoinPool.java:n/a)");
 
     /*
      * Implementation Overview
@@ -861,6 +861,7 @@ public class ForkJoinPool extends AbstractExecutorService {
          * @throws RejectedExecutionException if array cannot be resized
          */
         final void push(ForkJoinTask<?> task) {
+            _rvpredict_before_push(task);
             ForkJoinTask<?>[] a; ForkJoinPool p;
             int b = base, s = top, n;
             if ((a = array) != null) {    // ignore if queue removed
@@ -1469,19 +1470,6 @@ public class ForkJoinPool extends AbstractExecutorService {
         }
     }
 
-    // RV-Predict loggging methods
-
-    private final List<Long> _rvpredict_started_worker_threads = new ArrayList<>();
-
-    private synchronized void _rvpredict_start_worker_thread(Thread t) {
-        _rvpredict_started_worker_threads.add(t.getId());
-    }
-
-    private void _rvpredict_join_worker_threads() {
-        _rvpredict_started_worker_threads.forEach(tid -> RVPredictRuntime.saveThreadSyncEvent(
-                EventType.JOIN, RVPREDICT_FJP_LOC_ID, tid));
-    }
-
     // Creating, registering and deregistering workers
 
     /**
@@ -1497,7 +1485,6 @@ public class ForkJoinPool extends AbstractExecutorService {
         ForkJoinWorkerThread wt = null;
         try {
             if (fac != null && (wt = fac.newThread(this)) != null) {
-                _rvpredict_start_worker_thread(wt);
                 wt.start();
                 return true;
             }
@@ -2403,6 +2390,17 @@ public class ForkJoinPool extends AbstractExecutorService {
         }
     }
 
+    // RV-Predict logging methods
+    private static final int RVPREDICT_FJP_LOC_ID = RVPredictRuntime.metadata
+            .getLocationId("java.util.concurrent.ForkJoinPool(ForkJoinPool.java:n/a)");
+    static final int RVPREDICT_FJ_TASK_NUM_OF_PUSH = RVPredictRuntime.metadata
+            .getVariableId("java.util.concurrent.ForkJoinTask", "_rvpredict_num_of_push");
+
+    private static void _rvpredict_before_push(ForkJoinTask<?> task) {
+        RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_FJP_LOC_ID,
+                System.identityHashCode(task), -RVPREDICT_FJ_TASK_NUM_OF_PUSH, ++task._rvpredict_num_of_push);
+    }
+
     /**
      * Tries to add the given task to a submission queue at
      * submitter's current queue. Only the (vastly) most common path
@@ -2412,6 +2410,7 @@ public class ForkJoinPool extends AbstractExecutorService {
      * @param task the task. Caller must ensure non-null.
      */
     final void externalPush(ForkJoinTask<?> task) {
+        _rvpredict_before_push(task);
         WorkQueue[] ws; WorkQueue q; int m;
         int r = ThreadLocalRandom.getProbe();
         int rs = runState;
@@ -3141,19 +3140,15 @@ public class ForkJoinPool extends AbstractExecutorService {
             return false;
         }
         long nanos = unit.toNanos(timeout);
-        if (isTerminated()) {
-            _rvpredict_join_worker_threads();
+        if (isTerminated())
             return true;
-        }
         if (nanos <= 0L)
             return false;
         long deadline = System.nanoTime() + nanos;
         synchronized (this) {
             for (;;) {
-                if (isTerminated()) {
-                    _rvpredict_join_worker_threads();
+                if (isTerminated())
                     return true;
-                }
                 if (nanos <= 0L)
                     return false;
                 long millis = TimeUnit.NANOSECONDS.toMillis(nanos);

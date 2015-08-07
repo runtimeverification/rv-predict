@@ -50,6 +50,7 @@ import java.nio.file.Paths;
 import java.security.CodeSource;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.tools.ant.util.JavaEnvUtils;
 
@@ -147,7 +148,8 @@ public class Configuration implements Constants {
 
     public final List<Pattern> includeList = new ArrayList<>();
     public final List<Pattern> excludeList = new ArrayList<>();
-    public final Set<String> suppressList = new HashSet<>();
+    public final List<String> suppressList = new ArrayList<>();
+    public Pattern suppressPattern;
 
     private JCommander jCommander;
 
@@ -255,14 +257,10 @@ public class Configuration implements Constants {
         }
     }
 
-    private void initSuppressList() {
-        if (suppresses != null) {
-            for (String suppress : suppresses.replace('.', '/').split(",")) {
-                if (!suppress.isEmpty()) {
-                    suppressList.add(suppress.replace('/', '.'));
-                }
-            }
-        }
+    private void initSuppressPattern() {
+        suppressList.addAll(Arrays.asList(suppress.split(",")).stream().map(s -> s.trim())
+                .filter(s -> !s.isEmpty()).collect(Collectors.toList()));
+        suppressPattern = Pattern.compile(Joiner.on("|").join(suppressList));
     }
 
     /**
@@ -349,12 +347,12 @@ public class Configuration implements Constants {
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include",
             descriptionKey = "2000")
-    public String includes;
+    private String includes;
 
     public final static String opt_exclude = "--exclude";
     @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude",
             descriptionKey = "2100")
-    public String excludes;
+    private String excludes;
 
     final static String opt_window_size = "--window";
     @Parameter(names = opt_window_size, description = "Window size (must be >= 64)", descriptionKey = "2200")
@@ -366,9 +364,8 @@ public class Configuration implements Constants {
     public boolean stacks = false;
 
     public final static String opt_suppress = "--suppress";
-    @Parameter(names = opt_suppress, description = "Suppress race reports on the given (comma-separated) list of fields",
-            descriptionKey = "2400")
-    private String suppresses;
+    @Parameter(names = opt_suppress, description = "Suppress race reports on the fields that match the given (comma-separated) list of regular expressions", descriptionKey = "2400")
+    private String suppress = "";
 
     final static String opt_smt_solver = "--solver";
     @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2500")
@@ -455,7 +452,7 @@ public class Configuration implements Constants {
 
         initExcludeList();
         initIncludeList();
-        initSuppressList();
+        initSuppressPattern();
 
         /* Carefully handle the interaction between options:
          * 1) 4 different modes: only_profile, only_log, only_predict and log_then_predict;

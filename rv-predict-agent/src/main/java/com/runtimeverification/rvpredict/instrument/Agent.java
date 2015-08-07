@@ -120,11 +120,14 @@ public class Agent implements ClassFileTransformer, Constants {
         if (config.getLogDir() != null) {
             config.logger().report("Log directory: " + config.getLogDir(), Logger.MSGTYPE.INFO);
         }
-        if (config.includes != null) {
+        if (!config.includeList.isEmpty()) {
             config.logger().report("Including: " + config.includeList, Logger.MSGTYPE.INFO);
         }
-        if (config.excludes != null) {
+        if (!config.excludeList.isEmpty()) {
             config.logger().report("Excluding: " + config.excludeList, Logger.MSGTYPE.INFO);
+        }
+        if (!config.suppressList.isEmpty()) {
+            config.logger().report("Suppressing race on: " + config.suppressList, Logger.MSGTYPE.INFO);
         }
     }
 

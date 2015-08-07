@@ -448,10 +448,9 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         @Override
         public void run() {
             while (true) {
-                Iterator<Buffer> itr = activeBuffers.iterator();
-                while (itr.hasNext()) {
-                    Buffer b;
-                    if (!(b = itr.next()).owner.isAlive()) {
+                for (Iterator<Buffer> itr = activeBuffers.iterator(); itr.hasNext();) {
+                    Buffer b = itr.next();
+                    if (!b.owner.isAlive()) {
                         /* take care of unfinalized events */
                         b.finalizeRemainingEvents();
                         /* if there is no finalized events either then this

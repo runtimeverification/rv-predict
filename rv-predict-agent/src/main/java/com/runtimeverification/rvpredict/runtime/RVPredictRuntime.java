@@ -276,8 +276,8 @@ public final class RVPredictRuntime implements Constants {
      * Logs the {@code READ/WRITE} event produced by field access.
      *
      * @param object
-     *            the owner object of the field; {@code null} when accessing
-     *            static fields
+     *            the owner object of the field, which would be the class
+     *            literal when accessing static field
      * @param value
      *            the value written by the write access or the value read by the
      *            read access

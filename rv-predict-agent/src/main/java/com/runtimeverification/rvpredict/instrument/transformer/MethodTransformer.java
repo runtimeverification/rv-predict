@@ -109,7 +109,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private void onSyncMethodEnterOrExit(boolean isEnter) {
         if (isStatic) {
-            loadClassLiteral();
+            loadClassLiteral(className);
         } else {
             mv.loadThis();
         }
@@ -180,25 +180,25 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             /* read event should be logged after it happens */
             if (opcode == GETSTATIC) {
                 // <stack>... </stack>
-                mv.push((String) null);
-                // <stack>... null </stack>
+                loadClassLiteral(owner);
+                // <stack>... classltr </stack>
             } else {
                 // <stack>... objectref </stack>
                 mv.dup();
                 // <stack>... objectref objectref </stack>
             }
             mv.visitFieldInsn(opcode, owner, name, desc); // read happens
-            // <stack>... objectref value </stack>
+            // <stack>... (objectref|classltr) value </stack>
             if (valueType.getSize() == 1) {
                 mv.dupX1();
             } else {
                 mv.dup2X1();
             }
-            // <stack>... value objectref value </stack>
+            // <stack>... value (objectref|classltr) value </stack>
             calcLongValue(valueType);
-            // <stack>... value objectref longValue </stack>
+            // <stack>... value (objectref|classltr) longValue </stack>
             push(varId, 0, locId);
-            // <stack>... value objectref longValue varId false locId </stack>
+            // <stack>... value (objectref|classltr) longValue varId false locId </stack>
             invokeRtnMethod(LOG_FIELD_ACCESS);
             // <stack>... value </stack>
             break;
@@ -209,7 +209,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             // <stack>... (objectref)? value </stack>
             int value = storeNewLocal(valueType);
             if (opcode == PUTSTATIC) {
-                mv.push((String) null);
+                loadClassLiteral(owner);
             }
             int objectref = storeNewLocal(OBJECT_TYPE);
             // <stack>... </stack>
@@ -499,13 +499,13 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         }
     }
 
-    private void loadClassLiteral() {
+    private void loadClassLiteral(String cname) {
         /* before Java 5 the bytecode for loading class literal is quite cumbersome */
         if ((version & 0xFFFF) < Opcodes.V1_5) {
-            mv.visitLdcInsn(className.replace('/', '.'));
+            mv.visitLdcInsn(cname.replace('/', '.'));
             mv.invokeStatic(CLASS_TYPE, Method.getMethod("Class forName(String)"));
         } else {
-            mv.visitLdcInsn(Type.getObjectType(className));
+            mv.visitLdcInsn(Type.getObjectType(cname));
         }
     }
 

@@ -17,7 +17,7 @@ import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 class _rvpredict_condition_wrapper implements Condition {
 
     private static final int RVPREDICT_CONDITION_WRAPPER_LOC_ID = RVPredictRuntime.metadata
-            .getLocationId("java.util.concurrent.locks._rvpredict_condition_wrapper");
+            .getLocationId("java.util.concurrent.locks._rvpredict_condition_wrapper.dummy(_rvpredict_condition_wrapper:n/a)");
 
     private final AbstractOwnableSynchronizer sync;
 

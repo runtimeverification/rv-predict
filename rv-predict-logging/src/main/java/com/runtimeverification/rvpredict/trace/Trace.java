@@ -517,8 +517,7 @@ public class Trace {
         }
 
         /* debugging code: print out events in order */
-//        tidToEvents.values().stream().flatMap(List::stream).sorted().forEach(event -> logger()
-//                .debug((event + " at " + metadata().getLocationSig(event.getLocId()))));
+//        printEvents();
     }
 
     /**
@@ -604,6 +603,14 @@ public class Trace {
         }
 
         return blocks;
+    }
+
+    /**
+     * Useful for debugging.
+     */
+    public void printEvents() {
+        tidToEvents.values().stream().flatMap(List::stream).sorted().forEach(event -> logger()
+                .debug((event + " at " + metadata().getLocationSig(event.getLocId()))));
     }
 
 }

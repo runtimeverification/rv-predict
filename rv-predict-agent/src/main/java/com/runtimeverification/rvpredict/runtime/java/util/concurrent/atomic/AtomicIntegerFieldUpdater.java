@@ -441,8 +441,6 @@ public abstract class AtomicIntegerFieldUpdater<T> {
         }
 
         private void fullCheck(T obj) {
-            System.out.println(tclass + " vs. " + obj);
-
             if (!tclass.isInstance(obj))
                 throw new ClassCastException();
             if (cclass != null)

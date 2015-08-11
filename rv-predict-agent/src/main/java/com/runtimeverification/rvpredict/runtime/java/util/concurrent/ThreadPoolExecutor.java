@@ -1519,7 +1519,12 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
         try {
             for (;;) {
                 if (runStateAtLeast(ctl.get(), TERMINATED)) {
-                    _rvpredict_join_worker_threads();
+                    try {
+                        mainLock.unlock();
+                        _rvpredict_join_worker_threads();
+                    } finally {
+                        mainLock.lock();
+                    }
                     return true;
                 }
                 if (nanos <= 0)

@@ -260,7 +260,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             /* cast the result back to the original return type to pass bytecode
              * verification since an overriding method may specialize the return
              * type */
-            if ((version & 0xFFFF) >= Opcodes.V1_6) {
+            if ((version & 0xFFFF) >= Opcodes.V1_5) {
                 Type returnType = Type.getType((name + desc).substring(idx + 1));
                 if (!interceptor.method.getReturnType().equals(returnType)) {
                     mv.checkCast(returnType);

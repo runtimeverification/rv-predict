@@ -308,8 +308,6 @@ public class PriorityBlockingQueue<E> extends AbstractQueue<E>
 
     private void _rvpredict_add_elem_id(int elem_id) {
         // assert lock.isHeldByCurrentThread();
-        RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_PBQ_LOC_ID,
-                System.identityHashCode(this), elem_id, 0);
         RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_PBQ_LOC_ID,
                 System.identityHashCode(this), elem_id, 1);
     }
@@ -382,8 +380,8 @@ public class PriorityBlockingQueue<E> extends AbstractQueue<E>
             Object[] array = queue;
             E result = (E) array[0];
             E x = (E) array[n];
-            _rvpredict_remove_element(n);
             array[n] = null;
+            _rvpredict_remove_element(0);
             Comparator<? super E> cmp = comparator;
             if (cmp == null)
                 siftDownComparable(0, x, elem_id[n], array, elem_id, n);
@@ -706,12 +704,11 @@ public class PriorityBlockingQueue<E> extends AbstractQueue<E>
     private void removeAt(int i) {
         Object[] array = queue;
         int n = size - 1;
+        _rvpredict_remove_element(i);
         if (n == i) { // removed last element
-            _rvpredict_remove_element(i);
             array[i] = null;
         } else {
             E moved = (E) array[n];
-            _rvpredict_remove_element(n);
             array[n] = null;
             Comparator<? super E> cmp = comparator;
             if (cmp == null)

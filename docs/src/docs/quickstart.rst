@@ -47,7 +47,9 @@ Assuming ``<rvPath>`` is the installation directory for RV-Predict,
 running RV-Predict as an agent along with your Java application simply
 requires adding the ``-javaagent:<rvPath>/lib/rv-predict.jar`` option
 and the ``-Xbootclasspath/a:<rvPath>/lib/rv-predict.jar`` option to
-your Java command line.
+your Java command line. In addition, we strongly recommend you to
+also add the ``-XX:hashCode=1`` option; this significantly reduces
+the possibility of false positive due to identity hash code collision.
 Passing options to the agent can be done as standard for agents:
 using  ``-javaagent:<rvPath>/lib/rv-predict.jar="<rv_predict_options>"``,
 where ``<rv_predict_options>`` are RV-Predict options.
@@ -79,6 +81,7 @@ similar to the following:
           <configuration>
               <argLine>-javaagent:<rvPath>/lib/rv-predict.jar</argLine>
               <argLine>-Xbootclasspath/a:<rvPath>/lib/rv-predict.jar</argLine>
+              <argLine>-XX:hashCode=1</argLine>
           </configuration>
           </plugin>
       ...
@@ -90,13 +93,14 @@ used by the project (e.g., ``2.16``).
 
 Adding the ``-javaagent`` and ``-Xbootclasspath`` options are the only changes
 needed to an existing project and tests can still be run with ``mvn test``.
+Again, the ``-XX:hashCode=1`` option is optional but highly recommended.
 
 Integration with IDEs
 `````````````````````
 
 Generic instructions
-  the ``-javaagent`` and ``-Xbootclasspath`` options need to be added to the VM
-  options of your Run/Debug Configurations.
+  options ``-javaagent``, ``-Xbootclasspath`` and ``-XX:hashCode=1`` (optional)
+  need to be added to the VM options of your Run/Debug Configurations.
 Eclipse
   From the menu select **Run** -> **Run Configurations** ->
   (then you select the configuration that you are running) ->

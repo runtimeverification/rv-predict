@@ -387,7 +387,7 @@ public class Configuration implements Constants {
     final static String opt_version = "--version";
     @Parameter(names = opt_version, description = "Print product version and exit", descriptionKey = "9100")
     public static boolean display_version;
-    private static final String RV_PREDICT_VERSION = "1.4";
+    private static final String RV_PREDICT_VERSION = "1.5";
 
     final static String short_opt_help = "-h";
     final static String opt_help = "--help";

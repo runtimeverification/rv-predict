@@ -1,8 +1,8 @@
 package jtsan;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+
+
 
 public class ExecutorTests {
 
@@ -71,6 +71,19 @@ public class ExecutorTests {
         sharedVar++;
     }
 
+    public void scheduledThreadExecutor() {
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(2);
+        executor.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
+        executor.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
+        sharedVar++;
+        for (int i = 0; i < 5; i++) {
+            // test ScheduledThreadPoolExecutor$DelayWorkQueue
+            executor.scheduleWithFixedDelay(() -> { int x = sharedVar; }, 0, 100, TimeUnit.MILLISECONDS);
+        }
+        executor.shutdown();
+        awaitTermination(executor);
+    }
+
     public static void main(String[] args) {
         ExecutorTests tests = new ExecutorTests();
         // positive tests
@@ -82,6 +95,7 @@ public class ExecutorTests {
             // negative tests
             tests.executorThreadStartJoin();
             tests.singleThreadExecutor();
+            tests.scheduledThreadExecutor();
         }
     }
 }

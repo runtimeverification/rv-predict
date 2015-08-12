@@ -47,6 +47,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;      // RVPredict: use original AtomicLong
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+
+import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
+
 import java.util.*;
 
 /**
@@ -818,6 +822,9 @@ public class ScheduledThreadPoolExecutor
     static class DelayedWorkQueue extends AbstractQueue<Runnable>
         implements BlockingQueue<Runnable> {
 
+        private static final int DELAYED_WORK_QUEUE_LOC_ID = RVPredictRuntime.metadata
+                .getLocationId("java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue(ScheduledThreadPoolExecutor.java:n/a)");
+
         /*
          * A DelayedWorkQueue is based on a heap-based data structure
          * like those in DelayQueue and PriorityQueue, except that
@@ -844,6 +851,8 @@ public class ScheduledThreadPoolExecutor
         private static final int INITIAL_CAPACITY = 16;
         private RunnableScheduledFuture<?>[] queue =
             new RunnableScheduledFuture<?>[INITIAL_CAPACITY];
+        private int[] elem_id = new int[INITIAL_CAPACITY];
+        private int elem_id_counter = 0;
         private final ReentrantLock lock = new ReentrantLock();
         private int size = 0;
 
@@ -871,29 +880,59 @@ public class ScheduledThreadPoolExecutor
          */
         private final Condition available = lock.newCondition();
 
+        // RV-Predict logging methods
+
+        private int new_elem_id() {
+            // assert lock.isHeldByCurrentThread();
+            return ++elem_id_counter;
+        }
+
+        private void _rvpredict_add_elem_id(int elem_id) {
+            // assert lock.isHeldByCurrentThread();
+            RVPredictRuntime.saveMemAccEvent(EventType.WRITE, DELAYED_WORK_QUEUE_LOC_ID,
+                    System.identityHashCode(this), elem_id, 1);
+        }
+
+//        private void _rvpredict_access_element(int idx) {
+//            // assert lock.isHeldByCurrentThread();
+//            RVPredictRuntime.saveMemAccEvent(EventType.READ, DELAYED_WORK_QUEUE_LOC_ID,
+//                    System.identityHashCode(this), elem_id[idx], 1);
+//        }
+
+        private void _rvpredict_remove_element(int idx) {
+            // assert lock.isHeldByCurrentThread();
+            RVPredictRuntime.saveMemAccEvent(EventType.READ, DELAYED_WORK_QUEUE_LOC_ID,
+                    System.identityHashCode(this), elem_id[idx], 1);
+            RVPredictRuntime.saveMemAccEvent(EventType.WRITE, DELAYED_WORK_QUEUE_LOC_ID,
+                    System.identityHashCode(this), elem_id[idx], 0);
+        }
+
         /**
          * Sets f's heapIndex if it is a ScheduledFutureTask.
          */
         private void setIndex(RunnableScheduledFuture<?> f, int idx) {
             if (f instanceof ScheduledFutureTask)
-                ((ScheduledFutureTask)f).heapIndex = idx;
+                ((ScheduledFutureTask<?>)f).heapIndex = idx;
         }
 
         /**
          * Sifts element added at bottom up to its heap-ordered spot.
          * Call only when holding lock.
          */
-        private void siftUp(int k, RunnableScheduledFuture<?> key) {
+        private void siftUp(int k, RunnableScheduledFuture<?> key, int key_id) {
             while (k > 0) {
                 int parent = (k - 1) >>> 1;
                 RunnableScheduledFuture<?> e = queue[parent];
+                int eid = elem_id[parent];
                 if (key.compareTo(e) >= 0)
                     break;
                 queue[k] = e;
+                elem_id[k] = eid;
                 setIndex(e, k);
                 k = parent;
             }
             queue[k] = key;
+            elem_id[k] = key_id;
             setIndex(key, k);
         }
 
@@ -901,21 +940,26 @@ public class ScheduledThreadPoolExecutor
          * Sifts element added at top down to its heap-ordered spot.
          * Call only when holding lock.
          */
-        private void siftDown(int k, RunnableScheduledFuture<?> key) {
+        private void siftDown(int k, RunnableScheduledFuture<?> key, int key_id) {
             int half = size >>> 1;
             while (k < half) {
                 int child = (k << 1) + 1;
                 RunnableScheduledFuture<?> c = queue[child];
+                int cid = elem_id[child];
                 int right = child + 1;
-                if (right < size && c.compareTo(queue[right]) > 0)
+                if (right < size && c.compareTo(queue[right]) > 0) {
+                    cid = elem_id[child];
                     c = queue[child = right];
+                }
                 if (key.compareTo(c) <= 0)
                     break;
                 queue[k] = c;
+                elem_id[k] = cid;
                 setIndex(c, k);
                 k = child;
             }
             queue[k] = key;
+            elem_id[k] = key_id;
             setIndex(key, k);
         }
 
@@ -928,6 +972,7 @@ public class ScheduledThreadPoolExecutor
             if (newCapacity < 0) // overflow
                 newCapacity = Integer.MAX_VALUE;
             queue = Arrays.copyOf(queue, newCapacity);
+            elem_id = Arrays.copyOf(elem_id, newCapacity);
         }
 
         /**
@@ -936,7 +981,7 @@ public class ScheduledThreadPoolExecutor
         private int indexOf(Object x) {
             if (x != null) {
                 if (x instanceof ScheduledFutureTask) {
-                    int i = ((ScheduledFutureTask) x).heapIndex;
+                    int i = ((ScheduledFutureTask<?>) x).heapIndex;
                     // Sanity check; x could conceivably be a
                     // ScheduledFutureTask from some other pool.
                     if (i >= 0 && i < size && queue[i] == x)
@@ -967,15 +1012,17 @@ public class ScheduledThreadPoolExecutor
                 int i = indexOf(x);
                 if (i < 0)
                     return false;
+                _rvpredict_remove_element(i); // remove i-th element; not s-th!
 
                 setIndex(queue[i], -1);
                 int s = --size;
                 RunnableScheduledFuture<?> replacement = queue[s];
+                int rid = elem_id[s];
                 queue[s] = null;
                 if (s != i) {
-                    siftDown(i, replacement);
+                    siftDown(i, replacement, rid);
                     if (queue[i] == replacement)
-                        siftUp(i, replacement);
+                        siftUp(i, replacement, rid);
                 }
                 return true;
             } finally {
@@ -1017,16 +1064,19 @@ public class ScheduledThreadPoolExecutor
             RunnableScheduledFuture<?> e = (RunnableScheduledFuture<?>)x;
             final ReentrantLock lock = this.lock;
             lock.lock();
+            int eid = new_elem_id();
             try {
                 int i = size;
                 if (i >= queue.length)
                     grow();
+                _rvpredict_add_elem_id(eid);
                 size = i + 1;
                 if (i == 0) {
                     queue[0] = e;
+                    elem_id[0] = eid;
                     setIndex(e, 0);
                 } else {
-                    siftUp(i, e);
+                    siftUp(i, e, eid);
                 }
                 if (queue[0] == e) {
                     leader = null;
@@ -1059,9 +1109,11 @@ public class ScheduledThreadPoolExecutor
         private RunnableScheduledFuture<?> finishPoll(RunnableScheduledFuture<?> f) {
             int s = --size;
             RunnableScheduledFuture<?> x = queue[s];
+            int xid = elem_id[s];
             queue[s] = null;
+            _rvpredict_remove_element(0); // remove the first element; not the s-th!
             if (s != 0)
-                siftDown(0, x);
+                siftDown(0, x, xid);
             setIndex(f, -1);
             return f;
         }
@@ -1163,6 +1215,7 @@ public class ScheduledThreadPoolExecutor
                 for (int i = 0; i < size; i++) {
                     RunnableScheduledFuture<?> t = queue[i];
                     if (t != null) {
+                        _rvpredict_remove_element(i);
                         queue[i] = null;
                         setIndex(t, -1);
                     }

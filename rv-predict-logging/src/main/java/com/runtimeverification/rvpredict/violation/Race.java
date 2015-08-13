@@ -31,7 +31,6 @@ package com.runtimeverification.rvpredict.violation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import com.google.common.base.StandardSystemProperty;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
@@ -49,6 +48,9 @@ import com.runtimeverification.rvpredict.util.Constants;
  * @author YilongL
  */
 public class Race {
+
+    private static final String RVPREDICT_RT_PKG_PREFIX = Constants.RVPREDICT_RUNTIME_PKG_PREFIX
+            .replace('/', '.');
 
     private final Event e1;
     private final Event e2;
@@ -121,7 +123,7 @@ public class Race {
         }
 
         sb.append(String.format("}}}%n"));
-        return sb.toString();
+        return sb.toString().replace(RVPREDICT_RT_PKG_PREFIX, "");
     }
 
     private void generateMemAccReport(Event e, StringBuilder sb) {

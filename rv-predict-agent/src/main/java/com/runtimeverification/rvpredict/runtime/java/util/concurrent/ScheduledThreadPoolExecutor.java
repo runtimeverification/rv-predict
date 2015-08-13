@@ -948,8 +948,8 @@ public class ScheduledThreadPoolExecutor
                 int cid = elem_id[child];
                 int right = child + 1;
                 if (right < size && c.compareTo(queue[right]) > 0) {
-                    cid = elem_id[child];
                     c = queue[child = right];
+                    cid = elem_id[child];
                 }
                 if (key.compareTo(c) <= 0)
                     break;

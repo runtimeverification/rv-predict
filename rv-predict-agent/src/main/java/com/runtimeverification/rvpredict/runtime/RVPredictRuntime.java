@@ -46,6 +46,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -1066,10 +1067,6 @@ public final class RVPredictRuntime implements Constants {
         boolean isThreadSafe = true;
         if (collection instanceof Vector || collection instanceof Hashtable) {
             mutex = collection;
-        } else if (collection instanceof BlockingQueue
-                || collection instanceof ConcurrentMap
-                || cname.contains("Concurrent")) {
-            mutex = state;
         } else if (cname.startsWith("java.util.Collections$Synchronized")) {
             try {
                 mutex = collection instanceof Collection
@@ -1078,6 +1075,11 @@ public final class RVPredictRuntime implements Constants {
             } catch (Throwable e) {
                 throw new RuntimeException(e);
             }
+        } else if (collection instanceof BlockingQueue
+                || collection instanceof ConcurrentMap
+                || Pattern.compile("Concurrent|Synchronized|CopyOnWrite|LockFree").matcher(cname)
+                        .find()) {
+            mutex = state;
         } else {
             /* unknown collection; assume non-thread-safe */
             mutex = state;

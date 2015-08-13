@@ -136,14 +136,14 @@ public class Race {
                 getHeldLocksReport(heldLocks)));
         boolean isTopmostStack = true;
         List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
-        heldLocks.stream().filter(Event::isLockTypeMonitor).forEach(stacktrace::add);
+        heldLocks.forEach(stacktrace::add);
         Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
         for (Event elem : stacktrace) {
             String locSig = elem.getLocId() != -1 ? metadata.getLocationSig(elem.getLocId())
                     : "... not available ...";
             if (elem.isLock()) {
-                sb.append(String.format("        - locked Monitor@%s at %s %n",
-                        lockIdToHexString(elem.getLockId()), locSig));
+                sb.append(String.format("        - locked %s at %s %n", getLockRepresentation(elem),
+                        locSig));
             } else {
                 sb.append(String.format(" %s  at %s%n", isTopmostStack ? "---->" : "     ", locSig));
                 isTopmostStack = false;
@@ -163,19 +163,6 @@ public class Race {
                 sb.append(String.format("    T%s is created by n/a%n", tid));
             }
         }
-
-        heldLocks.removeIf(Event::isLockTypeMonitor);
-        if (!heldLocks.isEmpty()) {
-            sb.append(String.format("    Locks acquired by this thread (reporting in chronological order):%n"));
-            for (Event lock : heldLocks) {
-                sb.append(String.format("      %s%n", getLockRepresentation(lock)));
-                for (Event elem : trace.getStacktraceAt(lock)) {
-                    String locSig = elem.getLocId() != -1 ? metadata.getLocationSig(elem.getLocId())
-                            : "... not available ...";
-                    sb.append(String.format("        at %s%n", locSig));
-                }
-            }
-        }
     }
 
     private String getHeldLocksReport(List<Event> heldLocks) {
@@ -191,14 +178,10 @@ public class Race {
         return sb.toString();
     }
 
-    private String lockIdToHexString(long lockId) {
-        return Integer.toHexString((int) lockId);
-    }
-
     private String getLockRepresentation(Event lock) {
         long lockId = lock.getLockId();
         int upper32 = (int)(lockId >> 32);
-        String lower32 = lockIdToHexString(lockId);
+        String lower32 = Integer.toHexString((int) lockId);
         if (lock.getType() == EventType.READ_LOCK) {
             assert upper32 == 0;
             return "ReadLock@" + lower32;

@@ -76,12 +76,29 @@ public class ExecutorTests {
         executor.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
         executor.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
         sharedVar++;
-        for (int i = 0; i < 5; i++) {
-            // test ScheduledThreadPoolExecutor$DelayWorkQueue
-            executor.scheduleWithFixedDelay(() -> { int x = sharedVar; }, 0, 100, TimeUnit.MILLISECONDS);
+        for (int i = 0; i < 10; i++) {
+            // test HB edge imposed by ScheduledThreadPoolExecutor$DelayWorkQueue
+            executor.scheduleWithFixedDelay(new Runnable() {
+
+                int x = sharedVar;
+
+                @Override
+                public void run() {
+                    x++;
+                }
+            }, 0, 10, TimeUnit.MILLISECONDS);
         }
+        longSleep();
         executor.shutdown();
         awaitTermination(executor);
+    }
+
+    private static void longSleep() {
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            throw new RuntimeException("InterruptedException while long sleep", e);
+        }
     }
 
     public static void main(String[] args) {

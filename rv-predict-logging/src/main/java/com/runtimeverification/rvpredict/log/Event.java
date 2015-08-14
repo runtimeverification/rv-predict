@@ -1,7 +1,5 @@
 package com.runtimeverification.rvpredict.log;
 
-import com.runtimeverification.rvpredict.util.Constants;
-
 /**
  * Class for representing an event as it is recorded in the log
  * @author TraianSF
@@ -181,10 +179,6 @@ public class Event implements Comparable<Event> {
 
     public boolean isWaitRel() {
         return TYPE == EventType.WAIT_REL;
-    }
-
-    public boolean isLockTypeMonitor() {
-        return (int) (getLockId() >> 32) == Constants.MONITOR_C;
     }
 
     public boolean isSyncEvent() {

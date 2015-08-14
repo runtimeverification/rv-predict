@@ -331,7 +331,22 @@ public class Trace {
     }
 
     private void processEvents() {
-        boolean isSingleThreaded = rawTraces.size() < 2;
+        if (rawTraces.size() == 1) {
+            /* fast-path for the single-threading case: the only task is to
+             * update the global trace state accordingly */
+            RawTrace rawTrace = rawTraces.iterator().next();
+            for (int i = 0; i < rawTrace.size(); i++) {
+                Event event = rawTrace.event(i);
+                if (event.isLock() && !event.isWaitAcq()) {
+                    state.acquireLock(event);
+                } else if (event.isUnlock() && !event.isWaitRel()) {
+                    state.releaseLock(event);
+                } else if (event.isMetaEvent()) {
+                    state.onMetaEvent(event);
+                }
+            }
+            return;
+        }
 
         /// PHASE 1
         Set<Event> outermostLockEvents = new HashSet<>();
@@ -348,10 +363,8 @@ public class Trace {
 
                 if (event.isReadOrWrite()) {
                     /* update memory address state */
-                    if (!isSingleThreaded) {
-                        MemoryAddrState st = addrToState.computeIfAbsent(event.getAddr());
-                        st.touch(event);
-                    }
+                    MemoryAddrState st = addrToState.computeIfAbsent(event.getAddr());
+                    st.touch(event);
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
                         if (event.isWaitAcq()) {

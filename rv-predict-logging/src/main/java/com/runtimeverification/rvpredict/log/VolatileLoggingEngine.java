@@ -28,17 +28,13 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.log;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.LockSupport;
-import java.util.stream.Collectors;
-
-import com.google.common.collect.MapMaker;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.RaceDetector;
 import com.runtimeverification.rvpredict.metadata.Metadata;
@@ -74,8 +70,14 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
     /**
      * Buffers that are alive so far.
+     * <p>
+     * There is not much thread contention on this data structure. Prefer using
+     * synchronized implementation over concurrent one.
+     * <p>
+     * <b>Note:</b> in order to avoid deadlock, never perform complex operation
+     * when holding the lock; always create a copy first
      */
-    private final Set<Buffer> activeBuffers = Collections.newSetFromMap(new MapMaker().makeMap());
+    private final List<Buffer> activeBuffers = Collections.synchronizedList(new ArrayList<>(256));
 
     private final ThreadLocal<Buffer> threadLocalBuffer = new ThreadLocal<Buffer>() {
         @Override
@@ -102,8 +104,11 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
     @Override
     public void finishLogging() {
         /* last effort to flush the remaining events */
-        activeBuffers.stream().filter(b -> !b.owner.isAlive())
-                .forEach(Buffer::finalizeRemainingEvents);
+        for (Buffer b : activeBuffers.toArray(new Buffer[0])) {
+            if (!b.owner.isAlive()) {
+                b.finalizeRemainingEvents();
+            }
+        }
 
         closed = true;
         int n = globalEventID.getAndAdd(windowSize); // block the GID counter for good
@@ -174,9 +179,12 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
 
         try {
-            List<RawTrace> rawTraces = activeBuffers.stream().filter(b -> !b.isEmpty())
-                    .map(b -> new RawTrace(b.start, b.cursor, b.events))
-                    .collect(Collectors.toList());
+            List<RawTrace> rawTraces = new ArrayList<>();
+            activeBuffers.forEach(b -> {
+               if (!b.isEmpty()) {
+                   rawTraces.add(new RawTrace(b.start, b.cursor, b.events));
+               }
+            });
             detector.run(crntState.initNextTraceWindow(rawTraces));
         } catch (Throwable e) {
             config.logger().debug(e);
@@ -316,9 +324,11 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             switch (eventType) {
             case JOIN:
                 /* flush the delayed events in the joined thread before logging JOIN */
-                activeBuffers.stream()
-                        .filter(b -> b.tid == ((long) addr1 << 32 | addr2 & 0xFFFFFFFFL))
-                        .forEach(Buffer::finalizeRemainingEvents);
+                for (Buffer b : activeBuffers.toArray(new Buffer[0])) {
+                    if (b.tid == ((long) addr1 << 32 | addr2 & 0xFFFFFFFFL)) {
+                        b.finalizeRemainingEvents();
+                    }
+                }
             case READ:
             case WRITE_LOCK:
             case READ_LOCK:
@@ -448,19 +458,18 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         @Override
         public void run() {
             while (true) {
-                for (Iterator<Buffer> itr = activeBuffers.iterator(); itr.hasNext();) {
-                    Buffer b = itr.next();
+                for (Buffer b : activeBuffers.toArray(new Buffer[0])) {
                     if (!b.owner.isAlive()) {
                         /* take care of unfinalized events */
                         b.finalizeRemainingEvents();
                         /* if there is no finalized events either then this
                          * buffer has no use */
                         if (b.isEmpty()) {
-                            itr.remove();
+                            activeBuffers.remove(b);
                         }
                     }
                 }
-                LockSupport.parkNanos(100000000L); // sleep 100 ms
+                LockSupport.parkNanos(10000000000L); // sleep 10000 ms
             }
         }
     }

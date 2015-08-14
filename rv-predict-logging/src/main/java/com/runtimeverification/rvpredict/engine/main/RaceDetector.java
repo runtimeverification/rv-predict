@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -35,7 +34,8 @@ public class RaceDetector implements Constants {
     private boolean isThreadSafeLocation(Trace trace, int locId) {
         String locationSig = trace.metadata().getLocationSig(locId);
         return locationSig.startsWith("java.util.concurrent")
-            || locationSig.startsWith("java.util.stream");
+            || locationSig.startsWith("java.util.stream")
+            || locationSig.substring(locationSig.lastIndexOf('.')).startsWith(".class$");
     }
 
     private Map<String, List<Race>> computeUnknownRaceSuspects(Trace trace) {

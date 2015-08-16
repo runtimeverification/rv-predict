@@ -108,7 +108,10 @@ public class Configuration implements Constants {
     public final static String[] MOCKS = new String[] {
         "java/util/Collection",
         "java/util/Map",
-        "java/util/Iterator"
+        "java/util/Iterator",
+        // we don't want to instrument any ClassLoader or SecurityManager: issue#512
+        "java/lang/ClassLoader",
+        "java/lang/SecurityManager"
     };
 
     public final static Set<String> MUST_REPLACE = new HashSet<>(Arrays.asList(

@@ -270,12 +270,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             if (owner.startsWith("[") || isSelfCtorCall || !strategy.logCallStackEvent()) {
                 mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 return;
-            } else {
-                ClassFile classFile = ClassFile.getInstance(loader, owner);
-                if (classFile == null) {
-                    logger.debug("[Warning] unable to locate the class file of " + owner
-                            + " while transforming " + className + "." + methodName);
-                }
             }
 
             /* Wrap the method call instruction into a try-finally block with logging code.

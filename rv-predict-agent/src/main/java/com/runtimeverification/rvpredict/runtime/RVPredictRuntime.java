@@ -697,6 +697,15 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
+     * {@link Collection#size()}
+     */
+    public static int rvPredictCollectionSize(Collection collection, int locId) {
+        return logCollectionReadAccess(collection, locId, () -> {
+            return collection.size();
+        });
+    }
+
+    /**
      * {@link Collection#add(Object)}
      */
     public static boolean rvPredictCollectionAdd(Collection collection, Object e, int locId) {

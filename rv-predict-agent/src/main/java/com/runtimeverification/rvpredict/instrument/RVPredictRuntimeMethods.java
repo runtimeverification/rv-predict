@@ -123,6 +123,8 @@ public class RVPredictRuntimeMethods {
             register(INTERFACE, JU_LISTITERATOR, "set", "rvPredictListIteratorSet", O);
 
     // java.util.Collection methods
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_SIZE    =
+            register(INTERFACE, JU_COLLECTION, "size", "rvPredictCollectionSize");
     public static final RVPredictInterceptor RVPREDICT_COLLECTION_ADD     =
             register(INTERFACE, JU_COLLECTION, "add", "rvPredictCollectionAdd", O);
     public static final RVPredictInterceptor RVPREDICT_COLLECTION_ADD_ALL =

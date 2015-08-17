@@ -706,6 +706,15 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
+     * {@link Collection#isEmpty()}
+     */
+    public static boolean rvPredictCollectionIsEmpty(Collection collection, int locId) {
+        return logCollectionReadAccess(collection, locId, () -> {
+            return collection.isEmpty();
+        });
+    }
+
+    /**
      * {@link Collection#add(Object)}
      */
     public static boolean rvPredictCollectionAdd(Collection collection, Object e, int locId) {

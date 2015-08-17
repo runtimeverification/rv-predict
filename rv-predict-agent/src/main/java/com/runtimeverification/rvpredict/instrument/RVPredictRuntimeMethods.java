@@ -125,6 +125,8 @@ public class RVPredictRuntimeMethods {
     // java.util.Collection methods
     public static final RVPredictInterceptor RVPREDICT_COLLECTION_SIZE    =
             register(INTERFACE, JU_COLLECTION, "size", "rvPredictCollectionSize");
+    public static final RVPredictInterceptor RVPREDICT_COLLECTION_ISEMPTY =
+            register(INTERFACE, JU_COLLECTION, "isEmpty", "rvPredictCollectionIsEmpty");
     public static final RVPredictInterceptor RVPREDICT_COLLECTION_ADD     =
             register(INTERFACE, JU_COLLECTION, "add", "rvPredictCollectionAdd", O);
     public static final RVPredictInterceptor RVPREDICT_COLLECTION_ADD_ALL =

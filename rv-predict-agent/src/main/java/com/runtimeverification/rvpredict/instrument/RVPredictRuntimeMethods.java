@@ -109,8 +109,18 @@ public class RVPredictRuntimeMethods {
     // java.util.List
     public static final RVPredictInterceptor RVPREDICT_LIST_LISTITERATOR  =
             register(INTERFACE, JU_LIST, "listIterator", "rvPredictListGetListIterator");
-    public static final RVPredictInterceptor RVPREDICT_LIST_LISTITERATOR_IDX  =
+    public static final RVPredictInterceptor RVPREDICT_LIST_LISTITERATOR_IDX =
             register(INTERFACE, JU_LIST, "listIterator", "rvPredictListGetListIterator", I);
+    public static final RVPredictInterceptor RVPREDICT_LIST_GET           =
+            register(INTERFACE, JU_LIST, "get", "rvPredictListGet", I);
+    public static final RVPredictInterceptor RVPREDICT_LIST_SET           =
+            register(INTERFACE, JU_LIST, "set", "rvPredictListSet", I, O);
+    public static final RVPredictInterceptor RVPREDICT_LIST_ADD           =
+            register(INTERFACE, JU_LIST, "add", "rvPredictListAdd", I, O);
+    public static final RVPredictInterceptor RVPREDICT_LIST_REMOVE        =
+            register(INTERFACE, JU_LIST, "remove", "rvPredictListRemove", I);
+    public static final RVPredictInterceptor RVPREDICT_LIST_INDEX_OF      =
+            register(INTERFACE, JU_LIST, "indexOf", "rvPredictListIndexOf", O);
 
     // java.util.ListIterator methods
     public static final RVPredictInterceptor RVPREDICT_LISTITERATOR_HAS_PREVIOUS  =

@@ -393,6 +393,38 @@ public class JUCollectionTests {
         };
     }
 
+    @RaceTest(expectRace = false,
+            description = "test List-specific add/remove methods")
+    public void syncListAddAndRemove() {
+        new ThreadRunner(2) {
+            List<Integer> l;
+
+            @Override
+            public void setUp() {
+                l = Collections.synchronizedList(new ArrayList<>());
+            }
+
+            @Override
+            public void thread1() {
+                sharedVar = 0;
+                l.add(0, 0);
+            }
+
+            @Override
+            public void thread2() {
+                while (true) {
+                    try {
+                        l.remove(0);
+                        sharedVar++;
+                        break;
+                    } catch (IndexOutOfBoundsException e) {
+                        // ignore
+                    }
+                }
+            }
+        };
+    }
+
     public static void main(String[] args) {
         JUCollectionTests tests = new JUCollectionTests();
         // positive tests
@@ -414,6 +446,7 @@ public class JUCollectionTests {
             tests.readOnlyIteration();
             tests.synchronizedCollections();
             tests.syncMapIterateCollectionView();
+            tests.syncListAddAndRemove();
         }
     }
 }

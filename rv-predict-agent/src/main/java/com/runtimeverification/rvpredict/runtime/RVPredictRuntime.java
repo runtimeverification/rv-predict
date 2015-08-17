@@ -806,6 +806,52 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
+     * {@link List#get(int)}
+     */
+    public static Object rvPredictListGet(List list, int index, int locId) {
+        return logCollectionReadAccess(list, locId, () -> {
+            return list.get(index);
+        });
+    }
+
+    /**
+     * {@link List#set(int, Object)}
+     */
+    public static Object rvPredictListSet(List list, int index, Object e, int locId) {
+        return logCollectionWriteAccess(list, locId, () -> {
+            return list.set(index, e);
+        });
+    }
+
+    /**
+     * {@link List#add(int, Object)}
+     */
+    public static void rvPredictListAdd(List list, int index, Object e, int locId) {
+        logCollectionWriteAccess(list, locId, () -> {
+            list.add(index, e);
+            return null;
+        });
+    }
+
+    /**
+     * {@link List#remove(int)}
+     */
+    public static Object rvPredictListRemove(List list, int index, int locId) {
+        return logCollectionWriteAccess(list, locId, () -> {
+            return list.remove(index);
+        });
+    }
+
+    /**
+     * {@link List#indexOf(Object)}
+     */
+    public static int rvPredictListIndexOf(List list, Object e, int locId) {
+        return logCollectionReadAccess(list, locId, () -> {
+            return list.indexOf(e);
+        });
+    }
+
+    /**
      * {@link Map#compute(Object, BiFunction)}
      */
     public static Object rvPredictMapCompute(Map map, Object key, BiFunction remappingFunction,

@@ -186,9 +186,9 @@ public class Agent implements ClassFileTransformer, Constants {
             return null;
         } catch (Throwable e) {
             /* exceptions during class loading are silently suppressed by default */
-            config.logger().debug("Cannot retransform " + cname + ". Exception: " + e);
+            config.logger().debug("Cannot retransform " + cname);
+            config.logger().debug(e);
             if (Configuration.debug) {
-                config.logger().debug(e);
                 // fail-fast strategy under debug mode
                 System.exit(1);
             }

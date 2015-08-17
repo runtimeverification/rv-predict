@@ -159,4 +159,26 @@ public class TraceState {
         return new ThreadState(stacktrace, lockStates);
     }
 
+    /**
+     * Fast-path implementation for event processing that is specialized for the
+     * single-threading case.
+     * <p>
+     * No need to create the {@link Trace} object because there can't be races.
+     * The only task is to update this global trace state.
+     *
+     * @param rawTrace
+     */
+    public void fastProcess(RawTrace rawTrace) {
+        for (int i = 0; i < rawTrace.size(); i++) {
+            Event event = rawTrace.event(i);
+            if (event.isLock() && !event.isWaitAcq()) {
+                acquireLock(event);
+            } else if (event.isUnlock() && !event.isWaitRel()) {
+                releaseLock(event);
+            } else if (event.isMetaEvent()) {
+                onMetaEvent(event);
+            }
+        }
+    }
+
 }

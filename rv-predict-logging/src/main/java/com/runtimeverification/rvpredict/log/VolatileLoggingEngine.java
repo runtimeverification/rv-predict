@@ -180,12 +180,16 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
         try {
             List<RawTrace> rawTraces = new ArrayList<>();
-            activeBuffers.forEach(b -> {
-               if (!b.isEmpty()) {
-                   rawTraces.add(new RawTrace(b.start, b.cursor, b.events));
-               }
-            });
-            detector.run(crntState.initNextTraceWindow(rawTraces));
+            for (Buffer b : activeBuffers) {
+                if (!b.isEmpty()) {
+                    rawTraces.add(new RawTrace(b.start, b.cursor, b.events));
+                }
+            }
+            if (rawTraces.size() == 1) {
+                crntState.fastProcess(rawTraces.iterator().next());
+            } else {
+                detector.run(crntState.initNextTraceWindow(rawTraces));
+            }
         } catch (Throwable e) {
             config.logger().debug(e);
             /* cannot use System.exit because it may lead to deadlock */

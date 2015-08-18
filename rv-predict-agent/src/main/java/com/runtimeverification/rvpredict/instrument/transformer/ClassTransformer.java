@@ -24,10 +24,10 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
 
     private int version;
 
-    public static byte[] transform(ClassLoader loader, byte[] cbuf, Configuration config,
+    public static byte[] transform(ClassLoader loader, String cname, byte[] cbuf, Configuration config,
             TransformStrategy strategy) {
         ClassReader cr = new ClassReader(cbuf);
-        ClassWriter cw = new ClassWriter(cr, loader);
+        ClassWriter cw = new ClassWriter(cr, loader, cname, config.logger());
         ClassTransformer transformer = new ClassTransformer(cw, loader, config, strategy);
         cr.accept(transformer, ClassReader.EXPAND_FRAMES);
 

@@ -332,19 +332,7 @@ public class Trace {
 
     private void processEvents() {
         if (rawTraces.size() == 1) {
-            /* fast-path for the single-threading case: the only task is to
-             * update the global trace state accordingly */
-            RawTrace rawTrace = rawTraces.iterator().next();
-            for (int i = 0; i < rawTrace.size(); i++) {
-                Event event = rawTrace.event(i);
-                if (event.isLock() && !event.isWaitAcq()) {
-                    state.acquireLock(event);
-                } else if (event.isUnlock() && !event.isWaitRel()) {
-                    state.releaseLock(event);
-                } else if (event.isMetaEvent()) {
-                    state.onMetaEvent(event);
-                }
-            }
+            state.fastProcess(rawTraces.iterator().next());
             return;
         }
 

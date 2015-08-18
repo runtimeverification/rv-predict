@@ -165,7 +165,7 @@ public class Agent implements ClassFileTransformer, Constants {
             checkUninterceptedClassLoading(cname, c);
 
             if (cname.equals("java/lang/Thread")) {
-                return ClassTransformer.transform(loader, cbuf, config,
+                return ClassTransformer.transform(loader, cname, cbuf, config,
                         TransformStrategy.THREAD);
             } else if (cname.startsWith("java/util/concurrent/ForkJoinPool")
                     || cname.startsWith("java/util/concurrent/ForkJoinTask")
@@ -178,7 +178,7 @@ public class Agent implements ClassFileTransformer, Constants {
                     || cname.startsWith(RVPREDICT_RUNTIME_PKG_PREFIX)) {
                 ClassFile classFile = ClassFile.getInstance(loader, cname, cbuf);
                 if (InstrumentUtils.needToInstrument(classFile)) {
-                    byte[] transformed = ClassTransformer.transform(loader, cbuf, config,
+                    byte[] transformed = ClassTransformer.transform(loader, cname, cbuf, config,
                             TransformStrategy.FULL);
                     return transformed;
                 }
@@ -186,9 +186,9 @@ public class Agent implements ClassFileTransformer, Constants {
             return null;
         } catch (Throwable e) {
             /* exceptions during class loading are silently suppressed by default */
-            config.logger().debug("Cannot retransform " + cname + ". Exception: " + e);
+            config.logger().debug("Cannot retransform " + cname);
+            config.logger().debug(e);
             if (Configuration.debug) {
-                config.logger().debug(e);
                 // fail-fast strategy under debug mode
                 System.exit(1);
             }

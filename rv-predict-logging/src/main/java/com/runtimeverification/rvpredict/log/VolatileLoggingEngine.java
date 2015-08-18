@@ -180,11 +180,11 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
         try {
             List<RawTrace> rawTraces = new ArrayList<>();
-            for (Buffer b : activeBuffers) {
+            activeBuffers.forEach(b -> {
                 if (!b.isEmpty()) {
                     rawTraces.add(new RawTrace(b.start, b.cursor, b.events));
                 }
-            }
+            });
             if (rawTraces.size() == 1) {
                 crntState.fastProcess(rawTraces.iterator().next());
             } else {

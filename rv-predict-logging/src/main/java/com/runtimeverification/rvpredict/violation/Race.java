@@ -93,7 +93,7 @@ public class Race {
 
     @Override
     public String toString() {
-        int addr = e1.getFieldIdOrArrayIndex();
+        int addr = Math.min(0, e1.getFieldIdOrArrayIndex()); // collapse all array indices to 0
         int loc1 = Math.min(e1.getLocId(), e2.getLocId());
         int loc2 = Math.max(e1.getLocId(), e2.getLocId());
         return "Race(" + addr + "," + loc1 + "," + loc2 + ")";

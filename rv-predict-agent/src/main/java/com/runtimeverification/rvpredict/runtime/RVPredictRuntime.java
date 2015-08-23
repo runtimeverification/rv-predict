@@ -1248,7 +1248,7 @@ public final class RVPredictRuntime implements Constants {
         Object backingColl = getBackingCollection(collection);
         MutableInt state = getCollectionState(backingColl);
 
-        Object mutex = null;
+        Object mutex;
         boolean isThreadSafe = true;
         if (collection instanceof Vector || collection instanceof Hashtable) {
             mutex = collection;
@@ -1264,31 +1264,63 @@ public final class RVPredictRuntime implements Constants {
                 || collection instanceof ConcurrentMap
                 || Pattern.compile("Concurrent|Synchronized|CopyOnWrite|LockFree").matcher(cname)
                         .find()) {
-            mutex = state;
+            mutex = null;
         } else {
             /* unknown collection; assume non-thread-safe */
-            mutex = state;
+            mutex = null;
             isThreadSafe = false;
         }
 
         int addrl = System.identityHashCode(backingColl);
         int addrr = -metadata.getVariableId(backingColl.getClass().getName(), MOCK_STATE_FIELD);
-        synchronized (mutex) {
-            int value = state.intValue();
-            if (isThreadSafe) {
-                saveLockEvent(EventType.WRITE_LOCK, locId, MONITOR_C, mutex);
+        if (mutex != null) {
+            synchronized (mutex) {
+                int value = state.intValue();
+                if (isThreadSafe) {
+                    saveLockEvent(EventType.WRITE_LOCK, locId, MONITOR_C, mutex);
+                }
+                if (isWrite) {
+                    state.increment();
+                    saveMemAccEvent(EventType.READ, locId, addrl, addrr, value);
+                    saveMemAccEvent(EventType.WRITE, locId, addrl, addrr, value + 1);
+                } else {
+                    saveMemAccEvent(EventType.READ, locId, addrl, addrr, value);
+                }
+                if (isThreadSafe) {
+                    saveLockEvent(EventType.WRITE_UNLOCK, locId, MONITOR_C, mutex);
+                }
+                return closure.get();
             }
+        } else {
+            /* `mutex` is null, synchronize on `state` instead: closure.get()
+             * may involve locking, so it must be done outside the sync block
+             * to avoid deadlock (issue#528) */
             if (isWrite) {
-                state.increment();
-                saveMemAccEvent(EventType.READ, locId, addrl, addrr, value);
-                saveMemAccEvent(EventType.WRITE, locId, addrl, addrr, value + 1);
+                T result = closure.get();
+                synchronized (state) {
+                    int value = state.intValue();
+                    state.increment();
+                    if (isThreadSafe) {
+                        saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId, addrl, addrr,
+                                value, value + 1, System.identityHashCode(state));
+                    } else {
+                        saveMemAccEvent(EventType.READ, locId, addrl, addrr, value);
+                        saveMemAccEvent(EventType.WRITE, locId, addrl, addrr, value + 1);
+                    }
+                }
+                return result;
             } else {
-                saveMemAccEvent(EventType.READ, locId, addrl, addrr, value);
+                synchronized (state) {
+                    int value = state.intValue();
+                    if (isThreadSafe) {
+                        saveAtomicEvent(EventType.ATOMIC_READ, locId, addrl, addrr,
+                                value, 0, System.identityHashCode(state));
+                    } else {
+                        saveMemAccEvent(EventType.READ, locId, addrl, addrr, value);
+                    }
+                }
+                return closure.get();
             }
-            if (isThreadSafe) {
-                saveLockEvent(EventType.WRITE_UNLOCK, locId, MONITOR_C, mutex);
-            }
-            return closure.get();
         }
     }
 

@@ -31,11 +31,13 @@ package com.runtimeverification.rvpredict.runtime;
 import java.lang.invoke.MethodHandle;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
 import java.util.Vector;
@@ -1092,6 +1094,125 @@ public final class RVPredictRuntime implements Constants {
     public static Object rvPredictStackPeek(Stack stack, int locId) {
         return logCollectionWriteAccess(stack, locId, () -> {
             return stack.peek();
+        });
+    }
+
+    /**
+     * {@link Queue#offer(Object)}
+     */
+    public static boolean rvPredictQueueOffer(Queue queue, Object e, int locId) {
+        return logCollectionWriteAccess(queue, locId, () -> {
+            return queue.offer(e);
+        });
+    }
+
+    /**
+     * {@link Queue#remove()}
+     */
+    public static Object rvPredictQueueRemove(Queue queue, int locId) {
+        return logCollectionWriteAccess(queue, locId, () -> {
+            return queue.remove();
+        });
+    }
+
+    /**
+     * {@link Queue#poll()}
+     */
+    public static Object rvPredictQueuePoll(Queue queue, int locId) {
+        return logCollectionWriteAccess(queue, locId, () -> {
+            return queue.poll();
+        });
+    }
+
+    /**
+     * {@link Queue#element()}
+     */
+    public static Object rvPredictQueueElement(Queue queue, int locId) {
+        return logCollectionReadAccess(queue, locId, () -> {
+            return queue.element();
+        });
+    }
+
+    /**
+     * {@link Queue#peek()}
+     */
+    public static Object rvPredictQueuePeek(Queue queue, int locId) {
+        return logCollectionReadAccess(queue, locId, () -> {
+            return queue.peek();
+        });
+    }
+
+    /**
+     * {@link Deque#addFirst(Object)}
+     */
+    public static void rvPredictDequeAddFirst(Deque deque, Object e, int locId) {
+        logCollectionWriteAccess(deque, locId, () -> {
+            deque.addFirst(e);
+            return null;
+        });
+    }
+
+    /**
+     * {@link Deque#addLast(Object)}
+     */
+    public static void rvPredictDequeAddLast(Deque deque, Object e, int locId) {
+        logCollectionWriteAccess(deque, locId, () -> {
+            deque.addLast(e);
+            return null;
+        });
+    }
+
+    /**
+     * {@link Deque#offerFirst(Object)}
+     */
+    public static boolean rvPredictDequeOfferFirst(Deque deque, Object e, int locId) {
+        return logCollectionWriteAccess(deque, locId, () -> {
+            return deque.offerFirst(e);
+        });
+    }
+
+    /**
+     * {@link Deque#offerLast(Object)}
+     */
+    public static boolean rvPredictDequeOfferLast(Deque deque, Object e, int locId) {
+        return logCollectionWriteAccess(deque, locId, () -> {
+            return deque.offerLast(e);
+        });
+    }
+
+    /**
+     * {@link Deque#removeFirst()}
+     */
+    public static Object rvPredictDequeRemoveFirst(Deque deque, int locId) {
+        return logCollectionWriteAccess(deque, locId, () -> {
+            return deque.removeFirst();
+        });
+    }
+
+    /**
+     * {@link Deque#removeLast()}
+     */
+    public static Object rvPredictDequeRemoveLast(Deque deque, int locId) {
+        return logCollectionWriteAccess(deque, locId, () -> {
+            return deque.removeLast();
+        });
+    }
+
+    /**
+     * {@link Deque#getFirst()}
+     */
+    public static Object rvPredictDequeGetFirst(Deque deque, int locId) {
+        return logCollectionReadAccess(deque, locId, () -> {
+            return deque.getFirst();
+        });
+    }
+
+    /**
+     * {@link Deque#getLast()}
+     */
+    public static Object rvPredictDequeGetLast(Deque deque, int locId) {
+        return logCollectionReadAccess(deque, locId, () -> {
+            return deque.getLast();
         });
     }
 

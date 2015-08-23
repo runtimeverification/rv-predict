@@ -49,6 +49,8 @@ public class RVPredictRuntimeMethods {
     private static final String JU_COLLECTION   =   "java/util/Collection";
     private static final String JU_LIST         =   "java/util/List";
     private static final String JU_LISTITERATOR =   "java/util/ListIterator";
+    private static final String JU_QUEUE        =   "java/util/Queue";
+    private static final String JU_DEQUE        =   "java/util/Deque";
     private static final String JU_MAP          =   "java/util/Map";
     private static final String JU_STACK        =   "java/util/Stack";
     private static final String JU_COLLECTIONS  =   "java/util/Collections";
@@ -157,6 +159,36 @@ public class RVPredictRuntimeMethods {
             register(INTERFACE, JU_COLLECTION, "toArray", "rvPredictCollectionToArray");
     public static final RVPredictInterceptor RVPREDICT_COLLECTION_TOARRAY_GENERIC =
             register(INTERFACE, JU_COLLECTION, "toArray", "rvPredictCollectionToArray", Object[].class);
+
+    // java.util.Queue
+    public static final RVPredictInterceptor RVPREDICT_QUEUE_OFFER      =
+            register(INTERFACE, JU_QUEUE, "offer", "rvPredictQueueOffer", O);
+    public static final RVPredictInterceptor RVPREDICT_QUEUE_REMOVE     =
+            register(INTERFACE, JU_QUEUE, "remove", "rvPredictQueueRemove");
+    public static final RVPredictInterceptor RVPREDICT_QUEUE_POLL       =
+            register(INTERFACE, JU_QUEUE, "poll", "rvPredictQueuePoll");
+    public static final RVPredictInterceptor RVPREDICT_QUEUE_ELEMENT    =
+            register(INTERFACE, JU_QUEUE, "element", "rvPredictQueueElement");
+    public static final RVPredictInterceptor RVPREDICT_QUEUE_PEEK       =
+            register(INTERFACE, JU_QUEUE, "peek", "rvPredictQueuePeek");
+
+    // java.util.Deque (far from complete...)
+    public static final RVPredictInterceptor RVPREDICT_DEQUE_ADD_FIRST      =
+            register(INTERFACE, JU_DEQUE, "addFirst", "rvPredictDequeAddFirst", O);
+    public static final RVPredictInterceptor RVPREDICT_DEQUE_ADD_LAST       =
+            register(INTERFACE, JU_DEQUE, "addLast", "rvPredictDequeAddLast", O);
+    public static final RVPredictInterceptor RVPREDICT_DEQUE_OFFER_FIRST    =
+            register(INTERFACE, JU_DEQUE, "offerFirst", "rvPredictDequeOfferFirst", O);
+    public static final RVPredictInterceptor RVPREDICT_DEQUE_OFFER_LAST     =
+            register(INTERFACE, JU_DEQUE, "offerLast", "rvPredictDequeOfferLast", O);
+    public static final RVPredictInterceptor RVPREDICT_DEQUE_REMOVE_FIRST   =
+            register(INTERFACE, JU_DEQUE, "removeFirst", "rvPredictDequeRemoveFirst");
+    public static final RVPredictInterceptor RVPREDICT_DEQUE_REMOVE_LAST    =
+            register(INTERFACE, JU_DEQUE, "removeLast", "rvPredictDequeRemoveLast");
+    public static final RVPredictInterceptor RVPREDICT_DEQUE_GET_FIRST      =
+            register(INTERFACE, JU_DEQUE, "getFirst", "rvPredictDequeGetFirst");
+    public static final RVPredictInterceptor RVPREDICT_DEQUE_GET_LAST    =
+            register(INTERFACE, JU_DEQUE, "getLast", "rvPredictDequeGetLast");
 
     // java.util.Map methods
     public static final RVPredictInterceptor RVPREDICT_MAP_CLEAR          =

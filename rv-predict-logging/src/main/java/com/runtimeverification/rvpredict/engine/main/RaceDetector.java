@@ -35,7 +35,7 @@ public class RaceDetector implements Constants {
     public RaceDetector(Configuration config) {
         this.config = config;
         Context z3Context = Configuration.getZ3Context();
-        this.z3filter = new Z3Filter(z3Context);
+        this.z3filter = new Z3Filter(z3Context, config.windowSize);
         try {
             /* setup the solver */
             // mkSimpleSolver < mkSolver < mkSolver("QF_IDL")

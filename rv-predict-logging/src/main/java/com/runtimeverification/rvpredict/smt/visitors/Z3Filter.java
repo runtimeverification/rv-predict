@@ -14,13 +14,22 @@ public class Z3Filter {
 
     private final Context context;
 
+    private final int windowSize;
+
     private final Visitor visitor;
+
+    private final BoolExpr[] concPhiVariables;
+
+    private final IntExpr[] orderVariables;
 
     private final List<IDisposable> disposables;
 
-    public Z3Filter(Context context) {
+    public Z3Filter(Context context, int windowSize) {
         this.context = context;
+        this.windowSize = windowSize;
         this.visitor = new Visitor();
+        this.concPhiVariables = new BoolExpr[windowSize];
+        this.orderVariables = new IntExpr[windowSize];
         this.disposables = new ArrayList<>();
     }
 
@@ -49,15 +58,21 @@ public class Z3Filter {
         }
 
         @Override
-        public void visit(BooleanVariable variable) throws Z3Exception {
-            result = context.mkBoolConst(variable.getNamePrefix() + variable.getId());
-            disposables.add(result);
+        public void visit(ConcretePhiVariable variable) throws Z3Exception {
+            int idx = (int) (variable.getId() % windowSize);
+            if (concPhiVariables[idx] == null) {
+                concPhiVariables[idx] = context.mkBoolConst(variable.getNamePrefix() + idx);
+            }
+            result = concPhiVariables[idx];
         }
 
         @Override
         public void visit(OrderVariable variable) throws Z3Exception {
-            result = context.mkIntConst(variable.getNamePrefix() + variable.getId());
-            disposables.add(result);
+            int idx = (int) (variable.getId() % windowSize);
+            if (orderVariables[idx] == null) {
+                orderVariables[idx] = context.mkIntConst(variable.getNamePrefix() + idx);
+            }
+            result = orderVariables[idx];
         }
 
         @Override

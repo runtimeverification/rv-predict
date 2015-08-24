@@ -4,8 +4,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.microsoft.z3.Context;
+import com.microsoft.z3.Params;
+import com.microsoft.z3.Z3Exception;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
+import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.violation.Race;
@@ -23,8 +28,24 @@ public class RaceDetector implements Constants {
 
     private final List<String> reports = new ArrayList<>();
 
+    private final Z3Filter z3filter;
+
+    private final com.microsoft.z3.Solver solver;
+
     public RaceDetector(Configuration config) {
         this.config = config;
+        Context z3Context = Configuration.getZ3Context();
+        this.z3filter = new Z3Filter(z3Context);
+        try {
+            /* setup the solver */
+            // mkSimpleSolver < mkSolver < mkSolver("QF_IDL")
+            this.solver = z3Context.mkSimpleSolver();
+            Params params = z3Context.mkParams();
+            params.add("timeout", config.solver_timeout * 1000);
+            solver.setParameters(params);
+        } catch (Z3Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public List<String> getRaceReports() {
@@ -80,8 +101,8 @@ public class RaceDetector implements Constants {
             return;
         }
 
-        Map<String, Race> result = MaximalCausalModel.create(trace)
-                .checkRaceSuspects(sigToRaceSuspects, config.solver_timeout);
+        Map<String, Race> result = MaximalCausalModel.create(trace, z3filter, solver)
+                .checkRaceSuspects(sigToRaceSuspects);
         sigToRealRace.putAll(result);
         result.forEach((sig, race) -> {
             String report = race.generateRaceReport();

@@ -36,10 +36,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.microsoft.z3.Context;
-import com.microsoft.z3.Params;
+import com.microsoft.z3.Solver;
 import com.microsoft.z3.Status;
-import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
@@ -78,21 +76,21 @@ public class MaximalCausalModel {
      */
     private final FormulaTerm.Builder phiTau = FormulaTerm.andBuilder();
 
-    private static Context z3Context;
+    private final Z3Filter z3filter;
 
-    static {
-        z3Context = Configuration.getZ3Context();
-    }
+    private final com.microsoft.z3.Solver solver;
 
-    public static MaximalCausalModel create(Trace trace) {
-        MaximalCausalModel model = new MaximalCausalModel(trace);
+    public static MaximalCausalModel create(Trace trace, Z3Filter z3filter, Solver solver) {
+        MaximalCausalModel model = new MaximalCausalModel(trace, z3filter, solver);
         model.addPhiMHB();
         model.addPhiLock();
         return model;
     }
 
-    private MaximalCausalModel(Trace trace) {
+    private MaximalCausalModel(Trace trace, Z3Filter z3filter, Solver solver) {
         this.trace = trace;
+        this.z3filter = z3filter;
+        this.solver = solver;
     }
 
     private BoolFormula HB(Event event1, Event event2) {
@@ -314,11 +312,9 @@ public class MaximalCausalModel {
      * their signatures.
      *
      * @param sigToRaceSuspects
-     * @param timeout
-     *            solver timeout in seconds
      * @return a map from race signatures to real race instances
      */
-    public Map<String, Race> checkRaceSuspects(Map<String, List<Race>> sigToRaceSuspects, int timeout) {
+    public Map<String, Race> checkRaceSuspects(Map<String, List<Race>> sigToRaceSuspects) {
         /* specialize the maximal causal model based on race queries */
         Map<Race, BoolFormula> suspectToAsst = new HashMap<>();
         sigToRaceSuspects.values().forEach(suspects -> {
@@ -334,16 +330,8 @@ public class MaximalCausalModel {
 //        sigToRaceSuspects.forEach((sig, l) -> trace.logger().debug().println(sig + ": " + l.size()));
 
         Map<String, Race> result = new HashMap<>();
-        Z3Filter z3filter = new Z3Filter(z3Context);
-        com.microsoft.z3.Solver solver;
         try {
-            /* setup the solver */
-            // mkSimpleSolver < mkSolver < mkSolver("QF_IDL")
-            solver = z3Context.mkSimpleSolver();
-            Params params = z3Context.mkParams();
-            params.add("timeout", timeout * 1000);
-            solver.setParameters(params);
-
+            solver.push();
             /* translate our formula into Z3 AST format */
             solver.add(z3filter.filter(phiTau.build()));
             for (Map.Entry<Event, BoolFormula> entry : readToPhiConc.entrySet()) {
@@ -365,6 +353,7 @@ public class MaximalCausalModel {
                     }
                 }
             }
+            solver.pop();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

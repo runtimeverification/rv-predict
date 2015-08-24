@@ -354,6 +354,7 @@ public class MaximalCausalModel {
                 }
             }
             solver.pop();
+            z3filter.clear();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

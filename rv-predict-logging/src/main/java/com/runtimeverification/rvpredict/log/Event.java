@@ -99,6 +99,10 @@ public class Event implements Comparable<Event> {
         return ADDR;
     }
 
+    public int getObjectHashCode() {
+        return (int) (getAddr() >> 32);
+    }
+
     public int getFieldIdOrArrayIndex() {
         return (int) getAddr();
     }
@@ -134,20 +138,47 @@ public class Event implements Comparable<Event> {
     }
 
     /**
-     * Returns {@code true} if this event has type {@link EventType#WRITE_LOCK}
-     * or {@link EventType#READ_LOCK}; otherwise, {@code false}.
+     * Returns {@code true} if this event has type {@link EventType#WRITE_LOCK},
+     * {@link EventType#READ_LOCK}, or {@link EventType#WAIT_ACQ}; otherwise,
+     * {@code false}.
      */
     public boolean isLock() {
-        return TYPE == EventType.READ_LOCK || TYPE == EventType.WRITE_LOCK;
+        return TYPE == EventType.READ_LOCK || TYPE == EventType.WRITE_LOCK
+                || TYPE == EventType.WAIT_ACQ;
+    }
+
+    public boolean isReadLock() {
+        return TYPE == EventType.READ_LOCK;
+    }
+
+    public boolean isWriteLock() {
+        return TYPE == EventType.WRITE_LOCK;
+    }
+
+    public boolean isWaitAcq() {
+        return TYPE == EventType.WAIT_ACQ;
     }
 
     /**
      * Returns {@code true} if this event has type
-     * {@link EventType#WRITE_UNLOCK} or {@link EventType#READ_UNLOCK};
-     * otherwise, {@code false}.
+     * {@link EventType#WRITE_UNLOCK}, {@link EventType#READ_UNLOCK}, or
+     * {@link EventType#WAIT_REL}; otherwise, {@code false}.
      */
     public boolean isUnlock() {
-        return TYPE == EventType.READ_UNLOCK || TYPE == EventType.WRITE_UNLOCK;
+        return TYPE == EventType.READ_UNLOCK || TYPE == EventType.WRITE_UNLOCK
+                || TYPE == EventType.WAIT_REL;
+    }
+
+    public boolean isReadUnlock() {
+        return TYPE == EventType.READ_UNLOCK;
+    }
+
+    public boolean isWriteUnlock() {
+        return TYPE == EventType.WRITE_UNLOCK;
+    }
+
+    public boolean isWaitRel() {
+        return TYPE == EventType.WAIT_REL;
     }
 
     public boolean isSyncEvent() {
@@ -156,6 +187,18 @@ public class Event implements Comparable<Event> {
 
     public boolean isMetaEvent() {
         return TYPE.isMetaType();
+    }
+
+    public boolean isCallStackEvent() {
+        return TYPE == EventType.INVOKE_METHOD || TYPE == EventType.FINISH_METHOD;
+    }
+
+    public boolean isInvokeMethod() {
+        return TYPE == EventType.INVOKE_METHOD;
+    }
+
+    public boolean isSimilarTo(Event event) {
+        return TYPE == event.TYPE && ID == event.ID && ADDR == event.ADDR && VALUE == event.VALUE;
     }
 
     @Override
@@ -169,7 +212,16 @@ public class Event implements Comparable<Event> {
 
     @Override
     public int compareTo(Event e) {
-        return Long.compare(getGID(), e.getGID());
+        int result = Long.compare(getGID(), e.getGID());
+        if (result == 0) {
+            // YilongL: dirty hack to deal with the imprecise GID of call stack event
+            if (isCallStackEvent()) {
+                return e.isCallStackEvent() ? 0 : -1;
+            } else {
+                return e.isCallStackEvent() ? 1 : 0;
+            }
+        }
+        return result;
     }
 
     @Override

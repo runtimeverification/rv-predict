@@ -9,7 +9,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -28,15 +27,12 @@ public class TraceCache {
 
     private final List<EventReader> readers = new ArrayList<>();
 
-    protected final Event[] events;
-
     /**
      * Creates a new {@code TraceCahce} structure for a trace log.
      */
     public TraceCache(Configuration config, Metadata metadata) {
         this.config = config;
-        this.crntState = new TraceState(metadata);
-        this.events = new Event[config.windowSize];
+        this.crntState = new TraceState(config, metadata);
     }
 
     public void setup() throws IOException {
@@ -51,32 +47,32 @@ public class TraceCache {
     }
 
     /**
+     * Returns the power of two that is greater than the given integer.
+     */
+    protected int getNextPowerOfTwo(int x) {
+        return 1 << (32 - Integer.numberOfLeadingZeros(x));
+    }
+
+    /**
      * Load trace segment starting from event {@code fromIndex}.
      *
      * @param fromIndex
      *            low endpoint (inclusive) of the trace segment
-     * @return a {@link Trace} representing the trace segment read
+     * @return a {@link Trace} representing the trace segment read or
+     *         {@code null} if the end of file is reached
      */
     public Trace getTrace(long fromIndex) throws IOException {
-        Arrays.fill(events, null);
-        long toIndex = fromIndex + events.length;
-
-        readEvents(fromIndex, toIndex);
+        long toIndex = fromIndex + config.windowSize;
+        List<RawTrace> rawTraces = readEvents(fromIndex, toIndex);
 
         /* finish reading events and create the Trace object */
-        int numOfEvents = events.length;
-        for (int i = 0; i < events.length; i++) {
-            if (events[i] == null) {
-                numOfEvents = i;
-                break;
-            }
-        }
-        return crntState.initNextTraceWindow(events, numOfEvents);
+        return rawTraces.isEmpty() ? null : crntState.initNextTraceWindow(rawTraces);
     }
-
-    protected void readEvents(long fromIndex, long toIndex) throws IOException {
-    /* sort readers by their last read events */
-        readers.sort((r1, r2) -> Long.compare(r1.lastReadEvent().getGID(), r2.lastReadEvent().getGID()));
+    
+    protected List<RawTrace> readEvents(long fromIndex, long toIndex) throws IOException {
+        List<RawTrace> rawTraces =  new ArrayList<>();
+        /* sort readers by their last read events */
+        readers.sort((r1, r2) -> r1.lastReadEvent().compareTo(r2.lastReadEvent()));
         Iterator<EventReader> iter = readers.iterator();
         Event event;
         while (iter.hasNext()) {
@@ -86,8 +82,13 @@ public class TraceCache {
             }
 
             assert event.getGID() >= fromIndex;
+            int capacity = getNextPowerOfTwo(config.windowSize - 1);
+            if (config.stacks) {
+                capacity <<= 1;
+            }
+            List<Event> events = new ArrayList<>(capacity);
             do {
-                events[(int) (event.getGID() % events.length)] = event;
+                events.add(event);
                 try {
                     event = reader.readEvent();
                 } catch (EOFException e) {
@@ -95,7 +96,10 @@ public class TraceCache {
                     break;
                 }
             } while (event.getGID() < toIndex);
+            int length = getNextPowerOfTwo(events.size());
+            rawTraces.add(new RawTrace(0, events.size(), events.toArray(new Event[length])));
         }
+        return rawTraces;
     }
 
 }

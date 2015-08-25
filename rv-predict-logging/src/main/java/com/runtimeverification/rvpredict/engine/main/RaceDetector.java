@@ -1,59 +1,94 @@
 package com.runtimeverification.rvpredict.engine.main;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+import com.microsoft.z3.Context;
+import com.microsoft.z3.Params;
+import com.microsoft.z3.Z3Exception;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.smt.SMTConstraintBuilder;
-import com.runtimeverification.rvpredict.trace.MemoryAccessBlock;
+import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
+import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.Trace;
-import com.runtimeverification.rvpredict.util.Logger;
+import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.violation.Race;
 
 /**
  * Detects data races from a given {@link Trace} object.
- * <p>
- * We analyze memory access events on each shared memory address in the
- * trace separately. For each shared memory address, enumerate all memory
- * access pairs on this address and build the data-abstract feasibility for
- * each of them. Then for each memory access pair, send to the SMT solver
- * its data-abstract feasibility together with the already built must
- * happen-before (MHB) constraints and locking constraints. The pair is
- * reported as a real data race if the solver returns sat.
- * <p>
- * To reduce the expensive calls to the SMT solver, we apply two
- * optimizations:
- * <li>Use Lockset + Weak HB algorithm to filter out those memory access
- * pairs that are obviously not data races.
- * <li>Group "equivalent" memory access events to a block and consider them
- * as a single memory access. In short, such block has the property that all
- * memory access events in it have the same causal HB relation with the
- * outside events. Therefore, it is sufficient to consider only one event
- * from each block.
  *
  * @author YilongL
  */
-public class RaceDetector {
+public class RaceDetector implements Constants {
 
     private final Configuration config;
 
-    private final Metadata metadata;
+    private final Map<String, Race> sigToRealRace = new HashMap<>();
 
-    private final Set<Race> races;
+    private final List<String> reports = new ArrayList<>();
 
-    public RaceDetector(Configuration config, Metadata metadata) {
+    private final Z3Filter z3filter;
+
+    private final com.microsoft.z3.Solver solver;
+
+    public RaceDetector(Configuration config) {
         this.config = config;
-        this.metadata = metadata;
-        this.races = new HashSet<>();
+        Context z3Context = Configuration.getZ3Context();
+        this.z3filter = new Z3Filter(z3Context, config.windowSize);
+        try {
+            /* setup the solver */
+            // mkSimpleSolver < mkSolver < mkSolver("QF_IDL")
+            this.solver = z3Context.mkSimpleSolver();
+            Params params = z3Context.mkParams();
+            params.add("timeout", config.solver_timeout * 1000);
+            solver.setParameters(params);
+        } catch (Z3Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    public Set<Race> getRaces() {
-        return Collections.unmodifiableSet(races);
+    public List<String> getRaceReports() {
+        return reports;
+    }
+
+    private boolean isThreadSafeLocation(Trace trace, int locId) {
+        String locationSig = trace.metadata().getLocationSig(locId);
+        return locationSig.startsWith("java.util.concurrent")
+            || locationSig.startsWith("java.util.stream")
+            || locationSig.substring(locationSig.lastIndexOf('.')).startsWith(".class$");
+    }
+
+    private Map<String, List<Race>> computeUnknownRaceSuspects(Trace trace) {
+        Map<String, List<Race>> sigToRaceCandidates = new HashMap<>();
+        trace.eventsByThreadID().forEach((tid1, events1) -> {
+           trace.eventsByThreadID().forEach((tid2, events2) -> {
+               if (tid1 < tid2) {
+                   events1.forEach(e1 -> {
+                      events2.forEach(e2 -> {
+                          if ((e1.isWrite() && e2.isReadOrWrite() ||
+                                  e1.isReadOrWrite() && e2.isWrite())
+                                  && e1.getAddr() == e2.getAddr()
+                                  && !trace.metadata().isVolatile(e1.getAddr())
+                                  && !isThreadSafeLocation(trace, e1.getLocId())
+                                  && !trace.isInsideClassInitializer(e1)
+                                  && !trace.isInsideClassInitializer(e2)) {
+                              Race race = new Race(e1, e2, trace);
+                              if (!config.suppressPattern.matcher(race.getRaceLocationSig())
+                                      .matches()) {
+                                  String raceSig = race.toString();
+                                  if (!sigToRealRace.containsKey(raceSig)) {
+                                      sigToRaceCandidates.computeIfAbsent(raceSig,
+                                              x -> new ArrayList<>()).add(race);
+                                  }
+                              }
+                          }
+                      });
+                   });
+               }
+           });
+        });
+        return sigToRaceCandidates;
     }
 
     public void run(Trace trace) {
@@ -61,62 +96,18 @@ public class RaceDetector {
             return;
         }
 
-        SMTConstraintBuilder cnstrBuilder = new SMTConstraintBuilder(config, trace);
-
-        cnstrBuilder.addIntraThreadConstraints();
-        cnstrBuilder.addThreadStartJoinConstraints();
-        cnstrBuilder.addLockingConstraints();
-        cnstrBuilder.finish();
-
-        for (MemoryAccessBlock blk1 : trace.getMemoryAccessBlocks()) {
-            for (MemoryAccessBlock blk2 : trace.getMemoryAccessBlocks()) {
-               if (blk1.getTID() >= blk2.getTID()) {
-                   continue;
-               }
-
-               /* skip if all potential data races that are already known */
-               Set<Race> potentialRaces = Sets.newHashSet();
-               blk1.forEach(e1 -> {
-                  blk2.forEach(e2 -> {
-                      if ((e1.isWrite() || e2.isWrite())
-                              && e1.getAddr() == e2.getAddr()
-                              && (config.checkVolatile || !metadata.isVolatile(e1.getAddr()))
-                              && !trace.isInsideClassInitializer(e1)
-                              && !trace.isInsideClassInitializer(e2)) {
-                          potentialRaces.add(new Race(e1, e2, trace, metadata));
-                      }
-                  });
-               });
-               if (races.containsAll(potentialRaces)) {
-                   continue;
-               }
-
-               /* not a race if the two events hold a common lock */
-               Event e1 = Iterables.getFirst(blk1, null);
-               Event e2 = Iterables.getFirst(blk2, null);
-               if (cnstrBuilder.hasCommonLock(e1, e2)) {
-                   continue;
-               }
-
-               /* not a race if one event happens-before the other */
-               if (cnstrBuilder.happensBefore(e1, e2)
-                       || cnstrBuilder.happensBefore(e2, e1)) {
-                   continue;
-               }
-
-               /* start building constraints for MCM */
-               if (cnstrBuilder.isRace(e1, e2)) {
-                   potentialRaces.forEach(race -> {
-                       if (races.add(race)) {
-                           String report = config.simple_report ?
-                                   race.toString() : race.generateRaceReport();
-                           config.logger.report(report, Logger.MSGTYPE.REAL);
-                       }
-                   });
-               }
-
-           }
+        Map<String, List<Race>> sigToRaceSuspects = computeUnknownRaceSuspects(trace);
+        if (sigToRaceSuspects.isEmpty()) {
+            return;
         }
-    }
 
+        Map<String, Race> result = MaximalCausalModel.create(trace, z3filter, solver)
+                .checkRaceSuspects(sigToRaceSuspects);
+        sigToRealRace.putAll(result);
+        result.forEach((sig, race) -> {
+            String report = race.generateRaceReport();
+            reports.add(report);
+            config.logger().reportRace(report);
+        });
+    }
 }

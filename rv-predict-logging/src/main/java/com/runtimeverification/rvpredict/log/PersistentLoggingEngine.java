@@ -91,9 +91,11 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
     }
 
     @Override
-    public void log(EventType eventType, int locId, long addr, long value1, long value2) {
+    public void log(EventType eventType, int locId, int addr1, int addr2, long value1, long value2,
+            int extra) {
         long tid = Thread.currentThread().getId();
         long gid;
+        int atomLock;
         switch (eventType) {
         case READ:
         case WRITE:
@@ -101,49 +103,53 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
         case WRITE_UNLOCK:
         case READ_LOCK:
         case READ_UNLOCK:
+        case WAIT_ACQ:
+        case WAIT_REL:
         case START:
         case JOIN:
         case CLINIT_ENTER:
         case CLINIT_EXIT:
+            gid = globalEventID.getAndIncrement();
+            log(eventType, gid, tid, locId, addr1, addr2, value1);
+            break;
         case INVOKE_METHOD:
         case FINISH_METHOD:
-            gid = globalEventID.getAndIncrement();
-            log(eventType, gid, tid, locId, addr, value1);
+            gid = globalEventID.get();
+            log(eventType, gid, tid, locId, addr1, addr2, value1);
             break;
         case ATOMIC_READ:
             gid = globalEventID.getAndAdd(3);
-            log(EventType.WRITE_LOCK,   gid,     tid, locId, getAtomicLockId(addr), 0);
-            log(EventType.READ,         gid + 1, tid, locId, addr, value1);
-            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, getAtomicLockId(addr), 0);
+            atomLock = extra > 0 ? extra : addr1;
+            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, atomLock, 0);
+            log(EventType.READ,         gid + 1, tid, locId, addr1, addr2, value1);
+            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, ATOMIC_LOCK_C, atomLock, 0);
             break;
         case ATOMIC_WRITE:
             gid = globalEventID.getAndAdd(3);
-            log(EventType.WRITE_LOCK,   gid,     tid, locId, getAtomicLockId(addr), 0);
-            log(EventType.WRITE,        gid + 1, tid, locId, addr, value1);
-            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, getAtomicLockId(addr), 0);
+            atomLock = extra > 0 ? extra : addr1;
+            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, atomLock, 0);
+            log(EventType.WRITE,        gid + 1, tid, locId, addr1, addr2, value1);
+            log(EventType.WRITE_UNLOCK, gid + 2, tid, locId, ATOMIC_LOCK_C, atomLock, 0);
             break;
         case ATOMIC_READ_THEN_WRITE:
             gid = globalEventID.getAndAdd(4);
-            log(EventType.WRITE_LOCK,   gid,     tid, locId, getAtomicLockId(addr), 0);
-            log(EventType.READ,         gid + 1, tid, locId, addr, value1);
-            log(EventType.WRITE,        gid + 2, tid, locId, addr, value2);
-            log(EventType.WRITE_UNLOCK, gid + 3, tid, locId, getAtomicLockId(addr), 0);
+            atomLock = extra > 0 ? extra : addr1;
+            log(EventType.WRITE_LOCK,   gid,     tid, locId, ATOMIC_LOCK_C, atomLock, 0);
+            log(EventType.READ,         gid + 1, tid, locId, addr1, addr2, value1);
+            log(EventType.WRITE,        gid + 2, tid, locId, addr1, addr2, value2);
+            log(EventType.WRITE_UNLOCK, gid + 3, tid, locId, ATOMIC_LOCK_C, atomLock, 0);
             break;
         default:
             assert false;
         }
     }
 
-    private long getAtomicLockId(long addr) {
-        return (long) ATOMIC_LOCK_C << 32 | ((int) (addr >> 32)) & 0xFFFFFFFFL;
-    }
-
-    private void log(EventType eventType, long gid, long tid, int locId, long addr,
+    private void log(EventType eventType, long gid, long tid, int locId, int addr1, int addr2,
             long value) {
         EventWriter writer = threadLocalEventWriter.get();
         if (writer != null) {
             try {
-                writer.write(gid, tid, locId, addr, value, eventType);
+                writer.write(gid, tid, locId, (long) addr1 << 32 | addr2 & 0xFFFFFFFFL, value, eventType);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

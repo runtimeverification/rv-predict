@@ -28,8 +28,9 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.violation;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-
 import com.google.common.base.StandardSystemProperty;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
@@ -38,24 +39,25 @@ import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Constants;
 
 /**
- * Data race violation
+ * Represents a data race. A data race is uniquely identified by the two memory
+ * access events that it consists of. However, different races can have
+ * identical race signature, which is given by {@link Race#toString()}. For the
+ * purpose of race detection, we are more interested in races that have
+ * different signatures.
  *
+ * @author YilongL
  */
-public class Race extends AbstractViolation {
+public class Race {
+
+    private static final String RVPREDICT_RT_PKG_PREFIX = Constants.RVPREDICT_RUNTIME_PKG_PREFIX
+            .replace('/', '.');
 
     private final Event e1;
     private final Event e2;
     private final Trace trace;
 
-    private final int locId1;
-    private final int locId2;
-    private final String varSig;
-    private final String stmtSig1;
-    private final String stmtSig2;
-
-    public Race(Event e1, Event e2, Trace trace,
-            Metadata metadata) {
-        if (e1.getLocId() > e2.getLocId()) {
+    public Race(Event e1, Event e2, Trace trace) {
+        if (e1.getGID() > e2.getGID()) {
             Event tmp = e1;
             e1 = e2;
             e2 = tmp;
@@ -64,23 +66,19 @@ public class Race extends AbstractViolation {
         this.e1 = e1.copy();
         this.e2 = e2.copy();
         this.trace = trace;
-        locId1 = e1.getLocId();
-        locId2 = e2.getLocId();
-        int idx = e1.getFieldIdOrArrayIndex();
-        varSig = idx < 0 ? metadata.getVariableSig(-idx).replace("/", ".") : "#" + idx;
-        stmtSig1 = metadata.getLocationSig(locId1);
-        stmtSig2 = metadata.getLocationSig(locId2);
-        if (stmtSig1 == null) {
-            System.err.println("[Warning]: missing metadata for location ID " + locId1);
-        }
-        if (stmtSig2 == null) {
-            System.err.println("[Warning]: missing metadata for location ID " + locId2);
-        }
+    }
+
+    public Event firstEvent() {
+        return e1;
+    }
+
+    public Event secondEvent() {
+        return e2;
     }
 
     @Override
     public int hashCode() {
-        return locId1 * 17 + locId2;
+        return e1.hashCode() * 31 + e2.hashCode();
     }
 
     @Override
@@ -90,37 +88,41 @@ public class Race extends AbstractViolation {
         }
 
         Race otherRace = (Race) object;
-        return locId1 == otherRace.locId1 && locId2 == otherRace.locId2;
+        return e1.equals(otherRace.e1) && e2.equals(otherRace.e2);
     }
 
     @Override
     public String toString() {
-        String stmtSig1 = this.stmtSig1;
-        String stmtSig2 = this.stmtSig2;
-        if (stmtSig1.compareTo(stmtSig2) > 0) {
-            String tmp = stmtSig1;
-            stmtSig1 = stmtSig2;
-            stmtSig2 = tmp;
-        }
+        int addr = Math.min(0, e1.getFieldIdOrArrayIndex()); // collapse all array indices to 0
+        int loc1 = Math.min(e1.getLocId(), e2.getLocId());
+        int loc2 = Math.max(e1.getLocId(), e2.getLocId());
+        return "Race(" + addr + "," + loc1 + "," + loc2 + ")";
+    }
 
-        return String.format("Race on %s between%s",
-            varSig.startsWith("#") ? "an array access" : "field " + varSig,
-            stmtSig1.equals(stmtSig2) ?
-                String.format(" two instances of:%n    %s%n", stmtSig1) :
-                String.format(":%n    %s%n    %s%n", stmtSig1, stmtSig2));
+    public String getRaceLocationSig() {
+        int idx = e1.getFieldIdOrArrayIndex();
+        return idx < 0 ? trace.metadata().getVariableSig(-idx).replace("/", ".") : "#" + idx;
     }
 
     public String generateRaceReport() {
+        String locSig = getRaceLocationSig();
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Possible data race on %s: {{{%n",
-                (varSig.startsWith("#") ? "array element " : "field ") + varSig));
+        sb.append(String.format("Data race on %s: {{{%n",
+                (locSig.startsWith("#") ? "array element " : "field ") + locSig));
 
-        generateMemAccReport(e1, sb);
-        sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
-        generateMemAccReport(e2, sb);
+        if (trace.metadata().getLocationSig(e1.getLocId())
+                .compareTo(trace.metadata().getLocationSig(e2.getLocId())) <= 0) {
+            generateMemAccReport(e1, sb);
+            sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
+            generateMemAccReport(e2, sb);
+        } else {
+            generateMemAccReport(e2, sb);
+            sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
+            generateMemAccReport(e1, sb);
+        }
 
         sb.append(String.format("}}}%n"));
-        return sb.toString();
+        return sb.toString().replace(RVPREDICT_RT_PKG_PREFIX, "");
     }
 
     private void generateMemAccReport(Event e, StringBuilder sb) {
@@ -131,9 +133,20 @@ public class Race extends AbstractViolation {
                 e.isWrite() ? "write" : "read",
                 tid,
                 getHeldLocksReport(heldLocks)));
-        for (Integer locId : trace.getStacktraceAt(e)) {
-            String sig = locId >= 0 ? metadata.getLocationSig(locId) : "... not available ...";
-            sb.append(String.format("        at %s%n", sig));
+        boolean isTopmostStack = true;
+        List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
+        heldLocks.forEach(stacktrace::add);
+        Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
+        for (Event elem : stacktrace) {
+            String locSig = elem.getLocId() != -1 ? metadata.getLocationSig(elem.getLocId())
+                    : "... not available ...";
+            if (elem.isLock()) {
+                sb.append(String.format("        - locked %s at %s %n", getLockRepresentation(elem),
+                        locSig));
+            } else {
+                sb.append(String.format(" %s  at %s%n", isTopmostStack ? "---->" : "     ", locSig));
+                isTopmostStack = false;
+            }
         }
 
         long parentTID = metadata.getParentTID(tid);
@@ -147,18 +160,6 @@ public class Race extends AbstractViolation {
                 sb.append(String.format("    T%s is the main thread%n", tid));
             } else {
                 sb.append(String.format("    T%s is created by n/a%n", tid));
-            }
-        }
-
-        if (!heldLocks.isEmpty()) {
-            sb.append(String.format("    Locks acquired by this thread (reporting in chronological order):%n"));
-            for (Event lock : heldLocks) {
-                sb.append(String.format("      %s%n", getLockRepresentation(lock)));
-                for (Integer locId : trace.getStacktraceAt(lock)) {
-                    String sig = locId >= 0 ? metadata.getLocationSig(locId)
-                            : "... not available ...";
-                    sb.append(String.format("        at %s%n", sig));
-                }
             }
         }
     }
@@ -177,9 +178,9 @@ public class Race extends AbstractViolation {
     }
 
     private String getLockRepresentation(Event lock) {
-        long lockId = lock.getSyncObject();
+        long lockId = lock.getLockId();
         int upper32 = (int)(lockId >> 32);
-        int lower32 = (int) lockId;
+        String lower32 = Integer.toHexString((int) lockId);
         if (lock.getType() == EventType.READ_LOCK) {
             assert upper32 == 0;
             return "ReadLock@" + lower32;

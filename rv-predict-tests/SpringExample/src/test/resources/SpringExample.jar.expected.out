@@ -1,0 +1,1 @@
+Data race on field HelloWorld.x: \{\{\{(.*)---->  at HelloWorld\$MyThread.run\(HelloWorld.java:39\)(.*)---->  at HelloWorld.printHello\(HelloWorld.java:23\)(.*)\}\}\}

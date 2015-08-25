@@ -1,184 +1,157 @@
 <?xml version="1.0"?>
 <!-- Copyright (c) 2014 Runtime Verification Inc. All Rights Reserved. -->
-<tests>
-    <test name="ftpserver.jar">
+<basic>
+    <test name="ftpserver.jar" module="ftpserver">
+        <jar/>
         <runs value="32" />
-        <rvarg key="--maxlen" value="2000" />
-        <rvarg key="--solver" value="z3" />
+        <rvarg key="--window" value="2000" />
         <rvarg value="--debug" />
-        <rvarg value="--simple-report" />
-        <arg key="-jar" value="ftpserver.jar" />
+        <rvarg value="--stacks" />
     </test>
-    <test name="ftpserver.jar">
+    <test name="ftpserver.jar" module="ftpserver">
+        <jar/>
         <runs value="32" />
-        <rvarg key="--maxlen" value="2000" />
+        <rvarg key="--window" value="2000" />
+        <rvarg value="--offline" />
         <rvarg value="--debug" />
-        <rvarg value="--simple-report" />
-        <arg key="-jar" value="ftpserver.jar" />
+        <rvarg value="--stacks" />
     </test>
-    <test name="ftpserver.jar">
-        <runs value="32" />
-        <rvarg key="--maxlen" value="2000" />
-        <rvarg value="--online" />
+
+    <test name="SpringExample.jar" module="SpringExample">
+        <jar/>
+        <rvarg key="--window" value="6000" />
         <rvarg value="--debug" />
-        <rvarg value="--simple-report" />
-        <arg key="-jar" value="ftpserver.jar" />
+        <rvarg value="--stacks" />
     </test>
-    
-     <test name="demo.Example">
-        <arg key="-cp" value="basic.jar" />
-        <arg value="demo.Example" />
-        <rvarg key="--include" value="a.b" />
-        <rvarg value="--simple-report" />
-    </test>
-     <test name="demo.Example">
-        <arg key="-cp" value="basic.jar" />
-        <arg value="demo.Example" />
-        <rvarg key="--maxlen" value="5000" />
-        <rvarg key="--exclude" value="x" />
-        <rvarg value="--simple-report" />
-    </test>
-    
-    <test name="SpringExample.jar">
-        <arg key="-jar" value="SpringExample.jar" />
-        <rvarg value="--debug" />
-        <rvarg value="--simple-report" />
-    </test>
-    <test agent="true" name="SpringExample.jar">
-        <arg key="-jar" value="SpringExample.jar" />
-        <rvarg key="--solver" value="z3" />
-        <rvarg value="--debug" />
-        <rvarg value="--simple-report" />
-    </test>
-    
-    <test name="account.Account">
+
+    <test name="account.Account" module="examples">
         <runs value="64" />
-        <arg key="-cp" value="basic.jar" />
         <arg value="account.Account" />
-        <rvarg value="--simple-report" />
+        <rvarg value="--stacks" />
     </test>
-    <test name="array.Test">
-        <arg key="-cp" value="basic.jar" />
+    <test name="array.Test" module="basic">
         <arg value="array.Test" />
-        <rvarg value="--simple-report" />
+        <rvarg value="--stacks" />
     </test>
-    <test name="airlinetickets.Airlinetickets">
+    <test name="airlinetickets.Airlinetickets" module="examples">
         <runs value="32" />
-        <arg key="-cp" value="basic.jar" />
         <arg value="airlinetickets.Airlinetickets" />
-        <rvarg value="--simple-report" />
+        <rvarg value="--stacks" />
     </test>
-    <test name="boundedbuffer.BoundedBuffer">
-        <runs value="256" />
-        <arg key="-cp" value="basic.jar" />
-        <arg value="boundedbuffer.BoundedBuffer" />
-        <rvarg value="--simple-report" />
-    </test>
-    <test name="mergesort.MergeSort">
-        <runs value="512" />
-        <arg key="-cp" value="basic.jar" />
-        <arg value="mergesort.MergeSort" />
-        <rvarg value="--simple-report" />
-    </test>
-    <test name="critical.Critical">
-        <runs value="2" />
-        <arg key="-cp" value="basic.jar" />
-        <arg value="critical.Critical" />
-        <rvarg value="--simple-report" />
-    </test>
-    <test name="bufwriter.BufWriter">
-        <runs value="5" />
-        <arg key="-cp" value="basic.jar" />
-        <arg value="bufwriter.BufWriter" />
-        <rvarg value="--simple-report" />
-    </test>
-    <test name="bubblesort.BubbleSort">
-        <runs value="64" />
-        <rvarg value="--simple-report" />
-        <arg key="-cp" value="basic.jar" />
-        <arg value="bubblesort.BubbleSort" />
-    </test>
-    <test name="benchmarks.JGFRayTracerBenchSizeA">
-        <runs value="64" />
-        <rvarg key="--maxlen" value="3000" />
-        <rvarg value="--simple-report" />
-        <arg key="-cp" value="basic.jar" />
+    <test name="benchmarks.JGFRayTracerBenchSizeA" module="examples">
+        <runs value="8" />
+        <rvarg key="--window" value="5000" />
+        <rvarg value="--stacks" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />
     </test>
-    <test name="benchmarks.JGFMonteCarloBenchSizeA">
-        <arg key="-cp" value="basic.jar" />
+    <test name="benchmarks.JGFMonteCarloBenchSizeA" module="examples">
         <arg value="benchmarks.JGFMonteCarloBenchSizeA" />
-        <rvarg value="--simple-report" />
+        <rvarg value="--stacks" />
     </test>
-    <test name="benchmarks.JGFMolDynBenchSizeA">
-        <arg key="-cp" value="basic.jar" />
+    <test name="benchmarks.JGFMolDynBenchSizeA" module="examples">
         <arg value="benchmarks.JGFMolDynBenchSizeA" />
-        <rvarg value="--simple-report" />
+        <rvarg value="--stacks" />
+    </test>
+    
+    <test name="demo.Example" module="basic">
+        <arg value="demo.Example" />
+        <rvarg value="--stacks" />
+    </test>
+    <test name="boundedbuffer.BoundedBuffer" module="basic">
+        <runs value="32" />
+        <arg value="boundedbuffer.BoundedBuffer" />
+        <rvarg key="--window" value="800" />
+        <rvarg value="--stacks" />
+    </test>
+    <test name="critical.Critical" module="basic">
+        <runs value="8" />
+        <arg value="critical.Critical" />
+        <rvarg value="--stacks" />
+    </test>
+    <test name="bufwriter.BufWriter" module="basic">
+        <runs value="5" />
+        <arg value="bufwriter.BufWriter" />
+        <rvarg value="--stacks" />
+        <rvarg key="--window" value="500" />
+    </test>
+    <test name="bubblesort.BubbleSort" module="basic">
+        <runs value="64" />
+        <rvarg value="--stacks" />
+        <arg value="bubblesort.BubbleSort" />
+        <rvarg key="--window" value="500" />
     </test>
 
-    <test name="jtsan.EasyTests-positive">
-        <arg key="-cp" value="basic.jar" />
+    <test name="jtsan.EasyTests-positive" module="basic">
         <arg value="jtsan.EasyTests" />
         <arg value="positive" />
-        <rvarg value="--simple-report" />
+        <rvarg value="--stacks" />
     </test>
-        <test name="jtsan.EasyTests-negative">
-        <arg key="-cp" value="basic.jar" />
+    <test name="jtsan.EasyTests-negative" module="basic">
         <arg value="jtsan.EasyTests" />
         <arg value="negative" />
+        <rvarg value="--stacks" />
     </test>
 
-    <test name="jtsan.MediumTests-positive">
-        <arg key="-cp" value="basic.jar" />
+    <test name="jtsan.MediumTests-positive" module="basic">
         <arg value="jtsan.MediumTests" />
         <arg value="positive" />
-        <rvarg value="--simple-report" />
+        <rvarg value="--stacks" />
     </test>
-    <test name="jtsan.MediumTests-negative">
-        <arg key="-cp" value="basic.jar" />
+    <test name="jtsan.MediumTests-negative" module="basic">
         <arg value="jtsan.MediumTests" />
         <arg value="negative" />
+        <rvarg value="--stacks" />
     </test>
 
-    <test name="jtsan.CustomTests-positive">
-        <arg key="-cp" value="basic.jar" />
+    <test name="jtsan.CustomTests-positive" module="basic">
         <arg value="jtsan.CustomTests" />
         <arg value="positive" />
-        <rvarg value="--simple-report" />
+        <rvarg value="--stacks" />
     </test>
-        <test name="jtsan.CustomTests-negative">
-        <arg key="-cp" value="basic.jar" />
+    <test name="jtsan.CustomTests-negative" module="basic">
         <arg value="jtsan.CustomTests" />
         <arg value="negative" />
+        <rvarg value="--stacks" />
     </test>
 
-    <test name="jtsan.JUConcurrentTests-positive">
-        <arg key="-cp" value="basic.jar" />
+    <test name="jtsan.JUConcurrentTests-positive" module="basic">
         <arg value="jtsan.JUConcurrentTests" />
         <arg value="positive" />
-        <rvarg value="--simple-report" />
+        <rvarg key="--window" value="5000" />
+        <rvarg value="--stacks" />
     </test>
-    <test name="jtsan.JUConcurrentTests-negative">
-        <arg key="-cp" value="basic.jar" />
+    <test name="jtsan.JUConcurrentTests-negative" module="basic">
         <arg value="jtsan.JUConcurrentTests" />
         <arg value="negative" />
+        <rvarg key="--window" value="3000" />
+        <rvarg value="--stacks" />
     </test>
 
-    <test name="jtsan.JUCollectionTests-positive">
-        <arg key="-cp" value="basic.jar" />
+    <test name="jtsan.JUCollectionTests-positive" module="basic">
         <arg value="jtsan.JUCollectionTests" />
         <arg value="positive" />
-        <rvarg value="--simple-report" />
+        <rvarg value="--stacks" />
+        <rvarg key="--include" value="jtsan.JUCollectionTests$DelegatedIterator" />
     </test>
-    <test name="jtsan.JUCollectionTests-negative">
-        <arg key="-cp" value="basic.jar" />
+    <test name="jtsan.JUCollectionTests-negative" module="basic">
         <arg value="jtsan.JUCollectionTests" />
         <arg value="negative" />
+        <rvarg value="--stacks" />
     </test>
 
-    <test name="instrumentation.InstrumentationTests">
-        <arg key="-cp" value="basic.jar" />
+    <test name="jtsan.ExecutorTests-positive" module="basic">
+        <arg value="jtsan.ExecutorTests" />
+        <arg value="positive" />
+        <rvarg value="--stacks" />
+    </test>
+    <test name="jtsan.ExecutorTests-negative" module="basic">
+        <arg value="jtsan.ExecutorTests" />
+        <arg value="negative" />
+        <rvarg value="--stacks" />
+    </test>
+
+    <test name="instrumentation.InstrumentationTests" module="basic">
         <arg value="instrumentation.InstrumentationTests" />
     </test>
 
-</tests>
+</basic>

@@ -29,25 +29,30 @@
 package com.runtimeverification.rvpredict.runtime;
 
 import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
+import java.util.Deque;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
+import java.util.Stack;
 import java.util.Vector;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.AbstractQueuedSynchronizer;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.mutable.MutableInt;
+
+import com.google.common.collect.MapMaker;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
@@ -112,75 +117,43 @@ import com.runtimeverification.rvpredict.util.Constants;
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public final class RVPredictRuntime implements Constants {
 
-    /**
-     * Dummy value used to represent abstract state whose concrete value we do
-     * not care about.
-     * <p>
-     * <b>Note:</b> since we always return 0 as the initial value for all
-     * tracked variables, the prediction engine has to understand this dummy
-     * value to avoid generating read-write consistency constraint on abstract
-     * state.
-     */
-    private static final long DUMMY_VALUE = Constants._0X_DEADBEEFL;
-
     private static final String MOCK_STATE_FIELD = "$state";
 
     public static final Metadata metadata = Metadata.singleton();
 
-    private static int NATIVE_INTERRUPTED_STATUS_VAR_ID = metadata.getVariableId(
+    /**
+     * <em>Interruption rule:</em> A thread calling interrupt on another thread
+     * happens before the interrupted thread detects the interrupt (either by
+     * having {@code InterruptedException} thrown, or invoking
+     * {@link Thread#isInterrupted()} or {@link Thread#interrupted()}).
+     */
+    private static int THREAD_INTERRUPTED_STATUS_VAR_ID = metadata.getVariableId(
             "java.lang.Thread", "$interruptedStatus");
-    private static int ATOMIC_BOOLEAN_MOCK_VAL_ID = metadata.getVariableId(
-            "java.util.concurrent.atomic.AtomicBoolean", "$value");
-    private static int AQS_MOCK_STATE_ID = metadata.getVariableId(
-            "java.util.concurrent.locks.AbstractQueuedSynchronizer", MOCK_STATE_FIELD);
 
-    private static final MethodHandle SYNC_COLLECTION_GET_MUTEX = getFieldGetter(
+    private static final MethodHandle SYNC_COLLECTION_GET_MUTEX = Helper.getFieldGetter(
             Collections.synchronizedCollection(Collections.EMPTY_LIST).getClass(), "mutex");
-    private static final MethodHandle SYNC_MAP_GET_MUTEX = getFieldGetter(
+    private static final MethodHandle SYNC_MAP_GET_MUTEX = Helper.getFieldGetter(
             Collections.synchronizedMap(Collections.EMPTY_MAP).getClass(), "mutex");
-
-    private static final MethodHandle AQS_GET_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "getState");
-    private static final MethodHandle AQS_SET_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "setState", int.class);
-    private static final MethodHandle AQS_CAS_STATE = getMethodHandle(AbstractQueuedSynchronizer.class, "compareAndSetState", int.class, int.class);
-
-    private static MethodHandle getFieldGetter(Class<?> cls, String name) {
-        try {
-            Field field = cls.getDeclaredField(name);
-            field.setAccessible(true);
-            return MethodHandles.lookup().unreflectGetter(field);
-        } catch (NoSuchFieldException | SecurityException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static MethodHandle getMethodHandle(Class<?> cls, String name,
-            Class<?>... parameterTypes) {
-        try {
-            Method method = cls.getDeclaredMethod(name, parameterTypes);
-            method.setAccessible(true);
-            return MethodHandles.lookup().unreflect(method);
-        } catch (NoSuchMethodException | SecurityException | IllegalAccessException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static final ConcurrentHashMap<Lock, ReadWriteLock> readLockToRWLock = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<Lock, ReadWriteLock> writeLockToRWLock = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<Condition, Lock> conditionToLock = new ConcurrentHashMap<>();
+    private static final MethodHandle THREAD_START0 = Helper.getMethodHandle(Thread.class, "start0");
 
     /**
      * Map from iterator to its associated iterable (if any).
      */
-    private static final SynchronizedWeakIdentityHashMap<Iterator, Iterable> iteratorToIterable = new SynchronizedWeakIdentityHashMap<>();
+    private static final ConcurrentMap<Iterator, Iterable> iteratorToIterable = new MapMaker()
+            .weakKeys().weakValues().makeMap();
 
     /**
      * Map from view to its backed collection. There are two kinds of view in
      * the Java Collections Framework: the collection views provided in the
-     * {@link java.util.Map} interface and the range views provided in the {@link java.util.List},
-     * {@link java.util.SortedSet}, and {@link java.util.SortedMap} interfaces.
+     * {@link java.util.Map} interface and the range views provided in the
+     * {@link java.util.List}, {@link java.util.SortedSet}, and
+     * {@link java.util.SortedMap} interfaces.
      */
-    private static final SynchronizedWeakIdentityHashMap<Object, Object> viewToBackedCollection = new SynchronizedWeakIdentityHashMap<>();
+    private static final ConcurrentMap<Object, Object> viewToBackingCollection = new MapMaker()
+            .weakKeys().weakValues().makeMap();
+
+    private static final ConcurrentMap<Object, MutableInt> collectionToState = new MapMaker()
+            .weakKeys().makeMap();
 
     private static ILoggingEngine logger;
 
@@ -202,13 +175,13 @@ public final class RVPredictRuntime implements Constants {
     }
 
     public static void logInvokeMethod(int locId) {
-        if (!config.simple_report) {
+        if (config.stacks) {
             saveMetaEvent(EventType.INVOKE_METHOD, locId);
         }
     }
 
     public static void logFinishMethod(int locId) {
-        if (!config.simple_report) {
+        if (config.stacks) {
             saveMetaEvent(EventType.FINISH_METHOD, locId);
         }
     }
@@ -237,18 +210,16 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictWait(Object object, long timeout, int locId)
             throws InterruptedException {
-        long monitorId = calcMonitorId(object);
-        saveSyncEvent(EventType.WRITE_UNLOCK, locId, monitorId);
+        saveLockEvent(EventType.WAIT_REL, locId, MONITOR_C, object);
         try {
             object.wait(timeout);
         } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.WRITE_LOCK, locId, monitorId);
+            clearInterruptedStatus(Thread.currentThread(), locId);
+            saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
             throw e;
         }
 
-        onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(EventType.WRITE_LOCK, locId, monitorId);
+        saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
     }
 
     /**
@@ -266,18 +237,16 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictWait(Object object, long timeout, int nano, int locId)
             throws InterruptedException {
-        long monitorId = calcMonitorId(object);
-        saveSyncEvent(EventType.WRITE_UNLOCK, locId, monitorId);
+        saveLockEvent(EventType.WAIT_REL, locId, MONITOR_C, object);
         try {
             object.wait(timeout, nano);
         } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.WRITE_LOCK, locId, monitorId);
+            clearInterruptedStatus(Thread.currentThread(), locId);
+            saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
             throw e;
         }
 
-        onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(EventType.WRITE_LOCK, locId, monitorId);
+        saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
     }
 
     /**
@@ -290,7 +259,7 @@ public final class RVPredictRuntime implements Constants {
      *            the location identifier of the event
      */
     public static void logMonitorEnter(Object object, int locId) {
-        saveSyncEvent(EventType.WRITE_LOCK, locId, calcMonitorId(object));
+        saveLockEvent(EventType.WRITE_LOCK, locId, MONITOR_C, object);
     }
 
     /**
@@ -303,15 +272,15 @@ public final class RVPredictRuntime implements Constants {
      *            the location identifier of the event
      */
     public static void logMonitorExit(Object object, int locId) {
-        saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcMonitorId(object));
+        saveLockEvent(EventType.WRITE_UNLOCK, locId, MONITOR_C, object);
     }
 
     /**
      * Logs the {@code READ/WRITE} event produced by field access.
      *
      * @param object
-     *            the owner object of the field; {@code null} when accessing
-     *            static fields
+     *            the owner object of the field, which would be the class
+     *            literal when accessing static field
      * @param value
      *            the value written by the write access or the value read by the
      *            read access
@@ -349,502 +318,156 @@ public final class RVPredictRuntime implements Constants {
     }
 
     /**
-     * Logs the {@code START} event produced by invoking {@code thread.start()}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code start()} method is
-     *            invoked
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#start0()}
      */
-    public static void rvPredictStart(Thread thread, int locId) {
-        saveSyncEvent(EventType.START, locId, thread.getId());
+    public static void rvPredictStart0(Thread thread, int locId) {
+        locId = metadata.getLocationId(new Throwable().getStackTrace()[2].toString());
+        saveThreadSyncEvent(EventType.START, locId, thread.getId());
         metadata.addThreadCreationInfo(thread.getId(), Thread.currentThread().getId(), locId);
-        thread.start();
+        try {
+            THREAD_START0.invoke(thread);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
-     * Logs the {@code JOIN} event produced by invoking {@code thread.join()}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code join()} method is
-     *            invoked
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#isAlive()}
+     * <p>
+     * <i>Thread termination rule:</i> Any action in a thread happens before any
+     * other thread detects that thread has terminated, either by successfully
+     * return from {@link Thread#join()} or by {@link Thread#isAlive()}
+     * returning false.
+     */
+    public static boolean rvPredictIsAlive(Thread thread, int locId) {
+        if (!thread.isAlive()) {
+            saveThreadSyncEvent(EventType.JOIN, locId, thread.getId());
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * {@link Thread#join()}
      */
     public static void rvPredictJoin(Thread thread, int locId) throws InterruptedException {
         rvPredictJoin(thread, 0, locId);
     }
 
     /**
-     * Logs the {@code JOIN} event produced by invoking
-     * {@code thread.join(long)}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code join(long)} method is
-     *            invoked
-     * @param millis
-     *            the first argument of {@code thread.join(long)}
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#join(long)}
      */
     public static void rvPredictJoin(Thread thread, long millis, int locId)
             throws InterruptedException {
         try {
             thread.join(millis);
         } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
+            clearInterruptedStatus(Thread.currentThread(), locId);
             throw e;
         }
 
-        onBlockingMethodNormalReturn(locId);
         if (millis == 0) {
-            saveSyncEvent(EventType.JOIN, locId, thread.getId());
+            saveThreadSyncEvent(EventType.JOIN, locId, thread.getId());
         }
     }
 
     /**
-     * Logs the {@code JOIN} event produced by invoking
-     * {@code thread.join(long, int)}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code join(long, int)} method
-     *            is invoked
-     * @param millis
-     *            the first argument of {@code thread.join(long, int)}
-     * @param nanos
-     *            the second argument of {@code thread.join(long, int)}
-     * @param locId
-     *            the location identifier of the event
-     *
+     * {@link Thread#join(long, int)}
      */
     public static void rvPredictJoin(Thread thread, long millis, int nanos, int locId)
             throws InterruptedException {
         try {
             thread.join(millis, nanos);
         } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
+            clearInterruptedStatus(Thread.currentThread(), locId);
             throw e;
         }
 
-        onBlockingMethodNormalReturn(locId);
         if (millis == 0 && nanos == 0) {
-            saveSyncEvent(EventType.JOIN, locId, thread.getId());
+            saveThreadSyncEvent(EventType.JOIN, locId, thread.getId());
         }
     }
 
     /**
-     * Logs the events produced by invoking {@code Thread#sleep(long)}.
-     *
-     * @param millis
-     *            the first argument of {@code Thread#sleep(long)}
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#sleep(long)}
      */
     public static void rvPredictSleep(long millis, int locId) throws InterruptedException {
         try {
             Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            throw e;
+        } finally {
+            clearInterruptedStatus(Thread.currentThread(), locId);
         }
     }
 
     /**
-     * Logs the events produced by invoking {@code Thread#sleep(long, int)}.
-     *
-     * @param millis
-     *            the first argument of {@code Thread#sleep(long, int)}
-     * @param nanos
-     *            the second argument of {@code Thread#sleep(long, int)}
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#sleep(long,int)}
      */
     public static void rvPredictSleep(long millis, int nanos, int locId)
             throws InterruptedException {
         try {
             Thread.sleep(millis, nanos);
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            throw e;
+        } finally {
+            clearInterruptedStatus(Thread.currentThread(), locId);
         }
     }
 
     /**
-     * Logs the events produced by invoking {@code thread.interrupt()}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code interrupt()} method is
-     *            invoked
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#interrupt()}
      */
     public static void rvPredictInterrupt(Thread thread, int locId) {
-        try {
-            if (thread != Thread.currentThread()) {
-                thread.checkAccess();
-            }
-
-            /* TODO(YilongL): Interrupting a thread that is not alive need not
-             * have any effect; yet I am not sure how to model such case
-             * precisely so I just assume interrupted status will be set to true
-             */
-
-            /*
-             * make sure the write on interrupted status is logged before the
-             * read-and-clear events generated by the blocking method
-             */
-            saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(thread),
-                    -NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
-            thread.interrupt();
-        } catch (SecurityException e) {
-            throw e;
+        if (thread != Thread.currentThread()) {
+            thread.checkAccess();
         }
+        setInterruptedStatus(thread, locId);
+        thread.interrupt();
     }
 
     /**
-     * Logs the events produced by invoking {@code thread.isInterrupted()}.
-     *
-     * @param thread
-     *            the {@code Thread} object whose {@code isInterrupted()} method
-     *            is invoked
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#isInterrupted()}
      */
     public static boolean rvPredictIsInterrupted(Thread thread, int locId) {
-        boolean isInterrupted = thread.isInterrupted();
-        /*
-         * the interrupted status is like an imaginary shared variable so we
-         * need to record access to it to preserve soundness
-         */
-        saveMemAccEvent(EventType.READ, locId, System.identityHashCode(thread),
-                -NATIVE_INTERRUPTED_STATUS_VAR_ID, bool2int(isInterrupted));
-        return isInterrupted;
+        boolean result = thread.isInterrupted();
+        testInterruptedStatus(thread, result, false /* reset */, locId);
+        return result;
     }
 
     /**
-     * Logs the events produced by invoking {@code Thread#interrupted()}.
-     *
-     * @param locId
-     *            the location identifier of the event
+     * {@link Thread#interrupted()}
      */
     public static boolean rvPredictInterrupted(int locId) {
-        boolean interrupted = Thread.interrupted();
-        saveMemAccEvent(EventType.READ, locId, 0, -NATIVE_INTERRUPTED_STATUS_VAR_ID, interrupted ? 1
-                : 0);
-        /* clear interrupted status */
-        saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(Thread.currentThread()),
-                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-        return interrupted;
+        boolean result = Thread.interrupted();
+        testInterruptedStatus(Thread.currentThread(), result, true /* reset */, locId);
+        return result;
     }
 
-    /**
-     * Logs the {@code LOCK} event produced by invoking {@code Lock#lock()}.
-     *
-     * @param lock
-     *            the lock to acquire
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static void rvPredictLock(Lock lock, int locId) {
-        lock.lock();
-        saveSyncEvent(getLockEventType(lock), locId, calcLockId(lock));
+    private static void setInterruptedStatus(Thread t, int locId) {
+        saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(t),
+                -THREAD_INTERRUPTED_STATUS_VAR_ID, 1, 0);
     }
 
-    /**
-     * Logs events produced by invoking {@code Lock#lockInterruptibly()}.
-     *
-     * @param lock
-     *            the lock to acquire
-     * @param locId
-     *            the location identifier of the event
-     *
-     * @throws InterruptedException
-     *             see {@link Lock#lockInterruptibly()}
-     */
-    public static void rvPredictLockInterruptibly(Lock lock, int locId) throws InterruptedException {
-        try {
-            lock.lockInterruptibly();
-            onBlockingMethodNormalReturn(locId);
-            saveSyncEvent(getLockEventType(lock), locId, calcLockId(lock));
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            throw e;
-        }
+    private static void clearInterruptedStatus(Thread t, int locId) {
+        saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(t),
+                -THREAD_INTERRUPTED_STATUS_VAR_ID, 0, 0);
     }
 
-    /**
-     * Logs the {@code LOCK} event produced by invoking {@code Lock#tryLock()}.
-     *
-     * @param lock
-     *            the lock to acquire
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static boolean rvPredictTryLock(Lock lock, int locId) {
-        boolean acquired = lock.tryLock();
-        if (acquired) {
-            saveSyncEvent(getLockEventType(lock), locId, calcLockId(lock));
-        }
-        return acquired;
-    }
-
-    /**
-     * Logs events produced by invoking {@code Lock#tryLock(long, TimeUnit)}.
-     *
-     * @param lock
-     *            the lock to acquire
-     * @param time
-     *            first argument of {@code Lock#tryLock(long, TimeUnit)}
-     * @param unit
-     *            second argument of {@code Lock#tryLock(long, TimeUnit)}.
-     * @param locId
-     *            the location identifier of the event
-     *
-     * @throws InterruptedException
-     *             see {@link Lock#tryLock(long, TimeUnit)}
-     */
-    public static boolean rvPredictTryLock(Lock lock, long time, TimeUnit unit, int locId)
-            throws InterruptedException {
-        try {
-            boolean acquired = lock.tryLock(time, unit);
-            if (acquired) {
-                onBlockingMethodNormalReturn(locId);
-                saveSyncEvent(EventType.WRITE_LOCK, locId, calcLockId(lock));
+    private static void testInterruptedStatus(Thread t, boolean isInterrupted,
+            boolean clearInterrupted, int locId) {
+        if (clearInterrupted) {
+            if (isInterrupted) {
+                saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
+                        System.identityHashCode(t), -THREAD_INTERRUPTED_STATUS_VAR_ID, 1, 0);
+            } else {
+                saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(t),
+                        -THREAD_INTERRUPTED_STATUS_VAR_ID, 0, 0);
             }
-            return acquired;
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            throw e;
+        } else {
+            saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(t),
+                    -THREAD_INTERRUPTED_STATUS_VAR_ID, bool2int(isInterrupted), 0);
         }
     }
 
     /**
-     * Logs the {@code UNLOCK} event produced by invoking {@code Lock#Unlock()}.
-     *
-     * @param lock
-     *            the lock to release
-     * @param locId
-     *            the location identifier of the event
-     */
-    public static void rvPredictUnlock(Lock lock, int locId) {
-        saveSyncEvent(getUnlockEventType(lock), locId, calcLockId(lock));
-        lock.unlock();
-    }
-
-    /**
-     * {@link Lock#newCondition()}
-     */
-    public static Condition rvPredictLockNewCondition(Lock lock, int locId) {
-        Condition condition = lock.newCondition();
-        conditionToLock.putIfAbsent(condition, lock);
-        return condition;
-    }
-
-    /**
-     * {@link ReadWriteLock#readLock()}
-     */
-    public static Lock rvPredictReadWriteLockReadLock(ReadWriteLock readWriteLock, int locId) {
-        Lock readLock = readWriteLock.readLock();
-        readLockToRWLock.putIfAbsent(readLock, readWriteLock);
-        return readLock;
-    }
-
-    /**
-     * {@link ReadWriteLock#writeLock()}
-     */
-    public static Lock rvPredictReadWriteLockWriteLock(ReadWriteLock readWriteLock, int locId) {
-        Lock writeLock = readWriteLock.writeLock();
-        writeLockToRWLock.putIfAbsent(writeLock, readWriteLock);
-        return writeLock;
-    }
-
-    /**
-     * {@link Condition#await()}
-     */
-    public static void rvPredictConditionAwait(Condition condition, int locId)
-            throws InterruptedException {
-        long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveSyncEvent(EventType.WRITE_UNLOCK, locId, lockId);
-        try {
-            condition.await();
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
-            throw e;
-        }
-
-        onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
-    }
-
-    /**
-     * {@link Condition#await(long, TimeUnit)}
-     */
-    public static boolean rvPredictConditionAwait(Condition condition, long time, TimeUnit unit,
-            int locId) throws InterruptedException {
-        boolean result;
-        long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveSyncEvent(EventType.WRITE_UNLOCK, locId, lockId);
-        try {
-            result = condition.await(time, unit);
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
-            throw e;
-        }
-
-        onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
-        return result;
-    }
-
-    /**
-     * {@link Condition#awaitNanos(long)}
-     */
-    public static long rvPredictConditionAwaitNanos(Condition condition, long nanosTimeout,
-            int locId) throws InterruptedException {
-        long result;
-        long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveSyncEvent(EventType.WRITE_UNLOCK, locId, lockId);
-        try {
-            result = condition.awaitNanos(nanosTimeout);
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
-            throw e;
-        }
-
-        onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
-        return result;
-    }
-
-    /**
-     * {@link Condition#awaitUntil(Date)}
-     */
-    public static boolean rvPredictConditionAwaitUntil(Condition condition, Date deadline, int locId)
-            throws InterruptedException {
-        boolean result;
-        long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveSyncEvent(EventType.WRITE_UNLOCK, locId, lockId);
-        try {
-            result = condition.awaitUntil(deadline);
-        } catch (InterruptedException e) {
-            onBlockingMethodInterrupted(locId);
-            saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
-            throw e;
-        }
-
-        onBlockingMethodNormalReturn(locId);
-        saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
-        return result;
-    }
-
-    /**
-     * {@link Condition#awaitUninterruptibly()}
-     */
-    public static void rvPredictConditionAwaitUninterruptibly(Condition condition, int locId) {
-        long lockId = System.identityHashCode(conditionToLock.get(condition));
-        saveSyncEvent(EventType.WRITE_UNLOCK, locId, lockId);
-        condition.awaitUninterruptibly();
-        saveSyncEvent(EventType.WRITE_LOCK, locId, lockId);
-    }
-
-    /**
-     * {@link AbstractQueuedSynchronizer#getState()}
-     */
-    public static int rvPredictAbstractQueuedSynchronizerGetState(AbstractQueuedSynchronizer aqs,
-            int locId) {
-        synchronized (aqs) {
-            int result = (int) invokeMethodHandle(AQS_GET_STATE, aqs);
-            saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(aqs),
-                    -AQS_MOCK_STATE_ID, result, 0);
-            return result;
-        }
-    }
-
-    /**
-     * {@link AbstractQueuedSynchronizer#setState(int)}
-     */
-    public static void rvPredictAbstractQueuedSynchronizerSetState(AbstractQueuedSynchronizer aqs,
-            int newState, int locId) {
-        synchronized (aqs) {
-            saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(aqs),
-                    -AQS_MOCK_STATE_ID, newState, 0);
-            invokeMethodHandle(AQS_SET_STATE, aqs, newState);
-        }
-    }
-
-    /**
-     * {@link AbstractQueuedSynchronizer#compareAndSetState(int, int)}
-     */
-    public static boolean rvPredictAbstractQueuedSynchronizerCASState(AbstractQueuedSynchronizer aqs,
-            int expect, int update, int locId) {
-        synchronized (aqs) {
-            saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId, System.identityHashCode(aqs),
-                    -AQS_MOCK_STATE_ID, (int) invokeMethodHandle(AQS_GET_STATE, aqs), update);
-            return (boolean) invokeMethodHandle(AQS_CAS_STATE, aqs, expect, update);
-        }
-    }
-
-    /**
-     * {@link AtomicBoolean#get()}
-     */
-    public static boolean rvPredictAtomicBoolGet(AtomicBoolean atomicBool, int locId) {
-        synchronized (atomicBool) {
-            boolean result = atomicBool.get();
-            saveAtomicEvent(EventType.ATOMIC_READ, locId, System.identityHashCode(atomicBool),
-                    -ATOMIC_BOOLEAN_MOCK_VAL_ID, bool2int(result), 0);
-            return result;
-        }
-    }
-
-    /**
-     * {@link AtomicBoolean#set(boolean)}
-     */
-    public static void rvPredictAtomicBoolSet(AtomicBoolean atomicBool, boolean newValue, int locId) {
-        synchronized (atomicBool) {
-            saveAtomicEvent(EventType.ATOMIC_WRITE, locId, System.identityHashCode(atomicBool),
-                    -ATOMIC_BOOLEAN_MOCK_VAL_ID, bool2int(newValue), 0);
-            atomicBool.set(newValue);
-        }
-    }
-
-    /**
-     * {@link AtomicBoolean#getAndSet(boolean)}
-     */
-    public static boolean rvPredictAtomicBoolGAS(AtomicBoolean atomicBool, boolean newValue,
-            int locId) {
-        synchronized (atomicBool) {
-            boolean result = atomicBool.getAndSet(newValue);
-            saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
-                    System.identityHashCode(atomicBool), -ATOMIC_BOOLEAN_MOCK_VAL_ID,
-                    bool2int(result), bool2int(newValue));
-            return result;
-        }
-    }
-
-    /**
-     * {@link AtomicBoolean#compareAndSet(boolean, boolean)}
-     */
-    public static boolean rvPredictAtomicBoolCAS(AtomicBoolean atomicBool, boolean expect,
-            boolean update, int locId) {
-        synchronized (atomicBool) {
-            boolean result = atomicBool.compareAndSet(expect, update);
-            saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId,
-                    System.identityHashCode(atomicBool), -ATOMIC_BOOLEAN_MOCK_VAL_ID,
-                    result ? bool2int(expect) : bool2int(!expect), bool2int(update));
-            return result;
-        }
-    }
-
-    /**
-     * Logs the events produced by invoking
-     * {@code System#arraycopy(Object, int, Object, int, int)}.
-     *
-     * @param locId
-     *            the location identifier of the event
+     * {@link System#arraycopy(Object,int,Object,int,int)}
      */
     public static void rvPredictSystemArraycopy(Object src, int srcPos, Object dest, int destPos,
             int length, int locId) {
@@ -987,181 +610,419 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Iterator rvPredictIterableGetIterator(Iterable iterable, int locId) {
         Iterator iterator = iterable.iterator();
-        Iterable value = iteratorToIterable.put(iterator, iterable);
-        if (value != null && Configuration.verbose) {
-            System.err.println("[Runtime] error: iterator " + iterator
-                    + " was already bound to " + value);
-        }
+        iteratorToIterable.put(iterator, iterable);
         return iterator;
+    }
+
+    /**
+     * {@link List#listIterator()}
+     */
+    public static ListIterator rvPredictListGetListIterator(List list, int locId) {
+        ListIterator listItr = list.listIterator();
+        iteratorToIterable.put(listItr, list);
+        return listItr;
+    }
+
+    /**
+     * {@link List#listIterator(int)}
+     */
+    public static ListIterator rvPredictListGetListIterator(List list, int index, int locId) {
+        ListIterator listItr = list.listIterator(index);
+        iteratorToIterable.put(listItr, list);
+        return listItr;
     }
 
     /**
      * {@link Iterator#hasNext()}
      */
     public static boolean rvPredictIteratorHasNext(Iterator iterator, int locId) {
-        boolean result = iterator.hasNext();
-        readUsingIterator(iterator, locId);
-        return result;
+        return readUsingIterator(iterator, locId, () -> {
+            return iterator.hasNext();
+        });
     }
 
     /**
      * {@link Iterator#next()}
      */
     public static Object rvPredictIteratorNext(Iterator iterator, int locId) {
-        Object result = iterator.next();
-        readUsingIterator(iterator, locId);
-        return result;
+        return readUsingIterator(iterator, locId, () -> {
+            return iterator.next();
+        });
     }
 
     /**
      * {@link Iterator#remove()}
      */
     public static void rvPredictIteratorRemove(Iterator iterator, int locId) {
-        writeUsingIterator(iterator, locId);
-        iterator.remove();
+        writeUsingIterator(iterator, locId, () -> {
+            iterator.remove();
+            return null;
+        });
+    }
+
+    /**
+     * {@link ListIterator#hasPrevious()}
+     */
+    public static boolean rvPredictListIteratorHasPrevious(ListIterator listItr, int locId) {
+        return readUsingIterator(listItr, locId, () -> {
+            return listItr.hasPrevious();
+        });
+    }
+
+    /**
+     * {@link ListIterator#previous()}
+     */
+    public static Object rvPredictListIteratorPrevious(ListIterator listItr, int locId) {
+        return readUsingIterator(listItr, locId, () -> {
+            return listItr.previous();
+        });
+    }
+
+    /**
+     * {@link ListIterator#add(Object)}
+     */
+    public static void rvPredictListIteratorAdd(ListIterator listItr, Object e, int locId) {
+        writeUsingIterator(listItr, locId, () -> {
+            listItr.add(e);
+            return null;
+        });
+    }
+
+    /**
+     * {@link ListIterator#set(Object)}
+     */
+    public static void rvPredictListIteratorSet(ListIterator listItr, Object e, int locId) {
+        writeUsingIterator(listItr, locId, () -> {
+            listItr.set(e);
+            return null;
+        });
+    }
+
+    /**
+     * {@link Collection#size()}
+     */
+    public static int rvPredictCollectionSize(Collection collection, int locId) {
+        return logCollectionReadAccess(collection, locId, () -> {
+            return collection.size();
+        });
+    }
+
+    /**
+     * {@link Collection#isEmpty()}
+     */
+    public static boolean rvPredictCollectionIsEmpty(Collection collection, int locId) {
+        return logCollectionReadAccess(collection, locId, () -> {
+            return collection.isEmpty();
+        });
     }
 
     /**
      * {@link Collection#add(Object)}
      */
     public static boolean rvPredictCollectionAdd(Collection collection, Object e, int locId) {
-        mockCollectionWriteAccess(collection, locId);
-        return collection.add(e);
+        return logCollectionWriteAccess(collection, locId, () -> {
+            return collection.add(e);
+        });
     }
 
     /**
      * {@link Collection#addAll(Collection)}
      */
     public static boolean rvPredictCollectionAddAll(Collection collection, Collection c, int locId) {
-        mockCollectionWriteAccess(collection, locId);
-        return collection.addAll(c);
+        return logCollectionWriteAccess(collection, locId, () -> {
+            return collection.addAll(c);
+        });
     }
 
     /**
      * {@link Collection#remove(Object)}
      */
     public static boolean rvPredictCollectionRemove(Collection collection, Object e, int locId) {
-        mockCollectionWriteAccess(collection, locId);
-        return collection.remove(e);
+        return logCollectionWriteAccess(collection, locId, () -> {
+            return collection.remove(e);
+        });
     }
 
     /**
      * {@link Collection#removeAll(Collection)}
      */
     public static boolean rvPredictCollectionRemoveAll(Collection collection, Collection c, int locId) {
-        mockCollectionWriteAccess(collection, locId);
-        return collection.removeAll(c);
+        return logCollectionWriteAccess(collection, locId, () -> {
+            return collection.removeAll(c);
+        });
     }
 
     /**
      * {@link Collection#retainAll(Collection)}
      */
     public static boolean rvPredictCollectionRetainAll(Collection collection, Collection c, int locId) {
-        mockCollectionWriteAccess(collection, locId);
-        return collection.retainAll(c);
+        return logCollectionWriteAccess(collection, locId, () -> {
+            return collection.retainAll(c);
+        });
     }
 
     /**
      * {@link Collection#contains(Object)}
      */
     public static boolean rvPredictCollectionContains(Collection collection, Object e, int locId) {
-        boolean result = collection.contains(e);
-        mockCollectionReadAccess(collection, locId);
-        return result;
+        return logCollectionReadAccess(collection, locId, () -> {
+            return collection.contains(e);
+        });
     }
 
     /**
      * {@link Collection#containsAll(Collection)}
      */
     public static boolean rvPredictCollectionContainsAll(Collection collection, Collection c, int locId) {
-        boolean result = collection.containsAll(c);
-        mockCollectionReadAccess(collection, locId);
-        return result;
+        return logCollectionReadAccess(collection, locId, () -> {
+            return collection.containsAll(c);
+        });
     }
 
     /**
      * {@link java.util.Collection#clear()}
      */
     public static void rvPredictCollectionClear(Collection collection, int locId) {
-        mockCollectionWriteAccess(collection, locId);
-        collection.clear();
+        logCollectionWriteAccess(collection, locId, () -> {
+            collection.clear();
+            return null;
+        });
     }
 
     /**
      * {@link Collection#toArray()}
      */
     public static Object[] rvPredictCollectionToArray(Collection collection, int locId) {
-        Object[] result = collection.toArray();
-        mockCollectionReadAccess(collection, locId);
-        return result;
+        return logCollectionReadAccess(collection, locId, () -> {
+            return collection.toArray();
+        });
     }
 
     /**
      * {@link Collection#toArray(Object[])}
      */
     public static Object[] rvPredictCollectionToArray(Collection collection, Object[] a, int locId) {
-        Object[] result = collection.toArray(a);
-        mockCollectionReadAccess(collection, locId);
-        return result;
+        return logCollectionReadAccess(collection, locId, () -> {
+            return collection.toArray(a);
+        });
+    }
+
+    /**
+     * {@link List#get(int)}
+     */
+    public static Object rvPredictListGet(List list, int index, int locId) {
+        return logCollectionReadAccess(list, locId, () -> {
+            return list.get(index);
+        });
+    }
+
+    /**
+     * {@link List#set(int, Object)}
+     */
+    public static Object rvPredictListSet(List list, int index, Object e, int locId) {
+        return logCollectionWriteAccess(list, locId, () -> {
+            return list.set(index, e);
+        });
+    }
+
+    /**
+     * {@link List#add(int, Object)}
+     */
+    public static void rvPredictListAdd(List list, int index, Object e, int locId) {
+        logCollectionWriteAccess(list, locId, () -> {
+            list.add(index, e);
+            return null;
+        });
+    }
+
+    /**
+     * {@link List#remove(int)}
+     */
+    public static Object rvPredictListRemove(List list, int index, int locId) {
+        return logCollectionWriteAccess(list, locId, () -> {
+            return list.remove(index);
+        });
+    }
+
+    /**
+     * {@link List#indexOf(Object)}
+     */
+    public static int rvPredictListIndexOf(List list, Object e, int locId) {
+        return logCollectionReadAccess(list, locId, () -> {
+            return list.indexOf(e);
+        });
+    }
+
+    /**
+     * {@link Map#compute(Object, BiFunction)}
+     */
+    public static Object rvPredictMapCompute(Map map, Object key, BiFunction remappingFunction,
+            int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.compute(key, remappingFunction);
+        });
+    }
+
+    /**
+     * {@link Map#computeIfAbsent(Object, Function)}
+     */
+    public static Object rvPredictMapComputeIfAbsent(Map map, Object key, Function mappingFunction,
+            int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.computeIfAbsent(key, mappingFunction);
+        });
+    }
+
+    /**
+     * {@link Map#computeIfPresent(Object, BiFunction)}
+     */
+    public static Object rvPredictMapComputeIfPresent(Map map, Object key, BiFunction remappingFunction,
+            int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.computeIfPresent(key, remappingFunction);
+        });
+    }
+
+    /**
+     * {@link Map#forEach(BiConsumer)}
+     */
+    public static void rvPredictMapForEach(Map map, BiConsumer action, int locId) {
+        logCollectionReadAccess(map, locId, () -> {
+            map.forEach(action);
+            return null;
+        });
+    }
+
+    /**
+     * {@link Map#merge(Object, Object, BiFunction)}
+     */
+    public static Object rvPredictMapMerge(Map map, Object key, Object value,
+            BiFunction remappingFunction, int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.merge(key, value, remappingFunction);
+        });
     }
 
     /**
      * {@link Map#get(Object)}
      */
     public static Object rvPredictMapGet(Map map, Object key, int locId) {
-        Object result = map.get(key);
-        mockCollectionReadAccess(map, locId);
-        return result;
+        return logCollectionReadAccess(map, locId, () -> {
+            return map.get(key);
+        });
+    }
+
+    /**
+     * {@link Map#getOrDefault(Object, Object)}
+     */
+    public static Object rvPredictMapGetOrDefault(Map map, Object key, Object defaultVal,
+            int locId) {
+        return logCollectionReadAccess(map, locId, () -> {
+            return map.getOrDefault(key, defaultVal);
+        });
     }
 
     /**
      * {@link Map#put(Object, Object)}
      */
     public static Object rvPredictMapPut(Map map, Object key, Object value, int locId) {
-        mockCollectionWriteAccess(map, locId);
-        return map.put(key, value);
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.put(key, value);
+        });
     }
 
     /**
      * {@link Map#putAll(Map)}
      */
     public static void rvPredictMapPutAll(Map map, Map m, int locId) {
-        mockCollectionWriteAccess(map, locId);
-        map.putAll(m);
+        logCollectionWriteAccess(map, locId, () -> {
+            map.putAll(m);
+            return null;
+        });
+    }
+
+    /**
+     * {@link Map#putIfAbsent(Object, Object)}
+     */
+    public static Object rvPredictMapPutIfAbsent(Map map, Object key, Object value, int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.putIfAbsent(key, value);
+        });
     }
 
     /**
      * {@link Map#remove(Object)}
      */
     public static Object rvPredictMapRemove(Map map, Object key, int locId) {
-        mockCollectionWriteAccess(map, locId);
-        return map.remove(key);
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.remove(key);
+        });
+    }
+
+    /**
+     * {@link Map#remove(Object, Object)}
+     */
+    public static boolean rvPredictMapRemove(Map map, Object key, Object value, int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.remove(key, value);
+        });
+    }
+
+    /**
+     * {@link Map#replace(Object, Object)}
+     */
+    public static Object rvPredictMapReplace(Map map, Object key, Object value, int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.replace(key, value);
+        });
+    }
+
+    /**
+     * {@link Map#replace(Object, Object, Object)}
+     */
+    public static boolean rvPredictMapReplace(Map map, Object key, Object oldValue, Object newValue,
+            int locId) {
+        return logCollectionWriteAccess(map, locId, () -> {
+            return map.replace(key, oldValue, newValue);
+        });
+    }
+
+    /**
+     * {@link Map#replaceAll(BiFunction)}
+     */
+    public static void rvPredictMapReplaceAll(Map map, BiFunction function, int locId) {
+        logCollectionWriteAccess(map, locId, () -> {
+            map.replaceAll(function);
+            return null;
+        });
     }
 
     /**
      * {@link Map#containsKey(Object)}
      */
     public static boolean rvPredictMapContainsKey(Map map, Object key, int locId) {
-        boolean result = map.containsKey(key);
-        mockCollectionReadAccess(map, locId);
-        return result;
+        return logCollectionReadAccess(map, locId, () -> {
+            return map.containsKey(key);
+        });
     }
 
     /**
      * {@link Map#containsValue(Object)}
      */
     public static boolean rvPredictMapContainsValue(Map map, Object value, int locId) {
-        boolean result = map.containsValue(value);
-        mockCollectionReadAccess(map, locId);
-        return result;
+        return logCollectionReadAccess(map, locId, () -> {
+            return map.containsValue(value);
+        });
     }
 
     /**
      * {@link Map#clear()}
      */
     public static void rvPredictMapClear(Map map, int locId) {
-        mockCollectionWriteAccess(map, locId);
-        map.clear();
+        logCollectionWriteAccess(map, locId, () -> {
+            map.clear();
+            return null;
+        });
     }
 
     /**
@@ -1169,7 +1030,7 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Set rvPredictMapEntrySet(Map map, int locId) {
         Set result = map.entrySet();
-        viewToBackedCollection.put(result, map);
+        viewToBackingCollection.put(result, map);
         return result;
     }
 
@@ -1178,7 +1039,7 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Set rvPredictMapKeySet(Map map, int locId) {
         Set result = map.keySet();
-        viewToBackedCollection.put(result, map);
+        viewToBackingCollection.put(result, map);
         return result;
     }
 
@@ -1187,7 +1048,7 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Collection rvPredictMapValues(Map map, int locId) {
         Collection result = map.values();
-        viewToBackedCollection.put(result, map);
+        viewToBackingCollection.put(result, map);
         return result;
     }
 
@@ -1196,7 +1057,7 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Collection rvPredictSynchronizedCollection(Collection collection, int locId) {
         Collection syncCollection = Collections.synchronizedCollection(collection);
-        viewToBackedCollection.put(syncCollection, collection);
+        viewToBackingCollection.put(syncCollection, collection);
         return syncCollection;
     }
 
@@ -1205,57 +1066,166 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Map rvPredictSynchronizedMap(Map map, int locId) {
         Map syncMap = Collections.synchronizedMap(map);
-        viewToBackedCollection.put(syncMap, map);
+        viewToBackingCollection.put(syncMap, map);
         return syncMap;
     }
 
     /**
-     * Shorthand for {@link MethodHandle#invoke(Object...)}.
+     * {@link Stack#push(Object)}
      */
-    private static Object invokeMethodHandle(MethodHandle mh, Object... objects) {
-        try {
-            return mh.invokeWithArguments(objects);
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
-        }
+    public static Object rvPredictStackPush(Stack stack, Object e, int locId) {
+        return logCollectionWriteAccess(stack, locId, () -> {
+            return stack.push(e);
+        });
+    }
+
+    /**
+     * {@link Stack#pop()}
+     */
+    public static Object rvPredictStackPop(Stack stack, int locId) {
+        return logCollectionWriteAccess(stack, locId, () -> {
+            return stack.pop();
+        });
+    }
+
+    /**
+     * {@link Stack#peek()}
+     */
+    public static Object rvPredictStackPeek(Stack stack, int locId) {
+        return logCollectionWriteAccess(stack, locId, () -> {
+            return stack.peek();
+        });
+    }
+
+    /**
+     * {@link Queue#offer(Object)}
+     */
+    public static boolean rvPredictQueueOffer(Queue queue, Object e, int locId) {
+        return logCollectionWriteAccess(queue, locId, () -> {
+            return queue.offer(e);
+        });
+    }
+
+    /**
+     * {@link Queue#remove()}
+     */
+    public static Object rvPredictQueueRemove(Queue queue, int locId) {
+        return logCollectionWriteAccess(queue, locId, () -> {
+            return queue.remove();
+        });
+    }
+
+    /**
+     * {@link Queue#poll()}
+     */
+    public static Object rvPredictQueuePoll(Queue queue, int locId) {
+        return logCollectionWriteAccess(queue, locId, () -> {
+            return queue.poll();
+        });
+    }
+
+    /**
+     * {@link Queue#element()}
+     */
+    public static Object rvPredictQueueElement(Queue queue, int locId) {
+        return logCollectionReadAccess(queue, locId, () -> {
+            return queue.element();
+        });
+    }
+
+    /**
+     * {@link Queue#peek()}
+     */
+    public static Object rvPredictQueuePeek(Queue queue, int locId) {
+        return logCollectionReadAccess(queue, locId, () -> {
+            return queue.peek();
+        });
+    }
+
+    /**
+     * {@link Deque#addFirst(Object)}
+     */
+    public static void rvPredictDequeAddFirst(Deque deque, Object e, int locId) {
+        logCollectionWriteAccess(deque, locId, () -> {
+            deque.addFirst(e);
+            return null;
+        });
+    }
+
+    /**
+     * {@link Deque#addLast(Object)}
+     */
+    public static void rvPredictDequeAddLast(Deque deque, Object e, int locId) {
+        logCollectionWriteAccess(deque, locId, () -> {
+            deque.addLast(e);
+            return null;
+        });
+    }
+
+    /**
+     * {@link Deque#offerFirst(Object)}
+     */
+    public static boolean rvPredictDequeOfferFirst(Deque deque, Object e, int locId) {
+        return logCollectionWriteAccess(deque, locId, () -> {
+            return deque.offerFirst(e);
+        });
+    }
+
+    /**
+     * {@link Deque#offerLast(Object)}
+     */
+    public static boolean rvPredictDequeOfferLast(Deque deque, Object e, int locId) {
+        return logCollectionWriteAccess(deque, locId, () -> {
+            return deque.offerLast(e);
+        });
+    }
+
+    /**
+     * {@link Deque#removeFirst()}
+     */
+    public static Object rvPredictDequeRemoveFirst(Deque deque, int locId) {
+        return logCollectionWriteAccess(deque, locId, () -> {
+            return deque.removeFirst();
+        });
+    }
+
+    /**
+     * {@link Deque#removeLast()}
+     */
+    public static Object rvPredictDequeRemoveLast(Deque deque, int locId) {
+        return logCollectionWriteAccess(deque, locId, () -> {
+            return deque.removeLast();
+        });
+    }
+
+    /**
+     * {@link Deque#getFirst()}
+     */
+    public static Object rvPredictDequeGetFirst(Deque deque, int locId) {
+        return logCollectionReadAccess(deque, locId, () -> {
+            return deque.getFirst();
+        });
+    }
+
+    /**
+     * {@link Deque#getLast()}
+     */
+    public static Object rvPredictDequeGetLast(Deque deque, int locId) {
+        return logCollectionReadAccess(deque, locId, () -> {
+            return deque.getLast();
+        });
     }
 
     private static int bool2int(boolean b) {
         return b ? 1 : 0;
     }
 
-    private static long calcMonitorId(Object obj) {
-        // Use low 32bit for object hash and high 32bit for the magic constant.
-        return ((long)MONITOR_C << 32L) + System.identityHashCode(obj);
+    private static <T> T logCollectionReadAccess(Object collection, int locId, Supplier<T> closure) {
+        return logCollectionAccess(collection, false, locId, closure);
     }
 
-    private static long calcLockId(Lock lock) {
-        if (readLockToRWLock.containsKey(lock)) {
-            /* get the associated ReadWriteLock for read lock */
-            return System.identityHashCode(readLockToRWLock.get(lock));
-        } else if (writeLockToRWLock.containsKey(lock)) {
-            /* get the associated ReadWriteLock for write lock */
-            return System.identityHashCode(writeLockToRWLock.get(lock));
-        } else {
-            /* normal lock */
-            return System.identityHashCode(lock);
-        }
-    }
-
-    private static EventType getLockEventType(Lock lock) {
-        return readLockToRWLock.containsKey(lock) ? EventType.READ_LOCK : EventType.WRITE_LOCK;
-    }
-
-    private static EventType getUnlockEventType(Lock lock) {
-        return readLockToRWLock.containsKey(lock) ? EventType.READ_UNLOCK : EventType.WRITE_UNLOCK;
-    }
-
-    private static void mockCollectionReadAccess(Object collection, int locId) {
-        mockCollectionAccess(collection, false, locId);
-    }
-
-    private static void mockCollectionWriteAccess(Object collection, int locId) {
-        mockCollectionAccess(collection, true, locId);
+    private static <T> T logCollectionWriteAccess(Object collection, int locId, Supplier<T> closure) {
+        return logCollectionAccess(collection, true, locId, closure);
     }
 
     /**
@@ -1267,46 +1237,118 @@ public final class RVPredictRuntime implements Constants {
      * @param locId
      *            the location identifier
      */
-    public static void mockCollectionAccess(Object collection, boolean isWrite, int locId) {
-        String className = collection.getClass().getName();
-        if (collection instanceof Vector || collection instanceof Hashtable
-                || className.startsWith("java.util.concurrent.")) {
-            /* non-wrapper thread-safe collections */
-            return;
-        } else if (className.startsWith("java.util.Collections$Synchronized")) {
-            /* thread-safe collection wrapper */
-            Object mutex;
-            mutex = collection instanceof Collection ?
-                invokeMethodHandle(SYNC_COLLECTION_GET_MUTEX, collection) :
-                invokeMethodHandle(SYNC_MAP_GET_MUTEX, collection);
+    public static <T> T logCollectionAccess(Object collection, boolean isWrite, int locId,
+            Supplier<T> closure) {
+        String cname = collection.getClass().getName();
+        if (cname.startsWith("com.runtimeverification")) {
+            /* skip our own runtime library class which has been manually instrumented */
+            return closure.get();
+        }
 
-            Object backedColl = getBackedCollection(collection);
+        Object backingColl = getBackingCollection(collection);
+        MutableInt state = getCollectionState(backingColl);
+
+        Object mutex;
+        boolean isThreadSafe = true;
+        if (collection instanceof Vector || collection instanceof Hashtable) {
+            mutex = collection;
+        } else if (cname.startsWith("java.util.Collections$Synchronized")) {
+            try {
+                mutex = collection instanceof Collection
+                        ? SYNC_COLLECTION_GET_MUTEX.invoke(collection)
+                        : SYNC_MAP_GET_MUTEX.invoke(collection);
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
+            }
+        } else if (collection instanceof BlockingQueue
+                || collection instanceof ConcurrentMap
+                || Pattern.compile("Concurrent|Synchronized|CopyOnWrite|LockFree").matcher(cname)
+                        .find()) {
+            mutex = null;
+        } else {
+            /* unknown collection; assume non-thread-safe */
+            mutex = null;
+            isThreadSafe = false;
+        }
+
+        int addrl = System.identityHashCode(backingColl);
+        int addrr = -metadata.getVariableId(backingColl.getClass().getName(), MOCK_STATE_FIELD);
+        if (mutex != null) {
             synchronized (mutex) {
-                saveSyncEvent(EventType.WRITE_LOCK, locId, calcMonitorId(mutex));
-                saveMemAccEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
-                        System.identityHashCode(backedColl),
-                        -metadata.getVariableId(backedColl.getClass().getName(), MOCK_STATE_FIELD),
-                        DUMMY_VALUE);
-                saveSyncEvent(EventType.WRITE_UNLOCK, locId, calcMonitorId(mutex));
+                int value = state.intValue();
+                if (isThreadSafe) {
+                    saveLockEvent(EventType.WRITE_LOCK, locId, MONITOR_C, mutex);
+                }
+                if (isWrite) {
+                    state.increment();
+                    saveMemAccEvent(EventType.READ, locId, addrl, addrr, value);
+                    saveMemAccEvent(EventType.WRITE, locId, addrl, addrr, value + 1);
+                } else {
+                    saveMemAccEvent(EventType.READ, locId, addrl, addrr, value);
+                }
+                if (isThreadSafe) {
+                    saveLockEvent(EventType.WRITE_UNLOCK, locId, MONITOR_C, mutex);
+                }
+                return closure.get();
             }
         } else {
-            /* thread-unsafe collection */
-            Object backedColl = getBackedCollection(collection);
-            saveMemAccEvent(isWrite ? EventType.WRITE : EventType.READ, locId,
-                    System.identityHashCode(backedColl),
-                    -metadata.getVariableId(backedColl.getClass().getName(), MOCK_STATE_FIELD),
-                    DUMMY_VALUE);
+            /* `mutex` is null, synchronize on `state` instead: closure.get()
+             * may involve locking, so it must be done outside the sync block
+             * to avoid deadlock (issue#528) */
+            if (isWrite) {
+                T result = closure.get();
+                synchronized (state) {
+                    int value = state.intValue();
+                    state.increment();
+                    if (isThreadSafe) {
+                        saveAtomicEvent(EventType.ATOMIC_READ_THEN_WRITE, locId, addrl, addrr,
+                                value, value + 1, System.identityHashCode(state));
+                    } else {
+                        saveMemAccEvent(EventType.READ, locId, addrl, addrr, value);
+                        saveMemAccEvent(EventType.WRITE, locId, addrl, addrr, value + 1);
+                    }
+                }
+                return result;
+            } else {
+                synchronized (state) {
+                    int value = state.intValue();
+                    if (isThreadSafe) {
+                        saveAtomicEvent(EventType.ATOMIC_READ, locId, addrl, addrr,
+                                value, 0, System.identityHashCode(state));
+                    } else {
+                        saveMemAccEvent(EventType.READ, locId, addrl, addrr, value);
+                    }
+                }
+                return closure.get();
+            }
         }
+    }
+
+    /**
+     * Gets the backing {@link Collection} or {@link Map} of a given view.
+     */
+    private static Object getBackingCollection(Object view) {
+        Object backingColl;
+        while ((backingColl = viewToBackingCollection.get(view)) != null) {
+            view = backingColl;
+        }
+        return view;
+    }
+
+    private static MutableInt getCollectionState(Object collection) {
+        return collectionToState.computeIfAbsent(collection, x -> new MutableInt(0));
     }
 
     /**
      * Logs write event generated by accessing some collection (e.g.
      * {@link Collection}, {@link Map}, etc.) using an {@link Iterator}.
      */
-    private static void writeUsingIterator(Iterator iterator, int locId) {
+    private static <T> T writeUsingIterator(Iterator iterator, int locId, Supplier<T> closure) {
         Object collection = resolveAccessedCollection(iterator);
         if (collection != null) {
-            mockCollectionWriteAccess(collection, locId);
+            return logCollectionWriteAccess(collection, locId, closure);
+        } else {
+            return closure.get();
         }
     }
 
@@ -1314,12 +1356,16 @@ public final class RVPredictRuntime implements Constants {
      * Logs read event generated by accessing some collection (e.g.
      * {@link Collection}, {@link Map}, etc.) using an {@link Iterator}.
      */
-    private static void readUsingIterator(Iterator iterator, int locId) {
+    private static <T> T readUsingIterator(Iterator iterator, int locId, Supplier<T> closure) {
         Object collection = resolveAccessedCollection(iterator);
         if (collection != null) {
-            mockCollectionReadAccess(collection, locId);
+            return logCollectionReadAccess(collection, locId, closure);
+        } else {
+            return closure.get();
         }
     }
+
+    private static Set<String> DEBUG_ORPHAN_ITERATORS = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /**
      * Returns the {@link Collection} or {@link Map} that a given
@@ -1329,79 +1375,50 @@ public final class RVPredictRuntime implements Constants {
     private static Object resolveAccessedCollection(Iterator iterator) {
         Iterable iterable = iteratorToIterable.get(iterator);
         if (iterable == null) {
-            if (Configuration.verbose) {
-                /* this is possible because not all iterators are created by
-                 * Iterable.iterator() */
-                System.err.println("[Runtime] Unable to find the collection associated with " + iterator);
+            /* not all iterators are created by Iterable.iterator() */
+            if (DEBUG_ORPHAN_ITERATORS.add(iterator.getClass().getName())) {
+                config.logger().debug("Unable to find the collection accessed by " + iterator);
             }
             return null;
         } else {
-            return getBackedCollection(iterable);
+            return getBackingCollection(iterable);
         }
     }
 
-    /**
-     * Gets the backing {@link Collection} or {@link Map} of a given view.
-     */
-    private static Object getBackedCollection(Object view) {
-        assert view != null;
-        Object backedColl;
-        while (true) {
-            backedColl = viewToBackedCollection.get(view);
-            if (backedColl == null) {
-                return view;
-            } else {
-                view = backedColl;
-            }
-        }
-    }
-
-    /**
-     * Logs events produced by blocking methods being interrupted. In
-     * particular, this means that 1) the interrupted status of the current
-     * thread has to be true and 2) the interrupted status must then be cleared.
-     *
-     * @param locId
-     *            the location ID
-     */
-    private static void onBlockingMethodInterrupted(int locId) {
-        Thread crntThread = Thread.currentThread();
-        /* require interrupted status to be true at the moment */
-        saveMemAccEvent(EventType.READ, locId, System.identityHashCode(crntThread),
-                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 1);
-        /* clear interrupted status */
-        saveMemAccEvent(EventType.WRITE, locId, System.identityHashCode(crntThread),
-                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-    }
-
-    private static void onBlockingMethodNormalReturn(int locId) {
-        /* YilongL: it's possible that another thread interrupts this thread and
-         * logs the write of interrupted status to 1 before this read. Thus, the
-         * logged global trace could violate read-write consistency on the
-         * imaginary interrupted status field */
-        saveMemAccEvent(EventType.READ, locId, System.identityHashCode(Thread.currentThread()),
-                -NATIVE_INTERRUPTED_STATUS_VAR_ID, 0);
-    }
-
-    private static void saveMemAccEvent(EventType eventType, int locId, int addrl, int addrr,
+    public static void saveMemAccEvent(EventType eventType, int locId, int addrl, int addrr,
             long value) {
-        logger.log(eventType, locId, concat(addrl, addrr), value, 0);
+        logger.log(eventType, locId, addrl, addrr, value, 0);
     }
 
-    private static void saveSyncEvent(EventType eventType, int locId, long syncObj) {
-        logger.log(eventType, locId, syncObj, 0, 0);
+    public static void saveThreadSyncEvent(EventType eventType, int locId, long tid) {
+        logger.log(eventType, locId, (int) (tid >> 32), (int) tid, 0, 0);
+    }
+
+    public static void saveLockEvent(EventType eventType, int locId, byte LOCK_TYPE, Object lock) {
+        if (lock == null) {
+            throw new NullPointerException();
+        }
+        logger.log(eventType, locId, LOCK_TYPE, System.identityHashCode(lock), 0, 0);
     }
 
     private static void saveMetaEvent(EventType eventType, int locId) {
-        logger.log(eventType, locId, 0, 0, 0);
+        logger.log(eventType, locId, 0, 0, 0, 0);
     }
 
-    private static void saveAtomicEvent(EventType eventType, int locId, int addrl, int addrr,
+    public static void saveAtomicEvent(EventType eventType, int locId, int addrl, int addrr,
             long value1, long value2) {
-        logger.log(eventType, locId, concat(addrl, addrr), value1, value2);
+        logger.log(eventType, locId, addrl, addrr, value1, value2);
     }
 
-    private static long concat(int upper32, int lower32) {
-        return (long) upper32 << 32 | lower32 & 0xFFFFFFFFL;
+    /**
+     * Similar to
+     * {@link RVPredictRuntime#saveAtomicEvent(EventType, int, int, int, long, long)}
+     * , but allows the caller to provide an atomic lock ID that is different
+     * from {@code addrl}.
+     */
+    public static void saveAtomicEvent(EventType eventType, int locId, int addrl, int addrr,
+            long value1, long value2, int atomLock) {
+        logger.log(eventType, locId, addrl, addrr, value1, value2, atomLock);
     }
+
 }

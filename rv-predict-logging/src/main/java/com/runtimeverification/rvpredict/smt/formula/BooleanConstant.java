@@ -2,7 +2,7 @@ package com.runtimeverification.rvpredict.smt.formula;
 
 import com.runtimeverification.rvpredict.smt.visitors.Visitor;
 
-public class BooleanConstant extends SMTConstant implements Formula {
+public class BooleanConstant extends SMTConstant implements BoolFormula {
     public static final BooleanConstant TRUE = new BooleanConstant(true);
     public static final BooleanConstant FALSE = new BooleanConstant(false);
     private final boolean value;
@@ -21,8 +21,4 @@ public class BooleanConstant extends SMTConstant implements Formula {
         return String.valueOf(value);
     }
 
-    @Override
-    public Sort getSort() {
-        return Sort.Bool;
-    }
 }

@@ -6,7 +6,7 @@ import com.runtimeverification.rvpredict.smt.visitors.Visitor;
 /**
  * A formula constructed from {@link SMTFormula}s through a {@link BooleanOperation}.
  */
-public class FormulaTerm extends SMTTerm<BooleanOperation,SMTFormula> implements Formula {
+public class FormulaTerm extends SMTTerm<BooleanOperation,SMTFormula> implements BoolFormula {
 
     public static Builder andBuilder() {
         return AndFormula.builder();
@@ -16,23 +16,23 @@ public class FormulaTerm extends SMTTerm<BooleanOperation,SMTFormula> implements
         return OrFormula.builder();
     }
 
-    public static AndFormula AND(Formula left, Formula right) {
+    public static AndFormula AND(BoolFormula left, BoolFormula right) {
         return new AndFormula(left, right);
     }
 
-    public static OrFormula OR(Formula left, Formula right) {
+    public static OrFormula OR(BoolFormula left, BoolFormula right) {
         return new OrFormula(left, right);
     }
 
-    public static Equal BOOL_EQUAL(Formula left, Formula right) {
+    public static Equal BOOL_EQUAL(BoolFormula left, BoolFormula right) {
         return new Equal(left, right);
     }
 
-    public static Equal INT_EQUAL(OrderVariable left, OrderVariable right) {
+    public static Equal INT_EQUAL(IntFormula left, IntFormula right) {
         return new Equal(left, right);
     }
 
-    public static LessThan LESS_THAN(OrderVariable left, OrderVariable right) {
+    public static LessThan LESS_THAN(IntFormula left, IntFormula right) {
         return new LessThan(left, right);
     }
 
@@ -53,6 +53,7 @@ public class FormulaTerm extends SMTTerm<BooleanOperation,SMTFormula> implements
             super(operation);
         }
 
+        @Override
         public FormulaTerm build() {
             return FormulaTerm.of(operation, builder.build());
         }

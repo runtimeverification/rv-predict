@@ -2,15 +2,18 @@ package com.runtimeverification.rvpredict;
 
 import java.io.*;
 import java.nio.charset.Charset;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.google.common.base.Joiner;
 import com.google.common.io.Files;
@@ -24,16 +27,16 @@ import org.junit.Assert;
  */
 public class TestHelper {
 
+    private static final int NUM_OF_WORKER_THREADS = 4;
     private final File basePathFile;
     private final Path basePath;
 
     /**
      * Initializes the {@code basePath} field to the parent directory of the specified file path
-     * @param filePath  path to the file which prompted this test, used to establish working dir
+     * @param modulePath  path to the file which prompted this test, used to establish working dir
      */
-    public TestHelper(String filePath)   {
-        FileSystem fileSystem = FileSystems.getDefault();
-        this.basePath = fileSystem.getPath(filePath);
+    public TestHelper(Path modulePath)   {
+        this.basePath = modulePath;
         basePathFile = basePath.toFile();
 
     }
@@ -51,99 +54,113 @@ public class TestHelper {
      *            list of arguments describing the system command to be
      *            executed.
      * @return the number of runs before success
-     * @throws IOException
-     * @throws InterruptedException
+     * @throws Exception
      */
     public int testCommand(final String expectedFilePrefix, int numOfRuns, final String... command)
-            throws IOException, InterruptedException {
+            throws Exception {
         Assert.assertTrue(expectedFilePrefix != null);
 
-        final String testsPrefix= basePath.toString() + "/" + expectedFilePrefix;
+        final String testsPrefix = basePath.toString() + "/" + expectedFilePrefix;
         final File inFile = new File(testsPrefix + ".in");
-
-        final String[] error = new String[1];
 
         // compile regex patterns
         final List<Pattern> expectedPatterns = new ArrayList<>();
         for (String regex : Files.toString(new File(testsPrefix + ".expected.out"),
                 Charset.defaultCharset()).split("(\n|\r)")) {
+            regex = regex.trim();
             if (!regex.isEmpty()) {
-                expectedPatterns.add(Pattern.compile(regex));
+                expectedPatterns.add(Pattern.compile(regex, Pattern.DOTALL));
             }
         }
 
+        ExecutorService executor = Executors.newFixedThreadPool(NUM_OF_WORKER_THREADS);
+        List<Task> tasks = IntStream.range(0, numOfRuns).boxed()
+                .map(id -> new Task(testsPrefix, id, basePathFile, inFile, command))
+                .collect(Collectors.toList());
+        Map<Task, Future<Integer>> taskToFuture = tasks.stream()
+                .collect(Collectors.toMap(x -> x, task -> executor.submit(task)));
 
-        int n;
-        /*
-         * run the command up to a certain number of times and gather the
-         * outputs
-         */
-        LinkedBlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<Runnable>(4) {
-            @Override
-            public boolean offer(Runnable runnable) {
-                try {
-                    put(runnable);
-                    return true;
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-                return false;
-            }
-        };
-        ExecutorService pool = new ThreadPoolExecutor(4,4,0, TimeUnit.SECONDS, workQueue);
-        for (n = 0; n < numOfRuns && !expectedPatterns.isEmpty(); n++) {
-            pool.execute(new Runnable() {
-                @Override
-                public void run() {
-                    if (expectedPatterns.isEmpty() || error[0] != null) return;
-                    try {
-                        long id = Thread.currentThread().getId();
-                        File stdoutFile = new File(testsPrefix + id + ".actual.out");
-                        File stderrFile = new File(testsPrefix + id + ".actual.err");
-                        ProcessBuilder processBuilder = new ProcessBuilder(command).inheritIO();
-                        processBuilder.directory(basePathFile);
-                        processBuilder.redirectOutput(stdoutFile);
-                        processBuilder.redirectError(stderrFile);
-                        if (inFile.exists() && !inFile.isDirectory()) {
-                            processBuilder.redirectInput(inFile);
-                        }
-                        Process process = processBuilder.start();
-                        int returnCode = process.waitFor();
-                        if (expectedPatterns.isEmpty() || error[0] != null) return;
-                        if (returnCode != 0) {
-                            error[0] = "Expected no error during " + Arrays.toString(command)
-                                    + " but received " + returnCode + ".\n"
-                                    + Files.toString(stderrFile, Charset.defaultCharset());
-                            return;
-                        }
-                        String output = Files.toString(stdoutFile, Charset.defaultCharset());
-                        synchronized (expectedPatterns) {
-                            Iterator<Pattern> iter = expectedPatterns.iterator();
-                            while (iter.hasNext()) {
-                                if (iter.next().matcher(output).find()) {
-                                    iter.remove();
-                                }
-                            }
-                        }
-                    } catch (InterruptedException | IOException e) {
-                        e.printStackTrace();
+        List<String> outputs = new ArrayList<>();
+        int numOfDoneTasks = 0;
+        while (!expectedPatterns.isEmpty() && !taskToFuture.isEmpty()) {
+            List<Task> tasksDone = new ArrayList<>();
+            for (Task task : taskToFuture.keySet()) {
+                Future<Integer> future = taskToFuture.get(task);
+                if (future.isDone()) {
+                    numOfDoneTasks++;
+                    int returnCode = future.get();
+                    String output = Files.toString(task.stderrFile, Charset.defaultCharset());
+                    outputs.add(output);
+                    if (returnCode != 0) {
+                        Assert.fail("Expected no error during " + Arrays.toString(command)
+                                + " but received " + returnCode + ".\n"
+                                + output);
+                    } else {
+                        extractRaceReports(output).forEach(report ->
+                            expectedPatterns.removeIf(p -> p.matcher(report).matches()));
                     }
+                    tasksDone.add(task);
                 }
-            });
+            }
+            taskToFuture.keySet().removeAll(tasksDone);
         }
-        pool.shutdown();
-        while (!pool.isTerminated()) {
-            pool.awaitTermination(1, TimeUnit.SECONDS);
-        }
-
-        if (error[0] != null) {
-            Assert.fail(error[0]);
-        }
+        executor.shutdownNow();
 
         Assert.assertTrue("Unable to match regular expressions: \n\t" +
-                        Joiner.on("\n\t").skipNulls().join(expectedPatterns),
+                        Joiner.on("\n\t").skipNulls().join(expectedPatterns) + "\n\t" + outputs,
                 expectedPatterns.isEmpty());
-        return n;
+        return numOfDoneTasks;
+    }
+
+    private static List<String> extractRaceReports(String output) {
+        List<String> result = new ArrayList<>();
+        int fromIdx = 0;
+        while (true) {
+            int posStartAnchor = output.indexOf("Data race on ", fromIdx);
+            if (posStartAnchor < 0) {
+                break;
+            }
+            int posEndAnchor = output.indexOf("}}}", posStartAnchor) + "}}}".length();
+            result.add(output.substring(posStartAnchor, posEndAnchor));
+            fromIdx = posEndAnchor + 1;
+        }
+        if (result.isEmpty()) {
+            result.add("No races found");
+        }
+        return result;
+    }
+
+    private static class Task implements Callable<Integer> {
+
+        private final ProcessBuilder processBuilder;
+
+        private final File stdoutFile;
+
+        private final File stderrFile;
+
+        private Task(String testsPrefix, int id, File basePathFile, File inputFile, String... command) {
+            stdoutFile = new File(testsPrefix + id + ".actual.out");
+            stderrFile = new File(testsPrefix + id + ".actual.err");
+            processBuilder = new ProcessBuilder(command).inheritIO();
+            processBuilder.directory(basePathFile);
+            processBuilder.redirectOutput(stdoutFile);
+            processBuilder.redirectError(stderrFile);
+            if (inputFile.exists() && !inputFile.isDirectory()) {
+                processBuilder.redirectInput(inputFile);
+            }
+        }
+
+        @Override
+        public Integer call() throws Exception {
+            Process process = processBuilder.start();
+            try {
+                return process.waitFor();
+            } catch (InterruptedException e) {
+                process.destroyForcibly();
+                throw e;
+            }
+        }
+
     }
 
 }

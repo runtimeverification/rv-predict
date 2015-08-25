@@ -1,3 +1,0 @@
-(?s)(.*)Race on field jtsan.ThreadRunner.sharedVar between:(\s)*jtsan.CustomTests\$6.thread1\(CustomTests.java:194\)(\s)*jtsan.CustomTests\$6.thread2\(CustomTests.java:202\)(.*)
-
-(?s)(.*)Race on field jtsan.ThreadRunner.sharedVar between two instances of:(\s)*jtsan.CustomTests\$7.thread1\(CustomTests.java:225\)(.*)

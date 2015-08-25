@@ -5,11 +5,11 @@ import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.util.Logger;
 
@@ -29,7 +29,7 @@ public class Main {
 
         if (config.isLogging() || config.isProfiling()) {
             if (config.getJavaArguments().isEmpty()) {
-                config.logger.report("You must provide a class or a jar to run.",
+                config.logger().report("You must provide a class or a jar to run.",
                         Logger.MSGTYPE.ERROR);
                 config.usage();
                 System.exit(1);
@@ -40,7 +40,7 @@ public class Main {
                 if (!outdirFile.exists()) {
                     outdirFile.mkdir();
                 } else  if (!outdirFile.isDirectory()) {
-                    config.logger.report(config.getLogDir() + " is not a directory",
+                    config.logger().report(config.getLogDir() + " is not a directory",
                             Logger.MSGTYPE.ERROR);
                     config.usage();
                     System.exit(1);
@@ -60,22 +60,23 @@ public class Main {
         List<String> args = new ArrayList<>();
         args.add(JAVA_EXECUTABLE);
         args.add("-ea");
+        args.add("-XX:hashCode=1"); // see #issue 500 identityHashCode collisions
         args.add("-Xbootclasspath/a:" + RV_PREDICT_JAR);
-        String bootLibPath = "";
-        for (String nativeLibPath : System.getProperty("java.library.path").split(":")) {
-            if (nativeLibPath.contains("rv-predict/lib/native")) {
-                bootLibPath += ":" + nativeLibPath;
-            }
-        }
-        args.add("-Dsun.boot.library.path=" + bootLibPath);
+        args.add("-Dsun.boot.library.path=" + Configuration.getNativeLibraryPath());
         args.add("-javaagent:" + RV_PREDICT_JAR + "=" + createAgentArgs());
         args.addAll(config.getJavaArguments());
 
         Process process = null;
         try {
             process = new ProcessBuilder(args).start();
-            StreamRedirector.redirect(process);
+            StreamGobbler errorGobbler = StreamGobbler.spawn(process.getErrorStream(), System.err);
+            StreamGobbler outputGobbler = StreamGobbler.spawn(process.getInputStream(), System.out);
+            StreamGobbler.spawn(System.in, new PrintStream(process.getOutputStream()), true /* flush */);
+
             process.waitFor();
+
+            errorGobbler.join();
+            outputGobbler.join();
         } catch (IOException ignored) {
         } catch (InterruptedException e) {
             if (process != null) {

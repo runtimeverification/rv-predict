@@ -31,7 +31,7 @@ package com.runtimeverification.rvpredict.trace;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 
-public class LockRegion {
+public class LockRegion implements Comparable<LockRegion> {
     private final Event lock;
     private final Event unlock;
 
@@ -82,9 +82,23 @@ public class LockRegion {
         return !isReadLocked;
     }
 
+    public boolean include(Event e) {
+        return tid == e.getTID() && (lock == null || lock.compareTo(e) < 0)
+                && (unlock == null || unlock.compareTo(e) > 0);
+    }
+
     @Override
     public String toString() {
         return String.format("<%s, %s>", lock, unlock);
+    }
+
+    @Override
+    public int compareTo(LockRegion otherRegion) {
+        long x1 = lock == null ? Integer.MIN_VALUE : lock.getGID();
+        long y1 = unlock == null ? Integer.MAX_VALUE : unlock.getGID();
+        long x2 = otherRegion.lock == null ? Integer.MIN_VALUE : otherRegion.lock.getGID();
+        long y2 = otherRegion.unlock == null ? Integer.MAX_VALUE : otherRegion.unlock.getGID();
+        return x1 != x2 ? Long.compare(x1, x2) : Long.compare(y1, y2);
     }
 
 }

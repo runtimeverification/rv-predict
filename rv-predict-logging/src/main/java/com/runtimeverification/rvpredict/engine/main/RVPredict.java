@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
@@ -65,7 +66,7 @@ public class RVPredict {
             this.metadata = Metadata.readFrom(config.getMetadataPath());
             traceCache = new TraceCache(config, metadata);
         }
-        this.detector = new RaceDetector(config, metadata);
+        this.detector = new RaceDetector(config);
     }
 
     public void start() {
@@ -74,14 +75,20 @@ public class RVPredict {
             long fromIndex = 0;
             // process the trace window by window
             Trace trace;
-            do {
-                trace = traceCache.getTrace(fromIndex);
-                fromIndex += config.windowSize;
-                detector.run(trace);
-            } while (trace.getSize() == config.windowSize);
+            while (true) {
+                if ((trace = traceCache.getTrace(fromIndex)) != null) {
+                    fromIndex += config.windowSize;
+                    detector.run(trace);
+                } else {
+                    break;
+                }
+            }
 
-            if (detector.getRaces().isEmpty()) {
-                config.logger.report("No races found.", Logger.MSGTYPE.INFO);
+            List<String> reports = detector.getRaceReports();
+            if (reports.isEmpty()) {
+                config.logger().report("No races found.", Logger.MSGTYPE.INFO);
+            } else {
+                reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
             }
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
@@ -104,19 +111,25 @@ public class RVPredict {
 
                 if (config.isOfflinePrediction()) {
                     if (config.isLogging()) {
-                        config.logger.reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
+                        config.logger().reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
                     }
 
-                    Process process = null;
+                    Process proc = null;
                     try {
-                        process = startPredictionProcess(config);
-                        StreamRedirector.redirect(process);
-                        process.waitFor();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
-                        if (process != null) {
-                            process.destroy();
+                        proc = startPredictionProcess(config);
+                        StreamGobbler errorGobbler = StreamGobbler.spawn(proc.getErrorStream(), System.err);
+                        StreamGobbler outputGobbler = StreamGobbler.spawn(proc.getInputStream(), System.out);
+
+                        proc.waitFor();
+
+                        // the join() here is necessary even if the gobbler
+                        // threads are non-daemon because we are already in the
+                        // shutdown hook
+                        errorGobbler.join();
+                        outputGobbler.join();
+                    } catch (IOException | InterruptedException e) {
+                        if (proc != null) {
+                            proc.destroy();
                         }
                         e.printStackTrace();
                     }
@@ -139,14 +152,8 @@ public class RVPredict {
         Collections.addAll(appArgs, config.getArgs());
 
         assert config.isOfflinePrediction();
-        /* replace option --dir with --predict */
-        int idx = appArgs.indexOf(Configuration.opt_outdir);
-        if (idx != -1) {
-            appArgs.set(idx, Configuration.opt_only_predict);
-        } else {
-            appArgs.add(startOfRVArgs, Configuration.opt_only_predict);
-            appArgs.add(startOfRVArgs + 1, config.getLogDir());
-        }
+        appArgs.add(startOfRVArgs, Configuration.opt_only_predict);
+        appArgs.add(startOfRVArgs + 1, config.getLogDir());
         return new ProcessBuilder(appArgs).start();
     }
 

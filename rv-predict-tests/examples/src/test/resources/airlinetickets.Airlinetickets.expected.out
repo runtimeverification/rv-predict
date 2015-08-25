@@ -1,0 +1,11 @@
+Data race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold: \{\{\{(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)\}\}\}
+
+Data race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold: \{\{\{(.*)---->  at airlinetickets.Airlinetickets.go\(Airlinetickets.java:62\)(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)\}\}\}
+
+Data race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold: \{\{\{(.*)---->  at airlinetickets.Airlinetickets.go\(Airlinetickets.java:62\)(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:106\)(.*)\}\}\}
+
+Data race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold: \{\{\{(.*)---->  at airlinetickets.Airlinetickets.go\(Airlinetickets.java:63\)(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)\}\}\}
+
+Data race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold: \{\{\{(.*)---->  at airlinetickets.Airlinetickets.checkResult\(Airlinetickets.java:78\)(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)\}\}\}
+
+Data race on field airlinetickets.Airlinetickets.Num_Of_Seats_Sold: \{\{\{(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:104\)(.*)---->  at airlinetickets.Airlinetickets.run\(Airlinetickets.java:106\)(.*)\}\}\}

@@ -31,12 +31,15 @@ package com.runtimeverification.rvpredict.config;
 import com.beust.jcommander.*;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.microsoft.z3.Context;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -46,6 +49,7 @@ import java.nio.file.Paths;
 import java.security.CodeSource;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.tools.ant.util.JavaEnvUtils;
 
@@ -69,70 +73,85 @@ public class Configuration implements Constants {
     private static final String METADATA_BIN = "metadata.bin";
 
     /**
-     * Packages/classes that are excluded from instrumentation by default. These are
-     * configurable by the users through the <code>--exclude</code> command option.
+     * Packages/classes that need to be excluded from instrumentation. These are
+     * not configurable by the users because including them for instrumentation
+     * almost certainly leads to crash.
      */
-     private static String[] DEFAULT_EXCLUDES = new String[] {
-            "javax.*",
-            "sunw.*",
-            "com.sun.*",
-            "com.ibm.*",
-            "com.apple.*",
-            "apple.awt.*",
-            "org.xml.*",
-            "jdk.internal.*"
+    public static List<Pattern> IGNORES;
+    static {
+        String [] ignores = new String[] {
+                RVPREDICT_PKG_PREFIX,
+
+                // lz4 library cannot be repackaged because it hard-codes some
+                // of its class names in the implementation
+                "net/jpountz/",
+
+                // z3 native library cannot be repackaged
+                "com/microsoft/z3",
+
+                // array type
+                "[",
+
+                // immutable classes
+                "cOm/google/common/collect/Immutable".replace("O", "o"), // hack to trick the repackage tool
+                "scala/collection/immutable/",
+
+                // Basics of the JDK that everything else is depending on
+                "sun/",
+                "com/sun",
+                "java/",
+                "jdk/internal"
+        };
+        IGNORES = getDefaultPatterns(ignores);
+    }
+
+    public final static String[] MOCKS = new String[] {
+        "java/util/Collection",
+        "java/util/Map",
+        "java/util/Iterator",
+        // we don't want to instrument any ClassLoader or SecurityManager: issue#512
+        "java/lang/ClassLoader",
+        "java/lang/SecurityManager"
     };
 
-     /**
-      * Packages/classes that need to be excluded from instrumentation. These are
-      * not configurable by the users because including them for instrumentation
-      * almost certainly leads to crash.
-      */
-     public static List<Pattern> IGNORES;
-     static {
-         String [] ignores = new String[] {
-                 COM_RUNTIMEVERIFICATION_RVPREDICT,
+    public final static Set<String> MUST_REPLACE = new HashSet<>(Arrays.asList(
+            "java/util/concurrent/atomic/AtomicBoolean",
+            "java/util/concurrent/atomic/AtomicInteger",
+            // TODO: handle the other AtomicX classes
+            "java/util/concurrent/locks/AbstractQueuedSynchronizer",
+            "java/util/concurrent/locks/AbstractQueuedLongSynchronizer",
+            "java/util/concurrent/locks/ReentrantLock",
+            "java/util/concurrent/locks/ReentrantReadWriteLock",
+            // TODO: handle StampedLock from Java 8
+            "java/util/concurrent/ArrayBlockingQueue",
+            "java/util/concurrent/LinkedBlockingQueue",
+            "java/util/concurrent/PriorityBlockingQueue",
+            "java/util/concurrent/SynchronousQueue",
+            // TODO: handle the other BlockingQueue's
+            "java/util/concurrent/Semaphore",
+            "java/util/concurrent/CountDownLatch",
+            "java/util/concurrent/CyclicBarrier",
+            "java/util/concurrent/Exchanger",
+            // TODO: handle Phaser
+            "java/util/concurrent/FutureTask",
+            // TODO: handle CompletableFuture from Java 8
+            "java/util/concurrent/ThreadPoolExecutor",
+            "java/util/concurrent/ScheduledThreadPoolExecutor",
+            "java/util/concurrent/RejectedExecutionHandler",
+            "java/util/concurrent/Executors"));
 
-                 // lz4 library cannot be repackaged because it hard-codes some
-                 // of its class names in the implementation
-                 "net/jpountz/",
-
-                 // z3 native library cannot be repackaged
-                 "com/microsoft/z3",
-
-                 // array type
-                 "[",
-
-                 // Basics of the JDK that everything else is depending on
-                 "sun/",
-                 "java/"
-         };
-         IGNORES = getDefaultPatterns(ignores);
-     }
-
-     public static String[] MOCKS = new String[] {
-         "java/util/Collection",
-         "java/util/Map"
-
-         /* YilongL: do not exclude Iterator because it's not likely to slow down
-          * logging a lot; besides, I am interested in seeing what could happen */
-         // "java/util/Iterator"
-     };
-
-    public static List<Pattern> MUST_INCLUDES;
+    public final static List<Pattern> MUST_INCLUDES;
     static {
         String[] mustIncludes = new String[] {
-                "java/util/concurrent/Semaphore",
-                "java/util/concurrent/CountDownLatch",
-                "java/util/concurrent/CyclicBarrier",
-                "java/util/concurrent/ArrayBlockingQueue",
-                "java/util/concurrent/LinkedBlockingQueue"
+            "com/runtimeverification/rvpredict/runtime/java/util/concurrent/CyclicBarrier"
         };
         MUST_INCLUDES = getDefaultPatterns(mustIncludes);
     }
 
     public final List<Pattern> includeList = new ArrayList<>();
     public final List<Pattern> excludeList = new ArrayList<>();
+    public final List<String> suppressList = new ArrayList<>();
+    public Pattern suppressPattern;
 
     private JCommander jCommander;
 
@@ -173,6 +192,47 @@ public class Configuration implements Constants {
         return null;
     }
 
+    public static Path getNativeLibraryPath() {
+        Path nativePath = Paths.get(getBasePath(), "lib", "native");
+        OS os = OS.current();
+        String arch = System.getProperty("os.arch").equals("x86") ? "32" : "64";
+        switch (os) {
+        case OSX:
+            nativePath = nativePath.resolve("osx");
+            break;
+        case WINDOWS:
+            nativePath = nativePath.resolve("windows" + arch);
+            break;
+        default:
+            nativePath = nativePath.resolve("linux" + arch);
+        }
+        return nativePath;
+    }
+
+    public static Context getZ3Context() {
+        Context context = null;
+        try {
+            String libz3 = OS.current() == OS.WINDOWS ? "libz3" : "z3";
+            // Very dirty hack to add our native libraries dir to the array of system paths
+            // dependent on the implementation of java.lang.ClassLoader (although that seems pretty consistent)
+            //TODO: Might actually be better to alter and recompile the z3 java bindings
+            Field sysPathsField = ClassLoader.class.getDeclaredField("sys_paths");
+            sysPathsField.setAccessible(true);
+            String[] sysPaths = (String[]) sysPathsField.get(null);
+            String oldPath = sysPaths[0];
+            sysPaths[0] = getNativeLibraryPath().toString();
+
+            System.loadLibrary(libz3);
+            context = new Context();
+
+            //restoring the previous system path
+            sysPaths[0] = oldPath;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return context;
+    }
+
     private void initIncludeList() {
         if (includes != null) {
             for (String include : includes.replace('.', '/').split(",")) {
@@ -183,21 +243,18 @@ public class Configuration implements Constants {
     }
 
     private void initExcludeList() {
-        String excludes = this.excludes;
-        if (excludes == null) {
-            excludeList.addAll(getDefaultPatterns(DEFAULT_EXCLUDES));
-        } else {
-            excludes = excludes.trim();
-            if (excludes.charAt(0) == '+') { // initialize excludeList with default patterns
-                excludes = excludes.substring(1);
-                excludeList.addAll(getDefaultPatterns(DEFAULT_EXCLUDES));
-            }
+        if (excludes != null) {
             for (String exclude : excludes.replace('.', '/').split(",")) {
-                exclude = exclude.trim();
-                if (!exclude.isEmpty())
-                    excludeList.add(createClassPattern(exclude));
+                if (exclude.isEmpty()) continue;
+                excludeList.add(createClassPattern(exclude));
             }
         }
+    }
+
+    private void initSuppressPattern() {
+        suppressList.addAll(Arrays.asList(suppress.split(",")).stream().map(s -> s.trim())
+                .filter(s -> !s.isEmpty()).collect(Collectors.toList()));
+        suppressPattern = Pattern.compile(Joiner.on("|").join(suppressList));
     }
 
     /**
@@ -260,78 +317,76 @@ public class Configuration implements Constants {
     @Parameter(description = "[java_options] <java_command_line>")
     private List<String> javaArgs = new ArrayList<>();
 
-    public final static String opt_event_profile = "--profile";
-    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1000")
-    private boolean profile;
+    private final static String ONLINE_PREDICTION = "ONLINE_PREDICTION";
+    private final static String OFFLINE_PREDICTION = "OFFLINE_PREDICTION";
+    private static final String LLVM_PREDICTION = "LLVM_PREDICTION";
+    private String prediction;
+
+    public final static String opt_offline = "--offline";
+    @Parameter(names = opt_offline, description = "Run prediction offline", descriptionKey = "1000")
+    private boolean offline;
 
     public final static String opt_only_log = "--log";
-    @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1005")
+    @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1100")
     private String log_dir = null;
     private boolean log = true;
 
     public final static String opt_only_predict = "--predict";
-    @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "1010")
+    @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "1200")
     private String predict_dir = null;
+
+    public final static String opt_event_profile = "--profile";
+    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1300")
+    private boolean profile;
 
     public final static String opt_llvm_predict = "--llvm-predict";
     @Parameter(names = opt_llvm_predict, description = "Run prediction on given llvm trace", descriptionKey = "1020")
     private String llvm_trace_file = null;
 
     public final static String opt_include = "--include";
-    @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include." +
-            "\nPrefix with + to add to the default included packages", hidden = true, descriptionKey = "1025")
-    public String includes;
+    @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include",
+            descriptionKey = "2000")
+    private String includes;
 
     public final static String opt_exclude = "--exclude";
-    @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude." +
-            "\nPrefix with + to add to the default excluded packages", hidden = true, descriptionKey = "1030")
-    public String excludes;
+    @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude",
+            descriptionKey = "2100")
+    private String excludes;
 
-    private final static String ONLINE_PREDICTION = "ONLINE_PREDICTION";
-    private final static String OFFLINE_PREDICTION = "OFFLINE_PREDICTION";
-    private static final String LLVM_PREDICTION = "LLVM_PREDICTION";
-    private String prediction;
-
-    public final static String opt_online = "--online";
-    @Parameter(names = opt_online, description = "Run prediction online", hidden = true, descriptionKey = "2005")
-    private boolean online;
-
-    final static String opt_max_len = "--maxlen";
-    @Parameter(names = opt_max_len, description = "Window size", hidden = true, descriptionKey = "2010")
+    final static String opt_window_size = "--window";
+    @Parameter(names = opt_window_size, description = "Window size (must be >= 64)", descriptionKey = "2200")
     public int windowSize = 1000;
+    private static int MIN_WINDOW_SIZE = 64;
 
-    final static String opt_volatile = "--volatile";
-    @Parameter(names = opt_volatile, description = "Check unordered conflict accesses on volatile variables", hidden = true, descriptionKey = "2030")
-    public boolean checkVolatile;
+    final static String opt_stacks = "--stacks";
+    @Parameter(names = opt_stacks, description = "Record call stack events and compute stack traces in race report", descriptionKey = "2300")
+    public boolean stacks = false;
+
+    public final static String opt_suppress = "--suppress";
+    @Parameter(names = opt_suppress, description = "Suppress race reports on the fields that match the given (comma-separated) list of regular expressions", descriptionKey = "2400")
+    private String suppress = "";
 
     final static String opt_smt_solver = "--solver";
-    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3,libz3].", hidden = true, descriptionKey = "2050")
-    public String smt_solver = "libz3";
+    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2500")
+    public String smt_solver = "z3";
 
     final static String opt_solver_timeout = "--solver-timeout";
-    @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2060")
-    public long solver_timeout = 10;
-
-    final static String opt_timeout = "--timeout";
-    @Parameter(names = opt_timeout, description = "RV-Predict timeout in seconds", hidden = true, descriptionKey = "2070")
-    public long timeout = 3600;
-
-    final static String opt_simple_report = "--simple-report";
-    @Parameter(names = opt_simple_report, description = "Output simple data race report", hidden = true, descriptionKey = "2080")
-    public boolean simple_report = false;
+    @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2600")
+    public int solver_timeout = 60;
 
     final static String opt_debug = "--debug";
-    @Parameter(names = opt_debug, description = "Output developer debugging information", hidden = true, descriptionKey = "2090")
+    @Parameter(names = opt_debug, description = "Output developer debugging information", hidden = true, descriptionKey = "3000")
     public static boolean debug = false;
-
-    public final static String opt_outdir = "--dir";
-    @Parameter(names = opt_outdir, description = "Output directory", hidden = true, descriptionKey = "8000")
-    private String outdir = null;
 
     final static String short_opt_verbose = "-v";
     final static String opt_verbose = "--verbose";
     @Parameter(names = { short_opt_verbose, opt_verbose }, description = "Generate more verbose output", descriptionKey = "9000")
     public static boolean verbose;
+
+    final static String opt_version = "--version";
+    @Parameter(names = opt_version, description = "Print product version and exit", descriptionKey = "9100")
+    public static boolean display_version;
+    private static final String RV_PREDICT_VERSION = "1.5";
 
     final static String short_opt_help = "-h";
     final static String opt_help = "--help";
@@ -340,7 +395,7 @@ public class Configuration implements Constants {
 
     private static final String RVPREDICT_ARGS_TERMINATOR = "--";
 
-    public final Logger logger = new Logger();
+    private final Logger logger = new Logger();
 
     public static Configuration instance(String[] args) {
         Configuration config = new Configuration();
@@ -389,9 +444,14 @@ public class Configuration implements Constants {
             usage();
             System.exit(0);
         }
+        if (display_version) {
+            System.out.println("RV-Predict version " + RV_PREDICT_VERSION);
+            System.exit(0);
+        }
 
         initExcludeList();
         initIncludeList();
+        initSuppressPattern();
 
         /* Carefully handle the interaction between options:
          * 1) 5 different modes: only_profile, only_log, only_predict, only_llvm_prediict, and log_then_predict;
@@ -405,17 +465,14 @@ public class Configuration implements Constants {
             if (log_dir != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_only_log);
             }
-            if (outdir != null) {
-                exclusiveOptionsFailure(opt_event_profile, opt_outdir);
-            }
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_only_predict);
             }
             if (llvm_trace_file != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_llvm_predict);
             }
-            if (online) {
-                exclusiveOptionsFailure(opt_event_profile, opt_online);
+            if (offline) {
+                exclusiveOptionsFailure(opt_event_profile, opt_offline);
             }
             log = false;
         } else if (log_dir != null) {           /* only log */
@@ -425,53 +482,52 @@ public class Configuration implements Constants {
             if (llvm_trace_file != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_llvm_predict);
             }
-            if (outdir != null) {
-                exclusiveOptionsFailure(opt_only_log, opt_outdir);
-            }
-            if (online) {
-                exclusiveOptionsFailure(opt_only_log, opt_online);
+            if (offline) {
+                exclusiveOptionsFailure(opt_only_log, opt_offline);
             }
             log_dir = Paths.get(log_dir).toAbsolutePath().toString();
         } else if (predict_dir != null) {       /* only predict */
             if (llvm_trace_file != null) {
                 exclusiveOptionsFailure(opt_only_predict, opt_llvm_predict);
             }
-            if (outdir != null) {
-                exclusiveOptionsFailure(opt_only_predict, opt_outdir);
-            }
-            if (online) {
-                exclusiveOptionsFailure(opt_only_predict, opt_online);
-            }
             log_dir = Paths.get(predict_dir).toAbsolutePath().toString();
             log = false;
             prediction = OFFLINE_PREDICTION;
         }  else if (llvm_trace_file != null) {       /* only predict */
-            if (outdir != null) {
-                exclusiveOptionsFailure(opt_llvm_predict, opt_outdir);
-            }
-            if (online) {
-                exclusiveOptionsFailure(opt_llvm_predict, opt_online);
+            if (predict_dir != null) {
+                exclusiveOptionsFailure(opt_llvm_predict, opt_only_predict);
             }
             log_dir = Paths.get(llvm_trace_file).toAbsolutePath().toString();
             log = false;
             prediction = LLVM_PREDICTION;
         } else {                                /* log then predict */
-            if (online) {
-                log_dir = null;
-                prediction = ONLINE_PREDICTION;
-            } else {
-                try {
-                    log_dir = outdir == null ? Files.createTempDirectory(
-                            Paths.get(System.getProperty("java.io.tmpdir")), RV_PREDICT).toString()
-                            : Paths.get(outdir).toAbsolutePath().toString();
-                } catch (IOException e) {
-                    System.err.println("Error while attempting to create log dir.");
-                    System.err.println(e.getMessage());
-                    System.exit(1);
+            try {
+                log_dir = Files.createTempDirectory(
+                        Paths.get(System.getProperty("java.io.tmpdir")), RV_PREDICT).toString();
+            } catch (IOException e) {
+                System.err.println("Error while attempting to create log dir.");
+                System.err.println(e.getMessage());
+                System.exit(1);
+            }
+            prediction = offline ? OFFLINE_PREDICTION : ONLINE_PREDICTION;
+        }
+
+        if (log_dir != null) {
+            try {
+                if (isLLVMPrediction()) {
+                    logger.setLogDir(Paths.get(llvm_trace_file).toAbsolutePath().getParent().toString());
+                } else {
+                    logger.setLogDir(log_dir);
                 }
-                prediction = OFFLINE_PREDICTION;
+            } catch (FileNotFoundException e) {
+                logger.report("Error while attempting to create the logger: directory not found",
+                        Logger.MSGTYPE.ERROR);
+                System.exit(1);
             }
         }
+
+        /* set window size */
+        windowSize = Math.max(windowSize, MIN_WINDOW_SIZE);
 
         int startOfJavaArgs = endIdx;
         if (startOfJavaArgs < args.length
@@ -486,6 +542,30 @@ public class Configuration implements Constants {
     public void exclusiveOptionsFailure(String opt1, String opt2) {
         System.err.println("Error: Options " + opt1 + " and " + opt2 + " are mutually exclusive.");
         System.exit(1);
+    }
+
+    private String lineWrap(String text,int lineWidth) {
+        StringBuilder builder = new StringBuilder();
+        Scanner scanner = new Scanner(text);
+        while (scanner.hasNextLine()) {
+            int spaceLeft = lineWidth;
+            int spaceWidth = 2;
+            String line = scanner.nextLine();
+            StringTokenizer st=new StringTokenizer(line);
+            while (st.hasMoreTokens()) {
+                String word = st.nextToken();
+                if ((word.length() + spaceWidth) > spaceLeft) {
+                    builder.append("\n");
+                    spaceLeft = lineWidth - word.length();
+                } else {
+                    spaceLeft -= (word.length() + spaceWidth);
+                }
+                builder.append(word);
+                builder.append(' ');
+            }
+            builder.append("\n");
+        }
+        return builder.toString();
     }
 
     public void usage() {
@@ -539,7 +619,7 @@ public class Configuration implements Constants {
                     + parameterDescription.getNames()
                     + Strings.repeat(" ", spacesAfterCnt)
                     + Joiner.on("\n" + Strings.repeat(" ", 4 + max_option_length)).join(
-                            parameterDescription.getDescription().split("\\n"))
+                            lineWrap(parameterDescription.getDescription(),80-max_option_length).split("\\n"))
                     + (aDefault.isEmpty() ? "" : "\n" + Strings.repeat(" ", 4)
                             + Strings.repeat(" ", max_option_length) + aDefault);
             usageMap.put(descriptionKey, description);
@@ -577,6 +657,10 @@ public class Configuration implements Constants {
 
     public List<String> getJavaArguments() {
         return javaArgs;
+    }
+
+    public Logger logger() {
+        return logger;
     }
 
     /**

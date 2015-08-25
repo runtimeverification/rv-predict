@@ -1,0 +1,3 @@
+Data race on field jtsan.ThreadRunner.sharedVar: \{\{\{(.*)---->  at jtsan.CustomTests\$6.thread1\(CustomTests.java:194\)(.*)---->  at jtsan.CustomTests\$6.thread2\(CustomTests.java:202\)(.*)\}\}\}
+
+Data race on field jtsan.ThreadRunner.sharedVar: \{\{\{(.*)---->  at jtsan.CustomTests\$7.thread1\(CustomTests.java:225\)(.*)---->  at jtsan.CustomTests\$7.thread1\(CustomTests.java:225\)(.*)\}\}\}

@@ -8,10 +8,13 @@ import com.runtimeverification.rvpredict.metadata.Metadata;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Created by Traian on 23.04.2015.
+ * Class reading the trace from an LLVM execution debug log.
+ *
+ * @author TraianSF
  */
 public class LLVMTraceCache extends TraceCache {
     private BufferedReader traceFile = null;
@@ -29,13 +32,26 @@ public class LLVMTraceCache extends TraceCache {
 
 
     @Override
-    protected void readEvents(long fromIndex, long toIndex) throws IOException {
+    protected List<RawTrace> readEvents(long fromIndex, long toIndex) throws IOException {
+        Map<Long, List<Event>> rawTracesTable = new HashMap<>();
+
         for (long i = fromIndex; i < toIndex; i++) {
             Event event = getNextEvent();
             if (event == null) break;
             assert i == event.getGID();
-            events[((int) (i % events.length))] = event;
+            List<Event> events = rawTracesTable.get(event.getTID());
+            if (events == null) {
+                events = new ArrayList<>();
+                rawTracesTable.put(event.getTID(), events);
+            }
+            events.add(event);
         }
+        List<RawTrace> rawTraces =  new ArrayList<>();
+        for (List<Event> events : rawTracesTable.values()) {
+            int length = getNextPowerOfTwo(events.size());
+            rawTraces.add(new RawTrace(0, events.size(), events.toArray(new Event[length])));
+        }
+        return rawTraces;
     }
 
     protected Event getNextEvent() throws IOException {

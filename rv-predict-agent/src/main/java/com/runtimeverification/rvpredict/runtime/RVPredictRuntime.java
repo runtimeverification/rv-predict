@@ -140,7 +140,7 @@ public final class RVPredictRuntime implements Constants {
      * Map from iterator to its associated iterable (if any).
      */
     private static final ConcurrentMap<Iterator, Iterable> iteratorToIterable = new MapMaker()
-            .weakKeys().makeMap();
+            .weakKeys().weakValues().makeMap();
 
     /**
      * Map from view to its backed collection. There are two kinds of view in
@@ -150,7 +150,7 @@ public final class RVPredictRuntime implements Constants {
      * {@link java.util.SortedMap} interfaces.
      */
     private static final ConcurrentMap<Object, Object> viewToBackingCollection = new MapMaker()
-            .weakKeys().makeMap();
+            .weakKeys().weakValues().makeMap();
 
     private static final ConcurrentMap<Object, MutableInt> collectionToState = new MapMaker()
             .weakKeys().makeMap();

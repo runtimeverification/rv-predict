@@ -5,7 +5,7 @@ else
   ARCH=32;
 fi
 
-RV_PREDICT_LIB_DIR="$(cd $(dirname "$0")/../lib; pwd)"
+RV_PREDICT_LIB_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ `uname` = 'Darwin' ]; then
   export PATH="$RV_PREDICT_LIB_DIR/native/osx":$PATH
   export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:"$RV_PREDICT_LIB_DIR/native/osx"

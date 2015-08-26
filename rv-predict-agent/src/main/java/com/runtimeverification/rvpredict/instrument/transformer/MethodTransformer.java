@@ -3,13 +3,12 @@ package com.runtimeverification.rvpredict.instrument.transformer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.instrument.InstrumentUtils;
 import com.runtimeverification.rvpredict.instrument.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
-import com.runtimeverification.rvpredict.util.Logger;
-
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -32,7 +31,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     private final int version;
     private final String locIdPrefix;
 
-    private final Logger logger;
+    private final Configuration config;
 
     private final TransformStrategy strategy;
 
@@ -48,16 +47,8 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     private int crntLineNum;
 
-    /**
-     * Specifies the number of constructor calls already visited in
-     * {@link #visitMethodInsn}.
-     * <p>
-     * Only meaningful when the method being transformed is a constructor.
-     */
-    private int numOfCtorCall = 0;
-
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
-            String name, String desc, int access, ClassLoader loader, Logger logger,
+            String name, String desc, int access, ClassLoader loader, Configuration config,
             TransformStrategy strategy) {
         super(Opcodes.ASM5, new GeneratorAdapter(mv, access, name, desc));
         this.mv = (GeneratorAdapter) super.mv;
@@ -68,7 +59,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
         this.loader = loader;
-        this.logger = logger;
+        this.config = config;
         this.strategy = strategy;
         this.locIdPrefix = String.format("%s(%s:", className.replace("/", ".") + "." + name,
                 source == null ? "Unknown" : source);
@@ -153,8 +144,8 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         desc = replaceStandardLibraryClass(desc);
         ClassFile classFile = resolveDeclaringClass(loader, owner, name);
         if (classFile == null) {
-            logger.debug(String.format("Unable to resolve field %s.%s in class %s", owner, name,
-                    className));
+            config.logger().debug(String.format("Unable to resolve field %s.%s in class %s", owner,
+                    name, className));
             mv.visitFieldInsn(opcode, owner, name, desc);
             return;
         }
@@ -179,7 +170,9 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         }
 
         /* fix issue: https://github.com/runtimeverification/rv-predict/issues/458 */
-        if ("<init>".equals(methodName) && opcode == PUTFIELD && numOfCtorCall == 0) {
+        if ("<init>".equals(methodName) && (opcode == PUTFIELD || opcode == GETFIELD)
+                && name.startsWith("scala$collection$")
+                && name.endsWith("SerializationProxy$$orig")) {
             mv.visitFieldInsn(opcode, owner, name, desc);
             return;
         }
@@ -255,12 +248,6 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         owner = replaceStandardLibraryClass(owner);
         desc = replaceStandardLibraryClass(desc);
 
-        boolean isSelfCtorCall = false;
-        if ("<init>".equals(methodName) && "<init>".equals(name)) {
-            numOfCtorCall++;
-            isSelfCtorCall = numOfCtorCall == 1;
-        }
-
         int idx = (name + desc).lastIndexOf(')');
         String methodSig = (name + desc).substring(0, idx + 1);
         RVPredictInterceptor interceptor;
@@ -281,24 +268,31 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
                 }
             }
         } else {
-            if (owner.startsWith("[") || isSelfCtorCall || !strategy.logCallStackEvent()) {
+            if (owner.startsWith("[") || !strategy.logCallStackEvent() || !config.stacks) {
                 mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 return;
             }
 
-            /* Wrap the method call instruction into a try-finally block with logging code.
-             *
-             *     LOG_INVOKE_METHOD
-             * L0:
-             *     visitMethodInsn(opcode, owner, name, desc, itf)
-             *     LOG_FINISH_METHOD
-             *     goto L2
-             * L1:
-             *     LOG_FINISH_METHOD
-             *     throw exception
-             * L2:
-             *     ...
-             */
+            /* optimization: no need to log call stack events of Object.<init>() */
+            if ("<init>".equals(name) && "java/lang/Object".equals(owner)) {
+                // TODO: profile and then decide whether to generalize this optimization
+                mv.visitMethodInsn(opcode, owner, name, desc, itf);
+                return;
+            }
+
+           /* Wrap the method call instruction into a try-finally block with logging code.
+            *
+            *     LOG_INVOKE_METHOD
+            * L0:
+            *     visitMethodInsn(opcode, owner, name, desc, itf)
+            *     LOG_FINISH_METHOD
+            *     goto L2
+            * L1:
+            *     LOG_FINISH_METHOD
+            *     throw exception
+            * L2:
+            *     ...
+            */
             push(locId);
             invokeRtnMethod(LOG_INVOKE_METHOD);
             Label l0 = mv.mark();

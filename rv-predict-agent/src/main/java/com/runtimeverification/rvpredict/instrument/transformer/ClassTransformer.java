@@ -99,7 +99,7 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
          * infinite recursion at runtime */
         if ((access & ACC_BRIDGE) == 0) {
             mv = new MethodTransformer(mv, source, className, version, name, desc, access,
-                    loader, config.logger(), strategy);
+                    loader, config, strategy);
         }
 
         if ("<clinit>".equals(name)) {

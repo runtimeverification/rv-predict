@@ -1,7 +1,7 @@
-package race;
+package regression;
 
 /**
- * Created by Traian on 23.04.2015.
+ * @author TraianSF
  */
 public class Race {
     private static int Global;

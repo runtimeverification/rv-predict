@@ -454,7 +454,7 @@ public class Configuration implements Constants {
         initSuppressPattern();
 
         /* Carefully handle the interaction between options:
-         * 1) 5 different modes: only_profile, only_log, only_predict, only_llvm_prediict, and log_then_predict;
+         * 1) 5 different modes: only_profile, only_log, only_predict, only_llvm_predict, and log_then_predict;
          * 2) 2 types of prediction: online and offline;
          * 3) log directory can be specified or not.
          *
@@ -494,9 +494,6 @@ public class Configuration implements Constants {
             log = false;
             prediction = OFFLINE_PREDICTION;
         }  else if (llvm_trace_file != null) {       /* only predict */
-            if (predict_dir != null) {
-                exclusiveOptionsFailure(opt_llvm_predict, opt_only_predict);
-            }
             log_dir = Paths.get(llvm_trace_file).toAbsolutePath().toString();
             log = false;
             prediction = LLVM_PREDICTION;

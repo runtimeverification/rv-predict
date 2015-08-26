@@ -38,8 +38,27 @@ public class InstrumentationTests {
         i.intValue();
     }
 
+    static class Path {
+        Path(Path path) { this(); }
+
+        Path() { }
+    }
+
+    /**
+     * Tests `flagThisUninit` for the finally-block: issue#541
+     */
+    private static void testStackFramesMap2() {
+        new Path(null);
+    }
+
     public static void main(String[] args) {
-        testStackFramesMap();
+        try {
+            testStackFramesMap();
+            testStackFramesMap2();
+        } catch (Throwable e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
     }
 
 }

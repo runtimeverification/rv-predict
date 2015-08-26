@@ -150,8 +150,9 @@
         <rvarg value="--stacks" />
     </test>
 
-    <test name="instrumentation.InstrumentationTests" module="basic">
+    <test name="instrumentation.InstrumentationTests" module="basic" agent="true">
         <arg value="instrumentation.InstrumentationTests" />
+        <rvarg value="--stacks" />
     </test>
 
 </basic>

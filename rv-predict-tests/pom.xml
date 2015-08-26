@@ -13,6 +13,7 @@
         <module>SpringExample</module>
         <module>examples</module>
         <module>ftpserver</module>
+        <module>llvm-tests</module>
     </modules>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

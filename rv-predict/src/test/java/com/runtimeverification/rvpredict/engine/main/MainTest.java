@@ -62,10 +62,10 @@ public class MainTest {
 
 
     public MainTest(String name, Path modulePath, int numOfRuns, List<String> rvArguments, List<String> arguments,
-                    boolean agentTest) {
+                    boolean agentTest, boolean inputTest) {
         this.name = name;
         this.numOfRuns = numOfRuns;
-        helper = new TestHelper(modulePath);
+        helper = new TestHelper(modulePath, inputTest);
         args = new ArrayList<>();
         if (agentTest) {
             args.addAll(agentCommand);
@@ -122,6 +122,7 @@ public class MainTest {
                     String name = test.getAttribute("name");
                     String module = test.getAttribute("module");
                     Path modulePath = Paths.get(examplesPath, module);
+                    boolean inputTest = test.getElementsByTagName("in").getLength() != 0;
                     String jar = modulePath.resolve("target").resolve(module + "-" + version + "-" + "jar-with-dependencies.jar").toString();
                     boolean isJar = test.getElementsByTagName("jar").getLength() != 0;
                     boolean agentTest = test.hasAttribute("agent");
@@ -136,7 +137,7 @@ public class MainTest {
                     }
                     arguments.add(jar);
                     processArguments(arguments, test.getElementsByTagName("arg"));
-                    data.add(new Object[]{name, modulePath, numOfRuns, rvarguments, arguments, agentTest});
+                    data.add(new Object[]{name, modulePath, numOfRuns, rvarguments, arguments, agentTest, inputTest});
                 }
             }
         } catch (ParserConfigurationException | SAXException | IOException e) {

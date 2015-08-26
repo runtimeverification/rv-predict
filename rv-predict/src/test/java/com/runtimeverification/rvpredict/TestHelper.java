@@ -30,13 +30,16 @@ public class TestHelper {
     private static final int NUM_OF_WORKER_THREADS = 4;
     private final File basePathFile;
     private final Path basePath;
+    private boolean inputTest;
 
     /**
      * Initializes the {@code basePath} field to the parent directory of the specified file path
      * @param modulePath  path to the file which prompted this test, used to establish working dir
+     * @param inputTest
      */
-    public TestHelper(Path modulePath)   {
+    public TestHelper(Path modulePath, boolean inputTest)   {
         this.basePath = modulePath;
+        this.inputTest = inputTest;
         basePathFile = basePath.toFile();
 
     }
@@ -75,7 +78,7 @@ public class TestHelper {
 
         ExecutorService executor = Executors.newFixedThreadPool(NUM_OF_WORKER_THREADS);
         List<Task> tasks = IntStream.range(0, numOfRuns).boxed()
-                .map(id -> new Task(testsPrefix, id, basePathFile, inFile, command))
+                .map(id -> new Task(testsPrefix, id, basePathFile, inFile, inputTest, command))
                 .collect(Collectors.toList());
         Map<Task, Future<Integer>> taskToFuture = tasks.stream()
                 .collect(Collectors.toMap(x -> x, task -> executor.submit(task)));
@@ -138,14 +141,21 @@ public class TestHelper {
 
         private final File stderrFile;
 
-        private Task(String testsPrefix, int id, File basePathFile, File inputFile, String... command) {
+        private Task(String testsPrefix, int id, File basePathFile, File inputFile, boolean inputTest, String... command) {
             stdoutFile = new File(testsPrefix + id + ".actual.out");
             stderrFile = new File(testsPrefix + id + ".actual.err");
+            if (inputTest) {
+                for (int i = 0; i < command.length; i++) {
+                    if (command[i].equals("$in")) {
+                        command[i] = inputFile.getAbsolutePath();
+                    }
+                }
+            }
             processBuilder = new ProcessBuilder(command).inheritIO();
             processBuilder.directory(basePathFile);
             processBuilder.redirectOutput(stdoutFile);
             processBuilder.redirectError(stderrFile);
-            if (inputFile.exists() && !inputFile.isDirectory()) {
+            if (!inputTest && inputFile.exists() && !inputFile.isDirectory()) {
                 processBuilder.redirectInput(inputFile);
             }
         }

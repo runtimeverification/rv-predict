@@ -52,7 +52,7 @@
         <arg value="benchmarks.JGFMolDynBenchSizeA" />
         <rvarg value="--stacks" />
     </test>
-    
+
     <test name="demo.Example" module="basic">
         <arg value="demo.Example" />
         <rvarg value="--stacks" />
@@ -156,6 +156,17 @@
 
     <test name="instrumentation.InstrumentationTests" module="basic">
         <arg value="instrumentation.InstrumentationTests" />
+    </test>
+
+    <test name="llvm.demo.example2" module="llvm-tests">
+        <in/>
+        <rvarg value="--stacks" />
+        <rvarg key="--llvm-predict" value="$in" />
+    </test>
+    <test name="llvm.demo.example" module="llvm-tests">
+        <in/>
+        <rvarg value="--stacks" />
+        <rvarg key="--llvm-predict" value="$in" />
     </test>
 
 </basic>

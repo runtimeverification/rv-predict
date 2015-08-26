@@ -127,6 +127,12 @@ public class InstrumentUtils implements Opcodes {
      */
     public static String replaceStandardLibraryClass(String className, String literal) {
         if (literal != null && !className.startsWith(Constants.RVPREDICT_RUNTIME_PKG_PREFIX)) {
+            /* quick rejection test: make sure the most common case is done in O(length(literal)) */
+            if (!Configuration.MUST_REPLACE_QUICK_TEST_PATTERN.matcher(literal).find()) {
+                return literal;
+            }
+
+            // TODO: the following code can be further optimized
             for (String stdlibClass : Configuration.MUST_REPLACE) {
                 literal = literal.replace("edu/emory/mathcs/backport/" + stdlibClass, PLACE_HOLDER);
                 literal = literal.replace(stdlibClass, PLACE_HOLDER);

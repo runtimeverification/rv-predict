@@ -140,6 +140,9 @@ public class Configuration implements Constants {
             "java/util/concurrent/RejectedExecutionHandler",
             "java/util/concurrent/Executors"));
 
+    public final static Pattern MUST_REPLACE_QUICK_TEST_PATTERN = Pattern
+            .compile("java/util/concurrent");
+
     public final static List<Pattern> MUST_INCLUDES;
     static {
         String[] mustIncludes = new String[] {

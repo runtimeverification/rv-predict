@@ -28,6 +28,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     private final ClassLoader loader;
     private final String className;
     private final String methodName;
+    private final String methodDesc;
     private final int version;
     private final String locIdPrefix;
 
@@ -62,6 +63,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         this.mv = (GeneratorAdapter) super.mv;
         this.className = className;
         this.methodName = name;
+        this.methodDesc = desc;
         this.version = version;
         this.isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
         this.isStatic = (access & ACC_STATIC) != 0;
@@ -164,7 +166,19 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
             return;
         }
 
-        /* fixes issue: https://github.com/runtimeverification/rv-predict/issues/458 */
+        /* simple but imperfect fix for issue#513; neither sound nor complete */
+        if ("finalize()V".equals(methodName + methodDesc)
+            && opcode != GETSTATIC && opcode != PUTSTATIC) {
+            /* Limitations:
+             *   - miss read/write events on instance fields of other objects;
+             *   - read/write events on the instance field of this object may
+             *     still be logged from other methods called inside finalize()
+             */
+            mv.visitFieldInsn(opcode, owner, name, desc);
+            return;
+        }
+
+        /* fix issue: https://github.com/runtimeverification/rv-predict/issues/458 */
         if ("<init>".equals(methodName) && opcode == PUTFIELD && numOfCtorCall == 0) {
             mv.visitFieldInsn(opcode, owner, name, desc);
             return;

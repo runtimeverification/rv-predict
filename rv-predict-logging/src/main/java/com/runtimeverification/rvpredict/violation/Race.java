@@ -135,7 +135,7 @@ public class Race {
                 getHeldLocksReport(heldLocks)));
         boolean isTopmostStack = true;
         List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
-        heldLocks.forEach(stacktrace::add);
+        stacktrace.addAll(heldLocks);
         Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
         for (Event elem : stacktrace) {
             String locSig = elem.getLocId() != -1 ? metadata.getLocationSig(elem.getLocId())

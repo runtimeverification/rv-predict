@@ -47,7 +47,8 @@ public class Main {
                 }
             }
 
-            execApplication();
+            /* exit with the same value as the subprocess */
+            System.exit(execApplication());
         } else {
             /* must be in only_predict mode */
             assert config.isOfflinePrediction();
@@ -58,7 +59,7 @@ public class Main {
     /**
      * Executes the application in a subprocess.
      */
-    private static void execApplication() {
+    private static int execApplication() {
         List<String> args = new ArrayList<>();
         args.add(JAVA_EXECUTABLE);
         args.add("-ea");
@@ -69,13 +70,14 @@ public class Main {
         args.addAll(config.getJavaArguments());
 
         Process process = null;
+        int exitValue = -1;
         try {
             process = new ProcessBuilder(args).start();
             StreamGobbler errorGobbler = StreamGobbler.spawn(process.getErrorStream(), System.err);
             StreamGobbler outputGobbler = StreamGobbler.spawn(process.getInputStream(), System.out);
             StreamGobbler.spawn(System.in, new PrintStream(process.getOutputStream()), true /* flush */);
 
-            process.waitFor();
+            exitValue = process.waitFor();
 
             errorGobbler.join();
             outputGobbler.join();
@@ -86,6 +88,7 @@ public class Main {
             }
             e.printStackTrace();
         }
+        return exitValue;
     }
 
     /**

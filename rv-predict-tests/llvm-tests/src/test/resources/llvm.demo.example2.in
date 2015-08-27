@@ -1,0 +1,52 @@
+<gid:8192;tid:1;id:4865459;addr:0;value:0;type:INVOKE_METHOD;fn:main;file:demo/example2.c;line:16>
+<gid:8195;tid:1;id:4479204;addr:2;value:0;type:START;fn:__interceptor_pthread_create;file:tsan/rtl/tsan_interceptors.cc;line:859>
+<gid:8192;tid:2;id:4865302;addr:0;value:0;type:INVOKE_METHOD;fn:MyThread;file:demo/example2.c;line:8>
+<gid:8196;tid:2;id:4383649;addr:21676904;value:0;type:WRITE_LOCK;fn:pthread_mutex_lock;file:tsan/../sanitizer_common/sanitizer_common_interceptors.inc;line:3103>
+<gid:8196;tid:2;id:4383649;addr:21676904;value:1;type:READ;fn:pthread_mutex_lock;file:tsan/../sanitizer_common/sanitizer_common_interceptors.inc;line:3103>
+<gid:8198;tid:1;id:4479204;addr:3;value:0;type:START;fn:__interceptor_pthread_create;file:tsan/rtl/tsan_interceptors.cc;line:859>
+<gid:8199;tid:2;id:4865364;addr:21676896;value:1;type:WRITE;fn:MyThread;file:demo/example2.c;line:10>
+<gid:8201;tid:2;id:4363844;addr:21676904;value:0;type:WRITE_UNLOCK;fn:__interceptor_pthread_mutex_unlock;file:tsan/../sanitizer_common/sanitizer_common_interceptors.inc;line:3114>
+<gid:8201;tid:2;id:4363844;addr:21676904;value:2;type:READ;fn:__interceptor_pthread_mutex_unlock;file:tsan/../sanitizer_common/sanitizer_common_interceptors.inc;line:3114>
+<gid:8203;tid:2;id:4865390;addr:21676896;value:1;type:READ;fn:MyThread;file:demo/example2.c;line:12>
+<gid:8192;tid:3;id:4865302;addr:0;value:0;type:INVOKE_METHOD;fn:MyThread;file:demo/example2.c;line:8>
+<gid:8200;tid:1;id:4383649;addr:21676904;value:0;type:WRITE_LOCK;fn:pthread_mutex_lock;file:tsan/../sanitizer_common/sanitizer_common_interceptors.inc;line:3103>
+<gid:8208;tid:2;id:4865423;addr:0;value:0;type:FINISH_METHOD;fn:MyThread;file:demo/example2.c;line:13>
+<gid:8200;tid:1;id:4383649;addr:21676904;value:2;type:READ;fn:pthread_mutex_lock;file:tsan/../sanitizer_common/sanitizer_common_interceptors.inc;line:3103>
+<gid:8203;tid:1;id:4865533;addr:21676896;value:2;type:WRITE;fn:main;file:demo/example2.c;line:21>
+==================
+WARNING: ThreadSanitizer: data race on vptr (ctor/dtor vs virtual call) (pid=24043)
+  Write of size 8 at 0x0000014ac360 by main thread (mutexes: write M0):
+    #0 main demo/example2.c:21:4 (example2+0x0000004a3dfc)
+
+  Previous read of size 4 at 0x0000014ac360 by thread T1:
+    #0 MyThread demo/example2.c:12:20 (example2+0x0000004a3d6d)
+
+  Location is global 'x' of size 4 at 0x0000014ac360 (example2+0x0000014ac360)
+
+  Mutex M0 (0x0000014ac368) created at:
+    #0 pthread_mutex_lock tsan/../sanitizer_common/sanitizer_common_interceptors.inc:3103 (example2+0x00000042e3a0)
+    #1 MyThread demo/example2.c:9:3 (example2+0x0000004a3d3e)
+
+  Thread T1 (tid=24046, finished) created by main thread at:
+    #0 pthread_create tsan/rtl/tsan_interceptors.cc:859 (example2+0x0000004458e3)
+    #1 main demo/example2.c:18:3 (example2+0x0000004a3dc8)
+
+SUMMARY: ThreadSanitizer: data race on vptr (ctor/dtor vs virtual call) demo/example2.c:21:4 in main
+==================
+<gid:8205;tid:1;id:4363844;addr:21676904;value:0;type:WRITE_UNLOCK;fn:__interceptor_pthread_mutex_unlock;file:tsan/../sanitizer_common/sanitizer_common_interceptors.inc;line:3114>
+<gid:8205;tid:1;id:4363844;addr:21676904;value:2;type:READ;fn:__interceptor_pthread_mutex_unlock;file:tsan/../sanitizer_common/sanitizer_common_interceptors.inc;line:3114>
+<gid:8207;tid:1;id:4865561;addr:21676896;value:0;type:WRITE;fn:main;file:demo/example2.c;line:23>
+<gid:8196;tid:3;id:4383649;addr:21676904;value:0;type:WRITE_LOCK;fn:pthread_mutex_lock;file:tsan/../sanitizer_common/sanitizer_common_interceptors.inc;line:3103>
+<gid:8208;tid:1;id:4865579;addr:140722342098056;value:140567271962368;type:READ;fn:main;file:demo/example2.c;line:24>
+<gid:8196;tid:3;id:4383649;addr:21676904;value:2;type:READ;fn:pthread_mutex_lock;file:tsan/../sanitizer_common/sanitizer_common_interceptors.inc;line:3103>
+<gid:8210;tid:1;id:4488658;addr:2;value:0;type:JOIN;fn:__interceptor_pthread_join;file:tsan/rtl/tsan_interceptors.cc;line:914>
+<gid:8211;tid:1;id:4865599;addr:140722342098048;value:140567261476608;type:READ;fn:main;file:demo/example2.c;line:25>
+<gid:8199;tid:3;id:4865364;addr:21676896;value:1;type:WRITE;fn:MyThread;file:demo/example2.c;line:10>
+<gid:8201;tid:3;id:4363844;addr:21676904;value:0;type:WRITE_UNLOCK;fn:__interceptor_pthread_mutex_unlock;file:tsan/../sanitizer_common/sanitizer_common_interceptors.inc;line:3114>
+<gid:8201;tid:3;id:4363844;addr:21676904;value:2;type:READ;fn:__interceptor_pthread_mutex_unlock;file:tsan/../sanitizer_common/sanitizer_common_interceptors.inc;line:3114>
+<gid:8203;tid:3;id:4865390;addr:21676896;value:1;type:READ;fn:MyThread;file:demo/example2.c;line:12>
+<gid:8208;tid:3;id:4865423;addr:0;value:0;type:FINISH_METHOD;fn:MyThread;file:demo/example2.c;line:13>
+<gid:8213;tid:1;id:4488658;addr:3;value:0;type:JOIN;fn:__interceptor_pthread_join;file:tsan/rtl/tsan_interceptors.cc;line:914>
+<gid:8214;tid:1;id:4865615;addr:0;value:0;type:FINISH_METHOD;fn:main;file:demo/example2.c;line:26>
+ThreadSanitizer: reported 1 warnings
+11

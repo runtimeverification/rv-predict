@@ -39,6 +39,7 @@ import java.util.List;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.util.Logger;
@@ -58,8 +59,13 @@ public class RVPredict {
 
     public RVPredict(Configuration config) {
         this.config = config;
-        this.metadata = Metadata.readFrom(config.getMetadataPath());
-        traceCache = new TraceCache(config, metadata);
+        if (config.isLLVMPrediction()) {
+            metadata = Metadata.singleton();
+            traceCache = new LLVMTraceCache(config, metadata);
+        } else {
+            this.metadata = Metadata.readFrom(config.getMetadataPath());
+            traceCache = new TraceCache(config, metadata);
+        }
         this.detector = new RaceDetector(config);
     }
 

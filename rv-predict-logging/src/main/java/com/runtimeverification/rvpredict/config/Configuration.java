@@ -322,6 +322,7 @@ public class Configuration implements Constants {
 
     private final static String ONLINE_PREDICTION = "ONLINE_PREDICTION";
     private final static String OFFLINE_PREDICTION = "OFFLINE_PREDICTION";
+    private static final String LLVM_PREDICTION = "LLVM_PREDICTION";
     private String prediction;
 
     public final static String opt_offline = "--offline";
@@ -340,6 +341,10 @@ public class Configuration implements Constants {
     public final static String opt_event_profile = "--profile";
     @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1300")
     private boolean profile;
+
+    public final static String opt_llvm_predict = "--llvm-predict";
+    @Parameter(names = opt_llvm_predict, description = "Run prediction on given llvm trace", hidden = true, descriptionKey = "1250")
+    private String llvm_trace_file = null;
 
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include",
@@ -452,7 +457,7 @@ public class Configuration implements Constants {
         initSuppressPattern();
 
         /* Carefully handle the interaction between options:
-         * 1) 4 different modes: only_profile, only_log, only_predict and log_then_predict;
+         * 1) 5 different modes: only_profile, only_log, only_predict, only_llvm_predict, and log_then_predict;
          * 2) 2 types of prediction: online and offline;
          * 3) log directory can be specified or not.
          *
@@ -466,6 +471,9 @@ public class Configuration implements Constants {
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_only_predict);
             }
+            if (llvm_trace_file != null) {
+                exclusiveOptionsFailure(opt_event_profile, opt_llvm_predict);
+            }
             if (offline) {
                 exclusiveOptionsFailure(opt_event_profile, opt_offline);
             }
@@ -474,14 +482,24 @@ public class Configuration implements Constants {
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_only_predict);
             }
+            if (llvm_trace_file != null) {
+                exclusiveOptionsFailure(opt_only_log, opt_llvm_predict);
+            }
             if (offline) {
                 exclusiveOptionsFailure(opt_only_log, opt_offline);
             }
             log_dir = Paths.get(log_dir).toAbsolutePath().toString();
         } else if (predict_dir != null) {       /* only predict */
+            if (llvm_trace_file != null) {
+                exclusiveOptionsFailure(opt_only_predict, opt_llvm_predict);
+            }
             log_dir = Paths.get(predict_dir).toAbsolutePath().toString();
             log = false;
             prediction = OFFLINE_PREDICTION;
+        }  else if (llvm_trace_file != null) {       /* only llvm_predict */
+            log_dir = Paths.get(llvm_trace_file).toAbsolutePath().toString();
+            log = false;
+            prediction = LLVM_PREDICTION;
         } else {                                /* log then predict */
             try {
                 log_dir = Files.createTempDirectory(
@@ -496,7 +514,11 @@ public class Configuration implements Constants {
 
         if (log_dir != null) {
             try {
-                logger.setLogDir(log_dir);
+                if (isLLVMPrediction()) {
+                    logger.setLogDir(Paths.get(llvm_trace_file).toAbsolutePath().getParent().toString());
+                } else {
+                    logger.setLogDir(log_dir);
+                }
             } catch (FileNotFoundException e) {
                 logger.report("Error while attempting to create the logger: directory not found",
                         Logger.MSGTYPE.ERROR);
@@ -581,6 +603,10 @@ public class Configuration implements Constants {
         int spacesAfterCnt;
         String description;
         for (ParameterDescription parameterDescription : jCommander.getParameters()) {
+            if (parameterDescription.getNames().contains(opt_llvm_predict)) {
+                //Omit llvm prediction from the list of options (for now)
+                continue;
+            }
             Parameter parameter = parameterDescription.getParameter().getParameter();
             String descriptionKey = parameter.descriptionKey();
             description = "\n";
@@ -673,6 +699,10 @@ public class Configuration implements Constants {
 
     public boolean isOfflinePrediction() {
         return prediction == OFFLINE_PREDICTION;
+    }
+
+    public boolean isLLVMPrediction() {
+        return prediction == LLVM_PREDICTION;
     }
 
     public boolean noPrediction() {

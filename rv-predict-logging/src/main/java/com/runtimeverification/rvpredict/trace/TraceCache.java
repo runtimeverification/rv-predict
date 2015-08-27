@@ -21,7 +21,7 @@ import java.util.List;
  */
 public class TraceCache {
 
-    private final Configuration config;
+    protected final Configuration config;
 
     private final TraceState crntState;
 
@@ -49,7 +49,7 @@ public class TraceCache {
     /**
      * Returns the power of two that is greater than the given integer.
      */
-    private int getNextPowerOfTwo(int x) {
+    protected int getNextPowerOfTwo(int x) {
         return 1 << (32 - Integer.numberOfLeadingZeros(x));
     }
 
@@ -63,8 +63,14 @@ public class TraceCache {
      */
     public Trace getTrace(long fromIndex) throws IOException {
         long toIndex = fromIndex + config.windowSize;
-        List<RawTrace> rawTraces = new ArrayList<>();
+        List<RawTrace> rawTraces = readEvents(fromIndex, toIndex);
 
+        /* finish reading events and create the Trace object */
+        return rawTraces.isEmpty() ? null : crntState.initNextTraceWindow(rawTraces);
+    }
+    
+    protected List<RawTrace> readEvents(long fromIndex, long toIndex) throws IOException {
+        List<RawTrace> rawTraces =  new ArrayList<>();
         /* sort readers by their last read events */
         readers.sort((r1, r2) -> r1.lastReadEvent().compareTo(r2.lastReadEvent()));
         Iterator<EventReader> iter = readers.iterator();
@@ -93,9 +99,7 @@ public class TraceCache {
             int length = getNextPowerOfTwo(events.size());
             rawTraces.add(new RawTrace(0, events.size(), events.toArray(new Event[length])));
         }
-
-        /* finish reading events and create the Trace object */
-        return rawTraces.isEmpty() ? null : crntState.initNextTraceWindow(rawTraces);
+        return rawTraces;
     }
 
 }

@@ -1296,7 +1296,6 @@ public final class RVPredictRuntime implements Constants {
              * may involve locking, so it must be done outside the sync block
              * to avoid deadlock (issue#528) */
             if (isWrite) {
-                T result = closure.get();
                 synchronized (state) {
                     int value = state.intValue();
                     state.increment();
@@ -1308,8 +1307,9 @@ public final class RVPredictRuntime implements Constants {
                         saveMemAccEvent(EventType.WRITE, locId, addrl, addrr, value + 1);
                     }
                 }
-                return result;
+                return closure.get();
             } else {
+                T result = closure.get();
                 synchronized (state) {
                     int value = state.intValue();
                     if (isThreadSafe) {
@@ -1319,7 +1319,7 @@ public final class RVPredictRuntime implements Constants {
                         saveMemAccEvent(EventType.READ, locId, addrl, addrr, value);
                     }
                 }
-                return closure.get();
+                return result;
             }
         }
     }

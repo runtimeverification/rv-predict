@@ -340,7 +340,7 @@ public class Configuration implements Constants {
     private boolean profile;
 
     public final static String opt_llvm_predict = "--llvm-predict";
-    @Parameter(names = opt_llvm_predict, description = "Run prediction on given llvm trace", descriptionKey = "1020")
+    @Parameter(names = opt_llvm_predict, description = "Run prediction on given llvm trace", hidden = true, descriptionKey = "1250")
     private String llvm_trace_file = null;
 
     public final static String opt_include = "--include";
@@ -600,6 +600,10 @@ public class Configuration implements Constants {
         int spacesAfterCnt;
         String description;
         for (ParameterDescription parameterDescription : jCommander.getParameters()) {
+            if (parameterDescription.getNames().contains(opt_llvm_predict)) {
+                //Omit llvm prediction from the list of options (for now)
+                continue;
+            }
             Parameter parameter = parameterDescription.getParameter().getParameter();
             String descriptionKey = parameter.descriptionKey();
             description = "\n";

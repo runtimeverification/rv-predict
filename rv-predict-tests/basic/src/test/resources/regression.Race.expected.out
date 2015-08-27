@@ -1,1 +1,0 @@
-Data race on field regression.Race.Global: \{\{\{(.*)---->  at regression.Race.access\$002\(Race.java:6\)(.*)---->  at regression.Race.main\(Race.java:18\)(.*)\}\}\}

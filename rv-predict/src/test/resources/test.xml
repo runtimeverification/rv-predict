@@ -57,10 +57,6 @@
         <arg value="demo.Example" />
         <rvarg value="--stacks" />
     </test>
-    <test name="regression.Race" module="basic">
-        <arg value="regression.Race" />
-        <rvarg value="--stacks" />
-    </test>
     <test name="boundedbuffer.BoundedBuffer" module="basic">
         <runs value="32" />
         <arg value="boundedbuffer.BoundedBuffer" />

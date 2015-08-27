@@ -35,7 +35,7 @@ public class TestHelper {
     /**
      * Initializes the {@code basePath} field to the parent directory of the specified file path
      * @param modulePath  path to the file which prompted this test, used to establish working dir
-     * @param inputTest
+     * @param inputTest whether this test uses a precomputed log (and thus it only requires prediction)
      */
     public TestHelper(Path modulePath, boolean inputTest)   {
         this.basePath = modulePath;

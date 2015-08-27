@@ -493,7 +493,7 @@ public class Configuration implements Constants {
             log_dir = Paths.get(predict_dir).toAbsolutePath().toString();
             log = false;
             prediction = OFFLINE_PREDICTION;
-        }  else if (llvm_trace_file != null) {       /* only predict */
+        }  else if (llvm_trace_file != null) {       /* only llvm_predict */
             log_dir = Paths.get(llvm_trace_file).toAbsolutePath().toString();
             log = false;
             prediction = LLVM_PREDICTION;

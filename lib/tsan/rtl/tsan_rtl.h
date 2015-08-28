@@ -626,8 +626,7 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
     uptr size, bool is_write);
 void MemoryAccessRangeStep(ThreadState *thr, uptr pc, uptr addr,
     uptr size, uptr step, bool is_write);
-void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr,
-    int size, bool kAccessIsWrite, bool kIsAtomic);
+void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr, int size, bool kAccessIsWrite, bool kIsAtomic, u64 value);
 
 const int kSizeLog1 = 0;
 const int kSizeLog2 = 1;
@@ -636,11 +635,12 @@ const int kSizeLog8 = 3;
 
 void ALWAYS_INLINE MemoryRead(ThreadState *thr, uptr pc,
                                      uptr addr, int kAccessSizeLog) {
+  RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), pc, addr, *((u64*)addr), "READ");
   MemoryAccess(thr, pc, addr, kAccessSizeLog, false, false);
 }
 
-void ALWAYS_INLINE MemoryWrite(ThreadState *thr, uptr pc,
-                                      uptr addr, int kAccessSizeLog) {
+void ALWAYS_INLINE MemoryWrite(ThreadState *thr, uptr pc, uptr addr, const int kAccessSizeLog, u64 value) {
+  RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), pc, addr, value, "WRITE");
   MemoryAccess(thr, pc, addr, kAccessSizeLog, true, false);
 }
 

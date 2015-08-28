@@ -187,7 +187,7 @@ void FdClose(ThreadState *thr, uptr pc, int fd) {
     return;
   FdDesc *d = fddesc(thr, pc, fd);
   // To catch races between fd usage and close.
-  MemoryWrite(thr, pc, (uptr)d, kSizeLog8);
+  MemoryWrite(thr, pc, (uptr) d, kSizeLog8, 0);
   // We need to clear it, because if we do not intercept any call out there
   // that creates fd, we will hit false postives.
   MemoryResetRange(thr, pc, (uptr)d, 8);

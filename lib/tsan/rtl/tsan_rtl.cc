@@ -622,8 +622,7 @@ void MemoryAccessImpl1(ThreadState *thr, uptr addr,
   return;
 }
 
-void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr,
-    int size, bool kAccessIsWrite, bool kIsAtomic) {
+void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr, int size, bool kAccessIsWrite, bool kIsAtomic, u64 value) {
   while (size) {
     int size1 = 1;
     int kAccessSizeLog = kSizeLog1;
@@ -740,9 +739,6 @@ void MemoryAccess(ThreadState *thr, uptr pc, uptr addr,
       (int)(1 << kAccessSizeLog), kAccessIsWrite, shadow_mem,
       (uptr)shadow_mem[0], (uptr)shadow_mem[1],
       (uptr)shadow_mem[2], (uptr)shadow_mem[3]);
-  if (!kAccessIsWrite) {
-    RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), pc, addr, *((u64*)addr), "READ");
-  }
 
 #if SANITIZER_DEBUG
   if (!IsAppMem(addr)) {

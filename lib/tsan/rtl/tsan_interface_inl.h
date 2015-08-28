@@ -34,20 +34,20 @@ void __tsan_read8(void *addr) {
   MemoryRead(cur_thread(), CALLERPC, (uptr)addr, kSizeLog8);
 }
 
-void __tsan_write1(void *addr) {
-  MemoryWrite(cur_thread(), CALLERPC, (uptr)addr, kSizeLog1);
+void __tsan_write1(void *addr, void *new_val) {
+  MemoryWrite(cur_thread(), CALLERPC, (uptr)addr, kSizeLog1, (u64) new_val);
 }
 
-void __tsan_write2(void *addr) {
-  MemoryWrite(cur_thread(), CALLERPC, (uptr)addr, kSizeLog2);
+void __tsan_write2(void *addr, void *new_val) {
+  MemoryWrite(cur_thread(), CALLERPC, (uptr)addr, kSizeLog2, (u64) new_val);
 }
 
-void __tsan_write4(void *addr) {
-  MemoryWrite(cur_thread(), CALLERPC, (uptr)addr, kSizeLog4);
+void __tsan_write4(void *addr, void *new_val) {
+  MemoryWrite(cur_thread(), CALLERPC, (uptr)addr, kSizeLog4, (u64) new_val);
 }
 
-void __tsan_write8(void *addr) {
-  MemoryWrite(cur_thread(), CALLERPC, (uptr)addr, kSizeLog8);
+void __tsan_write8(void *addr, void *new_val) {
+  MemoryWrite(cur_thread(), CALLERPC, (uptr)addr, kSizeLog8, (u64) new_val);
 }
 
 void __tsan_read1_pc(void *addr, void *pc) {
@@ -66,29 +66,28 @@ void __tsan_read8_pc(void *addr, void *pc) {
   MemoryRead(cur_thread(), (uptr)pc, (uptr)addr, kSizeLog8);
 }
 
-void __tsan_write1_pc(void *addr, void *pc) {
-  MemoryWrite(cur_thread(), (uptr)pc, (uptr)addr, kSizeLog1);
+void __tsan_write1_pc(void *addr, void *pc, void *new_val) {
+  MemoryWrite(cur_thread(), (uptr)pc, (uptr)addr, kSizeLog1, (u64) new_val);
 }
 
-void __tsan_write2_pc(void *addr, void *pc) {
-  MemoryWrite(cur_thread(), (uptr)pc, (uptr)addr, kSizeLog2);
+void __tsan_write2_pc(void *addr, void *pc, void *new_val) {
+  MemoryWrite(cur_thread(), (uptr)pc, (uptr)addr, kSizeLog2, (u64) new_val);
 }
 
-void __tsan_write4_pc(void *addr, void *pc) {
-  MemoryWrite(cur_thread(), (uptr)pc, (uptr)addr, kSizeLog4);
+void __tsan_write4_pc(void *addr, void *pc, void *new_val) {
+  MemoryWrite(cur_thread(), (uptr)pc, (uptr)addr, kSizeLog4, (u64) new_val);
 }
 
-void __tsan_write8_pc(void *addr, void *pc) {
-  MemoryWrite(cur_thread(), (uptr)pc, (uptr)addr, kSizeLog8);
+void __tsan_write8_pc(void *addr, void *pc, void *new_val) {
+  MemoryWrite(cur_thread(), (uptr)pc, (uptr)addr, kSizeLog8, (u64) new_val);
 }
 
 void __tsan_vptr_update(void **vptr_p, void *new_val) {
   CHECK_EQ(sizeof(vptr_p), 8);
   ThreadState *thr = cur_thread();
-  RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), CALLERPC, (uptr)vptr_p, (u64)new_val, "WRITE");
   if (*vptr_p != new_val) {
     thr->is_vptr_access = true;
-    MemoryWrite(thr, CALLERPC, (uptr)vptr_p, kSizeLog8);
+    MemoryWrite(thr, CALLERPC, (uptr)vptr_p, kSizeLog8, (u64) new_val);
     thr->is_vptr_access = false;
   }
 }
@@ -103,13 +102,13 @@ void __tsan_vptr_read(void **vptr_p) {
 
 void __tsan_func_entry(void *pc) {
   ThreadState *thr = cur_thread();
-  RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), CALLERPC, 0UL, 0UL, "INVOKE_METHOD");
+  RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), ((uptr)pc)-1, 0UL, 0UL, "INVOKE_METHOD");
   FuncEntry(thr, (uptr)pc);
 }
 
 void __tsan_func_exit() {
   ThreadState *thr = cur_thread();
-  RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), CALLERPC, 0UL, 0UL, "FINISH_METHOD");
+  RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), (thr->shadow_stack_pos-1)[0]-1, 0UL, 0UL, "FINISH_METHOD");
   FuncExit(thr);
 }
 

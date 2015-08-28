@@ -150,7 +150,7 @@ void ThreadSanitizer::initializeCallbacks(Module &M) {
 
     SmallString<32> WriteName("__tsan_write" + itostr(ByteSize));
     TsanWrite[i] = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-        WriteName, IRB.getVoidTy(), IRB.getInt8PtrTy(), nullptr));
+        WriteName, IRB.getVoidTy(), IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), nullptr));
 
     SmallString<64> UnalignedReadName("__tsan_unaligned_read" +
         itostr(ByteSize));
@@ -162,7 +162,7 @@ void ThreadSanitizer::initializeCallbacks(Module &M) {
         itostr(ByteSize));
     TsanUnalignedWrite[i] =
         checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-            UnalignedWriteName, IRB.getVoidTy(), IRB.getInt8PtrTy(), nullptr));
+            UnalignedWriteName, IRB.getVoidTy(), IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), nullptr));
 
     Type *Ty = Type::getIntNTy(M.getContext(), BitSize);
     Type *PtrTy = Ty->getPointerTo();
@@ -281,21 +281,26 @@ bool ThreadSanitizer::addrPointsToConstantData(Value *Addr) {
 void ThreadSanitizer::chooseInstructionsToInstrument(
     SmallVectorImpl<Instruction *> &Local, SmallVectorImpl<Instruction *> &All,
     const DataLayout &DL) {
-  SmallSet<Value*, 8> WriteTargets;
+  //RV Predict: Commenting out WriteTargets as we want to instrument all reads
+  //SmallSet<Value*, 8> WriteTargets;
   // Iterate from the end.
   for (SmallVectorImpl<Instruction*>::reverse_iterator It = Local.rbegin(),
        E = Local.rend(); It != E; ++It) {
     Instruction *I = *It;
     if (StoreInst *Store = dyn_cast<StoreInst>(I)) {
-      WriteTargets.insert(Store->getPointerOperand());
+      //RV Predict: Commenting out WriteTargets as we want to instrument all reads
+      // WriteTargets.insert(Store->getPointerOperand());
     } else {
       LoadInst *Load = cast<LoadInst>(I);
       Value *Addr = Load->getPointerOperand();
+      //RV Predict: Commenting out WriteTargets as we want to instrument all reads
+      /*
       if (WriteTargets.count(Addr)) {
         // We will write to this temp, so no reason to analyze the read.
         NumOmittedReadsBeforeWrite++;
         continue;
       }
+      */
       if (addrPointsToConstantData(Addr)) {
         // Addr points to some constant data -- it can not race with any writes.
         continue;
@@ -415,9 +420,9 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
   int Idx = getMemoryAccessFuncIndex(Addr, DL);
   if (Idx < 0)
     return false;
-  if (IsWrite/* && isVtableAccess(I)*/) {
-    DEBUG(dbgs() << "  VPTR : " << *I << "\n");
-    Value *StoredValue = cast<StoreInst>(I)->getValueOperand();
+  Value *StoredValue;
+  if (IsWrite) {
+      StoredValue = cast<StoreInst>(I)->getValueOperand();
     // StoredValue may be a vector type if we are storing several vptrs at once.
     // In this case, just take the first element of the vector since this is
     // enough to find vptr races.
@@ -426,12 +431,15 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
           StoredValue, ConstantInt::get(IRB.getInt32Ty(), 0));
     if (StoredValue->getType()->isIntegerTy())
       StoredValue = IRB.CreateIntToPtr(StoredValue, IRB.getInt8PtrTy());
-    // Call TsanVptrUpdate.
-    IRB.CreateCall2(TsanVptrUpdate,
-                    IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                    IRB.CreatePointerCast(StoredValue, IRB.getInt8PtrTy()));
-    NumInstrumentedVtableWrites++;
-    return true;
+    if (isVtableAccess(I)) {
+        DEBUG(dbgs() << "  VPTR : " << *I << "\n");
+        // Call TsanVptrUpdate.
+        IRB.CreateCall2(TsanVptrUpdate,
+                        IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
+                        IRB.CreatePointerCast(StoredValue, IRB.getInt8PtrTy()));
+        NumInstrumentedVtableWrites++;
+        return true;
+    }
   }
   if (!IsWrite && isVtableAccess(I)) {
     IRB.CreateCall(TsanVptrLoad,
@@ -449,7 +457,12 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
     OnAccessFunc = IsWrite ? TsanWrite[Idx] : TsanRead[Idx];
   else
     OnAccessFunc = IsWrite ? TsanUnalignedWrite[Idx] : TsanUnalignedRead[Idx];
-  IRB.CreateCall(OnAccessFunc, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()));
+  if (IsWrite) {
+      IRB.CreateCall2(OnAccessFunc, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
+                      IRB.CreatePointerCast(StoredValue, IRB.getInt8PtrTy()));
+  } else {
+      IRB.CreateCall(OnAccessFunc, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()));
+  }
   if (IsWrite) NumInstrumentedWrites++;
   else         NumInstrumentedReads++;
   return true;

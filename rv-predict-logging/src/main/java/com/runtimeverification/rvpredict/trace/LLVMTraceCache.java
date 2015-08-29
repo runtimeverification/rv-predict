@@ -19,7 +19,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class LLVMTraceCache extends TraceCache {
     private BufferedReader traceFile = null;
     private final Metadata metadata;
-    private static AtomicLong globalId = new AtomicLong(-1);
     public LLVMTraceCache(Configuration config, Metadata metadata) {
         super(config, metadata);
         this.metadata = metadata;
@@ -38,7 +37,6 @@ public class LLVMTraceCache extends TraceCache {
         for (long i = fromIndex; i < toIndex; i++) {
             Event event = getNextEvent();
             if (event == null) break;
-            assert i == event.getGID();
             List<Event> events = rawTracesTable.get(event.getTID());
             if (events == null) {
                 events = new ArrayList<>();
@@ -58,7 +56,7 @@ public class LLVMTraceCache extends TraceCache {
         String line;
         do {
             line = traceFile.readLine();
-        } while (line != null && (line.contains("<null>") || !line.startsWith("<gid")));
+        } while (line != null && (!line.startsWith("<gid")));
         if (line == null) {
             return null;
         }
@@ -75,7 +73,6 @@ public class LLVMTraceCache extends TraceCache {
         int ln = (int) parseLong("line", parts[8]);
         System.out.printf("<gid:%d;tid:%d;id:%d;addr:%d;value:%d;type:%s;fn:%s;file:%s;line:%d>%n",
                 gid, tid, id, addr, value, type.toString(), fn, file, ln);
-        gid = globalId.incrementAndGet();
         id = metadata.getLocationId(String.format("<id:%d;fn:%s;file:%s;line:%d>", id, fn, file, ln));
         return new Event(gid, tid, (int) id, addr, value, type);
 

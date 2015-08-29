@@ -64,10 +64,12 @@ void WEAK OnInitialize() {}
 #endif
 
 static char thread_registry_placeholder[sizeof(ThreadRegistry)];
+static atomic_uint64_t rv_gid;
 
 void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 value, const char* type) {
+  gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
   SymbolizedStack* frame = SymbolizeCode(id);
- 
+
   Printf("<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s;fn:%s;file:%s;line:%d>\n", gid, tid + 1, id, addr, value, type,
        frame->info.function, frame->info.file, frame->info.line);
 }

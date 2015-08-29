@@ -60,7 +60,7 @@ To invoke RV-Predict on the Account class, simply replace
 
 If preferring RV-Predict's agent mode, the similar command would be:
 
- .. code-block:: none
+.. code-block:: none
 
     java -javaagent:<rvPath>/lib/rv-predict.jar -cp examples/examples.jar account.Account
 

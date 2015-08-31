@@ -86,9 +86,9 @@ import com.runtimeverification.rvpredict.util.Constants;
  * </ul>
  *
  * <b>Note:</b> we do not, however, guarantee absolute read-write consistency of
- * the logged trace because the running problem could be racey itself. For
+ * the logged trace because the running problem could be raceful itself. For
  * example, suppose two read and write operations on shared variable {@code x}
- * are racey, the following scenarios are possible:
+ * are raceful, the following scenarios are possible:
  *
  *
  *  TODO(YilongL): here is a mistake, read event is logged after the read happens!
@@ -106,7 +106,7 @@ import com.runtimeverification.rvpredict.util.Constants;
  * the trace because 1) for each trace window, our prediction algorithm doesn't
  * care about the order of events from different threads as we are going to
  * reorder them anyway, and 2) the (incorrectly logged) final values of the
- * racey window <em>might</em> still be a possible outcome that can be inferred
+ * raceful window <em>might</em> still be a possible outcome that can be inferred
  * from the actual execution.
  *
  * @see EventType

@@ -160,9 +160,9 @@ void ThreadSanitizer::initializeCallbacks(Module &M) {
 
     SmallString<64> UnalignedWriteName("__tsan_unaligned_write" +
         itostr(ByteSize));
-    TsanUnalignedWrite[i] =
-        checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-            UnalignedWriteName, IRB.getVoidTy(), IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), nullptr));
+    TsanUnalignedWrite[i] = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+        UnalignedWriteName, IRB.getVoidTy(),
+        IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), nullptr));
 
     Type *Ty = Type::getIntNTy(M.getContext(), BitSize);
     Type *PtrTy = Ty->getPointerTo();
@@ -422,7 +422,7 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
     return false;
   Value *StoredValue;
   if (IsWrite) {
-      StoredValue = cast<StoreInst>(I)->getValueOperand();
+    StoredValue = cast<StoreInst>(I)->getValueOperand();
     // StoredValue may be a vector type if we are storing several vptrs at once.
     // In this case, just take the first element of the vector since this is
     // enough to find vptr races.
@@ -432,13 +432,13 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
     if (StoredValue->getType()->isIntegerTy())
       StoredValue = IRB.CreateIntToPtr(StoredValue, IRB.getInt8PtrTy());
     if (isVtableAccess(I)) {
-        DEBUG(dbgs() << "  VPTR : " << *I << "\n");
-        // Call TsanVptrUpdate.
-        IRB.CreateCall2(TsanVptrUpdate,
-                        IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                        IRB.CreatePointerCast(StoredValue, IRB.getInt8PtrTy()));
-        NumInstrumentedVtableWrites++;
-        return true;
+      DEBUG(dbgs() << "  VPTR : " << *I << "\n");
+      // Call TsanVptrUpdate.
+      IRB.CreateCall2(TsanVptrUpdate,
+                      IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
+                      IRB.CreatePointerCast(StoredValue, IRB.getInt8PtrTy()));
+      NumInstrumentedVtableWrites++;
+      return true;
     }
   }
   if (!IsWrite && isVtableAccess(I)) {
@@ -458,10 +458,10 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
   else
     OnAccessFunc = IsWrite ? TsanUnalignedWrite[Idx] : TsanUnalignedRead[Idx];
   if (IsWrite) {
-      IRB.CreateCall2(OnAccessFunc, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                      IRB.CreatePointerCast(StoredValue, IRB.getInt8PtrTy()));
+    IRB.CreateCall2(OnAccessFunc, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
+                    IRB.CreatePointerCast(StoredValue, IRB.getInt8PtrTy()));
   } else {
-      IRB.CreateCall(OnAccessFunc, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()));
+    IRB.CreateCall(OnAccessFunc, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()));
   }
   if (IsWrite) NumInstrumentedWrites++;
   else         NumInstrumentedReads++;

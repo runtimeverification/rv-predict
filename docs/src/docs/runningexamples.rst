@@ -175,7 +175,7 @@ is replaced by ``an array access`` in the messages above.
 
 If no races are found, then the message ``No races found.`` is displayed. The 
 races are logged in the log directory printed at the beginning of the report
-(``/tmp/rv-predict7274661192308018898``) in ``report.txt``, and any errors or
+(``/tmp/rv-predict7274661192308018898``) in ``result.txt``, and any errors or
 stacktraces are recorded in ``debug.log``. Users can specify a different log
 directory with the ``--log`` flag.
 

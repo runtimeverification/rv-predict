@@ -152,7 +152,7 @@ A race description usually follows the syntax
 
 .. code-block:: none
 
-    Data race on field <racey_memory_location>: {{{
+    Data race on field <raceful_memory_location>: {{{
         Concurrent <read|write> on thread <thread_id> (locks held: {<locks>})
      ---->  at <method_name>(<file_name>:<line_number>)
 
@@ -161,13 +161,13 @@ A race description usually follows the syntax
     }}}
 
 which presents the fully qualified name of the location at which the race
-occurred (``<racey_memory_location>``), which is either a field or an array
+occurred (``<raceful_memory_location>``), which is either a field or an array
 element, and the stacktraces of the two memory accesses in race. The stacktrace
 is presented in the same format as in Java: each stacktrace element contains the
 fully qualified name of the method (``<method_name>``), file containing the
 location (``<file_name>``) and line number (``<line_number>``). The description
 also presents the type of race, which can be write-write or read-write, and
-provides details about the threads and locks involved (``<thread_number>`` and
+provides details about the threads and locks involved (``<thread_id>`` and
 ``<locks>``).
 
 Finally, if the race is due to an array access, the text ``field <field_name>``
@@ -175,7 +175,7 @@ is replaced by ``an array access`` in the messages above.
 
 If no races are found, then the message ``No races found.`` is displayed. The 
 races are logged in the log directory printed at the beginning of the report
-(``/tmp/rv-predict7274661192308018898``) in ``report.txt``, and any errors or
+(``/tmp/rv-predict7274661192308018898``) in ``result.txt``, and any errors or
 stacktraces are recorded in ``debug.log``. Users can specify a different log
 directory with the ``--log`` flag.
 

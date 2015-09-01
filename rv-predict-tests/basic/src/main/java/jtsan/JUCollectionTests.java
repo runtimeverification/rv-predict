@@ -4,7 +4,7 @@ package jtsan;
 
 import java.util.*;
 import java.util.Map.Entry;
-
+import java.util.concurrent.*;
 
 
 /**
@@ -425,6 +425,33 @@ public class JUCollectionTests {
         };
     }
 
+    @RaceTest(expectRace = false,
+            description = "test thread-safe set created from Collections.newSetFromMap")
+    public void newSetFromSyncMap() {
+        new ThreadRunner(2) {
+            Set<Integer> s;
+
+            @Override
+            public void setUp() {
+                s = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
+            }
+
+            @Override
+            public void thread1() {
+                sharedVar = 0;
+                s.add(0);
+            }
+
+            @Override
+            public void thread2() {
+                while (!s.contains(0)) {
+                    Thread.yield();
+                }
+                sharedVar = 1;
+            }
+        };
+    }
+
     public static void main(String[] args) {
         JUCollectionTests tests = new JUCollectionTests();
         // positive tests
@@ -447,6 +474,7 @@ public class JUCollectionTests {
             tests.synchronizedCollections();
             tests.syncMapIterateCollectionView();
             tests.syncListAddAndRemove();
+            tests.newSetFromSyncMap();
         }
     }
 }

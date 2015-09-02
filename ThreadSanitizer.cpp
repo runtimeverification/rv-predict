@@ -288,19 +288,15 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
        E = Local.rend(); It != E; ++It) {
     Instruction *I = *It;
     if (StoreInst *Store = dyn_cast<StoreInst>(I)) {
-      //RV Predict: Commenting out WriteTargets as we want to instrument all reads
       // WriteTargets.insert(Store->getPointerOperand());
     } else {
       LoadInst *Load = cast<LoadInst>(I);
       Value *Addr = Load->getPointerOperand();
-      //RV Predict: Commenting out WriteTargets as we want to instrument all reads
-      /*
-      if (WriteTargets.count(Addr)) {
-        // We will write to this temp, so no reason to analyze the read.
-        NumOmittedReadsBeforeWrite++;
-        continue;
-      }
-      */
+      //if (WriteTargets.count(Addr)) {
+      //  // We will write to this temp, so no reason to analyze the read.
+      //  NumOmittedReadsBeforeWrite++;
+      //  continue;
+      //}
       if (addrPointsToConstantData(Addr)) {
         // Addr points to some constant data -- it can not race with any writes.
         continue;

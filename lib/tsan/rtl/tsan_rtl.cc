@@ -66,12 +66,68 @@ void WEAK OnInitialize() {}
 static char thread_registry_placeholder[sizeof(ThreadRegistry)];
 static atomic_uint64_t rv_gid;
 
-void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 value, const char* type) {
-  gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
-  SymbolizedStack* frame = SymbolizeCode(id);
+uptr getCallerStackLocation(const ThreadState *thr) { return (thr->shadow_stack_pos-1)[0]-1; }
 
-  Printf("<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s;fn:%s;file:%s;line:%d>\n", gid, tid + 1, id, addr, value, type,
-       frame->info.function, frame->info.file, frame->info.line);
+const char* RVEventTypes[] = {
+  "READ",
+  "WRITE",
+  "ATOMIC_READ",
+  "ATOMIC_WRITE",
+  "ATOMIC_READ_THEN_WRITE",
+  "WRITE_LOCK",
+  "WRITE_UNLOCK",
+  "READ_LOCK",
+  "READ_UNLOCK",
+  "WAIT_REL",
+  "WAIT_ACQ",
+  "START",
+  "JOIN",
+  "CLINIT_ENTER",
+  "CLINIT_EXIT",
+  "INVOKE_METHOD",
+  "FINISH_METHOD",
+};
+
+void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 value, RVEventType type) {
+  SymbolizedStack* frame = SymbolizeCode(id);
+  ReportLocation *location = SymbolizeData(addr);
+  if (location) {
+    const DataInfo &global = location->global;
+    Printf("  Location is global '%s' of size %zu at %p (%s+%p)\n\n",
+           global.name, global.size, global.start,
+           StripModuleName(global.module), global.module_offset);
+  }
+
+  Printf("<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s;fn:%s;file:%s;line:%d>\n",
+         gid, tid + 1, id, addr, value, RVEventTypes[type],
+         frame->info.function, frame->info.file, frame->info.line);
+}
+
+void RVLog(RVEventType type, uptr id, uptr addr, u64 value1, u64 value2, int extra) {
+  u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
+  ThreadState *thr = cur_thread();
+  u64 tid = thr->fast_state.tid();
+  RVEventFile(gid, tid+1, id, addr, value1, type);
+}
+
+void RVLog(RVEventType type, uptr id, uptr addr, u64 value1, u64 value2) {
+  RVLog(type, id, addr, value1, value2, 0);
+}
+
+void RVSaveMetaEvent(RVEventType eventType, uptr locId){
+  RVLog(eventType, locId, 0, 0, 0, 0);
+}
+
+void RVSaveThreadSyncEvent(RVEventType eventType, uptr locId, u64 threadId) {
+  RVLog(eventType, locId, (uptr) nullptr, threadId+1, 0);
+}
+
+void RVSaveLockEvent(RVEventType eventType, uptr locId, uptr lock) {
+  RVLog(eventType, locId, lock, 0, 0);
+}
+
+void RVSaveMemAccEvent(RVEventType eventType, uptr addr, u64 value, uptr locId) {
+  RVLog(eventType, locId, addr, value, 0);
 }
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {
@@ -624,7 +680,7 @@ void MemoryAccessImpl1(ThreadState *thr, uptr addr,
   return;
 }
 
-void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr, int size, bool kAccessIsWrite, bool kIsAtomic, u64 value) {
+void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr, int size, bool kAccessIsWrite, bool kIsAtomic) {
   while (size) {
     int size1 = 1;
     int kAccessSizeLog = kSizeLog1;

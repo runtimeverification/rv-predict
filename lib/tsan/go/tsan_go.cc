@@ -113,13 +113,13 @@ void __tsan_read_pc(ThreadState *thr, void *addr, uptr callpc, uptr pc) {
 }
 
 void __tsan_write(ThreadState *thr, void *addr, void *pc) {
-  MemoryWrite(thr, (uptr)pc, (uptr)addr, kSizeLog1, 0);
+  MemoryWrite(thr, (uptr)pc, (uptr)addr, kSizeLog1);
 }
 
 void __tsan_write_pc(ThreadState *thr, void *addr, uptr callpc, uptr pc) {
   if (callpc != 0)
     FuncEntry(thr, callpc);
-  MemoryWrite(thr, (uptr)pc, (uptr)addr, kSizeLog1, 0);
+  MemoryWrite(thr, (uptr)pc, (uptr)addr, kSizeLog1);
   if (callpc != 0)
     FuncExit(thr);
 }

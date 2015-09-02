@@ -891,7 +891,7 @@ TSAN_INTERCEPTOR(int, pthread_create,
   }
   if (res == 0) {
     int tid = ThreadCreate(thr, pc, *(uptr*)th, detached);
-    RVEventFile(thr->fast_state.epoch(), thr->tid, (thr->shadow_stack_pos-1)[0]-1, tid + 1, 0UL, "START");
+    RVSaveThreadSyncEvent(START, getCallerStackLocation(thr), tid);
     CHECK_NE(tid, 0);
     // Synchronization on p.tid serves two purposes:
     // 1. ThreadCreate must finish before the new thread starts.
@@ -917,7 +917,7 @@ TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
   ThreadIgnoreEnd(thr, pc);
   if (res == 0) {
     ThreadJoin(thr, pc, tid);
-    RVEventFile(thr->fast_state.epoch(), thr->tid,  (thr->shadow_stack_pos-1)[0]-1, tid + 1, 0UL, "JOIN");
+    RVSaveThreadSyncEvent(JOIN, getCallerStackLocation(thr), tid);
   }
   return res;
 }
@@ -1239,14 +1239,14 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_unlock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_barrier_init, void *b, void *a, unsigned count) {
   SCOPED_TSAN_INTERCEPTOR(pthread_barrier_init, b, a, count);
-  MemoryWrite(thr, pc, (uptr) b, kSizeLog1, 0);
+  MemoryWrite(thr, pc, (uptr)b, kSizeLog1);
   int res = REAL(pthread_barrier_init)(b, a, count);
   return res;
 }
 
 TSAN_INTERCEPTOR(int, pthread_barrier_destroy, void *b) {
   SCOPED_TSAN_INTERCEPTOR(pthread_barrier_destroy, b);
-  MemoryWrite(thr, pc, (uptr) b, kSizeLog1, 0);
+  MemoryWrite(thr, pc, (uptr)b, kSizeLog1);
   int res = REAL(pthread_barrier_destroy)(b);
   return res;
 }

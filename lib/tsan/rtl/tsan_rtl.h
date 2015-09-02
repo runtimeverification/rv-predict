@@ -604,7 +604,94 @@ void PrintMatchedBenignRaces();
 # define DPrintf2(...)
 #endif
 
-void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 value, const char* type);
+enum RVEventType {
+  READ = 0,
+  WRITE = 1,
+
+  /**
+   * Atomic events that are used only in the front-end.
+   */
+  ATOMIC_READ = 2,
+  ATOMIC_WRITE = 3,
+  ATOMIC_READ_THEN_WRITE = 4,
+
+  /**
+   * Event generated after acquiring an intrinsic lock or write lock.
+   */
+  WRITE_LOCK = 5,
+
+  /**
+   * Event generated before releasing an intrinsic lock or write lock.
+   */
+  WRITE_UNLOCK = 6,
+
+  /**
+   * Event generated after acquiring a read lock, i.e.,
+   * {@code ReadWriteLock#readLock()#lock()}.
+   */
+  READ_LOCK = 7,
+
+  /**
+   * Event generated before releasing a read lock, i.e.,
+   * {@code ReadWriteLock#readLock()#unlock()}.
+   */
+  READ_UNLOCK = 8,
+
+  /**
+   * Event generated before calling {@link Object#wait()} or
+   * {@link Condition#await()}.
+   */
+  WAIT_REL = 9,
+
+  /**
+   * Event generated after a thread is awakened from {@link Object#wait()} or
+   * {@link Condition#await()} for whatever reason (e.g., spurious wakeup,
+   * being notified, or being interrupted).
+   */
+  WAIT_ACQ = 10,
+
+  /**
+   * Event generated before calling {@code Thread#start()}.
+   */
+  START = 11,
+
+  /**
+   * Event generated after a thread is awakened from {@code Thread#join()}
+   * because the joining thread finishes.
+   */
+  JOIN = 12,
+
+  /**
+   * Event generated after entering the class initializer code, i.e.
+   * {@code <clinit>}.
+   */
+  CLINIT_ENTER = 13,
+
+  /**
+   * Event generated right before exiting the class initializer code, i.e.
+   * {@code <clinit>}.
+   */
+  CLINIT_EXIT = 14,
+
+  INVOKE_METHOD = 15,
+
+  FINISH_METHOD = 16,
+};
+
+ALWAYS_INLINE bool RVIsSyncType(RVEventType type) {
+  return WRITE_LOCK <= type && type <= JOIN;
+}
+
+ALWAYS_INLINE bool RVIsMetaType(RVEventType type) {
+  return CLINIT_ENTER <= type && type <= FINISH_METHOD;
+}
+
+uptr getCallerStackLocation(const ThreadState *thr);
+void RVSaveMetaEvent(RVEventType eventType, uptr locId);
+void RVSaveThreadSyncEvent(RVEventType eventType, uptr locId, u64 threadId);
+void RVSaveLockEvent(RVEventType eventType, uptr locId, uptr lock);
+void RVSaveMemAccEvent(RVEventType eventType, uptr addr, u64 value, uptr locId);
+
 
 u32 CurrentStackId(ThreadState *thr, uptr pc);
 ReportStack *SymbolizeStackId(u32 stack_id);
@@ -626,7 +713,7 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
     uptr size, bool is_write);
 void MemoryAccessRangeStep(ThreadState *thr, uptr pc, uptr addr,
     uptr size, uptr step, bool is_write);
-void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr, int size, bool kAccessIsWrite, bool kIsAtomic, u64 value);
+void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr, int size, bool kAccessIsWrite, bool kIsAtomic);
 
 const int kSizeLog1 = 0;
 const int kSizeLog2 = 1;
@@ -635,12 +722,10 @@ const int kSizeLog8 = 3;
 
 void ALWAYS_INLINE MemoryRead(ThreadState *thr, uptr pc,
                                      uptr addr, int kAccessSizeLog) {
-  RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), pc, addr, *((u64*)addr), "READ");
   MemoryAccess(thr, pc, addr, kAccessSizeLog, false, false);
 }
 
-void ALWAYS_INLINE MemoryWrite(ThreadState *thr, uptr pc, uptr addr, const int kAccessSizeLog, u64 value) {
-  RVEventFile(thr->fast_state.epoch(), thr->fast_state.tid(), pc, addr, value, "WRITE");
+void ALWAYS_INLINE MemoryWrite(ThreadState *thr, uptr pc, uptr addr, const int kAccessSizeLog) {
   MemoryAccess(thr, pc, addr, kAccessSizeLog, true, false);
 }
 

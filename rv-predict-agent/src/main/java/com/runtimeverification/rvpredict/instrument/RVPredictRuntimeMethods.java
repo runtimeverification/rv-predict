@@ -249,6 +249,8 @@ public class RVPredictRuntimeMethods {
             register(STATIC, JU_COLLECTIONS, "synchronizedCollection", "rvPredictSynchronizedCollection", Collection.class);
     public static final RVPredictInterceptor RVPREDICT_SYNC_MAP           =
             register(STATIC, JU_COLLECTIONS, "synchronizedMap", "rvPredictSynchronizedMap", Map.class);
+    public static final RVPredictInterceptor RVPREDICT_SET_FROM_MAP       =
+            register(STATIC, JU_COLLECTIONS, "newSetFromMap", "rvPredictNewSetFromMap", Map.class);
 
     /** Short-hand for {@link RVPredictRuntimeMethod#create(String, Class...)}. */
     private static RVPredictRuntimeMethod init(String name, Class<?>... parameterTypes) {

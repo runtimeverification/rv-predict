@@ -53,20 +53,20 @@ void __tsan_write16_pc(void *addr, void *pc, void *val) {
 // __tsan_unaligned_read/write calls are emitted by compiler.
 
 void __tsan_unaligned_read2(const void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u16*)addr), CALLERPC);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u16*)addr, CALLERPC);
 }
 
 void __tsan_unaligned_read4(const void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u32*)addr), CALLERPC);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u32*)addr, CALLERPC);
 }
 
 void __tsan_unaligned_read8(const void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u64*)addr), CALLERPC);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u64*)addr, CALLERPC);
 }
 
 void __tsan_unaligned_read16(const void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u64*)addr), CALLERPC);
-  RVSaveMemAccEvent(READ, (uptr)addr + 8, *((u64*)addr + 8), CALLERPC);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u64*)addr, CALLERPC);
+  RVSaveMemAccEvent(READ, (uptr)addr + 8, *(u64*)addr + 8, CALLERPC);
 }
 
 void __tsan_unaligned_write2(void *addr, void *val) {
@@ -110,7 +110,7 @@ u64 __sanitizer_unaligned_load64(const uu64 *addr) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_unaligned_store16(uu16 *addr, u16 v) {
-  __tsan_unaligned_write2(addr, (void*) v);
+  __tsan_unaligned_write2(addr, (void*)v);
   *addr = v;
 }
 

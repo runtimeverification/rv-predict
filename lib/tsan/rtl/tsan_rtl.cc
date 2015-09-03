@@ -64,9 +64,6 @@ void WEAK OnInitialize() {}
 #endif
 
 static char thread_registry_placeholder[sizeof(ThreadRegistry)];
-static atomic_uint64_t rv_gid;
-
-ALWAYS_INLINE uptr getCallerStackLocation(ThreadState *thr) { return (thr->shadow_stack_pos - 1)[0] - 1; }
 
 const char* RVEventTypes[] = {
   "READ",
@@ -88,7 +85,7 @@ const char* RVEventTypes[] = {
   "FINISH_METHOD",
 };
 
-ALWAYS_INLINE void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
+void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   SymbolizedStack* frame = SymbolizeCode(id);
   ReportLocation *location = SymbolizeData(addr);
   if (location) {
@@ -103,28 +100,6 @@ ALWAYS_INLINE void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 val, RVEv
          frame->info.function, frame->info.file, frame->info.line);
 }
 
-ALWAYS_INLINE void RVLog(RVEventType type, uptr id, uptr addr, u64 val1, u64 val2) {
-  u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
-  ThreadState *thr = cur_thread();
-  u64 tid = thr->fast_state.tid();
-  RVEventFile(gid, tid + 1, id, addr, val1, type);
-}
-
-void RVSaveMetaEvent(RVEventType type, uptr locId){
-  RVLog(type, locId, 0, 0, 0);
-}
-
-void RVSaveThreadSyncEvent(RVEventType type, ThreadState* thr, u64 tid) {
-  RVLog(type, getCallerStackLocation(thr), (uptr)nullptr, tid + 1, 0);
-}
-
-void RVSaveLockEvent(RVEventType type, ThreadState* thr, uptr lock) {
-  RVLog(type, getCallerStackLocation(thr), lock, 0, 0);
-}
-
-void RVSaveMemAccEvent(RVEventType type, uptr addr, u64 val, uptr id) {
-  RVLog(type, id, addr, val, 0);
-}
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {
   // Map thread trace when context is created.

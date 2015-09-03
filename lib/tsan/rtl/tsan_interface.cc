@@ -122,7 +122,7 @@ void __sanitizer_unaligned_store32(uu32 *addr, u32 v) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_unaligned_store64(uu64 *addr, u64 v) {
-  __tsan_unaligned_write8(addr,  (void*)v);
+  __tsan_unaligned_write8(addr, (void*)v);
   *addr = v;
 }
 }  // extern "C"

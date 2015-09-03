@@ -29,57 +29,62 @@ void __tsan_init() {
 }
 
 void __tsan_read16(void *addr) {
-  MemoryRead(cur_thread(), CALLERPC, (uptr)addr, kSizeLog8);
-  MemoryRead(cur_thread(), CALLERPC, (uptr)addr + 8, kSizeLog8);
+  RVSaveMemAccEvent(READ, (uptr)addr, *((u64*)addr), CALLERPC);
+  RVSaveMemAccEvent(READ, (uptr)addr + 8, *((u64*)addr + 8), CALLERPC);
 }
 
-void __tsan_write16(void *addr) {
-  MemoryWrite(cur_thread(), CALLERPC, (uptr)addr, kSizeLog8);
-  MemoryWrite(cur_thread(), CALLERPC, (uptr)addr + 8, kSizeLog8);
+void __tsan_write16(void *addr, void *val) {
+  RVSaveMemAccEvent(WRITE, (uptr)addr, (u64)val, CALLERPC);
+  RVSaveMemAccEvent(WRITE, (uptr)addr + 8, (u64)val, CALLERPC);
+  //TODO(TraianSF): We're recording the latter event with the same value here
 }
 
 void __tsan_read16_pc(void *addr, void *pc) {
-  MemoryRead(cur_thread(), (uptr)pc, (uptr)addr, kSizeLog8);
-  MemoryRead(cur_thread(), (uptr)pc, (uptr)addr + 8, kSizeLog8);
+  RVSaveMemAccEvent(READ, (uptr)addr, *((u64*)addr), CALLERPC);
+  RVSaveMemAccEvent(READ, (uptr)addr + 8, *((u64*)addr + 8), CALLERPC);
 }
 
-void __tsan_write16_pc(void *addr, void *pc) {
-  MemoryWrite(cur_thread(), (uptr)pc, (uptr)addr, kSizeLog8);
-  MemoryWrite(cur_thread(), (uptr)pc, (uptr)addr + 8, kSizeLog8);
+void __tsan_write16_pc(void *addr, void *pc, void *val) {
+  RVSaveMemAccEvent(WRITE, (uptr)addr, (u64)val, (uptr)pc);
+  RVSaveMemAccEvent(WRITE, (uptr)addr + 8, (u64)val, (uptr)pc);
+  //TODO(TraianSF): We're recording the latter event with the same value here
 }
 
 // __tsan_unaligned_read/write calls are emitted by compiler.
 
 void __tsan_unaligned_read2(const void *addr) {
-  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 2, false, false);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u16*)addr, CALLERPC);
 }
 
 void __tsan_unaligned_read4(const void *addr) {
-  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 4, false, false);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u32*)addr, CALLERPC);
 }
 
 void __tsan_unaligned_read8(const void *addr) {
-  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 8, false, false);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u64*)addr, CALLERPC);
 }
 
 void __tsan_unaligned_read16(const void *addr) {
-  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 16, false, false);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u64*)addr, CALLERPC);
+  RVSaveMemAccEvent(READ, (uptr)addr + 8, *(u64*)addr + 8, CALLERPC);
 }
 
-void __tsan_unaligned_write2(void *addr) {
-  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 2, true, false);
+void __tsan_unaligned_write2(void *addr, void *val) {
+  RVSaveMemAccEvent(WRITE, (uptr)addr, (u16)(u64)val, CALLERPC);
 }
 
-void __tsan_unaligned_write4(void *addr) {
-  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 4, true, false);
+void __tsan_unaligned_write4(void *addr, void *val) {
+  RVSaveMemAccEvent(WRITE, (uptr)addr, (u32)(u64)val, CALLERPC);
 }
 
-void __tsan_unaligned_write8(void *addr) {
-  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 8, true, false);
+void __tsan_unaligned_write8(void *addr, void *val) {
+  RVSaveMemAccEvent(WRITE, (uptr)addr, (u64)val, CALLERPC);
 }
 
-void __tsan_unaligned_write16(void *addr) {
-  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 16, true, false);
+void __tsan_unaligned_write16(void *addr, void *val) {
+  RVSaveMemAccEvent(WRITE, (uptr)addr, (u64)val, CALLERPC);
+  RVSaveMemAccEvent(WRITE, (uptr)addr + 8, (u64)val, CALLERPC);
+  //TODO(TraianSF): We're recording the latter event with the same value here
 }
 
 // __sanitizer_unaligned_load/store are for user instrumentation.
@@ -105,19 +110,19 @@ u64 __sanitizer_unaligned_load64(const uu64 *addr) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_unaligned_store16(uu16 *addr, u16 v) {
-  __tsan_unaligned_write2(addr);
+  __tsan_unaligned_write2(addr, (void*)v);
   *addr = v;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_unaligned_store32(uu32 *addr, u32 v) {
-  __tsan_unaligned_write4(addr);
+  __tsan_unaligned_write4(addr, (void*)v);
   *addr = v;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_unaligned_store64(uu64 *addr, u64 v) {
-  __tsan_unaligned_write8(addr);
+  __tsan_unaligned_write8(addr, (void*)v);
   *addr = v;
 }
 }  // extern "C"

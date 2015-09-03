@@ -604,7 +604,81 @@ void PrintMatchedBenignRaces();
 # define DPrintf2(...)
 #endif
 
-void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 value, const char* type);
+enum RVEventType {
+  READ = 0,
+  WRITE = 1,
+
+  /**
+   * Atomic events that are used only in the front-end.
+   */
+  ATOMIC_READ = 2,
+  ATOMIC_WRITE = 3,
+  ATOMIC_READ_THEN_WRITE = 4,
+
+  /**
+   * Event generated after acquiring an intrinsic lock or write lock.
+   */
+  WRITE_LOCK = 5,
+
+  /**
+   * Event generated before releasing an intrinsic lock or write lock.
+   */
+  WRITE_UNLOCK = 6,
+
+  /**
+   * Event generated after acquiring a read lock
+   */
+  READ_LOCK = 7,
+
+  /**
+   * Event generated before releasing a read lock
+   */
+  READ_UNLOCK = 8,
+
+  /**
+   * Event generated before a spawned thread is started
+   */
+  START = 11,
+
+  /**
+   * Event generated after a thread is awakened from join
+   * because the joining thread finishes.
+   */
+  JOIN = 12,
+
+  INVOKE_METHOD = 15,
+
+  FINISH_METHOD = 16,
+};
+
+static atomic_uint64_t rv_gid;
+
+uptr ALWAYS_INLINE getCallerStackLocation(ThreadState *thr) { return (thr->shadow_stack_pos - 1)[0] - 1; }
+
+void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 val, RVEventType type);
+
+void ALWAYS_INLINE RVLog(RVEventType type, uptr id, uptr addr, u64 val1, u64 val2) {
+  u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
+  ThreadState *thr = cur_thread();
+  u64 tid = thr->fast_state.tid();
+  RVEventFile(gid, tid + 1, id, addr, val1, type);
+}
+
+void ALWAYS_INLINE RVSaveMetaEvent(RVEventType type, uptr locId){
+  RVLog(type, locId, 0, 0, 0);
+}
+
+void ALWAYS_INLINE RVSaveThreadSyncEvent(RVEventType type, ThreadState* thr, u64 tid) {
+  RVLog(type, getCallerStackLocation(thr), (uptr)nullptr, tid + 1, 0);
+}
+
+void ALWAYS_INLINE RVSaveLockEvent(RVEventType type, ThreadState* thr, uptr lock) {
+  RVLog(type, getCallerStackLocation(thr), lock, 0, 0);
+}
+
+void ALWAYS_INLINE RVSaveMemAccEvent(RVEventType type, uptr addr, u64 val, uptr id) {
+  RVLog(type, id, addr, val, 0);
+}
 
 u32 CurrentStackId(ThreadState *thr, uptr pc);
 ReportStack *SymbolizeStackId(u32 stack_id);

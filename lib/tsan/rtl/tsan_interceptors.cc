@@ -891,7 +891,7 @@ TSAN_INTERCEPTOR(int, pthread_create,
   }
   if (res == 0) {
     int tid = ThreadCreate(thr, pc, *(uptr*)th, detached);
-    RVSaveThreadSyncEvent(START, getCallerStackLocation(thr), tid);
+    RVSaveThreadSyncEvent(START, thr, tid);
     CHECK_NE(tid, 0);
     // Synchronization on p.tid serves two purposes:
     // 1. ThreadCreate must finish before the new thread starts.
@@ -917,7 +917,7 @@ TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
   ThreadIgnoreEnd(thr, pc);
   if (res == 0) {
     ThreadJoin(thr, pc, tid);
-    RVSaveThreadSyncEvent(JOIN, getCallerStackLocation(thr), tid);
+    RVSaveThreadSyncEvent(JOIN, thr, tid);
   }
   return res;
 }

@@ -142,7 +142,7 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr) {
 
 void MutexLock(ThreadState *thr, uptr pc, uptr addr, int rec, bool try_lock) {
   DPrintf("#%d: MutexLock %zx rec=%d\n", thr->tid, addr, rec);
-  RVSaveLockEvent(WRITE_LOCK, getCallerStackLocation(thr), addr);
+  RVSaveLockEvent(WRITE_LOCK, thr, addr);
   CHECK_GT(rec, 0);
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);
@@ -188,7 +188,7 @@ void MutexLock(ThreadState *thr, uptr pc, uptr addr, int rec, bool try_lock) {
 
 int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, bool all) {
   DPrintf("#%d: MutexUnlock %zx all=%d\n", thr->tid, addr, all);
-  RVSaveLockEvent(WRITE_UNLOCK, getCallerStackLocation(thr), addr);
+  RVSaveLockEvent(WRITE_UNLOCK, thr, addr);
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);
   SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
@@ -232,7 +232,7 @@ int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, bool all) {
 
 void MutexReadLock(ThreadState *thr, uptr pc, uptr addr, bool trylock) {
   DPrintf("#%d: MutexReadLock %zx\n", thr->tid, addr);
-  RVSaveLockEvent(READ_LOCK, getCallerStackLocation(thr), addr);
+  RVSaveLockEvent(READ_LOCK, thr, addr);
   StatInc(thr, StatMutexReadLock);
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);
@@ -268,7 +268,7 @@ void MutexReadLock(ThreadState *thr, uptr pc, uptr addr, bool trylock) {
 
 void MutexReadUnlock(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexReadUnlock %zx\n", thr->tid, addr);
-  RVSaveLockEvent(READ_UNLOCK, getCallerStackLocation(thr), addr);
+  RVSaveLockEvent(READ_UNLOCK, thr, addr);
   StatInc(thr, StatMutexReadUnlock);
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);
@@ -308,7 +308,7 @@ void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr) {
   bool report_bad_unlock = false;
   if (s->owner_tid == SyncVar::kInvalidTid) {
     // Seems to be read unlock.
-    RVSaveLockEvent(READ_UNLOCK, getCallerStackLocation(thr), addr);
+    RVSaveLockEvent(READ_UNLOCK, thr, addr);
     write = false;
     StatInc(thr, StatMutexReadUnlock);
     thr->fast_state.IncrementEpoch();
@@ -316,7 +316,7 @@ void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr) {
     ReleaseImpl(thr, pc, &s->read_clock);
   } else if (s->owner_tid == thr->tid) {
     // Seems to be write unlock.
-    RVSaveLockEvent(WRITE_UNLOCK, getCallerStackLocation(thr), addr);
+    RVSaveLockEvent(WRITE_UNLOCK, thr, addr);
     thr->fast_state.IncrementEpoch();
     TraceAddEvent(thr, thr->fast_state, EventTypeUnlock, s->GetId());
     CHECK_GT(s->recursion, 0);

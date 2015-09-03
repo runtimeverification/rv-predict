@@ -35,7 +35,7 @@ void __tsan_read16(void *addr) {
 
 void __tsan_write16(void *addr, void *val) {
   RVSaveMemAccEvent(WRITE, (uptr)addr, (u64)val, CALLERPC);
-  RVSaveMemAccEvent(WRITE, (uptr)addr+8, (u64)val, CALLERPC);
+  RVSaveMemAccEvent(WRITE, (uptr)addr + 8, (u64)val, CALLERPC);
   //TODO(TraianSF): We're recording the latter event with the same value here
 }
 

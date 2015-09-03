@@ -626,71 +626,36 @@ enum RVEventType {
   WRITE_UNLOCK = 6,
 
   /**
-   * Event generated after acquiring a read lock, i.e.,
-   * {@code ReadWriteLock#readLock()#lock()}.
+   * Event generated after acquiring a read lock
    */
   READ_LOCK = 7,
 
   /**
-   * Event generated before releasing a read lock, i.e.,
-   * {@code ReadWriteLock#readLock()#unlock()}.
+   * Event generated before releasing a read lock
    */
   READ_UNLOCK = 8,
 
   /**
-   * Event generated before calling {@link Object#wait()} or
-   * {@link Condition#await()}.
-   */
-  WAIT_REL = 9,
-
-  /**
-   * Event generated after a thread is awakened from {@link Object#wait()} or
-   * {@link Condition#await()} for whatever reason (e.g., spurious wakeup,
-   * being notified, or being interrupted).
-   */
-  WAIT_ACQ = 10,
-
-  /**
-   * Event generated before calling {@code Thread#start()}.
+   * Event generated before a spawned thread is started
    */
   START = 11,
 
   /**
-   * Event generated after a thread is awakened from {@code Thread#join()}
+   * Event generated after a thread is awakened from join
    * because the joining thread finishes.
    */
   JOIN = 12,
-
-  /**
-   * Event generated after entering the class initializer code, i.e.
-   * {@code <clinit>}.
-   */
-  CLINIT_ENTER = 13,
-
-  /**
-   * Event generated right before exiting the class initializer code, i.e.
-   * {@code <clinit>}.
-   */
-  CLINIT_EXIT = 14,
 
   INVOKE_METHOD = 15,
 
   FINISH_METHOD = 16,
 };
 
-ALWAYS_INLINE bool RVIsSyncType(RVEventType type) {
-  return WRITE_LOCK <= type && type <= JOIN;
-}
-
-ALWAYS_INLINE bool RVIsMetaType(RVEventType type) {
-  return CLINIT_ENTER <= type && type <= FINISH_METHOD;
-}
-
-uptr getCallerStackLocation(const ThreadState *thr);
-void RVSaveMetaEvent(RVEventType eventType, uptr locId);
-void RVSaveThreadSyncEvent(RVEventType eventType, uptr locId, u64 threadId);
-void RVSaveLockEvent(RVEventType eventType, uptr locId, uptr lock);
-void RVSaveMemAccEvent(RVEventType eventType, uptr addr, u64 value, uptr locId);
+uptr getCallerStackLocation(ThreadState *thr);
+void RVSaveMetaEvent(RVEventType type, uptr id);
+void RVSaveThreadSyncEvent(RVEventType type, ThreadState* thr, u64 tid);
+void RVSaveLockEvent(RVEventType type, ThreadState* thr, uptr lock);
+void RVSaveMemAccEvent(RVEventType type, uptr addr, u64 val, uptr id);
 
 
 u32 CurrentStackId(ThreadState *thr, uptr pc);
@@ -713,7 +678,8 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
     uptr size, bool is_write);
 void MemoryAccessRangeStep(ThreadState *thr, uptr pc, uptr addr,
     uptr size, uptr step, bool is_write);
-void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr, int size, bool kAccessIsWrite, bool kIsAtomic);
+void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr,
+    int size, bool kAccessIsWrite, bool kIsAtomic);
 
 const int kSizeLog1 = 0;
 const int kSizeLog2 = 1;
@@ -725,7 +691,8 @@ void ALWAYS_INLINE MemoryRead(ThreadState *thr, uptr pc,
   MemoryAccess(thr, pc, addr, kAccessSizeLog, false, false);
 }
 
-void ALWAYS_INLINE MemoryWrite(ThreadState *thr, uptr pc, uptr addr, const int kAccessSizeLog) {
+void ALWAYS_INLINE MemoryWrite(ThreadState *thr, uptr pc,
+                                      uptr addr, int kAccessSizeLog) {
   MemoryAccess(thr, pc, addr, kAccessSizeLog, true, false);
 }
 

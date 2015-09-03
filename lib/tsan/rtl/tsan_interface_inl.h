@@ -19,19 +19,19 @@
 using namespace __tsan;  // NOLINT
 
 void __tsan_read1(void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u8*)addr), CALLERPC);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u8*)addr, CALLERPC);
 }
 
 void __tsan_read2(void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u16*)addr), CALLERPC);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u16*)addr, CALLERPC);
 }
 
 void __tsan_read4(void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u32*)addr), CALLERPC);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u32*)addr, CALLERPC);
 }
 
 void __tsan_read8(void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u64*)addr), CALLERPC);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u64*)addr, CALLERPC);
 }
 
 void __tsan_write1(void *addr, void *val) {
@@ -51,19 +51,19 @@ void __tsan_write8(void *addr, void *val) {
 }
 
 void __tsan_read1_pc(void *addr, void *pc) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u8*)addr), (uptr)pc);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u8*)addr, (uptr)pc);
 }
 
 void __tsan_read2_pc(void *addr, void *pc) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u16*)addr), (uptr)pc);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u16*)addr, (uptr)pc);
 }
 
 void __tsan_read4_pc(void *addr, void *pc) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u32*)addr), (uptr)pc);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u32*)addr, (uptr)pc);
 }
 
 void __tsan_read8_pc(void *addr, void *pc) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u64*)addr), (uptr)pc);
+  RVSaveMemAccEvent(READ, (uptr)addr, *(u64*)addr, (uptr)pc);
 }
 
 void __tsan_write1_pc(void *addr, void *pc, void *val) {
@@ -84,12 +84,12 @@ void __tsan_write8_pc(void *addr, void *pc, void *val) {
 
 void __tsan_vptr_update(void **vptr_p, void *new_val) {
   CHECK_EQ(sizeof(vptr_p), 8);
-  RVSaveMemAccEvent(WRITE, (uptr)vptr_p, (u64) new_val, CALLERPC);
+  RVSaveMemAccEvent(WRITE, (uptr)vptr_p, (u64)new_val, CALLERPC);
 }
 
 void __tsan_vptr_read(void **vptr_p) {
   CHECK_EQ(sizeof(vptr_p), 8);
-  RVSaveMemAccEvent(WRITE, (uptr)vptr_p, *((u64*)vptr_p), CALLERPC);
+  RVSaveMemAccEvent(WRITE, (uptr)vptr_p, *(u64*)vptr_p, CALLERPC);
 }
 
 void __tsan_func_entry(void *pc) {

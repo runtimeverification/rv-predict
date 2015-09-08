@@ -132,10 +132,7 @@ public class TraceState {
             break;
         case FINISH_METHOD:
             int locId = tidToStacktrace.get(tid).removeLast().getLocId();
-            if (locId != event.getLocId() && !config.isLLVMPrediction()) {
-                /*TODO(traiansf): Currently llvm instrumentation does not get same location for method entry/exit.
-                                  Remove condition once that problem is addressed.
-                 */
+            if (locId != event.getLocId()) {
                 throw new IllegalStateException("Unmatched method entry/exit events!" +
                         (Configuration.debug ?
                         "\n\tENTRY:" + metadata.getLocationSig(locId) +

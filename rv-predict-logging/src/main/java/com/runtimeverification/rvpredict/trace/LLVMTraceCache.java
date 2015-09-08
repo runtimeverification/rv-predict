@@ -73,8 +73,15 @@ public class LLVMTraceCache extends TraceCache {
         int ln = (int) parseLong("line", parts[8]);
         System.out.printf("<gid:%d;tid:%d;id:%d;addr:%d;value:%d;type:%s;fn:%s;file:%s;line:%d>%n",
                 gid, tid, id, addr, value, type.toString(), fn, file, ln);
-        id = metadata.getLocationId(String.format("<id:%d;fn:%s;file:%s;line:%d>", id, fn, file, ln));
-        return new Event(gid, tid, (int) id, addr, value, type);
+        int locationId = metadata.getLocationId(String.format("<id:%d;fn:%s;file:%s;line:%d>", id, fn, file, ln));
+        if (type == EventType.START) {
+            metadata.addThreadCreationInfo(value, tid, locationId);
+        }
+        if (type == EventType.START || type == EventType.JOIN) {
+            addr = value;
+            value = 0;
+        }
+        return new Event(gid, tid, locationId, addr, value, type);
 
     }
 

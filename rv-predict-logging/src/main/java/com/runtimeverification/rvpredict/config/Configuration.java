@@ -216,20 +216,8 @@ public class Configuration implements Constants {
         Context context = null;
         try {
             String libz3 = OS.current() == OS.WINDOWS ? "libz3" : "z3";
-            // Very dirty hack to add our native libraries dir to the array of system paths
-            // dependent on the implementation of java.lang.ClassLoader (although that seems pretty consistent)
-            //TODO: Might actually be better to alter and recompile the z3 java bindings
-            Field sysPathsField = ClassLoader.class.getDeclaredField("sys_paths");
-            sysPathsField.setAccessible(true);
-            String[] sysPaths = (String[]) sysPathsField.get(null);
-            String oldPath = sysPaths[0];
-            sysPaths[0] = getNativeLibraryPath().toString();
-
             System.loadLibrary(libz3);
             context = new Context();
-
-            //restoring the previous system path
-            sysPaths[0] = oldPath;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

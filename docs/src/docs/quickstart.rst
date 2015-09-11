@@ -56,8 +56,8 @@ where ``<rv_predict_options>`` are RV-Predict options.
 
 The agent uses the z3_ library as a constraint solver.  Therefore,  the ``z3``
 libraries need to be accessible from the library path.
-To ensure that, please go to the ``<rvPath>/lib`` directory and ``source``
-the ``setenv`` script:
+To ensure that, please go to the ``<rvPath>/lib`` directory and update
+your environment using the ``setenv`` script:
 
 For Linux/OSX systems
 ::

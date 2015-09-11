@@ -89,6 +89,13 @@ public class InstrumentUtils implements Opcodes {
                 toInstrument = include.matcher(cname).matches();
                 if (toInstrument) break;
             }
+
+            /* MUST_REPLACE also overrides MOCKS */
+            for (String mustReplace : Configuration.MUST_REPLACE) {
+                if (ClassFile.isSubtypeOf(loader, cname, mustReplace)) {
+                    toInstrument = true;
+                }
+            }
         }
 
         /* make sure we don't instrument IGNORES even if the user said so */

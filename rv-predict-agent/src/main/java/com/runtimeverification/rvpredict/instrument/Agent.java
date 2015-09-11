@@ -174,7 +174,7 @@ public class Agent implements ClassFileTransformer, Constants {
                 String AGENT_CLASS = "com/runtimeverification/rvpredict/instrument/Agent";
                 return Resources.toByteArray(new URL(ClassLoader.getSystemClassLoader()
                         .getResource(AGENT_CLASS + ".class").toString().replace(AGENT_CLASS, cname)));
-            } else if (!cname.startsWith(RVPREDICT_PKG_PREFIX) && !cname.startsWith("sun")
+            } else if (!cname.startsWith(RVPREDICT_PKG_PREFIX)
                     || cname.startsWith(RVPREDICT_RUNTIME_PKG_PREFIX)) {
                 ClassFile classFile = ClassFile.getInstance(loader, cname, cbuf);
                 if (InstrumentUtils.needToInstrument(classFile)) {

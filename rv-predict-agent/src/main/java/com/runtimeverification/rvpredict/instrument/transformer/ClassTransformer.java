@@ -60,8 +60,12 @@ public class ClassTransformer extends ClassVisitor implements Opcodes {
             String[] interfaces) {
         className = name;
         this.version = version;
+        String[] interfaces2 = new String[interfaces.length];
+        for (int i = 0; i < interfaces.length; i++) {
+            interfaces2[i] = replaceStandardLibraryClass(interfaces[i]);
+        }
         cv.visit(version, access, name, replaceStandardLibraryClass(signature),
-                replaceStandardLibraryClass(superName), interfaces);
+                replaceStandardLibraryClass(superName), interfaces2);
     }
 
     @Override

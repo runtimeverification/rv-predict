@@ -289,18 +289,24 @@ public class JUConcurrentTests {
         };
     }
 
+    static class CustomLinkedBlockingQueue<T> extends LinkedBlockingQueue<T> {
+        public CustomLinkedBlockingQueue(int capacity) {
+            super(capacity);
+        }
+    }
+
     @RaceTest(expectRace = false,
             description = "Test HB relation imposed by LinkedBlockingQueue")
-    public void linkedBlockingQueue() {
+    public void customLinkedBlockingQueue() {
         new ThreadRunner(2) {
 
-            LinkedBlockingQueue<Integer> lbq;
+            CustomLinkedBlockingQueue<Integer> lbq;
 
             int x, y, z;
 
             @Override
             public void setUp() {
-                lbq = new LinkedBlockingQueue<>(1);
+                lbq = new CustomLinkedBlockingQueue<>(1);
             }
 
             @Override
@@ -1028,7 +1034,7 @@ public class JUConcurrentTests {
         } else {
             // negative tests
             tests.arrayBlockingQueue();
-            tests.linkedBlockingQueue();
+            tests.customLinkedBlockingQueue();
             tests.priorityBlockingQueue();
             tests.lockInterruptibly();
             tests.reentrantLockInterruptibly();

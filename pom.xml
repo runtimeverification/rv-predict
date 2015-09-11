@@ -4,7 +4,7 @@
     <groupId>com.runtimeverification.rvpredict</groupId>
     <artifactId>root</artifactId>
     <packaging>pom</packaging>
-    <version>1.6.1</version>
+    <version>1.7-SNAPSHOT</version>
     <profiles>
         <profile>
             <id>generate-docs</id>
@@ -29,7 +29,7 @@
     <url>http://www.runtimeverification.com</url>
     <scm>
         <connection>scm:git:https://github.com/runtimeverification/rv-predict.git</connection>
-        <tag>root-1.6.1</tag>
+        <tag>HEAD</tag>
     </scm>
     <repositories>
         <repository>

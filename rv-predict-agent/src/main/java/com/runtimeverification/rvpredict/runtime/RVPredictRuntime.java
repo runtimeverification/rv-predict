@@ -176,15 +176,11 @@ public final class RVPredictRuntime implements Constants {
     }
 
     public static void logInvokeMethod(int locId) {
-        if (config.stacks) {
-            saveMetaEvent(EventType.INVOKE_METHOD, locId);
-        }
+        saveMetaEvent(EventType.INVOKE_METHOD, locId);
     }
 
     public static void logFinishMethod(int locId) {
-        if (config.stacks) {
-            saveMetaEvent(EventType.FINISH_METHOD, locId);
-        }
+        saveMetaEvent(EventType.FINISH_METHOD, locId);
     }
 
     /**

@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+#
 # RV-Predict script for aggregating race reports
 #
 # Python version: 2.7

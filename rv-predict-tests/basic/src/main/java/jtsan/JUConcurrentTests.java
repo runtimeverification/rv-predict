@@ -17,6 +17,7 @@
 
 package jtsan;
 
+import java.nio.channels.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -26,7 +27,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 
 /**
  * Class contains tests for jtsan. Tests cover java.util.concurrent functionality.
@@ -1014,6 +1014,39 @@ public class JUConcurrentTests {
         };
     }
 
+    @RaceTest(expectRace = false, description = "Test java.nio.channels.CompletionHandler")
+    public void asyncCompletionHandler() {
+        final List<Integer> list = new ArrayList<>();
+        try {
+            final AsynchronousServerSocketChannel server = AsynchronousServerSocketChannel.open()
+                    .bind(null);
+            list.add(0);
+            server.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
+                @Override
+                public void completed(AsynchronousSocketChannel result, Void att) {
+                    list.add(1);
+                }
+
+                @Override
+                public void failed(Throwable exc, Void att) {}
+            });
+
+            new ThreadRunner(1) {
+                @Override
+                public void thread1() {
+                    try {
+                        AsynchronousSocketChannel client = AsynchronousSocketChannel.open();
+                        client.connect(server.getLocalAddress()).get();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            };
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private JUConcurrentTests() {
         /* trigger the initialization of the common fork join pool */
         IntStream.range(0, 100).parallel().average();
@@ -1056,6 +1089,7 @@ public class JUConcurrentTests {
             tests.exchanger();
             tests.statelessLambdaExpr();
             tests.mutableReduction();
+            tests.asyncCompletionHandler();
         }
     }
 

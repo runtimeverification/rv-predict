@@ -85,9 +85,7 @@ similar to the following:
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${surefire-version}</version>
           <configuration>
-              <argLine>-javaagent:<rvPath>/lib/rv-predict.jar</argLine>
-              <argLine>-Xbootclasspath/a:<rvPath>/lib/rv-predict.jar</argLine>
-              <argLine>-XX:hashCode=1</argLine>
+              <argLine>-javaagent:<rvPath>/lib/rv-predict.jar -Xbootclasspath/a:<rvPath>/lib/rv-predict.jar -XX:hashCode=1</argLine>
           </configuration>
           </plugin>
       ...

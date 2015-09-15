@@ -582,6 +582,9 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
     private static final RuntimePermission shutdownPerm =
         new RuntimePermission("modifyThread");
 
+    private static final int RVPREDICT_FIRST_TASK = RVPredictRuntime.metadata
+            .getVariableId("java.util.concurrent.ThreadPoolExecutor$Worker", "firstTask");
+
     /**
      * Class Worker mainly maintains interrupt control state for
      * threads running tasks, along with other minor bookkeeping.
@@ -621,8 +624,23 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
          */
         Worker(Runnable firstTask) {
             setState(-1); // inhibit interrupts until runWorker
-            this.firstTask = firstTask;
+            _rvpredict_set_firstTask(firstTask);
             this.thread = getThreadFactory().newThread(this);
+        }
+
+        Runnable _rvpredict_get_firstTask() {
+            Runnable firstTask = this.firstTask;
+            RVPredictRuntime.saveMemAccEvent(EventType.READ, RVPREDICT_THREAD_POOL_EXECUTOR_LOC_ID,
+                    System.identityHashCode(this), RVPREDICT_FIRST_TASK,
+                    System.identityHashCode(firstTask));
+            return firstTask;
+        }
+
+        void _rvpredict_set_firstTask(Runnable firstTask) {
+            RVPredictRuntime.saveMemAccEvent(EventType.WRITE, RVPREDICT_THREAD_POOL_EXECUTOR_LOC_ID,
+                    System.identityHashCode(this), RVPREDICT_FIRST_TASK,
+                    System.identityHashCode(firstTask));
+            this.firstTask = firstTask;
         }
 
         /** Delegates main run loop to outer runWorker  */
@@ -1179,8 +1197,8 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      */
     final void runWorker(Worker w) {
         Thread wt = Thread.currentThread();
-        Runnable task = w.firstTask;
-        w.firstTask = null;
+        Runnable task = w._rvpredict_get_firstTask();
+        w._rvpredict_set_firstTask(null);
         w.unlock(); // allow interrupts
         boolean completedAbruptly = true;
         try {

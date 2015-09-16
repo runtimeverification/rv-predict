@@ -63,7 +63,6 @@ public class Main {
         args.add(JAVA_EXECUTABLE);
         args.add("-ea");
         args.add("-XX:hashCode=1"); // see #issue 500 identityHashCode collisions
-        args.add("-Xbootclasspath/a:" + RV_PREDICT_JAR);
         args.add("-Dsun.boot.library.path=" + Configuration.getNativeLibraryPath());
         args.add("-javaagent:" + RV_PREDICT_JAR + "=" + createAgentArgs());
         args.addAll(config.getJavaArguments());

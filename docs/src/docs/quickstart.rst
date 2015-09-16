@@ -45,8 +45,7 @@ As an agent
 
 Assuming ``<rvPath>`` is the installation directory for RV-Predict,
 running RV-Predict as an agent along with your Java application simply
-requires adding the ``-javaagent:<rvPath>/lib/rv-predict.jar`` option
-and the ``-Xbootclasspath/a:<rvPath>/lib/rv-predict.jar`` option to
+requires adding the ``-javaagent:<rvPath>/lib/rv-predict.jar`` option to
 your Java command line. In addition, we strongly recommend you to
 also add the ``-XX:hashCode=1`` option; this significantly reduces
 the possibility of false positive due to identity hash code collision.
@@ -85,9 +84,7 @@ similar to the following:
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${surefire-version}</version>
           <configuration>
-              <argLine>-javaagent:<rvPath>/lib/rv-predict.jar</argLine>
-              <argLine>-Xbootclasspath/a:<rvPath>/lib/rv-predict.jar</argLine>
-              <argLine>-XX:hashCode=1</argLine>
+              <argLine>-javaagent:<rvPath>/lib/rv-predict.jar -XX:hashCode=1</argLine>
           </configuration>
           </plugin>
       ...
@@ -97,7 +94,7 @@ similar to the following:
 Replace ``${surefire-version}`` with the exact surefire plugin version
 used by the project (e.g., ``2.16``).
 
-Adding the ``-javaagent`` and ``-Xbootclasspath`` options are the only changes
+Adding the ``-javaagent`` option is the only change
 needed to an existing project and tests can still be run with ``mvn test``.
 Again, the ``-XX:hashCode=1`` option is optional but highly recommended.
 
@@ -105,18 +102,18 @@ Integration with IDEs
 `````````````````````
 
 Generic instructions
-  options ``-javaagent``, ``-Xbootclasspath`` and ``-XX:hashCode=1`` (optional)
+  options ``-javaagent`` and ``-XX:hashCode=1`` (optional)
   need to be added to the VM options of your Run/Debug Configurations.
 Eclipse
   From the menu select **Run** -> **Run Configurations** ->
   (then you select the configuration that you are running) ->
   select **Arguments** tab -> enter
-  ``-javaagent:<rvPath>/lib/rv-predict.jar -Xbootclasspath/a:<rvPath>/lib/rv-predict.jar``
+  ``-javaagent:<rvPath>/lib/rv-predict.jar``
   into the **VM arguments** field.
 IntelliJ IDEA
   From the menu select **Run** -> **Edit Configurations** ->
   (then you select the configuration that you are running) -> enter
-  ``-javaagent:<rvPath>/lib/rv-predict.jar -Xbootclasspath/a:<rvPath>/lib/rv-predict.jar``
+  ``-javaagent:<rvPath>/lib/rv-predict.jar``
   into the **VM options:** field.
 
 

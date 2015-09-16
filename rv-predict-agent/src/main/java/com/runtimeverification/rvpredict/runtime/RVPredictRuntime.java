@@ -611,7 +611,9 @@ public final class RVPredictRuntime implements Constants {
      */
     public static Iterator rvPredictIterableGetIterator(Iterable iterable, int locId) {
         Iterator iterator = iterable.iterator();
-        iteratorToIterable.put(iterator, iterable);
+        if (iterator != null) {
+            iteratorToIterable.put(iterator, iterable);
+        }
         return iterator;
     }
 
@@ -620,7 +622,9 @@ public final class RVPredictRuntime implements Constants {
      */
     public static ListIterator rvPredictListGetListIterator(List list, int locId) {
         ListIterator listItr = list.listIterator();
-        iteratorToIterable.put(listItr, list);
+        if (listItr != null) {
+            iteratorToIterable.put(listItr, list);
+        }
         return listItr;
     }
 
@@ -629,7 +633,9 @@ public final class RVPredictRuntime implements Constants {
      */
     public static ListIterator rvPredictListGetListIterator(List list, int index, int locId) {
         ListIterator listItr = list.listIterator(index);
-        iteratorToIterable.put(listItr, list);
+        if (listItr != null) {
+            iteratorToIterable.put(listItr, list);
+        }
         return listItr;
     }
 

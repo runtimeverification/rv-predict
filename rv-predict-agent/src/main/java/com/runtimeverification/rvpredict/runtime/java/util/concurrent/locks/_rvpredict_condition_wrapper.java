@@ -21,7 +21,7 @@ class _rvpredict_condition_wrapper implements Condition {
 
     private final AbstractOwnableSynchronizer sync;
 
-    private final Condition condition;
+    final Condition condition;
 
     _rvpredict_condition_wrapper(AbstractOwnableSynchronizer sync, Condition condition) {
         this.sync = sync;

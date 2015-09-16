@@ -1486,9 +1486,13 @@ public class ReentrantReadWriteLock
     public boolean hasWaiters(Condition condition) {
         if (condition == null)
             throw new NullPointerException();
-        if (!(condition instanceof AbstractQueuedSynchronizer.ConditionObject))
+        if (!(condition instanceof _rvpredict_condition_wrapper)
+                || !(((_rvpredict_condition_wrapper) condition).condition instanceof
+                        AbstractQueuedSynchronizer.ConditionObject)) {
             throw new IllegalArgumentException("not owner");
-        return sync.hasWaiters((AbstractQueuedSynchronizer.ConditionObject)condition);
+        }
+        return sync.hasWaiters((AbstractQueuedSynchronizer.ConditionObject)
+                ((_rvpredict_condition_wrapper) condition).condition);
     }
 
     /**
@@ -1509,9 +1513,13 @@ public class ReentrantReadWriteLock
     public int getWaitQueueLength(Condition condition) {
         if (condition == null)
             throw new NullPointerException();
-        if (!(condition instanceof AbstractQueuedSynchronizer.ConditionObject))
+        if (!(condition instanceof _rvpredict_condition_wrapper)
+                || !(((_rvpredict_condition_wrapper) condition).condition instanceof
+                        AbstractQueuedSynchronizer.ConditionObject)) {
             throw new IllegalArgumentException("not owner");
-        return sync.getWaitQueueLength((AbstractQueuedSynchronizer.ConditionObject)condition);
+        }
+        return sync.getWaitQueueLength((AbstractQueuedSynchronizer.ConditionObject)
+                ((_rvpredict_condition_wrapper) condition).condition);
     }
 
     /**
@@ -1534,9 +1542,13 @@ public class ReentrantReadWriteLock
     protected Collection<Thread> getWaitingThreads(Condition condition) {
         if (condition == null)
             throw new NullPointerException();
-        if (!(condition instanceof AbstractQueuedSynchronizer.ConditionObject))
+        if (!(condition instanceof _rvpredict_condition_wrapper)
+                || !(((_rvpredict_condition_wrapper) condition).condition instanceof
+                        AbstractQueuedSynchronizer.ConditionObject)) {
             throw new IllegalArgumentException("not owner");
-        return sync.getWaitingThreads((AbstractQueuedSynchronizer.ConditionObject)condition);
+        }
+        return sync.getWaitingThreads((AbstractQueuedSynchronizer.ConditionObject)
+                ((_rvpredict_condition_wrapper) condition).condition);
     }
 
     /**

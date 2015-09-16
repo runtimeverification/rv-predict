@@ -146,8 +146,13 @@ public class Configuration implements Constants {
     public final static List<Pattern> MUST_INCLUDES;
     static {
         String[] mustIncludes = new String[] {
-            "java/security/cert/X509Certificate", "sun/security",   // fix issue#556
-            "sun/nio/ch/AsynchronousChannelGroupImpl",              // fix issue#553
+            "java/security/cert/X509Certificate", "sun/security",   // fix issue #556
+
+            /* fix issue #553: include as few classes as possible when removing false alarms */
+            "sun/nio/ch/AsynchronousChannelGroupImpl",
+            "sun/nio/ch/Port",
+            "sun/nio/ch/ThreadPool",
+
             "com/runtimeverification/rvpredict/runtime/java/util/concurrent/CyclicBarrier"
         };
         MUST_INCLUDES = getDefaultPatterns(mustIncludes);

@@ -37,6 +37,7 @@
                         </manifest>
                         <manifestEntries>
                             <Premain-Class>com.runtimeverification.rvpredict.instrument.Agent</Premain-Class>
+                            <Boot-Class-Path>rv-predict.jar</Boot-Class-Path>
                             <Can-Retransform-Classes>true</Can-Retransform-Classes>
                         </manifestEntries>
                     </archive>

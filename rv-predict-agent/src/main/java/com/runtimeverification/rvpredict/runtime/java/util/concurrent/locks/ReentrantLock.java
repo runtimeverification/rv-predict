@@ -708,6 +708,17 @@ public class ReentrantLock implements Lock, java.io.Serializable {
         return sync.getQueuedThreads();
     }
 
+    private AbstractQueuedSynchronizer.ConditionObject _rvpredict_unwrap_real_condition(
+            Condition condition) {
+        if (!(condition instanceof _rvpredict_condition_wrapper)
+                || !(((_rvpredict_condition_wrapper) condition).condition instanceof
+                        AbstractQueuedSynchronizer.ConditionObject)) {
+            throw new IllegalArgumentException("not owner");
+        }
+        return (AbstractQueuedSynchronizer.ConditionObject)
+                ((_rvpredict_condition_wrapper) condition).condition;
+    }
+
     /**
      * Queries whether any threads are waiting on the given condition
      * associated with this lock. Note that because timeouts and
@@ -726,9 +737,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
     public boolean hasWaiters(Condition condition) {
         if (condition == null)
             throw new NullPointerException();
-        if (!(condition instanceof AbstractQueuedSynchronizer.ConditionObject))
-            throw new IllegalArgumentException("not owner");
-        return sync.hasWaiters((AbstractQueuedSynchronizer.ConditionObject)condition);
+        return sync.hasWaiters(_rvpredict_unwrap_real_condition(condition));
     }
 
     /**
@@ -749,9 +758,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
     public int getWaitQueueLength(Condition condition) {
         if (condition == null)
             throw new NullPointerException();
-        if (!(condition instanceof AbstractQueuedSynchronizer.ConditionObject))
-            throw new IllegalArgumentException("not owner");
-        return sync.getWaitQueueLength((AbstractQueuedSynchronizer.ConditionObject)condition);
+        return sync.getWaitQueueLength(_rvpredict_unwrap_real_condition(condition));
     }
 
     /**
@@ -774,9 +781,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
     protected Collection<Thread> getWaitingThreads(Condition condition) {
         if (condition == null)
             throw new NullPointerException();
-        if (!(condition instanceof AbstractQueuedSynchronizer.ConditionObject))
-            throw new IllegalArgumentException("not owner");
-        return sync.getWaitingThreads((AbstractQueuedSynchronizer.ConditionObject)condition);
+        return sync.getWaitingThreads(_rvpredict_unwrap_real_condition(condition));
     }
 
     /**

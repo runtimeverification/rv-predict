@@ -4,7 +4,7 @@ import static com.runtimeverification.rvpredict.util.Constants.JUC_LOCK_C;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.AbstractOwnableSynchronizer;
+import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Condition;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
@@ -19,11 +19,11 @@ class _rvpredict_condition_wrapper implements Condition {
     private static final int RVPREDICT_CONDITION_WRAPPER_LOC_ID = RVPredictRuntime.metadata
             .getLocationId("java.util.concurrent.locks._rvpredict_condition_wrapper.dummy(_rvpredict_condition_wrapper:n/a)");
 
-    private final AbstractOwnableSynchronizer sync;
+    private final AbstractQueuedSynchronizer sync;
 
-    private final Condition condition;
+    final Condition condition;
 
-    _rvpredict_condition_wrapper(AbstractOwnableSynchronizer sync, Condition condition) {
+    _rvpredict_condition_wrapper(AbstractQueuedSynchronizer sync, Condition condition) {
         this.sync = sync;
         this.condition = condition;
     }

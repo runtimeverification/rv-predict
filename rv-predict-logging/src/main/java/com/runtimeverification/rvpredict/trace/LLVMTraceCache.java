@@ -9,7 +9,6 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Class reading the trace from an LLVM execution debug log.
@@ -26,7 +25,7 @@ public class LLVMTraceCache extends TraceCache {
 
     @Override
     public void setup() throws IOException {
-        traceFile = new BufferedReader(new FileReader(config.getLogDir()));
+        traceFile = new BufferedReader(new FileReader(config.getLLVMTraceFile()));
     }
 
 

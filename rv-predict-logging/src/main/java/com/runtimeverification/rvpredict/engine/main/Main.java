@@ -12,6 +12,8 @@ import java.util.List;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.util.Logger;
 
+import com.runtimeverification.licensing.Licensing;
+
 /**
  * @author TraianSF
  * @author YilongL
@@ -24,6 +26,9 @@ public class Main {
      * The entry point of RV-Predict when it is started by script.
      */
     public static void main(String[] args) {
+        Licensing licensingSystem = new Licensing("com/runtimeverification/rvpredict/instrument/Agent.class", "predict");
+        licensingSystem.promptForLicense();
+
         config = Configuration.instance(args);
 
         if (config.isLogging() || config.isProfiling()) {

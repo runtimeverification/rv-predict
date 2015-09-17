@@ -3,6 +3,7 @@
 <installation version="5.0">
 
     <jar src="res/panels/RVPanels.jar" />
+    <jar src="rv-licensing.jar" />
 
     <!-- General Application Information -->
     <info>
@@ -18,6 +19,7 @@
         <!-- Variables required for adding RV key to installer -->
         <variable name="rvFullProductName" value="RV-Predict"/>
         <variable name="rvProductId" value="predict"/>
+        <variable name="rvLicensePath" value="lib"/>
     </variables>
 
     <!-- GUI-Specific Preferences -->
@@ -47,12 +49,12 @@
 
     <!-- Installer Panel Sequence -->
     <panels>
-        <!-- First, check RV key and make sure it validates properly -->
+        <panel classname="LicencePanel"/>
+        <panel classname="TargetPanel"/>
+        <!-- Check RV key and make sure it validates properly -->
         <panel classname="UserInputPanel" id="rvkey">
             <validator classname="com.izforge.izpack.panels.rvkey.RVKeyValidator"/>
         </panel>
-        <panel classname="LicencePanel"/>
-        <panel classname="TargetPanel"/>
         <panel classname="PacksPanel"/>
         <panel classname="InstallPanel"/>
         <panel classname="com.izforge.izpack.panels.htmlfinishinfo.HTMLFinishInfoPanel" id="finish" />

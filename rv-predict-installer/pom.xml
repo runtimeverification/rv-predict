@@ -17,6 +17,11 @@
     </properties>
     <dependencies>
         <dependency>
+            <groupId>com.runtimeverification.licensing</groupId>
+            <artifactId>rv-licensing</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>rv-predict</artifactId>
             <version>${project.version}</version>
@@ -46,6 +51,7 @@
                             <artifactItems>
                                 <artifactItem>
                                     <groupId>com.runtimeverification.install</groupId>
+                                    <artifactId>rv-licensing</artifactId>
                                     <artifactId>rv-install</artifactId>
                                     <version>1.0-SNAPSHOT</version>
                                     <type>jar</type>
@@ -57,6 +63,29 @@
                             <outputDirectory>${project.build.directory}</outputDirectory>
                             <overWriteReleases>false</overWriteReleases>
                             <overWriteSnapshots>true</overWriteSnapshots>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>com.runtimeverification.licensing</groupId>
+                                    <artifactId>rv-licensing</artifactId>
+                                    <type>jar</type>
+                                    <overWrite>false</overWrite>
+                                    <destFileName>rv-licensing.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                            <outputDirectory>../target/release/rv-predict/</outputDirectory>
                         </configuration>
                     </execution>
                 </executions>

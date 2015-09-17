@@ -33,6 +33,8 @@ import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
+import com.runtimeverification.licensing.Licensing;
+
 public class Agent implements ClassFileTransformer, Constants {
 
     private static Instrumentation instrumentation;
@@ -122,6 +124,8 @@ public class Agent implements ClassFileTransformer, Constants {
     }
 
     private static void printStartupInfo() {
+        Licensing licensingSystem = new Licensing("com/runtimeverification/rvpredict/instrument/Agent.class", "predict");
+        licensingSystem.promptForLicense();
         config.logger().reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
         if (config.getLogDir() != null) {
             config.logger().report("Log directory: " + config.getLogDir(), Logger.MSGTYPE.INFO);

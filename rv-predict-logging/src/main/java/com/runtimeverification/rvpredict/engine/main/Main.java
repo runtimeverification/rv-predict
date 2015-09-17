@@ -3,7 +3,6 @@ package com.runtimeverification.rvpredict.engine.main;
 import static com.runtimeverification.rvpredict.config.Configuration.JAVA_EXECUTABLE;
 import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_JAR;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -33,18 +32,6 @@ public class Main {
                         Logger.MSGTYPE.ERROR);
                 config.usage();
                 System.exit(1);
-            }
-
-            if (config.getLogDir() != null) {
-                File outdirFile = new File(config.getLogDir());
-                if (!outdirFile.exists()) {
-                    outdirFile.mkdir();
-                } else  if (!outdirFile.isDirectory()) {
-                    config.logger().report(config.getLogDir() + " is not a directory",
-                            Logger.MSGTYPE.ERROR);
-                    config.usage();
-                    System.exit(1);
-                }
             }
 
             execApplication();

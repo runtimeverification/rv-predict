@@ -45,8 +45,8 @@ public class Agent implements ClassFileTransformer, Constants {
         preinitializeClasses();
         processAgentArguments(agentArgs);
         checkEnvLibraryPath();
-        printStartupInfo();
         initLoggingDirectory();
+        printStartupInfo();
 
         ILoggingEngine loggingEngine;
         if (config.isProfiling()) {
@@ -151,22 +151,37 @@ public class Agent implements ClassFileTransformer, Constants {
     }
 
     private static void initLoggingDirectory() {
-        String directory = config.getLogDir();
-        if (directory != null) {
-            /* scan all trace files */
-            DirectoryScanner scanner = new DirectoryScanner();
-            scanner.setIncludes(new String[] { "*" + Configuration.TRACE_SUFFIX + "*" });
-            scanner.setBasedir(directory);
-            scanner.scan();
-
-            for (String fname : scanner.getIncludedFiles()) {
-                try {
-                    Files.delete(Paths.get(directory, fname));
-                } catch (IOException e) {
-                    config.logger().report(
-                            "Cannot delete trace file " + fname + "from dir. " + directory,
-                            Logger.MSGTYPE.ERROR);
+        /* compute and set path to log directory if it is still unknown */
+        String logDir = config.getLogDir();
+        if (logDir == null) {
+            try {
+                Path baseDir = Paths.get(System.getProperty("java.io.tmpdir"),
+                        config.getBaseDirName());
+                if (!Files.exists(baseDir)) {
+                    Files.createDirectory(baseDir);
                 }
+                logDir = Files.createTempDirectory(baseDir, "rv-predict").toString();
+                config.setLogDir(logDir);
+            } catch (IOException e) {
+                System.err.println("Error while attempting to create log dir.");
+                System.err.println(e.getMessage());
+                System.exit(1);
+            }
+        }
+
+        /* scan all trace files */
+        DirectoryScanner scanner = new DirectoryScanner();
+        scanner.setIncludes(new String[] { "*" + Configuration.TRACE_SUFFIX + "*" });
+        scanner.setBasedir(logDir);
+        scanner.scan();
+
+        for (String fname : scanner.getIncludedFiles()) {
+            try {
+                Files.delete(Paths.get(logDir, fname));
+            } catch (IOException e) {
+                config.logger().report(
+                        "Cannot delete trace file " + fname + "from dir. " + logDir,
+                        Logger.MSGTYPE.ERROR);
             }
         }
     }

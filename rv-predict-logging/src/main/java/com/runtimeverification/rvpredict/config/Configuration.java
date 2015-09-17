@@ -37,13 +37,11 @@ import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.CodeSource;
@@ -342,17 +340,20 @@ public class Configuration implements Constants {
     private static final String LLVM_PREDICTION = "LLVM_PREDICTION";
     private String prediction;
 
+    private boolean log;
+
+    private String logDir;
+
     public final static String opt_offline = "--offline";
     @Parameter(names = opt_offline, description = "Run prediction offline", descriptionKey = "1000")
     private boolean offline;
 
     public final static String opt_only_log = "--log";
-    @Parameter(names = opt_only_log, description = "Record execution in given directory (no prediction)", descriptionKey = "1100")
-    private String log_dir = null;
-    private boolean log = true;
+    @Parameter(names = opt_only_log, description = "Log execution trace without running prediction", descriptionKey = "1100")
+    private boolean only_log = false;
 
     public final static String opt_only_predict = "--predict";
-    @Parameter(names = opt_only_predict, description = "Run prediction on logs from given directory", descriptionKey = "1200")
+    @Parameter(names = opt_only_predict, description = "Run prediction on logs from the given directory", descriptionKey = "1200")
     private String predict_dir = null;
 
     public final static String opt_event_profile = "--profile";
@@ -360,8 +361,12 @@ public class Configuration implements Constants {
     private boolean profile;
 
     public final static String opt_llvm_predict = "--llvm-predict";
-    @Parameter(names = opt_llvm_predict, description = "Run prediction on given llvm trace", hidden = true, descriptionKey = "1250")
-    private String llvm_trace_file = null;
+    @Parameter(names = opt_llvm_predict, description = "Run prediction on given llvm trace", hidden = true, descriptionKey = "1400")
+    public String llvm_trace_file = null;
+
+    public final static String opt_dir_name = "--dir-name";
+    @Parameter(names = opt_dir_name, description = "The name of the base directory where RV-Predict creates log directories", descriptionKey = "1500")
+    private String dir_name = "";
 
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include",
@@ -482,7 +487,7 @@ public class Configuration implements Constants {
          * to represent the 3 choices above.
          */
         if (profile) {                          /* only profile */
-            if (log_dir != null) {
+            if (only_log) {
                 exclusiveOptionsFailure(opt_event_profile, opt_only_log);
             }
             if (predict_dir != null) {
@@ -494,8 +499,7 @@ public class Configuration implements Constants {
             if (offline) {
                 exclusiveOptionsFailure(opt_event_profile, opt_offline);
             }
-            log = false;
-        } else if (log_dir != null) {           /* only log */
+        } else if (only_log) {                  /* only log */
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_only_predict);
             }
@@ -505,42 +509,19 @@ public class Configuration implements Constants {
             if (offline) {
                 exclusiveOptionsFailure(opt_only_log, opt_offline);
             }
-            log_dir = Paths.get(log_dir).toAbsolutePath().toString();
+            log = true;
         } else if (predict_dir != null) {       /* only predict */
             if (llvm_trace_file != null) {
                 exclusiveOptionsFailure(opt_only_predict, opt_llvm_predict);
             }
-            log_dir = Paths.get(predict_dir).toAbsolutePath().toString();
-            log = false;
+            setLogDir(Paths.get(predict_dir).toAbsolutePath().toString());
             prediction = OFFLINE_PREDICTION;
-        }  else if (llvm_trace_file != null) {       /* only llvm_predict */
-            log_dir = Paths.get(llvm_trace_file).toAbsolutePath().toString();
-            log = false;
+        }  else if (llvm_trace_file != null) {  /* only llvm_predict */
+            setLogDir(Paths.get(llvm_trace_file).toAbsolutePath().getParent().toString());
             prediction = LLVM_PREDICTION;
         } else {                                /* log then predict */
-            try {
-                log_dir = Files.createTempDirectory(
-                        Paths.get(System.getProperty("java.io.tmpdir")), RV_PREDICT).toString();
-            } catch (IOException e) {
-                System.err.println("Error while attempting to create log dir.");
-                System.err.println(e.getMessage());
-                System.exit(1);
-            }
+            log = true;
             prediction = offline ? OFFLINE_PREDICTION : ONLINE_PREDICTION;
-        }
-
-        if (log_dir != null) {
-            try {
-                if (isLLVMPrediction()) {
-                    logger.setLogDir(Paths.get(llvm_trace_file).toAbsolutePath().getParent().toString());
-                } else {
-                    logger.setLogDir(log_dir);
-                }
-            } catch (FileNotFoundException e) {
-                logger.report("Error while attempting to create the logger: directory not found",
-                        Logger.MSGTYPE.ERROR);
-                System.exit(1);
-            }
         }
 
         /* set window size */
@@ -684,19 +665,38 @@ public class Configuration implements Constants {
         return logger;
     }
 
+    public String getBaseDirName() {
+        return dir_name;
+    }
+
+    public void setLogDir(String logDir) {
+        this.logDir = logDir;
+        try {
+            logger.setLogDir(logDir);
+        } catch (FileNotFoundException e) {
+            System.err.println("Error while attempting to create the logger: directory " + logDir
+                    + " not found");
+            System.exit(1);
+        }
+    }
+
     /**
      * Returns the directory to read and/or write log files.
      */
     public String getLogDir() {
-        return log_dir;
+        return logDir;
     }
 
     public Path getMetadataPath() {
-        return Paths.get(log_dir, METADATA_BIN);
+        return Paths.get(logDir, METADATA_BIN);
     }
 
     public Path getTraceFilePath(int id) {
-        return Paths.get(log_dir, id + "_" + TRACE_SUFFIX);
+        return Paths.get(logDir, id + "_" + TRACE_SUFFIX);
+    }
+
+    public File getLLVMTraceFile() {
+        return Paths.get(llvm_trace_file).toFile();
     }
 
     public boolean isProfiling() {

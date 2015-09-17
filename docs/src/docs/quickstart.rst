@@ -133,9 +133,13 @@ option when invoking RV-Predict:
 
           --offline          Run prediction offline
 
-          --log              Record execution in given directory (no prediction)
+          --log              Log execution trace without running prediction
 
-          --predict          Run prediction on logs from given directory
+          --predict          Run prediction on logs from the given directory
+
+          --dir-name         The name of the base directory where RV-Predict
+                             creates log directories
+                             Default:
 
           --include          Comma separated list of packages to include
 
@@ -163,13 +167,16 @@ Explanation:
 -  the ``--offline`` option tells RV-Predict to store the logged execution
    trace on disk and only run the prediction algorithm after the application
    terminates.
--  the ``--log <dir>`` option tells RV-Predict that the execution should be
-   logged in the ``<dir>`` directory and that the prediction phase should be
-   skipped.
+-  the ``--log`` option tells RV-Predict to log the execution trace but skip
+   the prediction phase.
 -  the ``--predict <dir>`` option tells RV-Predict to skip the logging phase,
    using the logged trace from the ``<dir>`` directory to run the prediction
-   algorithms.  When using this option, specifying the java options and java
+   algorithms. When using this option, specifying the java options and java
    command line are no longer necessary.
+-  the ``--dir-name <dir>`` option specifies the name of the work directory
+   where RV-Predict creates its log directories. For example, if we specify
+   ``--dir-name foo`` then the log directory created by RV-Predict would look
+   like ``/tmp/foo/rv-predictXXX`` on a linux system.
 -  the ``--include`` option tells RV-Predict to include the given packages
    in instrumentation; this option takes precedence over the following
    ``--exclude`` option.

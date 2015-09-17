@@ -396,7 +396,6 @@ public class Configuration implements Constants {
     final static String opt_version = "--version";
     @Parameter(names = opt_version, description = "Print product version and exit", descriptionKey = "9100")
     public static boolean display_version;
-    private static final String RV_PREDICT_VERSION = "1.5";
 
     final static String short_opt_help = "-h";
     final static String opt_help = "--help";
@@ -455,7 +454,8 @@ public class Configuration implements Constants {
             System.exit(0);
         }
         if (display_version) {
-            System.out.println("RV-Predict version " + RV_PREDICT_VERSION);
+            System.out.println("RV-Predict version "
+                    + this.getClass().getPackage().getImplementationVersion());
             System.exit(0);
         }
 

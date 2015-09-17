@@ -7,6 +7,7 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.ProtectionDomain;
 import java.util.Collections;
@@ -42,6 +43,7 @@ public class Agent implements ClassFileTransformer, Constants {
         instrumentation = inst;
         preinitializeClasses();
         processAgentArguments(agentArgs);
+        checkLibraryPath();
         printStartupInfo();
         initLoggingDirectory();
 
@@ -113,6 +115,17 @@ public class Agent implements ClassFileTransformer, Constants {
         }
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         config = Configuration.instance(args);
+    }
+
+    private static void checkLibraryPath() {
+        Path nativeLibraryPath = Configuration.getNativeLibraryPath();
+        for (String path : System.getProperty("java.library.path").split("(;|:)")) {
+            if (Paths.get(path).equals(nativeLibraryPath)) {
+                return;
+            }
+        }
+        config.logger().report("Library path not properly set!", Logger.MSGTYPE.ERROR);
+        System.exit(1);
     }
 
     private static void printStartupInfo() {

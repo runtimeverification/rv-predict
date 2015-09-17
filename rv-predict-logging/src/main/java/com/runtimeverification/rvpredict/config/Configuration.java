@@ -322,6 +322,8 @@ public class Configuration implements Constants {
         public String getLibraryPathEnvVar() {
             if (this == WINDOWS) {
                 return "PATH";
+            } else if (this == OSX) {
+                return "DYLD_LIBRARY_PATH";
             } else {
                 return "LD_LIBRARY_PATH";
             }

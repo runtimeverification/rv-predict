@@ -256,19 +256,21 @@ We list below some possible issues occurring when using RV-Predict and ways to
 address them.  For any unlisted issue you might experience, please use the
 `RV Support Center`_.
 
-Getting error message "Library path not properly set!"
+Getting error message "environment variable XXX must include library path ..."
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Problem
-  RV-Predict terminates abruptly with an error message saying "Library path not properly set!"
+  RV-Predict terminates abruptly with an error message saying "environment
+  variable XXX must include library path ..."
 
 Reason
-  RV-Predict requires the ``java.library.path`` property to be properly set in
-  order to locate some native libraries it is using.
+  RV-Predict requires the OS-dependent environment variable used for searching
+  native library to be properly set in order to locate the native libraries it
+  is using.
 
 Advice
-  Go back and check the section "As an agent" regarding how to use the ``setenv`` script
-  to set the library path.
+  Go back and check the section "As an agent" regarding how to use the ``setenv``
+  script to set the library path.
 
 Program does not seem to terminate
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

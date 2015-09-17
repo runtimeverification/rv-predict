@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.instrument;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -43,7 +44,7 @@ public class Agent implements ClassFileTransformer, Constants {
         instrumentation = inst;
         preinitializeClasses();
         processAgentArguments(agentArgs);
-        checkLibraryPath();
+        checkEnvLibraryPath();
         printStartupInfo();
         initLoggingDirectory();
 
@@ -117,14 +118,19 @@ public class Agent implements ClassFileTransformer, Constants {
         config = Configuration.instance(args);
     }
 
-    private static void checkLibraryPath() {
-        Path nativeLibraryPath = Configuration.getNativeLibraryPath();
-        for (String path : System.getProperty("java.library.path").split("(;|:)")) {
-            if (Paths.get(path).equals(nativeLibraryPath)) {
-                return;
+    private static void checkEnvLibraryPath() {
+        Path nativeLibraryPath = Configuration.getNativeLibraryPath().toAbsolutePath();
+        String envVar = Configuration.OS.current().getLibraryPathEnvVar();
+        String value = System.getenv(envVar);
+        if (value != null) {
+            for (String path : value.split(File.pathSeparator)) {
+                if (Paths.get(path).toAbsolutePath().equals(nativeLibraryPath)) {
+                    return;
+                }
             }
         }
-        config.logger().report("Library path not properly set!", Logger.MSGTYPE.ERROR);
+        config.logger().report(String.format("environment variable %s must include path%n%s",
+                envVar, nativeLibraryPath), Logger.MSGTYPE.ERROR);
         System.exit(1);
     }
 

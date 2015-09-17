@@ -318,6 +318,14 @@ public class Configuration implements Constants {
             }
             return executable;
         }
+
+        public String getLibraryPathEnvVar() {
+            if (this == WINDOWS) {
+                return "PATH";
+            } else {
+                return "LD_LIBRARY_PATH";
+            }
+        }
     }
 
     private static final String RV_PREDICT = "rv-predict";

@@ -2,7 +2,7 @@
     <parent>
         <groupId>com.runtimeverification.rvpredict</groupId>
         <artifactId>root</artifactId>
-        <version>1.7-SNAPSHOT</version>
+        <version>1.6.2</version>
     </parent>
     <!-- Based on guide at http://docs.codehaus.org/display/IZPACK/Compiling+Using+Maven -->
     <modelVersion>4.0.0</modelVersion>

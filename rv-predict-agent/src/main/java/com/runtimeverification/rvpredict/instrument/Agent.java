@@ -124,6 +124,7 @@ public class Agent implements ClassFileTransformer, Constants {
         String value = System.getenv(envVar);
         if (value != null) {
             for (String path : value.split(File.pathSeparator)) {
+                config.logger().report("Checking " + path, Logger.MSGTYPE.INFO);
                 if (Paths.get(path).toAbsolutePath().equals(nativeLibraryPath)) {
                     return;
                 }

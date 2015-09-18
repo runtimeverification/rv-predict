@@ -220,7 +220,6 @@ public class Configuration implements Constants {
     public static Context getZ3Context() {
         Context context = null;
         try {
-            String libz3 = OS.current() == OS.WINDOWS ? "libz3" : "z3";
             // Very dirty hack to add our native libraries dir to the array of system paths
             // dependent on the implementation of java.lang.ClassLoader (although that seems pretty consistent)
             //TODO: Might actually be better to alter and recompile the z3 java bindings
@@ -230,7 +229,6 @@ public class Configuration implements Constants {
             String oldPath = sysPaths[0];
             sysPaths[0] = getNativeLibraryPath().toString();
 
-            System.loadLibrary(libz3);
             context = new Context();
 
             //restoring the previous system path

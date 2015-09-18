@@ -44,7 +44,7 @@ public class Agent implements ClassFileTransformer, Constants {
         instrumentation = inst;
         preinitializeClasses();
         processAgentArguments(agentArgs);
-        checkEnvLibraryPath();
+//        checkEnvLibraryPath();
         initLoggingDirectory();
         printStartupInfo();
 

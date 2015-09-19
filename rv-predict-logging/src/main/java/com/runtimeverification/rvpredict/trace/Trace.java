@@ -278,7 +278,7 @@ public class Trace {
         long tid = event.getTID();
         long gid = event.getGID();
         Deque<Event> stacktrace = new ArrayDeque<>();
-        if (!state.config().stacks) {
+        if (!state.config().stacks()) {
             stacktrace.add(event);
         } else if (gid >= baseGID) {
             /* event is in the current window; reassemble its stack trace */

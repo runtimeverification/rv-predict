@@ -383,9 +383,9 @@ public class Configuration implements Constants {
     public int windowSize = 1000;
     private static int MIN_WINDOW_SIZE = 64;
 
-    final static String opt_stacks = "--stacks";
-    @Parameter(names = opt_stacks, description = "Record call stack events and compute stack traces in race report", descriptionKey = "2300")
-    public boolean stacks = false;
+    final static String opt_no_stacks = "--no-stacks";
+    @Parameter(names = opt_no_stacks, description = "Do not record call stack events and compute stack traces in race report", hidden = true, descriptionKey = "2300")
+    private boolean nostacks = false;
 
     public final static String opt_suppress = "--suppress";
     @Parameter(names = opt_suppress, description = "Suppress race reports on the fields that match the given (comma-separated) list of regular expressions", descriptionKey = "2400")
@@ -724,5 +724,9 @@ public class Configuration implements Constants {
 
     public boolean noPrediction() {
         return prediction == null;
+    }
+
+    public boolean stacks() {
+        return !nostacks;
     }
 }

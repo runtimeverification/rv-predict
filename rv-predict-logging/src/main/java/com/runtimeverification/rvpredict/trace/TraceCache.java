@@ -68,7 +68,7 @@ public class TraceCache {
         /* finish reading events and create the Trace object */
         return rawTraces.isEmpty() ? null : crntState.initNextTraceWindow(rawTraces);
     }
-    
+
     protected List<RawTrace> readEvents(long fromIndex, long toIndex) throws IOException {
         List<RawTrace> rawTraces =  new ArrayList<>();
         /* sort readers by their last read events */
@@ -83,7 +83,7 @@ public class TraceCache {
 
             assert event.getGID() >= fromIndex;
             int capacity = getNextPowerOfTwo(config.windowSize - 1);
-            if (config.stacks) {
+            if (config.stacks()) {
                 capacity <<= 1;
             }
             List<Event> events = new ArrayList<>(capacity);

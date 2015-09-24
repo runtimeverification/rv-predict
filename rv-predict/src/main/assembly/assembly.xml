@@ -4,33 +4,6 @@
           xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
     <id>${project.parent.artifactId}</id>
     <includeBaseDirectory>false</includeBaseDirectory>
-    <dependencySets>
-        <dependencySet>
-            <outputDirectory>/lib/native</outputDirectory>
-            <includes>
-                <include>*:exe:*</include>
-            </includes>
-            <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}.${artifact.type}</outputFileNameMapping>
-            <fileMode>775</fileMode>
-        </dependencySet>
-        <dependencySet>
-            <outputDirectory>/lib/native</outputDirectory>
-            <includes>
-                <include>*:uexe:*</include>
-            </includes>
-            <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}</outputFileNameMapping>
-            <fileMode>775</fileMode>
-        </dependencySet>
-        <dependencySet>
-            <outputDirectory>/lib/native</outputDirectory>
-            <includes>
-                <include>*:dll:*</include>
-                <include>*:so:*</include>
-                <include>*:dylib:*</include>
-            </includes>
-            <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}.${artifact.type}</outputFileNameMapping>
-        </dependencySet>
-    </dependencySets>
     <moduleSets>
       <moduleSet>
             <useAllReactorProjects>true</useAllReactorProjects>
@@ -38,7 +11,7 @@
                 <include>com.runtimeverification.rvpredict:rv-predict-jar</include>
             </includes>
             <binaries>
-                <outputDirectory>/lib</outputDirectory>
+                <outputDirectory>/</outputDirectory>
                 <outputFileNameMapping>rv-predict.jar</outputFileNameMapping>
                 <unpack>false</unpack>
                 <dependencySets>
@@ -95,28 +68,10 @@
             </includes>
         </fileSet>
         <fileSet>
-            <directory>${project.build.scriptSourceDirectory}/bin</directory>
-            <outputDirectory>/bin</outputDirectory>
-            <filtered>true</filtered>
+            <directory>${project.build.scriptSourceDirectory}/tools</directory>
+            <outputDirectory>/tools</outputDirectory>
             <fileMode>775</fileMode>
             <directoryMode>775</directoryMode>
-        </fileSet>
-        <fileSet>
-            <directory>${project.build.scriptSourceDirectory}/lib</directory>
-            <outputDirectory>/lib</outputDirectory>
-            <fileMode>775</fileMode>
-            <directoryMode>775</directoryMode>
-        </fileSet>
-        <fileSet>
-            <directory>${project.build.directory}/lib</directory>
-            <outputDirectory>/lib</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>src/main/resources/</directory>
-            <outputDirectory>/lib</outputDirectory>
-            <includes>
-                <include>images/</include>
-            </includes>
         </fileSet>
     </fileSets>
 </assembly>

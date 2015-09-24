@@ -29,20 +29,31 @@
                 </executions>
             </plugin>
             <plugin>
-                <artifactId>maven-jar-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>com.runtimeverification.rvpredict.engine.main.Main</mainClass>
-                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                        </manifest>
-                        <manifestEntries>
-                            <Premain-Class>com.runtimeverification.rvpredict.instrument.Agent</Premain-Class>
-                            <Boot-Class-Path>rv-predict.jar</Boot-Class-Path>
-                            <Can-Retransform-Classes>true</Can-Retransform-Classes>
-                        </manifestEntries>
-                    </archive>
-                </configuration>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>jar-with-dlls</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptor>src/main/assembly/assembly.xml</descriptor>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <archive>
+                                <manifest>
+                                    <mainClass>com.runtimeverification.rvpredict.engine.main.Main</mainClass>
+                                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                                </manifest>
+                                <manifestEntries>
+                                    <Premain-Class>com.runtimeverification.rvpredict.instrument.Agent</Premain-Class>
+                                    <Boot-Class-Path>rv-predict.jar</Boot-Class-Path>
+                                    <Can-Retransform-Classes>true</Can-Retransform-Classes>
+                                </manifestEntries>
+                            </archive>
+                         </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
@@ -57,10 +68,9 @@
                             <excludes>
                                 <exclude>junit:junit</exclude>
                                 <exclude>org.hamcrest:*</exclude>
-                                <exclude>com.microsoft.z3:libz3java</exclude>
                                 <exclude>com.microsoft.z3:libz3</exclude>
-                                <exclude>com.microsoft.z3:z3</exclude>
                             </excludes>
+
                             <rules>
                                 <rule>
                                     <pattern>org.objectweb.**.*</pattern>

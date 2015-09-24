@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-"$(dirname "$0")/../target/release/rv-predict/bin/rv-predict-gui"
+"$(dirname "$0")/../target/release/rv-predict/tools/rv-predict-gui"

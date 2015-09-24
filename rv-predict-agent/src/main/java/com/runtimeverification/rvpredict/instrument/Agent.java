@@ -44,7 +44,6 @@ public class Agent implements ClassFileTransformer, Constants {
         instrumentation = inst;
         preinitializeClasses();
         processAgentArguments(agentArgs);
-//        checkEnvLibraryPath();
         initLoggingDirectory();
         printStartupInfo();
 
@@ -116,23 +115,6 @@ public class Agent implements ClassFileTransformer, Constants {
         }
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         config = Configuration.instance(args);
-    }
-
-    private static void checkEnvLibraryPath() {
-        Path nativeLibraryPath = Configuration.getNativeLibraryPath().toAbsolutePath();
-        String envVar = Configuration.OS.current().getLibraryPathEnvVar();
-        String value = System.getenv(envVar);
-        if (value != null) {
-            for (String path : value.split(File.pathSeparator)) {
-                config.logger().report("Checking " + path, Logger.MSGTYPE.INFO);
-                if (Paths.get(path).toAbsolutePath().equals(nativeLibraryPath)) {
-                    return;
-                }
-            }
-        }
-        config.logger().report(String.format("environment variable %s must include path%n%s",
-                envVar, nativeLibraryPath), Logger.MSGTYPE.ERROR);
-        System.exit(1);
     }
 
     private static void printStartupInfo() {

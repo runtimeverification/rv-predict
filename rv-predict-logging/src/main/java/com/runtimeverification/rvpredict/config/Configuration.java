@@ -35,9 +35,7 @@ import com.microsoft.z3.Context;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -63,8 +61,7 @@ public class Configuration implements Constants {
 
     private static final String SEPARATOR = System.getProperty("file.separator");
     public static final String JAVA_EXECUTABLE = JavaEnvUtils.getJreExecutable("java");
-    public static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "lib"
-            + SEPARATOR + "rv-predict.jar";
+    public static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "rv-predict.jar";
 
     public static final String TRACE_SUFFIX = "trace.bin";
 
@@ -192,52 +189,12 @@ public class Configuration implements Constants {
         path = new File(path).getAbsolutePath();
         try {
             String decodedPath = URLDecoder.decode(path, "UTF-8");
-            File parent = new File(decodedPath).getParentFile().getParentFile();
+            File parent = new File(decodedPath).getParentFile();
             return parent.getAbsolutePath();
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
         return null;
-    }
-
-    public static Path getNativeLibraryPath() {
-        Path nativePath = Paths.get(getBasePath(), "lib", "native");
-        OS os = OS.current();
-        String property = System.getProperty("os.arch");
-        String arch = property.endsWith("86") ? "32" : "64";
-        switch (os) {
-        case OSX:
-            nativePath = nativePath.resolve("osx");
-            break;
-        case WINDOWS:
-            nativePath = nativePath.resolve("windows" + arch);
-            break;
-        default:
-            nativePath = nativePath.resolve("linux" + arch);
-        }
-        return nativePath;
-    }
-
-    public static Context getZ3Context() {
-        Context context = null;
-        try {
-            // Very dirty hack to add our native libraries dir to the array of system paths
-            // dependent on the implementation of java.lang.ClassLoader (although that seems pretty consistent)
-            //TODO: Might actually be better to alter and recompile the z3 java bindings
-            Field sysPathsField = ClassLoader.class.getDeclaredField("sys_paths");
-            sysPathsField.setAccessible(true);
-            String[] sysPaths = (String[]) sysPathsField.get(null);
-            String oldPath = sysPaths[0];
-            sysPaths[0] = getNativeLibraryPath().toString();
-
-            context = new Context();
-
-            //restoring the previous system path
-            sysPaths[0] = oldPath;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return context;
     }
 
     private void initIncludeList() {

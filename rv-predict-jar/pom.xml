@@ -33,7 +33,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.runtimeverification.rvpredict.engine.main.GUIMain</mainClass>
+                            <mainClass>com.runtimeverification.rvpredict.engine.main.Main</mainClass>
                             <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                         </manifest>
                         <manifestEntries>

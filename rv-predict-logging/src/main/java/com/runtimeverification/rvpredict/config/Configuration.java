@@ -203,7 +203,8 @@ public class Configuration implements Constants {
     public static Path getNativeLibraryPath() {
         Path nativePath = Paths.get(getBasePath(), "lib", "native");
         OS os = OS.current();
-        String arch = System.getProperty("os.arch").equals("x86") ? "32" : "64";
+        String property = System.getProperty("os.arch");
+        String arch = property.endsWith("86") ? "32" : "64";
         switch (os) {
         case OSX:
             nativePath = nativePath.resolve("osx");

@@ -53,7 +53,7 @@ public class MainTest {
     private static String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
     private static List<String> agentCommand = Arrays.asList(java, "-ea");
 
-    private static String binPath = basePath + separator + "tools" + separator;
+    private static String binPath = basePath + separator + "bin" + separator;
     private final TestHelper helper;
     private final String name;
     private final int numOfRuns;

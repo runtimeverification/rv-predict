@@ -1,1 +1,1 @@
-@"%~dp0..\target\release\rv-predict\tools\rv-predict-gui.bat"
+@"%~dp0..\target\release\rv-predict\bin\rv-predict-gui.bat"

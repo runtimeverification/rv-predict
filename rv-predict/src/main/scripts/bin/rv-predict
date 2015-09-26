@@ -5,7 +5,7 @@ if [ -z "$RV_OPTS" ];
 fi
 
 if "$(dirname "$0")/checkJava"; then
-  java $RV_OPTS -ea -cp "$(dirname "$0")/../rv-predict.jar" com.runtimeverification.rvpredict.engine.main.Main "$@"
+  java $RV_OPTS -ea -jar "$(dirname "$0")/../rv-predict.jar" "$@"
 else
   exit 1
 fi

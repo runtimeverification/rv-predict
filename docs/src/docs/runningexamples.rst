@@ -89,48 +89,63 @@ observed:
     Bank records = 125, accounts balance = 125.
     Records match.
     Data race on field account.Account.Bank_Total: {{{
-        Concurrent write in thread T10 (locks held: {})
+        Concurrent write in thread T12 (locks held: {})
      ---->  at account.Account.Service(Account.java:98)
-        T10 is created by T1
+            at account.BankAccount.Action(BankAccount.java:41)
+            at account.BankAccount.run(BankAccount.java:56)
+        T12 is created by T1
+            at account.Account.go(Account.java:46)
+
+        Concurrent read in thread T13 (locks held: {})
+     ---->  at account.Account.Service(Account.java:98)
+            at account.BankAccount.Action(BankAccount.java:41)
+            at account.BankAccount.run(BankAccount.java:56)
+        T13 is created by T1
+            at account.Account.go(Account.java:46)
+    }}}
+
+    Data race on field account.Account.Bank_Total: {{{
+        Concurrent write in thread T12 (locks held: {})
+     ---->  at account.Account.Service(Account.java:98)
+            at account.BankAccount.Action(BankAccount.java:41)
+            at account.BankAccount.run(BankAccount.java:56)
+        T12 is created by T1
             at account.Account.go(Account.java:46)
 
         Concurrent read in thread T1 (locks held: {})
      ---->  at account.Account.checkResult(Account.java:75)
-        T1 is the main thread
-    }}}
-
-    Data race on field account.Account.Bank_Total: {{{
-        Concurrent write in thread T10 (locks held: {})
-     ---->  at account.Account.Service(Account.java:98)
-        T10 is created by T1
-            at account.Account.go(Account.java:46)
-    
-        Concurrent read in thread T1 (locks held: {})
-     ---->  at account.Account.checkResult(Account.java:76)
+            at account.Account.go(Account.java:70)
+            at account.Account.main(Account.java:30)
         T1 is the main thread
     }}}
 
     Data race on field account.BankAccount.Balance: {{{
-        Concurrent write in thread T10 (locks held: {})
+        Concurrent write in thread T12 (locks held: {})
      ---->  at account.Account.Service(Account.java:97)
-        T10 is created by T1
+            at account.BankAccount.Action(BankAccount.java:41)
+            at account.BankAccount.run(BankAccount.java:56)
+        T12 is created by T1
             at account.Account.go(Account.java:46)
-    
+
         Concurrent read in thread T1 (locks held: {})
      ---->  at account.Account.go(Account.java:67)
+            at account.Account.main(Account.java:30)
         T1 is the main thread
     }}}
-    
+
     Data race on field account.Account.Bank_Total: {{{
-        Concurrent write in thread T10 (locks held: {})
+        Concurrent write in thread T12 (locks held: {})
      ---->  at account.Account.Service(Account.java:98)
-        T10 is created by T1
+            at account.BankAccount.Action(BankAccount.java:41)
+            at account.BankAccount.run(BankAccount.java:56)
+        T12 is created by T1
             at account.Account.go(Account.java:46)
-    
-        Concurrent read in thread T11 (locks held: {})
-     ---->  at account.Account.Service(Account.java:98)
-        T11 is created by T1
-            at account.Account.go(Account.java:46)
+
+        Concurrent read in thread T1 (locks held: {})
+     ---->  at account.Account.checkResult(Account.java:76)
+            at account.Account.go(Account.java:70)
+            at account.Account.main(Account.java:30)
+        T1 is the main thread
     }}}
 
 

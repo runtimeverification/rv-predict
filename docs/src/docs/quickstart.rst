@@ -134,9 +134,6 @@ option when invoking RV-Predict:
           --window           Window size (must be >= 64)
                              Default: 1000
 
-          --stacks           Record call stack events and compute stack traces
-                             in race report
-
           --suppress         Suppress race reports on the fields that match
                              the given (comma-separated) list of regular
                              expressions
@@ -172,8 +169,6 @@ Explanation:
    find races between events with the largest distance of ``<size>`` in the
    logged trace.  The larger the ``<size>`` is, the more races are expected
    to be detected, and the more time RV-Predict will take.
--  the ``--stacks`` option tells RV-Predict to record call stack events that
-   can be used to compute stack traces in the race report.
 -  the ``--suppress`` option tells RV-Predict to suppress race reports on
    the fields that match the given regular expression patterns; only used
    when the user is absolutely certain that the data race to be suppressed
@@ -198,6 +193,8 @@ displayed by invoking the tool are not sufficient:
 -  the ``--profile`` option instructs RV-Predict to run in the profiling mode
    which does not perform any deep analysis. It is commonly used to estimate the
    number and distribution of events generated from the instrumented classes.
+-  the ``--no-stacks`` option tells RV-Predict to not record call stack events
+   that are used to compute stack traces in the race report.
 
 Suggested JVM memory tweaks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

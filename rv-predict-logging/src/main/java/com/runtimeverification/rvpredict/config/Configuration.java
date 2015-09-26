@@ -347,9 +347,11 @@ public class Configuration implements Constants {
     @Parameter(names = opt_suppress, description = "Suppress race reports on the fields that match the given (comma-separated) list of regular expressions", descriptionKey = "2400")
     private String suppress = "";
 
+    /*
     final static String opt_smt_solver = "--solver";
     @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2500")
     public String smt_solver = "z3";
+    */
 
     final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2600")

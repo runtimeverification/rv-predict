@@ -4,6 +4,17 @@
           xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
     <id>${project.parent.artifactId}</id>
     <includeBaseDirectory>false</includeBaseDirectory>
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>/lib/native</outputDirectory>
+            <includes>
+                <include>*:vcomp100:*:*</include>
+                <include>*:msvcr100:*:*</include>
+                <include>*:msvcp100:*:*</include>
+            </includes>
+            <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}.${artifact.type}</outputFileNameMapping>
+        </dependencySet>
+    </dependencySets>
     <moduleSets>
       <moduleSet>
             <useAllReactorProjects>true</useAllReactorProjects>
@@ -68,8 +79,8 @@
             </includes>
         </fileSet>
         <fileSet>
-            <directory>${project.build.scriptSourceDirectory}/tools</directory>
-            <outputDirectory>/tools</outputDirectory>
+            <directory>${project.build.scriptSourceDirectory}/bin</directory>
+            <outputDirectory>/bin</outputDirectory>
             <fileMode>775</fileMode>
             <directoryMode>775</directoryMode>
         </fileSet>

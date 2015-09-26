@@ -73,14 +73,7 @@
         <dependency>
             <groupId>com.microsoft.z3</groupId>
             <artifactId>z3java</artifactId>
-            <version>4.3.2-bb56885147e4</version>
-            <type>dll</type>
-            <classifier>windows64</classifier>
-        </dependency>
-        <dependency>
-            <groupId>com.microsoft.z3</groupId>
-            <artifactId>libz3</artifactId>
-            <version>4.3.2-bb56885147e4</version>
+            <version>4.3.3</version>
             <type>dll</type>
             <classifier>windows64</classifier>
         </dependency>
@@ -88,14 +81,7 @@
         <dependency>
             <groupId>com.microsoft.z3</groupId>
             <artifactId>z3java</artifactId>
-            <version>4.3.2-bb56885147e4</version>
-            <type>dll</type>
-            <classifier>windows32</classifier>
-        </dependency>
-        <dependency>
-            <groupId>com.microsoft.z3</groupId>
-            <artifactId>libz3</artifactId>
-            <version>4.3.2-bb56885147e4</version>
+            <version>4.3.3</version>
             <type>dll</type>
             <classifier>windows32</classifier>
         </dependency>

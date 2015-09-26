@@ -73,17 +73,17 @@
                 <exclude name="bin/*"/>
                 <exclude name="log/*"/>
             </fileset>
-            <fileset dir="tools" targetdir="$INSTALL_PATH/scripts">
+            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
                 <include name="*.py" />
             </fileset>
-            <executable targetfile="$INSTALL_PATH/scripts/rv-predict" keep="true" stage="never" condition="!izpack.windowsinstall"/>
-            <executable targetfile="$INSTALL_PATH/scripts/rv-predict-gui" keep="true" stage="never" condition="!izpack.windowsinstall"/>
-            <executable targetfile="$INSTALL_PATH/scripts/checkJava" keep="true" stage="never" condition="!izpack.windowsinstall"/>
-            <fileset dir="tools" targetdir="$INSTALL_PATH/scripts">
+            <executable targetfile="$INSTALL_PATH/bin/rv-predict" keep="true" stage="never" condition="!izpack.windowsinstall"/>
+            <executable targetfile="$INSTALL_PATH/bin/rv-predict-gui" keep="true" stage="never" condition="!izpack.windowsinstall"/>
+            <executable targetfile="$INSTALL_PATH/bin/checkJava" keep="true" stage="never" condition="!izpack.windowsinstall"/>
+            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
                 <include name="*.bat" />
                 <os family="windows"/>
             </fileset>
-            <fileset dir="tools" targetdir="$INSTALL_PATH/scripts">
+            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
                 <exclude name="*.bat" />
                 <os family="unix"/>
             </fileset>

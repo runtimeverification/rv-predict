@@ -101,7 +101,7 @@ normal Java options. Whenever it might cause confusion, the optional ``--`` can
 be used as a terminator for the RV-Predict options.
 
 To make it easier to run RV-Predict on the command line, scripts are provided
-in the ``<rvPath>/scripts`` directory.
+in the ``<rvPath>/bin`` directory.
 
 Tuning RV-Predict
 -----------------

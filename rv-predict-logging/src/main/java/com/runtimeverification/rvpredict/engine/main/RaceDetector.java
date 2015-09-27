@@ -113,7 +113,6 @@ public class RaceDetector implements Constants {
         });
     }
 
-
     public static String getNativeLibraryPath() {
         String nativePath = "/native";
         Configuration.OS os = Configuration.OS.current();

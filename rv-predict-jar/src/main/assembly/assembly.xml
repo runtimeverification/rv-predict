@@ -4,7 +4,6 @@
     <id>assembly-with-dll</id>
     <formats>
         <format>jar</format>
-
     </formats>
     <includeBaseDirectory>false</includeBaseDirectory>
     <dependencySets>

@@ -16,7 +16,7 @@ automatically upon download), following all instructions.
 Running RV-Predict
 ------------------
 
-RV-Predict's main operation mode is an agent, easing the  integration
+RV-Predict's main operation mode is an agent, easing the integration
 with IDEs and build management tools like Maven.  Moreover, it can also be run
 as a standalone application, either as a drop in replacement for the ``java``
 command, or for offline trace analysis.
@@ -33,7 +33,7 @@ your Java command line. In addition, we strongly recommend you to
 also add the ``-XX:hashCode=1`` option; this significantly reduces
 the possibility of false positive due to identity hash code collision.
 Passing options to the agent can be done as standard for agents:
-using  ``-javaagent:<rvPath>/rv-predict.jar="<rv_predict_options>"``,
+using ``-javaagent:<rvPath>/rv-predict.jar="<rv_predict_options>"``,
 where ``<rv_predict_options>`` are RV-Predict options.
 
 Integration with Maven
@@ -220,7 +220,7 @@ options for advanced users to tune RV-Predict:
 
 #. Window size.  For efficiency reasons, RV-Predict splits the execution
    trace into segments (called windows) of a specified size.  The default
-   window size is ``1000``;  however, the user can alter this size using
+   window size is ``1000``; however, the user can alter this size using
    the ``--window`` option, with the intuition that a larger size provides
    better coverage, at the expense of increasing the analysis time.
 #. Excluding packages.  To allow better control over the efficiency,

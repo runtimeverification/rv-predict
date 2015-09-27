@@ -108,5 +108,4 @@
     <!-- The native libraries to add. This is required for creating shortcuts on Windows -->
     <native type="izpack" name="ShellLink.dll"/>
 
-
 </installation>

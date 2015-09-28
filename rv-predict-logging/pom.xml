@@ -43,13 +43,13 @@
         <dependency>
             <groupId>com.microsoft.z3</groupId>
             <artifactId>com.microsoft.z3</artifactId>
-            <version>4.3.2-bb56885147e4</version>
+            <version>4.4.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.microsoft.z3</groupId>
             <artifactId>libz3java</artifactId>
-            <version>4.3.3</version>
+            <version>4.4.0</version>
             <type>so</type>
             <classifier>linux64</classifier>
         </dependency>
@@ -57,7 +57,7 @@
         <dependency>
             <groupId>com.microsoft.z3</groupId>
             <artifactId>libz3java</artifactId>
-            <version>4.3.3</version>
+            <version>4.4.0</version>
             <type>so</type>
             <classifier>linux32</classifier>
         </dependency>
@@ -65,7 +65,7 @@
         <dependency>
             <groupId>com.microsoft.z3</groupId>
             <artifactId>libz3java</artifactId>
-            <version>4.3.3</version>
+            <version>4.4.0</version>
             <type>dylib</type>
             <classifier>osx</classifier>
         </dependency>
@@ -73,7 +73,7 @@
         <dependency>
             <groupId>com.microsoft.z3</groupId>
             <artifactId>z3java</artifactId>
-            <version>4.3.3</version>
+            <version>4.4.0</version>
             <type>dll</type>
             <classifier>windows64</classifier>
         </dependency>
@@ -81,7 +81,7 @@
         <dependency>
             <groupId>com.microsoft.z3</groupId>
             <artifactId>z3java</artifactId>
-            <version>4.3.3</version>
+            <version>4.4.0</version>
             <type>dll</type>
             <classifier>windows32</classifier>
         </dependency>

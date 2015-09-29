@@ -75,14 +75,14 @@ Eclipse
   (then you select the configuration that you are running) ->
   select **Arguments** tab -> enter into the **VM arguments** field
 
-  - ``${jvmOptions} -javaagent:<rvPath>/rv-predict.jar="${rvOptions}"``
+  - ``${jvmOptions} -javaagent:${rvPath}/rv-predict.jar="${rvOptions}"``
 
 IntelliJ IDEA
   From the menu select **Run** -> **Edit Configurations** ->
   (then you select the configuration that you are running) -> enter
   into the **VM options** field
 
-  - ``${jvmOptions} -javaagent:<rvPath>/rv-predict.jar="${rvOptions}"``
+  - ``${jvmOptions} -javaagent:${rvPath}/rv-predict.jar="${rvOptions}"``
 
 On the command line
 ~~~~~~~~~~~~~~~~~~~
@@ -103,7 +103,7 @@ Whenever it might cause confusion, the optional ``--`` can be used as a
 terminator for the RV-Predict options.
 
 To make it easier to run RV-Predict on the command line, an ``rv-predict`` script is provided
-in the ``<rvPath>/bin`` directory.
+in the ``${rvPath}/bin`` directory.
 
 RV-Predict options
 ------------------
@@ -119,7 +119,7 @@ option when invoking RV-Predict:
 
 .. code-block:: none
 
-    java -jar <rv-path>/rv-predict.jar -h
+    java -jar ${rvPath}/rv-predict.jar -h
 
     Usage: rv-predict [rv_predict_options] [--] [java_options] <java_command_line>
       Common options (use -h -v for a complete list):
@@ -191,7 +191,7 @@ combining the ``-h`` and ``-v`` options:
 
 .. code-block:: none
 
-    java -jar <rv-path>/rv-predict.jar -h -v
+    java -jar ${rvPath}/rv-predict.jar -h -v
 
 As this list of advanced options is continuously evolving, we only list the
 more common ones here.  Please feel free to contact us in case the explanations

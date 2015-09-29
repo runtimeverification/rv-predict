@@ -14,13 +14,6 @@ and how RV-Predict detects and reports them.
 account.Account
 ---------------
 
-Short Description
-~~~~~~~~~~~~~~~~~
-
-The Account class is a demo for a multi-threaded system which manages accounts
-while keeping track of their internal balance.  Because of poor synchronization,
-a rare data-race yielding a nondeterministic behavior is possible.
-
 Normal run
 ~~~~~~~~~~
 
@@ -51,14 +44,14 @@ Expected output:
 RV-Predict run
 ~~~~~~~~~~~~~~
 
-To use RV-Predict as an agent, add the ``--javaagent:<rvPath>/rv-predict.jar``
+To use RV-Predict as an agent, add the ``-javaagent:<rvPath>/rv-predict.jar``
 option at the beginning of the java command line:
 
 .. code-block:: none
 
     java -javaagent:<rvPath>/rv-predict.jar -cp examples/examples.jar account.Account
 
-If preferring the non-agent version, add the ``--jar <rvPath>/rv-predict.jar``
+To use the non-agent version, add the ``-jar <rvPath>/rv-predict.jar``
 option at the beginning of the java command line:
 
 .. code-block:: none
@@ -164,36 +157,31 @@ the session.
 The analysis performed on the logged trace exhibits 4 data-races which could
 have occurred if the thread scheduling would have been different.
 
-A race description usually follows the syntax
+Take for example the final data-race exhibited in the above example.
+RV-Predict shows a race on the ``account.Account.Bank_Total`` field and gives
+the stacktraces of the two memory accesses involved in the race.
+The first stacktrace describes a write on the field performed by thread ``T12``
+(holding no locks) during the execution of the ``account.Account.Service``
+method at line ``98`` in the ``Account.java`` file.
+Similarly, the second stacktrace describes a read on the same field performed
+by thread T1 holding no locks during the execution of method
+``account.Account.checkResult`` at line ``76`` of the ``Account.java`` file.
+Full stacktraces are included for both accesses, including information about
+the creation of the threads.
 
-.. code-block:: none
+The stack trace is presented in the same format as in Java to ease integration
+with IDEs and stacktrace analysis tools.
+If there were locks acquired, the location where the locks were acquired would
+have appeared in the stack traces.
 
-    Data race on field <raceful_memory_location>: {{{
-        Concurrent <read|write> on thread <thread_id> (locks held: {<locks>})
-     ---->  at <method_name>(<file_name>:<line_number>)
-
-        Concurrent <read|write> on thread <thread_id> (locks held: {<locks>})
-     ---->  at <method_name>(<file_name>:<line_number>)
-    }}}
-
-which presents the fully qualified name of the location at which the race
-occurred (``<raceful_memory_location>``), which is either a field or an array
-element, and the stacktraces of the two memory accesses in race. The stacktrace
-is presented in the same format as in Java: each stacktrace element contains the
-fully qualified name of the method (``<method_name>``), file containing the
-location (``<file_name>``) and line number (``<line_number>``). The description
-also presents the type of race, which can be write-write or read-write, and
-provides details about the threads and locks involved (``<thread_id>`` and
-``<locks>``).
-
-Finally, if the race is due to an array access, the text ``field <field_name>``
-is replaced by ``an array access`` in the messages above.
+Finally, if the race would be due to an array access,
+the text ``field <field_name>`` would be replaced by ``an array access``
+in the race report.
 
 If no races are found, then the message ``No races found.`` is displayed. The 
 races are logged in the log directory printed at the beginning of the report
 (``/tmp/rv-predict7274661192308018898``) in ``result.txt``, and any errors or
-stacktraces are recorded in ``debug.log``. Users can specify a different log
-directory with the ``--log`` flag.
+stacktraces are recorded in ``debug.log``.
 
 
 More Examples

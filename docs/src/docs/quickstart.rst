@@ -10,31 +10,33 @@ Installation
 ------------
 
 Download the installer from the `RV-Predict website`_ and execute it
-with ``java -jar <installer>`` (unless your browser executes it
-automatically upon download), following all instructions.
+with ``java -jar <installer>``, following all instructions.
 
 Running RV-Predict
 ------------------
 
-RV-Predict's main operation mode is an agent, easing the integration
+RV-Predict's main operation mode is as a Java agent, easing the integration
 with IDEs and build management tools like Maven.  Moreover, it can also be run
 as a standalone application, either as a drop in replacement for the ``java``
-command, or for offline trace analysis.
+command or for offline trace analysis.
 
-In the following, we assume ``<rvPath>`` is the installation directory
+In the following, we assume ``${rvPath}`` is the installation directory
 for RV-Predict.
+
+Moreover, we will use ``${rvOptions}`` to refer to the `RV-Predict options`_
+used for controlling the RV-Predict tool, and ``${jvmOptions}`` to refer to
+additional `JVM options`_ which can impact the overall performance
+of the tool, both of them detailed below.
+Note that for simpler examples, these options can be omitted altogether.
 
 As an agent
 ~~~~~~~~~~~
 
 Running RV-Predict as an agent along with your Java application simply
-requires adding the ``-javaagent:<rvPath>/rv-predict.jar`` option to
-your Java command line. In addition, we strongly recommend you to
-also add the ``-XX:hashCode=1`` option; this significantly reduces
-the possibility of false positive due to identity hash code collision.
+requires adding the ``-javaagent:${rvPath}/rv-predict.jar`` option to
+your Java command line.
 Passing options to the agent can be done as standard for agents:
-using ``-javaagent:<rvPath>/rv-predict.jar="<rv_predict_options>"``,
-where ``<rv_predict_options>`` are RV-Predict options.
+using ``-javaagent:${rvPath}/rv-predict.jar="${rvOptions}"``.
 
 Integration with Maven
 ``````````````````````
@@ -52,7 +54,7 @@ similar to the following:
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${surefire-version}</version>
           <configuration>
-              <argLine>-javaagent:<rvPath>/rv-predict.jar -XX:hashCode=1</argLine>
+              <argLine> ${jvmOptions} -javaagent:${rvPath}/rv-predict.jar="${rvOptions}" </argLine>
           </configuration>
           </plugin>
       ...
@@ -62,27 +64,25 @@ similar to the following:
 Replace ``${surefire-version}`` with the exact surefire plugin version
 used by the project (e.g., ``2.16``).
 
-Adding the ``-javaagent`` option is the only change
-needed to an existing project and tests can still be run with ``mvn test``.
-Again, the ``-XX:hashCode=1`` option is optional but highly recommended.
-
 Integration with IDEs
 `````````````````````
 
 Generic instructions
-  options ``-javaagent`` and ``-XX:hashCode=1`` (optional)
-  need to be added to the VM options of your Run/Debug Configurations.
+  option ``-javaagent`` needs to be added to the VM options of your IDE's
+  Run/Debug Configurations.
 Eclipse
   From the menu select **Run** -> **Run Configurations** ->
   (then you select the configuration that you are running) ->
-  select **Arguments** tab -> enter
-  ``-javaagent:<rvPath>/rv-predict.jar``
-  into the **VM arguments** field.
+  select **Arguments** tab -> enter into the **VM arguments** field
+
+  - ``${jvmOptions} -javaagent:<rvPath>/rv-predict.jar="${rvOptions}"``
+
 IntelliJ IDEA
   From the menu select **Run** -> **Edit Configurations** ->
   (then you select the configuration that you are running) -> enter
-  ``-javaagent:<rvPath>/rv-predict.jar``
-  into the **VM options:** field.
+  into the **VM options** field
+
+  - ``${jvmOptions} -javaagent:<rvPath>/rv-predict.jar="${rvOptions}"``
 
 On the command line
 ~~~~~~~~~~~~~~~~~~~
@@ -91,20 +91,27 @@ RV-Predict is invoked as follows:
 
 .. code-block:: none
 
-        java -jar <rv-path>/rv-predict.jar [rv_predict_options] [--] [java_options] class [args...]
+        java ${jvmOptions} -jar ${rvPath}/rv-predict.jar ${rvOptions} [--] [java_options] class [args...]
             (to predict races in a class)
-    or  java -jar <rv-path>/rv-predict.jar [rv_predict_options] [--] [java_options] -jar jarfile [args...]
+    or  java ${jvmOptions} -jar ${rvPath}/rv-predict.jar ${rvOptions} [--] [java_options] -jar jarfile [args...]
             (to predict races in an executable jar file)
 
-where ``[rv_predict_options]`` are RV-Predict options and ``[java_options]`` are
-normal Java options. Whenever it might cause confusion, the optional ``--`` can
-be used as a terminator for the RV-Predict options.
+where  ``[java_options]`` are additional `JVM options`_ used for running the
+program and logging its execution.
 
-To make it easier to run RV-Predict on the command line, scripts are provided
+Whenever it might cause confusion, the optional ``--`` can be used as a
+terminator for the RV-Predict options.
+
+To make it easier to run RV-Predict on the command line, an ``rv-predict`` script is provided
 in the ``<rvPath>/bin`` directory.
 
-Tuning RV-Predict
------------------
+RV-Predict options
+------------------
+
+The RV-Predict options are used for controlling the execution of RV-Predict
+either in agent mode or in command-line mode.
+Note that certain options (like ``--predict``) are only meaningful in the
+command-line mode.
 
 The list of common options can be obtained by using the ``-h`` or ``--help``
 option when invoking RV-Predict:
@@ -196,19 +203,6 @@ displayed by invoking the tool are not sufficient:
 -  the ``--no-stacks`` option tells RV-Predict to not record call stack events
    that are used to compute stack traces in the race report.
 
-Suggested JVM memory tweaks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-As RV-Predict instruments the code at runtime and records sequences of
-events in the JVM memory, running RV-Predict on larger applications might
-require adjusting the memory limits of the JVM.
-For example, here are the initial options passes by our helper script when
-invoking RV-Predict:
--Xss4m sets the thread stack size of the JVM to be 4MB,
--Xms64m sets the initial heap size to be 64MB
--Xmx1g sets the maximum heap size to be 1G
-
-
 Enhancing prediction power
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -220,9 +214,9 @@ options for advanced users to tune RV-Predict:
 
 #. Window size.  For efficiency reasons, RV-Predict splits the execution
    trace into segments (called windows) of a specified size.  The default
-   window size is ``1000``; however, the user can alter this size using
+   window size is ``1000``.  Users can alter this size using
    the ``--window`` option, with the intuition that a larger size provides
-   better coverage, at the expense of increasing the analysis time.
+   better coverage at the expense of increasing the analysis time.
 #. Excluding packages.  To allow better control over the efficiency,
    RV-Predict provides the option ``--exclude`` to remove certain packages from
    logging.  This option takes a list of package patterns prefixes separated
@@ -238,6 +232,24 @@ options for advanced users to tune RV-Predict:
    to include and exclude, RV-Predict also provides the ``--include`` option
    which is similar to the ``--exclude`` option (comma separated list of
    package patterns), but opposite in effect.
+
+
+JVM options
+-----------
+
+As RV-Predict instruments the code at runtime and records sequences of
+events in the JVM memory, running RV-Predict on larger applications might
+require adjusting the memory limits of the JVM.
+For example, here are the initial options passed by our helper script when
+invoking RV-Predict:
+
+-  ``-Xss4m`` sets the thread stack size of the JVM to be 4MB,
+-  ``-Xms64m`` sets the initial heap size to be 64MB
+-  ``-Xmx1g`` sets the maximum heap size to be 1G
+
+In addition, we strongly recommend adding the ``-XX:hashCode=1`` option if
+running RV-Predict on larger projects; this significantly reduces the
+possibility of false positives due to identity hash code collision.
 
 
 Problems running RV-Predict?

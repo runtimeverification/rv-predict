@@ -97,7 +97,7 @@ RV-Predict is invoked as follows:
             (to predict races in an executable jar file)
 
 where  ``[java_options]`` are additional `JVM options`_ used for running the
-program and logging its execution.
+program.
 
 Whenever it might cause confusion, the optional ``--`` can be used as a
 terminator for the RV-Predict options.

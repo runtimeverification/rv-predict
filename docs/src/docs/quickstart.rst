@@ -10,7 +10,9 @@ Installation
 ------------
 
 Download the installer from the `RV-Predict website`_ and execute it
-with ``java -jar <installer>``, following all instructions.
+with ``java -jar <installer>``, following all instructions. Remember
+to add the ``bin`` directory under the RV-Predict installation
+directory to your ``PATH`` environment variable.
 
 Running RV-Predict
 ------------------

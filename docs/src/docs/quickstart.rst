@@ -106,6 +106,16 @@ IntelliJ IDEA
 
   - ``${jvmOptions} -javaagent:${rvPath}/rv-predict.jar="${rvOptions}"``
 
+Using RV-Predict for all Java apps
+``````````````````````````````````
+
+If one wants to run RV-Predict for any invocation of the ``java`` tool,
+one can simply update the environment variable ``JAVA_TOOL_OPTIONS``
+to include the line:
+
+    ${jvmOptions} -javaagent:${rvPath}/rv-predict.jar="${rvOptions}"
+
+
 RV-Predict options
 ------------------
 

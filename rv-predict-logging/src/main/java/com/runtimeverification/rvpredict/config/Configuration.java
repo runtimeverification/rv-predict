@@ -301,15 +301,15 @@ public class Configuration implements Constants {
     private String logDir;
 
     public final static String opt_offline = "--offline";
-    @Parameter(names = opt_offline, description = "Run prediction offline", descriptionKey = "1000")
+    @Parameter(names = opt_offline, description = "Run prediction offline", hidden = true, descriptionKey = "1000")
     private boolean offline;
 
     public final static String opt_only_log = "--log";
-    @Parameter(names = opt_only_log, description = "Log execution trace without running prediction", descriptionKey = "1100")
+    @Parameter(names = opt_only_log, description = "Log execution trace without running prediction", hidden = true, descriptionKey = "1100")
     private boolean only_log = false;
 
     public final static String opt_only_predict = "--predict";
-    @Parameter(names = opt_only_predict, description = "Run prediction on logs from the given directory", descriptionKey = "1200")
+    @Parameter(names = opt_only_predict, description = "Run prediction on logs from the given directory", hidden = true, descriptionKey = "1200")
     private String predict_dir = null;
 
     public final static String opt_event_profile = "--profile";

@@ -1,6 +1,5 @@
 package com.runtimeverification.rvpredict.instrument;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -44,6 +43,11 @@ public class Agent implements ClassFileTransformer, Constants {
         instrumentation = inst;
         preinitializeClasses();
         processAgentArguments(agentArgs);
+        if (!config.isLogging()) {
+            Runtime.getRuntime().addShutdownHook(
+                    RVPredict.getPredictionThread(config));
+            System.exit(0);
+        }
         initLoggingDirectory();
         printStartupInfo();
 
@@ -83,7 +87,7 @@ public class Agent implements ClassFileTransformer, Constants {
         }
         config.logger().report("Finished retransforming preloaded classes.", Logger.MSGTYPE.INFO);
 
-        Runtime.getRuntime().addShutdownHook(RVPredict.getPredictionThread(config, loggingEngine));
+        Runtime.getRuntime().addShutdownHook(RVPredict.getCleanPredictionThread(config, loggingEngine));
     }
 
     /**

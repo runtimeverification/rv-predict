@@ -50,8 +50,8 @@ The ``rv-predict`` script is itself just a wrapper for the Java command:
     java -jar ${rvPath}/rv-predict.jar
 
 and they can be used interchangeably.  The benefit of the script is that
-if ${rvPath}/bin is added to the environment ``PATH``, it does not need
-to be mentioned anymore at each tool invocation.
+if ${rvPath}/bin is added to the environment ``PATH``, ${rvPath} does not need
+to be mentioned at each tool invocation anymore.
 
 As an agent
 ~~~~~~~~~~~

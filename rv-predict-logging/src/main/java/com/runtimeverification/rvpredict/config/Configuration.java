@@ -31,12 +31,10 @@ package com.runtimeverification.rvpredict.config;
 import com.beust.jcommander.*;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
-import com.microsoft.z3.Context;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -50,14 +48,12 @@ import java.util.stream.Collectors;
 import org.apache.tools.ant.util.JavaEnvUtils;
 
 /**
- * Command line options class for rv-predict Used by JCommander to parse the
- * main program parameters.
+ * Common options class for RV-Predict Used by JCommander to parse the
+ * common program parameters.
+ * This class contains the common options. It is specialized by {@link AgentConfiguration}
+ * for agent-specific options and by {@link PredictionConfiguration} for prediction-only options.
  */
-public class Configuration implements Constants {
-
-    public static final String LOGGING_PHASE_COMPLETED = "Logging phase completed.";
-    public static final String TRACE_LOGGED_IN = "\tTrace logged in: ";
-    public static final String INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE = "Instrumented execution to record the trace";
+public abstract class Configuration implements Constants {
 
     private static final String SEPARATOR = System.getProperty("file.separator");
     public static final String JAVA_EXECUTABLE = JavaEnvUtils.getJreExecutable("java");
@@ -67,107 +63,8 @@ public class Configuration implements Constants {
 
     private static final String METADATA_BIN = "metadata.bin";
 
-    /**
-     * Packages/classes that need to be excluded from instrumentation. These are
-     * not configurable by the users because including them for instrumentation
-     * almost certainly leads to crash.
-     */
-    public static List<Pattern> IGNORES;
-    static {
-        String [] ignores = new String[] {
-                RVPREDICT_PKG_PREFIX,
-
-                // lz4 library cannot be repackaged because it hard-codes some
-                // of its class names in the implementation
-                "net/jpountz/",
-
-                // z3 native library cannot be repackaged
-                "com/microsoft/z3",
-
-                // array type
-                "[",
-
-                // immutable classes
-                "cOm/google/common/collect/Immutable".replace("O", "o"), // hack to trick the repackage tool
-                "scala/collection/immutable/",
-
-                // Basics of the JDK that everything else is depending on
-                "sun/",
-                "com/sun",
-                "java/",
-                "jdk/internal"
-        };
-        IGNORES = getDefaultPatterns(ignores);
-    }
-
-    public final static String[] MOCKS = new String[] {
-        "java/util/Collection",
-        "java/util/Map",
-        "java/util/Iterator",
-        // we don't want to instrument any ClassLoader or SecurityManager: issue#512
-        "java/lang/ClassLoader",
-        "java/lang/SecurityManager"
-    };
-
-    public final static Set<String> MUST_REPLACE = new HashSet<>(Arrays.asList(
-            "java/util/concurrent/atomic/AtomicBoolean",
-            "java/util/concurrent/atomic/AtomicInteger",
-            // TODO: handle the other AtomicX classes
-            "java/util/concurrent/locks/AbstractQueuedSynchronizer",
-            "java/util/concurrent/locks/AbstractQueuedLongSynchronizer",
-            "java/util/concurrent/locks/ReentrantLock",
-            "java/util/concurrent/locks/ReentrantReadWriteLock",
-            // TODO: handle StampedLock from Java 8
-            "java/util/concurrent/ArrayBlockingQueue",
-            "java/util/concurrent/LinkedBlockingQueue",
-            "java/util/concurrent/PriorityBlockingQueue",
-            "java/util/concurrent/SynchronousQueue",
-            // TODO: handle the other BlockingQueue's
-            "java/util/concurrent/Semaphore",
-            "java/util/concurrent/CountDownLatch",
-            "java/util/concurrent/CyclicBarrier",
-            "java/util/concurrent/Exchanger",
-            // TODO: handle Phaser
-            "java/util/concurrent/FutureTask",
-            // TODO: handle CompletableFuture from Java 8
-            "java/util/concurrent/ThreadPoolExecutor",
-            "java/util/concurrent/ScheduledThreadPoolExecutor",
-            "java/util/concurrent/RejectedExecutionHandler",
-            "java/util/concurrent/Executors"));
-
-    public final static Pattern MUST_REPLACE_QUICK_TEST_PATTERN = Pattern
-            .compile("java/util/concurrent");
-
-    public final static List<Pattern> MUST_INCLUDES;
-    static {
-        String[] mustIncludes = new String[] {
-            "java/security/cert/X509Certificate", "sun/security",   // fix issue #556
-
-            /* fix issue #553: include as few classes as possible when removing false alarms */
-            "sun/nio/ch/AsynchronousChannelGroupImpl",
-            "sun/nio/ch/Port",
-            "sun/nio/ch/ThreadPool",
-
-            "com/runtimeverification/rvpredict/runtime/java/util/concurrent/CyclicBarrier"
-        };
-        MUST_INCLUDES = getDefaultPatterns(mustIncludes);
-    }
-
-    public final List<Pattern> includeList = new ArrayList<>();
-    public final List<Pattern> excludeList = new ArrayList<>();
-    public final List<String> suppressList = new ArrayList<>();
-    public Pattern suppressPattern;
 
     private JCommander jCommander;
-
-    private static Pattern createClassPattern(String pattern) {
-        pattern = pattern.replace('.', '/');
-        String escapeChars[] = new String[] {"$","["};
-        for (String c : escapeChars) {
-           pattern = pattern.replace(c, "\\"  + c);
-        }
-        return Pattern.compile(pattern.replace("*", ".*")+".*");
-    }
 
     public static String getBasePath() {
         CodeSource codeSource = Configuration.class.getProtectionDomain().getCodeSource();
@@ -196,48 +93,6 @@ public class Configuration implements Constants {
         }
         return null;
     }
-
-    private void initIncludeList() {
-        if (includes != null) {
-            for (String include : includes.replace('.', '/').split(",")) {
-                if (include.isEmpty()) continue;
-                includeList.add(createClassPattern(include));
-            }
-        }
-    }
-
-    private void initExcludeList() {
-        if (excludes != null) {
-            for (String exclude : excludes.replace('.', '/').split(",")) {
-                if (exclude.isEmpty()) continue;
-                excludeList.add(createClassPattern(exclude));
-            }
-        }
-    }
-
-    private void initSuppressPattern() {
-        suppressList.addAll(Arrays.asList(suppress.split(",")).stream().map(s -> s.trim())
-                .filter(s -> !s.isEmpty()).collect(Collectors.toList()));
-        suppressPattern = Pattern.compile(Joiner.on("|").join(suppressList));
-    }
-
-    /**
-     * Creates a {@link java.util.regex.Pattern} list from a String array
-     * describing packages/classes using file pattern conventions ({@code *}
-     * stands for a sequence of characters)
-     *
-     * @param patterns the array of package/class descriptions
-     * @return A {@link java.util.regex.Pattern} list which matches
-     *         names specified by the given argument
-     */
-    public static List<Pattern> getDefaultPatterns(String[] patterns) {
-        List<Pattern> patternList = new ArrayList<>();
-        for (String pattern : patterns) {
-            patternList.add(createClassPattern(pattern));
-        }
-        return patternList;
-    }
-
 
     public enum OS {
         OSX(true), LINUX(true), UNKNOWN(false), WINDOWS(false);
@@ -284,55 +139,17 @@ public class Configuration implements Constants {
         }
     }
 
-    private static final String RV_PREDICT = "rv-predict";
-
     private String[] args;
-    private String[] rvpredictArgs;
-    @Parameter(description = "[java_options] <java_command_line>")
-    private List<String> javaArgs = new ArrayList<>();
 
-    private final static String ONLINE_PREDICTION = "ONLINE_PREDICTION";
-    private final static String OFFLINE_PREDICTION = "OFFLINE_PREDICTION";
-    private static final String LLVM_PREDICTION = "LLVM_PREDICTION";
-    private String prediction;
-
-    private boolean log;
+    protected final static String ONLINE_PREDICTION = "ONLINE_PREDICTION";
+    protected final static String OFFLINE_PREDICTION = "OFFLINE_PREDICTION";
+    protected String prediction;
 
     private String logDir;
 
-    public final static String opt_offline = "--offline";
-    @Parameter(names = opt_offline, description = "Run prediction offline", descriptionKey = "1000")
-    private boolean offline;
 
-    public final static String opt_only_log = "--log";
-    @Parameter(names = opt_only_log, description = "Log execution trace without running prediction", descriptionKey = "1100")
-    private boolean only_log = false;
 
-    public final static String opt_only_predict = "--predict";
-    @Parameter(names = opt_only_predict, description = "Run prediction on logs from the given directory", descriptionKey = "1200")
-    private String predict_dir = null;
-
-    public final static String opt_event_profile = "--profile";
-    @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1300")
-    private boolean profile;
-
-    public final static String opt_llvm_predict = "--llvm-predict";
-    @Parameter(names = opt_llvm_predict, description = "Run prediction on given llvm trace", hidden = true, descriptionKey = "1400")
-    public String llvm_trace_file = null;
-
-    public final static String opt_dir_name = "--dir-name";
-    @Parameter(names = opt_dir_name, description = "The name of the base directory where RV-Predict creates log directories", descriptionKey = "1500")
-    private String dir_name = "";
-
-    public final static String opt_include = "--include";
-    @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include",
-            descriptionKey = "2000")
-    private String includes;
-
-    public final static String opt_exclude = "--exclude";
-    @Parameter(names = opt_exclude, validateWith = PackageValidator.class, description = "Comma separated list of packages to exclude",
-            descriptionKey = "2100")
-    private String excludes;
+    // Prediction options
 
     final static String opt_window_size = "--window";
     @Parameter(names = opt_window_size, description = "Window size (must be >= 64)", descriptionKey = "2200")
@@ -357,6 +174,7 @@ public class Configuration implements Constants {
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2600")
     public int solver_timeout = 60;
 
+
     final static String opt_debug = "--debug";
     @Parameter(names = opt_debug, description = "Output developer debugging information", hidden = true, descriptionKey = "3000")
     public static boolean debug = false;
@@ -375,47 +193,19 @@ public class Configuration implements Constants {
     @Parameter(names = { short_opt_help, opt_help }, description = "Print help info", help = true, descriptionKey = "9900")
     public boolean help;
 
-    private static final String RVPREDICT_ARGS_TERMINATOR = "--";
-
     private final Logger logger = new Logger();
 
-    public static Configuration instance(String[] args) {
-        Configuration config = new Configuration();
-        config.parseArguments(args);
-        return config;
-    }
+    public final List<String> suppressList = new ArrayList<>();
+    public Pattern suppressPattern;
 
-    private Configuration() { }
-
-    private void parseArguments(String[] args) {
+   protected void parseArguments(String[] args) {
         this.args = args;
         jCommander = new JCommander(this);
-        jCommander.setProgramName(RV_PREDICT);
-
-        /* collect all parameter names */
-        Set<String> rvpredictOptionNames = new HashSet<>();
-        for (ParameterDescription parameterDescription : jCommander.getParameters()) {
-            Collections.addAll(rvpredictOptionNames, parameterDescription.getParameter().names());
-        }
-
-        /* attempt to separate rv-predict arguments as much as we can */
-        int endIdx = args.length;
-        for (int i = 0; i < args.length; i++) {
-            if (args[i].startsWith("-") && !rvpredictOptionNames.contains(args[i])
-                    || RVPREDICT_ARGS_TERMINATOR.equals(args[i])) {
-                /* stop as soon as we see an unknown option or the terminator */
-                /* JCommander will throw a parsing error upon unknown option; so
-                 * we first separate them manually and then let the JCommander
-                 * deal with main parameter */
-                endIdx = i;
-                break;
-            }
-        }
+        jCommander.setProgramName(getProgramName());
 
         /* parse rv-predict arguments */
         try {
-            jCommander.parse(Arrays.copyOf(args, endIdx));
-            rvpredictArgs = Arrays.copyOf(args, endIdx - javaArgs.size());
+            jCommander.parse(args);
         } catch (ParameterException e) {
             System.err.println("Error: Cannot parse command line arguments.");
             System.err.println(e.getMessage());
@@ -432,68 +222,21 @@ public class Configuration implements Constants {
             System.exit(0);
         }
 
-        initExcludeList();
-        initIncludeList();
         initSuppressPattern();
-
-        /* Carefully handle the interaction between options:
-         * 1) 5 different modes: only_profile, only_log, only_predict, only_llvm_predict, and log_then_predict;
-         * 2) 2 types of prediction: online and offline;
-         * 3) log directory can be specified or not.
-         *
-         * The following code computes 3 variables, e.g. log, prediction, and log_dir,
-         * to represent the 3 choices above.
-         */
-        if (profile) {                          /* only profile */
-            if (only_log) {
-                exclusiveOptionsFailure(opt_event_profile, opt_only_log);
-            }
-            if (predict_dir != null) {
-                exclusiveOptionsFailure(opt_event_profile, opt_only_predict);
-            }
-            if (llvm_trace_file != null) {
-                exclusiveOptionsFailure(opt_event_profile, opt_llvm_predict);
-            }
-            if (offline) {
-                exclusiveOptionsFailure(opt_event_profile, opt_offline);
-            }
-        } else if (only_log) {                  /* only log */
-            if (predict_dir != null) {
-                exclusiveOptionsFailure(opt_only_log, opt_only_predict);
-            }
-            if (llvm_trace_file != null) {
-                exclusiveOptionsFailure(opt_only_log, opt_llvm_predict);
-            }
-            if (offline) {
-                exclusiveOptionsFailure(opt_only_log, opt_offline);
-            }
-            log = true;
-        } else if (predict_dir != null) {       /* only predict */
-            if (llvm_trace_file != null) {
-                exclusiveOptionsFailure(opt_only_predict, opt_llvm_predict);
-            }
-            setLogDir(Paths.get(predict_dir).toAbsolutePath().toString());
-            prediction = OFFLINE_PREDICTION;
-        }  else if (llvm_trace_file != null) {  /* only llvm_predict */
-            setLogDir(Paths.get(llvm_trace_file).toAbsolutePath().getParent().toString());
-            prediction = LLVM_PREDICTION;
-        } else {                                /* log then predict */
-            log = true;
-            prediction = offline ? OFFLINE_PREDICTION : ONLINE_PREDICTION;
-        }
 
         /* set window size */
         windowSize = Math.max(windowSize, MIN_WINDOW_SIZE);
 
-        int startOfJavaArgs = endIdx;
-        if (startOfJavaArgs < args.length
-                && RVPREDICT_ARGS_TERMINATOR.equals(args[startOfJavaArgs])) {
-            startOfJavaArgs++;
-        }
-        for (int i = startOfJavaArgs; i < args.length; i++) {
-            javaArgs.add(args[i]);
-        }
     }
+
+    protected abstract String getProgramName();
+
+    private void initSuppressPattern() {
+        suppressList.addAll(Arrays.asList(suppress.split(",")).stream().map(s -> s.trim())
+                .filter(s -> !s.isEmpty()).collect(Collectors.toList()));
+        suppressPattern = Pattern.compile(Joiner.on("|").join(suppressList));
+    }
+
 
     public void exclusiveOptionsFailure(String opt1, String opt2) {
         System.err.println("Error: Options " + opt1 + " and " + opt2 + " are mutually exclusive.");
@@ -547,9 +290,7 @@ public class Configuration implements Constants {
 
         // Computing usage
         max_option_length++;
-        String usageHeader = "Usage: " + RV_PREDICT
-                + " [rv_predict_options] [--] "
-                + jCommander.getMainParameterDescription() + "\n";
+        String usageHeader = getUsageHeader();
         String usage = usageHeader + "  Options:";
         String shortUsage = usageHeader + "  Common options (use -h -v for a complete list):";
 
@@ -559,7 +300,7 @@ public class Configuration implements Constants {
         int spacesAfterCnt;
         String description;
         for (ParameterDescription parameterDescription : jCommander.getParameters()) {
-            if (parameterDescription.getNames().contains(opt_llvm_predict)) {
+            if (parameterDescription.getNames().contains(PredictionConfiguration.opt_llvm_predict)) {
                 //Omit llvm prediction from the list of options (for now)
                 continue;
             }
@@ -600,6 +341,8 @@ public class Configuration implements Constants {
         }
     }
 
+    protected abstract String getUsageHeader();
+
     private String getDefault(ParameterDescription parameterDescription) {
         Object aDefault = parameterDescription.getDefault();
         if (aDefault == null || aDefault.equals(Boolean.FALSE))
@@ -611,20 +354,8 @@ public class Configuration implements Constants {
         return args;
     }
 
-    public String[] getRVPredictArguments() {
-        return rvpredictArgs;
-    }
-
-    public List<String> getJavaArguments() {
-        return javaArgs;
-    }
-
     public Logger logger() {
         return logger;
-    }
-
-    public String getBaseDirName() {
-        return dir_name;
     }
 
     public void setLogDir(String logDir) {
@@ -653,20 +384,10 @@ public class Configuration implements Constants {
         return Paths.get(logDir, id + "_" + TRACE_SUFFIX);
     }
 
-    public File getLLVMTraceFile() {
-        return Paths.get(llvm_trace_file).toFile();
-    }
-
-    public boolean isProfiling() {
-        return profile;
-    }
-
     /**
      * Checks if the current RV-Predict instance needs to do logging.
      */
-    public boolean isLogging() {
-        return log;
-    }
+    public abstract boolean isLogging();
 
     public boolean isOnlinePrediction() {
         return prediction == ONLINE_PREDICTION;
@@ -674,10 +395,6 @@ public class Configuration implements Constants {
 
     public boolean isOfflinePrediction() {
         return prediction == OFFLINE_PREDICTION;
-    }
-
-    public boolean isLLVMPrediction() {
-        return prediction == LLVM_PREDICTION;
     }
 
     public boolean noPrediction() {

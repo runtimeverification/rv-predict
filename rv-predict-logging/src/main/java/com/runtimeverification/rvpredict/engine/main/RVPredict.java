@@ -37,6 +37,8 @@ import java.util.Collections;
 import java.util.List;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.config.AgentConfiguration;
+import com.runtimeverification.rvpredict.config.PredictionConfiguration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
@@ -54,16 +56,16 @@ public class RVPredict {
 
     private final Configuration config;
     private final TraceCache traceCache;
-    private final Metadata metadata;
     private final RaceDetector detector;
 
-    public RVPredict(Configuration config) {
+    public RVPredict(PredictionConfiguration config) {
         this.config = config;
+        Metadata metadata;
         if (config.isLLVMPrediction()) {
             metadata = Metadata.singleton();
             traceCache = new LLVMTraceCache(config, metadata);
         } else {
-            this.metadata = Metadata.readFrom(config.getMetadataPath());
+            metadata = Metadata.readFrom(config.getMetadataPath());
             traceCache = new TraceCache(config, metadata);
         }
         this.detector = new RaceDetector(config);
@@ -111,7 +113,7 @@ public class RVPredict {
 
                 if (config.isOfflinePrediction()) {
                     if (config.isLogging()) {
-                        config.logger().reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
+                        config.logger().reportPhase(AgentConfiguration.LOGGING_PHASE_COMPLETED);
                     }
 
                     Process proc = null;
@@ -152,8 +154,7 @@ public class RVPredict {
         Collections.addAll(appArgs, config.getArgs());
 
         assert config.isOfflinePrediction();
-        appArgs.add(startOfRVArgs, Configuration.opt_only_predict);
-        appArgs.add(startOfRVArgs + 1, config.getLogDir());
+        appArgs.add(startOfRVArgs, config.getLogDir());
         return new ProcessBuilder(appArgs).start();
     }
 
@@ -162,7 +163,7 @@ public class RVPredict {
      * {@link RVPredict#startPredictionProcess(Configuration)}.
      */
     public static void main(String[] args) {
-        Configuration config = Configuration.instance(args);
+        PredictionConfiguration config = PredictionConfiguration.instance(args);
         new RVPredict(config).start();
     }
 

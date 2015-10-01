@@ -1174,7 +1174,7 @@ public class GUIMain {
 
         List<String> cmdList = new ArrayList<String>(Arrays.asList(new String[] { "java",
                 "-Xmx" + heapSize, "-cp", jarPath.toString(),
-                Main.class.getName(), mode, tmpDirMap.get(absoluteFileName) }));
+                RVPredict.class.getName(), mode, tmpDirMap.get(absoluteFileName) }));
         cmd[0] = "--";
 
         cmdList.addAll(Arrays.asList(cmd));

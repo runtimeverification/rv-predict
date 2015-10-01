@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+import com.runtimeverification.rvpredict.config.AgentConfiguration;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
@@ -64,7 +65,7 @@ public class InstrumentUtils implements Opcodes {
         }
 
         if (toInstrument) {
-            for (String mock : Configuration.MOCKS) {
+            for (String mock : AgentConfiguration.MOCKS) {
                 if (ClassFile.isSubtypeOf(loader, cname, mock)) {
                     toInstrument = false;
                     if (Configuration.verbose) {
@@ -91,7 +92,7 @@ public class InstrumentUtils implements Opcodes {
             }
 
             /* MUST_REPLACE also overrides MOCKS */
-            for (String mustReplace : Configuration.MUST_REPLACE) {
+            for (String mustReplace : AgentConfiguration.MUST_REPLACE) {
                 if (ClassFile.isSubtypeOf(loader, cname, mustReplace)) {
                     toInstrument = true;
                 }
@@ -100,7 +101,7 @@ public class InstrumentUtils implements Opcodes {
 
         /* make sure we don't instrument IGNORES even if the user said so */
         if (toInstrument) {
-            for (Pattern ignore : Configuration.IGNORES) {
+            for (Pattern ignore : AgentConfiguration.IGNORES) {
                 toInstrument = !ignore.matcher(cname).matches();
                 if (!toInstrument) break;
             }
@@ -108,7 +109,7 @@ public class InstrumentUtils implements Opcodes {
 
         /* the only exception to the IGNORES list */
         if (!toInstrument) {
-            for (Pattern mustInclude : Configuration.MUST_INCLUDES) {
+            for (Pattern mustInclude : AgentConfiguration.MUST_INCLUDES) {
                 if (mustInclude.matcher(cname).matches()) {
                     toInstrument = true;
                     break;
@@ -122,7 +123,7 @@ public class InstrumentUtils implements Opcodes {
 
     /**
      * Returns a new string resulting from replacing all occurrences of
-     * {@link Configuration#MUST_REPLACE} in the old string with their
+     * {@link AgentConfiguration#MUST_REPLACE} in the old string with their
      * {@code RV-Predict} counterparts.
      *
      * @param className
@@ -135,12 +136,12 @@ public class InstrumentUtils implements Opcodes {
     public static String replaceStandardLibraryClass(String className, String literal) {
         if (literal != null && !className.startsWith(Constants.RVPREDICT_RUNTIME_PKG_PREFIX)) {
             /* quick rejection test: make sure the most common case is done in O(length(literal)) */
-            if (!Configuration.MUST_REPLACE_QUICK_TEST_PATTERN.matcher(literal).find()) {
+            if (!AgentConfiguration.MUST_REPLACE_QUICK_TEST_PATTERN.matcher(literal).find()) {
                 return literal;
             }
 
             // TODO: the following code can be further optimized
-            for (String stdlibClass : Configuration.MUST_REPLACE) {
+            for (String stdlibClass : AgentConfiguration.MUST_REPLACE) {
                 literal = literal.replace("edu/emory/mathcs/backport/" + stdlibClass, PLACE_HOLDER);
                 literal = literal.replace(stdlibClass, PLACE_HOLDER);
                 literal = literal.replace(PLACE_HOLDER, Constants.RVPREDICT_RUNTIME_PKG_PREFIX

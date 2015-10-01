@@ -1,6 +1,5 @@
 package com.runtimeverification.rvpredict.instrument;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -17,6 +16,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.io.Resources;
+import com.runtimeverification.rvpredict.config.AgentConfiguration;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.RVPredict;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
@@ -38,7 +38,7 @@ public class Agent implements ClassFileTransformer, Constants {
 
     private static Instrumentation instrumentation;
 
-    public static Configuration config;
+    public static AgentConfiguration config;
 
     public static void premain(String agentArgs, Instrumentation inst) {
         instrumentation = inst;
@@ -114,11 +114,11 @@ public class Agent implements ClassFileTransformer, Constants {
             agentArgs = agentArgs.substring(1, agentArgs.length() - 1);
         }
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        config = Configuration.instance(args);
+        config = AgentConfiguration.instance(args);
     }
 
     private static void printStartupInfo() {
-        config.logger().reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
+        config.logger().reportPhase(AgentConfiguration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
         if (config.getLogDir() != null) {
             config.logger().report("Log directory: " + config.getLogDir(), Logger.MSGTYPE.INFO);
         }

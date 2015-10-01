@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.engine.main;
 
 import com.runtimeverification.rvpredict.IntegrationTest;
 import com.runtimeverification.rvpredict.TestHelper;
+import com.runtimeverification.rvpredict.config.AgentConfiguration;
 import com.runtimeverification.rvpredict.config.Configuration;
 import org.junit.experimental.categories.Category;
 import org.junit.Test;
@@ -78,7 +79,7 @@ public class MainTest {
         args = new ArrayList<>();
         if (agentTest) {
             args.addAll(agentCommand);
-            args.add("-javaagent:" + rvPredictJar + "=" + Main.createAgentArgs(rvArguments));
+            args.add("-javaagent:" + rvPredictJar + "=" + AgentConfiguration.createAgentArgs(rvArguments));
         } else {
             if (Configuration.OS.current() == Configuration.OS.WINDOWS) {
                 args.add(binPath + "rv-predict.bat");

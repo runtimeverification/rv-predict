@@ -42,7 +42,7 @@
                             <appendAssemblyId>false</appendAssemblyId>
                             <archive>
                                 <manifest>
-                                    <mainClass>com.runtimeverification.rvpredict.engine.main.Main</mainClass>
+                                    <mainClass>com.runtimeverification.rvpredict.engine.main.RVPredict</mainClass>
                                     <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                                 </manifest>
                                 <manifestEntries>

@@ -1,11 +1,12 @@
 package com.runtimeverification.rvpredict.trace;
 
-import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.config.PredictionConfiguration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
@@ -16,16 +17,18 @@ import java.util.*;
  * @author TraianSF
  */
 public class LLVMTraceCache extends TraceCache {
-    private BufferedReader traceFile = null;
+    private final File traceFile;
+    private BufferedReader traceReader = null;
     private final Metadata metadata;
-    public LLVMTraceCache(Configuration config, Metadata metadata) {
+    public LLVMTraceCache(PredictionConfiguration config, Metadata metadata) {
         super(config, metadata);
         this.metadata = metadata;
+        traceFile = config.getLLVMTraceFile();
     }
 
     @Override
     public void setup() throws IOException {
-        traceFile = new BufferedReader(new FileReader(config.getLLVMTraceFile()));
+        traceReader = new BufferedReader(new FileReader(traceFile));
     }
 
 
@@ -54,7 +57,7 @@ public class LLVMTraceCache extends TraceCache {
     protected Event getNextEvent() throws IOException {
         String line;
         do {
-            line = traceFile.readLine();
+            line = traceReader.readLine();
         } while (line != null && (!line.startsWith("<gid")));
         if (line == null) {
             return null;

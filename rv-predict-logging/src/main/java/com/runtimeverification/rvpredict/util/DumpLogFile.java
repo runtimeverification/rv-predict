@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.util;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.config.PredictionConfiguration;
 import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
@@ -25,8 +26,8 @@ public class DumpLogFile {
         }
         Path path = Paths.get(args[0]).toAbsolutePath();
         Path directory = path.getParent();
-        Configuration configuration = Configuration.instance(
-                new String[] { "--dir", directory.toString() });
+        PredictionConfiguration configuration = PredictionConfiguration.instance(
+                new String[] { "--predict", directory.toString() });
         Metadata metadata = Metadata.readFrom(configuration.getMetadataPath());
         String file = args[0];
         try (EventReader reader = new EventReader(Paths.get(file))) {

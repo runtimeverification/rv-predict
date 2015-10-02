@@ -56,10 +56,15 @@
     </moduleSets>
     <fileSets>
         <fileSet>
-            <directory>../docs/target/docs/text</directory>
+            <directory>../docs/target/docs/single</directory>
             <outputDirectory>/docs</outputDirectory>
             <excludes>
                 <exclude>.doctrees/**</exclude>
+                <exclude>_sources/**</exclude>
+                <exclude>objects.inv</exclude>
+                <exclude>searchindex.js</exclude>
+                <exclude>search.html</exclude>
+                <exclude>blog.html</exclude>
             </excludes>
         </fileSet>
         <fileSet>

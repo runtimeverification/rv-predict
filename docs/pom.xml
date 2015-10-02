@@ -65,11 +65,11 @@
                         </goals>
                     </execution>
                     <execution>
-                        <id>textdocs</id>
+                        <id>singlehtmldocs</id>
                         <configuration>
                             <sourceDirectory>${basedir}/src/docs</sourceDirectory>
-                            <outputDirectory>target/docs/text</outputDirectory>
-                            <builder>text</builder> 
+                            <outputDirectory>target/docs/single</outputDirectory>
+                            <builder>html</builder>
                             <fork>true</fork> 
                         </configuration>
                         <phase>package</phase>

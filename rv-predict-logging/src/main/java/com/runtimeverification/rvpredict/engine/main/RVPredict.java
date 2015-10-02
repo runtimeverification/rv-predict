@@ -98,24 +98,17 @@ public class RVPredict {
         }
     }
 
-    public static Thread getPredictionThread(Configuration config) {
-        return new Thread("Prediction Thread") {
-            @Override
-            public void run() {
-                executePredictionProcess(config);
-            }
-        };
-    }
-
-    public static Thread getCleanPredictionThread(Configuration config, ILoggingEngine loggingEngine) {
+    public static Thread getPredictionThread(Configuration config, ILoggingEngine loggingEngine) {
         return new Thread("Cleanup Thread") {
             @Override
             public void run() {
-                try {
-                    loggingEngine.finishLogging();
-                } catch (IOException e) {
-                    System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
-                    System.err.println(e.getMessage());
+                if (loggingEngine != null) {
+                    try {
+                        loggingEngine.finishLogging();
+                    } catch (IOException e) {
+                        System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
+                        System.err.println(e.getMessage());
+                    }
                 }
 
                 if (config.isOfflinePrediction()) {
@@ -123,32 +116,28 @@ public class RVPredict {
                         config.logger().reportPhase(Configuration.LOGGING_PHASE_COMPLETED);
                     }
 
-                    executePredictionProcess(config);
+                    Process proc = null;
+                    try {
+                        proc = startPredictionProcess(config);
+                        StreamGobbler errorGobbler = StreamGobbler.spawn(proc.getErrorStream(), System.err);
+                        StreamGobbler outputGobbler = StreamGobbler.spawn(proc.getInputStream(), System.out);
+
+                        proc.waitFor();
+
+                        // the join() here is necessary even if the gobbler
+                        // threads are non-daemon because we are already in the
+                        // shutdown hook
+                        errorGobbler.join();
+                        outputGobbler.join();
+                    } catch (IOException | InterruptedException e) {
+                        if (proc != null) {
+                            proc.destroy();
+                        }
+                        e.printStackTrace();
+                    }
                 }
             }
         };
-    }
-
-    private static void executePredictionProcess(Configuration config) {
-        Process proc = null;
-        try {
-            proc = startPredictionProcess(config);
-            StreamGobbler errorGobbler = StreamGobbler.spawn(proc.getErrorStream(), System.err);
-            StreamGobbler outputGobbler = StreamGobbler.spawn(proc.getInputStream(), System.out);
-
-            proc.waitFor();
-
-            // the join() here is necessary even if the gobbler
-            // threads are non-daemon because we are already in the
-            // shutdown hook
-            errorGobbler.join();
-            outputGobbler.join();
-        } catch (IOException | InterruptedException e) {
-            if (proc != null) {
-                proc.destroy();
-            }
-            e.printStackTrace();
-        }
     }
 
     /**

@@ -45,7 +45,7 @@ public class Agent implements ClassFileTransformer, Constants {
         processAgentArguments(agentArgs);
         if (!config.isLogging()) {
             Runtime.getRuntime().addShutdownHook(
-                    RVPredict.getPredictionThread(config));
+                    RVPredict.getPredictionThread(config, null));
             System.exit(0);
         }
         initLoggingDirectory();
@@ -87,7 +87,7 @@ public class Agent implements ClassFileTransformer, Constants {
         }
         config.logger().report("Finished retransforming preloaded classes.", Logger.MSGTYPE.INFO);
 
-        Runtime.getRuntime().addShutdownHook(RVPredict.getCleanPredictionThread(config, loggingEngine));
+        Runtime.getRuntime().addShutdownHook(RVPredict.getPredictionThread(config, loggingEngine));
     }
 
     /**

@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-ulimit -s `ulimit -H -s`
-
-if "$(dirname "$0")/checkJava"; then
-  java -cp "$(dirname "$0")/../rv-predict.jar" com.runtimeverification.rvpredict.engine.main.GUIMain
-else
-  exit 1
-fi

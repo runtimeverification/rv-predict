@@ -1,7 +1,6 @@
 @ECHO off
 SETLOCAL ENABLEEXTENSIONS
 IF ERRORLEVEL 1 ECHO Unable to enable extensions
-IF NOT DEFINED RV_OPTS SET RV_OPTS=-Xms64m -Xmx1024m -Xss4m
 SET RV_JAR=%~dp0..\rv-predict.jar
-java %RV_OPTS% -cp "%RV_JAR%" com.runtimeverification.rvpredict.engine.main.GUIMain
+java -cp "%RV_JAR%" com.runtimeverification.rvpredict.engine.main.GUIMain
 ENDLOCAL

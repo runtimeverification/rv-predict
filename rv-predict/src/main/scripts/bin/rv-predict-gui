@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 ulimit -s `ulimit -H -s`
-if [ -z "$RV_OPTS" ];
-  then export RV_OPTS="-Xms64m -Xmx1024m -Xss4m"
-fi
 
 if "$(dirname "$0")/checkJava"; then
-  java $RV_OPTS -cp "$(dirname "$0")/../rv-predict.jar" com.runtimeverification.rvpredict.engine.main.GUIMain
+  java -cp "$(dirname "$0")/../rv-predict.jar" com.runtimeverification.rvpredict.engine.main.GUIMain
 else
   exit 1
 fi

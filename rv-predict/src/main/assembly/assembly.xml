@@ -60,6 +60,7 @@
             <outputDirectory>/docs</outputDirectory>
             <excludes>
                 <exclude>.doctrees/**</exclude>
+                <exclude>.buildinfo</exclude>
                 <exclude>_sources/**</exclude>
                 <exclude>objects.inv</exclude>
                 <exclude>searchindex.js</exclude>

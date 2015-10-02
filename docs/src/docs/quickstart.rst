@@ -10,15 +10,16 @@ Installation
 ------------
 
 Download the installer from the `RV-Predict website`_ and execute it
-with ``java -jar <installer>``, following all instructions.
+with ``java -jar <installer>``, following all instructions. Remember
+to add the ``bin`` directory under the RV-Predict installation
+directory to your ``PATH`` environment variable.
 
 Running RV-Predict
 ------------------
 
-RV-Predict's main operation mode is as a Java agent, easing the integration
-with IDEs and build management tools like Maven.  Moreover, it can also be run
-as a standalone application, either as a drop in replacement for the ``java``
-command or for offline trace analysis.
+RV-Predict can be run both from the command line, as a drop in
+replacement for the ``java`` command, and as an agent, to ease
+integration with IDEs and build management tools like Maven.
 
 In the following, we assume ``${rvPath}`` is the installation directory
 for RV-Predict.
@@ -28,6 +29,31 @@ used for controlling the RV-Predict tool, and ``${jvmOptions}`` to refer to
 additional `JVM options`_ which can impact the overall performance
 of the tool, both of them detailed below.
 Note that for simpler examples, these options can be omitted altogether.
+
+On the command line
+~~~~~~~~~~~~~~~~~~~
+
+RV-Predict is invoked as follows:
+
+.. code-block:: none
+
+        rv-predict ${rvOptions} [--] ${jvmOptions} class [args...]
+            (to predict races in a class)
+    or  rv-predict ${rvOptions} [--] ${jvmOptions} -jar jarfile [args...]
+            (to predict races in an executable jar file)
+
+Whenever it might cause confusion, the optional ``--`` can be used as a
+terminator for the RV-Predict options.
+
+The ``rv-predict`` script is itself just a wrapper for the Java command:
+
+.. code-block:: none
+
+    java -jar ${rvPath}/rv-predict.jar
+
+and they can be used interchangeably.  The benefit of the script is that
+if ${rvPath}/bin is added to the environment ``PATH``, ${rvPath} does not need
+to be mentioned at each tool invocation anymore.
 
 As an agent
 ~~~~~~~~~~~
@@ -68,7 +94,7 @@ Integration with IDEs
 `````````````````````
 
 Generic instructions
-  option ``-javaagent`` needs to be added to the VM options of your IDE's
+  Same options as above need to be added to the VM options of your IDE's
   Run/Debug Configurations.
 Eclipse
   From the menu select **Run** -> **Run Configurations** ->
@@ -84,51 +110,30 @@ IntelliJ IDEA
 
   - ``${jvmOptions} -javaagent:${rvPath}/rv-predict.jar="${rvOptions}"``
 
-On the command line
-~~~~~~~~~~~~~~~~~~~
+Using RV-Predict for all Java apps
+``````````````````````````````````
 
-RV-Predict is invoked as follows:
+If one wants to run RV-Predict for any invocation of the ``java`` tool,
+one can simply update the environment variable ``JAVA_TOOL_OPTIONS``
+to include the line
 
-.. code-block:: none
-
-        java ${jvmOptions} -jar ${rvPath}/rv-predict.jar ${rvOptions} [--] [java_options] class [args...]
-            (to predict races in a class)
-    or  java ${jvmOptions} -jar ${rvPath}/rv-predict.jar ${rvOptions} [--] [java_options] -jar jarfile [args...]
-            (to predict races in an executable jar file)
-
-where  ``[java_options]`` are additional `JVM options`_ used for running the
-program.
-
-Whenever it might cause confusion, the optional ``--`` can be used as a
-terminator for the RV-Predict options.
-
-To make it easier to run RV-Predict on the command line, an ``rv-predict`` script is provided
-in the ``${rvPath}/bin`` directory.
+- ``${jvmOptions} -javaagent:${rvPath}/rv-predict.jar="${rvOptions}"``
 
 RV-Predict options
 ------------------
 
 The RV-Predict options are used for controlling the execution of RV-Predict
 either in agent mode or in command-line mode.
-Note that certain options (like ``--predict``) are only meaningful in the
-command-line mode.
-
 The list of common options can be obtained by using the ``-h`` or ``--help``
 option when invoking RV-Predict:
 
 
 .. code-block:: none
 
-    java -jar ${rvPath}/rv-predict.jar -h
+    rv-predict -h
 
     Usage: rv-predict [rv_predict_options] [--] [java_options] <java_command_line>
       Common options (use -h -v for a complete list):
-
-          --offline          Run prediction offline
-
-          --log              Log execution trace without running prediction
-
-          --predict          Run prediction on logs from the given directory
 
           --dir-name         The name of the base directory where RV-Predict
                              creates log directories
@@ -152,17 +157,12 @@ option when invoking RV-Predict:
 
       -h, --help             Print help info
 
+
 Explanation:
 
 -  the ``--offline`` option tells RV-Predict to store the logged execution
    trace on disk and only run the prediction algorithm after the application
    terminates.
--  the ``--log`` option tells RV-Predict to log the execution trace but skip
-   the prediction phase.
--  the ``--predict <dir>`` option tells RV-Predict to skip the logging phase,
-   using the logged trace from the ``<dir>`` directory to run the prediction
-   algorithms. When using this option, specifying the java options and java
-   command line are no longer necessary.
 -  the ``--dir-name <dir>`` option specifies the name of the work directory
    where RV-Predict creates its log directories. For example, if we specify
    ``--dir-name foo`` then the log directory created by RV-Predict would look
@@ -191,12 +191,18 @@ combining the ``-h`` and ``-v`` options:
 
 .. code-block:: none
 
-    java -jar ${rvPath}/rv-predict.jar -h -v
+    rv-predict -h -v
 
 As this list of advanced options is continuously evolving, we only list the
 more common ones here.  Please feel free to contact us in case the explanations
 displayed by invoking the tool are not sufficient:
 
+-  the ``--log`` option tells RV-Predict to log the execution trace but skip
+   the prediction phase.
+-  the ``--predict <dir>`` option tells RV-Predict to skip the logging phase,
+   using the logged trace from the ``<dir>`` directory to run the prediction
+   algorithms. When using this option, all non-`RV-Predict options`_ will
+   be disregarded.
 -  the ``--profile`` option instructs RV-Predict to run in the profiling mode
    which does not perform any deep analysis. It is commonly used to estimate the
    number and distribution of events generated from the instrumented classes.
@@ -252,46 +258,5 @@ running RV-Predict on larger projects; this significantly reduces the
 possibility of false positives due to identity hash code collision.
 
 
-Problems running RV-Predict?
-----------------------------
-
-We list below some possible issues occurring when using RV-Predict and ways to
-address them.  For any unlisted issue you might experience, please use the
-`RV Support Center`_.
-
-Program does not seem to terminate
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Problem
-  The execution of the program takes too long when run using RV-Predict.
-
-Reason
-  It could be due to the overhead required by RV-Predict analysis, or due to a
-  deadlock condition triggered by the logged program.
-
-Advice
-  You can stop the program at any time and run the prediction phase on the
-  already logged trace using the ``--predict`` option with the directory in which
-  the trace was logged (printed by RV-Predict when the logging was started).
-
-Stack overflow error
-~~~~~~~~~~~~~~~~~~~~
-
-Problem
-  I'm getting an unexpected *Stack Overflow* exception and a huge stack
-  trace when running my program with RV-Predict.
-
-Reason
-  The execution trace to be analyzed is collected by RV-Predict using a Java agent,
-  which means that the call stack of the logging module adds on top of the call stack
-  of the original application.
-
-Advice
-  Try increasing the stack size of the logged program by passing the ``-Xss``
-  option to RV-Predict.
-
-
-
 .. _z3: http://z3.codeplex.com
 .. _RV-Predict website: http://runtimeverification.com/predict
-.. _RV Support Center: https://runtimeverification.com/support/

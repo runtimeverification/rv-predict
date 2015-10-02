@@ -147,8 +147,6 @@ public abstract class Configuration implements Constants {
 
     private String logDir;
 
-
-
     // Prediction options
 
     final static String opt_window_size = "--window";

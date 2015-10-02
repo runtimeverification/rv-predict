@@ -44,6 +44,11 @@ public class Agent implements ClassFileTransformer, Constants {
         instrumentation = inst;
         preinitializeClasses();
         processAgentArguments(agentArgs);
+        if (!config.isLogging()) {
+            Runtime.getRuntime().addShutdownHook(
+                    RVPredict.getPredictionThread(config, null));
+            System.exit(0);
+        }
         initLoggingDirectory();
         printStartupInfo();
 

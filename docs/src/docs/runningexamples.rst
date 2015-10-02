@@ -44,19 +44,18 @@ Expected output:
 RV-Predict run
 ~~~~~~~~~~~~~~
 
-To use RV-Predict as an agent, add the ``-javaagent:<rvPath>/rv-predict.jar``
-option at the beginning of the java command line:
+To invoke RV-Predict on the Account class, simply replace
+``java`` by ``rv-predict`` on the command line:
 
 .. code-block:: none
 
-    java -javaagent:<rvPath>/rv-predict.jar -cp examples/examples.jar account.Account
+    rv-predict -cp examples/examples.jar account.Account
 
-To use the non-agent version, add the ``-jar <rvPath>/rv-predict.jar``
-option at the beginning of the java command line:
+To use RV-Predict's agent mode, the similar command would be:
 
 .. code-block:: none
 
-    java -jar <rvPath>/rv-predict.jar -cp examples/examples.jar account.Account
+    java -javaagent:<rvPath>/lib/rv-predict.jar -cp examples/examples.jar account.Account
 
 
 As previously, a complete execution output of the Account class is generated,

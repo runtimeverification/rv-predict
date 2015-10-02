@@ -47,6 +47,8 @@ terminator for the RV-Predict options.
 
 The ``rv-predict`` script is itself just a wrapper for the Java command:
 
+.. code-block:: none
+
     java -jar ${rvPath}/rv-predict.jar
 
 and they can be used interchangeably.  The benefit of the script is that
@@ -92,7 +94,7 @@ Integration with IDEs
 `````````````````````
 
 Generic instructions
-  option ``-javaagent`` needs to be added to the VM options of your IDE's
+  Same options as above need to be added to the VM options of your IDE's
   Run/Debug Configurations.
 Eclipse
   From the menu select **Run** -> **Run Configurations** ->
@@ -115,7 +117,7 @@ If one wants to run RV-Predict for any invocation of the ``java`` tool,
 one can simply update the environment variable ``JAVA_TOOL_OPTIONS``
 to include the line:
 
-    ${jvmOptions} -javaagent:${rvPath}/rv-predict.jar="${rvOptions}"
+  - ``${jvmOptions} -javaagent:${rvPath}/rv-predict.jar="${rvOptions}"``
 
 
 RV-Predict options
@@ -123,7 +125,6 @@ RV-Predict options
 
 The RV-Predict options are used for controlling the execution of RV-Predict
 either in agent mode or in command-line mode.
-
 The list of common options can be obtained by using the ``-h`` or ``--help``
 option when invoking RV-Predict:
 
@@ -201,8 +202,8 @@ displayed by invoking the tool are not sufficient:
    the prediction phase.
 -  the ``--predict <dir>`` option tells RV-Predict to skip the logging phase,
    using the logged trace from the ``<dir>`` directory to run the prediction
-   algorithms. When using this option, specifying the java options and java
-   command line are no longer necessary.
+   algorithms. When using this option, all non-`RV-Predict options`_ will
+   be disregarded.
 -  the ``--profile`` option instructs RV-Predict to run in the profiling mode
    which does not perform any deep analysis. It is commonly used to estimate the
    number and distribution of events generated from the instrumented classes.
@@ -258,46 +259,5 @@ running RV-Predict on larger projects; this significantly reduces the
 possibility of false positives due to identity hash code collision.
 
 
-Problems running RV-Predict?
-----------------------------
-
-We list below some possible issues occurring when using RV-Predict and ways to
-address them.  For any unlisted issue you might experience, please use the
-`RV Support Center`_.
-
-Program does not seem to terminate
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Problem
-  The execution of the program takes too long when run using RV-Predict.
-
-Reason
-  It could be due to the overhead required by RV-Predict analysis, or due to a
-  deadlock condition triggered by the logged program.
-
-Advice
-  You can stop the program at any time and run the prediction phase on the
-  already logged trace using the ``--predict`` option with the directory in which
-  the trace was logged (printed by RV-Predict when the logging was started).
-
-Stack overflow error
-~~~~~~~~~~~~~~~~~~~~
-
-Problem
-  I'm getting an unexpected *Stack Overflow* exception and a huge stack
-  trace when running my program with RV-Predict.
-
-Reason
-  The execution trace to be analyzed is collected by RV-Predict using a Java agent,
-  which means that the call stack of the logging module adds on top of the call stack
-  of the original application.
-
-Advice
-  Try increasing the stack size of the logged program by passing the ``-Xss``
-  (as part of the `JVM options`_) to RV-Predict.
-
-
-
 .. _z3: http://z3.codeplex.com
 .. _RV-Predict website: http://runtimeverification.com/predict
-.. _RV Support Center: https://runtimeverification.com/support/

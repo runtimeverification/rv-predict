@@ -40,4 +40,5 @@ Contents
    :maxdepth: 2
    quickstart
    runningexamples
+   troubleshooting
    blog

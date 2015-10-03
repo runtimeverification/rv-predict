@@ -4,7 +4,7 @@ RUNTIME VERIFICATION SOFTWARE LICENSE
 
 This license is an agreement between Runtime Verification Corporation (RV) and you. It applies to all software provided by RV, as well as to updates, supplements, Internet-based and support services, unless other terms accompany those items. If so, those terms apply.
 
-By using the software, you accept these terms. If you do not accept them, do not use the software. Instead, contact us at contact@runtimeverification.com.
+By using the software, you accept these terms. If you do not accept them, do not use the software. Instead, contact us at [Runtime Verification Support](http://runtimeverification.com/support).
 
 1. OVERVIEW.
   a. Software: The software includes development tools, software programs and documentation.
@@ -25,7 +25,7 @@ By using the software, you accept these terms. If you do not accept them, do not
 
 4. BACKUP COPY. You may make one backup copy of the software. You may use the backup copy only to reinstall the software.
 
-5. SUPPORT SERVICES. RV provides limitted support services for the software. Please check our website and/or contact us at contact@runtimeverification.com.
+5. SUPPORT SERVICES. RV provides limitted support services for the software. Please check our website and/or contact us at [Runtime Verification Support](http://runtimeverification.com/support).
 
 6. APPLICABLE LAW. The laws of the country in which you acquired the software govern the interpretation of this agreement and apply to claims for breaching it, regardless of conflict of laws principles.
 

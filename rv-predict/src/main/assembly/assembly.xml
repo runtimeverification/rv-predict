@@ -81,8 +81,11 @@
             <outputDirectory>/examples</outputDirectory>
             <includes>
                 <include>examples-list.txt</include>
-                <include>src/**</include>
             </includes>
+        </fileSet>
+        <fileSet>
+            <directory>../rv-predict-tests/examples/src/main/java</directory>
+            <outputDirectory>/examples/src</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>${project.build.scriptSourceDirectory}/bin</directory>

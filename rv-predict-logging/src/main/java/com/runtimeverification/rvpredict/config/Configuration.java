@@ -35,9 +35,7 @@ import com.microsoft.z3.Context;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -63,8 +61,7 @@ public class Configuration implements Constants {
 
     private static final String SEPARATOR = System.getProperty("file.separator");
     public static final String JAVA_EXECUTABLE = JavaEnvUtils.getJreExecutable("java");
-    public static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "lib"
-            + SEPARATOR + "rv-predict.jar";
+    public static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "rv-predict.jar";
 
     public static final String TRACE_SUFFIX = "trace.bin";
 
@@ -192,53 +189,12 @@ public class Configuration implements Constants {
         path = new File(path).getAbsolutePath();
         try {
             String decodedPath = URLDecoder.decode(path, "UTF-8");
-            File parent = new File(decodedPath).getParentFile().getParentFile();
+            File parent = new File(decodedPath).getParentFile();
             return parent.getAbsolutePath();
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
         return null;
-    }
-
-    public static Path getNativeLibraryPath() {
-        Path nativePath = Paths.get(getBasePath(), "lib", "native");
-        OS os = OS.current();
-        String arch = System.getProperty("os.arch").equals("x86") ? "32" : "64";
-        switch (os) {
-        case OSX:
-            nativePath = nativePath.resolve("osx");
-            break;
-        case WINDOWS:
-            nativePath = nativePath.resolve("windows" + arch);
-            break;
-        default:
-            nativePath = nativePath.resolve("linux" + arch);
-        }
-        return nativePath;
-    }
-
-    public static Context getZ3Context() {
-        Context context = null;
-        try {
-            String libz3 = OS.current() == OS.WINDOWS ? "libz3" : "z3";
-            // Very dirty hack to add our native libraries dir to the array of system paths
-            // dependent on the implementation of java.lang.ClassLoader (although that seems pretty consistent)
-            //TODO: Might actually be better to alter and recompile the z3 java bindings
-            Field sysPathsField = ClassLoader.class.getDeclaredField("sys_paths");
-            sysPathsField.setAccessible(true);
-            String[] sysPaths = (String[]) sysPathsField.get(null);
-            String oldPath = sysPaths[0];
-            sysPaths[0] = getNativeLibraryPath().toString();
-
-            System.loadLibrary(libz3);
-            context = new Context();
-
-            //restoring the previous system path
-            sysPaths[0] = oldPath;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return context;
     }
 
     private void initIncludeList() {
@@ -345,15 +301,15 @@ public class Configuration implements Constants {
     private String logDir;
 
     public final static String opt_offline = "--offline";
-    @Parameter(names = opt_offline, description = "Run prediction offline", descriptionKey = "1000")
+    @Parameter(names = opt_offline, description = "Run prediction offline", hidden = true, descriptionKey = "1000")
     private boolean offline;
 
     public final static String opt_only_log = "--log";
-    @Parameter(names = opt_only_log, description = "Log execution trace without running prediction", descriptionKey = "1100")
+    @Parameter(names = opt_only_log, description = "Log execution trace without running prediction", hidden = true, descriptionKey = "1100")
     private boolean only_log = false;
 
     public final static String opt_only_predict = "--predict";
-    @Parameter(names = opt_only_predict, description = "Run prediction on logs from the given directory", descriptionKey = "1200")
+    @Parameter(names = opt_only_predict, description = "Run prediction on logs from the given directory", hidden = true, descriptionKey = "1200")
     private String predict_dir = null;
 
     public final static String opt_event_profile = "--profile";
@@ -391,9 +347,11 @@ public class Configuration implements Constants {
     @Parameter(names = opt_suppress, description = "Suppress race reports on the fields that match the given (comma-separated) list of regular expressions", descriptionKey = "2400")
     private String suppress = "";
 
+    /*
     final static String opt_smt_solver = "--solver";
     @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2500")
     public String smt_solver = "z3";
+    */
 
     final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2600")

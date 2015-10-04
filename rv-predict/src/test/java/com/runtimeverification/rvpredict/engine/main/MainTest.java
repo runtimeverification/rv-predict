@@ -49,10 +49,9 @@ public class MainTest {
         return path;
     }
 
-    private static String rvPredictJar = basePath + separator + "lib" + separator + "rv-predict.jar";
+    private static String rvPredictJar = basePath + separator + "rv-predict.jar";
     private static String java = org.apache.tools.ant.util.JavaEnvUtils.getJreExecutable("java");
-    private static List<String> agentCommand = Arrays.asList(new String[]{
-            java, "-ea", "-Xbootclasspath/a:" + rvPredictJar});
+    private static List<String> agentCommand = Arrays.asList(java, "-ea");
 
     private static String binPath = basePath + separator + "bin" + separator;
     private final TestHelper helper;

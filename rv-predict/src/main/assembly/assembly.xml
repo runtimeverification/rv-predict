@@ -8,25 +8,9 @@
         <dependencySet>
             <outputDirectory>/lib/native</outputDirectory>
             <includes>
-                <include>*:exe:*</include>
-            </includes>
-            <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}.${artifact.type}</outputFileNameMapping>
-            <fileMode>775</fileMode>
-        </dependencySet>
-        <dependencySet>
-            <outputDirectory>/lib/native</outputDirectory>
-            <includes>
-                <include>*:uexe:*</include>
-            </includes>
-            <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}</outputFileNameMapping>
-            <fileMode>775</fileMode>
-        </dependencySet>
-        <dependencySet>
-            <outputDirectory>/lib/native</outputDirectory>
-            <includes>
-                <include>*:dll:*</include>
-                <include>*:so:*</include>
-                <include>*:dylib:*</include>
+                <include>*:vcomp100:*:*</include>
+                <include>*:msvcr100:*:*</include>
+                <include>*:msvcp100:*:*</include>
             </includes>
             <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}.${artifact.type}</outputFileNameMapping>
         </dependencySet>
@@ -38,7 +22,7 @@
                 <include>com.runtimeverification.rvpredict:rv-predict-jar</include>
             </includes>
             <binaries>
-                <outputDirectory>/lib</outputDirectory>
+                <outputDirectory>/</outputDirectory>
                 <outputFileNameMapping>rv-predict.jar</outputFileNameMapping>
                 <unpack>false</unpack>
                 <dependencySets>
@@ -72,10 +56,16 @@
     </moduleSets>
     <fileSets>
         <fileSet>
-            <directory>../docs/target/docs/text</directory>
+            <directory>../docs/target/docs/single</directory>
             <outputDirectory>/docs</outputDirectory>
             <excludes>
                 <exclude>.doctrees/**</exclude>
+                <exclude>.buildinfo</exclude>
+                <exclude>_sources/**</exclude>
+                <exclude>objects.inv</exclude>
+                <exclude>searchindex.js</exclude>
+                <exclude>search.html</exclude>
+                <exclude>blog.html</exclude>
             </excludes>
         </fileSet>
         <fileSet>
@@ -91,32 +81,17 @@
             <outputDirectory>/examples</outputDirectory>
             <includes>
                 <include>examples-list.txt</include>
-                <include>src/**</include>
             </includes>
+        </fileSet>
+        <fileSet>
+            <directory>../rv-predict-tests/examples/src/main/java</directory>
+            <outputDirectory>/examples/src</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>${project.build.scriptSourceDirectory}/bin</directory>
             <outputDirectory>/bin</outputDirectory>
-            <filtered>true</filtered>
             <fileMode>775</fileMode>
             <directoryMode>775</directoryMode>
-        </fileSet>
-        <fileSet>
-            <directory>${project.build.scriptSourceDirectory}/lib</directory>
-            <outputDirectory>/lib</outputDirectory>
-            <fileMode>775</fileMode>
-            <directoryMode>775</directoryMode>
-        </fileSet>
-        <fileSet>
-            <directory>${project.build.directory}/lib</directory>
-            <outputDirectory>/lib</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>src/main/resources/</directory>
-            <outputDirectory>/lib</outputDirectory>
-            <includes>
-                <include>images/</include>
-            </includes>
         </fileSet>
     </fileSets>
 </assembly>

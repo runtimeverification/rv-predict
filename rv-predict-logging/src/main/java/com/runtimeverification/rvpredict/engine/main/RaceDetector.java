@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.engine.main;
 
+import java.io.*;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,7 +36,7 @@ public class RaceDetector implements Constants {
 
     public RaceDetector(Configuration config) {
         this.config = config;
-        Context z3Context = Configuration.getZ3Context();
+        Context z3Context = getZ3Context(config);
         this.z3filter = new Z3Filter(z3Context, config.windowSize);
         try {
             /* setup the solver */
@@ -62,31 +64,31 @@ public class RaceDetector implements Constants {
     private Map<String, List<Race>> computeUnknownRaceSuspects(Trace trace) {
         Map<String, List<Race>> sigToRaceCandidates = new HashMap<>();
         trace.eventsByThreadID().forEach((tid1, events1) -> {
-           trace.eventsByThreadID().forEach((tid2, events2) -> {
-               if (tid1 < tid2) {
-                   events1.forEach(e1 -> {
-                      events2.forEach(e2 -> {
-                          if ((e1.isWrite() && e2.isReadOrWrite() ||
-                                  e1.isReadOrWrite() && e2.isWrite())
-                                  && e1.getAddr() == e2.getAddr()
-                                  && !trace.metadata().isVolatile(e1.getAddr())
-                                  && !isThreadSafeLocation(trace, e1.getLocId())
-                                  && !trace.isInsideClassInitializer(e1)
-                                  && !trace.isInsideClassInitializer(e2)) {
-                              Race race = new Race(e1, e2, trace);
-                              if (!config.suppressPattern.matcher(race.getRaceLocationSig())
-                                      .matches()) {
-                                  String raceSig = race.toString();
-                                  if (!sigToRealRace.containsKey(raceSig)) {
-                                      sigToRaceCandidates.computeIfAbsent(raceSig,
-                                              x -> new ArrayList<>()).add(race);
-                                  }
-                              }
-                          }
-                      });
-                   });
-               }
-           });
+            trace.eventsByThreadID().forEach((tid2, events2) -> {
+                if (tid1 < tid2) {
+                    events1.forEach(e1 -> {
+                        events2.forEach(e2 -> {
+                            if ((e1.isWrite() && e2.isReadOrWrite() ||
+                                    e1.isReadOrWrite() && e2.isWrite())
+                                    && e1.getAddr() == e2.getAddr()
+                                    && !trace.metadata().isVolatile(e1.getAddr())
+                                    && !isThreadSafeLocation(trace, e1.getLocId())
+                                    && !trace.isInsideClassInitializer(e1)
+                                    && !trace.isInsideClassInitializer(e2)) {
+                                Race race = new Race(e1, e2, trace);
+                                if (!config.suppressPattern.matcher(race.getRaceLocationSig())
+                                        .matches()) {
+                                    String raceSig = race.toString();
+                                    if (!sigToRealRace.containsKey(raceSig)) {
+                                        sigToRaceCandidates.computeIfAbsent(raceSig,
+                                                x -> new ArrayList<>()).add(race);
+                                    }
+                                }
+                            }
+                        });
+                    });
+                }
+            });
         });
         return sigToRaceCandidates;
     }
@@ -109,5 +111,77 @@ public class RaceDetector implements Constants {
             reports.add(report);
             config.logger().reportRace(report);
         });
+    }
+
+    public static String getNativeLibraryPath() {
+        String nativePath = "/native";
+        Configuration.OS os = Configuration.OS.current();
+        String property = System.getProperty("os.arch");
+        String arch = property.endsWith("86") ? "32" : "64";
+        switch (os) {
+        case OSX:
+            nativePath += "/osx";
+            break;
+        case WINDOWS:
+            nativePath += "/windows" + arch;
+            break;
+        default:
+            nativePath += "/linux" + arch;
+        }
+        return nativePath;
+    }
+
+    public static String getNativeLibraryName() {
+        Configuration.OS os = Configuration.OS.current();
+        switch (os) {
+        case OSX:
+            return "libz3java.dylib";
+        case WINDOWS:
+            return "z3java.dll";
+        default:
+            return "libz3java.so";
+        }
+    }
+
+    public Context getZ3Context(Configuration config) {
+        String nativeLibraryName = getNativeLibraryName();
+        String nativeLibraryPath = getNativeLibraryPath() + "/" + nativeLibraryName;
+        Context context = null;
+        try {
+            String logDir = config.getLogDir();
+            File nativeLibraryFile = new File(logDir, nativeLibraryName);
+            if (!nativeLibraryFile.exists()) {
+                nativeLibraryFile.deleteOnExit();
+                InputStream in = getClass().getResourceAsStream(nativeLibraryPath);
+                BufferedInputStream reader = new BufferedInputStream(in);
+                byte[] buffer = new byte[8192];
+                int read = -1;
+                FileOutputStream fos = new FileOutputStream(nativeLibraryFile);
+                BufferedOutputStream writer = new BufferedOutputStream(fos);
+
+                while ((read = reader.read(buffer)) != -1) {
+                    writer.write(buffer, 0, read);
+                }
+                reader.close();
+                writer.close();
+            }
+
+            // Very dirty hack to add our native libraries dir to the array of system paths
+            // dependent on the implementation of java.lang.ClassLoader (although that seems pretty consistent)
+            //TODO: Might actually be better to alter and recompile the z3 java bindings
+            Field sysPathsField = ClassLoader.class.getDeclaredField("sys_paths");
+            sysPathsField.setAccessible(true);
+            String[] sysPaths = (String[]) sysPathsField.get(null);
+            String oldPath = sysPaths[0];
+            sysPaths[0] = logDir;
+
+            context = new Context();
+
+            //restoring the previous system path
+            sysPaths[0] = oldPath;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return context;
     }
 }

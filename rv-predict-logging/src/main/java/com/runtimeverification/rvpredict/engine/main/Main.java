@@ -48,9 +48,7 @@ public class Main {
     private static void execApplication() {
         List<String> args = new ArrayList<>();
         args.add(JAVA_EXECUTABLE);
-        args.add("-ea");
         args.add("-XX:hashCode=1"); // see #issue 500 identityHashCode collisions
-        args.add("-Dsun.boot.library.path=" + Configuration.getNativeLibraryPath());
         args.add("-javaagent:" + RV_PREDICT_JAR + "=" + createAgentArgs());
         args.addAll(config.getJavaArguments());
 

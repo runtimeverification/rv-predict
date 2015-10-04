@@ -102,11 +102,13 @@ public class RVPredict {
         return new Thread("Cleanup Thread") {
             @Override
             public void run() {
-                try {
-                    loggingEngine.finishLogging();
-                } catch (IOException e) {
-                    System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
-                    System.err.println(e.getMessage());
+                if (loggingEngine != null) {
+                    try {
+                        loggingEngine.finishLogging();
+                    } catch (IOException e) {
+                        System.err.println("Warning: I/O Error while logging the execution. The log might be unreadable.");
+                        System.err.println(e.getMessage());
+                    }
                 }
 
                 if (config.isOfflinePrediction()) {
@@ -152,8 +154,10 @@ public class RVPredict {
         Collections.addAll(appArgs, config.getArgs());
 
         assert config.isOfflinePrediction();
-        appArgs.add(startOfRVArgs, Configuration.opt_only_predict);
-        appArgs.add(startOfRVArgs + 1, config.getLogDir());
+        if (!appArgs.contains(Configuration.opt_only_predict)) {
+            appArgs.add(startOfRVArgs, Configuration.opt_only_predict);
+            appArgs.add(startOfRVArgs + 1, config.getLogDir());
+        }
         return new ProcessBuilder(appArgs).start();
     }
 

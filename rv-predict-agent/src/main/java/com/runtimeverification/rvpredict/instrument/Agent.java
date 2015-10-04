@@ -1,6 +1,5 @@
 package com.runtimeverification.rvpredict.instrument;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -44,7 +43,11 @@ public class Agent implements ClassFileTransformer, Constants {
         instrumentation = inst;
         preinitializeClasses();
         processAgentArguments(agentArgs);
-        checkEnvLibraryPath();
+        if (!config.isLogging()) {
+            Runtime.getRuntime().addShutdownHook(
+                    RVPredict.getPredictionThread(config, null));
+            System.exit(0);
+        }
         initLoggingDirectory();
         printStartupInfo();
 
@@ -116,22 +119,6 @@ public class Agent implements ClassFileTransformer, Constants {
         }
         String[] args = agentArgs.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         config = Configuration.instance(args);
-    }
-
-    private static void checkEnvLibraryPath() {
-        Path nativeLibraryPath = Configuration.getNativeLibraryPath().toAbsolutePath();
-        String envVar = Configuration.OS.current().getLibraryPathEnvVar();
-        String value = System.getenv(envVar);
-        if (value != null) {
-            for (String path : value.split(File.pathSeparator)) {
-                if (Paths.get(path).toAbsolutePath().equals(nativeLibraryPath)) {
-                    return;
-                }
-            }
-        }
-        config.logger().report(String.format("environment variable %s must include path%n%s",
-                envVar, nativeLibraryPath), Logger.MSGTYPE.ERROR);
-        System.exit(1);
     }
 
     private static void printStartupInfo() {

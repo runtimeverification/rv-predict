@@ -85,19 +85,125 @@ const char* RVEventTypes[] = {
   "FINISH_METHOD",
 };
 
-void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
-  SymbolizedStack* frame = SymbolizeCode(id);
-  ReportLocation *location = SymbolizeData(addr);
-  if (location) {
-    const DataInfo &global = location->global;
-    Printf("  Location is global '%s' of size %zu at %p (%s+%p)\n\n",
-           global.name, global.size, global.start,
-           StripModuleName(global.module), global.module_offset);
+#define NUM_BUCKETS 19
+
+template<typename Key,typename Value>
+class threadsafe_lookup_table {
+ private:
+  class bucket_value {
+   public:
+    Key key;
+    Value value;
+    bucket_value(Key key, Value value): key(key), value(value) {}
+    bucket_value(bucket_value& val): key(val.key), value(val.value) {}
+  };
+  class bucket_iterator {
+   public:
+    bucket_value item;
+    bucket_iterator* next;
+    bucket_iterator(bucket_value itm) : item(itm), next(nullptr) {}
+  };
+  class bucket_data {
+   public:
+    bucket_iterator* begin() {return first;}
+    bucket_iterator* end() {return nullptr;}
+
+    bucket_data() : first(nullptr), last(nullptr) {};
+
+    void push_back(bucket_value value) {
+      void *mem = internal_alloc(MBlockMetadata, sizeof(bucket_iterator));
+      bucket_iterator* item = new(mem) bucket_iterator(value);
+      if (first == nullptr) {
+        first = item;
+      } else if (last == nullptr) {
+        last = first->next = item;
+      } else {
+        last = last->next = item;
+      }
+    }
+   private:
+    bucket_iterator* first;
+    bucket_iterator* last;
+  };
+  class bucket_type {
+   private:
+    bucket_data data;
+    mutable StaticSpinMutex mutex;
+
+    bucket_iterator* find_entry_for(Key key) {
+      bucket_iterator* d;
+      for (d = data.begin(); d != data.end(); d = d->next) {
+        if (d->item.key == key) break;
+      }
+      return d;
+    }
+   public:
+    Value value_for(Key key,Value default_value) {
+      SpinMutexLock lock(&mutex);
+      bucket_iterator* found_entry=find_entry_for(key);
+      return (found_entry != data.end())?found_entry->item.value:default_value;
+    }
+    void put_if_absent_mapping(Key& key,Value& value) {
+      SpinMutexLock lock(&mutex);
+      bucket_iterator* found_entry=find_entry_for(key);
+      if (found_entry==data.end()) {
+        bucket_value val(key,value);
+        data.push_back(val);
+      }
+    }
+  };
+
+  bucket_type buckets[NUM_BUCKETS];
+  bucket_type& get_bucket(Key key) {
+    int bucket_index=(u64)key%NUM_BUCKETS;
+    return buckets[bucket_index];
+  }
+ public:
+  Value value_for(Key key, Value default_value=Value()) {
+    return get_bucket(key).value_for(key,default_value);
+  }
+  void put_if_absent(Key key, Value value) {
+    get_bucket(key).put_if_absent_mapping(key,value);
+  }
+};
+
+static threadsafe_lookup_table<u64, u64> idToLocId;
+static atomic_uint64_t nextLocId;
+static threadsafe_lookup_table<u64, u64> addrToVarId;
+static atomic_uint64_t nextVarId;
+static atomic_uint64_t rv_gid;
+
+void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
+  u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
+  u64 locId = idToLocId.value_for(id);
+  if (!locId) {
+    locId = atomic_fetch_add(&nextLocId, 1, memory_order_relaxed) + 1;
+    idToLocId.put_if_absent(id, locId);
+    SymbolizedStack* frame = SymbolizeCode(id);
+    Printf("<locId:%lld;fn:%s;file:%s;line:%d>\n",
+        locId, frame->info.function, frame->info.file , frame->info.line);
+
+    locId = idToLocId.value_for(id);
+  }
+  u64 varId = addrToVarId.value_for(addr);
+  if (!varId) {
+    varId = atomic_fetch_add(&nextVarId, 1, memory_order_relaxed);
+    ReportLocation *location = SymbolizeData(addr);
+    if (location) {
+      const DataInfo &global = location->global;
+      Printf("<varId:%lld;desc:global '%s' of size %zu at %p (%s+%p)>\n",
+          varId, global.name, global.size, global.start,
+          StripModuleName(global.module), global.module_offset);
+      if (type == READ || type == WRITE) {
+      	varId =  -varId & 0xFFFFFFFFL;
+      }
+    }
+    addrToVarId.put_if_absent(addr, varId);
+    varId = addrToVarId.value_for(addr);
   }
 
-  Printf("<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s;fn:%s;file:%s;line:%d>\n",
-         gid, tid + 1, id, addr, val, RVEventTypes[type],
-         frame->info.function, frame->info.file, frame->info.line);
+  Printf("<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s>\n",
+         gid, tid + 1, locId, varId, val, RVEventTypes[type]);
 }
 
 

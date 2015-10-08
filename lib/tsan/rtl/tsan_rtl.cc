@@ -33,7 +33,6 @@
 #define _MM_MALLOC_H_INCLUDED
 #define __MM_MALLOC_H
 #include <emmintrin.h>
-
 typedef __m128i m128;
 #endif
 
@@ -44,9 +43,6 @@ extern "C" void __tsan_resume() {
 }
 
 namespace __tsan {
-
-#define NUM_BUCKETS 19
-
 
 #ifndef SANITIZER_GO
 THREADLOCAL char cur_thread_placeholder[sizeof(ThreadState)] ALIGNED(64);
@@ -88,6 +84,8 @@ const char* RVEventTypes[] = {
   "INVOKE_METHOD",
   "FINISH_METHOD",
 };
+
+#define NUM_BUCKETS 19
 
 template<typename Key,typename Value>
 class threadsafe_lookup_table {

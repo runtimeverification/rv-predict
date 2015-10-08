@@ -651,17 +651,14 @@ enum RVEventType {
   FINISH_METHOD = 16,
 };
 
-static atomic_uint64_t rv_gid;
-
 uptr ALWAYS_INLINE getCallerStackLocation(ThreadState *thr) { return (thr->shadow_stack_pos - 1)[0] - 1; }
 
-void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 val, RVEventType type);
+void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type);
 
 void ALWAYS_INLINE RVLog(RVEventType type, uptr id, uptr addr, u64 val1, u64 val2) {
-  u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
   ThreadState *thr = cur_thread();
   u64 tid = thr->fast_state.tid();
-  RVEventFile(gid, tid + 1, id, addr, val1, type);
+  RVEventFile(tid, id, addr, val1, type);
 }
 
 void ALWAYS_INLINE RVSaveMetaEvent(RVEventType type, uptr locId){

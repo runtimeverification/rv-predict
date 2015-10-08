@@ -93,7 +93,7 @@ void __tsan_vptr_read(void **vptr_p) {
 }
 
 void __tsan_func_entry(void *pc) {
-  RVSaveMetaEvent(INVOKE_METHOD, (uptr)pc);
+  RVSaveMetaEvent(INVOKE_METHOD, (uptr)pc - 1);
   ThreadState* thr = cur_thread();
   FuncEntry(thr, (uptr)pc);
 }

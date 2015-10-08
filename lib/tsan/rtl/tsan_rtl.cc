@@ -108,7 +108,7 @@ class threadsafe_lookup_table {
   class bucket_data {
    public:
     bucket_iterator* begin() {return first;}
-    bucket_iterator* end() {return last;}
+    bucket_iterator* end() {return nullptr;}
 
     bucket_data() : first(nullptr), last(nullptr) {};
 
@@ -173,29 +173,35 @@ static threadsafe_lookup_table<u64, u64> idToLocId;
 static atomic_uint64_t nextLocId;
 static threadsafe_lookup_table<u64, u64> addrToVarId;
 static atomic_uint64_t nextVarId;
+static atomic_uint64_t rv_gid;
 
-void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
+void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
+  u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
   u64 locId = idToLocId.value_for(id);
   if (!locId) {
     locId = atomic_fetch_add(&nextLocId, 1, memory_order_relaxed) + 1;
     idToLocId.put_if_absent(id, locId);
     SymbolizedStack* frame = SymbolizeCode(id);
     Printf("<locId:%lld;fn:%s;file:%s;line:%d>\n",
-        locId, frame->info.function, frame->info.file, frame->info.line);
+        locId, frame->info.function, frame->info.file , frame->info.line);
+
     locId = idToLocId.value_for(id);
   }
   u64 varId = addrToVarId.value_for(addr);
   if (!varId) {
     varId = atomic_fetch_add(&nextVarId, 1, memory_order_relaxed);
-    addrToVarId.put_if_absent(addr, varId);
     ReportLocation *location = SymbolizeData(addr);
     if (location) {
       const DataInfo &global = location->global;
-      Printf("<varId:%lld;desc:Location is global '%s' of size %zu at %p (%s+%p)>\n",
+      Printf("<varId:%lld;desc:global '%s' of size %zu at %p (%s+%p)>\n",
           varId, global.name, global.size, global.start,
           StripModuleName(global.module), global.module_offset);
-      varId = addrToVarId.value_for(addr);
+      if (type == READ || type == WRITE) {
+      	varId =  -varId & 0xFFFFFFFFL;
+      }
     }
+    addrToVarId.put_if_absent(addr, varId);
+    varId = addrToVarId.value_for(addr);
   }
 
   Printf("<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s>\n",

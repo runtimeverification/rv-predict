@@ -132,10 +132,12 @@
         <in/>
         <rvarg key="--llvm-predict" value="$in" />
     </test>
+    <!--
     <test name="llvm.demo.example" module="llvm-tests">
         <in/>
-        <rvarg key="--llvm-predict" value="$in" />
+        <rvarg key="- -llvm-predict" value="$in" />
     </test>
+    -->
     <test name="llvm.account.account" module="llvm-tests">
         <in/>
         <rvarg key="--llvm-predict" value="$in" />

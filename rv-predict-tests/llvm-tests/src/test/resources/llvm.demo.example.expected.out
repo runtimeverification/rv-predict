@@ -1,2 +1,0 @@
-Data race on array element #21676936: \{\{\{(.*)---->  at <id:4865354;fn:Thread1;file:demo\/example.c;line:10>(.*)---->  at <id:4865467;fn:main;file:demo\/example.c;line:18>(.*)\}\}\}
-

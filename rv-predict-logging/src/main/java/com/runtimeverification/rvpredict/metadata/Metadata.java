@@ -70,6 +70,11 @@ public class Metadata implements Serializable {
         return varIdToVarSig[varId];
     }
 
+    public void setVariableSig(int varId, String sig) {
+        assert varIdToVarSig[varId] == null;
+        varIdToVarSig[varId] = sig;
+    }
+
     public int getLocationId(String locSig) {
         Integer locId = locSigToLocId.get(locSig);
         if (locId == null) {
@@ -82,6 +87,11 @@ public class Metadata implements Serializable {
 
     public String getLocationSig(int locId) {
         return locIdToLocSig[locId];
+    }
+
+    public void setLocationSig(int locId, String sig) {
+        assert locIdToLocSig[locId] == null;
+        locIdToLocSig[locId] = sig;
     }
 
     public void addVolatileVariable(String cname, String fname) {

@@ -4,10 +4,9 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.util.Logger;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 /**
@@ -25,7 +24,13 @@ public class LLVMTraceCache extends TraceCache {
 
     @Override
     public void setup() throws IOException {
-        traceFile = new BufferedReader(new FileReader(config.getLLVMTraceFile()));
+        File llvmTraceFile = config.getLLVMTraceFile();
+        if (llvmTraceFile.exists()) {
+            traceFile = new BufferedReader(new FileReader(llvmTraceFile));
+        } else {
+            config.logger().report("LLVM trace file missing.  Assuming input from STDIN.", Logger.MSGTYPE.INFO);
+            traceFile = new BufferedReader(new InputStreamReader(System.in));
+        }
     }
 
 
@@ -55,24 +60,28 @@ public class LLVMTraceCache extends TraceCache {
         String line;
         do {
             line = traceFile.readLine();
-        } while (line != null && (!line.startsWith("<gid")));
-        if (line == null) {
-            return null;
-        }
+            if (line == null) {
+                return null;
+            }
+            if (line.startsWith("<locId")) {
+                parseLocationInfo(line);
+                continue;
+            }
+            if (line.startsWith("<varId")) {
+                parseVarInfo(line);
+                continue;
+            }
+        } while (!line.startsWith("<gid"));
         String[] parts = line.substring(line.indexOf('<') + 1, line.lastIndexOf('>')).split(";");
-        assert parts.length == 9;
+        assert parts.length == 6;
         long gid = parseLong("gid", parts[0]);
         long tid = parseLong("tid", parts[1]);
-        long id = parseLong("id", parts[2]);
+        int locationId = (int) parseLong("id", parts[2]);
         long addr = parseLong("addr", parts[3]);
         long value = parseLong("value", parts[4]);
         EventType type = parseType("type", parts[5]);
-        String fn = parseString("fn", parts[6]);
-        String file = parseString("file", parts[7]);
-        int ln = (int) parseLong("line", parts[8]);
-        System.out.printf("<gid:%d;tid:%d;id:%d;addr:%d;value:%d;type:%s;fn:%s;file:%s;line:%d>%n",
-                gid, tid, id, addr, value, type.toString(), fn, file, ln);
-        int locationId = metadata.getLocationId(String.format("<id:%d;fn:%s;file:%s;line:%d>", id, fn, file, ln));
+        config.logger().debug(String.format("<gid:%d;tid:%d;id:%d;addr:%d;value:%d;type:%s>%n",
+                gid, tid, locationId, addr, value, type.toString()));
         if (type == EventType.START) {
             metadata.addThreadCreationInfo(value, tid, locationId);
         }
@@ -82,6 +91,24 @@ public class LLVMTraceCache extends TraceCache {
         }
         return new Event(gid, tid, locationId, addr, value, type);
 
+    }
+
+    private void parseVarInfo(String line) {
+        String[] parts = line.substring(line.indexOf('<') + 1, line.lastIndexOf('>')).split(";");
+        assert parts.length == 2;
+        int varId = (int) parseLong("varId", parts[0]);
+        String desc = parseString("desc", parts[1]);
+        metadata.setVariableSig(varId, desc);
+    }
+
+    private void parseLocationInfo(String line) {
+        String[] parts = line.substring(line.indexOf('<') + 1, line.lastIndexOf('>')).split(";");
+        assert parts.length == 4;
+        int locId = (int) parseLong("locId", parts[0]);
+        String fn = parseString("fn", parts[1]);
+        String file = parseString("file", parts[2]);
+        int ln = (int) parseLong("line", parts[3]);
+        metadata.setLocationSig(locId, String.format("<fn:%s;file:%s;line:%d>", fn, file, ln));
     }
 
     private EventType parseType(String attr, String part) {

@@ -101,14 +101,28 @@ public class Race {
 
     public String getRaceLocationSig() {
         int idx = e1.getFieldIdOrArrayIndex();
-        return idx < 0 ? trace.metadata().getVariableSig(-idx).replace("/", ".") : "#" + idx;
+        if (idx < 0) {
+            String sig = trace.metadata().getVariableSig(-idx).replace("/", ".");
+            int object = e1.getObjectHashCode();
+            return object == 0 ? "@" + sig : sig;
+        }
+        return "#" + idx;
     }
 
     public String generateRaceReport() {
         String locSig = getRaceLocationSig();
+        switch (locSig.charAt(0)) {
+            case '#':
+                locSig = "array element " + locSig;
+                break;
+            case '@':
+                locSig = locSig.substring(1);
+                break;
+            default:
+                locSig = "field " + locSig;
+        }
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Data race on %s: {{{%n",
-                (locSig.startsWith("#") ? "array element " : "field ") + locSig));
+        sb.append(String.format("Data race on %s: {{{%n", locSig));
 
         if (trace.metadata().getLocationSig(e1.getLocId())
                 .compareTo(trace.metadata().getLocationSig(e2.getLocId())) <= 0) {

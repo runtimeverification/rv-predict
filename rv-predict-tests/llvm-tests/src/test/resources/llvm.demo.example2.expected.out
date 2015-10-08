@@ -1,9 +1,10 @@
-Data race on array element #21680992: \{\{\{(.*)---->  at <id:4867832;fn:MyThread;file:demo\/example2.c;line:12>(.*)---->  at <id:4868019;fn:main;file:demo\/example2.c;line:23>(.*)\}\}\}
+Data race on global 'x' of size 4 at 0x0000014a6820 \(example2\+0x0000014a6820\): \{\{\{(.*)---->  at <fn:MyThread;file:example2.c;line:12>(.*)---->  at <fn:main;file:example2.c;line:23>(.*)\}\}\}
 
-Data race on array element #21680992: \{\{\{(.*)---->  at <id:4867832;fn:MyThread;file:demo\/example2.c;line:12>(.*)---->  at <id:4867991;fn:main;file:demo\/example2.c;line:21>(.*)\}\}\}
+Data race on global 'x' of size 4 at 0x0000014a6820 \(example2\+0x0000014a6820\): \{\{\{(.*)---->  at <fn:MyThread;file:example2.c;line:10>(.*)---->  at <fn:main;file:example2.c;line:23>(.*)\}\}\}
 
-Data race on array element #21680992: \{\{\{(.*)---->  at <id:4867785;fn:MyThread;file:demo\/example2.c;line:10>(.*)---->  at <id:4868019;fn:main;file:demo\/example2.c;line:23>(.*)\}\}\}
+Data race on global 'x' of size 4 at 0x0000014a6820 \(example2\+0x0000014a6820\): \{\{\{(.*)---->  at <fn:MyThread;file:example2.c;line:10>(.*)---->  at <fn:MyThread;file:example2.c;line:12>(.*)\}\}\}
 
-Data race on array element #21680992: \{\{\{(.*)---->  at <id:4867806;fn:MyThread;file:demo\/example2.c;line:10>(.*)---->  at <id:4867832;fn:MyThread;file:demo\/example2.c;line:12>(.*)\}\}\}
+Data race on global 'x' of size 4 at 0x0000014a6820 \(example2\+0x0000014a6820\): \{\{\{(.*)---->  at <fn:MyThread;file:example2.c;line:10>(.*)---->  at <fn:main;file:example2.c;line:23>(.*)\}\}\}
 
+Data race on global 'x' of size 4 at 0x0000014a6820 \(example2\+0x0000014a6820\): \{\{\{(.*)---->  at <fn:MyThread;file:example2.c;line:12>(.*)---->  at <fn:main;file:example2.c;line:21>(.*)\}\}\}
 

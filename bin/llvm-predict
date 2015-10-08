@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-PATH=$PATH:.
-"$@" 2>&1 | "$(dirname "$0")/rv-predict" --llvm-predict stdin

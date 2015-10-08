@@ -25,11 +25,10 @@ public class LLVMTraceCache extends TraceCache {
     @Override
     public void setup() throws IOException {
         File llvmTraceFile = config.getLLVMTraceFile();
-        if (llvmTraceFile.exists()) {
-            traceFile = new BufferedReader(new FileReader(llvmTraceFile));
-        } else {
-            config.logger().report("LLVM trace file missing.  Assuming input from STDIN.", Logger.MSGTYPE.INFO);
+        if ("<stdin>".equals(llvmTraceFile.getName())) {
             traceFile = new BufferedReader(new InputStreamReader(System.in));
+        } else {
+            traceFile = new BufferedReader(new FileReader(llvmTraceFile));
         }
     }
 
@@ -107,6 +106,7 @@ public class LLVMTraceCache extends TraceCache {
         int locId = (int) parseLong("locId", parts[0]);
         String fn = parseString("fn", parts[1]);
         String file = parseString("file", parts[2]);
+        file = file.substring(file.lastIndexOf('/') + 1);
         int ln = (int) parseLong("line", parts[3]);
         metadata.setLocationSig(locId, String.format("<fn:%s;file:%s;line:%d>", fn, file, ln));
     }

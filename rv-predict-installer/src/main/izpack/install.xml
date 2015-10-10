@@ -92,12 +92,6 @@
             <fileset dir="lib/native/windows32" targetdir="${ENV[SystemRoot]}/System32">
                 <os family="windows" arch="x86"/>
             </fileset>
-            <fileset dir="lib/native/windows64" targetdir="${ENV[SystemRoot]}/Sysnative">
-                <os family="windows" arch="x86"/>
-            </fileset>
-            <fileset dir="lib/native/windows32" targetdir="${ENV[SystemRoot]}/SysWOW64">
-                <os family="windows" arch="amd64"/>
-            </fileset>
             <fileset dir="lib/native/windows64" targetdir="${ENV[SystemRoot]}/System32">
                 <os family="windows" arch="amd64"/>
             </fileset>

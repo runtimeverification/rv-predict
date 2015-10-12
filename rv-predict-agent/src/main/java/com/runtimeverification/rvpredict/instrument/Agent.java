@@ -142,8 +142,7 @@ public class Agent implements ClassFileTransformer, Constants {
         String logDir = config.getLogDir();
         if (logDir == null) {
             try {
-                Path baseDir = Paths.get(System.getProperty("java.io.tmpdir"),
-                        config.getBaseDirName());
+                Path baseDir = Paths.get(config.getBaseDirName());
                 if (!Files.exists(baseDir)) {
                     Files.createDirectory(baseDir);
                 }

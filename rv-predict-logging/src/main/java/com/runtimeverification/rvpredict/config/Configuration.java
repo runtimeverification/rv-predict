@@ -31,12 +31,10 @@ package com.runtimeverification.rvpredict.config;
 import com.beust.jcommander.*;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
-import com.microsoft.z3.Context;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -320,9 +318,9 @@ public class Configuration implements Constants {
     @Parameter(names = opt_llvm_predict, description = "Run prediction on given llvm trace", hidden = true, descriptionKey = "1400")
     public String llvm_trace_file = null;
 
-    public final static String opt_dir_name = "--dir-name";
-    @Parameter(names = opt_dir_name, description = "The name of the base directory where RV-Predict creates log directories", descriptionKey = "1500")
-    private String dir_name = "";
+    public final static String opt_base_log_dir = "--base-log-dir";
+    @Parameter(names = opt_base_log_dir, description = "The name of the base directory where RV-Predict creates log directories", descriptionKey = "1500")
+    private String baseLogDir = System.getProperty("java.io.tmpdir");
 
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include",
@@ -624,7 +622,7 @@ public class Configuration implements Constants {
     }
 
     public String getBaseDirName() {
-        return dir_name;
+        return baseLogDir;
     }
 
     public void setLogDir(String logDir) {

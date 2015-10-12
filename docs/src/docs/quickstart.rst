@@ -163,7 +163,7 @@ Explanation:
 -  the ``--offline`` option tells RV-Predict to store the logged execution
    trace on disk and only run the prediction algorithm after the application
    terminates.
--  the ``--base-log-dir <dir>`` option specifies the name of the work directory
+-  the ``--base-log-dir <dir>`` option specifies the name of the directory
    where RV-Predict creates its log directories. The default value for this
    option is the current temporary directory.
 -  the ``--include`` option tells RV-Predict to include the given packages

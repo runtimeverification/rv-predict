@@ -180,7 +180,7 @@ public class RaceDetector implements Constants {
             } catch (UnsatisfiedLinkError error) {
                 if (Configuration.OS.current() == Configuration.OS.WINDOWS) {
                     String binDir = "'" + Configuration.getBasePath() + "\\bin'";
-                    System.err.println("[Error] RV-Predict requires additional dlls from " + binDir + " for prediction.\n" +
+                    System.err.println("[Error]  RV-Predict must be on the PATH for prediction to run.\n" +
                             "\t Please add " + binDir + " to the PATH.");
                     System.exit(1);
                 } else throw error;

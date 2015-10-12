@@ -6,6 +6,34 @@ We list below some possible issues occurring when using RV-Predict and ways to
 address them.  For any unlisted issue you might experience, please use the
 `RV Support Center`_.
 
+
+[Error]  RV-Predict must be on the PATH for prediction to run.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Problem
+  The above error shows up when running RV-Predict
+
+Reason
+  RV-Predict requires some DLLs (part of the Visual C++ redistributable package)
+  to be on the PATH for the prediction process to run.
+
+Advice
+  Follow the advice on screen and add the ``bin`` RV-Predict directory
+  to the PATH.
+
+Problem
+  If the problem persists, although the ``bin`` directory is on the PATH
+
+Reason
+  RV-Predict was installed using a different architecture JVM than the one
+  used for running it.
+
+Advice
+  Reinstall RV-Predict using the same JVM you intend to run it with.
+  If you need using RV-Predict with both 32 bit and  64 bit JVMs,
+  try installing it into different locations, using the two JVMs.
+  Note though that you might need diffrent PATHs to run each.
+
 Program does not seem to terminate
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

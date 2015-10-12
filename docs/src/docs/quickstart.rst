@@ -135,9 +135,9 @@ option when invoking RV-Predict:
     Usage: rv-predict [rv_predict_options] [--] [java_options] <java_command_line>
       Common options (use -h -v for a complete list):
 
-          --dir-name         The name of the base directory where RV-Predict
+          --base-log-dir     The name of the base directory where RV-Predict
                              creates log directories
-                             Default:
+                             Default: /tmp
 
           --include          Comma separated list of packages to include
 
@@ -163,10 +163,9 @@ Explanation:
 -  the ``--offline`` option tells RV-Predict to store the logged execution
    trace on disk and only run the prediction algorithm after the application
    terminates.
--  the ``--dir-name <dir>`` option specifies the name of the work directory
-   where RV-Predict creates its log directories. For example, if we specify
-   ``--dir-name foo`` then the log directory created by RV-Predict would look
-   like ``/tmp/foo/rv-predictXXX`` on a linux system.
+-  the ``--base-log-dir <dir>`` option specifies the name of the work directory
+   where RV-Predict creates its log directories. The default value for this
+   option is the current temporary directory.
 -  the ``--include`` option tells RV-Predict to include the given packages
    in instrumentation; this option takes precedence over the following
    ``--exclude`` option.

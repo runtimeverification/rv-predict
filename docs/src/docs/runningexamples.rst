@@ -3,16 +3,18 @@ Running Examples
 
 RV-Predict comes with a suite of small benchmark examples which can be
 found in ``examples/examples.jar``, whose source code is in
-``examples/src``.  The file ``examples/examples-list.txt``
-lists all runnable classes in ``examples/examples.jar``. Below we only
-discuss the example ``account.Account``, but all of them are executed
-the same way. We strongly encourage you to also check out our blog
-article `Detecting popular data races in Java using RV-Predict`_, execute
-all those examples and try to understand the data races occurring in each
+``examples/src``.  Please consult ``examples/README.md`` for more details.
+We strongly encourage you to also check out our blog article
+`Detecting popular data races in Java using RV-Predict`_, execute
+all those examples (they are included in ``examples.jar``)
+and try to understand the data races occurring in each
 and how RV-Predict detects and reports them.
+Below we only discuss the example ``account.Account``.
 
 account.Account
 ---------------
+
+For brevety, assume we are in the ``examples`` directory.
 
 Normal run
 ~~~~~~~~~~
@@ -23,7 +25,7 @@ Running command:
 
 .. code-block:: none
 
-    java -cp examples/examples.jar account.Account
+    java -cp examples.jar account.Account
 
 Expected output:
 
@@ -49,13 +51,13 @@ To invoke RV-Predict on the Account class, simply replace
 
 .. code-block:: none
 
-    rv-predict -cp examples/examples.jar account.Account
+    rv-predict -cp examples.jar account.Account
 
 To use RV-Predict's agent mode, the similar command would be:
 
 .. code-block:: none
 
-    java -javaagent:<rvPath>/lib/rv-predict.jar -cp examples/examples.jar account.Account
+    java -javaagent:../rv-predict.jar -cp examples.jar account.Account
 
 
 As previously, a complete execution output of the Account class is generated,

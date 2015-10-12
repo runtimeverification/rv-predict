@@ -80,7 +80,7 @@
             <directory>../rv-predict-tests/examples</directory>
             <outputDirectory>/examples</outputDirectory>
             <includes>
-                <include>examples-list.txt</include>
+                <include>README.md</include>
             </includes>
         </fileSet>
         <fileSet>

@@ -66,6 +66,20 @@
             <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>
             <file src="rv-predict.jar" targetdir="$INSTALL_PATH"/>
             <file src="docs" targetdir="$INSTALL_PATH"/>
+            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
+                <include name="*.bat" />
+                <os family="windows"/>
+            </fileset>
+            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
+                <exclude name="*.bat" />
+                <os family="unix"/>
+            </fileset>
+            <fileset dir="lib/native/windows32" targetdir="$INSTALL_PATH/bin">
+                <os family="windows" arch="x86"/>
+            </fileset>
+            <fileset dir="lib/native/windows64" targetdir="$INSTALL_PATH/bin">
+                <os family="windows" arch="amd64"/>
+            </fileset>
         </pack>
         <pack name="Examples" required="no" installGroups="New Application" >
             <description>Example Java programs illustrating RV-Predict's features.</description>
@@ -78,15 +92,8 @@
             </fileset>
             <executable targetfile="$INSTALL_PATH/bin/rv-predict" keep="true" stage="never" condition="!izpack.windowsinstall"/>
             <executable targetfile="$INSTALL_PATH/bin/checkJava" keep="true" stage="never" condition="!izpack.windowsinstall"/>
-            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
-                <include name="*.bat" />
-                <os family="windows"/>
-            </fileset>
-            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
-                <exclude name="*.bat" />
-                <os family="unix"/>
-            </fileset>
-         </pack>
+        </pack>
+        <!--
         <pack name="MSVC++ redistributable package" required="yes" installGroups="New Application" condition="izpack.windowsinstall">
             <description>Microsoft Visual C++ dependent dlls required (on Windows) by the z3java library.</description>
             <fileset dir="lib/native/windows32" targetdir="${ENV[SystemRoot]}/System32">
@@ -96,6 +103,7 @@
                 <os family="windows" arch="amd64"/>
             </fileset>
         </pack>
+        -->
     </packs>
 
     <!-- The native libraries to add. This is required for creating shortcuts on Windows -->

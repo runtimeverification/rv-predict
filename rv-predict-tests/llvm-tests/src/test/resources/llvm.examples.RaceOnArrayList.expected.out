@@ -1,0 +1,1 @@
+Data race on global 'v' of size 24 at 0x00000152de00 \(RaceOnArrayList+0x00000152de10\): \{\{\{(.*)at <fn:thread1\(\);file:RaceOnArrayList.cpp;line:56>(.*)at <fn:thread2\(\);file:RaceOnArrayList.cpp;line:60>(.*)\}\}\}

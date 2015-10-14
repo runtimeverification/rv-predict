@@ -1,0 +1,1 @@
+Data race on global 'condition' of size 1 at 0x00000152cec0 \(BrokenSpinningLoop\+0x00000152cec0\): \{\{\{(.*)---->  at <fn:thread1\(\);file:BrokenSpinningLoop.cpp;line:59>(.*)---->  at <fn:thread2\(\);file:BrokenSpinningLoop.cpp;line:63>(.*)\}\}\}

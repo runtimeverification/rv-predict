@@ -56,9 +56,16 @@ public class RaceDetector implements Constants {
 
     private boolean isThreadSafeLocation(Trace trace, int locId) {
         String locationSig = trace.metadata().getLocationSig(locId);
-        return locationSig.startsWith("java.util.concurrent")
-            || locationSig.startsWith("java.util.stream")
-            || locationSig.substring(locationSig.lastIndexOf('.')).startsWith(".class$");
+        if (locationSig.startsWith("java.util.concurrent")
+            || locationSig.startsWith("java.util.stream")) {
+            return true;
+        } else {
+            int index = locationSig.lastIndexOf('.');
+            if (index != -1) {
+                return locationSig.substring(index).startsWith(".class$");
+            }
+        }
+        return false;
     }
 
     private Map<String, List<Race>> computeUnknownRaceSuspects(Trace trace) {

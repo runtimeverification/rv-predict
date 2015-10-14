@@ -1,0 +1,2 @@
+Data race on global 'sharedVar' of size 4 at 0x00000152be00 \(SimpleRace+0x00000152be00\): \{\{\{(.*)---->  at <fn:thread1\(\);file:SimpleRace.cpp;line:55>(.*)---->  at <fn:thread2\(\);file:SimpleRace.cpp;line:59>(.*)\}\}\}
+

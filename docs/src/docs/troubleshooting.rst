@@ -7,11 +7,11 @@ address them.  For any unlisted issue you might experience, please use the
 `RV Support Center`_.
 
 
-[Error]  RV-Predict must be on the PATH for prediction to run.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[Error]  RV-Predict must be on the PATH for prediction to run
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Problem
-  The above error shows up when running RV-Predict
+  The above error shows up when running RV-Predict on Windows
 
 Reason
   RV-Predict requires some DLLs (part of the Visual C++ redistributable package)

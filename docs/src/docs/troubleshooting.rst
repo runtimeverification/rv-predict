@@ -23,7 +23,7 @@ Advice
   and add the ``bin`` RV-Predict directory to the ``PATH``.
 
 Problem
-  If the problem persists, although the ``bin`` directory is on the ``PATH``.
+  The above problem persists, although the ``bin`` directory is on the ``PATH``.
 
 Reason
   RV-Predict was installed using a different architecture JVM than the one

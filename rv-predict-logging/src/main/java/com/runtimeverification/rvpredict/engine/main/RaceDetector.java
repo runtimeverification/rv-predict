@@ -14,6 +14,7 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.trace.maps.ThreadIDToObjectMap;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.violation.Race;
 
@@ -168,18 +169,26 @@ public class RaceDetector implements Constants {
 
             // Very dirty hack to add our native libraries dir to the array of system paths
             // dependent on the implementation of java.lang.ClassLoader (although that seems pretty consistent)
-            //TODO: Might actually be better to alter and recompile the z3 java bindings
             Field sysPathsField = ClassLoader.class.getDeclaredField("sys_paths");
             sysPathsField.setAccessible(true);
             String[] sysPaths = (String[]) sysPathsField.get(null);
             String oldPath = sysPaths[0];
             sysPaths[0] = logDir;
 
-            context = new Context();
+            try {
+                context = new Context();
+            } catch (UnsatisfiedLinkError error) {
+                if (Configuration.OS.current() == Configuration.OS.WINDOWS) {
+                    String binDir = "'" + Configuration.getBasePath() + "\\bin'";
+                    System.err.println("[Error]  RV-Predict must be on the PATH for prediction to run.\n" +
+                            "\t Please add " + binDir + " to the PATH.");
+                    System.exit(1);
+                } else throw error;
+            }
 
             //restoring the previous system path
             sysPaths[0] = oldPath;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new RuntimeException(e);
         }
         return context;

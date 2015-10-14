@@ -64,7 +64,7 @@
             <plugin>
                 <groupId>org.codehaus.izpack</groupId>
                 <artifactId>izpack-maven-plugin</artifactId>
-                <version>5.0.0-rc2</version>
+                <version>5.0.5</version>
                 <extensions>true</extensions>
                 <configuration>
                     <baseDir>${staging.dir.app}</baseDir>

@@ -11,7 +11,7 @@ address them.  For any unlisted issue you might experience, please use the
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Problem
-  The above error shows up when running RV-Predict on Windows
+  The above error shows up when running RV-Predict on Windows.
 
 Reason
   The Windows version of RV-Predict requires some DLLs (part of the

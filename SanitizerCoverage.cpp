@@ -33,6 +33,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
@@ -341,9 +342,9 @@ void SanitizerCoverageModule::InjectCoverageForIndirectCalls(
         *F.getParent(), Ty, false, GlobalValue::PrivateLinkage,
         Constant::getNullValue(Ty), "__sancov_gen_callee_cache");
     CalleeCache->setAlignment(kCacheAlignment);
-    IRB.CreateCall2(SanCovIndirCallFunction,
-                    IRB.CreatePointerCast(Callee, IntptrTy),
-                    IRB.CreatePointerCast(CalleeCache, IntptrTy));
+    IRB.CreateCall(SanCovIndirCallFunction,
+                   {IRB.CreatePointerCast(Callee, IntptrTy),
+                    IRB.CreatePointerCast(CalleeCache, IntptrTy)});
   }
 }
 
@@ -357,11 +358,11 @@ void SanitizerCoverageModule::InjectTraceForCmp(
       if (!A0->getType()->isIntegerTy()) continue;
       uint64_t TypeSize = DL->getTypeStoreSizeInBits(A0->getType());
       // __sanitizer_cov_trace_cmp((type_size << 32) | predicate, A0, A1);
-      IRB.CreateCall3(
+      IRB.CreateCall(
           SanCovTraceCmpFunction,
-          ConstantInt::get(Int64Ty, (TypeSize << 32) | ICMP->getPredicate()),
-          IRB.CreateIntCast(A0, Int64Ty, true),
-          IRB.CreateIntCast(A1, Int64Ty, true));
+          {ConstantInt::get(Int64Ty, (TypeSize << 32) | ICMP->getPredicate()),
+           IRB.CreateIntCast(A0, Int64Ty, true),
+           IRB.CreateIntCast(A1, Int64Ty, true)});
     }
   }
 }
@@ -374,6 +375,13 @@ void SanitizerCoverageModule::SetNoSanitizeMetadata(Instruction *I) {
 
 void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
                                                     bool UseCalls) {
+  // Don't insert coverage for unreachable blocks: we will never call
+  // __sanitizer_cov() for them, so counting them in
+  // NumberOfInstrumentedBlocks() might complicate calculation of code coverage
+  // percentage. Also, unreachable instructions frequently have no debug
+  // locations.
+  if (isa<UnreachableInst>(BB.getTerminator()))
+    return;
   BasicBlock::iterator IP = BB.getFirstInsertionPt(), BE = BB.end();
   // Skip static allocas at the top of the entry block so they don't become
   // dynamic when we split the block.  If we used our optimized stack layout,
@@ -385,9 +393,14 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
   }
 
   bool IsEntryBB = &BB == &F.getEntryBlock();
-  DebugLoc EntryLoc = IsEntryBB && IP->getDebugLoc()
-                          ? IP->getDebugLoc().getFnDebugLoc()
-                          : IP->getDebugLoc();
+  DebugLoc EntryLoc;
+  if (IsEntryBB) {
+    if (auto SP = getDISubprogram(&F))
+      EntryLoc = DebugLoc::get(SP->getScopeLine(), 0, SP);
+  } else {
+    EntryLoc = IP->getDebugLoc();
+  }
+
   IRBuilder<> IRB(IP);
   IRB.SetCurrentDebugLocation(EntryLoc);
   SmallVector<Value *, 1> Indices;
@@ -410,7 +423,7 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     IRB.SetCurrentDebugLocation(EntryLoc);
     // __sanitizer_cov gets the PC of the instruction using GET_CALLER_PC.
     IRB.CreateCall(SanCovFunction, GuardP);
-    IRB.CreateCall(EmptyAsm);  // Avoids callback merge.
+    IRB.CreateCall(EmptyAsm, {}); // Avoids callback merge.
   }
 
   if (Options.Use8bitCounters) {

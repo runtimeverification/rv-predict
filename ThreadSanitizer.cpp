@@ -399,7 +399,7 @@ bool ThreadSanitizer::runOnFunction(Function &F) {
     IRB.CreateCall(TsanFuncEntry, ReturnAddress);
     for (auto RetInst : RetVec) {
       IRBuilder<> IRBRet(RetInst);
-      IRBRet.CreateCall(TsanFuncExit);
+      IRBRet.CreateCall(TsanFuncExit, {});
     }
     Res = true;
   }
@@ -430,9 +430,9 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
     if (isVtableAccess(I)) {
       DEBUG(dbgs() << "  VPTR : " << *I << "\n");
       // Call TsanVptrUpdate.
-      IRB.CreateCall2(TsanVptrUpdate,
-                      IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                      IRB.CreatePointerCast(StoredValue, IRB.getInt8PtrTy()));
+      IRB.CreateCall(TsanVptrUpdate,
+                     {IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
+                      IRB.CreatePointerCast(StoredValue, IRB.getInt8PtrTy())});
       NumInstrumentedVtableWrites++;
       return true;
     }
@@ -490,16 +490,18 @@ static ConstantInt *createOrdering(IRBuilder<> *IRB, AtomicOrdering ord) {
 bool ThreadSanitizer::instrumentMemIntrinsic(Instruction *I) {
   IRBuilder<> IRB(I);
   if (MemSetInst *M = dyn_cast<MemSetInst>(I)) {
-    IRB.CreateCall3(MemsetFn,
-      IRB.CreatePointerCast(M->getArgOperand(0), IRB.getInt8PtrTy()),
-      IRB.CreateIntCast(M->getArgOperand(1), IRB.getInt32Ty(), false),
-      IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false));
+    IRB.CreateCall(
+        MemsetFn,
+        {IRB.CreatePointerCast(M->getArgOperand(0), IRB.getInt8PtrTy()),
+         IRB.CreateIntCast(M->getArgOperand(1), IRB.getInt32Ty(), false),
+         IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
     I->eraseFromParent();
   } else if (MemTransferInst *M = dyn_cast<MemTransferInst>(I)) {
-    IRB.CreateCall3(isa<MemCpyInst>(M) ? MemcpyFn : MemmoveFn,
-      IRB.CreatePointerCast(M->getArgOperand(0), IRB.getInt8PtrTy()),
-      IRB.CreatePointerCast(M->getArgOperand(1), IRB.getInt8PtrTy()),
-      IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false));
+    IRB.CreateCall(
+        isa<MemCpyInst>(M) ? MemcpyFn : MemmoveFn,
+        {IRB.CreatePointerCast(M->getArgOperand(0), IRB.getInt8PtrTy()),
+         IRB.CreatePointerCast(M->getArgOperand(1), IRB.getInt8PtrTy()),
+         IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
     I->eraseFromParent();
   }
   return false;

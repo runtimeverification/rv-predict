@@ -67,12 +67,17 @@ if(NOT MSVC)
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON --driver-mode=g++)
 endif()
 
+if(ANDROID)
+  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -pie)
+endif()
+
 set(SANITIZER_TEST_LINK_LIBS)
 append_list_if(ANDROID log SANITIZER_TEST_LINK_LIBS)
 # NDK r10 requires -latomic almost always.
 append_list_if(ANDROID atomic SANITIZER_TEST_LINK_LIBS)
 
 append_list_if(COMPILER_RT_HAS_LIBDL -ldl SANITIZER_TEST_LINK_FLAGS_COMMON)
+append_list_if(COMPILER_RT_HAS_LIBRT -lrt SANITIZER_TEST_LINK_FLAGS_COMMON)
 append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread SANITIZER_TEST_LINK_FLAGS_COMMON)
 # x86_64 FreeBSD 9.2 additionally requires libc++ to build the tests. Also,
 # 'libm' shall be specified explicitly to build i386 tests.

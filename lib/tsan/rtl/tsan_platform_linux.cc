@@ -202,8 +202,8 @@ static void MapRodata() {
 
 void InitializeShadowMemory() {
   // Map memory shadow.
-  uptr shadow = (uptr)MmapFixedNoReserve(kShadowBeg,
-    kShadowEnd - kShadowBeg);
+  uptr shadow =
+      (uptr)MmapFixedNoReserve(kShadowBeg, kShadowEnd - kShadowBeg, "shadow");
   if (shadow != kShadowBeg) {
     Printf("FATAL: ThreadSanitizer can not mmap the shadow memory\n");
     Printf("FATAL: Make sure to compile with -fPIE and "
@@ -224,6 +224,10 @@ void InitializeShadowMemory() {
 #endif
   NoHugePagesInRegion(MemToShadow(kMadviseRangeBeg),
                       kMadviseRangeSize * kShadowMultiplier);
+  // Meta shadow is compressing and we don't flush it,
+  // so it makes sense to mark it as NOHUGEPAGE to not over-allocate memory.
+  // On one program it reduces memory consumption from 5GB to 2.5GB.
+  NoHugePagesInRegion(kMetaShadowBeg, kMetaShadowEnd - kMetaShadowBeg);
   if (common_flags()->use_madv_dontdump)
     DontDumpShadowMemory(kShadowBeg, kShadowEnd - kShadowBeg);
   DPrintf("memory shadow: %zx-%zx (%zuGB)\n",
@@ -232,7 +236,8 @@ void InitializeShadowMemory() {
 
   // Map meta shadow.
   uptr meta_size = kMetaShadowEnd - kMetaShadowBeg;
-  uptr meta = (uptr)MmapFixedNoReserve(kMetaShadowBeg, meta_size);
+  uptr meta =
+      (uptr)MmapFixedNoReserve(kMetaShadowBeg, meta_size, "meta shadow");
   if (meta != kMetaShadowBeg) {
     Printf("FATAL: ThreadSanitizer can not mmap the shadow memory\n");
     Printf("FATAL: Make sure to compile with -fPIE and "

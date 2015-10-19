@@ -19,6 +19,7 @@ check_cxx_compiler_flag(-fno-exceptions      COMPILER_RT_HAS_FNO_EXCEPTIONS_FLAG
 check_cxx_compiler_flag(-fomit-frame-pointer COMPILER_RT_HAS_FOMIT_FRAME_POINTER_FLAG)
 check_cxx_compiler_flag(-funwind-tables      COMPILER_RT_HAS_FUNWIND_TABLES_FLAG)
 check_cxx_compiler_flag(-fno-stack-protector COMPILER_RT_HAS_FNO_STACK_PROTECTOR_FLAG)
+check_cxx_compiler_flag(-fno-sanitize=safe-stack COMPILER_RT_HAS_FNO_SANITIZE_SAFE_STACK_FLAG)
 check_cxx_compiler_flag(-fvisibility=hidden  COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG)
 check_cxx_compiler_flag(-fno-rtti            COMPILER_RT_HAS_FNO_RTTI_FLAG)
 check_cxx_compiler_flag(-ffreestanding       COMPILER_RT_HAS_FFREESTANDING_FLAG)
@@ -62,6 +63,7 @@ check_symbol_exists(__func__ "" COMPILER_RT_HAS_FUNC_SYMBOL)
 # Libraries.
 check_library_exists(c printf "" COMPILER_RT_HAS_LIBC)
 check_library_exists(dl dlopen "" COMPILER_RT_HAS_LIBDL)
+check_library_exists(rt shm_open "" COMPILER_RT_HAS_LIBRT)
 check_library_exists(m pow "" COMPILER_RT_HAS_LIBM)
 check_library_exists(pthread pthread_create "" COMPILER_RT_HAS_LIBPTHREAD)
 check_library_exists(stdc++ __cxa_throw "" COMPILER_RT_HAS_LIBSTDCXX)
@@ -118,7 +120,8 @@ macro(test_target_arch arch def)
   endif()
   if(${CAN_TARGET_${arch}})
     list(APPEND COMPILER_RT_SUPPORTED_ARCH ${arch})
-  elseif("${COMPILER_RT_TEST_TARGET_ARCH}" MATCHES "${arch}")
+  elseif("${COMPILER_RT_TEST_TARGET_ARCH}" MATCHES "${arch}" AND
+         COMPILER_RT_HAS_EXPLICIT_TEST_TARGET_TRIPLE)
     # Bail out if we cannot target the architecture we plan to test.
     message(FATAL_ERROR "Cannot compile for ${arch}:\n${TARGET_${arch}_OUTPUT}")
   endif()
@@ -179,7 +182,11 @@ else()
       test_target_arch(i686 __i686__ "-m32")
       test_target_arch(i386 __i386__ "-m32")
     else()
-      test_target_arch(i386 "" "")
+      if (CMAKE_SIZEOF_VOID_P EQUAL 4)
+        test_target_arch(i386 "" "")
+      else()
+        test_target_arch(x86_64 "" "")
+      endif()
     endif()
   elseif("${LLVM_NATIVE_ARCH}" STREQUAL "PowerPC")
     TEST_BIG_ENDIAN(HOST_IS_BIG_ENDIAN)
@@ -196,11 +203,11 @@ else()
     # FIXME: Ideally, we would build the N32 library too.
     if("${COMPILER_RT_TEST_TARGET_ARCH}" MATCHES "mipsel|mips64el")
       # regex for mipsel, mips64el
-      test_target_arch(mipsel "" "-mips32r2")
-      test_target_arch(mips64el "" "-mips64r2 -mabi=n64")
+      test_target_arch(mipsel "" "-mips32r2" "--target=mipsel-linux-gnu")
+      test_target_arch(mips64el "" "-mips64r2" "-mabi=n64")
     else()
-      test_target_arch(mips "" "-mips32r2")
-      test_target_arch(mips64 "" "-mips64r2 -mabi=n64")
+      test_target_arch(mips "" "-mips32r2" "--target=mips-linux-gnu")
+      test_target_arch(mips64 "" "-mips64r2" "-mabi=n64")
     endif()
   elseif("${COMPILER_RT_TEST_TARGET_ARCH}" MATCHES "arm")
     test_target_arch(arm "" "-march=armv7-a")
@@ -226,6 +233,7 @@ function(filter_available_targets out_var)
   set(${out_var} ${archs} PARENT_SCOPE)
 endfunction()
 
+# Returns a list of architecture specific target cflags in @out_var list.
 function(get_target_flags_for_arch arch out_var)
   list(FIND COMPILER_RT_SUPPORTED_ARCH ${arch} ARCH_INDEX)
   if(ARCH_INDEX EQUAL -1)
@@ -254,6 +262,7 @@ filter_available_targets(PROFILE_SUPPORTED_ARCH x86_64 i386 i686 arm mips mips64
 filter_available_targets(TSAN_SUPPORTED_ARCH x86_64 mips64 mips64el)
 filter_available_targets(UBSAN_SUPPORTED_ARCH x86_64 i386 i686 arm aarch64 mips
   mipsel mips64 mips64el powerpc64 powerpc64le)
+filter_available_targets(SAFESTACK_SUPPORTED_ARCH x86_64 i386 i686)
 
 if(ANDROID)
   set(OS_NAME "Android")
@@ -263,13 +272,21 @@ endif()
 
 if (SANITIZER_COMMON_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
     (OS_NAME MATCHES "Android|Darwin|Linux|FreeBSD" OR
-    (OS_NAME MATCHES "Windows" AND MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 4)))
+    (OS_NAME MATCHES "Windows" AND MSVC)))
   set(COMPILER_RT_HAS_SANITIZER_COMMON TRUE)
 else()
   set(COMPILER_RT_HAS_SANITIZER_COMMON FALSE)
 endif()
 
-if (COMPILER_RT_HAS_SANITIZER_COMMON AND ASAN_SUPPORTED_ARCH)
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND
+    (NOT OS_NAME MATCHES "Windows" OR CMAKE_SIZEOF_VOID_P EQUAL 4))
+  set(COMPILER_RT_HAS_INTERCEPTION TRUE)
+else()
+  set(COMPILER_RT_HAS_INTERCEPTION FALSE)
+endif()
+
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND ASAN_SUPPORTED_ARCH AND
+    (NOT OS_NAME MATCHES "Windows" OR CMAKE_SIZEOF_VOID_P EQUAL 4))
   set(COMPILER_RT_HAS_ASAN TRUE)
 else()
   set(COMPILER_RT_HAS_ASAN FALSE)
@@ -291,7 +308,7 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND LSAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Darwin|Linux|FreeBSD")
+    OS_NAME MATCHES "Linux|FreeBSD")
   set(COMPILER_RT_HAS_LSAN TRUE)
 else()
   set(COMPILER_RT_HAS_LSAN FALSE)
@@ -319,7 +336,7 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND UBSAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Darwin|Linux|FreeBSD")
+    OS_NAME MATCHES "Darwin|Linux|FreeBSD|Windows")
   set(COMPILER_RT_HAS_UBSAN TRUE)
 else()
   set(COMPILER_RT_HAS_UBSAN FALSE)
@@ -331,4 +348,11 @@ endif()
 # true on Mips, so we make it false here.
 if("${LLVM_NATIVE_ARCH}" STREQUAL "Mips")
   set(COMPILER_RT_HAS_MSSE3_FLAG FALSE)
+endif()
+
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND SAFESTACK_SUPPORTED_ARCH AND
+    OS_NAME MATCHES "Darwin|Linux|FreeBSD")
+  set(COMPILER_RT_HAS_SAFESTACK TRUE)
+else()
+  set(COMPILER_RT_HAS_SAFESTACK FALSE)
 endif()

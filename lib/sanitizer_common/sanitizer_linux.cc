@@ -110,7 +110,7 @@ namespace __sanitizer {
 
 // --------------- sanitizer_libc.h
 uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
-                   u64 offset) {
+                   OFF_T offset) {
 #if SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
   return internal_syscall(SYSCALL(mmap), (uptr)addr, length, prot, flags, fd,
                           offset);
@@ -706,45 +706,30 @@ uptr GetPageSize() {
 #endif
 }
 
-static char proc_self_exe_cache_str[kMaxPathLength];
-static uptr proc_self_exe_cache_len = 0;
-
 uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {
-  if (proc_self_exe_cache_len > 0) {
-    // If available, use the cached module name.
-    uptr module_name_len =
-        internal_snprintf(buf, buf_len, "%s", proc_self_exe_cache_str);
-    CHECK_LT(module_name_len, buf_len);
-    return module_name_len;
-  }
 #if SANITIZER_FREEBSD
-  const int Mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+  const int Mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+  const char *default_module_name = "kern.proc.pathname";
   size_t Size = buf_len;
-  bool IsErr = (sysctl(Mib, 4, buf, &Size, NULL, 0) != 0);
+  bool IsErr = (sysctl(Mib, ARRAY_SIZE(Mib), buf, &Size, NULL, 0) != 0);
   int readlink_error = IsErr ? errno : 0;
   uptr module_name_len = Size;
 #else
+  const char *default_module_name = "/proc/self/exe";
   uptr module_name_len = internal_readlink(
-      "/proc/self/exe", buf, buf_len);
+      default_module_name, buf, buf_len);
   int readlink_error;
   bool IsErr = internal_iserror(module_name_len, &readlink_error);
 #endif
   if (IsErr) {
-    // We can't read /proc/self/exe for some reason, assume the name of the
-    // binary is unknown.
-    Report("WARNING: readlink(\"/proc/self/exe\") failed with errno %d, "
+    // We can't read binary name for some reason, assume it's unknown.
+    Report("WARNING: reading executable name failed with errno %d, "
            "some stack frames may not be symbolized\n", readlink_error);
-    module_name_len = internal_snprintf(buf, buf_len, "/proc/self/exe");
+    module_name_len = internal_snprintf(buf, buf_len, "%s",
+                                        default_module_name);
     CHECK_LT(module_name_len, buf_len);
   }
   return module_name_len;
-}
-
-void CacheBinaryName() {
-  if (!proc_self_exe_cache_len) {
-    proc_self_exe_cache_len =
-        ReadBinaryName(proc_self_exe_cache_str, kMaxPathLength);
-  }
 }
 
 // Match full names of the form /path/to/base_name{-,.}*
@@ -970,7 +955,7 @@ extern "C" __attribute__((weak)) int dl_iterate_phdr(
 
 static int dl_iterate_phdr_test_cb(struct dl_phdr_info *info, size_t size,
                                    void *data) {
-  // Any name starting with "lib" indicated a bug in L where library base names
+  // Any name starting with "lib" indicates a bug in L where library base names
   // are returned instead of paths.
   if (info->dlpi_name && info->dlpi_name[0] == 'l' &&
       info->dlpi_name[1] == 'i' && info->dlpi_name[2] == 'b') {
@@ -982,20 +967,21 @@ static int dl_iterate_phdr_test_cb(struct dl_phdr_info *info, size_t size,
 
 static atomic_uint32_t android_api_level;
 
-static u32 AndroidDetectApiLevel() {
-  if (!dl_iterate_phdr)
-    return 19; // K or lower
+static AndroidApiLevel AndroidDetectApiLevel() {
+  if (!&dl_iterate_phdr)
+    return ANDROID_KITKAT; // K or lower
   bool base_name_seen = false;
   dl_iterate_phdr(dl_iterate_phdr_test_cb, &base_name_seen);
   if (base_name_seen)
-    return 22; // L MR1
-  return 23;   // post-L
+    return ANDROID_LOLLIPOP_MR1; // L MR1
+  return ANDROID_POST_LOLLIPOP;   // post-L
   // Plain L (API level 21) is completely broken wrt ASan and not very
   // interesting to detect.
 }
 
-u32 AndroidGetApiLevel() {
-  u32 level = atomic_load(&android_api_level, memory_order_relaxed);
+AndroidApiLevel AndroidGetApiLevel() {
+  AndroidApiLevel level =
+      (AndroidApiLevel)atomic_load(&android_api_level, memory_order_relaxed);
   if (level) return level;
   level = AndroidDetectApiLevel();
   atomic_store(&android_api_level, level, memory_order_relaxed);
@@ -1015,7 +1001,7 @@ void *internal_start_thread(void(*func)(void *arg), void *arg) {
   // Start the thread with signals blocked, otherwise it can steal user signals.
   __sanitizer_sigset_t set, old;
   internal_sigfillset(&set);
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   // Glibc uses SIGSETXID signal during setuid call. If this signal is blocked
   // on any thread, setuid call hangs (see test/tsan/setuid.c).
   internal_sigdelset(&set, 33);

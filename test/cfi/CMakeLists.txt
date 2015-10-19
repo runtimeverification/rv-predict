@@ -9,6 +9,7 @@ if(NOT COMPILER_RT_STANDALONE_BUILD)
     FileCheck
     clang
     not
+    ubsan
   )
   if(LLVM_ENABLE_PIC AND LLVM_BINUTILS_INCDIR)
     list(APPEND CFI_TEST_DEPS
@@ -18,6 +19,11 @@ if(NOT COMPILER_RT_STANDALONE_BUILD)
   if(APPLE)
     list(APPEND CFI_TEST_DEPS
       LTO
+    )
+  endif()
+  if(WIN32 AND EXISTS ${CMAKE_SOURCE_DIR}/tools/lld)
+    list(APPEND CFI_TEST_DEPS
+      lld
     )
   endif()
 endif()

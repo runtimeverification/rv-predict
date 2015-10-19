@@ -209,9 +209,12 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {
   // Map thread trace when context is created.
-  MapThreadTrace(GetThreadTrace(tid), TraceSize() * sizeof(Event));
+  char name[50];
+  internal_snprintf(name, sizeof(name), "trace %u", tid);
+  MapThreadTrace(GetThreadTrace(tid), TraceSize() * sizeof(Event), name);
   const uptr hdr = GetThreadTraceHeader(tid);
-  MapThreadTrace(hdr, sizeof(Trace));
+  internal_snprintf(name, sizeof(name), "trace header %u", tid);
+  MapThreadTrace(hdr, sizeof(Trace), name);
   new((void*)hdr) Trace();
   // We are going to use only a small part of the trace with the default
   // value of history_size. However, the constructor writes to the whole trace.
@@ -379,7 +382,7 @@ void MapShadow(uptr addr, uptr size) {
   // Global data is not 64K aligned, but there are no adjacent mappings,
   // so we can get away with unaligned mapping.
   // CHECK_EQ(addr, addr & ~((64 << 10) - 1));  // windows wants 64K alignment
-  MmapFixedNoReserve(MemToShadow(addr), size * kShadowMultiplier);
+  MmapFixedNoReserve(MemToShadow(addr), size * kShadowMultiplier, "shadow");
 
   // Meta shadow is 2:1, so tread carefully.
   static bool data_mapped = false;
@@ -391,7 +394,7 @@ void MapShadow(uptr addr, uptr size) {
   if (!data_mapped) {
     // First call maps data+bss.
     data_mapped = true;
-    MmapFixedNoReserve(meta_begin, meta_end - meta_begin);
+    MmapFixedNoReserve(meta_begin, meta_end - meta_begin, "meta shadow");
   } else {
     // Mapping continous heap.
     // Windows wants 64K alignment.
@@ -401,19 +404,19 @@ void MapShadow(uptr addr, uptr size) {
       return;
     if (meta_begin < mapped_meta_end)
       meta_begin = mapped_meta_end;
-    MmapFixedNoReserve(meta_begin, meta_end - meta_begin);
+    MmapFixedNoReserve(meta_begin, meta_end - meta_begin, "meta shadow");
     mapped_meta_end = meta_end;
   }
   VPrintf(2, "mapped meta shadow for (%p-%p) at (%p-%p)\n",
       addr, addr+size, meta_begin, meta_end);
 }
 
-void MapThreadTrace(uptr addr, uptr size) {
+void MapThreadTrace(uptr addr, uptr size, const char *name) {
   DPrintf("#0: Mapping trace at %p-%p(0x%zx)\n", addr, addr + size, size);
   CHECK_GE(addr, kTraceMemBeg);
   CHECK_LE(addr + size, kTraceMemEnd);
   CHECK_EQ(addr, addr & ~((64 << 10) - 1));  // windows wants 64K alignment
-  uptr addr1 = (uptr)MmapFixedNoReserve(addr, size);
+  uptr addr1 = (uptr)MmapFixedNoReserve(addr, size, name);
   if (addr1 != addr) {
     Printf("FATAL: ThreadSanitizer can not mmap thread trace (%p/%p->%p)\n",
         addr, size, addr1);
@@ -458,6 +461,7 @@ void Initialize(ThreadState *thr) {
   ctx = new(ctx_placeholder) Context;
   const char *options = GetEnv(kTsanOptionsEnv);
   InitializeFlags(&ctx->flags, options);
+  CacheBinaryName();
 #ifndef SANITIZER_GO
   InitializeAllocator();
 #endif

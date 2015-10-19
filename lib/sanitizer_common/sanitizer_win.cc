@@ -35,7 +35,9 @@ namespace __sanitizer {
 
 // --------------------- sanitizer_common.h
 uptr GetPageSize() {
-  return 1U << 14;  // FIXME: is this configurable?
+  // FIXME: there is an API for getting the system page size (GetSystemInfo or
+  // GetNativeSystemInfo), but if we use it here we get test failures elsewhere.
+  return 1U << 14;
 }
 
 uptr GetMmapGranularity() {
@@ -104,9 +106,10 @@ void UnmapOrDie(void *addr, uptr size) {
   }
 }
 
-void *MmapFixedNoReserve(uptr fixed_addr, uptr size) {
+void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
   // FIXME: is this really "NoReserve"? On Win32 this does not matter much,
   // but on Win64 it does.
+  (void)name; // unsupported
   void *p = VirtualAlloc((LPVOID)fixed_addr, size,
       MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
   if (p == 0)
@@ -125,7 +128,8 @@ void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
   return MmapOrDie(size, mem_type);
 }
 
-void *MmapNoAccess(uptr fixed_addr, uptr size) {
+void *MmapNoAccess(uptr fixed_addr, uptr size, const char *name) {
+  (void)name; // unsupported
   void *res = VirtualAlloc((LPVOID)fixed_addr, size,
                            MEM_RESERVE | MEM_COMMIT, PAGE_NOACCESS);
   if (res == 0)
@@ -166,7 +170,7 @@ void *MapFileToMemory(const char *file_name, uptr *buff_size) {
   UNIMPLEMENTED();
 }
 
-void *MapWritableFileToMemory(void *addr, uptr size, fd_t fd, uptr offset) {
+void *MapWritableFileToMemory(void *addr, uptr size, fd_t fd, OFF_T offset) {
   UNIMPLEMENTED();
 }
 
@@ -289,11 +293,6 @@ void SetAddressSpaceUnlimited() {
 }
 
 char *FindPathToBinary(const char *name) {
-  // Nothing here for now.
-  return 0;
-}
-
-uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {
   // Nothing here for now.
   return 0;
 }
@@ -618,7 +617,27 @@ bool IsDeadlySignal(int signum) {
 }
 
 bool IsAccessibleMemoryRange(uptr beg, uptr size) {
-  // FIXME: Actually implement this function.
+  SYSTEM_INFO si;
+  GetNativeSystemInfo(&si);
+  uptr page_size = si.dwPageSize;
+  uptr page_mask = ~(page_size - 1);
+
+  for (uptr page = beg & page_mask, end = (beg + size - 1) & page_mask;
+       page <= end;) {
+    MEMORY_BASIC_INFORMATION info;
+    if (VirtualQuery((LPCVOID)page, &info, sizeof(info)) != sizeof(info))
+      return false;
+
+    if (info.Protect == 0 || info.Protect == PAGE_NOACCESS ||
+        info.Protect == PAGE_EXECUTE)
+      return false;
+
+    if (info.RegionSize == 0)
+      return false;
+
+    page += info.RegionSize;
+  }
+
   return true;
 }
 
@@ -637,6 +656,13 @@ SignalContext SignalContext::Create(void *siginfo, void *context) {
   uptr access_addr = exception_record->ExceptionInformation[1];
 
   return SignalContext(context, access_addr, pc, sp, bp);
+}
+
+uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {
+  // FIXME: Actually implement this function.
+  CHECK_GT(buf_len, 0);
+  buf[0] = 0;
+  return 0;
 }
 
 }  // namespace __sanitizer

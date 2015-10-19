@@ -659,16 +659,6 @@ TSAN_INTERCEPTOR(char*, strncpy, char *dst, char *src, uptr n) {
   return REAL(strncpy)(dst, src, n);
 }
 
-TSAN_INTERCEPTOR(const char*, strstr, const char *s1, const char *s2) {
-  SCOPED_TSAN_INTERCEPTOR(strstr, s1, s2);
-  const char *res = REAL(strstr)(s1, s2);
-  uptr len1 = internal_strlen(s1);
-  uptr len2 = internal_strlen(s2);
-  MemoryAccessRange(thr, pc, (uptr)s1, len1 + 1, false);
-  MemoryAccessRange(thr, pc, (uptr)s2, len2 + 1, false);
-  return res;
-}
-
 TSAN_INTERCEPTOR(char*, strdup, const char *str) {
   SCOPED_TSAN_INTERCEPTOR(strdup, str);
   // strdup will call malloc, so no instrumentation is required here.
@@ -836,7 +826,7 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
     ScopedIgnoreInterceptors ignore;
     ThreadIgnoreBegin(thr, 0);
     if (pthread_setspecific(g_thread_finalize_key,
-                            (void *)kPthreadDestructorIterations)) {
+                            (void *)GetPthreadDestructorIterations())) {
       Printf("ThreadSanitizer: failed to set thread key\n");
       Die();
     }
@@ -1004,8 +994,8 @@ INTERCEPTOR(int, pthread_cond_init, void *c, void *a) {
 INTERCEPTOR(int, pthread_cond_wait, void *c, void *m) {
   void *cond = init_cond(c);
   SCOPED_TSAN_INTERCEPTOR(pthread_cond_wait, cond, m);
-  MutexUnlock(thr, pc, (uptr)m);
   MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
+  MutexUnlock(thr, pc, (uptr)m);
   CondMutexUnlockCtx arg = {&si, thr, pc, m};
   int res = 0;
   // This ensures that we handle mutex lock even in case of pthread_cancel.
@@ -1026,8 +1016,8 @@ INTERCEPTOR(int, pthread_cond_wait, void *c, void *m) {
 INTERCEPTOR(int, pthread_cond_timedwait, void *c, void *m, void *abstime) {
   void *cond = init_cond(c);
   SCOPED_TSAN_INTERCEPTOR(pthread_cond_timedwait, cond, m, abstime);
-  MutexUnlock(thr, pc, (uptr)m);
   MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
+  MutexUnlock(thr, pc, (uptr)m);
   CondMutexUnlockCtx arg = {&si, thr, pc, m};
   int res = 0;
   // This ensures that we handle mutex lock even in case of pthread_cancel.
@@ -1531,7 +1521,7 @@ TSAN_INTERCEPTOR(int, dup, int oldfd) {
   SCOPED_TSAN_INTERCEPTOR(dup, oldfd);
   int newfd = REAL(dup)(oldfd);
   if (oldfd >= 0 && newfd >= 0 && newfd != oldfd)
-    FdDup(thr, pc, oldfd, newfd);
+    FdDup(thr, pc, oldfd, newfd, true);
   return newfd;
 }
 
@@ -1539,7 +1529,7 @@ TSAN_INTERCEPTOR(int, dup2, int oldfd, int newfd) {
   SCOPED_TSAN_INTERCEPTOR(dup2, oldfd, newfd);
   int newfd2 = REAL(dup2)(oldfd, newfd);
   if (oldfd >= 0 && newfd2 >= 0 && newfd2 != oldfd)
-    FdDup(thr, pc, oldfd, newfd2);
+    FdDup(thr, pc, oldfd, newfd2, false);
   return newfd2;
 }
 
@@ -1547,7 +1537,7 @@ TSAN_INTERCEPTOR(int, dup3, int oldfd, int newfd, int flags) {
   SCOPED_TSAN_INTERCEPTOR(dup3, oldfd, newfd, flags);
   int newfd2 = REAL(dup3)(oldfd, newfd, flags);
   if (oldfd >= 0 && newfd2 >= 0 && newfd2 != oldfd)
-    FdDup(thr, pc, oldfd, newfd2);
+    FdDup(thr, pc, oldfd, newfd2, false);
   return newfd2;
 }
 
@@ -2156,6 +2146,50 @@ TSAN_INTERCEPTOR(int, vfork, int fake) {
   return WRAP(fork)(fake);
 }
 
+typedef int (*dl_iterate_phdr_cb_t)(__sanitizer_dl_phdr_info *info, SIZE_T size,
+                                    void *data);
+struct dl_iterate_phdr_data {
+  ThreadState *thr;
+  uptr pc;
+  dl_iterate_phdr_cb_t cb;
+  void *data;
+};
+
+static bool IsAppNotRodata(uptr addr) {
+  return IsAppMem(addr) && *(u64*)MemToShadow(addr) != kShadowRodata;
+}
+
+static int dl_iterate_phdr_cb(__sanitizer_dl_phdr_info *info, SIZE_T size,
+                              void *data) {
+  dl_iterate_phdr_data *cbdata = (dl_iterate_phdr_data *)data;
+  // dlopen/dlclose allocate/free dynamic-linker-internal memory, which is later
+  // accessible in dl_iterate_phdr callback. But we don't see synchronization
+  // inside of dynamic linker, so we "unpoison" it here in order to not
+  // produce false reports. Ignoring malloc/free in dlopen/dlclose is not enough
+  // because some libc functions call __libc_dlopen.
+  if (info && IsAppNotRodata((uptr)info->dlpi_name))
+    MemoryResetRange(cbdata->thr, cbdata->pc, (uptr)info->dlpi_name,
+                     internal_strlen(info->dlpi_name));
+  int res = cbdata->cb(info, size, cbdata->data);
+  // Perform the check one more time in case info->dlpi_name was overwritten
+  // by user callback.
+  if (info && IsAppNotRodata((uptr)info->dlpi_name))
+    MemoryResetRange(cbdata->thr, cbdata->pc, (uptr)info->dlpi_name,
+                     internal_strlen(info->dlpi_name));
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, dl_iterate_phdr, dl_iterate_phdr_cb_t cb, void *data) {
+  SCOPED_TSAN_INTERCEPTOR(dl_iterate_phdr, cb, data);
+  dl_iterate_phdr_data cbdata;
+  cbdata.thr = thr;
+  cbdata.pc = pc;
+  cbdata.cb = cb;
+  cbdata.data = data;
+  int res = REAL(dl_iterate_phdr)(dl_iterate_phdr_cb, &cbdata);
+  return res;
+}
+
 static int OnExit(ThreadState *thr) {
   int status = Finalize(thr);
   FlushStreams();
@@ -2474,7 +2508,6 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(strrchr);
   TSAN_INTERCEPT(strcpy);  // NOLINT
   TSAN_INTERCEPT(strncpy);
-  TSAN_INTERCEPT(strstr);
   TSAN_INTERCEPT(strdup);
 
   TSAN_INTERCEPT(pthread_create);
@@ -2590,6 +2623,7 @@ void InitializeInterceptors() {
 
   TSAN_INTERCEPT(fork);
   TSAN_INTERCEPT(vfork);
+  TSAN_INTERCEPT(dl_iterate_phdr);
   TSAN_INTERCEPT(on_exit);
   TSAN_INTERCEPT(__cxa_atexit);
   TSAN_INTERCEPT(_exit);

@@ -165,22 +165,6 @@ void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
   return (void *)p;
 }
 
-void *MmapFixedNoReserve(uptr fixed_addr, uptr size) {
-  uptr PageSize = GetPageSizeCached();
-  uptr p = internal_mmap((void*)(fixed_addr & ~(PageSize - 1)),
-      RoundUpTo(size, PageSize),
-      PROT_READ | PROT_WRITE,
-      MAP_PRIVATE | MAP_ANON | MAP_FIXED | MAP_NORESERVE,
-      -1, 0);
-  int reserrno;
-  if (internal_iserror(p, &reserrno))
-    Report("ERROR: %s failed to "
-           "allocate 0x%zx (%zd) bytes at address %zx (errno: %d)\n",
-           SanitizerToolName, size, size, fixed_addr, reserrno);
-  IncreaseTotalMmap(size);
-  return (void *)p;
-}
-
 void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
   uptr PageSize = GetPageSizeCached();
   uptr p = internal_mmap((void*)(fixed_addr & ~(PageSize - 1)),
@@ -197,13 +181,6 @@ void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
   }
   IncreaseTotalMmap(size);
   return (void *)p;
-}
-
-void *MmapNoAccess(uptr fixed_addr, uptr size) {
-  return (void *)internal_mmap((void*)fixed_addr, size,
-                               PROT_NONE,
-                               MAP_PRIVATE | MAP_ANON | MAP_FIXED |
-                               MAP_NORESERVE, -1, 0);
 }
 
 bool MprotectNoAccess(uptr addr, uptr size) {
@@ -263,14 +240,14 @@ void *MapFileToMemory(const char *file_name, uptr *buff_size) {
   return internal_iserror(map) ? 0 : (void *)map;
 }
 
-void *MapWritableFileToMemory(void *addr, uptr size, fd_t fd, uptr offset) {
+void *MapWritableFileToMemory(void *addr, uptr size, fd_t fd, OFF_T offset) {
   uptr flags = MAP_SHARED;
   if (addr) flags |= MAP_FIXED;
   uptr p = internal_mmap(addr, size, PROT_READ | PROT_WRITE, flags, fd, offset);
   int mmap_errno = 0;
   if (internal_iserror(p, &mmap_errno)) {
-    Printf("could not map writable file (%d, %zu, %zu): %zd, errno: %d\n",
-           fd, offset, size, p, mmap_errno);
+    Printf("could not map writable file (%d, %lld, %zu): %zd, errno: %d\n",
+           fd, (long long)offset, size, p, mmap_errno);
     return 0;
   }
   return (void *)p;
@@ -293,6 +270,7 @@ bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
   while (proc_maps.Next(&start, &end,
                         /*offset*/0, /*filename*/0, /*filename_size*/0,
                         /*protection*/0)) {
+    if (start == end) continue;  // Empty range.
     CHECK_NE(0, end);
     if (!IntervalsAreSeparate(start, end - 1, range_start, range_end))
       return false;

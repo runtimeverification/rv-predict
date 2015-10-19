@@ -23,6 +23,11 @@
 #include "sanitizer_list.h"
 #include "sanitizer_mutex.h"
 
+#ifdef _MSC_VER
+extern "C" void _ReadWriteBarrier();
+#pragma intrinsic(_ReadWriteBarrier)
+#endif
+
 namespace __sanitizer {
 struct StackTrace;
 struct AddressInfo;
@@ -43,6 +48,10 @@ const uptr kMaxPathLength = 4096;
 static const uptr kMaxNumberOfModules = 1 << 14;
 
 const uptr kMaxThreadStackSize = 1 << 30;  // 1Gb
+
+// Denotes fake PC values that come from JIT/JAVA/etc.
+// For such PC values __tsan_symbolize_external() will be called.
+const u64 kExternalPCBit = 1ULL << 60;
 
 extern const char *SanitizerToolName;  // Can be changed by the tool.
 
@@ -69,10 +78,11 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
 // Memory management
 void *MmapOrDie(uptr size, const char *mem_type);
 void UnmapOrDie(void *addr, uptr size);
-void *MmapFixedNoReserve(uptr fixed_addr, uptr size);
+void *MmapFixedNoReserve(uptr fixed_addr, uptr size,
+                         const char *name = nullptr);
 void *MmapNoReserveOrDie(uptr size, const char *mem_type);
 void *MmapFixedOrDie(uptr fixed_addr, uptr size);
-void *MmapNoAccess(uptr fixed_addr, uptr size);
+void *MmapNoAccess(uptr fixed_addr, uptr size, const char *name = nullptr);
 // Map aligned chunk of address space; size and alignment are powers of two.
 void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type);
 // Disallow access to a memory range.  Use MmapNoAccess to allocate an
@@ -226,7 +236,7 @@ uptr ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
 // (or NULL if mapping fails). Stores the size of mmaped region
 // in '*buff_size'.
 void *MapFileToMemory(const char *file_name, uptr *buff_size);
-void *MapWritableFileToMemory(void *addr, uptr size, fd_t fd, uptr offset);
+void *MapWritableFileToMemory(void *addr, uptr size, fd_t fd, OFF_T offset);
 
 bool IsAccessibleMemoryRange(uptr beg, uptr size);
 
@@ -237,6 +247,10 @@ const char *StripPathPrefix(const char *filepath,
 const char *StripModuleName(const char *module);
 
 // OS
+uptr ReadBinaryName(/*out*/char *buf, uptr buf_len);
+uptr ReadBinaryNameCached(/*out*/char *buf, uptr buf_len);
+const char *GetBinaryBasename();
+void CacheBinaryName();
 void DisableCoreDumperIfNecessary();
 void DumpProcessMap();
 bool FileExists(const char *filename);
@@ -247,8 +261,6 @@ char *FindPathToBinary(const char *name);
 bool IsPathSeparator(const char c);
 bool IsAbsolutePath(const char *path);
 
-// Returns the path to the main executable.
-uptr ReadBinaryName(/*out*/char *buf, uptr buf_len);
 u32 GetUid();
 void ReExec();
 bool StackSizeIsUnlimited();
@@ -343,7 +355,11 @@ INLINE uptr MostSignificantSetBitIndex(uptr x) {
   CHECK_NE(x, 0U);
   unsigned long up;  // NOLINT
 #if !SANITIZER_WINDOWS || defined(__clang__) || defined(__GNUC__)
+# ifdef _WIN64
+  up = SANITIZER_WORDSIZE - 1 - __builtin_clzll(x);
+# else
   up = SANITIZER_WORDSIZE - 1 - __builtin_clzl(x);
+# endif
 #elif defined(_WIN64)
   _BitScanReverse64(&up, x);
 #else
@@ -356,7 +372,11 @@ INLINE uptr LeastSignificantSetBitIndex(uptr x) {
   CHECK_NE(x, 0U);
   unsigned long up;  // NOLINT
 #if !SANITIZER_WINDOWS || defined(__clang__) || defined(__GNUC__)
+# ifdef _WIN64
+  up = __builtin_ctzll(x);
+# else
   up = __builtin_ctzl(x);
+# endif
 #elif defined(_WIN64)
   _BitScanForward64(&up, x);
 #else
@@ -376,7 +396,7 @@ INLINE uptr RoundUpToPowerOfTwo(uptr size) {
   uptr up = MostSignificantSetBitIndex(size);
   CHECK(size < (1ULL << (up + 1)));
   CHECK(size > (1ULL << up));
-  return 1UL << (up + 1);
+  return 1ULL << (up + 1);
 }
 
 INLINE uptr RoundUpTo(uptr size, uptr boundary) {
@@ -394,17 +414,7 @@ INLINE bool IsAligned(uptr a, uptr alignment) {
 
 INLINE uptr Log2(uptr x) {
   CHECK(IsPowerOfTwo(x));
-#if !SANITIZER_WINDOWS || defined(__clang__) || defined(__GNUC__)
-  return __builtin_ctzl(x);
-#elif defined(_WIN64)
-  unsigned long ret;  // NOLINT
-  _BitScanForward64(&ret, x);
-  return ret;
-#else
-  unsigned long ret;  // NOLINT
-  _BitScanForward(&ret, x);
-  return ret;
-#endif
+  return LeastSignificantSetBitIndex(x);
 }
 
 // Don't use std::min, std::max or std::swap, to minimize dependency
@@ -606,15 +616,15 @@ typedef bool (*string_predicate_t)(const char *);
 uptr GetListOfModules(LoadedModule *modules, uptr max_modules,
                       string_predicate_t filter);
 
-#if SANITIZER_POSIX
-const uptr kPthreadDestructorIterations = 4;
-#else
-// Unused on Windows.
-const uptr kPthreadDestructorIterations = 0;
-#endif
-
 // Callback type for iterating over a set of memory ranges.
 typedef void (*RangeIteratorCallback)(uptr begin, uptr end, void *arg);
+
+enum AndroidApiLevel {
+  ANDROID_NOT_ANDROID = 0,
+  ANDROID_KITKAT = 19,
+  ANDROID_LOLLIPOP_MR1 = 22,
+  ANDROID_POST_LOLLIPOP = 23
+};
 
 #if SANITIZER_ANDROID
 // Initialize Android logging. Any writes before this are silently lost.
@@ -622,14 +632,25 @@ void AndroidLogInit();
 void AndroidLogWrite(const char *buffer);
 void GetExtraActivationFlags(char *buf, uptr size);
 void SanitizerInitializeUnwinder();
-u32 AndroidGetApiLevel();
+AndroidApiLevel AndroidGetApiLevel();
 #else
 INLINE void AndroidLogInit() {}
 INLINE void AndroidLogWrite(const char *buffer_unused) {}
 INLINE void GetExtraActivationFlags(char *buf, uptr size) { *buf = '\0'; }
 INLINE void SanitizerInitializeUnwinder() {}
-INLINE u32 AndroidGetApiLevel() { return 0; }
+INLINE AndroidApiLevel AndroidGetApiLevel() { return ANDROID_NOT_ANDROID; }
 #endif
+
+INLINE uptr GetPthreadDestructorIterations() {
+#if SANITIZER_ANDROID
+  return (AndroidGetApiLevel() == ANDROID_LOLLIPOP_MR1) ? 8 : 4;
+#elif SANITIZER_POSIX
+  return 4;
+#else
+// Unused on Windows.
+  return 0;
+#endif
+}
 
 void *internal_start_thread(void(*func)(void*), void *arg);
 void internal_join_thread(void *th);
@@ -640,9 +661,8 @@ void MaybeStartBackgroudThread();
 // compiler from recognising it and turning it into an actual call to
 // memset/memcpy/etc.
 static inline void SanitizerBreakOptimization(void *arg) {
-#if _MSC_VER
-  // FIXME: make sure this is actually enough.
-  __asm;
+#if _MSC_VER && !defined(__clang__)
+  _ReadWriteBarrier();
 #else
   __asm__ __volatile__("" : : "r" (arg) : "memory");
 #endif

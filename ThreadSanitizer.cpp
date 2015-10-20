@@ -454,8 +454,8 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
   else
     OnAccessFunc = IsWrite ? TsanUnalignedWrite[Idx] : TsanUnalignedRead[Idx];
   if (IsWrite) {
-    IRB.CreateCall2(OnAccessFunc, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                    IRB.CreatePointerCast(StoredValue, IRB.getInt8PtrTy()));
+    IRB.CreateCall(OnAccessFunc, {IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
+                    IRB.CreatePointerCast(StoredValue, IRB.getInt8PtrTy())});
   } else {
     IRB.CreateCall(OnAccessFunc, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()));
   }

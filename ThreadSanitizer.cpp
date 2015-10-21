@@ -425,6 +425,7 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
     if (isa<VectorType>(StoredValue->getType()))
       StoredValue = IRB.CreateExtractElement(
           StoredValue, ConstantInt::get(IRB.getInt32Ty(), 0));
+    //TODO(traiansf): properly handle float values through bitwise conversion
     if (StoredValue->getType()->isFloatingPointTy())
       StoredValue = IRB.CreateFPToUI(StoredValue, IRB.getInt64Ty());
     if (StoredValue->getType()->isIntegerTy())

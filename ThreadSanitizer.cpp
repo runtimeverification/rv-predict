@@ -425,6 +425,8 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
     if (isa<VectorType>(StoredValue->getType()))
       StoredValue = IRB.CreateExtractElement(
           StoredValue, ConstantInt::get(IRB.getInt32Ty(), 0));
+    if (StoredValue->getType()->isFloatingPointTy())
+      StoredValue = IRB.CreateFPToUI(StoredValue, IRB.getInt64Ty());
     if (StoredValue->getType()->isIntegerTy())
       StoredValue = IRB.CreateIntToPtr(StoredValue, IRB.getInt8PtrTy());
     if (isVtableAccess(I)) {

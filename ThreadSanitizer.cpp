@@ -425,9 +425,12 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
     if (isa<VectorType>(StoredValue->getType()))
       StoredValue = IRB.CreateExtractElement(
           StoredValue, ConstantInt::get(IRB.getInt32Ty(), 0));
-    //TODO(traiansf): properly handle float values through bitwise conversion
-    if (StoredValue->getType()->isFloatingPointTy())
-      StoredValue = IRB.CreateFPToUI(StoredValue, IRB.getInt64Ty());
+    if (StoredValue->getType()->isFloatingPointTy()) {
+      Value* alloca = IRB.CreateAlloca(StoredValue->getType());
+      StoreInst* store = IRB.CreateStore(StoredValue, alloca);
+      Value* store64 = IRB.CreateBitCast(store->getPointerOperand(), IRB.getInt64Ty()->getPointerTo());
+      StoredValue = IRB.CreateLoad(store64);
+    }
     if (StoredValue->getType()->isIntegerTy())
       StoredValue = IRB.CreateIntToPtr(StoredValue, IRB.getInt8PtrTy());
     if (isVtableAccess(I)) {

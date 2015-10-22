@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.engine.main;
 
 import java.io.*;
 import java.lang.reflect.Field;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,7 +15,6 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.Trace;
-import com.runtimeverification.rvpredict.trace.maps.ThreadIDToObjectMap;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.violation.Race;
 
@@ -37,7 +37,7 @@ public class RaceDetector implements Constants {
 
     public RaceDetector(Configuration config) {
         this.config = config;
-        Context z3Context = getZ3Context(config);
+        Context z3Context = getZ3Context();
         this.z3filter = new Z3Filter(z3Context, config.windowSize);
         try {
             /* setup the solver */
@@ -151,36 +151,18 @@ public class RaceDetector implements Constants {
         }
     }
 
-    public Context getZ3Context(Configuration config) {
-        String nativeLibraryName = getNativeLibraryName();
-        String nativeLibraryPath = getNativeLibraryPath() + "/" + nativeLibraryName;
+    public Context getZ3Context() {
+        String z3LibDir = System.getProperty("java.io.tmpdir");
+        extractZ3Library(z3LibDir);
         Context context = null;
         try {
-            String logDir = config.getLogDir();
-            File nativeLibraryFile = new File(logDir, nativeLibraryName);
-            if (!nativeLibraryFile.exists()) {
-                nativeLibraryFile.deleteOnExit();
-                InputStream in = getClass().getResourceAsStream(nativeLibraryPath);
-                BufferedInputStream reader = new BufferedInputStream(in);
-                byte[] buffer = new byte[8192];
-                int read = -1;
-                FileOutputStream fos = new FileOutputStream(nativeLibraryFile);
-                BufferedOutputStream writer = new BufferedOutputStream(fos);
-
-                while ((read = reader.read(buffer)) != -1) {
-                    writer.write(buffer, 0, read);
-                }
-                reader.close();
-                writer.close();
-            }
-
             // Very dirty hack to add our native libraries dir to the array of system paths
             // dependent on the implementation of java.lang.ClassLoader (although that seems pretty consistent)
             Field sysPathsField = ClassLoader.class.getDeclaredField("sys_paths");
             sysPathsField.setAccessible(true);
             String[] sysPaths = (String[]) sysPathsField.get(null);
             String oldPath = sysPaths[0];
-            sysPaths[0] = logDir;
+            sysPaths[0] = z3LibDir;
 
             try {
                 context = new Context();
@@ -199,5 +181,35 @@ public class RaceDetector implements Constants {
             throw new RuntimeException(e);
         }
         return context;
+    }
+
+    private void extractZ3Library(String logDir) {
+        String z3LibraryName = getNativeLibraryName();
+        Path z3LibraryTarget = Paths.get(logDir, z3LibraryName);
+        if (Files.exists(z3LibraryTarget)) return;
+        String z3LibraryPath = getNativeLibraryPath() + "/" + z3LibraryName;
+        try {
+            Path z3LibraryTempPath = Files.createTempFile(z3LibraryTarget.getParent(), "rvpredict-z3-", ".library");
+            File z3LibraryTempFile = z3LibraryTempPath.toFile();
+            InputStream in = getClass().getResourceAsStream(z3LibraryPath);
+            BufferedInputStream reader = new BufferedInputStream(in);
+            byte[] buffer = new byte[8192];
+            int read;
+            FileOutputStream fos = new FileOutputStream(z3LibraryTempFile);
+            BufferedOutputStream writer = new BufferedOutputStream(fos);
+
+            while ((read = reader.read(buffer)) != -1) {
+                writer.write(buffer, 0, read);
+            }
+            reader.close();
+            writer.close();
+            if (!Files.exists(z3LibraryTarget)) {
+                Files.move(z3LibraryTempPath, z3LibraryTarget, StandardCopyOption.ATOMIC_MOVE);
+            }
+        } catch (IOException e) {
+            if (!Files.exists(z3LibraryTarget)) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }

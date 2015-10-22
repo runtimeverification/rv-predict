@@ -82,7 +82,18 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
     private final ThreadLocal<Buffer> threadLocalBuffer = new ThreadLocal<Buffer>() {
         @Override
         protected Buffer initialValue() {
-            Buffer buffer = new Buffer(windowSize);
+            Thread owner = Thread.currentThread();
+            /* YilongL: hack to work around issue #602 */
+            // TODO: figure out how this method can be called more than once per thread...
+            synchronized (activeBuffers) {
+                for (Buffer buffer : activeBuffers) {
+                    if (buffer.owner == owner) {
+                        return buffer;
+                    }
+                }
+            }
+
+            Buffer buffer = new Buffer(owner, windowSize);
             activeBuffers.add(buffer);
             return buffer;
         }
@@ -275,8 +286,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
          */
         final AtomicBoolean isLastBatchFinalized = new AtomicBoolean(false);
 
-        Buffer(int bound) {
-            owner = Thread.currentThread();
+        Buffer(Thread owner, int bound) {
+            this.owner = owner;
             tid = owner.getId();
             length = getCircularArrayLength(bound);
             mask = length - 1;

@@ -133,6 +133,10 @@ public class Trace {
         }
         processEvents();
         this.size = tidToEvents.values().stream().collect(Collectors.summingInt(List::size));
+        if (rawTraces.size() != rawTraces.stream().map(RawTrace::getTID)
+                .collect(Collectors.toSet()).size()) {
+            throw new IllegalStateException();
+        }
     }
 
     public Metadata metadata() {

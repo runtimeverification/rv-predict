@@ -94,21 +94,17 @@ static atomic_uint64_t nextLocId;
 static atomic_uint64_t nextVarId;
 static atomic_uint64_t rv_gid;
 
-char rvbuff[1000];
-
-const char* tidToFilename(u64 tid) {
-  internal_snprintf(rvbuff, 1000, "%llu.log", tid);
-  return rvbuff;
-}
 
 void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
   u64 locId = idToLocId.count(id);
 
   fd_t fd;
+  char rvbuff[1000];
 
   if(!tidToFd.count(tid)) {
-    fd = OpenFile(tidToFilename(tid), WrOnly);
+    internal_snprintf(rvbuff, 1000, "%llu.log", tid);
+    fd = OpenFile(rvbuff, WrOnly);
     tidToFd.insert(tid, fd);
   } else {
     fd = tidToFd.get(tid);

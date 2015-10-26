@@ -94,6 +94,17 @@ static atomic_uint64_t nextLocId;
 static atomic_uint64_t nextVarId;
 static atomic_uint64_t rv_gid;
 
+template<typename T>
+void WriteNum(fd_t fd, T x) {
+  WriteToFile(fd, &x, sizeof(T));
+}
+
+void WriteStr(fd_t fd, const char* s) {
+  if(s == 0)
+    return WriteStr(fd, "");
+  int len = internal_strlen(s);
+  WriteToFile(fd, s, len);
+}
 
 void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
@@ -119,10 +130,19 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
     idToLocId.insert(id, locId);
 
     SymbolizedStack* frame = SymbolizeCode(id);
+
+    /*
     int len = internal_snprintf(rvbuff, sizeof(rvbuff), "<locId:%lld;fn:%s;file:%s;line:%d>\n",
         locId, frame->info.function, frame->info.file , frame->info.line);
-
     WriteToFile(locfd, (void*)rvbuff, len);
+    */
+
+
+
+    WriteNum(locfd, locId);
+    WriteStr(locfd, frame->info.function);
+    WriteStr(locfd, frame->info.file);
+    WriteNum(locfd, frame->info.line);
 
   }
   locId = idToLocId.get(id);
@@ -134,11 +154,23 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
     ReportLocation *location = SymbolizeData(addr);
     if (location) {
       const DataInfo &global = location->global;
+
+      /*
       int len = internal_snprintf(rvbuff, sizeof(rvbuff), "<varId:%lld;desc:global '%s' of size %zu at %p (%s+%p)>\n",
           varId, global.name, global.size, global.start,
           StripModuleName(global.module), global.module_offset);
 
       WriteToFile(varfd, (void*)rvbuff, len);
+      */
+
+
+      WriteNum(varfd, varId);
+      WriteStr(varfd, global.name);
+      WriteNum(varfd, global.size);
+      WriteNum(varfd, global.start);
+      WriteStr(varfd, StripModuleName(global.module));
+      WriteNum(varfd, global.module_offset);
+
       if (type == READ || type == WRITE) {
         varId =  -varId & 0xFFFFFFFFL;
       }
@@ -147,9 +179,18 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   }
   varId = addrToVarId.get(addr);
 
+  /*
   int len = internal_snprintf(rvbuff, sizeof(rvbuff), "<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s>\n",
          gid, tid + 1, locId, varId, val, RVEventTypes[type]);
   WriteToFile(fd, (void*)rvbuff, len);
+  */
+
+  WriteNum(fd, gid);
+  WriteNum(fd, tid + 1);
+  WriteNum(fd, locId);
+  WriteNum(fd, varId);
+  WriteNum(fd, val);
+  WriteStr(fd, RVEventTypes[type]);
 }
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {

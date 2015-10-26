@@ -100,10 +100,13 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   u64 locId = idToLocId.count(id);
 
   fd_t fd;
+  static fd_t locfd = OpenFile("locId.log", WrOnly),
+              varfd = OpenFile("varId.log", WrOnly); 
+  
   char rvbuff[1000];
 
   if(!tidToFd.count(tid)) {
-    internal_snprintf(rvbuff, 1000, "%llu.log", tid);
+    internal_snprintf(rvbuff, sizeof(rvbuff), "%llu.log", tid + 1);
     fd = OpenFile(rvbuff, WrOnly);
     tidToFd.insert(tid, fd);
   } else {
@@ -116,10 +119,10 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
     idToLocId.insert(id, locId);
 
     SymbolizedStack* frame = SymbolizeCode(id);
-    int len = internal_snprintf(rvbuff, 1000, "<locId:%lld;fn:%s;file:%s;line:%d>\n",
+    int len = internal_snprintf(rvbuff, sizeof(rvbuff), "<locId:%lld;fn:%s;file:%s;line:%d>\n",
         locId, frame->info.function, frame->info.file , frame->info.line);
 
-    WriteToFile(fd, (void*)rvbuff, len);
+    WriteToFile(locfd, (void*)rvbuff, len);
 
   }
   locId = idToLocId.get(id);
@@ -131,11 +134,11 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
     ReportLocation *location = SymbolizeData(addr);
     if (location) {
       const DataInfo &global = location->global;
-      int len = internal_snprintf(rvbuff, 1000, "<varId:%lld;desc:global '%s' of size %zu at %p (%s+%p)>\n",
+      int len = internal_snprintf(rvbuff, sizeof(rvbuff), "<varId:%lld;desc:global '%s' of size %zu at %p (%s+%p)>\n",
           varId, global.name, global.size, global.start,
           StripModuleName(global.module), global.module_offset);
 
-      WriteToFile(fd, (void*)rvbuff, len);
+      WriteToFile(varfd, (void*)rvbuff, len);
       if (type == READ || type == WRITE) {
         varId =  -varId & 0xFFFFFFFFL;
       }
@@ -144,7 +147,7 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   }
   varId = addrToVarId.get(addr);
 
-  int len = internal_snprintf(rvbuff, 1000, "<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s>\n",
+  int len = internal_snprintf(rvbuff, sizeof(rvbuff), "<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s>\n",
          gid, tid + 1, locId, varId, val, RVEventTypes[type]);
   WriteToFile(fd, (void*)rvbuff, len);
 }

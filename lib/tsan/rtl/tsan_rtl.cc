@@ -117,7 +117,7 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   char rvbuff[1000];
 
   if(!tidToFd.count(tid)) {
-    internal_snprintf(rvbuff, sizeof(rvbuff), "%llu.log", tid + 1);
+    internal_snprintf(rvbuff, sizeof(rvbuff), "%llu_trace.bin", tid + 1);
     fd = OpenFile(rvbuff, WrOnly);
     tidToFd.insert(tid, fd);
   } else {

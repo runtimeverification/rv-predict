@@ -103,7 +103,7 @@ void WriteStr(fd_t fd, const char* s) {
   if(s == 0)
     return WriteStr(fd, "");
   int len = internal_strlen(s);
-  WriteToFile(fd, s, len);
+  WriteToFile(fd, s, len + 1);
 }
 
 void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
@@ -111,13 +111,13 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   u64 locId = idToLocId.count(id);
 
   fd_t fd;
-  static fd_t locfd = OpenFile("locId.log", WrOnly),
-              varfd = OpenFile("varId.log", WrOnly); 
+  static fd_t locfd = OpenFile("loc_metadata.bin", WrOnly),
+              varfd = OpenFile("var_metadata.bin", WrOnly); 
   
   char rvbuff[1000];
 
   if(!tidToFd.count(tid)) {
-    internal_snprintf(rvbuff, sizeof(rvbuff), "%llu_trace.bin", tid + 1);
+    internal_snprintf(rvbuff, sizeof(rvbuff), "%llu_trace.bin", tid);
     fd = OpenFile(rvbuff, WrOnly);
     tidToFd.insert(tid, fd);
   } else {
@@ -137,13 +137,10 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
     WriteToFile(locfd, (void*)rvbuff, len);
     */
 
-
+    internal_snprintf(rvbuff, sizeof(rvbuff), "<fn:%s;file:%s;line:%d>", frame->info.function, frame->info.file, frame->info.line);
 
     WriteNum(locfd, locId);
-    WriteStr(locfd, frame->info.function);
-    WriteStr(locfd, frame->info.file);
-    WriteNum(locfd, frame->info.line);
-
+    WriteStr(locfd, rvbuff);
   }
   locId = idToLocId.get(id);
 
@@ -163,13 +160,12 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
       WriteToFile(varfd, (void*)rvbuff, len);
       */
 
+      internal_snprintf(rvbuff, sizeof(rvbuff), "global '%s' of size %zu at %p (%s + %p)", global.name, global.size, global.start,
+          StripModuleName(global.module), global.module_offset);
+
 
       WriteNum(varfd, varId);
-      WriteStr(varfd, global.name);
-      WriteNum(varfd, global.size);
-      WriteNum(varfd, global.start);
-      WriteStr(varfd, StripModuleName(global.module));
-      WriteNum(varfd, global.module_offset);
+      WriteStr(varfd, rvbuff);
 
       if (type == READ || type == WRITE) {
         varId =  -varId & 0xFFFFFFFFL;
@@ -186,11 +182,11 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   */
 
   WriteNum(fd, gid);
-  WriteNum(fd, tid + 1);
-  WriteNum(fd, locId);
+  WriteNum(fd, tid);
+  WriteNum(fd, (int)locId);
   WriteNum(fd, varId);
   WriteNum(fd, val);
-  WriteStr(fd, RVEventTypes[type]);
+  WriteNum(fd, (char)type);
 }
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {

@@ -113,6 +113,8 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   fd_t fd;
   static fd_t locfd = OpenFile("loc_metadata.bin", WrOnly),
               varfd = OpenFile("var_metadata.bin", WrOnly); 
+  static fd_t locfd2 = OpenFile("loc.log", WrOnly),
+              varfd2 = OpenFile("var.log", WrOnly); 
   
   char rvbuff[1000];
 
@@ -131,11 +133,9 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
 
     SymbolizedStack* frame = SymbolizeCode(id);
 
-    /*
     int len = internal_snprintf(rvbuff, sizeof(rvbuff), "<locId:%lld;fn:%s;file:%s;line:%d>\n",
         locId, frame->info.function, frame->info.file , frame->info.line);
-    WriteToFile(locfd, (void*)rvbuff, len);
-    */
+    WriteToFile(locfd2, (void*)rvbuff, len);
 
     internal_snprintf(rvbuff, sizeof(rvbuff), "<fn:%s;file:%s;line:%d>", frame->info.function, frame->info.file, frame->info.line);
 
@@ -152,13 +152,11 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
     if (location) {
       const DataInfo &global = location->global;
 
-      /*
       int len = internal_snprintf(rvbuff, sizeof(rvbuff), "<varId:%lld;desc:global '%s' of size %zu at %p (%s+%p)>\n",
           varId, global.name, global.size, global.start,
           StripModuleName(global.module), global.module_offset);
 
-      WriteToFile(varfd, (void*)rvbuff, len);
-      */
+      WriteToFile(varfd2, (void*)rvbuff, len);
 
       internal_snprintf(rvbuff, sizeof(rvbuff), "global '%s' of size %zu at %p (%s + %p)", global.name, global.size, global.start,
           StripModuleName(global.module), global.module_offset);
@@ -176,11 +174,9 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   varId = addrToVarId.get(addr);
 
   /*
-  int len = internal_snprintf(rvbuff, sizeof(rvbuff), "<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s>\n",
-         gid, tid + 1, locId, varId, val, RVEventTypes[type]);
-  WriteToFile(fd, (void*)rvbuff, len);
-  */
-
+  Printf("<gid:%lld;tid:%lld;id:%d;addr:%lld;value:%lld;type:%s>\n",
+         gid, tid, (int)locId, varId, val, RVEventTypes[type]);
+*/
   WriteNum(fd, gid);
   WriteNum(fd, tid);
   WriteNum(fd, (int)locId);

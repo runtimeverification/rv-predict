@@ -112,7 +112,6 @@ void WriteStr(fd_t fd, const char* s) {
 
 void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
-  u64 locId = idToLocId.count(id);
 
   fd_t fd;
   static fd_t locfd = OpenFile("loc_metadata.bin", WrOnly),
@@ -132,6 +131,8 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
     fd = tidToFd.get(tid);
   }
 
+  u64 locId = idToLocId.count(id);
+
   if (!locId) {
     SpinMutexLock lock(&locInsert);
     locId = atomic_fetch_add(&nextLocId, 1, memory_order_relaxed) + 1;
@@ -145,7 +146,7 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
         locId, frame->info.function, frame->info.file , frame->info.line);
     WriteToFile(locfd2, (void*)rvbuff, len);
 */
-    internal_snprintf(rvbuff, sizeof(rvbuff), "<fn:%s;file:%s;line:%d>", frame->info.function, frame->info.file, frame->info.line);
+    internal_snprintf(rvbuff, sizeof(rvbuff), "fn:%s;file:%s;line:%d", frame->info.function, frame->info.file, frame->info.line);
 
     WriteNum(locfd, locId);
     WriteStr(locfd, rvbuff);

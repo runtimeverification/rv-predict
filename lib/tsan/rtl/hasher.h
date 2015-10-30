@@ -74,9 +74,14 @@ template<typename Key, typename Value, unsigned int (*thasher)(Key) = hasher<Key
                 ent.push_back(e);
             }
 
-            void erase(Key key) {
+            bool erase(Key key) {
                 int poz = find_position(key);
-                ent.erase_position(poz);
+                if(poz != ent.size()) {
+                  ent.erase_position(poz);
+                  return true;
+                } else {
+                  return false;
+                }
             }
         };
 
@@ -152,13 +157,11 @@ template<typename Key, typename Value, unsigned int (*thasher)(Key) = hasher<Key
         }
 
         int count(Key key) {
-            SpinMutexLock lock(&mutex);
             bucket& now = get_bucket(key);
             return now.count(key);
         }
 
         Value get(Key key) {
-            SpinMutexLock lock(&mutex);
             bucket& now = get_bucket(key);
             return now.get(key);
         }
@@ -180,7 +183,7 @@ template<typename Key, typename Value, unsigned int (*thasher)(Key) = hasher<Key
 
             bucket& now = get_bucket(key);
             now.erase(key);
-            --entries;
+            entries -= now.erase(key);
             resize();
         }
     };

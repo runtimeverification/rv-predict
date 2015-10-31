@@ -651,9 +651,9 @@ public class Configuration implements Constants {
     public Path getTraceFilePath(int id) {
         return Paths.get(logDir, id + "_" + TRACE_SUFFIX);
     }
-    
+
     public File getLLVMMetadataFile(String id) {
-    	return Paths.get(logDir, id + "_" + METADATA_BIN).toFile();
+        return Paths.get(logDir, id + "_" + METADATA_BIN).toFile();
     }
 
     public boolean isProfiling() {

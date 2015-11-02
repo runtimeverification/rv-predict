@@ -1,14 +1,11 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.LLVMEventReader;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.*;
 import java.nio.file.Path;
-import java.util.*;
 
 /**
  * Class reading the trace from an LLVM execution debug log.
@@ -19,20 +16,30 @@ import java.util.*;
 public class LLVMTraceCache extends TraceCache {
     private final Metadata metadata;
 
-    private final List<LLVMEventReader> LLVMReaders = new ArrayList<> ();
-
     public LLVMTraceCache(Configuration config, Metadata metadata) {
         super(config, metadata);
         this.metadata = metadata;
     }
 
-    private void parseVarInfo() throws IOException {
-        BinaryParser in = new BinaryParser(config.getLLVMMetadataFile("var"));
+    private interface MetadataLogger {
+         public void log(Object[] args);
+    }
+
+    private interface BinaryReader {
+        public default Object[] read(BinaryParser in) throws IOException {
+            Object[] args= new Object[2];
+            args[0] = in.readLong().intValue();
+            args[1] = in.readString();
+            return args;
+        }
+    }
+
+    private void parseInfo(MetadataLogger logger, BinaryReader reader, String prefix) throws IOException {
+        BinaryParser in = new BinaryParser(config.getLLVMMetadataFile(prefix));
         while(true) {
             try {
-                int varId = in.readLong().intValue();
-                String sig = in.readString();
-                metadata.setVariableSig(varId, sig);
+                Object[] args = reader.read(in);
+                logger.log(args);
             } catch (EOFException e) {
                 break;
             }
@@ -40,23 +47,51 @@ public class LLVMTraceCache extends TraceCache {
         in.close();
     }
 
-    private void parseLocInfo() throws IOException {
-        BinaryParser in = new BinaryParser(config.getLLVMMetadataFile("loc"));
-        while(true) {
-            try {
-                int locId = in.readLong().intValue();
-                String sig = in.readString();
-                metadata.setLocationSig(locId, sig);
-            } catch (EOFException e) {
-                break;
+    private void parseVarInfo() throws IOException {
+        parseInfo(new MetadataLogger() {
+            @Override
+            public void log(Object[] args) {
+                metadata.setVariableSig((Integer)args[0], (String)args[1]);
             }
-        }
-        in.close();
+        }, new BinaryReader() {
+        } , "var");
+    }
+
+    private void parseLocInfo() throws IOException {
+        parseInfo(new MetadataLogger() {
+            @Override
+            public void log(Object[] args) {
+                metadata.setLocationSig((Integer)args[0], (String)args[1]);
+            }
+        }, new BinaryReader() {
+        }, "loc");
+    }
+
+    private void parseThdInfo() throws IOException {
+        parseInfo(new MetadataLogger() {
+
+            @Override
+            public void log(Object[] args) {
+                metadata.addThreadCreationInfo((long)args[0], (long)args[1], (int)args[2]);
+
+            }
+        }, new BinaryReader() {
+
+            @Override
+            public Object[] read(BinaryParser in) throws IOException {
+                Object[] args = new Object[3];
+                args[0] = in.readLong();
+                args[1] = in.readLong();
+                args[2] = in.readInt();
+                return args;
+            }
+        }, "thd");
     }
 
     private void readMetadata() throws IOException {
         parseVarInfo();
         parseLocInfo();
+        parseThdInfo();
     }
 
     @Override
@@ -64,61 +99,10 @@ public class LLVMTraceCache extends TraceCache {
         int logId = 0;
         Path path = config.getTraceFilePath(logId);
         while(path.toFile().exists()) {
-            LLVMReaders.add(new LLVMEventReader(path));
+            readers.add(new LLVMEventReader(path));
             ++logId;
             path = config.getTraceFilePath(logId);
         }
         readMetadata();
     }
-
-
-    @Override
-    protected List<RawTrace> readEvents(long fromIndex, long toIndex) throws IOException {
-        List<RawTrace> rawTraces = new ArrayList<>();
-        LLVMReaders.sort((r1, r2) -> r1.lastReadEvent().compareTo(r2.lastReadEvent()));
-
-        Iterator<LLVMEventReader> iter = LLVMReaders.iterator();
-        while(iter.hasNext()) {
-            LLVMEventReader reader = iter.next();
-
-            if(reader.lastReadEvent().getGID() >= toIndex)
-                break;
-
-            Event event = reader.lastReadEvent();
-
-            assert(event.getGID() >= fromIndex);
-
-            int capacity = getNextPowerOfTwo(config.windowSize - 1);
-            if(config.stacks())
-                capacity *= 2;
-
-            List<Event> events = new ArrayList<>(capacity);
-
-            do {
-                if(event.getType() == EventType.START) {
-                    metadata.addThreadCreationInfo(event.getValue(), event.getTID(), event.getLocId());
-                }
-
-                if(event.getType() == EventType.JOIN || event.getType() == EventType.START) {
-                    event.setAddr(event.getValue());
-                    event.setValue(0);
-                }
-
-                events.add(event);
-                try {
-                    event = reader.readEvent();
-                } catch (EOFException e) {
-                    iter.remove();
-                    break;
-                }
-            } while(event.getGID() < toIndex);
-
-            int len = getNextPowerOfTwo(events.size());
-
-            rawTraces.add(new RawTrace(0, events.size(), events.toArray(new Event[len])));
-        }
-
-        return rawTraces;
-    }
-
 }

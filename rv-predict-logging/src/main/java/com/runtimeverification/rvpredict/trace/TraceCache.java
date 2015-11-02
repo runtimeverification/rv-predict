@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventReader;
+import com.runtimeverification.rvpredict.log.EventReaderInterface;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
@@ -25,7 +26,7 @@ public class TraceCache {
 
     private final TraceState crntState;
 
-    private final List<EventReader> readers = new ArrayList<>();
+    protected final List<EventReaderInterface> readers = new ArrayList<>();
 
     /**
      * Creates a new {@code TraceCahce} structure for a trace log.
@@ -73,10 +74,10 @@ public class TraceCache {
         List<RawTrace> rawTraces =  new ArrayList<>();
         /* sort readers by their last read events */
         readers.sort((r1, r2) -> r1.lastReadEvent().compareTo(r2.lastReadEvent()));
-        Iterator<EventReader> iter = readers.iterator();
+        Iterator<EventReaderInterface> iter = readers.iterator();
         Event event;
         while (iter.hasNext()) {
-            EventReader reader = iter.next();
+            EventReaderInterface reader = iter.next();
             if ((event = reader.lastReadEvent()).getGID() >= toIndex) {
                 break;
             }

@@ -1,6 +1,5 @@
 package com.runtimeverification.rvpredict.log;
 
-import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -13,7 +12,7 @@ import com.runtimeverification.rvpredict.trace.BinaryParser;
  * @author ericpts
  *
  */
-public class LLVMEventReader implements Closeable {
+public class LLVMEventReader implements EventReaderInterface {
 
     private BinaryParser in;
 
@@ -24,6 +23,7 @@ public class LLVMEventReader implements Closeable {
         readEvent();
     }
 
+    @Override
     public final Event readEvent() throws IOException {
         try {
             lastReadEvent = new Event(
@@ -42,6 +42,7 @@ public class LLVMEventReader implements Closeable {
         return lastReadEvent;
     }
 
+    @Override
     public Event lastReadEvent() {
         return this.lastReadEvent;
     }

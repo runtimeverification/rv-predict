@@ -95,7 +95,8 @@ static atomic_uint64_t nextVarId;
 static atomic_uint64_t rv_gid;
 
 static StaticSpinMutex locInsert,
-                       varInsert;
+                       varInsert,
+                       thdInsert;
 
 
 template<typename T>
@@ -115,13 +116,14 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
 
   fd_t fd;
   static fd_t locfd = OpenFile("loc_metadata.bin", WrOnly),
-              varfd = OpenFile("var_metadata.bin", WrOnly); 
+              varfd = OpenFile("var_metadata.bin", WrOnly),
+              thdfd = OpenFile("thd_metadata.bin", WrOnly);
   /*
   static fd_t locfd2 = OpenFile("loc.log", WrOnly),
               varfd2 = OpenFile("var.log", WrOnly); 
               */
   
-  char rvbuff[1000];
+  char rvbuff[400];
 
   if(!tidToFd.count(tid)) {
     internal_snprintf(rvbuff, sizeof(rvbuff), "%llu_trace.bin", tid);
@@ -197,6 +199,16 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   Printf("<gid:%lld;tid:%lld;id:%d;addr:%lld;value:%lld;type:%s>\n",
          gid, tid, (int)locId, varId, val, RVEventTypes[type]);
 */
+  if(type == START) {
+    SpinMutexLock lock(&thdInsert);
+    WriteNum(thdfd, val);
+    WriteNum(thdfd, tid + 1);
+    WriteNum(thdfd, (unsigned int)locId);
+  }
+  if(type == JOIN || type == START) {
+    varId = val;
+    val = 0;
+  }
   WriteNum(fd, gid);
   WriteNum(fd, tid + 1);
   WriteNum(fd, (unsigned int)locId);

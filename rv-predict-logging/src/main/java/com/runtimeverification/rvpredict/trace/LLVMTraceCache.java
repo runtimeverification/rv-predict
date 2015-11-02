@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.LLVMEventReader;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
@@ -31,7 +32,6 @@ public class LLVMTraceCache extends TraceCache {
             try {
                 int varId = in.readLong().intValue();
                 String sig = in.readString();
-                System.out.println("Processed var: " + Integer.toString(varId) + sig);
                 metadata.setVariableSig(varId, sig);
             } catch (EOFException e) {
                 break;
@@ -46,7 +46,6 @@ public class LLVMTraceCache extends TraceCache {
             try {
                 int locId = in.readLong().intValue();
                 String sig = in.readString();
-                System.out.println("Processed loc: " + Integer.toString(locId) + sig);
                 metadata.setLocationSig(locId, sig);
             } catch (EOFException e) {
                 break;
@@ -96,7 +95,15 @@ public class LLVMTraceCache extends TraceCache {
             List<Event> events = new ArrayList<>(capacity);
 
             do {
-                System.out.println("Added event" + event.toString());
+                if(event.getType() == EventType.START) {
+                    metadata.addThreadCreationInfo(event.getValue(), event.getTID(), event.getLocId());
+                }
+
+                if(event.getType() == EventType.JOIN || event.getType() == EventType.START) {
+                    event.setAddr(event.getValue());
+                    event.setValue(0);
+                }
+
                 events.add(event);
                 try {
                     event = reader.readEvent();

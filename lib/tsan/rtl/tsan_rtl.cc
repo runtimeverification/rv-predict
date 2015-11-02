@@ -135,21 +135,25 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
 
   if (!locId) {
     SpinMutexLock lock(&locInsert);
-    locId = atomic_fetch_add(&nextLocId, 1, memory_order_relaxed) + 1;
 
-    idToLocId.insert(id, locId);
+    if(!idToLocId.count(id)){
 
-    SymbolizedStack* frame = SymbolizeCode(id);
+        locId = atomic_fetch_add(&nextLocId, 1, memory_order_relaxed) + 1;
 
-    /*
-    int len = internal_snprintf(rvbuff, sizeof(rvbuff), "<locId:%lld;fn:%s;file:%s;line:%d>\n",
-        locId, frame->info.function, frame->info.file , frame->info.line);
-    WriteToFile(locfd2, (void*)rvbuff, len);
-*/
-    internal_snprintf(rvbuff, sizeof(rvbuff), "fn:%s;file:%s;line:%d", frame->info.function, frame->info.file, frame->info.line);
+        idToLocId.insert(id, locId);
 
-    WriteNum(locfd, locId);
-    WriteStr(locfd, rvbuff);
+        SymbolizedStack* frame = SymbolizeCode(id);
+
+        /*
+        int len = internal_snprintf(rvbuff, sizeof(rvbuff), "<locId:%lld;fn:%s;file:%s;line:%d>\n",
+            locId, frame->info.function, frame->info.file , frame->info.line);
+        WriteToFile(locfd2, (void*)rvbuff, len);
+    */
+        internal_snprintf(rvbuff, sizeof(rvbuff), "fn:%s;file:%s;line:%d", frame->info.function, frame->info.file, frame->info.line);
+
+        WriteNum(locfd, locId);
+        WriteStr(locfd, rvbuff);
+      }
   }
   locId = idToLocId.get(id);
 
@@ -157,31 +161,35 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
 
   if (!varId) {
     SpinMutexLock lock(&varInsert);
-    varId = atomic_fetch_add(&nextVarId, 1, memory_order_relaxed);
-    ReportLocation *location = SymbolizeData(addr);
-    if (location) {
-      const DataInfo &global = location->global;
 
-      /*
-      int len = internal_snprintf(rvbuff, sizeof(rvbuff), "<varId:%lld;desc:global '%s' of size %zu at %p (%s+%p)>\n",
-          varId, global.name, global.size, global.start,
-          StripModuleName(global.module), global.module_offset);
+    if(!addrToVarId.count(addr)) {
 
-      WriteToFile(varfd2, (void*)rvbuff, len);
-      */
+        varId = atomic_fetch_add(&nextVarId, 1, memory_order_relaxed);
+        ReportLocation *location = SymbolizeData(addr);
+        if (location) {
+          const DataInfo &global = location->global;
 
-      internal_snprintf(rvbuff, sizeof(rvbuff), "global '%s' of size %zu at %p (%s + %p)", global.name, global.size, global.start,
-          StripModuleName(global.module), global.module_offset);
+          /*
+          int len = internal_snprintf(rvbuff, sizeof(rvbuff), "<varId:%lld;desc:global '%s' of size %zu at %p (%s+%p)>\n",
+              varId, global.name, global.size, global.start,
+              StripModuleName(global.module), global.module_offset);
+
+          WriteToFile(varfd2, (void*)rvbuff, len);
+          */
+
+          internal_snprintf(rvbuff, sizeof(rvbuff), "global '%s' of size %zu at %p (%s + %p)", global.name, global.size, global.start,
+              StripModuleName(global.module), global.module_offset);
 
 
-      WriteNum(varfd, varId);
-      WriteStr(varfd, rvbuff);
+          WriteNum(varfd, varId);
+          WriteStr(varfd, rvbuff);
 
-      if (type == READ || type == WRITE) {
-        varId =  -varId & 0xFFFFFFFFL;
-      }
+          if (type == READ || type == WRITE) {
+            varId =  -varId & 0xFFFFFFFFL;
+          }
+        }
+        addrToVarId.insert(addr, varId);
     }
-    addrToVarId.insert(addr, varId);
   }
   varId = addrToVarId.get(addr);
 
@@ -190,7 +198,7 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
          gid, tid, (int)locId, varId, val, RVEventTypes[type]);
 */
   WriteNum(fd, gid);
-  WriteNum(fd, tid);
+  WriteNum(fd, tid + 1);
   WriteNum(fd, (unsigned int)locId);
   WriteNum(fd, varId);
   WriteNum(fd, val);

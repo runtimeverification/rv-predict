@@ -315,8 +315,8 @@ public class Configuration implements Constants {
     private boolean profile;
 
     public final static String opt_llvm_predict = "--llvm-predict";
-    @Parameter(names = opt_llvm_predict, description = "Run prediction on llvm trace", hidden = true, descriptionKey = "1400")
-    public boolean llvm_predict = false;
+    @Parameter(names = opt_llvm_predict, description = "Run prediction on llvm logs found in given directroy", hidden = true, descriptionKey = "1400")
+    public String llvm_predict = null;
 
     public final static String opt_base_log_dir = "--base-log-dir";
     @Parameter(names = opt_base_log_dir, description = "The name of the base directory where RV-Predict creates log directories", descriptionKey = "1500")
@@ -449,7 +449,7 @@ public class Configuration implements Constants {
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_only_predict);
             }
-            if (llvm_predict != false) {
+            if (llvm_predict != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_llvm_predict);
             }
             if (offline) {
@@ -459,7 +459,7 @@ public class Configuration implements Constants {
             if (predict_dir != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_only_predict);
             }
-            if (llvm_predict != false) {
+            if (llvm_predict != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_llvm_predict);
             }
             if (offline) {
@@ -467,13 +467,13 @@ public class Configuration implements Constants {
             }
             log = true;
         } else if (predict_dir != null) {       /* only predict */
-            if (llvm_predict != false) {
+            if (llvm_predict != null) {
                 exclusiveOptionsFailure(opt_only_predict, opt_llvm_predict);
             }
             setLogDir(Paths.get(predict_dir).toAbsolutePath().toString());
             prediction = OFFLINE_PREDICTION;
-        }  else if (llvm_predict != false) {  /* only llvm_predict */
-            setLogDir(Paths.get(".").toAbsolutePath().normalize().toString());
+        }  else if (llvm_predict != null) {  /* llvm_predict in the given directory */
+            setLogDir(Paths.get(llvm_predict).toAbsolutePath().normalize().toString());
             prediction = LLVM_PREDICTION;
         } else {                                /* log then predict */
             log = true;
@@ -652,8 +652,8 @@ public class Configuration implements Constants {
         return Paths.get(logDir, id + "_" + TRACE_SUFFIX);
     }
 
-    public File getLLVMMetadataFile(String id) {
-        return Paths.get(logDir, id + "_" + METADATA_BIN).toFile();
+    public Path getLLVMMetadataPath(String id) {
+        return Paths.get(logDir, id + "_" + METADATA_BIN);
     }
 
     public boolean isProfiling() {

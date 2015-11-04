@@ -35,7 +35,7 @@ public class LLVMTraceCache extends TraceCache {
     }
 
     private void parseInfo(MetadataLogger logger, BinaryReader reader, String prefix) throws IOException {
-        BinaryParser in = new BinaryParser(config.getLLVMMetadataFile(prefix));
+        BinaryParser in = new BinaryParser(config.getLLVMMetadataPath(prefix).toFile());
         while(true) {
             try {
                 Object[] args = reader.read(in);

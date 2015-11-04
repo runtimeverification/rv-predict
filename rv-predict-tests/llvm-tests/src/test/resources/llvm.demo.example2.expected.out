@@ -1,10 +1,1 @@
-Data race on global 'x' of size 4 at 0x0000014a6820 \(example2\+0x0000014a6820\): \{\{\{(.*)---->  at <fn:MyThread;file:example2.c;line:12>(.*)---->  at <fn:main;file:example2.c;line:23>(.*)\}\}\}
-
-Data race on global 'x' of size 4 at 0x0000014a6820 \(example2\+0x0000014a6820\): \{\{\{(.*)---->  at <fn:MyThread;file:example2.c;line:10>(.*)---->  at <fn:main;file:example2.c;line:23>(.*)\}\}\}
-
-Data race on global 'x' of size 4 at 0x0000014a6820 \(example2\+0x0000014a6820\): \{\{\{(.*)---->  at <fn:MyThread;file:example2.c;line:10>(.*)---->  at <fn:MyThread;file:example2.c;line:12>(.*)\}\}\}
-
-Data race on global 'x' of size 4 at 0x0000014a6820 \(example2\+0x0000014a6820\): \{\{\{(.*)---->  at <fn:MyThread;file:example2.c;line:10>(.*)---->  at <fn:main;file:example2.c;line:23>(.*)\}\}\}
-
-Data race on global 'x' of size 4 at 0x0000014a6820 \(example2\+0x0000014a6820\): \{\{\{(.*)---->  at <fn:MyThread;file:example2.c;line:12>(.*)---->  at <fn:main;file:example2.c;line:21>(.*)\}\}\}
-
+Data race on global 'x' of size 4 at 0x0000014a0bd8 \(a\.out \+ 0x0000014a0bd8\): \{\{\{(.*)---->  at fn:MyThread;file:<null>;line:0(.*)---->  at fn:main;file:<null>;line:0(.*)\}\}\}

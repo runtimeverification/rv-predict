@@ -1,4 +1,1 @@
-Data race on global 'helper' of size 8 at 0x00000152ce00 \(DoubleCheckedLocking+0x00000152ce00\): \{\{\{(.*)---->  at <fn:getHelper\(\);file:DoubleCheckedLocking.cpp;line:71>(.*)---->  at <fn:getHelper\(\);file:DoubleCheckedLocking.cpp;line:75>(.*)\}\}\}
-
-Data race on global 'helper' of size 8 at 0x00000152ce00 \(DoubleCheckedLocking+0x00000152ce00\): \{\{\{(.*)---->  at <fn:getHelper\(\);file:DoubleCheckedLocking.cpp;line:68>(.*)---->  at <fn:getHelper\(\);file:DoubleCheckedLocking.cpp;line:71>(.*)\}\}\}
-
+Data race on global 'helper' of size 8 at 0x000001527ee8 \(a\.out \+ 0x000001527ee8\): \{\{\{(.*)---->  at fn:getHelper\(\);file:<null>;line:0(.*)---->  at fn:getHelper\(\);file:<null>;line:0(.*)\}\}\}

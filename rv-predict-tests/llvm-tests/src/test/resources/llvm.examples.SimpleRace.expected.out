@@ -1,2 +1,1 @@
-Data race on global 'sharedVar' of size 4 at 0x00000152be00 \(SimpleRace+0x00000152be00\): \{\{\{(.*)---->  at <fn:thread1\(\);file:SimpleRace.cpp;line:55>(.*)---->  at <fn:thread2\(\);file:SimpleRace.cpp;line:59>(.*)\}\}\}
-
+Data race on global 'sharedVar' of size 4 at 0x000001524ea8 \(a\.out \+ 0x000001524ea8\): \{\{\{(.*)---->  at fn:thread1\(\);file:<null>;line:0(.*)T2 is created by T1(.*)Concurrent read in thread T3 \(locks held: \{}\)(.*)---->  at fn:thread2\(\);file:<null>;line:0(.*)\}\}\}

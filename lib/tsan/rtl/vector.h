@@ -12,7 +12,7 @@ namespace __tsan{
   namespace __RV {
 
     void* alloc(int sz) {
-      static MBlockType _typ;
+      static MBlockType _typ = MBlockRV;
       return internal_alloc(_typ, sz);
     }
 
@@ -148,6 +148,9 @@ namespace __tsan{
         }
 
         ~vector() {
+          for(int i = 0; i < sz; ++i) {
+            arr[i].~value();
+          }
           internal_free(arr);
         }
       };

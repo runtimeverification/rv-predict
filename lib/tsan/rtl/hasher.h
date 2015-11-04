@@ -17,24 +17,30 @@ template<typename T>
         return (y * 13337 + 189) % MOD;
     }
 
-template<typename Key, typename Value, unsigned int (*thasher)(Key) = hasher<Key> >
+template<typename Key, typename Value, unsigned int (*thasher)(const Key) = hasher<Key> >
     struct RVHash {
         struct entry {
             Key key;
             Value value;
 
-            entry() {
-            }
-            entry(Key k, Value v) {
-                key = k;
-                value = v;
+            entry(const entry &e):
+              key(e.key),
+              value(e.value){}
+
+            entry(const Key &k, const Value &v):
+                key(k),
+                value(v){}
+
+            ~entry() {
+              key.~Key();
+              value.~Value();
             }
         };
 
         struct bucket {
             vector<entry> ent;
 
-            int find_position(Key key) {
+            int find_position(const Key &key) {
                 for(int i = 0; i < ent.size(); ++i) {
                     if(ent[i].key == key)
                         return i;
@@ -46,6 +52,10 @@ template<typename Key, typename Value, unsigned int (*thasher)(Key) = hasher<Key
               ent.clear();
             }
 
+            ~bucket() {
+              ent.~vector();
+            }
+
             int size() {
                 return ent.size();
             }
@@ -54,7 +64,11 @@ template<typename Key, typename Value, unsigned int (*thasher)(Key) = hasher<Key
                 return ent[i];
             }
 
-            int count(Key key) {
+            const entry& operator[](int i) const {
+              return ent[i];
+            }
+
+            int count(const Key &key) {
                 int pos = find_position(key);
                 if(pos == ent.size())
                     return 0;
@@ -62,19 +76,24 @@ template<typename Key, typename Value, unsigned int (*thasher)(Key) = hasher<Key
                     return 1;
             }
 
-            Value get(Key key) {
+            Value& get(const Key &key) {
                 int pos = find_position(key);
                 return ent[pos].value;
             }
 
-            void insert(Key key, Value value) {
+            const Value& get(const Key &key) const {
+                int pos = find_position(key);
+                return ent[pos].value;
+            }
+
+            void insert(const Key &key, const Value &value) {
                 entry e(key, value);
                 if(count(key))
                     return;
                 ent.push_back(e);
             }
 
-            bool erase(Key key) {
+            bool erase(const Key &key) {
                 int poz = find_position(key);
                 if(poz != ent.size()) {
                   ent.erase_position(poz);
@@ -151,34 +170,51 @@ template<typename Key, typename Value, unsigned int (*thasher)(Key) = hasher<Key
             }
         }
 
-        bucket& get_bucket(Key key) {
+        bucket& get_bucket(const Key &key) {
+            int val = thasher(key) % size;
+            return b[val];
+        }
+        const bucket& get_bucket(const Key &key) const {
             int val = thasher(key) % size;
             return b[val];
         }
 
-        int count(Key key) {
+        int count(const Key &key) {
             bucket& now = get_bucket(key);
             return now.count(key);
         }
 
-        Value get(Key key) {
+        Value& get(const Key &key) {
             bucket& now = get_bucket(key);
             return now.get(key);
         }
 
-        void internal_insert(Key key, Value value) {
+        const Value& get(const Key &key) const {
+          bucket& now = get_bucket(key);
+          return now.get(key);
+        }
+
+        Value& operator[](const Key &key) {
+          return get(key);
+        }
+
+        const Value& operator[](const Key key) const {
+          return get(key);
+        }
+
+        void internal_insert(const Key key, const Value &value) {
             bucket& now = get_bucket(key);
             now.insert(key, value);
         }
 
-        void insert(Key key, Value value) {
+        void insert(const Key& key, const Value &value) {
             SpinMutexLock lock(&mutex);
             ++entries;
             internal_insert(key, value);
             resize();
         }
 
-        void erase(Key key) {
+        void erase(const Key& key) {
             SpinMutexLock lock(&mutex);
 
             bucket& now = get_bucket(key);

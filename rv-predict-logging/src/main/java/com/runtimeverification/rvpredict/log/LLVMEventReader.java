@@ -9,7 +9,7 @@ import com.runtimeverification.rvpredict.trace.BinaryParser;
 /**
  * An EventReader specialized for LLVM
  *
- * @author ericpts
+ * @author EricPtS
  *
  */
 public class LLVMEventReader implements EventReaderInterface {

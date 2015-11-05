@@ -4,7 +4,7 @@ import java.io.Closeable;
 import java.io.IOException;
 /**
  * An interface for reading events; to be used in TraceCache
- * @author ericpts
+ * @author EricPtS
  *
  */
 

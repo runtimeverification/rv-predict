@@ -10,7 +10,6 @@ import java.nio.file.Path;
 /**
  * Class reading the trace from an LLVM execution debug log.
  *
- * @author TraianSF
  * @author EricPtS
  */
 public class LLVMTraceCache extends TraceCache {

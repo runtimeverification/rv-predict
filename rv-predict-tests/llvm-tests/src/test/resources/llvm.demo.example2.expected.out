@@ -1,1 +1,7 @@
-Data race on global 'x' of size 4 at 0x0000014a0bd8 \(a\.out \+ 0x0000014a0bd8\): \{\{\{(.*)---->  at fn:MyThread;file:<null>;line:0(.*)---->  at fn:main;file:<null>;line:0(.*)\}\}\}
+Data race on global 'x' of size 4 at 0x000001523e10 \(a\.out \+ 0x000001523e10\): \{\{\{(.*)---->  at fn:MyThread\(void\*\);file:racy-c-programs/demo/example2\.c;line:10(.*) ---->  at fn:MyThread\(void\*\);file:racy-c-programs/demo/example2\.c;line:12(.*)}}}
+
+Data race on global 'x' of size 4 at 0x000001523e10 \(a\.out \+ 0x000001523e10\): \{\{\{(.*)---->  at fn:MyThread\(void\*\);file:racy-c-programs/demo/example2\.c;line:10(.*) ---->  at fn:main;file:racy-c-programs/demo/example2\.c;line:23(.*)}}}
+
+Data race on global 'x' of size 4 at 0x000001523e10 \(a\.out \+ 0x000001523e10\): \{\{\{(.*)---->  at fn:MyThread\(void\*\);file:racy-c-programs/demo/example2\.c;line:12(.*) ---->  at fn:main;file:racy-c-programs/demo/example2\.c;line:21(.*)}}}
+
+Data race on global 'x' of size 4 at 0x000001523e10 \(a\.out \+ 0x000001523e10\): \{\{\{(.*)---->  at fn:MyThread\(void\*\);file:racy-c-programs/demo/example2\.c;line:12(.*) ---->  at fn:main;file:racy-c-programs/demo/example2\.c;line:23(.*)}}}

@@ -1,1 +1,1 @@
-Data race on global 'sharedVar' of size 4 at 0x000001524ea8 \(a\.out \+ 0x000001524ea8\): \{\{\{(.*)---->  at fn:thread1\(\);file:<null>;line:0(.*)T2 is created by T1(.*)Concurrent read in thread T3 \(locks held: \{}\)(.*)---->  at fn:thread2\(\);file:<null>;line:0(.*)\}\}\}
+Data race on global 'sharedVar' of size 4 at 0x000001527ee8 \(a\.out \+ 0x000001527ee8\): \{\{\{(.*)---->  at fn:thread1\(\);file:racy-c-programs/examples/SimpleRace\.cpp;line:10(.*)---->  at fn:thread2\(\);file:racy-c-programs/examples/SimpleRace\.cpp;line:14(.*)}}}

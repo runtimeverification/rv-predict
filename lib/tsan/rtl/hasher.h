@@ -9,7 +9,7 @@
 namespace __tsan{
 namespace __RV {
 
-const unsigned int MOD = (1 << 31);
+const unsigned int MOD = (1 << 30);
 
 template<typename T>
     unsigned int hasher(T x) {
@@ -38,10 +38,10 @@ template<typename Key, typename Value, unsigned int (*thasher)(const Key) = hash
         };
 
         struct bucket {
-            vector<entry> ent;
+          __tsan::__RV::vector<entry> ent;
 
             int find_position(const Key &key) {
-                for(int i = 0; i < ent.size(); ++i) {
+                for(int i = 0; i < (int)ent.size(); ++i) {
                     if(ent[i].key == key)
                         return i;
                 }
@@ -49,6 +49,7 @@ template<typename Key, typename Value, unsigned int (*thasher)(const Key) = hash
             }
 
             void clear() {
+              ent.arr = 0;
               ent.clear();
             }
 
@@ -106,7 +107,6 @@ template<typename Key, typename Value, unsigned int (*thasher)(const Key) = hash
 
         int size;
         int entries;
-        mutable StaticSpinMutex mutex;
 
         bucket* b;
 
@@ -208,15 +208,12 @@ template<typename Key, typename Value, unsigned int (*thasher)(const Key) = hash
         }
 
         void insert(const Key& key, const Value &value) {
-            SpinMutexLock lock(&mutex);
             ++entries;
             internal_insert(key, value);
             resize();
         }
 
         void erase(const Key& key) {
-            SpinMutexLock lock(&mutex);
-
             bucket& now = get_bucket(key);
             now.erase(key);
             entries -= now.erase(key);

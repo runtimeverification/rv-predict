@@ -4,7 +4,6 @@
 #define VECTOR_H
 
 #include "tsan_mman.h"
-#include "tsan_mutex.h"
 #include "tsan_defs.h"
 
 namespace __tsan{
@@ -12,7 +11,7 @@ namespace __tsan{
   namespace __RV {
 
     void* alloc(int sz) {
-      static MBlockType _typ = MBlockRV;
+      static MBlockType _typ = MBlockMetadata;
       return internal_alloc(_typ, sz);
     }
 
@@ -22,7 +21,6 @@ namespace __tsan{
         int sz;
         int max_sz;
         value* arr;
-        mutable StaticSpinMutex mutex;
 
         value* new_alloc() {
           return (value *)alloc(max_sz * sizeof(value)); 
@@ -43,7 +41,7 @@ namespace __tsan{
         }
 
         void grow() {
-          max_sz *= 2;
+          max_sz = max_sz * 5 / 4;
         }
 
         void shrink() {
@@ -65,29 +63,24 @@ namespace __tsan{
         }
 
         bool empty() {
-          SpinMutexLock lock(&mutex);
           return sz == 0;
         }
 
         int size() {
-          SpinMutexLock lock(&mutex);
           return sz;
         }
 
         int max_size() {
-          SpinMutexLock lock(&mutex);
           return max_sz;
         }
 
 
         value back() {
-          SpinMutexLock lock(&mutex);
           return arr[sz - 1];
         }
 
 
         int find(value v) {
-          SpinMutexLock lock(&mutex);
           for(int i = 0; i < sz; ++i) {
             if(arr[i] == v) {
               return i;
@@ -97,7 +90,6 @@ namespace __tsan{
         }
 
         void erase_position(int poz) {
-          SpinMutexLock lock(&mutex);
           for(int i = poz; i + 1 < sz; ++i) {
             arr[i] = arr[i + 1];
           }
@@ -106,52 +98,49 @@ namespace __tsan{
         }
 
         void erase(value v) {
-          SpinMutexLock lock(&mutex);
           int poz = find(v);
           if(poz != sz)
             erase_position(poz);
         }
 
         void push_back(value v) {
-          SpinMutexLock lock(&mutex);
+          resize();
           arr[sz] = v;
           sz++;
-          resize();
         }
 
         void insert(int poz, value v) {
-          SpinMutexLock lock(&mutex);
-          ++sz;
           resize();
+          ++sz;
           for(int i = sz; i > poz; --i)
             arr[i] = arr[i - 1];
           arr[poz] = v;
         }
 
         void pop_back() {
-          SpinMutexLock lock(&mutex);
           --sz;
           resize();
         }
         void clear() {
-          SpinMutexLock lock(&mutex);
-          sz = 0;
-          max_sz = 16;
-          resize();
-        }
-
-        vector() {
-          SpinMutexLock lock(&mutex);
           sz = 0;
           max_sz = 8;
+          if(arr != 0){
+            internal_free(arr);
+            arr = 0;
+          }
           arr = new_alloc();
         }
 
+        vector() {
+          arr = 0;
+          clear();
+        }
+
         ~vector() {
-          for(int i = 0; i < sz; ++i) {
-            arr[i].~value();
+          if(arr != 0) {
+            internal_free(arr);
+            arr = 0;
           }
-          internal_free(arr);
         }
       };
   };

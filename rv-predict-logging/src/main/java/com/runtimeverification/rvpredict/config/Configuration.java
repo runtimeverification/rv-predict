@@ -315,7 +315,7 @@ public class Configuration implements Constants {
     private boolean profile;
 
     public final static String opt_llvm_predict = "--llvm-predict";
-    @Parameter(names = opt_llvm_predict, description = "Run prediction on llvm logs found in given directroy", hidden = true, descriptionKey = "1400")
+    @Parameter(names = opt_llvm_predict, description = "Run prediction on llvm logs found in given directory", hidden = true, descriptionKey = "1400")
     public String llvm_predict = null;
 
     public final static String opt_base_log_dir = "--base-log-dir";

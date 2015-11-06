@@ -18,7 +18,7 @@ import net.jpountz.lz4.LZ4FastDecompressor;
  * @author TraianSF
  * @author YilongL
  */
-public class EventReader implements EventReaderInterface {
+public class EventReader implements IEventReader {
 
     private static final LZ4FastDecompressor FAST_DECOMPRESSOR =
             LZ4Factory.fastestInstance().fastDecompressor();

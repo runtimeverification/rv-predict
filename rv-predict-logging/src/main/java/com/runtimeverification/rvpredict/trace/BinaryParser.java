@@ -18,9 +18,10 @@ import java.nio.file.Path;
  */
 
 public class BinaryParser implements Closeable {
-    private final ByteBuffer byteBuffer = ByteBuffer.allocate(8).order(ByteOrder.nativeOrder());
-    private BufferedInputStream in;
 
+    private final ByteBuffer byteBuffer = ByteBuffer.allocate(8).order(ByteOrder.nativeOrder());
+
+    private BufferedInputStream in;
 
     public BinaryParser(File file) throws IOException {
         in = new BufferedInputStream(new FileInputStream(file));
@@ -29,7 +30,6 @@ public class BinaryParser implements Closeable {
     public BinaryParser(Path path) throws IOException {
         this(path.toFile());
     }
-
 
     public final int readByte() throws IOException {
         int rd = in.read();

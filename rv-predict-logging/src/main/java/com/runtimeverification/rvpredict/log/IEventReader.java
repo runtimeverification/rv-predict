@@ -8,9 +8,9 @@ import java.io.IOException;
  *
  */
 
-public interface EventReaderInterface extends Closeable {
+public interface IEventReader extends Closeable {
 
-    public Event readEvent() throws IOException;
+    Event readEvent() throws IOException;
 
     public Event lastReadEvent();
 }

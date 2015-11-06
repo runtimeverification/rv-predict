@@ -24,8 +24,8 @@ public class LLVMTraceCache extends TraceCache {
          public void log(Object[] args);
     }
 
-    private interface BinaryReader {
-        public default Object[] read(BinaryParser in) throws IOException {
+    private class BinaryReader {
+        public Object[] read(BinaryParser in) throws IOException {
             Object[] args= new Object[2];
             args[0] = in.readLong().intValue();
             args[1] = in.readString();
@@ -53,7 +53,7 @@ public class LLVMTraceCache extends TraceCache {
                 metadata.setVariableSig((Integer)args[0], (String)args[1]);
             }
         }, new BinaryReader() {
-        } , "var");
+        }, "var");
     }
 
     private void parseLocInfo() throws IOException {
@@ -62,8 +62,8 @@ public class LLVMTraceCache extends TraceCache {
             public void log(Object[] args) {
                 metadata.setLocationSig((Integer)args[0], (String)args[1]);
             }
-        }, new BinaryReader() {
-        }, "loc");
+        }, new BinaryReader()
+         , "loc");
     }
 
     private void parseThdInfo() throws IOException {

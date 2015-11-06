@@ -12,9 +12,9 @@ import com.runtimeverification.rvpredict.trace.BinaryParser;
  * @author EricPtS
  *
  */
-public class LLVMEventReader implements EventReaderInterface {
+public class LLVMEventReader implements IEventReader {
 
-    private BinaryParser in;
+    private final BinaryParser in;
 
     private Event lastReadEvent;
 

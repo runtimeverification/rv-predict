@@ -1,7 +1,6 @@
 package com.runtimeverification.rvpredict.log;
 
 import java.io.BufferedInputStream;
-import java.io.Closeable;
 import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -19,7 +18,7 @@ import net.jpountz.lz4.LZ4FastDecompressor;
  * @author TraianSF
  * @author YilongL
  */
-public class EventReader implements Closeable {
+public class EventReader implements IEventReader {
 
     private static final LZ4FastDecompressor FAST_DECOMPRESSOR =
             LZ4Factory.fastestInstance().fastDecompressor();
@@ -36,7 +35,8 @@ public class EventReader implements Closeable {
         readEvent();
     }
 
-    public final Event readEvent() throws IOException {
+    @Override
+    public Event readEvent() throws IOException {
         int bytes;
         int off = 0;
         int len = Event.SIZEOF;
@@ -59,6 +59,7 @@ public class EventReader implements Closeable {
         return lastReadEvent;
     }
 
+    @Override
     public Event lastReadEvent() {
         return lastReadEvent;
     }

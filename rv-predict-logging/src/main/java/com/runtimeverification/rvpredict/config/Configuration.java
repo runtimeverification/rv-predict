@@ -47,6 +47,8 @@ import java.util.stream.Collectors;
 
 import org.apache.tools.ant.util.JavaEnvUtils;
 
+import com.runtimeverification.licensing.Licensing;
+
 /**
  * Command line options class for rv-predict Used by JCommander to parse the
  * main program parameters.
@@ -385,6 +387,11 @@ public class Configuration implements Constants {
 
     private Configuration() { }
 
+    private void printLicense() {
+        Licensing licensingSystem = new Licensing("com/runtimeverification/rvpredict/instrument/Agent.class", "predict");
+        licensingSystem.getLicenseCache().getLicense().printInfo();
+    }
+
     private void parseArguments(String[] args) {
         this.args = args;
         jCommander = new JCommander(this);
@@ -425,6 +432,7 @@ public class Configuration implements Constants {
             System.exit(0);
         }
         if (display_version) {
+            printLicense();
             System.out.println("RV-Predict version "
                     + this.getClass().getPackage().getImplementationVersion());
             System.exit(0);
@@ -535,6 +543,9 @@ public class Configuration implements Constants {
          * or -jar and is run as a class (i.e., not using -jar) then the java
          * -cp option must be used explicitly for disambiguation.
          */
+
+        // Display licensing info
+        printLicense();
 
         // computing names maximum length
         int max_option_length = 0;

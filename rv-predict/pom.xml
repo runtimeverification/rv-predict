@@ -52,6 +52,63 @@
     </dependencies>
     <build>
         <plugins>
+            <!-- Download latest licenses (and delete old ones first due to old version of download plugin not supporting overwrites) -->
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-antrun-plugin</artifactId>
+              <version>1.8</version>
+              <executions>
+                <execution>
+                  <phase>process-resources</phase>
+                  <goals>
+                    <goal>run</goal>
+                  </goals>
+                  <configuration>
+                    <target>
+                      <delete 
+                        file="${project.parent.relativePath}/../EVALUATION-LICENSE.md"/>   
+                      <delete 
+                        file="${project.parent.relativePath}/../LICENSE.md"/>
+                    </target>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>            
+            <plugin>
+              <groupId>com.googlecode.maven-download-plugin</groupId>
+              <artifactId>maven-download-plugin</artifactId>
+              <version>1.1.0</version>
+              <executions>
+                <execution>
+                  <phase>process-resources</phase>
+                  <id>download-evaluation</id>
+                  <goals>
+                    <goal>wget</goal>
+                  </goals>
+                  <configuration>
+                    <url>https://runtimeverification.com/licensing/EVALUATION-LICENSE.md</url>
+                    <outputFileName>EVALUATION-LICENSE.md</outputFileName>
+                    <outputDirectory>${project.parent.relativePath}/..</outputDirectory>
+                    <overwrite>true</overwrite>
+                    <skipCache>true</skipCache>
+                  </configuration>
+                </execution>
+                <execution>
+                  <phase>process-resources</phase>
+                  <id>download-license</id>
+                  <goals>
+                    <goal>wget</goal>
+                  </goals>
+                  <configuration>
+                    <url>https://runtimeverification.com/licensing/LICENSE.md</url>
+                    <outputFileName>LICENSE.md</outputFileName>
+                    <outputDirectory>${project.parent.relativePath}/..</outputDirectory>
+                    <overwrite>true</overwrite>
+                    <skipCache>true</skipCache>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>2.4</version>

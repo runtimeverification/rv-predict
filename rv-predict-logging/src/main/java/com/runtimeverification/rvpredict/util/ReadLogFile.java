@@ -9,18 +9,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * Debugging class for dumping the contents of a log file to console.
+ * Debugging class for printing the contents of a log file to console.
  * Uses metadata information to desugar location pointers to actual locations in the code.
  *
  * @author TraianSF
  */
-public class DumpLogFile {
+public class ReadLogFile {
     /**
      * @param args path to a file containing a trace segment.
      */
     public static void main(String[] args) {
         if (args.length < 1) {
-            System.err.println("Usage " + DumpLogFile.class.getName() + " <log_file_name>");
+            System.err.println("Usage " + ReadLogFile.class.getName() + " <log_file_name>");
             System.exit(1);
         }
         Path path = Paths.get(args[0]).toAbsolutePath();

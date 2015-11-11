@@ -63,7 +63,7 @@ public class Configuration implements Constants {
 
     public static final String TRACE_SUFFIX = "trace.bin";
 
-    private static final String METADATA_BIN = "metadata.bin";
+    public static final String METADATA_BIN = "metadata.bin";
 
     /**
      * Packages/classes that need to be excluded from instrumentation. These are
@@ -472,7 +472,7 @@ public class Configuration implements Constants {
             }
             setLogDir(Paths.get(predict_dir).toAbsolutePath().normalize().toString());
             prediction = OFFLINE_PREDICTION;
-        }  else if (llvm_predict != null) {  /* only llvm_predict */
+        }  else if (llvm_predict != null) {     /* only llvm_predict */
             setLogDir(Paths.get(llvm_predict).toAbsolutePath().normalize().toString());
             prediction = LLVM_PREDICTION;
         } else {                                /* log then predict */

@@ -25,9 +25,7 @@ public class DumpLogFile {
         }
         Path path = Paths.get(args[0]).toAbsolutePath();
         Path directory = path.getParent();
-        Configuration configuration = Configuration.instance(
-                new String[] { "--dir", directory.toString() });
-        Metadata metadata = Metadata.readFrom(configuration.getMetadataPath());
+        Metadata metadata = Metadata.readFrom(Paths.get(directory.toString(), Configuration.METADATA_BIN));
         String file = args[0];
         try (EventReader reader = new EventReader(Paths.get(file))) {
             System.out.println("Dumping events from " + file);

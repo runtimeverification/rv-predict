@@ -31,7 +31,8 @@ public class ReadLogFile {
             System.out.println("Dumping events from " + file);
             while (true) {
                 Event event = reader.readEvent();
-                System.out.printf("%-60s %s%n", event.toString(), metadata.getLocationSig(event.getLocId()));
+                String locSig = event.getLocId() < 0 ? "n/a" : metadata.getLocationSig(event.getLocId());
+                System.out.printf("%-60s %s%n", event.toString(), locSig);
             }
         } catch (EOFException ignored) {
         } catch (IOException e) {

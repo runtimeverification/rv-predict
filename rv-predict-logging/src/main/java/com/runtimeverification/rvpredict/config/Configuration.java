@@ -429,12 +429,13 @@ public class Configuration implements Constants {
 
         if (help) {
             usage();
-            System.exit(0);
         }
         if (display_version) {
-            printLicense();
             System.out.println("RV-Predict version "
                     + this.getClass().getPackage().getImplementationVersion());
+        }
+        if (help || display_version) {
+            printLicense();
             System.exit(0);
         }
 
@@ -543,9 +544,6 @@ public class Configuration implements Constants {
          * or -jar and is run as a class (i.e., not using -jar) then the java
          * -cp option must be used explicitly for disambiguation.
          */
-
-        // Display licensing info
-        printLicense();
 
         // computing names maximum length
         int max_option_length = 0;

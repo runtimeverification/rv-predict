@@ -58,8 +58,8 @@ namespace __tsan{
           }
         }
 
-        value& operator[](int poz) {
-          return arr[poz];
+        value& operator[](int pos) {
+          return arr[pos];
         }
 
         bool empty() {
@@ -89,8 +89,8 @@ namespace __tsan{
           return sz;
         }
 
-        void erase_position(int poz) {
-          for(int i = poz; i + 1 < sz; ++i) {
+        void erase_position(int pos) {
+          for(int i = pos; i + 1 < sz; ++i) {
             arr[i] = arr[i + 1];
           }
           --sz;
@@ -98,9 +98,9 @@ namespace __tsan{
         }
 
         void erase(value v) {
-          int poz = find(v);
-          if(poz != sz)
-            erase_position(poz);
+          int pos = find(v);
+          if(pos != sz)
+            erase_position(pos);
         }
 
         void push_back(value v) {
@@ -109,12 +109,12 @@ namespace __tsan{
           sz++;
         }
 
-        void insert(int poz, value v) {
+        void insert(int pos, value v) {
           resize();
           ++sz;
-          for(int i = sz; i > poz; --i)
+          for(int i = sz; i > pos; --i)
             arr[i] = arr[i - 1];
-          arr[poz] = v;
+          arr[pos] = v;
         }
 
         void pop_back() {
@@ -124,22 +124,22 @@ namespace __tsan{
         void clear() {
           sz = 0;
           max_sz = 8;
-          if(arr != 0){
+          if(arr != nullptr){
             internal_free(arr);
-            arr = 0;
+            arr = nullptr;
           }
           arr = new_alloc();
         }
 
         vector() {
-          arr = 0;
+          arr = nullptr;
           clear();
         }
 
         ~vector() {
-          if(arr != 0) {
+          if(arr != nullptr) {
             internal_free(arr);
-            arr = 0;
+            arr = nullptr;
           }
         }
       };

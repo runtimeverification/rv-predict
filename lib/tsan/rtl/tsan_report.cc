@@ -269,6 +269,7 @@ static SymbolizedStack *SkipTsanInternalFrames(SymbolizedStack *frames) {
 }
 
 void PrintReport(const ReportDesc *rep) {
+  return;
   Decorator d;
   Printf("==================\n");
   const char *rep_typ_str = ReportTypeString(rep->typ);
@@ -383,6 +384,7 @@ static void PrintThread(const ReportThread *rt) {
 }
 
 void PrintReport(const ReportDesc *rep) {
+  return;
   Printf("==================\n");
   if (rep->typ == ReportTypeRace) {
     Printf("WARNING: DATA RACE");

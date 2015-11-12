@@ -48,8 +48,12 @@ template<typename Key, typename Value, unsigned int (*thasher)(const Key) = hash
                 return ent.size();
             }
 
-            void clear() {
+            void init() {
               ent.arr = 0;
+              ent.clear();
+            }
+
+            void clear() {
               ent.clear();
             }
 
@@ -95,9 +99,9 @@ template<typename Key, typename Value, unsigned int (*thasher)(const Key) = hash
             }
 
             bool erase(const Key &key) {
-                int poz = find_position(key);
-                if(poz != ent.size()) {
-                  ent.erase_position(poz);
+                int pos = find_position(key);
+                if(pos != ent.size()) {
+                  ent.erase_position(pos);
                   return true;
                 } else {
                   return false;
@@ -118,7 +122,7 @@ template<typename Key, typename Value, unsigned int (*thasher)(const Key) = hash
             void* mem = new_alloc();
             b = (bucket *)mem;
             for(int i = 0; i < size; ++i) {
-              b[i].clear();
+              b[i].init();
             }
         }
 

@@ -50,7 +50,7 @@ public class TraceCache {
     /**
      * Returns the power of two that is greater than the given integer.
      */
-    protected int getNextPowerOfTwo(int x) {
+    protected final int getNextPowerOfTwo(int x) {
         return 1 << (32 - Integer.numberOfLeadingZeros(x));
     }
 
@@ -70,7 +70,7 @@ public class TraceCache {
         return rawTraces.isEmpty() ? null : crntState.initNextTraceWindow(rawTraces);
     }
 
-    protected List<RawTrace> readEvents(long fromIndex, long toIndex) throws IOException {
+    protected final List<RawTrace> readEvents(long fromIndex, long toIndex) throws IOException {
         List<RawTrace> rawTraces =  new ArrayList<>();
         /* sort readers by their last read events */
         readers.sort((r1, r2) -> r1.lastReadEvent().compareTo(r2.lastReadEvent()));

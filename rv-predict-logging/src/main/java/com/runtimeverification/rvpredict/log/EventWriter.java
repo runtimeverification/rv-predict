@@ -8,16 +8,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
 
 import net.jpountz.lz4.LZ4BlockOutputStream;
-import net.jpountz.lz4.LZ4Compressor;
-import net.jpountz.lz4.LZ4Factory;
-
-import com.runtimeverification.rvpredict.config.Configuration.OS;
 
 public class EventWriter implements Closeable {
-
-    public static final int COMPRESS_BLOCK_SIZE = 8 * 1024 * 1024; // 8MB
-
-    private static final LZ4Compressor FAST_COMPRESSOR = LZ4Factory.fastestInstance().fastCompressor();
 
     private final LZ4BlockOutputStream out;
 
@@ -28,12 +20,7 @@ public class EventWriter implements Closeable {
     private final ByteBuffer byteBuffer = ByteBuffer.allocate(Event.SIZEOF);
 
     public EventWriter(Path path) throws IOException {
-        this.out = new LZ4BlockOutputStream(
-            OS.current() == OS.WINDOWS ?
-                    new BufferedChannelOutputStream(path) :
-                    new MappedByteBufferOutputStream(path),
-                COMPRESS_BLOCK_SIZE,
-                FAST_COMPRESSOR);
+        this.out = LZ4Utils.createCompressionStream(path);
     }
 
     public void write(long gid, long tid, int locId, long addr, long value,

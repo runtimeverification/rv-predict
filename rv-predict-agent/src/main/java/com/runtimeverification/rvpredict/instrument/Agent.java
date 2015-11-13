@@ -7,7 +7,6 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.ProtectionDomain;
 import java.util.Collections;
@@ -139,20 +138,13 @@ public class Agent implements ClassFileTransformer, Constants {
 
     private static void initLoggingDirectory() {
         /* compute and set path to log directory if it is still unknown */
-        String logDir = config.getLogDir();
-        if (logDir == null) {
-            try {
-                Path baseDir = Paths.get(config.getBaseDirName());
-                if (!Files.exists(baseDir)) {
-                    Files.createDirectory(baseDir);
-                }
-                logDir = Files.createTempDirectory(baseDir, "rv-predict").toString();
-                config.setLogDir(logDir);
-            } catch (IOException e) {
-                System.err.println("Error while attempting to create log dir.");
-                System.err.println(e.getMessage());
-                System.exit(1);
-            }
+        String logDir = null;
+        try {
+            logDir = config.getOrCreateLogDir();
+        } catch (IOException e) {
+            System.err.println("Error while attempting to create log dir.");
+            System.err.println(e.getMessage());
+            System.exit(1);
         }
 
         /* scan all trace files */

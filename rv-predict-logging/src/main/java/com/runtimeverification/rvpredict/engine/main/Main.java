@@ -37,7 +37,7 @@ public class Main {
             execApplication();
         } else {
             /* must be in only_predict or only_llvm_predict mode */
-            assert config.isOfflinePrediction() || config.isLLVMPrediction();
+            assert config.isOfflinePrediction() || config.isLLVMPrediction() || config.isModulePrediction();
             new RVPredict(config).start();
         }
     }

@@ -9,6 +9,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Stack;
 import java.util.Map;
 
 /**
@@ -17,8 +18,8 @@ import java.util.Map;
  * @author TraianSF
  */
 public class ModuleTraceCache extends TraceCache {
-    long gid = 0;
-    long value = 0;
+    private long gid = 0;
+    private long value = 0;
 
     private BufferedReader traceFile = null;
     private final Metadata metadata;
@@ -26,6 +27,25 @@ public class ModuleTraceCache extends TraceCache {
         super(config, metadata);
         this.metadata = metadata;
     }
+
+
+    class IndexedStack<Index,Value> {
+        private Map<Index, Stack<Value>> indexedStack = new HashMap<>();
+        public Value push(Index i, Value v) {
+            Stack<Value> stack = indexedStack.get(i);
+            if (stack == null) {
+                stack = new Stack<Value>();
+                indexedStack.put(i,stack);
+            }
+            return stack.push(v);
+        }
+
+        public Value pop(Index i) {
+            return indexedStack.get(i).pop();
+        }
+    }
+
+    private IndexedStack<Long,Integer> threadCallStack = new IndexedStack<>();
 
     @Override
     public void setup() throws IOException {
@@ -81,16 +101,24 @@ public class ModuleTraceCache extends TraceCache {
         int i = 0;
         EventType type = parseType("type", parts[i++]);
         long tid = parseLong("tid", parts[i++]);
-        long locationId = parseLong("pc", parts[i++]);
-        long addr = parseLong("addr", parts[i++]);
+        String locationIdStr = parseString("pc", parts[i++]);
+        String addrStr = parseString("addr", parts[i++]);
+        int locationId = metadata.getLocationId(locationIdStr);
+        int addr = metadata.getVariableId("",addrStr);
         ++gid;
         config.logger().debug(String.format("<gid:%d;tid:%d;id:%d;addr:%d;value:%d;type:%s>%n",
                 gid, tid, locationId, addr, value, type.toString()));
-        if (metadata.getLocationSig((int)locationId) == null) {
-            metadata.setLocationSig((int)locationId, Long.toHexString(locationId));
+//        if (metadata.getLocationSig((int)locationId) == null) {
+//            metadata.setLocationSig((int)locationId, Long.toHexString(locationId));
+//        }
+//        if (metadata.getVariableSig((int)addr) == null) {
+//            metadata.setVariableSig((int)addr, Long.toHexString(addr));
+//        }
+        if (type == EventType.INVOKE_METHOD) {
+            threadCallStack.push(tid, locationId);
         }
-        if (metadata.getVariableSig((int)addr) == null) {
-            metadata.setVariableSig((int)addr, Long.toHexString(addr));
+        if (type == EventType.FINISH_METHOD) {
+            locationId = threadCallStack.pop(tid);
         }
 //        if (type == EventType.START) {
 //            metadata.addThreadCreationInfo(value, tid, locationId);
@@ -99,7 +127,7 @@ public class ModuleTraceCache extends TraceCache {
 //            addr = value;
 //            value = 0;
 //        }
-        return new Event(gid, tid, (int)locationId, addr, value, type);
+        return new Event(gid, tid, locationId, addr, value, type);
 
     }
 

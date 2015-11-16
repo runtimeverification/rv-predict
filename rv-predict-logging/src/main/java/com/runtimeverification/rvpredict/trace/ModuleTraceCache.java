@@ -20,6 +20,7 @@ import java.util.Map;
 public class ModuleTraceCache extends TraceCache {
     private long gid = 0;
     private long value = 0;
+    private static final long INTERRUPT_TID = Long.MAX_VALUE;
 
     private BufferedReader traceFile = null;
     private final Metadata metadata;
@@ -87,67 +88,30 @@ public class ModuleTraceCache extends TraceCache {
             if (line == null) {
                 return null;
             }
-//            if (line.startsWith("<locId")) {
-//                parseLocationInfo(line);
-//                continue;
-//            }
-//            if (line.startsWith("<varId")) {
-//                parseVarInfo(line);
-//                continue;
-//            }
         } while (!line.startsWith("<type"));
         String[] parts = line.substring(line.indexOf('<') + 1, line.lastIndexOf('>')).split(";");
         assert parts.length == 4;
         int i = 0;
         EventType type = parseType("type", parts[i++]);
         long tid = parseLong("tid", parts[i++]);
+        if (tid == 0) {
+            tid = INTERRUPT_TID;
+        }
         String locationIdStr = parseString("pc", parts[i++]);
         String addrStr = parseString("addr", parts[i++]);
         int locationId = metadata.getLocationId(locationIdStr);
-        int addr = metadata.getVariableId("",addrStr);
+        int addr = -metadata.getVariableId("",addrStr);
         ++gid;
         config.logger().debug(String.format("<gid:%d;tid:%d;id:%d;addr:%d;value:%d;type:%s>%n",
                 gid, tid, locationId, addr, value, type.toString()));
-//        if (metadata.getLocationSig((int)locationId) == null) {
-//            metadata.setLocationSig((int)locationId, Long.toHexString(locationId));
-//        }
-//        if (metadata.getVariableSig((int)addr) == null) {
-//            metadata.setVariableSig((int)addr, Long.toHexString(addr));
-//        }
         if (type == EventType.INVOKE_METHOD) {
             threadCallStack.push(tid, locationId);
         }
         if (type == EventType.FINISH_METHOD) {
             locationId = threadCallStack.pop(tid);
         }
-//        if (type == EventType.START) {
-//            metadata.addThreadCreationInfo(value, tid, locationId);
-//        }
-//        if (type == EventType.START || type == EventType.JOIN) {
-//            addr = value;
-//            value = 0;
-//        }
         return new Event(gid, tid, locationId, addr, value, type);
 
-    }
-
-    private void parseVarInfo(String line) {
-        String[] parts = line.substring(line.indexOf('<') + 1, line.lastIndexOf('>')).split(";");
-        assert parts.length == 2;
-        int varId = (int) parseLong("varId", parts[0]);
-        String desc = parseString("desc", parts[1]);
-        metadata.setVariableSig(varId, desc);
-    }
-
-    private void parseLocationInfo(String line) {
-        String[] parts = line.substring(line.indexOf('<') + 1, line.lastIndexOf('>')).split(";");
-        assert parts.length == 4;
-        int locId = (int) parseLong("locId", parts[0]);
-        String fn = parseString("fn", parts[1]);
-        String file = parseString("file", parts[2]);
-        file = file.substring(file.lastIndexOf('/') + 1);
-        int ln = (int) parseLong("line", parts[3]);
-        metadata.setLocationSig(locId, String.format("<fn:%s;file:%s;line:%d>", fn, file, ln));
     }
 
     private EventType parseType(String attr, String part) {

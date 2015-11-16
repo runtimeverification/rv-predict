@@ -40,6 +40,7 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
+import com.runtimeverification.rvpredict.trace.ModuleTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.util.Logger;
@@ -62,6 +63,9 @@ public class RVPredict {
         if (config.isLLVMPrediction()) {
             metadata = Metadata.singleton();
             traceCache = new LLVMTraceCache(config, metadata);
+        } else if (config.isModulePrediction()) {
+            metadata = Metadata.singleton();
+            traceCache = new ModuleTraceCache(config, metadata);
         } else {
             this.metadata = Metadata.readFrom(config.getMetadataPath());
             traceCache = new TraceCache(config, metadata);

@@ -292,6 +292,7 @@ public class Configuration implements Constants {
     private final static String ONLINE_PREDICTION = "ONLINE_PREDICTION";
     private final static String OFFLINE_PREDICTION = "OFFLINE_PREDICTION";
     private static final String LLVM_PREDICTION = "LLVM_PREDICTION";
+    private static final String MODULE_PREDICTION = "MODULE_PREDICTION";
     private String prediction;
 
     private boolean log;
@@ -313,6 +314,10 @@ public class Configuration implements Constants {
     public final static String opt_event_profile = "--profile";
     @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1300")
     private boolean profile;
+
+    public final static String opt_module_predict = "--module-predict";
+    @Parameter(names = opt_module_predict, description = "Run prediction on given kernel module trace", hidden = true, descriptionKey = "1400")
+    public String module_trace_file = null;
 
     public final static String opt_llvm_predict = "--llvm-predict";
     @Parameter(names = opt_llvm_predict, description = "Run prediction on given llvm trace", hidden = true, descriptionKey = "1400")
@@ -452,6 +457,9 @@ public class Configuration implements Constants {
             if (llvm_trace_file != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_llvm_predict);
             }
+            if (module_trace_file != null) {
+                exclusiveOptionsFailure(opt_event_profile, opt_module_predict);
+            }
             if (offline) {
                 exclusiveOptionsFailure(opt_event_profile, opt_offline);
             }
@@ -462,6 +470,9 @@ public class Configuration implements Constants {
             if (llvm_trace_file != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_llvm_predict);
             }
+            if (module_trace_file != null) {
+                exclusiveOptionsFailure(opt_only_log, opt_module_predict);
+            }
             if (offline) {
                 exclusiveOptionsFailure(opt_only_log, opt_offline);
             }
@@ -470,11 +481,20 @@ public class Configuration implements Constants {
             if (llvm_trace_file != null) {
                 exclusiveOptionsFailure(opt_only_predict, opt_llvm_predict);
             }
+            if (module_trace_file != null) {
+                exclusiveOptionsFailure(opt_only_predict, opt_module_predict);
+            }
             setLogDir(Paths.get(predict_dir).toAbsolutePath().toString());
             prediction = OFFLINE_PREDICTION;
         }  else if (llvm_trace_file != null) {  /* only llvm_predict */
+            if (module_trace_file != null) {
+                exclusiveOptionsFailure(opt_llvm_predict, opt_module_predict);
+            }
             setLogDir(Paths.get(llvm_trace_file).toAbsolutePath().getParent().toString());
             prediction = LLVM_PREDICTION;
+        }  else if (module_trace_file != null) {  /* only llvm_predict */
+            setLogDir(Paths.get(module_trace_file).toAbsolutePath().getParent().toString());
+            prediction = MODULE_PREDICTION;
         } else {                                /* log then predict */
             log = true;
             prediction = offline ? OFFLINE_PREDICTION : ONLINE_PREDICTION;
@@ -655,6 +675,10 @@ public class Configuration implements Constants {
         return Paths.get(llvm_trace_file).toFile();
     }
 
+    public File getModuleTraceFile() {
+        return Paths.get(module_trace_file).toFile();
+    }
+
     public boolean isProfiling() {
         return profile;
     }
@@ -676,6 +700,10 @@ public class Configuration implements Constants {
 
     public boolean isLLVMPrediction() {
         return prediction == LLVM_PREDICTION;
+    }
+
+    public boolean isModulePrediction() {
+        return prediction == MODULE_PREDICTION;
     }
 
     public boolean noPrediction() {

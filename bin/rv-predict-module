@@ -7,7 +7,7 @@
 # Prerequisite packages: enum34
 #
 # Sample usage:
-#   find -iname "result.txt" -exec cat "{}" \; | python aggregate-tests.py >races.txt 2>info.txt
+#   rv-predict-module <module_object> <log_dir>
 
 from __future__ import print_function
 import re
@@ -18,20 +18,20 @@ from sys import argv
 from subprocess import Popen, PIPE, STDOUT, check_call
 import os
 
-def startGDB(module):
+def startGDB(module,logDir):
     gdb = Popen(['/usr/bin/gdb', '--quiet'], stderr=STDOUT,stdout = PIPE, stdin = PIPE )
     #gdb.stdin.write("set print symbol-filename on\n")
-    with open(".sections/.text","r") as f:
+    with open(logDir + "/sections/.text","r") as f:
         text = f.read()
     gdb.stdin.write("add-symbol-file " + module + " " + text[:-1])
     count = 1
-    for filename in os.listdir(".sections"):
+    for filename in os.listdir(logDir + "/sections"):
         info("segment", filename)
         if filename.startswith("."):
             if filename in {".text", ".strtab", ".symtab"}:
                 continue
             count += 1
-            with open(".sections/"+filename,"r") as f:
+            with open(logDir + "/sections/"+filename,"r") as f:
                 section = f.read()
                 info("(gdb)"," -s " + filename + " " + section)
                 gdb.stdin.write(" -s " + filename + " " + section[:-1])
@@ -192,14 +192,14 @@ def finalize_leg():
         state = State.final
 
 
-script, module, logFile = argv
+script, module, logDir = argv
 print("Running rv-predict on the logged trace")
-gdb, di_address = startGDB(module)
+gdb, di_address = startGDB(module, logDir)
 check_call([os.path.dirname(os.path.realpath(__file__)) + '/rv-predict', 
-                 '--module-predict', logFile,
+                 '--module-predict', logDir + "/trace.rv",
                  '--interrupt-address', di_address])
 
-txt = open("result.txt")
+txt = open(logDir + "/result.txt")
 
 for line in txt:
     info(str(state) + "\t" + line)

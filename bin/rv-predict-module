@@ -179,7 +179,6 @@ thread_create_re = re.compile("\s*([^ ]*) is created by ([^\s]*)")
 thread_main_re = re.compile("\s*([^ ]*) is the main thread");
 race_end_re = re.compile("[}][}][}]")
 
-races = {}
 
 def finalize_leg():
     global state
@@ -193,12 +192,25 @@ def finalize_leg():
 
 
 script, module, logDir = argv
-print("Running rv-predict on the logged trace")
+info("Extracting trace from kernel log")
+with open( logDir + '/trace', "r" ) as trace:
+    traceList = trace.readlines()
+with open( logDir + '/start_time', "r") as fStartTime:
+    startTime = fStartTime.read()
+positions = [i for i,x in enumerate(traceList) if startTime[:-1] in x]
+lastPos = positions[-1]
+events = [(x[x.find("<type"):]) for x in traceList[lastPos+1:] if "<type" in x]
+with open( logDir + '/trace.rv',"w" ) as rvTrace:
+    rvTrace.writelines(events)
+
+print("Running rv-predict on the extracted trace")
 gdb, di_address = startGDB(module, logDir)
 check_call([os.path.dirname(os.path.realpath(__file__)) + '/rv-predict', 
                  '--module-predict', logDir + "/trace.rv",
                  '--interrupt-address', di_address])
 
+info("Symbolizing the races")
+races = {}
 txt = open(logDir + "/result.txt")
 
 for line in txt:

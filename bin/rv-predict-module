@@ -15,11 +15,11 @@ import sys
 from enum import Enum
 from collections import deque, OrderedDict
 from sys import argv
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, STDOUT, check_call
 import os
 
 def startGDB(module):
-    gdb = Popen(['/usr/bin/gdb', '--quiet'], stderr=PIPE,stdout = PIPE, stdin = PIPE )
+    gdb = Popen(['/usr/bin/gdb', '--quiet'], stderr=STDOUT,stdout = PIPE, stdin = PIPE )
     #gdb.stdin.write("set print symbol-filename on\n")
     with open(".sections/.text","r") as f:
         text = f.read()
@@ -39,10 +39,10 @@ def startGDB(module):
     for i in range(0,count+3):
         line = gdb.stdout.readline()
         info("(gdb) ", line)
-    #gdb.stdin.write("info address 0\n")
-    #line = gdb.stdout.readline()
-    #info("(gdb) ", line)
-    return gdb
+    gdb.stdin.write("info address __rv_di\n")
+    line = gdb.stdout.readline()
+    info("(gdb) ", line)
+    return gdb, line.split()[-1][:-1]
 
 def lookupAddress(gdb,addr):
     addr = "0x" + addr[1:]
@@ -192,9 +192,14 @@ def finalize_leg():
         state = State.final
 
 
-script, filename, module = argv
-txt = open(filename)
-gdb = startGDB(module)
+script, module, logFile = argv
+print("Running rv-predict on the logged trace")
+gdb, di_address = startGDB(module)
+check_call([os.path.dirname(os.path.realpath(__file__)) + '/rv-predict', 
+                 '--module-predict', logFile,
+                 '--interrupt-address', di_address])
+
+txt = open("result.txt")
 
 for line in txt:
     info(str(state) + "\t" + line)
@@ -241,7 +246,7 @@ for line in txt:
             continue
         match = lock_stack_re.match(line)
         if match:
-            access.stack.append(LockLocation(*lookupLocation(gdb,*match.groups())))
+            access.stack.append(LockLocation(match.group(1),*lookupLocation(gdb,match.group(2))))
             continue
         state = State.leg_thread
     if state == State.leg_thread:
@@ -273,5 +278,8 @@ for line in txt:
         state = State.initial
 
 oraces = OrderedDict(sorted(races.items()))
-for race in oraces.itervalues():
-    print(race,"\n")
+if oraces:
+    for race in oraces.itervalues():
+        print(race,"\n")
+else:
+    print("No races found.")

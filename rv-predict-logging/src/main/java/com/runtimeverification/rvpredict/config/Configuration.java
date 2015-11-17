@@ -319,8 +319,12 @@ public class Configuration implements Constants {
     @Parameter(names = opt_module_predict, description = "Run prediction on given kernel module trace", hidden = true, descriptionKey = "1400")
     public String module_trace_file = null;
 
+    public final static String opt_interrupt_address = "--interrupt-address";
+    @Parameter(names = opt_interrupt_address, description = "Address used to encode interrupt enable/disable operations", hidden = true, descriptionKey = "1410")
+    public String interrupt_address = null;
+
     public final static String opt_llvm_predict = "--llvm-predict";
-    @Parameter(names = opt_llvm_predict, description = "Run prediction on given llvm trace", hidden = true, descriptionKey = "1400")
+    @Parameter(names = opt_llvm_predict, description = "Run prediction on given llvm trace", hidden = true, descriptionKey = "1430")
     public String llvm_trace_file = null;
 
     public final static String opt_base_log_dir = "--base-log-dir";

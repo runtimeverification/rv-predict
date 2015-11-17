@@ -6,11 +6,7 @@ import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Stack;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Class reading the trace from an LLVM execution debug log.
@@ -18,15 +14,19 @@ import java.util.Map;
  * @author TraianSF
  */
 public class ModuleTraceCache extends TraceCache {
+    private final int interruptLockId;
     private long gid = 0;
     private long value = 0;
+    private long tid = 0;
     private static final long INTERRUPT_TID = Long.MAX_VALUE;
 
     private BufferedReader traceFile = null;
     private final Metadata metadata;
+
     public ModuleTraceCache(Configuration config, Metadata metadata) {
         super(config, metadata);
         this.metadata = metadata;
+        interruptLockId = metadata.getVariableId("", config.interrupt_address.substring(2));
     }
 
 
@@ -47,6 +47,8 @@ public class ModuleTraceCache extends TraceCache {
     }
 
     private IndexedStack<Long,Integer> threadCallStack = new IndexedStack<>();
+    private Set<Long> disabledInterrupts = new HashSet<>();
+    private Deque<Event> nextEvents = new ArrayDeque<>();
 
     @Override
     public void setup() throws IOException {
@@ -82,6 +84,11 @@ public class ModuleTraceCache extends TraceCache {
     }
 
     protected Event getNextEvent() throws IOException {
+        if (!nextEvents.isEmpty()) {
+            Event e = nextEvents.poll();
+            config.logger().debug(e.toString());
+            return e;
+        }
         String line;
         do {
             line = traceFile.readLine();
@@ -93,25 +100,44 @@ public class ModuleTraceCache extends TraceCache {
         assert parts.length == 4;
         int i = 0;
         EventType type = parseType("type", parts[i++]);
-        long tid = parseLong("tid", parts[i++]);
-        if (tid == 0) {
-            tid = INTERRUPT_TID;
-        }
+        long newTid = parseLong("tid", parts[i++]);
         String locationIdStr = parseString("pc", parts[i++]);
         String addrStr = parseString("addr", parts[i++]);
         int locationId = metadata.getLocationId(locationIdStr);
         int addr = -metadata.getVariableId("",addrStr);
         ++gid;
-        config.logger().debug(String.format("<gid:%d;tid:%d;id:%d;addr:%d;value:%d;type:%s>%n",
-                gid, tid, locationId, addr, value, type.toString()));
+        if (newTid == 0) {
+            if (tid != INTERRUPT_TID) {
+                nextEvents.add(new Event(gid++,INTERRUPT_TID,locationId, interruptLockId,0,EventType.WRITE_LOCK));
+                tid = INTERRUPT_TID;
+            }
+        } else {
+            if (tid == INTERRUPT_TID) {
+                nextEvents.add(new Event(gid++,INTERRUPT_TID,locationId, interruptLockId,0,EventType.WRITE_UNLOCK));
+            }
+            tid = newTid;
+        }
         if (type == EventType.INVOKE_METHOD) {
             threadCallStack.push(tid, locationId);
         }
         if (type == EventType.FINISH_METHOD) {
             locationId = threadCallStack.pop(tid);
         }
-        return new Event(gid, tid, locationId, addr, value, type);
-
+        if (interruptLockId == -addr) {
+            addr = -addr;
+            value = 0;
+            if (disabledInterrupts.contains(tid)) {
+                type = EventType.WRITE_UNLOCK;
+                disabledInterrupts.remove(tid);
+            } else {
+                type= EventType.WRITE_LOCK;
+                disabledInterrupts.add(tid);
+            }
+        }
+        nextEvents.add(new Event(gid, tid, locationId, addr, value, type));
+        Event e = nextEvents.poll();
+        config.logger().debug(e.toString());
+        return e;
     }
 
     private EventType parseType(String attr, String part) {

@@ -82,7 +82,8 @@ lookupLocation.__cache = {}
 
 
 def info(*objs):
-    print("INFO: ", objs, file=sys.stderr)
+    pass
+    #print("INFO: ", objs, file=sys.stderr)
 
 class State(Enum):
     initial = 1
@@ -205,9 +206,11 @@ with open( logDir + '/trace.rv',"w" ) as rvTrace:
 
 print("Running rv-predict on the extracted trace")
 gdb, di_address = startGDB(module, logDir)
+devnull = open(os.devnull, 'w')
 check_call([os.path.dirname(os.path.realpath(__file__)) + '/rv-predict', 
                  '--module-predict', logDir + "/trace.rv",
-                 '--interrupt-address', di_address])
+                 '--interrupt-address', di_address],
+           stdout = devnull, stderr = devnull)
 
 info("Symbolizing the races")
 races = {}

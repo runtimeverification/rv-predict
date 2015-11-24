@@ -9,7 +9,7 @@
     <dependencies>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>rv-predict-agent</artifactId>
+            <artifactId>rv-predict-source</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>
@@ -124,11 +124,7 @@
                             <exclusions>
                                 <exclusion>
                                     <groupId>com.runtimeverification.rvpredict</groupId>
-                                    <artifactId>rv-predict-agent</artifactId>
-                                </exclusion>
-                                <exclusion>
-                                    <groupId>com.runtimeverification.rvpredict</groupId>
-                                    <artifactId>rv-predict-logging</artifactId>
+                                    <artifactId>rv-predict-source</artifactId>
                                 </exclusion>
                                 <exclusion>
                                     <groupId>org.apache.commons</groupId>

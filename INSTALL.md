@@ -1,14 +1,28 @@
-Installation instructions:
+#####Installation instructions:
 
-clone https://github.com/runtimeverification/rv-predict-llvm
+1. clone https://github.com/runtimeverification/rv-predict-llvm
+2. clone https://github.com/runtimeverification/rv-predict-clang in rv-predict-llvm/tools 
+3. clone https://github.com/runtimeverification/rv-predict-compiler-rt in rv-predict-llvm/projects
 
-clone https://github.com/runtimeverification/rv-predict-clang in rv-predict-llvm/tools 
+[then follow the instructions here](http://llvm.org/docs/GettingStarted.html)
 
-clone https://github.com/runtimeverification/rv-predict-compiler-rt in rv-predict-llvm/projects
+to build clang using CMake
 
-then follow the instructions here 
+*****
 
-http://llvm.org/docs/GettingStarted.html
+#####Usage instructions:
 
-to build with CMake
+Add the flag **-fsanitize=rvpredict** when compiling with clang.
 
+
+If you want proper line numbers and file information when reporting races, add the **-g** flag  for debugging symbols.
+
+Once the binary is done, test using rv-predict-llvm \<binary file\>
+
+Example usage:
+
+```bash
+clang++ -std=c++11 -fsanitize=rvpredict -g main.cpp -o file
+
+rv-predict-llvm ./file
+```

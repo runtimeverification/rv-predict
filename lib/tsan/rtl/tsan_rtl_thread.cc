@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_placement_new.h"
+#include <builtins/int_endianness.h>
 
 #include "tsan_symbolize.h"
 #include "tsan_rtl.h"
@@ -329,10 +330,41 @@ void ThreadSetName(ThreadState *thr, const char *name) {
   ctx->thread_registry->SetThreadName(thr->tid, name);
 }
 
+void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr,
+                             uptr size, uptr pc) {
+
+  u64 RVVal = 0;
+
+  for(uptr i = 0; i < size && i < sizeof(u64); ++i) {
+    u8 val = *(u8*)(addr + i);
+
+#if _YUGA_LITTLE_ENDIAN == 1
+    RVVal += val * (1LL << (8 * (u64)(i)));
+#elif _YUGA_BIG_ENDIAN == 1
+    RVVal = (RVVal << 8) + val;
+#endif
+  }
+
+  RVSaveMemAccEvent(RVType, addr, RVVal, pc);
+
+  if(size > sizeof(u64)) {
+    RVSaveMemoryAccessRange(RVType, addr + sizeof(u64), size - sizeof(u64), pc);
+  }
+}
+
 void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
                        uptr size, bool is_write) {
   if (size == 0)
     return;
+
+  RVEventType RVType;
+
+  if(is_write)
+    RVType = WRITE;
+  else
+    RVType = READ;
+
+  RVSaveMemoryAccessRange(RVType, addr, size, pc);
 
   u64 *shadow_mem = (u64*)MemToShadow(addr);
   DPrintf2("#%d: MemoryAccessRange: @%p %p size=%d is_write=%d\n",

@@ -144,6 +144,10 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
 
       internal_snprintf(rvbuff, sizeof(rvbuff), "fn:%s;file:%s;line:%d", frame->info.function, frame->info.file, frame->info.line);
 
+      DPrintf("<locId:%lld;fn:%s;file:%s;line:%d>\n",
+                  locId, frame->info.function, frame->info.file , frame->info.line);
+
+
       WriteNum(locfd, locId);
       WriteStr(locfd, rvbuff);
     }
@@ -163,6 +167,10 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
         const DataInfo &global = location->global;
 
         internal_snprintf(rvbuff, sizeof(rvbuff), "global '%s' of size %zu at %p (%s + %p)", global.name, global.size, global.start,
+            StripModuleName(global.module), global.module_offset);
+
+        DPrintf("<varId:%lld;desc:global '%s' of size %zu at %p (%s+%p)>\n",
+            varId, global.name, global.size, global.start,
             StripModuleName(global.module), global.module_offset);
 
 
@@ -194,6 +202,9 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   WriteNum(fd, varId);
   WriteNum(fd, val);
   WriteNum(fd, (unsigned char)type);
+
+  DPrintf("<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s>\n",
+      gid, tid + 1, locId, varId, val, RVEventTypes[type]);
 }
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {

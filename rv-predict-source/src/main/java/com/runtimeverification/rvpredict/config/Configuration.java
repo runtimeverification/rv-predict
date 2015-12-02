@@ -31,6 +31,7 @@ package com.runtimeverification.rvpredict.config;
 import com.beust.jcommander.*;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.runtimeverification.rvpredict.instrument.Agent;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
@@ -388,7 +389,7 @@ public class Configuration implements Constants {
     private Configuration() { }
 
     private void printLicense() {
-        Licensing licensingSystem = new Licensing("com/runtimeverification/rvpredict/instrument/Agent.class", "predict");
+        Licensing licensingSystem = new Licensing(Agent.class.toString(), "predict");
         licensingSystem.getLicenseCache().getLicense().printInfo();
     }
 

@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.instrument.Agent;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import com.runtimeverification.licensing.Licensing;
@@ -26,7 +27,7 @@ public class Main {
      * The entry point of RV-Predict when it is started by script.
      */
     public static void main(String[] args) {
-        Licensing licensingSystem = new Licensing("com/runtimeverification/rvpredict/instrument/Agent.class", "predict");
+        Licensing licensingSystem = new Licensing(Agent.class.toString(), "predict");
         licensingSystem.promptForLicense();
 
         config = Configuration.instance(args);

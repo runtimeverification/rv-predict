@@ -11,9 +11,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.lang3.tuple.Pair;
-
 import com.runtimeverification.rvpredict.log.LZ4Utils;
+import org.apache.commons.lang3.tuple.Pair;
 
 @SuppressWarnings("serial")
 public class Metadata implements Serializable {
@@ -36,7 +35,7 @@ public class Metadata implements Serializable {
     private final String[] locIdToLocSig = new String[MAX_NUM_OF_LOCATIONS];
 
     private final Set<Integer> volatileVarIds = Collections
-            .newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
+            .newSetFromMap(new ConcurrentHashMap<>());
 
     private final Map<Long, Pair<Long, Integer>> tidToCreationInfo = new ConcurrentHashMap<>();
 

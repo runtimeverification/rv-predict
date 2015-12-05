@@ -38,6 +38,7 @@ import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.CodeSource;
@@ -319,8 +320,12 @@ public class Configuration implements Constants {
     public String llvm_predict = null;
 
     public final static String opt_base_log_dir = "--base-log-dir";
-    @Parameter(names = opt_base_log_dir, description = "The name of the base directory where RV-Predict creates log directories", descriptionKey = "1500")
+    @Parameter(names = opt_base_log_dir, description = "The path of the base directory where RV-Predict creates log directories", descriptionKey = "1500")
     private String baseLogDir = System.getProperty("java.io.tmpdir");
+
+    public final static String opt_log_dirname = "--log-dirname";
+    @Parameter(names = opt_log_dirname, description = "The name of the log directory where RV-Predict stores log files", descriptionKey = "1600")
+    private String logDirName;
 
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include",
@@ -626,7 +631,38 @@ public class Configuration implements Constants {
         return baseLogDir;
     }
 
-    public void setLogDir(String logDir) {
+    /**
+     * Returns the directory to read and/or write log files.
+     */
+    public String getLogDir() {
+        return logDir;
+    }
+
+    /**
+     * Returns the directory to read and/or write log files or create one if it
+     * is still unavailable.
+     */
+    public String getOrCreateLogDir() throws IOException {
+        if (logDir == null) {
+            Path baseDirPath = Paths.get(baseLogDir);
+            if (!Files.exists(baseDirPath)) {
+                Files.createDirectory(baseDirPath);
+            }
+
+            if (logDirName != null) {
+                Path logDirPath = Paths.get(baseLogDir, logDirName);
+                if (!Files.exists(logDirPath)) {
+                    Files.createDirectory(logDirPath);
+                }
+                setLogDir(logDirPath.toString());
+            } else {
+                setLogDir(Files.createTempDirectory(baseDirPath, "rv-predict").toString());
+            }
+        }
+        return logDir;
+    }
+
+    private void setLogDir(String logDir) {
         this.logDir = logDir;
         try {
             logger.setLogDir(logDir);
@@ -635,13 +671,6 @@ public class Configuration implements Constants {
                     + " not found");
             System.exit(1);
         }
-    }
-
-    /**
-     * Returns the directory to read and/or write log files.
-     */
-    public String getLogDir() {
-        return logDir;
     }
 
     public Path getMetadataPath() {

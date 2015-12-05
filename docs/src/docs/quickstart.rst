@@ -139,6 +139,9 @@ option when invoking RV-Predict:
                              creates log directories
                              Default: /tmp
 
+          --log-dirname      The name of the log directory where RV-Predict
+                             stores log files
+
           --include          Comma separated list of packages to include
 
           --exclude          Comma separated list of packages to exclude
@@ -163,10 +166,14 @@ Explanation:
 -  the ``--offline`` option tells RV-Predict to store the logged execution
    trace on disk and only run the prediction algorithm after the application
    terminates.
--  the ``--base-log-dir <dir>`` option specifies the name of the directory
+-  the ``--base-log-dir <dir>`` option specifies the path of the directory
    where RV-Predict creates its log directories. This option defaults to
    the current temporary directory on your platform (usually set with the
    environment variable TMPDIR in Linux/Unix, or TMP or TEMP in Windows).
+-  the ``--log-dirname <dirname>`` option specifies the name of the log
+   directory where RV-Predict stores log files such as traces and metadatas.
+   When this option is not specified, RV-Predict will create and use a fresh
+   temporary directory.
 -  the ``--include`` option tells RV-Predict to include the given packages
    in instrumentation; this option takes precedence over the following
    ``--exclude`` option.

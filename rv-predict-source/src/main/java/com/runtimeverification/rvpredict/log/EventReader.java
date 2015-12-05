@@ -1,15 +1,11 @@
 package com.runtimeverification.rvpredict.log;
 
-import java.io.BufferedInputStream;
 import java.io.EOFException;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 
 import net.jpountz.lz4.LZ4BlockInputStream;
-import net.jpountz.lz4.LZ4Factory;
-import net.jpountz.lz4.LZ4FastDecompressor;
 
 /**
  * An event input stream lets an application to read {@link Event} from an
@@ -20,9 +16,6 @@ import net.jpountz.lz4.LZ4FastDecompressor;
  */
 public class EventReader implements IEventReader {
 
-    private static final LZ4FastDecompressor FAST_DECOMPRESSOR =
-            LZ4Factory.fastestInstance().fastDecompressor();
-
     private final LZ4BlockInputStream in;
 
     private final ByteBuffer byteBuffer = ByteBuffer.allocate(Event.SIZEOF);
@@ -30,8 +23,7 @@ public class EventReader implements IEventReader {
     private Event lastReadEvent;
 
     public EventReader(Path path) throws IOException {
-        in = new LZ4BlockInputStream(new BufferedInputStream(new FileInputStream(path.toFile()),
-                EventWriter.COMPRESS_BLOCK_SIZE), FAST_DECOMPRESSOR);
+        in = LZ4Utils.createDecompressionStream(path);
         readEvent();
     }
 

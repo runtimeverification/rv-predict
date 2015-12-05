@@ -1,7 +1,5 @@
 package com.runtimeverification.rvpredict.metadata;
 
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -13,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.runtimeverification.rvpredict.log.LZ4Utils;
 import org.apache.commons.lang3.tuple.Pair;
 
 @SuppressWarnings("serial")
@@ -36,7 +35,7 @@ public class Metadata implements Serializable {
     private final String[] locIdToLocSig = new String[MAX_NUM_OF_LOCATIONS];
 
     private final Set<Integer> volatileVarIds = Collections
-            .newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
+            .newSetFromMap(new ConcurrentHashMap<>());
 
     private final Map<Long, Pair<Long, Integer>> tidToCreationInfo = new ConcurrentHashMap<>();
 
@@ -136,8 +135,8 @@ public class Metadata implements Serializable {
      * @return the {@code Metadata} object
      */
     public static Metadata readFrom(Path path) {
-        try (ObjectInputStream metadataIS = new ObjectInputStream(new BufferedInputStream(
-                new FileInputStream(path.toFile())))) {
+        try (ObjectInputStream metadataIS = new ObjectInputStream(
+                LZ4Utils.createDecompressionStream(path))) {
             return (Metadata) metadataIS.readObject();
         } catch (FileNotFoundException e) {
             System.err.println("Error: Metadata file not found.");

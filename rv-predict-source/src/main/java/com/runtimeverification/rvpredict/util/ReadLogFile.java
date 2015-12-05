@@ -27,16 +27,37 @@ public class ReadLogFile {
         Path directory = path.getParent();
         Metadata metadata = Metadata.readFrom(Paths.get(directory.toString(), Configuration.METADATA_BIN));
         String file = args[0];
-        try (EventReader reader = new EventReader(Paths.get(file))) {
-            System.out.println("Dumping events from " + file);
-            while (true) {
-                Event event = reader.readEvent();
-                String locSig = event.getLocId() < 0 ? "n/a" : metadata.getLocationSig(event.getLocId());
-                System.out.printf("%-60s %s%n", event.toString(), locSig);
+        if (file.endsWith("metadata.bin")) {
+            System.out.println("#variable section#");
+            for (int varId = 1;; varId++) {
+                String varSig = metadata.getVariableSig(varId);
+                if (varSig != null) {
+                    System.out.printf("%s:%s%n", varId, varSig);
+                } else {
+                    break;
+                }
             }
-        } catch (EOFException ignored) {
-        } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("#program location section#");
+            for (int locId = 1;; locId++) {
+                String locSig = metadata.getLocationSig(locId);
+                if (locSig != null) {
+                    System.out.printf("%s:%s%n", locId, locSig);
+                } else {
+                    break;
+                }
+            }
+        } else {
+            try (EventReader reader = new EventReader(Paths.get(file))) {
+                System.out.println("Dumping events from " + file);
+                while (true) {
+                    Event event = reader.readEvent();
+                    String locSig = event.getLocId() < 0 ? "n/a" : metadata.getLocationSig(event.getLocId());
+                    System.out.printf("%-60s %s%n", event.toString(), locSig);
+                }
+            } catch (EOFException ignored) {
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

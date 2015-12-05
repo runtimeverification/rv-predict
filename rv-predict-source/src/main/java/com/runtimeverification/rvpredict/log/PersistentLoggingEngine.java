@@ -32,8 +32,6 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.util.Constants;
 
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.nio.file.Path;
@@ -86,8 +84,7 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
     }
 
     private ObjectOutputStream getMetadataOS() throws IOException {
-        return new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(
-                config.getMetadataPath().toFile())));
+        return new ObjectOutputStream(LZ4Utils.createCompressionStream(config.getMetadataPath()));
     }
 
     @Override

@@ -27,7 +27,7 @@ public class Main {
      * The entry point of RV-Predict when it is started by script.
      */
     public static void main(String[] args) {
-        Licensing licensingSystem = new Licensing(Agent.class.toString(), "predict");
+        Licensing licensingSystem = new Licensing(Configuration.AGENT_RESOURCE_PATH, "predict");
         licensingSystem.promptForLicense();
 
         config = Configuration.instance(args);

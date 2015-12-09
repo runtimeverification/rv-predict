@@ -124,7 +124,7 @@ public class Agent implements ClassFileTransformer, Constants {
     }
 
     private static void printStartupInfo() {
-        Licensing licensingSystem = new Licensing("com/runtimeverification/rvpredict/instrument/Agent.class", "predict");
+        Licensing licensingSystem = new Licensing(Configuration.AGENT_RESOURCE_PATH, "predict");
         licensingSystem.promptForLicense();
         config.logger().reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
         if (config.getLogDir() != null) {

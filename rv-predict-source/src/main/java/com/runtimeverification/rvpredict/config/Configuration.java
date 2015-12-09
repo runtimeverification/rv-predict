@@ -67,6 +67,7 @@ public class Configuration implements Constants {
     public static final String TRACE_SUFFIX = "trace.bin";
 
     public static final String METADATA_BIN = "metadata.bin";
+    public static final String AGENT_RESOURCE_PATH = Agent.class.getName().replace(".","/") + ".class";
 
     /**
      * Packages/classes that need to be excluded from instrumentation. These are
@@ -389,7 +390,7 @@ public class Configuration implements Constants {
     private Configuration() { }
 
     private void printLicense() {
-        Licensing licensingSystem = new Licensing(Agent.class.toString(), "predict");
+        Licensing licensingSystem = new Licensing(AGENT_RESOURCE_PATH, "predict");
         licensingSystem.getLicenseCache().getLicense().printInfo();
     }
 

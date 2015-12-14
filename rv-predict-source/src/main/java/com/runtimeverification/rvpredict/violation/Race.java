@@ -154,6 +154,9 @@ public class Race {
         for (Event elem : stacktrace) {
             String locSig = elem.getLocId() != -1 ? metadata.getLocationSig(elem.getLocId())
                     : "... not available ...";
+            if (Configuration.briefStacks && isLibrary(locSig)) {
+                continue;
+            }
             if (elem.isLock()) {
                 sb.append(String.format("        - locked %s at %s %n", getLockRepresentation(elem),
                         locSig));

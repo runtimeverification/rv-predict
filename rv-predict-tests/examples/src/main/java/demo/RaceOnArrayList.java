@@ -1,21 +1,24 @@
 // Copyright (c) 2015 Runtime Verification Inc. (RV-Predict Team). All Rights Reserved.
 
-package examples;
+package demo;
 
-public class SimpleRace {
+import java.util.ArrayList;
+import java.util.List;
 
-    static int sharedVar;
+public class RaceOnArrayList {
+
+    static List<Integer> list = new ArrayList<>();
 
     public static void main(String[] args) {
         new ThreadRunner() {
             @Override
             public void thread1() {
-                sharedVar++;
+                list.add(0);
             }
 
             @Override
             public void thread2() {
-                sharedVar++;
+                list.add(1);
             }
         };
     }

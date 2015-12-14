@@ -7,12 +7,12 @@ them normally, run the following commands:
     java -cp examples.jar benchmarks.JGFRayTracerBenchSizeA
     java -cp examples.jar benchmarks.JGFMonteCarloBenchSizeA
     java -cp examples.jar benchmarks.JGFMolDynBenchSizeA
-    java -cp examples.jar examples.BrokenSpinningLoop
-    java -cp examples.jar examples.RaceOnSynchronizedMap
-    java -cp examples.jar examples.DoubleCheckedLocking
-    java -cp examples.jar examples.WriteUnderReadLock
-    java -cp examples.jar examples.SimpleRace
-    java -cp examples.jar examples.RaceOnArrayList
+    java -cp examples.jar demo.BrokenSpinningLoop
+    java -cp examples.jar demo.RaceOnSynchronizedMap
+    java -cp examples.jar demo.DoubleCheckedLocking
+    java -cp examples.jar demo.WriteUnderReadLock
+    java -cp examples.jar demo.SimpleRace
+    java -cp examples.jar demo.RaceOnArrayList
 
 To execute them with RV-Predict, either replace `java` with `rv-predict`
 (make sure you already added the `bin` directory under the RV-Predict

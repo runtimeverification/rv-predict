@@ -348,7 +348,7 @@ public class Configuration implements Constants {
 
     final static String opt_brief_stacks = "--brief-stacks";
     @Parameter(names = opt_brief_stacks, description = "Hide library stack frames from race report", hidden = true, descriptionKey = "2350")
-    private boolean briefStacks = false;
+    public static boolean briefStacks = false;
 
     public final static String opt_suppress = "--suppress";
     @Parameter(names = opt_suppress, description = "Suppress race reports on the fields that match the given (comma-separated) list of regular expressions", descriptionKey = "2400")

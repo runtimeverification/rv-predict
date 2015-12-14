@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import com.google.common.base.StandardSystemProperty;
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
@@ -179,6 +180,12 @@ public class Race {
                 sb.append(String.format("    T%s is created by n/a%n", tid));
             }
         }
+    }
+
+    private boolean isLibrary(String locSig) {
+        return locSig.contains("__libc")
+                || locSig.contains("std::")
+                || locSig.contains("tsan__");
     }
 
     private String getHeldLocksReport(List<Event> heldLocks) {

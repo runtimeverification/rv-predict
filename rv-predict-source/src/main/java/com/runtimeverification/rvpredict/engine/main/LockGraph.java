@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.engine.main;
 
 import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import com.runtimeverification.rvpredict.log.Event;
 import org.kframework.utils.algorithms.SCCTarjan;
 
@@ -12,7 +13,7 @@ import java.util.stream.Stream;
  */
 public class LockGraph {
     int nextLockId = 0;
-    BiMap<Long, Integer> lockIdToVertex;
+    BiMap<Long, Integer> lockIdToVertex = HashBiMap.create();
     List<Collection<Integer>> graph = new ArrayList<>();
 
     public void addEdge(Long l1, Long l2) {
@@ -38,8 +39,8 @@ public class LockGraph {
                         v -> lockEvents.get(lockIdToVertex.inverse().get(v))));
     }
 
-    Map<Long,Event> lockEvents;
-    Map<Long, Set<Long>> lockSet;
+    Map<Long,Event> lockEvents = new HashMap<>();
+    Map<Long, Set<Long>> lockSet = new HashMap<>();
 
     public void handle(Event event) {
         long lockId = event.getLockId();

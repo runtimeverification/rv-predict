@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.engine.main.LockGraph;
 import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.IEventReader;
 import com.runtimeverification.rvpredict.log.Event;
@@ -21,6 +22,12 @@ import java.util.List;
  * @author YilongL
  */
 public class TraceCache {
+
+    public LockGraph getLockGraph() {
+        return lockGraph;
+    }
+
+    private final LockGraph lockGraph = new LockGraph();
 
     protected final Configuration config;
 
@@ -90,6 +97,10 @@ public class TraceCache {
             List<Event> events = new ArrayList<>(capacity);
             do {
                 events.add(event);
+                if (event.isLock() || event.isUnlock()) {
+                    lockGraph.handle(event);
+
+                }
                 try {
                     event = reader.readEvent();
                 } catch (EOFException e) {

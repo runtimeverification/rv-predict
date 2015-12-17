@@ -90,6 +90,11 @@ public class RVPredict {
             } else {
                 reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
             }
+            traceCache.getLockGraph().getCycles().forEach(
+                    cycle -> {
+                        System.out.println("Potential Deadlock");
+                        cycle.forEach(System.out::println);
+                    });
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());

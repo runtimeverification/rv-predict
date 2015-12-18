@@ -1,7 +1,7 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.engine.main.LockGraph;
+import com.runtimeverification.rvpredict.engine.main.deadlock.LockGraph;
 import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.IEventReader;
 import com.runtimeverification.rvpredict.log.Event;
@@ -99,7 +99,6 @@ public class TraceCache {
                 events.add(event);
                 if (event.isLock() || event.isUnlock()) {
                     lockGraph.handle(event);
-
                 }
                 try {
                     event = reader.readEvent();

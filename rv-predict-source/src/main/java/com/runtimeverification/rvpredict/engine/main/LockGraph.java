@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.engine.main;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.runtimeverification.rvpredict.log.Event;
+import org.apache.commons.lang3.tuple.Pair;
 import org.kframework.utils.algorithms.SCCTarjan;
 
 import java.util.*;
@@ -20,6 +21,7 @@ public class LockGraph {
         int v1 = getLockId(l1);
         int v2 = getLockId(l2);
         graph.get(v1).add(v2);
+        eventEdges.put(Pair.of(v1,v2),Pair.of(lockEvents.get(l1), lockEvents.get(l2)));
     }
 
     private int getLockId(Long l1) {
@@ -32,14 +34,26 @@ public class LockGraph {
         return v1;
     }
 
-    public Stream<Stream<Event>> getCycles() {
+    public List<List<Pair<Event,Event>>> getCycles() {
         List<List<Integer>> cycles = new SCCTarjan().scc(graph);
-        return cycles.stream().map(
-                l -> l.stream().map(
-                        v -> lockEvents.get(lockIdToVertex.inverse().get(v))));
+        List<List<Pair<Event,Event>>> eventCycles = new ArrayList<>();
+        for (List<Integer> cycle : cycles) {
+            List<Pair<Event,Event>> eventCycle = new ArrayList<>();
+            for (int i = 0; i < cycle.size()-1; i++) {
+                int v1 = cycle.get(i);
+                int v2 = cycle.get(i+1);
+                eventCycle.add(eventEdges.get(Pair.of(v1, v2)));
+            }
+            int v1 = cycle.get(cycle.size()-1);
+            int v2 = cycle.get(0);
+            eventCycle.add(eventEdges.get(Pair.of(v1, v2)));
+            eventCycles.add(eventCycle);
+        }
+        return eventCycles;
     }
 
     Map<Long,Event> lockEvents = new HashMap<>();
+    Map<Pair<Integer,Integer>, Pair<Event,Event>> eventEdges = new HashMap<>();
     Map<Long, Set<Long>> lockSet = new HashMap<>();
 
     public void handle(Event event) {

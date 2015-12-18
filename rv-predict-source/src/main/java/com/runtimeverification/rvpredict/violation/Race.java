@@ -191,7 +191,7 @@ public class Race {
         return sb.toString();
     }
 
-    private String getLockRepresentation(Event lock) {
+    public static String getLockRepresentation(Event lock) {
         long lockId = lock.getLockId();
         int upper32 = (int)(lockId >> 32);
         String lower32 = Integer.toHexString((int) lockId);

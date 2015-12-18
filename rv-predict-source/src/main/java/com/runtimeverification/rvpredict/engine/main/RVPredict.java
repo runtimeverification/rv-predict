@@ -37,12 +37,16 @@ import java.util.Collections;
 import java.util.List;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.util.Logger;
+import com.runtimeverification.rvpredict.violation.Race;
+import org.apache.commons.lang3.SystemUtils;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * Class for predicting violations from a logged execution.
@@ -90,17 +94,46 @@ public class RVPredict {
             } else {
                 reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
             }
-            traceCache.getLockGraph().getCycles().forEach(
-                    cycle -> {
-                        System.out.println("Potential Deadlock");
-                        cycle.forEach(System.out::println);
-                    });
+            traceCache.getLockGraph().getCycles().forEach(this::deadlockReport);
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());
             e.printStackTrace();
             System.exit(1);
         }
+    }
+
+    private void deadlockReport(List<Pair<Event, Event>> cycle) {
+        StringBuilder report = new StringBuilder();
+        StringBuilder summary = new StringBuilder();
+        StringBuilder details = new StringBuilder();
+        report.append("Potential Deadlock\n");
+        summary.append("Cycle in lock order graph: ");
+        cycle.forEach(eventEventPair -> {
+            Event before = eventEventPair.getLeft();
+            summary.append("M"+ before.getLockId() + " " +
+                    "(" + Race.getLockRepresentation(before) + ")" +
+                    " => ");
+            Event after = eventEventPair.getRight();
+            details.append("Mutex M" + after.getLockId() + " acquired here " +
+                    "while holding mutex M" + before.getLockId()+":");
+            details.append('\n');
+            details.append(metadata.getLocationSig(after.getLocId()));
+            details.append('\n');
+            details.append('\n');
+            details.append("Mutex M" + before.getLockId() + " previously acquired " +
+                    "by the same thread here:");
+            details.append('\n');
+            details.append(metadata.getLocationSig(before.getLocId()));
+            details.append('\n');
+            details.append('\n');
+        });
+        summary.append("M"+cycle.get(0).getLeft().getLockId());
+        summary.append('\n');
+        report.append(summary);
+        report.append('\n');
+        report.append(details);
+        config.logger().report(report.toString(),Logger.MSGTYPE.REAL);
     }
 
     public static Thread getPredictionThread(Configuration config, ILoggingEngine loggingEngine) {

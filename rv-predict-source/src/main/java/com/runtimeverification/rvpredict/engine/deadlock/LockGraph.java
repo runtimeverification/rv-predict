@@ -91,32 +91,30 @@ public class LockGraph {
         StringBuilder report = new StringBuilder();
         StringBuilder summary = new StringBuilder();
         StringBuilder details = new StringBuilder();
-        report.append("Potential Deadlock\n");
-        summary.append("Cycle in lock order graph: ");
         cycle.forEach(eventEventPair -> {
             Event before = eventEventPair.getLeft();
             summary.append("M"+ before.getLockId() + " " +
                     "(" + before.getLockRepresentation() + ")" +
                     " => ");
             Event after = eventEventPair.getRight();
-            details.append("Mutex M" + after.getLockId() + " acquired here " +
-                    "while holding mutex M" + before.getLockId()+":");
             details.append('\n');
+            details.append("    M" + after.getLockId() + " acquired " +
+                    "while holding M" + before.getLockId());
+            details.append('\n');
+            details.append(" ---->  at ");
             details.append(metadata.getLocationSig(after.getLocId()));
             details.append('\n');
-            details.append('\n');
-            details.append("Mutex M" + before.getLockId() + " previously acquired " +
-                    "by the same thread here:");
-            details.append('\n');
-            details.append(metadata.getLocationSig(before.getLocId()));
-            details.append('\n');
-            details.append('\n');
+            details.append(String.format("        - locked %s at %s %n",
+                    "M"+ before.getLockId(),
+                    metadata.getLocationSig(before.getLocId())));
         });
         summary.append("M"+cycle.get(0).getLeft().getLockId());
-        summary.append('\n');
+        report.append("Potential deadlock detected: {{{\n");
+        report.append("    Cycle in lock acquisition graph: ");
         report.append(summary);
-        report.append('\n');
+        report.append("\n");
         report.append(details);
+        report.append("}}}\n");
         config.logger().report(report.toString(), Logger.MSGTYPE.REAL);
     }
 

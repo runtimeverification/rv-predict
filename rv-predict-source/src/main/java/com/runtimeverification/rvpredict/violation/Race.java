@@ -33,7 +33,6 @@ import java.util.Collections;
 import java.util.List;
 import com.google.common.base.StandardSystemProperty;
 import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Constants;
@@ -155,7 +154,7 @@ public class Race {
             String locSig = elem.getLocId() != -1 ? metadata.getLocationSig(elem.getLocId())
                     : "... not available ...";
             if (elem.isLock()) {
-                sb.append(String.format("        - locked %s at %s %n", getLockRepresentation(elem),
+                sb.append(String.format("        - locked %s at %s %n", elem.getLockRepresentation(),
                         locSig));
             } else {
                 sb.append(String.format(" %s  at %s%n", isTopmostStack ? "---->" : "     ", locSig));
@@ -185,27 +184,10 @@ public class Race {
                 if (i > 0) {
                     sb.append(", ");
                 }
-                sb.append(getLockRepresentation(heldLocks.get(i)));
+                sb.append(heldLocks.get(i).getLockRepresentation());
             }
         }
         return sb.toString();
-    }
-
-    public static String getLockRepresentation(Event lock) {
-        long lockId = lock.getLockId();
-        int upper32 = (int)(lockId >> 32);
-        String lower32 = Integer.toHexString((int) lockId);
-        if (lock.getType() == EventType.READ_LOCK) {
-            assert upper32 == 0;
-            return "ReadLock@" + lower32;
-        } else {
-            if (upper32 == 0) {
-                return "WriteLock@" + lower32;
-            } else {
-                assert upper32 == Constants.MONITOR_C;
-                return "Monitor@" + lower32;
-            }
-        }
     }
 
 }

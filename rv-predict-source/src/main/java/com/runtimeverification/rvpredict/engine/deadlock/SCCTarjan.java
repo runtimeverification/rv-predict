@@ -1,6 +1,12 @@
-package com.runtimeverification.rvpredict.engine.main.deadlock;
+package com.runtimeverification.rvpredict.engine.deadlock;
 
-import java.util.*;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 
 /**
  * An optimized version of Tarjan's Strongly connected components algorithm
@@ -19,17 +25,38 @@ import java.util.*;
  * @author TraianSF
  */
 
-public class SCCTarjan {
+class SCCTarjan<Vertex> {
+    private int nextLockId = 0;
     private int time;
-    private List<Collection<Integer>> graph;
     private int[] lowlink;
     private boolean[] used;
     private List<Integer> stack;
     private List<List<Integer>> components;
 
-    public List<List<Integer>> scc(List<Collection<Integer>> graph) {
+    private List<Collection<Integer>> graph = new ArrayList<>();
+
+    public void addEdge(Vertex l1, Vertex l2) {
+        int v1 = getLockId(l1);
+        int v2 = getLockId(l2);
+        graph.get(v1).add(v2);
+    }
+
+    public Collection<List<Vertex>> getScc() {
+        if (components == null) {
+            scc();
+        }
+        Collection<List<Vertex>> sccs = new ArrayList<>();
+        components.forEach(component -> {
+            List<Vertex> scc = new ArrayList<>();
+            component.forEach(
+                    v -> scc.add(lockIdToVertex.inverse().get(v)));
+            sccs.add(scc);
+        });
+        return sccs;
+    }
+
+    private void scc() {
         int n = graph.size();
-        this.graph = graph;
         lowlink = new int[n];
         used = new boolean[n];
         stack = new ArrayList<>();
@@ -38,8 +65,6 @@ public class SCCTarjan {
         for (int u = 0; u < n; u++)
             if (!used[u])
                 dfs(u);
-
-        return components;
     }
 
     private void dfs(int u) {
@@ -68,5 +93,20 @@ public class SCCTarjan {
             }
             components.add(component);
         }
+    }
+
+    private BiMap<Vertex, Integer> lockIdToVertex = HashBiMap.create();
+    private int getLockId(Vertex l1) {
+        Integer v1 = lockIdToVertex.get(l1);
+        if (v1 == null) {
+            v1 = newVertex();
+            lockIdToVertex.put(l1,v1);
+        }
+        return v1;
+    }
+
+    private int newVertex() {
+        graph.add(new HashSet<>());
+        return nextLockId++;
     }
 }

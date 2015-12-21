@@ -1,1 +1,9 @@
-Potential Deadlock
+Cycle in lock order graph: M2 \(WriteLock@2\) => M1 \(WriteLock@1\) => M2
+
+Mutex M1 acquired here while holding mutex M2:\nfn:main;file:\/home\/vagrant\/demo\/predict\/5-deadlock.c;line:16
+
+Mutex M2 previously acquired by the same thread here:\nfn:main;file:\/home\/vagrant\/demo\/predict\/5-deadlock.c;line:15
+
+Mutex M2 acquired here while holding mutex M1:\nfn:main;file:\/home\/vagrant\/demo\/predict\/5-deadlock.c;line:10
+
+Mutex M1 previously acquired by the same thread here:\nfn:main;file:\/home\/vagrant\/demo\/predict\/5-deadlock.c;line:9

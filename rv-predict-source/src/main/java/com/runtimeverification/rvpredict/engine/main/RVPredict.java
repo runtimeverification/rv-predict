@@ -37,14 +37,12 @@ import java.util.Collections;
 import java.util.List;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.util.Logger;
-import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * Class for predicting violations from a logged execution.

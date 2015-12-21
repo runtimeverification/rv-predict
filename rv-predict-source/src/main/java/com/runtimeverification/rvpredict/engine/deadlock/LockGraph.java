@@ -17,10 +17,10 @@ import java.util.*;
 public class LockGraph {
     private final Configuration config;
     private final Metadata metadata;
-    SCCTarjan<Long> sccGraph = new SCCTarjan<>();
-    private Map<Long,Event> lockEvents = new HashMap<>();
-    private Map<Pair<Long,Long>, Pair<Event,Event>> eventEdges = new HashMap<>();
-    private Map<Long, Set<Long>> lockSet = new HashMap<>();
+    private final SCCTarjan<Long> sccGraph = new SCCTarjan<>();
+    private final Map<Long,Event> lockEvents = new HashMap<>();
+    private final Map<Pair<Long,Long>, Pair<Event,Event>> eventEdges = new HashMap<>();
+    private final Map<Long, Set<Long>> lockSet = new HashMap<>();
 
     public LockGraph(Configuration config, Metadata metadata) {
         this.config = config;

@@ -99,14 +99,11 @@ class SCCTarjan<Vertex> {
     private int getLockId(Vertex l1) {
         Integer v1 = lockIdToVertex.get(l1);
         if (v1 == null) {
-            v1 = newVertex();
+            graph.add(new HashSet<>());
+            v1 = nextLockId++;
             lockIdToVertex.put(l1,v1);
         }
         return v1;
     }
 
-    private int newVertex() {
-        graph.add(new HashSet<>());
-        return nextLockId++;
-    }
 }

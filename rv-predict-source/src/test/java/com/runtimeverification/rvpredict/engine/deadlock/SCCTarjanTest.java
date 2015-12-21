@@ -3,10 +3,8 @@ package com.runtimeverification.rvpredict.engine.deadlock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * @author TraianSF

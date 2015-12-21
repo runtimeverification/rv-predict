@@ -1,6 +1,148 @@
 <?xml version="1.0"?>
 <!-- Copyright (c) 2014 Runtime Verification Inc. All Rights Reserved. -->
 <basic>
+    <test name="ftpserver.jar" module="ftpserver">
+        <jar/>
+        <runs value="32" />
+        <rvarg key="--window" value="2000" />
+        <rvarg value="--debug" />
+    </test>
+    <test name="ftpserver.jar" module="ftpserver">
+        <jar/>
+        <runs value="32" />
+        <rvarg key="--window" value="2000" />
+        <rvarg value="--offline" />
+        <rvarg value="--debug" />
+    </test>
+
+    <test name="SpringExample.jar" module="SpringExample">
+        <jar/>
+        <rvarg key="--window" value="6000" />
+        <rvarg value="--debug" />
+    </test>
+
+    <test name="account.Account" module="examples">
+        <runs value="64" />
+        <arg value="account.Account" />
+    </test>
+    <test name="array.Test" module="basic">
+        <arg value="array.Test" />
+    </test>
+    <test name="airlinetickets.Airlinetickets" module="examples">
+        <runs value="32" />
+        <arg value="airlinetickets.Airlinetickets" />
+    </test>
+    <test name="benchmarks.JGFRayTracerBenchSizeA" module="examples">
+        <runs value="8" />
+        <rvarg key="--window" value="5000" />
+        <arg value="benchmarks.JGFRayTracerBenchSizeA" />
+    </test>
+    <test name="benchmarks.JGFMonteCarloBenchSizeA" module="examples">
+        <arg value="benchmarks.JGFMonteCarloBenchSizeA" />
+    </test>
+    <test name="benchmarks.JGFMolDynBenchSizeA" module="examples">
+        <arg value="benchmarks.JGFMolDynBenchSizeA" />
+    </test>
+
+    <test name="demo.Example" module="basic">
+        <arg value="demo.Example" />
+    </test>
+    <test name="boundedbuffer.BoundedBuffer" module="basic">
+        <runs value="32" />
+        <arg value="boundedbuffer.BoundedBuffer" />
+        <rvarg key="--window" value="800" />
+    </test>
+    <test name="critical.Critical" module="basic">
+        <runs value="8" />
+        <arg value="critical.Critical" />
+    </test>
+    <test name="bufwriter.BufWriter" module="basic">
+        <runs value="5" />
+        <arg value="bufwriter.BufWriter" />
+        <rvarg key="--window" value="500" />
+    </test>
+    <test name="bubblesort.BubbleSort" module="basic">
+        <runs value="64" />
+        <arg value="bubblesort.BubbleSort" />
+        <rvarg key="--window" value="500" />
+    </test>
+
+    <test name="jtsan.EasyTests-positive" module="basic">
+        <arg value="jtsan.EasyTests" />
+        <arg value="positive" />
+    </test>
+    <test name="jtsan.EasyTests-negative" module="basic">
+        <arg value="jtsan.EasyTests" />
+        <arg value="negative" />
+    </test>
+
+    <test name="jtsan.MediumTests-positive" module="basic">
+        <arg value="jtsan.MediumTests" />
+        <arg value="positive" />
+    </test>
+    <test name="jtsan.MediumTests-negative" module="basic">
+        <arg value="jtsan.MediumTests" />
+        <arg value="negative" />
+    </test>
+
+    <test name="jtsan.CustomTests-positive" module="basic">
+        <arg value="jtsan.CustomTests" />
+        <arg value="positive" />
+    </test>
+    <test name="jtsan.CustomTests-negative" module="basic">
+        <arg value="jtsan.CustomTests" />
+        <arg value="negative" />
+    </test>
+
+    <test name="jtsan.JUConcurrentTests-positive" module="basic">
+        <arg value="jtsan.JUConcurrentTests" />
+        <arg value="positive" />
+        <rvarg key="--window" value="5000" />
+    </test>
+    <test name="jtsan.JUConcurrentTests-negative" module="basic">
+        <arg value="jtsan.JUConcurrentTests" />
+        <arg value="negative" />
+        <rvarg key="--window" value="3000" />
+    </test>
+
+    <test name="jtsan.JUCollectionTests-positive" module="basic">
+        <arg value="jtsan.JUCollectionTests" />
+        <arg value="positive" />
+        <rvarg key="--include" value="jtsan.JUCollectionTests$DelegatedIterator" />
+    </test>
+    <test name="jtsan.JUCollectionTests-negative" module="basic">
+        <arg value="jtsan.JUCollectionTests" />
+        <arg value="negative" />
+    </test>
+
+    <test name="jtsan.ExecutorTests-positive" module="basic">
+        <arg value="jtsan.ExecutorTests" />
+        <arg value="positive" />
+    </test>
+    <test name="jtsan.ExecutorTests-negative" module="basic">
+        <arg value="jtsan.ExecutorTests" />
+        <arg value="negative" />
+    </test>
+
+    <test name="instrumentation.InstrumentationTests" module="basic">
+        <arg value="instrumentation.InstrumentationTests" />
+    </test>
+
+    <test name="llvm.demo.example2" module="llvm-tests">
+        <in/>
+        <rvarg key="--llvm-predict" value="$in" />
+    </test>
+    <!--
+    <test name="llvm.demo.example" module="llvm-tests">
+        <in/>
+        <rvarg key="- -llvm-predict" value="$in" />
+    </test>
+    -->
+    <test name="llvm.account.account" module="llvm-tests">
+        <in/>
+        <rvarg key="--llvm-predict" value="$in" />
+    </test>
+
     <test name="llvm.deadlock.simple" module="llvm-tests">
         <in/>
         <rvarg key="--llvm-predict" value="$in" />

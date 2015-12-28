@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.engine.deadlock.LockGraph;
 import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.IEventReader;
 import com.runtimeverification.rvpredict.log.Event;
@@ -22,6 +23,8 @@ import java.util.List;
  */
 public class TraceCache {
 
+    private final LockGraph lockGraph;
+
     protected final Configuration config;
 
     private final TraceState crntState;
@@ -34,6 +37,7 @@ public class TraceCache {
     public TraceCache(Configuration config, Metadata metadata) {
         this.config = config;
         this.crntState = new TraceState(config, metadata);
+        lockGraph = new LockGraph(config, metadata);
     }
 
     public void setup() throws IOException {
@@ -45,6 +49,10 @@ public class TraceCache {
             }
             readers.add(new EventReader(path));
         }
+    }
+
+    public LockGraph getLockGraph() {
+        return lockGraph;
     }
 
     /**
@@ -90,6 +98,10 @@ public class TraceCache {
             List<Event> events = new ArrayList<>(capacity);
             do {
                 events.add(event);
+                //TODO(TraianSF): the following conditional does not belong here. Consider moving it.
+                if (event.isLock() || event.isUnlock()) {
+                    lockGraph.handle(event);
+                }
                 try {
                     event = reader.readEvent();
                 } catch (EOFException e) {

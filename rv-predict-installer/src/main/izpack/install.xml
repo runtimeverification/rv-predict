@@ -3,6 +3,7 @@
 <installation version="5.0">
 
     <jar src="res/panels/RVPanels.jar" />
+    <jar src="rv-licensing.jar" />
 
     <!-- General Application Information -->
     <info>
@@ -18,10 +19,11 @@
         <!-- Variables required for adding RV key to installer -->
         <variable name="rvFullProductName" value="RV-Predict"/>
         <variable name="rvProductId" value="predict"/>
+        <variable name="rvLicensePath" value="."/>
     </variables>
 
     <!-- GUI-Specific Preferences -->
-    <guiprefs width="630" height="450" resizable="yes">
+    <guiprefs width="750" height="500" resizable="yes">
         <modifier key="useHeadingPanel" value="yes"/>
         <modifier key="useHeadingForSummary" value="no"/>
         <modifier key="headingImageOnLeft" value="yes"/>
@@ -39,7 +41,7 @@
         <res id="CustomLangPack.xml_eng" src="res/izpack-rv-eng-lang.xml"/>
         <!-- User input spec defining RV key inputs -->
         <res id="userInputSpec.xml" src="res/userInputSpec.xml"/>
-        <res id="LicencePanel.licence" src="LICENSE.md"/>
+        <res id="LicencePanel.licence" src="EVALUATION-LICENSE.md"/>
         <res id="HTMLFinishInfoPanel.finish" src="res/rvdependencies/finish.html"/>
         <res id="Heading.image" src="res/images/predict.png"/>
 <!--        <res id="TargetPanel.dir.windows" src="res/windows-installpath.txt"/> -->
@@ -47,12 +49,12 @@
 
     <!-- Installer Panel Sequence -->
     <panels>
-        <!-- First, check RV key and make sure it validates properly -->
+        <panel classname="TargetPanel"/>
+        <!-- Check RV key and make sure it validates properly -->
         <panel classname="UserInputPanel" id="rvkey">
             <validator classname="com.izforge.izpack.panels.rvkey.RVKeyValidator"/>
         </panel>
         <panel classname="LicencePanel"/>
-        <panel classname="TargetPanel"/>
         <panel classname="PacksPanel"/>
         <panel classname="InstallPanel"/>
         <panel classname="com.izforge.izpack.panels.htmlfinishinfo.HTMLFinishInfoPanel" id="finish" />

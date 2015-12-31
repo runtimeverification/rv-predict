@@ -72,11 +72,16 @@ public class LockGraph {
         Collection<List<Long>> cycles = sccGraph.getScc();
         List<List<Pair<Event,Event>>> eventCycles = new ArrayList<>();
         for (List<Long> cycle : cycles) {
+            // reverse the order of vertices because getScc returns them as they were stored on an internal stack
+            java.util.Collections.reverse((List<?>) cycle);
             if (cycle.size()==1) continue;
             List<Pair<Event,Event>> eventCycle = new ArrayList<>();
             for (int i = 0; i < cycle.size()-1; i++) {
                 long v1 = cycle.get(i);
                 long v2 = cycle.get(i+1);
+                Pair eventPair = eventEdges.get(Pair.of(v1, v2));
+                // make sure that edges on the cycle correspond the graph edges
+                assert(eventPair.getLeft() != null && eventPair.getRight() != null);
                 eventCycle.add(eventEdges.get(Pair.of(v1, v2)));
             }
             long v1 = cycle.get(cycle.size()-1);

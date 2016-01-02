@@ -1,6 +1,6 @@
 // Copyright (c) 2015 Runtime Verification Inc. (RV-Predict Team). All Rights Reserved.
 
-package examples;
+package demo;
 
 public class BrokenSpinningLoop {
 

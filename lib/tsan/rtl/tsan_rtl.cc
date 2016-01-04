@@ -144,11 +144,16 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
 
       internal_snprintf(rvbuff, sizeof(rvbuff), "fn:%s;file:%s;line:%d", frame->info.function, frame->info.file, frame->info.line);
 
+      DPrintf("<locId:%lld;%s>\n",
+                  locId, rvbuff);
+
       WriteNum(locfd, locId);
       WriteStr(locfd, rvbuff);
     }
   }
   locId = idToLocId.get(id);
+
+  DPrintf("Id %lld => locId %lld\n", id, locId);
 
   u64 varId = addrToVarId.count(addr);
 
@@ -165,6 +170,8 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
         internal_snprintf(rvbuff, sizeof(rvbuff), "global '%s' of size %zu at %p (%s + %p)", global.name, global.size, global.start,
             StripModuleName(global.module), global.module_offset);
 
+        DPrintf("<varId:%lld;desc:%s>\n", varId, rvbuff);
+
 
         WriteNum(varfd, varId);
         WriteStr(varfd, rvbuff);
@@ -177,6 +184,8 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
     }
   }
   varId = addrToVarId.get(addr);
+
+  DPrintf("addr %lld => varId %lld\n", addr, varId);
 
   if(type == START) {
     SpinMutexLock lock(&thdInsert);
@@ -194,6 +203,9 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
   WriteNum(fd, varId);
   WriteNum(fd, val);
   WriteNum(fd, (unsigned char)type);
+
+  DPrintf("<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s>\n",
+            gid,     tid + 1, locId,  varId,    val,       RVEventTypes[type]);
 }
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {

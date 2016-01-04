@@ -1,0 +1,22 @@
+#!/bin/bash
+
+
+cpp=0
+exts=(cc cp cxx cpp CPP c++ C)
+
+for i in "$@";
+do
+    for ext in ${exts[*]}; do
+        if [[ $i =~ \.$ext$ ]] ; then
+            let "cpp+=1"
+        fi
+    done
+done
+
+CMP=clang
+
+if [ "$cpp" -gt 0 ]; then
+   CMP=clang++
+fi
+
+$CMP -fsanitize=rvpredict "$@"

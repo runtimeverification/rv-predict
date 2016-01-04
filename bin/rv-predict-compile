@@ -2,7 +2,7 @@
 
 
 cpp=0
-exts=(cc cp cxx cpp CPP c++ C)
+exts=("cc" "cp" "cxx" "cpp" "CPP" "c\+\+" "C")
 
 for i in "$@";
 do
@@ -12,6 +12,7 @@ do
         fi
     done
 done
+
 
 CMP=clang
 

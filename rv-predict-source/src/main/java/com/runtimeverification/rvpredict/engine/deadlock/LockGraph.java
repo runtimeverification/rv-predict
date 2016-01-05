@@ -40,6 +40,10 @@ public class LockGraph {
         long tid = event.getTID();
         Set<Long> locks = lockSet.get(tid);
         if (event.isUnlock()) {
+            if (locks == null) {
+                reportUnlockOfUnlockedMutex(event);
+                return;
+            }
             locks.remove(lockId);
             return;
         }
@@ -120,6 +124,14 @@ public class LockGraph {
         report.append("\n");
         report.append(details);
         report.append("}}}\n");
+        config.logger().report(report.toString(), Logger.MSGTYPE.REAL);
+    }
+    private void reportUnlockOfUnlockedMutex(Event event) {
+        assert(event.isUnlock());
+        StringBuilder report = new StringBuilder();
+        report.append("Unlock of an unlocked mutex: \n");
+        report.append("\t\t" + metadata.getLocationSig(event.getLocId()));
+        report.append("\n");
         config.logger().report(report.toString(), Logger.MSGTYPE.REAL);
     }
 

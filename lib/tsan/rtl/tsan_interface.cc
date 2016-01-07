@@ -29,62 +29,75 @@ void __tsan_init() {
 }
 
 void __tsan_read16(void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u64*)addr), CALLERPC);
-  RVSaveMemAccEvent(READ, (uptr)addr + 8, *((u64*)addr + 8), CALLERPC);
+  for(int i = 0; i < 16; ++i) {
+    RVSaveMemAccEvent(READ, (uptr)((u8*)addr + i), *((u8*)addr + i), CALLERPC);
+  }
 }
 
 void __tsan_write16(void *addr, void *val) {
-  RVSaveMemAccEvent(WRITE, (uptr)addr, (u64)val, CALLERPC);
-  RVSaveMemAccEvent(WRITE, (uptr)addr + 8, (u64)val, CALLERPC);
-  //TODO(TraianSF): We're recording the latter event with the same value here
+  for(int i = 0; i < 16; ++i) {
+    RVSaveMemAccEvent(WRITE, (uptr)((u8*)addr + i), *((u8*)val + i), CALLERPC);
+  }
 }
 
 void __tsan_read16_pc(void *addr, void *pc) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *((u64*)addr), CALLERPC);
-  RVSaveMemAccEvent(READ, (uptr)addr + 8, *((u64*)addr + 8), CALLERPC);
+  for(int i = 0; i < 16; ++i) {
+    RVSaveMemAccEvent(READ, (uptr)((u8*)addr + i), *((u8*)addr + i), CALLERPC);
+  }
 }
 
 void __tsan_write16_pc(void *addr, void *pc, void *val) {
-  RVSaveMemAccEvent(WRITE, (uptr)addr, (u64)val, (uptr)pc);
-  RVSaveMemAccEvent(WRITE, (uptr)addr + 8, (u64)val, (uptr)pc);
-  //TODO(TraianSF): We're recording the latter event with the same value here
+  for(int i = 0; i < 16; ++i) {
+    RVSaveMemAccEvent(WRITE, (uptr)((u8*)addr + i), *((u8*)val + i), (uptr)pc);
+  }
 }
 
 // __tsan_unaligned_read/write calls are emitted by compiler.
 
+void __tsan_unaligned_read(const void *addr, const int size) {
+  for(int i = 0; i < size; ++i) {
+    RVSaveMemAccEvent(READ, (uptr)((const u8*)addr + i), *((const u8*)addr + i), CALLERPC);
+  }
+}
+
 void __tsan_unaligned_read2(const void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *(u16*)addr, CALLERPC);
+  __tsan_unaligned_read(addr, 2);
 }
 
 void __tsan_unaligned_read4(const void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *(u32*)addr, CALLERPC);
+  __tsan_unaligned_read(addr, 4);
 }
 
 void __tsan_unaligned_read8(const void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *(u64*)addr, CALLERPC);
+  __tsan_unaligned_read(addr, 8);
 }
 
 void __tsan_unaligned_read16(const void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *(u64*)addr, CALLERPC);
-  RVSaveMemAccEvent(READ, (uptr)addr + 8, *(u64*)addr + 8, CALLERPC);
+  __tsan_unaligned_read(addr, 16);
+}
+
+void __tsan_unaligned_write(void *addr, void *val, const int size) {
+  for(int i = 0; i < size; ++i) {
+    RVSaveMemAccEvent(WRITE, (uptr)((u8*)addr + i), *((u8*)val + i), CALLERPC);
+  }
 }
 
 void __tsan_unaligned_write2(void *addr, void *val) {
-  RVSaveMemAccEvent(WRITE, (uptr)addr, (u16)(u64)val, CALLERPC);
+  __tsan_unaligned_write(addr, val, 2);
 }
 
 void __tsan_unaligned_write4(void *addr, void *val) {
+  __tsan_unaligned_write(addr, val, 4);
   RVSaveMemAccEvent(WRITE, (uptr)addr, (u32)(u64)val, CALLERPC);
 }
 
 void __tsan_unaligned_write8(void *addr, void *val) {
+  __tsan_unaligned_write(addr, val, 8);
   RVSaveMemAccEvent(WRITE, (uptr)addr, (u64)val, CALLERPC);
 }
 
 void __tsan_unaligned_write16(void *addr, void *val) {
-  RVSaveMemAccEvent(WRITE, (uptr)addr, (u64)val, CALLERPC);
-  RVSaveMemAccEvent(WRITE, (uptr)addr + 8, (u64)val, CALLERPC);
-  //TODO(TraianSF): We're recording the latter event with the same value here
+  __tsan_unaligned_write(addr, val, 16);
 }
 
 // __sanitizer_unaligned_load/store are for user instrumentation.
@@ -110,19 +123,19 @@ u64 __sanitizer_unaligned_load64(const uu64 *addr) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_unaligned_store16(uu16 *addr, u16 v) {
-  __tsan_unaligned_write2(addr, (void*)v);
+  __tsan_unaligned_write2(addr, (void*)&v);
   *addr = v;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_unaligned_store32(uu32 *addr, u32 v) {
-  __tsan_unaligned_write4(addr, (void*)v);
+  __tsan_unaligned_write4(addr, (void*)&v);
   *addr = v;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_unaligned_store64(uu64 *addr, u64 v) {
-  __tsan_unaligned_write8(addr, (void*)v);
+  __tsan_unaligned_write8(addr, (void*)&v);
   *addr = v;
 }
 }  // extern "C"

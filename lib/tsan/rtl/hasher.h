@@ -225,6 +225,6 @@ template<typename Key, typename Value, unsigned int (*thasher)(const Key) = hash
         }
     };
 
-};
-};
+}
+}
 #endif

@@ -143,7 +143,7 @@ namespace __tsan{
           }
         }
       };
-  };
-};
+  }
+}
 
 #endif

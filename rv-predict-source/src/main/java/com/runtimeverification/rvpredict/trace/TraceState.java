@@ -112,6 +112,8 @@ public class TraceState {
 
     public int releaseLock(Event unlock) {
         LockState st = tidToLockIdToLockState.get(unlock.getTID(), unlock.getLockId());
+        if (st == null) return -1;
+
         st.release(unlock);
         return unlock.isReadUnlock() ? st.readLockLevel() : st.writeLockLevel();
     }

@@ -7,127 +7,114 @@
 #include "tsan_mutex.h"
 
 namespace __tsan{
-namespace __RV {
+  namespace __RV {
 
-const unsigned int MOD = (1 << 30);
+    const unsigned int MOD = (1 << 30);
 
-template<typename T>
-    unsigned int hasher(T x) {
+    template<typename T>
+      unsigned int hasher(T x) {
         unsigned long long y = x;
         return (y * 13337 + 189) % MOD;
-    }
+      }
 
-template<typename Key, typename Value, unsigned int (*thasher)(const Key) = hasher<Key> >
-    struct RVHash {
+    template<typename Key, typename Value, unsigned int (*thasher)(const Key) = hasher<Key> >
+      struct RVHash {
         struct entry {
-            Key key;
-            Value value;
+          Key key;
+          Value value;
 
-            entry(const entry &e):
-              key(e.key),
-              value(e.value){}
+          entry(const entry &e):
+            key(e.key),
+            value(e.value){}
 
-            entry(const Key &k, const Value &v):
-                key(k),
-                value(v){}
+          entry(const Key &k, const Value &v):
+            key(k),
+            value(v){}
 
-            ~entry() {
-              key.~Key();
-              value.~Value();
-            }
+          ~entry() {
+            key.~Key();
+            value.~Value();
+          }
         };
 
         struct bucket {
           __tsan::__RV::vector<entry> ent;
 
-          mutable StaticSpinMutex mutex;
-
-            int find_position(const Key key) {
-              SpinMutexLock lock(&mutex);
-                for(int i = 0; i < (int)ent.size(); ++i) {
-                    if(ent[i].key == key)
-                        return i;
-                }
-                return ent.size();
+          int find_position(const Key key) {
+            for(int i = 0; i < (int)ent.size(); ++i) {
+              if(ent[i].key == key)
+                return i;
             }
+            return ent.size();
+          }
 
-            void init() {
-              SpinMutexLock lock(&mutex);
-              ent.arr = 0;
-              ent.clear();
-            }
+          void init() {
+            ent.arr = 0;
+            ent.clear();
+          }
 
-            void clear() {
-              SpinMutexLock lock(&mutex);
-              ent.clear();
-            }
+          void clear() {
+            ent.clear();
+          }
 
-            ~bucket() {
-              ent.~vector();
-            }
+          ~bucket() {
+            ent.~vector();
+          }
 
-            int size() {
-              SpinMutexLock lock(&mutex);
-                return ent.size();
-            }
+          int size() {
+            return ent.size();
+          }
 
-            entry& operator[](int i) {
-              SpinMutexLock lock(&mutex);
-                return ent[i];
-            }
+          entry& operator[](int i) {
+            return ent[i];
+          }
 
-            const entry& operator[](int i) const {
-              SpinMutexLock lock(&mutex);
-              return ent[i];
-            }
+          const entry& operator[](int i) const {
+            return ent[i];
+          }
 
-            int count(const Key &key) {
-                int pos = find_position(key);
-              SpinMutexLock lock(&mutex);
-                if(pos == ent.size())
-                    return 0;
-                else
-                    return 1;
-            }
+          int count(const Key &key) {
+            int pos = find_position(key);
+            if(pos == ent.size())
+              return 0;
+            else
+              return 1;
+          }
 
-            Value& get(const Key &key) {
-                int pos = find_position(key);
-              SpinMutexLock lock(&mutex);
-                return ent[pos].value;
-            }
+          Value& get(const Key &key) {
+            int pos = find_position(key);
+            return ent[pos].value;
+          }
 
-            const Value& get(const Key &key) const {
-                int pos = find_position(key);
-              SpinMutexLock lock(&mutex);
-                return ent[pos].value;
-            }
+          const Value& get(const Key &key) const {
+            int pos = find_position(key);
+            return ent[pos].value;
+          }
 
-            void insert(const Key &key, const Value &value) {
-                entry e(key, value);
-                if(count(key))
-                    return;
-              SpinMutexLock lock(&mutex);
-                ent.push_back(e);
-            }
+          void insert(const Key &key, const Value &value) {
+            entry e(key, value);
+            if(count(key))
+              return;
+            ent.push_back(e);
+          }
 
-            bool erase(const Key &key) {
-              SpinMutexLock lock(&mutex);
-                int pos = find_position(key);
-                if(pos != ent.size()) {
-                  ent.erase_position(pos);
-                  return true;
-                } else {
-                  return false;
-                }
+          bool erase(const Key &key) {
+            int pos = find_position(key);
+            if(pos != ent.size()) {
+              ent.erase_position(pos);
+              return true;
+            } else {
+              return false;
             }
+          }
         };
 
         RVHash():
-            mtx(MutexTypeTrace, StatEvents)
-      {
-            size = 16;
-            entries = 0;
-            realloc();
+          mtx(MutexTypeTrace, StatEvents)
+        {
+          size = 16;
+          entries = 0;
+          realloc();
         }
 
         ~RVHash() {
@@ -135,21 +122,21 @@ template<typename Key, typename Value, unsigned int (*thasher)(const Key) = hash
         }
 
         int count(const Key &key) {
-            mtx.ReadLock();
-            bucket& now = get_bucket(key);
-            int ret = now.count(key);
-            mtx.ReadUnlock();
-            return ret;
+          mtx.ReadLock();
+          bucket& now = get_bucket(key);
+          int ret = now.count(key);
+          mtx.ReadUnlock();
+          return ret;
         }
 
         Value& get(const Key &key) {
-            mtx.ReadLock();
-            
-            bucket& now = get_bucket(key);
-            Value& ret = now.get(key);
-            
-            mtx.ReadUnlock();
-            return ret;
+          mtx.ReadLock();
+
+          bucket& now = get_bucket(key);
+          Value& ret = now.get(key);
+
+          mtx.ReadUnlock();
+          return ret;
         }
 
         const Value& get(const Key &key) const {
@@ -164,26 +151,26 @@ template<typename Key, typename Value, unsigned int (*thasher)(const Key) = hash
 
 
         void insert(const Key& key, const Value &value) {
-            mtx.Lock();
+          mtx.Lock();
 
-            ++entries;
-            internal_insert(key, value);
-            resize();
+          ++entries;
+          internal_insert(key, value);
+          resize();
 
-            mtx.Unlock();
+          mtx.Unlock();
         }
 
         void erase(const Key& key) {
-            mtx.Lock();
+          mtx.Lock();
 
-            bucket& now = get_bucket(key);
-            now.erase(key);
-            entries -= now.erase(key);
-            resize();
+          bucket& now = get_bucket(key);
+          now.erase(key);
+          entries -= now.erase(key);
+          resize();
 
-            mtx.Unlock();
+          mtx.Unlock();
         }
-private:
+        private:
 
         int size;
         int entries;
@@ -193,73 +180,72 @@ private:
         mutable Mutex mtx;
 
         void internal_insert(const Key key, const Value &value) {
-            bucket& now = get_bucket(key);
-            now.insert(key, value);
+          bucket& now = get_bucket(key);
+          now.insert(key, value);
         }
 
         void rebuild(int old_size) {
-            bucket* old = b;
-            realloc();
+          bucket* old = b;
+          realloc();
 
-
-            for(int i = 0; i < old_size; ++i) {
-                bucket &now = old[i];
-                for(int j = 0; j < now.size(); ++j) {
-                    entry &e = now[j];
-                    internal_insert(e.key, e.value);
-                }
+          for(int i = 0; i < old_size; ++i) {
+            bucket &now = old[i];
+            for(int j = 0; j < now.size(); ++j) {
+              entry &e = now[j];
+              internal_insert(e.key, e.value);
             }
+          }
 
-            internal_free(old);
+          internal_free(old);
         }
 
         void grow() {
-            int old_size = size;
-            size *= 2;
-            rebuild(old_size);
+          int old_size = size;
+          size *= 2;
+          rebuild(old_size);
         }
 
         void shrink() {
-            int old_size = size;
-            size /= 2;
-            rebuild(old_size);
+          int old_size = size;
+          size /= 2;
+          rebuild(old_size);
         }
 
 
         void resize() {
-            int total = size * 6;
-            if(entries == total) {
-                grow();
-            }else if(entries == total / 6 && size > 16) {
-                shrink();
-            }
+          int total = size * 6;
+          if(entries == total) {
+            grow();
+          }else if(entries == total / 6 && size > 16) {
+            shrink();
+          }
         }
 
         bucket& get_bucket(const Key &key) {
-            int val = thasher(key) % size;
-            return b[val];
+          int val = thasher(key) % size;
+          return b[val];
         }
         const bucket& get_bucket(const Key &key) const {
-            int val = thasher(key) % size;
-            return b[val];
+          int val = thasher(key) % size;
+          return b[val];
         }
 
 
 
         void *new_alloc() {
-            return alloc(sizeof(bucket) * size);
+          return alloc(sizeof(bucket) * size);
         }
 
         void realloc() {
-            void* mem = new_alloc();
-            b = (bucket *)mem;
-            for(int i = 0; i < size; ++i) {
-              b[i].init();
-            }
+          void* mem = new_alloc();
+          b = (bucket *)mem;
+          for(int i = 0; i < size; ++i) {
+            b[i].init();
+          }
         }
 
-    };
+      };
 
-}
+  }
 }
 #endif

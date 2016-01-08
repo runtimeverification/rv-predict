@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Runtime Verification Inc. (RV-Predict Team). All Rights Reserved.
+// Copyright (c) 2016 Runtime Verification Inc. (RV-Predict Team). All Rights Reserved.
 
 #include <thread>
 

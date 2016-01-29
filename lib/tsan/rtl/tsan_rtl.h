@@ -649,6 +649,11 @@ enum RVEventType {
   INVOKE_METHOD = 15,
 
   FINISH_METHOD = 16,
+
+  /**
+   * Event generated before locking (for deadlock detection
+   */
+  PRE_LOCK = 17,
 };
 
 uptr ALWAYS_INLINE getCallerStackLocation(ThreadState *thr) { return (thr->shadow_stack_pos - 1)[0] - 1; }

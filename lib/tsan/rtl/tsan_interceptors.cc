@@ -1098,6 +1098,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_trylock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_mutex_timedlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_timedlock, m, abstime);
+  RVSaveLockEvent(PRE_LOCK, thr, (uptr)m);
   int res = REAL(pthread_mutex_timedlock)(m, abstime);
   if (res == 0) {
     MutexLock(thr, pc, (uptr)m);
@@ -1125,6 +1126,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_destroy, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_spin_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_lock, m);
+  RVSaveLockEvent(PRE_LOCK, thr, (uptr)m);
   int res = REAL(pthread_spin_lock)(m);
   if (res == 0) {
     MutexLock(thr, pc, (uptr)m);
@@ -1134,6 +1136,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_lock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_spin_trylock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_trylock, m);
+  RVSaveLockEvent(PRE_LOCK, thr, (uptr)m);
   int res = REAL(pthread_spin_trylock)(m);
   if (res == 0) {
     MutexLock(thr, pc, (uptr)m, /*rec=*/1, /*try_lock=*/true);
@@ -1168,6 +1171,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_destroy, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_rdlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_rdlock, m);
+  RVSaveLockEvent(PRE_LOCK, thr, (uptr)m);
   int res = REAL(pthread_rwlock_rdlock)(m);
   if (res == 0) {
     MutexReadLock(thr, pc, (uptr)m);
@@ -1177,6 +1181,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_rdlock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_tryrdlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_tryrdlock, m);
+  RVSaveLockEvent(PRE_LOCK, thr, (uptr)m);
   int res = REAL(pthread_rwlock_tryrdlock)(m);
   if (res == 0) {
     MutexReadLock(thr, pc, (uptr)m, /*try_lock=*/true);
@@ -1186,6 +1191,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_tryrdlock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_timedrdlock, m, abstime);
+  RVSaveLockEvent(PRE_LOCK, thr, (uptr)m);
   int res = REAL(pthread_rwlock_timedrdlock)(m, abstime);
   if (res == 0) {
     MutexReadLock(thr, pc, (uptr)m);
@@ -1195,6 +1201,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_wrlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_wrlock, m);
+  RVSaveLockEvent(PRE_LOCK, thr, (uptr)m);
   int res = REAL(pthread_rwlock_wrlock)(m);
   if (res == 0) {
     MutexLock(thr, pc, (uptr)m);
@@ -1204,6 +1211,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_wrlock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_trywrlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_trywrlock, m);
+  RVSaveLockEvent(PRE_LOCK, thr, (uptr)m);
   int res = REAL(pthread_rwlock_trywrlock)(m);
   if (res == 0) {
     MutexLock(thr, pc, (uptr)m, /*rec=*/1, /*try_lock=*/true);
@@ -1213,6 +1221,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_trywrlock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_timedwrlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_timedwrlock, m, abstime);
+  RVSaveLockEvent(PRE_LOCK, thr, (uptr)m);
   int res = REAL(pthread_rwlock_timedwrlock)(m, abstime);
   if (res == 0) {
     MutexLock(thr, pc, (uptr)m);
@@ -2248,9 +2257,16 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
                     ((TsanInterceptorContext *) ctx)->pc, (uptr) ptr, size, \
                     false)
 
+
+#define FIRST(...) FIRST_HELPER(__VA_ARGS__, throwaway)
+#define FIRST_HELPER(first, ...) first
+
+
 #define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)      \
   SCOPED_TSAN_INTERCEPTOR(func, __VA_ARGS__);         \
   TsanInterceptorContext _ctx = {thr, caller_pc, pc}; \
+  if (internal_strcmp("pthread_mutex_lock",#func) == 0)        \
+    RVSaveLockEvent(PRE_LOCK, thr, (uptr)FIRST(__VA_ARGS__));  \
   ctx = (void *)&_ctx;                                \
   (void) ctx;
 

@@ -35,7 +35,7 @@ public class LockGraph {
      * @param event  a lock/unlock event
      */
     public void handle(Event event) {
-        assert event.isLock() || event.isUnlock();
+        assert event.isPreLock() || event.isUnlock();
         long lockId = event.getLockId();
         long tid = event.getTID();
         Set<Long> locks = lockSet.get(tid);

@@ -115,7 +115,7 @@ public class Event implements Comparable<Event> {
     }
 
     public long getLockId() {
-        assert isLock() || isUnlock();
+        assert isPreLock() || isLock() ||  isUnlock();
         return getSyncObject();
     }
 
@@ -147,6 +147,10 @@ public class Event implements Comparable<Event> {
     public boolean isLock() {
         return TYPE == EventType.READ_LOCK || TYPE == EventType.WRITE_LOCK
                 || TYPE == EventType.WAIT_ACQ;
+    }
+
+    public boolean isPreLock() {
+        return TYPE == EventType.PRE_LOCK;
     }
 
     public boolean isReadLock() {
@@ -204,7 +208,7 @@ public class Event implements Comparable<Event> {
     }
 
     public String getLockRepresentation() {
-        assert isLock();
+        assert isPreLock() || isLock();
         long lockId = getLockId();
         int upper32 = (int)(lockId >> 32);
         String lower32 = Integer.toHexString((int) lockId);

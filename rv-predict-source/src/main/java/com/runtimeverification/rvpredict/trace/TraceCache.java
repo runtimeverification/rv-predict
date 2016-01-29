@@ -99,7 +99,7 @@ public class TraceCache {
             do {
                 events.add(event);
                 //TODO(TraianSF): the following conditional does not belong here. Consider moving it.
-                if (event.isLock() || event.isUnlock()) {
+                if (event.isPreLock() || event.isUnlock()) {
                     lockGraph.handle(event);
                 }
                 try {

@@ -80,6 +80,11 @@ public enum EventType {
 
     FINISH_METHOD,
 
+    /**
+     * Event generated before acquiring of any type of lock is attempted.
+     * Required by, and only used for, deadlock detection, where the intention
+     * to acquire a lock is more relevant than actually the acquisition itself.
+     */
     PRE_LOCK;
 
     public boolean isSyncType() {

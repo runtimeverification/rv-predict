@@ -85,6 +85,7 @@ public enum EventType {
      * Required by, and only used for, deadlock detection, where the intention
      * to acquire a lock is more relevant than actually the acquisition itself.
      */
+    //TODO(TraianSF): Consider moving this with the other SYNC events
     PRE_LOCK;
 
     public boolean isSyncType() {

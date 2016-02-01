@@ -78,10 +78,12 @@ public enum EventType {
 
     INVOKE_METHOD,
 
-    FINISH_METHOD;
+    FINISH_METHOD,
+
+    PRE_LOCK;
 
     public boolean isSyncType() {
-        return WRITE_LOCK.ordinal() <= this.ordinal() && this.ordinal() <= JOIN.ordinal();
+        return WRITE_LOCK.ordinal() <= this.ordinal() && this.ordinal() <= JOIN.ordinal() || this == PRE_LOCK;
     }
 
     public boolean isMetaType() {

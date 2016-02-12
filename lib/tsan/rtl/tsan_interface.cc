@@ -83,21 +83,19 @@ void __tsan_unaligned_write(void *addr, void *val, const int size) {
 }
 
 void __tsan_unaligned_write2(void *addr, void *val) {
-  __tsan_unaligned_write(addr, val, 2);
+  __tsan_unaligned_write(addr, &val, 2);
 }
 
 void __tsan_unaligned_write4(void *addr, void *val) {
-  __tsan_unaligned_write(addr, val, 4);
-  RVSaveMemAccEvent(WRITE, (uptr)addr, (u32)(u64)val, CALLERPC);
+  __tsan_unaligned_write(addr, &val, 4);
 }
 
 void __tsan_unaligned_write8(void *addr, void *val) {
-  __tsan_unaligned_write(addr, val, 8);
-  RVSaveMemAccEvent(WRITE, (uptr)addr, (u64)val, CALLERPC);
+  __tsan_unaligned_write(addr, &val, 8);
 }
 
 void __tsan_unaligned_write16(void *addr, void *val) {
-  __tsan_unaligned_write(addr, val, 16);
+  __tsan_unaligned_write(addr, &val, 16);
 }
 
 // __sanitizer_unaligned_load/store are for user instrumentation.

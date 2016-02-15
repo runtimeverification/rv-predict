@@ -112,7 +112,7 @@ struct RVHash {
   RVHash() : mtx(MutexTypeTrace, StatEvents) {
     size = 16;
     entries = 0;
-    realloc();
+    realloc_bucket();
   }
 
   ~RVHash() {
@@ -184,7 +184,7 @@ private:
 
   void rebuild(int old_size) {
     bucket* old = b;
-    realloc();
+    realloc_bucket();
 
     for(int i = 0; i < old_size; ++i) {
       bucket &now = old[i];
@@ -232,7 +232,7 @@ private:
     return alloc(sizeof(bucket) * size);
   }
 
-  void realloc() {
+  void realloc_bucket() {
     void* mem = new_alloc();
     b = (bucket *)mem;
     for(int i = 0; i < size; ++i) {

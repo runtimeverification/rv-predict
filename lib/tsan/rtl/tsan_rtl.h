@@ -679,6 +679,7 @@ void ALWAYS_INLINE RVSaveLockEvent(RVEventType type, ThreadState* thr, uptr lock
 }
 
 void ALWAYS_INLINE RVSaveMemAccEvent(RVEventType type, uptr addr, u64 val, uptr id) {
+  //Printf("%s %llu: %c\n",type == READ ? "READ" : "WRITE",addr, val);
   RVLog(type, id, addr, val, 0);
 }
 

@@ -333,9 +333,9 @@ void ThreadSetName(ThreadState *thr, const char *name) {
 void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr,
                              uptr size, uptr pc) {
 
-  for(uptr i = 0; i < size && i < sizeof(u64); ++i) {
-    const u8 val = *(u8*)(addr + i);
-    RVSaveMemAccEvent(RVType, addr, val, pc);
+  for(uptr i = 0; i < size; ++i) {
+    const u8 val = *((u8*)addr + i);
+    RVSaveMemAccEvent(RVType, (uptr)((u8*)addr + i), val, pc);
   }
 
 }

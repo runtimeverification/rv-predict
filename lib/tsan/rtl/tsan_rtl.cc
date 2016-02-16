@@ -229,7 +229,7 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
       RVSingleEventFile(gid+1,   tid, id, addr, val,READ);
       RVSingleEventFile(gid+2,   tid, id, addr, 0,WRITE_UNLOCK );
       break;
-    default:
+    default: // All other event types generate a single event
       u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
       RVSingleEventFile(gid, tid, id, addr, val, type);
   }

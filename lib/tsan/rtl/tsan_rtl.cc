@@ -111,8 +111,15 @@ void WriteStr(fd_t fd, const char* s) {
   WriteToFile(fd, s, len + 1);
 }
 
-void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
-  u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
+void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr,
+                             uptr size, uptr pc) {
+  for(uptr i = 0; i < size; ++i) {
+    const u8 val = *((u8*)addr + i);
+    RVSaveMemAccEvent(RVType, (uptr)((u8*)addr + i), val, pc);
+  }
+}
+
+void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
 
   fd_t fd;
   static fd_t locfd = OpenFile("loc_metadata.bin", WrOnly),
@@ -206,6 +213,26 @@ void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
 
   DPrintf("<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s>\n",
             gid,     tid + 1, locId,  varId,    val,       RVEventTypes[type]);
+}
+
+/**
+ * Special case for atomic events.  For now, we consider atomic operations
+ * as locking on the element being accessed.
+ */
+void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
+  u64 gid;
+  switch (type) {
+    case ATOMIC_READ:
+    case ATOMIC_WRITE:
+      gid = atomic_fetch_add(&rv_gid, 3, memory_order_relaxed);
+      RVSingleEventFile(gid,     tid, id, addr, 0,WRITE_LOCK );
+      RVSingleEventFile(gid+1,   tid, id, addr, val,READ);
+      RVSingleEventFile(gid+2,   tid, id, addr, 0,WRITE_UNLOCK );
+      break;
+    default: // All other event types generate a single event
+      u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
+      RVSingleEventFile(gid, tid, id, addr, val, type);
+  }
 }
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {
@@ -775,7 +802,7 @@ void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr,
       size1 = 2;
       kAccessSizeLog = kSizeLog2;
     }
-    MemoryAccess(thr, pc, addr, kAccessSizeLog, kAccessIsWrite, kIsAtomic);
+    RVMemoryAccess(thr, pc, addr, kAccessSizeLog, kAccessIsWrite, kIsAtomic);
     addr += size1;
     size -= size1;
   }

@@ -330,16 +330,6 @@ void ThreadSetName(ThreadState *thr, const char *name) {
   ctx->thread_registry->SetThreadName(thr->tid, name);
 }
 
-void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr,
-                             uptr size, uptr pc) {
-
-  for(uptr i = 0; i < size; ++i) {
-    const u8 val = *((u8*)addr + i);
-    RVSaveMemAccEvent(RVType, (uptr)((u8*)addr + i), val, pc);
-  }
-
-}
-
 void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
                        uptr size, bool is_write) {
   if (size == 0)

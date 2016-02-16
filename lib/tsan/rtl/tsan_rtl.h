@@ -658,6 +658,7 @@ enum RVEventType {
 
 uptr ALWAYS_INLINE getCallerStackLocation(ThreadState *thr) { return (thr->shadow_stack_pos - 1)[0] - 1; }
 
+void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr, uptr size, uptr pc);
 void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type);
 
 void ALWAYS_INLINE RVLog(RVEventType type, uptr id, uptr addr, u64 val1, u64 val2) {
@@ -682,6 +683,27 @@ void ALWAYS_INLINE RVSaveMemAccEvent(RVEventType type, uptr addr, u64 val, uptr 
   //Printf("%s %llu: %c\n",type == READ ? "READ" : "WRITE",addr, val);
   RVLog(type, id, addr, val, 0);
 }
+
+
+void ALWAYS_INLINE RVMemoryAccess(ThreadState *thr, uptr pc, uptr addr,
+    int kAccessSizeLog, bool kAccessIsWrite, bool kIsAtomic) {
+  RVEventType type;
+  if (kAccessIsWrite) {
+    if (kIsAtomic) {
+      type = ATOMIC_WRITE;
+    } else {
+      type = WRITE;
+    }
+  } else {
+    if (kIsAtomic) {
+      type = ATOMIC_READ;
+    } else {
+      type = READ;
+    }
+  }
+  RVSaveMemoryAccessRange(type, addr, 1 << kAccessSizeLog, getCallerStackLocation(thr));
+}
+
 
 u32 CurrentStackId(ThreadState *thr, uptr pc);
 ReportStack *SymbolizeStackId(u32 stack_id);

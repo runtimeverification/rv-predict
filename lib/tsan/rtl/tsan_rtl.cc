@@ -802,7 +802,7 @@ void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr,
       size1 = 2;
       kAccessSizeLog = kSizeLog2;
     }
-    MemoryAccess(thr, pc, addr, kAccessSizeLog, kAccessIsWrite, kIsAtomic);
+    RVMemoryAccess(thr, pc, addr, kAccessSizeLog, kAccessIsWrite, kIsAtomic);
     addr += size1;
     size -= size1;
   }
@@ -898,7 +898,6 @@ bool ContainsSameAccess(u64 *s, u64 a, u64 sync_epoch, bool is_write) {
 ALWAYS_INLINE USED
 void MemoryAccess(ThreadState *thr, uptr pc, uptr addr,
     int kAccessSizeLog, bool kAccessIsWrite, bool kIsAtomic) {
-  RVMemoryAccess(thr, pc, addr, kAccessSizeLog, kAccessIsWrite, kIsAtomic);
   u64 *shadow_mem = (u64*)MemToShadow(addr);
   DPrintf2("#%d: MemoryAccess: @%p %p size=%d"
       " is_write=%d shadow_mem=%p {%zx, %zx, %zx, %zx}\n",

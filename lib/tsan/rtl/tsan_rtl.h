@@ -735,22 +735,22 @@ const int kSizeLog8 = 3;
 
 void ALWAYS_INLINE MemoryRead(ThreadState *thr, uptr pc,
                                      uptr addr, int kAccessSizeLog) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, false, false);
+  RVMemoryAccess(thr, pc, addr, kAccessSizeLog, false, false);
 }
 
 void ALWAYS_INLINE MemoryWrite(ThreadState *thr, uptr pc,
                                       uptr addr, int kAccessSizeLog) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, true, false);
+  RVMemoryAccess(thr, pc, addr, kAccessSizeLog, true, false);
 }
 
 void ALWAYS_INLINE MemoryReadAtomic(ThreadState *thr, uptr pc,
                                            uptr addr, int kAccessSizeLog) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, false, true);
+  RVMemoryAccess(thr, pc, addr, kAccessSizeLog, false, true);
 }
 
 void ALWAYS_INLINE MemoryWriteAtomic(ThreadState *thr, uptr pc,
                                             uptr addr, int kAccessSizeLog) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, true, true);
+  RVMemoryAccess(thr, pc, addr, kAccessSizeLog, true, true);
 }
 
 void MemoryResetRange(ThreadState *thr, uptr pc, uptr addr, uptr size);

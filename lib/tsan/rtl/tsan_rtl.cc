@@ -120,6 +120,9 @@ void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr,
   }
 }
 
+/**
+ * If range is larger than 1024, then recording only the first and last 512 bytes
+ */
 void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr,
                              uptr size, uptr pc, bool isAtomic) {
   if (size == 0) return;
@@ -138,6 +141,10 @@ void RVReadInteger(uptr addr, uptr size, uptr pc) {
   RVSaveMemoryAccessRange(READ, addr, size, pc);
 }
 
+/**
+ * Currently this is only called with standard interger sizes, i.e.,
+ * size is one of 1,2,4,8.
+ */
 void RVWriteInteger(uptr addr, uptr size, uptr pc, void* val) {
   if (0 == size) return;
   if (size > 8) size = 8;

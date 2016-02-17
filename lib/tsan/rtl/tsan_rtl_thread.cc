@@ -342,7 +342,7 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
   else
     RVType = READ;
 
-  RVSaveMemoryAccessRange(RVType, addr, size, pc);
+  RVSaveMemoryAccessRange(RVType, addr, size, pc, false);
 
   u64 *shadow_mem = (u64*)MemToShadow(addr);
   DPrintf2("#%d: MemoryAccessRange: @%p %p size=%d is_write=%d\n",

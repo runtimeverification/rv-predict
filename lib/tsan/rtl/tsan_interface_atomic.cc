@@ -276,7 +276,7 @@ template<typename T>
 static void AtomicStore(ThreadState *thr, uptr pc, volatile T *a, T v,
     morder mo) {
   CHECK(IsStoreOrder(mo));
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>(), v);
   // This fast-path is critical for performance.
   // Assume the access is atomic.
   // Strictly saying even relaxed store cuts off release sequence,
@@ -297,7 +297,7 @@ static void AtomicStore(ThreadState *thr, uptr pc, volatile T *a, T v,
 
 template<typename T, T (*F)(volatile T *v, T op)>
 static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>(), v);
   SyncVar *s = 0;
   if (mo != mo_relaxed) {
     s = ctx->metamap.GetOrCreateAndLock(thr, pc, (uptr)a, true);
@@ -421,7 +421,7 @@ template<typename T>
 static bool AtomicCAS(ThreadState *thr, uptr pc,
     volatile T *a, T *c, T v, morder mo, morder fmo) {
   (void)fmo;  // Unused because llvm does not pass it yet.
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>(), v);
   SyncVar *s = 0;
   bool write_lock = mo != mo_acquire && mo != mo_consume;
   if (mo != mo_relaxed) {

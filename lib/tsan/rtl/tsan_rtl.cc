@@ -84,6 +84,7 @@ const char* RVEventTypes[] = {
   "",
   "INVOKE_METHOD",
   "FINISH_METHOD",
+  "PRE_LOCK",
 };
 
 static __RV::RVHash<u64, u64> idToLocId;
@@ -119,8 +120,47 @@ void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr,
   }
 }
 
-void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
+void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr,
+                             uptr size, uptr pc, bool isAtomic) {
+  if (size == 0) return;
+  if (isAtomic)
+    RVLog(WRITE_LOCK, pc, addr, 0, 0);
+  if (size > 1024) {
+    RVSaveMemoryAccessRange(RVType, addr, 512, pc);
+    RVSaveMemoryAccessRange(RVType, (uptr)((u8*)addr + (size-513)), 512, pc);
+  } else
+    RVSaveMemoryAccessRange(RVType, addr, size, pc);
+  if (isAtomic)
+    RVLog(WRITE_UNLOCK, pc, addr, 0, 0);
+}
 
+void RVReadInteger(uptr addr, uptr size, uptr pc) {
+  RVSaveMemoryAccessRange(READ, addr, size, pc);
+}
+
+void RVWriteInteger(uptr addr, uptr size, uptr pc, void* val) {
+  if (0 == size) return;
+  if (size > 8) size = 8;
+  u8 v8; u16 v16; u32 v32; u64 v64 = (u64) val;
+  u8* p = nullptr;
+  switch (size) {
+    case 1:
+      v8 = (u8)v64;   p = &v8;  break;
+    case 2:
+      v16 = (u16)v64; p = (u8*)&v16; break;
+    case 3:
+    case 4:
+      v32 = (u32)v64; p = (u8*)&v32; break;
+    default:
+      p = (u8*)&v64; break;
+  }
+  for (uptr i =0; i < size; i++)
+    RVSaveMemAccEvent(WRITE, (uptr)((u8*)addr +i), p[i], pc);
+}
+
+
+void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr,
+                       u64 val, RVEventType type) {
   fd_t fd;
   static fd_t locfd = OpenFile("loc_metadata.bin", WrOnly),
               varfd = OpenFile("var_metadata.bin", WrOnly),
@@ -211,8 +251,8 @@ void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 val, RVEventType 
   WriteNum(fd, val);
   WriteNum(fd, (unsigned char)type);
 
-  DPrintf("<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s>\n",
-            gid,     tid + 1, locId,  varId,    val,       RVEventTypes[type]);
+  DPrintf("<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s(%d)>\n",
+            gid,     tid + 1, locId,  varId,    val,       RVEventTypes[type], type);
 }
 
 /**

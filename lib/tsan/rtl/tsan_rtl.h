@@ -658,7 +658,9 @@ enum RVEventType {
 
 uptr ALWAYS_INLINE getCallerStackLocation(ThreadState *thr) { return (thr->shadow_stack_pos - 1)[0] - 1; }
 
-void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr, uptr size, uptr pc);
+void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr, uptr size, uptr pc, bool isAtomic);
+void RVReadInteger(uptr addr, uptr size, uptr pc);
+void RVWriteInteger(uptr addr, uptr size, uptr pc, void* val);
 void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type);
 
 void ALWAYS_INLINE RVLog(RVEventType type, uptr id, uptr addr, u64 val1, u64 val2) {
@@ -684,24 +686,10 @@ void ALWAYS_INLINE RVSaveMemAccEvent(RVEventType type, uptr addr, u64 val, uptr 
   RVLog(type, id, addr, val, 0);
 }
 
-
 void ALWAYS_INLINE RVMemoryAccess(ThreadState *thr, uptr pc, uptr addr,
     int kAccessSizeLog, bool kAccessIsWrite, bool kIsAtomic) {
-  RVEventType type;
-  if (kAccessIsWrite) {
-    if (kIsAtomic) {
-      type = ATOMIC_WRITE;
-    } else {
-      type = WRITE;
-    }
-  } else {
-    if (kIsAtomic) {
-      type = ATOMIC_READ;
-    } else {
-      type = READ;
-    }
-  }
-  RVSaveMemoryAccessRange(type, addr, 1 << kAccessSizeLog, getCallerStackLocation(thr));
+  RVSaveMemoryAccessRange(kAccessIsWrite ? WRITE : READ, addr,
+      1 << kAccessSizeLog, getCallerStackLocation(thr), kIsAtomic);
 }
 
 
@@ -749,8 +737,10 @@ void ALWAYS_INLINE MemoryReadAtomic(ThreadState *thr, uptr pc,
 }
 
 void ALWAYS_INLINE MemoryWriteAtomic(ThreadState *thr, uptr pc,
-                                            uptr addr, int kAccessSizeLog) {
-  RVMemoryAccess(thr, pc, addr, kAccessSizeLog, true, true);
+                                            uptr addr, int kAccessSizeLog, u64 val) {
+  RVLog(WRITE_LOCK, pc, addr, 0, 0);
+  RVWriteInteger(addr, 1<<kAccessSizeLog, pc, (void*)val);
+  RVLog(WRITE_UNLOCK, pc, addr, 0, 0);
 }
 
 void MemoryResetRange(ThreadState *thr, uptr pc, uptr addr, uptr size);

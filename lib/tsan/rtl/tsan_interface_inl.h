@@ -19,81 +19,67 @@
 using namespace __tsan;  // NOLINT
 
 void __tsan_read1(void *addr) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *(u8*)addr, CALLERPC);
+  RVReadInteger((uptr)addr, 1, CALLERPC);
 }
 
 void __tsan_read2(void *addr) {
-  for(int i = 0; i < 2; ++i) 
-    __tsan_read1((u8*)addr + i);
-  
+  RVReadInteger((uptr)addr, 2, CALLERPC);
 }
 
 void __tsan_read4(void *addr) {
-  for(int i = 0; i < 4; ++i) 
-    __tsan_read1((u8*)addr + i);
-  
+  RVReadInteger((uptr)addr, 4, CALLERPC);
 }
 
 void __tsan_read8(void *addr) {
-  for(int i = 0; i < 8; ++i) 
-    __tsan_read1((u8*)addr + i);
+  RVReadInteger((uptr)addr, 8, CALLERPC);
 }
 
 void __tsan_write1(void *addr, void *val) {
-  RVSaveMemAccEvent(WRITE, (uptr)addr, (u8)(u64)val, CALLERPC);
+  RVWriteInteger((uptr)addr, 1, CALLERPC, val);
 }
 
 void __tsan_write2(void *addr, void *val) {
-  for(int i = 0; i < 2; ++i)
-    __tsan_write1((u8*)addr + i, (u8*)val + i);
+  RVWriteInteger((uptr)addr, 2, CALLERPC, val);
 }
 
 void __tsan_write4(void *addr, void *val) {
-  for(int i = 0; i < 4; ++i)
-    __tsan_write1((u8*)addr + i, (u8*)val + i);
+  RVWriteInteger((uptr)addr, 4, CALLERPC, val);
 }
 
 void __tsan_write8(void *addr, void *val) {
-  for(int i = 0; i < 8; ++i)
-    __tsan_write1((u8*)addr + i, (u8*)val + i);
+  RVWriteInteger((uptr)addr, 8, CALLERPC, val);
 }
 
 void __tsan_read1_pc(void *addr, void *pc) {
-  RVSaveMemAccEvent(READ, (uptr)addr, *(u8*)addr, (uptr)pc);
+  RVReadInteger((uptr)addr, 1, (uptr)pc);
 }
 
 void __tsan_read2_pc(void *addr, void *pc) {
-  for(int i = 0; i < 2; ++i)
-    __tsan_read1_pc((u8*) addr + i, pc);
+  RVReadInteger((uptr)addr, 2, (uptr)pc);
 }
 
 void __tsan_read4_pc(void *addr, void *pc) {
-  for(int i = 0; i < 4; ++i)
-    __tsan_read1_pc((u8*) addr + i, pc);
+  RVReadInteger((uptr)addr, 4, (uptr)pc);
 }
 
 void __tsan_read8_pc(void *addr, void *pc) {
-  for(int i = 0; i < 8; ++i)
-    __tsan_read1_pc((u8*) addr + i, pc);
+  RVReadInteger((uptr)addr, 8, (uptr)pc);
 }
 
 void __tsan_write1_pc(void *addr, void *pc, void *val) {
-  RVSaveMemAccEvent(WRITE, (uptr)addr, (u8)(u64)val, (uptr)pc);
+  RVWriteInteger((uptr)addr, 1, (uptr)pc, val);
 }
 
 void __tsan_write2_pc(void *addr, void *pc, void *val) {
-  for(int i = 0; i < 2; ++i)
-    __tsan_write1_pc((u8*)addr + i, pc, (u8*)val + i);
+  RVWriteInteger((uptr)addr, 2, (uptr)pc, val);
 }
 
 void __tsan_write4_pc(void *addr, void *pc, void *val) {
-  for(int i = 0; i < 4; ++i)
-    __tsan_write1_pc((u8*)addr + i, pc, (u8*)val + i);
+  RVWriteInteger((uptr)addr, 4, (uptr)pc, val);
 }
 
 void __tsan_write8_pc(void *addr, void *pc, void *val) {
-  for(int i = 0; i < 8; ++i)
-    __tsan_write1_pc((u8*)addr + i, pc, (u8*)val + i);
+  RVWriteInteger((uptr)addr, 8, (uptr)pc, val);
 }
 
 void __tsan_vptr_update(void **vptr_p, void *new_val) {
@@ -119,9 +105,9 @@ void __tsan_func_exit() {
 }
 
 void __tsan_read_range(void *addr, uptr size) {
-  MemoryAccessRange(cur_thread(), CALLERPC, (uptr)addr, size, false);
+  RVSaveMemoryAccessRange(READ, (uptr)addr, size, CALLERPC, false);
 }
 
 void __tsan_write_range(void *addr, uptr size) {
-  MemoryAccessRange(cur_thread(), CALLERPC, (uptr)addr, size, true);
+  RVSaveMemoryAccessRange(WRITE, (uptr)addr, size, CALLERPC, false);
 }

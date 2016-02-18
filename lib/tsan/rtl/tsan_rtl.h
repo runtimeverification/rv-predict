@@ -736,11 +736,20 @@ void ALWAYS_INLINE MemoryReadAtomic(ThreadState *thr, uptr pc,
   RVMemoryAccess(thr, pc, addr, kAccessSizeLog, false, true);
 }
 
+void ALWAYS_INLINE RVAtomicLock(uptr addr, uptr pc) {
+    RVLog(WRITE_LOCK, pc, -addr, 0, 0);
+}
+
+void ALWAYS_INLINE RVAtomicUnlock(uptr addr, uptr pc) {
+    RVLog(WRITE_UNLOCK, pc, -addr, 0, 0);
+}
+
+
 void ALWAYS_INLINE MemoryWriteAtomic(ThreadState *thr, uptr pc,
                                             uptr addr, int kAccessSizeLog, u64 val) {
-  RVLog(WRITE_LOCK, pc, addr, 0, 0);
+  RVAtomicLock(addr, pc);
   RVWriteInteger(addr, 1<<kAccessSizeLog, pc, (void*)val);
-  RVLog(WRITE_UNLOCK, pc, addr, 0, 0);
+  RVAtomicUnlock(addr, pc);
 }
 
 void MemoryResetRange(ThreadState *thr, uptr pc, uptr addr, uptr size);

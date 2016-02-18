@@ -99,7 +99,7 @@ public class TraceCache {
             do {
                 events.add(event);
                 //TODO(TraianSF): the following conditional does not belong here. Consider moving it.
-                if (event.isPreLock() || event.isUnlock()) {
+                if (event.isPreLock() || event.isLock() || event.isUnlock()) {
                     if (config.isLLVMPrediction()) {
                         //TODO(TraianSF): remove above condition once instrumentation works for Java
                         lockGraph.handle(event);

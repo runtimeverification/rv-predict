@@ -127,14 +127,14 @@ void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr,
                              uptr size, uptr pc, bool isAtomic) {
   if (size == 0) return;
   if (isAtomic)
-    RVLog(WRITE_LOCK, pc, addr, 0, 0);
+    RVLog(WRITE_LOCK, pc, -addr, 0, 0);
   if (size > 1024) {
     RVSaveMemoryAccessRange(RVType, addr, 512, pc);
     RVSaveMemoryAccessRange(RVType, (uptr)((u8*)addr + (size-513)), 512, pc);
   } else
     RVSaveMemoryAccessRange(RVType, addr, size, pc);
   if (isAtomic)
-    RVLog(WRITE_UNLOCK, pc, addr, 0, 0);
+    RVLog(WRITE_UNLOCK, pc, -addr, 0, 0);
 }
 
 void RVReadInteger(uptr addr, uptr size, uptr pc) {

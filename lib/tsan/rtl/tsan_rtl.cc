@@ -127,14 +127,14 @@ void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr,
                              uptr size, uptr pc, bool isAtomic) {
   if (size == 0) return;
   if (isAtomic)
-    RVLog(WRITE_LOCK, pc, addr, 0, 0);
+    RVAtomicLock(addr, pc);
   if (size > 1024) {
     RVSaveMemoryAccessRange(RVType, addr, 512, pc);
     RVSaveMemoryAccessRange(RVType, (uptr)((u8*)addr + (size-513)), 512, pc);
   } else
     RVSaveMemoryAccessRange(RVType, addr, size, pc);
   if (isAtomic)
-    RVLog(WRITE_UNLOCK, pc, addr, 0, 0);
+    RVAtomicUnlock(addr, pc);
 }
 
 void RVReadInteger(uptr addr, uptr size, uptr pc) {
@@ -267,19 +267,8 @@ void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr,
  * as locking on the element being accessed.
  */
 void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
-  u64 gid;
-  switch (type) {
-    case ATOMIC_READ:
-    case ATOMIC_WRITE:
-      gid = atomic_fetch_add(&rv_gid, 3, memory_order_relaxed);
-      RVSingleEventFile(gid,     tid, id, addr, 0,WRITE_LOCK );
-      RVSingleEventFile(gid+1,   tid, id, addr, val,READ);
-      RVSingleEventFile(gid+2,   tid, id, addr, 0,WRITE_UNLOCK );
-      break;
-    default: // All other event types generate a single event
-      u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
-      RVSingleEventFile(gid, tid, id, addr, val, type);
-  }
+  u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
+  RVSingleEventFile(gid, tid, id, addr, val, type);
 }
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {

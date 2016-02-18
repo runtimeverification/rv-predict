@@ -35,7 +35,7 @@ public class LockGraph {
      * @param event  a lock/unlock event
      */
     public void handle(Event event) {
-        assert event.isPreLock() || event.isUnlock();
+        assert event.isPreLock() || event.isLock() || event.isUnlock();
         long lockId = event.getLockId();
         long tid = event.getTID();
         Set<Long> locks = lockSet.get(tid);
@@ -53,6 +53,7 @@ public class LockGraph {
             locks = new HashSet<>();
             lockSet.put(tid, locks);
         } else {
+            if (locks.contains(lockId)) return; // TODO(TraianSF): handle recursive locking
             locks.forEach(lock -> addEdge(lock, lockId));
         }
         locks.add(lockId);

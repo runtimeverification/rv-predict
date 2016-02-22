@@ -14,13 +14,9 @@ function test {
     else
         echo "FAIL"
     fi
+
+    rm result.txt debug.log
 }
 
-echo "Testing race detection"
-printf "%0.s-" {1..22}
-echo ""
-
-for i in *\.cpp; do
-    test $i
-    rm debug.log result.txt
-done
+f="$1"
+test "$f"

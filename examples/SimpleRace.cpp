@@ -15,6 +15,7 @@ void thread2() {
 }
 
 int main() {
+    sharedVar = 1;
     thread t1(thread1);
     thread t2(thread2);
 

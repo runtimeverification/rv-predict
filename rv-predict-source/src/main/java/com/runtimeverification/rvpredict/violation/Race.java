@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import com.google.common.base.StandardSystemProperty;
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -53,9 +54,10 @@ public class Race {
 
     private final Event e1;
     private final Event e2;
+    private final Configuration config;
     private final Trace trace;
 
-    public Race(Event e1, Event e2, Trace trace) {
+    public Race(Event e1, Event e2, Trace trace, Configuration config) {
         if (e1.getGID() > e2.getGID()) {
             Event tmp = e1;
             e1 = e2;
@@ -65,6 +67,7 @@ public class Race {
         this.e1 = e1.copy();
         this.e2 = e2.copy();
         this.trace = trace;
+        this.config = config;
     }
 
     public Event firstEvent() {
@@ -99,13 +102,23 @@ public class Race {
     }
 
     public String getRaceLocationSig() {
-        int idx = e1.getFieldIdOrArrayIndex();
-        if (idx < 0) {
-            String sig = trace.metadata().getVariableSig(-idx).replace("/", ".");
-            int object = e1.getObjectHashCode();
-            return object == 0 ? "@" + sig : sig;
+        if(config.isLLVMPrediction()) {
+            int idx = e1.getObjectHashCode();
+            if(idx != 0) {
+                String sig = trace.metadata().getVariableSig(idx).replace("/", ".");
+                return "@" + sig;
+            } else {
+                return "#" + e1.getFieldIdOrArrayIndex();
+            }
+        } else {
+            int idx = e1.getFieldIdOrArrayIndex();
+            if (idx < 0) {
+                String sig = trace.metadata().getVariableSig(-idx).replace("/", ".");
+                int object = e1.getObjectHashCode();
+                return object == 0 ? "@" + sig : sig;
+            }
+            return "#" + idx;
         }
-        return "#" + idx;
     }
 
     public String generateRaceReport() {

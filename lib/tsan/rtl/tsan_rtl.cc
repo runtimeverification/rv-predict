@@ -90,6 +90,7 @@ const char* RVEventTypes[] = {
 static __RV::RVHash<u64, u64> idToLocId;
 static __RV::RVHash<u64, u64> addrToVarId;
 static __RV::RVHash<u64, fd_t> tidToFd;
+static __RV::RVHash<u64, bool> inLogger;
 
 static atomic_uint64_t nextLocId;
 static atomic_uint64_t nextVarId;
@@ -267,8 +268,14 @@ void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr,
  * as locking on the element being accessed.
  */
 void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
+  if (!inLogger.allocated()) return;
+  if (inLogger.count(tid)) return;
+  else {
+    inLogger.insert(tid,true);
+  }
   u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
   RVSingleEventFile(gid, tid, id, addr, val, type);
+  inLogger.erase(tid);
 }
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {
@@ -1132,6 +1139,7 @@ void FuncEntry(ThreadState *thr, uptr pc) {
   if (thr->shadow_stack_pos == thr->shadow_stack_end)
     GrowShadowStack(thr);
 #endif
+  RVSaveMetaEvent(INVOKE_METHOD, pc);
   thr->shadow_stack_pos[0] = pc;
   thr->shadow_stack_pos++;
 }
@@ -1150,6 +1158,7 @@ void FuncExit(ThreadState *thr) {
   DCHECK_LT(thr->shadow_stack_pos, thr->shadow_stack_end);
 #endif
   thr->shadow_stack_pos--;
+  RVSaveMetaEvent(FINISH_METHOD, thr->shadow_stack_pos[0]);
 }
 
 void ThreadIgnoreBegin(ThreadState *thr, uptr pc) {

@@ -119,6 +119,10 @@ struct RVHash {
     internal_free(b);
   }
 
+  bool allocated() {
+    return size;
+  }
+
   int count(const Key &key) {
     mtx.ReadLock();
     bucket& now = get_bucket(key);

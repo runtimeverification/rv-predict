@@ -69,7 +69,12 @@ public class Metadata implements Serializable {
         return varIdToVarSig[varId];
     }
 
+    public class TooManyVariables extends RuntimeException {}
+
     public void setVariableSig(int varId, String sig) {
+        if (varId >= MAX_NUM_OF_VARIABLES) {
+            throw new TooManyVariables();
+        }
         assert varIdToVarSig[varId] == null;
         varIdToVarSig[varId] = sig;
     }

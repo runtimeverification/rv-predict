@@ -254,6 +254,10 @@ void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr,
     varId = val;
     val = 0;
   }
+  if ((type == PRE_LOCK || type == WRITE_LOCK || type == READ_LOCK ||
+      type == WRITE_UNLOCK || type == READ_UNLOCK) && varId >= 1LL << 32) {
+    varId = varId >> 32;
+  }
   WriteNum(fd, gid);
   WriteNum(fd, tid + 1);
   WriteNum(fd, (unsigned int)locId);

@@ -225,14 +225,16 @@ void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr,
         internal_snprintf(rvbuff, sizeof(rvbuff), "global '%s' of size %zu at %p (%s + %p)", global.name, global.size, global.start,
             StripModuleName(global.module), global.module_offset);
 
-        DPrintf("<varId:%lld;desc:%s>\n", varId, rvbuff);
+        uptr offset = global.module_offset - global.start;
+
+        DPrintf("<varId:%lld;offset:%lld;desc:%s>\n", varId, (u64)offset, rvbuff);
 
 
         WriteNum(varfd, varId);
         WriteStr(varfd, rvbuff);
 
         if (type == READ || type == WRITE) {
-          varId =  -varId & 0xFFFFFFFFL;
+          varId = varId << 32LL | offset;
         }
       }
       addrToVarId.insert(addr, varId);

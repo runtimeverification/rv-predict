@@ -70,6 +70,14 @@ public class Configuration implements Constants {
     public static final String METADATA_BIN = "metadata.bin";
     public static final String AGENT_RESOURCE_PATH = Agent.class.getName().replace(".","/") + ".class";
 
+
+    private static final List<String> LLVM_LIB_STRINGS = Arrays.asList(new String[]{
+            "__libc",
+            "std::",
+            "tsan__",
+            "__tsan",
+    });
+
     /**
      * Packages/classes that need to be excluded from instrumentation. These are
      * not configurable by the users because including them for instrumentation
@@ -198,6 +206,12 @@ public class Configuration implements Constants {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public boolean isExcludedLibrary(String locSig) {
+        if (!isLLVMPrediction()) return false;
+        if (libStacks) return false;
+        return LLVM_LIB_STRINGS.stream().anyMatch(locSig::contains);
     }
 
     private void initIncludeList() {
@@ -350,9 +364,9 @@ public class Configuration implements Constants {
     @Parameter(names = opt_no_stacks, description = "Do not record call stack events and compute stack traces in race report", hidden = true, descriptionKey = "2300")
     private boolean nostacks = false;
 
-    final static String opt_brief_stacks = "--brief-stacks";
-    @Parameter(names = opt_brief_stacks, description = "Hide library stack frames from race report", hidden = true, descriptionKey = "2350")
-    public static boolean briefStacks = false;
+    final static String opt_lib_stacks = "--lib-stacks";
+    @Parameter(names = opt_lib_stacks, description = "Include library stack frames in the race report", hidden = true, descriptionKey = "2350")
+    public static boolean libStacks = false;
 
     public final static String opt_suppress = "--suppress";
     @Parameter(names = opt_suppress, description = "Suppress race reports on the fields that match the given (comma-separated) list of regular expressions", descriptionKey = "2400")

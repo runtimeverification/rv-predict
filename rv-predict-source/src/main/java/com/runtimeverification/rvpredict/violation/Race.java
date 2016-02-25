@@ -166,7 +166,7 @@ public class Race {
         for (Event elem : stacktrace) {
             String locSig = elem.getLocId() != -1 ? metadata.getLocationSig(elem.getLocId())
                     : "... not available ...";
-            if (Configuration.briefStacks && isLibrary(locSig)) {
+            if (config.isExcludedLibrary(locSig)) {
                 continue;
             }
             if (elem.isLock()) {
@@ -191,12 +191,6 @@ public class Race {
                 sb.append(String.format("    T%s is created by n/a%n", tid));
             }
         }
-    }
-
-    private boolean isLibrary(String locSig) {
-        return locSig.contains("__libc")
-                || locSig.contains("std::")
-                || locSig.contains("tsan__");
     }
 
     private String getHeldLocksReport(List<Event> heldLocks) {

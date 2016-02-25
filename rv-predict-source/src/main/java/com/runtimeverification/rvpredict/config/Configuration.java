@@ -208,6 +208,12 @@ public class Configuration implements Constants {
         return null;
     }
 
+    /**
+     * Checks whether a program location corresponds to a library location which should be excluded
+     * from the Race report by default.
+     *
+     * @param locSig  string describing the program location
+     */
     public boolean isExcludedLibrary(String locSig) {
         if (!isLLVMPrediction()) return false;
         if (libStacks) return false;

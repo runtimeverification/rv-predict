@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.trace;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LLVMEventReader;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -88,7 +89,12 @@ public class LLVMTraceCache extends TraceCache {
     }
 
     private void readMetadata() throws IOException {
-        parseVarInfo();
+        try {
+            parseVarInfo();
+        } catch (Metadata.TooManyVariables e) {
+            config.logger().report("Maximum number of variables allowed (" + metadata.MAX_NUM_OF_VARIABLES +
+                    ") exceeded.", Logger.MSGTYPE.ERROR);
+        }
         parseLocInfo();
         parseThdInfo();
     }

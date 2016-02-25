@@ -2,28 +2,29 @@
 RUNTIME VERIFICATION SOFTWARE LICENSE
 -------------------------------------
 
-This license is an agreement between Runtime Verification Corporation (RV) and you. It applies to all software provided by RV, as well as to updates, supplements, Internet-based and support services, unless other terms accompany those items. If so, those terms apply.
+This license is an agreement between Runtime Verification, Inc. (RV) and you. It applies to all software provided by RV, as well as to updates, supplements, Internet-based and support services, unless other terms accompany those items. If so, those terms apply.
 
 By using the software, you accept these terms. If you do not accept them, do not use the software. Instead, contact us at [Runtime Verification Support](http://runtimeverification.com/support).
 
 1. OVERVIEW.
-  a. Software: The software includes development tools, software programs and documentation.
-  b. License Model: The software is licensed based on a per processor core basis. Each license permits you to run the software on up to eight (8) processor cores.
+  a. The software includes development tools, software programs and documentation.
+  b. The software is licensed based on a per processor core basis. Each license permits you to run the software on up to eight (8) processor cores.
 
-2. INSTALLATION AND USE RIGHTS.
-  a. General: You may install one copy of the software on a single server in your organization to design, develop, test and demonstrate your programs.
-  b. Limitation: You may only run each licensed copy of the software on up to eight (8) processor cores.
+2. INSTALLATION AND USE.
+  a. You may install one copy of the software on a single server in your organization to design, develop, test and demonstrate your programs.
+  b. You may only run each licensed copy of the software on up to eight (8) processor cores.
 
-3. SCOPE OF LICENSE. The software is licensed, not sold. This agreement only gives you some rights to use the software. RV reserves all other rights. You must comply with any technical limitations in the software that only allow you to use it in certain ways. You may not
-  * work around any technical limitations in the software;
-  * reverse engineer, decompile/disassemble the software, except and only to the extent that applicable law expressly permits, despite this limitation;
-  * make more copies of the software than specified in this agreement or allowed by applicable law, despite this limitation;
-  * publish the software for others to copy;
-  * rent, lease or lend the software; 
-  * incorporate the software in derivative products that you or your institution licenses (free or for profit); or
-  * use the software for commercial software hosting services.
+3. LICENSE. You have limitted rights to use this software. RV reserves all other rights. You may not
+  * Make more copies of the software than specified in this agreement;
+  * Publish the software for others to copy;
+  * Transfer, assign, rent, lease or lend the software; 
+  * Work around any technical limitations in the software;
+  * Reverse engineer, decompile/disassemble, or create derivative works of the software nor permit any third party to do so, except to the extent such restrictions are prohibited by applicable mandatory local law.
+  * Use the software for commercial software hosting services.
 
 4. BACKUP COPY. You may make one backup copy of the software. You may use the backup copy only to reinstall the software.
+
+5. THIRD PARTY SOFTWARE. The software may contain permitted open source or community software provided under separate licenses.  Such licenses, if any, can found under a folder named "Licenses".
 
 5. SUPPORT SERVICES. RV provides limitted support services for the software. Please check our website and/or contact us at [Runtime Verification Support](http://runtimeverification.com/support).
 

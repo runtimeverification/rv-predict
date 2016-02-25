@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.log;
 
+import com.runtimeverification.rvpredict.util.Constants;
+
 /**
  * Class for representing an event as it is recorded in the log
  * @author TraianSF
@@ -113,7 +115,7 @@ public class Event implements Comparable<Event> {
     }
 
     public long getLockId() {
-        assert isLock() || isUnlock();
+        assert isPreLock() || isLock() ||  isUnlock();
         return getSyncObject();
     }
 
@@ -145,6 +147,10 @@ public class Event implements Comparable<Event> {
     public boolean isLock() {
         return TYPE == EventType.READ_LOCK || TYPE == EventType.WRITE_LOCK
                 || TYPE == EventType.WAIT_ACQ;
+    }
+
+    public boolean isPreLock() {
+        return TYPE == EventType.PRE_LOCK;
     }
 
     public boolean isReadLock() {
@@ -199,6 +205,24 @@ public class Event implements Comparable<Event> {
 
     public boolean isSimilarTo(Event event) {
         return TYPE == event.TYPE && ID == event.ID && ADDR == event.ADDR && VALUE == event.VALUE;
+    }
+
+    public String getLockRepresentation() {
+        assert isPreLock() || isLock();
+        long lockId = getLockId();
+        int upper32 = (int)(lockId >> 32);
+        String lower32 = Integer.toHexString((int) lockId);
+        if (getType() == EventType.READ_LOCK) {
+            assert upper32 == 0;
+            return "ReadLock@" + lower32;
+        } else {
+            if (upper32 == 0) {
+                return "WriteLock@" + lower32;
+            } else {
+                assert upper32 == Constants.MONITOR_C;
+                return "Monitor@" + lower32;
+            }
+        }
     }
 
     @Override

@@ -31,6 +31,7 @@ package com.runtimeverification.rvpredict.config;
 import com.beust.jcommander.*;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.runtimeverification.rvpredict.instrument.Agent;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
@@ -47,6 +48,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.tools.ant.util.JavaEnvUtils;
+
+import com.runtimeverification.licensing.Licensing;
 
 /**
  * Command line options class for rv-predict Used by JCommander to parse the
@@ -65,6 +68,7 @@ public class Configuration implements Constants {
     public static final String TRACE_SUFFIX = "trace.bin";
 
     public static final String METADATA_BIN = "metadata.bin";
+    public static final String AGENT_RESOURCE_PATH = Agent.class.getName().replace(".","/") + ".class";
 
     /**
      * Packages/classes that need to be excluded from instrumentation. These are
@@ -394,6 +398,11 @@ public class Configuration implements Constants {
 
     private Configuration() { }
 
+    private void printLicense() {
+        Licensing licensingSystem = new Licensing(AGENT_RESOURCE_PATH, "predict");
+        licensingSystem.getLicenseCache().getLicense().printInfo();
+    }
+
     private void parseArguments(String[] args) {
         this.args = args;
         jCommander = new JCommander(this);
@@ -431,11 +440,13 @@ public class Configuration implements Constants {
 
         if (help) {
             usage();
-            System.exit(0);
         }
         if (display_version) {
             System.out.println("RV-Predict version "
                     + this.getClass().getPackage().getImplementationVersion());
+        }
+        if (help || display_version) {
+            printLicense();
             System.exit(0);
         }
 

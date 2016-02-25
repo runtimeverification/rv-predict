@@ -78,10 +78,18 @@ public enum EventType {
 
     INVOKE_METHOD,
 
-    FINISH_METHOD;
+    FINISH_METHOD,
+
+    /**
+     * Event generated before acquiring of any type of lock is attempted.
+     * Required by, and only used for, deadlock detection, where the intention
+     * to acquire a lock is more relevant than actually the acquisition itself.
+     */
+    //TODO(TraianSF): Consider moving this with the other SYNC events
+    PRE_LOCK;
 
     public boolean isSyncType() {
-        return WRITE_LOCK.ordinal() <= this.ordinal() && this.ordinal() <= JOIN.ordinal();
+        return WRITE_LOCK.ordinal() <= this.ordinal() && this.ordinal() <= JOIN.ordinal() || this == PRE_LOCK;
     }
 
     public boolean isMetaType() {

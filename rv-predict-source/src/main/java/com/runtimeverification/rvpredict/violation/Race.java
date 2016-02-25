@@ -34,7 +34,6 @@ import java.util.List;
 import com.google.common.base.StandardSystemProperty;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Constants;
@@ -55,9 +54,10 @@ public class Race {
 
     private final Event e1;
     private final Event e2;
+    private final Configuration config;
     private final Trace trace;
 
-    public Race(Event e1, Event e2, Trace trace) {
+    public Race(Event e1, Event e2, Trace trace, Configuration config) {
         if (e1.getGID() > e2.getGID()) {
             Event tmp = e1;
             e1 = e2;
@@ -67,6 +67,7 @@ public class Race {
         this.e1 = e1.copy();
         this.e2 = e2.copy();
         this.trace = trace;
+        this.config = config;
     }
 
     public Event firstEvent() {
@@ -101,13 +102,23 @@ public class Race {
     }
 
     public String getRaceLocationSig() {
-        int idx = e1.getFieldIdOrArrayIndex();
-        if (idx < 0) {
-            String sig = trace.metadata().getVariableSig(-idx).replace("/", ".");
-            int object = e1.getObjectHashCode();
-            return object == 0 ? "@" + sig : sig;
+        if(config.isLLVMPrediction()) {
+            int idx = e1.getObjectHashCode();
+            if(idx != 0) {
+                String sig = trace.metadata().getVariableSig(idx).replace("/", ".");
+                return "@" + sig;
+            } else {
+                return "#" + e1.getFieldIdOrArrayIndex();
+            }
+        } else {
+            int idx = e1.getFieldIdOrArrayIndex();
+            if (idx < 0) {
+                String sig = trace.metadata().getVariableSig(-idx).replace("/", ".");
+                int object = e1.getObjectHashCode();
+                return object == 0 ? "@" + sig : sig;
+            }
+            return "#" + idx;
         }
-        return "#" + idx;
     }
 
     public String generateRaceReport() {
@@ -159,7 +170,7 @@ public class Race {
                 continue;
             }
             if (elem.isLock()) {
-                sb.append(String.format("        - locked %s at %s %n", getLockRepresentation(elem),
+                sb.append(String.format("        - locked %s at %s %n", elem.getLockRepresentation(),
                         locSig));
             } else {
                 sb.append(String.format(" %s  at %s%n", isTopmostStack ? "---->" : "     ", locSig));
@@ -195,27 +206,10 @@ public class Race {
                 if (i > 0) {
                     sb.append(", ");
                 }
-                sb.append(getLockRepresentation(heldLocks.get(i)));
+                sb.append(heldLocks.get(i).getLockRepresentation());
             }
         }
         return sb.toString();
-    }
-
-    private String getLockRepresentation(Event lock) {
-        long lockId = lock.getLockId();
-        int upper32 = (int)(lockId >> 32);
-        String lower32 = Integer.toHexString((int) lockId);
-        if (lock.getType() == EventType.READ_LOCK) {
-            assert upper32 == 0;
-            return "ReadLock@" + lower32;
-        } else {
-            if (upper32 == 0) {
-                return "WriteLock@" + lower32;
-            } else {
-                assert upper32 == Constants.MONITOR_C;
-                return "Monitor@" + lower32;
-            }
-        }
     }
 
 }

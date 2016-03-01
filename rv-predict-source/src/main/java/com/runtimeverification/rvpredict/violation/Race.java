@@ -34,9 +34,10 @@ import java.util.List;
 import com.google.common.base.StandardSystemProperty;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
 import com.runtimeverification.rvpredict.trace.Trace;
-import com.runtimeverification.rvpredict.util.Constants;
 
 /**
  * Represents a data race. A data race is uniquely identified by the two memory
@@ -49,13 +50,11 @@ import com.runtimeverification.rvpredict.util.Constants;
  */
 public class Race {
 
-    private static final String RVPREDICT_RT_PKG_PREFIX = Constants.RVPREDICT_RUNTIME_PKG_PREFIX
-            .replace('/', '.');
-
     private final Event e1;
     private final Event e2;
     private final Configuration config;
     private final Trace trace;
+    private final SignatureProcessor signatureProcessor;
 
     public Race(Event e1, Event e2, Trace trace, Configuration config) {
         if (e1.getGID() > e2.getGID()) {
@@ -68,6 +67,11 @@ public class Race {
         this.e2 = e2.copy();
         this.trace = trace;
         this.config = config;
+        if (config.isLLVMPrediction()) {
+            signatureProcessor = new LLVMSignatureProcessor();
+        } else {
+            signatureProcessor = new SignatureProcessor();
+        }
     }
 
     public Event firstEvent() {
@@ -122,6 +126,7 @@ public class Race {
     }
 
     public String generateRaceReport() {
+        signatureProcessor.reset();
         String locSig = getRaceLocationSig();
         switch (locSig.charAt(0)) {
             case '#':
@@ -148,7 +153,7 @@ public class Race {
         }
 
         sb.append(String.format("}}}%n"));
-        return sb.toString().replace(RVPREDICT_RT_PKG_PREFIX, "");
+        return signatureProcessor.simplify(sb.toString());
     }
 
     private void generateMemAccReport(Event e, StringBuilder sb) {
@@ -164,10 +169,14 @@ public class Race {
         stacktrace.addAll(heldLocks);
         Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
         for (Event elem : stacktrace) {
-            String locSig = elem.getLocId() != -1 ? metadata.getLocationSig(elem.getLocId())
+            int locId = elem.getLocId();
+            String locSig = locId >= 0 ? metadata.getLocationSig(locId)
                     : "... not available ...";
             if (config.isExcludedLibrary(locSig)) {
                 continue;
+            }
+            if (locId >= 0) {
+                signatureProcessor.process(locSig);
             }
             if (elem.isLock()) {
                 sb.append(String.format("        - locked %s at %s %n", elem.getLockRepresentation(),
@@ -184,6 +193,9 @@ public class Race {
             sb.append(String.format("    T%s is created by T%s%n", tid, parentTID));
             sb.append(String.format("        at %s%n", locId >= 0 ? metadata.getLocationSig(locId)
                     : "unknown location"));
+            if (locId >= 0) {
+                signatureProcessor.process(metadata.getLocationSig(locId));
+            }
         } else {
             if (tid == 1) {
                 sb.append(String.format("    T%s is the main thread%n", tid));

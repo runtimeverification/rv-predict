@@ -73,6 +73,7 @@ public class Configuration implements Constants {
 
     private static final List<String> LLVM_LIB_STRINGS = Arrays.asList(new String[]{
             "__libc",
+            "__lib_",
             "std::",
             "tsan__",
             "__tsan",

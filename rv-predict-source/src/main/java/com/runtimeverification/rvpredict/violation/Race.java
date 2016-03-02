@@ -28,9 +28,8 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.violation;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+
 import com.google.common.base.StandardSystemProperty;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
@@ -168,21 +167,27 @@ public class Race {
         List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
         stacktrace.addAll(heldLocks);
         Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
+        Deque<Event> lockTrace = new ArrayDeque<>();
         for (Event elem : stacktrace) {
             int locId = elem.getLocId();
             String locSig = locId >= 0 ? metadata.getLocationSig(locId)
                     : "... not available ...";
             if (config.isExcludedLibrary(locSig)) {
+                if (elem.isLock()) {
+                    lockTrace.addLast(elem);
+                }
                 continue;
             }
             if (locId >= 0) {
                 signatureProcessor.process(locSig);
             }
             if (elem.isLock()) {
+                dumpSavedLocks(lockTrace, locSig, sb);
                 sb.append(String.format("        - locked %s at %s %n", elem.getLockRepresentation(),
                         locSig));
             } else {
                 sb.append(String.format(" %s  at %s%n", isTopmostStack ? "---->" : "     ", locSig));
+                dumpSavedLocks(lockTrace, locSig, sb);
                 isTopmostStack = false;
             }
         }
@@ -203,6 +208,14 @@ public class Race {
                 sb.append(String.format("    T%s is created by n/a%n", tid));
             }
         }
+    }
+
+    private void dumpSavedLocks(Deque<Event> lockTrace, String locSig, StringBuilder sb) {
+        for (Event elem : lockTrace) {
+            sb.append(String.format("        - locked %s at %s %n", elem.getLockRepresentation(),
+                    locSig));
+        }
+        lockTrace.clear();
     }
 
     private String getHeldLocksReport(List<Event> heldLocks) {

@@ -255,8 +255,13 @@ void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr,
     val = 0;
   }
   if ((type == PRE_LOCK || type == WRITE_LOCK || type == READ_LOCK ||
+      type == ATOMIC_LOCK || type == ATOMIC_UNLOCK ||
       type == WRITE_UNLOCK || type == READ_UNLOCK) && varId >= 1LL << 32) {
     varId = varId >> 32;
+  }
+  if (type == ATOMIC_LOCK || type == ATOMIC_UNLOCK) {
+    varId = (ATOMIC_LOCK_C << 32) | (varId & 0xFFFFFFFFULL);
+    type = type == ATOMIC_LOCK ? WRITE_LOCK : WRITE_UNLOCK;
   }
   WriteNum(fd, gid);
   WriteNum(fd, tid + 1);

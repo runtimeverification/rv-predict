@@ -3,6 +3,8 @@ package com.runtimeverification.rvpredict.engine.deadlock;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
+import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
 import com.runtimeverification.rvpredict.util.Logger;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -21,10 +23,16 @@ public class LockGraph {
     private final Map<Long,Event> lockEvents = new HashMap<>();
     private final Map<Pair<Long,Long>, Pair<Event,Event>> eventEdges = new HashMap<>();
     private final Map<Long, Set<Long>> lockSet = new HashMap<>();
+    private final SignatureProcessor signatureProcessor;
 
     public LockGraph(Configuration config, Metadata metadata) {
         this.config = config;
         this.metadata = metadata;
+        if (config.isLLVMPrediction()) {
+            signatureProcessor = new LLVMSignatureProcessor();
+        } else {
+            signatureProcessor = new SignatureProcessor();
+        }
     }
 
     /**
@@ -97,11 +105,14 @@ public class LockGraph {
         return eventCycles;
     }
 
+
     private void reportDeadlock(List<Pair<Event, Event>> cycle) {
+        signatureProcessor.reset();
         StringBuilder report = new StringBuilder();
         StringBuilder summary = new StringBuilder();
         StringBuilder details = new StringBuilder();
         cycle.forEach(eventEventPair -> {
+            String locSig;
             Event before = eventEventPair.getLeft();
             summary.append("M"+ before.getLockId() + " " +
                     "(" + before.getLockRepresentation() + ")" +
@@ -112,11 +123,15 @@ public class LockGraph {
                     "while holding M" + before.getLockId());
             details.append('\n');
             details.append(" ---->  at ");
-            details.append(metadata.getLocationSig(after.getLocId()));
+            locSig = metadata.getLocationSig(after.getLocId());
+            signatureProcessor.process(locSig);
+            details.append(locSig);
             details.append('\n');
+            locSig = metadata.getLocationSig(before.getLocId());
+            signatureProcessor.process(locSig);
             details.append(String.format("        - locked %s at %s %n",
                     "M"+ before.getLockId(),
-                    metadata.getLocationSig(before.getLocId())));
+                    locSig));
         });
         summary.append("M"+cycle.get(0).getLeft().getLockId());
         report.append("Potential deadlock detected: {{{\n");
@@ -125,8 +140,9 @@ public class LockGraph {
         report.append("\n");
         report.append(details);
         report.append("}}}\n");
-        config.logger().report(report.toString(), Logger.MSGTYPE.REAL);
+        config.logger().report(signatureProcessor.simplify(report.toString()), Logger.MSGTYPE.REAL);
     }
+
     private void reportUnlockOfUnlockedMutex(Event event) {
         assert(event.isUnlock());
         StringBuilder report = new StringBuilder();

@@ -654,7 +654,18 @@ enum RVEventType {
    * Event generated before locking (for deadlock detection
    */
   PRE_LOCK = 17,
-};
+  /**
+   * Event generated after acquiring an atomic lock
+   */
+  ATOMIC_LOCK = 18,
+
+  /**
+   * Event generated before releasing an atomic lock
+   */
+  ATOMIC_UNLOCK = 19,
+ };
+
+#define ATOMIC_LOCK_C 43ULL
 
 uptr ALWAYS_INLINE getCallerStackLocation(ThreadState *thr) { return (thr->shadow_stack_pos - 1)[0] - 1; }
 
@@ -737,11 +748,11 @@ void ALWAYS_INLINE MemoryReadAtomic(ThreadState *thr, uptr pc,
 }
 
 void ALWAYS_INLINE RVAtomicLock(uptr addr, uptr pc) {
-    RVLog(WRITE_LOCK, pc, -addr, 0, 0);
+    RVLog(ATOMIC_LOCK, pc, -addr, 0, 0);
 }
 
 void ALWAYS_INLINE RVAtomicUnlock(uptr addr, uptr pc) {
-    RVLog(WRITE_UNLOCK, pc, -addr, 0, 0);
+    RVLog(ATOMIC_UNLOCK, pc, -addr, 0, 0);
 }
 
 

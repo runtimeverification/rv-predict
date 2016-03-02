@@ -17,7 +17,7 @@ import org.apache.commons.lang3.tuple.Pair;
 @SuppressWarnings("serial")
 public class Metadata implements Serializable {
 
-    public static final int MAX_NUM_OF_VARIABLES = 1024 * 128;
+    public static final int MAX_NUM_OF_VARIABLES = 1024 * 1024;
 
     // this should be enough for more than 1 million lines of code
     public static final int MAX_NUM_OF_LOCATIONS = 1024 * 1024;

@@ -16,7 +16,11 @@ public class LLVMSignatureProcessor extends SignatureProcessor {
 
     @Override
     public String simplify(String s) {
-        return s.replace(basePath.substring(0, 1 + basePath.lastIndexOf('/')), "");
+        final String prefix = basePath.substring(0, 1 + basePath.lastIndexOf('/'));
+        if (prefix.length() > 1) {
+            s = s.replace(prefix, "");
+        }
+        return s.replace("fn:","").replace(";file:"," ").replace(";line:",":");
     }
 
     @Override

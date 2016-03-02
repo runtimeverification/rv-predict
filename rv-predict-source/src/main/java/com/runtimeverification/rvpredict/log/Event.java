@@ -216,11 +216,14 @@ public class Event implements Comparable<Event> {
             assert upper32 == 0;
             return "ReadLock@" + lower32;
         } else {
-            if (upper32 == 0) {
-                return "WriteLock@" + lower32;
-            } else {
-                assert upper32 == Constants.MONITOR_C;
-                return "Monitor@" + lower32;
+            switch (upper32) {
+                case Constants.MONITOR_C:
+                    return "Monitor@" + lower32;
+                case Constants.ATOMIC_LOCK_C:
+                    return "AtomicLock@" + lower32;
+                default:
+                    assert upper32 == 0;
+                    return "WriteLock@" + lower32;
             }
         }
     }

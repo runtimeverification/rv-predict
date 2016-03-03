@@ -195,6 +195,10 @@ public class Event implements Comparable<Event> {
         return TYPE.isMetaType();
     }
 
+    public boolean isFork() {
+        return TYPE == EventType.FORK;
+    }
+
     public boolean isCallStackEvent() {
         return TYPE == EventType.INVOKE_METHOD || TYPE == EventType.FINISH_METHOD;
     }
@@ -279,5 +283,4 @@ public class Event implements Comparable<Event> {
     public Event copy() {
         return new Event(GID, TID, ID, ADDR, VALUE, TYPE);
     }
-
 }

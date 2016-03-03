@@ -381,6 +381,8 @@ public class Trace {
                     } else if (type == EventType.CLINIT_EXIT) {
                         isInsideClinit = state.isInsideClassInitializer(tid);
                     }
+                } else if (event.isFork()) {
+                    //TODO(TraianSF): Add behavior for forking
                 } else {
                     throw new IllegalStateException();
                 }

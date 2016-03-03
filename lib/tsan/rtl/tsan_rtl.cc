@@ -85,8 +85,6 @@ const char* RVEventTypes[] = {
   "INVOKE_METHOD",
   "FINISH_METHOD",
   "PRE_LOCK",
-  "ATOMIC_LOCK",
-  "ATOMIC_UNLOCK",
   "FORK",
 };
 

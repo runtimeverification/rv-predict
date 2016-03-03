@@ -85,6 +85,7 @@ const char* RVEventTypes[] = {
   "INVOKE_METHOD",
   "FINISH_METHOD",
   "PRE_LOCK",
+  "FORK",
 };
 
 static __RV::RVHash<u64, u64> idToLocId;
@@ -98,7 +99,8 @@ static atomic_uint64_t rv_gid;
 
 static StaticSpinMutex locInsert,
                        varInsert,
-                       thdInsert;
+                       thdInsert,
+                       forkReset;
 
 
 template<typename T>
@@ -173,11 +175,32 @@ void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr,
   static fd_t locfd = OpenFile("loc_metadata.bin", WrOnly),
               varfd = OpenFile("var_metadata.bin", WrOnly),
               thdfd = OpenFile("thd_metadata.bin", WrOnly);
-
+  static int pid = (int)internal_getpid();
+  static char pids[100]="";
   char rvbuff[300];
 
+  int l_pid =  (int)internal_getpid();
+  if (l_pid != pid) {
+    SpinMutexLock lock(&forkReset);
+    if (l_pid != pid) {
+      pid = l_pid;
+      internal_snprintf(pids, 100, "%d-loc_metadata.bin", l_pid);
+      locfd = OpenFile(pids, WrOnly);
+      internal_snprintf(pids, 100, "%d-var_metadata.bin", l_pid);
+      varfd = OpenFile(pids, WrOnly);
+      internal_snprintf(pids, 100, "%d-thd_metadata.bin", l_pid);
+      thdfd = OpenFile(pids, WrOnly);
+      internal_snprintf(pids, 100, "%d-", l_pid);
+      for (int i = 0; tidToFd.count(i); i++) {
+        internal_snprintf(rvbuff, sizeof(rvbuff), "%s%llu_trace.bin", pids,tid);
+        tidToFd.get(i) = OpenFile(rvbuff, WrOnly);
+      }
+    }
+  }
+
+
   if(!tidToFd.count(tid)) {
-    internal_snprintf(rvbuff, sizeof(rvbuff), "%llu_trace.bin", tid);
+    internal_snprintf(rvbuff, sizeof(rvbuff), "%s%llu_trace.bin", pids,tid);
     fd = OpenFile(rvbuff, WrOnly);
     tidToFd.insert(tid, fd);
   } else {
@@ -659,7 +682,7 @@ void ForkChildAfter(ThreadState *thr, uptr pc) {
 
   uptr nthread = 0;
   ctx->thread_registry->GetNumberOfThreads(0, 0, &nthread /* alive threads */);
-  VPrintf(1, "ThreadSanitizer: forked new process with pid %d,"
+  Printf("Warning: forked new process with pid %d,"
       " parent had %d threads\n", (int)internal_getpid(), (int)nthread);
   if (nthread == 1) {
     StartBackgroundThread();

@@ -2131,6 +2131,7 @@ TSAN_INTERCEPTOR(int, fork, int fake) {
   } else if (pid > 0) {
     // parent
     ForkParentAfter(thr, pc);
+    RVFork(pid, pc);
   } else {
     // error
     ForkParentAfter(thr, pc);

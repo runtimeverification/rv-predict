@@ -74,6 +74,6 @@ TSAN_FLAG(int, io_sync, 1,
           "0 - no synchronization "
           "1 - reasonable level of synchronization (write->read)"
           "2 - global synchronization of all IO operations.")
-TSAN_FLAG(bool, die_after_fork, true,
+TSAN_FLAG(bool, die_after_fork, false,
           "Die after multi-threaded fork if the child creates new threads.")
 TSAN_FLAG(const char *, suppressions, "", "Suppressions file name.")

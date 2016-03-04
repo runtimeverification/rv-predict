@@ -77,6 +77,7 @@ public class Configuration implements Constants {
             "std::",
             "tsan__",
             "__tsan",
+            "<null>",
     });
 
     /**

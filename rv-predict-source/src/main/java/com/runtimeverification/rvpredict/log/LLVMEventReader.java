@@ -4,6 +4,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.BinaryParser;
 
 /**
@@ -37,6 +38,9 @@ public class LLVMEventReader implements IEventReader {
         } catch (EOFException e) {
             lastReadEvent = null;
             throw e;
+        }
+        if (lastReadEvent.isStart()) {
+            Metadata.singleton().llvmThreadCreationEvents.put(lastReadEvent.getSyncedThreadId(),lastReadEvent);
         }
 
         return lastReadEvent;

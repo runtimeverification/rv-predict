@@ -174,20 +174,19 @@ public class Race {
                     : "... not available ...";
             if (config.isExcludedLibrary(locSig)) {
                 if (elem.isLock()) {
-                    lockTrace.addLast(elem);
+                    locSig = findUserCallLocation(elem);
+                } else {
+                    continue;
                 }
-                continue;
             }
             if (locId >= 0) {
                 signatureProcessor.process(locSig);
             }
             if (elem.isLock()) {
-                dumpSavedLocks(lockTrace, locSig, sb);
                 sb.append(String.format("        - locked %s at %s %n", elem.getLockRepresentation(),
                         locSig));
             } else {
                 sb.append(String.format(" %s  at %s%n", isTopmostStack ? "---->" : "     ", locSig));
-                dumpSavedLocks(lockTrace, locSig, sb);
                 isTopmostStack = false;
             }
         }
@@ -196,10 +195,15 @@ public class Race {
         if (parentTID > 0) {
             int locId = metadata.getThreadCreationLocId(tid);
             sb.append(String.format("    T%s is created by T%s%n", tid, parentTID));
-            sb.append(String.format("        at %s%n", locId >= 0 ? metadata.getLocationSig(locId)
-                    : "unknown location"));
             if (locId >= 0) {
-                signatureProcessor.process(metadata.getLocationSig(locId));
+                String locationSig = metadata.getLocationSig(locId);
+                if (config.isExcludedLibrary(locationSig)) {
+                    locationSig = findUserCallLocation(metadata.llvmThreadCreationEvents.get(tid));
+                }
+                signatureProcessor.process(locationSig);
+                sb.append(String.format("        at %s%n", locationSig));
+            } else {
+                sb.append("        at unknown location%n");
             }
         } else {
             if (tid == 1) {
@@ -210,12 +214,18 @@ public class Race {
         }
     }
 
-    private void dumpSavedLocks(Deque<Event> lockTrace, String locSig, StringBuilder sb) {
-        for (Event elem : lockTrace) {
-            sb.append(String.format("        - locked %s at %s %n", elem.getLockRepresentation(),
-                    locSig));
+    private String findUserCallLocation(Event elem) {
+        List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(elem));
+        String location = trace.metadata().getLocationSig(elem.getLocId());
+        String sig;
+        for (Event event : stacktrace) {
+            sig = trace.metadata().getLocationSig(event.getLocId());
+            if (!config.isExcludedLibrary(sig)) {
+                location = sig;
+                break;
+            }
         }
-        lockTrace.clear();
+        return location;
     }
 
     private String getHeldLocksReport(List<Event> heldLocks) {

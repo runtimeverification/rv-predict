@@ -78,6 +78,7 @@ public class Configuration implements Constants {
             "tsan__",
             "__tsan",
             "<null>",
+            "/usr/lib/"
     });
 
     /**

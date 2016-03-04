@@ -114,6 +114,11 @@ public class Event implements Comparable<Event> {
         return ADDR;
     }
 
+    public long getSyncedThreadId() {
+        assert isStart() || isJoin();
+        return ADDR;
+    }
+
     public long getLockId() {
         assert isPreLock() || isLock() ||  isUnlock();
         return getSyncObject();

@@ -51,9 +51,9 @@ void process(int val, string s)
 
 void thread_function(stack& st, string s)
 {
-    int val = st.top();
-    st.pop();
-    process(val, s);
+      int val = st.top();
+      st.pop();
+      process(val, s);
 }
 
 int main()
@@ -63,19 +63,14 @@ int main()
 
     st.print();
 
-    while(true) {
-        if(st.getSize() > 0) {
-            thread t1(&thread_function, ref(st), string("thread1"));
-            t1.detach();
-        }
-        else
-            break;
-        if(st.getSize() > 0) {
-            thread t2(&thread_function, ref(st), string("thread2"));
-            t2.detach();
-        }
-        else
-            break;
+    if(st.getSize() > 0) {
+      thread t1(&thread_function, ref(st), string("thread1"));
+      t1.detach();
+    }
+    for (int i = 10; i < 20; i++)  st.push(i);
+    if(st.getSize() > 0) {
+      thread t2(&thread_function, ref(st), string("thread2"));
+      t2.detach();
     }
 
     return 0;

@@ -1,1 +1,1 @@
-Please see the documentation in the docs directory. 
+Please see the documentation in README.txt. 

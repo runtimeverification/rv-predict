@@ -1,0 +1,6 @@
+Data race on array element #11: \{\{\{(.*)---->  at stack::top\(\) Stack.cpp:18(.*) ---->  at stack::pop\(\) Stack.cpp:29(.*)}}}
+
+Data race on array element #11: \{\{\{(.*)---->  at stack::pop\(\) Stack.cpp:29(.*) ---->  at stack::getSize\(\) Stack.cpp:21(.*)}}}
+
+Data race on array element #11: \{\{\{(.*)---->  at stack::pop\(\) Stack.cpp:29(.*) ---->  at stack::~stack\(\) Stack.cpp:16(.*)}}}
+

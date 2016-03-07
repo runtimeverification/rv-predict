@@ -200,6 +200,7 @@ public class Race {
             if (locId >= 0) {
                 String locationSig = metadata.getLocationSig(locId);
                 if (config.isExcludedLibrary(locationSig)) {
+                    assert config.isLLVMPrediction() : "isExcludedLibrary is currently only defined for LLVM.";
                     locationSig = findUserCallLocation(metadata.llvmThreadCreationEvents.get(tid));
                 }
                 signatureProcessor.process(locationSig);
@@ -217,6 +218,9 @@ public class Race {
         return stackSize>0;
     }
 
+    /**
+     * Retrieves the most recent non-library call location from the stack trace associated to an event.
+     */
     private String findUserCallLocation(Event elem) {
         List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(elem));
         String location = trace.metadata().getLocationSig(elem.getLocId());

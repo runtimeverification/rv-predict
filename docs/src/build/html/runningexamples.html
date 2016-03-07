@@ -1,0 +1,718 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Running Examples &mdash; Runtime Verification Match Documentation</title>
+    
+    <link rel="stylesheet" href="_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Runtime Verification Match Documentation" href="index.html" />
+    <link rel="prev" title="Quickstart" href="quickstart.html" /> 
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <div class="headertitle"><a
+          href="index.html">Runtime Verification Match Documentation</a></div>
+        <div class="rel">
+          <a href="quickstart.html" title="Quickstart"
+             accesskey="P">previous</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="running-examples">
+<h1>Running Examples<a class="headerlink" href="#running-examples" title="Permalink to this headline">¶</a></h1>
+<p>We provide examples demonstrating RV-Predict capabilities in detecting
+concurrency bugs. Below we focus on detecting data races.
+Data races are a common kind of concurrency bug in multithreaded applications.
+Intuitively, a data race occurs when two threads concurrently access a shared memory
+and at least one of the accesses is a write.
+Data races are very hard to detect with traditional testing techniques. It requires
+occurance of simultaneous access from multiple treads to a particular region which
+results with a corrupted data that violates a particular user provided assertion or
+test case. Therefore, traditional software engineering testing methodology is
+inadequate because all tests passing most of the time with rare fails with mysterious
+rare message might create a false sense of reliability.</p>
+<p>Despite all the effort on solving this problem, it remains a challenge in practice to
+detect data races effectively and efficiently. RV-Predict aims to change this undesired situation.
+Below we are summarizing some of the most common data races in C and C++ and show how
+to detect them with RV-Predict. The examples described below can be found in RV-Predict[C]
+distribtion <tt class="docutils literal"><span class="pre">examples/demo</span></tt> directory and online
+<a class="reference external" href="https://github.com/runtimeverification/rv-predict-c/tree/master/examples/demo">examples/demo</a>.
+For any file in that directory, simply run <tt class="docutils literal"><span class="pre">rv-predict-compile</span> <span class="pre">[file].c</span></tt> to
+compile it, followed by <tt class="docutils literal"><span class="pre">rv-predict-execute</span> <span class="pre">./a.out</span></tt> to execute it.</p>
+<div class="section" id="concurrent-access-to-a-shared-variable">
+<h2>1. Concurrent Access to a Shared Variable<a class="headerlink" href="#concurrent-access-to-a-shared-variable" title="Permalink to this headline">¶</a></h2>
+<p>This is the simplest form of a data race, and also the most frequent in practice.
+The problem description is straightforward: multiple threads are accessing a shared
+variable without any synchronization.</p>
+<div class="section" id="posix-threads">
+<h3>POSIX Threads<a class="headerlink" href="#posix-threads" title="Permalink to this headline">¶</a></h3>
+<p>Consider the following snippet of the code from <tt class="docutils literal"><span class="pre">dot-product.c</span></tt> that uses POSIX Threads library
+for multithreading.</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">void</span> <span class="o">*</span><span class="nf">dotprod</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">len</span> <span class="p">;</span>
+  <span class="kt">long</span> <span class="n">offset</span><span class="p">;</span>
+  <span class="kt">float</span> <span class="n">mysum</span><span class="p">,</span> <span class="o">*</span><span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="n">y</span><span class="p">;</span>
+  <span class="n">offset</span> <span class="o">=</span> <span class="p">(</span><span class="kt">long</span><span class="p">)</span><span class="n">arg</span><span class="p">;</span>
+
+  <span class="n">len</span> <span class="o">=</span> <span class="n">dotstr</span><span class="p">.</span><span class="n">veclen</span><span class="p">;</span>
+  <span class="n">start</span> <span class="o">=</span> <span class="n">offset</span><span class="o">*</span><span class="n">len</span><span class="p">;</span>
+  <span class="n">end</span>   <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">len</span><span class="p">;</span>
+  <span class="n">x</span> <span class="o">=</span> <span class="n">dotstr</span><span class="p">.</span><span class="n">a</span><span class="p">;</span>
+  <span class="n">y</span> <span class="o">=</span> <span class="n">dotstr</span><span class="p">.</span><span class="n">b</span><span class="p">;</span>
+
+  <span class="n">mysum</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="n">start</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">end</span> <span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">mysum</span> <span class="o">+=</span> <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+  <span class="p">}</span>
+
+  <span class="n">dotstr</span><span class="p">.</span><span class="n">sum</span> <span class="o">+=</span> <span class="n">mysum</span><span class="p">;</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Thread %ld did %d to %d:  mysum=%f global sum=%f</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="n">offset</span><span class="p">,</span><span class="n">start</span><span class="p">,</span><span class="n">end</span><span class="p">,</span><span class="n">mysum</span><span class="p">,</span><span class="n">dotstr</span><span class="p">.</span><span class="n">sum</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The function dotprod is activated when the thread is created.
+All input to this routine is obtained from a structure
+of type DOTDATA and all output from this function is written into
+this structure. The benefit of this approach is apparent for the
+multi-threaded program: when a thread is created we pass a single
+argument to the activated function - typically this argument
+is a thread number. All  the other information required by the
+function is accessed from the globally accessible structure.</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="nf">main</span> <span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+  <span class="c1">//  &lt;&lt; code ommitted for brevity &gt;&gt;</span>
+  <span class="cm">/* Create threads to perform the dotproduct  */</span>
+  <span class="k">for</span><span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">NUMTHRDS</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">callThd</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">dotprod</span><span class="p">,</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="n">i</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="c1">// &lt;&lt; code ommitted for brevity &gt;&gt;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The main program creates threads which do all the work and then
+print out result upon completion. Before creating the threads,
+the input data is created.
+Each thread works on a different set of data.
+The offset is specified by <tt class="docutils literal"><span class="pre">i</span></tt>. The size of
+the data for each thread is indicated by <tt class="docutils literal"><span class="pre">VECLEN</span></tt> (not shown above, please see the complete source).
+Since all threads update a shared structure,
+there is a race condition. The main thread needs to wait for
+all threads to complete, it waits for each one of the threads.</p>
+<p>RV-Predict[C] works in two steps. (Make sure you are in the directroy examples/demo.)
+First, <tt class="docutils literal"><span class="pre">$</span> <span class="pre">rv-predict-compile</span> <span class="pre">dot-product.c</span></tt> creates an instrumented version of a multithreaded
+program that computes a dot products.
+Second, <tt class="docutils literal"><span class="pre">$</span> <span class="pre">rv-predict-execute</span> <span class="pre">./a.out</span></tt> performs and offline analyis.
+The results of the analysis:</p>
+<div class="highlight-none"><div class="highlight"><pre>Thread 0 did 0 to 10:  mysum=10.000000 global sum=10.000000
+Thread 1 did 10 to 20:  mysum=10.000000 global sum=20.000000
+Thread 2 did 20 to 30:  mysum=10.000000 global sum=30.000000
+Sum =  30.000000
+Data race on global &#39;dotstr&#39; of size 24 at 0x0000014b47a0 (a.out + 0x0000014b47b0): {{{
+    Concurrent write in thread T3 (locks held: {})
+ ----&gt;  at dotprod dot-product.c:62
+    T3 is created by T1
+        at main dot-product.c:107
+
+    Concurrent write in thread T2 (locks held: {})
+ ----&gt;  at dotprod dot-product.c:62
+    T2 is created by T1
+        at main dot-product.c:107
+}}}
+
+Data race on global &#39;dotstr&#39; of size 24 at 0x0000014b47a0 (a.out + 0x0000014b47b0): {{{
+    Concurrent read in thread T2 (locks held: {})
+ ----&gt;  at dotprod dot-product.c:62
+    T2 is created by T1
+        at main dot-product.c:107
+
+    Concurrent write in thread T3 (locks held: {})
+ ----&gt;  at dotprod dot-product.c:62
+    T3 is created by T1
+        at main dot-product.c:107
+}}}
+
+Data race on global &#39;dotstr&#39; of size 24 at 0x0000014b47a0 (a.out + 0x0000014b47b0): {{{
+    Concurrent write in thread T2 (locks held: {})
+ ----&gt;  at dotprod dot-product.c:62
+    T2 is created by T1
+        at main dot-product.c:107
+
+    Concurrent read in thread T3 (locks held: {})
+ ----&gt;  at dotprod dot-product.c:63
+    T3 is created by T1
+        at main dot-product.c:107
+}}}
+</pre></div>
+</div>
+<p>First, note that the standard testing would not caught data races,
+because the output and the final result are as expected.
+However, RV-Predict&#8217;s output correctly predicts three possible data races.
+The first one is on line 62: <tt class="docutils literal"><span class="pre">dotstr.sum</span> <span class="pre">+=</span> <span class="pre">mysum;</span></tt>,
+where data race occurs because two threads can concurrently write to the shared variable.
+The second data race is concerned with the same line, however this time our analysis
+informs that data race exists due to a concurrent read and a concurrent write.
+Finally, the third report describes the case where there can be a concurrent write at line 62,
+and a concurrent read at line 63:
+<tt class="docutils literal"><span class="pre">printf(&quot;Thread</span> <span class="pre">%ld</span> <span class="pre">did</span> <span class="pre">%d</span> <span class="pre">to</span> <span class="pre">%d:</span>&nbsp; <span class="pre">mysum=%f</span> <span class="pre">global</span> <span class="pre">sum=%f\n&quot;,offset,start,end,mysum,dotstr.sum);</span></tt>.</p>
+<p>This example also showcases the maximality and predictive power of our approach. In particular,
+consider analyis results on the same program by widely used ThreadSanitizer tool from Google.</p>
+<div class="highlight-none"><div class="highlight"><pre>Thread 0 did 0 to 10:  mysum=10.000000 global sum=10.000000
+==================
+WARNING: ThreadSanitizer: data race (pid=6010)
+  Write of size 4 at 0x0000014ae3b0 by thread T2:
+    #0 dotprod /home/eddie/work/rv-predict-c/examples/demo/dot-product.c:62:14 (a.out+0x0000004a53cd)
+
+  Previous write of size 4 at 0x0000014ae3b0 by thread T1:
+    #0 dotprod /home/eddie/work/rv-predict-c/examples/demo/dot-product.c:62:14 (a.out+0x0000004a53cd)
+
+  Location is global &#39;dotstr&#39; of size 24 at 0x0000014ae3a0 (a.out+0x0000014ae3b0)
+
+  Thread T2 (tid=6013, running) created by main thread at:
+    #0 pthread_create /home/eddie/work/llvm-3.7.0.src/projects/compiler-rt/lib/tsan/rtl/tsan_interceptors.cc:849 (a.out+0x000000446d93)
+    #1 main /home/eddie/work/rv-predict-c/examples/demo/dot-product.c:107:5 (a.out+0x0000004a5668)
+
+  Thread T1 (tid=6012, finished) created by main thread at:
+    #0 pthread_create /home/eddie/work/llvm-3.7.0.src/projects/compiler-rt/lib/tsan/rtl/tsan_interceptors.cc:849 (a.out+0x000000446d93)
+    #1 main /home/eddie/work/rv-predict-c/examples/demo/dot-product.c:107:5 (a.out+0x0000004a5668)
+
+SUMMARY: ThreadSanitizer: data race /home/eddie/work/rv-predict-c/examples/demo/dot-product.c:62:14 in dotprod
+==================
+Thread 1 did 10 to 20:  mysum=10.000000 global sum=20.000000
+Thread 2 did 20 to 30:  mysum=10.000000 global sum=30.000000
+Sum =  30.000000
+ThreadSanitizer: reported 1 warnings
+</pre></div>
+</div>
+<p>Note, that ThreadSanitizer can only detect one data race, specifically, the case when
+there are two concurrent writes to the shared variable.</p>
+<p>Furthermore, consider Helgrind, another widely used tool for detecting concurrency bug
+that is part of the Valgrind toolset. The result of Helgrind analyis is shown below.</p>
+<div class="highlight-none"><div class="highlight"><pre>Thread 0 did 0 to 10:  mysum=10.000000 global sum=10.000000
+==6192== ---Thread-Announcement------------------------------------------
+==6192==
+==6192== Thread #3 was created
+==6192==    at 0x515543E: clone (clone.S:74)
+==6192==    by 0x4E44199: do_clone.constprop.3 (createthread.c:75)
+==6192==    by 0x4E458BA: create_thread (createthread.c:245)
+==6192==    by 0x4E458BA: pthread_create@@GLIBC_2.2.5 (pthread_create.c:611)
+==6192==    by 0x4C30E0D: ??? (in /usr/lib/valgrind/vgpreload_helgrind-amd64-linux.so)
+==6192==    by 0x40090F: main (dot-product.c:107)
+==6192==
+==6192== ---Thread-Announcement------------------------------------------
+==6192==
+==6192== Thread #2 was created
+==6192==    at 0x515543E: clone (clone.S:74)
+==6192==    by 0x4E44199: do_clone.constprop.3 (createthread.c:75)
+==6192==    by 0x4E458BA: create_thread (createthread.c:245)
+==6192==    by 0x4E458BA: pthread_create@@GLIBC_2.2.5 (pthread_create.c:611)
+==6192==    by 0x4C30E0D: ??? (in /usr/lib/valgrind/vgpreload_helgrind-amd64-linux.so)
+==6192==    by 0x40090F: main (dot-product.c:107)
+==6192==
+==6192== ----------------------------------------------------------------
+==6192==
+==6192== Possible data race during read of size 4 at 0x601080 by thread #3
+==6192== Locks held: none
+==6192==    at 0x4007E4: dotprod (dot-product.c:62)
+==6192==    by 0x4C30FA6: ??? (in /usr/lib/valgrind/vgpreload_helgrind-amd64-linux.so)
+==6192==    by 0x4E45181: start_thread (pthread_create.c:312)
+==6192==    by 0x515547C: clone (clone.S:111)
+==6192==
+==6192== This conflicts with a previous write of size 4 by thread #2
+==6192== Locks held: none
+==6192==    at 0x4007F5: dotprod (dot-product.c:62)
+==6192==    by 0x4C30FA6: ??? (in /usr/lib/valgrind/vgpreload_helgrind-amd64-linux.so)
+==6192==    by 0x4E45181: start_thread (pthread_create.c:312)
+==6192==    by 0x515547C: clone (clone.S:111)
+==6192==  Address 0x601080 is 16 bytes inside data symbol &quot;dotstr&quot;
+==6192==
+==6192== ----------------------------------------------------------------
+==6192==
+==6192== Possible data race during write of size 4 at 0x601080 by thread #3
+==6192== Locks held: none
+==6192==    at 0x4007F5: dotprod (dot-product.c:62)
+==6192==    by 0x4C30FA6: ??? (in /usr/lib/valgrind/vgpreload_helgrind-amd64-linux.so)
+==6192==    by 0x4E45181: start_thread (pthread_create.c:312)
+==6192==    by 0x515547C: clone (clone.S:111)
+==6192==
+==6192== This conflicts with a previous write of size 4 by thread #2
+==6192== Locks held: none
+==6192==    at 0x4007F5: dotprod (dot-product.c:62)
+==6192==    by 0x4C30FA6: ??? (in /usr/lib/valgrind/vgpreload_helgrind-amd64-linux.so)
+==6192==    by 0x4E45181: start_thread (pthread_create.c:312)
+==6192==    by 0x515547C: clone (clone.S:111)
+==6192==  Address 0x601080 is 16 bytes inside data symbol &quot;dotstr&quot;
+==6192==
+Thread 1 did 10 to 20:  mysum=10.000000 global sum=20.000000
+Thread 2 did 20 to 30:  mysum=10.000000 global sum=30.000000
+Sum =  30.000000
+</pre></div>
+</div>
+<p>Helgrind is able to detect two data races related to concurrent writes or a concurrent
+read and a concurrent write at line 62, but not is not able to predict with a concurrent write
+at line 62 and a concurrent read at line 63.</p>
+</div>
+<div class="section" id="c-c-11">
+<h3>C/C++ 11<a class="headerlink" href="#c-c-11" title="Permalink to this headline">¶</a></h3>
+<p>One of the most significant features in the new C and C++11 Standard is the support
+for multithreaded programs. This the feature makes it possible to write multithreaded
+C/C++ program without relying on platform specific extensions and writing portable multithreaded
+code with standardized behavior. RV-Predict[C] support C/C++11 concurrency, and thus
+it is able to detect concurrency bugs in the code written using C/C++11 constructs.</p>
+<p>Consider the following example implementing a simple state machine.</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="n">mutex</span> <span class="n">l</span><span class="p">;</span>
+<span class="kt">bool</span> <span class="n">ready</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+<span class="k">enum</span> <span class="n">State</span> <span class="p">{</span> <span class="n">STOP</span><span class="p">,</span> <span class="n">INIT</span><span class="p">,</span> <span class="n">START</span> <span class="p">};</span>
+<span class="n">State</span> <span class="n">state</span> <span class="o">=</span> <span class="n">STOP</span><span class="p">;</span>
+
+<span class="kt">void</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">l</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
+    <span class="n">ready</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+  <span class="n">l</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+  <span class="n">state</span> <span class="o">=</span> <span class="n">INIT</span><span class="p">;</span>
+  <span class="n">l</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
+    <span class="n">ready</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+  <span class="n">l</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">start</span><span class="p">()</span> <span class="p">{</span>
+  <span class="c1">// yield increases likelihood of avoiding expensive locking and unlocking</span>
+  <span class="c1">// before being ready to enter the START state</span>
+  <span class="n">this_thread</span><span class="o">::</span><span class="n">yield</span><span class="p">();</span>
+  <span class="n">l</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">ready</span> <span class="o">&amp;&amp;</span> <span class="n">state</span> <span class="o">==</span> <span class="n">INIT</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">state</span> <span class="o">=</span> <span class="n">START</span><span class="p">;</span>
+   <span class="p">}</span>
+  <span class="n">l</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">stop</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">l</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
+    <span class="n">ready</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">STOP</span><span class="p">;</span>
+  <span class="n">l</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kr">thread</span> <span class="n">t1</span><span class="p">(</span><span class="n">init</span><span class="p">);</span>
+    <span class="kr">thread</span> <span class="n">t2</span><span class="p">(</span><span class="n">start</span><span class="p">);</span>
+    <span class="kr">thread</span> <span class="n">t3</span><span class="p">(</span><span class="n">stop</span><span class="p">);</span>
+    <span class="n">t1</span><span class="p">.</span><span class="n">join</span><span class="p">();</span> <span class="n">t2</span><span class="p">.</span><span class="n">join</span><span class="p">();</span> <span class="n">t3</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>(For full source see examples/demo/simple-state-machine.cpp.)
+This program implements state machine with three states, and each thread models
+some state machine transitions. Moreover, the developes seem to have devised a reasonable
+locking policy that appears to protect shared resources.
+This class of programs are hard to test, since there are many valid observable behaviors.
+So, some of the previosly mentioned tools ThreadSanitize or Helgrind can be used to
+increase confidence in the correctness of the program. In fact, neither ThreadSanitizer
+nor Helgrind report any problems with programs.</p>
+<p>However, there are three subtle data races in the program, and RV-Predict[C] findsfinds them all.</p>
+<div class="highlight-none"><div class="highlight"><pre>Data race on global &#39;state&#39; of size 4 at 0x00000153ccf4 (a.out + 0x00000153ccf4): {{{
+    Concurrent write in thread T2 (locks held: {})
+ ----&gt;  at init() simple-state-machine.cpp:19
+    T2 is created by T1
+        at main simple-state-machine.cpp:44
+
+    Concurrent read in thread T3 (locks held: {WriteLock@94})
+ ----&gt;  at start() simple-state-machine.cpp:28
+        - locked WriteLock@94 at start() simple-state-machine.cpp:27
+    T3 is created by T1
+        at main simple-state-machine.cpp:44
+}}}
+</pre></div>
+</div>
+<p>First data race is due to a write at line 19: <tt class="docutils literal"><span class="pre">state</span> <span class="pre">=</span> <span class="pre">INIT;</span></tt>, while concurrently
+reading the current value of the state variable. This behavior might lead to a
+behavior where the START state is not reached because of the aformentioned data race.</p>
+<div class="highlight-none"><div class="highlight"><pre>Data race on global &#39;state&#39; of size 4 at 0x00000153ccf4 (a.out + 0x00000153ccf4): {{{
+    Concurrent write in thread T2 (locks held: {})
+ ----&gt;  at init() simple-state-machine.cpp:19
+    T2 is created by T1
+        at main simple-state-machine.cpp:44
+
+    Concurrent write in thread T4 (locks held: {WriteLock@94})
+ ----&gt;  at stop() simple-state-machine.cpp:37
+        - locked WriteLock@94 at stop() simple-state-machine.cpp:35
+    T4 is created by T1
+        at main simple-state-machine.cpp:45
+}}}
+</pre></div>
+</div>
+<p>Second data race is likely particularly dangerous, because there are concurrent
+writes of INIT and STOP to the state variable, which effectively means that the
+program could begin entering the START state with possibly critical reasons to
+prevent the progress.</p>
+<div class="highlight-none"><div class="highlight"><pre>Data race on global &#39;state&#39; of size 4 at 0x00000153ccf4 (a.out + 0x00000153ccf5): {{{
+    Concurrent write in thread T2 (locks held: {})
+ ----&gt;  at init() simple-state-machine.cpp:19
+    T2 is created by T1
+        at main simple-state-machine.cpp:44
+
+    Concurrent write in thread T3 (locks held: {WriteLock@94})
+ ----&gt;  at start() simple-state-machine.cpp:29
+        - locked WriteLock@94 at start() simple-state-machine.cpp:27
+    T3 is created by T1
+        at main simple-state-machine.cpp:44
+}}}
+</pre></div>
+</div>
+<p>Finally, the third data race can effectively invert the state from START of INIT.</p>
+<p>In summary, this simple program demonstrates that the state-of-the-art tools can be inadequate
+in detection of subtle data races with possibly dire consequences, while RV-Predict[C] can
+clearly identify all the data races.</p>
+</div>
+</div>
+<div class="section" id="unsafe-data-strucuture-manipulation">
+<h2>2. Unsafe Data Strucuture Manipulation<a class="headerlink" href="#unsafe-data-strucuture-manipulation" title="Permalink to this headline">¶</a></h2>
+<p>Many standard library data structures are not designed to be used in a multithreaded environment,
+e.g. widely used vector class.</p>
+<p>First, consider a simple example (examples.demo/unsafe-vector.c):</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cp">#include &lt;vector&gt;</span>
+<span class="cp">#include &lt;thread&gt;</span>
+
+<span class="n">using</span> <span class="n">namespace</span> <span class="n">std</span><span class="p">;</span>
+
+<span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+
+<span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kr">thread</span> <span class="n">t1</span><span class="p">(</span><span class="n">thread1</span><span class="p">);</span>
+    <span class="kr">thread</span> <span class="n">t2</span><span class="p">(</span><span class="n">thread2</span><span class="p">);</span>
+
+    <span class="n">t1</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
+    <span class="n">t2</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>In the example both threads are trying to add to <tt class="docutils literal"><span class="pre">std::vector</span></tt> without synchronization.
+RV-Predict[C] catches the data race as shown below.</p>
+<div class="highlight-none"><div class="highlight"><pre>Data race on global &#39;v&#39; of size 24 at 0x00000153ecc8 (a.out + 0x00000153ecd8): {{{
+    Concurrent read in thread T2 (locks held: {})
+ ----&gt;  at thread1() unsafe-vector.cpp:12
+    T2 is created by T1
+        at main unsafe-vector.cpp:20
+
+    Concurrent write in thread T3 (locks held: {})
+ ----&gt;  at thread2() unsafe-vector.cpp:16
+    T3 is created by T1
+        at main unsafe-vector.cpp:20
+}}}
+
+...
+</pre></div>
+</div>
+<p>This example is easily fixed by using some synchronization mechanims (e.g., locks) when
+performing the access to the shared variable <tt class="docutils literal"><span class="pre">v</span></tt>.</p>
+<p>Consider now a more interesting example (see below), where we used <tt class="docutils literal"><span class="pre">vector</span></tt> data structure
+to implement a stack. At first sight, it looks like all the operations are properly synchronized,
+however just because we are using a mutex or other synchronization mechanism to protect
+shared data, it does not mean we are protected from race conditions!</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="n">using</span> <span class="n">namespace</span> <span class="n">std</span><span class="p">;</span>
+<span class="n">mutex</span> <span class="n">myMutex</span><span class="p">;</span>
+<span class="n">class</span> <span class="n">stack</span>
+<span class="p">{</span>
+<span class="nl">public:</span>
+  <span class="n">stack</span><span class="p">()</span> <span class="p">{};</span>
+  <span class="o">~</span><span class="n">stack</span><span class="p">()</span> <span class="p">{};</span>
+  <span class="kt">void</span> <span class="nf">pop</span><span class="p">();</span>
+  <span class="kt">int</span> <span class="nf">top</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="n">data</span><span class="p">.</span><span class="n">back</span><span class="p">();</span> <span class="p">}</span>
+  <span class="kt">void</span> <span class="nf">push</span><span class="p">(</span><span class="kt">int</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="nf">print</span><span class="p">();</span>
+  <span class="kt">int</span> <span class="nf">getSize</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="n">data</span><span class="p">.</span><span class="n">size</span><span class="p">();</span> <span class="p">}</span>
+<span class="nl">private:</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">data</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="kt">void</span> <span class="n">stack</span><span class="o">::</span><span class="n">pop</span><span class="p">()</span>
+<span class="p">{</span>
+  <span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">guard</span><span class="p">(</span><span class="n">myMutex</span><span class="p">);</span>
+  <span class="n">data</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">end</span><span class="p">()</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="n">stack</span><span class="o">::</span><span class="n">push</span><span class="p">(</span><span class="kt">int</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">guard</span><span class="p">(</span><span class="n">myMutex</span><span class="p">);</span>
+  <span class="n">data</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">n</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="n">stack</span><span class="o">::</span><span class="n">print</span><span class="p">()</span>
+<span class="p">{</span>
+  <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;initial stack : &quot;</span> <span class="p">;</span>
+  <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">item</span> <span class="o">:</span> <span class="n">data</span><span class="p">)</span>
+      <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">item</span> <span class="o">&lt;&lt;</span> <span class="s">&quot; &quot;</span><span class="p">;</span>
+  <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="n">process</span><span class="p">(</span><span class="kt">int</span> <span class="n">val</span><span class="p">,</span> <span class="n">string</span> <span class="n">s</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">guard</span><span class="p">(</span><span class="n">myMutex</span><span class="p">);</span>
+  <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">s</span> <span class="o">&lt;&lt;</span> <span class="s">&quot; : &quot;</span> <span class="o">&lt;&lt;</span> <span class="n">val</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="n">thread_function</span><span class="p">(</span><span class="n">stack</span><span class="o">&amp;</span> <span class="n">st</span><span class="p">,</span> <span class="n">string</span> <span class="n">s</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">val</span> <span class="o">=</span> <span class="n">st</span><span class="p">.</span><span class="n">top</span><span class="p">();</span>
+  <span class="n">st</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+  <span class="n">process</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">s</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="n">main</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="n">stack</span> <span class="n">st</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>  <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+
+    <span class="n">st</span><span class="p">.</span><span class="n">print</span><span class="p">();</span>
+
+    <span class="k">while</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span><span class="p">(</span><span class="n">st</span><span class="p">.</span><span class="n">getSize</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kr">thread</span> <span class="n">t1</span><span class="p">(</span><span class="o">&amp;</span><span class="n">thread_function</span><span class="p">,</span> <span class="n">ref</span><span class="p">(</span><span class="n">st</span><span class="p">),</span> <span class="n">string</span><span class="p">(</span><span class="s">&quot;thread1&quot;</span><span class="p">));</span>
+        <span class="kr">thread</span> <span class="nf">t2</span><span class="p">(</span><span class="o">&amp;</span><span class="n">thread_function</span><span class="p">,</span> <span class="n">ref</span><span class="p">(</span><span class="n">st</span><span class="p">),</span> <span class="n">string</span><span class="p">(</span><span class="s">&quot;thread2&quot;</span><span class="p">));</span>
+        <span class="n">t1</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
+        <span class="n">t2</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>(For full source see examples/demo/stack.cpp.)
+In the example below each shared access is guarded using</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">guard</span><span class="p">(</span><span class="n">myMutex</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Now, it would be tempting to conclude that the code is thread-safe.
+However, we actually canont rely on the result of getSize().
+Although it might be correct at the time of call, once it returns
+other threads are free to access the stack and might push() new
+elements to the stack or pop() existing elements of the stack.</p>
+<p>This particular data race is consequence of the interface design, and
+the use of mutex internally to protect te stack does not prevent it.
+As shown below, RV-Predict[C] can be used to detect these kind of flaws.</p>
+<div class="highlight-none"><div class="highlight"><pre>Data race on array element #11: {{{
+    Concurrent read in thread T3 (locks held: {})
+ ----&gt;  at stack::top() Stack.cpp:18
+    T3 is created by T1
+        at main Stack.cpp:66
+
+    Concurrent write in thread T2 (locks held: {WriteLock@27})
+ ----&gt;  at stack::pop() Stack.cpp:29
+        - locked WriteLock@27 at stack::pop() Stack.cpp:29
+    T2 is created by T1
+        at main Stack.cpp:65
+}}}
+</pre></div>
+</div>
+</div>
+<div class="section" id="double-checked-locking">
+<h2>3. Double-checked Locking<a class="headerlink" href="#double-checked-locking" title="Permalink to this headline">¶</a></h2>
+<p>Suppose you have a shared resource (e.g.shared a database connection or a large allocation a
+big chunk of of memory) that is expensive to construct, so it is only done when necessary.
+A common idiom used in such cases is known as <cite>double-checked locking</cite> pattern.
+The basic idea is that the pointer is first read without acquiring the lock, and the lock
+is acquired only if the pointer is NULL. The pointer is then checked again once the lock has
+been acquired in case another threads has done the initialization between the first check
+and this thread acquring a lock.</p>
+<p>For full source see examples/demo/double-checked-locking.cpp.</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="k">struct</span> <span class="n">some_resource</span>
+<span class="p">{</span>
+    <span class="kt">void</span> <span class="n">do_something</span><span class="p">()</span>
+    <span class="p">{}</span>
+
+<span class="p">};</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">some_resource</span><span class="o">&gt;</span> <span class="n">resource_ptr</span><span class="p">;</span>
+<span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">resource_mutex</span><span class="p">;</span>
+<span class="n">std</span><span class="o">::</span><span class="kr">thread</span> <span class="kr">thread</span><span class="p">;</span>
+<span class="n">std</span><span class="o">::</span><span class="kr">thread</span> <span class="n">join</span><span class="p">;</span>
+<span class="kt">void</span> <span class="nf">foo</span><span class="p">()</span>
+<span class="p">{</span>
+  <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">resource_ptr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">lk</span><span class="p">(</span><span class="n">resource_mutex</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">resource_ptr</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">resource_ptr</span><span class="p">.</span><span class="n">reset</span><span class="p">(</span><span class="n">new</span> <span class="n">some_resource</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">resource_ptr</span><span class="o">-&gt;</span><span class="n">do_something</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">::</span><span class="kr">thread</span> <span class="n">t1</span><span class="p">(</span><span class="n">foo</span><span class="p">);</span>
+    <span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">::</span><span class="kr">thread</span> <span class="n">t2</span><span class="p">(</span><span class="n">foo</span><span class="p">);</span>
+
+    <span class="n">t1</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
+    <span class="n">t2</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>However, this pattern has become infamous because it has potential for a nasty race condition.
+As shown below, RV-Predict[C] detect the race condition. Specifically, the data race occurs
+because the read outside the lock is not synchronized with the write done by the thread inside
+the lock. The race condition includes the pointer and the object pointed to: even if a thread
+sees the pointer written by another thread, it might not see the newly created instance of
+<tt class="docutils literal"><span class="pre">some_resource</span></tt>, resulting in the call to <tt class="docutils literal"><span class="pre">do_something()</span></tt> operating on incorrect values.</p>
+<div class="highlight-none"><div class="highlight"><pre>Data race on global &#39;resource_ptr&#39; of size 16 at 0x00000153dcc8 (a.out + 0x00000153dcc8): {{{
+    Concurrent read in thread T3 (locks held: {})
+ ----&gt;  at foo() double-checked-locking.cpp:19
+    T3 is created by T1
+        at main double-checked-locking.cpp:32
+
+    Concurrent write in thread T2 (locks held: {WriteLock@dc})
+ ----&gt;  at foo() double-checked-locking.cpp:23
+        - locked WriteLock@dc at foo() double-checked-locking.cpp:21
+    T2 is created by T1
+        at main double-checked-locking.cpp:32
+}}}
+...
+</pre></div>
+</div>
+</div>
+<div class="section" id="broken-spinnning-loop">
+<h2>4. Broken Spinnning Loop<a class="headerlink" href="#broken-spinnning-loop" title="Permalink to this headline">¶</a></h2>
+<p>Sometimes we want to synchronize multiple threads based on whether some condition has been met.
+And it’s a common pattern to use a while loop that repeatedly checks that condition:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="n">using</span> <span class="n">namespace</span> <span class="n">std</span><span class="p">;</span>
+
+<span class="kt">bool</span> <span class="n">condition</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+<span class="kt">int</span> <span class="n">sharedVar</span><span class="p">;</span>
+
+<span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">sharedVar</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">condition</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">while</span><span class="p">(</span><span class="o">!</span><span class="n">condition</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">this_thread</span><span class="o">::</span><span class="n">yield</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">sharedVar</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">throw</span> <span class="n">new</span> <span class="n">runtime_error</span><span class="p">(</span><span class="s">&quot;How is this possible!?&quot;</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kr">thread</span> <span class="n">t1</span><span class="p">(</span><span class="n">thread1</span><span class="p">);</span>
+    <span class="kr">thread</span> <span class="n">t2</span><span class="p">(</span><span class="n">thread2</span><span class="p">);</span>
+    <span class="n">t1</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
+    <span class="n">t2</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>As shown below, RV-Predict[C] detect the data race on <tt class="docutils literal"><span class="pre">condition</span></tt> variable.</p>
+<div class="highlight-none"><div class="highlight"><pre>Data race on global &#39;condition&#39; of size 1 at 0x00000153cd88 (a.out + 0x00000153cd88): {{{
+    Concurrent write in thread T2 (locks held: {})
+ ----&gt;  at thread1() spinning-loop.cpp:14
+    T2 is created by T1
+        at main spinning-loop.cpp:28
+
+    Concurrent read in thread T3 (locks held: {})
+ ----&gt;  at thread2() spinning-loop.cpp:18
+    T3 is created by T1
+        at main spinning-loop.cpp:28
+}}}
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Welcome!</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Running Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#concurrent-access-to-a-shared-variable">1. Concurrent Access to a Shared Variable</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#posix-threads">POSIX Threads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#c-c-11">C/C++ 11</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#unsafe-data-strucuture-manipulation">2. Unsafe Data Strucuture Manipulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#double-checked-locking">3. Double-checked Locking</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#broken-spinnning-loop">4. Broken Spinnning Loop</a></li>
+</ul>
+</li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="quickstart.html" title="Quickstart"
+             >previous</a>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer">
+        &copy; Copyright Runtime Verification Inc..
+      Last updated on Mar 07, 2016.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

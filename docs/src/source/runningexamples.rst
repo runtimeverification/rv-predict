@@ -3,11 +3,11 @@ Running Examples
 
 We provide examples demonstrating RV-Predict capabilities in detecting 
 concurrency bugs. Below we focus on detecting data races. 
-Data races are a common kind of concurrency bug in multithreaded applications. 
+Data races are a common kind of concurrency bug in multi-threaded applications. 
 Intuitively, a data race occurs when two threads concurrently access a shared memory 
 and at least one of the accesses is a write. 
 Data races are very hard to detect with traditional testing techniques. It requires
-occurance of simultaneous access from multiple treads to a particular region which
+occurrence of simultaneous access from multiple treads to a particular region which
 results with a corrupted data that violates a particular user provided assertion or 
 test case. Therefore, traditional software engineering testing methodology is 
 inadequate because all tests passing most of the time with rare fails with mysterious
@@ -17,7 +17,7 @@ Despite all the effort on solving this problem, it remains a challenge in practi
 detect data races effectively and efficiently. RV-Predict aims to change this undesired situation. 
 Below we are summarizing some of the most common data races in C and C++ and show how 
 to detect them with RV-Predict. The examples described below can be found in RV-Predict[C] 
-distribtion ``examples/demo`` directory and online 
+distribution ``examples/demo`` directory and online 
 `examples/demo <https://github.com/runtimeverification/rv-predict-c/tree/master/examples/demo>`_.
 For any file in that directory, simply run ``rv-predict-compile [file].c`` to
 compile it, followed by ``rv-predict-execute ./a.out`` to execute it.
@@ -33,7 +33,7 @@ POSIX Threads
 ~~~~~~~~~~~~~
 
 Consider the following snippet of the code from ``dot-product.c`` that uses POSIX Threads library
-for multithreading.
+for multi-threading.
 
 .. code-block:: c
 
@@ -94,10 +94,10 @@ there is a race condition. The main thread needs to wait for
 all threads to complete, it waits for each one of the threads.
 
 
-RV-Predict[C] works in two steps. (Make sure you are in the directroy examples/demo.)
-First, ``$ rv-predict-compile dot-product.c`` creates an instrumented version of a multithreaded
+RV-Predict[C] works in two steps. (Make sure you are in the directory examples/demo.)
+First, ``$ rv-predict-compile dot-product.c`` creates an instrumented version of a multi-threaded
 program that computes a dot products. 
-Second, ``$ rv-predict-execute ./a.out`` performs and offline analyis. 
+Second, ``$ rv-predict-execute ./a.out`` performs an offline analysis. 
 The results of the analysis:
 
 .. code-block:: none
@@ -154,7 +154,7 @@ and a concurrent read at line 63:
 ``printf("Thread %ld did %d to %d:  mysum=%f global sum=%f\n",offset,start,end,mysum,dotstr.sum);``.
 
 This example also showcases the maximality and predictive power of our approach. In particular, 
-consider analyis results on the same program by widely used ThreadSanitizer tool from Google. 
+consider analysis results on the same program by widely used ThreadSanitizer tool from Google. 
 
 .. code-block:: none
 
@@ -188,7 +188,7 @@ Note, that ThreadSanitizer can only detect one data race, specifically, the case
 there are two concurrent writes to the shared variable. 
 
 Furthermore, consider Helgrind, another widely used tool for detecting concurrency bug
-that is part of the Valgrind toolset. The result of Helgrind analyis is shown below.
+that is part of the Valgrind tool-set. The result of Helgrind analysis is shown below.
 
 .. code-block:: none
 
@@ -258,8 +258,8 @@ at line 62 and a concurrent read at line 63.
 C/C++ 11
 ~~~~~~~~~
 One of the most significant features in the new C and C++11 Standard is the support 
-for multithreaded programs. This the feature makes it possible to write multithreaded
-C/C++ program without relying on platform specific extensions and writing portable multithreaded
+for multi-threaded programs. This the feature makes it possible to write multi-threaded
+C/C++ program without relying on platform specific extensions and writing portable multi-threaded
 code with standardized behavior. RV-Predict[C] support C/C++11 concurrency, and thus 
 it is able to detect concurrency bugs in the code written using C/C++11 constructs. 
 
@@ -310,14 +310,14 @@ Consider the following example implementing a simple state machine.
 
 (For full source see examples/demo/simple-state-machine.cpp.)
 This program implements state machine with three states, and each thread models 
-some state machine transitions. Moreover, the developes seem to have devised a reasonable 
+some state machine transitions. Moreover, the developers seem to have devised a reasonable 
 locking policy that appears to protect shared resources. 
 This class of programs are hard to test, since there are many valid observable behaviors.
-So, some of the previosly mentioned tools ThreadSanitize or Helgrind can be used to 
+So, some of the previously mentioned tools ThreadSanitizer or Helgrind can be used to 
 increase confidence in the correctness of the program. In fact, neither ThreadSanitizer 
 nor Helgrind report any problems with programs. 
 
-However, there are three subtle data races in the program, and RV-Predict[C] findsfinds them all. 
+However, there are three subtle data races in the program, and RV-Predict[C] finds them all. 
 
 .. code-block:: none
 
@@ -336,7 +336,7 @@ However, there are three subtle data races in the program, and RV-Predict[C] fin
 
 First data race is due to a write at line 19: ``state = INIT;``, while concurrently
 reading the current value of the state variable. This behavior might lead to a 
-behavior where the START state is not reached because of the aformentioned data race. 
+behavior where the START state is not reached because of the aforementioned data race. 
 
 
 .. code-block:: none
@@ -384,7 +384,7 @@ clearly identify all the data races.
 2. Unsafe Data Strucuture Manipulation
 --------------------------------------
 
-Many standard library data structures are not designed to be used in a multithreaded environment, 
+Many standard library data structures are not designed to be used in a multi-threaded environment, 
 e.g. widely used vector class. 
 
 First, consider a simple example (examples.demo/unsafe-vector.c):
@@ -435,7 +435,7 @@ RV-Predict[C] catches the data race as shown below.
 
   ...
 
-This example is easily fixed by using some synchronization mechanims (e.g., locks) when
+This example is easily fixed by using some synchronization mechanisms (e.g., locks) when
 performing the access to the shared variable ``v``. 
 
 Consider now a more interesting example (see below), where we used ``vector`` data structure
@@ -518,13 +518,13 @@ In the example below each shared access is guarded using
   lock_guard<mutex> guard(myMutex);
   
 Now, it would be tempting to conclude that the code is thread-safe. 
-However, we actually canont rely on the result of getSize(). 
+However, we actually cannot rely on the result of getSize(). 
 Although it might be correct at the time of call, once it returns
 other threads are free to access the stack and might push() new 
 elements to the stack or pop() existing elements of the stack. 
 
 This particular data race is consequence of the interface design, and
-the use of mutex internally to protect te stack does not prevent it. 
+the use of mutex internally to protect the stack does not prevent it. 
 As shown below, RV-Predict[C] can be used to detect these kind of flaws. 
 
 .. code-block:: none
@@ -553,7 +553,7 @@ A common idiom used in such cases is known as `double-checked locking` pattern.
 The basic idea is that the pointer is first read without acquiring the lock, and the lock
 is acquired only if the pointer is NULL. The pointer is then checked again once the lock has
 been acquired in case another threads has done the initialization between the first check
-and this thread acquring a lock. 
+and this thread acquiring a lock. 
 
 For full source see examples/demo/double-checked-locking.cpp.
 
@@ -619,7 +619,7 @@ sees the pointer written by another thread, it might not see the newly created i
 ------------------------
 
 Sometimes we want to synchronize multiple threads based on whether some condition has been met. 
-And it’s a common pattern to use a while loop that repeatedly checks that condition:
+And it is a common pattern to use a while loop that repeatedly checks that condition:
 
 .. code-block:: c
 

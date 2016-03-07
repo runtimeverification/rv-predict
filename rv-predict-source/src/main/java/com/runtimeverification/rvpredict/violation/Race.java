@@ -139,23 +139,25 @@ public class Race {
         }
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("Data race on %s: {{{%n", locSig));
+        boolean reportableRace = false;
 
         if (trace.metadata().getLocationSig(e1.getLocId())
                 .compareTo(trace.metadata().getLocationSig(e2.getLocId())) <= 0) {
-            generateMemAccReport(e1, sb);
+            reportableRace |= generateMemAccReport(e1, sb);
             sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
-            generateMemAccReport(e2, sb);
+            reportableRace |= generateMemAccReport(e2, sb);
         } else {
-            generateMemAccReport(e2, sb);
+            reportableRace |= generateMemAccReport(e2, sb);
             sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
-            generateMemAccReport(e1, sb);
+            reportableRace |= generateMemAccReport(e1, sb);
         }
 
         sb.append(String.format("}}}%n"));
-        return signatureProcessor.simplify(sb.toString());
+        return reportableRace ? signatureProcessor.simplify(sb.toString()) : "";
     }
 
-    private void generateMemAccReport(Event e, StringBuilder sb) {
+    private boolean generateMemAccReport(Event e, StringBuilder sb) {
+        int stackSize = 0;
         long tid = e.getTID();
         Metadata metadata = trace.metadata();
         List<Event> heldLocks = trace.getHeldLocksAt(e);
@@ -167,7 +169,6 @@ public class Race {
         List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
         stacktrace.addAll(heldLocks);
         Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
-        Deque<Event> lockTrace = new ArrayDeque<>();
         for (Event elem : stacktrace) {
             int locId = elem.getLocId();
             String locSig = locId >= 0 ? metadata.getLocationSig(locId)
@@ -179,6 +180,7 @@ public class Race {
                     continue;
                 }
             }
+            stackSize++;
             if (locId >= 0) {
                 signatureProcessor.process(locSig);
             }
@@ -212,6 +214,7 @@ public class Race {
                 sb.append(String.format("    T%s is created by n/a%n", tid));
             }
         }
+        return stackSize>0;
     }
 
     private String findUserCallLocation(Event elem) {
@@ -219,10 +222,13 @@ public class Race {
         String location = trace.metadata().getLocationSig(elem.getLocId());
         String sig;
         for (Event event : stacktrace) {
-            sig = trace.metadata().getLocationSig(event.getLocId());
-            if (!config.isExcludedLibrary(sig)) {
-                location = sig;
-                break;
+            int locId = event.getLocId();
+            if (locId != -1) {
+                sig = trace.metadata().getLocationSig(locId);
+                if (!config.isExcludedLibrary(sig)) {
+                    location = sig;
+                    break;
+                }
             }
         }
         return location;

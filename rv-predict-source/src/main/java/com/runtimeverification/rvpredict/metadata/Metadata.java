@@ -6,11 +6,13 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.LZ4Utils;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -38,6 +40,7 @@ public class Metadata implements Serializable {
             .newSetFromMap(new ConcurrentHashMap<>());
 
     private final Map<Long, Pair<Long, Integer>> tidToCreationInfo = new ConcurrentHashMap<>();
+    public final Map<Long, Event> llvmThreadCreationEvents = new HashMap<>();
 
     private static final Metadata instance = new Metadata();
 

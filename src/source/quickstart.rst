@@ -3,7 +3,8 @@ Quickstart
 
 RV-Predict[C] works in two steps.
 First, ``$ rv-predict-compile file.c`` creates an instrumented version of a 
-multithreaded program. 
+multithreaded program (rv-predict-compile is just a wrapper for our customized 
+version of clang compiler). 
 Second, ``$ rv-predict-execute ./a.out`` performs and offline data race analysis. 
 
 .. code-block:: none

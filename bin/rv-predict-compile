@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 cpp=0
 exts=("cc" "cp" "cxx" "cpp" "CPP" "c\+\+" "C")
 
@@ -17,7 +16,7 @@ done
 CMP=clang
 
 if [ "$cpp" -gt 0 ]; then
-   CMP=clang++
+   CMP='clang++ -std=c++11'
 fi
 
-$CMP -fsanitize=rvpredict "$@"
+$CMP -fsanitize=rvpredict -g "$@"

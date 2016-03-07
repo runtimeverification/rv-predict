@@ -90,8 +90,8 @@ in practice to detect data races effectively and efficiently. RV-
 Predict aims to change this undesired situation. Below we are
 summarizing some of the most common data races in C and C++ and show
 how to detect them with RV-Predict. The examples described below can
-be found in RV-Predict[C] distribution "examples/demo" directory and
-online examples/demo. For any file in that directory, simply run "rv-
+be found in RV-Predict[C] distribution "examples/demo" directory. 
+For any file in that directory, simply run "rv-
 predict-compile [file].c" to compile it, followed by "rv-predict-
 execute ./a.out" to execute it.
 

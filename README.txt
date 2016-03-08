@@ -28,7 +28,7 @@ Contents
 
 * Welcome!
 
-* Quickstart
+* vuickstart
 
 * Running Examples
 
@@ -44,17 +44,22 @@ Contents
 
   * 4. Broken Spinnning Loop
 
-Quickstart
+vuickstart
 **********
 
-RV-Predict[C] works in two steps. First, "$ rv-predict-compile file.c"
-creates an instrumented version of a multithreaded program (rv-
-predict-compile is just a wrapper for our customized version of clang
+RV-Predict[C] works in two steps. First, "$ rv-predict-c file.c"
+creates an instrumented version of a multithreaded C program (rv-
+predict-c is just a wrapper for our customized version of clang
 compiler). Second, "$ rv-predict-execute ./a.out" performs and offline
 data race analysis.
 
-   rv-predict-compile file.c
+   rv-predict-c file.c
    rv-predict-execute ./a.out
+
+For c++ programs, just use "rv-predict-c++ file.cpp" as shown below.
+.. code-block:: none
+
+   rv-predict-c++ file.c rv-predict-execute ./a.out
 
 You can also use RV-Predict[C] with a piece of software built using
 Gnu Autoconf, use the following command (our tool currently relies on
@@ -90,10 +95,9 @@ in practice to detect data races effectively and efficiently. RV-
 Predict aims to change this undesired situation. Below we are
 summarizing some of the most common data races in C and C++ and show
 how to detect them with RV-Predict. The examples described below can
-be found in RV-Predict[C] distribution "examples/demo" directory. 
-For any file in that directory, simply run "rv-
-predict-compile [file].c" to compile it, followed by "rv-predict-
-execute ./a.out" to execute it.
+be found in RV-Predict[C] distribution "examples/demo" directory. For
+any file in that directory, simply run "rv-predict-c[++] <file>.c[pp]"
+to compile it, followed by "rv-predict-execute ./a.out" to execute it.
 
 
 1. Concurrent Access to a Shared Variable
@@ -161,7 +165,7 @@ condition. The main thread needs to wait for all threads to complete,
 it waits for each one of the threads.
 
 RV-Predict[C] works in two steps. (Make sure you are in the directory
-examples/demo.) First, "$ rv-predict-compile dot-product.c" creates an
+examples/demo.) First, "$ rv-predict-c dot-product.c" creates an
 instrumented version of a multi-threaded program that computes a dot
 products. Second, "$ rv-predict-execute ./a.out" performs an offline
 analysis. The results of the analysis:
@@ -387,6 +391,12 @@ ThreadSanitizer nor Helgrind report any problems with programs.
 
 However, there are three subtle data races in the program, and RV-
 Predict[C] finds them all.
+
+Compile this programs as shown below. .. code-block:: none
+
+   rv-predict-c++ simple-state-machine.cpp rv-predict-execute ./a.out
+
+The results of analysis will be:
 
    Data race on global 'state' of size 4 at 0x00000153ccf4 (a.out + 0x00000153ccf4): {{{
        Concurrent write in thread T2 (locks held: {})

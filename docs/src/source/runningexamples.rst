@@ -18,7 +18,7 @@ detect data races effectively and efficiently. RV-Predict aims to change this un
 Below we are summarizing some of the most common data races in C and C++ and show how 
 to detect them with RV-Predict. The examples described below can be found in RV-Predict[C] 
 distribution ``examples/demo`` directory.
-For any file in that directory, simply run ``rv-predict-compile [file].c[pp]`` to
+For any file in that directory, simply run ``rv-predict-c[++] <file>.c[pp]`` to
 compile it, followed by ``rv-predict-execute ./a.out`` to execute it.
 
 
@@ -94,7 +94,7 @@ all threads to complete, it waits for each one of the threads.
 
 
 RV-Predict[C] works in two steps. (Make sure you are in the directory examples/demo.)
-First, ``$ rv-predict-compile dot-product.c`` creates an instrumented version of a multi-threaded
+First, ``$ rv-predict-c dot-product.c`` creates an instrumented version of a multi-threaded
 program that computes a dot products. 
 Second, ``$ rv-predict-execute ./a.out`` performs an offline analysis. 
 The results of the analysis:
@@ -317,6 +317,14 @@ increase confidence in the correctness of the program. In fact, neither ThreadSa
 nor Helgrind report any problems with programs. 
 
 However, there are three subtle data races in the program, and RV-Predict[C] finds them all. 
+
+Compile this programs as shown below. 
+.. code-block:: none
+
+    rv-predict-c++ simple-state-machine.cpp
+    rv-predict-execute ./a.out
+
+The results of analysis will be:
 
 .. code-block:: none
 

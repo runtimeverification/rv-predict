@@ -28,7 +28,7 @@ Contents
 
 * Welcome!
 
-* vuickstart
+* Quickstart
 
 * Running Examples
 
@@ -44,7 +44,7 @@ Contents
 
   * 4. Broken Spinnning Loop
 
-vuickstart
+Quickstart
 **********
 
 RV-Predict[C] works in two steps. First, "$ rv-predict-c file.c"

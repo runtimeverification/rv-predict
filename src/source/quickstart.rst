@@ -1,4 +1,4 @@
-vuickstart
+Quickstart
 ==========
 
 RV-Predict[C] works in two steps.

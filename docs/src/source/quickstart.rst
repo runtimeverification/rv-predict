@@ -2,20 +2,20 @@ Quickstart
 ==========
 
 RV-Predict[C] works in two steps.
-First, ``$ rv-predict-c file.c`` creates an instrumented version of a 
-multithreaded C program (rv-predict-c is just a wrapper for our customized 
+First, ``$ rv-predict-c-compile file.c`` creates an instrumented version of a 
+multithreaded C program (rv-predict-c-compile is just a wrapper for our customized 
 version of clang compiler). 
 Second, ``$ rv-predict-execute ./a.out`` performs and offline data race analysis. 
 
 .. code-block:: none
 
-    rv-predict-c file.c
+    rv-predict-c-compile file.c
     rv-predict-execute ./a.out
 
-For c++ programs, just use ``rv-predict-c++ file.cpp`` as shown below.
+For c++ programs, just use ``rv-predict-c++-compile file.cpp`` as shown below.
 .. code-block:: none
 
-    rv-predict-c++ file.c
+    rv-predict-c++-compile file.c
     rv-predict-execute ./a.out
 
 

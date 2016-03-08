@@ -47,19 +47,19 @@ Contents
 Quickstart
 **********
 
-RV-Predict[C] works in two steps. First, "$ rv-predict-c file.c"
-creates an instrumented version of a multithreaded C program (rv-
-predict-c is just a wrapper for our customized version of clang
-compiler). Second, "$ rv-predict-execute ./a.out" performs and offline
-data race analysis.
+RV-Predict[C] works in two steps. First, "$ rv-predict-c-compile
+file.c" creates an instrumented version of a multithreaded C program
+(rv-predict-c-compile is just a wrapper for our customized version of
+clang compiler). Second, "$ rv-predict-execute ./a.out" performs and
+offline data race analysis.
 
-   rv-predict-c file.c
+   rv-predict-c-compile file.c
    rv-predict-execute ./a.out
 
-For c++ programs, just use "rv-predict-c++ file.cpp" as shown below.
-.. code-block:: none
+For c++ programs, just use "rv-predict-c++-compile file.cpp" as shown
+below. .. code-block:: none
 
-   rv-predict-c++ file.c rv-predict-execute ./a.out
+   rv-predict-c++-compile file.c rv-predict-execute ./a.out
 
 You can also use RV-Predict[C] with a piece of software built using
 Gnu Autoconf, use the following command (our tool currently relies on
@@ -96,8 +96,9 @@ Predict aims to change this undesired situation. Below we are
 summarizing some of the most common data races in C and C++ and show
 how to detect them with RV-Predict. The examples described below can
 be found in RV-Predict[C] distribution "examples/demo" directory. For
-any file in that directory, simply run "rv-predict-c[++] <file>.c[pp]"
-to compile it, followed by "rv-predict-execute ./a.out" to execute it.
+any file in that directory, simply run "rv-predict-c[++]-compile
+<file>.c[pp]" to compile it, followed by "rv-predict-execute ./a.out"
+to execute it.
 
 
 1. Concurrent Access to a Shared Variable
@@ -165,10 +166,10 @@ condition. The main thread needs to wait for all threads to complete,
 it waits for each one of the threads.
 
 RV-Predict[C] works in two steps. (Make sure you are in the directory
-examples/demo.) First, "$ rv-predict-c dot-product.c" creates an
-instrumented version of a multi-threaded program that computes a dot
-products. Second, "$ rv-predict-execute ./a.out" performs an offline
-analysis. The results of the analysis:
+examples/demo.) First, "$ rv-predict-c-compile dot-product.c" creates
+an instrumented version of a multi-threaded program that computes a
+dot products. Second, "$ rv-predict-execute ./a.out" performs an
+offline analysis. The results of the analysis:
 
    Thread 0 did 0 to 10:  mysum=10.000000 global sum=10.000000
    Thread 1 did 10 to 20:  mysum=10.000000 global sum=20.000000
@@ -394,7 +395,8 @@ Predict[C] finds them all.
 
 Compile this programs as shown below. .. code-block:: none
 
-   rv-predict-c++ simple-state-machine.cpp rv-predict-execute ./a.out
+   rv-predict-c++-compile simple-state-machine.cpp rv-predict-execute
+   ./a.out
 
 The results of analysis will be:
 

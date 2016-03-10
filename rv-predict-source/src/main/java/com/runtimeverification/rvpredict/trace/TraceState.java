@@ -177,7 +177,10 @@ public class TraceState {
     public void fastProcess(RawTrace rawTrace) {
         for (int i = 0; i < rawTrace.size(); i++) {
             Event event = rawTrace.event(i);
-            if (event.isLock() && !event.isWaitAcq()) {
+            if (event.isStart()) {
+                onThreadStart(event);
+            } else if (event.isLock() && !event.isWaitAcq()) {
+                onLock(event);
                 acquireLock(event);
             } else if (event.isUnlock() && !event.isWaitRel()) {
                 releaseLock(event);
@@ -187,32 +190,33 @@ public class TraceState {
         }
     }
 
-    protected Deque<Event> getCurrentWindowStackTrace(Event event, RawTrace t) {
-        long gid = event.getGID();
-        Deque<Event> stacktrace = new ArrayDeque<>();
-        if (!config().stacks()) {
-            stacktrace.add(event);
-            return stacktrace;
+    protected void onLock(Event event) {
+        int locId = findUserCallLocation(event);
+        if (locId != event.getLocId()) {
+            event.setLocId(locId);
         }
-        t_tidToThreadState.getOrDefault(event.getTID(), new ThreadState()).getStacktrace()
-                .forEach(stacktrace::addFirst);
-        for (int i = 0; i < t.size(); i++) {
-            Event e = t.event(i);
-            if (e.getGID() > gid) break;
-            if (e.getType() == EventType.INVOKE_METHOD) {
-                stacktrace.addFirst(e);
-            } else if (e.getType() == EventType.FINISH_METHOD) {
-                stacktrace.removeFirst();
-            }
-        }
-        stacktrace.addFirst(event);
-        return stacktrace;
     }
 
-    protected int findUserCallLocation(Deque<Event> stacktrace) {
+    protected void onThreadStart(Event event) {
+        int locId = findUserCallLocation(event);
+        if (locId != metadata.getThreadCreationLocId(event.getSyncedThreadId())) {
+            metadata().addThreadCreationInfo(event.getSyncedThreadId(), event.getTID(), locId);
+        }
+    }
+
+    /**
+     * Retrieves the most recent non-library call location from the stack trace associated to an event.
+     */
+    private int findUserCallLocation(Event e) {
+        int locId = e.getLocId();
+        if (locId >= 0 && !config().isExcludedLibrary(metadata().getLocationSig(locId))) {
+            return locId;
+        }
+        long tid = e.getTID();
+        Deque<Event> stacktrace = tidToStacktrace.get(tid);
         String sig;
         for (Event event : stacktrace) {
-            int locId = event.getLocId();
+            locId = event.getLocId();
             if (locId != -1) {
                 sig = metadata().getLocationSig(locId);
                 if (!config().isExcludedLibrary(sig)) {

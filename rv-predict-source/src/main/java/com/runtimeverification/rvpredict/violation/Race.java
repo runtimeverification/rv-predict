@@ -175,13 +175,8 @@ public class Race {
             locSig = locId >= 0 ? metadata.getLocationSig(locId)
                     : "... not available ...";
             if (config.isExcludedLibrary(locSig)) {
-                if (elem.isLock()) {
-                    locId = trace.findUserCallLocation(elem);
-                    locSig = locId >= 0 ? metadata.getLocationSig(locId)
-                            : "... not available ...";
-                } else {
-                    continue;
-                }
+                assert !elem.isLock() : "Locations for locks should have been handled in TraceState::onLock";
+                continue;
             }
             stackSize++;
             if (locId >= 0) {

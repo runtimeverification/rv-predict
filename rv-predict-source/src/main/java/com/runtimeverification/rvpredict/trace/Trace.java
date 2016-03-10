@@ -282,23 +282,10 @@ public class Trace {
         long tid = event.getTID();
         long gid = event.getGID();
         Deque<Event> stacktrace = new ArrayDeque<>();
-        if (!state.config().stacks()) {
-            stacktrace.add(event);
-        } else if (gid >= baseGID) {
-            /* event is in the current window; reassemble its stack trace */
-            tidToThreadState.getOrDefault(tid, new ThreadState()).getStacktrace()
-                    .forEach(stacktrace::addFirst);
+        if (gid >= baseGID) {
+            /* event is in the current window */
             RawTrace t = rawTraces.stream().filter(p -> p.getTID() == tid).findAny().get();
-            for (int i = 0; i < t.size(); i++) {
-                Event e = t.event(i);
-                if (e.getGID() > gid) break;
-                if (e.getType() == EventType.INVOKE_METHOD) {
-                    stacktrace.addFirst(e);
-                } else if (e.getType() == EventType.FINISH_METHOD) {
-                    stacktrace.removeFirst();
-                }
-            }
-            stacktrace.addFirst(event);
+            return state.getCurrentWindowStackTrace(event, t);
         } else {
             /* event is from previous windows */
             stacktrace.add(event);
@@ -334,6 +321,21 @@ public class Trace {
         return lockEvents;
     }
 
+    /**
+     * Retrieves the most recent non-library call location from the stack trace associated to an event.
+     */
+    public int findUserCallLocation(Event elem) {
+        return state.findUserCallLocation(getStacktraceAt(elem));
+    }
+
+    private void updateThreadCreationLocId(Event event) {
+        int locId = metadata().getThreadCreationLocId(event.getSyncedThreadId());
+        if (locId < 0 || state.config().isExcludedLibrary(metadata().getLocationSig(locId))) {
+            locId = findUserCallLocation(event);
+            metadata().addThreadCreationInfo(event.getSyncedThreadId(), event.getTID(), locId);
+        }
+    }
+
     private void processEvents() {
         if (rawTraces.size() == 1) {
             state.fastProcess(rawTraces.iterator().next());
@@ -349,6 +351,9 @@ public class Trace {
 
             for (int i = 0; i < rawTrace.size(); i++) {
                 Event event = rawTrace.event(i);
+                if (event.isStart()) {
+                    updateThreadCreationLocId(event);
+                }
                 if (isInsideClinit) {
                     clinitEvents.add(event);
                 }

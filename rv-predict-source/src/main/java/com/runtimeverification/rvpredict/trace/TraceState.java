@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.runtimeverification.rvpredict.log.EventType;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.google.common.collect.HashBasedTable;
@@ -184,6 +185,42 @@ public class TraceState {
                 onMetaEvent(event);
             }
         }
+    }
+
+    protected Deque<Event> getCurrentWindowStackTrace(Event event, RawTrace t) {
+        long gid = event.getGID();
+        Deque<Event> stacktrace = new ArrayDeque<>();
+        if (!config().stacks()) {
+            stacktrace.add(event);
+            return stacktrace;
+        }
+        t_tidToThreadState.getOrDefault(event.getTID(), new ThreadState()).getStacktrace()
+                .forEach(stacktrace::addFirst);
+        for (int i = 0; i < t.size(); i++) {
+            Event e = t.event(i);
+            if (e.getGID() > gid) break;
+            if (e.getType() == EventType.INVOKE_METHOD) {
+                stacktrace.addFirst(e);
+            } else if (e.getType() == EventType.FINISH_METHOD) {
+                stacktrace.removeFirst();
+            }
+        }
+        stacktrace.addFirst(event);
+        return stacktrace;
+    }
+
+    protected int findUserCallLocation(Deque<Event> stacktrace) {
+        String sig;
+        for (Event event : stacktrace) {
+            int locId = event.getLocId();
+            if (locId != -1) {
+                sig = metadata().getLocationSig(locId);
+                if (!config().isExcludedLibrary(sig)) {
+                    return locId;
+                }
+            }
+        }
+        return -1;
     }
 
 }

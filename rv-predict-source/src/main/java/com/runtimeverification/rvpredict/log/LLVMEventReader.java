@@ -39,10 +39,6 @@ public class LLVMEventReader implements IEventReader {
             lastReadEvent = null;
             throw e;
         }
-        if (lastReadEvent.isStart()) {
-            Metadata.singleton().llvmThreadCreationEvents.put(lastReadEvent.getSyncedThreadId(),lastReadEvent);
-        }
-
         return lastReadEvent;
     }
 

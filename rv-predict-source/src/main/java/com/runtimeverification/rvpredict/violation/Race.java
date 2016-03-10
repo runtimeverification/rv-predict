@@ -169,13 +169,16 @@ public class Race {
         List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
         stacktrace.addAll(heldLocks);
         Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
+        String locSig;
         for (Event elem : stacktrace) {
             int locId = elem.getLocId();
-            String locSig = locId >= 0 ? metadata.getLocationSig(locId)
+            locSig = locId >= 0 ? metadata.getLocationSig(locId)
                     : "... not available ...";
             if (config.isExcludedLibrary(locSig)) {
                 if (elem.isLock()) {
-                    locSig = findUserCallLocation(elem);
+                    locId = trace.findUserCallLocation(elem);
+                    locSig = locId >= 0 ? metadata.getLocationSig(locId)
+                            : "... not available ...";
                 } else {
                     continue;
                 }
@@ -199,10 +202,6 @@ public class Race {
             sb.append(String.format("    T%s is created by T%s%n", tid, parentTID));
             if (locId >= 0) {
                 String locationSig = metadata.getLocationSig(locId);
-                if (config.isExcludedLibrary(locationSig)) {
-                    assert config.isLLVMPrediction() : "isExcludedLibrary is currently only defined for LLVM.";
-                    locationSig = findUserCallLocation(metadata.llvmThreadCreationEvents.get(tid));
-                }
                 signatureProcessor.process(locationSig);
                 sb.append(String.format("        at %s%n", locationSig));
             } else {
@@ -216,26 +215,6 @@ public class Race {
             }
         }
         return stackSize>0;
-    }
-
-    /**
-     * Retrieves the most recent non-library call location from the stack trace associated to an event.
-     */
-    private String findUserCallLocation(Event elem) {
-        List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(elem));
-        String location = trace.metadata().getLocationSig(elem.getLocId());
-        String sig;
-        for (Event event : stacktrace) {
-            int locId = event.getLocId();
-            if (locId != -1) {
-                sig = trace.metadata().getLocationSig(locId);
-                if (!config.isExcludedLibrary(sig)) {
-                    location = sig;
-                    break;
-                }
-            }
-        }
-        return location;
     }
 
     private String getHeldLocksReport(List<Event> heldLocks) {

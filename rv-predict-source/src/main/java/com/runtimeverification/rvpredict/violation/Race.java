@@ -169,10 +169,9 @@ public class Race {
         List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
         stacktrace.addAll(heldLocks);
         Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
-        String locSig;
         for (Event elem : stacktrace) {
             int locId = elem.getLocId();
-            locSig = locId >= 0 ? metadata.getLocationSig(locId)
+            String locSig = locId >= 0 ? metadata.getLocationSig(locId)
                     : "... not available ...";
             if (config.isExcludedLibrary(locSig)) {
                 assert !elem.isLock() : "Locations for locks should have been handled in TraceState::onLock";

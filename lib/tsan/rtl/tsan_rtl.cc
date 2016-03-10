@@ -176,32 +176,32 @@ void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr,
               varfd = OpenFile("var_metadata.bin", WrOnly),
               thdfd = OpenFile("thd_metadata.bin", WrOnly);
   static int pid = (int)internal_getpid();
-  static char pids[100]="";
-  char rvbuff[300];
+  static char pids[25]="";
+  char fn_buff[55];
 
   int l_pid =  (int)internal_getpid();
   if (l_pid != pid) {
     SpinMutexLock lock(&forkReset);
     if (l_pid != pid) {
       pid = l_pid;
-      internal_snprintf(pids, 100, "%d-loc_metadata.bin", l_pid);
-      locfd = OpenFile(pids, WrOnly);
-      internal_snprintf(pids, 100, "%d-var_metadata.bin", l_pid);
-      varfd = OpenFile(pids, WrOnly);
-      internal_snprintf(pids, 100, "%d-thd_metadata.bin", l_pid);
-      thdfd = OpenFile(pids, WrOnly);
-      internal_snprintf(pids, 100, "%d-", l_pid);
+      internal_snprintf(pids, sizeof(pids), "%d-", l_pid);
+      internal_snprintf(fn_buff, sizeof(fn_buff), "%d-loc_metadata.bin", l_pid);
+      locfd = OpenFile(fn_buff, WrOnly);
+      internal_snprintf(fn_buff, sizeof(fn_buff), "%d-var_metadata.bin", l_pid);
+      varfd = OpenFile(fn_buff, WrOnly);
+      internal_snprintf(fn_buff, sizeof(fn_buff), "%d-thd_metadata.bin", l_pid);
+      thdfd = OpenFile(fn_buff, WrOnly);
       for (int i = 0; tidToFd.count(i); i++) {
-        internal_snprintf(rvbuff, sizeof(rvbuff), "%s%llu_trace.bin", pids,tid);
-        tidToFd.get(i) = OpenFile(rvbuff, WrOnly);
+        internal_snprintf(fn_buff, sizeof(fn_buff), "%s%llu_trace.bin", pids,tid);
+        tidToFd.get(i) = OpenFile(fn_buff, WrOnly);
       }
     }
   }
 
 
   if(!tidToFd.count(tid)) {
-    internal_snprintf(rvbuff, sizeof(rvbuff), "%s%llu_trace.bin", pids,tid);
-    fd = OpenFile(rvbuff, WrOnly);
+    internal_snprintf(fn_buff, sizeof(fn_buff), "%s%llu_trace.bin", pids,tid);
+    fd = OpenFile(fn_buff, WrOnly);
     tidToFd.insert(tid, fd);
   } else {
     fd = tidToFd.get(tid);
@@ -220,13 +220,17 @@ void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr,
 
       SymbolizedStack* frame = SymbolizeCode(id);
 
-      internal_snprintf(rvbuff, sizeof(rvbuff), "fn:%s;file:%s;line:%d", frame->info.function, frame->info.file, frame->info.line);
+      int size = (frame->info.function ? internal_strlen(frame->info.function) : 10) + (frame->info.file ? internal_strlen(frame->info.file) : 10) + 40;
+      char* rvbuff = (char *) internal_alloc(MBlockString, size);
+
+      internal_snprintf(rvbuff, size, "fn:%s;file:%s;line:%d", frame->info.function, frame->info.file, frame->info.line);
 
       DPrintf("<locId:%lld;%s>\n",
                   locId, rvbuff);
 
       WriteNum(locfd, locId);
       WriteStr(locfd, rvbuff);
+      internal_free(rvbuff);
     }
   }
   locId = idToLocId.get(id);
@@ -245,8 +249,11 @@ void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr,
       if (location) {
         const DataInfo &global = location->global;
 
-        internal_snprintf(rvbuff, sizeof(rvbuff), "global '%s' of size %zu at %p (%s + %p)", global.name, global.size, global.start,
-            StripModuleName(global.module), global.module_offset);
+        const char* module = StripModuleName(global.module);
+        int size = (global.name ? internal_strlen(global.name) : 10) + (module ? internal_strlen(module) : 10) + 100;
+        char* rvbuff = (char*) internal_alloc(MBlockString, size);
+        internal_snprintf(rvbuff, size, "global '%s' of size %zu at %p (%s + %p)", global.name, global.size, global.start,
+            module, global.module_offset);
 
         uptr offset = global.module_offset - global.start;
 
@@ -255,6 +262,7 @@ void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr,
 
         WriteNum(varfd, varId);
         WriteStr(varfd, rvbuff);
+        internal_free(rvbuff);
 
         if (type == READ || type == WRITE) {
           varId = varId << 32LL | offset;

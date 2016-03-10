@@ -286,7 +286,7 @@ public class Trace {
             stacktrace.add(event);
         } else if (gid >= baseGID) {
             /* event is in the current window; reassemble its stack trace */
-            tidToThreadState.getOrDefault(event.getTID(), new ThreadState()).getStacktrace()
+            tidToThreadState.getOrDefault(tid, new ThreadState()).getStacktrace()
                     .forEach(stacktrace::addFirst);
             RawTrace t = rawTraces.stream().filter(p -> p.getTID() == tid).findAny().get();
             for (int i = 0; i < t.size(); i++) {

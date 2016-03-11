@@ -176,27 +176,35 @@ public class TraceState {
     public void fastProcess(RawTrace rawTrace) {
         for (int i = 0; i < rawTrace.size(); i++) {
             Event event = rawTrace.event(i);
-            if (event.isStart()) {
-                onThreadStart(event);
-            } else if (event.isLock() && !event.isWaitAcq()) {
-                onLock(event);
+            if (event.isLock() && !event.isWaitAcq()) {
+                updateLockLocToUserLoc(event);
                 acquireLock(event);
             } else if (event.isUnlock() && !event.isWaitRel()) {
                 releaseLock(event);
             } else if (event.isMetaEvent()) {
                 onMetaEvent(event);
+            } else if (event.isStart()) {
+                updateThreadLocToUserLoc(event);
             }
         }
     }
 
-    protected void onLock(Event event) {
+    /**
+     * Updates the location at which a lock was acquired to the most recent reportable location on the call stack.
+     * @param event a lock acquiring event.  Assumed to be the latest in the current trace window.
+     */
+    protected void updateLockLocToUserLoc(Event event) {
         int locId = findUserCallLocation(event);
         if (locId != event.getLocId()) {
             event.setLocId(locId);
         }
     }
 
-    protected void onThreadStart(Event event) {
+    /**
+     * Updates the location about thread creation to the most recent reportable location on the call stack.
+     * @param event an event creating a new thread.  Assumed to be the latest in the current trace window.
+     */
+    protected void updateThreadLocToUserLoc(Event event) {
         int locId = findUserCallLocation(event);
         if (locId != metadata.getThreadCreationLocId(event.getSyncedThreadId())) {
             metadata().addThreadCreationInfo(event.getSyncedThreadId(), event.getTID(), locId);

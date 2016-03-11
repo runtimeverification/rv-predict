@@ -174,7 +174,7 @@ public class Race {
             String locSig = locId >= 0 ? metadata.getLocationSig(locId)
                     : "... not available ...";
             if (config.isExcludedLibrary(locSig)) {
-                assert !elem.isLock() : "Locations for locks should have been handled in TraceState::onLock";
+                assert !elem.isLock() : "Locations for locks should have been handled in TraceState::updateLockLocToUserLoc";
                 continue;
             }
             stackSize++;

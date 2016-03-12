@@ -101,6 +101,7 @@ public class LLVMTraceCache extends TraceCache {
 
     @Override
     public void setup() throws IOException {
+        readMetadata();
         int logId = 0;
         Path path = config.getTraceFilePath(logId);
         while(path.toFile().exists()) {
@@ -108,6 +109,5 @@ public class LLVMTraceCache extends TraceCache {
             ++logId;
             path = config.getTraceFilePath(logId);
         }
-        readMetadata();
     }
 }

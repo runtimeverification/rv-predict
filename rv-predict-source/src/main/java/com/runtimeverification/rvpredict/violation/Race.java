@@ -174,11 +174,8 @@ public class Race {
             String locSig = locId >= 0 ? metadata.getLocationSig(locId)
                     : "... not available ...";
             if (config.isExcludedLibrary(locSig)) {
-                if (elem.isLock()) {
-                    locSig = findUserCallLocation(elem);
-                } else {
-                    continue;
-                }
+                assert !elem.isLock() : "Locations for locks should have been handled in TraceState::updateLockLocToUserLoc";
+                continue;
             }
             stackSize++;
             if (locId >= 0) {
@@ -199,10 +196,6 @@ public class Race {
             sb.append(String.format("    T%s is created by T%s%n", tid, parentTID));
             if (locId >= 0) {
                 String locationSig = metadata.getLocationSig(locId);
-                if (config.isExcludedLibrary(locationSig)) {
-                    assert config.isLLVMPrediction() : "isExcludedLibrary is currently only defined for LLVM.";
-                    locationSig = findUserCallLocation(metadata.llvmThreadCreationEvents.get(tid));
-                }
                 signatureProcessor.process(locationSig);
                 sb.append(String.format("        at %s%n", locationSig));
             } else {
@@ -216,26 +209,6 @@ public class Race {
             }
         }
         return stackSize>0;
-    }
-
-    /**
-     * Retrieves the most recent non-library call location from the stack trace associated to an event.
-     */
-    private String findUserCallLocation(Event elem) {
-        List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(elem));
-        String location = trace.metadata().getLocationSig(elem.getLocId());
-        String sig;
-        for (Event event : stacktrace) {
-            int locId = event.getLocId();
-            if (locId != -1) {
-                sig = trace.metadata().getLocationSig(locId);
-                if (!config.isExcludedLibrary(sig)) {
-                    location = sig;
-                    break;
-                }
-            }
-        }
-        return location;
     }
 
     private String getHeldLocksReport(List<Event> heldLocks) {

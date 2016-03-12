@@ -177,13 +177,61 @@ public class TraceState {
         for (int i = 0; i < rawTrace.size(); i++) {
             Event event = rawTrace.event(i);
             if (event.isLock() && !event.isWaitAcq()) {
+                updateLockLocToUserLoc(event);
                 acquireLock(event);
             } else if (event.isUnlock() && !event.isWaitRel()) {
                 releaseLock(event);
             } else if (event.isMetaEvent()) {
                 onMetaEvent(event);
+            } else if (event.isStart()) {
+                updateThreadLocToUserLoc(event);
             }
         }
+    }
+
+    /**
+     * Updates the location at which a lock was acquired to the most recent reportable location on the call stack.
+     * @param event a lock acquiring event.  Assumed to be the latest in the current trace window.
+     */
+    protected void updateLockLocToUserLoc(Event event) {
+        int locId = findUserCallLocation(event);
+        if (locId != event.getLocId()) {
+            event.setLocId(locId);
+        }
+    }
+
+    /**
+     * Updates the location about thread creation to the most recent reportable location on the call stack.
+     * @param event an event creating a new thread.  Assumed to be the latest in the current trace window.
+     */
+    protected void updateThreadLocToUserLoc(Event event) {
+        int locId = findUserCallLocation(event);
+        if (locId != metadata.getThreadCreationLocId(event.getSyncedThreadId())) {
+            metadata().addThreadCreationInfo(event.getSyncedThreadId(), event.getTID(), locId);
+        }
+    }
+
+    /**
+     * Retrieves the most recent non-library call location from the stack trace associated to an event.
+     */
+    private int findUserCallLocation(Event e) {
+        int locId = e.getLocId();
+        if (locId >= 0 && !config().isExcludedLibrary(metadata().getLocationSig(locId))) {
+            return locId;
+        }
+        long tid = e.getTID();
+        Deque<Event> stacktrace = tidToStacktrace.get(tid);
+        String sig;
+        for (Event event : stacktrace) {
+            locId = event.getLocId();
+            if (locId != -1) {
+                sig = metadata().getLocationSig(locId);
+                if (!config().isExcludedLibrary(sig)) {
+                    return locId;
+                }
+            }
+        }
+        return -1;
     }
 
 }

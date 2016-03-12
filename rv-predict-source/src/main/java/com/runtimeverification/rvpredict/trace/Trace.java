@@ -359,6 +359,7 @@ public class Trace {
                     st.touch(event);
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
+                        state.updateLockLocToUserLoc(event);
                         if (event.isWaitAcq()) {
                             outermostLockEvents.add(event);
                         } else if (state.acquireLock(event) == 1) {
@@ -372,6 +373,8 @@ public class Trace {
                         } else if (state.releaseLock(event) == 0) {
                             outermostLockEvents.add(event);
                         }
+                    } else if (event.isStart()) {
+                        state.updateThreadLocToUserLoc(event);
                     }
                 } else if (event.isMetaEvent()) {
                     state.onMetaEvent(event);
@@ -543,7 +546,6 @@ public class Trace {
      * @param idx1
      *            the initial index of the (consecutive) second occurrence of
      *            the potential pattern
-     * @param i
      * @return the new event index
      */
     private static int skipRecurrentPatterns(Event[] events, int size, int idx0, int idx1) {

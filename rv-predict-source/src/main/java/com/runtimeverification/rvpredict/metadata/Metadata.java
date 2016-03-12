@@ -40,8 +40,6 @@ public class Metadata implements Serializable {
             .newSetFromMap(new ConcurrentHashMap<>());
 
     private final Map<Long, Pair<Long, Integer>> tidToCreationInfo = new ConcurrentHashMap<>();
-    //TODO(TraianSF): there is some redundancy between tidToCreationInfo and llvmThreadCreationEvents
-    public final Map<Long, Event> llvmThreadCreationEvents = new HashMap<>();
 
     private static final Metadata instance = new Metadata();
 

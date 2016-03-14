@@ -761,7 +761,7 @@ void ALWAYS_INLINE RVAtomicUnlock(uptr addr, uptr pc) {
 }
 
 void ALWAYS_INLINE RVFork(int pid, uptr pc) {
-  RVLog(FORK, pc, pid, 0, 0);
+  RVLog(FORK, pc, 0, pid, 0);
 }
 
 

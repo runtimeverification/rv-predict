@@ -9,7 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.lang3.ObjectUtils;
+import com.runtimeverification.rvpredict.engine.deadlock.LockGraph;
+import org.apache.commons.collections4.map.HashedMap;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.google.common.collect.HashBasedTable;
@@ -46,6 +47,8 @@ public class TraceState {
     public final Table<Long, Long, LockState> tidToLockIdToLockState = HashBasedTable.create(
             DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_LOCKS);
 
+    private final LockGraph lockGraph;
+
     private final Configuration config;
 
     private final Metadata metadata;
@@ -64,6 +67,12 @@ public class TraceState {
 
     private final Set<Event> t_clinitEvents;
 
+    private Map<Long, ForkState> forks;
+
+    public LockGraph getLockGraph() {
+        return lockGraph;
+    }
+
     public TraceState(Configuration config, Metadata metadata) {
         this.config = config;
         this.metadata = metadata;
@@ -75,6 +84,23 @@ public class TraceState {
                                             DEFAULT_NUM_OF_ADDR);
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
+        this.forks                     = new HashedMap<>();
+        this.lockGraph                 = new LockGraph(config, metadata);
+    }
+
+    public TraceState(Configuration config, Metadata metadata, LockGraph lockGraph) {
+        this.config = config;
+        this.metadata = metadata;
+        this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_tidToThreadState        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_addrToState             = new MemoryAddrToStateMap(config.windowSize);
+        this.t_tidToAddrToEvents       = HashBasedTable.create(DEFAULT_NUM_OF_THREADS,
+                DEFAULT_NUM_OF_ADDR);
+        this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
+        this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
+        this.forks                     = new HashedMap<>();
+        this.lockGraph                 = lockGraph;
     }
 
     public ThreadIDToObjectMap<Deque<Event>> getTidToStacktrace() {
@@ -138,17 +164,12 @@ public class TraceState {
             tidToStacktrace = ThreadIDToObjectMap.growOnFull(tidToStacktrace);
             break;
         case FINISH_METHOD:
-            //when forking, the forked log has one more FINISH_METHOD than INVOKE_METHOD
-            try {
-                int locId = tidToStacktrace.get(tid).removeLast().getLocId();
-                if (locId != event.getLocId()) {
-                    throw new IllegalStateException("Unmatched method entry/exit events!" +
-                            (Configuration.debug ?
-                                    "\n\tENTRY:" + metadata.getLocationSig(locId) +
-                                            "\n\tEXIT:" + metadata.getLocationSig(event.getLocId()) : ""));
-                }
-            } catch(java.util.NoSuchElementException e) {
-                break;
+            int locId = tidToStacktrace.get(tid).removeLast().getLocId();
+            if (locId != event.getLocId()) {
+                throw new IllegalStateException("Unmatched method entry/exit events!" +
+                        (Configuration.debug ?
+                                "\n\tENTRY:" + metadata.getLocationSig(locId) +
+                                        "\n\tEXIT:" + metadata.getLocationSig(event.getLocId()) : ""));
             }
             break;
         default:
@@ -175,14 +196,14 @@ public class TraceState {
     }
 
     public TraceState makeCopy() {
-        TraceState ret = new TraceState(this.config, this.metadata);
+        TraceState ret = new TraceState(this.config, this.metadata, lockGraph.makeCopy());
         LongToObjectMap.EntryIterator it = getTidToStacktrace().iterator();
-        while(it.hasNext()) {
-            ret.getTidToStacktrace().put(it.getNextKey(), new ArrayDeque<>((Deque)it.getNextValue()));
-            it = (LongToObjectMap.EntryIterator)it.getNextValue();
+        while (it.hasNext()) {
+            ret.getTidToStacktrace().put(it.getNextKey(), new ArrayDeque<>((Deque) it.getNextValue()));
+            it.incCursor();
         }
 
-        for(Table.Cell<Long, Long, LockState> cell :tidToLockIdToLockState.cellSet()){
+        for (Table.Cell<Long, Long, LockState> cell : tidToLockIdToLockState.cellSet()) {
             ret.tidToLockIdToLockState.put(cell.getRowKey(), cell.getColumnKey(), cell.getValue().copy());
         }
 
@@ -210,6 +231,14 @@ public class TraceState {
                 onMetaEvent(event);
             } else if (event.isStart()) {
                 updateThreadLocToUserLoc(event);
+            } else if (event.isFork()) {
+                forks.put(event.getPID(), new ForkState(this, event.getGID()));
+            }
+            if (event.isPreLock() || event.isLock() || event.isUnlock()) {
+                if (config().isLLVMPrediction()) {
+                    //TODO(TraianSF): remove above condition once instrumentation works for Java
+                    getLockGraph().handle(event);
+                }
             }
         }
     }
@@ -259,4 +288,7 @@ public class TraceState {
         return -1;
     }
 
+    public Map<Long, ForkState> getForks() {
+        return forks;
+    }
 }

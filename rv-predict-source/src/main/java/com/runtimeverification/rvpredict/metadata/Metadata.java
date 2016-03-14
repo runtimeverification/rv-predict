@@ -6,7 +6,6 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,6 +42,8 @@ public class Metadata implements Serializable {
 
     private static final Metadata instance = new Metadata();
 
+    private boolean fork;
+
     /**
      * Note: This method should be used only in a few places and definitely NOT
      * in offline prediction which should get its {@code Metadata} instance from
@@ -77,7 +78,8 @@ public class Metadata implements Serializable {
         if (varId >= MAX_NUM_OF_VARIABLES) {
             throw new TooManyVariables();
         }
-//        assert varIdToVarSig[varId] == null;
+        if(!isFork())
+            assert varIdToVarSig[varId] == null;
         varIdToVarSig[varId] = sig;
     }
 
@@ -96,7 +98,8 @@ public class Metadata implements Serializable {
     }
 
     public void setLocationSig(int locId, String sig) {
-//        assert locIdToLocSig[locId] == null;
+        if(!isFork())
+            assert locIdToLocSig[locId] == null;
         locIdToLocSig[locId] = sig;
     }
 
@@ -115,6 +118,14 @@ public class Metadata implements Serializable {
     public boolean isVolatile(long addr) {
         int varId = (int) addr;
         return varId < 0 && volatileVarIds.contains(-varId);
+    }
+
+    public boolean isFork() {
+        return this.fork;
+    }
+
+    public void setFork() {
+        fork = true;
     }
 
     public void addThreadCreationInfo(long childTID, long parentTID, int locId) {

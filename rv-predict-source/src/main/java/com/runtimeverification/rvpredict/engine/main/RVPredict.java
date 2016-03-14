@@ -86,16 +86,13 @@ public class RVPredict {
                     break;
                 }
             }
-
-            p_traceCache.getLockGraph().runDeadlockDetection();
-
             Map<Long, ForkState> forks = p_traceCache.getForks();
+
+            this.metadata.setFork();
 
             for(Map.Entry<Long, ForkState> entry: forks.entrySet()) {
                 run(entry.getKey() + "-", entry.getValue());
             }
-
-
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());
@@ -103,12 +100,12 @@ public class RVPredict {
             System.exit(1);
         }
 
-        p_traceCache.getLockGraph().runDeadlockDetection();
+        p_traceCache.getCrntState().getLockGraph().runDeadlockDetection();
     }
 
     public void start() {
 
-        run("", new ForkState(traceCache.getLockGraph(), traceCache.getCrntState(), 0));
+        run("", new ForkState(traceCache.getCrntState(), 0));
 
         List<String> reports = detector.getRaceReports();
         if (reports.isEmpty()) {

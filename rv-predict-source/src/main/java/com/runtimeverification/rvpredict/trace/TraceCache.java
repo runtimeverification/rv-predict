@@ -1,7 +1,6 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.engine.deadlock.LockGraph;
 import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.IEventReader;
 import com.runtimeverification.rvpredict.log.Event;
@@ -21,13 +20,9 @@ import java.util.*;
  */
 public class TraceCache {
 
-    private final LockGraph lockGraph;
-
     protected final Configuration config;
 
     private final TraceState crntState;
-
-    private final Map<Long, ForkState> forks = new HashMap<>();
 
     protected final List<IEventReader> readers = new ArrayList<>();
 
@@ -37,13 +32,11 @@ public class TraceCache {
     public TraceCache(Configuration config, Metadata metadata) {
         this.config = config;
         this.crntState = new TraceState(config, metadata);
-        lockGraph = new LockGraph(config, metadata);
     }
 
     public TraceCache(Configuration config, Metadata metadata, ForkState savedState) {
         this.config = config;
         this.crntState = savedState.getCrntState();
-        this.lockGraph = savedState.getLockGraph();
     }
 
     public TraceState getCrntState() {
@@ -61,12 +54,8 @@ public class TraceCache {
         }
     }
 
-    public LockGraph getLockGraph() {
-        return lockGraph;
-    }
-
     public Map<Long, ForkState> getForks() {
-        return this.forks;
+        return this.crntState.getForks();
     }
 
     /**
@@ -112,19 +101,6 @@ public class TraceCache {
             List<Event> events = new ArrayList<>(capacity);
             do {
                 events.add(event);
-                //TODO(TraianSF): the following conditional does not belong here. Consider moving it.
-                if (event.isPreLock() || event.isLock() || event.isUnlock()) {
-                    if (config.isLLVMPrediction()) {
-                        //TODO(TraianSF): remove above condition once instrumentation works for Java
-                        lockGraph.handle(event);
-                    }
-                }
-
-                if(event.isFork()) {
-                    //currently we only handle forks for LLVM
-                    Long pid = event.getPID();
-                    forks.put(pid, new ForkState(this.lockGraph, this.crntState, fromIndex));
-                }
                 try {
                     event = reader.readEvent();
                 } catch (EOFException e) {

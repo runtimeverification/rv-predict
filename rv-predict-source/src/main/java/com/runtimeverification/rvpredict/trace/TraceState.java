@@ -47,7 +47,7 @@ public class TraceState {
     public final Table<Long, Long, LockState> tidToLockIdToLockState = HashBasedTable.create(
             DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_LOCKS);
 
-    private final LockGraph lockGraph;
+    private LockGraph lockGraph;
 
     private final Configuration config;
 
@@ -89,17 +89,7 @@ public class TraceState {
     }
 
     public TraceState(Configuration config, Metadata metadata, LockGraph lockGraph) {
-        this.config = config;
-        this.metadata = metadata;
-        this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
-        this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
-        this.t_tidToThreadState        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
-        this.t_addrToState             = new MemoryAddrToStateMap(config.windowSize);
-        this.t_tidToAddrToEvents       = HashBasedTable.create(DEFAULT_NUM_OF_THREADS,
-                DEFAULT_NUM_OF_ADDR);
-        this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
-        this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
-        this.forks                     = new HashedMap<>();
+        this(config, metadata);
         this.lockGraph                 = lockGraph;
     }
 

@@ -7,4 +7,5 @@ echo ""
 
 mkdir rvtmp
 cp ./racy-c-programs/tsan/Races/Success/* ./rvtmp/
+cp ./racy-c-programs/tsan/Races/Fork/* ./rvtmp/
 ./folder.sh rvtmp

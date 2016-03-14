@@ -386,6 +386,7 @@ public class Trace {
                     }
                 } else if (event.isFork()) {
                     //TODO(TraianSF): Add behavior for forking
+                    long child = event.getAddr();
                 } else {
                     throw new IllegalStateException();
                 }

@@ -67,6 +67,35 @@ public class LockGraph {
         locks.add(lockId);
     }
 
+    public SCCTarjan<Long> getSccGraph() {
+        return sccGraph;
+    }
+
+    public Map<Long, Event> getLockEvents() {
+        return lockEvents;
+    }
+
+    public Map<Pair<Long, Long>, Pair<Event, Event>> getEventEdges() {
+        return eventEdges;
+    }
+
+    public Map<Long, Set<Long>> getLockSet() {
+        return lockSet;
+    }
+
+    public LockGraph makeCopy() {
+        LockGraph ret = new LockGraph(this.config, this.metadata);
+        ret.getLockSet().putAll(this.getLockSet());
+        ret.getLockEvents().putAll(this.getLockEvents());
+
+        for(Pair<Long, Long> edge: eventEdges.keySet()) {
+            ret.addEdge(edge.getLeft(), edge.getRight());
+        }
+
+        return ret;
+    }
+
+
     /**
      * Computes cycles in the lock acquisition graph as lists of edges between
      * existing lock acquisitions and new lock acquisitions.
@@ -76,7 +105,7 @@ public class LockGraph {
         getCycles().forEach(this::reportDeadlock);
     }
 
-    private void addEdge(Long l1, Long l2) {
+    public void addEdge(Long l1, Long l2) {
         sccGraph.addEdge(l1,l2);
         eventEdges.put(Pair.of(l1,l2),Pair.of(lockEvents.get(l1), lockEvents.get(l2)));
     }

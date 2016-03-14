@@ -10,9 +10,7 @@ import com.runtimeverification.rvpredict.metadata.Metadata;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 /**
  * Class adding a transparency layer between the prediction engine and the
@@ -29,6 +27,8 @@ public class TraceCache {
 
     private final TraceState crntState;
 
+    private final Map<Long, ForkState> forks = new HashMap<>();
+
     protected final List<IEventReader> readers = new ArrayList<>();
 
     /**
@@ -38,6 +38,16 @@ public class TraceCache {
         this.config = config;
         this.crntState = new TraceState(config, metadata);
         lockGraph = new LockGraph(config, metadata);
+    }
+
+    public TraceCache(Configuration config, Metadata metadata, ForkState savedState) {
+        this.config = config;
+        this.crntState = savedState.getCrntState();
+        this.lockGraph = savedState.getLockGraph();
+    }
+
+    public TraceState getCrntState() {
+        return crntState;
     }
 
     public void setup() throws IOException {
@@ -53,6 +63,10 @@ public class TraceCache {
 
     public LockGraph getLockGraph() {
         return lockGraph;
+    }
+
+    public Map<Long, ForkState> getForks() {
+        return this.forks;
     }
 
     /**
@@ -104,6 +118,12 @@ public class TraceCache {
                         //TODO(TraianSF): remove above condition once instrumentation works for Java
                         lockGraph.handle(event);
                     }
+                }
+
+                if(event.isFork()) {
+                    //currently we only handle forks for LLVM
+                    Long pid = event.getPID();
+                    forks.put(pid, new ForkState(this.lockGraph, this.crntState, fromIndex));
                 }
                 try {
                     event = reader.readEvent();

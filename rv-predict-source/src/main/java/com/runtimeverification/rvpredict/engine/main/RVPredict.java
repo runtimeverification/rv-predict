@@ -35,10 +35,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.trace.ForkState;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
@@ -69,14 +71,15 @@ public class RVPredict {
         this.detector = new RaceDetector(config);
     }
 
-    public void start() {
+    private void run(String pid, ForkState forkState) {
+        TraceCache p_traceCache = new LLVMTraceCache(config, metadata, pid, forkState);
+        long fromIndex = forkState.getFromIndex();
         try {
-            traceCache.setup();
-            long fromIndex = 0;
-            // process the trace window by window
+            p_traceCache.setup();
+
             Trace trace;
-            while (true) {
-                if ((trace = traceCache.getTrace(fromIndex)) != null) {
+            while(true) {
+                if ((trace = p_traceCache.getTrace(fromIndex)) != null) {
                     fromIndex += config.windowSize;
                     detector.run(trace);
                 } else {
@@ -84,18 +87,34 @@ public class RVPredict {
                 }
             }
 
-            List<String> reports = detector.getRaceReports();
-            if (reports.isEmpty()) {
-                config.logger().report("No races found.", Logger.MSGTYPE.INFO);
-            } else {
-                reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
+            p_traceCache.getLockGraph().runDeadlockDetection();
+
+            Map<Long, ForkState> forks = p_traceCache.getForks();
+
+            for(Map.Entry<Long, ForkState> entry: forks.entrySet()) {
+                run(entry.getKey() + "-", entry.getValue());
             }
-            traceCache.getLockGraph().runDeadlockDetection();
+
+
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());
             e.printStackTrace();
             System.exit(1);
+        }
+
+        p_traceCache.getLockGraph().runDeadlockDetection();
+    }
+
+    public void start() {
+
+        run("", new ForkState(traceCache.getLockGraph(), traceCache.getCrntState(), 0));
+
+        List<String> reports = detector.getRaceReports();
+        if (reports.isEmpty()) {
+            config.logger().report("No races found.", Logger.MSGTYPE.INFO);
+        } else {
+            reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
         }
     }
 

@@ -15,10 +15,18 @@ import java.nio.file.Path;
  */
 public class LLVMTraceCache extends TraceCache {
     private final Metadata metadata;
+    private final String pid;
 
     public LLVMTraceCache(Configuration config, Metadata metadata) {
         super(config, metadata);
         this.metadata = metadata;
+        this.pid = "";
+    }
+
+    public LLVMTraceCache(Configuration config, Metadata metadata, String pid, ForkState savedState) {
+        super(config, metadata, savedState);
+        this.metadata = metadata;
+        this.pid = pid;
     }
 
     private interface MetadataLogger {
@@ -35,7 +43,7 @@ public class LLVMTraceCache extends TraceCache {
     }
 
     private void parseInfo(MetadataLogger logger, BinaryReader reader, String prefix) throws IOException {
-        BinaryParser in = new BinaryParser(config.getLLVMMetadataPath(prefix).toFile());
+        BinaryParser in = new BinaryParser(config.getLLVMMetadataPath(pid + prefix).toFile());
         while(true) {
             try {
                 Object[] args = reader.read(in);
@@ -103,11 +111,11 @@ public class LLVMTraceCache extends TraceCache {
     public void setup() throws IOException {
         readMetadata();
         int logId = 0;
-        Path path = config.getTraceFilePath(logId);
+        Path path = config.getTraceFilePath(logId, pid);
         while(path.toFile().exists()) {
             readers.add(new LLVMEventReader(path));
             ++logId;
-            path = config.getTraceFilePath(logId);
+            path = config.getTraceFilePath(logId, pid);
         }
     }
 }

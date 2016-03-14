@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.google.common.collect.HashBasedTable;
@@ -42,7 +43,7 @@ public class TraceState {
     /**
      * Map from (thread ID, lock ID) to lock state.
      */
-    private final Table<Long, Long, LockState> tidToLockIdToLockState = HashBasedTable.create(
+    public final Table<Long, Long, LockState> tidToLockIdToLockState = HashBasedTable.create(
             DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_LOCKS);
 
     private final Configuration config;
@@ -74,6 +75,10 @@ public class TraceState {
                                             DEFAULT_NUM_OF_ADDR);
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
+    }
+
+    public ThreadIDToObjectMap<Deque<Event>> getTidToStacktrace() {
+        return tidToStacktrace;
     }
 
     public Configuration config() {
@@ -133,12 +138,17 @@ public class TraceState {
             tidToStacktrace = ThreadIDToObjectMap.growOnFull(tidToStacktrace);
             break;
         case FINISH_METHOD:
-            int locId = tidToStacktrace.get(tid).removeLast().getLocId();
-            if (locId != event.getLocId()) {
-                throw new IllegalStateException("Unmatched method entry/exit events!" +
-                        (Configuration.debug ?
-                        "\n\tENTRY:" + metadata.getLocationSig(locId) +
-                        "\n\tEXIT:" + metadata.getLocationSig(event.getLocId()) : ""));
+            //when forking, the forked log has one more FINISH_METHOD than INVOKE_METHOD
+            try {
+                int locId = tidToStacktrace.get(tid).removeLast().getLocId();
+                if (locId != event.getLocId()) {
+                    throw new IllegalStateException("Unmatched method entry/exit events!" +
+                            (Configuration.debug ?
+                                    "\n\tENTRY:" + metadata.getLocationSig(locId) +
+                                            "\n\tEXIT:" + metadata.getLocationSig(event.getLocId()) : ""));
+                }
+            } catch(java.util.NoSuchElementException e) {
+                break;
             }
             break;
         default:
@@ -162,6 +172,21 @@ public class TraceState {
         List<LockState> lockStates = new ArrayList<>();
         tidToLockIdToLockState.row(tid).values().forEach(st -> lockStates.add(st.copy()));
         return new ThreadState(stacktrace, lockStates);
+    }
+
+    public TraceState makeCopy() {
+        TraceState ret = new TraceState(this.config, this.metadata);
+        LongToObjectMap.EntryIterator it = getTidToStacktrace().iterator();
+        while(it.hasNext()) {
+            ret.getTidToStacktrace().put(it.getNextKey(), new ArrayDeque<>((Deque)it.getNextValue()));
+            it = (LongToObjectMap.EntryIterator)it.getNextValue();
+        }
+
+        for(Table.Cell<Long, Long, LockState> cell :tidToLockIdToLockState.cellSet()){
+            ret.tidToLockIdToLockState.put(cell.getRowKey(), cell.getColumnKey(), cell.getValue().copy());
+        }
+
+        return ret;
     }
 
     /**

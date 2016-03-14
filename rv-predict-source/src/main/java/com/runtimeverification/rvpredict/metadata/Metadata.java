@@ -77,7 +77,7 @@ public class Metadata implements Serializable {
         if (varId >= MAX_NUM_OF_VARIABLES) {
             throw new TooManyVariables();
         }
-        assert varIdToVarSig[varId] == null;
+//        assert varIdToVarSig[varId] == null;
         varIdToVarSig[varId] = sig;
     }
 
@@ -96,7 +96,7 @@ public class Metadata implements Serializable {
     }
 
     public void setLocationSig(int locId, String sig) {
-        assert locIdToLocSig[locId] == null;
+//        assert locIdToLocSig[locId] == null;
         locIdToLocSig[locId] = sig;
     }
 

@@ -1,11 +1,11 @@
 #!/bin/bash
 
 function test {
-    src=$1
+    src="$1"
     echo -n "$src: "
-    rv-predict-compile -std=c++11 "$src"
+    rv-predict-compile "$src"
     chmod +x ./a.out
-    rv-predict-llvm ./a.out &>/dev/null
+    rv-predict-c-execute ./a.out &>/dev/null
     rm a.out
     results=`cat result.txt`
 
@@ -18,5 +18,4 @@ function test {
     rm result.txt debug.log
 }
 
-f="$1"
-test "$f"
+test "$1"

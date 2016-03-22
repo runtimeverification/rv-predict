@@ -76,8 +76,8 @@ const char* RVEventTypes[] = {
   "WRITE_UNLOCK",
   "READ_LOCK",
   "READ_UNLOCK",
-  "",
-  "",
+  "WAIT_REL",
+  "WAIT_ACQ",
   "START",
   "JOIN",
   "",
@@ -293,14 +293,17 @@ void RVEventFile(u64 tid, u64 id, u64 addr,
     varId = val;
     val = 0;
   }
-  if ((type == PRE_LOCK || type == WRITE_LOCK || type == READ_LOCK ||
-      type == ATOMIC_LOCK || type == ATOMIC_UNLOCK ||
-      type == WRITE_UNLOCK || type == READ_UNLOCK) && varId >= 1LL << 32) {
+  if ((type == PRE_LOCK || type == ATOMIC_LOCK || type == ATOMIC_UNLOCK ||
+      isMonitorSynchronized(type)
+      ) && varId >= 1LL << 32) {
     varId = varId >> 32;
   }
   if (type == ATOMIC_LOCK || type == ATOMIC_UNLOCK) {
     varId = (ATOMIC_LOCK_C << 32) | (varId & 0xFFFFFFFFULL);
     type = type == ATOMIC_LOCK ? WRITE_LOCK : WRITE_UNLOCK;
+  }
+  if (isMonitorSynchronized(type)) {
+    varId = (MONITOR_C << 32) | (varId & 0xFFFFFFFFULL);
   }
   WriteNum(fd, gid);
   WriteNum(fd, tid + 1);

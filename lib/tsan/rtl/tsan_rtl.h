@@ -636,6 +636,19 @@ enum RVEventType {
   READ_UNLOCK = 8,
 
   /**
+   * Event generated before calling {@link Object#wait()} or
+   * {@link Condition#await()}.
+   */
+  WAIT_REL = 9,
+
+  /**
+   * Event generated after a thread is awakened from {@link Object#wait()} or
+   * {@link Condition#await()} for whatever reason (e.g., spurious wakeup,
+   * being notified, or being interrupted).
+   */
+  WAIT_ACQ = 10,
+
+  /**
    * Event generated before a spawned thread is started
    */
   START = 11,
@@ -670,7 +683,10 @@ enum RVEventType {
   ATOMIC_UNLOCK = 20,
  };
 
+bool ALWAYS_INLINE isMonitorSynchronized (RVEventType type) { return (type >= WRITE_LOCK && type <= WAIT_ACQ); }
+
 #define ATOMIC_LOCK_C 43ULL
+#define MONITOR_C 42ULL
 
 uptr ALWAYS_INLINE getCallerStackLocation(ThreadState *thr) { return (thr->shadow_stack_pos - 1)[0] - 1; }
 

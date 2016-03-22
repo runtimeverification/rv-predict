@@ -1,0 +1,39 @@
+{% extends "!layout.html" %}
+{% block extrahead %}
+    <?php include('/var/www/php/header_head.php');?>
+    <link rel="stylesheet" href="https://runtimeverification.com/css/foundation.css" />
+    <link rel="stylesheet" href="{{ pathto('_static/agogo.css', 1) }}" />
+    <link rel="stylesheet" href="https://runtimeverification.com/css/rv_docs.css" />
+    <link rel="stylesheet" href="https://runtimeverification.com/css/rv.css" />
+    <link href='https://fonts.googleapis.com/css?family=Roboto:500' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Libre+Baskerville' rel='stylesheet' type='text/css'>
+    <script src="https://runtimeverification.com/js/vendor/modernizr.js"></script>
+    {{ super() }}
+{% endblock %}
+{% block document %}
+    </div></div></div>
+    <div class="headerwrap">
+        <!-- RV Header -->
+        <?php include('/var/www/php/header_body.php');?>
+    </div>
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            {{ super() }}
+{% endblock %}
+{% block footer %}
+    <script src="https://runtimeverification.com/js/vendor/jquery.js"></script>
+    <script src="https://runtimeverification.com/js/foundation.min.js"></script>
+    <script>
+        $(document).foundation();
+    </script>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+      ga('create', 'UA-55269403-1', 'auto');
+      ga('send', 'pageview');
+    </script>
+    {{ super() }}
+{% endblock %}

@@ -168,15 +168,23 @@ void RVWriteInteger(uptr addr, uptr size, uptr pc, void* val) {
     RVSaveMemAccEvent(WRITE, (uptr)((u8*)addr +i), p[i], pc);
 }
 
-
-void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr,
+void RVEventFile(u64 tid, u64 id, u64 addr,
                        u64 val, RVEventType type) {
+  ThreadState *thr = cur_thread();
+  if (!tidToFd.allocated()) {
+    return;
+  }
+  if (thr->ignore_interceptors) return;
+  thr->ignore_interceptors++;
+  thr->ignore_reads_and_writes++;
+  thr->ignore_sync++;
   fd_t fd;
   static fd_t locfd = OpenFile("loc_metadata.bin", WrOnly),
               varfd = OpenFile("var_metadata.bin", WrOnly),
               thdfd = OpenFile("thd_metadata.bin", WrOnly);
   static int pid = (int)internal_getpid();
   static char pids[25]="";
+  u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
   char fn_buff[55];
 
   int l_pid =  (int)internal_getpid();
@@ -303,21 +311,9 @@ void RVSingleEventFile(u64 gid, u64 tid, u64 id, u64 addr,
 
   DPrintf("<gid:%lld;tid:%lld;id:%lld;addr:%lld;value:%lld;type:%s(%d)>\n",
             gid,     tid + 1, locId,  varId,    val,       RVEventTypes[type], type);
-}
-
-/**
- * Special case for atomic events.  For now, we consider atomic operations
- * as locking on the element being accessed.
- */
-void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type) {
-  if (!inLogger.allocated()) return;
-  if (inLogger.count(tid)) return;
-  else {
-    inLogger.insert(tid,true);
-  }
-  u64 gid = atomic_fetch_add(&rv_gid, 1, memory_order_relaxed);
-  RVSingleEventFile(gid, tid, id, addr, val, type);
-  inLogger.erase(tid);
+  thr->ignore_sync--;
+  thr->ignore_reads_and_writes--;
+  thr->ignore_interceptors--;
 }
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {
@@ -731,13 +727,19 @@ u32 CurrentStackId(ThreadState *thr, uptr pc) {
     if (thr->shadow_stack_pos == thr->shadow_stack_end)
       GrowShadowStack(thr);
 #endif
+
+    RVSaveMetaEvent(INVOKE_METHOD, pc);
+    DPrintf("#%d: FuncEntry %p\n", (int)thr->fast_state.tid(), (void*)pc);
     thr->shadow_stack_pos[0] = pc;
     thr->shadow_stack_pos++;
   }
   u32 id = StackDepotPut(
       StackTrace(thr->shadow_stack, thr->shadow_stack_pos - thr->shadow_stack));
-  if (pc != 0)
+  if (pc != 0) {
     thr->shadow_stack_pos--;
+    DPrintf("#%d: FuncExit %p\n", (int)thr->fast_state.tid(), (void*)thr->shadow_stack_pos[0]);
+    RVSaveMetaEvent(FINISH_METHOD, thr->shadow_stack_pos[0]);
+  }
   return id;
 }
 
@@ -1182,6 +1184,7 @@ void FuncEntry(ThreadState *thr, uptr pc) {
     GrowShadowStack(thr);
 #endif
   RVSaveMetaEvent(INVOKE_METHOD, pc);
+  DPrintf("#%d: FuncEntry %p\n", (int)thr->fast_state.tid(), (void*)pc);
   thr->shadow_stack_pos[0] = pc;
   thr->shadow_stack_pos++;
 }
@@ -1200,6 +1203,7 @@ void FuncExit(ThreadState *thr) {
   DCHECK_LT(thr->shadow_stack_pos, thr->shadow_stack_end);
 #endif
   thr->shadow_stack_pos--;
+  DPrintf("#%d: FuncExit %p\n", (int)thr->fast_state.tid(), (void*)thr->shadow_stack_pos[0]);
   RVSaveMetaEvent(FINISH_METHOD, thr->shadow_stack_pos[0]);
 }
 

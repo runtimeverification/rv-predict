@@ -765,9 +765,12 @@ extern "C" int INTERFACE_ATTRIBUTE __cxa_guard_acquire(atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_acquire, g);
   for (;;) {
     u32 cmp = atomic_load(g, memory_order_acquire);
+    RVMemoryAccess(thr, pc, (uptr) g, 4, false, true);
     if (cmp == 0) {
-      if (atomic_compare_exchange_strong(g, &cmp, 1<<16, memory_order_relaxed))
+      if (atomic_compare_exchange_strong(g, &cmp, 1<<16, memory_order_relaxed)) {
+        RVMemoryAccess(thr, pc, (uptr) g, 4, true, true);
         return 1;
+      }
     } else if (cmp == 1) {
       Acquire(thr, pc, (uptr)g);
       return 0;
@@ -781,11 +784,13 @@ extern "C" void INTERFACE_ATTRIBUTE __cxa_guard_release(atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_release, g);
   Release(thr, pc, (uptr)g);
   atomic_store(g, 1, memory_order_release);
+  RVMemoryAccess(thr, pc, (uptr) g, 4, true, true);
 }
 
 extern "C" void INTERFACE_ATTRIBUTE __cxa_guard_abort(atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_abort, g);
   atomic_store(g, 0, memory_order_relaxed);
+  RVMemoryAccess(thr, pc, (uptr) g, 4, true, true);
 }
 
 static void thread_finalize(void *v) {

@@ -294,7 +294,7 @@ void RVEventFile(u64 tid, u64 id, u64 addr,
     val = 0;
   }
   if ((type == PRE_LOCK || type == ATOMIC_LOCK || type == ATOMIC_UNLOCK ||
-      (type >= WRITE_LOCK && type <= WAIT_ACQ)
+      isMonitorSynchronized(type)
       ) && varId >= 1LL << 32) {
     varId = varId >> 32;
   }
@@ -302,7 +302,7 @@ void RVEventFile(u64 tid, u64 id, u64 addr,
     varId = (ATOMIC_LOCK_C << 32) | (varId & 0xFFFFFFFFULL);
     type = type == ATOMIC_LOCK ? WRITE_LOCK : WRITE_UNLOCK;
   }
-  if (type >= WRITE_LOCK && type <= WAIT_ACQ) {
+  if (isMonitorSynchronized(type)) {
     varId = (MONITOR_C << 32) | (varId & 0xFFFFFFFFULL);
   }
   WriteNum(fd, gid);

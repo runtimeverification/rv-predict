@@ -765,10 +765,10 @@ extern "C" int INTERFACE_ATTRIBUTE __cxa_guard_acquire(atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_acquire, g);
   for (;;) {
     u32 cmp = atomic_load(g, memory_order_acquire);
-    RVMemoryAccess(thr, pc, (uptr) g, 4, false, true);
+    RVAcquire(thr, pc, (uptr) g);
     if (cmp == 0) {
       if (atomic_compare_exchange_strong(g, &cmp, 1<<16, memory_order_relaxed)) {
-        RVMemoryAccess(thr, pc, (uptr) g, 4, true, true);
+        RVRelease(thr, pc, (uptr) g);
         return 1;
       }
     } else if (cmp == 1) {
@@ -782,15 +782,14 @@ extern "C" int INTERFACE_ATTRIBUTE __cxa_guard_acquire(atomic_uint32_t *g) {
 
 extern "C" void INTERFACE_ATTRIBUTE __cxa_guard_release(atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_release, g);
-  Release(thr, pc, (uptr)g);
   atomic_store(g, 1, memory_order_release);
-  RVMemoryAccess(thr, pc, (uptr) g, 4, true, true);
+  RVRelease(thr, pc, (uptr)g);
 }
 
 extern "C" void INTERFACE_ATTRIBUTE __cxa_guard_abort(atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_abort, g);
   atomic_store(g, 0, memory_order_relaxed);
-  RVMemoryAccess(thr, pc, (uptr) g, 4, true, true);
+  RVRelease(thr, pc, (uptr) g);
 }
 
 static void thread_finalize(void *v) {
@@ -1257,14 +1256,14 @@ TSAN_INTERCEPTOR(int, pthread_barrier_destroy, void *b) {
 
 TSAN_INTERCEPTOR(int, pthread_barrier_wait, void *b) {
   SCOPED_TSAN_INTERCEPTOR(pthread_barrier_wait, b);
-  RVMemoryAccess(thr, pc, (uptr) b, 4, true, true);
+  RVRelease(thr, pc, (uptr) b);
   RVSaveLockEvent(WRITE_LOCK, thr, (uptr) b);
   RVSaveLockEvent(WAIT_REL, thr, (uptr) b);
   int res = REAL(pthread_barrier_wait)(b);
   RVSaveLockEvent(WAIT_ACQ, thr, (uptr) b);
   RVSaveLockEvent(WRITE_UNLOCK, thr, (uptr) b);
   if (res == 0 || res == PTHREAD_BARRIER_SERIAL_THREAD) {
-    RVMemoryAccess(thr, pc, (uptr) b, 4, false, true);
+    RVAcquire(thr, pc, (uptr) b);
   }
   return res;
 }

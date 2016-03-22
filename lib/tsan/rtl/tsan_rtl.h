@@ -694,6 +694,8 @@ void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr, uptr size, uptr pc, 
 void RVReadInteger(uptr addr, uptr size, uptr pc);
 void RVWriteInteger(uptr addr, uptr size, uptr pc, void* val);
 void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type);
+void RVAcquire(ThreadState *thr, uptr pc, uptr addr);
+void RVRelease(ThreadState *thr, uptr pc, uptr addr);
 
 void ALWAYS_INLINE RVLog(RVEventType type, uptr id, uptr addr, u64 val1, u64 val2) {
   ThreadState *thr = cur_thread();

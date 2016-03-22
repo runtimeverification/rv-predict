@@ -165,7 +165,7 @@ void FdAcquire(ThreadState *thr, uptr pc, int fd) {
   DPrintf("#%d: FdAcquire(%d) -> %p\n", thr->tid, fd, s);
   MemoryRead(thr, pc, (uptr)d, kSizeLog8);
   if (s)
-    Acquire(thr, pc, (uptr)s);
+    RVAcquire(thr, pc, (uptr)s);
 }
 
 void FdRelease(ThreadState *thr, uptr pc, int fd) {
@@ -176,7 +176,7 @@ void FdRelease(ThreadState *thr, uptr pc, int fd) {
   DPrintf("#%d: FdRelease(%d) -> %p\n", thr->tid, fd, s);
   MemoryRead(thr, pc, (uptr)d, kSizeLog8);
   if (s)
-    Release(thr, pc, (uptr)s);
+    RVRelease(thr, pc, (uptr)s);
 }
 
 void FdAccess(ThreadState *thr, uptr pc, int fd) {

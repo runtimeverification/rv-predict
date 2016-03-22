@@ -356,6 +356,10 @@ void MutexRepair(ThreadState *thr, uptr pc, uptr addr) {
   s->mtx.Unlock();
 }
 
+void RVAcquire(ThreadState *thr, uptr pc, uptr addr) {
+  RVMemoryAccess(thr, pc, addr, 1, false, true);
+}
+
 void Acquire(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: Acquire %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
@@ -381,6 +385,10 @@ void AcquireGlobal(ThreadState *thr, uptr pc) {
   ThreadRegistryLock l(ctx->thread_registry);
   ctx->thread_registry->RunCallbackForEachThreadLocked(
       UpdateClockCallback, thr);
+}
+
+void RVRelease(ThreadState *thr, uptr pc, uptr addr) {
+  RVMemoryAccess(thr, pc, addr, 1, true, true);
 }
 
 void Release(ThreadState *thr, uptr pc, uptr addr) {

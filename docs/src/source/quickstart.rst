@@ -12,7 +12,8 @@ Second, ``$ rv-predict-execute ./a.out`` performs and offline data race analysis
     rv-predict-c-compile file.c
     rv-predict-execute ./a.out
 
-For c++ programs, just use ``rv-predict-c++-compile file.cpp`` as shown below.
+For c++ programs, just use ``rv-predict-c++-compile file.cpp`` as shown below:
+
 .. code-block:: none
 
     rv-predict-c++-compile file.c

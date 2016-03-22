@@ -684,6 +684,7 @@ enum RVEventType {
  };
 
 bool ALWAYS_INLINE isMonitorSynchronized (RVEventType type) { return (type >= WRITE_LOCK && type <= WAIT_ACQ); }
+bool ALWAYS_INLINE isReadSync (RVEventType type) { return (type == READ_LOCK || type <= READ_UNLOCK); }
 
 #define ATOMIC_LOCK_C 43ULL
 #define MONITOR_C 42ULL

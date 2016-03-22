@@ -282,7 +282,7 @@ void FdSocketAccept(ThreadState *thr, uptr pc, int fd, int newfd) {
   if (bogusfd(fd))
     return;
   // Synchronize connect->accept.
-  Acquire(thr, pc, (uptr)&fdctx.connectsync);
+  RVAcquire(thr, pc, (uptr)&fdctx.connectsync);
   init(thr, pc, newfd, &fdctx.socksync);
 }
 
@@ -291,7 +291,7 @@ void FdSocketConnecting(ThreadState *thr, uptr pc, int fd) {
   if (bogusfd(fd))
     return;
   // Synchronize connect->accept.
-  Release(thr, pc, (uptr)&fdctx.connectsync);
+  RVRelease(thr, pc, (uptr)&fdctx.connectsync);
 }
 
 void FdSocketConnect(ThreadState *thr, uptr pc, int fd) {

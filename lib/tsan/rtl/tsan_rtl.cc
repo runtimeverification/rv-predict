@@ -302,7 +302,7 @@ void RVEventFile(u64 tid, u64 id, u64 addr,
     varId = (ATOMIC_LOCK_C << 32) | (varId & 0xFFFFFFFFULL);
     type = type == ATOMIC_LOCK ? WRITE_LOCK : WRITE_UNLOCK;
   }
-  if (isMonitorSynchronized(type)) {
+  if (isMonitorSynchronized(type) && !isReadSync(type)) {
     varId = (MONITOR_C << 32) | (varId & 0xFFFFFFFFULL);
   }
   WriteNum(fd, gid);

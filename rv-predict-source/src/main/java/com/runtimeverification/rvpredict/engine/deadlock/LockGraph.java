@@ -83,18 +83,15 @@ public class LockGraph {
         return lockSet;
     }
 
-    public LockGraph makeCopy() {
-        LockGraph ret = new LockGraph(this.config, this.metadata);
-        ret.getLockSet().putAll(this.getLockSet());
-        ret.getLockEvents().putAll(this.getLockEvents());
-
-        for(Pair<Long, Long> edge: eventEdges.keySet()) {
+    public LockGraph copy() {
+        LockGraph ret = new LockGraph(config, metadata);
+        ret.lockSet.putAll(getLockSet());
+        ret.lockEvents.putAll(getLockEvents());
+        for (Pair<Long, Long> edge: eventEdges.keySet()) {
             ret.addEdge(edge.getLeft(), edge.getRight());
         }
-
         return ret;
     }
-
 
     /**
      * Computes cycles in the lock acquisition graph as lists of edges between
@@ -105,7 +102,7 @@ public class LockGraph {
         getCycles().forEach(this::reportDeadlock);
     }
 
-    public void addEdge(Long l1, Long l2) {
+    private void addEdge(Long l1, Long l2) {
         sccGraph.addEdge(l1,l2);
         eventEdges.put(Pair.of(l1,l2),Pair.of(lockEvents.get(l1), lockEvents.get(l2)));
     }

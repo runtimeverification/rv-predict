@@ -17,14 +17,8 @@ public class LLVMTraceCache extends TraceCache {
     private final Metadata metadata;
     private final String pid;
 
-    public LLVMTraceCache(Configuration config, Metadata metadata) {
-        super(config, metadata);
-        this.metadata = metadata;
-        this.pid = "";
-    }
-
-    public LLVMTraceCache(Configuration config, Metadata metadata, String pid, ForkState savedState) {
-        super(config, metadata, savedState);
+    public LLVMTraceCache(Configuration config, Metadata metadata, String pid, ForkPoint forkPoint) {
+        super(config, metadata, forkPoint);
         this.metadata = metadata;
         this.pid = pid;
     }

@@ -392,7 +392,7 @@ public class Trace {
                         isInsideClinit = state.isInsideClassInitializer(tid);
                     }
                 } else if (event.isFork()) {
-                    state.getForks().put(event.getPID(), new ForkState(this.state, event.getGID()));
+                    state.addForkPoint(event.getPID(), new ForkPoint(this.state, event.getGID()));
                 } else {
                     throw new IllegalStateException();
                 }

@@ -34,9 +34,12 @@ public class TraceCache {
         this.crntState = new TraceState(config, metadata);
     }
 
-    public TraceCache(Configuration config, Metadata metadata, ForkState savedState) {
+    public TraceCache(Configuration config, Metadata metadata, ForkPoint forkPoint) {
         this.config = config;
-        this.crntState = savedState.getCrntState();
+        if(forkPoint != null)
+            this.crntState = forkPoint.getTraceState();
+        else
+            this.crntState = new TraceState(config, metadata);
     }
 
     public TraceState getCrntState() {
@@ -54,8 +57,8 @@ public class TraceCache {
         }
     }
 
-    public Map<Long, ForkState> getForks() {
-        return this.crntState.getForks();
+    public Map<Long, ForkPoint> getForks() {
+        return this.crntState.getPidToForkPoint();
     }
 
     /**

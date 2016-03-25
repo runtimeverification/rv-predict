@@ -1,13 +1,6 @@
 package com.runtimeverification.rvpredict.trace;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import com.runtimeverification.rvpredict.engine.deadlock.LockGraph;
 import org.apache.commons.collections4.map.HashedMap;
@@ -44,10 +37,10 @@ public class TraceState {
     /**
      * Map from (thread ID, lock ID) to lock state.
      */
-    public final Table<Long, Long, LockState> tidToLockIdToLockState = HashBasedTable.create(
+    private final Table<Long, Long, LockState> tidToLockIdToLockState = HashBasedTable.create(
             DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_LOCKS);
 
-    private LockGraph lockGraph;
+    private final LockGraph lockGraph;
 
     private final Configuration config;
 
@@ -67,13 +60,13 @@ public class TraceState {
 
     private final Set<Event> t_clinitEvents;
 
-    private Map<Long, ForkState> forks;
-
-    public LockGraph getLockGraph() {
-        return lockGraph;
-    }
+    private final Map<Long, ForkPoint> pidToForkPoint;
 
     public TraceState(Configuration config, Metadata metadata) {
+        this(config, metadata, new LockGraph(config, metadata));
+    }
+
+    public TraceState(Configuration config, Metadata metadata, LockGraph lockGraph) {
         this.config = config;
         this.metadata = metadata;
         this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
@@ -81,20 +74,19 @@ public class TraceState {
         this.t_tidToThreadState        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_addrToState             = new MemoryAddrToStateMap(config.windowSize);
         this.t_tidToAddrToEvents       = HashBasedTable.create(DEFAULT_NUM_OF_THREADS,
-                                            DEFAULT_NUM_OF_ADDR);
+                DEFAULT_NUM_OF_ADDR);
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
-        this.forks                     = new HashedMap<>();
-        this.lockGraph                 = new LockGraph(config, metadata);
-    }
-
-    public TraceState(Configuration config, Metadata metadata, LockGraph lockGraph) {
-        this(config, metadata);
+        this.pidToForkPoint            = new HashMap<>();
         this.lockGraph                 = lockGraph;
     }
 
     public ThreadIDToObjectMap<Deque<Event>> getTidToStacktrace() {
         return tidToStacktrace;
+    }
+
+    public Table<Long, Long, LockState> getTidToLockIdToLockState() {
+        return tidToLockIdToLockState;
     }
 
     public Configuration config() {
@@ -158,8 +150,8 @@ public class TraceState {
             if (locId != event.getLocId()) {
                 throw new IllegalStateException("Unmatched method entry/exit events!" +
                         (Configuration.debug ?
-                                "\n\tENTRY:" + metadata.getLocationSig(locId) +
-                                        "\n\tEXIT:" + metadata.getLocationSig(event.getLocId()) : ""));
+                        "\n\tENTRY:" + metadata.getLocationSig(locId) +
+                        "\n\tEXIT:" + metadata.getLocationSig(event.getLocId()) : ""));
             }
             break;
         default:
@@ -185,19 +177,8 @@ public class TraceState {
         return new ThreadState(stacktrace, lockStates);
     }
 
-    public TraceState makeCopy() {
-        TraceState ret = new TraceState(this.config, this.metadata, lockGraph.makeCopy());
-        LongToObjectMap.EntryIterator it = getTidToStacktrace().iterator();
-        while (it.hasNext()) {
-            ret.getTidToStacktrace().put(it.getNextKey(), new ArrayDeque<>((Deque) it.getNextValue()));
-            it.incCursor();
-        }
-
-        for (Table.Cell<Long, Long, LockState> cell : tidToLockIdToLockState.cellSet()) {
-            ret.tidToLockIdToLockState.put(cell.getRowKey(), cell.getColumnKey(), cell.getValue().copy());
-        }
-
-        return ret;
+    public LockGraph getLockGraph() {
+        return lockGraph;
     }
 
     /**
@@ -222,7 +203,7 @@ public class TraceState {
             } else if (event.isStart()) {
                 updateThreadLocToUserLoc(event);
             } else if (event.isFork()) {
-                forks.put(event.getPID(), new ForkState(this, event.getGID()));
+                addForkPoint(event.getPID(), new ForkPoint(this, event.getGID()));
             }
             if (event.isPreLock() || event.isLock() || event.isUnlock()) {
                 if (config().isLLVMPrediction()) {
@@ -278,7 +259,11 @@ public class TraceState {
         return -1;
     }
 
-    public Map<Long, ForkState> getForks() {
-        return forks;
+    public Map<Long, ForkPoint> getPidToForkPoint() {
+        return pidToForkPoint;
+    }
+
+    public void addForkPoint(long PID, ForkPoint forkPoint) {
+        pidToForkPoint.put(PID, forkPoint);
     }
 }

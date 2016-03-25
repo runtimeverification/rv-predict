@@ -40,7 +40,7 @@ import java.util.Map;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.trace.ForkState;
+import com.runtimeverification.rvpredict.trace.ForkPoint;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
@@ -63,7 +63,7 @@ public class RVPredict {
         this.config = config;
         if (config.isLLVMPrediction()) {
             metadata = Metadata.singleton();
-            traceCache = new LLVMTraceCache(config, metadata);
+            traceCache = new LLVMTraceCache(config, metadata, "", null);
         } else {
             this.metadata = Metadata.readFrom(config.getMetadataPath());
             traceCache = new TraceCache(config, metadata);
@@ -71,42 +71,33 @@ public class RVPredict {
         this.detector = new RaceDetector(config);
     }
 
-    private void run(String pid, ForkState forkState) {
-        TraceCache p_traceCache = new LLVMTraceCache(config, metadata, pid, forkState);
-        long fromIndex = forkState.getFromIndex();
+    private void run(String pid, ForkPoint forkPoint) {
+        TraceCache forkTraceCache = new LLVMTraceCache(config, metadata, pid, forkPoint);
+        long fromIndex = forkPoint.getFromIndex();
         try {
-            p_traceCache.setup();
-
+            forkTraceCache.setup();
             Trace trace;
-            while(true) {
-                if ((trace = p_traceCache.getTrace(fromIndex)) != null) {
+            while (true) {
+                if ((trace = forkTraceCache.getTrace(fromIndex)) != null) {
                     fromIndex += config.windowSize;
                     detector.run(trace);
                 } else {
                     break;
                 }
             }
-            Map<Long, ForkState> forks = p_traceCache.getForks();
-
-            this.metadata.setFork();
-
-            for(Map.Entry<Long, ForkState> entry: forks.entrySet()) {
-                run(entry.getKey() + "-", entry.getValue());
-            }
+            metadata.setFork();
+            forkTraceCache.getForks().forEach((k, v) -> run(k + "-", v));
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());
             e.printStackTrace();
             System.exit(1);
         }
-
-        p_traceCache.getCrntState().getLockGraph().runDeadlockDetection();
+        forkTraceCache.getCrntState().getLockGraph().runDeadlockDetection();
     }
 
     public void start() {
-
-        run("", new ForkState(traceCache.getCrntState(), 0));
-
+        run("", new ForkPoint(traceCache.getCrntState(), 0));
         List<String> reports = detector.getRaceReports();
         if (reports.isEmpty()) {
             config.logger().report("No races found.", Logger.MSGTYPE.INFO);

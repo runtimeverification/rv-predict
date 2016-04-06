@@ -1,1 +1,2 @@
-Potential deadlock detected: \{\{\{(.*)Cycle in lock acquisition graph: M1 \(WriteLock@1\) => M2 \(WriteLock@2\) => M1(.*)M2 acquired while holding M1(.*)---->  at fn:main;file:5-deadlock\.c;line:10(.*)- locked M1 at fn:main;file:5-deadlock\.c;line:19(.*)M1 acquired while holding M2(.*)---->  at fn:main;file:5-deadlock\.c;line:16(.*)- locked M2 at fn:main;file:5-deadlock\.c;line:15(.*)\}\}\}
+Potential deadlock detected: \{\{\{(.*)Cycle in lock acquisition graph: M1 \(WriteLock@1\) => M2 \(WriteLock@2\) => M1(.*)M2 acquired while holding M1(.*)---->  at main 5-deadlock\.c:10(.*)- locked M1 at main 5-deadlock\.c:9(.*)M1 acquired while holding M2(.*)---->  at main 5-deadlock\.c:16(.*)- locked M2 at main 5-deadlock\.c:15(.*)\}\}\}
+

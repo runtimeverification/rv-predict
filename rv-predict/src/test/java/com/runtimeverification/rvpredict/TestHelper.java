@@ -99,6 +99,8 @@ public class TestHelper {
                                 + " but received " + returnCode + ".\n"
                                 + output);
                     } else {
+                        extractDeadlockReports(output).forEach(report ->
+                                expectedPatterns.removeIf(p -> p.matcher(report).matches()));
                         extractRaceReports(output).forEach(report ->
                             expectedPatterns.removeIf(p -> p.matcher(report).matches()));
                     }
@@ -115,20 +117,28 @@ public class TestHelper {
         return numOfDoneTasks;
     }
 
+    private static List<String> extractDeadlockReports(String output) {
+        return extractReport(output, "Potential deadlock detected: ", "No deadlocks found");
+    }
+
     private static List<String> extractRaceReports(String output) {
+        return extractReport(output, "Data race on ", "No races found");
+    }
+
+    private static List<String> extractReport(String from, String init, String alternative) {
         List<String> result = new ArrayList<>();
         int fromIdx = 0;
         while (true) {
-            int posStartAnchor = output.indexOf("Data race on ", fromIdx);
+            int posStartAnchor = from.indexOf(init, fromIdx);
             if (posStartAnchor < 0) {
                 break;
             }
-            int posEndAnchor = output.indexOf("}}}", posStartAnchor) + "}}}".length();
-            result.add(output.substring(posStartAnchor, posEndAnchor));
+            int posEndAnchor = from.indexOf("}}}", posStartAnchor) + "}}}".length();
+            result.add(from.substring(posStartAnchor, posEndAnchor));
             fromIdx = posEndAnchor + 1;
         }
         if (result.isEmpty()) {
-            result.add("No races found");
+            result.add(alternative);
         }
         return result;
     }

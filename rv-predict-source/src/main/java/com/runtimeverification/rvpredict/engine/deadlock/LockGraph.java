@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.engine.deadlock;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
 import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
@@ -44,6 +45,8 @@ public class LockGraph {
      */
     public void handle(Event event) {
         assert event.isPreLock() || event.isLock() || event.isUnlock();
+        if (event.getType() == EventType.WAIT_ACQ || event.getType() == EventType.WAIT_REL)
+            return;
         long lockId = event.getLockId();
         long tid = event.getTID();
         Set<Long> locks = lockSet.get(tid);

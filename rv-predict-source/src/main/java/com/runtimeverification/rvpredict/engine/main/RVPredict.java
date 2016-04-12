@@ -59,15 +59,17 @@ public class RVPredict {
     final Metadata metadata;
     final RaceDetector detector;
 
+    Metadata initMetadata() {
+        return Metadata.readFrom(config.getMetadataPath());
+    }
+    TraceCache initTraceCache() {
+        return new TraceCache(config, metadata);
+    }
+
     public RVPredict(Configuration config) {
         this.config = config;
-        if (config.isLLVMPrediction()) {
-            metadata = Metadata.singleton();
-            traceCache = new LLVMTraceCache(config, metadata, "", null);
-        } else {
-            this.metadata = Metadata.readFrom(config.getMetadataPath());
-            traceCache = new TraceCache(config, metadata);
-        }
+        metadata = initMetadata();
+        traceCache = initTraceCache();
         this.detector = new RaceDetector(config);
     }
 

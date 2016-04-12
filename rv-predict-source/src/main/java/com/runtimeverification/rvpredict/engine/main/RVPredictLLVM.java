@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.engine.main;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.ForkPoint;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -17,6 +18,16 @@ import java.util.List;
  * @author EricPtS
  */
 public class RVPredictLLVM extends RVPredict {
+
+    @Override
+    Metadata initMetadata() {
+        return Metadata.singleton();
+    }
+
+    @Override
+    TraceCache initTraceCache() {
+        return new LLVMTraceCache(config, metadata, "", null);
+    }
 
     RVPredictLLVM(Configuration config) {
         super(config);

@@ -54,10 +54,10 @@ import com.runtimeverification.rvpredict.util.Logger;
  */
 public class RVPredict {
 
-    private final Configuration config;
-    private final TraceCache traceCache;
-    private final Metadata metadata;
-    private final RaceDetector detector;
+    final Configuration config;
+    final TraceCache traceCache;
+    final Metadata metadata;
+    final RaceDetector detector;
 
     public RVPredict(Configuration config) {
         this.config = config;
@@ -71,38 +71,33 @@ public class RVPredict {
         this.detector = new RaceDetector(config);
     }
 
-    private void run(String pid, ForkPoint forkPoint) {
-        TraceCache forkTraceCache = new LLVMTraceCache(config, metadata, pid, forkPoint);
-        long fromIndex = forkPoint.getFromIndex();
+    public void start() {
         try {
-            forkTraceCache.setup();
+            traceCache.setup();
+            long fromIndex = 0;
+            // process the trace window by window
             Trace trace;
             while (true) {
-                if ((trace = forkTraceCache.getTrace(fromIndex)) != null) {
+                if ((trace = traceCache.getTrace(fromIndex)) != null) {
                     fromIndex += config.windowSize;
                     detector.run(trace);
                 } else {
                     break;
                 }
             }
-            metadata.setFork();
-            forkTraceCache.getForks().forEach((k, v) -> run(k + "-", v));
+
+            List<String> reports = detector.getRaceReports();
+            if (reports.isEmpty()) {
+                config.logger().report("No races found.", Logger.MSGTYPE.INFO);
+            } else {
+                reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
+            }
+            traceCache.getCrntState().getLockGraph().runDeadlockDetection();
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());
             e.printStackTrace();
             System.exit(1);
-        }
-        forkTraceCache.getCrntState().getLockGraph().runDeadlockDetection();
-    }
-
-    public void start() {
-        run("", new ForkPoint(traceCache.getCrntState(), 0));
-        List<String> reports = detector.getRaceReports();
-        if (reports.isEmpty()) {
-            config.logger().report("No races found.", Logger.MSGTYPE.INFO);
-        } else {
-            reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
         }
     }
 

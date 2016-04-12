@@ -15,6 +15,7 @@
 #include "sanitizer_thread_registry.h"
 
 namespace __sanitizer {
+typedef GenericScopedLock<MemoryBlockingMutex> MemoryBlockingMutexLock;
 
 ThreadContextBase::ThreadContextBase(u32 tid)
     : tid(tid), unique_id(0), reuse_count(), os_id(0), user_id(0),
@@ -107,20 +108,20 @@ ThreadRegistry::ThreadRegistry(ThreadContextFactory factory, u32 max_threads,
 
 void ThreadRegistry::GetNumberOfThreads(uptr *total, uptr *running,
                                         uptr *alive) {
-  BlockingMutexLock l(&mtx_);
+  MemoryBlockingMutexLock l(&mtx_);
   if (total) *total = n_contexts_;
   if (running) *running = running_threads_;
   if (alive) *alive = alive_threads_;
 }
 
 uptr ThreadRegistry::GetMaxAliveThreads() {
-  BlockingMutexLock l(&mtx_);
+  MemoryBlockingMutexLock l(&mtx_);
   return max_alive_threads_;
 }
 
 u32 ThreadRegistry::CreateThread(uptr user_id, bool detached, u32 parent_tid,
                                  void *arg) {
-  BlockingMutexLock l(&mtx_);
+  MemoryBlockingMutexLock l(&mtx_);
   u32 tid = kUnknownTid;
   ThreadContextBase *tctx = QuarantinePop();
   if (tctx) {
@@ -166,7 +167,7 @@ void ThreadRegistry::RunCallbackForEachThreadLocked(ThreadCallback cb,
 }
 
 u32 ThreadRegistry::FindThread(FindThreadCallback cb, void *arg) {
-  BlockingMutexLock l(&mtx_);
+  MemoryBlockingMutexLock l(&mtx_);
   for (u32 tid = 0; tid < n_contexts_; tid++) {
     ThreadContextBase *tctx = threads_[tid];
     if (tctx != 0 && cb(tctx, arg))
@@ -198,7 +199,7 @@ ThreadContextBase *ThreadRegistry::FindThreadContextByOsIDLocked(uptr os_id) {
 }
 
 void ThreadRegistry::SetThreadName(u32 tid, const char *name) {
-  BlockingMutexLock l(&mtx_);
+  MemoryBlockingMutexLock l(&mtx_);
   CHECK_LT(tid, n_contexts_);
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
@@ -207,7 +208,7 @@ void ThreadRegistry::SetThreadName(u32 tid, const char *name) {
 }
 
 void ThreadRegistry::SetThreadNameByUserId(uptr user_id, const char *name) {
-  BlockingMutexLock l(&mtx_);
+  MemoryBlockingMutexLock l(&mtx_);
   for (u32 tid = 0; tid < n_contexts_; tid++) {
     ThreadContextBase *tctx = threads_[tid];
     if (tctx != 0 && tctx->user_id == user_id &&
@@ -219,7 +220,7 @@ void ThreadRegistry::SetThreadNameByUserId(uptr user_id, const char *name) {
 }
 
 void ThreadRegistry::DetachThread(u32 tid, void *arg) {
-  BlockingMutexLock l(&mtx_);
+  MemoryBlockingMutexLock l(&mtx_);
   CHECK_LT(tid, n_contexts_);
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
@@ -237,7 +238,7 @@ void ThreadRegistry::DetachThread(u32 tid, void *arg) {
 }
 
 void ThreadRegistry::JoinThread(u32 tid, void *arg) {
-  BlockingMutexLock l(&mtx_);
+  MemoryBlockingMutexLock l(&mtx_);
   CHECK_LT(tid, n_contexts_);
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
@@ -250,7 +251,7 @@ void ThreadRegistry::JoinThread(u32 tid, void *arg) {
 }
 
 void ThreadRegistry::FinishThread(u32 tid) {
-  BlockingMutexLock l(&mtx_);
+  MemoryBlockingMutexLock l(&mtx_);
   CHECK_GT(alive_threads_, 0);
   alive_threads_--;
   CHECK_GT(running_threads_, 0);
@@ -267,7 +268,7 @@ void ThreadRegistry::FinishThread(u32 tid) {
 }
 
 void ThreadRegistry::StartThread(u32 tid, uptr os_id, void *arg) {
-  BlockingMutexLock l(&mtx_);
+  MemoryBlockingMutexLock l(&mtx_);
   running_threads_++;
   CHECK_LT(tid, n_contexts_);
   ThreadContextBase *tctx = threads_[tid];

@@ -25,6 +25,7 @@
 #include "hasher.h"
 #include "tsan_suppressions.h"
 #include "tsan_symbolize.h"
+#include "tsan_fd.h"
 #include "ubsan/ubsan_init.h"
 
 #ifdef __SSE3__
@@ -87,6 +88,9 @@ const char* RVEventTypes[] = {
   "PRE_LOCK",
   "FORK",
 };
+
+#define OFFSET_STACK 0xFFF0000ULL
+#define    OFFSET_FD 0xFFFFFFFULL
 
 static __RV::RVHash<u64, u64> idToLocId;
 static __RV::RVHash<u64, u64> addrToVarId;
@@ -168,6 +172,123 @@ void RVWriteInteger(uptr addr, uptr size, uptr pc, void* val) {
     RVSaveMemAccEvent(WRITE, (uptr)((u8*)addr +i), p[i], pc);
 }
 
+char*
+AddStackInfo (bool is_stack, int tid, u64 addr, int& offset) {
+  char* rvbuff = (char*) ((internal_alloc(MBlockString, 90)));
+  internal_snprintf(rvbuff, 90, "%s memory created by thread %d at %p",
+                    is_stack ? "stack" : "thread local", tid, addr);
+  offset = OFFSET_STACK | (tid & 0xFFFF);
+  return rvbuff;
+}
+
+/**
+ * This function computes the appropriate symbolic identifier for a memory
+ * location specified by {@code addr}.
+ * If the location is new, a new symbolic identifier is created and its
+ * metadata is recorded in the ffile specified by {@code varfd}.
+ *
+ * Most of the code here is taken and slightly adapted from
+ * {@link ScopedReport::AddLocation(uptr , uptr)}
+ * defined in {@link tsan_rtl_report.cc}
+ */
+u64
+retrieveVarId (u64 addr, fd_t varfd, RVEventType type) {
+  bool locked = ctx->thread_registry->LockIfNotLocked();
+  int offset = -1;
+  char* rvbuff = 0;
+  u64 varId = addrToVarId.count(addr);
+  if (varId) {
+    varId = addrToVarId.get(addr);
+    if ((varId & OFFSET_STACK) == OFFSET_STACK) {
+      DPrintf("Found address of stack variable %p (varId:%lld, thread:%lld)\n",
+             addr, varId >> 32, varId && 0xFFFF);
+      bool is_stack = false;
+      if (ThreadContext *tctx = IsThreadStackOrTls(addr, &is_stack)) {
+        if ((varId & 0xFFFF) != tctx->tid) {
+          rvbuff = AddStackInfo(is_stack, tctx->tid, addr, offset);
+          addrToVarId.erase(addr);
+          DPrintf("Replacing info for %p...\n", addr);
+        }
+      }
+    }
+  }
+  if (!varId || rvbuff) {
+    SpinMutexLock lock(&varInsert);
+    if (rvbuff || !addrToVarId.count(addr)) {
+      varId = atomic_fetch_add(&nextVarId, 1, memory_order_relaxed);
+      if (!rvbuff) {
+        int fd = -1;
+        int creat_tid = -1;
+        u32 creat_stack = 0;
+        if (FdLocation(addr, &fd, &creat_tid, &creat_stack)) {
+          DPrintf("retrieveVarId %p: File descriptor %d from thread %d\n",
+                 addr, loc->fd, loc->tid);
+          rvbuff = (char*) (internal_alloc(MBlockString, 110));
+          internal_snprintf(rvbuff, 110,
+                            "file descriptor '%d' created by thread %d at %p",
+                            fd, creat_tid, addr);
+          offset = OFFSET_FD;
+        } else {
+          MBlock *b = 0;
+          Allocator *a = allocator();
+          if (a->PointerIsMine((void*)addr)) {
+            void *block_begin = a->GetBlockBegin((void*)addr);
+            if (block_begin)
+              b = ctx->metamap.GetBlock((uptr)block_begin);
+          }
+          if (b != 0) {
+            ThreadContext *tctx = FindThreadByTidLocked(b->tid);
+            uptr heap_chunk_start = (uptr)allocator()->GetBlockBegin((void *)addr);
+            int tid = tctx ? tctx->tid : b->tid;
+            rvbuff = (char*) (internal_alloc(MBlockString, 160));
+            offset = addr - heap_chunk_start;
+            internal_snprintf(rvbuff, 160,
+                              "heap memory of size %d allocated by thread %d at %p (%p + %lld)",
+                              b->siz, tid, addr, heap_chunk_start, offset);
+          } else {
+            bool is_stack = false;
+            if (ThreadContext *tctx = IsThreadStackOrTls(addr, &is_stack)) {
+              rvbuff = AddStackInfo(is_stack, tctx->tid, addr, offset);
+            }
+            if (ReportLocation *location = SymbolizeData(addr)) {
+              const DataInfo& global = location->global;
+              const char* module = StripModuleName(global.module);
+              int size = (global.name ? internal_strlen(global.name) : 10)
+                        + (module ? internal_strlen(module) : 10) + 100;
+              if (rvbuff) {
+                internal_free(rvbuff);
+              }
+              rvbuff = (char*) (internal_alloc(MBlockString, size));
+              internal_snprintf(rvbuff, size,
+                                "global '%s' of size %zu at %p (%s + %p)",
+                                global.name, global.size, global.start, module,
+                                global.module_offset);
+              offset = global.module_offset - global.start;
+            }
+          }
+        }
+      }
+      if (rvbuff) {
+        WriteNum(varfd, varId);
+        WriteStr(varfd, rvbuff);
+        internal_free(rvbuff);
+        if ((type == READ || type == WRITE) && offset >= 0) {
+          varId = varId << 32LL | (u64) offset;
+        }
+        DPrintf("<addr:%p;varId:%lld;offset:%lld;desc:%s>\n", addr, varId,
+                (u64) (offset), rvbuff);
+      }
+      DPrintf("addr %p => varId %lld\n", addr, varId);
+      addrToVarId.insert(addr, varId);
+    }
+  }
+  varId = addrToVarId.get(addr);
+  if (locked) {
+    ctx->thread_registry->Unlock();
+  }
+  return varId;
+}
+
 void RVEventFile(u64 tid, u64 id, u64 addr,
                        u64 val, RVEventType type) {
   ThreadState *thr = cur_thread();
@@ -245,44 +366,7 @@ void RVEventFile(u64 tid, u64 id, u64 addr,
 
   DPrintf("Id %lld => locId %lld\n", id, locId);
 
-  u64 varId = addrToVarId.count(addr);
-
-  if (!varId) {
-    SpinMutexLock lock(&varInsert);
-
-    if(!addrToVarId.count(addr)) {
-
-      varId = atomic_fetch_add(&nextVarId, 1, memory_order_relaxed);
-      ReportLocation *location = SymbolizeData(addr);
-      if (location) {
-        const DataInfo &global = location->global;
-
-        const char* module = StripModuleName(global.module);
-        int size = (global.name ? internal_strlen(global.name) : 10) + (module ? internal_strlen(module) : 10) + 100;
-        char* rvbuff = (char*) internal_alloc(MBlockString, size);
-        internal_snprintf(rvbuff, size, "global '%s' of size %zu at %p (%s + %p)", global.name, global.size, global.start,
-            module, global.module_offset);
-
-        uptr offset = global.module_offset - global.start;
-
-        DPrintf("<varId:%lld;offset:%lld;desc:%s>\n", varId, (u64)offset, rvbuff);
-
-
-        WriteNum(varfd, varId);
-        WriteStr(varfd, rvbuff);
-        internal_free(rvbuff);
-
-        if (type == READ || type == WRITE) {
-          varId = varId << 32LL | offset;
-        }
-      }
-      addrToVarId.insert(addr, varId);
-    }
-  }
-  varId = addrToVarId.get(addr);
-
-  DPrintf("addr %lld => varId %lld\n", addr, varId);
-
+  u64 varId = retrieveVarId(addr, varfd, type);
   if(type == START) {
     SpinMutexLock lock(&thdInsert);
     WriteNum(thdfd, val);

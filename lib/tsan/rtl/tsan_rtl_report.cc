@@ -212,7 +212,7 @@ static ThreadContext *FindThreadByUidLocked(int unique_id) {
   return 0;
 }
 
-static ThreadContext *FindThreadByTidLocked(int tid) {
+ThreadContext *FindThreadByTidLocked(int tid) {
   ctx->thread_registry->CheckLocked();
   return static_cast<ThreadContext*>(
       ctx->thread_registry->GetThreadLocked(tid));

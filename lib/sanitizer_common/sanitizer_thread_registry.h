@@ -73,6 +73,19 @@ class ThreadContextBase {
 
 typedef ThreadContextBase* (*ThreadContextFactory)(u32 tid);
 
+class MemoryBlockingMutex  {
+ public:
+  MemoryBlockingMutex() : lockingThread_(0), mtx_() {}
+  bool LockIfNotLocked() { if (lockingThread_ != GetTid()) { Lock(); return true;} return false; }
+  void Lock() { mtx_.Lock(); lockingThread_ = GetTid();}
+  void Unlock() { lockingThread_ = 0; mtx_.Unlock(); }
+  void CheckLocked() { mtx_.CheckLocked(); }
+
+ private:
+  uptr lockingThread_;
+  BlockingMutex mtx_;
+};
+
 class ThreadRegistry {
  public:
   static const u32 kUnknownTid;
@@ -82,6 +95,7 @@ class ThreadRegistry {
   void GetNumberOfThreads(uptr *total = 0, uptr *running = 0, uptr *alive = 0);
   uptr GetMaxAliveThreads();
 
+  bool LockIfNotLocked() { return mtx_.LockIfNotLocked(); }
   void Lock() { mtx_.Lock(); }
   void CheckLocked() { mtx_.CheckLocked(); }
   void Unlock() { mtx_.Unlock(); }
@@ -122,7 +136,7 @@ class ThreadRegistry {
   const u32 thread_quarantine_size_;
   const u32 max_reuse_;
 
-  BlockingMutex mtx_;
+  MemoryBlockingMutex mtx_;
 
   u32 n_contexts_;      // Number of created thread contexts,
                         // at most max_threads_.

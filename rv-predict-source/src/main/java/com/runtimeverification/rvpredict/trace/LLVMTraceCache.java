@@ -55,7 +55,7 @@ public class LLVMTraceCache extends TraceCache {
             public void log(Object[] args) {
                 metadata.setVariableSig((Integer)args[0], (String)args[1]);
                 if (((String)args[1]).startsWith("global ")) {
-
+                    metadata.registerGlobal((Integer)args[0]);
                 }
                 System.out.println((String)args[1]);
             }

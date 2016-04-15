@@ -56,6 +56,7 @@ public class RaceDetector implements Constants {
     }
 
     private boolean isThreadSafeLocation(Trace trace, int locId) {
+        if (locId == 0) return true;
         String locationSig = trace.metadata().getLocationSig(locId);
         if (locationSig.startsWith("java.util.concurrent")
             || locationSig.startsWith("java.util.stream")) {

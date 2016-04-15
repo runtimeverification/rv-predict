@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.trace;
 
+import com.google.common.collect.ImmutableList;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LLVMEventReader;
 import com.runtimeverification.rvpredict.metadata.Metadata;
@@ -7,6 +8,7 @@ import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.*;
 import java.nio.file.Path;
+import java.util.Collection;
 
 /**
  * Class reading the trace from an LLVM execution debug log.
@@ -52,6 +54,10 @@ public class LLVMTraceCache extends TraceCache {
             @Override
             public void log(Object[] args) {
                 metadata.setVariableSig((Integer)args[0], (String)args[1]);
+                if (((String)args[1]).startsWith("global ")) {
+
+                }
+                System.out.println((String)args[1]);
             }
         }, new BinaryReader() {
         }, "var");
@@ -103,9 +109,11 @@ public class LLVMTraceCache extends TraceCache {
     public void setup() throws IOException {
         readMetadata();
         int logId = 0;
+        LLVMEventReader.setGlobalVars(metadata.getGlobalVars());
+
         Path path = config.getTraceFilePath(logId);
         while(path.toFile().exists()) {
-            readers.add(new LLVMEventReader(path));
+            readers.add(new LLVMEventReader(logId, path));
             ++logId;
             path = config.getTraceFilePath(logId);
         }

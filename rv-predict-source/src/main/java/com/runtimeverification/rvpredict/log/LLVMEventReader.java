@@ -3,8 +3,9 @@ package com.runtimeverification.rvpredict.log;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collection;
+import java.util.Iterator;
 
-import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.BinaryParser;
 
 /**
@@ -16,19 +17,35 @@ import com.runtimeverification.rvpredict.trace.BinaryParser;
 public class LLVMEventReader implements IEventReader {
 
     private final BinaryParser in;
+    private final int threadIndex;
+    private static Iterator<Integer> globalVarsIterator;
+    private static int currentGlobalVar;
+    private static int globalVarsNo;
 
     private Event lastReadEvent;
 
-    public LLVMEventReader(Path path) throws IOException {
+    public LLVMEventReader(int threadIndex, Path path) throws IOException {
         in = new BinaryParser(path);
+        this.threadIndex = threadIndex;
         readEvent();
+    }
+
+    public static void setGlobalVars(Collection<Integer> globalVars) {
+        LLVMEventReader.globalVarsIterator = globalVars.iterator();
+        globalVarsNo = globalVars.size();
+        currentGlobalVar = 0;
     }
 
     @Override
     public final Event readEvent() throws IOException {
+        if (threadIndex == 0 && globalVarsIterator.hasNext()) {
+            lastReadEvent = new Event(currentGlobalVar, 0, 0, globalVarsIterator.next(), 0, EventType.WRITE);
+            currentGlobalVar++;
+            return lastReadEvent;
+        }
         try {
             lastReadEvent = new Event(
-                    in.readLong(),
+                    in.readLong() + globalVarsNo,
                     in.readLong(),
                     in.readInt(),
                     in.readLong(),

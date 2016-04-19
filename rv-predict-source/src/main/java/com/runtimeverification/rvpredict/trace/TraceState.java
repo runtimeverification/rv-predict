@@ -3,7 +3,6 @@ package com.runtimeverification.rvpredict.trace;
 import java.util.*;
 
 import com.runtimeverification.rvpredict.engine.deadlock.LockGraph;
-import org.apache.commons.collections4.map.HashedMap;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.google.common.collect.HashBasedTable;
@@ -74,7 +73,7 @@ public class TraceState {
         this.t_tidToThreadState        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_addrToState             = new MemoryAddrToStateMap(config.windowSize);
         this.t_tidToAddrToEvents       = HashBasedTable.create(DEFAULT_NUM_OF_THREADS,
-                DEFAULT_NUM_OF_ADDR);
+                                            DEFAULT_NUM_OF_ADDR);
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
         this.pidToForkPoint            = new HashMap<>();

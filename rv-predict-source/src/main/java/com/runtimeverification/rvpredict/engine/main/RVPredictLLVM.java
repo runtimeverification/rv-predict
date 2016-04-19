@@ -7,7 +7,6 @@ import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.util.Logger;
-import com.sun.xml.internal.bind.annotation.OverrideAnnotationOf;
 
 import java.io.IOException;
 import java.util.List;
@@ -17,20 +16,18 @@ import java.util.List;
  * tailored to LLVM's fork scheme
  * @author EricPtS
  */
-public class RVPredictLLVM extends RVPredict {
+public class RVPredictLLVM  {
 
-    @Override
-    Metadata initMetadata() {
-        return Metadata.singleton();
-    }
-
-    @Override
-    TraceCache initTraceCache() {
-        return new LLVMTraceCache(config, metadata, "", null);
-    }
+    final Configuration config;
+    final TraceCache traceCache;
+    final Metadata metadata;
+    final RaceDetector detector;
 
     RVPredictLLVM(Configuration config) {
-        super(config);
+        this.config = config;
+        metadata = Metadata.singleton();
+        traceCache = new LLVMTraceCache(config, metadata, "", null);
+        detector = new RaceDetector(config);
     }
 
     private void run(String pid, ForkPoint forkPoint) {
@@ -58,7 +55,6 @@ public class RVPredictLLVM extends RVPredict {
         forkTraceCache.getCrntState().getLockGraph().runDeadlockDetection();
     }
 
-    @Override
     public void start() {
         run("", new ForkPoint(traceCache.getCrntState(), 0));
         List<String> reports = detector.getRaceReports();

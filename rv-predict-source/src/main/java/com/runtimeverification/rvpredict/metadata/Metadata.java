@@ -34,7 +34,7 @@ public class Metadata implements Serializable {
 
     private final String[] locIdToLocSig = new String[MAX_NUM_OF_LOCATIONS];
 
-    private final List<Integer> globalVars = new ArrayList<>();
+    private final List<Long> globalVars = new ArrayList<>();
 
     private final Set<Integer> volatileVarIds = Collections
             .newSetFromMap(new ConcurrentHashMap<>());
@@ -131,11 +131,11 @@ public class Metadata implements Serializable {
         return info == null ? -1 : info.getRight();
     }
 
-    public void registerGlobal(Integer varId) {
+    public void registerGlobal(Long varId) {
         globalVars.add(varId);
     }
 
-    public ImmutableList<Integer> getGlobalVars() {
+    public ImmutableList<Long> getGlobalVars() {
         return ImmutableList.copyOf(globalVars);
     }
 

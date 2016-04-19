@@ -54,10 +54,6 @@ public class LLVMTraceCache extends TraceCache {
             @Override
             public void log(Object[] args) {
                 metadata.setVariableSig((Integer)args[0], (String)args[1]);
-                if (((String)args[1]).startsWith("global ")) {
-                    metadata.registerGlobal((Integer)args[0]);
-                }
-                System.out.println((String)args[1]);
             }
         }, new BinaryReader() {
         }, "var");
@@ -94,6 +90,25 @@ public class LLVMTraceCache extends TraceCache {
         }, "thd");
     }
 
+    private void parseGlobalsInfo() throws IOException {
+        parseInfo(new MetadataLogger() {
+
+            @Override
+            public void log(Object[] args) {
+                metadata.registerGlobal((long)args[0]);
+
+            }
+        }, new BinaryReader() {
+
+            @Override
+            public Object[] read(BinaryParser in) throws IOException {
+                Object[] args = new Object[1];
+                args[0] = in.readLong();
+                return args;
+            }
+        }, "global");
+    }
+
     private void readMetadata() throws IOException {
         try {
             parseVarInfo();
@@ -101,6 +116,7 @@ public class LLVMTraceCache extends TraceCache {
             config.logger().report("Maximum number of variables allowed (" + metadata.MAX_NUM_OF_VARIABLES +
                     ") exceeded.", Logger.MSGTYPE.ERROR);
         }
+        parseGlobalsInfo();
         parseLocInfo();
         parseThdInfo();
     }

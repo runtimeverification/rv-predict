@@ -18,7 +18,7 @@ public class LLVMEventReader implements IEventReader {
 
     private final BinaryParser in;
     private final int threadIndex;
-    private static Iterator<Integer> globalVarsIterator;
+    private static Iterator<Long> globalVarsIterator;
     private static int currentGlobalVar;
     private static int globalVarsNo;
 
@@ -30,7 +30,7 @@ public class LLVMEventReader implements IEventReader {
         readEvent();
     }
 
-    public static void setGlobalVars(Collection<Integer> globalVars) {
+    public static void setGlobalVars(Collection<Long> globalVars) {
         LLVMEventReader.globalVarsIterator = globalVars.iterator();
         globalVarsNo = globalVars.size();
         currentGlobalVar = 0;
@@ -39,7 +39,7 @@ public class LLVMEventReader implements IEventReader {
     @Override
     public final Event readEvent() throws IOException {
         if (threadIndex == 0 && globalVarsIterator.hasNext()) {
-            lastReadEvent = new Event(currentGlobalVar, 1, 0, (long)globalVarsIterator.next() << 32, 0, EventType.WRITE);
+            lastReadEvent = new Event(currentGlobalVar, 1, 0, globalVarsIterator.next(), 0, EventType.WRITE);
             currentGlobalVar++;
             return lastReadEvent;
         }

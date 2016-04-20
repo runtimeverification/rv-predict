@@ -694,16 +694,21 @@ uptr ALWAYS_INLINE getCallerStackLocation(ThreadState *thr) { return (thr->shado
 void RVSaveMemoryAccessRange(RVEventType RVType, uptr addr, uptr size, uptr pc, bool isAtomic);
 void RVReadInteger(uptr addr, uptr size, uptr pc);
 void RVWriteInteger(uptr addr, uptr size, uptr pc, void* val);
-void RVEventFile(u64 tid, u64 id, u64 addr, u64 val, RVEventType type);
+void RVWriteInteger(uptr addr, uptr size, uptr pc, void* val, bool isAtomic);
+void RVEventFile(u64 gid, u64 tid, u64 id, u64 addr, u64 val, RVEventType type);
 void RVAcquire(ThreadState *thr, uptr pc, uptr addr);
 void RVRelease(ThreadState *thr, uptr pc, uptr addr);
 ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack);
 ThreadContext *FindThreadByTidLocked(int tid);
 
-void ALWAYS_INLINE RVLog(RVEventType type, uptr id, uptr addr, u64 val1, u64 val2) {
+void ALWAYS_INLINE RVLog(u64 gid, RVEventType type, uptr id, uptr addr, u64 val1, u64 val2) {
   ThreadState *thr = cur_thread();
   u64 tid = thr->fast_state.tid();
-  RVEventFile(tid, id, addr, val1, type);
+  RVEventFile(gid, tid, id, addr, val1, type);
+}
+
+void ALWAYS_INLINE RVLog(RVEventType type, uptr id, uptr addr, u64 val1, u64 val2) {
+   RVLog(0, type, id, addr, val1, val2);
 }
 
 void ALWAYS_INLINE RVSaveMetaEvent(RVEventType type, uptr locId){
@@ -718,9 +723,13 @@ void ALWAYS_INLINE RVSaveLockEvent(RVEventType type, ThreadState* thr, uptr lock
   RVLog(type, getCallerStackLocation(thr), lock, 0, 0);
 }
 
-void ALWAYS_INLINE RVSaveMemAccEvent(RVEventType type, uptr addr, u64 val, uptr id) {
+void ALWAYS_INLINE RVSaveMemAccEvent(u64 gid, RVEventType type, uptr addr, u64 val, uptr id) {
   //Printf("%s %llu: %c\n",type == READ ? "READ" : "WRITE",addr, val);
-  RVLog(type, id, addr, val, 0);
+  RVLog(gid, type, id, addr, val, 0);
+}
+
+void ALWAYS_INLINE RVSaveMemAccEvent(RVEventType type, uptr addr, u64 val, uptr id) {
+  RVSaveMemAccEvent(0, type, addr, val, id);
 }
 
 void ALWAYS_INLINE RVMemoryAccess(ThreadState *thr, uptr pc, uptr addr,
@@ -773,12 +782,12 @@ void ALWAYS_INLINE MemoryReadAtomic(ThreadState *thr, uptr pc,
   RVMemoryAccess(thr, pc, addr, kAccessSizeLog, false, true);
 }
 
-void ALWAYS_INLINE RVAtomicLock(uptr addr, uptr pc) {
-  RVLog(ATOMIC_LOCK, pc, -addr, 0, 0);
+void ALWAYS_INLINE RVAtomicLock(u64 gid, uptr addr, uptr pc) {
+  RVLog(gid, ATOMIC_LOCK, pc, -addr, 0, 0);
 }
 
-void ALWAYS_INLINE RVAtomicUnlock(uptr addr, uptr pc) {
-  RVLog(ATOMIC_UNLOCK, pc, -addr, 0, 0);
+void ALWAYS_INLINE RVAtomicUnlock(u64 gid, uptr addr, uptr pc) {
+  RVLog(gid, ATOMIC_UNLOCK, pc, -addr, 0, 0);
 }
 
 void ALWAYS_INLINE RVFork(int pid, uptr pc) {
@@ -788,9 +797,7 @@ void ALWAYS_INLINE RVFork(int pid, uptr pc) {
 
 void ALWAYS_INLINE MemoryWriteAtomic(ThreadState *thr, uptr pc,
                                             uptr addr, int kAccessSizeLog, u64 val) {
-  RVAtomicLock(addr, pc);
-  RVWriteInteger(addr, 1<<kAccessSizeLog, pc, (void*)val);
-  RVAtomicUnlock(addr, pc);
+  RVWriteInteger(addr, 1<<kAccessSizeLog, pc, (void*)val, true);
 }
 
 void MemoryResetRange(ThreadState *thr, uptr pc, uptr addr, uptr size);

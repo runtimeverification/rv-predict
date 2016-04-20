@@ -6,6 +6,8 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Iterator;
 
+import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.BinaryParser;
 
 /**
@@ -55,6 +57,17 @@ public class LLVMEventReader implements IEventReader {
         } catch (EOFException e) {
             lastReadEvent = null;
             throw e;
+        }
+        if (Configuration.debug) {
+            String object = null;
+            if (lastReadEvent.isSyncEvent()) {
+                object = Metadata.singleton().getVariableSig((int)lastReadEvent.getSyncObject());
+            } else if (lastReadEvent.isReadOrWrite()){
+                 object = Metadata.singleton().getVariableSig(lastReadEvent.getObjectHashCode());
+            } else if (lastReadEvent.isStart() || lastReadEvent.isJoin()) {
+                object = "Thread " + lastReadEvent.getSyncedThreadId();
+            }
+            System.out.format("#%d:%d %s%s at %s%n", lastReadEvent.getTID(), lastReadEvent.getGID(), lastReadEvent.getType().toString(), object != null ? " of " + object: "", Metadata.singleton().getLocationSig(lastReadEvent.getLocId()));
         }
         return lastReadEvent;
     }

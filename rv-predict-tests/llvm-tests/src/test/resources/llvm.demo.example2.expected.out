@@ -1,5 +1,6 @@
-Data race on global 'x' of size 4 at 0x0000014aa3e0 \(a\.out \+ 0x0000014aa3e0\): \{\{\{(.*)---->  at MyThread example2\.c:14(.*) ---->  at main example2\.c:25(.*)}}}
+Data race on global 'x' of size 4 at 0x0000014b0448 \(a\.out\): \{\{\{(.*)---->  at MyThread example2\.c:13(.*) ---->  at main example2\.c:24(.*)}}}
 
-Data race on global 'x' of size 4 at 0x0000014aa3e0 \(a\.out \+ 0x0000014aa3e0\): \{\{\{(.*)---->  at MyThread example2\.c:12(.*) ---->  at MyThread example2\.c:14(.*)}}}
+Data race on global 'x' of size 4 at 0x0000014b0448 \(a\.out\): \{\{\{(.*)---->  at MyThread example2\.c:11(.*) ---->  at MyThread example2\.c:13(.*)}}}
 
-Data race on global 'x' of size 4 at 0x0000014aa3e0 \(a\.out \+ 0x0000014aa3e0\): \{\{\{(.*)---->  at MyThread example2\.c:14(.*) ---->  at main example2\.c:23(.*)}}}
+Data race on global 'x' of size 4 at 0x0000014b0448 \(a\.out\): \{\{\{(.*)---->  at MyThread example2\.c:13(.*) ---->  at main example2\.c:22(.*)}}}
+

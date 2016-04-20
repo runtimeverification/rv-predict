@@ -44,7 +44,6 @@ public class RVPredictLLVM  {
                     break;
                 }
             }
-            metadata.setFork();
             forkTraceCache.getForks().forEach((k, v) -> run(k + "-", v));
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");

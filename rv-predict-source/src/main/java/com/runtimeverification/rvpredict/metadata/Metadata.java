@@ -78,7 +78,7 @@ public class Metadata implements Serializable {
         if (varId >= MAX_NUM_OF_VARIABLES) {
             throw new TooManyVariables();
         }
-        assert varIdToVarSig[varId] == null || isFork();
+        assert varIdToVarSig[varId] == null || varIdToVarSig[varId] == sig;
         varIdToVarSig[varId] = sig;
     }
 
@@ -97,7 +97,7 @@ public class Metadata implements Serializable {
     }
 
     public void setLocationSig(int locId, String sig) {
-        assert locIdToLocSig[locId] == null || isFork();
+        assert locIdToLocSig[locId] == null || locIdToLocSig[locId] == sig;
         locIdToLocSig[locId] = sig;
     }
 
@@ -116,14 +116,6 @@ public class Metadata implements Serializable {
     public boolean isVolatile(long addr) {
         int varId = (int) addr;
         return varId < 0 && volatileVarIds.contains(-varId);
-    }
-
-    public boolean isFork() {
-        return this.fork;
-    }
-
-    public void setFork() {
-        fork = true;
     }
 
     public void addThreadCreationInfo(long childTID, long parentTID, int locId) {

@@ -61,8 +61,8 @@ public class RVPredict {
 
     public RVPredict(Configuration config) {
         this.config = config;
-        metadata = initMetadata();
-        traceCache = initTraceCache();
+        metadata = Metadata.readFrom(config.getMetadataPath());
+        traceCache = new TraceCache(config, metadata);
         detector = new RaceDetector(config);
     }
 

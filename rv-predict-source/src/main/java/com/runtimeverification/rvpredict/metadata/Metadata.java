@@ -9,8 +9,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.collect.ImmutableList;
-import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.LZ4Utils;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -131,12 +129,12 @@ public class Metadata implements Serializable {
         return info == null ? -1 : info.getRight();
     }
 
-    public void registerGlobal(Long varId) {
+    public void registerGlobal(long varId) {
         globalVars.add(varId);
     }
 
-    public ImmutableList<Long> getGlobalVars() {
-        return ImmutableList.copyOf(globalVars);
+    public Collection<Long> getGlobalVars() {
+        return globalVars;
     }
 
     /**

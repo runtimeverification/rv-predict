@@ -19,16 +19,16 @@ import com.runtimeverification.rvpredict.trace.BinaryParser;
 public class LLVMEventReader implements IEventReader {
 
     private final BinaryParser in;
-    private final int threadIndex;
+    private final int logId;
     private static Iterator<Long> globalVarsIterator;
     private static int currentGlobalVar;
     private static int globalVarsNo;
 
     private Event lastReadEvent;
 
-    public LLVMEventReader(int threadIndex, Path path) throws IOException {
+    public LLVMEventReader(int logId, Path path) throws IOException {
         in = new BinaryParser(path);
-        this.threadIndex = threadIndex;
+        this.logId = logId;
         readEvent();
     }
 
@@ -40,7 +40,7 @@ public class LLVMEventReader implements IEventReader {
 
     @Override
     public final Event readEvent() throws IOException {
-        if (threadIndex == 0 && globalVarsIterator.hasNext()) {
+        if (logId == 0 && globalVarsIterator.hasNext()) {
             lastReadEvent = new Event(currentGlobalVar, 1, 0, globalVarsIterator.next(), 0, EventType.WRITE);
             currentGlobalVar++;
             return lastReadEvent;

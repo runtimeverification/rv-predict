@@ -41,7 +41,7 @@ public class LLVMEventReader implements IEventReader {
     @Override
     public final Event readEvent() throws IOException {
         if (logId == 0 && globalVarsIterator.hasNext()) {
-            lastReadEvent = new Event(currentGlobalVar, 1, 0, globalVarsIterator.next(), 0, EventType.WRITE);
+            lastReadEvent = new Event(currentGlobalVar, 1, 1, globalVarsIterator.next(), 0, EventType.WRITE);
             currentGlobalVar++;
             return lastReadEvent;
         }

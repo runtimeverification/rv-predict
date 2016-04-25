@@ -42,8 +42,6 @@ public class Metadata implements Serializable {
 
     private static final Metadata instance = new Metadata();
 
-    private boolean fork;
-
     /**
      * Note: This method should be used only in a few places and definitely NOT
      * in offline prediction which should get its {@code Metadata} instance from
@@ -78,7 +76,7 @@ public class Metadata implements Serializable {
         if (varId >= MAX_NUM_OF_VARIABLES) {
             throw new TooManyVariables();
         }
-        assert varIdToVarSig[varId] == null || varIdToVarSig[varId] == sig;
+        assert varIdToVarSig[varId] == null || varIdToVarSig[varId].equals(sig);
         varIdToVarSig[varId] = sig;
     }
 
@@ -97,7 +95,7 @@ public class Metadata implements Serializable {
     }
 
     public void setLocationSig(int locId, String sig) {
-        assert locIdToLocSig[locId] == null || locIdToLocSig[locId] == sig;
+        assert locIdToLocSig[locId] == null || locIdToLocSig[locId].equals(sig);
         locIdToLocSig[locId] = sig;
     }
 

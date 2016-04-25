@@ -135,7 +135,6 @@ public class Metadata implements Serializable {
     }
 
     public List<Long> getGlobalVars() {
-
         return UnmodifiableList.unmodifiableList(globalVars);
     }
 

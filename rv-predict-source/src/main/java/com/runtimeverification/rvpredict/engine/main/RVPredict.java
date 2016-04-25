@@ -54,10 +54,10 @@ import com.runtimeverification.rvpredict.util.Logger;
  */
 public class RVPredict {
 
-    final Configuration config;
-    final TraceCache traceCache;
-    final Metadata metadata;
-    final RaceDetector detector;
+    private final Configuration config;
+    private final TraceCache traceCache;
+    private final Metadata metadata;
+    private final RaceDetector detector;
 
     public RVPredict(Configuration config) {
         this.config = config;

@@ -5,14 +5,12 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.LZ4Utils;
+import org.apache.commons.collections4.list.UnmodifiableList;
 import org.apache.commons.lang3.tuple.Pair;
 
 @SuppressWarnings("serial")
@@ -34,6 +32,8 @@ public class Metadata implements Serializable {
     private final String[] varIdToVarSig = new String[MAX_NUM_OF_VARIABLES];
 
     private final String[] locIdToLocSig = new String[MAX_NUM_OF_LOCATIONS];
+
+    private final List<Long> globalVars = new ArrayList<>();
 
     private final Set<Integer> volatileVarIds = Collections
             .newSetFromMap(new ConcurrentHashMap<>());
@@ -128,6 +128,14 @@ public class Metadata implements Serializable {
     public int getThreadCreationLocId(long tid) {
         Pair<Long, Integer> info = tidToCreationInfo.get(tid);
         return info == null ? -1 : info.getRight();
+    }
+
+    public void registerGlobal(long varId) {
+        globalVars.add(varId);
+    }
+
+    public List<Long> getGlobalVars() {
+        return UnmodifiableList.unmodifiableList(globalVars);
     }
 
     /**

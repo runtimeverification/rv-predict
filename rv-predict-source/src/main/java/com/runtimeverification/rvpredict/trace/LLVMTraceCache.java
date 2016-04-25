@@ -71,14 +71,12 @@ public class LLVMTraceCache extends TraceCache {
 
     private void parseThdInfo() throws IOException {
         parseInfo(new MetadataLogger() {
-
             @Override
             public void log(Object[] args) {
                 metadata.addThreadCreationInfo((long)args[0], (long)args[1], (int)args[2]);
 
             }
         }, new BinaryReader() {
-
             @Override
             public Object[] read(BinaryParser in) throws IOException {
                 Object[] args = new Object[3];
@@ -90,6 +88,22 @@ public class LLVMTraceCache extends TraceCache {
         }, "thd");
     }
 
+    private void parseGlobalsInfo() throws IOException {
+        parseInfo(new MetadataLogger() {
+            @Override
+            public void log(Object[] args) {
+                metadata.registerGlobal((long)args[0]);
+            }
+        }, new BinaryReader() {
+            @Override
+            public Object[] read(BinaryParser in) throws IOException {
+                Object[] args = new Object[1];
+                args[0] = in.readLong();
+                return args;
+            }
+        }, "global");
+    }
+
     private void readMetadata() throws IOException {
         try {
             parseVarInfo();
@@ -97,6 +111,7 @@ public class LLVMTraceCache extends TraceCache {
             config.logger().report("Maximum number of variables allowed (" + metadata.MAX_NUM_OF_VARIABLES +
                     ") exceeded.", Logger.MSGTYPE.ERROR);
         }
+        parseGlobalsInfo();
         parseLocInfo();
         parseThdInfo();
     }
@@ -105,9 +120,10 @@ public class LLVMTraceCache extends TraceCache {
     public void setup() throws IOException {
         readMetadata();
         int logId = 0;
+        LLVMEventReader.setGlobalVars(metadata.getGlobalVars());
         Path path = config.getTraceFilePath(logId, pid);
         while(path.toFile().exists()) {
-            readers.add(new LLVMEventReader(path));
+            readers.add(new LLVMEventReader(logId, path));
             ++logId;
             path = config.getTraceFilePath(logId, pid);
         }

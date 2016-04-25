@@ -1,5 +1,6 @@
 *.iml
 .idea
+EVALUATION-LICENSE.md
 .metadata
 .recommenders
 .cache

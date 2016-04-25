@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.runtimeverification.rvpredict.log.LZ4Utils;
+import org.apache.commons.collections4.list.UnmodifiableList;
 import org.apache.commons.lang3.tuple.Pair;
 
 @SuppressWarnings("serial")
@@ -133,8 +134,9 @@ public class Metadata implements Serializable {
         globalVars.add(varId);
     }
 
-    public Collection<Long> getGlobalVars() {
-        return globalVars;
+    public List<Long> getGlobalVars() {
+
+        return UnmodifiableList.unmodifiableList(globalVars);
     }
 
     /**

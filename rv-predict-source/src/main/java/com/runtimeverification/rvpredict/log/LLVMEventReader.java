@@ -3,8 +3,7 @@ package com.runtimeverification.rvpredict.log;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.Iterator;
+import java.util.List;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.metadata.Metadata;
@@ -20,9 +19,8 @@ public class LLVMEventReader implements IEventReader {
 
     private final BinaryParser in;
     private final int logId;
-    private static Iterator<Long> globalVarsIterator;
+    private static List<Long> globalVars;
     private static int currentGlobalVar;
-    private static int globalVarsNo;
 
     private Event lastReadEvent;
 
@@ -32,22 +30,25 @@ public class LLVMEventReader implements IEventReader {
         readEvent();
     }
 
-    public static void setGlobalVars(Collection<Long> globalVars) {
-        LLVMEventReader.globalVarsIterator = globalVars.iterator();
-        globalVarsNo = globalVars.size();
+    public static void setGlobalVars(List<Long> globalVars) {
+        LLVMEventReader.globalVars = globalVars;
         currentGlobalVar = 0;
     }
 
     @Override
     public final Event readEvent() throws IOException {
-        if (logId == 0 && globalVarsIterator.hasNext()) {
-            lastReadEvent = new Event(currentGlobalVar, 1, 1, globalVarsIterator.next(), 0, EventType.WRITE);
+        if (logId == 0 && currentGlobalVar < globalVars.size()) {
+            /* Currently we "initialize" all globals as the first events in the main thread (logId = 0).
+               The main reason for this approach is that the information that a location is global is currently recorded
+               only when the location is first accessed, and the initialization does not count as an access.
+            */
+            lastReadEvent = new Event(currentGlobalVar, 1, 1, globalVars.get(currentGlobalVar), 0, EventType.WRITE);
             currentGlobalVar++;
             return lastReadEvent;
         }
         try {
             lastReadEvent = new Event(
-                    in.readLong() + globalVarsNo,
+                    in.readLong() + globalVars.size(),
                     in.readLong(),
                     in.readInt(),
                     in.readLong(),

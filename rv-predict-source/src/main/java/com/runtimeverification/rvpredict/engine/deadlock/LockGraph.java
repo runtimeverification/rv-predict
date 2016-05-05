@@ -70,6 +70,32 @@ public class LockGraph {
         locks.add(lockId);
     }
 
+    public SCCTarjan<Long> getSccGraph() {
+        return sccGraph;
+    }
+
+    public Map<Long, Event> getLockEvents() {
+        return lockEvents;
+    }
+
+    public Map<Pair<Long, Long>, Pair<Event, Event>> getEventEdges() {
+        return eventEdges;
+    }
+
+    public Map<Long, Set<Long>> getLockSet() {
+        return lockSet;
+    }
+
+    public LockGraph copy() {
+        LockGraph ret = new LockGraph(config, metadata);
+        ret.lockSet.putAll(getLockSet());
+        ret.lockEvents.putAll(getLockEvents());
+        for (Pair<Long, Long> edge: eventEdges.keySet()) {
+            ret.addEdge(edge.getLeft(), edge.getRight());
+        }
+        return ret;
+    }
+
     /**
      * Computes cycles in the lock acquisition graph as lists of edges between
      * existing lock acquisitions and new lock acquisitions.

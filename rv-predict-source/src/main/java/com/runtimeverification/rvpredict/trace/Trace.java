@@ -353,6 +353,13 @@ public class Trace {
                     clinitEvents.add(event);
                 }
 
+                if (event.isPreLock() || event.isLock() || event.isUnlock()) {
+                    if (state.config().isLLVMPrediction()) {
+                        //TODO(TraianSF): remove above condition once instrumentation works for Java
+                        state.getLockGraph().handle(event);
+                    }
+                }
+
                 if (event.isReadOrWrite()) {
                     /* update memory address state */
                     MemoryAddrState st = addrToState.computeIfAbsent(event.getAddr());
@@ -385,7 +392,7 @@ public class Trace {
                         isInsideClinit = state.isInsideClassInitializer(tid);
                     }
                 } else if (event.isFork()) {
-                    //TODO(TraianSF): Add behavior for forking
+                    state.addForkPoint(event.getPID(), new ForkPoint(state, event.getGID()));
                 } else {
                     throw new IllegalStateException();
                 }

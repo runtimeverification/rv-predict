@@ -1,14 +1,8 @@
 package com.runtimeverification.rvpredict.trace;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
+import com.runtimeverification.rvpredict.engine.deadlock.LockGraph;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.google.common.collect.HashBasedTable;
@@ -45,6 +39,8 @@ public class TraceState {
     private final Table<Long, Long, LockState> tidToLockIdToLockState = HashBasedTable.create(
             DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_LOCKS);
 
+    private final LockGraph lockGraph;
+
     private final Configuration config;
 
     private final Metadata metadata;
@@ -63,7 +59,13 @@ public class TraceState {
 
     private final Set<Event> t_clinitEvents;
 
+    private final Map<Long, ForkPoint> pidToForkPoint;
+
     public TraceState(Configuration config, Metadata metadata) {
+        this(config, metadata, new LockGraph(config, metadata));
+    }
+
+    public TraceState(Configuration config, Metadata metadata, LockGraph lockGraph) {
         this.config = config;
         this.metadata = metadata;
         this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
@@ -74,6 +76,16 @@ public class TraceState {
                                             DEFAULT_NUM_OF_ADDR);
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
+        this.pidToForkPoint            = new HashMap<>();
+        this.lockGraph                 = lockGraph;
+    }
+
+    public ThreadIDToObjectMap<Deque<Event>> getTidToStacktrace() {
+        return tidToStacktrace;
+    }
+
+    public Table<Long, Long, LockState> getTidToLockIdToLockState() {
+        return tidToLockIdToLockState;
     }
 
     public Configuration config() {
@@ -164,6 +176,10 @@ public class TraceState {
         return new ThreadState(stacktrace, lockStates);
     }
 
+    public LockGraph getLockGraph() {
+        return lockGraph;
+    }
+
     /**
      * Fast-path implementation for event processing that is specialized for the
      * single-threading case.
@@ -185,6 +201,14 @@ public class TraceState {
                 onMetaEvent(event);
             } else if (event.isStart()) {
                 updateThreadLocToUserLoc(event);
+            } else if (event.isFork()) {
+                addForkPoint(event.getPID(), new ForkPoint(this, event.getGID()));
+            }
+            if (event.isPreLock() || event.isLock() || event.isUnlock()) {
+                if (config().isLLVMPrediction()) {
+                    //TODO(TraianSF): remove above condition once instrumentation works for Java
+                    getLockGraph().handle(event);
+                }
             }
         }
     }
@@ -234,4 +258,11 @@ public class TraceState {
         return -1;
     }
 
+    public Map<Long, ForkPoint> getPidToForkPoint() {
+        return pidToForkPoint;
+    }
+
+    public void addForkPoint(long PID, ForkPoint forkPoint) {
+        pidToForkPoint.put(PID, forkPoint);
+    }
 }

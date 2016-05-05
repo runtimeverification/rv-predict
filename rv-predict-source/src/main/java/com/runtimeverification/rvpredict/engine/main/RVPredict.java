@@ -35,10 +35,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.trace.ForkPoint;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
@@ -59,14 +61,9 @@ public class RVPredict {
 
     public RVPredict(Configuration config) {
         this.config = config;
-        if (config.isLLVMPrediction()) {
-            metadata = Metadata.singleton();
-            traceCache = new LLVMTraceCache(config, metadata);
-        } else {
-            this.metadata = Metadata.readFrom(config.getMetadataPath());
-            traceCache = new TraceCache(config, metadata);
-        }
-        this.detector = new RaceDetector(config);
+        metadata = Metadata.readFrom(config.getMetadataPath());
+        traceCache = new TraceCache(config, metadata);
+        detector = new RaceDetector(config);
     }
 
     public void start() {
@@ -90,7 +87,7 @@ public class RVPredict {
             } else {
                 reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
             }
-            traceCache.getLockGraph().runDeadlockDetection();
+            traceCache.getCrntState().getLockGraph().runDeadlockDetection();
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());

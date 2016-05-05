@@ -719,6 +719,10 @@ public class Configuration implements Constants {
         return Paths.get(logDir, id + "_" + TRACE_SUFFIX);
     }
 
+    public Path getTraceFilePath(int id, String pid) {
+       return Paths.get(logDir, pid + id + "_" + TRACE_SUFFIX);
+    }
+
     public Path getLLVMMetadataPath(String id) {
         return Paths.get(logDir, id + "_" + METADATA_BIN);
     }

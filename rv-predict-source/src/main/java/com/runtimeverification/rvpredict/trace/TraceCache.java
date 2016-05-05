@@ -1,7 +1,6 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.engine.deadlock.LockGraph;
 import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.IEventReader;
 import com.runtimeverification.rvpredict.log.Event;
@@ -10,9 +9,7 @@ import com.runtimeverification.rvpredict.metadata.Metadata;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 /**
  * Class adding a transparency layer between the prediction engine and the
@@ -22,8 +19,6 @@ import java.util.List;
  * @author YilongL
  */
 public class TraceCache {
-
-    private final LockGraph lockGraph;
 
     protected final Configuration config;
 
@@ -37,7 +32,15 @@ public class TraceCache {
     public TraceCache(Configuration config, Metadata metadata) {
         this.config = config;
         this.crntState = new TraceState(config, metadata);
-        lockGraph = new LockGraph(config, metadata);
+    }
+
+    public TraceCache(Configuration config, Metadata metadata, ForkPoint forkPoint) {
+        this.config = config;
+        crntState = forkPoint != null ? forkPoint.getTraceState() : new TraceState(config, metadata);
+    }
+
+    public TraceState getCrntState() {
+        return crntState;
     }
 
     public void setup() throws IOException {
@@ -51,8 +54,8 @@ public class TraceCache {
         }
     }
 
-    public LockGraph getLockGraph() {
-        return lockGraph;
+    public Map<Long, ForkPoint> getForks() {
+        return crntState.getPidToForkPoint();
     }
 
     /**
@@ -98,13 +101,6 @@ public class TraceCache {
             List<Event> events = new ArrayList<>(capacity);
             do {
                 events.add(event);
-                //TODO(TraianSF): the following conditional does not belong here. Consider moving it.
-                if (event.isPreLock() || event.isLock() || event.isUnlock()) {
-                    if (config.isLLVMPrediction()) {
-                        //TODO(TraianSF): remove above condition once instrumentation works for Java
-                        lockGraph.handle(event);
-                    }
-                }
                 try {
                     event = reader.readEvent();
                 } catch (EOFException e) {

@@ -101,6 +101,11 @@ public class Event implements Comparable<Event> {
         return ADDR;
     }
 
+    public long getPID() {
+        assert isFork();
+        return VALUE;
+    }
+
     public int getObjectHashCode() {
         return (int) (getAddr() >> 32);
     }
@@ -280,7 +285,9 @@ public class Event implements Comparable<Event> {
                     Long.toHexString(getSyncObject()));
         } else if (isMetaEvent()) {
             return String.format("(%s, E%s, T%s, L%s)", TYPE, GID, TID, ID);
-        } else {
+        } else if (isFork()){
+            return String.format("(%s, E%s, T%s, P%s)", TYPE, GID, TID, VALUE);
+        }else {
             return "UNKNOWN EVENT";
         }
     }

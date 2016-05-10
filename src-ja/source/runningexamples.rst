@@ -24,7 +24,7 @@ RV-Predictが並列処理のバグを検出する能力を説明します。以�
     For any file in that directory, simply run ``rv-predict-c[++]-compile <file>.c[pp]`` to
     compile it, followed by ``rv-predict-execute ./a.out`` to execute it.
 
-この問題を解決すべくあらゆる努力がなされていますが、効果的かつ効率的なデータ競合の検出はいまだに大きなチャレンジです。RV-Predictは、この望ましくない状況を変えることを目的としています。以下では、C/C++における最も一般的なデータ競合についていくつかまとめています。また、それらをRV-Predictで検出する方法を紹介します。以下で説明する例は、RV-Predict[C]ディストリビューションの``examples/demo``ディレクトリで確認できます。このディレクトリ内のファイルについては、単純に ``rv-predict-c[++]-compile <file>.c[pp]`` と実行するだけでコンパイルできます。実行するには、 ``rv-predict-execute ./a.out`` と続けてください。
+この問題を解決すべくあらゆる努力がなされていますが、効果的かつ効率的なデータ競合の検出はいまだに大きなチャレンジです。RV-Predictは、この望ましくない状況を変えることを目的としています。以下では、C/C++における最も一般的なデータ競合についていくつかまとめています。また、それらをRV-Predictで検出する方法を紹介します。以下で説明する例は、RV-Predict[C]ディストリビューションの ``examples/demo`` ディレクトリで確認できます。このディレクトリ内のファイルについては、単純に ``rv-predict-c[++]-compile <file>.c[pp]`` と実行するだけでコンパイルできます。実行するには、 ``rv-predict-execute ./a.out`` と続けてください。
 
 
 .. 1. Concurrent Access to a Shared Variable
@@ -43,7 +43,7 @@ POSIXスレッド
 .. Consider the following snippet of the code from ``dot-product.c`` that uses POSIX Threads library
     for multi-threading.
 
-以下は、``dot-product.c`` から抜粋したコードで、マルチスレッド用のPOSIXスレッドライブラリを使用しています。
+以下は、 ``dot-product.c``  から抜粋したコードで、マルチスレッド用のPOSIXスレッドライブラリを使用しています。
 
 .. code-block:: c
 
@@ -105,7 +105,7 @@ dotprod関数はスレッドが生成されたときに実行されます。こ�
     there is a race condition. The main thread needs to wait for
     all threads to complete, it waits for each one of the threads.
 
-mainプログラムは処理を実行するスレッドを生成し、処理が完了すると結果を出力します。スレッドを生成する前に、入力データが生成されます。各スレッドは異なるデータを処理します。``i``でoffsetが指定されています。各スレッドで扱うデータのサイズは``VECLEN``（上の例にはないので、完全なソースを確認してください）で表されます。すべてのスレッドは共有の構造体を更新するので、レースコンディション（競合条件）が存在します。mainスレッドはすべてのスレッドが完了するのを待つ必要があり、それらのスレッドひとつひとつを待ちます。
+mainプログラムは処理を実行するスレッドを生成し、処理が完了すると結果を出力します。スレッドを生成する前に、入力データが生成されます。各スレッドは異なるデータを処理します。 ``i`` でoffsetが指定されています。各スレッドで扱うデータのサイズは ``VECLEN`` （上の例にはないので、完全なソースを確認してください）で表されます。すべてのスレッドは共有の構造体を更新するので、レースコンディション（競合条件）が存在します。mainスレッドはすべてのスレッドが完了するのを待つ必要があり、それらのスレッドひとつひとつを待ちます。
 
 
 .. RV-Predict[C] works in two steps. (Make sure you are in the directory examples/demo.)
@@ -114,7 +114,7 @@ mainプログラムは処理を実行するスレッドを生成し、処理が�
     Second, ``$ rv-predict-execute ./a.out`` performs an offline analysis. 
     The results of the analysis:
 
-RV-Predict[C]は２ステップで実行します。（examples/demoディレクトリ配下にいることを確認してください。）まず最初に、``$ rv-predict-c-compile dot-product.c``  が、ドットプロダクトを計算するマルチスレッドプログラムのインストルメントバージョンを生成します。次に、``$ rv-predict-execute ./a.out``  がオフライン解析を実行します。解析結果は以下の通りです：
+RV-Predict[C]は２ステップで実行します。（examples/demoディレクトリ配下にいることを確認してください。）まず最初に、 ``$ rv-predict-c-compile dot-product.c``  が、ドットプロダクトを計算するマルチスレッドプログラムのインストルメントバージョンを生成します。次に、 ``$ rv-predict-execute ./a.out``  がオフライン解析を実行します。解析結果は以下の通りです：
 
 .. code-block:: none
 
@@ -169,7 +169,7 @@ RV-Predict[C]は２ステップで実行します。（examples/demoディレク
     and a concurrent read at line 63: 
     ``printf("Thread %ld did %d to %d:  mysum=%f global sum=%f\n",offset,start,end,mysum,dotstr.sum);``.
 
-まず、標準的なテストではデータ競合はほぼ発見されないということに注意してください。なぜなら、ここでの出力および最終的な結果もまた、期待通りのものだからです。しかし、RV-Predictの出力は３つのデータ競合の可能性を正しく予想しています。最初の競合は62行目の：``dotstr.sum += mysum;``  ですが、２つのスレッドが同時に共有変数へ書き込む可能性があるため、データ競合が発生します。2つ目のデータ競合も同じ行ですが、同時読み出しおよび同時書き込みによるデータ競合が存在していることを知らせる解析結果となっています。最後に、3つ目の報告は62行目で同時書き込みがあり、63行目：``printf("Thread %ld did %d to %d:  mysum=%f global sum=%f\n",offset,start,end,mysum,dotstr.sum);``  で同時読み出しがあるケースを説明しています。
+まず、標準的なテストではデータ競合はほぼ発見されないということに注意してください。なぜなら、ここでの出力および最終的な結果もまた、期待通りのものだからです。しかし、RV-Predictの出力は３つのデータ競合の可能性を正しく予想しています。最初の競合は62行目の： ``dotstr.sum += mysum;``  ですが、２つのスレッドが同時に共有変数へ書き込む可能性があるため、データ競合が発生します。2つ目のデータ競合も同じ行ですが、同時読み出しおよび同時書き込みによるデータ競合が存在していることを知らせる解析結果となっています。最後に、3つ目の報告は62行目で同時書き込みがあり、63行目： ``printf("Thread %ld did %d to %d:  mysum=%f global sum=%f\n",offset,start,end,mysum,dotstr.sum);``  で同時読み出しがあるケースを説明しています。
 
 .. This example also showcases the maximality and predictive power of our approach. In particular, 
     consider analysis results on the same program by widely used ThreadSanitizer tool from Google. 
@@ -384,7 +384,7 @@ C/C++ 11
     reading the current value of the state variable. This behavior might lead to a 
     behavior where the START state is not reached because of the aforementioned data race. 
 
-最初のデータ競合は19行目：state = INIT; の書き込みによるものですが、一方で同時にstate変数の現在の値を読み出しています。前述のデータ競合により、START状態にはならない可能性があります。
+最初のデータ競合は19行目： ``state = INIT;``  の書き込みによるものですが、一方で同時にstate変数の現在の値を読み出しています。前述のデータ競合により、START状態にはならない可能性があります。
 
 .. code-block:: none
 
@@ -504,7 +504,7 @@ C/C++ 11
     however just because we are using a mutex or other synchronization mechanism to protect 
     shared data, it does not mean we are protected from race conditions!
 
-今度はもっと興味深い例について考えてみましょう（以下を見てください）。ここでは、スタックを実装するために ``vector`` データ構造を使用しています。最初は、全ての操作が適切に同期されているように見えますが、共有データを保護するためにミューテックスやその他同期メカニズムを使用しているというだけなので、それはレースコンディションから保護されているということにはなりません。
+今度はもっと興味深い例について考えてみましょう（以下を見てください）。ここでは、スタックを実装するために ``vector``  データ構造を使用しています。最初は、全ての操作が適切に同期されているように見えますが、共有データを保護するためにミューテックスやその他同期メカニズムを使用しているというだけなので、それはレースコンディションから保護されているということにはなりません。
 
 .. code-block:: c
 
@@ -671,7 +671,7 @@ C/C++ 11
     sees the pointer written by another thread, it might not see the newly created instance of 
     ``some_resource``, resulting in the call to ``do_something()`` operating on incorrect values. 
 
-しかし、このパターンは悪名高くなりました。なぜなら、やっかいなレースコンディションの可能性があるからです。以下の通り、RV-Predict[C]はレースコンディションを検出します。具体的には、ロック外の読み出しが、ロック内のスレッドによる書き込みと同期されないため、データ競合が発生します。レースコンディションはポインタおよびそれが指すオブジェクトを含みます：あるスレッドが他のスレッドによって書き込まれるポインタを見ている場合でも、新しく生成された ``some_resource`` のインスタンスを見ていないかもしれません。結果、 ``do_something()`` が間違った値に作用するように呼び出されることになります。
+しかし、このパターンは悪名高くなりました。なぜなら、やっかいなレースコンディションの可能性があるからです。以下の通り、RV-Predict[C]はレースコンディションを検出します。具体的には、ロック外の読み出しが、ロック内のスレッドによる書き込みと同期されないため、データ競合が発生します。レースコンディションはポインタおよびそれが指すオブジェクトを含みます：あるスレッドが他のスレッドによって書き込まれるポインタを見ている場合でも、新しく生成された ``some_resource``  のインスタンスを見ていないかもしれません。結果、 ``do_something()``  が間違った値に作用するように呼び出されることになります。
 
 .. code-block:: none
 
@@ -730,7 +730,7 @@ C/C++ 11
 
 .. As shown below, RV-Predict[C] detect the data race on ``condition`` variable. 
 
-以下の通り、RV-Predict[C]は変数conditionでのデータ競合を検知します。
+以下の通り、RV-Predict[C]は変数 ``condition`` でのデータ競合を検知します。
 
 .. code-block:: none
 

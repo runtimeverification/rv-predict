@@ -8,7 +8,7 @@
     version of clang compiler). 
     Second, ``$ rv-predict-execute ./a.out`` performs and offline data race analysis. 
 
-RV-Predict[C]は２ステップで機能します。まずは、``$ rv-predict-c-compile file.c`` が、マルチスレッドCプログラムのインスツルメンテッドバージョンを生成します。（rv-predict-c-compileは我々がカスタマイズしたバージョンのclangコンパイラのラッパーです。）次に、``$ rv-predict-execute ./a.out`` でオフラインでデータ競合解析を実行します。
+RV-Predict[C]は２ステップで機能します。まずは、 ``$ rv-predict-c-compile file.c``  が、マルチスレッドCプログラムのインスツルメンテッドバージョンを生成します。（rv-predict-c-compileは我々がカスタマイズしたバージョンのclangコンパイラのラッパーです。）次に、 ``$ rv-predict-execute ./a.out``  でオフラインでデータ競合解析を実行します。
 
 .. code-block:: none
 
@@ -16,7 +16,8 @@ RV-Predict[C]は２ステップで機能します。まずは、``$ rv-predict-c
     rv-predict-execute ./a.out
 
 .. For c++ programs, just use ``rv-predict-c++-compile file.cpp`` as shown below:
-C++プログラムの場合は、以下のように``rv-predict-c++-compile file.cpp``を使用してください：
+
+C++プログラムの場合は、以下のように ``rv-predict-c++-compile file.cpp`` を使用してください：
 
 .. code-block:: none
 
@@ -41,4 +42,5 @@ C++プログラムの場合は、以下のように``rv-predict-c++-compile file
     make <target> CC=clang CFLAGS=-fsanitize=rv-predict
 
 .. Note: if your code uses ``g++`` just replace ``clang`` with ``clang++``.
-注：あなたのコードが``g++``を使用している場合は、``clang``を``clang++``に置き換えるだけです。
+
+注：あなたのコードが ``g++`` を使用している場合は、 ``clang`` を ``clang++`` に置き換えるだけです。

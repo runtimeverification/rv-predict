@@ -319,6 +319,7 @@ nor Helgrind report any problems with programs.
 However, there are three subtle data races in the program, and RV-Predict[C] finds them all. 
 
 Compile this programs as shown below. 
+
 .. code-block:: none
 
     rv-predict-c++-compile simple-state-machine.cpp

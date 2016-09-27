@@ -1,0 +1,4 @@
+Usage:
+clang -Xclang -load -Xclang ../rv-predict-bare-metal/build/src/libpass0.so hello.c -o a.out
+opt -load ../rv-predict-bare-metal/build/src/libpass0.so -pass0 hello.bc > /dev/null 
+

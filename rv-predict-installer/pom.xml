@@ -19,7 +19,7 @@
         <dependency>
             <groupId>com.runtimeverification.licensing</groupId>
             <artifactId>rv-licensing</artifactId>
-            <version>1.1-SNAPSHOT</version>
+            <version>1.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>

@@ -205,6 +205,8 @@ RVPredictInstrument::instrumentLoadOrStore(Instruction *I,
     // The value returned by/passed to the load/store instruction.
     Value *Val;
 
+    std::printf("ding ding ding\n");
+
     bool IsWrite = isa<StoreInst>(*I);
     if (IsWrite) {
         StoreInst *Store = cast<StoreInst>(I);

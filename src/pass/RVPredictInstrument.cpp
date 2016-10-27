@@ -319,11 +319,28 @@ static RegisterPass<RVPredictInstrument> _("rv-instrument",
         "RV-Predict[Bare-metal] instrumentation pass", false, false);
 
 /// Register as default pass, to run before any other optimization passes.
+
+/* We don't want to run the passes we depend on this early, so let's
+ * try to run it later.
+ */
+
+/*
 static RegisterStandardPasses __(
         PassManagerBuilder::EP_EarlyAsPossible,
         [](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
             PM.add(new RVPredictInstrument());
         }
 );
+*/
+
+static void registerThisPass(const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+    PM.add(new RVPredictInstrument());
+}
+
+static RegisterStandardPasses __(PassManagerBuilder::EP_ModuleOptimizerEarly,
+                                 registerThisPass);
+
+static RegisterStandardPasses ___(PassManagerBuilder::EP_EnabledOnOptLevel0,
+                                  registerThisPass);
 
 } // namespace RVPredict

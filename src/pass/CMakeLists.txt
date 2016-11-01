@@ -1,12 +1,11 @@
 #SET(CMAKE_CXX_FLAGS "-Wall -fno-rtti")
 
-add_llvm_loadable_module(rv-instrument GatherAnnotation.cpp FindSharedVariable.cpp RVPredictInstrument.cpp)
+add_llvm_loadable_module(rv-instrument
+    GatherAnnotation.cpp FindSharedVariable.cpp RVPredictInstrument.cpp)
 
 # Get proper shared-library behavior (where symbols are not necessarily
 # resolved when the shared library is linked) on OS X.
 if(APPLE)
-    set_target_properties(rv-instrument PROPERTIES
-        LINK_FLAGS "-undefined dynamic_lookup"
-    )
+	set_target_properties(rv-instrument PROPERTIES
+	    LINK_FLAGS "-undefined dynamic_lookup")
 endif(APPLE)
-

@@ -316,15 +316,16 @@ char RVPredictInstrument::ID = 0;
 static RegisterPass<RVPredictInstrument> _("rv-instrument",
         "RV-Predict[Bare-metal] instrumentation pass", false, false);
 
-/// Registering this function pass at extension point `EP_EarlyAsPossible`      
-/// results in a segmentation fault at runtime because the LLVM PassManager    
-/// somehow schedules the module passes this function pass depends on        
-/// to run too early (even before fields in the `Module` are properly
-/// initialized).  To workaround this problem, specify this pass to have
-/// the same extension points as the module passes it depends on.
+// Registering this function pass at extension point `EP_EarlyAsPossible`
+// results in a segmentation fault at runtime because the LLVM PassManager
+// somehow schedules the module passes this function pass depends on
+// to run too early (even before fields in the `Module` are properly
+// initialized).  To workaround this problem, specify this pass to have
+// the same extension points as the module passes it depends on.
 
-static void registerThisPass(const PassManagerBuilder &, legacy::PassManagerBase &PM) {
-    PM.add(new RVPredictInstrument());
+static void registerThisPass(const PassManagerBuilder &,
+    legacy::PassManagerBase &PM) {
+	PM.add(new RVPredictInstrument());
 }
 
 static RegisterStandardPasses __(PassManagerBuilder::EP_ModuleOptimizerEarly,

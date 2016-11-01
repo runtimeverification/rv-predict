@@ -9,8 +9,13 @@ set(CMAKE_BUILD_TYPE Debug)
 
 find_package(LLVM 3.8 REQUIRED CONFIG)
 
-list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-include(AddLLVM)
+#
+# The following couple of lines are necessary for cmake
+# to find LLVM commands such as add_llvm_loadable_module(...)
+# on Mac OS X (El Capitan).
+#
+list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")	# for include(AddLLVM) 
+include(AddLLVM)			# for add_llvm_loadable_module(...)
 
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})

@@ -2,9 +2,6 @@
 
 #SET(CMAKE_CXX_FLAGS "-Wall -fno-rtti")
 
-#add_library(rv-instrument SHARED GatherAnnotation.cpp FindSharedVariable.cpp RVPredictInstrument.cpp)
-set(LLVM_LINK_COMPONENTS Core Support)
-
 add_llvm_loadable_module(rv-instrument GatherAnnotation.cpp FindSharedVariable.cpp RVPredictInstrument.cpp)
 
 # Get proper shared-library behavior (where symbols are not necessarily

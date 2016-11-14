@@ -21,16 +21,7 @@ using namespace llvm;
 /// initializeInstrumentation - Initialize all passes in the TransformUtils
 /// library.
 void llvm::initializeInstrumentation(PassRegistry &Registry) {
-  initializeAddressSanitizerPass(Registry);
-  initializeAddressSanitizerModulePass(Registry);
-  initializeBoundsCheckingPass(Registry);
-  initializeGCOVProfilerPass(Registry);
-  initializeInstrProfilingPass(Registry);
-  initializeMemorySanitizerPass(Registry);
   initializeThreadSanitizerPass(Registry);
-  initializeSanitizerCoverageModulePass(Registry);
-  initializeDataFlowSanitizerPass(Registry);
-  initializeSafeStackPass(Registry);
 }
 
 /// LLVMInitializeInstrumentation - C binding for

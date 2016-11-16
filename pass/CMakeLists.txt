@@ -1,4 +1,4 @@
-add_llvm_loadable_module(RVPredictInstrumentation
+add_llvm_loadable_module(rvpinstrument
 #  AddressSanitizer.cpp
 #  BoundsChecking.cpp
 #  DataFlowSanitizer.cpp
@@ -8,7 +8,7 @@ add_llvm_loadable_module(RVPredictInstrumentation
 #  InstrProfiling.cpp
 #  SafeStack.cpp
 #  SanitizerCoverage.cpp
-  ThreadSanitizer.cpp
+  RVPredictInstrumentation.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms

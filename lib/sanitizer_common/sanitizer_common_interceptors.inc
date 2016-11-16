@@ -3871,6 +3871,7 @@ INTERCEPTOR(long double, remquol, long double x, long double y, int *quo) {
 
 #if SANITIZER_INTERCEPT_LGAMMA
 extern int signgam;
+int SANITIZER_WEAK_ATTRIBUTE signgam;
 INTERCEPTOR(double, lgamma, double x) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, lgamma, x);

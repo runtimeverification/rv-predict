@@ -150,18 +150,6 @@ const char *RVPredictInstrument::getPassName() const {
   return "RVPredictInstrument";
 }
 
-#ifdef __no_thank_you
-char RVPredictInstrument::ID = 0;
-INITIALIZE_PASS(RVPredictInstrument, "rvpredict",
-    "RVPredictInstrument: detects data races.",
-    false, false)
-
-FunctionPass *llvm::createThreadSanitizerPass() {
-  return new RVPredictInstrument();
-}
-
-#endif
-
 void RVPredictInstrument::initializeCallbacks(Module &M) {
   IRBuilder<> IRB(M.getContext());
   // Initialize the callbacks.

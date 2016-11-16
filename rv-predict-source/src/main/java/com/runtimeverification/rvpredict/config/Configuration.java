@@ -78,6 +78,7 @@ public class Configuration implements Constants {
             "__tsan",
             "<null>",
             "/usr/lib/",
+            "/usr/bin/../lib/",	// TBD normalize paths, instead?
             "llvm/projects/compiler-rt"
     });
 

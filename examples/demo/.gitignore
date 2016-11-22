@@ -1,2 +1,12 @@
 .depend
+dot-product
+double-checked-locking
+lpcq
+memcpy
+*.o
+simple-state-machine
+spinning-loop
+square-sum
+stack
 .*.swp
+unsafe-vector

@@ -38,6 +38,17 @@ lpcq_get(lpcq_t *q)
 	return item;
 }
 
+void
+lpcq_put(lpcq_t *q, void *item)
+{
+	void * volatile *nextp = lpcq_nextp(q->nextofs, item);
+
+	*nextp = NULL;
+	void * volatile *otailp = q->tailp;
+	q->tailp = nextp;
+	*otailp = item;
+}
+
 lpcq_iter_t
 lpcq_getall(lpcq_t *q)
 {
@@ -71,15 +82,4 @@ lpcq_next(lpcq_iter_t *i)
 
 	i->item = *nextp;
 	return head;
-}
-
-void
-lpcq_put(lpcq_t *q, void *item)
-{
-	void * volatile *nextp = lpcq_nextp(q->nextofs, item);
-
-	*nextp = NULL;
-	void * volatile *otailp = q->tailp;
-	q->tailp = nextp;
-	*otailp = item;
 }

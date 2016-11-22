@@ -1,3 +1,5 @@
+Copyright (c) 2016 Runtime Verification, Inc.  All rights reserved.
+
 `lpcq` is a POSIX Threads-using C program that sends some numbers from a
 producer thread to a consumer thread through a queue.  The program demonstrates
 RV-Predict[C]'s capability to detect races on a linked producer-consumer queue
@@ -259,3 +261,4 @@ time:
 	    T3 is created by T1
 		at main lpcq_main.c:120
 	}}}
+

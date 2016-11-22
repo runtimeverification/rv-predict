@@ -1,3 +1,5 @@
+/* Copyright (c) 2016 Runtime Verification, Inc.  All rights reserved. */
+
 #ifndef _LPCQ_H_
 #define _LPCQ_H_
 

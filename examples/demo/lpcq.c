@@ -1,3 +1,5 @@
+/* Copyright (c) 2016 Runtime Verification, Inc.  All rights reserved. */
+
 #include <sched.h>	/* for sched_yield() */
 #include <sys/param.h>	/* for MAX */
 #include <limits.h>	/* for INT_MAX */

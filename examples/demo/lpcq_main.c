@@ -1,3 +1,5 @@
+/* Copyright (c) 2016 Runtime Verification, Inc.  All rights reserved. */
+
 #include <assert.h>
 #include <err.h>
 #include <stddef.h>

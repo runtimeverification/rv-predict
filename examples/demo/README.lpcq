@@ -1,0 +1,261 @@
+`lpcq` is a POSIX Threads-using C program that sends some numbers from a
+producer thread to a consumer thread through a queue.  The program demonstrates
+RV-Predict[C]'s capability to detect races on a linked producer-consumer queue
+library.  The library itself does not provide any synchronization.  Library
+users must synchronize access to a queue, otherwise two or more threads
+accessing the same queue will corrupt it.
+
+# Sources
+
+lpcq.h		the library's type and function declarations
+lpcq.c		the library's implementation
+lpcq_main.c	the test driver
+
+# Compilation
+
+Using a copy of `clang` that has the RV-Predict sanitizer built in,
+run
+
+	clang -pthread -g -fsanitize=rvpredict -o lpcq lpcq.c lpcq_main.c
+
+That produces an executable binary, `lpcq`.
+
+# Exploring RV-Predict with `lpcq`.
+
+If you run `lpcq` like this, RV-Predict will detect races, and `lpcq`
+may even crash because of queue corruption or a timeout:
+
+	rv-predict-execute ./lpcq
+
+Run `lpcq` like this to protect the queue with a PThreads mutex.  No
+data races will be detected, and the program will run to completion every
+time:
+
+	rv-predict-execute ./lpcq -l
+
+# Example outputs
+
+## When a mutex synchronizes the producer and consumer threads'
+## access to the queue, RV-Predict detects no races.
+
+	$ rv-predict-execute ./lpcq -l
+	locking enabled
+	read item 0
+	read item 1
+	read item 2
+	read item 3
+	read item 4
+	[RV-Predict] No races found.
+
+## Without synchronization, the producer and consumer thread race
+## to update queue elements.  Sometimes the race is harmless.
+
+	$ rv-predict-execute ./lpcq 
+	read item 0
+	read item 1
+	read item 2
+	read item 3
+	read item 4
+	Data race on array element #10: {{{
+	    Concurrent write in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:34
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent write in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:49
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}
+
+	Data race on global 'items' of size 80 at 0x0000014a8930 (lpcq + 0x0000014a8960): {{{
+	    Concurrent read in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:34
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent write in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:49
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}
+
+	Data race on array element #15: {{{
+	    Concurrent read in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:35
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent write in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:48
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}
+
+	Data race on array element #20: {{{
+	    Concurrent write in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:36
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent write in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:48
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}
+
+	Data race on array element #14: {{{
+	    Concurrent read in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:26
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent write in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:48
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}
+
+	Data race on array element #14: {{{
+	    Concurrent write in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:36
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent read in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:47
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}
+
+	Data race on array element #6: {{{
+	    Concurrent read in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:31
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent write in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:49
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}
+
+## Sometimes the race corrupts the queue.  `lpcq` eventually crashes.
+
+	$ rv-predict-execute ./lpcq 
+	read item 0
+	read item 2
+	read item 3
+	read item 4
+	Segmentation fault
+	Data race on array element #10: {{{
+	    Concurrent write in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:34
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent write in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:49
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}
+
+	Data race on global 'items' of size 80 at 0x0000014a8930 (lpcq + 0x0000014a8930): {{{
+	    Concurrent read in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:34
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent write in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:49
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}
+
+	Data race on array element #14: {{{
+	    Concurrent read in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:35
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent write in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:48
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}
+
+	Data race on array element #14: {{{
+	    Concurrent write in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:36
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent write in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:48
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}
+
+	Data race on array element #14: {{{
+	    Concurrent write in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:36
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent read in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:47
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}
+
+	Data race on array element #6: {{{
+	    Concurrent read in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:31
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent write in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:49
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}
+
+	Data race on array element #14: {{{
+	    Concurrent read in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:26
+		at consume lpcq_main.c:60
+	    T2 is created by T1
+		at main lpcq_main.c:119
+
+	    Concurrent write in thread T3 (locks held: {})
+	 ---->  at lpcq_put lpcq.c:48
+		at produce lpcq_main.c:81
+	    T3 is created by T1
+		at main lpcq_main.c:120
+	}}}

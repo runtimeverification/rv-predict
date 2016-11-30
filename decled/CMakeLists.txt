@@ -10,10 +10,6 @@ add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 
-#set(LLVM_PATH /usr/lib/llvm-3.8)
-#link_directories(${LLVM_PATH}/lib)
-#include_directories(${LLVM_PATH}/include)
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-rtti -Wall -Wno-unused-variable")
 
 set(SOURCE_FILES decled.cc)
@@ -53,14 +49,6 @@ target_link_libraries(decled
   LLVMCore # Support
   LLVMSupport
 )
-
-# include(FindCurses)
-#target_link_libraries(decled
-#    pthread
-#    z
-#    dl
-#    ${CURSES_LIBRARIES}
-#)
 
 install(TARGETS decled
         RUNTIME DESTINATION bin)

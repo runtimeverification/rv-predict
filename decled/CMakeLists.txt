@@ -14,7 +14,7 @@ link_directories(${LLVM_LIBRARY_DIRS})
 #link_directories(${LLVM_PATH}/lib)
 #include_directories(${LLVM_PATH}/include)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-unused-variable")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-rtti -Wall -Wno-unused-variable")
 
 set(SOURCE_FILES decled.cc)
 add_executable(decled ${SOURCE_FILES})
@@ -54,13 +54,13 @@ target_link_libraries(decled
   LLVMSupport
 )
 
-include(FindCurses)
-target_link_libraries(decled
-    pthread
-    z
-    dl
-    ${CURSES_LIBRARIES}
-)
+# include(FindCurses)
+#target_link_libraries(decled
+#    pthread
+#    z
+#    dl
+#    ${CURSES_LIBRARIES}
+#)
 
 install(TARGETS decled
         RUNTIME DESTINATION bin)

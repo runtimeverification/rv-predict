@@ -150,7 +150,6 @@ public:
     return TraverseFunctionHelper(D);
   }
 
-#if 0
   bool TraverseCXXMethodDecl(CXXMethodDecl *D) {
     return TraverseFunctionHelper(D);
   }
@@ -167,6 +166,7 @@ public:
     return TraverseFunctionHelper(D);
   }
 
+#if 0
   bool TraverseVarHelper(VarDecl *D) {
     AddStorageClass(D->getStorageClass());
     AddThreadStorageClass(D->getTSCSpec());
@@ -1823,7 +1823,7 @@ public:
 int
 main(int argc, const char **argv)
 {
-//	CommonOptionsParser OptionsParser(argc, argv, decledCategory);
+#if 0
 	FixedCompilationDatabase *comp =
 	    clang::tooling::FixedCompilationDatabase::loadFromCommandLine(
 	        argc, const_cast<const char **> (argv));
@@ -1833,12 +1833,12 @@ main(int argc, const char **argv)
 
 	std::vector<std::string> sources;
 	sources.push_back (std::string(argv[1]));
-
 	ClangTool tool(
-#if 0
-	    OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
-#else
 		*comp, sources);
+#else
+	CommonOptionsParser OptionsParser(argc, argv, decledCategory);
+	ClangTool tool(
+	    OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
 #endif
 #if 0
   // nasty hacky garbage in order to gain access to the output sent to stderr

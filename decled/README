@@ -1,0 +1,22 @@
+decled.cc: sources for the (Decl)aration (Ed)itor
+run.sh: shell script for testing the editor
+
+Building:
+
+	I built on office.runtimeverification.com:2222, starting
+	in the decled/ directory, using a clang+llvm 3.8.1 binary that
+	I downloaded and extracted in my home directory:
+
+	cd ..
+	mkdir build
+	cd build
+	cmake -DLLVM_DIR=$HOME/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-16.04/share/llvm/cmake -DClang_DIR=$HOME/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-16.04/share/clang/cmake -DCMAKE_C_COMPILER=$HOME/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-16.04/bin/clang -DCMAKE_CXX_COMPILER=$HOME/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-16.04/bin/clang++ ../decled/
+	make
+
+Running:
+
+	From I build/ directory, I use the shell script in ../decled/
+	to test the program on decled.cc:
+
+	../decled/run.sh
+

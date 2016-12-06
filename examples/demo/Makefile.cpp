@@ -1,7 +1,7 @@
 .include <bsd.own.mk>
 
-CC=${HOME}/rv/raw/local/bin/clang++
-CXX=${HOME}/rv/raw/local/bin/clang++
+CC=clang++
+CXX=clang++
 CXXFLAGS+=-std=c++11
 
 PROGS=	double-checked-locking simple-state-machine spinning-loop stack
@@ -13,6 +13,6 @@ SRCS.spinning-loop=spinning-loop.cpp
 SRCS.stack=stack.cpp
 SRCS.unsafe-vector=unsafe-vector.cpp
 
-#LDADD+=-L${RUNTIME_DIR} -lclang_rt.tsan_cxx-x86_64
+LDADD+=-L${RUNTIME_DIR} -lclang_rt.tsan_cxx-x86_64
 
 .include <bsd.prog.mk>

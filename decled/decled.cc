@@ -3,6 +3,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
@@ -45,22 +46,22 @@ public:
 		return x;
 	}
 	bool visitFunctionHelper(FunctionDecl *d) {
-		printf("%s\n", d->getQualifiedNameAsString().c_str());
+                if (!d->isThisDeclarationADefinition()) {
+			return true;
+		}
+		printf("%s", d->getQualifiedNameAsString().c_str());
 
 		auto &mgr = context->getSourceManager();
 		auto range = d->getNameInfo().getSourceRange();
-#if 0
-		auto begin = context->getFullLoc(range.getBegin());
-		auto end = context->getFullLoc(range.getEnd());
-#else
 		auto begin = mgr.getSpellingLoc(range.getBegin());
 		auto end = mgr.getSpellingLoc(range.getEnd());
-#endif
-		printf("\t%u.%u - %u.%u\n",
+		auto realEnd = Lexer::getLocForEndOfToken(end, 0, mgr, context->getLangOpts());
+
+		printf("\t%u %u %u %u\n",
 		    mgr.getSpellingLineNumber(begin),
 		    mgr.getSpellingColumnNumber(begin),
-		    mgr.getSpellingLineNumber(end),
-		    mgr.getSpellingColumnNumber(end));
+		    mgr.getSpellingLineNumber(realEnd),
+		    mgr.getSpellingColumnNumber(realEnd));
 
 		return true;
 	}

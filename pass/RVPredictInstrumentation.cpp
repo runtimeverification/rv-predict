@@ -47,7 +47,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "rvpredict"
+#define DEBUG_TYPE "rvpinstrument"
 
 static cl::opt<bool>  ClInstrumentMemoryAccesses(
     "rvpredict-instrument-memory-accesses", cl::init(true),
@@ -123,8 +123,8 @@ public:
 };
 
 char RVPredictInstrument::ID = 0;
-static RegisterPass<RVPredictInstrument> _("rv-instrument",
-        "RV-Predict[Bare-metal] instrumentation pass", false, false);
+static RegisterPass<RVPredictInstrument> _("rvpinstrument",
+        "RV-Predict instrumentation pass", false, false);
 
 // Registering this function pass at extension point `EP_EarlyAsPossible`
 // results in a segmentation fault at runtime because the LLVM PassManager

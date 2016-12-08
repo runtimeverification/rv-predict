@@ -116,7 +116,7 @@ struct RVHash {
   }
 
   ~RVHash() {
-    internal_free(b);
+//    internal_free(b);
   }
 
   bool allocated() {

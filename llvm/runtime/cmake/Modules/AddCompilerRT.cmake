@@ -178,9 +178,6 @@ macro(add_compiler_rt_test test_suite test_name)
     set(output_bin "${output_bin}.exe")
   endif()
   # Use host compiler in a standalone build, and just-built Clang otherwise.
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND TEST_DEPS clang)
-  endif()
   # If we're not on MSVC, include the linker flags from CMAKE but override them
   # with the provided link flags. This ensures that flags which are required to
   # link programs at all are included, but the changes needed for the test
@@ -240,10 +237,6 @@ macro(add_custom_libcxx name prefix)
     set(flagstr "${flagstr} ${flag}")
   endforeach()
   set(LIBCXX_CFLAGS ${flagstr})
-
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND LIBCXX_DEPS clang)
-  endif()
 
   ExternalProject_Add(${name}
     PREFIX ${prefix}

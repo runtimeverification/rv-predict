@@ -10,9 +10,6 @@ macro(add_ubsan_testsuite test_mode sanitizer arch)
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
     ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg)
   list(APPEND UBSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND UBSAN_TEST_DEPS ${sanitizer})
-  endif()
 endmacro()
 
 foreach(arch ${UBSAN_SUPPORTED_ARCH})

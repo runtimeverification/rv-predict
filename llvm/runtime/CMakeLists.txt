@@ -7,122 +7,71 @@
 # An important constraint of the build is that it only produces libraries
 # based on the ability of the host toolchain to target various platforms.
 
-# Check if compiler-rt is built as a standalone project.
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  project(CompilerRT C CXX)
-  set(COMPILER_RT_STANDALONE_BUILD TRUE)
-else()
-  set(COMPILER_RT_STANDALONE_BUILD FALSE)
-endif()
+# Built as a standalone project.
+project(CompilerRT C CXX)
 
-# The CompilerRT build system requires CMake version 2.8.8 or higher in order
-# to use its support for building convenience "libraries" as a collection of
-# .o files. This is particularly useful in producing larger, more complex
-# runtime libraries.
-if (NOT MSVC)
-  cmake_minimum_required(VERSION 2.8.8)
-else()
-  # Version 2.8.12.1 is required to build with Visual Studion 2013.
-  cmake_minimum_required(VERSION 2.8.12.1)
-endif()
-
-# FIXME: It may be removed when we use 2.8.12.
-if(CMAKE_VERSION VERSION_LESS 2.8.12)
-  # Invalidate a couple of keywords.
-  set(cmake_2_8_12_INTERFACE)
-  set(cmake_2_8_12_PRIVATE)
-else()
-  # Use ${cmake_2_8_12_KEYWORD} intead of KEYWORD in target_link_libraries().
-  set(cmake_2_8_12_INTERFACE INTERFACE)
-  set(cmake_2_8_12_PRIVATE PRIVATE)
-  if(POLICY CMP0022)
-    cmake_policy(SET CMP0022 NEW) # automatic when 2.8.12 is required
-  endif()
-endif()
+cmake_minimum_required(VERSION 3.1)
 
 # Top level target used to build all compiler-rt libraries.
 add_custom_target(compiler-rt ALL)
 
-if (NOT COMPILER_RT_STANDALONE_BUILD)
-  # Compute the Clang version from the LLVM version.
-  # FIXME: We should be able to reuse CLANG_VERSION variable calculated
-  #        in Clang cmake files, instead of copying the rules here.
-  string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CLANG_VERSION
-         ${PACKAGE_VERSION})
-  # Setup the paths where compiler-rt runtimes and headers should be stored.
-  set(COMPILER_RT_OUTPUT_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION})
-  set(COMPILER_RT_EXEC_OUTPUT_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
-  set(COMPILER_RT_INSTALL_PATH lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION})
-  option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests."
-         ${LLVM_INCLUDE_TESTS})
- option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered"
-        ${LLVM_ENABLE_WERROR})
-  # Use just-built Clang to compile/link tests on all platforms, except for
-  # Windows where we need to use clang-cl instead.
-  if(NOT MSVC)
-    set(COMPILER_RT_TEST_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
-  else()
-    set(COMPILER_RT_TEST_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang.exe)
-  endif()
-else()
-  # Take output dir and install path from the user.
-  set(COMPILER_RT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH
-    "Path where built compiler-rt libraries should be stored.")
-  set(COMPILER_RT_EXEC_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin CACHE PATH
-    "Path where built compiler-rt executables should be stored.")
-  set(COMPILER_RT_INSTALL_PATH ${CMAKE_INSTALL_PREFIX} CACHE PATH
-    "Path where built compiler-rt libraries should be installed.")
-  option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests." OFF)
-  option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered" OFF)
-  # Use a host compiler to compile/link tests.
-  set(COMPILER_RT_TEST_COMPILER ${CMAKE_C_COMPILER} CACHE PATH "Compiler to use for testing")
+# Take output dir and install path from the user.
+set(COMPILER_RT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH
+  "Path where built compiler-rt libraries should be stored.")
+set(COMPILER_RT_EXEC_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin CACHE PATH
+  "Path where built compiler-rt executables should be stored.")
+set(COMPILER_RT_INSTALL_PATH ${CMAKE_INSTALL_PREFIX} CACHE PATH
+  "Path where built compiler-rt libraries should be installed.")
+option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests." OFF)
+option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered" OFF)
+# Use a host compiler to compile/link tests.
+set(COMPILER_RT_TEST_COMPILER ${CMAKE_C_COMPILER} CACHE PATH "Compiler to use for testing")
 
+if (NOT LLVM_CONFIG_PATH)
+  find_program(LLVM_CONFIG_PATH "llvm-config"
+               DOC "Path to llvm-config binary")
   if (NOT LLVM_CONFIG_PATH)
-    find_program(LLVM_CONFIG_PATH "llvm-config"
-                 DOC "Path to llvm-config binary")
-    if (NOT LLVM_CONFIG_PATH)
-      message(FATAL_ERROR "llvm-config not found: specify LLVM_CONFIG_PATH")
-    endif()
+    message(FATAL_ERROR "llvm-config not found: specify LLVM_CONFIG_PATH")
   endif()
-  execute_process(
-    COMMAND ${LLVM_CONFIG_PATH} "--obj-root" "--bindir" "--libdir" "--src-root"
-    RESULT_VARIABLE HAD_ERROR
-    OUTPUT_VARIABLE CONFIG_OUTPUT)
-  if (HAD_ERROR)
-    message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
-  endif()
-  string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";" CONFIG_OUTPUT ${CONFIG_OUTPUT})
-  list(GET CONFIG_OUTPUT 0 LLVM_BINARY_DIR)
-  list(GET CONFIG_OUTPUT 1 LLVM_TOOLS_BINARY_DIR)
-  list(GET CONFIG_OUTPUT 2 LLVM_LIBRARY_DIR)
-  list(GET CONFIG_OUTPUT 3 LLVM_MAIN_SRC_DIR)
-
-  # Make use of LLVM CMake modules.
-  file(TO_CMAKE_PATH ${LLVM_BINARY_DIR} LLVM_BINARY_DIR_CMAKE_STYLE)
-  set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR_CMAKE_STYLE}/share/llvm/cmake")
-  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
-  # Get some LLVM variables from LLVMConfig.
-  include("${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
-
-  set(LLVM_LIBRARY_OUTPUT_INTDIR
-    ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
-
-  # Find Python interpreter.
-  set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5)
-  include(FindPythonInterp)
-  if(NOT PYTHONINTERP_FOUND)
-    message(FATAL_ERROR "
-      Unable to find Python interpreter required testing. Please install Python
-      or specify the PYTHON_EXECUTABLE CMake variable.")
-  endif()
-
-  # Define default arguments to lit.
-  set(LIT_ARGS_DEFAULT "-sv")
-  if (MSVC OR XCODE)
-    set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
-  endif()
-  set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 endif()
+execute_process(
+  COMMAND ${LLVM_CONFIG_PATH} "--obj-root" "--bindir" "--libdir" "--src-root"
+  RESULT_VARIABLE HAD_ERROR
+  OUTPUT_VARIABLE CONFIG_OUTPUT)
+if (HAD_ERROR)
+  message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
+endif()
+string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";" CONFIG_OUTPUT ${CONFIG_OUTPUT})
+list(GET CONFIG_OUTPUT 0 LLVM_BINARY_DIR)
+list(GET CONFIG_OUTPUT 1 LLVM_TOOLS_BINARY_DIR)
+list(GET CONFIG_OUTPUT 2 LLVM_LIBRARY_DIR)
+list(GET CONFIG_OUTPUT 3 LLVM_MAIN_SRC_DIR)
+
+# Make use of LLVM CMake modules.
+file(TO_CMAKE_PATH ${LLVM_BINARY_DIR} LLVM_BINARY_DIR_CMAKE_STYLE)
+set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR_CMAKE_STYLE}/share/llvm/cmake")
+list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
+# Get some LLVM variables from LLVMConfig.
+include("${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
+
+set(LLVM_LIBRARY_OUTPUT_INTDIR
+  ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
+
+# Find Python interpreter.
+set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5)
+include(FindPythonInterp)
+if(NOT PYTHONINTERP_FOUND)
+  message(FATAL_ERROR "
+    Unable to find Python interpreter required testing. Please install Python
+    or specify the PYTHON_EXECUTABLE CMake variable.")
+endif()
+
+# Define default arguments to lit.
+set(LIT_ARGS_DEFAULT "-sv")
+if (MSVC OR XCODE)
+  set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
+endif()
+set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
 if("${COMPILER_RT_TEST_COMPILER}" MATCHES "clang[+]*$")
   set(COMPILER_RT_TEST_COMPILER_ID Clang)

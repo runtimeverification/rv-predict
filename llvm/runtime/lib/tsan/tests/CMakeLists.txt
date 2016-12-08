@@ -23,9 +23,6 @@ macro(tsan_compile obj_list source arch)
   set(output_obj "${basename}.${arch}.o")
   get_target_flags_for_arch(${arch} TARGET_CFLAGS)
   set(COMPILE_DEPS ${TSAN_RTL_HEADERS} ${ARGN})
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND COMPILE_DEPS gtest tsan)
-  endif()
   clang_compile(${output_obj} ${source}
           CFLAGS ${TSAN_UNITTEST_CFLAGS} ${TARGET_CFLAGS}
           DEPS ${COMPILE_DEPS})
@@ -43,9 +40,6 @@ macro(add_tsan_unittest testname)
       endforeach()
       get_target_flags_for_arch(${arch} TARGET_LINK_FLAGS)
       set(TEST_DEPS ${TEST_OBJECTS})
-      if(NOT COMPILER_RT_STANDALONE_BUILD)
-        list(APPEND TEST_DEPS tsan)
-      endif()
       # FIXME: Looks like we should link TSan with just-built runtime,
       # and not rely on -fsanitize=thread, as these tests are essentially
       # unit tests.

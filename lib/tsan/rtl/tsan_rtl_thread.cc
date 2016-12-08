@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_placement_new.h"
-#include <builtins/int_endianness.h>
 
 #include "tsan_symbolize.h"
 #include "tsan_rtl.h"

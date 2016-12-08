@@ -127,16 +127,6 @@ endmacro()
 
 set(COMPILER_RT_TEST_CFLAGS)
 
-# Unittests support.
-set(COMPILER_RT_GTEST_PATH ${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest)
-set(COMPILER_RT_GTEST_SOURCE ${COMPILER_RT_GTEST_PATH}/src/gtest-all.cc)
-set(COMPILER_RT_GTEST_CFLAGS
-  -DGTEST_NO_LLVM_RAW_OSTREAM=1
-  -DGTEST_HAS_RTTI=0
-  -I${COMPILER_RT_GTEST_PATH}/include
-  -I${COMPILER_RT_GTEST_PATH}
-)
-
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 COMPILER_RT_TEST_CFLAGS)
 
 if(MSVC)
@@ -146,17 +136,6 @@ if(MSVC)
   # We should teach clang to understand "#pragma intrinsic", see PR19898.
   list(APPEND COMPILER_RT_TEST_CFLAGS -Wno-undefined-inline)
 
-  # Clang doesn't support SEH on Windows yet.
-  list(APPEND COMPILER_RT_GTEST_CFLAGS -DGTEST_HAS_SEH=0)
-
-  # gtest use a lot of stuff marked as deprecated on Windows.
-  list(APPEND COMPILER_RT_GTEST_CFLAGS -Wno-deprecated-declarations)
-
-  # Visual Studio 2012 only supports up to 8 template parameters in
-  # std::tr1::tuple by default, but gtest requires 10
-  if(MSVC_VERSION EQUAL 1700)
-    list(APPEND COMPILER_RT_GTEST_CFLAGS -D_VARIADIC_MAX=10)
-  endif()
 endif()
 
 # Link objects into a single executable with COMPILER_RT_TEST_COMPILER,

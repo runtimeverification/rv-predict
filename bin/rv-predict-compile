@@ -1,22 +1,51 @@
-#!/bin/bash
+#!/bin/sh
+#
+# Note: this is a more-or-less "portable" Bourne shell script.
+# That is, it is not reliant on any bash-isms.
+#
 
-cpp=0
-exts=("cc" "cp" "cxx" "cpp" "CPP" "c\+\+" "C")
+PASS_DIR=$(dirname $0)/../llvm/build/pass
+RUNTIME_DIR=$(dirname $0)/../llvm/build/runtime/lib/linux
 
-for i in "$@";
-do
-    for ext in ${exts[*]}; do
-        if [[ $i =~ \.$ext$ ]] ; then
-            let "cpp+=1"
-        fi
-    done
+cplusplus=no
+sources=no
+link=yes
+compile=yes
+
+for arg in "$@"; do
+	case "$arg" in
+	--)	break
+		;;
+	-E)	compile=no
+		link=no
+		continue
+		;;
+	-[cS])	link=no
+		continue
+		;;
+	*.cc|*.cp|*.cxx|*.cpp|*.CPP|*.c++|*.C)
+		cplusplus=yes
+		sources=yes
+		;;
+	*.c)
+		sources=yes
+		;;
+	esac
 done
 
 
-CMP=clang
-
-if [ "$cpp" -gt 0 ]; then
-   CMP='clang++ -std=c++11'
+if [ ${cplusplus:-no} = yes ]; then
+	compiler="clang++ -std=c++11"
+else
+	compiler=clang
 fi
 
-$CMP -fsanitize=rvpredict -g "$@"
+if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ]; then
+	pass="-Xclang -load -Xclang $PASS_DIR/rvpinstrument.so -g"
+fi
+
+if [ ${link:-yes} = yes ]; then
+	runtime="-L${RUNTIME_DIR} -lclang_rt.tsan-x86_64 -ldl -lrt -pthread -g"
+fi
+
+$compiler ${pass:-} "$@" ${runtime:-}

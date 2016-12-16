@@ -2,6 +2,7 @@
 dot-product
 double-checked-locking
 lpcq
+spcq
 memcpy
 *.o
 simple-state-machine
@@ -10,3 +11,4 @@ square-sum
 stack
 .*.swp
 unsafe-vector
+*.ll

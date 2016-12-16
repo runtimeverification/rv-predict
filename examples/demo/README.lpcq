@@ -1,11 +1,11 @@
 Copyright (c) 2016 Runtime Verification, Inc.  All rights reserved.
 
-`lpcq` is a POSIX Threads-using C program that sends some numbers from a
-producer thread to a consumer thread through a queue.  The program demonstrates
-RV-Predict[C]'s capability to detect races on a linked producer-consumer queue
-library.  The library itself does not provide any synchronization.  Library
-users must synchronize access to a queue, otherwise two or more threads
-accessing the same queue will corrupt it.
+`lpcq` is a POSIX Threads-using C program that sends some numbers from
+a producer thread to a consumer thread through a queue.  The program
+demonstrates RV-Predict[C]'s capability to detect races on a linked
+producer-consumer queue library.  The library itself does not provide
+any synchronization.  Library users must synchronize access to a queue,
+otherwise two or more threads accessing the same queue will corrupt it.
 
 # Sources
 
@@ -15,10 +15,10 @@ lpcq_main.c	the test driver
 
 # Compilation
 
-Using a copy of `clang` that has the RV-Predict sanitizer built in,
-run
+Using rv-predict-compile, a wrapper for clang that adds RV-Predict
+instrumentation, run
 
-	clang -pthread -g -fsanitize=rvpredict -o lpcq lpcq.c lpcq_main.c
+	rv-predict-compile -o lpcq lpcq.c lpcq_main.c
 
 That produces an executable binary, `lpcq`.
 

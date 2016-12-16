@@ -1,0 +1,22 @@
+SOURCE LAYOUT
+
+	pass/: standalone instrumentation pass derived from
+	    Thread Sanitizer (tsan)
+	runtime/: standalone runtime derived from tsan
+
+BUILDING
+
+To build both the runtime and the instrumentation pass:
+
+	mkdir build
+	cd build
+	cmake ..
+	make
+
+The LLVM installation on office.runtimeverification.com:2222 is screwed up, so
+I recommend fetching and extracting a CLang+LLVM pre-built binary from
+http://llvm.org/releases/ and running cmake with the appropriate -DLLVM_DIR=
+path.  I have extracted 3.8.1 in my home directory, so I run cmake like so:
+
+	cmake -DLLVM_DIR=$HOME/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-16.04/share/llvm/cmake ..
+

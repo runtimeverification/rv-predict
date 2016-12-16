@@ -13,10 +13,33 @@ To build both the runtime and the instrumentation pass:
 	cmake ..
 	make
 
-The LLVM installation on office.runtimeverification.com:2222 is screwed up, so
-I recommend fetching and extracting a CLang+LLVM pre-built binary from
-http://llvm.org/releases/ and running cmake with the appropriate -DLLVM_DIR=
-path.  I have extracted 3.8.1 in my home directory, so I run cmake like so:
+After you run make, the two binaries that you need to add RV-Predict
+instrumentation to your program are under build/,
+
+	pass/rvpinstrument.so
+	runtime/lib/linux/libclang_rt.tsan-x86_64.a
+
+The LLVM installation on office.runtimeverification.com:2222 is screwed
+up, so I recommend fetching and extracting a CLang+LLVM pre-built binary
+from http://llvm.org/releases/ and running cmake with the appropriate
+-DLLVM_DIR= path.  I have extracted 3.8.1 in my home directory, so I
+run cmake like so:
 
 	cmake -DLLVM_DIR=$HOME/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-16.04/share/llvm/cmake ..
+
+USING
+
+To compile your program with RV-Predict instrumentation, follow this
+steps, where $BUILD refers to the build directory, build/, above,
+$SRCS refers to your source files, $OBJS to the object files created
+from those sources, and $PROG is the program you are building:
+
+Compile each source file, $src in $SRCS:
+
+	clang -g -Xclang -load -Xclang $BUILD/pass/rvpinstrument.so -c $src
+
+Link:
+
+	clang     -o $PROG $OBJS \
+	    -L$BUILD/lib/linux -lclang_rt.tsan-x86_64 -ldl -lrt -pthread -g
 

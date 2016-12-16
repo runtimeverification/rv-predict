@@ -2,7 +2,6 @@
 
 PROGS=	dot-product lpcq memcpy spcq square-sum
 
-#CC=${HOME}/rv/raw/local/bin/clang
 CC=clang
 CFLAGS+=-std=c11
 CPPFLAGS+=-D_POSIX_C_SOURCE=2

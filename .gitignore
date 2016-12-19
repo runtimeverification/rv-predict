@@ -1,10 +1,12 @@
 *.iml
 .idea
+EVALUATION-LICENSE.md
 .metadata
 .recommenders
 .cache
 .project
 .classpath
 .settings/
+EVALUATION-LICENSE.md
 *~
 target/

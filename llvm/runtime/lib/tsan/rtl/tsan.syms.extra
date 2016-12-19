@@ -1,0 +1,15 @@
+__rvpredict_init
+__rvpredict_read*
+__rvpredict_write*
+__rvpredict_vptr*
+__rvpredict_func*
+__rvpredict_atomic*
+__rvpredict_java*
+__rvpredict_unaligned*
+__rvpredict_release
+__rvpredict_acquire
+__ubsan_*
+Annotate*
+WTFAnnotate*
+RunningOnValgrind
+ValgrindSlowdown

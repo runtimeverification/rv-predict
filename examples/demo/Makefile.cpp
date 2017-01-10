@@ -13,6 +13,6 @@ SRCS.spinning-loop=spinning-loop.cpp
 SRCS.stack=stack.cpp
 SRCS.unsafe-vector=unsafe-vector.cpp
 
-LDADD+=-L${RUNTIME_DIR} -lclang_rt.tsan_cxx-x86_64
+LDADD+=${RV_PREDICT_CXX_LDADD}
 
 .include <bsd.prog.mk>

@@ -3,10 +3,15 @@
 #include <features.h>
 #include <assert.h>
 #include <err.h>
+#include <inttypes.h>	/* for PRIu64 */
+#include <limits.h>
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>	/* for uint64_t */
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <time.h>
 #include <unistd.h>
 #include "lpcq.h"
 
@@ -20,9 +25,11 @@ typedef struct _item {
 #endif
 
 pthread_mutex_t *mutexp = NULL;
-item_t items[5];
+item_t *items;
 
-const int nitems = __arraycount(items);
+int nitems = 5;
+
+bool timing = false;
 
 static inline void
 acquire_queue(void)
@@ -48,14 +55,24 @@ release_queue(void)
 	assert(rc == 0);
 }
 
-void *
+static void *
 consume(void *arg)
 {
 	int nread;
 	lpcq_t *q = arg;
+	uint64_t elapsed_ns;
+	struct timespec resolution, start, stop;
+	const uint32_t ns_per_s = 1000 * 1000 * 1000;
+	uint64_t busy_loops = 0;
+
+	if (clock_getres(CLOCK_MONOTONIC, &resolution) != 0)
+		err(EXIT_FAILURE, "%s: clock_getres", __func__);
+
+	if (clock_gettime(CLOCK_MONOTONIC, &start) != 0)
+		err(EXIT_FAILURE, "%s: clock_gettime", __func__);
 
 	for (nread = 0; nread < nitems; nread++) {
-		int loops;
+		unsigned int loops;
 		item_t *item;
 
 		for (loops = 0; loops < 10000; loops++) {
@@ -66,13 +83,28 @@ consume(void *arg)
 				break;
 			sched_yield();
 		}
+		busy_loops += loops;
 		printf("read item %d\n", item->idx);
+	}
+
+	if (clock_gettime(CLOCK_MONOTONIC, &stop) != 0)
+		err(EXIT_FAILURE, "%s: clock_gettime", __func__);
+
+	elapsed_ns = (stop.tv_sec - start.tv_sec) * ns_per_s +
+	    stop.tv_nsec - start.tv_nsec;
+
+	if (timing) {
+		fprintf(stderr,
+		    "%" PRIu64 " ns / %d items, %" PRIu64 " ns resolution\n",
+		    elapsed_ns, nitems,
+		    resolution.tv_sec * ns_per_s + resolution.tv_nsec);
+		fprintf(stderr, "%" PRIu64 " busy loops\n", busy_loops);
 	}
 
 	return NULL;
 }
 
-void *
+static void *
 produce(void *arg)
 {
 	lpcq_t *q = arg;
@@ -101,16 +133,31 @@ main(int argc, char **argv)
 	lpcq_t q;
 	pthread_mutex_t mutex;
 
-	while ((opt = getopt(argc, argv, "l")) != -1) {
+	while ((opt = getopt(argc, argv, "ln:t")) != -1) {
+		unsigned long v;
+		char *end;
+
 		switch (opt) {
 		case 'l':
-			fprintf(stderr, "locking enabled\n");
 			mutexp = &mutex;
+			break;
+		case 'n':
+			if (*optarg == '-' ||
+			    (v = strtoul(optarg, &end, 10)) == ULONG_MAX ||
+			    *end != '\0' || v > INT_MAX)
+				errx(EXIT_FAILURE, "%s: malformed or out-of-range -n argument", __func__);
+			nitems = (int)v;
+			break;
+		case 't':
+			timing = true;
 			break;
 		default:
 			usage(argv[0]);
 		}
 	}
+
+	if ((items = calloc(nitems, sizeof(items[0]))) == NULL)
+		err(EXIT_FAILURE, "%s: calloc", __func__);
 
 	if (pthread_mutex_init(&mutex, NULL) != 0)
 		err(EXIT_FAILURE, "%s: pthread_mutex_init", __func__);

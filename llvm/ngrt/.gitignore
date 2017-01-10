@@ -1,0 +1,6 @@
+*.a
+.depend
+.Makefile.tags
+*.o
+*.so
+tags

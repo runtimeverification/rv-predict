@@ -1,0 +1,5 @@
+ngrt/: next-generation runtime that is simpler and faster
+    than the one derived from tsan
+
+	func.c: instrumentation for function entry/exit
+	thread.c: instrumentation for pthread_create/_join

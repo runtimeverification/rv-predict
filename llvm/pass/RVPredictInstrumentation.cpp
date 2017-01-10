@@ -86,6 +86,7 @@ public:
   const char *getPassName() const override;
   bool runOnFunction(Function &F) override;
   bool doInitialization(Module &M) override;
+  GlobalVariable *createOrdering(IRBuilder<> *, AtomicOrdering);
   static char ID;  // Pass identification, replacement for typeid.
 
  private:
@@ -99,27 +100,32 @@ public:
   bool addrPointsToConstantData(Value *Addr);
   int getMemoryAccessFuncIndex(Value *Addr, const DataLayout &DL);
 
-  Type *IntptrTy;
-  IntegerType *OrdTy;
+  Type *intptr_type;
   // Callbacks to run-time library are computed in doInitialization.
-  Function *RVPredictFuncEntry;
-  Function *RVPredictFuncExit;
+  Function *fnenter;
+  Function *fnexit;
   // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
   static const size_t kNumberOfAccessSizes = 5;
-  Function *RVPredictRead[kNumberOfAccessSizes];
-  Function *RVPredictWrite[kNumberOfAccessSizes];
-  Function *RVPredictUnalignedRead[kNumberOfAccessSizes];
-  Function *RVPredictUnalignedWrite[kNumberOfAccessSizes];
-  Function *RVPredictAtomicLoad[kNumberOfAccessSizes];
-  Function *RVPredictAtomicStore[kNumberOfAccessSizes];
-  Function *RVPredictAtomicRMW[AtomicRMWInst::LAST_BINOP + 1][kNumberOfAccessSizes];
-  Function *RVPredictAtomicCAS[kNumberOfAccessSizes];
-  Function *RVPredictAtomicThreadFence;
-  Function *RVPredictAtomicSignalFence;
-  Function *RVPredictVptrUpdate;
-  Function *RVPredictVptrLoad;
-  Function *MemmoveFn, *MemcpyFn, *MemsetFn;
-  Function *RVPredictCtorFunction;
+  Function *load[kNumberOfAccessSizes];
+  Function *store[kNumberOfAccessSizes];
+  Function *unaligned_load[kNumberOfAccessSizes];
+  Function *unaligned_store[kNumberOfAccessSizes];
+  Function *atomic_load[kNumberOfAccessSizes];
+  Function *atomic_store[kNumberOfAccessSizes];
+  Function *atomic_rmw[AtomicRMWInst::LAST_BINOP + 1][kNumberOfAccessSizes];
+  Function *atomic_cas[kNumberOfAccessSizes];
+  Function *atomic_thread_fence;
+  Function *atomic_signal_fence;
+  Function *vptr_update;
+  Function *vptr_load;
+  Function *memmovefn, *memcpyfn, *memsetfn;
+  Function *ctorfn;
+  GlobalVariable *order_relaxed;
+  GlobalVariable *order_acquire;
+  GlobalVariable *order_release;
+  GlobalVariable *order_acq_rel;
+  GlobalVariable *order_seq_cst;
+
 };
 
 char RVPredictInstrument::ID = 0;
@@ -146,112 +152,191 @@ static RegisterStandardPasses ___(PassManagerBuilder::EP_EnabledOnOptLevel0,
 
 
 
-const char *RVPredictInstrument::getPassName() const {
-  return "RVPredictInstrument";
+const char *
+RVPredictInstrument::getPassName() const
+{
+	return "RVPredictInstrument";
 }
 
-void RVPredictInstrument::initializeCallbacks(Module &M) {
-  IRBuilder<> IRB(M.getContext());
-  // Initialize the callbacks.
-  RVPredictFuncEntry = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-      "__rvpredict_func_entry", IRB.getVoidTy(), IRB.getInt8PtrTy(), nullptr));
-  RVPredictFuncExit = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction("__rvpredict_func_exit", IRB.getVoidTy(), nullptr));
-  OrdTy = IRB.getInt32Ty();
-  for (size_t i = 0; i < kNumberOfAccessSizes; ++i) {
-    const size_t ByteSize = 1 << i;
-    const size_t BitSize = ByteSize * 8;
-    SmallString<32> ReadName("__rvpredict_read" + itostr(ByteSize));
-    RVPredictRead[i] = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-        ReadName, IRB.getVoidTy(), IRB.getInt8PtrTy(), nullptr));
+void
+RVPredictInstrument::initializeCallbacks(Module &m)
+{
+	IRBuilder<> builder(m.getContext());
+	auto memory_order_type = builder.getInt32Ty();
+	auto void_type = builder.getVoidTy();
+	auto int8_ptr_type = builder.getInt8PtrTy();
 
-    SmallString<32> WriteName("__rvpredict_write" + itostr(ByteSize));
-    RVPredictWrite[i] = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-        WriteName, IRB.getVoidTy(), IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), nullptr));
+	/* void __rvpredict_func_entry(void *);
+	 * void __rvpredict_func_exit(void);
+	 */
+	fnenter = checkSanitizerInterfaceFunction(
+	    m.getOrInsertFunction( "__rvpredict_func_entry", void_type,
+	        int8_ptr_type, nullptr));
+	fnexit = checkSanitizerInterfaceFunction(
+	    m.getOrInsertFunction("__rvpredict_func_exit", void_type, nullptr));
 
-    SmallString<64> UnalignedReadName("__rvpredict_unaligned_read" +
-        itostr(ByteSize));
-    RVPredictUnalignedRead[i] =
-        checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-            UnalignedReadName, IRB.getVoidTy(), IRB.getInt8PtrTy(), nullptr));
+	for (size_t i = 0; i < kNumberOfAccessSizes; ++i) {
+		const size_t byte_size = 1 << i;
+		const size_t bit_size = byte_size * 8;
+		auto byte_size_str = itostr(byte_size);
+		Type *type = Type::getIntNTy(m.getContext(), bit_size);
+		Type *ptr_type = type->getPointerTo();
 
-    SmallString<64> UnalignedWriteName("__rvpredict_unaligned_write" +
-        itostr(ByteSize));
-    RVPredictUnalignedWrite[i] = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-        UnalignedWriteName, IRB.getVoidTy(),
-        IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), nullptr));
+		SmallString<32> load_name("__rvpredict_load" + byte_size_str);
+		load[i] = checkSanitizerInterfaceFunction(
+		    m.getOrInsertFunction(load_name,
+			void_type, int8_ptr_type, nullptr));
 
-    Type *Ty = Type::getIntNTy(M.getContext(), BitSize);
-    Type *PtrTy = Ty->getPointerTo();
-    SmallString<32> AtomicLoadName("__rvpredict_atomic" + itostr(BitSize) +
-                                   "_load");
-    RVPredictAtomicLoad[i] = checkSanitizerInterfaceFunction(
-        M.getOrInsertFunction(AtomicLoadName, Ty, PtrTy, OrdTy, nullptr));
+		/* For m the width of the access in bytes, and n the width
+		 * in bits, the instrumentation may insert calls to any of
+		 * these functions: 
+		 *
+		 * void __rvpredict_store{m}(uint{n}_t *addr, uint{n}_t val);
+		 *
+		 * void __rvpredict_load{m}(uint{n}_t *addr, uint{n}_t val);
+		 *
+		 * void __rvpredict_unaligned_store{m}(uint{n}_t *addr,
+		 *     uint{n}_t val);
+		 *
+		 * void __rvpredict_unaligned_load{m}(uint{n}_t *addr,
+		 *     uint{n}_t val);
+		 *
+		 * void __rvpredict_atomic_store{m}(uint{n}_t *addr,
+		 *     uint{n}_t val, int32_t memory_order);
+		 *
+		 * void __rvpredict_atomic_load{m}(uint{n}_t *addr,
+		 *     uint{n}_t val, int32_t memory_order);
+		 *
+		 * uint{n}_t __rvpredict_atomic_cas{m}(uint{n}_t *addr,
+		 *     uint{n}_t expected, uint{n}_t desired,
+		 *     int32_t memory_order_success,
+		 *     int32_t memory_order_failure);
+		 *
+		 * uint{n}_t __rvpredict_atomic_exchange{m}(uint{n}_t *addr,
+		 *     uint{n}_t val, int32_t memory_order);
+		 *
+		 * void __rvpredict_atomic_fetch_{add,
+		 *     sub, and, or, xor, nand}{m}(uint{n}_t *addr,
+		 *     uint{n}_t oval, uint{n}_t arg, int32_t memory_order);
+		 */
+		SmallString<32> store_name("__rvpredict_store" + byte_size_str);
+		store[i] = checkSanitizerInterfaceFunction(
+		    m.getOrInsertFunction(store_name,
+		        void_type, ptr_type, type, nullptr));
 
-    SmallString<32> AtomicStoreName("__rvpredict_atomic" + itostr(BitSize) +
-                                    "_store");
-    RVPredictAtomicStore[i] = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-        AtomicStoreName, IRB.getVoidTy(), PtrTy, Ty, OrdTy, nullptr));
+		SmallString<64> unaligned_load_name(
+		    "__rvpredict_unaligned_load" + byte_size_str);
+		unaligned_load[i] = checkSanitizerInterfaceFunction(
+		    m.getOrInsertFunction(unaligned_load_name,
+		        void_type, ptr_type, type, nullptr));
 
-    for (int op = AtomicRMWInst::FIRST_BINOP;
-        op <= AtomicRMWInst::LAST_BINOP; ++op) {
-      RVPredictAtomicRMW[op][i] = nullptr;
-      const char *NamePart = nullptr;
-      if (op == AtomicRMWInst::Xchg)
-        NamePart = "_exchange";
-      else if (op == AtomicRMWInst::Add)
-        NamePart = "_fetch_add";
-      else if (op == AtomicRMWInst::Sub)
-        NamePart = "_fetch_sub";
-      else if (op == AtomicRMWInst::And)
-        NamePart = "_fetch_and";
-      else if (op == AtomicRMWInst::Or)
-        NamePart = "_fetch_or";
-      else if (op == AtomicRMWInst::Xor)
-        NamePart = "_fetch_xor";
-      else if (op == AtomicRMWInst::Nand)
-        NamePart = "_fetch_nand";
-      else
-        continue;
-      SmallString<32> RMWName("__rvpredict_atomic" + itostr(BitSize) + NamePart);
-      RVPredictAtomicRMW[op][i] = checkSanitizerInterfaceFunction(
-          M.getOrInsertFunction(RMWName, Ty, PtrTy, Ty, OrdTy, nullptr));
-    }
+		SmallString<64> unaligned_store_name(
+		    "__rvpredict_unaligned_store" + byte_size_str);
+		unaligned_store[i] = checkSanitizerInterfaceFunction(
+		    m.getOrInsertFunction(unaligned_store_name,
+		        void_type, ptr_type, type, nullptr));
 
-    SmallString<32> AtomicCASName("__rvpredict_atomic" + itostr(BitSize) +
-                                  "_compare_exchange_val");
-    RVPredictAtomicCAS[i] = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-        AtomicCASName, Ty, PtrTy, Ty, Ty, OrdTy, OrdTy, nullptr));
-  }
-  RVPredictVptrUpdate = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction("__rvpredict_vptr_update", IRB.getVoidTy(),
-                            IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), nullptr));
-  RVPredictVptrLoad = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-      "__rvpredict_vptr_read", IRB.getVoidTy(), IRB.getInt8PtrTy(), nullptr));
-  RVPredictAtomicThreadFence = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-      "__rvpredict_atomic_thread_fence", IRB.getVoidTy(), OrdTy, nullptr));
-  RVPredictAtomicSignalFence = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-      "__rvpredict_atomic_signal_fence", IRB.getVoidTy(), OrdTy, nullptr));
+		SmallString<32> atomic_load_name("__rvpredict_atomic_load" +
+		    byte_size_str);
+		atomic_load[i] = checkSanitizerInterfaceFunction(
+		    m.getOrInsertFunction(atomic_load_name, void_type,
+		    ptr_type, type, memory_order_type, nullptr));
 
-  MemmoveFn = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction("memmove", IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                            IRB.getInt8PtrTy(), IntptrTy, nullptr));
-  MemcpyFn = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction("memcpy", IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                            IRB.getInt8PtrTy(), IntptrTy, nullptr));
-  MemsetFn = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction("memset", IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                            IRB.getInt32Ty(), IntptrTy, nullptr));
+		SmallString<32> atomic_store_name("__rvpredict_atomic_store" +
+		    byte_size_str);
+		atomic_store[i] = checkSanitizerInterfaceFunction(
+		    m.getOrInsertFunction(atomic_store_name,
+		        void_type, ptr_type, type, memory_order_type, nullptr));
+
+		for (int op = AtomicRMWInst::FIRST_BINOP;
+		     op <= AtomicRMWInst::LAST_BINOP;
+		     op++) {
+			atomic_rmw[op][i] = nullptr;
+			const char *prefix = nullptr;
+			if (op == AtomicRMWInst::Xchg)
+				prefix = "__rvpredict_atomic_exchange";
+			else if (op == AtomicRMWInst::Add)
+				prefix = "__rvpredict_atomic_fetch_add";
+			else if (op == AtomicRMWInst::Sub)
+				prefix = "__rvpredict_atomic_fetch_sub";
+			else if (op == AtomicRMWInst::And)
+				prefix = "__rvpredict_atomic_fetch_and";
+			else if (op == AtomicRMWInst::Or)
+				prefix = "__rvpredict_atomic_fetch_or";
+			else if (op == AtomicRMWInst::Xor)
+				prefix = "__rvpredict_atomic_fetch_xor";
+			else if (op == AtomicRMWInst::Nand)
+				prefix = "__rvpredict_atomic_fetch_nand";
+			else
+				continue;
+			SmallString<32> rmw_name(prefix + byte_size_str);
+			atomic_rmw[op][i] =
+			    checkSanitizerInterfaceFunction(
+			        m.getOrInsertFunction(rmw_name, void_type,
+				    ptr_type, type, type, memory_order_type,
+				    nullptr));
+		}
+
+		SmallString<32> atomic_cas_name("__rvpredict_atomic_cas" +
+		    byte_size_str);
+		atomic_cas[i] = checkSanitizerInterfaceFunction(
+		    m.getOrInsertFunction(atomic_cas_name, type, ptr_type,
+		        type, type, memory_order_type, memory_order_type,
+			nullptr));
+	}
+	vptr_update = checkSanitizerInterfaceFunction(
+	    m.getOrInsertFunction("__rvpredict_vptr_update",
+	        void_type, int8_ptr_type,
+		int8_ptr_type, nullptr));
+	vptr_load = checkSanitizerInterfaceFunction(
+	    m.getOrInsertFunction("__rvpredict_vptr_load",
+	        void_type, int8_ptr_type, nullptr));
+	atomic_thread_fence = checkSanitizerInterfaceFunction(
+	    m.getOrInsertFunction("__rvpredict_atomic_thread_fence",
+	        void_type, memory_order_type, nullptr));
+	atomic_signal_fence = checkSanitizerInterfaceFunction(
+	    m.getOrInsertFunction("__rvpredict_atomic_signal_fence",
+	        void_type, memory_order_type, nullptr));
+
+	memmovefn = checkSanitizerInterfaceFunction(
+	    m.getOrInsertFunction("memmove",
+	        int8_ptr_type, int8_ptr_type,
+		int8_ptr_type, intptr_type, nullptr));
+	memcpyfn = checkSanitizerInterfaceFunction(
+	    m.getOrInsertFunction("memcpy",
+	        int8_ptr_type, int8_ptr_type,
+		int8_ptr_type, intptr_type, nullptr));
+	memsetfn = checkSanitizerInterfaceFunction(
+	    m.getOrInsertFunction("memset",
+	        int8_ptr_type, int8_ptr_type,
+		builder.getInt32Ty(), intptr_type, nullptr));
 }
 
 bool RVPredictInstrument::doInitialization(Module &M) {
   const DataLayout &DL = M.getDataLayout();
-  IntptrTy = DL.getIntPtrType(M.getContext());
-  std::tie(RVPredictCtorFunction, std::ignore) = createSanitizerCtorAndInitFunctions(
+  intptr_type = DL.getIntPtrType(M.getContext());
+  std::tie(ctorfn, std::ignore) = createSanitizerCtorAndInitFunctions(
       M, kRVPredictModuleCtorName, kRVPredictInitName, /*InitArgTypes=*/{},
       /*InitArgs=*/{});
 
-  appendToGlobalCtors(M, RVPredictCtorFunction, 0);
+  IRBuilder<> builder(M.getContext());
+  order_relaxed = new GlobalVariable(M, builder.getInt32Ty(), true,
+      GlobalValue::ExternalLinkage, 0, "__rvpredict_memory_order_relaxed");
+  order_acquire = new GlobalVariable(M, builder.getInt32Ty(), true,
+      GlobalValue::ExternalLinkage, 0, "__rvpredict_memory_order_acquire");
+  order_release = new GlobalVariable(M, builder.getInt32Ty(), true,
+      GlobalValue::ExternalLinkage, 0, "__rvpredict_memory_order_release");
+  order_acq_rel = new GlobalVariable(M, builder.getInt32Ty(), true,
+      GlobalValue::ExternalLinkage, 0, "__rvpredict_memory_order_acq_rel");
+  order_seq_cst = new GlobalVariable(M, builder.getInt32Ty(), true,
+      GlobalValue::ExternalLinkage, 0, "__rvpredict_memory_order_seq_cst");
+  order_relaxed->setAlignment(4);
+  order_acquire->setAlignment(4);
+  order_release->setAlignment(4);
+  order_acq_rel->setAlignment(4);
+  order_seq_cst->setAlignment(4);
+
+  appendToGlobalCtors(M, ctorfn, 0);
 
   return true;
 }
@@ -349,119 +434,215 @@ static bool isAtomic(Instruction *I) {
   return false;
 }
 
-bool RVPredictInstrument::runOnFunction(Function &F) {
-  // This is required to prevent instrumenting call to __rvpredict_init from within
-  // the module constructor.
-  if (&F == RVPredictCtorFunction)
-    return false;
-  initializeCallbacks(*F.getParent());
-  SmallVector<Instruction*, 8> RetVec;
-  SmallVector<Instruction*, 8> AllLoadsAndStores;
-  SmallVector<Instruction*, 8> LocalLoadsAndStores;
-  SmallVector<Instruction*, 8> AtomicAccesses;
-  SmallVector<Instruction*, 8> MemIntrinCalls;
-  bool Res = false;
-  bool HasCalls = false;
-  bool InstrumentFunction = true;
-  const DataLayout &DL = F.getParent()->getDataLayout();
+bool
+RVPredictInstrument::runOnFunction(Function &F)
+{
+        // This is required to prevent instrumenting call to
+        // __rvpredict_init from within the module constructor.
+	if (&F == ctorfn)
+		return false;
+	Module &m = *F.getParent();
+	initializeCallbacks(m);
+	SmallVector<Instruction *, 8> RetVec;
+	SmallVector<Instruction *, 8> AllLoadsAndStores;
+	SmallVector<Instruction *, 8> LocalLoadsAndStores;
+	SmallVector<Instruction *, 8> AtomicAccesses;
+	SmallVector<Instruction *, 8> MemIntrinCalls;
+	SmallVector<CallInst *, 8> fncalls;
+	bool didInstrument = false;
+	bool hasCalls = false;
+	const DataLayout &DL = m.getDataLayout();
+	struct {
+		Function *exitfn, *createfn, *joinfn;
+		Value *createstubfn, *joinstubfn, *exitstubfn;
+	} pthreads = {
+		  .exitfn = m.getFunction("pthread_exit")
+		, .createfn = m.getFunction("pthread_create")
+		, .joinfn = m.getFunction("pthread_join")
+		, .createstubfn = (pthreads.createfn == nullptr)
+		    ? nullptr
+		    : m.getOrInsertFunction("__rvpredict_pthread_create",
+		        pthreads.createfn->getFunctionType())
+		, .joinstubfn = (pthreads.joinfn == nullptr)
+		    ? nullptr
+		    : m.getOrInsertFunction("__rvpredict_pthread_join",
+					    pthreads.joinfn->getFunctionType())
+		, .exitstubfn = (pthreads.exitfn == nullptr)
+		    ? nullptr
+		    : m.getOrInsertFunction("__rvpredict_pthread_exit",
+					    pthreads.exitfn->getFunctionType())
+	};
 
-  // Traverse all instructions, collect loads/stores/returns, check for calls.
-  for (auto &BB : F) {
-    for (auto &Inst : BB) {
-      if (isAtomic(&Inst))
-        AtomicAccesses.push_back(&Inst);
-      else if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
-        LocalLoadsAndStores.push_back(&Inst);
-      else if (isa<ReturnInst>(Inst))
-        RetVec.push_back(&Inst);
-      else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
-        if (isa<MemIntrinsic>(Inst))
-          MemIntrinCalls.push_back(&Inst);
-        HasCalls = true;
-        chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores,
-                                       DL);
-      }
-    }
-    chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores, DL);
-  }
+	// Traverse all instructions, collect loads/stores/returns, check for calls.
+	for (auto &bblock : F) {
+		for (auto &insn : bblock) {
+			if (isAtomic(&insn))
+				AtomicAccesses.push_back(&insn);
+			else if (isa<LoadInst>(insn) || isa<StoreInst>(insn))
+				LocalLoadsAndStores.push_back(&insn);
+			else if (isa<ReturnInst>(insn))
+				RetVec.push_back(&insn);
+			else if (isa<CallInst>(insn) || isa<InvokeInst>(insn)) {
+				/*
+				 * TBD
+				 *
+                                 * It is probably necessary to intercept
+                                 * calls via InvokeInst, too.  Any other
+                                 * instructions?
+				 */
+				if (isa<MemIntrinsic>(insn))
+					MemIntrinCalls.push_back(&insn);
+				else if (auto ci = dyn_cast<CallInst>(&insn)) {
+                                        /* Cannot mutate the instructions
+                                         * while iterating them.
+                                         * Put them on a queue for
+                                         * processing, later.
+					 */
+					fncalls.push_back(ci);
+				}
 
-  // We have collected all loads and stores.
-  // FIXME: many of these accesses do not need to be checked for races
-  // (e.g. variables that do not escape, etc).
+				hasCalls = true;
+				chooseInstructionsToInstrument(
+				    LocalLoadsAndStores, AllLoadsAndStores, DL);
+			}
+		}
+		chooseInstructionsToInstrument(LocalLoadsAndStores,
+		    AllLoadsAndStores, DL);
+	}
 
-  // Instrument memory accesses only if we want to report bugs in the function.
-  if (ClInstrumentMemoryAccesses && InstrumentFunction)
-    for (auto Inst : AllLoadsAndStores) {
-      Res |= instrumentLoadOrStore(Inst, DL);
-    }
+	for (auto ci : fncalls) {
+		/* TBD:
+		 *
+		 * If the call is indirect, then the
+		 * CallInst will have no Function to
+		 * compare with.  It may nevertheless have
+		 * a FunctionType, I think.  In that case,
+		 * we can compare its FunctionType with
+		 * the type of each function we want to
+		 * intercept, and insert a direct call to
+		 * a function that compares the run-time
+		 * call target with functions that we
+		 * intercept and intercepts on a match.
+		 */
+		Function *calledfn = ci->getCalledFunction();
 
-  // Instrument atomic memory accesses in any case (they can be used to
-  // implement synchronization).
-  if (ClInstrumentAtomics)
-    for (auto Inst : AtomicAccesses) {
-      Res |= instrumentAtomic(Inst, DL);
-    }
+		if (calledfn == nullptr) {
+			/* do nothing */
+		} else if (calledfn == pthreads.createfn ||
+		           calledfn == pthreads.joinfn) {
+			auto nargs = ci->getNumArgOperands();
+			Value **args = new Value *[nargs];
+			for (auto i = 0; i < nargs; i++) {
+				args[i] = ci->getArgOperand(i);
+			}
+			auto replace_insn = CallInst::Create(
+			    (calledfn == pthreads.createfn)
+			        ? pthreads.createstubfn
+				: pthreads.joinstubfn,
+			    ArrayRef<Value *>(args, nargs));
+			delete args;
+			ReplaceInstWithInst(ci, replace_insn);
+		}
+	}
 
-  if (ClInstrumentMemIntrinsics && InstrumentFunction)
-    for (auto Inst : MemIntrinCalls) {
-      Res |= instrumentMemIntrinsic(Inst);
-    }
+	// We have collected all loads and stores.
+	// FIXME: many of these accesses do not need to be checked for races
+	// (e.g. variables that do not escape, etc).
 
-  // Instrument function entry/exit points if there were instrumented accesses.
-  if ((Res || HasCalls) && ClInstrumentFuncEntryExit) {
-    IRBuilder<> IRB(F.getEntryBlock().getFirstNonPHI());
-    Value *ReturnAddress = IRB.CreateCall(
-        Intrinsic::getDeclaration(F.getParent(), Intrinsic::returnaddress),
-        IRB.getInt32(0));
-    IRB.CreateCall(RVPredictFuncEntry, ReturnAddress);
-    for (auto RetInst : RetVec) {
-      IRBuilder<> IRBRet(RetInst);
-      IRBRet.CreateCall(RVPredictFuncExit, {});
-    }
-    Res = true;
-  }
-  return Res;
+        // Instrument memory accesses only if we want to report bugs in
+        // the function.
+	if (ClInstrumentMemoryAccesses) {
+		for (auto insn : AllLoadsAndStores) {
+			didInstrument |= instrumentLoadOrStore(insn, DL);
+		}
+	}
+
+	// Instrument atomic memory accesses in any case (they can be used to
+	// implement synchronization).
+	if (ClInstrumentAtomics) {
+		for (auto insn : AtomicAccesses) {
+			didInstrument |= instrumentAtomic(insn, DL);
+		}
+	}
+
+	if (ClInstrumentMemIntrinsics) {
+		for (auto insn : MemIntrinCalls) {
+			didInstrument |= instrumentMemIntrinsic(insn);
+		}
+	}
+
+        // Instrument function entry/exit points if there were
+        // instrumented accesses.
+	if ((didInstrument || hasCalls) && ClInstrumentFuncEntryExit) {
+		IRBuilder<> IRB(F.getEntryBlock().getFirstNonPHI());
+		Value *ReturnAddress = IRB.CreateCall(
+		Intrinsic::getDeclaration(F.getParent(),
+		    Intrinsic::returnaddress),
+		IRB.getInt32(0));
+		IRB.CreateCall(fnenter, ReturnAddress);
+		for (auto RetInst : RetVec) {
+			IRBuilder<> IRBRet(RetInst);
+			IRBRet.CreateCall(fnexit, {});
+		}
+		didInstrument = true;
+	}
+	return didInstrument;
 }
 
-bool RVPredictInstrument::instrumentLoadOrStore(Instruction *I,
-                                            const DataLayout &DL) {
+bool
+RVPredictInstrument::instrumentLoadOrStore(Instruction *I,
+                                            const DataLayout &DL)
+{
   IRBuilder<> IRB(I);
   bool IsWrite = isa<StoreInst>(*I);
-  Value *Addr = IsWrite
-      ? cast<StoreInst>(I)->getPointerOperand()
-      : cast<LoadInst>(I)->getPointerOperand();
+  Value *Addr;
+  Value *Val;
+  if (IsWrite) {
+      StoreInst *Store = cast<StoreInst>(I);
+      Addr = Store->getPointerOperand();
+      Val = Store->getValueOperand();
+  } else {
+      LoadInst *Load = cast<LoadInst>(I);
+      Addr = Load->getPointerOperand();
+      Val = Load;
+  }
+  Type *OrigTy = cast<PointerType>(Addr->getType())->getElementType();
+  const uint32_t TypeSize = DL.getTypeStoreSizeInBits(OrigTy);
+  Type *Ty = Type::getIntNTy(IRB.getContext(), TypeSize);
+  Type *PtrTy = Ty->getPointerTo();
   int Idx = getMemoryAccessFuncIndex(Addr, DL);
   if (Idx < 0)
     return false;
-  Value *StoredValue;
   if (IsWrite) {
-    StoredValue = cast<StoreInst>(I)->getValueOperand();
-    // StoredValue may be a vector type if we are storing several vptrs at once.
+    // Val may be a vector type if we are storing several vptrs at once.
     // In this case, just take the first element of the vector since this is
     // enough to find vptr races.
-    if (isa<VectorType>(StoredValue->getType()))
-      StoredValue = IRB.CreateExtractElement(
-          StoredValue, ConstantInt::get(IRB.getInt32Ty(), 0));
-    if (StoredValue->getType()->isFloatingPointTy()) {
-      Value* alloca = IRB.CreateAlloca(StoredValue->getType());
-      StoreInst* store = IRB.CreateStore(StoredValue, alloca);
-      Value* store64 = IRB.CreateBitCast(store->getPointerOperand(), IRB.getInt64Ty()->getPointerTo());
-      StoredValue = IRB.CreateLoad(store64);
+    if (isa<VectorType>(Val->getType()))
+      Val = IRB.CreateExtractElement(
+          Val, ConstantInt::get(IRB.getInt32Ty(), 0));
+    if (Val->getType()->isFloatingPointTy()) {
+      Value* alloca = IRB.CreateAlloca(Val->getType());
+      StoreInst* tmpstore = IRB.CreateStore(Val, alloca);
+      Value* tmpload = IRB.CreateBitCast(tmpstore->getPointerOperand(), PtrTy);
+      Val = IRB.CreateLoad(tmpload);
     }
-    if (StoredValue->getType()->isIntegerTy())
-      StoredValue = IRB.CreateIntToPtr(StoredValue, IRB.getInt8PtrTy());
+#if 0
+    /* Not sure what this int-to-pointer conversion was for. --dyoung */
+    if (Val->getType()->isIntegerTy())
+      Val = IRB.CreateIntToPtr(Val, IRB.getInt8PtrTy());
+#endif
     if (isVtableAccess(I)) {
       DEBUG(dbgs() << "  VPTR : " << *I << "\n");
-      // Call RVPredictVptrUpdate.
-      IRB.CreateCall(RVPredictVptrUpdate,
+      // Call vptr_update.
+      IRB.CreateCall(vptr_update,
                      {IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                      IRB.CreatePointerCast(StoredValue, IRB.getInt8PtrTy())});
+                      IRB.CreatePointerCast(Val, IRB.getInt8PtrTy())});
       NumInstrumentedVtableWrites++;
       return true;
     }
   }
   if (!IsWrite && isVtableAccess(I)) {
-    IRB.CreateCall(RVPredictVptrLoad,
+    IRB.CreateCall(vptr_load,
                    IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()));
     NumInstrumentedVtableReads++;
     return true;
@@ -469,37 +650,62 @@ bool RVPredictInstrument::instrumentLoadOrStore(Instruction *I,
   const unsigned Alignment = IsWrite
       ? cast<StoreInst>(I)->getAlignment()
       : cast<LoadInst>(I)->getAlignment();
-  Type *OrigTy = cast<PointerType>(Addr->getType())->getElementType();
-  const uint32_t TypeSize = DL.getTypeStoreSizeInBits(OrigTy);
   Value *OnAccessFunc = nullptr;
   if (Alignment == 0 || Alignment >= 8 || (Alignment % (TypeSize / 8)) == 0)
-    OnAccessFunc = IsWrite ? RVPredictWrite[Idx] : RVPredictRead[Idx];
+    OnAccessFunc = IsWrite ? store[Idx] : load[Idx];
   else
-    OnAccessFunc = IsWrite ? RVPredictUnalignedWrite[Idx] : RVPredictUnalignedRead[Idx];
+    OnAccessFunc = IsWrite ? unaligned_store[Idx] : unaligned_load[Idx];
+
+  // Cast the address pointer to intN_t * (and insert the cast instruction).
+  Addr = IRB.CreatePointerCast(Addr, PtrTy);
+  /* Cast the value to an unsigned integer of the same size.
+   * XXX Sometimes this produces a redundant cast from typeof(self) to
+   * typeof(self).
+   */
+  Instruction *CastInsn = CastInst::CreateBitOrPointerCast(Val, Ty);
+
   if (IsWrite) {
-    IRB.CreateCall(OnAccessFunc, {IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                    IRB.CreatePointerCast(StoredValue, IRB.getInt8PtrTy())});
+      // Insert the call before the store instruction.
+      CastInsn->insertBefore(I);
+      IRB.CreateCall(OnAccessFunc, {Addr, CastInsn});
   } else {
-    IRB.CreateCall(OnAccessFunc, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()));
+      // Insert the call after the load instruction.
+      CastInsn->insertAfter(I);
+      CallInst::Create(OnAccessFunc, {Addr, CastInsn})
+              ->insertAfter(CastInsn);
   }
+  /*
+  if (IsWrite) {
+    IRB.CreateCall(OnAccessFunc, {Addr, StoredValue});
+  } else {
+//    IRB.CreateCall(OnAccessFunc, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()));
+    CallInst::Create(OnAccessFunc, {Addr, I})
+            ->insertAfter(I);
+  }
+  */
   if (IsWrite) NumInstrumentedWrites++;
   else         NumInstrumentedReads++;
   return true;
 }
 
-static ConstantInt *createOrdering(IRBuilder<> *IRB, AtomicOrdering ord) {
-  uint32_t v = 0;
-  switch (ord) {
-    case NotAtomic: llvm_unreachable("unexpected atomic ordering!");
-    case Unordered:              // Fall-through.
-    case Monotonic:              v = 0; break;
-    // case Consume:                v = 1; break;  // Not specified yet.
-    case Acquire:                v = 2; break;
-    case Release:                v = 3; break;
-    case AcquireRelease:         v = 4; break;
-    case SequentiallyConsistent: v = 5; break;
-  }
-  return IRB->getInt32(v);
+GlobalVariable *
+RVPredictInstrument::createOrdering(IRBuilder<> *IRB, AtomicOrdering ord)
+{
+	switch (ord) {
+	case NotAtomic:
+		llvm_unreachable("unexpected atomic ordering!");
+	case Unordered:             
+	case Monotonic:
+		return order_relaxed;
+	case Acquire:
+		return order_acquire;
+	case Release:
+		return order_release;
+	case AcquireRelease:
+		return order_acq_rel;
+	case SequentiallyConsistent:
+		return order_seq_cst;
+	}
 }
 
 // If a memset intrinsic gets inlined by the code gen, we will miss races on it.
@@ -514,17 +720,17 @@ bool RVPredictInstrument::instrumentMemIntrinsic(Instruction *I) {
   IRBuilder<> IRB(I);
   if (MemSetInst *M = dyn_cast<MemSetInst>(I)) {
     IRB.CreateCall(
-        MemsetFn,
+        memsetfn,
         {IRB.CreatePointerCast(M->getArgOperand(0), IRB.getInt8PtrTy()),
          IRB.CreateIntCast(M->getArgOperand(1), IRB.getInt32Ty(), false),
-         IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
+         IRB.CreateIntCast(M->getArgOperand(2), intptr_type, false)});
     I->eraseFromParent();
   } else if (MemTransferInst *M = dyn_cast<MemTransferInst>(I)) {
     IRB.CreateCall(
-        isa<MemCpyInst>(M) ? MemcpyFn : MemmoveFn,
+        isa<MemCpyInst>(M) ? memcpyfn : memmovefn,
         {IRB.CreatePointerCast(M->getArgOperand(0), IRB.getInt8PtrTy()),
          IRB.CreatePointerCast(M->getArgOperand(1), IRB.getInt8PtrTy()),
-         IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
+         IRB.CreateIntCast(M->getArgOperand(2), intptr_type, false)});
     I->eraseFromParent();
   }
   return false;
@@ -538,83 +744,94 @@ bool RVPredictInstrument::instrumentMemIntrinsic(Instruction *I) {
 // The following page contains more background information:
 // http://www.hpl.hp.com/personal/Hans_Boehm/c++mm/
 
-bool RVPredictInstrument::instrumentAtomic(Instruction *I, const DataLayout &DL) {
-  IRBuilder<> IRB(I);
-  if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-    Value *Addr = LI->getPointerOperand();
-    int Idx = getMemoryAccessFuncIndex(Addr, DL);
-    if (Idx < 0)
-      return false;
-    const size_t ByteSize = 1 << Idx;
-    const size_t BitSize = ByteSize * 8;
-    Type *Ty = Type::getIntNTy(IRB.getContext(), BitSize);
-    Type *PtrTy = Ty->getPointerTo();
-    Value *Args[] = {IRB.CreatePointerCast(Addr, PtrTy),
-                     createOrdering(&IRB, LI->getOrdering())};
-    CallInst *C = CallInst::Create(RVPredictAtomicLoad[Idx], Args);
-    ReplaceInstWithInst(I, C);
+bool
+RVPredictInstrument::instrumentAtomic(Instruction *insn, const DataLayout &dl)
+{
+	IRBuilder<> builder(insn);
 
-  } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-    Value *Addr = SI->getPointerOperand();
-    int Idx = getMemoryAccessFuncIndex(Addr, DL);
-    if (Idx < 0)
-      return false;
-    const size_t ByteSize = 1 << Idx;
-    const size_t BitSize = ByteSize * 8;
-    Type *Ty = Type::getIntNTy(IRB.getContext(), BitSize);
-    Type *PtrTy = Ty->getPointerTo();
-    Value *Args[] = {IRB.CreatePointerCast(Addr, PtrTy),
-                     IRB.CreateIntCast(SI->getValueOperand(), Ty, false),
-                     createOrdering(&IRB, SI->getOrdering())};
-    CallInst *C = CallInst::Create(RVPredictAtomicStore[Idx], Args);
-    ReplaceInstWithInst(I, C);
-  } else if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I)) {
-    Value *Addr = RMWI->getPointerOperand();
-    int Idx = getMemoryAccessFuncIndex(Addr, DL);
-    if (Idx < 0)
-      return false;
-    Function *F = RVPredictAtomicRMW[RMWI->getOperation()][Idx];
-    if (!F)
-      return false;
-    const size_t ByteSize = 1 << Idx;
-    const size_t BitSize = ByteSize * 8;
-    Type *Ty = Type::getIntNTy(IRB.getContext(), BitSize);
-    Type *PtrTy = Ty->getPointerTo();
-    Value *Args[] = {IRB.CreatePointerCast(Addr, PtrTy),
-                     IRB.CreateIntCast(RMWI->getValOperand(), Ty, false),
-                     createOrdering(&IRB, RMWI->getOrdering())};
-    CallInst *C = CallInst::Create(F, Args);
-    ReplaceInstWithInst(I, C);
-  } else if (AtomicCmpXchgInst *CASI = dyn_cast<AtomicCmpXchgInst>(I)) {
-    Value *Addr = CASI->getPointerOperand();
-    int Idx = getMemoryAccessFuncIndex(Addr, DL);
-    if (Idx < 0)
-      return false;
-    const size_t ByteSize = 1 << Idx;
-    const size_t BitSize = ByteSize * 8;
-    Type *Ty = Type::getIntNTy(IRB.getContext(), BitSize);
-    Type *PtrTy = Ty->getPointerTo();
-    Value *Args[] = {IRB.CreatePointerCast(Addr, PtrTy),
-                     IRB.CreateIntCast(CASI->getCompareOperand(), Ty, false),
-                     IRB.CreateIntCast(CASI->getNewValOperand(), Ty, false),
-                     createOrdering(&IRB, CASI->getSuccessOrdering()),
-                     createOrdering(&IRB, CASI->getFailureOrdering())};
-    CallInst *C = IRB.CreateCall(RVPredictAtomicCAS[Idx], Args);
-    Value *Success = IRB.CreateICmpEQ(C, CASI->getCompareOperand());
+	if (auto li = dyn_cast<LoadInst>(insn)) {
+		Value *addr = li->getPointerOperand();
+		int idx = getMemoryAccessFuncIndex(addr, dl);
+		if (idx < 0)
+			return false;
+		const size_t ByteSize = 1 << idx;
+		const size_t BitSize = ByteSize * 8;
+		Type *Ty = Type::getIntNTy(builder.getContext(), BitSize);
+		Type *PtrTy = Ty->getPointerTo();
+		Value *args[] = {
+		    builder.CreatePointerCast(addr, PtrTy),
+		    li,
+		    createOrdering(&builder, li->getOrdering())};
+		CallInst *ci = CallInst::Create(atomic_load[idx], args);
+		ci->insertAfter(insn);
+	} else if (auto si = dyn_cast<StoreInst>(insn)) {
+		Value *addr = si->getPointerOperand();
+		int idx = getMemoryAccessFuncIndex(addr, dl);
+		if (idx < 0)
+			return false;
+		const size_t ByteSize = 1 << idx;
+		const size_t BitSize = ByteSize * 8;
+		Type *Ty = Type::getIntNTy(builder.getContext(), BitSize);
+		Type *PtrTy = Ty->getPointerTo();
+		Value *args[] = {
+		    builder.CreatePointerCast(addr, PtrTy),
+		    builder.CreateIntCast(si->getValueOperand(), Ty, false),
+		    createOrdering(&builder, si->getOrdering())};
+		CallInst *ci = CallInst::Create(atomic_store[idx], args);
+		ci->insertBefore(insn);
+	} else if (auto rmwi = dyn_cast<AtomicRMWInst>(insn)) {
+		Value *addr = rmwi->getPointerOperand();
+		int idx = getMemoryAccessFuncIndex(addr, dl);
+		if (idx < 0)
+			return false;
+		Function *F = atomic_rmw[rmwi->getOperation()][idx];
+		if (!F)
+			return false;
+		const size_t ByteSize = 1 << idx;
+		const size_t BitSize = ByteSize * 8;
+		Type *Ty = Type::getIntNTy(builder.getContext(), BitSize);
+		Type *PtrTy = Ty->getPointerTo();
+		Value *args[] = {
+		    builder.CreatePointerCast(addr, PtrTy),
+		    rmwi,
+		    builder.CreateIntCast(rmwi->getValOperand(), Ty, false),
+		    createOrdering(&builder, rmwi->getOrdering())};
+		CallInst *ci = CallInst::Create(F, args);
+		ci->insertAfter(insn);
+	} else if (auto casi = dyn_cast<AtomicCmpXchgInst>(insn)) {
+		Value *addr = casi->getPointerOperand();
+		int idx = getMemoryAccessFuncIndex(addr, dl);
+		if (idx < 0)
+			return false;
+		const size_t ByteSize = 1 << idx;
+		const size_t BitSize = ByteSize * 8;
+		Type *Ty = Type::getIntNTy(builder.getContext(), BitSize);
+		Type *PtrTy = Ty->getPointerTo();
+		Value *args[] = {
+		    builder.CreatePointerCast(addr, PtrTy),
+		    builder.CreateIntCast(casi->getCompareOperand(), Ty, false),
+		    builder.CreateIntCast(casi->getNewValOperand(), Ty, false),
+		    createOrdering(&builder, casi->getSuccessOrdering()),
+		    createOrdering(&builder, casi->getFailureOrdering())};
+		CallInst *ci = builder.CreateCall(atomic_cas[idx], args);
+		Value *Success = builder.CreateICmpEQ(ci,
+		    casi->getCompareOperand());
 
-    Value *Res = IRB.CreateInsertValue(UndefValue::get(CASI->getType()), C, 0);
-    Res = IRB.CreateInsertValue(Res, Success, 1);
+		Value *res = builder.CreateInsertValue(
+		    UndefValue::get(casi->getType()), ci, 0);
+		res = builder.CreateInsertValue(res, Success, 1);
 
-    I->replaceAllUsesWith(Res);
-    I->eraseFromParent();
-  } else if (FenceInst *FI = dyn_cast<FenceInst>(I)) {
-    Value *Args[] = {createOrdering(&IRB, FI->getOrdering())};
-    Function *F = FI->getSynchScope() == SingleThread ?
-        RVPredictAtomicSignalFence : RVPredictAtomicThreadFence;
-    CallInst *C = CallInst::Create(F, Args);
-    ReplaceInstWithInst(I, C);
-  }
-  return true;
+		insn->replaceAllUsesWith(res);
+		insn->eraseFromParent();
+	} else if (auto fi = dyn_cast<FenceInst>(insn)) {
+		Value *args[] = {createOrdering(&builder, fi->getOrdering())};
+		Function *f = (fi->getSynchScope() == SingleThread)
+		    ? atomic_signal_fence
+		    : atomic_thread_fence;
+		CallInst *ci = CallInst::Create(f, args);
+		ReplaceInstWithInst(insn, ci);
+	}
+	return true;
 }
 
 int RVPredictInstrument::getMemoryAccessFuncIndex(Value *Addr,

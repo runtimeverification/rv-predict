@@ -1,0 +1,9 @@
+/* Copyright (c) 2017 Runtime Verification, Inc.  All rights reserved. */
+
+#ifndef _RV_FUNC_H_
+#define _RV_FUNC_H_
+
+void __rvpredict_func_entry(const void *);                                 
+void __rvpredict_func_exit(void);                                    
+
+#endif /* _RV_FUNC_H_ */

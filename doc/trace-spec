@@ -1,0 +1,398 @@
+Here is an updated specification for trace files.  Major changes:
+
+1) I don't align fields to the pointer width (e.g., to 8 bytes on a
+   64-bit system).  Rather, 32-bit alignment.
+
+2) I replace "throps" (thread/opcode tuples) with "deltops"
+   (delta-PC/opcode tuples).
+
+3) The trace header tells the trace byte order of the trace contents.
+
+***
+
+An RV-Predict[C] event trace file starts with a header that indicates
+the format and version of the file.  Following the header are the event
+traces.  Traces continue right up to the end of the file, and in a
+well-formed event trace, the end of file should coincide with the end of
+the last trace.  In this way, you can stream a trace over a socket or
+other IPC.
+
+An RV-Predict[C] trace header is at byte 0 of a trace file.  The
+header starts with 4 bytes of "magic" that serve to distinguish an
+RV-Predict[C] trace file from files in other formats.  The magic
+consists of the 8-bit ASCII representations for the characters 'R' 'V'
+'P' '_', in that order.
+
+Immediately following the magic is a 32-bit version number.  The initial
+version number is 0.  We will increase it with every incompatible change
+to the file format.  A trace-file reader MUST give up if it reads a
+version number that it does not recognize.
+
+After the version number is a 32-bit byte-order indication: this is the
+word formed from the 8-bit ASCII representations of the digits 0, 1, 2,
+3:  '0' | ('1' << 8) | ('2' << 16) | ('3' << 24), and written to the
+stream in its producer's native byte order.  Thus, the characters appear
+in the order '3' '2' '1' '0' if the producer was big-endian, and '0' '1'
+'2' '3' if the producer was little-endian.
+
+After the byte-order indication is an 8-bit pointer width.  It tells
+how wide, in bytes, a pointer is.  For a trace from a 32-bit system, it
+will be 4.  For a 64-bit system, 8.  You get the picture.  The reader
+stores the pointer width in a variable `ptrw`.
+
+After the pointer width is an 8-bit default data width.  The reader
+should suppose that data narrower than the default data width was
+converted to the default data width before it was written to the trace
+file.  That is, if the default data width is 4, then 1- and 2-byte loads
+and stores were "cast" to uint32_t before they were written to the trace
+file.  The reader stores the pointer width in a variable `dataw`.
+
+After the default data width there are two bytes that pad the header to
+a whole number of 32-bit words.
+
+Here is a trace header in code:
+
+  /* RV-Predict trace file header.  Located at byte 0 of a trace file.  The
+   * trace starts at the first rvp_trace_t-sized boundary after the header,
+   * and it ends at EOF.
+   */
+  struct _rvp_trace_header {
+          char th_magic[4];               // 'R' 'V' 'P' '_'
+                                          //
+          uint32_t th_version;            // 0
+                                          //
+          uint32_t th_byteorder;          // byte-order indication,
+                                          // see discussion
+                                          //
+          uint8_t th_pointer_width;       // width of a pointer, in bytes
+                                          //
+          uint8_t th_data_width;          // default data width, in bytes
+                                          //
+          uint8_t th_pad1[2];
+  } __aligned(sizeof(uint32_t)) __packed;
+  
+  typedef struct _rvp_trace_header rvp_trace_header_t;
+
+The event traces begin on the first 32-bit boundary after the header.
+Every trace begins with a program counter (PC).  Some program counters
+are special: they encode an (delta, opcode) pair, or a "deltop".  The
+`delta` tells the reader by how many bytes to move the program counter
+of the current thread forward or backward: it is a two's-complement
+TBD-bit signed integer.  The first trace after the header MUST begin
+with the special program counter that encodes the deltop (0, begin),
+where 'begin' is the opcode standing for the start of a thread.  After
+the program counter is the 32-bit ID for the thread that starts all
+subsequent threads.
+
+Right now I have in mind just 28 opcodes, which I assign these numbers:
+
+        begin            0      // start of a thread
+        legend           0      // alias for 'begin'
+        end              1      // thread termination
+        load1            2      // load: 1, 2, 4, 8, 16 bytes wide
+        load2            3
+        load4            4
+        load8            5
+        load16           6
+        store1           7      // store: 1, 2, 4, 8, 16 bytes wide
+        store2           8
+        store4           9
+        store8          10
+        store16         11
+        fork            12      // create a new thread 
+        join            13      // join an existing thread
+        acquire1        14      // exclude reads/writes on  1 byte
+        release1        15
+        acquire2        16      //          ...             2 bytes
+        release2        17
+        acquire4        18      //          ...             4 bytes
+        release4        19
+        acquire8        20      //          ...             8 bytes
+        release8        21
+        acquire16       22      //          ...            16 bytes
+        release16       23
+        branch          24
+        enterfn         25      // enter a function
+        exitfn          26      // exit a function
+	switch		27	// switch thread context
+
+The first trace helps the reader to establish an important fact that
+lets it interpret the following traces: PC = (0, begin).  That
+implies that
+
+        PC + 1 = (0, end),
+        PC + 2 = (0, load1),
+        ...,
+        PC + 27 = (0, switch).
+
+Likewise, for an n-bit delta field,
+
+	PC -       2^(n-1) * 28 = (-2^(n-1), begin),
+	...,
+	PC -             2 * 28 = (-2,       begin),
+	PC -                 28 = (-1,       begin),
+	PC +                 28 = ( 1,       begin),
+	PC +             2 * 28 = ( 2,       begin),
+	...,
+	PC - (2^(n-1) - 1) * 28 = (2^(n-1) - 1, begin).
+
+The RV-Predict[C] runtime reserved all of those counters for itself
+while it ran the system under test, so the reader can be certain that
+whenever they appear in the trace, there is no ambiguity: they encode a
+deltop rather than an instruction address.
+
+The first trace also helps the reader to establish some state: the
+thread ID is remembered as the reader's "current thread."  The reader
+interprets every event according to the current thread, so it's not
+necessary to record a thread ID in every event.  Operations that
+establish a new current thread are 'begin' and 'switch'.
+
+Here are the trace formats that a reader must understand, their meaning,
+and the changes that they make to the reader's current thread (`self`)
+and program counter (`self.PC`).  Unless otherwise noted, every program
+counter and deltop begins on the first 32-bit boundary after the
+previous trace. "x*" stands for "zero or more instances of x."  Here is
+the trace grammar:
+
+traces ::= (0, 'begin') thread-ID trace*
+
+trace ::= (delta, 'load[n]') addr value
+
+                The current thread added `delta` to its program
+                counter and at the new program counter, it read
+                `n` bytes.
+
+                `addr` is an address `ptrw` bytes wide, starting
+                on the first 32-bit boundary after the deltop.
+
+                `value` is a value max(`n`, `dataw`) bytes wide,
+                starting on the first `dataw`-byte boundary after
+                `addr`.
+
+                `addr` and `value` are stored in the byte order
+                established by the trace header.
+
+		`self.PC <- self.PC + delta`
+
+	| (delta, 'store[n]') addr value
+
+                The current thread added `delta` to its program
+                counter and at the new program counter, it wrote
+                `n` bytes.
+
+                `addr` is an address `ptrw` bytes wide, starting
+                on the first 32-bit boundary after the deltop.
+
+                `value` is a value max(`n`, `dataw`) bytes wide,
+                starting on the first `dataw`-byte boundary after
+                `addr`.
+
+                `addr` and `value` are stored in the byte order
+                established by the trace header.
+
+		`self.PC <- self.PC + delta`
+
+	| (delta, 'atomic-load[n]') addr value
+
+                The current thread added `delta` to its program
+                counter and at the new program counter, it performed an
+		atomic read of `n` bytes.
+
+                `addr` is an address `ptrw` bytes wide, starting
+                on the first 32-bit boundary after the deltop.
+
+                `value` is a value max(`n`, `dataw`) bytes wide,
+                starting on the first `dataw`-byte boundary after
+                `addr`.
+
+                `addr` and `value` are stored in the byte order
+                established by the trace header.
+
+		`self.PC <- self.PC + delta`
+
+	| (delta, 'atomic-store[n]') addr value
+
+                The current thread added `delta` to its program counter
+                and at the new program counter, it performed an atomic
+                store of `n` bytes.
+
+                `addr` is an address `ptrw` bytes wide, starting
+                on the first 32-bit boundary after the deltop.
+
+                `value` is a value max(`n`, `dataw`) bytes wide,
+                starting on the first `dataw`-byte boundary after
+                `addr`.
+
+                `addr` and `value` are stored in the byte order
+                established by the trace header.
+
+		`self.PC <- self.PC + delta`
+
+	| (delta, 'atomic-rmw[n]') addr old-value new-value
+
+                The current thread added `delta` to its program
+                counter and at the new program counter, it performed an
+		atomic read-modify-write of `n` bytes.
+
+                `addr` is an address `ptrw` bytes wide, starting
+                on the first 32-bit boundary after the deltop.
+
+		`n` must be a power of two.
+
+                `old-value` and `new-value` are values max(`n`, `dataw`)
+                bytes wide.  .  If `n >= dataw`, then `old-value` starts
+                on the first `dataw`-byte boundary after `addr`, and
+                `new-value` starts on the first `dataw`-byte boundary
+                after `old-value`.  If `n < dataw`, then `old-value`
+                and `new-value` are combined into a single word with
+                `old-value` in bits (dataw * 8 - 1:dataw * 4) and
+                `old-value` in bits (dataw * 4 - 1:0).  The single
+                `n`-byte word is written in at the first `dataw`-byte
+                boundary after `addr`.  In this way, if `dataw` is 4 and
+                `n` is 2, then `new-value` and `old-value` are written
+                to the same 4-byte word in the trace.
+
+                `addr`, `old-value` and `new-value` (or the combined
+                word) are stored in the byte order established by the
+                trace header.
+
+		`self.PC <- self.PC + delta`
+
+	| (delta, 'atomic-store[n]') addr value
+
+                The current thread added `delta` to its program counter
+                and at the new program counter, it performed an atomic
+                store of `n` bytes.
+
+                `addr` is an address `ptrw` bytes wide, starting
+                on the first 32-bit boundary after the deltop.
+
+                `value` is a value max(`n`, `dataw`) bytes wide,
+                starting on the first `dataw`-byte boundary after
+                `addr`.
+
+                `addr` and `value` are stored in the byte order
+                established by the trace header.
+
+		`self.PC <- self.PC + delta`
+
+	| program-counter
+
+                The current thread changed its program counter to
+                `program-counter`.  Any value of `program-counter`
+                is allowed except for the program counters that encode
+                deltops.
+
+		`self.PC <- program-counter`
+
+        | (delta, 'begin') tid
+
+		A new thread, `tid`, started.
+
+                `tid` begins on the first 32-bit boundary after
+                the deltop, and it is `ptrw` bytes wide.
+
+                Note: with the exception of the thread that the
+                trace starts off with, `tid` must have been forked
+                previously, and it must not have been ended or
+                joined already.
+
+		`t <- new tid`
+		`t.PC <- self.PC + delta`
+		`self <- t`
+
+        | (delta, 'end')           
+
+                The current thread terminated.
+
+                Note: the current thread must not have terminated
+                previously, and it must not have been joined already.
+
+                The current thread cannot perform any deltop but
+                `program-counter` or `switch`.
+
+		`self.PC <- self.PC + delta`
+
+        | (delta, 'join') tid
+
+                The current thread joined `tid`.
+
+                `tid` begins on the first 32-bit boundary after
+                the deltop, and it is `ptrw` bytes wide.
+
+                Note: `tid` must have previously terminated with
+                (delta, 'end').
+
+		`self.PC <- self.PC + delta`
+
+        | (delta, 'fork') tid
+
+                The current thread added `delta` to its program
+                counter and forked a new thread, `tid`.
+
+                Note: `tid` cannot have been forked or started
+                already.  `tid` must perform `(delta, 'begin')` or
+                `program-counter` before any operation other than
+		`program-counter`.
+
+		`self.PC <- self.PC + delta`
+
+        | (delta, 'branch')
+
+                The current thread added `delta` to its program
+                counter and performed a conditional branch.
+
+		`self.PC <- self.PC + delta`
+
+        | (delta, 'enterfn')
+
+		The current thread added `delta` to its program
+		counter and entered a function at the new program
+		counter.
+
+		`self.PC <- self.PC + delta`
+
+        | (delta, 'exitfn')
+
+		The current thread added `delta` to its program
+		counter and, at the new program
+		counter, returned from the current function.
+
+		`self.PC <- self.PC + delta`
+
+        | (delta, 'acquire[n]') addr
+
+		The current thread added `delta` to its program counter
+		and acquired a lock on the `n`-byte memory region at
+		address `addr`.
+
+                `addr` begins on the first 32-bit boundary after
+                the deltop, and it is `ptrw` bytes wide.
+
+		Note: no thread may have already locked any
+		part of the region.
+
+		`self.PC <- self.PC + delta`
+
+        | (delta, 'release[n]') addr
+
+                The current thread added `delta` to its program
+                counter and released a lock on the `n`-byte memory
+                region at address `addr`.
+
+                `addr` begins on the first 32-bit boundary after
+                the deltop, and it is `ptrw` bytes wide.
+
+                Note: the current thread must hold the lock on the
+                identical region, no subregion or superior region.
+
+		`self.PC <- self.PC + delta`
+
+        | (delta, 'switch') tid
+
+                The current thread added `delta` to its program
+                counter.  Then the current thread changed to `tid`.
+
+		`self.PC <- self.PC + delta`
+		`self <- tid`
+

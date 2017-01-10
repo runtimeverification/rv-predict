@@ -23,8 +23,6 @@ lpcq_init(lpcq_t *q, int nextofs)
 void *
 lpcq_get(lpcq_t *q)
 {
-	int n = 0;
-
 	if (q->tailp == &q->head)
 		return NULL;
 
@@ -58,7 +56,6 @@ lpcq_getall(lpcq_t *q)
 		return (lpcq_iter_t){.item = NULL, .nextofs = 0, .lastnextp = NULL};
 
 	void *item;
-	int n = 0;
 
 	void * volatile *otailp = q->tailp;
 	q->tailp = &q->head;

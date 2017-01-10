@@ -34,7 +34,7 @@ is a thread number. All  the other information required by the
 function is accessed from the globally accessible structure. 
 */
 
-void *dotprod(void *arg)
+static void *dotprod(void *arg)
 {
   /* Define and use local variables for convenience */
 

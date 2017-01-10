@@ -47,7 +47,7 @@ release_queue(void)
 	assert(rc == 0);
 }
 
-void *
+static void *
 consume(void *arg)
 {
 	int nread;
@@ -71,7 +71,7 @@ consume(void *arg)
 	return NULL;
 }
 
-void *
+static void *
 produce(void *arg)
 {
 	spcq_t *q = arg;

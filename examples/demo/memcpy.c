@@ -4,14 +4,14 @@
 
 int x;
 
-void *
+static void *
 assignfn(void *arg)
 {
 	x = 5;
 	return NULL;
 }
 
-void *
+static void *
 copyfn(void *arg)
 {
 	int y = 10;

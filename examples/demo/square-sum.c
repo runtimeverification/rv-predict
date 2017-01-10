@@ -7,7 +7,7 @@
 
 long accum = 0;
 
-void *square(void *param) {
+static void *square(void *param) {
     int x = *(int *)param;
     accum += x * x;
     return NULL;

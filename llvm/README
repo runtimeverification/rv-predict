@@ -3,6 +3,8 @@ SOURCE LAYOUT
 	pass/: standalone instrumentation pass derived from
 	    Thread Sanitizer (tsan)
 	runtime/: standalone runtime derived from tsan
+	ngrt/: next-generation runtime that is simpler and faster
+	    than the one derived from tsan
 
 BUILDING
 

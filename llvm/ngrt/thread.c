@@ -20,14 +20,16 @@ static long pgsz = 0;
 /* thread_mutex protects thread_head, next_id */
 static pthread_mutex_t thread_mutex;
 static pthread_cond_t wakecond;
+static int nwake = 0;
 static rvp_thread_t * volatile thread_head = NULL;
 static uint32_t next_id = 0;
 static pthread_t serializer;
+static int serializer_fd;
 
 pthread_key_t rvp_thread_key;
 static pthread_once_t rvp_init_once = PTHREAD_ONCE_INIT;
-static pthread_once_t rvp_thread0_create_once = PTHREAD_ONCE_INIT;
-static pthread_once_t rvp_serializer_create_once = PTHREAD_ONCE_INIT;
+
+static void rvp_thread0_create(void);
 
 static inline void
 rvp_trace_fork(uint32_t id)
@@ -55,16 +57,21 @@ rvp_trace_end(void)
 }
 
 static void
-rvp_init(void)
+rvp_thread0_create(void)
 {
-	if (pgsz == 0 && (pgsz = sysconf(_SC_PAGE_SIZE)) == -1)
-		err(EXIT_FAILURE, "%s: sysconf", __func__);
-	if (pthread_key_create(&rvp_thread_key, NULL) != 0) 
-		err(EXIT_FAILURE, "%s: pthread_key_create", __func__);
-	if (pthread_mutex_init(&thread_mutex, NULL) != 0)
-		err(EXIT_FAILURE, "%s: pthread_mutex_init", __func__);
-	if (pthread_cond_init(&wakecond, NULL) != 0)
-		err(EXIT_FAILURE, "%s: pthread_mutex_init", __func__);
+	rvp_thread_t *t;
+
+	if ((t = rvp_thread_create(NULL, NULL)) == NULL)
+		err(EXIT_FAILURE, "%s: rvp_thread_create", __func__);
+
+	if (pthread_setspecific(rvp_thread_key, t) != 0)
+		err(EXIT_FAILURE, "%s: pthread_setspecific", __func__);
+
+	t->t_pthread = pthread_self();
+
+	assert(t->t_id == 1);
+
+	rvp_ring_put_begin(&t->t_ring, t->t_id);
 }
 
 static void
@@ -84,24 +91,33 @@ thread_unlock(void)
 static void *
 serialize(void *arg)
 {
-	rvp_thread_t *t;
-	int fd, rc;
+	int fd = serializer_fd;
 
-	if ((fd = rvp_trace_open()) == -1)
-		err(EXIT_FAILURE, "%s: rvp_trace_open", __func__);
-
+	thread_lock();
 	for (;;) {
-		thread_lock();
-		if ((rc = pthread_cond_wait(&wakecond, &thread_mutex)) != 0) {
-			errx(EXIT_FAILURE, "%s: pthread_cond_wait: %s",
-			    __func__, strerror(rc));
+		bool any_emptied;
+
+		while (nwake == 0) {
+			int rc = pthread_cond_wait(&wakecond, &thread_mutex);
+			if (rc != 0) {
+				errx(EXIT_FAILURE, "%s: pthread_cond_wait: %s",
+				    __func__, strerror(rc));
+			}
 		}
-		fprintf(stderr, "%s: woke up\n", __func__);
-		for (t = thread_head; t != NULL; t = t->t_next) {
-			rvp_thread_flush_to_fd(t, fd);
-		}
-		thread_unlock();
+		nwake--;
+//		fprintf(stderr, "%s: woke up\n", __func__);
+		do {
+			rvp_thread_t *t, *last_t = NULL;
+			any_emptied = false;
+			for (t = thread_head; t != NULL; t = t->t_next) {
+				if (rvp_thread_flush_to_fd(t, fd, t != last_t)){
+					last_t = t;
+					any_emptied = true; 
+				}
+			}
+		} while (any_emptied);
 	}
+	thread_unlock();
 	return NULL;
 }
 
@@ -110,30 +126,45 @@ rvp_serializer_create(void)
 {
 	int rc;
 
-	if ((rc = pthread_create(&serializer, NULL, serialize, NULL)) != 0)
-		errx(EXIT_FAILURE, "%s: pthread_create: %s", __func__, strerror(rc));
+	if ((serializer_fd = rvp_trace_open()) == -1)
+		err(EXIT_FAILURE, "%s: rvp_trace_open", __func__);
+
+	thread_lock();
+	assert(thread_head->t_next == NULL);
+	rvp_thread_flush_to_fd(thread_head, serializer_fd, false);
+	thread_unlock();
+
+	if ((rc = pthread_create(&serializer, NULL, serialize, NULL)) != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_create: %s", __func__,
+		    strerror(rc));
+	}
 }
 
 static void
-rvp_thread0_create(void)
+rvp_init(void)
 {
-	rvp_thread_t *t;
-
-	if ((t = rvp_thread_create(NULL, NULL)) == NULL)
-		err(EXIT_FAILURE, "%s: rvp_thread_create", __func__);
-
-	if (pthread_setspecific(rvp_thread_key, t) != 0)
-		err(EXIT_FAILURE, "%s: pthread_setspecific", __func__);
-
-	t->t_pthread = pthread_self();
+	if (pgsz == 0 && (pgsz = sysconf(_SC_PAGE_SIZE)) == -1)
+		err(EXIT_FAILURE, "%s: sysconf", __func__);
+	if (pthread_key_create(&rvp_thread_key, NULL) != 0) 
+		err(EXIT_FAILURE, "%s: pthread_key_create", __func__);
+	if (pthread_mutex_init(&thread_mutex, NULL) != 0)
+		err(EXIT_FAILURE, "%s: pthread_mutex_init", __func__);
+	if (pthread_cond_init(&wakecond, NULL) != 0)
+		err(EXIT_FAILURE, "%s: pthread_mutex_init", __func__);
+	/* The 'begin' op for the first thread (tid 1) has to be
+	 * written directly after the header, and it is by virtue of
+	 * rvp_serializer_create() being called directly after
+	 * rvp_thread0_create(), before any other thread has an opportunity
+	 * to start.
+	 */
+	rvp_thread0_create();
+	rvp_serializer_create();
 }
 
 void
 __rvpredict_init(void)
 {
 	(void)pthread_once(&rvp_init_once, rvp_init);
-	(void)pthread_once(&rvp_thread0_create_once, rvp_thread0_create);
-	(void)pthread_once(&rvp_serializer_create_once, rvp_serializer_create);
 }
 
 static void *
@@ -315,6 +346,7 @@ rvp_wake_transmitter(void)
 {
 	int rc;
 	thread_lock();
+	nwake++;
 	if ((rc = pthread_cond_signal(&wakecond)) != 0)
 		errx(EXIT_FAILURE, "%s: %s", __func__, strerror(rc));
 	thread_unlock();

@@ -13,7 +13,7 @@
 #include "trace.h"
 #include "tracefmt.h"
 
-static __section(".text") deltop_t deltops[RVP_NJMPS][RVP_NOPS] = { { 0 } };
+static __section(".text") deltops_t deltops = { .matrix = { { 0 } } };
 
 typedef struct _threadswitch {
 	uintptr_t deltop;
@@ -47,9 +47,9 @@ writeall(int fd, const void *buf, size_t nbytes)
 int
 rvp_trace_open(void)
 {
-	int fd;
+	int fd = open("./rvpredict.trace", O_WRONLY|O_CREAT|O_TRUNC, 0600);
 
-	if ((fd = open("/dev/null", O_WRONLY|O_CREAT)) == -1)
+	if (fd == -1)
 		return -1;
 
 	if (writeall(fd, &header, sizeof(header)) == -1) {
@@ -60,9 +60,10 @@ rvp_trace_open(void)
 	return fd;
 }
 
-void
-rvp_thread_flush_to_fd(rvp_thread_t *t, int fd)
+bool
+rvp_thread_flush_to_fd(rvp_thread_t *t, int fd, bool trace_switch)
 {
+	int iovcnt = 0;
 	ssize_t nwritten;
 	rvp_ring_t *r = &t->t_ring;
 	uint32_t *producer = r->r_producer, *consumer = r->r_consumer;
@@ -71,45 +72,44 @@ rvp_thread_flush_to_fd(rvp_thread_t *t, int fd)
 		      (uintptr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SWITCH)
 		, .id = t->t_id
 	};
+	struct iovec iov[3];
 
-	if (consumer == producer) {
-		return;
+	if (consumer == producer)
+		return false;
+
+	if (trace_switch) {
+		iov[iovcnt++] = (struct iovec){
+			  .iov_base = &threadswitch
+			, .iov_len = sizeof(threadswitch)
+		};
 	}
 
 	if (consumer < producer) {
-		const struct iovec iov[2] = {
-			{
-				  .iov_base = &threadswitch
-				, .iov_len = sizeof(threadswitch)
-			}, {
-				  .iov_base = consumer
-				, .iov_len = (producer - consumer) *
-				             sizeof(consumer[0])
-			}
-		};
-		nwritten = writev(fd, iov, __arraycount(iov));
-		assert(nwritten == iov[0].iov_len + iov[1].iov_len);
-		r->r_consumer = producer;
-		return;
-	}
-	/* producer < consumer */
-	const struct iovec iov[3] = {
-		{
-			  .iov_base = &threadswitch
-			, .iov_len = sizeof(threadswitch)
-		}, {
+		iov[iovcnt++] = (struct iovec){
 			  .iov_base = consumer
-			, .iov_len = (r->r_last - consumer) *
+			, .iov_len = (producer - consumer) *
 				     sizeof(consumer[0])
-		}, {
+		};
+	} else {	/* consumer > producer */
+		iov[iovcnt++] = (struct iovec){
+			  .iov_base = consumer
+			, .iov_len = (r->r_last + 1 - consumer) *
+				     sizeof(consumer[0])
+		};
+		iov[iovcnt++] = (struct iovec){
 			  .iov_base = r->r_items
 			, .iov_len = (producer - r->r_items) *
-				     sizeof(consumer[0])
-		}
-	};
-	nwritten = writev(fd, iov, __arraycount(iov));
-	assert(nwritten == iov[0].iov_len + iov[1].iov_len + iov[2].iov_len);
+				     sizeof(r->r_items[0])
+		};
+	}
+	nwritten = writev(fd, iov, iovcnt);
+
+	while (--iovcnt >= 0)
+		nwritten -= iov[iovcnt].iov_len;
+
+	assert(nwritten == 0);
 	r->r_consumer = producer;
+	return true;
 }
 
 void
@@ -122,17 +122,18 @@ rvp_ring_put_addr(rvp_ring_t *r, const void *addr)
 	} addru = {.uaddr = (uintptr_t)addr};
 
 	for (i = 0; i < __arraycount(addru.u32); i++) {
-		rvp_ring_put(r, addru.u32[0]);
+		rvp_ring_put(r, addru.u32[i]);
 	}
 }
 
 deltop_t *
 rvp_vec_and_op_to_deltop(int jmpvec, rvp_op_t op)
 {
-	deltop_t *deltop = &deltops[__arraycount(deltops) / 2 + jmpvec][op];
+	deltop_t *deltop =
+	    &deltops.matrix[__arraycount(deltops.matrix) / 2 + jmpvec][op];
 
-	if (deltop < &deltops[0][0] ||
-		    &deltops[RVP_NJMPS - 1][RVP_NOPS - 1] < deltop)
+	if (deltop < &deltops.matrix[0][0] ||
+		     &deltops.matrix[RVP_NJMPS - 1][RVP_NOPS - 1] < deltop)
 		return NULL;
 	
 	return deltop;
@@ -161,8 +162,8 @@ rvp_ring_put_begin(rvp_ring_t *r, uint32_t id)
 {
 	r->r_lastpc = __builtin_return_address(1);
 	rvp_ring_put_addr(r, rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN));
-	rvp_ring_put_addr(r, r->r_lastpc);
 	rvp_ring_put(r, id);
+	rvp_ring_put_addr(r, r->r_lastpc);
 }
 
 void

@@ -1,0 +1,6 @@
+core
+.Makefile.tags
+*.o
+rvpdump
+.*.swp
+tags

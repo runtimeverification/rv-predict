@@ -3,4 +3,5 @@
 .Makefile.tags
 *.o
 *.so
+.*.swp
 tags

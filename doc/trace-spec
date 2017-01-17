@@ -114,7 +114,7 @@ Right now I have in mind just 28 opcodes, which I assign these numbers:
         branch          24
         enterfn         25      // enter a function
         exitfn          26      // exit a function
-	switch		27	// switch thread context
+        switch          27      // switch thread context
 
 The first trace helps the reader to establish an important fact that
 lets it interpret the following traces: PC = (0, begin).  That
@@ -127,14 +127,14 @@ implies that
 
 Likewise, for an n-bit delta field,
 
-	PC -       2^(n-1) * 28 = (-2^(n-1), begin),
-	...,
-	PC -             2 * 28 = (-2,       begin),
-	PC -                 28 = (-1,       begin),
-	PC +                 28 = ( 1,       begin),
-	PC +             2 * 28 = ( 2,       begin),
-	...,
-	PC - (2^(n-1) - 1) * 28 = (2^(n-1) - 1, begin).
+        PC -       2^(n-1) * 28 = (-2^(n-1), begin),
+        ...,
+        PC -             2 * 28 = (-2,       begin),
+        PC -                 28 = (-1,       begin),
+        PC +                 28 = ( 1,       begin),
+        PC +             2 * 28 = ( 2,       begin),
+        ...,
+        PC - (2^(n-1) - 1) * 28 = (2^(n-1) - 1, begin).
 
 The RV-Predict[C] runtime reserved all of those counters for itself
 while it ran the system under test, so the reader can be certain that
@@ -172,9 +172,9 @@ trace ::= (delta, 'load[n]') addr value
                 `addr` and `value` are stored in the byte order
                 established by the trace header.
 
-		`self.PC <- self.PC + delta`
+                `self.PC <- self.PC + delta`
 
-	| (delta, 'store[n]') addr value
+        | (delta, 'store[n]') addr value
 
                 The current thread added `delta` to its program
                 counter and at the new program counter, it wrote
@@ -190,13 +190,13 @@ trace ::= (delta, 'load[n]') addr value
                 `addr` and `value` are stored in the byte order
                 established by the trace header.
 
-		`self.PC <- self.PC + delta`
+                `self.PC <- self.PC + delta`
 
-	| (delta, 'atomic-load[n]') addr value
+        | (delta, 'atomic-load[n]') addr value
 
                 The current thread added `delta` to its program
                 counter and at the new program counter, it performed an
-		atomic read of `n` bytes.
+                atomic read of `n` bytes.
 
                 `addr` is an address `ptrw` bytes wide, starting
                 on the first 32-bit boundary after the deltop.
@@ -208,9 +208,9 @@ trace ::= (delta, 'load[n]') addr value
                 `addr` and `value` are stored in the byte order
                 established by the trace header.
 
-		`self.PC <- self.PC + delta`
+                `self.PC <- self.PC + delta`
 
-	| (delta, 'atomic-store[n]') addr value
+        | (delta, 'atomic-store[n]') addr value
 
                 The current thread added `delta` to its program counter
                 and at the new program counter, it performed an atomic
@@ -226,18 +226,18 @@ trace ::= (delta, 'load[n]') addr value
                 `addr` and `value` are stored in the byte order
                 established by the trace header.
 
-		`self.PC <- self.PC + delta`
+                `self.PC <- self.PC + delta`
 
-	| (delta, 'atomic-rmw[n]') addr old-value new-value
+        | (delta, 'atomic-rmw[n]') addr old-value new-value
 
                 The current thread added `delta` to its program
                 counter and at the new program counter, it performed an
-		atomic read-modify-write of `n` bytes.
+                atomic read-modify-write of `n` bytes.
 
                 `addr` is an address `ptrw` bytes wide, starting
                 on the first 32-bit boundary after the deltop.
 
-		`n` must be a power of two.
+                `n` must be a power of two.
 
                 `old-value` and `new-value` are values max(`n`, `dataw`)
                 bytes wide.  .  If `n >= dataw`, then `old-value` starts
@@ -256,50 +256,36 @@ trace ::= (delta, 'load[n]') addr value
                 word) are stored in the byte order established by the
                 trace header.
 
-		`self.PC <- self.PC + delta`
+                `self.PC <- self.PC + delta`
 
-	| (delta, 'atomic-store[n]') addr value
-
-                The current thread added `delta` to its program counter
-                and at the new program counter, it performed an atomic
-                store of `n` bytes.
-
-                `addr` is an address `ptrw` bytes wide, starting
-                on the first 32-bit boundary after the deltop.
-
-                `value` is a value max(`n`, `dataw`) bytes wide,
-                starting on the first `dataw`-byte boundary after
-                `addr`.
-
-                `addr` and `value` are stored in the byte order
-                established by the trace header.
-
-		`self.PC <- self.PC + delta`
-
-	| program-counter
+        | program-counter
 
                 The current thread changed its program counter to
                 `program-counter`.  Any value of `program-counter`
                 is allowed except for the program counters that encode
                 deltops.
 
-		`self.PC <- program-counter`
+                `self.PC <- program-counter`
 
         | (delta, 'begin') tid
 
-		A new thread, `tid`, started.
+                A new thread, `tid`, started.
 
                 `tid` begins on the first 32-bit boundary after
-                the deltop, and it is `ptrw` bytes wide.
+                the deltop, and it is `dataw` bytes wide.
+
+                XXX Perhaps `tid` should be `ptrw` bytes wide, instead?
+                XXX That is how I originally specified it, but
+                XXX I implemented it as `dataw` bytes wide. --dyoung
 
                 Note: with the exception of the thread that the
                 trace starts off with, `tid` must have been forked
                 previously, and it must not have been ended or
                 joined already.
 
-		`t <- new tid`
-		`t.PC <- self.PC + delta`
-		`self <- t`
+                `t <- new tid`
+                `t.PC <- self.PC + delta`
+                `self <- t`
 
         | (delta, 'end')           
 
@@ -311,7 +297,10 @@ trace ::= (delta, 'load[n]') addr value
                 The current thread cannot perform any deltop but
                 `program-counter` or `switch`.
 
-		`self.PC <- self.PC + delta`
+                XXX Perhaps `program-counter` should not be allowed
+                XXX after (delta, 'end'), either?
+
+                `self.PC <- self.PC + delta`
 
         | (delta, 'join') tid
 
@@ -323,7 +312,7 @@ trace ::= (delta, 'load[n]') addr value
                 Note: `tid` must have previously terminated with
                 (delta, 'end').
 
-		`self.PC <- self.PC + delta`
+                `self.PC <- self.PC + delta`
 
         | (delta, 'fork') tid
 
@@ -333,46 +322,49 @@ trace ::= (delta, 'load[n]') addr value
                 Note: `tid` cannot have been forked or started
                 already.  `tid` must perform `(delta, 'begin')` or
                 `program-counter` before any operation other than
-		`program-counter`.
+                `program-counter`.
 
-		`self.PC <- self.PC + delta`
+                XXX Perhaps (delta, 'begin') should also precede
+                XXX `program-counter` ?
+
+                `self.PC <- self.PC + delta`
 
         | (delta, 'branch')
 
                 The current thread added `delta` to its program
                 counter and performed a conditional branch.
 
-		`self.PC <- self.PC + delta`
+                `self.PC <- self.PC + delta`
 
         | (delta, 'enterfn')
 
-		The current thread added `delta` to its program
-		counter and entered a function at the new program
-		counter.
+                The current thread added `delta` to its program
+                counter and entered a function at the new program
+                counter.
 
-		`self.PC <- self.PC + delta`
+                `self.PC <- self.PC + delta`
 
         | (delta, 'exitfn')
 
-		The current thread added `delta` to its program
-		counter and, at the new program
-		counter, returned from the current function.
+                The current thread added `delta` to its program counter
+                and, at the new program counter, returned from the
+                current function.
 
-		`self.PC <- self.PC + delta`
+                `self.PC <- self.PC + delta`
 
         | (delta, 'acquire[n]') addr
 
-		The current thread added `delta` to its program counter
-		and acquired a lock on the `n`-byte memory region at
-		address `addr`.
+                The current thread added `delta` to its program counter
+                and acquired a lock on the `n`-byte memory region at
+                address `addr`.
 
                 `addr` begins on the first 32-bit boundary after
                 the deltop, and it is `ptrw` bytes wide.
 
-		Note: no thread may have already locked any
-		part of the region.
+                Note: no thread may have already locked any
+                part of the region.
 
-		`self.PC <- self.PC + delta`
+                `self.PC <- self.PC + delta`
 
         | (delta, 'release[n]') addr
 
@@ -386,13 +378,13 @@ trace ::= (delta, 'load[n]') addr value
                 Note: the current thread must hold the lock on the
                 identical region, no subregion or superior region.
 
-		`self.PC <- self.PC + delta`
+                `self.PC <- self.PC + delta`
 
         | (delta, 'switch') tid
 
                 The current thread added `delta` to its program
                 counter.  Then the current thread changed to `tid`.
 
-		`self.PC <- self.PC + delta`
-		`self <- tid`
+                `self.PC <- self.PC + delta`
+                `self <- tid`
 

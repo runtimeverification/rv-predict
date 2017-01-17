@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Copyright (c) 2016 Runtime Verification, Inc. (RV-Match team). All Rights Reserved. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.runtimeverification.rv_match</groupId>
+    <artifactId>parent</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>rv-error</artifactId>
+  <packaging>jar</packaging>
+  <name>RV-Error Tool</name>
+
+  <repositories>
+    <repository>
+      <id>runtime-verification</id>
+      <name>Runtime Verification Repository</name>
+      <url>http://office.runtimeverification.com:8888/repository/internal</url>
+      <snapshots><enabled>false</enabled></snapshots>
+      <releases><enabled>true</enabled></releases>
+    </repository>
+    <repository>
+      <id>runtime-verification.snapshots</id>
+      <name>Runtime Verification Snapshot Repository</name>
+      <url>http://office.runtimeverification.com:8888/repository/snapshots</url>
+      <snapshots><enabled>true</enabled></snapshots>
+      <releases><enabled>false</enabled></releases>
+    </repository>
+  </repositories>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>runtime-verification</id>
+      <name>Runtime Verification Repository</name>
+      <url>http://office.runtimeverification.com:8888/repository/internal</url>
+      <snapshots><enabled>false</enabled></snapshots>
+      <releases><enabled>true</enabled></releases>
+    </pluginRepository>
+    <pluginRepository>
+      <id>runtime-verification.snapshots</id>
+      <name>Runtime Verification Snapshot Repository</name>
+      <url>http://office.runtimeverification.com:8888/repository/snapshots</url>
+      <snapshots><enabled>true</enabled></snapshots>
+      <releases><enabled>false</enabled></releases>
+    </pluginRepository>
+  </pluginRepositories>
+  <distributionManagement>
+    <repository>
+      <id>runtime-verification</id>
+      <name>Runtime Verification Repository</name>
+      <url>http://office.runtimeverification.com:8888/repository/internal</url>
+    </repository>
+    <snapshotRepository>
+      <id>runtime-verification.snapshots</id>
+      <name>Runtime Verification Snapshot Repository</name>
+      <url>http://office.runtimeverification.com:8888/repository/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20160810</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>1.3.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-csv</artifactId>
+      <version>1.1</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.1</version>
+          <configuration>
+            <source>1.8</source>
+            <target>1.8</target>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.5.0</version>
+        <executions>
+          <execution>
+            <id>run-atdj</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>atdj.opt</executable>
+              <workingDirectory>${project.build.directory}/generated-sources</workingDirectory>
+              <arguments>
+                <argument>-package</argument>
+                <argument>com.runtimeverification.error.data</argument>
+                <argument>${project.basedir}/../c-semantics-plugin/src/main/ocaml/common/error.atd</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.7</version>
+        <executions>
+          <execution>
+            <id>register-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -42,8 +42,12 @@ rvp_trace_fork(uint32_t id)
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	rvp_ring_t *r = &t->t_ring;
-	rvp_ring_put_pc_and_op(r, __builtin_return_address(0), RVP_OP_FORK);
-	rvp_ring_put(r, id);
+	rvp_buf_t b = RVP_BUF_INITIALIZER;
+
+	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
+	    RVP_OP_FORK);
+	rvp_buf_put(&b, id);
+	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
 }
 
 static inline void
@@ -51,15 +55,23 @@ rvp_trace_join(uint32_t id)
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	rvp_ring_t *r = &t->t_ring;
-	rvp_ring_put_pc_and_op(r, __builtin_return_address(0), RVP_OP_JOIN);
-	rvp_ring_put(r, id);
+	rvp_buf_t b = RVP_BUF_INITIALIZER;
+
+	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
+	    RVP_OP_JOIN);
+	rvp_buf_put(&b, id);
+	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
 }
 
 static inline void
 rvp_trace_end(void)
 {
 	rvp_ring_t *r = rvp_ring_for_curthr();
-	rvp_ring_put_pc_and_op(r, __builtin_return_address(0), RVP_OP_END);
+	rvp_buf_t b = RVP_BUF_INITIALIZER;
+
+	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
+	    RVP_OP_END);
+	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
 	rvp_ring_request_service(r);
 }
 
@@ -414,6 +426,9 @@ __rvpredict_pthread_join(pthread_t pthread, void **retval)
 	return 0;
 }
 
+/* TBD For signal-safety, avoid using mutexes and condition variables.
+ * Use pthread_kill(3) and an atomic?
+ */
 void
 rvp_wake_transmitter(void)
 {

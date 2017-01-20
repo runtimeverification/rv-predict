@@ -18,9 +18,12 @@ static inline void
 trace_mutex_op(const void *retaddr, pthread_mutex_t *mtx, rvp_op_t op)
 {
 	rvp_ring_t *r = rvp_ring_for_curthr();
+	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
-	rvp_ring_put_pc_and_op(r, retaddr, op);
-	rvp_ring_put_addr(r, mtx);
+	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, op);
+	rvp_buf_put_addr(&b, mtx);
+	rvp_ring_put_buf(r, &b);
+	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
 }
 
 int

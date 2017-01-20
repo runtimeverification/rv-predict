@@ -453,12 +453,18 @@ RVPredictInstrument::runOnFunction(Function &F)
 	bool hasCalls = false;
 	const DataLayout &DL = m.getDataLayout();
 	struct {
-		Function *exitfn, *createfn, *joinfn;
-		Value *createstubfn, *joinstubfn, *exitstubfn;
+		Function *exitfn, *createfn, *joinfn,
+		    *lockfn, *trylockfn, *unlockfn;
+
+		Value *createstubfn, *joinstubfn, *exitstubfn,
+		    *lockstubfn, *trylockstubfn, *unlockstubfn;
 	} pthreads = {
 		  .exitfn = m.getFunction("pthread_exit")
 		, .createfn = m.getFunction("pthread_create")
 		, .joinfn = m.getFunction("pthread_join")
+		, .lockfn = m.getFunction("pthread_mutex_lock")
+		, .trylockfn = m.getFunction("pthread_mutex_trylock")
+		, .unlockfn = m.getFunction("pthread_mutex_unlock")
 		, .createstubfn = (pthreads.createfn == nullptr)
 		    ? nullptr
 		    : m.getOrInsertFunction("__rvpredict_pthread_create",
@@ -471,6 +477,18 @@ RVPredictInstrument::runOnFunction(Function &F)
 		    ? nullptr
 		    : m.getOrInsertFunction("__rvpredict_pthread_exit",
 					    pthreads.exitfn->getFunctionType())
+		, .lockstubfn = (pthreads.lockfn == nullptr)
+		    ? nullptr
+		    : m.getOrInsertFunction("__rvpredict_pthread_mutex_lock",
+					    pthreads.lockfn->getFunctionType())
+		, .trylockstubfn = (pthreads.trylockfn == nullptr)
+		    ? nullptr
+		    : m.getOrInsertFunction("__rvpredict_pthread_mutex_trylock",
+			pthreads.trylockfn->getFunctionType())
+		, .unlockstubfn = (pthreads.unlockfn == nullptr)
+		    ? nullptr
+		    : m.getOrInsertFunction("__rvpredict_pthread_mutex_unlock",
+			pthreads.unlockfn->getFunctionType())
 	};
 
 	// Traverse all instructions, collect loads/stores/returns, check for calls.
@@ -526,19 +544,30 @@ RVPredictInstrument::runOnFunction(Function &F)
 		 */
 		Function *calledfn = ci->getCalledFunction();
 
+		Value *replacefn = nullptr;
 		if (calledfn == nullptr) {
 			/* do nothing */
-		} else if (calledfn == pthreads.createfn ||
-		           calledfn == pthreads.joinfn) {
+		} else if (calledfn == pthreads.createfn) {
+			replacefn = pthreads.createstubfn;
+		} else if (calledfn == pthreads.exitfn) {
+			replacefn = pthreads.exitstubfn;
+		} else if (calledfn == pthreads.joinfn) {
+			replacefn = pthreads.joinstubfn;
+		} else if (calledfn == pthreads.lockfn) {
+			replacefn = pthreads.lockstubfn;
+		} else if (calledfn == pthreads.trylockfn) {
+			replacefn = pthreads.trylockstubfn;
+		} else if (calledfn == pthreads.unlockfn) {
+			replacefn = pthreads.unlockstubfn;
+		}
+		if (replacefn != nullptr) {
 			auto nargs = ci->getNumArgOperands();
 			Value **args = new Value *[nargs];
 			for (auto i = 0; i < nargs; i++) {
 				args[i] = ci->getArgOperand(i);
 			}
 			auto replace_insn = CallInst::Create(
-			    (calledfn == pthreads.createfn)
-			        ? pthreads.createstubfn
-				: pthreads.joinstubfn,
+			    replacefn,
 			    ArrayRef<Value *>(args, nargs));
 			delete args;
 			ReplaceInstWithInst(ci, replace_insn);

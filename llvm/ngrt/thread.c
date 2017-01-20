@@ -47,7 +47,7 @@ rvp_trace_fork(uint32_t id)
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
 	    RVP_OP_FORK);
 	rvp_buf_put(&b, id);
-	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
+	rvp_ring_put_buf(r, b);
 }
 
 static inline void
@@ -60,7 +60,7 @@ rvp_trace_join(uint32_t id)
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
 	    RVP_OP_JOIN);
 	rvp_buf_put(&b, id);
-	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
+	rvp_ring_put_buf(r, b);
 }
 
 static inline void
@@ -71,7 +71,7 @@ rvp_trace_end(void)
 
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
 	    RVP_OP_END);
-	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
+	rvp_ring_put_buf(r, b);
 	rvp_ring_request_service(r);
 }
 

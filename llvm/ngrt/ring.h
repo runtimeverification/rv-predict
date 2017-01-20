@@ -100,32 +100,10 @@ rvp_ring_put_multiple(rvp_ring_t *r, const uint32_t *item, int nitems)
 	}
 }
 
-#if 0
 static inline void
-rvp_ring_put(rvp_ring_t *r, uint32_t item)
+rvp_ring_put_buf(rvp_ring_t *r, rvp_buf_t b)
 {
-	uint32_t *prev = r->r_producer;
-	uint32_t *next = (prev == r->r_last) ? r->r_items : (prev + 1);
-
-	/* TBD do we need to order the r_consumer, r_producer reads? */
-
-	while (next == r->r_consumer) {
-		rvp_ring_open_slot(r, next);
-		/* wake reader and wait */
-	}
-
-	*r->r_producer = item;
-	atomic_store_explicit(&r->r_producer, next, memory_order_release);
-	if (rvp_ring_nfull(r) * 2 == rvp_ring_capacity(r) + 1) {
-		rvp_ring_request_service(r);
-	}
+	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
 }
-#else
-static inline void
-rvp_ring_put(rvp_ring_t *r, uint32_t item)
-{
-	rvp_ring_put_multiple(r, &item, 1);
-}
-#endif
 
 #endif /* _RVP_RING_H_ */

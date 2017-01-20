@@ -126,22 +126,6 @@ rvp_thread_flush_to_fd(rvp_thread_t *t, int fd, bool trace_switch)
 	return true;
 }
 
-#if 0
-void
-rvp_ring_put_addr(rvp_ring_t *r, const void *addr)
-{
-	int i;
-	union {
-		uintptr_t uaddr;
-		uint32_t u32[sizeof(uintptr_t) / sizeof(uint32_t)];
-	} addru = {.uaddr = (uintptr_t)addr};
-
-	for (i = 0; i < __arraycount(addru.u32); i++) {
-		rvp_ring_put(r, addru.u32[i]);
-	}
-}
-#endif
-
 deltop_t *
 rvp_vec_and_op_to_deltop(int jmpvec, rvp_op_t op)
 {
@@ -174,52 +158,14 @@ rvp_buf_put_pc_and_op(rvp_buf_t *b, const char **lastpcp, const char *pc,
 	rvp_buf_put_addr(b, deltop);
 }
 
-#if 0
-void
-rvp_ring_put_pc_and_op(rvp_ring_t *r, const char *pc, rvp_op_t op)
-{
-	int jmpvec = pc - r->r_lastpc;
-	deltop_t *deltop;
-
-	deltop = rvp_vec_and_op_to_deltop(jmpvec, op);
-
-	r->r_lastpc = pc;
-
-	if (deltop == NULL) {
-		rvp_ring_put_addr(r, pc);
-		deltop = rvp_vec_and_op_to_deltop(0, op);
-		assert(deltop != NULL);
-	}
-	rvp_ring_put_addr(r, deltop);
-}
-
-void
-rvp_ring_put_u64(rvp_ring_t *r, uint64_t val)
-{
-	union {
-		uint64_t u64;
-		uint32_t u32[2];
-	} valu = {.u64 = val};
-
-	rvp_ring_put(r, valu.u32[0]);
-	rvp_ring_put(r, valu.u32[1]);
-}
-#endif
-
 void
 rvp_ring_put_begin(rvp_ring_t *r, uint32_t tid)
 {
 	r->r_lastpc = __builtin_return_address(0);
-#if 0
-	rvp_ring_put_addr(r, rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN));
-	rvp_ring_put(r, tid);
-	rvp_ring_put_addr(r, r->r_lastpc);
-#else
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 	rvp_buf_put_addr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN));
 	rvp_buf_put(&b, tid);
 	rvp_buf_put_addr(&b, r->r_lastpc);
-	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
-#endif
+	rvp_ring_put_buf(r, b);
 }
 

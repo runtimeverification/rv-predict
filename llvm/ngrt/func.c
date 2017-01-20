@@ -9,7 +9,7 @@ __rvpredict_func_entry(const void *retaddr)
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, RVP_OP_ENTERFN);
-	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
+	rvp_ring_put_buf(r, b);
 }
 
 void
@@ -20,5 +20,5 @@ __rvpredict_func_exit(void)
 
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
 	    RVP_OP_EXITFN);
-	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
+	rvp_ring_put_buf(r, b);
 }

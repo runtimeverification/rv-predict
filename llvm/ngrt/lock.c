@@ -22,8 +22,7 @@ trace_mutex_op(const void *retaddr, pthread_mutex_t *mtx, rvp_op_t op)
 
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, op);
 	rvp_buf_put_addr(&b, mtx);
-	rvp_ring_put_buf(r, &b);
-	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
+	rvp_ring_put_buf(r, b);
 }
 
 int

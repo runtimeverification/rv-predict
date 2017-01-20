@@ -15,7 +15,7 @@ trace_load_or_store(const char *retaddr, rvp_op_t op, void *addr,
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, op);
 	rvp_buf_put_addr(&b, addr);
 	rvp_buf_put(&b, val);
-	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
+	rvp_ring_put_buf(r, b);
 }
 
 /* void fn(T *addr, T val) */
@@ -58,7 +58,7 @@ __rvpredict_load8(uint64_t *addr, uint64_t val)
 	rvp_buf_put_addr(&b, addr);
 	rvp_buf_put_u64(&b, val);
 
-	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
+	rvp_ring_put_buf(r, b);
 }
 
 void
@@ -106,7 +106,7 @@ __rvpredict_store8(uint64_t *addr, uint64_t val)
 	    RVP_OP_STORE8);
 	rvp_buf_put_addr(&b, addr);
 	rvp_buf_put_u64(&b, val);
-	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
+	rvp_ring_put_buf(r, b);
 }
 
 void

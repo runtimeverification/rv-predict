@@ -14,7 +14,7 @@ trace_atomic_rmw4(const void *retaddr, uint32_t *addr, uint32_t oval,
 	rvp_buf_put_addr(&b, addr);
 	rvp_buf_put(&b, oval);
 	rvp_buf_put(&b, nval);
-	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
+	rvp_ring_put_buf(r, b);
 }
 
 void

@@ -13,62 +13,12 @@
 #include "tracefmt.h"
 #include "reader.h"
 
-typedef struct {
-	uintptr_t deltop;
-	uint32_t tid;
-} __packed __aligned(sizeof(uint32_t)) begin_fork_join_switch_t;
-
-typedef struct {
-	uintptr_t deltop;
-	uintptr_t addr;
-	uint32_t data;
-} __packed __aligned(sizeof(uint32_t)) load1_2_4_store1_2_4_t;
-
-typedef struct {
-	uintptr_t deltop;
-	uintptr_t addr;
-	uint64_t data;
-} __packed __aligned(sizeof(uint32_t)) load8_store8_t;
-
-typedef struct {
-	uintptr_t deltop;
-	uintptr_t addr;
-	uint32_t data;
-} __packed __aligned(sizeof(uint32_t)) atomic_load1_2_4_store1_2_4_t;
-
-typedef struct {
-	uintptr_t deltop;
-	uintptr_t addr;
-	uint32_t data;
-} __packed __aligned(sizeof(uint32_t)) atomic_load2_store2_t;
-
-typedef struct {
-	uintptr_t deltop;
-	uintptr_t addr;
-	uint32_t data;
-} __packed __aligned(sizeof(uint32_t)) atomic_load4_store4_t;
-
-typedef struct {
-	uintptr_t deltop;
-	uintptr_t addr;
-	uint64_t data;
-} __packed __aligned(sizeof(uint32_t)) atomic_load8_store8_t;
-
-typedef struct {
-	uintptr_t deltop;
-} __packed __aligned(sizeof(uint32_t)) end_enterfn_exitfn_t;
-
-typedef struct {
-	uintptr_t deltop;
-	uintptr_t addr;
-} __packed __aligned(sizeof(uint32_t)) acquire_release_t;
-
 typedef union {
 	uintptr_t ub_pc;
-	begin_fork_join_switch_t ub_begin_fork_join_switch;
-	load1_2_4_store1_2_4_t ub_load1_2_4_store1_2_4;
-	acquire_release_t ub_acquire_release;
-	load8_store8_t ub_load8_store8;
+	rvp_begin_fork_join_switch_t ub_begin_fork_join_switch;
+	rvp_load1_2_4_store1_2_4_t ub_load1_2_4_store1_2_4;
+	rvp_acquire_release_t ub_acquire_release;
+	rvp_load8_store8_t ub_load8_store8;
 	char ub_bytes[4096];
 } rvp_ubuf_t;
 
@@ -80,35 +30,41 @@ typedef struct {
 #define OP_INFO_INIT(__ty, __descr) {.oi_reclen = sizeof(__ty), .oi_descr = __descr}
 
 static const op_info_t op_to_info[RVP_NOPS] = {
-	  [RVP_OP_ENTERFN] = OP_INFO_INIT(end_enterfn_exitfn_t, "enter function")
-	, [RVP_OP_EXITFN] = OP_INFO_INIT(end_enterfn_exitfn_t, "exit function")
+	  [RVP_OP_ENTERFN] = OP_INFO_INIT(rvp_end_enterfn_exitfn_t,
+	     "enter function")
+	, [RVP_OP_EXITFN] = OP_INFO_INIT(rvp_end_enterfn_exitfn_t,
+	    "exit function")
 
-	, [RVP_OP_BEGIN] = OP_INFO_INIT(begin_fork_join_switch_t,
+	, [RVP_OP_BEGIN] = OP_INFO_INIT(rvp_begin_fork_join_switch_t,
 					"begin thread")
-	, [RVP_OP_END] = OP_INFO_INIT(end_enterfn_exitfn_t, "end thread")
-	, [RVP_OP_SWITCH] = OP_INFO_INIT(begin_fork_join_switch_t,
+	, [RVP_OP_END] = OP_INFO_INIT(rvp_end_enterfn_exitfn_t, "end thread")
+	, [RVP_OP_SWITCH] = OP_INFO_INIT(rvp_begin_fork_join_switch_t,
 					 "switch thread")
-	, [RVP_OP_FORK] = OP_INFO_INIT(begin_fork_join_switch_t, "fork thread")
-	, [RVP_OP_JOIN] = OP_INFO_INIT(begin_fork_join_switch_t, "join thread")
+	, [RVP_OP_FORK] = OP_INFO_INIT(rvp_begin_fork_join_switch_t,
+	    "fork thread")
+	, [RVP_OP_JOIN] = OP_INFO_INIT(rvp_begin_fork_join_switch_t,
+	    "join thread")
 
-	, [RVP_OP_LOAD1] = OP_INFO_INIT(load1_2_4_store1_2_4_t, "load 1")
-	, [RVP_OP_STORE1] = OP_INFO_INIT(load1_2_4_store1_2_4_t, "store 1")
-	, [RVP_OP_LOAD2] = OP_INFO_INIT(load1_2_4_store1_2_4_t, "load 2")
-	, [RVP_OP_LOAD4] = OP_INFO_INIT(load1_2_4_store1_2_4_t, "load 4")
-	, [RVP_OP_STORE4] = OP_INFO_INIT(load1_2_4_store1_2_4_t, "store 4")
-	, [RVP_OP_LOAD8] = OP_INFO_INIT(load8_store8_t, "load 8")
-	, [RVP_OP_STORE8] = OP_INFO_INIT(load8_store8_t, "store 8")
+	, [RVP_OP_LOAD1] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t, "load 1")
+	, [RVP_OP_STORE1] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t, "store 1")
+	, [RVP_OP_LOAD2] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t, "load 2")
+	, [RVP_OP_LOAD4] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t, "load 4")
+	, [RVP_OP_STORE4] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t, "store 4")
+	, [RVP_OP_LOAD8] = OP_INFO_INIT(rvp_load8_store8_t, "load 8")
+	, [RVP_OP_STORE8] = OP_INFO_INIT(rvp_load8_store8_t, "store 8")
 
-	, [RVP_OP_ATOMIC_LOAD4] = OP_INFO_INIT(load1_2_4_store1_2_4_t,
+	, [RVP_OP_ATOMIC_LOAD4] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t,
 					       "atomic load 4")
-	, [RVP_OP_ATOMIC_STORE4] = OP_INFO_INIT(load1_2_4_store1_2_4_t,
+	, [RVP_OP_ATOMIC_STORE4] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t,
 						"atomic store 4")
-	, [RVP_OP_ATOMIC_LOAD8] = OP_INFO_INIT(atomic_load8_store8_t,
+	, [RVP_OP_ATOMIC_LOAD8] = OP_INFO_INIT(rvp_load8_store8_t,
 					       "atomic load 8")
-	, [RVP_OP_ATOMIC_STORE8] = OP_INFO_INIT(atomic_load8_store8_t,
+	, [RVP_OP_ATOMIC_STORE8] = OP_INFO_INIT(rvp_load8_store8_t,
 					        "atomic store 8")
-	, [RVP_OP_ACQUIRE] = OP_INFO_INIT(acquire_release_t, "acquire mutex")
-	, [RVP_OP_RELEASE] = OP_INFO_INIT(acquire_release_t, "release mutex")
+	, [RVP_OP_ACQUIRE] = OP_INFO_INIT(rvp_acquire_release_t,
+	    "acquire mutex")
+	, [RVP_OP_RELEASE] = OP_INFO_INIT(rvp_acquire_release_t,
+	    "release mutex")
 };
 
 typedef struct _rvp_call {
@@ -442,8 +398,9 @@ rvp_trace_dump(int fd)
 
 	rvp_pstate_init(ps, pc0, tid);
 
-	ub.ub_begin_fork_join_switch = (begin_fork_join_switch_t){.deltop = pc0,
-								  .tid = tid};
+	ub.ub_begin_fork_join_switch =
+	    (rvp_begin_fork_join_switch_t){.deltop = pc0, .tid = tid};
+
 	size_t nfull = sizeof(ub.ub_begin_fork_join_switch);
 	size_t nshort = 0;
 	for (;;) {

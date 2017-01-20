@@ -83,4 +83,30 @@ struct _deltops {
 
 typedef struct _deltops deltops_t;
 
+typedef struct {
+	uintptr_t deltop;
+	uint32_t tid;
+} __packed __aligned(sizeof(uint32_t)) rvp_begin_fork_join_switch_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uintptr_t addr;
+	uint32_t data;
+} __packed __aligned(sizeof(uint32_t)) rvp_load1_2_4_store1_2_4_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uintptr_t addr;
+	uint64_t data;
+} __packed __aligned(sizeof(uint32_t)) rvp_load8_store8_t;
+
+typedef struct {
+	uintptr_t deltop;
+} __packed __aligned(sizeof(uint32_t)) rvp_end_enterfn_exitfn_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uintptr_t addr;
+} __packed __aligned(sizeof(uint32_t)) rvp_acquire_release_t;
+
 #endif /* _RVP_TRACEFMT_H_ */

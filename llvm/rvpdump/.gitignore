@@ -1,4 +1,5 @@
 core
+.depend
 .Makefile.tags
 *.o
 rvpdump

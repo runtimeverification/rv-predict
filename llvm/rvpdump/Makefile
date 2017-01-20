@@ -4,7 +4,7 @@ PROG=rvpdump
 
 CPPFLAGS+=-I../ngrt
 SRCS=main.c reader.c
-WARNS=4
+WARNS=5
 
 DBG+=-O0 -g
 

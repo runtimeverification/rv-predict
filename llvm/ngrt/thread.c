@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <err.h> /* for err(3) */
 #include <errno.h> /* for ESRCH */
+#include <inttypes.h> /* for PRIu32 */
 #include <stdint.h> /* for uint32_t */
 #include <stdlib.h> /* for EXIT_FAILURE */
 #include <stdio.h> /* for fprintf(3) */
@@ -19,24 +20,29 @@ static long pgsz = 0;
 
 /* thread_mutex protects thread_head, next_id */
 static pthread_mutex_t thread_mutex;
-static pthread_cond_t wakecond;
-static int nwake = 0;
 static rvp_thread_t * volatile thread_head = NULL;
 static uint32_t next_id = 0;
+
 static pthread_t serializer;
+static pthread_cond_t wakecond;
+static int nwake = 0;
 static int serializer_fd;
+static bool transmit = true;
 
 pthread_key_t rvp_thread_key;
 static pthread_once_t rvp_init_once = PTHREAD_ONCE_INIT;
 
+static int rvp_thread_detach(rvp_thread_t *);
+static void rvp_thread_destroy(rvp_thread_t *);
 static void rvp_thread0_create(void);
+static rvp_thread_t *rvp_collect_garbage(void);
 
 static inline void
 rvp_trace_fork(uint32_t id)
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	rvp_ring_t *r = &t->t_ring;
-	rvp_ring_put_pc_and_op(r, __builtin_return_address(1), RVP_OP_FORK);
+	rvp_ring_put_pc_and_op(r, __builtin_return_address(0), RVP_OP_FORK);
 	rvp_ring_put(r, id);
 }
 
@@ -45,7 +51,7 @@ rvp_trace_join(uint32_t id)
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	rvp_ring_t *r = &t->t_ring;
-	rvp_ring_put_pc_and_op(r, __builtin_return_address(1), RVP_OP_JOIN);
+	rvp_ring_put_pc_and_op(r, __builtin_return_address(0), RVP_OP_JOIN);
 	rvp_ring_put(r, id);
 }
 
@@ -53,7 +59,8 @@ static inline void
 rvp_trace_end(void)
 {
 	rvp_ring_t *r = rvp_ring_for_curthr();
-	rvp_ring_put_pc_and_op(r, __builtin_return_address(1), RVP_OP_END);
+	rvp_ring_put_pc_and_op(r, __builtin_return_address(0), RVP_OP_END);
+	rvp_ring_request_service(r);
 }
 
 static void
@@ -88,13 +95,40 @@ thread_unlock(void)
 		err(EXIT_FAILURE, "%s: pthread_mutex_unlock", __func__);
 }
 
+/* Caller must hold thread_mutex. */
+static void
+rvp_wake_transmitter_locked(void)
+{
+	int rc;
+	nwake++;
+	if ((rc = pthread_cond_signal(&wakecond)) != 0)
+		errx(EXIT_FAILURE, "%s: %s", __func__, strerror(rc));
+}
+
+static void
+rvp_stop_transmitter(void)
+{
+	int rc;
+
+	thread_lock();
+	transmit = false;
+	rvp_wake_transmitter_locked();
+	thread_unlock();
+
+	if ((rc = pthread_join(serializer, NULL)) != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_join: %s",
+		    __func__, strerror(rc));
+	}
+}
+
 static void *
 serialize(void *arg)
 {
 	int fd = serializer_fd;
+	rvp_thread_t *last_t = NULL, *t, *next_t;
 
 	thread_lock();
-	for (;;) {
+	while (transmit || nwake > 0) {
 		bool any_emptied;
 
 		while (nwake == 0) {
@@ -105,19 +139,30 @@ serialize(void *arg)
 			}
 		}
 		nwake--;
-//		fprintf(stderr, "%s: woke up\n", __func__);
+
 		do {
-			rvp_thread_t *t, *last_t = NULL;
 			any_emptied = false;
 			for (t = thread_head; t != NULL; t = t->t_next) {
 				if (rvp_thread_flush_to_fd(t, fd, t != last_t)){
+#if 0
+					if (t != last_t && last_t != NULL) {
+						printf("switch %" PRIu32 " -> %" PRIu32 "\n", last_t->t_id, t->t_id);
+					}
+#endif
 					last_t = t;
 					any_emptied = true; 
 				}
 			}
 		} while (any_emptied);
+
+		for (t = rvp_collect_garbage(); t != NULL; t = next_t) {
+			next_t = t->t_next;
+			rvp_thread_destroy(t);
+		}
 	}
 	thread_unlock();
+	if (close(fd) == -1)
+		warn("%s: close", __func__);
 	return NULL;
 }
 
@@ -159,6 +204,7 @@ rvp_init(void)
 	 */
 	rvp_thread0_create();
 	rvp_serializer_create();
+	atexit(rvp_stop_transmitter);
 }
 
 void
@@ -204,6 +250,27 @@ rvp_thread_attach(rvp_thread_t *t)
 	return 0;
 }
 
+/* Caller must hold thread_mutex. */ 
+static rvp_thread_t *
+rvp_collect_garbage(void)
+{
+	rvp_thread_t * volatile *tp;
+	rvp_thread_t *garbage_head = NULL;
+	rvp_thread_t * volatile *gtp = &garbage_head;
+
+	for (tp = &thread_head; *tp != NULL;) {
+		rvp_thread_t *t = *tp;
+		if (t->t_garbage) {
+			*tp = (*tp)->t_next;
+			*gtp = t;
+			gtp = &t->t_next;
+		} else
+			tp = &(*tp)->t_next;
+	}
+	*gtp = NULL;
+	return garbage_head;
+}
+
 static int
 rvp_thread_detach(rvp_thread_t *tgt)
 {
@@ -229,9 +296,6 @@ rvp_thread_detach(rvp_thread_t *tgt)
 static void
 rvp_thread_destroy(rvp_thread_t *t)
 {
-	if (rvp_thread_detach(t) != 0)
-		err(EXIT_FAILURE, "%s: rvp_thread_detach", __func__);
-
 	free(t->t_ring.r_items);
 	free(t);
 }
@@ -285,6 +349,9 @@ __rvpredict_pthread_create(pthread_t *thread,
 		return 0;
 	}
 
+	if (rvp_thread_detach(t) != 0)
+		err(EXIT_FAILURE, "%s: rvp_thread_detach", __func__);
+
 	rvp_thread_destroy(t);
 
 	return rc;
@@ -313,12 +380,19 @@ rvp_pthread_to_thread(pthread_t pthread)
 void
 __rvpredict_pthread_exit(void *retval)
 {
-	pthread_exit(retval);
 	rvp_trace_end();
+	pthread_exit(retval);
 	/* TBD flag change of status so that we can flush the trace
 	 * and reclaim resources---e.g., munmap/free the ring
 	 * once it's empty.  Careful: need to hang around for _join().
 	 */
+}
+
+static void
+rvp_thread_mark(rvp_thread_t *t)
+{
+	t->t_garbage = true;
+	rvp_wake_transmitter();
 }
 
 int
@@ -335,8 +409,7 @@ __rvpredict_pthread_join(pthread_t pthread, void **retval)
 
 	rvp_trace_join(t->t_id);
 
-	/* TBD don't destroy, mark as garbage! */
-	rvp_thread_destroy(t);
+	rvp_thread_mark(t);
 
 	return 0;
 }
@@ -344,11 +417,8 @@ __rvpredict_pthread_join(pthread_t pthread, void **retval)
 void
 rvp_wake_transmitter(void)
 {
-	int rc;
 	thread_lock();
-	nwake++;
-	if ((rc = pthread_cond_signal(&wakecond)) != 0)
-		errx(EXIT_FAILURE, "%s: %s", __func__, strerror(rc));
+	rvp_wake_transmitter_locked();
 	thread_unlock();
 }
 

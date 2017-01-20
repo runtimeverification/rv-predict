@@ -22,13 +22,25 @@ typedef struct {
 	uintptr_t deltop;
 	uintptr_t addr;
 	uint32_t data;
-} __packed __aligned(sizeof(uint32_t)) load4_store4_t;
+} __packed __aligned(sizeof(uint32_t)) load1_2_4_store1_2_4_t;
 
 typedef struct {
 	uintptr_t deltop;
 	uintptr_t addr;
 	uint64_t data;
 } __packed __aligned(sizeof(uint32_t)) load8_store8_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uintptr_t addr;
+	uint32_t data;
+} __packed __aligned(sizeof(uint32_t)) atomic_load1_2_4_store1_2_4_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uintptr_t addr;
+	uint32_t data;
+} __packed __aligned(sizeof(uint32_t)) atomic_load2_store2_t;
 
 typedef struct {
 	uintptr_t deltop;
@@ -47,6 +59,20 @@ typedef struct {
 } __packed __aligned(sizeof(uint32_t)) end_enterfn_exitfn_t;
 
 typedef struct {
+	uintptr_t deltop;
+	uintptr_t addr;
+} __packed __aligned(sizeof(uint32_t)) acquire_release_t;
+
+typedef union {
+	uintptr_t ub_pc;
+	begin_fork_join_switch_t ub_begin_fork_join_switch;
+	load1_2_4_store1_2_4_t ub_load1_2_4_store1_2_4;
+	acquire_release_t ub_acquire_release;
+	load8_store8_t ub_load8_store8;
+	char ub_bytes[4096];
+} rvp_ubuf_t;
+
+typedef struct {
 	size_t oi_reclen;
 	const char *oi_descr;
 } op_info_t;
@@ -59,20 +85,30 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 
 	, [RVP_OP_BEGIN] = OP_INFO_INIT(begin_fork_join_switch_t,
 					"begin thread")
+	, [RVP_OP_END] = OP_INFO_INIT(end_enterfn_exitfn_t, "end thread")
 	, [RVP_OP_SWITCH] = OP_INFO_INIT(begin_fork_join_switch_t,
 					 "switch thread")
 	, [RVP_OP_FORK] = OP_INFO_INIT(begin_fork_join_switch_t, "fork thread")
 	, [RVP_OP_JOIN] = OP_INFO_INIT(begin_fork_join_switch_t, "join thread")
 
-	, [RVP_OP_LOAD4] = OP_INFO_INIT(load4_store4_t, "load 4")
-	, [RVP_OP_STORE4] = OP_INFO_INIT(load4_store4_t, "store 4")
+	, [RVP_OP_LOAD1] = OP_INFO_INIT(load1_2_4_store1_2_4_t, "load 1")
+	, [RVP_OP_STORE1] = OP_INFO_INIT(load1_2_4_store1_2_4_t, "store 1")
+	, [RVP_OP_LOAD2] = OP_INFO_INIT(load1_2_4_store1_2_4_t, "load 2")
+	, [RVP_OP_LOAD4] = OP_INFO_INIT(load1_2_4_store1_2_4_t, "load 4")
+	, [RVP_OP_STORE4] = OP_INFO_INIT(load1_2_4_store1_2_4_t, "store 4")
 	, [RVP_OP_LOAD8] = OP_INFO_INIT(load8_store8_t, "load 8")
 	, [RVP_OP_STORE8] = OP_INFO_INIT(load8_store8_t, "store 8")
 
-	, [RVP_OP_ATOMIC_LOAD4] = OP_INFO_INIT(load4_store4_t, "atomic load 4")
-	, [RVP_OP_ATOMIC_STORE4] = OP_INFO_INIT(load4_store4_t, "atomic store 4")
-	, [RVP_OP_ATOMIC_LOAD8] = OP_INFO_INIT(atomic_load8_store8_t, "atomic load 8")
-	, [RVP_OP_ATOMIC_STORE8] = OP_INFO_INIT(atomic_load8_store8_t, "atomic store 8")
+	, [RVP_OP_ATOMIC_LOAD4] = OP_INFO_INIT(load1_2_4_store1_2_4_t,
+					       "atomic load 4")
+	, [RVP_OP_ATOMIC_STORE4] = OP_INFO_INIT(load1_2_4_store1_2_4_t,
+						"atomic store 4")
+	, [RVP_OP_ATOMIC_LOAD8] = OP_INFO_INIT(atomic_load8_store8_t,
+					       "atomic load 8")
+	, [RVP_OP_ATOMIC_STORE8] = OP_INFO_INIT(atomic_load8_store8_t,
+					        "atomic store 8")
+	, [RVP_OP_ACQUIRE] = OP_INFO_INIT(acquire_release_t, "acquire mutex")
+	, [RVP_OP_RELEASE] = OP_INFO_INIT(acquire_release_t, "release mutex")
 };
 
 typedef struct _rvp_call {
@@ -209,6 +245,153 @@ pc_is_not_deltop(rvp_pstate_t *ps, uintptr_t pc)
 	return pc < ps->ps_deltop_first || ps->ps_deltop_last < pc;
 }
 
+/*
+ * Consumes nothing and returns the number of bytes that the buffer is
+ * short of a full trace.
+ *
+ * Otherwise, consumes the trace at the start of the buffer `ub`, prints
+ * the trace, shifts the bytes of the buffer left by the number of bytes
+ * consumed, and returns 0.
+ */
+static size_t
+consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub,
+    size_t *nfullp)
+{
+	rvp_op_t op;
+	uintptr_t lastpc;
+	int jmpvec;
+	bool is_load = false
+	    ;
+	int field_width = 0;
+
+	if (pc_is_not_deltop(ps, ub->ub_pc)) {
+		ps->ps_thread[ps->ps_curthread].ts_lastpc = ub->ub_pc;
+		printf("tid %" PRIu32 " pc %#016" PRIxPTR " jump\n",
+		    ps->ps_curthread, ub->ub_pc);
+		advance(&ub->ub_bytes[0], nfullp, sizeof(ub->ub_pc));
+		return 0;
+	}
+	extract_jmpvec_and_op_from_deltop(ps->ps_deltop_first,
+	    ub->ub_pc, &jmpvec, &op);
+	const op_info_t *oi  = &op_to_info[op];
+	if (oi->oi_descr == NULL)
+		errx(EXIT_FAILURE, "unknown op %d\n", op);
+	/* need to top off buffer? */
+	if (*nfullp < oi->oi_reclen)
+		return oi->oi_reclen - *nfullp;
+	lastpc = ps->ps_thread[ps->ps_curthread].ts_lastpc;
+	if (op == RVP_OP_BEGIN)
+		rvp_pstate_begin_thread(ps, ub->ub_begin_fork_join_switch.tid);
+	ps->ps_thread[ps->ps_curthread].ts_lastpc = lastpc + jmpvec;
+	switch (op) {
+	case RVP_OP_ATOMIC_LOAD8:
+	case RVP_OP_ATOMIC_STORE8:
+	case RVP_OP_LOAD8:
+	case RVP_OP_STORE8:
+		field_width = 16;
+		break;
+	case RVP_OP_ATOMIC_LOAD4:
+	case RVP_OP_ATOMIC_STORE4:
+	case RVP_OP_LOAD4:
+	case RVP_OP_STORE4:
+		field_width = 8;
+		break;
+	case RVP_OP_ATOMIC_LOAD2:
+	case RVP_OP_ATOMIC_STORE2:
+	case RVP_OP_LOAD2:
+	case RVP_OP_STORE2:
+		field_width = 4;
+		break;
+	case RVP_OP_ATOMIC_LOAD1:
+	case RVP_OP_ATOMIC_STORE1:
+	case RVP_OP_LOAD1:
+	case RVP_OP_STORE1:
+		field_width = 2;
+		break;
+	default:
+		break;
+	}
+	switch (op) {
+	case RVP_OP_ATOMIC_LOAD8:
+	case RVP_OP_ATOMIC_LOAD4:
+	case RVP_OP_ATOMIC_LOAD2:
+	case RVP_OP_ATOMIC_LOAD1:
+	case RVP_OP_LOAD8:
+	case RVP_OP_LOAD4:
+	case RVP_OP_LOAD2:
+	case RVP_OP_LOAD1:
+		is_load = true;
+		break;
+	default:
+		break;
+	}
+
+	switch (op) {
+	case RVP_OP_ATOMIC_LOAD8:
+	case RVP_OP_ATOMIC_STORE8:
+	case RVP_OP_LOAD8:
+	case RVP_OP_STORE8:
+		printf("tid %" PRIu32 " pc %#016" PRIxPTR
+		    " %s %#.*" PRIx64 " %s [%#016" PRIxPTR "]\n",
+		    ps->ps_curthread,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc, oi->oi_descr,
+		    field_width,
+		    ub->ub_load8_store8.data,
+		    is_load ? "<-" : "->",
+		    ub->ub_load8_store8.addr);
+		break;
+	case RVP_OP_ATOMIC_LOAD4:
+	case RVP_OP_ATOMIC_STORE4:
+	case RVP_OP_ATOMIC_LOAD2:
+	case RVP_OP_ATOMIC_STORE2:
+	case RVP_OP_ATOMIC_LOAD1:
+	case RVP_OP_ATOMIC_STORE1:
+	case RVP_OP_LOAD4:
+	case RVP_OP_STORE4:
+	case RVP_OP_LOAD2:
+	case RVP_OP_STORE2:
+	case RVP_OP_LOAD1:
+	case RVP_OP_STORE1:
+		printf("tid %" PRIu32 " pc %#016" PRIxPTR
+		    " %s %#.*" PRIx32 " %s [%#016" PRIxPTR "]\n",
+		    ps->ps_curthread,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc, oi->oi_descr,
+		    field_width,
+		    ub->ub_load1_2_4_store1_2_4.data,
+		    is_load ? "<-" : "->",
+		    ub->ub_load1_2_4_store1_2_4.addr);
+		break;
+	case RVP_OP_END:
+	default:
+		printf("tid %" PRIu32 " pc %#016" PRIxPTR " %s\n",
+		    ps->ps_curthread,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc, oi->oi_descr);
+		break;
+	case RVP_OP_FORK:
+	case RVP_OP_JOIN:
+	case RVP_OP_SWITCH:
+		printf(
+		    "tid %" PRIu32 " pc %#016" PRIxPTR " %s tid %" PRIu32 "\n",
+		    ps->ps_curthread, ps->ps_thread[ps->ps_curthread].ts_lastpc,
+		    oi->oi_descr, ub->ub_begin_fork_join_switch.tid);
+		// TBD create a fledgling rvp_thread_pstate_t on fork?
+		break;
+	case RVP_OP_ACQUIRE:
+	case RVP_OP_RELEASE:
+		printf("tid %" PRIu32 " pc %#016" PRIxPTR
+		    " %s [%#016" PRIxPTR "]\n",
+		    ps->ps_curthread,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc, oi->oi_descr,
+		    ub->ub_acquire_release.addr);
+		break;
+	}
+	if (op == RVP_OP_SWITCH)
+		ps->ps_curthread = ub->ub_begin_fork_join_switch.tid;
+
+	advance(&ub->ub_bytes[0], nfullp, oi->oi_reclen);
+	return 0;
+}
+
 void
 rvp_trace_dump(int fd)
 {
@@ -226,13 +409,7 @@ rvp_trace_dump(int fd)
 	uintptr_t pc0;
 	uint32_t tid;
 	ssize_t nread;
-	union {
-		uintptr_t un_pc;
-		begin_fork_join_switch_t un_begin_fork_join_switch;
-		load4_store4_t un_load4_store4;
-		load8_store8_t un_load8_store8;
-		char un_bytes[4096];
-	} un;
+	rvp_ubuf_t ub;
 	const struct iovec iov[] = {
 		  { .iov_base = &th, .iov_len = sizeof(th) }
 		, { .iov_base = &pc0 , .iov_len = sizeof(pc0) }
@@ -265,46 +442,32 @@ rvp_trace_dump(int fd)
 
 	rvp_pstate_init(ps, pc0, tid);
 
-	un.un_begin_fork_join_switch = (begin_fork_join_switch_t){.deltop = pc0,
+	ub.ub_begin_fork_join_switch = (begin_fork_join_switch_t){.deltop = pc0,
 								  .tid = tid};
-	size_t nfull = sizeof(un.un_begin_fork_join_switch);
+	size_t nfull = sizeof(ub.ub_begin_fork_join_switch);
+	size_t nshort = 0;
 	for (;;) {
-		rvp_op_t op;
-		int jmpvec;
-
-		nread = read(fd, (char *)&un + nfull, sizeof(un) - nfull);
+		nread = read(fd, &ub.ub_bytes[nfull], sizeof(ub) - nfull);
 		if (nread == -1) {
 			err(EXIT_FAILURE, "%s: read failed (pc/deltop)",
 			    __func__);
 		}
 		nfull += nread;
+		if (nread < nshort) {
+			errx(EXIT_FAILURE, "%s: trace is short %zu bytes",
+			    __func__, nshort - nread);
+		}
+		nshort = 0;
 		if (nfull == 0)
 			break;
-		if (nfull < sizeof(un.un_pc)) {
+		if (nfull < sizeof(ub.ub_pc)) {
 			errx(EXIT_FAILURE, "%s: short read (pc/deltop)",
 			    __func__);
 		}
 		do {
-			if (pc_is_not_deltop(ps, un.un_pc)) {
-				ps->ps_thread[tid].ts_lastpc = un.un_pc;
-				printf("jump to %016" PRIxPTR "\n", un.un_pc);
-				advance(&un.un_bytes[0], &nfull,
-				    sizeof(un.un_pc));
-				continue;
-			}
-			extract_jmpvec_and_op_from_deltop(ps->ps_deltop_first,
-			    un.un_pc, &jmpvec, &op);
-			const op_info_t *oi  = &op_to_info[op];
-			if (oi->oi_descr == NULL) {
-				errx(EXIT_FAILURE, "unknown op %d\n", op);
-				return;
-			}
-			if (nfull < oi->oi_reclen)
+			nshort = consume_and_print_trace(ps, &ub, &nfull);
+			if (nshort != 0)
 				break;
-			printf("%s (%016" PRIxPTR ", reclen %zu)\n",
-			    oi->oi_descr, un.un_pc, oi->oi_reclen);
-			advance(&un.un_bytes[0], &nfull, oi->oi_reclen);
-			ps->ps_thread[tid].ts_lastpc += jmpvec;
-		} while (nfull < sizeof(un.un_pc));
+		} while (nfull >= sizeof(ub.ub_pc));
 	}
 }

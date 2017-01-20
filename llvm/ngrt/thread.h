@@ -13,6 +13,7 @@
 typedef struct _rvp_thread rvp_thread_t;
 
 struct _rvp_thread {
+	bool			t_garbage;
 	pthread_t		t_pthread;
 	uint32_t		t_id;
 	rvp_thread_t * volatile	t_next;

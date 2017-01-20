@@ -3,6 +3,7 @@
 #include <sys/stat.h>	/* for open(2) */
 #include <fcntl.h>	/* for open(2) */
 #include <sys/uio.h>	/* for writev(2) */
+#include <stdlib.h>	/* for getenv(3) */
 
 #include "access.h"
 #include "nbcompat.h"
@@ -47,7 +48,10 @@ writeall(int fd, const void *buf, size_t nbytes)
 int
 rvp_trace_open(void)
 {
-	int fd = open("./rvpredict.trace", O_WRONLY|O_CREAT|O_TRUNC, 0600);
+	const char *tracefn = getenv("RVP_TRACE_FILE");
+
+	int fd = open((tracefn != NULL) ? tracefn : "./rvpredict.trace",
+	    O_WRONLY|O_CREAT|O_TRUNC, 0600);
 
 	if (fd == -1)
 		return -1;
@@ -64,6 +68,8 @@ bool
 rvp_thread_flush_to_fd(rvp_thread_t *t, int fd, bool trace_switch)
 {
 	int iovcnt = 0;
+	static ssize_t total = 0, lastsw = -1;
+	static uint32_t last_tid = 0xffffffff;
 	ssize_t nwritten;
 	rvp_ring_t *r = &t->t_ring;
 	uint32_t *producer = r->r_producer, *consumer = r->r_consumer;
@@ -78,6 +84,8 @@ rvp_thread_flush_to_fd(rvp_thread_t *t, int fd, bool trace_switch)
 		return false;
 
 	if (trace_switch) {
+		assert(lastsw < total);
+		assert(last_tid != threadswitch.id);
 		iov[iovcnt++] = (struct iovec){
 			  .iov_base = &threadswitch
 			, .iov_len = sizeof(threadswitch)
@@ -103,6 +111,12 @@ rvp_thread_flush_to_fd(rvp_thread_t *t, int fd, bool trace_switch)
 		};
 	}
 	nwritten = writev(fd, iov, iovcnt);
+	if (trace_switch)
+		lastsw = total + sizeof(threadswitch);
+	total += nwritten;
+	assert(trace_switch
+	    ? (nwritten > sizeof(threadswitch))
+	    : (nwritten > 0));
 
 	while (--iovcnt >= 0)
 		nwritten -= iov[iovcnt].iov_len;
@@ -160,7 +174,7 @@ rvp_ring_put_pc_and_op(rvp_ring_t *r, const char *pc, rvp_op_t op)
 void
 rvp_ring_put_begin(rvp_ring_t *r, uint32_t id)
 {
-	r->r_lastpc = __builtin_return_address(1);
+	r->r_lastpc = __builtin_return_address(0);
 	rvp_ring_put_addr(r, rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN));
 	rvp_ring_put(r, id);
 	rvp_ring_put_addr(r, r->r_lastpc);

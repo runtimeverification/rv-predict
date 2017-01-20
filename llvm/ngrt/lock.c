@@ -29,7 +29,7 @@ __rvpredict_pthread_mutex_lock(pthread_mutex_t *mtx)
 	int rc;
 
 	rc = pthread_mutex_lock(mtx);
-	trace_mutex_op(__builtin_return_address(1), mtx, RVP_OP_ACQUIRE);
+	trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_ACQUIRE);
 
 	return rc;
 }
@@ -42,7 +42,7 @@ __rvpredict_pthread_mutex_trylock(pthread_mutex_t *mtx)
 	if ((rc = pthread_mutex_trylock(mtx)) != 0)
 		return rc;
 
-	trace_mutex_op(__builtin_return_address(1), mtx, RVP_OP_ACQUIRE);
+	trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_ACQUIRE);
 
 	return 0;
 }
@@ -50,7 +50,7 @@ __rvpredict_pthread_mutex_trylock(pthread_mutex_t *mtx)
 int
 __rvpredict_pthread_mutex_unlock(pthread_mutex_t *mtx)
 {
-	trace_mutex_op(__builtin_return_address(1), mtx, RVP_OP_RELEASE);
+	trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_RELEASE);
 
 	return pthread_mutex_unlock(mtx);
 }

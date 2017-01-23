@@ -225,25 +225,6 @@ __rvpredict_init(void)
 	(void)pthread_once(&rvp_init_once, rvp_init);
 }
 
-static void *
-__rvpredict_thread_wrapper(void *arg)
-{
-	void *retval;
-	rvp_thread_t *t = arg;
-
-	assert(pthread_getspecific(rvp_thread_key) == NULL);
-
-	if (pthread_setspecific(rvp_thread_key, t) != 0)
-		err(EXIT_FAILURE, "%s: pthread_setspecific", __func__);
-
-	rvp_ring_put_begin(&t->t_ring, t->t_id);
-
-	retval = (*t->t_routine)(t->t_arg);
-	__rvpredict_pthread_exit(retval);
-	/* probably never reached */
-	return retval;
-}
-
 static int
 rvp_thread_attach(rvp_thread_t *t)
 {
@@ -341,6 +322,63 @@ rvp_thread_create(void *(*routine)(void *), void *arg)
 	return t;
 }
 
+static void
+rvp_thread_mark(rvp_thread_t *t)
+{
+	t->t_garbage = true;
+	rvp_wake_transmitter();
+}
+
+static rvp_thread_t *
+rvp_pthread_to_thread(pthread_t pthread)
+{
+	rvp_thread_t *t;
+
+	thread_lock();
+
+	for (t = thread_head; t != NULL; t = t->t_next) {
+		if (t->t_pthread == pthread)
+			break;
+	}
+
+	thread_unlock();
+
+	if (t == NULL)
+		errno = ESRCH;
+
+	return t;
+}
+
+/* TBD For signal-safety, avoid using mutexes and condition variables.
+ * Use pthread_kill(3) and an atomic?
+ */
+void
+rvp_wake_transmitter(void)
+{
+	thread_lock();
+	rvp_wake_transmitter_locked();
+	thread_unlock();
+}
+
+static void *
+__rvpredict_thread_wrapper(void *arg)
+{
+	void *retval;
+	rvp_thread_t *t = arg;
+
+	assert(pthread_getspecific(rvp_thread_key) == NULL);
+
+	if (pthread_setspecific(rvp_thread_key, t) != 0)
+		err(EXIT_FAILURE, "%s: pthread_setspecific", __func__);
+
+	rvp_ring_put_begin(&t->t_ring, t->t_id);
+
+	retval = (*t->t_routine)(t->t_arg);
+	__rvpredict_pthread_exit(retval);
+	/* probably never reached */
+	return retval;
+}
+
 int
 __rvpredict_pthread_create(pthread_t *thread,
     const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg)
@@ -369,26 +407,6 @@ __rvpredict_pthread_create(pthread_t *thread,
 	return rc;
 }
 
-static rvp_thread_t *
-rvp_pthread_to_thread(pthread_t pthread)
-{
-	rvp_thread_t *t;
-
-	thread_lock();
-
-	for (t = thread_head; t != NULL; t = t->t_next) {
-		if (t->t_pthread == pthread)
-			break;
-	}
-
-	thread_unlock();
-
-	if (t == NULL)
-		errno = ESRCH;
-
-	return t;
-}
-
 void
 __rvpredict_pthread_exit(void *retval)
 {
@@ -398,13 +416,6 @@ __rvpredict_pthread_exit(void *retval)
 	 * and reclaim resources---e.g., munmap/free the ring
 	 * once it's empty.  Careful: need to hang around for _join().
 	 */
-}
-
-static void
-rvp_thread_mark(rvp_thread_t *t)
-{
-	t->t_garbage = true;
-	rvp_wake_transmitter();
 }
 
 int
@@ -425,15 +436,3 @@ __rvpredict_pthread_join(pthread_t pthread, void **retval)
 
 	return 0;
 }
-
-/* TBD For signal-safety, avoid using mutexes and condition variables.
- * Use pthread_kill(3) and an atomic?
- */
-void
-rvp_wake_transmitter(void)
-{
-	thread_lock();
-	rvp_wake_transmitter_locked();
-	thread_unlock();
-}
-

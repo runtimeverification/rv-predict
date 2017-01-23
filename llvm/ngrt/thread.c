@@ -11,8 +11,20 @@
 #include <unistd.h> /* for sysconf */
 
 #include "init.h"
+#include "interpose.h"
 #include "thread.h"
 #include "trace.h"
+
+REAL_DEFN(int, pthread_join, pthread_t, void **);
+REAL_DEFN(int, pthread_create, pthread_t *, const pthread_attr_t *,
+    void *(*)(void *), void *);
+REAL_DEFN(void, pthread_exit, void *);
+
+REAL_DEFN(int, pthread_mutex_lock, pthread_mutex_t *);
+REAL_DEFN(int, pthread_mutex_trylock, pthread_mutex_t *);
+REAL_DEFN(int, pthread_mutex_unlock, pthread_mutex_t *);
+REAL_DEFN(int, pthread_mutex_init, pthread_mutex_t *restrict,
+   const pthread_mutexattr_t *restrict);
 
 static rvp_thread_t *rvp_thread_create(void *(*)(void *), void *);
 
@@ -96,14 +108,14 @@ rvp_thread0_create(void)
 static void
 thread_lock(void)
 {
-	if (pthread_mutex_lock(&thread_mutex) != 0)
+	if (real_pthread_mutex_lock(&thread_mutex) != 0)
 		err(EXIT_FAILURE, "%s: pthread_mutex_lock", __func__);
 }
 
 static void
 thread_unlock(void)
 {
-	if (pthread_mutex_unlock(&thread_mutex) != 0)
+	if (real_pthread_mutex_unlock(&thread_mutex) != 0)
 		err(EXIT_FAILURE, "%s: pthread_mutex_unlock", __func__);
 }
 
@@ -127,7 +139,7 @@ rvp_stop_transmitter(void)
 	rvp_wake_transmitter_locked();
 	thread_unlock();
 
-	if ((rc = pthread_join(serializer, NULL)) != 0) {
+	if ((rc = real_pthread_join(serializer, NULL)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_join: %s",
 		    __func__, strerror(rc));
 	}
@@ -191,7 +203,9 @@ rvp_serializer_create(void)
 	rvp_thread_flush_to_fd(thread_head, serializer_fd, false);
 	thread_unlock();
 
-	if ((rc = pthread_create(&serializer, NULL, serialize, NULL)) != 0) {
+	rc = real_pthread_create(&serializer, NULL, serialize, NULL);
+
+	if (rc != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_create: %s", __func__,
 		    strerror(rc));
 	}
@@ -200,6 +214,15 @@ rvp_serializer_create(void)
 static void
 rvp_init(void)
 {
+	ESTABLISH_PTR_TO_REAL(pthread_join);
+	ESTABLISH_PTR_TO_REAL(pthread_create);
+	ESTABLISH_PTR_TO_REAL(pthread_exit);
+
+	ESTABLISH_PTR_TO_REAL(pthread_mutex_lock);
+	ESTABLISH_PTR_TO_REAL(pthread_mutex_trylock);
+	ESTABLISH_PTR_TO_REAL(pthread_mutex_unlock);
+	ESTABLISH_PTR_TO_REAL(pthread_mutex_init);
+
 	if (pgsz == 0 && (pgsz = sysconf(_SC_PAGE_SIZE)) == -1)
 		err(EXIT_FAILURE, "%s: sysconf", __func__);
 	if (pthread_key_create(&rvp_thread_key, NULL) != 0) 
@@ -391,7 +414,8 @@ __rvpredict_pthread_create(pthread_t *thread,
 	if ((t = rvp_thread_create(start_routine, arg)) == NULL)
 		return errno;
 
-	rc = pthread_create(&t->t_pthread, attr, __rvpredict_thread_wrapper, t);
+	rc = real_pthread_create(&t->t_pthread, attr,
+	    __rvpredict_thread_wrapper, t);
 
 	if (rc == 0) {
 		*thread = t->t_pthread;
@@ -411,7 +435,7 @@ void
 __rvpredict_pthread_exit(void *retval)
 {
 	rvp_trace_end();
-	pthread_exit(retval);
+	real_pthread_exit(retval);
 	/* TBD flag change of status so that we can flush the trace
 	 * and reclaim resources---e.g., munmap/free the ring
 	 * once it's empty.  Careful: need to hang around for _join().
@@ -424,7 +448,7 @@ __rvpredict_pthread_join(pthread_t pthread, void **retval)
 	int rc;
 	rvp_thread_t *t;
 
-	if ((rc = pthread_join(pthread, retval)) != 0)
+	if ((rc = real_pthread_join(pthread, retval)) != 0)
 		return rc;
 
 	if ((t = rvp_pthread_to_thread(pthread)) == NULL)
@@ -436,3 +460,8 @@ __rvpredict_pthread_join(pthread_t pthread, void **retval)
 
 	return 0;
 }
+
+INTERPOSE(int, pthread_join, pthread_t, void **);
+INTERPOSE(int, pthread_create, pthread_t *, const pthread_attr_t *,
+    void *(*)(void *), void *);
+INTERPOSE(void, pthread_exit, void *);

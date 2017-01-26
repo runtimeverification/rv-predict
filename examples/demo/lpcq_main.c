@@ -64,6 +64,12 @@ consume(void *arg)
 	struct timespec resolution, start, stop;
 	const uint32_t ns_per_s = 1000 * 1000 * 1000;
 	uint64_t busy_loops = 0;
+	const struct timespec half_second = {
+		  .tv_sec = 0
+		, .tv_nsec = 500 * 1000 * 1000
+	};
+
+	nanosleep(&half_second, NULL);
 
 	if (clock_getres(CLOCK_MONOTONIC, &resolution) != 0)
 		err(EXIT_FAILURE, "%s: clock_getres", __func__);

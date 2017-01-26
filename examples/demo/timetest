@@ -1,0 +1,18 @@
+#!/bin/sh
+
+for enable in no yes; do
+	echo RV-Predict instrumentation: $enable
+
+	bmake -s clean
+	bmake -s RV_PREDICT=$enable "$@"
+
+	for _prog in "$@"; do
+		prog=$(dirname $_prog)/$(basename $_prog)
+		# make the program hot in the caches
+		$prog -t -l -n 5 > /dev/null 2>&1
+		for n in 5 16 32 50 64 128 256 500 512 1024 2048 4096 5000 8192 16384 32768 50000; do
+			echo -n "$enable $n "
+			$prog -t -l -n $n > /dev/null
+		done
+	done
+done

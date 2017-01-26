@@ -70,6 +70,7 @@ typedef enum _rvp_op {
 	, RVP_OP_ATOMIC_STORE4	= 31
 	, RVP_OP_ATOMIC_STORE8	= 32
 	, RVP_OP_ATOMIC_STORE16	= 33
+	, RVP_OP_COG		= 34	// change of generation
 	, RVP_NOPS
 } rvp_op_t;
 
@@ -85,8 +86,19 @@ typedef struct _deltops deltops_t;
 
 typedef struct {
 	uintptr_t deltop;
+	uint64_t generation;
+} __packed __aligned(sizeof(uint32_t)) rvp_cog_t;
+
+typedef struct {
+	uintptr_t deltop;
 	uint32_t tid;
-} __packed __aligned(sizeof(uint32_t)) rvp_begin_fork_join_switch_t;
+	uint64_t generation;
+} __packed __aligned(sizeof(uint32_t)) rvp_begin_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uint32_t tid;
+} __packed __aligned(sizeof(uint32_t)) rvp_fork_join_switch_t;
 
 typedef struct {
 	uintptr_t deltop;

@@ -28,6 +28,7 @@ REAL_DEFN(int, pthread_mutex_init, pthread_mutex_t *restrict,
 
 static rvp_thread_t *rvp_thread_create(void *(*)(void *), void *);
 
+volatile _Atomic uint64_t rvp_ggen = 0;	// global generation number
 static long pgsz = 0;
 
 /* thread_mutex protects thread_head, next_id */
@@ -55,10 +56,16 @@ rvp_trace_fork(uint32_t id)
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	rvp_ring_t *r = &t->t_ring;
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
+	uint64_t gen;
 
+	gen = rvp_ggen_before_store();
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
 	    RVP_OP_FORK);
 	rvp_buf_put(&b, id);
+	if (r->r_lgen < gen) {
+		r->r_lgen = gen;
+		rvp_buf_put_cog(&b, gen);
+	}
 	rvp_ring_put_buf(r, b);
 }
 
@@ -102,7 +109,7 @@ rvp_thread0_create(void)
 
 	assert(t->t_id == 1);
 
-	rvp_ring_put_begin(&t->t_ring, t->t_id);
+	rvp_ring_put_begin(&t->t_ring, t->t_id, rvp_ggen_after_load());
 }
 
 static void
@@ -163,6 +170,8 @@ serialize(void *arg)
 			}
 		}
 		nwake--;
+
+		rvp_increase_ggen();
 
 		do {
 			any_emptied = false;
@@ -320,10 +329,11 @@ static rvp_thread_t *
 rvp_thread_create(void *(*routine)(void *), void *arg)
 {
 	rvp_thread_t *t;
-	const size_t items_per_pg = pgsz / sizeof(*t->t_ring.r_items);
+	const size_t ringsz = pgsz;
+	const size_t items_per_ring = ringsz / sizeof(*t->t_ring.r_items);
 	uint32_t *items;
 
-	items = calloc(items_per_pg, sizeof(*t->t_ring.r_items));
+	items = calloc(items_per_ring, sizeof(*t->t_ring.r_items));
 	if (items == NULL) {
 		errno = ENOMEM;
 		return NULL;
@@ -338,7 +348,7 @@ rvp_thread_create(void *(*routine)(void *), void *arg)
 	t->t_routine = routine;
 	t->t_arg = arg;
 
-	rvp_ring_init(&t->t_ring, items, items_per_pg);
+	rvp_ring_init(&t->t_ring, items, items_per_ring);
 
 	rvp_thread_attach(t);
 
@@ -394,7 +404,7 @@ __rvpredict_thread_wrapper(void *arg)
 	if (pthread_setspecific(rvp_thread_key, t) != 0)
 		err(EXIT_FAILURE, "%s: pthread_setspecific", __func__);
 
-	rvp_ring_put_begin(&t->t_ring, t->t_id);
+	rvp_ring_put_begin(&t->t_ring, t->t_id, rvp_ggen_after_load());
 
 	retval = (*t->t_routine)(t->t_arg);
 	__rvpredict_pthread_exit(retval);

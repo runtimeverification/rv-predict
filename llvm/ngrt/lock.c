@@ -20,9 +20,19 @@ trace_mutex_op(const void *retaddr, pthread_mutex_t *mtx, rvp_op_t op)
 {
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
+	uint64_t gen;
+
+	if (op == RVP_OP_ACQUIRE)
+		rvp_buf_trace_load_cog(&b, &r->r_lgen);
+	else
+		gen = rvp_ggen_before_store();
 
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, op);
 	rvp_buf_put_addr(&b, mtx);
+
+	if (op != RVP_OP_ACQUIRE)
+		rvp_buf_trace_cog(&b, &r->r_lgen, gen);
+
 	rvp_ring_put_buf(r, b);
 }
 

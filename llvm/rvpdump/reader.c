@@ -15,10 +15,12 @@
 
 typedef union {
 	uintptr_t ub_pc;
-	rvp_begin_fork_join_switch_t ub_begin_fork_join_switch;
+	rvp_begin_t ub_begin;
+	rvp_fork_join_switch_t ub_fork_join_switch;
 	rvp_load1_2_4_store1_2_4_t ub_load1_2_4_store1_2_4;
 	rvp_acquire_release_t ub_acquire_release;
 	rvp_load8_store8_t ub_load8_store8;
+	rvp_cog_t ub_cog;
 	char ub_bytes[4096];
 } rvp_ubuf_t;
 
@@ -35,14 +37,14 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 	, [RVP_OP_EXITFN] = OP_INFO_INIT(rvp_end_enterfn_exitfn_t,
 	    "exit function")
 
-	, [RVP_OP_BEGIN] = OP_INFO_INIT(rvp_begin_fork_join_switch_t,
-					"begin thread")
+	, [RVP_OP_BEGIN] = OP_INFO_INIT(rvp_begin_t, "begin thread")
+	, [RVP_OP_COG] = OP_INFO_INIT(rvp_cog_t, "change of generation")
 	, [RVP_OP_END] = OP_INFO_INIT(rvp_end_enterfn_exitfn_t, "end thread")
-	, [RVP_OP_SWITCH] = OP_INFO_INIT(rvp_begin_fork_join_switch_t,
+	, [RVP_OP_SWITCH] = OP_INFO_INIT(rvp_fork_join_switch_t,
 					 "switch thread")
-	, [RVP_OP_FORK] = OP_INFO_INIT(rvp_begin_fork_join_switch_t,
+	, [RVP_OP_FORK] = OP_INFO_INIT(rvp_fork_join_switch_t,
 	    "fork thread")
-	, [RVP_OP_JOIN] = OP_INFO_INIT(rvp_begin_fork_join_switch_t,
+	, [RVP_OP_JOIN] = OP_INFO_INIT(rvp_fork_join_switch_t,
 	    "join thread")
 
 	, [RVP_OP_LOAD1] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t, "load 1")
@@ -77,6 +79,7 @@ typedef struct _rvp_thread_pstate {
 	uintptr_t	ts_lastpc;
 	rvp_callstack_t	ts_callstack;
 	bool		ts_present;
+	uint64_t	ts_generation;
 } rvp_thread_pstate_t;
 
 /* parse state: global */
@@ -154,17 +157,19 @@ rvp_pstate_extend_threads_over(rvp_pstate_t *ps, uint32_t tid,
 }
 
 static void
-rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid)
+rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 {
 	if (ps->ps_nthreads <= tid) {
 		rvp_pstate_extend_threads_over(ps, tid, ps->ps_thread,
 		    ps->ps_nthreads);
 	}
 	ps->ps_curthread = tid;
+	ps->ps_thread[tid].ts_generation = generation;
 }
 
 static void
-rvp_pstate_init(rvp_pstate_t *ps, uintptr_t op0, uint32_t tid)
+rvp_pstate_init(rvp_pstate_t *ps, uintptr_t op0, uint32_t tid,
+    uint64_t generation)
 {
 	/* XXX it's not strictly necessary for deltops to have any concrete
 	 * storage
@@ -180,7 +185,7 @@ rvp_pstate_init(rvp_pstate_t *ps, uintptr_t op0, uint32_t tid)
 	ps->ps_thread = NULL;
 	ps->ps_nthreads = 0;
 
-	rvp_pstate_begin_thread(ps, tid);
+	rvp_pstate_begin_thread(ps, tid, generation);
 }
 
 static size_t
@@ -236,8 +241,10 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub,
 	if (*nfullp < oi->oi_reclen)
 		return oi->oi_reclen - *nfullp;
 	lastpc = ps->ps_thread[ps->ps_curthread].ts_lastpc;
-	if (op == RVP_OP_BEGIN)
-		rvp_pstate_begin_thread(ps, ub->ub_begin_fork_join_switch.tid);
+	if (op == RVP_OP_BEGIN) {
+		rvp_pstate_begin_thread(ps, ub->ub_begin.tid,
+		    ub->ub_begin.generation);
+	}
 	ps->ps_thread[ps->ps_curthread].ts_lastpc = lastpc + jmpvec;
 	switch (op) {
 	case RVP_OP_ATOMIC_LOAD8:
@@ -317,6 +324,13 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub,
 		    is_load ? "<-" : "->",
 		    ub->ub_load1_2_4_store1_2_4.addr);
 		break;
+	case RVP_OP_COG:
+		printf(
+		    "tid %" PRIu32 " pc %#016" PRIxPTR " %s"
+		    " generation %" PRIu64 "\n",
+		    ps->ps_curthread, ps->ps_thread[ps->ps_curthread].ts_lastpc,
+		    oi->oi_descr, ub->ub_cog.generation);
+		break;
 	case RVP_OP_END:
 	default:
 		printf("tid %" PRIu32 " pc %#016" PRIxPTR " %s\n",
@@ -329,7 +343,7 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub,
 		printf(
 		    "tid %" PRIu32 " pc %#016" PRIxPTR " %s tid %" PRIu32 "\n",
 		    ps->ps_curthread, ps->ps_thread[ps->ps_curthread].ts_lastpc,
-		    oi->oi_descr, ub->ub_begin_fork_join_switch.tid);
+		    oi->oi_descr, ub->ub_fork_join_switch.tid);
 		// TBD create a fledgling rvp_thread_pstate_t on fork?
 		break;
 	case RVP_OP_ACQUIRE:
@@ -342,7 +356,7 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub,
 		break;
 	}
 	if (op == RVP_OP_SWITCH)
-		ps->ps_curthread = ub->ub_begin_fork_join_switch.tid;
+		ps->ps_curthread = ub->ub_fork_join_switch.tid;
 
 	advance(&ub->ub_bytes[0], nfullp, oi->oi_reclen);
 	return 0;
@@ -354,6 +368,10 @@ rvp_trace_dump(int fd)
 	rvp_pstate_t ps0;
 	rvp_pstate_t *ps = &ps0;
 	rvp_trace_header_t th;
+	/* XXX make a compile-time assertion that this is a little-endian
+	 * machine, since we assume that when we read the initial 'begin'
+	 * operation, below.
+	 */
 	const rvp_trace_header_t expected_th = {
 		  .th_magic = "RVP_"
 		, .th_version = 0
@@ -364,19 +382,21 @@ rvp_trace_dump(int fd)
 	};
 	uintptr_t pc0;
 	uint32_t tid;
+	uint64_t generation;
 	ssize_t nread;
 	rvp_ubuf_t ub;
 	const struct iovec iov[] = {
 		  { .iov_base = &th, .iov_len = sizeof(th) }
-		, { .iov_base = &pc0 , .iov_len = sizeof(pc0) }
-		, { .iov_base = &tid , .iov_len = sizeof(tid) }
+		, { .iov_base = &pc0, .iov_len = sizeof(pc0) }
+		, { .iov_base = &tid, .iov_len = sizeof(tid) }
+		, { .iov_base = &generation, .iov_len = sizeof(generation) }
 	};
 
 	if ((nread = readv(fd, iov, __arraycount(iov))) == -1)
 		err(EXIT_FAILURE, "%s: readv(header)", __func__);
 
 	if (nread < iovsum(iov, __arraycount(iov))) {
-		errx(EXIT_FAILURE, "%s: short read (header + 1st deltop)",
+		errx(EXIT_FAILURE, "%s: short read (header + 1st deltop + ggen init)",
 		    __func__);
 	}
 
@@ -396,12 +416,11 @@ rvp_trace_dump(int fd)
 		    __func__, tid);
 	}
 
-	rvp_pstate_init(ps, pc0, tid);
+	rvp_pstate_init(ps, pc0, tid, generation);
 
-	ub.ub_begin_fork_join_switch =
-	    (rvp_begin_fork_join_switch_t){.deltop = pc0, .tid = tid};
+	ub.ub_begin = (rvp_begin_t){.deltop = pc0, .tid = tid};
 
-	size_t nfull = sizeof(ub.ub_begin_fork_join_switch);
+	size_t nfull = sizeof(ub.ub_begin);
 	size_t nshort = 0;
 	for (;;) {
 		nread = read(fd, &ub.ub_bytes[nfull], sizeof(ub) - nfull);

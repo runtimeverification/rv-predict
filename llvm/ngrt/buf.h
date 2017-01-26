@@ -9,7 +9,7 @@
 
 typedef struct {
 	int b_nwords;
-	uint32_t b_word[8];
+	uint32_t b_word[12];
 } rvp_buf_t;
 
 #define RVP_BUF_INITIALIZER	(rvp_buf_t){ .b_nwords = 0 }
@@ -48,5 +48,6 @@ rvp_buf_put_u64(rvp_buf_t *b, uint64_t val)
 }
 
 void rvp_buf_put_pc_and_op(rvp_buf_t *, const char **, const char *, rvp_op_t);
+void rvp_buf_put_cog(rvp_buf_t *, uint64_t);
 
 #endif /* _RVP_BUF_H_ */

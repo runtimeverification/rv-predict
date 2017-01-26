@@ -15,8 +15,48 @@ typedef struct _rvp_ring {
 	uint32_t *r_last;
 	uint32_t *r_items;
 	const char *r_lastpc;
-	uint32_t *r_staged;
+	uint64_t r_lgen;	// thread-local generation number
 } rvp_ring_t;
+
+extern volatile _Atomic uint64_t rvp_ggen;
+
+static inline void
+rvp_increase_ggen(void)
+{
+	(void)atomic_fetch_add_explicit(&rvp_ggen, 1, memory_order_release);
+}
+
+static inline uint64_t
+rvp_ggen_before_store(void)
+{
+	// acquire semantics ensure that the global generation load
+	// precedes the following instrumented store
+	return atomic_load_explicit(&rvp_ggen, memory_order_acquire);
+}
+
+static inline uint64_t
+rvp_ggen_after_load(void)
+{
+	// ensure that the instrumented load precedes the global
+	// generation load
+	atomic_thread_fence(memory_order_acquire);
+	return atomic_load_explicit(&rvp_ggen, memory_order_acquire);
+}
+
+static inline void
+rvp_buf_trace_cog(rvp_buf_t *b, uint64_t *lgenp, uint64_t gen)
+{
+	if (*lgenp < gen) {
+		*lgenp = gen;
+		rvp_buf_put_cog(b, gen);
+	}
+}
+
+static inline void
+rvp_buf_trace_load_cog(rvp_buf_t *b, uint64_t *lgenp)
+{
+	rvp_buf_trace_cog(b, lgenp, rvp_ggen_after_load());
+}
 
 void rvp_ring_init(rvp_ring_t *, uint32_t *, size_t);
 void rvp_ring_wait_for_slot(rvp_ring_t *, uint32_t *);

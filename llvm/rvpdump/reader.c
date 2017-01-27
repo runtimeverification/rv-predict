@@ -215,8 +215,7 @@ pc_is_not_deltop(rvp_pstate_t *ps, uintptr_t pc)
  * consumed, and returns 0.
  */
 static size_t
-consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub,
-    size_t *nfullp)
+consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 {
 	rvp_op_t op;
 	uintptr_t lastpc;

@@ -1,2 +1,4 @@
 #!/bin/sh
+currentDir="$(dirname "$0")"
+export PATH="$currentDir:$currentDir/../../k/bin:$PATH"
 ng --nailgun-server local:$HOME/.kserver/socket com.runtimeverification.error.RVError "$@"

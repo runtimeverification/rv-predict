@@ -1,3 +1,2 @@
 #!/bin/sh
-export HOME=$(cd ~; pwd)
 ng --nailgun-server local:$HOME/.kserver/socket com.runtimeverification.error.RVError "$@"

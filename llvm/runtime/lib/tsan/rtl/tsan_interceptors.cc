@@ -2208,6 +2208,7 @@ reset_ranges_insert(reset_ranges_t *rs, uptr addr, uptr size)
 {
 	if (rs->rs_nranges == rs->rs_nfull) {
 		reset_range_t *range;
+
 		int nranges = imax(8, rs->rs_nranges * 2);
 		range = (reset_range_t *)__libc_realloc(rs->rs_range,
 		    sizeof(*rs->rs_range) * nranges);

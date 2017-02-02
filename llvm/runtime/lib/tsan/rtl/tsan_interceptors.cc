@@ -2161,14 +2161,75 @@ TSAN_INTERCEPTOR(int, vfork, int fake) {
   return WRAP(fork)(fake);
 }
 
+typedef struct _reset_range {
+	uptr r_addr;
+	uptr r_size;
+} reset_range_t;
+
+typedef struct _reset_ranges {
+	reset_range_t *rs_range;
+	int rs_nfull;
+	int rs_nranges;
+} reset_ranges_t;
+
 typedef int (*dl_iterate_phdr_cb_t)(__sanitizer_dl_phdr_info *info, SIZE_T size,
                                     void *data);
 struct dl_iterate_phdr_data {
-  ThreadState *thr;
-  uptr pc;
+  reset_ranges_t reset_ranges;
   dl_iterate_phdr_cb_t cb;
   void *data;
 };
+
+static void
+reset_ranges_init(reset_ranges_t *rs)
+{
+	rs->rs_range = nullptr;
+	rs->rs_nfull = rs->rs_nranges = 0;
+}
+
+static void
+reset_ranges_destroy(reset_ranges_t *rs)
+{
+	if (rs->rs_range == nullptr)
+		return;
+	__libc_free(rs->rs_range);
+	rs->rs_range = nullptr;
+	rs->rs_nfull = rs->rs_nranges = 0;
+}
+
+static int
+imax(int l, int r)
+{
+	return (l > r) ? l : r;
+}
+
+static void
+reset_ranges_insert(reset_ranges_t *rs, uptr addr, uptr size)
+{
+	if (rs->rs_nranges == rs->rs_nfull) {
+		reset_range_t *range;
+		int nranges = imax(8, rs->rs_nranges * 2);
+		range = (reset_range_t *)__libc_realloc(rs->rs_range,
+		    sizeof(*rs->rs_range) * nranges);
+		if (range == nullptr)
+			Die();
+		rs->rs_range = range;
+		rs->rs_nranges = nranges;
+	}
+	rs->rs_range[rs->rs_nfull++] =
+	    (reset_range_t){.r_addr = addr, .r_size = size};
+}
+
+static void
+reset_ranges_reset(reset_ranges_t *rs, ThreadState *thr, uptr pc)
+{
+	int i;
+
+	for (i = 0; i < rs->rs_nfull; i++) {
+		MemoryResetRange(thr, pc, rs->rs_range[i].r_addr,
+		    rs->rs_range[i].r_size);
+	}
+}
 
 static bool IsAppNotRodata(uptr addr) {
   return IsAppMem(addr) && *(u64*)MemToShadow(addr) != kShadowRodata;
@@ -2183,26 +2244,32 @@ static int dl_iterate_phdr_cb(__sanitizer_dl_phdr_info *info, SIZE_T size,
   // produce false reports. Ignoring malloc/free in dlopen/dlclose is not enough
   // because some libc functions call __libc_dlopen.
   if (info && IsAppNotRodata((uptr)info->dlpi_name))
-    MemoryResetRange(cbdata->thr, cbdata->pc, (uptr)info->dlpi_name,
+    reset_ranges_insert(&cbdata->reset_ranges, (uptr)info->dlpi_name,
                      internal_strlen(info->dlpi_name));
   int res = cbdata->cb(info, size, cbdata->data);
   // Perform the check one more time in case info->dlpi_name was overwritten
   // by user callback.
   if (info && IsAppNotRodata((uptr)info->dlpi_name))
-    MemoryResetRange(cbdata->thr, cbdata->pc, (uptr)info->dlpi_name,
+    reset_ranges_insert(&cbdata->reset_ranges, (uptr)info->dlpi_name,
                      internal_strlen(info->dlpi_name));
   return res;
 }
 
-TSAN_INTERCEPTOR(int, dl_iterate_phdr, dl_iterate_phdr_cb_t cb, void *data) {
-  SCOPED_TSAN_INTERCEPTOR(dl_iterate_phdr, cb, data);
-  dl_iterate_phdr_data cbdata;
-  cbdata.thr = thr;
-  cbdata.pc = pc;
-  cbdata.cb = cb;
-  cbdata.data = data;
-  int res = REAL(dl_iterate_phdr)(dl_iterate_phdr_cb, &cbdata);
-  return res;
+TSAN_INTERCEPTOR(int, dl_iterate_phdr, dl_iterate_phdr_cb_t cb, void *data)
+{
+	SCOPED_TSAN_INTERCEPTOR(dl_iterate_phdr, cb, data);
+	dl_iterate_phdr_data cbdata;
+	int res;
+	cbdata.cb = cb;
+	cbdata.data = data;
+	reset_ranges_init(&cbdata.reset_ranges);
+	{
+		ScopedIgnoreInterceptors ignore;
+		res = REAL(dl_iterate_phdr)(dl_iterate_phdr_cb, &cbdata);
+	}
+	reset_ranges_reset(&cbdata.reset_ranges, thr, pc);
+	reset_ranges_destroy(&cbdata.reset_ranges);
+	return res;
 }
 
 static int OnExit(ThreadState *thr) {

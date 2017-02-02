@@ -11,6 +11,7 @@
 
 #include "nbcompat.h"	/* for __arraycount */
 #include "tracefmt.h"
+#include "legacy.h"
 #include "reader.h"
 
 typedef union {
@@ -74,6 +75,15 @@ typedef struct _rvp_call {
 	int		cs_depth;
 } rvp_callstack_t;
 
+struct _rvp_pstate;
+typedef struct _rvp_pstate rvp_pstate_t;
+
+typedef struct _rvp_emitters {
+	void (*emit_jump)(const rvp_pstate_t *, uintptr_t);
+	void (*emit_op)(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
+	    bool, int);
+} rvp_emitters_t;
+
 /* parse state: per-thread */
 typedef struct _rvp_thread_pstate {
 	uintptr_t	ts_lastpc;
@@ -88,7 +98,26 @@ typedef struct _rvp_pstate {
 	uint32_t		ps_nthreads;
 	uintptr_t		ps_deltop_first, ps_deltop_last;
 	uint32_t		ps_curthread;
+	const rvp_emitters_t	*ps_emitters;
 } rvp_pstate_t;
+
+static void emit_no_jump(const rvp_pstate_t *, uintptr_t);
+static void emit_legacy_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
+    bool, int);
+
+static void print_jump(const rvp_pstate_t *, uintptr_t);
+static void print_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
+    bool, int);
+
+static const rvp_emitters_t plain_text = {
+	  .emit_jump = print_jump
+	, .emit_op = print_op
+};
+
+static const rvp_emitters_t legacy_binary = {
+	  .emit_jump = emit_no_jump
+	, .emit_op = emit_legacy_op
+};
 
 static void
 extract_jmpvec_and_op_from_deltop(uintptr_t deltop0,
@@ -168,13 +197,15 @@ rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 }
 
 static void
-rvp_pstate_init(rvp_pstate_t *ps, uintptr_t op0, uint32_t tid,
-    uint64_t generation)
+rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters, uintptr_t op0,
+    uint32_t tid, uint64_t generation)
 {
 	/* XXX it's not strictly necessary for deltops to have any concrete
 	 * storage
 	 */
 	deltops_t deltops;
+
+	ps->ps_emitters = emitters;
 
 	ps->ps_deltop_first = op0 -
 	    (&deltops.matrix[RVP_NJMPS / 2][RVP_OP_BEGIN] -
@@ -206,87 +237,171 @@ pc_is_not_deltop(rvp_pstate_t *ps, uintptr_t pc)
 	return pc < ps->ps_deltop_first || ps->ps_deltop_last < pc;
 }
 
-/*
- * Consumes nothing and returns the number of bytes that the buffer is
- * short of a full trace.
- *
- * Otherwise, consumes the trace at the start of the buffer `ub`, prints
- * the trace, shifts the bytes of the buffer left by the number of bytes
- * consumed, and returns 0.
- */
-static size_t
-consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
+static void
+emit_no_jump(const rvp_pstate_t *ps, uintptr_t pc)
 {
-	rvp_op_t op;
-	uintptr_t lastpc;
-	int jmpvec;
-	bool is_load = false
-	    ;
-	int field_width = 0;
+	return;
+}
 
-	if (pc_is_not_deltop(ps, ub->ub_pc)) {
-		ps->ps_thread[ps->ps_curthread].ts_lastpc = ub->ub_pc;
-		printf("tid %" PRIu32 " pc %#016" PRIxPTR " jump\n",
-		    ps->ps_curthread, ub->ub_pc);
-		advance(&ub->ub_bytes[0], nfullp, sizeof(ub->ub_pc));
-		return 0;
+static int
+rvp_op_to_legacy_op(rvp_op_t op)
+{
+	switch (op) {
+	case RVP_OP_ENTERFN:
+		return INVOKE_METHOD;
+	case RVP_OP_EXITFN:
+		return FINISH_METHOD;
+	case RVP_OP_ATOMIC_LOAD8:
+	case RVP_OP_ATOMIC_LOAD4:
+	case RVP_OP_ATOMIC_LOAD2:
+	case RVP_OP_ATOMIC_LOAD1:
+		return READ; // ATOMIC_READ
+	case RVP_OP_LOAD8:
+	case RVP_OP_LOAD4:
+	case RVP_OP_LOAD2:
+	case RVP_OP_LOAD1:
+		return READ;
+	case RVP_OP_ATOMIC_STORE8:
+	case RVP_OP_ATOMIC_STORE4:
+	case RVP_OP_ATOMIC_STORE2:
+	case RVP_OP_ATOMIC_STORE1:
+		return WRITE; // ATOMIC_WRITE
+	case RVP_OP_STORE8:
+	case RVP_OP_STORE4:
+	case RVP_OP_STORE2:
+	case RVP_OP_STORE1:
+		return WRITE;
+	case RVP_OP_FORK:
+		return START;
+	case RVP_OP_JOIN:
+		return JOIN;
+	case RVP_OP_ACQUIRE:
+		return WRITE_LOCK;
+	case RVP_OP_RELEASE:
+		return WRITE_UNLOCK;
+	case RVP_OP_COG:	// bookkeeping w/ no legacy correspondence
+	case RVP_OP_SWITCH:	// bookkeeping w/ no legacy correspondence
+	case RVP_OP_BEGIN:	// implicit w/ first operation for a tid
+	case RVP_OP_END:	// implicit w/ last operation for a tid
+	case RVP_OP_ATOMIC_RMW1:
+	case RVP_OP_ATOMIC_RMW2:
+	case RVP_OP_ATOMIC_RMW4:
+	case RVP_OP_ATOMIC_RMW8:
+	case RVP_OP_ATOMIC_RMW16:
+	case RVP_OP_ATOMIC_STORE16:
+	case RVP_OP_ATOMIC_LOAD16:
+	case RVP_OP_STORE16:
+	case RVP_OP_LOAD16:
+	default:
+		return -1;
 	}
-	extract_jmpvec_and_op_from_deltop(ps->ps_deltop_first,
-	    ub->ub_pc, &jmpvec, &op);
-	const op_info_t *oi  = &op_to_info[op];
-	if (oi->oi_descr == NULL)
-		errx(EXIT_FAILURE, "unknown op %d\n", op);
-	/* need to top off buffer? */
-	if (*nfullp < oi->oi_reclen)
-		return oi->oi_reclen - *nfullp;
-	lastpc = ps->ps_thread[ps->ps_curthread].ts_lastpc;
-	if (op == RVP_OP_BEGIN) {
-		rvp_pstate_begin_thread(ps, ub->ub_begin.tid,
-		    ub->ub_begin.generation);
+}
+
+static uint32_t
+compress_pc(uint64_t pc)
+{
+	static int ninitialized = 0;
+	static uint32_t lasthi[2];
+	uint32_t newhi, newlo;
+	int i;
+
+	newhi = (uint32_t)(pc >> 32);
+	newlo = (uint32_t)(pc & 0xffffffff);
+	if ((pc & 0x80000000) != 0)
+		errx(EXIT_FAILURE, "%s: bit 31 is set", __func__);
+
+	for (i = 0; i < ninitialized; i++) {
+		if (newhi != lasthi[i])
+			continue;
+		if (i != 0)
+			return newlo | 0x80000000;
+		else
+			return newlo;
 	}
-	ps->ps_thread[ps->ps_curthread].ts_lastpc = lastpc + jmpvec;
+	if (ninitialized == __arraycount(lasthi)) {
+		errx(EXIT_FAILURE, "%s: too many distinct high words",
+		    __func__);
+	}
+	lasthi[ninitialized++] = newhi;
+	if (ninitialized > 1)
+		return newlo | 0x80000000;
+	else
+		return newlo;
+}
+
+static void
+emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
+    bool is_load, int field_width)
+{
+	static uint64_t gid = 0;
+	legacy_event_t ev;
+	int lop = rvp_op_to_legacy_op(op);
+
+	ev.gid = ++gid;	// XXX XXX XXX
+	ev.tid = ps->ps_curthread;
+	// id is "statement id"
+	ev.id = compress_pc(ps->ps_thread[ps->ps_curthread].ts_lastpc);
+
+	if (lop < 0)
+		return;
+
+	assert(lop <= UINT8_MAX);
+
+	ev.type = lop;
+
 	switch (op) {
 	case RVP_OP_ATOMIC_LOAD8:
 	case RVP_OP_ATOMIC_STORE8:
 	case RVP_OP_LOAD8:
 	case RVP_OP_STORE8:
-		field_width = 16;
+		ev.value = ub->ub_load8_store8.data;
+		ev.addr = ub->ub_load8_store8.addr;
 		break;
 	case RVP_OP_ATOMIC_LOAD4:
 	case RVP_OP_ATOMIC_STORE4:
-	case RVP_OP_LOAD4:
-	case RVP_OP_STORE4:
-		field_width = 8;
-		break;
 	case RVP_OP_ATOMIC_LOAD2:
 	case RVP_OP_ATOMIC_STORE2:
-	case RVP_OP_LOAD2:
-	case RVP_OP_STORE2:
-		field_width = 4;
-		break;
 	case RVP_OP_ATOMIC_LOAD1:
 	case RVP_OP_ATOMIC_STORE1:
+	case RVP_OP_LOAD4:
+	case RVP_OP_STORE4:
+	case RVP_OP_LOAD2:
+	case RVP_OP_STORE2:
 	case RVP_OP_LOAD1:
 	case RVP_OP_STORE1:
-		field_width = 2;
+		ev.value = ub->ub_load1_2_4_store1_2_4.data;
+		ev.addr = ub->ub_load1_2_4_store1_2_4.addr;
 		break;
 	default:
+		errx(EXIT_FAILURE, "%s: conversion unknown", __func__);
+	case RVP_OP_FORK:
+	case RVP_OP_JOIN:
+		ev.value = ub->ub_fork_join_switch.tid;
+		break;
+	case RVP_OP_ENTERFN:
+	case RVP_OP_EXITFN:
+		break;
+	case RVP_OP_ACQUIRE:
+	case RVP_OP_RELEASE:
+		ev.addr = ub->ub_acquire_release.addr;
 		break;
 	}
-	switch (op) {
-	case RVP_OP_ATOMIC_LOAD8:
-	case RVP_OP_ATOMIC_LOAD4:
-	case RVP_OP_ATOMIC_LOAD2:
-	case RVP_OP_ATOMIC_LOAD1:
-	case RVP_OP_LOAD8:
-	case RVP_OP_LOAD4:
-	case RVP_OP_LOAD2:
-	case RVP_OP_LOAD1:
-		is_load = true;
-		break;
-	default:
-		break;
-	}
+	if (write(STDOUT_FILENO, &ev, sizeof(ev)) == -1)
+		err(EXIT_FAILURE, "%s: write", __func__);
+}
+
+static void
+print_jump(const rvp_pstate_t *ps, uintptr_t pc)
+{ 
+	printf("tid %" PRIu32 " pc %#016" PRIxPTR " jump\n",
+	    ps->ps_curthread, pc);
+}
+
+static void
+print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
+    bool is_load, int field_width)
+{
+	const op_info_t *oi = &op_to_info[op];
 
 	switch (op) {
 	case RVP_OP_ATOMIC_LOAD8:
@@ -354,6 +469,91 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 		    ub->ub_acquire_release.addr);
 		break;
 	}
+}
+
+/*
+ * Consumes nothing and returns the number of bytes that the buffer is
+ * short of a full trace.
+ *
+ * Otherwise, consumes the trace at the start of the buffer `ub`, prints
+ * the trace, shifts the bytes of the buffer left by the number of bytes
+ * consumed, and returns 0.
+ */
+static size_t
+consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
+{
+	const rvp_emitters_t *emitters = ps->ps_emitters;
+	rvp_op_t op;
+	uintptr_t lastpc;
+	int jmpvec;
+	bool is_load = false;
+	int field_width = 0;
+
+	if (pc_is_not_deltop(ps, ub->ub_pc)) {
+		ps->ps_thread[ps->ps_curthread].ts_lastpc = ub->ub_pc;
+		(*emitters->emit_jump)(ps, ub->ub_pc);
+		advance(&ub->ub_bytes[0], nfullp, sizeof(ub->ub_pc));
+		return 0;
+	}
+	extract_jmpvec_and_op_from_deltop(ps->ps_deltop_first,
+	    ub->ub_pc, &jmpvec, &op);
+	const op_info_t *oi = &op_to_info[op];
+	if (oi->oi_descr == NULL)
+		errx(EXIT_FAILURE, "unknown op %d\n", op);
+	/* need to top off buffer? */
+	if (*nfullp < oi->oi_reclen)
+		return oi->oi_reclen - *nfullp;
+	lastpc = ps->ps_thread[ps->ps_curthread].ts_lastpc;
+	if (op == RVP_OP_BEGIN) {
+		rvp_pstate_begin_thread(ps, ub->ub_begin.tid,
+		    ub->ub_begin.generation);
+	}
+	ps->ps_thread[ps->ps_curthread].ts_lastpc = lastpc + jmpvec;
+	switch (op) {
+	case RVP_OP_ATOMIC_LOAD8:
+	case RVP_OP_ATOMIC_STORE8:
+	case RVP_OP_LOAD8:
+	case RVP_OP_STORE8:
+		field_width = 16;
+		break;
+	case RVP_OP_ATOMIC_LOAD4:
+	case RVP_OP_ATOMIC_STORE4:
+	case RVP_OP_LOAD4:
+	case RVP_OP_STORE4:
+		field_width = 8;
+		break;
+	case RVP_OP_ATOMIC_LOAD2:
+	case RVP_OP_ATOMIC_STORE2:
+	case RVP_OP_LOAD2:
+	case RVP_OP_STORE2:
+		field_width = 4;
+		break;
+	case RVP_OP_ATOMIC_LOAD1:
+	case RVP_OP_ATOMIC_STORE1:
+	case RVP_OP_LOAD1:
+	case RVP_OP_STORE1:
+		field_width = 2;
+		break;
+	default:
+		break;
+	}
+	switch (op) {
+	case RVP_OP_ATOMIC_LOAD8:
+	case RVP_OP_ATOMIC_LOAD4:
+	case RVP_OP_ATOMIC_LOAD2:
+	case RVP_OP_ATOMIC_LOAD1:
+	case RVP_OP_LOAD8:
+	case RVP_OP_LOAD4:
+	case RVP_OP_LOAD2:
+	case RVP_OP_LOAD1:
+		is_load = true;
+		break;
+	default:
+		break;
+	}
+
+	(*emitters->emit_op)(ps, ub, op, is_load, field_width);
+
 	if (op == RVP_OP_SWITCH)
 		ps->ps_curthread = ub->ub_fork_join_switch.tid;
 
@@ -362,7 +562,7 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 }
 
 void
-rvp_trace_dump(int fd)
+rvp_trace_dump(rvp_output_type_t otype, int fd)
 {
 	rvp_pstate_t ps0;
 	rvp_pstate_t *ps = &ps0;
@@ -390,6 +590,19 @@ rvp_trace_dump(int fd)
 		, { .iov_base = &tid, .iov_len = sizeof(tid) }
 		, { .iov_base = &generation, .iov_len = sizeof(generation) }
 	};
+	const rvp_emitters_t *emitters;
+
+	switch (otype) {
+	case RVP_OUTPUT_PLAIN_TEXT:
+		emitters = &plain_text;
+		break;
+	case RVP_OUTPUT_LEGACY_BINARY:
+		emitters = &legacy_binary;
+		break;
+	default:
+		errx(EXIT_FAILURE, "%s: unknown output type %d", __func__,
+		     otype);
+	}
 
 	if ((nread = readv(fd, iov, __arraycount(iov))) == -1)
 		err(EXIT_FAILURE, "%s: readv(header)", __func__);
@@ -415,7 +628,7 @@ rvp_trace_dump(int fd)
 		    __func__, tid);
 	}
 
-	rvp_pstate_init(ps, pc0, tid, generation);
+	rvp_pstate_init(ps, emitters, pc0, tid, generation);
 
 	ub.ub_begin = (rvp_begin_t){.deltop = pc0, .tid = tid};
 

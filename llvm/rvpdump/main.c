@@ -4,6 +4,7 @@
 #include <fcntl.h>	/* for open(2) */
 #include <stdio.h>
 #include <stdlib.h>	/* for EXIT_* */
+#include <string.h>	/* strcmp(3) */
 #include <unistd.h>	/* for STDIN_FILENO */
 
 #include "reader.h"
@@ -11,20 +12,41 @@
 static void
 usage(const char *progname)
 {
-	fprintf(stderr, "usage: %s [<trace file>]\n", progname);
+	fprintf(stderr, "usage: %s [-t <plain|legacy>] [<trace file>]\n",
+	    progname);
 	exit(EXIT_FAILURE);
 }
 
 int
 main(int argc, char **argv)
 {
-	int fd;
+	int ch, fd;
 	const char *inputname;
+	const char *progname = argv[0];
+	rvp_output_type_t otype = RVP_OUTPUT_PLAIN_TEXT;
 
-	if (argc > 2) {
-		usage(argv[0]);
-	} else if (argc == 2) {
-		inputname = argv[1];
+	while ((ch = getopt(argc, argv, "t:")) != -1) {
+		switch (ch) {
+		case 't':
+			if (strcmp(optarg, "legacy") == 0)
+				otype = RVP_OUTPUT_LEGACY_BINARY;
+			else if (strcmp(optarg, "plain") == 0)
+				otype = RVP_OUTPUT_PLAIN_TEXT;
+			else
+				usage(progname);
+			break;
+		default: /* '?' */
+			usage(progname);
+		}
+	}
+
+	argc -= optind;
+	argv += optind;
+ 
+	if (argc > 1) {
+		usage(progname);
+	} else if (argc == 1) {
+		inputname = argv[0];
 		fd = open(inputname, O_RDONLY);
 		if (fd == -1) {
 			err(EXIT_FAILURE, "%s: open(\"%s\")",
@@ -35,7 +57,7 @@ main(int argc, char **argv)
 		inputname = "<stdin>";
 	}
 
-	rvp_trace_dump(fd);
+	rvp_trace_dump(otype, fd);
 
 	return EXIT_SUCCESS;
 }

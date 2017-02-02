@@ -167,13 +167,14 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 	auto int8_ptr_type = builder.getInt8PtrTy();
 
 	/* void __rvpredict_func_entry(void *);
-	 * void __rvpredict_func_exit(void);
+	 * void __rvpredict_func_exit(void *);
 	 */
 	fnenter = checkSanitizerInterfaceFunction(
 	    m.getOrInsertFunction( "__rvpredict_func_entry", void_type,
 	        int8_ptr_type, nullptr));
 	fnexit = checkSanitizerInterfaceFunction(
-	    m.getOrInsertFunction("__rvpredict_func_exit", void_type, nullptr));
+	    m.getOrInsertFunction("__rvpredict_func_exit", void_type,
+	        int8_ptr_type, nullptr));
 
 	for (size_t i = 0; i < kNumberOfAccessSizes; ++i) {
 		const size_t byte_size = 1 << i;
@@ -611,7 +612,7 @@ RVPredictInstrument::runOnFunction(Function &F)
 		IRB.CreateCall(fnenter, ReturnAddress);
 		for (auto RetInst : RetVec) {
 			IRBuilder<> IRBRet(RetInst);
-			IRBRet.CreateCall(fnexit, {});
+			IRBRet.CreateCall(fnexit, ReturnAddress);
 		}
 		didInstrument = true;
 	}

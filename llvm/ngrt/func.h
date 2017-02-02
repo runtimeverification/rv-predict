@@ -3,7 +3,7 @@
 #ifndef _RV_FUNC_H_
 #define _RV_FUNC_H_
 
-void __rvpredict_func_entry(const void *);                                 
-void __rvpredict_func_exit(void);                                    
+void __rvpredict_func_entry(const void *);
+void __rvpredict_func_exit(const void *);
 
 #endif /* _RV_FUNC_H_ */

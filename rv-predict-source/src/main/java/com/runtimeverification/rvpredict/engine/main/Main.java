@@ -9,8 +9,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+
+import com.runtimeverification.licensing.RVLicense;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.instrument.Agent;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import com.runtimeverification.licensing.Licensing;
@@ -28,9 +29,10 @@ public class Main {
      */
     public static void main(String[] args) {
         Licensing licensingSystem = new Licensing(Configuration.AGENT_RESOURCE_PATH, "predict");
-        licensingSystem.promptForLicense();
+        RVLicense license = licensingSystem.promptForLicense();
 
         config = Configuration.instance(args);
+        config.logLicenseMessage(license.getLicenseMessage());
 
         if (config.isLogging() || config.isProfiling()) {
             if (config.getJavaArguments().isEmpty()) {
@@ -63,7 +65,9 @@ public class Main {
 
         Process process = null;
         try {
-            process = new ProcessBuilder(args).start();
+            ProcessBuilder pb = new ProcessBuilder(args);
+            pb.environment().put(Configuration.NO_LICENSE_ENV_VAR, "");
+            process = pb.start();
             StreamGobbler errorGobbler = StreamGobbler.spawn(process.getErrorStream(), System.err);
             StreamGobbler outputGobbler = StreamGobbler.spawn(process.getInputStream(), System.out);
             StreamGobbler.spawn(System.in, new PrintStream(process.getOutputStream()), true /* flush */);

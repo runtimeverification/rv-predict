@@ -55,6 +55,11 @@ import com.runtimeverification.licensing.Licensing;
  * Command line options class for rv-predict Used by JCommander to parse the
  * main program parameters.
  */
+/*
+ The descriptionKey argument to JCommander's Parameter annotation is abused to
+ specify a display order for options, instead of the indented purpose of localization.
+ If the last two digits are not '00' the option will be indented in the help list.
+ */
 public class Configuration implements Constants {
 
     public static final String LOGGING_PHASE_COMPLETED = "Logging phase completed.";
@@ -81,6 +86,8 @@ public class Configuration implements Constants {
             "/usr/bin/../lib/",	// TBD normalize paths, instead?
             "llvm/projects/compiler-rt"
     });
+
+    public static final String NO_LICENSE_ENV_VAR = "RVPREDICT_NO_LICENSE_MESSAGE";
 
     /**
      * Packages/classes that need to be excluded from instrumentation. These are
@@ -395,6 +402,12 @@ public class Configuration implements Constants {
     final static String opt_debug = "--debug";
     @Parameter(names = opt_debug, description = "Output developer debugging information", hidden = true, descriptionKey = "3000")
     public static boolean debug = false;
+
+    final static String no_license_message = "--no-license-message";
+    @Parameter(names = {no_license_message},
+            description = "Do not print a license message. Setting the the environment variable RVPREDICT_NO_LICENSE_MESSAGE has the same effect",
+            hidden = true, descriptionKey = "4000")
+    private boolean noLicenseMessage;
 
     final static String short_opt_verbose = "-v";
     final static String opt_verbose = "--verbose";
@@ -757,5 +770,13 @@ public class Configuration implements Constants {
 
     public boolean stacks() {
         return !nostacks;
+    }
+
+    public void logLicenseMessage(String licenseMessage) {
+        if (!noLicenseMessage
+                && !System.getenv().containsKey(Configuration.NO_LICENSE_ENV_VAR)
+                && !"".equals(licenseMessage)) {
+            logger().report(licenseMessage, Logger.MSGTYPE.INFO);
+        }
     }
 }

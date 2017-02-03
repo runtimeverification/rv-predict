@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.io.Resources;
+import com.runtimeverification.licensing.RVLicense;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.RVPredict;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
@@ -124,7 +125,10 @@ public class Agent implements ClassFileTransformer, Constants {
 
     private static void printStartupInfo() {
         Licensing licensingSystem = new Licensing(Configuration.AGENT_RESOURCE_PATH, "predict");
-        licensingSystem.promptForLicense();
+        RVLicense license = licensingSystem.promptForLicense();
+
+        config.logLicenseMessage(license.getLicenseMessage());
+
         config.logger().reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
         if (config.getLogDir() != null) {
             config.logger().report("Log directory: " + config.getLogDir(), Logger.MSGTYPE.INFO);

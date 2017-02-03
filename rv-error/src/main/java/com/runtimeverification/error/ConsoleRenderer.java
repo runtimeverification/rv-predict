@@ -129,7 +129,7 @@ public class ConsoleRenderer extends Renderer {
             sb.append("<unknown>");
             return;
         }
-        sb.append(loc.file);
+        sb.append(loc.rel_file);
         sb.append(":");
         sb.append(loc.line);
         if (loc.column != null) {

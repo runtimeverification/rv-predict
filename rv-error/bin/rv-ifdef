@@ -1,0 +1,27 @@
+#!/bin/bash
+# computes lines matching an ifdef or ifndef guard specified by a particular
+# macro, and emits json. this script is used by rv-ifdefall which should
+# be called by the rv-match and rv-predict frontends
+
+if [ $# -lt 4 ]
+then
+  printf "%s\n" "Usage: $(basename "$0") <source file> <macro> [D|U] [true|false]"
+  printf "%s\n" "Outputs json on stdout that can be parsed as a metadata node containing suppressions"
+  printf "%s\n" "that suppress (if the last argument is true) or allow (if the last argument is false)"
+  printf "%s\n" "all errors on lines of code in the file which are guarded by either"
+  printf "%s\n" "#ifdef <macro> (if the third argument is D) or #ifndef <macro> (if the third argument is U)"
+  exit 1
+fi
+
+unifdefed=$(mktemp)
+if [ $3 = D ]
+then
+  unifdef -b -U$2 $1 > $unifdefed
+else
+  unifdef -b -D$2 $1 > $unifdefed
+fi
+backslashed=${1//\\/\\\\}
+printf "%s" '{"suppressions": ['
+diff --changed-group-format='{"condition": ["Line", {"start_line": %df, "end_line": %dl, "file": "'${backslashed//\"/\\\"}'"}], "suppress": '$4'},' --unchanged-group-format="" $1 $unifdefed | head -c-1
+printf "%s" '], "message_length": 0, "format": ["CSV"], "previous_errors": [], "fatal_errors": false}'
+rm $unifdefed

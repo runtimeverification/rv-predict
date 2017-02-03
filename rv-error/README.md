@@ -20,3 +20,23 @@ It's the responsibility of each respective tool to generate
 the appropriate json and pass it on the command line to the tool,
 which in turn processes it and outputs it either on the command
 line or to a specific file.
+
+In order to process ifdef suppressions of the form
+```
+-Wno-ifdef=FOO
+-Wno-ifndef=BAR
+-Wifdef=BAZ
+```
+
+The respective tool should also run the following commands on each
+preprocessed source file, $ppOutput:
+```
+rv-ifdefclear $ppOutput
+rv-ifdefall $ppOutput FOO D true
+rv-ifdefall $ppOutput BAR U true
+rv-ifdefall $ppOutput BAZ D false
+```
+
+i.e., you must call rv-ifdefclear on the preprocessed output
+followed by rv-ifdefall with the correct arguments once for each ifdef
+suppression.

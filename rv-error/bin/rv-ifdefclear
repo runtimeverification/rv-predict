@@ -1,0 +1,20 @@
+#!/bin/sh
+# deletes old metadata about suppressions from prior builds involving a particular file.
+# This is needed so that rebuilds of the same project with different warning options
+# always see the latest options when checking ifdef suppressions.
+
+if [ $# -lt 1 ]
+then
+  printf "%s\n" "Usage: $(basename "$0") <preprocessed source>"
+  printf "%s\n" "Deletes files in ~/.rvsuppress relating to all files included"
+  printf "%s\n" "in the preprocessed output provided. If this is called after each"
+  printf "%s\n" "preprocessing prior to calling rv-ifdefall, this keeps state fresh"
+  printf "%s\n" "regarding ifdef suppressions in the cache directory."
+  exit 1
+fi 
+
+for file in `grep "^#" $1 | awk '{print $3}' | xargs printf "%s\n" | sort | uniq`
+do
+  absPath="$(cd "$(dirname "$file")"; pwd)/$(basename "$file")"
+  rm -rf "$HOME/.rvsuppress$absPath"
+done

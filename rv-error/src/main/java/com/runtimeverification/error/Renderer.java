@@ -13,15 +13,21 @@ import com.runtimeverification.error.data.Suppression;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.io.IOUtils;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -240,10 +246,28 @@ public abstract class Renderer {
         for (Suppression suppression : builtinSuppress()) {
             processSuppression(suppression, state, category, error_id, loc, symbol, isDuplicate);
         }
+        if (loc != null) {
+            for (Suppression suppression : cacheSuppress(loc.abs_file)) {
+                processSuppression(suppression, state, category, error_id, loc, symbol, isDuplicate);
+            }
+        }
         for (Suppression suppression : data.suppressions) {
             processSuppression(suppression, state, category, error_id, loc, symbol, isDuplicate);
         }
         return state.suppressErrorId || state.suppressSystemHeader || state.suppressLoc || state.suppressDuplicate;
+    }
+
+    private List<Suppression> cacheSuppress(String absPath) {
+        try {
+            Path path = Paths.get(System.getProperty("user.home"), ".rvsuppress", absPath, "ifdef.json");
+            String dataFile = IOUtils.toString(new FileInputStream(path.toFile()), "UTF-8");
+            Metadata data = new Metadata(dataFile);
+            return data.suppressions;
+        } catch (FileNotFoundException e) {
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return Collections.emptyList();
     }
 
     private void processSuppression(Suppression suppression, SuppressState state, ErrorCategory category,
@@ -264,7 +288,7 @@ public abstract class Renderer {
             }
             break;
         case FILE:
-            if (loc != null && loc.file.equals(suppression.condition.getFile())) {
+            if (loc != null && matchesGlob(loc.rel_file, loc.abs_file, suppression.condition.getFile())) {
                 state.suppressLoc = suppression.suppress;
             }
             break;
@@ -272,7 +296,7 @@ public abstract class Renderer {
             if (loc != null && loc.line >= suppression.condition.getLine().start_line
                     && loc.line <= suppression.condition.getLine().end_line
                     && (suppression.condition.getLine().file == null
-                    || loc.file.equals(suppression.condition.getLine().file))) {
+                    || loc.rel_file.equals(suppression.condition.getLine().file))) {
                 state.suppressLoc = suppression.suppress;
             }
             break;
@@ -290,6 +314,16 @@ public abstract class Renderer {
             // TODO(dwightguth): implement ifdef checking
             break;
         }
+    }
+
+    private boolean matchesGlob(String relFile, String absFile, String glob) {
+        try {
+            String workingDir = absFile.substring(0, absFile.indexOf(relFile));
+            return new ProcessBuilder().command("rv-fileglob", absFile, workingDir, glob).start().waitFor() == 0;
+        } catch (InterruptedException | IOException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     private Suppression[] builtinSuppress() {

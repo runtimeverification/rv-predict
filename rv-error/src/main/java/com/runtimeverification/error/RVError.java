@@ -26,6 +26,7 @@ public class RVError {
         boolean isFatal = getRenderer(args[0], json).render(error, json);
         System.exit(isFatal ? 1 : 0);
       } catch (JSONException e2) {
+        System.err.println(json);
         e.printStackTrace();
         e2.printStackTrace();
         System.exit(2);

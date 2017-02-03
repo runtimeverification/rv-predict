@@ -1,0 +1,24 @@
+#!/bin/sh
+# outputs data to the cache folder containing all the suppressions for
+# all the files included in the preprocessed output passed to the script.
+# This tool should be invoked by the rv-match and rv-predict frontends
+# in order to process ifdef suppressions, which are then read from the
+# cache folder by the error backend.
+
+if [ $# -lt 4 ]
+then
+  printf "%s\n" "Usage: $(basename "$0") <preprocessed source> <macro> [D|U] [true|false]"
+  printf "%s\n" "Parses the files included in the specified preprocessed source file and"
+  printf "%s\n" "creates a file in ~/.rvsuppress for each one containing the suppression"
+  printf "%s\n" "information based on the ifdef filter specifie by the second, third, and"
+  printf "%s\n" "fourth arguments. Should be called by tool frontend and the result is read"
+  printf "%s\n" "by rv-error itself."
+  exit 1
+fi
+
+for file in `grep "^#" $1 | awk '{print $3}' | xargs printf "%s\n" | sort | uniq`
+do
+  absPath="$(cd "$(dirname "$file")"; pwd)/$(basename "$file")"
+  mkdir -p "$HOME/.rvsuppress$absPath"
+  rv-ifdef $file $2 $3 $4 > "$HOME/.rvsuppress$absPath/ifdef.json" 2> /dev/null
+done

@@ -14,7 +14,7 @@ Below we only discuss the example ``account.Account``.
 account.Account
 ---------------
 
-For brevety, assume we are in the ``examples`` directory.
+For brevity, assume we are in the ``examples`` directory.
 
 Normal run
 ~~~~~~~~~~

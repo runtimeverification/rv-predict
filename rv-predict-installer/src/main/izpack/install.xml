@@ -82,6 +82,8 @@
             <fileset dir="lib/native/windows64" targetdir="$INSTALL_PATH/bin">
                 <os family="windows" arch="amd64"/>
             </fileset>
+            <executable targetfile="$INSTALL_PATH/bin/rv-predict" keep="true" stage="never" condition="!izpack.windowsinstall"/>
+            <executable targetfile="$INSTALL_PATH/bin/checkJava" keep="true" stage="never" condition="!izpack.windowsinstall"/>
         </pack>
         <pack name="Examples" required="no" installGroups="New Application" >
             <description>Example Java programs illustrating RV-Predict's features.</description>
@@ -92,8 +94,6 @@
             <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
                 <include name="*.py" />
             </fileset>
-            <executable targetfile="$INSTALL_PATH/bin/rv-predict" keep="true" stage="never" condition="!izpack.windowsinstall"/>
-            <executable targetfile="$INSTALL_PATH/bin/checkJava" keep="true" stage="never" condition="!izpack.windowsinstall"/>
         </pack>
         <!--
         <pack name="MSVC++ redistributable package" required="yes" installGroups="New Application" condition="izpack.windowsinstall">

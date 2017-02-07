@@ -2,7 +2,7 @@
     <parent>
         <groupId>com.runtimeverification.rvpredict</groupId>
         <artifactId>root</artifactId>
-        <version>1.8.2-SNAPSHOT</version>
+        <version>1.8.3</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>rv-predict</artifactId>
@@ -65,10 +65,8 @@
                   </goals>
                   <configuration>
                     <target>
-                      <delete 
-                        file="${project.parent.relativePath}/../EVALUATION-LICENSE.md"/>   
-                      <delete 
-                        file="${project.parent.relativePath}/../LICENSE.md"/>
+                      <delete file="${project.parent.relativePath}/../EVALUATION-LICENSE.md" />   
+                      <delete file="${project.parent.relativePath}/../LICENSE.md" />
                     </target>
                   </configuration>
                 </execution>

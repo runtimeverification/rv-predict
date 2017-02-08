@@ -387,6 +387,7 @@ public class Trace {
                 } else if (event.isFork()) {
                     //TODO(TraianSF): Add behavior for forking
                 } else {
+		    System.err.println(event.getType());
                     throw new IllegalStateException();
                 }
             }

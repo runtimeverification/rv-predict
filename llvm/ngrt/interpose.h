@@ -3,6 +3,10 @@
 
 #include <dlfcn.h> /* for dlsym(3) */
 #include <pthread.h>
+#include <signal.h>
+
+#define	REAL_DECL(__rettype, __func, ...)				\
+	extern __rettype (*real_##__func)(__VA_ARGS__)
 
 #define	REAL_DEFN(__rettype, __func, ...)				\
 	__rettype (*real_##__func)(__VA_ARGS__)
@@ -30,5 +34,8 @@ INTERPOSE_DECLS(int, pthread_mutex_trylock, pthread_mutex_t *);
 INTERPOSE_DECLS(int, pthread_mutex_unlock, pthread_mutex_t *);
 INTERPOSE_DECLS(int, pthread_mutex_init, pthread_mutex_t *restrict,
    const pthread_mutexattr_t *restrict);
+
+INTERPOSE_DECLS(int, sigaction, int signum, const struct sigaction *,
+    struct sigaction *);
 
 #endif /* _RVP_INTERPOSE_H_ */

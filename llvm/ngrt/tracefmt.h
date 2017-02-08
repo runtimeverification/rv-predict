@@ -71,6 +71,9 @@ typedef enum _rvp_op {
 	, RVP_OP_ATOMIC_STORE8	= 32
 	, RVP_OP_ATOMIC_STORE16	= 33
 	, RVP_OP_COG		= 34	// change of generation
+	, RVP_OP_SIGACT		= 35	// establish signal action
+	, RVP_OP_ENTERSIG	= 36	// signal delivery
+	, RVP_OP_EXITSIG	= 37
 	, RVP_NOPS
 } rvp_op_t;
 

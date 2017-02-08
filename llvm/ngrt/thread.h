@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdlib.h>	/* for EXIT_FAILURE */
 
+#include "interpose.h"
 #include "ring.h"
 
 typedef struct _rvp_thread rvp_thread_t;
@@ -20,6 +21,7 @@ struct _rvp_thread {
 	void			*t_arg;
 	void			*(*t_routine)(void *);
 	rvp_ring_t		t_ring;
+	rvp_ring_t		* _Atomic t_signal_ring;
 };
 
 int __rvpredict_pthread_create(pthread_t *, const pthread_attr_t *,
@@ -28,6 +30,11 @@ void __rvpredict_pthread_exit(void *);
 int __rvpredict_pthread_join(pthread_t, void **);
 
 bool rvp_thread_flush_to_fd(rvp_thread_t *, int, bool);
+
+REAL_DECL(int, pthread_join, pthread_t, void **);
+REAL_DECL(int, pthread_create, pthread_t *, const pthread_attr_t *,
+    void *(*)(void *), void *);
+REAL_DECL(void, pthread_exit, void *);
 
 extern pthread_key_t rvp_thread_key;
 

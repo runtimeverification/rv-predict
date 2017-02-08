@@ -10,6 +10,9 @@
 
 #include "buf.h"
 
+struct _rvp_ring;
+typedef struct _rvp_ring rvp_ring_t;
+
 typedef struct _rvp_ring {
 	uint32_t * _Atomic volatile r_producer, * _Atomic volatile r_consumer;
 	uint32_t *r_last;

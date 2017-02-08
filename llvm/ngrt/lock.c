@@ -1,10 +1,26 @@
 #include <err.h>
 #include <stdlib.h> /* for EXIT_FAILURE */
 
+#include "init.h"
 #include "interpose.h"
 #include "lock.h"
 #include "thread.h"
 #include "trace.h"
+
+REAL_DEFN(int, pthread_mutex_lock, pthread_mutex_t *);
+REAL_DEFN(int, pthread_mutex_trylock, pthread_mutex_t *);
+REAL_DEFN(int, pthread_mutex_unlock, pthread_mutex_t *);
+REAL_DEFN(int, pthread_mutex_init, pthread_mutex_t *restrict,
+   const pthread_mutexattr_t *restrict);
+
+void
+rvp_lock_init(void)
+{
+	ESTABLISH_PTR_TO_REAL(pthread_mutex_lock);
+	ESTABLISH_PTR_TO_REAL(pthread_mutex_trylock);
+	ESTABLISH_PTR_TO_REAL(pthread_mutex_unlock);
+	ESTABLISH_PTR_TO_REAL(pthread_mutex_init);
+}
 
 int
 __rvpredict_pthread_mutex_init(pthread_mutex_t *restrict mtx,

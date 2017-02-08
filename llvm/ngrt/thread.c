@@ -20,12 +20,6 @@ REAL_DEFN(int, pthread_create, pthread_t *, const pthread_attr_t *,
     void *(*)(void *), void *);
 REAL_DEFN(void, pthread_exit, void *);
 
-REAL_DEFN(int, pthread_mutex_lock, pthread_mutex_t *);
-REAL_DEFN(int, pthread_mutex_trylock, pthread_mutex_t *);
-REAL_DEFN(int, pthread_mutex_unlock, pthread_mutex_t *);
-REAL_DEFN(int, pthread_mutex_init, pthread_mutex_t *restrict,
-   const pthread_mutexattr_t *restrict);
-
 static rvp_thread_t *rvp_thread_create(void *(*)(void *), void *);
 
 volatile _Atomic uint64_t rvp_ggen = 0;	// global generation number
@@ -220,17 +214,20 @@ rvp_serializer_create(void)
 	}
 }
 
-static void
-rvp_init(void)
+void
+rvp_thread_init(void)
 {
 	ESTABLISH_PTR_TO_REAL(pthread_join);
 	ESTABLISH_PTR_TO_REAL(pthread_create);
 	ESTABLISH_PTR_TO_REAL(pthread_exit);
+}
 
-	ESTABLISH_PTR_TO_REAL(pthread_mutex_lock);
-	ESTABLISH_PTR_TO_REAL(pthread_mutex_trylock);
-	ESTABLISH_PTR_TO_REAL(pthread_mutex_unlock);
-	ESTABLISH_PTR_TO_REAL(pthread_mutex_init);
+static void
+rvp_init(void)
+{
+	rvp_signal_init();
+	rvp_thread_init();
+	rvp_lock_init();
 
 	if (pgsz == 0 && (pgsz = sysconf(_SC_PAGE_SIZE)) == -1)
 		err(EXIT_FAILURE, "%s: sysconf", __func__);
@@ -248,6 +245,7 @@ rvp_init(void)
 	 */
 	rvp_thread0_create();
 	rvp_serializer_create();
+
 	atexit(rvp_stop_transmitter);
 }
 

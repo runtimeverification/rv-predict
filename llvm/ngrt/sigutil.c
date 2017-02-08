@@ -15,7 +15,11 @@ sigeqset(const sigset_t *l, const sigset_t *r)
 	if (sigfillset(&all) == -1)
 		err(EXIT_FAILURE, "%s: sigfillset", __func__);
 
-	for (i = 0; (memb = sigismember(&all, i)) == 1; i++) {
+	/* skip over leading invalid signals */
+	for (i = 0; sigismember(&all, i) == -1; i++)
+		;	// do nothing
+
+	for (; (memb = sigismember(&all, i)) == 1; i++) {
 		int lmemb, rmemb;
 
 		if ((lmemb = sigismember(l, i)) == -1)

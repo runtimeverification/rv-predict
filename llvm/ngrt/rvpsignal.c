@@ -128,3 +128,6 @@ __rvpredict_sigaction(int signum, const struct sigaction *act,
 
 	return real_sigaction(signum, &act_copy, oact);
 }
+
+INTERPOSE(int, sigaction, int signum, const struct sigaction *,
+    struct sigaction *);

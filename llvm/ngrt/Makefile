@@ -12,7 +12,7 @@ CFLAGS+=-std=c11
 COPTS+=-O3
 DBG+=-g
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
-SRCS=access.c const.c func.c lock.c notimpl.c ring.c rmw.c signal.c sigutil.c
+SRCS=access.c const.c func.c lock.c notimpl.c ring.c rmw.c rvpsignal.c sigutil.c
 SRCS+=thread.c trace.c
 WARNS=4
 

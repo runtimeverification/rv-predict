@@ -22,6 +22,7 @@ typedef union {
 	rvp_acquire_release_t ub_acquire_release;
 	rvp_load8_store8_t ub_load8_store8;
 	rvp_cog_t ub_cog;
+	rvp_entersig_t ub_entersig;
 	char ub_bytes[4096];
 } rvp_ubuf_t;
 
@@ -68,6 +69,9 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 	    "acquire mutex")
 	, [RVP_OP_RELEASE] = OP_INFO_INIT(rvp_acquire_release_t,
 	    "release mutex")
+	, [RVP_OP_ENTERSIG] = OP_INFO_INIT(rvp_entersig_t,
+	    "enter signal handler")
+	, [RVP_OP_EXITSIG] = OP_INFO_INIT(rvp_exitsig_t, "exit signal handler")
 };
 
 typedef struct _rvp_call {
@@ -459,6 +463,13 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		    ps->ps_curthread, ps->ps_thread[ps->ps_curthread].ts_lastpc,
 		    oi->oi_descr, ub->ub_fork_join_switch.tid);
 		// TBD create a fledgling rvp_thread_pstate_t on fork?
+		break;
+	case RVP_OP_ENTERSIG:
+		printf(
+		    "tid %" PRIu32 " pc %#016" PRIxPTR
+		    " %s signal %" PRIu32 "\n",
+		    ps->ps_curthread, ps->ps_thread[ps->ps_curthread].ts_lastpc,
+		    oi->oi_descr, ub->ub_entersig.signum);
 		break;
 	case RVP_OP_ACQUIRE:
 	case RVP_OP_RELEASE:

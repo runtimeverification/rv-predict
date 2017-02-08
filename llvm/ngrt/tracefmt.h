@@ -105,6 +105,11 @@ typedef struct {
 
 typedef struct {
 	uintptr_t deltop;
+	uint32_t signum;
+} __packed __aligned(sizeof(uint32_t)) rvp_entersig_t;
+
+typedef struct {
+	uintptr_t deltop;
 	uintptr_t addr;
 	uint32_t data;
 } __packed __aligned(sizeof(uint32_t)) rvp_load1_2_4_store1_2_4_t;
@@ -118,6 +123,8 @@ typedef struct {
 typedef struct {
 	uintptr_t deltop;
 } __packed __aligned(sizeof(uint32_t)) rvp_end_enterfn_exitfn_t;
+
+typedef rvp_end_enterfn_exitfn_t rvp_exitsig_t;
 
 typedef struct {
 	uintptr_t deltop;

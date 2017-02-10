@@ -15,6 +15,6 @@ fi
 
 for file in `grep "^#" $1 | awk '{print $3}' | xargs printf "%s\n" | sort | uniq`
 do
-  absPath="$(cd "$(dirname "$file")"; pwd)/$(basename "$file")"
+  absPath="$(readlink -m "$file")"
   rm -rf "$HOME/.rvsuppress$absPath"
 done

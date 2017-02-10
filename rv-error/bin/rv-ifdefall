@@ -18,7 +18,7 @@ fi
 
 for file in `grep "^#" $1 | awk '{print $3}' | xargs printf "%s\n" | sort | uniq`
 do
-  absPath="$(cd "$(dirname "$file")"; pwd)/$(basename "$file")"
+  absPath="$(readlink -m "$file")"
   mkdir -p "$HOME/.rvsuppress$absPath"
   rv-ifdef $file $2 $3 $4 > "$HOME/.rvsuppress$absPath/ifdef.json" 2> /dev/null
 done

@@ -23,5 +23,5 @@ fi
 backslashed=${1//\\/\\\\}
 printf "%s" '{"suppressions": ['
 diff --changed-group-format='{"condition": ["Line", {"start_line": %df, "end_line": %dl, "file": "'${backslashed//\"/\\\"}'"}], "suppress": '$4'},' --unchanged-group-format="" $1 $unifdefed | head -c-1
-printf "%s" '], "message_length": 0, "format": ["CSV"], "previous_errors": [], "fatal_errors": false}'
+printf "%s" '], "message_length": 0, "format": ["CSV"], "previous_errors": [], "fatal_errors": false, "rv_error": ""}'
 rm $unifdefed

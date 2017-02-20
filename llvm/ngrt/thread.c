@@ -12,6 +12,8 @@
 
 #include "init.h"
 #include "interpose.h"
+#include "relay.h"
+#include "rvpsignal.h"
 #include "thread.h"
 #include "trace.h"
 
@@ -23,7 +25,6 @@ REAL_DEFN(void, pthread_exit, void *);
 static rvp_thread_t *rvp_thread_create(void *(*)(void *), void *);
 
 volatile _Atomic uint64_t rvp_ggen = 0;	// global generation number
-static long pgsz = 0;
 
 /* thread_mutex protects thread_head, next_id */
 static pthread_mutex_t thread_mutex;
@@ -92,6 +93,7 @@ static void
 rvp_thread0_create(void)
 {
 	rvp_thread_t *t;
+	rvp_ring_t *r;
 
 	if ((t = rvp_thread_create(NULL, NULL)) == NULL)
 		err(EXIT_FAILURE, "%s: rvp_thread_create", __func__);
@@ -103,7 +105,9 @@ rvp_thread0_create(void)
 
 	assert(t->t_id == 1);
 
-	rvp_ring_put_begin(&t->t_ring, t->t_id, rvp_ggen_after_load());
+	r = &t->t_ring;
+	r->r_lgen = rvp_ggen_after_load();
+	rvp_ring_put_begin(&t->t_ring, t->t_id, r->r_lgen);
 }
 
 static void
@@ -125,6 +129,7 @@ static void
 rvp_wake_transmitter_locked(void)
 {
 	int rc;
+
 	nwake++;
 	if ((rc = pthread_cond_signal(&wakecond)) != 0)
 		errx(EXIT_FAILURE, "%s: %s", __func__, strerror(rc));
@@ -151,6 +156,7 @@ serialize(void *arg)
 {
 	int fd = serializer_fd;
 	rvp_thread_t *last_t = NULL, *t, *next_t;
+	uint32_t nblocksets_last = 0;
 
 	thread_lock();
 	while (transmit || nwake > 0) {
@@ -167,7 +173,15 @@ serialize(void *arg)
 
 		rvp_increase_ggen();
 
+		rvp_signal_rings_replenish();
+
 		do {
+
+			/* TBD increase global generation every so
+			 * many words flushed?
+			 */
+
+			nblocksets_last = rvp_sigblocksets_emit(fd, nblocksets_last);
 			any_emptied = false;
 			for (t = thread_head; t != NULL; t = t->t_next) {
 				if (rvp_thread_flush_to_fd(t, fd, t != last_t)){
@@ -180,6 +194,7 @@ serialize(void *arg)
 					any_emptied = true; 
 				}
 			}
+			any_emptied |= rvp_signal_rings_flush_to_fd(fd);
 		} while (any_emptied);
 
 		for (t = rvp_collect_garbage(); t != NULL; t = next_t) {
@@ -225,12 +240,11 @@ rvp_thread_init(void)
 static void
 rvp_init(void)
 {
+	rvp_lock_init();	// needed by rvp_signal_init()
 	rvp_signal_init();
 	rvp_thread_init();
-	rvp_lock_init();
+	rvp_rings_init();
 
-	if (pgsz == 0 && (pgsz = sysconf(_SC_PAGE_SIZE)) == -1)
-		err(EXIT_FAILURE, "%s: sysconf", __func__);
 	if (pthread_key_create(&rvp_thread_key, NULL) != 0) 
 		err(EXIT_FAILURE, "%s: pthread_key_create", __func__);
 	if (pthread_mutex_init(&thread_mutex, NULL) != 0)
@@ -244,6 +258,7 @@ rvp_init(void)
 	 * to start.
 	 */
 	rvp_thread0_create();
+	rvp_relay_create();
 	rvp_serializer_create();
 
 	atexit(rvp_stop_transmitter);
@@ -327,18 +342,9 @@ static rvp_thread_t *
 rvp_thread_create(void *(*routine)(void *), void *arg)
 {
 	rvp_thread_t *t;
-	const size_t ringsz = pgsz;
-	const size_t items_per_ring = ringsz / sizeof(*t->t_ring.r_items);
-	uint32_t *items;
-
-	items = calloc(items_per_ring, sizeof(*t->t_ring.r_items));
-	if (items == NULL) {
-		errno = ENOMEM;
-		return NULL;
-	}
+	int rc;
 
 	if ((t = calloc(1, sizeof(*t))) == NULL) {
-		free(items);
 		errno = ENOMEM;
 		return NULL;
 	}
@@ -346,7 +352,11 @@ rvp_thread_create(void *(*routine)(void *), void *arg)
 	t->t_routine = routine;
 	t->t_arg = arg;
 
-	rvp_ring_init(&t->t_ring, items, items_per_ring);
+	if ((rc = rvp_ring_stdinit(&t->t_ring)) == -1) {
+		free(t);
+		errno = rc;
+		return NULL;
+	}
 
 	rvp_thread_attach(t);
 
@@ -396,13 +406,15 @@ __rvpredict_thread_wrapper(void *arg)
 {
 	void *retval;
 	rvp_thread_t *t = arg;
+	rvp_ring_t *r = &t->t_ring;
 
 	assert(pthread_getspecific(rvp_thread_key) == NULL);
 
 	if (pthread_setspecific(rvp_thread_key, t) != 0)
 		err(EXIT_FAILURE, "%s: pthread_setspecific", __func__);
 
-	rvp_ring_put_begin(&t->t_ring, t->t_id, rvp_ggen_after_load());
+	r->r_lgen = rvp_ggen_after_load();
+	rvp_ring_put_begin(&t->t_ring, t->t_id, r->r_lgen);
 
 	retval = (*t->t_routine)(t->t_arg);
 	__rvpredict_pthread_exit(retval);
@@ -416,8 +428,6 @@ __rvpredict_pthread_create(pthread_t *thread,
 {
 	int rc;
 	rvp_thread_t *t;
-
-	assert(pgsz != 0);
 
 	if ((t = rvp_thread_create(start_routine, arg)) == NULL)
 		return errno;

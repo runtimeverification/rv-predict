@@ -35,7 +35,10 @@ INTERPOSE_DECLS(int, pthread_mutex_unlock, pthread_mutex_t *);
 INTERPOSE_DECLS(int, pthread_mutex_init, pthread_mutex_t *restrict,
    const pthread_mutexattr_t *restrict);
 
-INTERPOSE_DECLS(int, sigaction, int signum, const struct sigaction *,
+INTERPOSE_DECLS(int, sigprocmask, int, const sigset_t *, sigset_t *);
+INTERPOSE_DECLS(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
+
+INTERPOSE_DECLS(int, sigaction, int, const struct sigaction *,
     struct sigaction *);
 
 #endif /* _RVP_INTERPOSE_H_ */

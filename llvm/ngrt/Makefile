@@ -11,9 +11,11 @@ CC=clang
 CFLAGS+=-std=c11
 COPTS+=-O3
 DBG+=-g
+CPPFLAGS+=-Wuninitialized
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
-SRCS=access.c const.c func.c lock.c notimpl.c ring.c rmw.c rvpsignal.c sigutil.c
+SRCS=access.c const.c func.c lock.c notimpl.c
+SRCS+=relay.c ring.c rmw.c rvpsignal.c sigutil.c
 SRCS+=thread.c trace.c
-WARNS=4
+WARNS=5
 
 .include <bsd.lib.mk>

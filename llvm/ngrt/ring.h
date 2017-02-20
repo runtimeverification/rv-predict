@@ -4,11 +4,19 @@
 #define _RVP_RING_H_
 
 #include <stdatomic.h>	/* for atomic_store_explicit */
+#include <stdbool.h>
 #include <stdint.h>	/* for uint32_t */
 #include <string.h>	/* for memcpy(3) */
 #include <unistd.h>	/* for size_t */
+#include <sys/uio.h>	/* for struct iovec */
 
 #include "buf.h"
+
+typedef enum _rvp_ring_state {
+	  RVP_RING_S_INUSE	= 0
+	, RVP_RING_S_CLEAN
+	, RVP_RING_S_DIRTY
+} rvp_ring_state_t;
 
 struct _rvp_ring;
 typedef struct _rvp_ring rvp_ring_t;
@@ -19,6 +27,8 @@ typedef struct _rvp_ring {
 	uint32_t *r_items;
 	const char *r_lastpc;
 	uint64_t r_lgen;	// thread-local generation number
+	rvp_ring_t *r_next;
+	rvp_ring_state_t _Atomic r_state;
 } rvp_ring_t;
 
 extern volatile _Atomic uint64_t rvp_ggen;
@@ -148,5 +158,10 @@ rvp_ring_put_buf(rvp_ring_t *r, rvp_buf_t b)
 {
 	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
 }
+
+void rvp_rings_init(void);
+int rvp_ring_stdinit(rvp_ring_t *);
+bool rvp_ring_get_iovs(rvp_ring_t *, struct iovec **, uint32_t **);
+bool rvp_ring_flush_to_fd(rvp_ring_t *, int);
 
 #endif /* _RVP_RING_H_ */

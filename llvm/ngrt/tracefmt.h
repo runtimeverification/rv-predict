@@ -71,9 +71,13 @@ typedef enum _rvp_op {
 	, RVP_OP_ATOMIC_STORE8	= 32
 	, RVP_OP_ATOMIC_STORE16	= 33
 	, RVP_OP_COG		= 34	// change of generation
-	, RVP_OP_SIGACT		= 35	// establish signal action
+	, RVP_OP_SIGEST		= 35	// establish signal action
 	, RVP_OP_ENTERSIG	= 36	// signal delivery
 	, RVP_OP_EXITSIG	= 37
+	, RVP_OP_SIGDIS		= 38	// disestablish signal action
+	, RVP_OP_SIGMASKMEMO	= 39	// establish a new number -> mask
+					// mapping (memoize mask)
+	, RVP_OP_MASKSIGS	= 40	// mask signals
 	, RVP_NOPS
 } rvp_op_t;
 
@@ -82,6 +86,7 @@ typedef enum _rvp_op {
 typedef const char deltop_t;
 
 struct _deltops {
+	char rsvd;
 	deltop_t matrix[RVP_NJMPS][RVP_NOPS];
 };
 
@@ -107,6 +112,30 @@ typedef struct {
 	uintptr_t deltop;
 	uint32_t signum;
 } __packed __aligned(sizeof(uint32_t)) rvp_entersig_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uint32_t masknum;
+} __packed __aligned(sizeof(uint32_t)) rvp_masksigs_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uint64_t mask;
+	uint32_t origin;
+	uint32_t masknum;
+} __packed __aligned(sizeof(uint32_t)) rvp_sigmaskmemo_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uintptr_t handler;
+	uint32_t signum;
+	uint32_t masknum;
+} __packed __aligned(sizeof(uint32_t)) rvp_sigest_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uint32_t signum;
+} __packed __aligned(sizeof(uint32_t)) rvp_sigdis_t;
 
 typedef struct {
 	uintptr_t deltop;

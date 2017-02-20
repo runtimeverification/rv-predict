@@ -65,52 +65,54 @@ rvp_trace_open(void)
 }
 
 bool
+rvp_ring_flush_to_fd(rvp_ring_t *r, int fd)
+{
+	uint32_t *next_consumer;
+	struct iovec iov[2], *iovp = &iov[0];
+	ssize_t nwritten;
+
+	if (!rvp_ring_get_iovs(r, &iovp, &next_consumer))
+		return false;
+
+	nwritten = writev(fd, iov, iovp - &iov[0]);
+	do {
+		--iovp;
+		nwritten -= iovp->iov_len;
+	} while (iovp != &iov[0]);
+
+	assert(nwritten == 0);
+	r->r_consumer = next_consumer;
+	return true;
+}
+
+bool
 rvp_thread_flush_to_fd(rvp_thread_t *t, int fd, bool trace_switch)
 {
-	int iovcnt = 0;
 	static ssize_t total = 0, lastsw = -1;
 	static uint32_t last_tid = 0xffffffff;
 	ssize_t nwritten;
 	rvp_ring_t *r = &t->t_ring;
-	uint32_t *producer = r->r_producer, *consumer = r->r_consumer;
+	uint32_t *next_consumer;
 	threadswitch_t threadswitch = {
 		  .deltop =
 		      (uintptr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SWITCH)
 		, .id = t->t_id
 	};
-	struct iovec iov[3];
-
-	if (consumer == producer)
-		return false;
-
-	if (trace_switch) {
-		assert(lastsw < total);
-		assert(last_tid != threadswitch.id);
-		iov[iovcnt++] = (struct iovec){
+	struct iovec iov[3] = {
+		[0] = (struct iovec){
 			  .iov_base = &threadswitch
 			, .iov_len = sizeof(threadswitch)
-		};
-	}
+		}
+	};
+	struct iovec *iovp = trace_switch ? &iov[1] : &iov[0];
 
-	if (consumer < producer) {
-		iov[iovcnt++] = (struct iovec){
-			  .iov_base = consumer
-			, .iov_len = (producer - consumer) *
-				     sizeof(consumer[0])
-		};
-	} else {	/* consumer > producer */
-		iov[iovcnt++] = (struct iovec){
-			  .iov_base = consumer
-			, .iov_len = (r->r_last + 1 - consumer) *
-				     sizeof(consumer[0])
-		};
-		iov[iovcnt++] = (struct iovec){
-			  .iov_base = r->r_items
-			, .iov_len = (producer - r->r_items) *
-				     sizeof(r->r_items[0])
-		};
-	}
-	nwritten = writev(fd, iov, iovcnt);
+	assert(!trace_switch ||
+	       (lastsw < total && last_tid != threadswitch.id));
+
+	if (!rvp_ring_get_iovs(r, &iovp, &next_consumer))
+		return false;
+
+	nwritten = writev(fd, iov, iovp - &iov[0]);
 	if (trace_switch)
 		lastsw = total + sizeof(threadswitch);
 	total += nwritten;
@@ -118,11 +120,13 @@ rvp_thread_flush_to_fd(rvp_thread_t *t, int fd, bool trace_switch)
 	    ? (nwritten > sizeof(threadswitch))
 	    : (nwritten > 0));
 
-	while (--iovcnt >= 0)
-		nwritten -= iov[iovcnt].iov_len;
+	do {
+		--iovp;
+		nwritten -= iovp->iov_len;
+	} while (iovp != &iov[0]);
 
 	assert(nwritten == 0);
-	r->r_consumer = producer;
+	r->r_consumer = next_consumer;
 	return true;
 }
 

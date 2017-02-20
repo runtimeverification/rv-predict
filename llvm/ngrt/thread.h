@@ -21,7 +21,7 @@ struct _rvp_thread {
 	void			*t_arg;
 	void			*(*t_routine)(void *);
 	rvp_ring_t		t_ring;
-	rvp_ring_t		* _Atomic t_signal_ring;
+	uint64_t		t_intrmask;
 };
 
 int __rvpredict_pthread_create(pthread_t *, const pthread_attr_t *,

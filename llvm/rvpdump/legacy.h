@@ -99,7 +99,7 @@ typedef enum _legacy_op {
 typedef struct _legacy_event {
 	uint64_t gid;
 	uint64_t tid;
-	uint32_t id;
+	uint32_t stmtid;
 	uint64_t addr;
 	uint64_t value;
 	uint8_t type;

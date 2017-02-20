@@ -1,6 +1,7 @@
 core
 .depend
 .Makefile.tags
+metadatadump
 *.o
 rvpdump
 .*.swp

@@ -1,7 +1,10 @@
 *.a
 .depend
+eitherorboth
+*.ll
 .Makefile.tags
 *.o
+sigcount
 *.so
 .*.swp
 tags

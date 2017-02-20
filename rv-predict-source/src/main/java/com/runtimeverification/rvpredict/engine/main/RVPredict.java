@@ -76,7 +76,7 @@ public class RVPredict {
             // process the trace window by window
             Trace trace;
             while (true) {
-                if ((trace = traceCache.getTrace(fromIndex)) != null) {
+                if ((trace = traceCache.getTraceWindow()) != null) {
                     fromIndex += config.windowSize;
                     detector.run(trace);
                 } else {

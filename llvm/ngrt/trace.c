@@ -115,7 +115,7 @@ rvp_thread_flush_to_fd(rvp_thread_t *t, int fd, bool trace_switch)
 		lastsw = total + sizeof(threadswitch);
 	total += nwritten;
 	assert(trace_switch
-	    ? (nwritten > sizeof(threadswitch))
+	    ? (nwritten > (ssize_t)sizeof(threadswitch))
 	    : (nwritten > 0));
 
 	while (--iovcnt >= 0)

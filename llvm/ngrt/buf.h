@@ -8,7 +8,7 @@
 #include "tracefmt.h"	/* for rvp_op_t */
 
 typedef struct {
-	int b_nwords;
+	unsigned int b_nwords;
 	uint32_t b_word[12];
 } rvp_buf_t;
 
@@ -24,7 +24,7 @@ rvp_buf_put(rvp_buf_t *b, uint32_t item)
 static inline void
 rvp_buf_put_addr(rvp_buf_t *b, const void *addr)
 {
-	int i;
+	unsigned int i;
 	union {
 		uintptr_t uaddr;
 		uint32_t u32[sizeof(uintptr_t) / sizeof(uint32_t)];

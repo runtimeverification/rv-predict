@@ -13,13 +13,13 @@
 struct _rvp_ring;
 typedef struct _rvp_ring rvp_ring_t;
 
-typedef struct _rvp_ring {
+struct _rvp_ring {
 	uint32_t * _Atomic volatile r_producer, * _Atomic volatile r_consumer;
 	uint32_t *r_last;
 	uint32_t *r_items;
 	const char *r_lastpc;
 	uint64_t r_lgen;	// thread-local generation number
-} rvp_ring_t;
+};
 
 extern volatile _Atomic uint64_t rvp_ggen;
 

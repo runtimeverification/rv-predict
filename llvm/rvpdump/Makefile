@@ -1,3 +1,4 @@
+NOMAN=
 #
 # This makefile uses BSD macro files.  You can get a rudimentary
 # set of BSD macro files on POSIX-compliant platforms like Linux and

@@ -1,7 +1,10 @@
 *.a
-.depend
-.Makefile.tags
 *.o
+*.pico
+*.po
 *.so
 .*.swp
+.Makefile.tags
+.depend
+.gdbinit
 tags

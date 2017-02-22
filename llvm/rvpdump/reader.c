@@ -97,13 +97,13 @@ typedef struct _rvp_thread_pstate {
 } rvp_thread_pstate_t;
 
 /* parse state: global */
-typedef struct _rvp_pstate {
+struct _rvp_pstate {
 	rvp_thread_pstate_t	*ps_thread;
 	uint32_t		ps_nthreads;
 	uintptr_t		ps_deltop_first, ps_deltop_last;
 	uint32_t		ps_curthread;
 	const rvp_emitters_t	*ps_emitters;
-} rvp_pstate_t;
+};
 
 static void emit_no_jump(const rvp_pstate_t *, uintptr_t);
 static void emit_legacy_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
@@ -158,7 +158,7 @@ static void
 rvp_pstate_extend_threads_over(rvp_pstate_t *ps, uint32_t tid,
     rvp_thread_pstate_t *othread, uint32_t onthreads)
 {
-	int i;
+	unsigned int i;
 	rvp_thread_pstate_t *ts;
 
 	assert(tid >= onthreads);
@@ -223,11 +223,11 @@ rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters, uintptr_t op0,
 	rvp_pstate_begin_thread(ps, tid, generation);
 }
 
-static size_t
+static ssize_t
 iovsum(const struct iovec *iov, int iovcnt)
 {
 	int i;
-	size_t sum = 0;
+	ssize_t sum = 0;
 
 	for (i = 0; i < iovcnt; i++)
 		sum += iov[i].iov_len;
@@ -644,7 +644,7 @@ rvp_trace_dump(rvp_output_type_t otype, int fd)
 	ub.ub_begin = (rvp_begin_t){.deltop = pc0, .tid = tid};
 
 	size_t nfull = sizeof(ub.ub_begin);
-	size_t nshort = 0;
+	ssize_t nshort = 0;
 	for (;;) {
 		nread = read(fd, &ub.ub_bytes[nfull], sizeof(ub) - nfull);
 		if (nread == -1) {

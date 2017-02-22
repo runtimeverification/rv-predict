@@ -37,6 +37,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -722,18 +723,18 @@ GlobalVariable *
 RVPredictInstrument::createOrdering(IRBuilder<> *IRB, AtomicOrdering ord)
 {
 	switch (ord) {
-	case NotAtomic:
+	case AtomicOrdering::NotAtomic:
 		llvm_unreachable("unexpected atomic ordering!");
-	case Unordered:             
-	case Monotonic:
+	case AtomicOrdering::Unordered:             
+	case AtomicOrdering::Monotonic:
 		return order_relaxed;
-	case Acquire:
+	case AtomicOrdering::Acquire:
 		return order_acquire;
-	case Release:
+	case AtomicOrdering::Release:
 		return order_release;
-	case AcquireRelease:
+	case AtomicOrdering::AcquireRelease:
 		return order_acq_rel;
-	case SequentiallyConsistent:
+	case AtomicOrdering::SequentiallyConsistent:
 		return order_seq_cst;
 	}
 }

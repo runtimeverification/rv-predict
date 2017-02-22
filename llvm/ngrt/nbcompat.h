@@ -3,6 +3,10 @@
 #ifndef _RVP_NBCOMPAT_H_
 #define _RVP_NBCOMPAT_H_
 
+#ifndef offsetof
+#define offsetof __builtin_offsetof
+#endif
+
 #ifndef __arraycount
 #define __arraycount(__a)	(sizeof(__a) / sizeof((__a)[0]))
 #endif /* __arraycount */

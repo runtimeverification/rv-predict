@@ -1,9 +1,11 @@
 #include <inttypes.h>	/* for PRIu32 */
 #include <signal.h>
+#include <stdatomic.h>
 #include <stdint.h>	/* for uint32_t */
 
 #include "init.h"
 #include "interpose.h"
+#include "relay.h"
 #include "rvpsignal.h"
 #include "sigutil.h"
 #include "trace.h"
@@ -117,7 +119,7 @@ rvp_signal_lookup(int signum)
 }
 
 bool
-rvp_signal_rings_flush_to_fd(int fd)
+rvp_signal_rings_flush_to_fd(int fd, rvp_lastctx_t *lc)
 {
 	rvp_ring_t *r;
 	bool any_emptied = false;
@@ -131,19 +133,22 @@ rvp_signal_rings_flush_to_fd(int fd)
 		 */
 		if (atomic_compare_exchange_strong(&r->r_state, &state,
 		    RVP_RING_S_INUSE)) {
-			any_emptied |= rvp_ring_flush_to_fd(r, fd);
+			any_emptied |= rvp_ring_flush_to_fd(r, fd, lc);
 			r->r_state = RVP_RING_S_CLEAN;
 		} else if (state == RVP_RING_S_INUSE) {
-			any_emptied |= rvp_ring_flush_to_fd(r, fd);
+			any_emptied |= rvp_ring_flush_to_fd(r, fd, lc);
 		}
 	}
 	return any_emptied;
 }
 
 static rvp_ring_t *
-rvp_signal_ring_get_scan(rvp_thread_t *t)
+rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t noutst)
 {
 	rvp_ring_t *r;
+	const uint32_t tid = t->t_id;
+
+	assert(noutst > 0);
 
 	/* XXX In principle, between reading the list of
 	 * signal rings, and checking a ring's state, 
@@ -153,21 +158,35 @@ rvp_signal_ring_get_scan(rvp_thread_t *t)
 	 */
 	for (r = signal_rings; r != NULL; r = r->r_next) {
 		rvp_ring_state_t dirty = RVP_RING_S_DIRTY;
+
+		if (!atomic_compare_exchange_weak(&r->r_state, &dirty,
+						 RVP_RING_S_INUSE))
+			continue;
+		if (r->r_tid == tid && r->r_nintr_outst == noutst)
+			return r;
+		/* Not a match, put it back. */
+		atomic_store_explicit(&r->r_state, RVP_RING_S_DIRTY,
+		    memory_order_relaxed);
+	}
+
+	for (r = signal_rings; r != NULL; r = r->r_next) {
 		rvp_ring_state_t clean = RVP_RING_S_CLEAN;
 
-		if (atomic_compare_exchange_weak(&r->r_state, &dirty,
-						 RVP_RING_S_INUSE)
-		||  atomic_compare_exchange_weak(&r->r_state, &clean,
-						 RVP_RING_S_INUSE))
+		if (atomic_compare_exchange_weak(&r->r_state, &clean,
+						 RVP_RING_S_INUSE)) {
+			r->r_tid = tid;
+			r->r_nintr_outst = noutst;
 			break;
+		}
 	}
+
 	return r;
 }
 
 static void
 rvp_wake_replenisher(void)
 {
-	rvp_wake_transmitter();
+	rvp_wake_relay();
 }
 
 /* Calls to rvp_signal_rings_replenish() are synchronized by
@@ -196,15 +215,14 @@ rvp_signal_rings_replenish(void)
 }
 
 rvp_ring_t *
-rvp_signal_ring_get(rvp_thread_t *t)
+rvp_signal_ring_get(rvp_thread_t *t, uint32_t noutst)
 {
 	rvp_ring_t *r;
 
-	while ((r = rvp_signal_ring_get_scan(t)) == NULL) {
+	while ((r = rvp_signal_ring_get_scan(t, noutst)) == NULL) {
 		// TBD backoff
 		rvp_wake_replenisher();
 	}
-
 	return r;
 }
 
@@ -227,22 +245,25 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	/* XXX rvp_thread_for_curthr() calls pthread_getspecific(), which
 	 * is not guaranteed to be async signal-safe.  However, it is
 	 * known to be safe on Linux, and it is probably safe on many other
-	 * operating systems.
+	 * operating systems.  Check: the C11 equivalent is async signal-
+	 * safe, isn't it?
 	 */
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	rvp_signal_t *s = rvp_signal_lookup(signum);
-	rvp_ring_t *r = rvp_signal_ring_get(t);
+	uint32_t noutst = atomic_fetch_add_explicit(&t->t_nintr_outst, 1,
+	    memory_order_acquire) + 1;
+	rvp_ring_t *r = rvp_signal_ring_get(t, noutst);
+	rvp_ring_t *oldr = atomic_exchange(&t->t_intr_ring, r);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
-	/* `r` may have been used by some other thread, so
-	 * record a switch to the current thread.
+	/* When the serializer reaches this ring, it will emit a
+	 * change of thread and change in outstanding interrupts, if
+	 * necessary, before emitting the events on the ring.
 	 *
-	 * Then, record a switch to the signal/interrupt context.
+	 * We only have to record the signal handler that was entered, here.
 	 */
-	rvp_buf_put_addr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_SWITCH));
-	rvp_buf_put(&b, t->t_id);
 	rvp_buf_put_addr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_ENTERSIG));
-	rvp_buf_put(&b, signum);	
+	rvp_buf_put(&b, signum);
 	rvp_ring_put_buf(r, b);
 
 	if (s->s_handler != NULL)
@@ -252,6 +273,9 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 
 	b = RVP_BUF_INITIALIZER;
 
+	atomic_store(&t->t_intr_ring, oldr);
+	noutst = atomic_fetch_sub_explicit(&t->t_nintr_outst, 1,
+	    memory_order_release) - 1;
 	rvp_buf_put_addr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_EXITSIG));
 	rvp_ring_put_buf(r, b);
 	rvp_signal_ring_put(t, r);

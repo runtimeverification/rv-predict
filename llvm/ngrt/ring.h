@@ -21,6 +21,11 @@ typedef enum _rvp_ring_state {
 struct _rvp_ring;
 typedef struct _rvp_ring rvp_ring_t;
 
+typedef struct _rvp_lastctx {
+	uint32_t lc_tid;
+	uint32_t lc_nintr_outst;
+} rvp_lastctx_t;
+
 typedef struct _rvp_ring {
 	uint32_t * _Atomic volatile r_producer, * _Atomic volatile r_consumer;
 	uint32_t *r_last;
@@ -29,6 +34,8 @@ typedef struct _rvp_ring {
 	uint64_t r_lgen;	// thread-local generation number
 	rvp_ring_t *r_next;
 	rvp_ring_state_t _Atomic r_state;
+	uint32_t r_tid;
+	uint32_t r_nintr_outst;
 } rvp_ring_t;
 
 extern volatile _Atomic uint64_t rvp_ggen;
@@ -162,6 +169,6 @@ rvp_ring_put_buf(rvp_ring_t *r, rvp_buf_t b)
 void rvp_rings_init(void);
 int rvp_ring_stdinit(rvp_ring_t *);
 bool rvp_ring_get_iovs(rvp_ring_t *, struct iovec **, uint32_t **);
-bool rvp_ring_flush_to_fd(rvp_ring_t *, int);
+bool rvp_ring_flush_to_fd(rvp_ring_t *, int, rvp_lastctx_t *);
 
 #endif /* _RVP_RING_H_ */

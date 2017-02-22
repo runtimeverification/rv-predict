@@ -35,6 +35,7 @@ static pthread_t serializer;
 static pthread_cond_t wakecond;
 static int nwake = 0;
 static int serializer_fd;
+static rvp_lastctx_t serializer_lc;
 static bool transmit = true;
 
 pthread_key_t rvp_thread_key;
@@ -46,16 +47,14 @@ static void rvp_thread0_create(void);
 static rvp_thread_t *rvp_collect_garbage(void);
 
 static inline void
-rvp_trace_fork(uint32_t id)
+rvp_trace_fork(uint32_t id, const void *retaddr)
 {
-	rvp_thread_t *t = rvp_thread_for_curthr();
-	rvp_ring_t *r = &t->t_ring;
+	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 	uint64_t gen;
 
 	gen = rvp_ggen_before_store();
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
-	    RVP_OP_FORK);
+	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, RVP_OP_FORK);
 	rvp_buf_put(&b, id);
 	if (r->r_lgen < gen) {
 		r->r_lgen = gen;
@@ -65,14 +64,12 @@ rvp_trace_fork(uint32_t id)
 }
 
 static inline void
-rvp_trace_join(uint32_t id)
+rvp_trace_join(uint32_t id, const void *retaddr)
 {
-	rvp_thread_t *t = rvp_thread_for_curthr();
-	rvp_ring_t *r = &t->t_ring;
+	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
-	    RVP_OP_JOIN);
+	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, RVP_OP_JOIN);
 	rvp_buf_put(&b, id);
 	rvp_ring_put_buf(r, b);
 }
@@ -107,7 +104,7 @@ rvp_thread0_create(void)
 
 	r = &t->t_ring;
 	r->r_lgen = rvp_ggen_after_load();
-	rvp_ring_put_begin(&t->t_ring, t->t_id, r->r_lgen);
+	rvp_ring_put_begin(r, t->t_id, r->r_lgen);
 }
 
 static void
@@ -155,7 +152,7 @@ static void *
 serialize(void *arg)
 {
 	int fd = serializer_fd;
-	rvp_thread_t *last_t = NULL, *t, *next_t;
+	rvp_thread_t *t, *next_t;
 	uint32_t nblocksets_last = 0;
 
 	thread_lock();
@@ -184,17 +181,16 @@ serialize(void *arg)
 			nblocksets_last = rvp_sigblocksets_emit(fd, nblocksets_last);
 			any_emptied = false;
 			for (t = thread_head; t != NULL; t = t->t_next) {
-				if (rvp_thread_flush_to_fd(t, fd, t != last_t)){
+				if (rvp_ring_flush_to_fd(&t->t_ring, fd, &serializer_lc)){
 #if 0
 					if (t != last_t && last_t != NULL) {
 						printf("switch %" PRIu32 " -> %" PRIu32 "\n", last_t->t_id, t->t_id);
 					}
 #endif
-					last_t = t;
 					any_emptied = true; 
 				}
 			}
-			any_emptied |= rvp_signal_rings_flush_to_fd(fd);
+			any_emptied |= rvp_signal_rings_flush_to_fd(fd, &serializer_lc);
 		} while (any_emptied);
 
 		for (t = rvp_collect_garbage(); t != NULL; t = next_t) {
@@ -218,7 +214,14 @@ rvp_serializer_create(void)
 
 	thread_lock();
 	assert(thread_head->t_next == NULL);
-	rvp_thread_flush_to_fd(thread_head, serializer_fd, false);
+	/* I don't use rvp_thread_flush_to_fd() here because I do not
+	 * want to log a change of thread here under any circumstances.
+	 */
+	rvp_ring_flush_to_fd(&thread_head->t_ring, serializer_fd, NULL);
+	serializer_lc = (rvp_lastctx_t){
+		  .lc_tid = thread_head->t_id
+		, .lc_nintr_outst = 0
+	};
 	thread_unlock();
 
 	rc = real_pthread_create(&serializer, NULL, serialize, NULL);
@@ -279,6 +282,9 @@ rvp_thread_attach(rvp_thread_t *t)
 		thread_unlock();
 		errx(EXIT_FAILURE, "%s: out of thread IDs", __func__);
 	}
+
+	t->t_ring.r_tid = t->t_id;
+	t->t_ring.r_nintr_outst = 0;
 
 	t->t_next = thread_head;
 	thread_head = t;
@@ -437,7 +443,7 @@ __rvpredict_pthread_create(pthread_t *thread,
 
 	if (rc == 0) {
 		*thread = t->t_pthread;
-		rvp_trace_fork(t->t_id);
+		rvp_trace_fork(t->t_id, __builtin_return_address(0));
 		return 0;
 	}
 
@@ -472,7 +478,7 @@ __rvpredict_pthread_join(pthread_t pthread, void **retval)
 	if ((t = rvp_pthread_to_thread(pthread)) == NULL)
 		err(EXIT_FAILURE, "%s: rvp_pthread_to_thread", __func__);
 
-	rvp_trace_join(t->t_id);
+	rvp_trace_join(t->t_id, __builtin_return_address(0));
 
 	rvp_thread_mark(t);
 

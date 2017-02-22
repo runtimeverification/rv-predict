@@ -39,8 +39,11 @@ relay(void *arg)
 
 			real_pthread_sigmask(SIG_BLOCK, &sigset, NULL);
 			real_pthread_sigmask(SIG_UNBLOCK, &osigset, NULL);
+			expected_signum = relay_signum;
 		}
 		rc = sigwait(&sigset, &rcvd_signum);
+		const char *msg = "ding!\n";
+		write(STDERR_FILENO, msg, strlen(msg));
 		if (rc != 0) {
 			errx(EXIT_FAILURE, "%s: pthread_kill: %s", __func__,
 			    strerror(rc));

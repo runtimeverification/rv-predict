@@ -65,61 +65,48 @@ rvp_trace_open(void)
 }
 
 bool
-rvp_ring_flush_to_fd(rvp_ring_t *r, int fd)
+rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 {
 	uint32_t *next_consumer;
-	struct iovec iov[2], *iovp = &iov[0];
 	ssize_t nwritten;
-
-	if (!rvp_ring_get_iovs(r, &iovp, &next_consumer))
-		return false;
-
-	nwritten = writev(fd, iov, iovp - &iov[0]);
-	do {
-		--iovp;
-		nwritten -= iovp->iov_len;
-	} while (iovp != &iov[0]);
-
-	assert(nwritten == 0);
-	r->r_consumer = next_consumer;
-	return true;
-}
-
-bool
-rvp_thread_flush_to_fd(rvp_thread_t *t, int fd, bool trace_switch)
-{
-	static ssize_t total = 0, lastsw = -1;
-	static uint32_t last_tid = 0xffffffff;
-	ssize_t nwritten;
-	rvp_ring_t *r = &t->t_ring;
-	uint32_t *next_consumer;
-	threadswitch_t threadswitch = {
+	rvp_fork_join_switch_t threadswitch = {
 		  .deltop =
 		      (uintptr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SWITCH)
-		, .id = t->t_id
+		, .tid = r->r_tid
 	};
-	struct iovec iov[3] = {
-		[0] = (struct iovec){
+	rvp_sigoutst_t sigoutst = {
+		  .deltop = 
+		      (uintptr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SIGOUTST)
+		, .noutst = r->r_nintr_outst
+	};
+	struct iovec iov[4] = {
+		  [0] = (struct iovec){
 			  .iov_base = &threadswitch
 			, .iov_len = sizeof(threadswitch)
 		}
+		, [1] = (struct iovec){
+			  .iov_base = &sigoutst
+			, .iov_len = sizeof(sigoutst)
+		}
 	};
-	struct iovec *iovp = trace_switch ? &iov[1] : &iov[0];
+	struct iovec *iovp = &iov[0];
 
-	assert(!trace_switch ||
-	       (lastsw < total && last_tid != threadswitch.id));
+	if (lc == NULL)
+		;
+	else if (lc->lc_tid != r->r_tid) {
+		iovp++; /* emit 'switch' to r->r_tid */
+		if (r->r_nintr_outst != 0) {
+			iovp++; /* emit 'sigoutst' to r->r_nintr_outst */
+		}
+	} else if (lc->lc_nintr_outst != r->r_nintr_outst) {
+		iov[0] = iov[1];
+		iovp++; /* emit 'sigoutst' to r->r_nintr_outst */
+	}
 
 	if (!rvp_ring_get_iovs(r, &iovp, &next_consumer))
 		return false;
 
 	nwritten = writev(fd, iov, iovp - &iov[0]);
-	if (trace_switch)
-		lastsw = total + sizeof(threadswitch);
-	total += nwritten;
-	assert(trace_switch
-	    ? (nwritten > sizeof(threadswitch))
-	    : (nwritten > 0));
-
 	do {
 		--iovp;
 		nwritten -= iovp->iov_len;
@@ -127,6 +114,10 @@ rvp_thread_flush_to_fd(rvp_thread_t *t, int fd, bool trace_switch)
 
 	assert(nwritten == 0);
 	r->r_consumer = next_consumer;
+	if (lc != NULL) {
+		lc->lc_tid = r->r_tid;
+		lc->lc_nintr_outst = r->r_nintr_outst;
+	}
 	return true;
 }
 

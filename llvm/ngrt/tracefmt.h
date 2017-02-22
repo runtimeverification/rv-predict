@@ -78,6 +78,16 @@ typedef enum _rvp_op {
 	, RVP_OP_SIGMASKMEMO	= 39	// establish a new number -> mask
 					// mapping (memoize mask)
 	, RVP_OP_MASKSIGS	= 40	// mask signals
+	, RVP_OP_SIGOUTST	= 41	// set the number of signals
+					// running concurrently on the
+					// current thread.  Note that
+					// this is a level of "concurrency,"
+					// not a signal "depth," because
+					// the wrapper function for signal
+					// handlers is reentrant, and it may
+					// race with itself to increase the
+					// number of interrupts outstanding
+					// ("depth").
 	, RVP_NOPS
 } rvp_op_t;
 
@@ -112,6 +122,11 @@ typedef struct {
 	uintptr_t deltop;
 	uint32_t signum;
 } __packed __aligned(sizeof(uint32_t)) rvp_entersig_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uint32_t noutst;
+} __packed __aligned(sizeof(uint32_t)) rvp_sigoutst_t;
 
 typedef struct {
 	uintptr_t deltop;
@@ -153,7 +168,9 @@ typedef struct {
 	uintptr_t deltop;
 } __packed __aligned(sizeof(uint32_t)) rvp_end_enterfn_exitfn_t;
 
-typedef rvp_end_enterfn_exitfn_t rvp_exitsig_t;
+typedef struct {
+	uintptr_t deltop;
+} rvp_exitsig_t;
 
 typedef struct {
 	uintptr_t deltop;

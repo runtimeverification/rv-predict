@@ -12,10 +12,12 @@
 #include <sys/stat.h>	/* for open(2) */
 #include <fcntl.h>	/* for open(2) */
 
-#include "nbcompat.h"	/* for __arraycount */
+#include "nbcompat.h"	/* for __arraycount, offsetof */
 #include "tracefmt.h"
 #include "legacy.h"
 #include "reader.h"
+
+#define	RSVD_NINTR_OUTST 0
 
 typedef union {
 	uintptr_t ub_pc;
@@ -26,6 +28,8 @@ typedef union {
 	rvp_load8_store8_t ub_load8_store8;
 	rvp_cog_t ub_cog;
 	rvp_entersig_t ub_entersig;
+	rvp_exitsig_t ub_exitsig;
+	rvp_sigoutst_t ub_sigoutst;
 	rvp_sigest_t ub_sigest;
 	rvp_sigdis_t ub_sigdis;
 	rvp_sigmaskmemo_t ub_sigmaskmemo;
@@ -59,9 +63,9 @@ typedef struct _rvp_thread_pstate {
 	uintptr_t	ts_lastpc;
 	rvp_callstack_t	ts_callstack;
 	bool		ts_present;
-	uint64_t	ts_generation;
-	uint64_t	ts_nops;
-	uint64_t	ts_last_gid;
+	uint64_t	ts_generation[2];
+	uint64_t	ts_nops[2];
+	uint64_t	ts_last_gid[2];
 } rvp_thread_pstate_t;
 
 /* parse state: global */
@@ -71,6 +75,7 @@ typedef struct _rvp_pstate {
 	uintptr_t		ps_deltop_first, ps_deltop_last;
 	uint32_t		ps_curthread;
 	const rvp_emitters_t	*ps_emitters;
+	uint32_t		ps_nintr_outst;
 } rvp_pstate_t;
 
 typedef struct _intmax_item intmax_item_t;
@@ -102,6 +107,8 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 	, [RVP_OP_BEGIN] = OP_INFO_INIT(rvp_begin_t, "begin thread")
 	, [RVP_OP_COG] = OP_INFO_INIT(rvp_cog_t, "change of generation")
 	, [RVP_OP_END] = OP_INFO_INIT(rvp_end_enterfn_exitfn_t, "end thread")
+	, [RVP_OP_SIGOUTST] = OP_INFO_INIT(rvp_sigoutst_t,
+	    "outstanding signals")
 	, [RVP_OP_SWITCH] = OP_INFO_INIT(rvp_fork_join_switch_t,
 					 "switch thread")
 	, [RVP_OP_FORK] = OP_INFO_INIT(rvp_fork_join_switch_t,
@@ -145,6 +152,7 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 static void emit_no_jump(const rvp_pstate_t *, uintptr_t);
 static void emit_legacy_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
     bool, int);
+static void emit_fork_metadata(uint64_t, uint64_t, uint32_t);
 
 static uint32_t get_next_thdfd(uintmax_t);
 
@@ -201,7 +209,6 @@ rvp_pstate_extend_threads_over(rvp_pstate_t *ps, uint32_t tid,
     rvp_thread_pstate_t *othread, uint32_t onthreads)
 {
 	int i;
-	rvp_thread_pstate_t *ts;
 
 	assert(tid >= onthreads);
 
@@ -210,7 +217,7 @@ rvp_pstate_extend_threads_over(rvp_pstate_t *ps, uint32_t tid,
 	     ps->ps_nthreads *= 2)
 		;	/* do nothing */
 
-	ps->ps_thread = malloc(sizeof(rvp_thread_pstate_t) * ps->ps_nthreads);
+	ps->ps_thread = calloc(ps->ps_nthreads, sizeof(rvp_thread_pstate_t));
 	if (ps->ps_thread == NULL) {
 		err(EXIT_FAILURE, "%s: malloc(%" PRIu32 " threads", __func__,
 		    ps->ps_nthreads);
@@ -222,11 +229,6 @@ rvp_pstate_extend_threads_over(rvp_pstate_t *ps, uint32_t tid,
 		else
 			ps->ps_thread[i].ts_present = false;
 	}
-	ts = &ps->ps_thread[tid];
-	assert(!ts->ts_present);
-	ts->ts_lastpc = ps->ps_deltop_first;
-	ts->ts_callstack = (rvp_callstack_t){NULL, 0};
-	ts->ts_present = true;
 	if (othread != NULL)
 		free(othread);
 }
@@ -239,8 +241,15 @@ rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 		    ps->ps_nthreads);
 	}
 	ps->ps_curthread = tid;
-	ps->ps_thread[tid].ts_generation = generation;
-	ps->ps_thread[tid].ts_nops = 0;
+	ps->ps_nintr_outst = 0;
+	rvp_thread_pstate_t *ts = &ps->ps_thread[tid];
+	assert(!ts->ts_present);
+	ts->ts_lastpc = ps->ps_deltop_first;
+	ts->ts_callstack = (rvp_callstack_t){NULL, 0};
+	ts->ts_present = true;
+	ts->ts_generation[0] = generation;
+	ts->ts_generation[1] = 0;
+	ts->ts_nops[ps->ps_nintr_outst] = 0;
 }
 
 static void
@@ -263,7 +272,9 @@ rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters, uintptr_t op0,
 	ps->ps_thread = NULL;
 	ps->ps_nthreads = 0;
 
+#if 0
 	rvp_pstate_begin_thread(ps, tid, generation);
+#endif
 }
 
 static size_t
@@ -445,9 +456,10 @@ static uint32_t
 get_next_thdfd(uintmax_t tid)
 {
 	int fd, rc;
-	char buf[sizeof("0000000000000000_trace.bin")];
+	static int next_trace_fileid = 0;
+	char buf[sizeof("18446744073709551615_trace.bin")];
 
-	rc = snprintf(buf, sizeof(buf), "%" PRIuMAX "_trace.bin", tid - 1);
+	rc = snprintf(buf, sizeof(buf), "%d_trace.bin", next_trace_fileid++);
 	if (rc < 0 || rc >= sizeof(buf))
 		errx(EXIT_FAILURE, "%s: snprintf", __func__);
 
@@ -475,21 +487,117 @@ rvp_pstate_next_gid(const rvp_pstate_t *ps)
 #else
 	uint64_t gid;
 	rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
-	assert(ts->ts_generation <= UINT16_MAX);
-	assert(ts->ts_nops < UINT32_MAX);
+	assert(ts->ts_generation[ps->ps_nintr_outst] <= UINT16_MAX);
+	assert(ts->ts_nops[ps->ps_nintr_outst] < UINT32_MAX);
 	assert(ps->ps_curthread <= UINT16_MAX);
-	++ts->ts_nops;
-	gid = (ts->ts_generation << 48) | (ts->ts_nops << 16) |
-	    ps->ps_curthread;
-	assert(ts->ts_last_gid < gid);
-	ts->ts_last_gid = gid;
+	++ts->ts_nops[ps->ps_nintr_outst];
+	gid = (ts->ts_generation[ps->ps_nintr_outst] << 48) |
+	    (ts->ts_nops[ps->ps_nintr_outst] << 16) | ps->ps_curthread;
+	assert(ts->ts_last_gid[ps->ps_nintr_outst] < gid);
+	ts->ts_last_gid[ps->ps_nintr_outst] = gid;
 	return gid;
 #endif
 }
 
+static uint64_t
+legacy_tid(const rvp_pstate_t *ps)
+{
+	/* TBD when we're handling multiple outstanding signals, put that
+	 * into the TID
+	 */
+	assert(ps->ps_nintr_outst <= 0x7fffffff);
+	if (ps->ps_nintr_outst != RSVD_NINTR_OUTST) {
+		return ps->ps_curthread | ((uint64_t)ps->ps_nintr_outst << 32) |
+		    ((uint64_t)1 << 63);
+	}
+
+	return ps->ps_curthread;
+}
+
+static uint64_t
+legacy_signal_tid(uint32_t signum)
+{
+	return (uint64_t)signum | ((uint64_t)RSVD_NINTR_OUTST << 32) |
+	    ((uint64_t)1 << 63);
+}
+
+static void
+emit_signal_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op)
+{
+	int fd;
+	legacy_event_t auxev, ev;
+	rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
+
+	switch (op) {
+	case RVP_OP_SIGEST:
+		ev.type = START;
+		ev.addr = legacy_signal_tid(ub->ub_sigest.signum);
+		ev.value = 0;
+		emit_fork_metadata(
+		    legacy_tid(ps), legacy_signal_tid(ub->ub_sigest.signum),
+		    compress_pc(ts->ts_lastpc));
+		break;
+	case RVP_OP_ENTERSIG:
+		/* Emit events 'begin' and 'acquire'.
+		 *
+		 * The 'begin' is implicit in the first use of this signal's
+		 * TID
+		 *
+		 * I use a WRITE_LOCK for the 'acquire'.  The 'acquire'
+		 * is to ensure that this signal respects the signal mask.
+		 * Note that, for now, I treat any non-zero mask like it
+		 * blocks *all* signals.
+		 */
+
+		auxev.type = START;
+		auxev.tid = legacy_signal_tid(ub->ub_entersig.signum);
+		auxev.stmtid = compress_pc(ts->ts_lastpc);
+		auxev.gid = rvp_pstate_next_gid(ps);
+		auxev.addr = legacy_tid(ps);
+		auxev.value = 0;
+
+		fd = intmax_table_put(&thd_table, auxev.tid, NULL);
+		if (write(fd, &auxev, sizeof(auxev)) == -1)
+			err(EXIT_FAILURE, "%s: write", __func__);
+
+		ev.type = WRITE_LOCK;
+		ev.addr = emit_addr(ps->ps_deltop_first +
+		    offsetof(deltops_t, rsvd) -
+		    offsetof(deltops_t, matrix[0][0]));
+
+		emit_fork_metadata(
+		    legacy_signal_tid(ub->ub_entersig.signum),
+		    legacy_tid(ps), compress_pc(ts->ts_lastpc));
+		break;
+	case RVP_OP_EXITSIG:
+		/* Emit events 'release' and 'end'.
+		 *
+		 * I use a WRITE_UNLOCK for the 'release'.
+		 *
+		 * The 'end' is implicit in the last use of the signal's TID.
+		 */
+		ev.type = WRITE_UNLOCK;
+		ev.addr = emit_addr(ps->ps_deltop_first +
+		    offsetof(deltops_t, rsvd) -
+		    offsetof(deltops_t, matrix[0][0]));
+		break;
+	default:
+		return;
+	}
+
+	ev.tid = legacy_tid(ps);
+	ev.stmtid = compress_pc(ts->ts_lastpc);
+	// assign GID after we're sure this op is one we can handle
+	ev.gid = rvp_pstate_next_gid(ps);
+
+	fd = intmax_table_put(&thd_table, legacy_tid(ps), NULL);
+	if (write(fd, &ev, sizeof(ev)) == -1)
+		err(EXIT_FAILURE, "%s: write", __func__);
+}
+
 static void
 emit_extended_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub,
-    rvp_op_t op, bool is_load, int field_width)
+    rvp_op_t op)
 {
 	int fd, i;
 	legacy_event_t ev[3];
@@ -509,6 +617,7 @@ emit_extended_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub,
 		ev[1].type = WRITE;
 		break;
 	default:
+		emit_signal_legacy_op(ps, ub, op);
 		return;
 	}
 
@@ -519,7 +628,7 @@ emit_extended_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub,
 		 * window than any of its side-effects.
 		 */
 		ev[i].gid = rvp_pstate_next_gid(ps);
-		ev[i].tid = ps->ps_curthread;
+		ev[i].tid = legacy_tid(ps);
 		ev[i].stmtid = compress_pc(ts->ts_lastpc);
 	}
 
@@ -548,9 +657,29 @@ emit_extended_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub,
 	ev[2].type = WRITE_UNLOCK;
 	ev[2].addr = emit_addr(~ev[1].addr);
 
-	fd = intmax_table_put(&thd_table, ps->ps_curthread, NULL);
+	fd = intmax_table_put(&thd_table, legacy_tid(ps), NULL);
 	if (write(fd, &ev, sizeof(ev)) == -1)
 		err(EXIT_FAILURE, "%s: write", __func__);
+}
+
+static void
+emit_fork_metadata(uint64_t curtid, uint64_t newtid, uint32_t stmtid)
+{
+	if (thdfd == -1) {
+		thdfd = open("thd_metadata.bin",
+		    O_WRONLY|O_CREAT|O_TRUNC, 0600);
+		if (thdfd == -1)
+			err(EXIT_FAILURE, "%s: open", __func__);
+	}
+	thd_record_t thd_record = {
+		  .newtid = newtid
+		, .curtid = curtid
+		, .stmtid = stmtid
+	};
+	if (writeall(thdfd, &thd_record, sizeof(thd_record)) == -1) {
+		errx(EXIT_FAILURE, "%s: could not write record",
+		     __func__);
+	}
 }
 
 static void
@@ -562,12 +691,12 @@ emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	int lop = rvp_op_to_legacy_op(op);
 
 	if (lop < 0) {
-		emit_extended_legacy_op(ps, ub, op, is_load, field_width);
+		emit_extended_legacy_op(ps, ub, op);
 		return;
 	}
 
 	ev.gid = rvp_pstate_next_gid(ps);
-	ev.tid = ps->ps_curthread;
+	ev.tid = legacy_tid(ps);
 	ev.stmtid = compress_pc(ts->ts_lastpc);
 
 	assert(lop <= UINT8_MAX);
@@ -600,24 +729,8 @@ emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	default:
 		errx(EXIT_FAILURE, "%s: conversion unknown", __func__);
 	case RVP_OP_FORK:
-		if (thdfd == -1) {
-			thdfd = open("thd_metadata.bin",
-			    O_WRONLY|O_CREAT|O_TRUNC, 0600);
-			if (thdfd == -1)
-				err(EXIT_FAILURE, "%s: open", __func__);
-		}
-		struct {
-			uint64_t newtid;
-			uint64_t curtid;
-			uint32_t stmtid;
-		} __packed thd_record = {.newtid = ub->ub_fork_join_switch.tid,
-		     .curtid = ps->ps_curthread,
-		     .stmtid = compress_pc(ts->ts_lastpc)
-		};
-		if (writeall(thdfd, &thd_record, sizeof(thd_record)) == -1) {
-			errx(EXIT_FAILURE, "%s: could not write record",
-			     __func__);
-		}
+		emit_fork_metadata(ps->ps_curthread,
+		    ub->ub_fork_join_switch.tid, compress_pc(ts->ts_lastpc));
 		/*FALLTHROUGH*/
 	case RVP_OP_JOIN:
 		ev.addr = ub->ub_fork_join_switch.tid;
@@ -631,7 +744,7 @@ emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		ev.addr = emit_addr(ub->ub_acquire_release.addr);
 		break;
 	}
-	int fd = intmax_table_put(&thd_table, ps->ps_curthread, NULL);
+	int fd = intmax_table_put(&thd_table, legacy_tid(ps), NULL);
 	if (write(fd, &ev, sizeof(ev)) == -1)
 		err(EXIT_FAILURE, "%s: write", __func__);
 }
@@ -639,8 +752,8 @@ emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 static void
 print_jump(const rvp_pstate_t *ps, uintptr_t pc)
 { 
-	printf("tid %" PRIu32 " pc %#016" PRIxPTR " jump\n",
-	    ps->ps_curthread, pc);
+	printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " jump\n",
+	    ps->ps_curthread, ps->ps_nintr_outst, pc);
 }
 
 static void
@@ -654,9 +767,9 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_ATOMIC_STORE8:
 	case RVP_OP_LOAD8:
 	case RVP_OP_STORE8:
-		printf("tid %" PRIu32 " pc %#016" PRIxPTR
+		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s %#.*" PRIx64 " %s [%#016" PRIxPTR "]\n",
-		    ps->ps_curthread,
+		    ps->ps_curthread, ps->ps_nintr_outst,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc, oi->oi_descr,
 		    field_width,
 		    ub->ub_load8_store8.data,
@@ -675,9 +788,9 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_STORE2:
 	case RVP_OP_LOAD1:
 	case RVP_OP_STORE1:
-		printf("tid %" PRIu32 " pc %#016" PRIxPTR
+		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s %#.*" PRIx32 " %s [%#016" PRIxPTR "]\n",
-		    ps->ps_curthread,
+		    ps->ps_curthread, ps->ps_nintr_outst,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc, oi->oi_descr,
 		    field_width,
 		    ub->ub_load1_2_4_store1_2_4.data,
@@ -686,79 +799,91 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		break;
 	case RVP_OP_BEGIN:
 		printf(
-		    "tid %" PRIu32 " pc %#016" PRIxPTR " %s"
+		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
 		    " generation %" PRIu64 "\n",
-		    ps->ps_curthread, ps->ps_thread[ps->ps_curthread].ts_lastpc,
+		    ps->ps_curthread, ps->ps_nintr_outst,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc,
 		    oi->oi_descr, ub->ub_begin.generation);
+		break;
+	case RVP_OP_SIGOUTST:
+		printf(
+		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
+		    " -> %" PRIu32 "\n",
+		    ps->ps_curthread, ps->ps_nintr_outst,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc,
+		    oi->oi_descr, ub->ub_sigoutst.noutst);
 		break;
 	case RVP_OP_COG:
 		printf(
-		    "tid %" PRIu32 " pc %#016" PRIxPTR " %s"
-		    " generation %" PRIu64 "\n",
-		    ps->ps_curthread, ps->ps_thread[ps->ps_curthread].ts_lastpc,
+		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
+		    " -> %" PRIu64 "\n",
+		    ps->ps_curthread, ps->ps_nintr_outst,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc,
 		    oi->oi_descr, ub->ub_cog.generation);
 		break;
 	case RVP_OP_END:
 	default:
-		printf("tid %" PRIu32 " pc %#016" PRIxPTR " %s\n",
-		    ps->ps_curthread,
+		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s\n",
+		    ps->ps_curthread, ps->ps_nintr_outst,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc, oi->oi_descr);
 		break;
 	case RVP_OP_FORK:
 	case RVP_OP_JOIN:
 	case RVP_OP_SWITCH:
 		printf(
-		    "tid %" PRIu32 " pc %#016" PRIxPTR " %s tid %" PRIu32 "\n",
-		    ps->ps_curthread, ps->ps_thread[ps->ps_curthread].ts_lastpc,
+		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s tid %" PRIu32 "\n",
+		    ps->ps_curthread, ps->ps_nintr_outst,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc,
 		    oi->oi_descr, ub->ub_fork_join_switch.tid);
 		// TBD create a fledgling rvp_thread_pstate_t on fork?
 		break;
 	case RVP_OP_ENTERSIG:
 		printf(
-		    "tid %" PRIu32 " pc %#016" PRIxPTR
+		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s signal %" PRIu32 "\n",
-		    ps->ps_curthread, ps->ps_thread[ps->ps_curthread].ts_lastpc,
+		    ps->ps_curthread, ps->ps_nintr_outst,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc,
 		    oi->oi_descr, ub->ub_entersig.signum);
 		break;
 	case RVP_OP_ACQUIRE:
 	case RVP_OP_RELEASE:
-		printf("tid %" PRIu32 " pc %#016" PRIxPTR
+		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s [%#016" PRIxPTR "]\n",
-		    ps->ps_curthread,
+		    ps->ps_curthread, ps->ps_nintr_outst,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc, oi->oi_descr,
 		    ub->ub_acquire_release.addr);
 		break;
 	case RVP_OP_SIGDIS:
-		printf("tid %" PRIu32 " pc %#016" PRIxPTR
+		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s signal %" PRIu32 "\n",
-		    ps->ps_curthread,
+		    ps->ps_curthread, ps->ps_nintr_outst,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc, oi->oi_descr,
 		    ub->ub_sigest.signum);
 		break;
 	case RVP_OP_SIGEST:
-		printf("tid %" PRIu32 " pc %#016" PRIxPTR
+		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s signal %" PRIu32 " handler %#016" PRIxPTR
 		    " mask #%" PRIu32 "\n",
-		    ps->ps_curthread,
+		    ps->ps_curthread, ps->ps_nintr_outst,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc, oi->oi_descr,
 		    ub->ub_sigest.signum,
 		    ub->ub_sigest.handler,
 		    ub->ub_sigest.masknum);
 		break;
 	case RVP_OP_SIGMASKMEMO:
-		printf("tid %" PRIu32 " pc %#016" PRIxPTR
+		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s #%" PRIu32 " origin %" PRIu32
 		    " bits %#016" PRIx64 "\n",
-		    ps->ps_curthread,
+		    ps->ps_curthread, ps->ps_nintr_outst,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc, oi->oi_descr,
 		    ub->ub_sigmaskmemo.masknum,
 		    ub->ub_sigmaskmemo.origin,
 		    ub->ub_sigmaskmemo.mask);
 		break;
 	case RVP_OP_MASKSIGS:
-		printf("tid %" PRIu32 " pc %#016" PRIxPTR
+		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s #%" PRIu32 "\n",
-		    ps->ps_curthread,
+		    ps->ps_curthread, ps->ps_nintr_outst,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc, oi->oi_descr,
 		    ub->ub_masksigs.masknum);
 		break;
@@ -797,11 +922,17 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	/* need to top off buffer? */
 	if (*nfullp < oi->oi_reclen)
 		return oi->oi_reclen - *nfullp;
-	lastpc = ps->ps_thread[ps->ps_curthread].ts_lastpc;
+	/* If this is the first 'begin', then we won't have a valid
+	 * ps->ps_curthread until after the rvp_pstate_begin_thread()
+	 * call.
+	 */
 	if (op == RVP_OP_BEGIN) {
 		rvp_pstate_begin_thread(ps, ub->ub_begin.tid,
 		    ub->ub_begin.generation);
 	}
+	assert(op != RVP_OP_ENTERSIG || ps->ps_nintr_outst != 0);
+
+	lastpc = ps->ps_thread[ps->ps_curthread].ts_lastpc;
 	ps->ps_thread[ps->ps_curthread].ts_lastpc = lastpc + jmpvec;
 	switch (op) {
 	case RVP_OP_ATOMIC_LOAD8:
@@ -850,13 +981,25 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 
 	if (op == RVP_OP_COG) {
 		rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
-		assert(ts->ts_generation < ub->ub_cog.generation);
-		ts->ts_generation = ub->ub_cog.generation;
-		ts->ts_nops = 0;
+		assert(ps->ps_nintr_outst <= 1);
+		assert(ts->ts_generation[ps->ps_nintr_outst] < ub->ub_cog.generation);
+		ts->ts_generation[ps->ps_nintr_outst] = ub->ub_cog.generation;
+		ts->ts_nops[ps->ps_nintr_outst] = 0;
 	}
 
-	if (op == RVP_OP_SWITCH)
+	if (op == RVP_OP_END) {
+		rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
+		ts->ts_present = false;
+	}
+
+	if (op == RVP_OP_SWITCH) {
 		ps->ps_curthread = ub->ub_fork_join_switch.tid;
+		ps->ps_nintr_outst = 0;
+	} else if (op == RVP_OP_EXITSIG) {
+		assert(ps->ps_nintr_outst != 0);
+	} else if (op == RVP_OP_SIGOUTST) {
+		ps->ps_nintr_outst = ub->ub_sigoutst.noutst;
+	}
 
 	advance(&ub->ub_bytes[0], nfullp, oi->oi_reclen);
 	return 0;

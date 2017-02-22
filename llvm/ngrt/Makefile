@@ -9,7 +9,7 @@ LIB=rvprt
 
 CC=clang
 CFLAGS+=-std=c11
-COPTS+=-O3
+COPTS+=-O3 -O0
 DBG+=-g
 CPPFLAGS+=-Wuninitialized
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT

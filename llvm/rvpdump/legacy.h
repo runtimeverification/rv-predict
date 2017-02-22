@@ -105,4 +105,10 @@ typedef struct _legacy_event {
 	uint8_t type;
 } __packed legacy_event_t;
 
+typedef struct _thd_record {
+	uint64_t newtid;
+	uint64_t curtid;
+	uint32_t stmtid;
+} __packed thd_record_t;
+
 #endif /* _RVP_LEGACY_H_ */

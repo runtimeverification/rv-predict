@@ -71,9 +71,23 @@ typedef enum _rvp_op {
 	, RVP_OP_ATOMIC_STORE8	= 32
 	, RVP_OP_ATOMIC_STORE16	= 33
 	, RVP_OP_COG		= 34	// change of generation
-	, RVP_OP_SIGACT		= 35	// establish signal action
+	, RVP_OP_SIGEST		= 35	// establish signal action
 	, RVP_OP_ENTERSIG	= 36	// signal delivery
 	, RVP_OP_EXITSIG	= 37
+	, RVP_OP_SIGDIS		= 38	// disestablish signal action
+	, RVP_OP_SIGMASKMEMO	= 39	// establish a new number -> mask
+					// mapping (memoize mask)
+	, RVP_OP_MASKSIGS	= 40	// mask signals
+	, RVP_OP_SIGOUTST	= 41	// set the number of signals
+					// running concurrently on the
+					// current thread.  Note that
+					// this is a level of "concurrency,"
+					// not a signal "depth," because
+					// the wrapper function for signal
+					// handlers is reentrant, and it may
+					// race with itself to increase the
+					// number of interrupts outstanding
+					// ("depth").
 	, RVP_NOPS
 } rvp_op_t;
 
@@ -82,6 +96,7 @@ typedef enum _rvp_op {
 typedef const char deltop_t;
 
 struct _deltops {
+	char rsvd;
 	deltop_t matrix[RVP_NJMPS][RVP_NOPS];
 };
 
@@ -110,6 +125,35 @@ typedef struct {
 
 typedef struct {
 	uintptr_t deltop;
+	uint32_t noutst;
+} __packed __aligned(sizeof(uint32_t)) rvp_sigoutst_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uint32_t masknum;
+} __packed __aligned(sizeof(uint32_t)) rvp_masksigs_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uint64_t mask;
+	uint32_t origin;
+	uint32_t masknum;
+} __packed __aligned(sizeof(uint32_t)) rvp_sigmaskmemo_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uintptr_t handler;
+	uint32_t signum;
+	uint32_t masknum;
+} __packed __aligned(sizeof(uint32_t)) rvp_sigest_t;
+
+typedef struct {
+	uintptr_t deltop;
+	uint32_t signum;
+} __packed __aligned(sizeof(uint32_t)) rvp_sigdis_t;
+
+typedef struct {
+	uintptr_t deltop;
 	uintptr_t addr;
 	uint32_t data;
 } __packed __aligned(sizeof(uint32_t)) rvp_load1_2_4_store1_2_4_t;
@@ -124,7 +168,9 @@ typedef struct {
 	uintptr_t deltop;
 } __packed __aligned(sizeof(uint32_t)) rvp_end_enterfn_exitfn_t;
 
-typedef rvp_end_enterfn_exitfn_t rvp_exitsig_t;
+typedef struct {
+	uintptr_t deltop;
+} rvp_exitsig_t;
 
 typedef struct {
 	uintptr_t deltop;

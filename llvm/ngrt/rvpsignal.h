@@ -22,11 +22,18 @@ typedef struct _rvp_signal {
 	void			(*s_sigaction)(int, siginfo_t *, void *);
 } rvp_signal_t;
 
-rvp_ring_t *rvp_signal_ring_get(rvp_thread_t *);
-void rvp_signal_ring_put(rvp_ring_t *);
+rvp_ring_t *rvp_signal_ring_get(rvp_thread_t *, uint32_t);
+void rvp_signal_ring_put(rvp_thread_t *, rvp_ring_t *);
 
 rvp_signal_t *rvp_signal_lookup(int);
 
 int __rvpredict_sigaction(int, const struct sigaction *, struct sigaction *);
+int __rvpredict_sigprocmask(int, const sigset_t *, sigset_t *);
+int __rvpredict_pthread_sigmask(int, const sigset_t *, sigset_t *);
+
+uint32_t rvp_sigblocksets_emit(int, uint32_t);
+rvp_sigblockset_t *intern_sigset(const sigset_t *);
+void rvp_signal_rings_replenish(void);
+bool rvp_signal_rings_flush_to_fd(int, rvp_lastctx_t *);
 
 #endif /* _RVP_SIGNAL_H_ */

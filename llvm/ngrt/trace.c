@@ -65,64 +65,59 @@ rvp_trace_open(void)
 }
 
 bool
-rvp_thread_flush_to_fd(rvp_thread_t *t, int fd, bool trace_switch)
+rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 {
-	int iovcnt = 0;
-	static ssize_t total = 0, lastsw = -1;
-	static uint32_t last_tid = 0xffffffff;
+	uint32_t *next_consumer;
 	ssize_t nwritten;
-	rvp_ring_t *r = &t->t_ring;
-	uint32_t *producer = r->r_producer, *consumer = r->r_consumer;
-	threadswitch_t threadswitch = {
+	rvp_fork_join_switch_t threadswitch = {
 		  .deltop =
 		      (uintptr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SWITCH)
-		, .id = t->t_id
+		, .tid = r->r_tid
 	};
-	struct iovec iov[3];
-
-	if (consumer == producer)
-		return false;
-
-	if (trace_switch) {
-		assert(lastsw < total);
-		assert(last_tid != threadswitch.id);
-		iov[iovcnt++] = (struct iovec){
+	rvp_sigoutst_t sigoutst = {
+		  .deltop = 
+		      (uintptr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SIGOUTST)
+		, .noutst = r->r_nintr_outst
+	};
+	struct iovec iov[4] = {
+		  [0] = (struct iovec){
 			  .iov_base = &threadswitch
 			, .iov_len = sizeof(threadswitch)
-		};
+		}
+		, [1] = (struct iovec){
+			  .iov_base = &sigoutst
+			, .iov_len = sizeof(sigoutst)
+		}
+	};
+	struct iovec *iovp = &iov[0];
+
+	if (lc == NULL)
+		;
+	else if (lc->lc_tid != r->r_tid) {
+		iovp++; /* emit 'switch' to r->r_tid */
+		if (r->r_nintr_outst != 0) {
+			iovp++; /* emit 'sigoutst' to r->r_nintr_outst */
+		}
+	} else if (lc->lc_nintr_outst != r->r_nintr_outst) {
+		iov[0] = iov[1];
+		iovp++; /* emit 'sigoutst' to r->r_nintr_outst */
 	}
 
-	if (consumer < producer) {
-		iov[iovcnt++] = (struct iovec){
-			  .iov_base = consumer
-			, .iov_len = (producer - consumer) *
-				     sizeof(consumer[0])
-		};
-	} else {	/* consumer > producer */
-		iov[iovcnt++] = (struct iovec){
-			  .iov_base = consumer
-			, .iov_len = (r->r_last + 1 - consumer) *
-				     sizeof(consumer[0])
-		};
-		iov[iovcnt++] = (struct iovec){
-			  .iov_base = r->r_items
-			, .iov_len = (producer - r->r_items) *
-				     sizeof(r->r_items[0])
-		};
-	}
-	nwritten = writev(fd, iov, iovcnt);
-	if (trace_switch)
-		lastsw = total + sizeof(threadswitch);
-	total += nwritten;
-	assert(trace_switch
-	    ? (nwritten > (ssize_t)sizeof(threadswitch))
-	    : (nwritten > 0));
+	if (!rvp_ring_get_iovs(r, &iovp, &next_consumer))
+		return false;
 
-	while (--iovcnt >= 0)
-		nwritten -= iov[iovcnt].iov_len;
+	nwritten = writev(fd, iov, iovp - &iov[0]);
+	do {
+		--iovp;
+		nwritten -= iovp->iov_len;
+	} while (iovp != &iov[0]);
 
 	assert(nwritten == 0);
-	r->r_consumer = producer;
+	r->r_consumer = next_consumer;
+	if (lc != NULL) {
+		lc->lc_tid = r->r_tid;
+		lc->lc_nintr_outst = r->r_nintr_outst;
+	}
 	return true;
 }
 

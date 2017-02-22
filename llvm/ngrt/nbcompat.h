@@ -4,8 +4,13 @@
 #define _RVP_NBCOMPAT_H_
 
 #include <sys/param.h>
+#include <stddef.h>
 
 #ifndef __NetBSD__
+
+#ifndef offsetof
+#define offsetof __builtin_offsetof
+#endif
 
 #ifndef __arraycount
 #define __arraycount(__a)	(sizeof(__a) / sizeof((__a)[0]))

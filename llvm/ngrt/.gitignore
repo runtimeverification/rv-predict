@@ -1,4 +1,5 @@
 *.a
+*.ll
 *.o
 *.pico
 *.po
@@ -7,4 +8,6 @@
 .Makefile.tags
 .depend
 .gdbinit
+eitherorboth
+sigcount
 tags

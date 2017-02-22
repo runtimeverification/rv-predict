@@ -58,7 +58,7 @@ public class TraceCache {
     /**
      * Returns the power of two that is greater than the given integer.
      */
-    protected final int getNextPowerOfTwo(int x) {
+    protected static final int getNextPowerOfTwo(int x) {
         return 1 << (32 - Integer.numberOfLeadingZeros(x));
     }
 
@@ -118,4 +118,84 @@ public class TraceCache {
         return rawTraces;
     }
 
+    protected final List<RawTrace> readEventWindow() throws IOException {
+        List<RawTrace> rawTraces =  new ArrayList<>();
+	int maxEvents = config.windowSize;
+        int capacity = getNextPowerOfTwo(maxEvents - 1);
+        if (config.stacks()) {
+            capacity <<= 1;
+        }
+        List<Event> events = new ArrayList<>(capacity);
+	for (int i = 0; i < maxEvents; i++) {
+		Event event;
+		long leastGID = Long.MAX_VALUE;
+		IEventReader leastReader = null;
+		Iterator<IEventReader> iter = readers.iterator();
+		while (iter.hasNext()) {
+			IEventReader reader = iter.next();
+			event = reader.lastReadEvent();
+			if (event != null && event.getGID() < leastGID) {
+//				System.err.println("choosing new reader because gid " + event.getGID() + " < " + leastGID);
+				leastReader = reader;
+				leastGID = event.getGID();
+			}
+		}
+		if (leastReader == null)
+			break;
+		event = leastReader.lastReadEvent();
+		assert event != null;
+		events.add(event);
+//		System.err.println("adding event " + event.getGID());
+                try {
+			leastReader.readEvent();
+                } catch (EOFException e) {
+			readers.remove(leastReader);
+                }
+	}
+	System.err.println("got " + events.size() + " events out of " + maxEvents);
+	/* Make GIDs compact. */
+	final int n = events.size();
+	if (n > 0 && events.get(n - 1).getGID() - events.get(0).getGID() >= config.windowSize) {
+		System.err.println("Compacting GIDs");
+		long gid = 0;
+		for (int i = 0; i < n; i++)
+			events.get(i).setGID(gid++);
+	}
+	if (n > 0) {
+		int i, tidStart = 0;
+		events.sort((l, r) -> {
+			long lt = l.getTID(), rt = r.getTID();
+			return (lt < rt) ? -1 : ((lt > rt) ? 1 : 0);
+		});
+		long lastTID = events.get(0).getTID();
+
+		for (i = 1; i < n; i++) {
+/*
+			assert evarray[i - 1].getGID() < evarray[i].getGID();
+*/
+			if (events.get(i).getTID() == lastTID)
+				continue;
+
+			rawTraces.add(tidSpanToRawTrace(events, tidStart, i));
+			lastTID = events.get(i).getTID();
+			tidStart = i;
+		}
+
+		rawTraces.add(tidSpanToRawTrace(events, tidStart, n));
+	}
+        return rawTraces;
+    }
+    private static RawTrace tidSpanToRawTrace(List<Event> events,
+	    int tidStart, int tidEnd) {
+	List<Event> tidEvents = events.subList(tidStart, tidEnd);
+	int n = tidEvents.size(), length = getNextPowerOfTwo(n);
+	tidEvents.sort((l, r) -> l.compareTo(r));
+	return new RawTrace(0, n, tidEvents.toArray(new Event[length]));
+    }
+    public Trace getTraceWindow() throws IOException {
+        List<RawTrace> rawTraces = readEventWindow();
+
+        /* finish reading events and create the Trace object */
+        return rawTraces.isEmpty() ? null : crntState.initNextTraceWindow(rawTraces);
+    }
 }

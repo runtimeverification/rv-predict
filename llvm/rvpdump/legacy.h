@@ -99,10 +99,16 @@ typedef enum _legacy_op {
 typedef struct _legacy_event {
 	uint64_t gid;
 	uint64_t tid;
-	uint32_t id;
+	uint32_t stmtid;
 	uint64_t addr;
 	uint64_t value;
 	uint8_t type;
 } __packed legacy_event_t;
+
+typedef struct _thd_record {
+	uint64_t newtid;
+	uint64_t curtid;
+	uint32_t stmtid;
+} __packed thd_record_t;
 
 #endif /* _RVP_LEGACY_H_ */

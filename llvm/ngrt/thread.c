@@ -12,6 +12,8 @@
 
 #include "init.h"
 #include "interpose.h"
+#include "relay.h"
+#include "rvpsignal.h"
 #include "thread.h"
 #include "trace.h"
 
@@ -23,7 +25,6 @@ REAL_DEFN(void, pthread_exit, void *);
 static rvp_thread_t *rvp_thread_create(void *(*)(void *), void *);
 
 volatile _Atomic uint64_t rvp_ggen = 0;	// global generation number
-static long pgsz = 0;
 
 /* thread_mutex protects thread_head, next_id */
 static pthread_mutex_t thread_mutex;
@@ -34,6 +35,7 @@ static pthread_t serializer;
 static pthread_cond_t wakecond;
 static int nwake = 0;
 static int serializer_fd;
+static rvp_lastctx_t serializer_lc;
 static bool transmit = true;
 
 pthread_key_t rvp_thread_key;
@@ -45,16 +47,14 @@ static void rvp_thread0_create(void);
 static rvp_thread_t *rvp_collect_garbage(void);
 
 static inline void
-rvp_trace_fork(uint32_t id)
+rvp_trace_fork(uint32_t id, const void *retaddr)
 {
-	rvp_thread_t *t = rvp_thread_for_curthr();
-	rvp_ring_t *r = &t->t_ring;
+	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 	uint64_t gen;
 
 	gen = rvp_ggen_before_store();
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
-	    RVP_OP_FORK);
+	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, RVP_OP_FORK);
 	rvp_buf_put(&b, id);
 	if (r->r_lgen < gen) {
 		r->r_lgen = gen;
@@ -64,14 +64,12 @@ rvp_trace_fork(uint32_t id)
 }
 
 static inline void
-rvp_trace_join(uint32_t id)
+rvp_trace_join(uint32_t id, const void *retaddr)
 {
-	rvp_thread_t *t = rvp_thread_for_curthr();
-	rvp_ring_t *r = &t->t_ring;
+	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
-	    RVP_OP_JOIN);
+	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, RVP_OP_JOIN);
 	rvp_buf_put(&b, id);
 	rvp_ring_put_buf(r, b);
 }
@@ -92,6 +90,7 @@ static void
 rvp_thread0_create(void)
 {
 	rvp_thread_t *t;
+	rvp_ring_t *r;
 
 	if ((t = rvp_thread_create(NULL, NULL)) == NULL)
 		err(EXIT_FAILURE, "%s: rvp_thread_create", __func__);
@@ -103,7 +102,9 @@ rvp_thread0_create(void)
 
 	assert(t->t_id == 1);
 
-	rvp_ring_put_begin(&t->t_ring, t->t_id, rvp_ggen_after_load());
+	r = &t->t_ring;
+	r->r_lgen = rvp_ggen_after_load();
+	rvp_ring_put_begin(r, t->t_id, r->r_lgen);
 }
 
 static void
@@ -125,6 +126,7 @@ static void
 rvp_wake_transmitter_locked(void)
 {
 	int rc;
+
 	nwake++;
 	if ((rc = pthread_cond_signal(&wakecond)) != 0)
 		errx(EXIT_FAILURE, "%s: %s", __func__, strerror(rc));
@@ -150,7 +152,8 @@ static void *
 serialize(void *arg)
 {
 	int fd = serializer_fd;
-	rvp_thread_t *last_t = NULL, *t, *next_t;
+	rvp_thread_t *t, *next_t;
+	uint32_t nblocksets_last = 0;
 
 	thread_lock();
 	while (transmit || nwake > 0) {
@@ -167,19 +170,27 @@ serialize(void *arg)
 
 		rvp_increase_ggen();
 
+		rvp_signal_rings_replenish();
+
 		do {
+
+			/* TBD increase global generation every so
+			 * many words flushed?
+			 */
+
+			nblocksets_last = rvp_sigblocksets_emit(fd, nblocksets_last);
 			any_emptied = false;
 			for (t = thread_head; t != NULL; t = t->t_next) {
-				if (rvp_thread_flush_to_fd(t, fd, t != last_t)){
+				if (rvp_ring_flush_to_fd(&t->t_ring, fd, &serializer_lc)){
 #if 0
 					if (t != last_t && last_t != NULL) {
 						printf("switch %" PRIu32 " -> %" PRIu32 "\n", last_t->t_id, t->t_id);
 					}
 #endif
-					last_t = t;
 					any_emptied = true; 
 				}
 			}
+			any_emptied |= rvp_signal_rings_flush_to_fd(fd, &serializer_lc);
 		} while (any_emptied);
 
 		for (t = rvp_collect_garbage(); t != NULL; t = next_t) {
@@ -203,7 +214,14 @@ rvp_serializer_create(void)
 
 	thread_lock();
 	assert(thread_head->t_next == NULL);
-	rvp_thread_flush_to_fd(thread_head, serializer_fd, false);
+	/* I don't use rvp_thread_flush_to_fd() here because I do not
+	 * want to log a change of thread here under any circumstances.
+	 */
+	rvp_ring_flush_to_fd(&thread_head->t_ring, serializer_fd, NULL);
+	serializer_lc = (rvp_lastctx_t){
+		  .lc_tid = thread_head->t_id
+		, .lc_nintr_outst = 0
+	};
 	thread_unlock();
 
 	rc = real_pthread_create(&serializer, NULL, serialize, NULL);
@@ -225,12 +243,11 @@ rvp_thread_init(void)
 static void
 rvp_init(void)
 {
+	rvp_lock_init();	// needed by rvp_signal_init()
 	rvp_signal_init();
 	rvp_thread_init();
-	rvp_lock_init();
+	rvp_rings_init();
 
-	if (pgsz == 0 && (pgsz = sysconf(_SC_PAGE_SIZE)) == -1)
-		err(EXIT_FAILURE, "%s: sysconf", __func__);
 	if (pthread_key_create(&rvp_thread_key, NULL) != 0) 
 		err(EXIT_FAILURE, "%s: pthread_key_create", __func__);
 	if (pthread_mutex_init(&thread_mutex, NULL) != 0)
@@ -244,6 +261,7 @@ rvp_init(void)
 	 * to start.
 	 */
 	rvp_thread0_create();
+	rvp_relay_create();
 	rvp_serializer_create();
 
 	atexit(rvp_stop_transmitter);
@@ -264,6 +282,9 @@ rvp_thread_attach(rvp_thread_t *t)
 		thread_unlock();
 		errx(EXIT_FAILURE, "%s: out of thread IDs", __func__);
 	}
+
+	t->t_ring.r_tid = t->t_id;
+	t->t_ring.r_nintr_outst = 0;
 
 	t->t_next = thread_head;
 	thread_head = t;
@@ -327,18 +348,9 @@ static rvp_thread_t *
 rvp_thread_create(void *(*routine)(void *), void *arg)
 {
 	rvp_thread_t *t;
-	const size_t ringsz = pgsz;
-	const size_t items_per_ring = ringsz / sizeof(*t->t_ring.r_items);
-	uint32_t *items;
-
-	items = calloc(items_per_ring, sizeof(*t->t_ring.r_items));
-	if (items == NULL) {
-		errno = ENOMEM;
-		return NULL;
-	}
+	int rc;
 
 	if ((t = calloc(1, sizeof(*t))) == NULL) {
-		free(items);
 		errno = ENOMEM;
 		return NULL;
 	}
@@ -346,7 +358,11 @@ rvp_thread_create(void *(*routine)(void *), void *arg)
 	t->t_routine = routine;
 	t->t_arg = arg;
 
-	rvp_ring_init(&t->t_ring, items, items_per_ring);
+	if ((rc = rvp_ring_stdinit(&t->t_ring)) == -1) {
+		free(t);
+		errno = rc;
+		return NULL;
+	}
 
 	rvp_thread_attach(t);
 
@@ -396,13 +412,15 @@ __rvpredict_thread_wrapper(void *arg)
 {
 	void *retval;
 	rvp_thread_t *t = arg;
+	rvp_ring_t *r = &t->t_ring;
 
 	assert(pthread_getspecific(rvp_thread_key) == NULL);
 
 	if (pthread_setspecific(rvp_thread_key, t) != 0)
 		err(EXIT_FAILURE, "%s: pthread_setspecific", __func__);
 
-	rvp_ring_put_begin(&t->t_ring, t->t_id, rvp_ggen_after_load());
+	r->r_lgen = rvp_ggen_after_load();
+	rvp_ring_put_begin(&t->t_ring, t->t_id, r->r_lgen);
 
 	retval = (*t->t_routine)(t->t_arg);
 	__rvpredict_pthread_exit(retval);
@@ -417,8 +435,6 @@ __rvpredict_pthread_create(pthread_t *thread,
 	int rc;
 	rvp_thread_t *t;
 
-	assert(pgsz != 0);
-
 	if ((t = rvp_thread_create(start_routine, arg)) == NULL)
 		return errno;
 
@@ -427,7 +443,7 @@ __rvpredict_pthread_create(pthread_t *thread,
 
 	if (rc == 0) {
 		*thread = t->t_pthread;
-		rvp_trace_fork(t->t_id);
+		rvp_trace_fork(t->t_id, __builtin_return_address(0));
 		return 0;
 	}
 
@@ -462,7 +478,7 @@ __rvpredict_pthread_join(pthread_t pthread, void **retval)
 	if ((t = rvp_pthread_to_thread(pthread)) == NULL)
 		err(EXIT_FAILURE, "%s: rvp_pthread_to_thread", __func__);
 
-	rvp_trace_join(t->t_id);
+	rvp_trace_join(t->t_id, __builtin_return_address(0));
 
 	rvp_thread_mark(t);
 

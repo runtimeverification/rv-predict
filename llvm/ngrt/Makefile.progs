@@ -5,17 +5,17 @@
 #
 .include <bsd.own.mk>
 
-LIB=rvprt
+PROGS=eitherorboth sigcount
 
 CC=clang
 CFLAGS+=-std=c11
-COPTS+=-O3 -O0
+COPTS+=-O3
+LDADD+=-pthread
 DBG+=-g
-CPPFLAGS+=-Wuninitialized
-CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
-SRCS=access.c const.c func.c lock.c notimpl.c
-SRCS+=relay.c ring.c rmw.c rvpsignal.c sigutil.c
-SRCS+=thread.c trace.c
-WARNS=5
+LDADD+=-g
+CPPFLAGS+=-D_POSIX_C_SOURCE=199506L
+SRCS.eitherorboth=eitherorboth.c
+SRCS.sigcount=sigcount.c
+WARNS=4
 
-.include <bsd.lib.mk>
+.include <bsd.prog.mk>

@@ -5,11 +5,12 @@
 #
 .include <bsd.own.mk>
 
-PROGS=rvpdump metadatadump
+PROGS=rvpdump metadatadump tracedump
 
 CPPFLAGS+=-Wuninitialized -I../ngrt
 SRCS.rvpdump=main.c reader.c
 SRCS.metadatadump=metadatadump.c
+SRCS.tracedump=tracedump.c
 WARNS=5
 
 DBG+=-O3 -g -O0

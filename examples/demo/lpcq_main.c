@@ -11,8 +11,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <signal.h>	/* sigaction(2) */
+#include <string.h>	/* memset(3) */
 #include <time.h>
 #include <unistd.h>
+
+#include <sys/time.h>	/* getitimer(2) */
+
 #include "lpcq.h"
 
 typedef struct _item {
@@ -26,9 +31,11 @@ typedef struct _item {
 
 pthread_mutex_t *mutexp = NULL;
 item_t *items;
+lpcq_t *sigq = NULL;
 
 int nitems = 5;
 
+bool use_signal = false;
 bool timing = false;
 
 static inline void
@@ -110,14 +117,36 @@ consume(void *arg)
 	return NULL;
 }
 
+static void
+handler(int signum)
+{
+	lpcq_t *q = sigq;
+
+	lpcq_put(q, &items[0]);
+}
+
+static void
+establish(lpcq_t *q)
+{
+	struct sigaction sa;
+
+	sigq = q;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = handler;
+	if (sigemptyset(&sa.sa_mask) == -1)
+		err(EXIT_FAILURE, "%s: sigemptyset", __func__);
+	if (sigaction(SIGALRM, &sa, NULL) == -1)
+		err(EXIT_FAILURE, "%s: sigaction", __func__);
+}
+
 static void *
 produce(void *arg)
 {
 	lpcq_t *q = arg;
 	int i;
 
-	for (i = 0; i < nitems; i++) {
-		acquire_queue();
+	for (i = (use_signal ? 1 : 0); i < nitems; i++) {
+		acquire_queue() ;
 		lpcq_put(q, &items[i]);
 		release_queue();
 	}
@@ -138,8 +167,9 @@ main(int argc, char **argv)
 	int i, opt;
 	lpcq_t q;
 	pthread_mutex_t mutex;
+	pthread_t producer, consumer;
 
-	while ((opt = getopt(argc, argv, "ln:t")) != -1) {
+	while ((opt = getopt(argc, argv, "sln:t")) != -1) {
 		unsigned long v;
 		char *end;
 
@@ -153,6 +183,9 @@ main(int argc, char **argv)
 			    *end != '\0' || v > INT_MAX)
 				errx(EXIT_FAILURE, "%s: malformed or out-of-range -n argument", __func__);
 			nitems = (int)v;
+			break;
+		case 's':
+			use_signal = true;
 			break;
 		case 't':
 			timing = true;
@@ -169,7 +202,19 @@ main(int argc, char **argv)
 		err(EXIT_FAILURE, "%s: pthread_mutex_init", __func__);
 
 	lpcq_init(&q, offsetof(item_t, next));
-	pthread_t producer, consumer;
+
+	if (use_signal) {
+		struct itimerval it;
+
+		establish(&q);
+		if (getitimer(ITIMER_REAL, &it) == -1)
+			err(EXIT_FAILURE, "%s: getitimer", __func__);
+		it.it_interval = (struct timeval){.tv_sec = 0, .tv_usec = 0};
+		it.it_value.tv_usec++;
+		if (setitimer(ITIMER_REAL, &it, NULL) == -1)
+			err(EXIT_FAILURE, "%s: setitimer", __func__);
+	}
+
 	for (i = 0; i < nitems; i++)
 		items[i].idx = i;
 	pthread_create(&consumer, NULL, &consume, &q);

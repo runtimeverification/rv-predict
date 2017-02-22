@@ -9,7 +9,7 @@
 
 #include "reader.h"
 
-static void
+static void __dead
 usage(const char *progname)
 {
 	fprintf(stderr, "usage: %s [-t <plain|legacy>] [<trace file>]\n",

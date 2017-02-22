@@ -3,7 +3,7 @@
 
 #include "notimpl.h"
 
-void
+void __dead
 not_implemented(const char *fname)
 {
 	errx(EXIT_FAILURE, "%s: not implemented", fname);

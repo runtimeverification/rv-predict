@@ -1,7 +1,9 @@
-core
-.depend
-.Makefile.tags
+*.core
 *.o
-rvpdump
 .*.swp
+.Makefile.tags
+.depend
+.gdbinit
+core
+rvpdump
 tags

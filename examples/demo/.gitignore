@@ -1,14 +1,15 @@
 .depend
 dot-product
 double-checked-locking
+intr_driver
+*.ll
 lpcq
-spcq
 memcpy
 *.o
 simple-state-machine
+spcq
 spinning-loop
 square-sum
 stack
 .*.swp
 unsafe-vector
-*.ll

@@ -4,14 +4,10 @@ PROGS=	intr_driver
 
 CC=clang
 CFLAGS+=-std=c11
+COPTS+=-O0
 CPPFLAGS+=-D_POSIX_SOURCE -D_POSIX_C_SOURCE=199506L
 WARNS=4
 
 SRCS.intr_driver=intr_driver.c
-SRCS.dot-product=dot-product.c
-SRCS.square-sum=square-sum.c
-SRCS.memcpy=memcpy.c
-SRCS.lpcq=lpcq.c lpcq_main.c
-SRCS.spcq=spcq.c spcq_main.c
 
 .include <bsd.prog.mk>

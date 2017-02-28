@@ -4,6 +4,7 @@
 #include <err.h> /* for err(3) */
 #include <errno.h> /* for ESRCH */
 #include <inttypes.h> /* for PRIu32 */
+#include <signal.h> /* for pthread_sigmask */
 #include <stdint.h> /* for uint32_t */
 #include <stdlib.h> /* for EXIT_FAILURE */
 #include <stdio.h> /* for fprintf(3) */
@@ -154,6 +155,11 @@ serialize(void *arg)
 	int fd = serializer_fd;
 	rvp_thread_t *t, *next_t;
 	uint32_t nblocksets_last = 0;
+	sigset_t maskall;
+
+	sigfillset(&maskall);
+
+	real_pthread_sigmask(SIG_BLOCK, &maskall, NULL);
 
 	thread_lock();
 	while (transmit || nwake > 0) {
@@ -376,7 +382,7 @@ rvp_thread_mark(rvp_thread_t *t)
 	rvp_wake_transmitter();
 }
 
-static rvp_thread_t *
+rvp_thread_t *
 rvp_pthread_to_thread(pthread_t pthread)
 {
 	rvp_thread_t *t;
@@ -410,6 +416,8 @@ rvp_wake_transmitter(void)
 static void *
 __rvpredict_thread_wrapper(void *arg)
 {
+	sigset_t set, oset;
+	int rc;
 	void *retval;
 	rvp_thread_t *t = arg;
 	rvp_ring_t *r = &t->t_ring;
@@ -422,7 +430,29 @@ __rvpredict_thread_wrapper(void *arg)
 	r->r_lgen = rvp_ggen_after_load();
 	rvp_ring_put_begin(&t->t_ring, t->t_id, r->r_lgen);
 
+	rc = real_pthread_sigmask(SIG_SETMASK,
+	    mask_to_sigset(t->t_intrmask, &set), &oset);
+
+	if (rc != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
+		    strerror(rc));
+	}
+
 	retval = (*t->t_routine)(t->t_arg);
+
+	/* XXX Probably should run hooks established by pthread_cleanup_push
+	 * before restoring the runtime's signal mask, but we shouldn't
+	 * run all of real_pthread_exit() with signals unblocked.
+	 * pthread_cleanup_push() something that restores the runtime's
+	 * signal mask?
+	 */
+	rc = real_pthread_sigmask(SIG_SETMASK, &oset, NULL);
+
+	if (rc != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
+		    strerror(rc));
+	}
+
 	__rvpredict_pthread_exit(retval);
 	/* probably never reached */
 	return retval;
@@ -432,14 +462,42 @@ int
 __rvpredict_pthread_create(pthread_t *thread,
     const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg)
 {
-	int rc;
+	int rc, rc2;
 	rvp_thread_t *t;
 
 	if ((t = rvp_thread_create(start_routine, arg)) == NULL)
 		return errno;
 
+	/* Block all signals, initialize t_intrmask with the
+	 * mask that used to be in effect, call real_pthread_create,
+	 * and re-establish the mask that used to be in effect.
+	 *
+	 * __rvpredict_thread_wrapper establishes the mask in t_intrmask
+	 * before calling start_routine.
+	 *
+	 * TBD After start_routine finishes, block all signals again?
+	 * Nah, I cannot think of a reason for it.
+	 *
+	 * Careful: call real_pthread_sigmask to establish masks!
+	 */
+	sigset_t fullset, oset;
+	if (sigfillset(&fullset) == -1)
+		err(EXIT_FAILURE, "%s: sigfillset", __func__);
+	if ((rc = real_pthread_sigmask(SIG_BLOCK, &fullset, &oset)) != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
+		    strerror(rc));
+	}
+	t->t_intrmask = sigset_to_mask(&oset);
+
 	rc = real_pthread_create(&t->t_pthread, attr,
 	    __rvpredict_thread_wrapper, t);
+
+	rc2 = real_pthread_sigmask(SIG_SETMASK, &oset, NULL);
+
+	if (rc2 != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
+		    strerror(rc2));
+	}
 
 	if (rc == 0) {
 		*thread = t->t_pthread;

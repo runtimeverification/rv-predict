@@ -35,5 +35,7 @@ uint32_t rvp_sigblocksets_emit(int, uint32_t);
 rvp_sigblockset_t *intern_sigset(const sigset_t *);
 void rvp_signal_rings_replenish(void);
 bool rvp_signal_rings_flush_to_fd(int, rvp_lastctx_t *);
+uint64_t sigset_to_mask(const sigset_t *);
+sigset_t *mask_to_sigset(uint64_t, sigset_t *);
 
 #endif /* _RVP_SIGNAL_H_ */

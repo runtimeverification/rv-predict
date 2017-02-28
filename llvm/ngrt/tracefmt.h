@@ -120,6 +120,7 @@ typedef struct {
 
 typedef struct {
 	uintptr_t deltop;
+	uint64_t generation;
 	uint32_t signum;
 } __packed __aligned(sizeof(uint32_t)) rvp_entersig_t;
 
@@ -136,7 +137,8 @@ typedef struct {
 typedef struct {
 	uintptr_t deltop;
 	uint64_t mask;
-	uint32_t origin;
+	uint32_t origin;	// this should probably be constant throughout
+				// a trace.  set up in header?
 	uint32_t masknum;
 } __packed __aligned(sizeof(uint32_t)) rvp_sigmaskmemo_t;
 

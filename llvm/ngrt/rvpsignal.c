@@ -176,6 +176,18 @@ rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t noutst)
 						 RVP_RING_S_INUSE)) {
 			r->r_tid = tid;
 			r->r_nintr_outst = noutst;
+			/* XXX some other thread may have changed to
+			 * XXX a later generation already.  probably
+			 * XXX should log a _COG immediately before _ENTERSIG
+			 * XXX so that an interruption isn't processed in
+			 * XXX a window prior to events that happened
+			 * XXX before it.
+			 * XXX
+			 * XXX XXX This issue ought to be fixed, should delete
+			 * XXX XXX the comment and the following assignment
+			 * XXX XXX and test.
+			 */
+			r->r_lgen = 0;
 			break;
 		}
 	}
@@ -251,18 +263,23 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	rvp_signal_t *s = rvp_signal_lookup(signum);
 	uint32_t noutst = atomic_fetch_add_explicit(&t->t_nintr_outst, 1,
-	    memory_order_acquire) + 1;
-	rvp_ring_t *r = rvp_signal_ring_get(t, noutst);
+	    memory_order_acquire);
+	rvp_ring_t *r = rvp_signal_ring_get(t, noutst + 1);
 	rvp_ring_t *oldr = atomic_exchange(&t->t_intr_ring, r);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
+	r->r_lgen = (oldr != NULL) ? oldr->r_lgen : t->t_ring.r_lgen;
+
 	/* When the serializer reaches this ring, it will emit a
-	 * change of thread and change in outstanding interrupts, if
-	 * necessary, before emitting the events on the ring.
-	 *
-	 * We only have to record the signal handler that was entered, here.
+	 * change of PC, a change of thread, and a change in outstanding
+	 * interrupts, if necessary, before emitting the events on the ring.
 	 */
+	r->r_lastpc = (s->s_handler != NULL)
+		? (const void *)s->s_handler
+		: (const void *)s->s_sigaction;
+	rvp_buf_put_addr(&b, r->r_lastpc);
 	rvp_buf_put_addr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_ENTERSIG));
+	rvp_buf_put_u64(&b, r->r_lgen);
 	rvp_buf_put(&b, signum);
 	rvp_ring_put_buf(r, b);
 
@@ -273,15 +290,19 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 
 	b = RVP_BUF_INITIALIZER;
 
+	if (oldr != NULL)
+		oldr->r_lgen = r->r_lgen;
+	else
+		t->t_ring.r_lgen = r->r_lgen;
+
 	atomic_store(&t->t_intr_ring, oldr);
-	noutst = atomic_fetch_sub_explicit(&t->t_nintr_outst, 1,
-	    memory_order_release) - 1;
+	atomic_store_explicit(&t->t_nintr_outst, noutst, memory_order_release);
 	rvp_buf_put_addr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_EXITSIG));
 	rvp_ring_put_buf(r, b);
 	rvp_signal_ring_put(t, r);
 }
 
-static sigset_t *
+sigset_t *
 mask_to_sigset(uint64_t mask, sigset_t *set)
 {
 	int rc, signum;
@@ -297,7 +318,7 @@ mask_to_sigset(uint64_t mask, sigset_t *set)
 	return set;
 }
 
-static uint64_t
+uint64_t
 sigset_to_mask(const sigset_t *set)
 {
 	int signum;

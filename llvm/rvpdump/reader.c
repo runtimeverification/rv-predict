@@ -884,10 +884,11 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_ENTERSIG:
 		printf(
 		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s signal %" PRIu32 "\n",
+		    " %s signal %" PRIu32 " generation %" PRIu64 "\n",
 		    ps->ps_curthread, ps->ps_nintr_outst,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst],
-		    oi->oi_descr, ub->ub_entersig.signum);
+		    oi->oi_descr, ub->ub_entersig.signum,
+		    ub->ub_entersig.generation);
 		break;
 	case RVP_OP_ACQUIRE:
 	case RVP_OP_RELEASE:

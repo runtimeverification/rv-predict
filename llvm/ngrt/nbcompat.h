@@ -3,6 +3,10 @@
 #ifndef _RVP_NBCOMPAT_H_
 #define _RVP_NBCOMPAT_H_
 
+#ifndef __dead
+#define	__dead	__attribute__((__noreturn__))
+#endif
+
 #ifndef offsetof
 #define offsetof __builtin_offsetof
 #endif

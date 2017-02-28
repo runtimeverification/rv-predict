@@ -75,7 +75,7 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 		, .tid = r->r_tid
 	};
 	rvp_sigoutst_t sigoutst = {
-		  .deltop = 
+		  .deltop =
 		      (uintptr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SIGOUTST)
 		, .noutst = r->r_nintr_outst
 	};

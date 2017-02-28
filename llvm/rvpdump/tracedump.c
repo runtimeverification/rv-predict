@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include <stdlib.h>	/* for EXIT_FAILURE */
 #include <unistd.h>	/* for STDIN_FILENO */
+#include <sys/types.h>	/* for open(2) */
+#include <sys/stat.h>	/* for open(2) */
+#include <fcntl.h>	/* for open(2) */
 
 #include "legacy.h"
 
@@ -42,13 +45,38 @@ op_to_name(int op)
 	return opnames[op].name;
 }
 
+static void __dead
+usage(const char *progname)
+{
+	fprintf(stderr, "usage: %s [trace-file]\n", progname);
+	exit(EXIT_FAILURE);
+}
+
 int
 main(int argc, char **argv)
 {
 	legacy_event_t ev[1024];
 	ssize_t i, nevs, nread;
+	int fd;
+	const char *progname, *inputname;
 
-	while ((nread = read(STDIN_FILENO, &ev[0], sizeof(ev))) != -1) {
+	progname = argv[0];
+
+	if (argc > 2) {
+		usage(progname);
+	} else if (argc == 2) {
+		inputname = argv[1];
+		fd = open(inputname, O_RDONLY);
+		if (fd == -1) {
+			err(EXIT_FAILURE, "%s: open(\"%s\")",
+			    __func__, inputname);
+		}
+	} else {
+		fd = STDIN_FILENO;
+		inputname = "<stdin>";
+	}
+
+	while ((nread = read(fd, &ev[0], sizeof(ev))) != -1) {
 		if (nread % sizeof(ev[0]) != 0)
 			errx(EXIT_FAILURE, "%s: short read", __func__);
 		if (nread == 0)

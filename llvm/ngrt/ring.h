@@ -11,6 +11,7 @@
 #include <sys/uio.h>	/* for struct iovec */
 
 #include "buf.h"
+#include "relay.h"
 
 typedef enum _rvp_ring_state {
 	  RVP_RING_S_INUSE	= 0
@@ -110,7 +111,10 @@ rvp_ring_nempty(rvp_ring_t *r)
 static inline void
 rvp_ring_request_service(rvp_ring_t *r)
 {
-	rvp_wake_transmitter();
+	if (r->r_nintr_outst == 0)
+		rvp_wake_transmitter();
+	else
+		rvp_wake_relay();
 }
 
 static inline void

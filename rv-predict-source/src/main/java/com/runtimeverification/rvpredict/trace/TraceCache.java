@@ -125,6 +125,8 @@ public class TraceCache {
         if (config.stacks()) {
             capacity <<= 1;
         }
+	if (Configuration.debug)
+	    System.err.println(readers.size() + " readers");
         List<Event> events = new ArrayList<>(capacity);
 	for (int i = 0; i < maxEvents; i++) {
 		Event event;
@@ -152,11 +154,13 @@ public class TraceCache {
 			readers.remove(leastReader);
                 }
 	}
-	System.err.println("got " + events.size() + " events out of " + maxEvents);
+	if (Configuration.debug)
+	    System.err.println("got " + events.size() + " events out of " + maxEvents);
 	/* Make GIDs compact. */
 	final int n = events.size();
 	if (n > 0 && events.get(n - 1).getGID() - events.get(0).getGID() >= config.windowSize) {
-		System.err.println("Compacting GIDs");
+		if (Configuration.debug)
+		    System.err.println("Compacting GIDs");
 		long gid = 0;
 		for (int i = 0; i < n; i++)
 			events.get(i).setGID(gid++);

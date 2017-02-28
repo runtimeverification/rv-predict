@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.LZ4Utils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -92,6 +93,8 @@ public class Metadata implements Serializable {
     }
 
     public String getLocationSig(int locId) {
+	if (Configuration.debug && locIdToLocSig[locId] == null)
+	    System.err.println("getLocationSig(" + locId + ") -> null");
         return locIdToLocSig[locId];
     }
 

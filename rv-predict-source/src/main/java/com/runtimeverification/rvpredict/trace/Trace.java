@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Table;
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.metadata.Metadata;
@@ -387,7 +388,8 @@ public class Trace {
                 } else if (event.isFork()) {
                     //TODO(TraianSF): Add behavior for forking
                 } else {
-		    System.err.println(event.getType());
+		    if (Configuration.debug)
+		        System.err.println(event.getType());
                     throw new IllegalStateException();
                 }
             }

@@ -1,3 +1,4 @@
+NOMAN=
 #
 # This makefile uses mk-configure macro files
 # (https://github.com/cheusov/mk-configure) with BSD make.  On a

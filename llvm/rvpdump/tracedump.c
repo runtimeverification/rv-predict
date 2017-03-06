@@ -40,7 +40,8 @@ struct {
 static const char *
 op_to_name(int op)
 {
-	if (op < 0 || __arraycount(opnames) <= op || opnames[op].name == NULL)
+	if (op < 0 || (int)__arraycount(opnames) <= op ||
+	    opnames[op].name == NULL)
 		return "<unknown>";
 	return opnames[op].name;
 }

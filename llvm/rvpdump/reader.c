@@ -70,7 +70,7 @@ typedef struct _rvp_thread_pstate {
 } rvp_thread_pstate_t;
 
 /* parse state: global */
-typedef struct _rvp_pstate {
+struct _rvp_pstate {
 	rvp_thread_pstate_t	*ps_thread;
 	uint32_t		ps_nthreads;
 	rvp_addr_t		ps_deltop_first, ps_deltop_last;
@@ -78,7 +78,7 @@ typedef struct _rvp_pstate {
 	const rvp_emitters_t	*ps_emitters;
 	uint32_t		ps_nintr_outst;
 	int			ps_zeromasknum;
-} rvp_pstate_t;
+};
 
 typedef struct _intmax_item intmax_item_t;
 
@@ -210,7 +210,7 @@ static void
 rvp_pstate_extend_threads_over(rvp_pstate_t *ps, uint32_t tid,
     rvp_thread_pstate_t *othread, uint32_t onthreads)
 {
-	int i;
+	unsigned int i;
 
 	assert(tid >= onthreads);
 
@@ -280,11 +280,11 @@ rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters,
 #endif
 }
 
-static size_t
+static ssize_t
 iovsum(const struct iovec *iov, int iovcnt)
 {
 	int i;
-	size_t sum = 0;
+	ssize_t sum = 0;
 
 	for (i = 0; i < iovcnt; i++)
 		sum += iov[i].iov_len;
@@ -463,7 +463,7 @@ get_next_thdfd(uintmax_t tid)
 	char buf[sizeof("18446744073709551615_trace.bin")];
 
 	rc = snprintf(buf, sizeof(buf), "%d_trace.bin", next_trace_fileid++);
-	if (rc < 0 || rc >= sizeof(buf))
+	if (rc < 0 || rc >= (int)sizeof(buf))
 		errx(EXIT_FAILURE, "%s: snprintf", __func__);
 
 	fd = open(buf, O_WRONLY|O_CREAT|O_TRUNC, 0600);
@@ -1132,7 +1132,7 @@ rvp_trace_dump(rvp_output_type_t otype, int fd)
 	ub.ub_begin = (rvp_begin_t){.deltop = pc0, .tid = tid};
 
 	size_t nfull = sizeof(ub.ub_begin);
-	size_t nshort = 0;
+	ssize_t nshort = 0;
 	for (;;) {
 		nread = read(fd, &ub.ub_bytes[nfull], sizeof(ub) - nfull);
 		if (nread == -1) {

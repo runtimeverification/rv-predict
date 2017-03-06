@@ -1,10 +1,13 @@
 *.a
-.depend
-eitherorboth
 *.ll
-.Makefile.tags
 *.o
-sigcount
+*.pico
+*.po
 *.so
 .*.swp
+.Makefile.tags
+.depend
+.gdbinit
+eitherorboth
+sigcount
 tags

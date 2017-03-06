@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2017 Runtime Verification, Inc.  All rights reserved.
+ */
 //===-- RVPredictInstrument.cpp - race detector -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -9,13 +12,11 @@
 //
 // This file is a part of RVPredictInstrument, a race detector.
 //
-// The tool is under development, for the details about previous versions see
-// http://code.google.com/p/data-race-test
-//
 // The instrumentation phase is quite simple:
 //   - Insert calls to run-time library before every memory access.
 //      - Optimizations may apply to avoid instrumenting some of the accesses.
 //   - Insert calls at function entry/exit.
+//   - More stuff here.
 // The rest is handled by the run-time library.
 //===----------------------------------------------------------------------===//
 
@@ -722,18 +723,18 @@ GlobalVariable *
 RVPredictInstrument::createOrdering(IRBuilder<> *IRB, AtomicOrdering ord)
 {
 	switch (ord) {
-	case NotAtomic:
+	case AtomicOrdering::NotAtomic:
 		llvm_unreachable("unexpected atomic ordering!");
-	case Unordered:             
-	case Monotonic:
+	case AtomicOrdering::Unordered:             
+	case AtomicOrdering::Monotonic:
 		return order_relaxed;
-	case Acquire:
+	case AtomicOrdering::Acquire:
 		return order_acquire;
-	case Release:
+	case AtomicOrdering::Release:
 		return order_release;
-	case AcquireRelease:
+	case AtomicOrdering::AcquireRelease:
 		return order_acq_rel;
-	case SequentiallyConsistent:
+	case AtomicOrdering::SequentiallyConsistent:
 		return order_seq_cst;
 	}
 }

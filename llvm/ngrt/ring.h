@@ -27,7 +27,7 @@ typedef struct _rvp_lastctx {
 	uint32_t lc_nintr_outst;
 } rvp_lastctx_t;
 
-typedef struct _rvp_ring {
+struct _rvp_ring {
 	uint32_t * _Atomic volatile r_producer, * _Atomic volatile r_consumer;
 	uint32_t *r_last;
 	uint32_t *r_items;
@@ -37,7 +37,7 @@ typedef struct _rvp_ring {
 	rvp_ring_state_t _Atomic r_state;
 	uint32_t r_tid;
 	uint32_t r_nintr_outst;
-} rvp_ring_t;
+};
 
 extern volatile _Atomic uint64_t rvp_ggen;
 

@@ -61,7 +61,7 @@ rvp_signal_table_init(void)
 	signal_tbl = tbl;
 	nsignals = lastsig;
 
-	if ((nsignals - signals_origin + 7) / 8 > sizeof(uint64_t)) {
+	if ((nsignals - signals_origin + 7) / 8 > (int)sizeof(uint64_t)) {
 		errx(EXIT_FAILURE, "%s: too many signals (%d - %d = %d) "
 		     "for a trace to represent", __func__, nsignals,
 		     signals_origin, nsignals - signals_origin);

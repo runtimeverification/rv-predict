@@ -3,6 +3,11 @@
 #ifndef _RVP_NBCOMPAT_H_
 #define _RVP_NBCOMPAT_H_
 
+#include <sys/param.h>
+#include <stddef.h>
+
+#ifndef __NetBSD__
+
 #ifndef __dead
 #define	__dead	__attribute__((__noreturn__))
 #endif
@@ -23,12 +28,10 @@
 #define __section(x)	__attribute__((__section__(x)))
 #endif /* __section */
 
-#ifndef	__aligned
-#define __aligned(x)	__attribute__((__aligned__(x)))
-#endif /* __aligned */
-
 #ifndef __packed
 #define	__packed	__attribute__((__packed__))
 #endif /* __packed */
+
+#endif /* __NetBSD_Version__ */
 
 #endif /* _RVP_NBCOMPAT_H_ */

@@ -343,7 +343,7 @@ rvp_sigblocksets_emit(int fd, uint32_t lastn)
 		if (bs->bs_number < lastn)
 			continue;
 		rvp_sigmaskmemo_t map = (rvp_sigmaskmemo_t){
-			  .deltop = (uintptr_t)rvp_vec_and_op_to_deltop(0,
+			  .deltop = (rvp_addr_t)rvp_vec_and_op_to_deltop(0,
 			      RVP_OP_SIGMASKMEMO)
 			, .mask = sigset_to_mask(&bs->bs_sigset)
 			, .origin = signals_origin

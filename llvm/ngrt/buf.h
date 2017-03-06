@@ -26,9 +26,9 @@ rvp_buf_put_addr(rvp_buf_t *b, const void *addr)
 {
 	int i;
 	union {
-		uintptr_t uaddr;
-		uint32_t u32[sizeof(uintptr_t) / sizeof(uint32_t)];
-	} addru = {.uaddr = (uintptr_t)addr};
+		rvp_addr_t uaddr;
+		uint32_t u32[sizeof(rvp_addr_t) / sizeof(uint32_t)];
+	} addru = {.uaddr = (rvp_addr_t)addr};
 
 	for (i = 0; i < __arraycount(addru.u32); i++) {
 		rvp_buf_put(b, addru.u32[i]);

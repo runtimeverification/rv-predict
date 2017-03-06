@@ -20,7 +20,7 @@
 #define	RSVD_NINTR_OUTST 0
 
 typedef union {
-	uintptr_t ub_pc;
+	rvp_addr_t ub_pc;
 	rvp_begin_t ub_begin;
 	rvp_fork_join_switch_t ub_fork_join_switch;
 	rvp_load1_2_4_store1_2_4_t ub_load1_2_4_store1_2_4;
@@ -45,7 +45,7 @@ typedef struct {
 #define OP_INFO_INIT(__ty, __descr) {.oi_reclen = sizeof(__ty), .oi_descr = __descr}
 
 typedef struct _rvp_call {
-	uintptr_t	*cs_funcs;
+	rvp_addr_t	*cs_funcs;
 	int		cs_depth;
 } rvp_callstack_t;
 
@@ -53,14 +53,14 @@ struct _rvp_pstate;
 typedef struct _rvp_pstate rvp_pstate_t;
 
 typedef struct _rvp_emitters {
-	void (*emit_jump)(const rvp_pstate_t *, uintptr_t);
+	void (*emit_jump)(const rvp_pstate_t *, rvp_addr_t);
 	void (*emit_op)(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
 	    bool, int);
 } rvp_emitters_t;
 
 /* parse state: per-thread */
 typedef struct _rvp_thread_pstate {
-	uintptr_t	ts_lastpc[2];
+	rvp_addr_t	ts_lastpc[2];
 	rvp_callstack_t	ts_callstack;
 	bool		ts_present;
 	uint64_t	ts_generation[2];
@@ -73,7 +73,7 @@ typedef struct _rvp_thread_pstate {
 typedef struct _rvp_pstate {
 	rvp_thread_pstate_t	*ps_thread;
 	uint32_t		ps_nthreads;
-	uintptr_t		ps_deltop_first, ps_deltop_last;
+	rvp_addr_t		ps_deltop_first, ps_deltop_last;
 	uint32_t		ps_curthread;
 	const rvp_emitters_t	*ps_emitters;
 	uint32_t		ps_nintr_outst;
@@ -151,14 +151,14 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 	    OP_INFO_INIT(rvp_masksigs_t, "set signal mask")
 };
 
-static void emit_no_jump(const rvp_pstate_t *, uintptr_t);
+static void emit_no_jump(const rvp_pstate_t *, rvp_addr_t);
 static void emit_legacy_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
     bool, int);
 static void emit_fork_metadata(uint64_t, uint64_t, uint32_t);
 
 static uint32_t get_next_thdfd(uintmax_t);
 
-static void print_jump(const rvp_pstate_t *, uintptr_t);
+static void print_jump(const rvp_pstate_t *, rvp_addr_t);
 static void print_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
     bool, int);
 
@@ -176,8 +176,8 @@ static intmax_table_t thd_table = {.t_get_next_id = get_next_thdfd};
 static int thdfd = -1;
 
 static void
-extract_jmpvec_and_op_from_deltop(uintptr_t deltop0,
-    uintptr_t pc, int *jmpvecp, rvp_op_t *opp)
+extract_jmpvec_and_op_from_deltop(rvp_addr_t deltop0,
+    rvp_addr_t pc, int *jmpvecp, rvp_op_t *opp)
 {
 	/* XXX it's not strictly necessary for deltops to have any concrete
 	 * storage
@@ -256,8 +256,8 @@ rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 }
 
 static void
-rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters, uintptr_t op0,
-    uint32_t tid, uint64_t generation)
+rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters,
+    rvp_addr_t op0, uint32_t tid, uint64_t generation)
 {
 	/* XXX it's not strictly necessary for deltops to have any concrete
 	 * storage
@@ -293,13 +293,13 @@ iovsum(const struct iovec *iov, int iovcnt)
 }
 
 static inline bool
-pc_is_not_deltop(rvp_pstate_t *ps, uintptr_t pc)
+pc_is_not_deltop(rvp_pstate_t *ps, rvp_addr_t pc)
 {
 	return pc < ps->ps_deltop_first || ps->ps_deltop_last < pc;
 }
 
 static void
-emit_no_jump(const rvp_pstate_t *ps, uintptr_t pc)
+emit_no_jump(const rvp_pstate_t *ps, rvp_addr_t pc)
 {
 	return;
 }
@@ -399,7 +399,7 @@ writeall(int fd, const void *buf, size_t nbytes)
 }
 
 static uint64_t
-emit_addr(uintptr_t addr)
+emit_addr(rvp_addr_t addr)
 {
 	const char nil = '\0';
 	static intmax_table_t addr_table;
@@ -480,26 +480,28 @@ get_next_thdfd(uintmax_t tid)
  * As of Mon Feb 20 15:14:08 CST 2017, the analysis backend does not
  * respect the GID's generation "field" in the formation of windows,
  * but it really should!
+ *
+ * As of Fri Mar 3 10:43:32 CST 2017, the analysis backend on the
+ * simpler-faster branch does respect the generation field.
  */
 static uint64_t
 rvp_pstate_next_gid(const rvp_pstate_t *ps)
 {
-#if 0
-	static uint64_t ggid = 0;
-	return ggid++;
-#else
 	uint64_t gid;
 	rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
+
 	assert(ts->ts_generation[ps->ps_nintr_outst] <= UINT16_MAX);
 	assert(ts->ts_nops[ps->ps_nintr_outst] < UINT32_MAX);
 	assert(ps->ps_curthread <= UINT16_MAX);
+
 	++ts->ts_nops[ps->ps_nintr_outst];
 	gid = (ts->ts_generation[ps->ps_nintr_outst] << 48) |
 	    (ts->ts_nops[ps->ps_nintr_outst] << 16) | ps->ps_curthread;
+
 	assert(ts->ts_last_gid[ps->ps_nintr_outst] < gid);
+
 	ts->ts_last_gid[ps->ps_nintr_outst] = gid;
 	return gid;
-#endif
 }
 
 static uint64_t
@@ -794,7 +796,7 @@ emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 }
 
 static void
-print_jump(const rvp_pstate_t *ps, uintptr_t pc)
+print_jump(const rvp_pstate_t *ps, rvp_addr_t pc)
 { 
 	printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " jump\n",
 	    ps->ps_curthread, ps->ps_nintr_outst, pc);
@@ -948,7 +950,7 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 {
 	const rvp_emitters_t *emitters = ps->ps_emitters;
 	rvp_op_t op;
-	uintptr_t lastpc;
+	rvp_addr_t lastpc;
 	int jmpvec;
 	bool is_load = false;
 	int field_width = 0;
@@ -1072,11 +1074,11 @@ rvp_trace_dump(rvp_output_type_t otype, int fd)
 		  .th_magic = "RVP_"
 		, .th_version = 0
 		, .th_byteorder = '0' | ('1' << 8) | ('2' << 16) | ('3' << 24)
-		, .th_pointer_width = sizeof(uintptr_t)
+		, .th_pointer_width = sizeof(rvp_addr_t)
 		, .th_data_width = sizeof(uint32_t)
 		, .th_pad1 = { 0 }
 	};
-	uintptr_t pc0;
+	rvp_addr_t pc0;
 	uint32_t tid;
 	uint64_t generation;
 	ssize_t nread;

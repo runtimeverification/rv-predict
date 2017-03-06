@@ -17,7 +17,7 @@
 static __section(".text") deltops_t deltops = { .matrix = { { 0 } } };
 
 typedef struct _threadswitch {
-	uintptr_t deltop;
+	rvp_addr_t deltop;
 	uint32_t id;
 } __packed __aligned(sizeof(uint32_t)) threadswitch_t;
 
@@ -25,7 +25,7 @@ static const rvp_trace_header_t header = {
 	  .th_magic = "RVP_"
 	, . th_version = 0
 	, .th_byteorder = '0' | ('1' << 8) | ('2' << 16) | ('3' << 24)
-	, .th_pointer_width = sizeof(uintptr_t)
+	, .th_pointer_width = sizeof(rvp_addr_t)
 	, .th_data_width = sizeof(uint32_t)
 };
 
@@ -71,12 +71,12 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 	ssize_t nwritten;
 	rvp_fork_join_switch_t threadswitch = {
 		  .deltop =
-		      (uintptr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SWITCH)
+		      (rvp_addr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SWITCH)
 		, .tid = r->r_tid
 	};
 	rvp_sigoutst_t sigoutst = {
 		  .deltop =
-		      (uintptr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SIGOUTST)
+		      (rvp_addr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SIGOUTST)
 		, .noutst = r->r_nintr_outst
 	};
 	struct iovec iov[4] = {

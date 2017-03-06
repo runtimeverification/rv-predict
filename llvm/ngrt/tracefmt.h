@@ -7,6 +7,12 @@
 
 #include "nbcompat.h"
 
+#if defined(RVP_ADDR_TYPE)
+typedef RVP_ADDR_TYPE rvp_addr_t;
+#else
+typedef uintptr_t rvp_addr_t;
+#endif
+
 /* RV-Predict trace file header.  Located at byte 0 of a trace file.  The
  * trace starts at the first rvp_trace_t-sized boundary after the header,
  * and it ends at EOF.
@@ -103,39 +109,39 @@ struct _deltops {
 typedef struct _deltops deltops_t;
 
 typedef struct {
-	uintptr_t deltop;
+	rvp_addr_t deltop;
 	uint64_t generation;
 } __packed __aligned(sizeof(uint32_t)) rvp_cog_t;
 
 typedef struct {
-	uintptr_t deltop;
+	rvp_addr_t deltop;
 	uint32_t tid;
 	uint64_t generation;
 } __packed __aligned(sizeof(uint32_t)) rvp_begin_t;
 
 typedef struct {
-	uintptr_t deltop;
+	rvp_addr_t deltop;
 	uint32_t tid;
 } __packed __aligned(sizeof(uint32_t)) rvp_fork_join_switch_t;
 
 typedef struct {
-	uintptr_t deltop;
+	rvp_addr_t deltop;
 	uint64_t generation;
 	uint32_t signum;
 } __packed __aligned(sizeof(uint32_t)) rvp_entersig_t;
 
 typedef struct {
-	uintptr_t deltop;
+	rvp_addr_t deltop;
 	uint32_t noutst;
 } __packed __aligned(sizeof(uint32_t)) rvp_sigoutst_t;
 
 typedef struct {
-	uintptr_t deltop;
+	rvp_addr_t deltop;
 	uint32_t masknum;
 } __packed __aligned(sizeof(uint32_t)) rvp_masksigs_t;
 
 typedef struct {
-	uintptr_t deltop;
+	rvp_addr_t deltop;
 	uint64_t mask;
 	uint32_t origin;	// this should probably be constant throughout
 				// a trace.  set up in header?
@@ -143,40 +149,40 @@ typedef struct {
 } __packed __aligned(sizeof(uint32_t)) rvp_sigmaskmemo_t;
 
 typedef struct {
-	uintptr_t deltop;
-	uintptr_t handler;
+	rvp_addr_t deltop;
+	rvp_addr_t handler;
 	uint32_t signum;
 	uint32_t masknum;
 } __packed __aligned(sizeof(uint32_t)) rvp_sigest_t;
 
 typedef struct {
-	uintptr_t deltop;
+	rvp_addr_t deltop;
 	uint32_t signum;
 } __packed __aligned(sizeof(uint32_t)) rvp_sigdis_t;
 
 typedef struct {
-	uintptr_t deltop;
-	uintptr_t addr;
+	rvp_addr_t deltop;
+	rvp_addr_t addr;
 	uint32_t data;
 } __packed __aligned(sizeof(uint32_t)) rvp_load1_2_4_store1_2_4_t;
 
 typedef struct {
-	uintptr_t deltop;
-	uintptr_t addr;
+	rvp_addr_t deltop;
+	rvp_addr_t addr;
 	uint64_t data;
 } __packed __aligned(sizeof(uint32_t)) rvp_load8_store8_t;
 
 typedef struct {
-	uintptr_t deltop;
+	rvp_addr_t deltop;
 } __packed __aligned(sizeof(uint32_t)) rvp_end_enterfn_exitfn_t;
 
 typedef struct {
-	uintptr_t deltop;
+	rvp_addr_t deltop;
 } rvp_exitsig_t;
 
 typedef struct {
-	uintptr_t deltop;
-	uintptr_t addr;
+	rvp_addr_t deltop;
+	rvp_addr_t addr;
 } __packed __aligned(sizeof(uint32_t)) rvp_acquire_release_t;
 
 #endif /* _RVP_TRACEFMT_H_ */

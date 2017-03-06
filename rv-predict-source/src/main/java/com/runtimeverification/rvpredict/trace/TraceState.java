@@ -133,12 +133,13 @@ public class TraceState {
             tidToStacktrace = ThreadIDToObjectMap.growOnFull(tidToStacktrace);
             break;
         case FINISH_METHOD:
-            int locId = tidToStacktrace.get(tid).removeLast().getLocId();
+	    Event lastEvent = tidToStacktrace.get(tid).removeLast();
+            int locId = lastEvent.getLocId();
             if (locId != event.getLocId()) {
                 throw new IllegalStateException("Unmatched method entry/exit events!" +
                         (Configuration.debug ?
-                        "\n\tENTRY:" + metadata.getLocationSig(locId) +
-                        "\n\tEXIT:" + metadata.getLocationSig(event.getLocId()) : ""));
+                        "\n\tENTRY:" + metadata.getLocationSig(locId) + " gid " + lastEvent.getGID() +
+                        "\n\tEXIT:" + metadata.getLocationSig(event.getLocId()) + " gid " + event.getGID() : ""));
             }
             break;
         default:

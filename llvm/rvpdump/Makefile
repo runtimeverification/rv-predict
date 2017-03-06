@@ -1,18 +1,20 @@
 #
-# This makefile uses BSD macro files.  You can get a rudimentary
-# set of BSD macro files on POSIX-compliant platforms like Linux and
-# Mac OS X by installing a Pkgsrc bootstrap kit from pkgsrc.org.
+# This makefile uses mk-configure macro files
+# (https://github.com/cheusov/mk-configure) with BSD make.  On a
+# POSIX-compliant platforms like Linux, Mac OS X, or *BSD, I recommend
+# installing bmake and mk-configure from pkgsrc.org. bmake is in the
+# pkgsrc bootstrap kit. The package for mk-configure is in devel/.
 #
-.include <bsd.own.mk>
 
 PROGS=rvpdump metadatadump tracedump
 
-CPPFLAGS+=-Wuninitialized -I../ngrt
+CC=clang
+CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt
 SRCS.rvpdump=main.c reader.c
 SRCS.metadatadump=metadatadump.c
 SRCS.tracedump=tracedump.c
-WARNS=5
+WARNS=4
 
 DBG+=-O3 -g -O0
 
-.include <bsd.prog.mk>
+.include <mkc.prog.mk>

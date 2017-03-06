@@ -1,11 +1,12 @@
 #
-# This makefile uses BSD macro files.  You can get a rudimentary
-# set of BSD macro files on POSIX-compliant platforms like Linux and
-# Mac OS X by installing a Pkgsrc bootstrap kit from pkgsrc.org.
+# This makefile uses mk-configure macro files
+# (https://github.com/cheusov/mk-configure) with BSD make.  On a
+# POSIX-compliant platforms like Linux, Mac OS X, or *BSD, I recommend
+# installing bmake and mk-configure from pkgsrc.org. bmake is in the
+# pkgsrc bootstrap kit. The package for mk-configure is in devel/.
 #
-.include <bsd.own.mk>
 
-LIB=rvprt
+LIB?=rvprt
 
 CC=clang
 CFLAGS+=-std=c11
@@ -16,6 +17,6 @@ CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
 SRCS=access.c const.c func.c lock.c notimpl.c
 SRCS+=relay.c ring.c rmw.c rvpsignal.c sigutil.c
 SRCS+=thread.c trace.c
-WARNS=5
+WARNS=4
 
-.include <bsd.lib.mk>
+.include <mkc.lib.mk>

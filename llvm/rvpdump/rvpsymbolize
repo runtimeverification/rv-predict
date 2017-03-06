@@ -6,7 +6,7 @@ tmpdir=$(mktemp -d)
 regex='at \(0x[0-9a-f]\+\) dummy.c:999'
 tee $tmpdir/original | \
 grep "$regex" | sed "s/.*$regex.*/\1/g" | sort -u | \
-    llvm-symbolizer -obj ~/rv/rv-predict-c/examples/demo/lpcq -inlining -print-address | \
+    llvm-symbolizer -obj $1 -inlining -print-address | \
     awk 'BEGIN {RS = "" ; FS = "\n"} /^0x/,/^$/ { print $1 " " $2 " " $3; }' | \
 while read addr symbol path; do
 	echo $addr $symbol $(basename $path)

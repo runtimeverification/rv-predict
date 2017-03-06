@@ -187,14 +187,8 @@ serialize(void *arg)
 			nblocksets_last = rvp_sigblocksets_emit(fd, nblocksets_last);
 			any_emptied = false;
 			for (t = thread_head; t != NULL; t = t->t_next) {
-				if (rvp_ring_flush_to_fd(&t->t_ring, fd, &serializer_lc)){
-#if 0
-					if (t != last_t && last_t != NULL) {
-						printf("switch %" PRIu32 " -> %" PRIu32 "\n", last_t->t_id, t->t_id);
-					}
-#endif
-					any_emptied = true; 
-				}
+				any_emptied |= rvp_ring_flush_to_fd(&t->t_ring,
+				    fd, &serializer_lc);
 			}
 			any_emptied |= rvp_signal_rings_flush_to_fd(fd, &serializer_lc);
 		} while (any_emptied);

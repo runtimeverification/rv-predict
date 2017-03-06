@@ -7,9 +7,10 @@
 #include <string.h>	/* strcmp(3) */
 #include <unistd.h>	/* for STDIN_FILENO */
 
+#include "nbcompat.h"
 #include "reader.h"
 
-static void
+static void __dead
 usage(const char *progname)
 {
 	fprintf(stderr, "usage: %s [-t <plain|legacy>] [<trace file>]\n",

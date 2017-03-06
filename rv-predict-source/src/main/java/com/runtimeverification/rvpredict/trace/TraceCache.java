@@ -29,6 +29,10 @@ public class TraceCache {
 
     private final TraceState crntState;
 
+    protected long lastGID = 0;
+    protected final int capacity;
+    protected final ArrayList<Event> eventsBuffer;
+
     protected final List<IEventReader> readers = new ArrayList<>();
 
     /**
@@ -36,6 +40,11 @@ public class TraceCache {
      */
     public TraceCache(Configuration config, Metadata metadata) {
         this.config = config;
+        // Used to be config.windowSize - 1, but I try to read 1 more
+	// than the window size, now.
+	capacity = getNextPowerOfTwo(config.windowSize) *
+	    (config.stacks() ? 2 : 1);
+	eventsBuffer = new ArrayList<>(capacity);
         this.crntState = new TraceState(config, metadata);
         lockGraph = new LockGraph(config, metadata);
     }
@@ -91,10 +100,6 @@ public class TraceCache {
             }
 
             assert event.getGID() >= fromIndex;
-            int capacity = getNextPowerOfTwo(config.windowSize - 1);
-            if (config.stacks()) {
-                capacity <<= 1;
-            }
             List<Event> events = new ArrayList<>(capacity);
             do {
                 events.add(event);
@@ -120,15 +125,13 @@ public class TraceCache {
 
     protected final List<RawTrace> readEventWindow() throws IOException {
         List<RawTrace> rawTraces =  new ArrayList<>();
-	int maxEvents = config.windowSize;
-        int capacity = getNextPowerOfTwo(maxEvents - 1);
-        if (config.stacks()) {
-            capacity <<= 1;
-        }
+	final int maxEvents = config.windowSize;
 	if (Configuration.debug)
 	    System.err.println(readers.size() + " readers");
-        List<Event> events = new ArrayList<>(capacity);
-	for (int i = 0; i < maxEvents; i++) {
+        ArrayList<Event> events = (ArrayList<Event>)eventsBuffer.clone();
+	eventsBuffer.clear();
+	events.ensureCapacity(capacity);
+	for (int i = events.size(); i < maxEvents + 1; i++) {
 		Event event;
 		long leastGID = Long.MAX_VALUE;
 		IEventReader leastReader = null;
@@ -156,37 +159,52 @@ public class TraceCache {
 	}
 	if (Configuration.debug)
 	    System.err.println("got " + events.size() + " events out of " + maxEvents);
-	/* Make GIDs compact. */
 	final int n = events.size();
-	if (n > 0 && events.get(n - 1).getGID() - events.get(0).getGID() >= config.windowSize) {
-		if (Configuration.debug)
-		    System.err.println("Compacting GIDs");
-		long gid = 0;
-		for (int i = 0; i < n; i++)
-			events.get(i).setGID(gid++);
-	}
-	if (n > 0) {
-		int i, tidStart = 0;
-		events.sort((l, r) -> {
-			long lt = l.getTID(), rt = r.getTID();
-			return (lt < rt) ? -1 : ((lt > rt) ? 1 : 0);
-		});
-		long lastTID = events.get(0).getTID();
-
-		for (i = 1; i < n; i++) {
-/*
-			assert evarray[i - 1].getGID() < evarray[i].getGID();
-*/
-			if (events.get(i).getTID() == lastTID)
-				continue;
-
-			rawTraces.add(tidSpanToRawTrace(events, tidStart, i));
-			lastTID = events.get(i).getTID();
-			tidStart = i;
+	if (n <= 0)
+		return rawTraces;
+	int nextGenStart = maxEvents + 1;
+	final long genMask = (long)0xffff << 48;
+	if (n < nextGenStart)
+		nextGenStart = n;
+	else for (int i = n - 1; i > 0; i--) {
+		if ((events.get(i - 1).getGID() & genMask) !=
+		    (events.get(i).getGID() & genMask)) {
+			nextGenStart = i;
+			break;
 		}
-
-		rawTraces.add(tidSpanToRawTrace(events, tidStart, n));
 	}
+	if (nextGenStart == maxEvents + 1) {
+		System.err.println("no change of generation in " +
+		    (maxEvents + 1) + " events");
+		return null;		// XXX
+	}
+	if (Configuration.debug) {
+		System.err.println("buffering " + (n - nextGenStart) +
+		    " events after window boundary");
+	}
+	eventsBuffer.addAll(events.subList(nextGenStart, n));
+	events.subList(nextGenStart, n).clear();
+	/* Make GIDs compact. */
+	for (int i = 0; i < nextGenStart; i++)
+		events.get(i).setGID(lastGID + i);
+	lastGID += maxEvents;
+	int tidStart = 0;
+	events.sort((l, r) -> {
+		long lt = l.getTID(), rt = r.getTID();
+		return (lt < rt) ? -1 : ((lt > rt) ? 1 : 0);
+	});
+	long prevTID = events.get(0).getTID();
+
+	for (int i = 1; i < nextGenStart; i++) {
+		if (events.get(i).getTID() == prevTID)
+			continue;
+
+		rawTraces.add(tidSpanToRawTrace(events, tidStart, i));
+		prevTID = events.get(i).getTID();
+		tidStart = i;
+	}
+
+	rawTraces.add(tidSpanToRawTrace(events, tidStart, nextGenStart));
         return rawTraces;
     }
     private static RawTrace tidSpanToRawTrace(List<Event> events,

@@ -35,14 +35,55 @@ lpcq_t *sigq = NULL;
 
 int nitems = 5;
 
-bool use_signal = false;
+bool use_mask = false, use_signal = false;
 bool timing = false;
 
-static inline void
-acquire_queue(void)
+static void
+signals_changemask(int how, int signum, sigset_t *oset)
+{
+	int rc;
+	sigset_t set;
+
+	if (sigemptyset(&set) == -1 || sigaddset(&set, signum) == -1)
+		err(EXIT_FAILURE, "%s: sig{add,empty}set", __func__);
+
+	if ((rc = pthread_sigmask(how, &set, oset)) != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
+		    strerror(rc));
+	}
+}
+
+static void
+signals_unmask(int signum, sigset_t *oset)
+{
+	signals_changemask(SIG_UNBLOCK, signum, oset);
+}
+
+static void
+signals_mask(int signum, sigset_t *oset)
+{
+	signals_changemask(SIG_BLOCK, signum, oset);
+}
+
+static void
+signals_restore(const sigset_t *oset)
 {
 	int rc;
 
+	if ((rc = pthread_sigmask(SIG_SETMASK, oset, NULL)) != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
+		    strerror(rc));
+	}
+}
+
+static inline void
+acquire_queue(sigset_t *oset)
+{
+	int rc;
+
+	if (use_mask)
+		signals_mask(SIGALRM, oset);
+		
 	if (mutexp == NULL)
 		return;
 
@@ -51,9 +92,12 @@ acquire_queue(void)
 }
 
 static inline void
-release_queue(void)
+release_queue(const sigset_t *oset)
 {
 	int rc;
+
+	if (use_mask)
+		signals_restore(oset);
 
 	if (mutexp == NULL)
 		return;
@@ -76,6 +120,8 @@ consume(void *arg)
 		, .tv_nsec = 500 * 1000 * 1000
 	};
 
+	signals_unmask(SIGALRM, NULL);
+
 	nanosleep(&half_second, NULL);
 
 	if (clock_getres(CLOCK_MONOTONIC, &resolution) != 0)
@@ -89,9 +135,10 @@ consume(void *arg)
 		item_t *item;
 
 		for (loops = 0; loops < 10000; loops++) {
-			acquire_queue();
+			sigset_t omask;
+			acquire_queue(&omask);
 			item = lpcq_get(q);
-			release_queue();
+			release_queue(&omask);
 			if (item != NULL) 
 				break;
 			sched_yield();
@@ -121,8 +168,10 @@ static void
 handler(int signum)
 {
 	lpcq_t *q = sigq;
+	static int i = 0;
 
-	lpcq_put(q, &items[0]);
+	if (i < nitems)
+		lpcq_put(q, &items[i++]);
 }
 
 static void
@@ -145,10 +194,11 @@ produce(void *arg)
 	lpcq_t *q = arg;
 	int i;
 
-	for (i = (use_signal ? 1 : 0); i < nitems; i++) {
-		acquire_queue() ;
+	for (i = 0; i < nitems; i++) {
+		sigset_t omask;
+		acquire_queue(&omask);
 		lpcq_put(q, &items[i]);
-		release_queue();
+		release_queue(&omask);
 	}
 
 	return NULL;
@@ -169,13 +219,16 @@ main(int argc, char **argv)
 	pthread_mutex_t mutex;
 	pthread_t producer, consumer;
 
-	while ((opt = getopt(argc, argv, "sln:t")) != -1) {
+	while ((opt = getopt(argc, argv, "slmn:t")) != -1) {
 		unsigned long v;
 		char *end;
 
 		switch (opt) {
 		case 'l':
 			mutexp = &mutex;
+			break;
+		case 'm':
+			use_mask = true;
 			break;
 		case 'n':
 			if (*optarg == '-' ||
@@ -203,23 +256,29 @@ main(int argc, char **argv)
 
 	lpcq_init(&q, offsetof(item_t, next));
 
+	for (i = 0; i < nitems; i++)
+		items[i].idx = i;
+
+	sigset_t oset;
+	signals_mask(SIGALRM, &oset);
+
+	pthread_create(&consumer, NULL, &consume, &q);
+
 	if (use_signal) {
 		struct itimerval it;
 
 		establish(&q);
 		if (getitimer(ITIMER_REAL, &it) == -1)
 			err(EXIT_FAILURE, "%s: getitimer", __func__);
-		it.it_interval = (struct timeval){.tv_sec = 0, .tv_usec = 0};
+		it.it_interval = (struct timeval){.tv_sec = 0, .tv_usec = 100};
 		it.it_value.tv_usec++;
 		if (setitimer(ITIMER_REAL, &it, NULL) == -1)
 			err(EXIT_FAILURE, "%s: setitimer", __func__);
+	} else {
+		pthread_create(&producer, NULL, &produce, &q);
+		pthread_join(producer, NULL);
 	}
-
-	for (i = 0; i < nitems; i++)
-		items[i].idx = i;
-	pthread_create(&consumer, NULL, &consume, &q);
-	pthread_create(&producer, NULL, &produce, &q);
-	pthread_join(producer, NULL);
 	pthread_join(consumer, NULL);
+	signals_restore(&oset);
 	(void)pthread_mutex_destroy(&mutex);
 }

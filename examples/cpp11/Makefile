@@ -3,7 +3,6 @@
 # set of BSD macro files on POSIX-compliant platforms like Linux and
 # Mac OS X by installing a Pkgsrc bootstrap kit from pkgsrc.org.
 #
-.include <bsd.own.mk>
 
 CC=clang++
 CXX=clang++
@@ -18,4 +17,5 @@ SRCS.SimpleRace=SimpleRace.cpp
 
 LDADD+=${RV_PREDICT_CXX_LDADD}
 
-.include <bsd.prog.mk>
+.include "../rvp.mk"
+.include <mkc.prog.mk>

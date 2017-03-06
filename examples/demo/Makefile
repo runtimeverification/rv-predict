@@ -3,7 +3,6 @@
 # set of BSD macro files on POSIX-compliant platforms like Linux and
 # Mac OS X by installing a Pkgsrc bootstrap kit from pkgsrc.org.
 #
-.include <bsd.own.mk>
 
 PROGS=	dot-product lpcq memcpy spcq square-sum
 
@@ -19,4 +18,5 @@ SRCS.memcpy=memcpy.c
 SRCS.lpcq=lpcq.c lpcq_main.c
 SRCS.spcq=spcq.c spcq_main.c
 
-.include <bsd.prog.mk>
+.include "../rvp.mk"
+.include <mkc.prog.mk>

@@ -20,4 +20,4 @@ COPTS+=-Xclang -load -Xclang ${PASS_DIR}/rvpinstrument.so
 LDADD+=-pthread
 LDADD+=-g
 
-DBG=-g -O0
+DBG+=-g -O0

@@ -55,7 +55,7 @@ lpcq_getall(lpcq_t *q)
 	if (q->tailp == &q->head)
 		return (lpcq_iter_t){.item = NULL, .nextofs = 0, .lastnextp = NULL};
 
-	void *item;
+	void *item = q->head;
 
 	void * volatile *otailp = q->tailp;
 	q->tailp = &q->head;

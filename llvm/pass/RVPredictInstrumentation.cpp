@@ -832,8 +832,7 @@ RVPredictInstrument::instrumentAtomic(Instruction *insn, const DataLayout &dl)
 		Value *args[] = {
         builder.CreatePointerCast(addr, PtrTy),
 		    builder.CreateIntCast(rmwi->getValOperand(), Ty, false),
-		    createOrdering(&builder, rmwi->getOrdering())
-    };
+		    createOrdering(&builder, rmwi->getOrdering())};
 		CallInst *ci = CallInst::Create(F, args);
 		ci->insertAfter(insn);
 	} else if (auto casi = dyn_cast<AtomicCmpXchgInst>(insn)) {

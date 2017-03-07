@@ -3,14 +3,14 @@
 #ifndef _RVP_EXCHANGE_H_
 #define _RVP_EXCHANGE_H_
 
+#include "rmw.h"
 #include "rvpint.h"
 
-/* T fn(T *addr, T val, int32_t memory_order) */ 
-uint8_t __rvpredict_atomic_exchange1(uint8_t *, uint8_t, int32_t);
-uint16_t __rvpredict_atomic_exchange2(uint16_t *, uint16_t, int32_t);
-uint32_t __rvpredict_atomic_exchange4(uint32_t *, uint32_t, int32_t);
-uint64_t __rvpredict_atomic_exchange8(uint64_t *, uint64_t, int32_t);
-rvp_uint128_t __rvpredict_atomic_exchange16(rvp_uint128_t *, rvp_uint128_t,
-    int32_t);
+/* void fn(T *addr, T oval, T nval, int32_t memory_order) */ 
+rvp_rmw1_func_t __rvpredict_atomic_exchange1;
+rvp_rmw2_func_t __rvpredict_atomic_exchange2;
+rvp_rmw4_func_t __rvpredict_atomic_exchange4;
+rvp_rmw8_func_t __rvpredict_atomic_exchange8;
+rvp_rmw16_func_t __rvpredict_atomic_exchange16;
 
 #endif /* _RVP_EXCHANGE_H_ */

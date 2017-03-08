@@ -30,12 +30,10 @@ package com.runtimeverification.rvpredict.smt;
 
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import com.microsoft.z3.FuncDecl;
+import com.microsoft.z3.Model;
 import com.microsoft.z3.Solver;
 import com.microsoft.z3.Status;
 import com.runtimeverification.rvpredict.log.Event;
@@ -75,6 +73,8 @@ public class MaximalCausalModel {
      * The formula that describes the maximal causal model of the trace tau.
      */
     private final FormulaTerm.Builder phiTau = FormulaTerm.andBuilder();
+
+    private final Map<String, Event> nameToEvent = new HashMap<>();
 
     private final Z3Filter z3filter;
 
@@ -116,6 +116,7 @@ public class MaximalCausalModel {
         /* build intra-thread program order constraint */
         trace.eventsByThreadID().forEach((tid, events) -> {
             mhbClosureBuilder.createNewGroup(events.get(0));
+            events.forEach(event -> nameToEvent.put(OrderVariable.get(event).toString(), event));
             for (int i = 1; i < events.size(); i++) {
                 Event e1 = events.get(i - 1);
                 Event e2 = events.get(i);
@@ -340,7 +341,31 @@ public class MaximalCausalModel {
             }
 //            checkTraceConsistency(z3filter, solver);
 
+            if (solver.check() == Status.SATISFIABLE) {
+                Model model = solver.getModel();
+                Map<Long, List<FuncDecl>> threadToExecution = new HashMap<>();
+                for (FuncDecl f : model.getConstDecls()) {
+                    String name = f.getName().toString();
+                    if (nameToEvent.containsKey(name)) {
+                        Event event = nameToEvent.get(name);
+                        threadToExecution.computeIfAbsent(event.getTID(), a -> new ArrayList<>());
+                        threadToExecution.get(event.getTID()).add(f);
+                    }
+                }
+                threadToExecution.values().forEach(events ->
+                        events.sort(Comparator.comparingLong(f -> Long.parseLong(model.getConstInterp(f).toString()))));
+
+                threadToExecution.forEach((tid, functions) -> {
+                    ArrayList<String> description = new ArrayList<>();
+                    functions.forEach(f -> description.add(f.getName() + ":" + model.getConstInterp(f)));
+                    System.out.print("Thread:" + tid);
+                    System.out.print(" -> ");
+                    System.out.println(String.join(" ", description));
+                });
+                System.out.println(".......... That's all folks!");
+            }
             /* check race suspects */
+
             for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
                 for (Race race : entry.getValue()) {
                     solver.push();

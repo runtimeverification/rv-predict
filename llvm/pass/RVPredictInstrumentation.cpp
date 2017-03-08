@@ -276,7 +276,7 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 			atomic_rmw[op][i] =
 			    checkSanitizerInterfaceFunction(
 			        m.getOrInsertFunction(rmw_name, void_type,
-                  ptr_type, type, memory_order_type,
+                  ptr_type, type, type, memory_order_type,
        	          nullptr));
 		}
 
@@ -831,6 +831,7 @@ RVPredictInstrument::instrumentAtomic(Instruction *insn, const DataLayout &dl)
 		Type *PtrTy = Ty->getPointerTo();
 		Value *args[] = {
         builder.CreatePointerCast(addr, PtrTy),
+        rmwi,
 		    builder.CreateIntCast(rmwi->getValOperand(), Ty, false),
 		    createOrdering(&builder, rmwi->getOrdering())};
 		CallInst *ci = CallInst::Create(F, args);

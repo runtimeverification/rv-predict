@@ -186,13 +186,15 @@ serialize(void *arg)
 			 * many words flushed?
 			 */
 
-			nblocksets_last = rvp_sigblocksets_emit(fd, nblocksets_last);
+			nblocksets_last = rvp_sigblocksets_emit(fd,
+			    nblocksets_last);
 			any_emptied = false;
 			for (t = thread_head; t != NULL; t = t->t_next) {
 				any_emptied |= rvp_ring_flush_to_fd(&t->t_ring,
 				    fd, &serializer_lc);
 			}
-			any_emptied |= rvp_signal_rings_flush_to_fd(fd, &serializer_lc);
+			any_emptied |= rvp_signal_rings_flush_to_fd(fd,
+			    &serializer_lc);
 		} while (any_emptied);
 
 		for (t = rvp_collect_garbage(); t != NULL; t = next_t) {

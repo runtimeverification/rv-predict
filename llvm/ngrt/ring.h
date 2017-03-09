@@ -40,6 +40,7 @@ struct _rvp_ring {
 };
 
 extern volatile _Atomic uint64_t rvp_ggen;
+extern unsigned int rvp_log2_nthreads;
 
 static inline void
 rvp_increase_ggen(void)
@@ -159,9 +160,19 @@ rvp_ring_put_multiple(rvp_ring_t *r, const uint32_t *item, int nitems)
 	}
 
 	atomic_store_explicit(&r->r_producer, next, memory_order_release);
-	if (rvp_ring_nfull(r) * 2 == rvp_ring_capacity(r) + 1) {
+
+	int nslots = rvp_ring_capacity(r) + 1;
+	int ggen_threshold = nslots >> (1 + rvp_log2_nthreads);
+	int service_threshold = nslots / 2;
+	int nfull = rvp_ring_nfull(r);
+
+	if (nitems >= ggen_threshold ||
+	    (prev - r->r_items) / ggen_threshold <
+	    (next - r->r_items) / ggen_threshold)
+		rvp_increase_ggen();
+
+	if ((nfull - nitems) / service_threshold < nfull / service_threshold)
 		rvp_ring_request_service(r);
-	}
 }
 
 static inline void

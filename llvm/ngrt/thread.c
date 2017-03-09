@@ -27,6 +27,8 @@ static rvp_thread_t *rvp_thread_create(void *(*)(void *), void *);
 
 volatile _Atomic uint64_t rvp_ggen = 0;	// global generation number
 
+unsigned int rvp_log2_nthreads = 1;
+
 /* thread_mutex protects thread_head, next_id */
 static pthread_mutex_t thread_mutex;
 static rvp_thread_t * volatile thread_head = NULL;
@@ -273,6 +275,13 @@ __rvpredict_init(void)
 	(void)pthread_once(&rvp_init_once, rvp_init);
 }
 
+static void
+rvp_update_nthreads(uint32_t n)
+{
+	while ((1 << rvp_log2_nthreads) < n)
+		rvp_log2_nthreads <<= 1;
+}
+
 static int
 rvp_thread_attach(rvp_thread_t *t)
 {
@@ -282,6 +291,8 @@ rvp_thread_attach(rvp_thread_t *t)
 		thread_unlock();
 		errx(EXIT_FAILURE, "%s: out of thread IDs", __func__);
 	}
+
+	rvp_update_nthreads(t->t_id);
 
 	t->t_ring.r_tid = t->t_id;
 	t->t_ring.r_nintr_outst = 0;

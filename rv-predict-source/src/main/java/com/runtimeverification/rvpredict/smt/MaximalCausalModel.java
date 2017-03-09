@@ -36,6 +36,7 @@ import com.microsoft.z3.FuncDecl;
 import com.microsoft.z3.Model;
 import com.microsoft.z3.Solver;
 import com.microsoft.z3.Status;
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
@@ -308,6 +309,21 @@ public class MaximalCausalModel {
         return raceAsst.build();
     }
 
+    private class EventWithOrder {
+        private final Event event;
+        private final long orderId;
+        public EventWithOrder(Event event, long orderId) {
+            this.event = event;
+            this.orderId = orderId;
+        }
+        public Event getEvent() {
+            return event;
+        }
+        public long getOrderId() {
+            return orderId;
+        }
+    }
+
     /**
      * Checks if the given race suspects are real. Race suspects are grouped by
      * their signatures.
@@ -341,28 +357,8 @@ public class MaximalCausalModel {
             }
 //            checkTraceConsistency(z3filter, solver);
 
-            if (solver.check() == Status.SATISFIABLE) {
-                Model model = solver.getModel();
-                Map<Long, List<FuncDecl>> threadToExecution = new HashMap<>();
-                for (FuncDecl f : model.getConstDecls()) {
-                    String name = f.getName().toString();
-                    if (nameToEvent.containsKey(name)) {
-                        Event event = nameToEvent.get(name);
-                        threadToExecution.computeIfAbsent(event.getTID(), a -> new ArrayList<>());
-                        threadToExecution.get(event.getTID()).add(f);
-                    }
-                }
-                threadToExecution.values().forEach(events ->
-                        events.sort(Comparator.comparingLong(f -> Long.parseLong(model.getConstInterp(f).toString()))));
-
-                threadToExecution.forEach((tid, functions) -> {
-                    ArrayList<String> description = new ArrayList<>();
-                    functions.forEach(f -> description.add(f.getName() + ":" + model.getConstInterp(f)));
-                    System.out.print("Thread:" + tid);
-                    System.out.print(" -> ");
-                    System.out.println(String.join(" ", description));
-                });
-                System.out.println(".......... That's all folks!");
+            if (Configuration.debug) {
+                findAndDumpOrdering();
             }
             /* check race suspects */
 
@@ -385,6 +381,36 @@ public class MaximalCausalModel {
         }
 
         return result;
+    }
+
+    private void findAndDumpOrdering() {
+        solver.push();
+        if (solver.check() == Status.SATISFIABLE) {
+            Model model = solver.getModel();
+            Map<Long, List<EventWithOrder>> threadToExecution = new HashMap<>();
+            for (FuncDecl f : model.getConstDecls()) {
+                String name = f.getName().toString();
+                if (nameToEvent.containsKey(name)) {
+                    Event event = nameToEvent.get(name);
+                    EventWithOrder eventWithOrder =
+                            new EventWithOrder(event, Long.parseLong(model.getConstInterp(f).toString()));
+                    threadToExecution.computeIfAbsent(event.getTID(), a -> new ArrayList<>()).add(eventWithOrder);
+                }
+            }
+            threadToExecution.values().forEach(events ->
+                    events.sort(Comparator.comparingLong(e -> e.getOrderId())));
+
+            System.out.println("Possible ordering of events, per thread ..........");
+            threadToExecution.forEach((tid, events) -> {
+                ArrayList<String> description = new ArrayList<>();
+                events.forEach(e -> description.add(e.getEvent().getGID() + ":" + e.getOrderId()));
+                System.out.print("  Thread:" + tid);
+                System.out.print(" -> ");
+                System.out.println(String.join(" ", description));
+            });
+            System.out.println(".......... That's all folks!");
+        }
+        solver.pop();
     }
 
     /**

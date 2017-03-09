@@ -5,6 +5,7 @@ eitherorboth
 .gdbinit
 *.ll
 .Makefile.tags
+_mkc_*
 *.o
 *.pico
 *.po

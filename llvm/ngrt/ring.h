@@ -166,6 +166,13 @@ rvp_ring_put_multiple(rvp_ring_t *r, const uint32_t *item, int nitems)
 	int service_threshold = nslots / 2;
 	int nfull = rvp_ring_nfull(r);
 
+	/* Increase the global generation number every time the producer
+	 * pointer in a per-thread event ring passes milestones that are
+	 * ggen_threshold apart.  Milestones get closer to each other
+	 * (ggen_threshold gets smaller) with more running threads, so
+	 * that opportunities to start new windows appear fairly regularly
+	 * no matter what level of concurrency.
+	 */
 	if (nitems >= ggen_threshold ||
 	    (prev - r->r_items) / ggen_threshold <
 	    (next - r->r_items) / ggen_threshold)

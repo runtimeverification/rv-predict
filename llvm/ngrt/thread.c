@@ -268,6 +268,8 @@ rvp_init(void)
 	rvp_relay_create();
 	rvp_serializer_create();
 
+	rvp_static_intrs_init();
+
 	atexit(rvp_stop_transmitter);
 }
 

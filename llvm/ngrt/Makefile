@@ -17,6 +17,7 @@ CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
 SRCS=access.c const.c func.c lock.c notimpl.c
 SRCS+=relay.c ring.c rmw.c rvpsignal.c sigutil.c
 SRCS+=thread.c trace.c
+SRCS+=intr.c
 WARNS=4
 
 .include <mkc.lib.mk>

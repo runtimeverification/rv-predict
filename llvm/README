@@ -43,5 +43,5 @@ Compile each source file, $src in $SRCS:
 Link:
 
 	clang     -o $PROG $OBJS \
-	    -L$BUILD/lib/linux -lclang_rt.tsan-x86_64 -ldl -lrt -pthread -g
+	    -L$BUILD/runtime/lib/linux -lclang_rt.tsan-x86_64 -ldl -lrt -pthread -g
 

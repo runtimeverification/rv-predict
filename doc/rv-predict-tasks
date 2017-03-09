@@ -1,0 +1,52 @@
+Detailed task breakdown, RV-Predict for C:
+[ ]	* Write Design & Implementation (D&I) document
+[x]		* consolidate proposals and staff feedback
+		  (see rv-predict-discussion.mbox)
+[ ]		* summarize major decisions
+[ ]		* write a manual for the compiler and execution
+		  environment, `rvpc` and `rvpx`
+		* describe rendezvous of RVPC runtime & analysis
+		  backend
+			* environment variables
+			* descriptors, files, & directories
+[ ]		* finalize designs
+			* trace format---add frame pointer
+			* ring buffers
+			* window boundary protocol
+			* trace stream
+[x]	* Implement ring buffers and new trace format
+[x]	* Write tool to display trace-stream
+[ ]	* Write tool to lint trace-stream
+[ ]	* Write tool to derive symbol names from data pointers,
+	  instruction pointers, frame pointers using DWARF debug
+	  information
+[ ]	* Produce interactive UI prototype for RV-Predict
+	* Update analysis backend
+[ ]		* Write Java reader for new trace streams
+[ ]		* Add formulas
+			* interrupts
+			* load/store barriers
+			* atomics
+[ ]		* Improve modeling of 1-, 2-, 4-, 8-byte access widths,
+		  byte string <string.h>.
+		* Program new RVPC report format, step by step
+[ ]			* Program the new layout in HTML & plain text
+[ ]			* Symbolize global memory locations
+				* load targets
+				* store targets
+[ ]			* Symbolize stack memory locations
+				* load targets: value <- symbol
+				* store targets: value -> symbol
+[ ]			* Symbolize memory values with pointer type
+				* load values: symbol <- symbol
+				* store values: symbol -> symbol
+[ ]			* Add source context to report
+	* Backend performance improvements
+[ ]		* Produce new performance profiles
+[ ]		* Compare profiles from non-sampling & sampling profilers
+[ ]		* Possible task: use faster algorithms and data structures
+		  for the transitive closure
+[ ]		* Possible task: look at solver performance versus
+		  level of constraint
+[ ]		* Possible task: tune I/O performance
+[ ]		* Possible task: try an alternate solver

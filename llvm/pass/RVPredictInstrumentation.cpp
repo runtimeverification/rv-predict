@@ -276,8 +276,8 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 			atomic_rmw[op][i] =
 			    checkSanitizerInterfaceFunction(
 			        m.getOrInsertFunction(rmw_name, void_type,
-                  ptr_type, type, type, memory_order_type,
-       	          nullptr));
+                                ptr_type, type, type, memory_order_type,
+       	                        nullptr));
 		}
 
 		SmallString<32> atomic_cas_name("__rvpredict_atomic_cas" +
@@ -830,8 +830,8 @@ RVPredictInstrument::instrumentAtomic(Instruction *insn, const DataLayout &dl)
 		Type *Ty = Type::getIntNTy(builder.getContext(), BitSize);
 		Type *PtrTy = Ty->getPointerTo();
 		Value *args[] = {
-                    builder.CreatePointerCast(addr, PtrTy),
-                    rmwi,
+		    builder.CreatePointerCast(addr, PtrTy),
+		    rmwi,
 		    builder.CreateIntCast(rmwi->getValOperand(), Ty, false),
 		    createOrdering(&builder, rmwi->getOrdering())};
 		CallInst *ci = CallInst::Create(F, args);

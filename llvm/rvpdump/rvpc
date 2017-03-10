@@ -50,8 +50,11 @@ if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ]; then
 	pass="-Xclang -load -Xclang $PASS_DIR/rvpinstrument.so -g"
 fi
 
+# -ldl for dlsym()
+# -lrt for timer_create() et cetera, in hacks.c
+# -pthread for POSIX threads
 if [ ${link:-yes} = yes ]; then
-	runtime="-L${RUNTIME_DIR} -lrvprt${bits:-} -ldl -pthread -g"
+	runtime="-L${RUNTIME_DIR} -lrvprt${bits:-} -ldl -lrt -pthread -g"
 fi
 
 $compiler ${pass:-} "$@" ${runtime:-}

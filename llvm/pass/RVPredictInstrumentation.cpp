@@ -276,8 +276,8 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 			atomic_rmw[op][i] =
 			    checkSanitizerInterfaceFunction(
 			        m.getOrInsertFunction(rmw_name, void_type,
-                                ptr_type, type, type, memory_order_type,
-       	                        nullptr));
+				    ptr_type, type, type, memory_order_type,
+				    nullptr));
 		}
 
 		SmallString<32> atomic_cas_name("__rvpredict_atomic_cas" +

@@ -53,6 +53,7 @@ struct _rvp_pstate;
 typedef struct _rvp_pstate rvp_pstate_t;
 
 typedef struct _rvp_emitters {
+	void (*init)(const rvp_pstate_t *);
 	void (*emit_jump)(const rvp_pstate_t *, rvp_addr_t);
 	void (*emit_op)(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
 	    bool, int);
@@ -121,6 +122,7 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 	, [RVP_OP_LOAD1] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t, "load 1")
 	, [RVP_OP_STORE1] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t, "store 1")
 	, [RVP_OP_LOAD2] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t, "load 2")
+	, [RVP_OP_STORE2] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t, "store 2")
 	, [RVP_OP_LOAD4] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t, "load 4")
 	, [RVP_OP_STORE4] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t, "store 4")
 	, [RVP_OP_LOAD8] = OP_INFO_INIT(rvp_load8_store8_t, "load 8")
@@ -158,6 +160,8 @@ static void emit_fork_metadata(uint64_t, uint64_t, uint32_t);
 
 static uint32_t get_next_thdfd(uintmax_t);
 
+static void legacy_init(const rvp_pstate_t *);
+
 static void print_jump(const rvp_pstate_t *, rvp_addr_t);
 static void print_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
     bool, int);
@@ -168,7 +172,8 @@ static const rvp_emitters_t plain_text = {
 };
 
 static const rvp_emitters_t legacy_binary = {
-	  .emit_jump = emit_no_jump
+	  .init = legacy_init
+	, .emit_jump = emit_no_jump
 	, .emit_op = emit_legacy_op
 };
 
@@ -296,6 +301,14 @@ static inline bool
 pc_is_not_deltop(rvp_pstate_t *ps, rvp_addr_t pc)
 {
 	return pc < ps->ps_deltop_first || ps->ps_deltop_last < pc;
+}
+
+static void
+legacy_init(const rvp_pstate_t *ps)
+{
+	thdfd = open("thd_metadata.bin", O_WRONLY|O_CREAT|O_TRUNC, 0600);
+	if (thdfd == -1)
+		err(EXIT_FAILURE, "%s: open", __func__);
 }
 
 static void
@@ -711,12 +724,6 @@ emit_extended_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub,
 static void
 emit_fork_metadata(uint64_t curtid, uint64_t newtid, uint32_t stmtid)
 {
-	if (thdfd == -1) {
-		thdfd = open("thd_metadata.bin",
-		    O_WRONLY|O_CREAT|O_TRUNC, 0600);
-		if (thdfd == -1)
-			err(EXIT_FAILURE, "%s: open", __func__);
-	}
 	thd_record_t thd_record = {
 		  .newtid = newtid
 		, .curtid = curtid
@@ -1128,6 +1135,9 @@ rvp_trace_dump(rvp_output_type_t otype, int fd)
 	}
 
 	rvp_pstate_init(ps, emitters, pc0, tid, generation);
+
+	if (emitters->init != NULL)
+		(*emitters->init)(ps);
 
 	ub.ub_begin = (rvp_begin_t){.deltop = pc0, .tid = tid};
 

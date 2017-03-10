@@ -30,7 +30,12 @@ package com.runtimeverification.rvpredict.smt;
 
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.microsoft.z3.FuncDecl;
 import com.microsoft.z3.Model;

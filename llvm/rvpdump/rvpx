@@ -7,6 +7,10 @@ exitcode=1
 
 exit_hook()
 {
+	for core in $(ls $tmpdir/*core); do
+		echo "$(basename $0): there are cores in $tmpdir/." 1>&2
+		exit $exitcode
+	done
         rm -rf $tmpdir
         exit $exitcode
 }

@@ -1,6 +1,7 @@
 #include <err.h>
 #include <inttypes.h> /* for PRId32 */
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +21,8 @@ typedef struct _rvp_static_intr {
 static rvp_static_intr_t rvp_static_intr[128];
 
 static int rvp_static_nintrs = 0;
+
+static bool intr_debug = false;
 
 static int
 static_intr_compare(const void *l, const void *r)
@@ -48,7 +51,14 @@ rvp_static_intrs_init(void)
 {
 	int i, j, nprio = 0;
 
-	fprintf(stderr, "%d signal handlers found\n", rvp_static_nintrs);
+	const char *debugenv = getenv("RVP_INTR_DEBUG");
+
+	intr_debug = debugenv != NULL && strcmp(debugenv, "yes") == 0;
+
+	if (intr_debug) {
+		fprintf(stderr, "%d signal handlers found\n",
+		    rvp_static_nintrs);
+	}
 
 	qsort(rvp_static_intr, rvp_static_nintrs, sizeof(rvp_static_intr[0]),
 	    static_intr_compare);
@@ -153,8 +163,10 @@ __rvpredict_intr_enable(void)
 void
 __rvpredict_intr_register(void (*handler)(void), int32_t prio)
 {
-	fprintf(stderr, "%s: handler %p prio %" PRId32 "\n",
-	    __func__, handler, prio);
+	if (intr_debug) {
+		fprintf(stderr, "%s: handler %p prio %" PRId32 "\n",
+		    __func__, handler, prio);
+	}
 	if (rvp_static_nintrs >= __arraycount(rvp_static_intr)) {
 		errx(EXIT_FAILURE,
 		    "%s: no room for handler %p prio %" PRId32 "\n",

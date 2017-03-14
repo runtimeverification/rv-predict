@@ -87,6 +87,7 @@ public class MaximalCausalModel {
                 Event event = currentEvents.get(j);
                 if (event.isStart()) {
                     limits.get(threadToIndex.get(event.getSyncedThreadId())).setStart(i, j);
+                    System.out.println("tti[" + threadToIndex.get(event.getSyncedThreadId()) + "]=" + i + ", "+ j);
                 }
             }
         }
@@ -96,16 +97,16 @@ public class MaximalCausalModel {
     private void addRaceIfNeeded(Configuration configuration, Map<String, Race> races) {
         for (int i = 0; i < configuration.getEventIndexes().length; i++) {
             int eventIndex1 = configuration.getEventIndexes()[i];
-            if (eventIndex1 >= events.get(i).size()) {
+            if (eventIndex1 == 0 || eventIndex1 >= events.get(i).size()) {
                 continue;
             }
-            Event e1 = events.get(i).get(eventIndex1);
+            Event e1 = events.get(i).get(eventIndex1 - 1);
             for (int j = i + 1; j < configuration.getEventIndexes().length; j++) {
                 int eventIndex2 = configuration.getEventIndexes()[j];
-                if (eventIndex2 >= events.get(j).size()) {
+                if (eventIndex2 == 0 || eventIndex2 > events.get(j).size()) {
                     continue;
                 }
-                Event e2 = events.get(j).get(eventIndex2);
+                Event e2 = events.get(j).get(eventIndex2 - 1);
                 if (!e1.isWrite() && !e2.isWrite()) {
                     continue;
                 }
@@ -119,6 +120,7 @@ public class MaximalCausalModel {
                 if (races.containsKey(signature)) {
                     continue;
                 }
+                System.out.println(signature + " -> " + e1 + " vs " + e2);
                 races.computeIfAbsent(signature, s -> new Race(e1, e2, trace, globalConfiguration));
             }
         }

@@ -5,11 +5,9 @@ import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.violation.Race;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
-/**
- * Created by virgil on 14.03.2017.
- */
 public class MaximalCausalModel {
     private final Trace trace;
     private final com.runtimeverification.rvpredict.config.Configuration globalConfiguration;
@@ -17,18 +15,17 @@ public class MaximalCausalModel {
     private final Map<Long, Integer> threadToIndex;
     private final List<Long> variables;
     private final Map<Long, Integer> variableToIndex;
-    private final List<List<Event>> events;
+    private final List<List<Event>> eventsForThread;
     private final List<List<Set<Long>>> writeLocksPerInstruction;
     private final List<List<Set<Long>>> readLocksPerInstruction;
     private final List<ThreadLimits> threadLimits;
 
     public static MaximalCausalModel create(
             Trace trace, com.runtimeverification.rvpredict.config.Configuration globalConfiguration) {
-        MaximalCausalModel model = new MaximalCausalModel(trace, globalConfiguration);
-        return model;
+        return new MaximalCausalModel(trace, globalConfiguration);
     }
 
-    public MaximalCausalModel(
+    private MaximalCausalModel(
             Trace trace, com.runtimeverification.rvpredict.config.Configuration globalConfiguration) {
         this.trace = trace;
         this.globalConfiguration = globalConfiguration;
@@ -42,15 +39,17 @@ public class MaximalCausalModel {
         for (int i = 0; i < variables.size(); i++) {
             variableToIndex.put(variables.get(i), i);
         }
-        events = new ArrayList<>();
+        eventsForThread = new ArrayList<>();
         writeLocksPerInstruction = new ArrayList<>();
         readLocksPerInstruction = new ArrayList<>();
-        for (int threadIndex = 0; threadIndex < threads.size(); threadIndex++) {
-            List<Event> threadEvents = trace.getEvents(threads.get(threadIndex));
-            events.add(threadEvents);
-            writeLocksPerInstruction.add(computeWriteLocksPerInstruction(threadEvents));
-            readLocksPerInstruction.add(computeReadLocksPerInstruction(threadEvents));
-        }
+        threads.forEach(threadId -> {
+            List<Event> threadEvents = trace.getEvents(threadId);
+            eventsForThread.add(threadEvents);
+            writeLocksPerInstruction.add(
+                    computeWriteLocksPerInstruction(threadEvents, trace.getHeldLocksAt(threadEvents.get(0))));
+            readLocksPerInstruction.add(
+                    computeReadLocksPerInstruction(threadEvents, trace.getHeldLocksAt(threadEvents.get(0))));
+        });
         threadLimits = computeThreadLimits();
     }
 
@@ -59,64 +58,136 @@ public class MaximalCausalModel {
         Set<Configuration> configurations = new HashSet<>();
         Map<String, Race> races = new HashMap<>();
 
-        toProcess.add(new Configuration(threads.size(), variables.size()));
+        toProcess.add(new Configuration(threads.size(), computeInitialVariableValues()));
         long count = 0;
         while (!toProcess.isEmpty()) {
             count++;
             Configuration configuration = toProcess.remove();
-            addRaceIfNeeded(configuration, races);
-            expand(configuration).forEach(expanded -> {
-                if (configurations.contains(expanded)) {
+            addRaces(configuration, races);
+
+            List<ConfigurationWithEvent> expandedConfigurations = expand(configuration);
+            expandedConfigurations.forEach(expanded -> {
+                Configuration expandedConfiguration = expanded.getConfiguration();
+                if (configurations.contains(expandedConfiguration)) {
                     return;
                 }
-                configurations.add(expanded);
-                toProcess.add(expanded);
+                configurations.add(expandedConfiguration);
+                toProcess.add(expandedConfiguration);
             });
         }
         System.out.println("Count=" + count);
         return races;
     }
 
+    private long[] computeInitialVariableValues() {
+        Event[] firstEventForVariable = new Event[variables.size()];
+        List<Set<Long>> allValuesForVariable = new ArrayList<>();
+        variables.forEach(events -> allValuesForVariable.add(new HashSet<>()));
+        eventsForThread.forEach(events ->
+            events.stream()
+                    .filter(Event::isReadOrWrite)
+                    .forEach(event -> {
+                        Integer variableIndex = variableToIndex.getOrDefault(event.getAddr(), null);
+                        if (variableIndex == null) {
+                            return;
+                        }
+                        allValuesForVariable.get(variableIndex).add(event.getValue());
+                        Event first = firstEventForVariable[variableIndex];
+                        if (first == null || event.getGID() < first.getGID()) {
+                            firstEventForVariable[variableIndex] = event;
+                        }
+                    }));
+        long [] initialValues = new long[variables.size()];
+        for (int i = 0; i < initialValues.length; i++) {
+            Event first = firstEventForVariable[i];
+            if (first.isWrite()) {
+                initialValues[i] = getUnusedValue(allValuesForVariable.get(i));
+            } else {
+                initialValues[i] = first.getValue();
+            }
+        }
+        return initialValues;
+    }
+
+    private long getUnusedValue(Set<Long> usedValues) {
+        long value;
+        do {
+            value = ThreadLocalRandom.current().nextLong();
+        } while (usedValues.contains(value));
+        return value;
+    }
+
     // TODO: This should be static.
     private List<ThreadLimits> computeThreadLimits() {
         List<ThreadLimits> limits = new ArrayList<>();
-        events.forEach(e -> limits.add(new ThreadLimits()));
-        for (int i = 0; i < events.size(); i++) {
-            List<Event> currentEvents = events.get(i);
+        eventsForThread.forEach(e -> limits.add(new ThreadLimits()));
+        for (int i = 0; i < eventsForThread.size(); i++) {
+            List<Event> currentEvents = eventsForThread.get(i);
             for (int j = 0; j < currentEvents.size(); j++) {
                 Event event = currentEvents.get(j);
                 if (event.isStart()) {
-                    limits.get(threadToIndex.get(event.getSyncedThreadId())).setStart(i, j);
-                    System.out.println("tti[" + threadToIndex.get(event.getSyncedThreadId()) + "]=" + i + ", "+ j);
+                    Integer threadIndex = threadToIndex.get(event.getSyncedThreadId());
+                    if (threadIndex == null) {
+                        // TODO: Why does this happen?
+                        System.out.println("Thread " + event.getSyncedThreadId() + " not found.");
+                        continue;
+                    }
+                    limits.get(threadIndex).setStart(i, j);
                 }
             }
         }
         return limits;
     }
 
-    private void addRaceIfNeeded(Configuration configuration, Map<String, Race> races) {
-        for (int i = 0; i < configuration.getEventIndexes().length; i++) {
-            int eventIndex1 = configuration.getEventIndexes()[i];
-            if (eventIndex1 == 0 || eventIndex1 >= events.get(i).size()) {
+    private void addRaces(Configuration configuration, Map<String, Race> races) {
+        List<Event> accesibleEvents = new ArrayList<>();
+        for (int threadIndex = 0; threadIndex < threads.size(); threadIndex++) {
+            int eventIndex = configuration.getEventIndex(threadIndex);
+            if (eventIndex == 0 && !threadCanStart(threadIndex, configuration)) {
                 continue;
             }
-            Event e1 = events.get(i).get(eventIndex1 - 1);
-            for (int j = i + 1; j < configuration.getEventIndexes().length; j++) {
-                int eventIndex2 = configuration.getEventIndexes()[j];
-                if (eventIndex2 == 0 || eventIndex2 > events.get(j).size()) {
+            if (eventIndex >= eventsForThread.get(threadIndex).size()) {
+                continue;
+            }
+            Event event = eventsForThread.get(threadIndex).get(eventIndex);
+            if (!event.isReadOrWrite()) {
+                continue;
+            }
+            accesibleEvents.add(event);
+        }
+        for (int i = 0; i < accesibleEvents.size(); i++) {
+            Event e1 = accesibleEvents.get(i);
+            for (int j = i + 1; j < accesibleEvents.size(); j++) {
+                Event e2 = accesibleEvents.get(j);
+                if (e1.getTID() == e2.getTID()
+                        || e1.getAddr() != e2.getAddr()
+                        || (!e1.isWrite() && !e2.isWrite())) {
                     continue;
                 }
-                Event e2 = events.get(j).get(eventIndex2 - 1);
-                if (!e1.isWrite() && !e2.isWrite()) {
+                String signature = e1.getGID() + ":" + e2.getGID();
+                if (races.containsKey(signature)) {
                     continue;
                 }
-                if (!e1.isReadOrWrite() || !e2.isReadOrWrite()) {
+                races.computeIfAbsent(signature, s -> new Race(e1, e2, trace, globalConfiguration));
+            }
+        }
+    }
+    /*
+    private void addRaces(List<ConfigurationWithEvent> configurations, Map<String, Race> races) {
+        List<Event> newEvents = configurations.stream()
+                .map(ConfigurationWithEvent::getEvent)
+                .filter(Event::isReadOrWrite)
+                .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+        for (int i = 0; i < newEvents.size(); i++) {
+            Event e1 = newEvents.get(i);
+            for (int j = i + 1; j < newEvents.size(); j++) {
+                Event e2 = newEvents.get(j);
+                if (e1.getTID() == e2.getTID()
+                        || e1.getAddr() != e2.getAddr()
+                        || (!e1.isWrite() && !e2.isWrite())) {
                     continue;
                 }
-                if (e1.getAddr() != e2.getAddr()) {
-                    continue;
-                }
-                String signature = i + ":" + eventIndex1 + ":" + j + ":" + eventIndex2;
+                String signature = e1.getGID() + ":" + e2.getGID();
                 if (races.containsKey(signature)) {
                     continue;
                 }
@@ -125,22 +196,48 @@ public class MaximalCausalModel {
             }
         }
     }
+    */
 
-    private List<Configuration> expand(Configuration configuration) {
-        List<Configuration> expanded = new ArrayList<>();
-        for (int i = 0; i < events.size(); i++) {
-            int eventIndex = configuration.eventIndexes[i];
-            if (eventIndex >= events.get(i).size()) {
+    private List<ConfigurationWithEvent> expand(Configuration configuration) {
+        if (globalConfiguration.debug) {
+            System.out.println("Expanding: " + configuration);
+        }
+        List<ConfigurationWithEvent> expanded = new ArrayList<>();
+        for (int threadIndex = 0; threadIndex < eventsForThread.size(); threadIndex++) {
+            if (globalConfiguration.debug) {
+                System.out.print("Thread: " + threadIndex + " ");
+            }
+            int eventIndex = configuration.getEventIndex(threadIndex);
+            if (eventIndex >= eventsForThread.get(threadIndex).size()) {
+                if (globalConfiguration.debug) {
+                    System.out.println("No more events.");
+                }
                 continue;
             }
-            if (eventIndex == 0 && !threadCanStart(i, configuration)) {
+            if (eventIndex == 0 && !threadCanStart(threadIndex, configuration)) {
+                if (globalConfiguration.debug) {
+                    System.out.println("Thread can't start.");
+                }
                 continue;
             }
-            Configuration expandedConfiguration = expandWithEvent(configuration, i, events.get(i).get(eventIndex));
+            Event event = eventsForThread.get(threadIndex).get(eventIndex);
+            if (globalConfiguration.debug) {
+                System.out.print(event + " ");
+            }
+            Configuration expandedConfiguration = expandWithEvent(configuration, threadIndex, event);
             if (expandedConfiguration == null) {
+                if (globalConfiguration.debug) {
+                    System.out.println("Can't expand configuration.");
+                }
                 continue;
             }
-            expanded.add(expandedConfiguration);
+            if (globalConfiguration.debug) {
+                System.out.println("Expanded as " + new ConfigurationWithEvent(expandedConfiguration, event) + ".");
+            }
+            expanded.add(new ConfigurationWithEvent(expandedConfiguration, event));
+        }
+        if (globalConfiguration.debug) {
+            System.out.println("expanded=" + expanded);
         }
         return expanded;
     }
@@ -161,10 +258,10 @@ public class MaximalCausalModel {
             return expandWithWrite(configuration, threadIndex, event.getAddr(), event.getValue());
         }
         if (event.isWriteLock()) {
-            return expandWithWriteLock(configuration, threadIndex, event.getAddr());
+            return expandWithWriteLock(configuration, threadIndex, event.getSyncObject());
         }
         if (event.isReadLock()) {
-            return expandWithReadLock(configuration, threadIndex, event.getAddr());
+            return expandWithReadLock(configuration, threadIndex, event.getSyncObject());
         }
         if (event.isJoin()) {
             return expandWithJoin(configuration, threadIndex, event.getSyncedThreadId());
@@ -174,7 +271,7 @@ public class MaximalCausalModel {
 
     private Configuration expandWithJoin(Configuration configuration, int threadIndex, long joinedThread) {
         int joinedThreadIndex = threadToIndex.get(joinedThread);
-        if (configuration.getEventIndex(joinedThreadIndex) >= events.get(joinedThreadIndex).size()) {
+        if (configuration.getEventIndex(joinedThreadIndex) >= eventsForThread.get(joinedThreadIndex).size()) {
             return expandWithGenericEvent(configuration, threadIndex);
         }
         return null;
@@ -246,43 +343,72 @@ public class MaximalCausalModel {
         });
         return variableToThreadCount.entrySet().stream()
                 .filter(entry -> entry.getValue() > 1)
-                .map(entry -> entry.getKey())
+                .map(Map.Entry::getKey)
                 .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
     }
 
-    private static List<Set<Long>> computeWriteLocksPerInstruction(List<Event> events) {
-        return computeLocksPerInstruction(events, event -> event.isWriteLock(), event -> event.isWriteUnlock());
+    private static List<Set<Long>> computeWriteLocksPerInstruction(List<Event> events, List<Event> heldLocks) {
+        return computeLocksPerInstruction(events, Event::isWriteLock, Event::isWriteUnlock, heldLocks);
     }
 
-    private static List<Set<Long>> computeReadLocksPerInstruction(List<Event> events) {
-        return computeLocksPerInstruction(events, event -> event.isReadLock(), event -> event.isReadUnlock());
+    private static List<Set<Long>> computeReadLocksPerInstruction(List<Event> events, List<Event> heldLocks) {
+        return computeLocksPerInstruction(events, Event::isReadLock, Event::isReadUnlock, heldLocks);
     }
 
     private static List<Set<Long>> computeLocksPerInstruction(
-            List<Event> events, Predicate<Event> isLock, Predicate<Event> isUnlock) {
+            List<Event> events, Predicate<Event> isLock, Predicate<Event> isUnlock, List<Event> heldLocks) {
         Set<Long> locks = new HashSet<>();
+        for (Event event : heldLocks) {
+            if (isLock.test(event)) {
+                locks.add(event.getSyncObject());
+            }
+        }
         List<Set<Long>> locksPerInstruction = new ArrayList<>(events.size());
         for (Event event : events) {
+            locksPerInstruction.add(locks);
             if (isLock.test(event)) {
                 locks = new HashSet<>(locks);
-                locks.add(event.getAddr());
+                locks.add(event.getSyncObject());
             }
             if (isUnlock.test(event)) {
                 locks = new HashSet<>(locks);
-                locks.remove(event.getAddr());
+                locks.remove(event.getSyncObject());
             }
-            locksPerInstruction.add(locks);
         }
+        locksPerInstruction.add(locks);
         return locksPerInstruction;
+    }
+
+    private static class ConfigurationWithEvent {
+        private final Configuration configuration;
+        private final Event event;
+
+        private ConfigurationWithEvent(Configuration configuration, Event event) {
+            this.configuration = configuration;
+            this.event = event;
+        }
+
+        private Configuration getConfiguration() {
+            return configuration;
+        }
+
+        private Event getEvent() {
+            return event;
+        }
+
+        @Override
+        public String toString() {
+            return "[" + configuration.toString() + "," + event.toString() + "]";
+        }
     }
 
     private static class Configuration {
         private final int [] eventIndexes;
         private final long [] variableValues;
 
-        private Configuration(int threadCount, int variableCount) {
+        private Configuration(int threadCount, long[] variableValues) {
             eventIndexes = new int[threadCount];
-            variableValues = new long[variableCount];
+            this.variableValues = variableValues;
         }
 
         private Configuration(int[] threadIndexes, long[] variableValues) {
@@ -299,21 +425,17 @@ public class MaximalCausalModel {
             return this;
         }
 
-        public int getEventIndex(int threadIndex) {
+        private int getEventIndex(int threadIndex) {
             return eventIndexes[threadIndex];
         }
 
-        public long getValue(int variableIndex) {
+        private long getValue(int variableIndex) {
             return variableValues[variableIndex];
         }
 
-        public Configuration setValue(int variableIndex, long value) {
+        private Configuration setValue(int variableIndex, long value) {
             variableValues[variableIndex] = value;
             return this;
-        }
-
-        public int[] getEventIndexes() {
-            return eventIndexes;
         }
 
         @Override
@@ -331,21 +453,21 @@ public class MaximalCausalModel {
             return Arrays.equals(eventIndexes, configuration.eventIndexes)
                     && Arrays.equals(variableValues, configuration.variableValues);
         }
+
+        @Override
+        public String toString() {
+            return "[eventIndexes=" + Arrays.toString(eventIndexes)
+                    + ",variableValues=" + Arrays.toString(variableValues) + "]";
+        }
     }
 
     private static class ThreadLimits {
         private int startThreadIndex = -1;
         private int startEventIndex = -1;
-        private int endThreadIndex = -1;  // TODO: Delete.
-        private int endEventIndex = -1;  // TODO: Delete.
 
         private void setStart(int threadIndex, int eventIndex) {
             startThreadIndex = threadIndex;
             startEventIndex = eventIndex;
-        }
-        private void setEnd(int threadIndex, int eventIndex) {
-            endThreadIndex = threadIndex;
-            endEventIndex = eventIndex;
         }
     }
 }

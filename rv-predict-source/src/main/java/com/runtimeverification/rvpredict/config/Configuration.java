@@ -388,6 +388,10 @@ public class Configuration implements Constants {
     public String smt_solver = "z3";
     */
 
+    final static String opt_no_smt = "--no-smt";
+    @Parameter(names = opt_no_smt, description = "Use the dynamic programming model.", hidden = true, descriptionKey = "2550")
+    private boolean nosmt = false;
+
     final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2600")
     public int solver_timeout = 60;
@@ -753,5 +757,9 @@ public class Configuration implements Constants {
 
     public boolean stacks() {
         return !nostacks;
+    }
+
+    public boolean isSmt() {
+        return !nosmt;
     }
 }

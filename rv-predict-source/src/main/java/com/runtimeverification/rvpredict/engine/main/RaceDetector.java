@@ -111,13 +111,14 @@ public class RaceDetector implements Constants {
             return;
         }
 
-        /*
-        Map<String, Race> result = MaximalCausalModel.create(trace, z3filter, solver)
-                .checkRaceSuspects(sigToRaceSuspects);
-        /*/
-        Map<String, Race> result =
-                com.runtimeverification.rvpredict.model.MaximalCausalModel.create(trace, config).findRaces();
-        //*/
+        Map<String, Race> result;
+        if (config.isSmt()) {
+             result = MaximalCausalModel.create(trace, z3filter, solver)
+                    .checkRaceSuspects(sigToRaceSuspects);
+        } else {
+            result =
+                    com.runtimeverification.rvpredict.model.MaximalCausalModel.create(trace, config).findRaces();
+        }
 
         sigToRealRace.putAll(result);
         result.forEach((sig, race) -> {

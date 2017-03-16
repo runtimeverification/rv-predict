@@ -2,12 +2,12 @@ package com.runtimeverification.rvpredict.log.compact;
 
 import java.nio.ByteBuffer;
 
-public class UInt32 implements ReadableData {
-    private int value = 0;
+public class UInt64 implements ReadableData {
+    private long value = 0;
 
     @Override
     public int size() {
-        return 4;
+        return 8;
     }
 
     @Override
@@ -15,7 +15,7 @@ public class UInt32 implements ReadableData {
         value = buffer.getInt();
     }
 
-    public int getValueAsInt() {
+    public long getValueAsLong() {
         return value;
     }
 }

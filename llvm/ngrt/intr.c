@@ -8,6 +8,7 @@
 #include <time.h>	/* for timer_create(2) */
 
 #include "init.h"
+#include "intr_exports.h"
 #include "nbcompat.h"
 
 typedef void (*rvp_intr_handler_t)(void);
@@ -163,6 +164,7 @@ __rvpredict_intr_enable(void)
 void
 __rvpredict_intr_register(void (*handler)(void), int32_t prio)
 {
+	prio = 0;
 	if (intr_debug) {
 		fprintf(stderr, "%s: handler %p prio %" PRId32 "\n",
 		    __func__, handler, prio);

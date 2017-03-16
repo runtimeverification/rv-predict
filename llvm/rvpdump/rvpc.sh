@@ -4,8 +4,8 @@
 # That is, it is not reliant on any bash-isms.
 #
 
-PASS_DIR=$RV_ROOT/rv-predict/llvm/build/pass
-RUNTIME_DIR=$RV_ROOT/rv-predict/llvm/ngrt
+PASS_DIR=${RV_ROOT:-/usr/local}/lib
+RUNTIME_DIR=${RV_ROOT:-/usr/local}/lib
 
 cplusplus=no
 sources=no

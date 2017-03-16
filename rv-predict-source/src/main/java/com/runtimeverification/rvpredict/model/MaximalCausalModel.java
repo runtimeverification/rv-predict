@@ -270,8 +270,14 @@ public class MaximalCausalModel {
     }
 
     private Configuration expandWithJoin(Configuration configuration, int threadIndex, long joinedThread) {
-        int joinedThreadIndex = threadToIndex.get(joinedThread);
-        if (configuration.getEventIndex(joinedThreadIndex) >= eventsForThread.get(joinedThreadIndex).size()) {
+        Integer joinedThreadIndex = threadToIndex.get(joinedThread);
+        // The thread may not be found if all its events were in a previous window.
+        //
+        // I can't tell for sure right now if it can happen that the last instruction of a thread
+        // is after the join for that thread. If that happens, then this last instruction may be in a
+        // different window, which can't be handled correctly here.
+        if (joinedThreadIndex == null ||
+                configuration.getEventIndex(joinedThreadIndex) >= eventsForThread.get(joinedThreadIndex).size()) {
             return expandWithGenericEvent(configuration, threadIndex);
         }
         return null;

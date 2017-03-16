@@ -1039,7 +1039,7 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 
 	if (op == RVP_OP_COG) {
 		rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
-		assert(ps->ps_nintr_outst <= 1);
+		assert(ps->ps_nintr_outst < __arraycount(ts->ts_generation));
 		assert(ts->ts_generation[ps->ps_nintr_outst] < ub->ub_cog.generation);
 		ts->ts_generation[ps->ps_nintr_outst] = ub->ub_cog.generation;
 		ts->ts_nops[ps->ps_nintr_outst] = 0;

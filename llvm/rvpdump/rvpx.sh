@@ -33,7 +33,7 @@ fi
 
 set +e
 "$@"
-exitcode=$!
+exitcode=$?
 set -e
 
 cd $tmpdir

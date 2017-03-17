@@ -103,7 +103,8 @@ public:
   const char *getPassName() const override;
   bool runOnFunction(Function &F) override;
   bool doInitialization(Module &M) override;
-  GlobalVariable *createOrdering(IRBuilder<> *, AtomicOrdering);
+  GlobalVariable *createOrderingPointer(IRBuilder<> *, AtomicOrdering);
+  Value *createOrdering(IRBuilder<> *, AtomicOrdering);
   static char ID;  // Pass identification, replacement for typeid.
   virtual void getAnalysisUsage(AnalysisUsage &Info) const;
 
@@ -208,11 +209,6 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 		Type *type = Type::getIntNTy(m.getContext(), bit_size);
 		Type *ptr_type = type->getPointerTo();
 
-		SmallString<32> load_name("__rvpredict_load" + byte_size_str);
-		load[i] = checkSanitizerInterfaceFunction(
-		    m.getOrInsertFunction(load_name,
-			void_type, int8_ptr_type, nullptr));
-
 		/* For m the width of the access in bytes, and n the width
 		 * in bits, the instrumentation may insert calls to any of
 		 * these functions: 
@@ -245,6 +241,11 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 		 *     sub, and, or, xor, nand}{m}(uint{n}_t *addr,
 		 *     uint{n}_t oval, uint{n}_t arg, int32_t memory_order);
 		 */
+		SmallString<32> load_name("__rvpredict_load" + byte_size_str);
+		load[i] = checkSanitizerInterfaceFunction(
+		    m.getOrInsertFunction(load_name,
+                        void_type, ptr_type, type, nullptr));
+
 		SmallString<32> store_name("__rvpredict_store" + byte_size_str);
 		store[i] = checkSanitizerInterfaceFunction(
 		    m.getOrInsertFunction(store_name,
@@ -777,7 +778,7 @@ RVPredictInstrument::instrumentLoadOrStore(Instruction *I,
 }
 
 GlobalVariable *
-RVPredictInstrument::createOrdering(IRBuilder<> *IRB, AtomicOrdering ord)
+RVPredictInstrument::createOrderingPointer(IRBuilder<> *IRB, AtomicOrdering ord)
 {
 	switch (ord) {
 	case AtomicOrdering::NotAtomic:
@@ -794,6 +795,12 @@ RVPredictInstrument::createOrdering(IRBuilder<> *IRB, AtomicOrdering ord)
 	case AtomicOrdering::SequentiallyConsistent:
 		return order_seq_cst;
 	}
+}
+
+Value *
+RVPredictInstrument::createOrdering(IRBuilder<> *IRB, AtomicOrdering ord)
+{
+  return IRB->CreateLoad(createOrderingPointer(IRB, ord), "");
 }
 
 // If a memset intrinsic gets inlined by the code gen, we will miss races on it.

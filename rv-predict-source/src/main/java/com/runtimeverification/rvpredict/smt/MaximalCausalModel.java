@@ -32,12 +32,16 @@ import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.microsoft.z3.FuncDecl;
+import com.microsoft.z3.Model;
 import com.microsoft.z3.Solver;
 import com.microsoft.z3.Status;
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
@@ -75,6 +79,8 @@ public class MaximalCausalModel {
      * The formula that describes the maximal causal model of the trace tau.
      */
     private final FormulaTerm.Builder phiTau = FormulaTerm.andBuilder();
+
+    private final Map<String, Event> nameToEvent = new HashMap<>();
 
     private final Z3Filter z3filter;
 
@@ -116,6 +122,7 @@ public class MaximalCausalModel {
         /* build intra-thread program order constraint */
         trace.eventsByThreadID().forEach((tid, events) -> {
             mhbClosureBuilder.createNewGroup(events.get(0));
+            events.forEach(event -> nameToEvent.put(OrderVariable.get(event).toString(), event));
             for (int i = 1; i < events.size(); i++) {
                 Event e1 = events.get(i - 1);
                 Event e2 = events.get(i);
@@ -307,6 +314,21 @@ public class MaximalCausalModel {
         return raceAsst.build();
     }
 
+    private class EventWithOrder {
+        private final Event event;
+        private final long orderId;
+        public EventWithOrder(Event event, long orderId) {
+            this.event = event;
+            this.orderId = orderId;
+        }
+        public Event getEvent() {
+            return event;
+        }
+        public long getOrderId() {
+            return orderId;
+        }
+    }
+
     /**
      * Checks if the given race suspects are real. Race suspects are grouped by
      * their signatures.
@@ -340,7 +362,11 @@ public class MaximalCausalModel {
             }
 //            checkTraceConsistency(z3filter, solver);
 
+            if (Configuration.debug) {
+                findAndDumpOrdering();
+            }
             /* check race suspects */
+
             for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
                 for (Race race : entry.getValue()) {
                     solver.push();
@@ -360,6 +386,36 @@ public class MaximalCausalModel {
         }
 
         return result;
+    }
+
+    private void findAndDumpOrdering() {
+        solver.push();
+        if (solver.check() == Status.SATISFIABLE) {
+            Model model = solver.getModel();
+            Map<Long, List<EventWithOrder>> threadToExecution = new HashMap<>();
+            for (FuncDecl f : model.getConstDecls()) {
+                String name = f.getName().toString();
+                if (nameToEvent.containsKey(name)) {
+                    Event event = nameToEvent.get(name);
+                    EventWithOrder eventWithOrder =
+                            new EventWithOrder(event, Long.parseLong(model.getConstInterp(f).toString()));
+                    threadToExecution.computeIfAbsent(event.getTID(), a -> new ArrayList<>()).add(eventWithOrder);
+                }
+            }
+            threadToExecution.values().forEach(events ->
+                    events.sort(Comparator.comparingLong(e -> e.getOrderId())));
+
+            System.out.println("Possible ordering of events, per thread ..........");
+            threadToExecution.forEach((tid, events) -> {
+                ArrayList<String> description = new ArrayList<>();
+                events.forEach(e -> description.add(e.getEvent().getGID() + ":" + e.getOrderId()));
+                System.out.print("  Thread:" + tid);
+                System.out.print(" -> ");
+                System.out.println(String.join(" ", description));
+            });
+            System.out.println(".......... That's all folks!");
+        }
+        solver.pop();
     }
 
     /**

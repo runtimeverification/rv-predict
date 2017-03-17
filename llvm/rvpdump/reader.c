@@ -423,7 +423,7 @@ emit_addr(rvp_addr_t addr)
 	id64 = intmax_table_put(&addr_table, addr, &is_new);
 
 	if (!is_new)
-		return id64;
+		return id64 << 32;
 
 	if (fd == -1) {
 		fd = open("./var_metadata.bin", O_WRONLY|O_CREAT|O_TRUNC, 0600);
@@ -431,11 +431,17 @@ emit_addr(rvp_addr_t addr)
 			err(EXIT_FAILURE, "%s: open", __func__);
 	}
 	if (writeall(fd, &id64, sizeof(id64)) == -1 ||
-	    dprintf(fd, "%#016" PRIxPTR, addr) < 0 ||
+	    dprintf(fd, "[%#016" PRIxPTR "]", addr) < 0 ||
 	    writeall(fd, &nil, sizeof(nil)) == -1)
 		errx(EXIT_FAILURE, "%s: could not write record", __func__);
 
-	return id64;
+	return id64 << 32;
+}
+
+static uint64_t
+emit_lock(rvp_addr_t addr)
+{
+	return emit_addr(addr) >> 32;
 }
 
 static uint32_t
@@ -574,7 +580,7 @@ emit_signal_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op)
 			return;
 		ts->ts_sigs_masked = masksigs;
 		ev.type = masksigs ? WRITE_LOCK : WRITE_UNLOCK;
-		ev.addr = emit_addr(ps->ps_deltop_first +
+		ev.addr = emit_lock(ps->ps_deltop_first +
 		    offsetof(deltops_t, rsvd) -
 		    offsetof(deltops_t, matrix[0][0]));
 		break;
@@ -620,7 +626,7 @@ emit_signal_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op)
 		ts->ts_sigs_masked = true;
 
 		ev.type = WRITE_LOCK;
-		ev.addr = emit_addr(ps->ps_deltop_first +
+		ev.addr = emit_lock(ps->ps_deltop_first +
 		    offsetof(deltops_t, rsvd) -
 		    offsetof(deltops_t, matrix[0][0]));
 		break;
@@ -636,7 +642,7 @@ emit_signal_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op)
 		ts->ts_sigs_masked = false;
 
 		ev.type = WRITE_UNLOCK;
-		ev.addr = emit_addr(ps->ps_deltop_first +
+		ev.addr = emit_lock(ps->ps_deltop_first +
 		    offsetof(deltops_t, rsvd) -
 		    offsetof(deltops_t, matrix[0][0]));
 		break;
@@ -711,10 +717,10 @@ emit_extended_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub,
 	}
 
 	ev[0].type = WRITE_LOCK;
-	ev[0].addr = emit_addr(~ev[1].addr);
+	ev[0].addr = emit_lock(~ev[1].addr);
 
 	ev[2].type = WRITE_UNLOCK;
-	ev[2].addr = emit_addr(~ev[1].addr);
+	ev[2].addr = emit_lock(~ev[1].addr);
 
 	fd = intmax_table_put(&thd_table, legacy_tid(ps), NULL);
 	if (write(fd, &ev, sizeof(ev)) == -1)
@@ -794,7 +800,7 @@ emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		break;
 	case RVP_OP_ACQUIRE:
 	case RVP_OP_RELEASE:
-		ev.addr = emit_addr(ub->ub_acquire_release.addr);
+		ev.addr = emit_lock(ub->ub_acquire_release.addr);
 		break;
 	}
 	int fd = intmax_table_put(&thd_table, legacy_tid(ps), NULL);

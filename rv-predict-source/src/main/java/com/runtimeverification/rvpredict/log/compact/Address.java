@@ -6,9 +6,9 @@ public class Address implements ReadableData {
     private final int size;
     private long value;
 
-    Address(TraceHeader header) throws InvalidTraceDataException {
+    public Address(TraceHeader header) throws InvalidTraceDataException {
         // TODO(virgil): Is the pointer width measured in bits or bytes?
-        size = header.getPointerWidth();
+        size = header.getPointerWidthInBytes();
         if (size != 4 && size != 8) {
             throw new InvalidTraceDataException("The pointer size can be only 4 or 8.");
         }
@@ -30,7 +30,7 @@ public class Address implements ReadableData {
         }
     }
 
-    public long getValue() {
+    public long getAsLong() {
         return value;
     }
 };

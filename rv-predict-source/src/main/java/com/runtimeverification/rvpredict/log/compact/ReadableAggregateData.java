@@ -7,7 +7,7 @@ public class ReadableAggregateData implements ReadableData {
     private List<ReadableData> childData;
     private int size;
     
-    void setData(List<ReadableData> childData) {
+    public void setData(List<ReadableData> childData) {
         this.childData = childData;
         this.size = childData.stream().mapToInt(ReadableData::size).sum();
     }

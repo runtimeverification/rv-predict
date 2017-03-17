@@ -1,6 +1,5 @@
 package com.runtimeverification.rvpredict.log.compact;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class TraceData extends ReadableAggregateData {
@@ -15,15 +14,15 @@ public class TraceData extends ReadableAggregateData {
         setData(Arrays.asList(pc, threadId, generation));
     }
 
-    public Address getPc() {
-        return pc;
+    public long getPc() {
+        return pc.getAsLong();
     }
 
-    public UInt32 getThreadId() {
-        return threadId;
+    public int getThreadId() {
+        return threadId.getValueAsInt();
     }
 
-    public UInt64 getGeneration() {
-        return generation;
+    public long getGeneration() {
+        return generation.getValueAsLong();
     }
 }

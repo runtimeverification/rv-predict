@@ -39,7 +39,7 @@ set -e
 cd $tmpdir
 ${RV_ROOT:-/usr/local}/bin/rvpdump -t legacy rvpredict.trace
 rv-predict --offline --window 4000 --llvm-predict . 2>&1 | \
-rvpsymbolize $progpath 1>&2
+rvpsymbolize --pc $progpath 1>&2
 
 trap - EXIT ALRM HUP INT PIPE QUIT TERM
 

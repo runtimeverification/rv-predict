@@ -6,6 +6,7 @@ intr_driver
 *.ll
 lpcq
 memcpy
+_mkc_*
 *.o
 simple-state-machine
 spcq

@@ -6,7 +6,7 @@
 
 CC=clang++
 CXX=clang++
-CXXFLAGS+=-std=c++11
+CPPFLAGS+=-std=c++11
 
 PROGS=	BrokenSpinningLoop DoubleCheckedLocking RaceOnArrayList SimpleRace
 

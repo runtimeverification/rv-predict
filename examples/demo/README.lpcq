@@ -15,10 +15,9 @@ lpcq_main.c	the test driver
 
 # Compilation
 
-Using rv-predict-compile, a wrapper for clang that adds RV-Predict
-instrumentation, run
+Using rvpc, a wrapper for clang that adds RV-Predict instrumentation, run
 
-	rv-predict-compile -o lpcq lpcq.c lpcq_main.c
+	rvpc -o lpcq lpcq.c lpcq_main.c
 
 That produces an executable binary, `lpcq`.
 
@@ -27,20 +26,38 @@ That produces an executable binary, `lpcq`.
 If you run `lpcq` like this, RV-Predict will detect races, and `lpcq`
 may even crash because of queue corruption or a timeout:
 
-	rv-predict-execute ./lpcq
+	rvpx ./lpcq
 
 Run `lpcq` like this to protect the queue with a PThreads mutex.  No
 data races will be detected, and the program will run to completion every
 time:
 
-	rv-predict-execute ./lpcq -l
+	rvpx ./lpcq -l
+
+RV-Predict is capable of detecting data races that involve a thread and
+a signal handler.  Run `lpcq` with the `-s` option to make it add items
+to the queue in a signal handler instead of in a thread.  Run this, and
+RV-Predict will detect a race between a thread and signal:
+
+	rvpx ./lpcq -s -n 15
+
+Add the `-m` option to tell `lpcq` to mask the signal that adds queue
+items while it consumes queue items.  That protects against data races.
+RV-Predict will detect no races when you run this:
+
+	rvpx ./lpcq -s -n 15 -m
+
+# Other lpcq options
+
+-n <items>	<items> is a decimal number.  `lpcq` will produce and consume
+		<items> queue items.
 
 # Example outputs
 
 ## When a mutex synchronizes the producer and consumer threads'
 ## access to the queue, RV-Predict detects no races.
 
-	$ rv-predict-execute ./lpcq -l
+	$ rvpx ./lpcq -l
 	locking enabled
 	read item 0
 	read item 1
@@ -52,7 +69,7 @@ time:
 ## Without synchronization, the producer and consumer thread race
 ## to update queue elements.  Sometimes the race is harmless.
 
-	$ rv-predict-execute ./lpcq 
+	$ rvpx ./lpcq 
 	read item 0
 	read item 1
 	read item 2
@@ -158,7 +175,7 @@ time:
 
 ## Sometimes the race corrupts the queue.  `lpcq` eventually crashes.
 
-	$ rv-predict-execute ./lpcq 
+	$ rvpx ./lpcq 
 	read item 0
 	read item 2
 	read item 3

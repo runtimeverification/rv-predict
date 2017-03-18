@@ -279,3 +279,68 @@ RV-Predict will detect no races when you run this:
 		at main lpcq_main.c:120
 	}}}
 
+## `lpcq` reports races with a signal handler 
+
+	$ rvpx ./lpcq -n 15 -s 
+	read item 0
+	read item 1
+	read item 2
+	read item 3
+	read item 4
+	read item 5
+	read item 6
+	read item 7
+	read item 8
+	read item 9
+	read item 10
+	read item 11
+	read item 12
+	read item 13
+	read item 14
+	Data race on [0x00000001f27060]: {{{
+	    Concurrent read in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:34:2
+		at consume lpcq_main.c:140:11
+		at __rvpredict_thread_wrapper thread.c:450:11
+	    T2 is created by T1
+		at main lpcq_main.c:266:2
+
+	    Concurrent write in thread T-9223372032559808510 (locks held: {WriteLock@19})
+	 ---->  at lpcq_put lpcq.c:46:9
+		at handler lpcq_main.c:175:1
+		at handler_wrapper rvpsignal.c:287:3
+		- locked WriteLock@19 at handler lpcq_main.c:169:0 
+	    T-9223372032559808510 is created by n/a
+	}}}
+
+	Data race on [0x007ffddad64438]: {{{
+	    Concurrent read in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:26:19
+		at consume lpcq_main.c:140:11
+		at __rvpredict_thread_wrapper thread.c:450:11
+	    T2 is created by T1
+		at main lpcq_main.c:266:2
+
+	    Concurrent write in thread T-9223372032559808510 (locks held: {WriteLock@19})
+	 ---->  at lpcq_put lpcq.c:48:11
+		at handler lpcq_main.c:175:1
+		at handler_wrapper rvpsignal.c:287:3
+		- locked WriteLock@19 at handler lpcq_main.c:169:0 
+	    T-9223372032559808510 is created by n/a
+	}}}
+
+	Data race on [0x007ffddad64438]: {{{
+	    Concurrent write in thread T2 (locks held: {})
+	 ---->  at lpcq_get lpcq.c:36:12
+		at consume lpcq_main.c:140:11
+		at __rvpredict_thread_wrapper thread.c:450:11
+	    T2 is created by T1
+		at main lpcq_main.c:266:2
+
+	    Concurrent read in thread T-9223372032559808510 (locks held: {WriteLock@19}) ---->  at lpcq_put lpcq.c:47:19
+		at handler lpcq_main.c:175:1
+		at handler_wrapper rvpsignal.c:287:3
+		- locked WriteLock@19 at handler lpcq_main.c:169:0 
+	    T-9223372032559808510 is created by n/a
+	}}}
+

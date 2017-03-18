@@ -207,7 +207,8 @@ produce(void *arg)
 static void
 usage(const char *progname)
 {
-	fprintf(stderr, "Usage: %s [-l]\n", progname);
+	fprintf(stderr, "usage: %s [-l] [-s] [-m] [-n #items] [-t]\n",
+	    progname);
 	exit(EXIT_FAILURE);
 }
 

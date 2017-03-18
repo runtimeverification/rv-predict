@@ -1,7 +1,10 @@
 BrokenSpinningLoop
 BrokenSpinningLoop.o
+*.d
+.depend
 DoubleCheckedLocking
 DoubleCheckedLocking.o
+_mkc_*
 RaceOnArrayList
 RaceOnArrayList.o
 SimpleRace

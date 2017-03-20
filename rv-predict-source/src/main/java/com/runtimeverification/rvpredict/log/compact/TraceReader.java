@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.log.compact;
 import java.io.*;
 import java.nio.*;
 import java.util.HashMap;
+import java.util.List;
 
 import static java.lang.Math.toIntExact;
 
@@ -11,28 +12,29 @@ public class TraceReader implements Closeable {
 
     private TraceHeader traceHeader;
     private TraceData traceData;
-    private Map<Long, ThreadState> threadIdToState;
     private final int minDeltaAndEventType;
     private final int maxDeltaAndEventType;
-    private CompactEvent firstEvent;
+    private List<CompactEvent> firstEvent;
+    private Context context;
 
     public TraceReader(String path) throws IOException, InvalidTraceDataException {
         File file = new File(path);
         inputStream = new BufferedInputStream(new FileInputStream(file));
         traceHeader = new TraceHeader(inputStream);
         traceData = new TraceData(traceHeader);
-        threadIdToState = new HashMap<>();
         read("first event", traceData);
-        firstEvent = CompactEvent.begin(traceData.getPc(), traceData.getThreadId());
+        context = new Context();
+        firstEvent = CompactEvent.begin(context, traceData.getPc(), traceData.getThreadId());
         minDeltaAndEventType = toIntExact(traceData.getPc())
                 - (Constants.JUMPS_IN_DELTA / 2) * CompactEvent.Type.getNumberOfValues();
         maxDeltaAndEventType = minDeltaAndEventType
                 + Constants.JUMPS_IN_DELTA * CompactEvent.Type.getNumberOfValues() - 1;
     }
 
-    public CompactEvent getNextEvent() throws InvalidTraceDataException {
+    public List<CompactEvent> getNextEvents(Context context)
+            throws InvalidTraceDataException, IOException {
         if (firstEvent != null) {
-            CompactEvent event = firstEvent;
+            List<CompactEvent> event = firstEvent;
             firstEvent = null;
             return event;
         }
@@ -40,9 +42,10 @@ public class TraceReader implements Closeable {
         DeltaAndEventType deltaAndEventType = DeltaAndEventType.parseFromPC(pc.getAsLong());
         if (deltaAndEventType == null) {
             // TODO(virgil): Update state.
-            return CompactEvent.jump(pc.getAsLong());
+            return CompactEvent.jump(context, pc.getAsLong());
         }
-        return deltaAndEventType.getEventType().getReader().read(inputStream);
+        context.updatePcWithDelta(deltaAndEventType.getJumpDelta());
+        return deltaAndEventType.getEventType().read(context, traceHeader, inputStream);
     }
 
     @Override
@@ -84,6 +87,10 @@ public class TraceReader implements Closeable {
 
         private CompactEvent.Type getEventType() {
             return eventType;
+        }
+
+        public int getJumpDelta() {
+            return jumpDelta;
         }
     }
 }

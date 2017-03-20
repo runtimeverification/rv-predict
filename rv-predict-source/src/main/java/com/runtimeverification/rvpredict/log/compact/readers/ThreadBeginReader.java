@@ -20,6 +20,7 @@ public class ThreadBeginReader implements CompactEvent.Reader {
         TraceElement element = reader.getInit(header);
         element.read(buffer);
         return CompactEvent.begin(
+                context,
                 element.threadId.getAsLong(), element.generation.getAsLong());
     }
 

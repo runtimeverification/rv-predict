@@ -30,6 +30,7 @@ public class AtomicReadModifyWriteReader implements CompactEvent.Reader{
         TraceElement element = reader.getInit(header);
         element.read(buffer);
         return CompactEvent.atomicReadModifyWrite(
+                context,
                 dataSizeInBytes,
                 element.address.getAsLong(),
                 element.readValue.getAsLong(),

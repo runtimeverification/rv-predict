@@ -1,6 +1,8 @@
 package com.runtimeverification.rvpredict.log.compact;
 
+import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.compact.readers.*;
+import com.sun.javaws.exceptions.InvalidArgumentException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -196,7 +198,7 @@ public abstract class CompactEvent {
         return threadId;
     }
 
-    static List<CompactEvent> dataManipulation(
+    public static List<CompactEvent> dataManipulation(
             Context context,
             DataManipulationType dataManipulationType,
             int dataSizeInBytes,
@@ -207,39 +209,87 @@ public abstract class CompactEvent {
         });
     }
 
-    static List<CompactEvent> atomicReadModifyWrite(
-            Context context, int dataSizeInBytes, long address, long readValue, long writeValue) {
+    public static List<CompactEvent> atomicReadModifyWrite(
+            Context context,
+            int dataSizeInBytes,
+            Address address, VariableInt readValue, VariableInt writeValue) {
         return Collections.singletonList(new CompactEvent(context) {
         });
     }
 
-    static List<CompactEvent> changeOfGeneration(Context context, long generation) {
+    public static List<CompactEvent> changeOfGeneration(Context context, Generation generation) {
         context.changeOfGeneration(generation);
         return NO_EVENTS;
     }
 
 
-    static List<CompactEvent> join(Context context, long threadId) {
+    public static List<CompactEvent> join(Context context, ThreadId threadId) {
         return Collections.singletonList(new CompactEvent(context) {
         });
     }
 
     public static List<CompactEvent> lockManipulation(
-            Context context, LockManipulationType lockManipulationType, long address) {
+            Context context, LockManipulationType lockManipulationType, Address address) {
         return Collections.singletonList(new CompactEvent(context) {
         });
     }
 
-    public static List<CompactEvent> disestablishSignal(Context context, long signalNumber) {
+    public static List<CompactEvent> disestablishSignal(
+            Context context, SignalNumber signalNumber) {
         return Collections.singletonList(new CompactEvent(context) {
         });
     }
 
-    public static List<CompactEvent> enterSignal(Context context, long generation, long signalNumber) {
+    public static List<CompactEvent> enterSignal(
+            Context context, Generation generation, SignalNumber signalNumber) {
         context.changeOfGeneration(generation);
         return Collections.singletonList(new CompactEvent(context) {
         });
     }
+
+    public static List<CompactEvent> establishSignal(
+            Context context,
+            Address handler, SignalNumber signalNumber, SignalMask signalMask) {
+        return Collections.singletonList(new CompactEvent(context) {
+        });
+    }
+
+    public static List<CompactEvent> threadSync(
+            Context context, ThreadSyncType threadSyncType, ThreadId threadId) {
+        return Collections.singletonList(new CompactEvent(context) {
+        });
+    }
+
+    private static List<CompactEvent> endThread(Context context) {
+        return Collections.singletonList(new CompactEvent(context) {
+        });
+    }
+
+    private static List<CompactEvent> enterFunction(Context context) {
+        return Collections.singletonList(new CompactEvent(context) {
+        });
+    }
+
+    private static List<CompactEvent> exitSignal(Context context) {
+        return Collections.singletonList(new CompactEvent(context) {
+        });
+    }
+
+    private static List<CompactEvent> exitFunction(Context context) {
+        return Collections.singletonList(new CompactEvent(context) {
+        });
+    }
+
+    public static List<CompactEvent> begin(Context context, Address pc, ThreadId threadId) {
+        zuma;
+        return Collections.singletonList(new CompactEvent(context) {
+        });
+    }
+
+    public static List<CompactEvent> jump(Context context, long address) {
+        context.jump(address);
+    }
+
 
     static CompactType dataManipulationTypeToCompactType(DataManipulationType dataManipulationType) {
         switch (dataManipulationType) {
@@ -247,6 +297,8 @@ public abstract class CompactEvent {
                 return CompactType.READ;
             case STORE:
                 return CompactType.WRITE;
+            default:
+                throw new IllegalArgumentException("Unknown data manipulation type: " + dataManipulationType + ".");
         }
     }
 }

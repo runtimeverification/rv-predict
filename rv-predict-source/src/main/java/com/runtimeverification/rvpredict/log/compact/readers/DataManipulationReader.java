@@ -36,6 +36,7 @@ public class DataManipulationReader implements CompactEvent.Reader {
         TraceElement element = reader.getInit(header);
         element.read(buffer);
         return CompactEvent.dataManipulation(
+                context,
                 dataManipulationType,
                 dataSizeInBytes,
                 element.address.getAsLong(),

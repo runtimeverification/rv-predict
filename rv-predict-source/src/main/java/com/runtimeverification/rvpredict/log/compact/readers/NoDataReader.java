@@ -1,6 +1,5 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
-import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.compact.CompactEvent;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
@@ -8,13 +7,13 @@ import com.runtimeverification.rvpredict.log.compact.TraceHeader;
 
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 public class NoDataReader implements CompactEvent.Reader {
-    private final Supplier<Event> eventSupplier;
+    private final Function<Context, List<CompactEvent>> eventFactory;
 
-    public NoDataReader(Supplier<Event> eventSupplier) {
-        this.eventSupplier = eventSupplier;
+    public NoDataReader(Function<Context, List<CompactEvent>> eventFactory) {
+        this.eventFactory = eventFactory;
     }
 
     @Override
@@ -24,6 +23,6 @@ public class NoDataReader implements CompactEvent.Reader {
 
     @Override
     public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
-        return eventSupplier.get();
+        return eventFactory.apply(context);
     }
 }

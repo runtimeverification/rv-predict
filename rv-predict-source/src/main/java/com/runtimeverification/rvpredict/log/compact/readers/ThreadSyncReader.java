@@ -28,6 +28,6 @@ public class ThreadSyncReader implements CompactEvent.Reader {
     public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
         VariableInt threadId = reader.getInit(header);
         threadId.read(buffer);
-        return CompactEvent.threadSync(threadSyncType, threadId.getAsLong());
+        return CompactEvent.threadSync(context, threadSyncType, threadId.getAsLong());
     }
 }

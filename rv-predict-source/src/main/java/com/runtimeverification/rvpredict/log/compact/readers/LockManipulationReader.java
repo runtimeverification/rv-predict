@@ -1,17 +1,19 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
 import com.runtimeverification.rvpredict.log.compact.Address;
-import com.runtimeverification.rvpredict.log.compact.Event;
+import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
-public class LockManipulationReader implements Event.Reader {
-    private final Event.LockManipulationType lockManipulationType;
-    private ReaderInitializer<Address> reader = new ReaderInitializer<>(Address::new);
+public class LockManipulationReader implements CompactEvent.Reader {
+    private final CompactEvent.LockManipulationType lockManipulationType;
+    private LazyInitializer<Address> reader = new LazyInitializer<>(Address::new);
 
-    public LockManipulationReader(Event.LockManipulationType lockManipulationType) {
+    public LockManipulationReader(CompactEvent.LockManipulationType lockManipulationType) {
         this.lockManipulationType = lockManipulationType;
     }
 
@@ -21,9 +23,9 @@ public class LockManipulationReader implements Event.Reader {
     }
 
     @Override
-    public Event readEvent(TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
         Address address = reader.getInit(header);
         address.read(buffer);
-        return Event.lockManipulation(lockManipulationType, address.getAsLong());
+        return CompactEvent.lockManipulation(context, lockManipulationType, address.getAsLong());
     }
 }

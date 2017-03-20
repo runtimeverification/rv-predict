@@ -1,21 +1,23 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
 import com.runtimeverification.rvpredict.log.compact.Address;
-import com.runtimeverification.rvpredict.log.compact.Event;
+import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.ReadableAggregateData;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
 import com.runtimeverification.rvpredict.log.compact.VariableInt;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
-public class AtomicReadModifyWriteReader implements Event.Reader{
+public class AtomicReadModifyWriteReader implements CompactEvent.Reader{
     private final int dataSizeInBytes;
-    private ReaderInitializer<TraceElement> reader;
+    private final LazyInitializer<TraceElement> reader;
 
     public AtomicReadModifyWriteReader(int dataSizeInBytes) {
         this.dataSizeInBytes = dataSizeInBytes;
-        reader = new ReaderInitializer<>(header -> new TraceElement(header, dataSizeInBytes));
+        reader = new LazyInitializer<>(header -> new TraceElement(header, dataSizeInBytes));
     }
 
     @Override
@@ -24,17 +26,17 @@ public class AtomicReadModifyWriteReader implements Event.Reader{
     }
 
     @Override
-    public Event readEvent(TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
         TraceElement element = reader.getInit(header);
         element.read(buffer);
-        return Event.atomicReadModifyWrite(
+        return CompactEvent.atomicReadModifyWrite(
                 dataSizeInBytes,
                 element.address.getAsLong(),
                 element.readValue.getAsLong(),
                 element.writeValue.getAsLong());
     }
 
-    private class TraceElement extends ReadableAggregateData {
+    private static class TraceElement extends ReadableAggregateData {
         private final Address address;
         private final VariableInt readValue;
         private final VariableInt writeValue;

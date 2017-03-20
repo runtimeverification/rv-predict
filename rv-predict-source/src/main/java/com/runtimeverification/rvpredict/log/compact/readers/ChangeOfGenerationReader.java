@@ -1,15 +1,16 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
-import com.runtimeverification.rvpredict.log.compact.Event;
+import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.compact.Context;
+import com.runtimeverification.rvpredict.log.compact.Generation;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
-import com.runtimeverification.rvpredict.log.compact.VariableInt;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
-public class ChangeOfGenerationReader implements Event.Reader {
-    private ReaderInitializer<VariableInt> generation
-            = new ReaderInitializer<>(header -> new VariableInt(header, 4));
+public class ChangeOfGenerationReader implements CompactEvent.Reader {
+    private final LazyInitializer<Generation> generation = new LazyInitializer<>(Generation::new);
 
     @Override
     public int size(TraceHeader header) throws InvalidTraceDataException {
@@ -17,8 +18,9 @@ public class ChangeOfGenerationReader implements Event.Reader {
     }
 
     @Override
-    public Event readEvent(TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
-        VariableInt element = generation.getInit(header);
-        return Event.changeOfGeneration(element.getAsLong());
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
+        Generation element = generation.getInit(header);
+        element.read(buffer);
+        return CompactEvent.changeOfGeneration(element.getAsLong());
     }
 }

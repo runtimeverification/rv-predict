@@ -4,13 +4,10 @@ import com.runtimeverification.rvpredict.log.compact.*;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 
-public class BeginReader implements Event.Reader {
-    private ReaderInitializer<TraceElement> reader;
-
-    BeginReader() {
-        reader = new ReaderInitializer<>(TraceElement::new);
-    }
+public class ThreadBeginReader implements CompactEvent.Reader {
+    private final LazyInitializer<TraceElement> reader = new LazyInitializer<>(TraceElement::new);
 
     @Override
     public int size(TraceHeader header) throws InvalidTraceDataException {
@@ -18,21 +15,21 @@ public class BeginReader implements Event.Reader {
     }
 
     @Override
-    public Event readEvent(TraceHeader header, ByteBuffer buffer)
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
             throws InvalidTraceDataException {
         TraceElement element = reader.getInit(header);
         element.read(buffer);
-        return Event.begin(
+        return CompactEvent.begin(
                 element.threadId.getAsLong(), element.generation.getAsLong());
     }
 
-    private class TraceElement extends ReadableAggregateData {
-        private final VariableInt threadId;
-        private final VariableInt generation;
+    private static class TraceElement extends ReadableAggregateData {
+        private final ThreadId threadId;
+        private final Generation generation;
 
         private TraceElement(TraceHeader header) throws InvalidTraceDataException {
-            threadId = new VariableInt(header, 4);
-            generation = new VariableInt(header, 8);
+            threadId = new ThreadId(header);
+            generation = new Generation(header);
             setData(Arrays.asList(threadId, generation));
         }
     }

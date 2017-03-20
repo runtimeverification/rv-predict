@@ -5,21 +5,23 @@ import com.runtimeverification.rvpredict.log.compact.readers.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
 
-public class Event {
+public abstract class CompactEvent {
+    private static final List<CompactEvent> NO_EVENTS = Collections.emptyList();
+
     public interface Reader {
         int size(TraceHeader header) throws InvalidTraceDataException;
-        Event readEvent(TraceHeader header, ByteBuffer buffer)
+        List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
                 throws InvalidTraceDataException;
     }
-    public enum Type {
-        BEGIN(0, new BeginReader()),  // start of a thread
-        END(1, new EndReader()),  // thread termination
-
+    enum Type {
         // load: 1, 2, 4, 8, 16 bytes wide.
         LOAD1(2, new DataManipulationReader(1, DataManipulationType.LOAD, Atomicity.NOT_ATOMIC)),
         LOAD2(3, new DataManipulationReader(2, DataManipulationType.LOAD, Atomicity.NOT_ATOMIC)),
@@ -57,20 +59,22 @@ public class Event {
 
         THREAD_FORK(12, new ThreadSyncReader(ThreadSyncType.FORK)),  // create a new thread
         THREAD_JOIN(13, new ThreadSyncReader(ThreadSyncType.JOIN)),  // join an existing thread
+        THREAD_BEGIN(0, new ThreadBeginReader()),  // start of a thread
+        THREAD_END(1, new NoDataReader(CompactEvent::endThread)),  // thread termination
         THREAD_SWITCH(18, new ThreadSyncReader(ThreadSyncType.SWITCH)),  // switch thread context
 
         LOCK_ACQUIRE(14, new LockManipulationReader(LockManipulationType.LOCK)),  // acquire lock
         LOCK_RELEASE(15, new LockManipulationReader(LockManipulationType.UNLOCK)),  // release lock
 
-        FUNCTION_ENTER(16, new EnterFunctionReader()),  // enter a function
-        FUNCTION_EXIT(17, new ExitFunctionReader()),  // exit a function
+        FUNCTION_ENTER(16, new NoDataReader(CompactEvent::enterFunction)),  // enter a function
+        FUNCTION_EXIT(17, new NoDataReader(CompactEvent::exitFunction)),  // exit a function
 
         CHANGE_OF_GENERATION(34, new ChangeOfGenerationReader()),  // change of generation
 
         SIG_ESTABLISH(35, new SignalEstablishReader()),  // establish signal action
         // signal delivery
         SIG_ENTER(36, new SignalEnterReader()),
-        SIG_EXIT(37, new SignalExitReader()),
+        SIG_EXIT(37, new NoDataReader(CompactEvent::exitSignal)),
         SIG_DISESTABLISH(38, new SignalDisestablishReader()),  // disestablish signal action.
         // establish a new number -> mask mapping (memoize mask).
         SIG_MASK_MEMOIZATION(39, new SignalMaskMemoizationReader()),
@@ -103,7 +107,7 @@ public class Event {
             return maxIntValue + 1;
         }
 
-        public Event read(TraceHeader header, InputStream stream)
+        public List<CompactEvent> read(Context context, TraceHeader header, InputStream stream)
                 throws InvalidTraceDataException, IOException {
             if (buffer == null) {
                 buffer = new byte[reader.size(header)];
@@ -111,21 +115,21 @@ public class Event {
             if (buffer.length != stream.read(buffer)) {
                 throw new InvalidTraceDataException("Short read for " + this + ".");
             }
-            return reader.readEvent(header, ByteBuffer.wrap(buffer).order(header.getByteOrder()));
+            return reader.readEvent(context, header, ByteBuffer.wrap(buffer).order(header.getByteOrder()));
         }
 
         static {
-            OptionalInt max = EnumSet.allOf(Event.Type.class).stream()
+            OptionalInt max = EnumSet.allOf(Type.class).stream()
                     .mapToInt(Type::intValue)
                     .max();
             assert max.isPresent();
             maxIntValue = max.getAsInt();
 
             intToType = new HashMap<>();
-            EnumSet.allOf(Event.Type.class).forEach(event -> intToType.put(event.intValue(), event));
+            EnumSet.allOf(Type.class).forEach(event -> intToType.put(event.intValue(), event));
         }
 
-        public static Event.Type fromInt(int type) {
+        public static Type fromInt(int type) {
             return intToType.get(type);
         }
     }
@@ -148,5 +152,101 @@ public class Event {
     public enum LockManipulationType {
         LOCK,
         UNLOCK,
+    }
+
+    public enum CompactType {
+        READ,
+        WRITE,
+
+        // ATOMIC_READ,
+        // ATOMIC_WRITE,
+        ATOMIC_READ_THEN_WRITE,
+
+        LOCK,
+
+        UNLOCK,
+
+        /**
+         * Event generated before calling {@code Thread#start()}.
+         */
+        START,
+
+        /**
+         * Event generated after a thread is awakened from {@code Thread#join()}
+         * because the joining thread finishes.
+         */
+        JOIN,
+
+        INVOKE_METHOD,
+        FINISH_METHOD,
+    }
+
+    private final long id;
+    private final long threadId;
+
+    private CompactEvent(Context context) {
+        this.id = context.newId();
+        this.threadId = context.getThreadId();
+    }
+
+    long getId() {
+        return id;
+    }
+    long getThreadId() {
+        return threadId;
+    }
+
+    static List<CompactEvent> dataManipulation(
+            Context context,
+            DataManipulationType dataManipulationType,
+            int dataSizeInBytes,
+            long address,
+            long value,
+            Atomicity atomicity) {
+        return Collections.singletonList(new CompactEvent(context) {
+        });
+    }
+
+    static List<CompactEvent> atomicReadModifyWrite(
+            Context context, int dataSizeInBytes, long address, long readValue, long writeValue) {
+        return Collections.singletonList(new CompactEvent(context) {
+        });
+    }
+
+    static List<CompactEvent> changeOfGeneration(Context context, long generation) {
+        context.changeOfGeneration(generation);
+        return NO_EVENTS;
+    }
+
+
+    static List<CompactEvent> join(Context context, long threadId) {
+        return Collections.singletonList(new CompactEvent(context) {
+        });
+    }
+
+    public static List<CompactEvent> lockManipulation(
+            Context context, LockManipulationType lockManipulationType, long address) {
+        return Collections.singletonList(new CompactEvent(context) {
+        });
+    }
+
+    public static List<CompactEvent> disestablishSignal(Context context, long signalNumber) {
+        return Collections.singletonList(new CompactEvent(context) {
+        });
+    }
+
+    public static List<CompactEvent> enterSignal(Context context, long generation, long signalNumber) {
+        context.changeOfGeneration(generation);
+        return Collections.singletonList(new CompactEvent(context) {
+        });
+    }
+
+    static CompactType dataManipulationTypeToCompactType(DataManipulationType dataManipulationType) {
+        switch (dataManipulationType) {
+            case LOAD:
+                return CompactType.READ;
+            case STORE:
+                return CompactType.WRITE;
+        }
     }
 }

@@ -1,7 +1,8 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
 import com.runtimeverification.rvpredict.log.compact.Address;
-import com.runtimeverification.rvpredict.log.compact.Event;
+import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.ReadableAggregateData;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
@@ -9,19 +10,20 @@ import com.runtimeverification.rvpredict.log.compact.VariableInt;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 
-public class DataManipulationReader implements Event.Reader {
+public class DataManipulationReader implements CompactEvent.Reader {
     private final int dataSizeInBytes;
-    private final Event.DataManipulationType dataManipulationType;
-    private final Event.Atomicity atomicity;
-    private final ReaderInitializer<TraceElement> reader;
+    private final CompactEvent.DataManipulationType dataManipulationType;
+    private final CompactEvent.Atomicity atomicity;
+    private final LazyInitializer<TraceElement> reader;
 
     public DataManipulationReader(
-            int sizeInBytes, Event.DataManipulationType dataManipulationType, Event.Atomicity atomicity) {
+            int sizeInBytes, CompactEvent.DataManipulationType dataManipulationType, CompactEvent.Atomicity atomicity) {
         this.dataSizeInBytes = sizeInBytes;
         this.dataManipulationType = dataManipulationType;
         this.atomicity = atomicity;
-        this.reader = new ReaderInitializer<>(header -> new TraceElement(header, dataSizeInBytes));
+        this.reader = new LazyInitializer<>(header -> new TraceElement(header, dataSizeInBytes));
     }
 
     @Override
@@ -30,10 +32,10 @@ public class DataManipulationReader implements Event.Reader {
     }
 
     @Override
-    public Event readEvent(TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
         TraceElement element = reader.getInit(header);
         element.read(buffer);
-        return Event.dataManipulation(
+        return CompactEvent.dataManipulation(
                 dataManipulationType,
                 dataSizeInBytes,
                 element.address.getAsLong(),

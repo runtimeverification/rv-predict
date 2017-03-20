@@ -242,8 +242,9 @@ public abstract class CompactEvent {
 
     public static List<CompactEvent> enterSignal(
             Context context, Generation generation, SignalNumber signalNumber) {
-        context.changeOfGeneration(generation);
+        context.enterSignal(generation);
         return Collections.singletonList(new CompactEvent(context) {
+            zuma;
         });
     }
 
@@ -280,9 +281,12 @@ public abstract class CompactEvent {
         });
     }
 
-    public static List<CompactEvent> begin(Context context, Address pc, ThreadId threadId) {
-        zuma;
+    public static List<CompactEvent> begin(
+            long minDeltaAndEventType, Context context, ThreadId threadId, Generation generation)
+            throws InvalidTraceDataException {
+        context.beginThread(minDeltaAndEventType, threadId, generation);
         return Collections.singletonList(new CompactEvent(context) {
+            zuma;
         });
     }
 

@@ -2,7 +2,6 @@ package com.runtimeverification.rvpredict.log.compact;
 
 import java.io.*;
 import java.nio.*;
-import java.util.HashMap;
 import java.util.List;
 
 import static java.lang.Math.toIntExact;
@@ -23,12 +22,15 @@ public class TraceReader implements Closeable {
         traceHeader = new TraceHeader(inputStream);
         traceData = new TraceData(traceHeader);
         read("first event", traceData);
-        context = new Context();
-        firstEvent = CompactEvent.begin(context, traceData.getPc(), traceData.getThreadId());
-        minDeltaAndEventType = toIntExact(traceData.getPc())
+        minDeltaAndEventType = toIntExact(traceData.getPc().getAsLong())
                 - (Constants.JUMPS_IN_DELTA / 2) * CompactEvent.Type.getNumberOfValues();
         maxDeltaAndEventType = minDeltaAndEventType
                 + Constants.JUMPS_IN_DELTA * CompactEvent.Type.getNumberOfValues() - 1;
+        context = new Context();
+        firstEvent = CompactEvent.begin(
+                minDeltaAndEventType, context, traceData.getThreadId(), traceData.getGeneration());
+        context.prepareToUpdatePcWithDelta(deltaAndEventType.getJumpDelta()); zuma;
+        DeltaAndEventType deltaAndEventType = DeltaAndEventType.parseFromPC(pc.getAsLong());
     }
 
     public List<CompactEvent> getNextEvents(Context context)

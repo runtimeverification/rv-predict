@@ -4,25 +4,25 @@ import java.util.Arrays;
 
 public class TraceData extends ReadableAggregateData {
     private final Address pc;
-    private final UInt32 threadId;
-    private final UInt64 generation;
+    private final ThreadId threadId;
+    private final Generation generation;
 
     public TraceData(TraceHeader header) throws InvalidTraceDataException {
         pc = new Address(header);
-        threadId = new UInt32();
-        generation = new UInt64();
+        threadId = new ThreadId();
+        generation = new Generation();
         setData(Arrays.asList(pc, threadId, generation));
     }
 
-    public long getPc() {
-        return pc.getAsLong();
+    public Address getPc() {
+        return pc;
     }
 
-    public int getThreadId() {
-        return threadId.getValueAsInt();
+    public ThreadId getThreadId() {
+        return threadId;
     }
 
-    public long getGeneration() {
-        return generation.getValueAsLong();
+    public Generation getGeneration() {
+        return generation;
     }
 }

@@ -299,7 +299,8 @@ trace ::= (delta, 'load[n]') addr value
                 `handler`, `signal-number`, and `mask-number` are stored
                 in the byte order established by the trace header.
 
-                `handler[signal-number] = {handler, mask[mask-number]}`
+                `handler[signal-number] <- handler`
+                `handler_mask[signal-number] <- mask_memo[mask-number]`
                 `self.PC <- self.PC + delta`
 
 	| (delta, 'sig-dis') signal-number
@@ -314,7 +315,7 @@ trace ::= (delta, 'load[n]') addr value
                 `signal-number` is stored in the byte order established
                 by the trace header.
 
-		`self.handler[signal-number] = nil`
+		`self.handler[signal-number] <- nil`
                 `self.PC <- self.PC + delta`
 
 	| (delta, 'enter-signal') generation signal-number
@@ -330,6 +331,8 @@ trace ::= (delta, 'load[n]') addr value
 
                 `self.PC <- self.PC + delta`
                 `self.signal_depth <- self.signal_depth + 1`
+		`push(self.signal_mask_stack, top(self.signal_mask) |
+			handler_mask[signal-number])`
 
 	| (delta, 'exit-signal') 
 
@@ -338,6 +341,7 @@ trace ::= (delta, 'load[n]') addr value
 
                 `self.PC <- self.PC + delta`
 		`self.signal_depth <- self.signal_depth - 1`
+		`pop(self.signal_mask_stack)`
 
 	| (delta, 'sig-outstanding') depth
 
@@ -348,8 +352,39 @@ trace ::= (delta, 'load[n]') addr value
                 `self.PC <- self.PC + delta`
 		`self.signal_depth <- depth`
 
-	| (delta, 'sig-mask-memo') TBD
-	| (delta, 'sig-sigs') TBD
+	| (delta, 'sig-mask-memo') mask origin mask-number
+
+                The current thread added `delta` to its program counter,
+                and saved the mask formed by shifting `mask` left by
+                `origin` bits in slot `mask-number` of the masks table
+                shared by all threads.
+
+                `mask` is 64 bits wide.  `origin` and `mask-number` are
+                both 32 bits wide.  `mask`, `origin`, and `mask-number`
+                each start on the first 32-bit boundary after the previous
+                element, and they are stored in the byte order established
+                by the trace header.
+
+                TBD add to this document an explanation of mask
+                    memoization
+
+                `self.PC <- self.PC + delta`
+                `mask_memo[mask-number] <- mask << origin`
+
+	| (delta, 'mask-sigs') mask-number
+
+                The current thread added `delta` to its program counter,
+                and bitwise-OR'd the memoized mask `mask-number` with
+                the current effective signal mask.
+
+                `mask-number` is 32 bits wide.  It starts on the first
+                32-bit boundary after the deltop, and it is stored in
+                the byte order established by the trace header.
+
+                `self.signal_mask_stack[self.signal_depth] =
+			self.signal_mask_stack[self.signal_depth] |
+			mask_memo[mask-number]`
+                `self.PC <- self.PC + delta`
 
         | program-counter
 

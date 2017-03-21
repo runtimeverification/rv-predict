@@ -11,7 +11,7 @@ public class Context {
     private final Map<Long, ThreadState> threadIdToState;
     private ThreadState currentThread;
     private int outstandingInterruptCount;
-
+    private int jumpDeltaForBegin;
 
     public Context() {
         threadIdToState = new HashMap<>();
@@ -27,13 +27,18 @@ public class Context {
                 currentThread.getLastPC(outstandingInterruptCount) + jumpDelta);
     }
 
+    public void setJumpDeltaForBegin(int jumpDeltaForBegin) {
+        this.jumpDeltaForBegin = jumpDeltaForBegin;
+    }
+
     public void beginThread(
             long deltop_first, ThreadId threadId, Generation generation)
             throws InvalidTraceDataException {
         if (threadIdToState.containsKey(threadId.getAsLong())) {
             throw new InvalidTraceDataException("Thread started twice: " + threadId.getAsLong() + ".");
         }
-        currentThread = new ThreadState(deltop_first, threadId, generation);
+        currentThread =
+                new ThreadState(deltop_first + jumpDeltaForBegin, threadId, generation);
         threadIdToState.put(currentThread.getThreadId(), currentThread);
         // TODO(virgil): Huh? Why isn't the outstanding interrupt count in the thread's state?
         outstandingInterruptCount = 0;
@@ -55,10 +60,10 @@ public class Context {
         private final List<Long> nops;
         private boolean signalsMasked;
 
-        private ThreadState(long deltop_first, ThreadId threadId, Generation generation) {
+        private ThreadState(long initialPC, ThreadId threadId, Generation generation) {
             this.threadId = threadId.getAsLong();
             lastPC = new ArrayList<>();
-            lastPC.add(deltop_first);
+            lastPC.add(initialPC);
             callStack = new Stack<>();
             this.generation = new ArrayList<>();
             this.generation.add(generation.getAsLong());

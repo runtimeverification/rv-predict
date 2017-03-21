@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.log.compact;
 
+import com.runtimeverification.rvpredict.log.Event;
+
 import java.io.*;
 import java.nio.*;
 import java.util.List;
@@ -10,7 +12,6 @@ public class TraceReader implements Closeable {
     private InputStream inputStream = null;
 
     private TraceHeader traceHeader;
-    private TraceData traceData;
     private final int minDeltaAndEventType;
     private final int maxDeltaAndEventType;
     private List<CompactEvent> firstEvent;
@@ -20,20 +21,25 @@ public class TraceReader implements Closeable {
         File file = new File(path);
         inputStream = new BufferedInputStream(new FileInputStream(file));
         traceHeader = new TraceHeader(inputStream);
-        traceData = new TraceData(traceHeader);
+        TraceData traceData = new TraceData(traceHeader);
         read("first event", traceData);
         minDeltaAndEventType = toIntExact(traceData.getPc().getAsLong())
                 - (Constants.JUMPS_IN_DELTA / 2) * CompactEvent.Type.getNumberOfValues();
         maxDeltaAndEventType = minDeltaAndEventType
                 + Constants.JUMPS_IN_DELTA * CompactEvent.Type.getNumberOfValues() - 1;
         context = new Context();
+        DeltaAndEventType deltaAndEventType = DeltaAndEventType.parseFromPC(
+                minDeltaAndEventType, maxDeltaAndEventType, traceData.getPc());
+        if (deltaAndEventType == null
+                || deltaAndEventType.getEventType() != CompactEvent.Type.THREAD_BEGIN) {
+            throw new InvalidTraceDataException("All traces should start with begin.");
+        }
+        context.setJumpDeltaForBegin(deltaAndEventType.getJumpDelta());
         firstEvent = CompactEvent.begin(
                 minDeltaAndEventType, context, traceData.getThreadId(), traceData.getGeneration());
-        context.prepareToUpdatePcWithDelta(deltaAndEventType.getJumpDelta()); zuma;
-        DeltaAndEventType deltaAndEventType = DeltaAndEventType.parseFromPC(pc.getAsLong());
     }
 
-    public List<CompactEvent> getNextEvents(Context context)
+    public List<CompactEvent> getNextEvents()
             throws InvalidTraceDataException, IOException {
         if (firstEvent != null) {
             List<CompactEvent> event = firstEvent;
@@ -41,12 +47,17 @@ public class TraceReader implements Closeable {
             return event;
         }
         Address pc = new Address(traceHeader);
-        DeltaAndEventType deltaAndEventType = DeltaAndEventType.parseFromPC(pc.getAsLong());
+        read("event identifier", pc);
+        DeltaAndEventType deltaAndEventType =
+                DeltaAndEventType.parseFromPC(minDeltaAndEventType, maxDeltaAndEventType, pc);
         if (deltaAndEventType == null) {
-            // TODO(virgil): Update state.
             return CompactEvent.jump(context, pc.getAsLong());
         }
-        context.updatePcWithDelta(deltaAndEventType.getJumpDelta());
+        if (deltaAndEventType.getEventType() == CompactEvent.Type.THREAD_BEGIN) {
+            context.setJumpDeltaForBegin(deltaAndEventType.getJumpDelta());
+        } else {
+            context.updatePcWithDelta(deltaAndEventType.getJumpDelta());
+        }
         return deltaAndEventType.getEventType().read(context, traceHeader, inputStream);
     }
 
@@ -68,7 +79,7 @@ public class TraceReader implements Closeable {
         data.read(buffer);
     }
 
-    private class DeltaAndEventType {
+    private static class DeltaAndEventType {
         private final CompactEvent.Type eventType;
         private final int jumpDelta;
 
@@ -77,7 +88,9 @@ public class TraceReader implements Closeable {
             this.jumpDelta = jumpDelta;
         }
 
-        private DeltaAndEventType parseFromPC(long pc) {
+        private static DeltaAndEventType parseFromPC(
+                int minDeltaAndEventType, int maxDeltaAndEventType, Address address) {
+            long pc = address.getAsLong();
             if (pc < minDeltaAndEventType || pc > maxDeltaAndEventType) {
                 return null;
             }
@@ -91,7 +104,7 @@ public class TraceReader implements Closeable {
             return eventType;
         }
 
-        public int getJumpDelta() {
+        private int getJumpDelta() {
             return jumpDelta;
         }
     }

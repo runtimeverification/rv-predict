@@ -9,8 +9,8 @@ public class TraceData extends ReadableAggregateData {
 
     public TraceData(TraceHeader header) throws InvalidTraceDataException {
         pc = new Address(header);
-        threadId = new ThreadId();
-        generation = new Generation();
+        threadId = new ThreadId(header);
+        generation = new Generation(header);
         setData(Arrays.asList(pc, threadId, generation));
     }
 

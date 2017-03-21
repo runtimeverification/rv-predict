@@ -395,12 +395,16 @@ trace ::= (delta, 'load[n]') addr value
 
                 `self.PC <- program-counter`
 
-        | (delta, 'begin') tid
+        | (delta, 'begin') tid generation
 
-                A new thread, `tid`, started.
+                A new thread, `tid`, started, and adopted the
+		global generation number `generation`.
 
                 `tid` begins on the first 32-bit boundary after
                 the deltop, and it is `dataw` bytes wide.
+
+                `generation` begins on the first 32-bit boundary after
+                `tid`, and it is 64 bits wide.
 
                 XXX Perhaps `tid` should be `ptrw` bytes wide, instead?
                 XXX That is how I originally specified it, but
@@ -504,6 +508,9 @@ trace ::= (delta, 'load[n]') addr value
                 The current thread added `delta` to its program counter.
                 Then the current thread changed to `tid` and reset the
                 signal depth to 0.
+
+                `tid` begins on the first 32-bit boundary after the
+                deltop, and it is 32 bits wide.
 
                 `self.PC <- self.PC + delta`
                 `self <- tid`

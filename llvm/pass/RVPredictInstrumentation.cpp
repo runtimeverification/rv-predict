@@ -29,6 +29,7 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -45,6 +46,8 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+
+#include "InterruptAnnotation.h"
 
 using namespace llvm;
 
@@ -80,6 +83,19 @@ static const char *const kRVPredictInitName = "__rvpredict_init";
 
 namespace RVPredict {
 
+	class DiagnosticInfoFatalError : public DiagnosticInfoOptimizationBase {
+	public:
+		DiagnosticInfoFatalError(
+		    const Function &Fn, const DebugLoc &DLoc,
+		    const Twine &Msg) :
+		DiagnosticInfoOptimizationBase(DK_OptimizationFailure, DS_Error,
+		    getPassName(), Fn, DLoc, Msg) {
+		}
+		virtual bool isEnabled(void) const {
+			return true;
+		}
+	};
+
 /// RVPredictInstrument: instrument the code in module to find races.
 class RVPredictInstrument : public FunctionPass {
 public:
@@ -90,6 +106,7 @@ public:
   GlobalVariable *createOrderingPointer(IRBuilder<> *, AtomicOrdering);
   Value *createOrdering(IRBuilder<> *, AtomicOrdering);
   static char ID;  // Pass identification, replacement for typeid.
+  virtual void getAnalysisUsage(AnalysisUsage &Info) const;
 
  private:
   void initializeCallbacks(Module &M);
@@ -158,6 +175,13 @@ const char *
 RVPredictInstrument::getPassName() const
 {
 	return "RVPredictInstrument";
+}
+
+void
+RVPredictInstrument::getAnalysisUsage(AnalysisUsage &AU) const
+{
+    // The RVPredictInstrument function pass invalidates all other passes.
+    AU.addRequired<InterruptAnnotation>();
 }
 
 void
@@ -617,6 +641,39 @@ RVPredictInstrument::runOnFunction(Function &F)
 			IRBRet.CreateCall(fnexit, ReturnAddress);
 		}
 		didInstrument = true;
+	}
+
+	InterruptAnnotation &analysis = getAnalysis<InterruptAnnotation>();
+	uint8_t prio;
+	if (analysis.getISRPrioLevel(F, prio)) {
+		IRBuilder<> builder(ctorfn->getEntryBlock().getFirstNonPHI());
+		auto void_type = builder.getVoidTy();
+		auto int32_type = builder.getInt32Ty();
+		FunctionType *handler_type =
+		    FunctionType::get(void_type, {}, false);
+
+		if (handler_type != F.getFunctionType()) {
+			std::string type_message;
+			llvm::raw_string_ostream sstr(type_message);
+
+			sstr << F.getName().str() << " has type ";
+			F.getFunctionType()->print(sstr);
+
+			builder.getContext().diagnose(
+			    DiagnosticInfoFatalError(F,
+				F.getEntryBlock().getFirstNonPHI()->getDebugLoc(),
+				sstr.str()));
+			builder.getContext().emitError(
+			    F.getEntryBlock().getFirstNonPHI(),
+			    "expected void <fn>(void)");
+		}
+
+		Function *regnfn = checkSanitizerInterfaceFunction(
+		    m.getOrInsertFunction("__rvpredict_intr_register",
+			void_type, handler_type, int32_type, nullptr));
+
+		builder.CreateCall(regnfn,
+		    {&F, ConstantInt::get(int32_type, prio)});
 	}
 	return didInstrument;
 }

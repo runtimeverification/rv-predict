@@ -31,7 +31,7 @@ run cmake like so:
 
 USING
 
-To compile your program with RV-Predict instrumentation, follow this
+To compile your program with RV-Predict instrumentation, follow these
 steps, where $BUILD refers to the build directory, build/, above,
 $SRCS refers to your source files, $OBJS to the object files created
 from those sources, and $PROG is the program you are building:

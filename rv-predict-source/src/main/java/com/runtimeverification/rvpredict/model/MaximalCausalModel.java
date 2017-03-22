@@ -5,8 +5,10 @@ import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.violation.Race;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class MaximalCausalModel {
     private final Trace trace;
@@ -44,6 +46,10 @@ public class MaximalCausalModel {
         readLocksPerInstruction = new ArrayList<>();
         threads.forEach(threadId -> {
             List<Event> threadEvents = trace.getEvents(threadId);
+            threadEvents = threadEvents.stream()
+                    .filter(event -> !event.isReadOrWrite()
+                            || variables.contains(event.getAddr()))
+                    .collect(Collectors.toList());
             eventsForThread.add(threadEvents);
             writeLocksPerInstruction.add(
                     computeWriteLocksPerInstruction(threadEvents, trace.getHeldLocksAt(threadEvents.get(0))));
@@ -53,29 +59,86 @@ public class MaximalCausalModel {
         threadLimits = computeThreadLimits();
     }
 
+    private class ProcessingQueue {
+        private final Queue<Configuration> toProcess = new ArrayDeque<>();
+        private final Set<Configuration> existingConfigurations = ConcurrentHashMap.newKeySet();
+        private int activeProducerConsumers = 0;
+
+        private void registerProducerConsumer() {
+            synchronized (toProcess) {
+                activeProducerConsumers++;
+            }
+        }
+
+        private void add(Configuration configuration) {
+            if (existingConfigurations.add(configuration)) {
+                synchronized (toProcess) {
+                    toProcess.add(configuration);
+                }
+                toProcess.notify();
+            }
+        }
+
+        private Configuration remove() {
+            synchronized (toProcess) {
+                while (toProcess.isEmpty()) {
+                    activeProducerConsumers--;
+                    if (activeProducerConsumers == 0) {
+                        toProcess.notify();
+                        return null;
+                    }
+                    try {
+                        toProcess.wait();
+                    } catch (InterruptedException e) {
+                    }
+                    activeProducerConsumers++;
+                }
+                return toProcess.remove();
+            }
+        }
+
+        public int getCount() {
+            return existingConfigurations.size();
+        }
+    }
+
     public Map<String, Race> findRaces() {
-        Queue<Configuration> toProcess = new ArrayDeque<>();
-        Set<Configuration> configurations = new HashSet<>();
+        ProcessingQueue toProcess = new ProcessingQueue();
         Map<String, Race> races = new HashMap<>();
 
         toProcess.add(new Configuration(threads.size(), computeInitialVariableValues()));
-        long count = 0;
-        while (!toProcess.isEmpty()) {
-            count++;
-            Configuration configuration = toProcess.remove();
-            addRaces(configuration, races);
+        toProcess.registerProducerConsumer();
 
-            List<ConfigurationWithEvent> expandedConfigurations = expand(configuration);
-            expandedConfigurations.forEach(expanded -> {
-                Configuration expandedConfiguration = expanded.getConfiguration();
-                if (configurations.contains(expandedConfiguration)) {
-                    return;
+        List<Thread> threads = new ArrayList<>();
+        for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
+            Thread thread = new Thread(() -> {
+                for (Configuration configuration = toProcess.remove();
+                     configuration != null;
+                     configuration = toProcess.remove()) {
+                    addRaces(configuration, races);
+
+                    List<ConfigurationWithEvent> expandedConfigurations = expand(configuration);
+                    expandedConfigurations.forEach(expanded -> {
+                        Configuration expandedConfiguration = expanded.getConfiguration();
+                        toProcess.add(expandedConfiguration);
+                    });
                 }
-                configurations.add(expandedConfiguration);
-                toProcess.add(expandedConfiguration);
             });
+            thread.start();
+            threads.add(thread);
         }
-        System.out.println("Count=" + count);
+        boolean notInterrupted;
+        do {
+            notInterrupted = true;
+            for (Thread thread : threads) {
+                try {
+                    thread.join();
+                } catch (InterruptedException e) {
+                    notInterrupted = false;
+                }
+            }
+        } while (notInterrupted);
+        System.out.println("Count=" + toProcess.getCount());
         return races;
     }
 

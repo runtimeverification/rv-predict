@@ -18,7 +18,7 @@ def printTime(time_seconds):
     time_seconds = time_seconds % SECONDS_IN_HOUR
     minutes = int(time_seconds / SECONDS_IN_MINUTE)
     seconds = time_seconds % SECONDS_IN_MINUTE
-    
+
     time_pieces = []
     if days:
         time_pieces.append('%dd' % days)
@@ -44,7 +44,9 @@ def runWithTime(args, timeoutSeconds):
 def runPredictTool(windowSize, timeoutSeconds, useSmt, extraArguments):
     args = []
     #TODO(virgil): this is horrible, I should pass the path as an argument or something.
-    args.extend(['java', '-ea', '-jar', os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), '../target/release/rv-predict/rv-predict.jar'),])
+    args.extend(['java', '-ea', '-jar',
+                 os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])),
+                              '../target/release/rv-predict/rv-predict.jar'),])
     if windowSize:
         args.extend(['--window', '%s' % 1000])
     if not useSmt:
@@ -55,14 +57,17 @@ def runPredictTool(windowSize, timeoutSeconds, useSmt, extraArguments):
 
 def runForWindows(windows, name, timeoutSeconds, useSmt, extraArguments):
     if not windows:
-        print '%s timeout=%s useSmt=%s' % (name, timeout, useSmt),
+        print '%s timeout=%s useSmt=%s' % (name, timeoutSeconds, useSmt),
         sys.stdout.flush()
-        runPredictTool(timeout = timeout, useSmt = useSmt, extraArguments = extraArguments)
+        runPredictTool(windowSize=None, timeoutSeconds=timeoutSeconds, useSmt=useSmt,
+                       extraArguments=extraArguments)
         return
     for w in windows:
-        print '%s %s timeout=%s useSmt=%s, window=%s' % (datetime.datetime.now(), name, timeoutSeconds, useSmt, w),
+        print ('%s %s timeout=%s useSmt=%s, window=%s'
+               % (datetime.datetime.now(), name, timeoutSeconds, useSmt, w)),
         sys.stdout.flush()
-        runPredictTool(windowSize = w, timeoutSeconds = timeoutSeconds, useSmt = useSmt, extraArguments = extraArguments)
+        runPredictTool(windowSize=w, timeoutSeconds=timeoutSeconds, useSmt=useSmt,
+                       extraArguments=extraArguments)
 
 def readExtraArguments(argv):
     extra_args = []
@@ -75,31 +80,56 @@ def readExtraArguments(argv):
         pass
     return argv, extra_args
 
+def runWithAndWithoutSmt(windows, name, timeoutSeconds, extraArguments):
+    runForWindows(windows=windows,
+                  name=name,
+                  timeoutSeconds=timeoutSeconds,
+                  useSmt=True,
+                  extraArguments=extraArguments)
+    runForWindows(windows=windows,
+                  name=name,
+                  timeoutSeconds=timeoutSeconds,
+                  useSmt=False,
+                  extraArguments=extraArguments)
+
+#TODO(virgil): it would be much nicer to read these from the output of
+# dacapo -l.
+DACAPO_TESTS = [
+    'avrora', 'batik', 'fop', 'h2', 'jython', 'luindex', 'lusearch',
+    'pmd', 'sunflow', 'tomcat', 'tradebeans', 'tradesoap', 'xalan']
+
+def runDacapoTests(dacapoJar, windows, timeoutSeconds):
+    for test in DACAPO_TESTS:
+        runWithAndWithoutSmt(windows=windows,
+                             name='dacapo-%s' % test,
+                             timeoutSeconds=timeoutSeconds,
+                             extraArguments=['-jar', dacapoJar, test])
+
 def main(argv):
     argv, extraArguments = readExtraArguments(argv)
 
-    parser = argparse.ArgumentParser(description = "Profile the rv-predict tool")
+    parser = argparse.ArgumentParser(description="Profile the rv-predict tool")
 
     parser.add_argument('--windows', '-w', action='append')
     parser.add_argument('--timeout-seconds', action='store')
     #parser.add_argument('--use-smt', action='store_const', const=True, default=False)
     parser.add_argument('--name', action='store')
     parser.add_argument('--llvm-directory', dest='llvm_directory', action='store')
+    parser.add_argument('--dacapo', action='store')
     args = parser.parse_args(argv)
+
+    if args.dacapo:
+        runDacapoTests(
+            dacapoJar=args.dacapo,
+            windows=[int(w) for w in args.windows],
+            timeoutSeconds=int(args.timeout_seconds))
 
     if args.llvm_directory:
         extraArguments.extend(['--llvm-predict', args.llvm_directory])
-    runForWindows(
+    runWithAndWithoutSmt(
         windows = [int(w) for w in args.windows], 
         name = args.name, 
         timeoutSeconds = int(args.timeout_seconds), 
-        useSmt = True, 
-        extraArguments = extraArguments)
-    runForWindows(
-        windows = [int(w) for w in args.windows], 
-        name = args.name, 
-        timeoutSeconds = int(args.timeout_seconds), 
-        useSmt = False, 
         extraArguments = extraArguments)
 
 if __name__ == '__main__':

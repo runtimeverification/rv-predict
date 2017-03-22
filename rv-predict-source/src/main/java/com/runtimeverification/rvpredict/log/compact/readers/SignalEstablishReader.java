@@ -1,12 +1,12 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
-import com.runtimeverification.rvpredict.log.compact.Address;
+import com.runtimeverification.rvpredict.log.compact.datatypes.Address;
 import com.runtimeverification.rvpredict.log.compact.CompactEvent;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.ReadableAggregateData;
-import com.runtimeverification.rvpredict.log.compact.SignalMaskNumber;
-import com.runtimeverification.rvpredict.log.compact.SignalNumber;
+import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMaskNumber;
+import com.runtimeverification.rvpredict.log.compact.datatypes.SignalNumber;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
 
 import java.nio.ByteBuffer;

@@ -1,5 +1,9 @@
 package com.runtimeverification.rvpredict.log.compact;
 
+import com.runtimeverification.rvpredict.log.compact.datatypes.Address;
+import com.runtimeverification.rvpredict.log.compact.datatypes.Generation;
+import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
+
 import java.util.Arrays;
 
 public class TraceData extends ReadableAggregateData {

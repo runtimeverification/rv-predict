@@ -1,7 +1,9 @@
 package com.runtimeverification.rvpredict.log.compact;
 
+import com.runtimeverification.rvpredict.log.compact.datatypes.Generation;
+import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
+
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +13,6 @@ public class Context {
     private final Map<Long, ThreadState> threadIdToState;
     private ThreadState currentThread;
     private int outstandingInterruptCount;
-    private int jumpDeltaForBegin;
 
     public Context() {
         threadIdToState = new HashMap<>();
@@ -27,18 +28,13 @@ public class Context {
                 currentThread.getLastPC(outstandingInterruptCount) + jumpDelta);
     }
 
-    public void setJumpDeltaForBegin(int jumpDeltaForBegin) {
-        this.jumpDeltaForBegin = jumpDeltaForBegin;
-    }
-
     public void beginThread(
             long deltop_first, ThreadId threadId, Generation generation)
             throws InvalidTraceDataException {
         if (threadIdToState.containsKey(threadId.getAsLong())) {
             throw new InvalidTraceDataException("Thread started twice: " + threadId.getAsLong() + ".");
         }
-        currentThread =
-                new ThreadState(deltop_first + jumpDeltaForBegin, threadId, generation);
+        currentThread = new ThreadState(deltop_first, threadId, generation);
         threadIdToState.put(currentThread.getThreadId(), currentThread);
         // TODO(virgil): Huh? Why isn't the outstanding interrupt count in the thread's state?
         outstandingInterruptCount = 0;

@@ -1,4 +1,8 @@
-package com.runtimeverification.rvpredict.log.compact;
+package com.runtimeverification.rvpredict.log.compact.datatypes;
+
+import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
+import com.runtimeverification.rvpredict.log.compact.ReadableData;
+import com.runtimeverification.rvpredict.log.compact.TraceHeader;
 
 import java.nio.ByteBuffer;
 

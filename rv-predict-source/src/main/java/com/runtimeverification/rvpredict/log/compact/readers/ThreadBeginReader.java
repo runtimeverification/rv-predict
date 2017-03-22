@@ -1,6 +1,8 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
 import com.runtimeverification.rvpredict.log.compact.*;
+import com.runtimeverification.rvpredict.log.compact.datatypes.Generation;
+import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;

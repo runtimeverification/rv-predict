@@ -4,9 +4,9 @@ import com.runtimeverification.rvpredict.log.compact.CompactEvent;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.ReadableAggregateData;
-import com.runtimeverification.rvpredict.log.compact.SignalMask;
-import com.runtimeverification.rvpredict.log.compact.SignalMaskNumber;
-import com.runtimeverification.rvpredict.log.compact.ThreadId;
+import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMask;
+import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMaskNumber;
+import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
 
 import java.nio.ByteBuffer;

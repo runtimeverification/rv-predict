@@ -1,13 +1,16 @@
 package com.runtimeverification.rvpredict.log.compact;
 
-import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.log.compact.datatypes.Address;
+import com.runtimeverification.rvpredict.log.compact.datatypes.Generation;
+import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMask;
+import com.runtimeverification.rvpredict.log.compact.datatypes.SignalNumber;
+import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
+import com.runtimeverification.rvpredict.log.compact.datatypes.VariableInt;
 import com.runtimeverification.rvpredict.log.compact.readers.*;
-import com.sun.javaws.exceptions.InvalidArgumentException;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -185,10 +188,12 @@ public abstract class CompactEvent {
 
     private final long id;
     private final long threadId;
+    private final CompactType compactType;
 
-    private CompactEvent(Context context) {
+    private CompactEvent(Context context, CompactType compactType) {
         this.id = context.newId();
         this.threadId = context.getThreadId();
+        this.compactType = compactType;
     }
 
     long getId() {
@@ -196,6 +201,16 @@ public abstract class CompactEvent {
     }
     long getThreadId() {
         return threadId;
+    }
+    CompactType getCompactType() {return compactType;}
+    int dataSizeInBytes() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
+    }
+    long dataAddress() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
+    }
+    long value() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
     }
 
     public static List<CompactEvent> dataManipulation(
@@ -205,7 +220,28 @@ public abstract class CompactEvent {
             long address,
             long value,
             Atomicity atomicity) {
-        return Collections.singletonList(new CompactEvent(context) {
+        CompactType compactType;
+        switch (dataManipulationType) {
+            case LOAD:
+                compactType = CompactType.READ;
+                break;
+            case STORE:
+                compactType = CompactType.WRITE;
+                break;
+            default:
+                throw new IllegalArgumentException(
+                        "Unknown data manipulation type: " + dataManipulationType);
+        }
+        return Collections.singletonList(new CompactEvent(context, compactType) {
+            int dataSizeInBytes() {
+                return dataSizeInBytes;
+            }
+            long dataAddress() {
+                return address;
+            }
+            long value() {
+                return value;
+            }
         });
     }
 
@@ -285,9 +321,7 @@ public abstract class CompactEvent {
             long minDeltaAndEventType, Context context, ThreadId threadId, Generation generation)
             throws InvalidTraceDataException {
         context.beginThread(minDeltaAndEventType, threadId, generation);
-        return Collections.singletonList(new CompactEvent(context) {
-            zuma;
-        });
+        return NO_EVENTS;
     }
 
     public static List<CompactEvent> jump(Context context, long address) {

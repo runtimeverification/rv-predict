@@ -3,9 +3,9 @@ package com.runtimeverification.rvpredict.log.compact.readers;
 import com.runtimeverification.rvpredict.log.compact.CompactEvent;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
-import com.runtimeverification.rvpredict.log.compact.ThreadId;
+import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
-import com.runtimeverification.rvpredict.log.compact.VariableInt;
+import com.runtimeverification.rvpredict.log.compact.datatypes.VariableInt;
 
 import java.nio.ByteBuffer;
 import java.util.List;

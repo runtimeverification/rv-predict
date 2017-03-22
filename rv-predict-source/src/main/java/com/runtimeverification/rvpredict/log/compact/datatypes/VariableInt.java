@@ -1,9 +1,8 @@
-package com.runtimeverification.rvpredict.log.compact;
+package com.runtimeverification.rvpredict.log.compact.datatypes;
 
-import com.runtimeverification.rvpredict.log.compact.UInt16;
-import com.runtimeverification.rvpredict.log.compact.UInt64;
-import com.runtimeverification.rvpredict.log.compact.readers.DataManipulationReader;
-import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
+import com.runtimeverification.rvpredict.log.compact.ReadableData;
+import com.runtimeverification.rvpredict.log.compact.TraceHeader;
 
 import java.nio.ByteBuffer;
 

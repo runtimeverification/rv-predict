@@ -11,7 +11,7 @@ SECONDS_IN_MINUTE = 60
 SECONDS_IN_HOUR = 60 * SECONDS_IN_MINUTE
 SECONDS_IN_DAY = 24 * SECONDS_IN_HOUR
 
-def printTime(time_seconds):
+def formatTime(time_seconds):
     days = int(time_seconds / SECONDS_IN_DAY)
     time_seconds = time_seconds % SECONDS_IN_DAY
     hours = int(time_seconds / SECONDS_IN_HOUR)
@@ -27,19 +27,18 @@ def printTime(time_seconds):
     if minutes or time_pieces:
         time_pieces.append('%dm' % minutes)
     time_pieces.append('%6.3fs' % seconds)
-    print ''.join(time_pieces)
+    return ''.join(time_pieces)
 
 def runWithTime(args, timeoutSeconds):
     start_time_seconds = time.time()
     p = subprocess.Popen(args, stdout=FNULL, stderr=FNULL)
+    print >> sys.stderr, "Started ", args
     while (time.time() - start_time_seconds < timeoutSeconds) and (p.poll() is None):
         time.sleep(0.1)
     elapsed_time_seconds = time.time() - start_time_seconds
-    try:
+    if not p.poll() is None:
         p.kill()
-    except:
-        pass
-    printTime(elapsed_time_seconds)
+    return formatTime(elapsed_time_seconds)
 
 def runPredictTool(windowSize, timeoutSeconds, useSmt, extraArguments):
     args = []
@@ -53,21 +52,22 @@ def runPredictTool(windowSize, timeoutSeconds, useSmt, extraArguments):
         args.append('--no-smt')
     args.extend(extraArguments)
 
-    runWithTime(args, timeoutSeconds)
+    return runWithTime(args, timeoutSeconds)
 
 def runForWindows(windows, name, timeoutSeconds, useSmt, extraArguments):
     if not windows:
-        print '%s timeout=%s useSmt=%s' % (name, timeoutSeconds, useSmt),
-        sys.stdout.flush()
-        runPredictTool(windowSize=None, timeoutSeconds=timeoutSeconds, useSmt=useSmt,
-                       extraArguments=extraArguments)
-        return
+        full_name = '%s timeout=%s useSmt=%s' % (name, timeoutSeconds, useSmt)
+        print >> sys.stderr, full_name
+        formatted_time = runPredictTool(windowSize=None, timeoutSeconds=timeoutSeconds,
+                                        useSmt=useSmt, extraArguments=extraArguments)
+        print full_name, formatted_time
     for w in windows:
-        print ('%s %s timeout=%s useSmt=%s, window=%s'
-               % (datetime.datetime.now(), name, timeoutSeconds, useSmt, w)),
-        sys.stdout.flush()
-        runPredictTool(windowSize=w, timeoutSeconds=timeoutSeconds, useSmt=useSmt,
-                       extraArguments=extraArguments)
+        full_name = ('%s %s timeout=%s useSmt=%s, window=%s'
+                     % (datetime.datetime.now(), name, timeoutSeconds, useSmt, w))
+        print >> sys.stderr, full_name
+        formatted_time = runPredictTool(windowSize=w, timeoutSeconds=timeoutSeconds, useSmt=useSmt,
+                                        extraArguments=extraArguments)
+        print full_name, formatted_time
 
 def readExtraArguments(argv):
     extra_args = []
@@ -123,6 +123,7 @@ def main(argv):
             dacapoJar=args.dacapo,
             windows=[int(w) for w in args.windows],
             timeoutSeconds=int(args.timeout_seconds))
+        return
 
     if args.llvm_directory:
         extraArguments.extend(['--llvm-predict', args.llvm_directory])

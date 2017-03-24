@@ -8,6 +8,7 @@
 
 LIB?=rvprt
 
+INCS=intr_exports.h
 CC=clang
 CFLAGS+=-std=c11
 COPTS+=-O3 -O0

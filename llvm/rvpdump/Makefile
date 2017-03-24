@@ -9,6 +9,12 @@ NOMAN=
 
 PROGS=rvpdump metadatadump tracedump
 
+FILESMODE=0755
+FILES=rvpc.sh rvpsymbolize.sh rvpx.sh
+FILESNAME_rvpc.sh=rvpc
+FILESNAME_rvpsymbolize.sh=rvpsymbolize
+FILESNAME_rvpx.sh=rvpx
+
 CC=clang
 CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt
 SRCS.rvpdump=main.c reader.c

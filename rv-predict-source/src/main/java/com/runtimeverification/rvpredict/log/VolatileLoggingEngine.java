@@ -172,8 +172,9 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                 }
             } else {
                 /* busy waiting until the counter is reset */
-                while (globalEventID.get() >= windowSize && !closed) {
+                while (numOfEvents > windowSize && !closed) {
                     LockSupport.parkNanos(1);
+                    numOfEvents = globalEventID.get();
                 }
                 /* try again, small chance to fail and get into busy waiting again */
                 return closed ? Integer.MIN_VALUE : claimGID(n);
@@ -183,7 +184,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
     }
 
-    private void runRaceDetection(int numOfEvents) {
+    protected void runRaceDetection(int numOfEvents) {
         /* makes sure that all the events have been finalized */
         while (finalized.sum() < numOfEvents) {
             LockSupport.parkNanos(1);

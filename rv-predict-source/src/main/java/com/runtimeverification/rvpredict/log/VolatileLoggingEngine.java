@@ -185,7 +185,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
     }
 
-    private void runRaceDetection(int numOfEvents) {
+    protected void runRaceDetection(int numOfEvents) {
         /* makes sure that all the events have been finalized */
         while (finalized.sum() < numOfEvents) {
             LockSupport.parkNanos(1);

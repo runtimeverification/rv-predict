@@ -408,7 +408,7 @@ public class MaximalCausalModel {
                     variablesInThread.add(event.getAddr());
                 }
             });
-            variablesInThread.forEach(addr -> variableToThreadCount.compute(addr, (k, v) -> v == null ? 1 : v + 1));
+            variablesInThread.forEach(addr -> variableToThreadCount.merge(addr, 1, (v1, v2) -> v1 + v2));
         });
         return variableToThreadCount.entrySet().stream()
                 .filter(entry -> entry.getValue() > 1)

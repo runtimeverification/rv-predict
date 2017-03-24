@@ -172,8 +172,9 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                 }
             } else {
                 /* busy waiting until the counter is reset */
-                while (globalEventID.get() > windowSize && !closed) {
+                while (numOfEvents > windowSize && !closed) {
                     LockSupport.parkNanos(1);
+                    numOfEvents = globalEventID.get();
                 }
                 /* try again, small chance to fail and get into busy waiting again */
                 return closed ? Integer.MIN_VALUE : claimGID(n);

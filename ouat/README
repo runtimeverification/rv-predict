@@ -1,0 +1,8 @@
+ouat/: (o)nce (u)pon (a) (t)ime is a land inhabited by
+    ELF and DWARF experiments.
+
+ouat/simplereader/: the `simplereader` example in libdwarf
+
+ouat/walker/: a program, derived from the `simplereader` example in
+    libdwarf, that walks the DWARF debugging information and prints
+    out information about variables and such.

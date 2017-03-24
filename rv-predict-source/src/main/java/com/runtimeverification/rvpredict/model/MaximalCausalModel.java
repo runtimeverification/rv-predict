@@ -62,7 +62,7 @@ public class MaximalCausalModel {
     private class ProcessingQueue {
         private final Queue<Configuration> toProcess = new ArrayDeque<>();
         private final Set<Configuration> existingConfigurations = ConcurrentHashMap.newKeySet();
-        private int activeProducerConsumers = 0;
+        private volatile int activeProducerConsumers = 0;
 
         private void registerProducerConsumer() {
             synchronized (toProcess) {
@@ -74,8 +74,8 @@ public class MaximalCausalModel {
             if (existingConfigurations.add(configuration)) {
                 synchronized (toProcess) {
                     toProcess.add(configuration);
+                    toProcess.notify();
                 }
-                toProcess.notify();
             }
         }
 
@@ -107,11 +107,11 @@ public class MaximalCausalModel {
         Map<String, Race> races = new HashMap<>();
 
         toProcess.add(new Configuration(threads.size(), computeInitialVariableValues()));
-        toProcess.registerProducerConsumer();
 
         List<Thread> threads = new ArrayList<>();
         for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
             Thread thread = new Thread(() -> {
+                toProcess.registerProducerConsumer();
                 for (Configuration configuration = toProcess.remove();
                      configuration != null;
                      configuration = toProcess.remove()) {
@@ -127,18 +127,17 @@ public class MaximalCausalModel {
             thread.start();
             threads.add(thread);
         }
-        boolean notInterrupted;
+        boolean interrupted;
         do {
-            notInterrupted = true;
+            interrupted = false;
             for (Thread thread : threads) {
                 try {
                     thread.join();
                 } catch (InterruptedException e) {
-                    notInterrupted = false;
+                    interrupted = true;
                 }
             }
-        } while (notInterrupted);
-        System.out.println("Count=" + toProcess.getCount());
+        } while (interrupted);
         return races;
     }
 
@@ -192,7 +191,6 @@ public class MaximalCausalModel {
                     Integer threadIndex = threadToIndex.get(event.getSyncedThreadId());
                     if (threadIndex == null) {
                         // TODO: Why does this happen?
-                        System.out.println("Thread " + event.getSyncedThreadId() + " not found.");
                         continue;
                     }
                     limits.get(threadIndex).setStart(i, j);

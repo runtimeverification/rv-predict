@@ -37,9 +37,11 @@ def run_with_time(args, timeout_seconds):
     while (time.time() - start_time_seconds < timeout_seconds) and (process.poll() is None):
         time.sleep(0.1)
     elapsed_time_seconds = time.time() - start_time_seconds
+    script_name = os.path.basename(sys.argv[0])
     subprocess.call(
         ['bash', '-c',
-         "kill -9 $(ps aux | grep 'predict' | grep -v 'profile.py' | awk '{print $2}')"],
+         "kill -9 $(ps aux | grep 'rv-predict.jar' | grep -v '%s' | awk '{print $2}')"
+         % script_name],
         stdout=FNULL)
     return format_time(elapsed_time_seconds)
 

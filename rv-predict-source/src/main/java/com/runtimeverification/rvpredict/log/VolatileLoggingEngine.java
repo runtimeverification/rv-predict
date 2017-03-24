@@ -337,7 +337,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
          * logged trace look closer to the execution.
          */
         void append(EventType eventType, int locId, int addr1, int addr2, long value1, long value2,
-                    int extra) {
+                int extra) {
             if (alreadyLogging) {
                 return;
             }
@@ -350,7 +350,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
 
         void unsafeAppend(EventType eventType, int locId, int addr1, int addr2, long value1, long value2,
-                          int extra) {
+                int extra) {
             int atomLock;
             switch (eventType) {
             case JOIN:

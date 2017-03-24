@@ -40,7 +40,8 @@ def run_with_time(args, timeout_seconds):
     script_name = os.path.basename(sys.argv[0])
     subprocess.call(
         ['bash', '-c',
-         "kill -9 $(ps aux | grep 'rv-predict.jar' | grep -v '%s' | awk '{print $2}')"
+         "kill -9 $(ps aux | grep 'rv-predict.jar' | grep -v '%s' "
+         + "| grep -v grep | awk '{print $2}')"
          % script_name],
         stdout=FNULL)
     return format_time(elapsed_time_seconds)
@@ -77,6 +78,7 @@ def run_for_windows(rv_predict_jar_path, windows, name, timeout_seconds, use_smt
             timeout_seconds=timeout_seconds, use_smt=use_smt,
             extra_arguments=extra_arguments)
         print full_name, formatted_time
+        sys.stdout.flush()
 
 def run_with_and_without_smt(rv_predict_jar_path, windows, name, timeout_seconds, extra_arguments):
     """Runs the rv-predict tool with the smt model first, then with the dynamic programming model,

@@ -3,14 +3,17 @@ package com.runtimeverification.rvpredict.log.compact;
 import com.runtimeverification.rvpredict.log.compact.datatypes.Address;
 import com.runtimeverification.rvpredict.log.compact.datatypes.Generation;
 import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMask;
+import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMaskNumber;
 import com.runtimeverification.rvpredict.log.compact.datatypes.SignalNumber;
 import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
+import com.runtimeverification.rvpredict.log.compact.datatypes.UInt64;
 import com.runtimeverification.rvpredict.log.compact.datatypes.VariableInt;
 import com.runtimeverification.rvpredict.log.compact.readers.*;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -183,7 +186,7 @@ public abstract class CompactEvent {
         JOIN,
 
         INVOKE_METHOD,
-        FINISH_METHOD,
+        FINISH_METHOD, ENTER_SIGNAL, ESTABLISH_SIGNAL,
     }
 
     private final long id;
@@ -212,13 +215,22 @@ public abstract class CompactEvent {
     long value() {
         throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
     }
+    long signalNumber() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
+    }
+    long getOtherThreadId() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
+    }
+    long getSignalMask() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
+    }
 
     public static List<CompactEvent> dataManipulation(
             Context context,
             DataManipulationType dataManipulationType,
             int dataSizeInBytes,
-            long address,
-            long value,
+            Address address,
+            VariableInt value,
             Atomicity atomicity) {
         CompactType compactType;
         switch (dataManipulationType) {
@@ -232,25 +244,46 @@ public abstract class CompactEvent {
                 throw new IllegalArgumentException(
                         "Unknown data manipulation type: " + dataManipulationType);
         }
-        return Collections.singletonList(new CompactEvent(context, compactType) {
-            int dataSizeInBytes() {
-                return dataSizeInBytes;
-            }
-            long dataAddress() {
-                return address;
-            }
-            long value() {
-                return value;
-            }
-        });
+        CompactEvent dataManipulationEvent =
+                dataManipulationEvent(context, dataSizeInBytes, address, value, compactType);
+        if (atomicity == Atomicity.NOT_ATOMIC) {
+            return Collections.singletonList(dataManipulationEvent);
+        }
+        // TODO(virgil): These locks should be something more fine-grained, e.g. write_locks.
+        // Also, it would probably be nice if an atomic write to this would also be atomic for
+        // access to a part of the address (i.e. union in c/c++), if that's indeed how it should
+        // work.
+        return Arrays.asList(
+                lockManipulationEvent(context, LockManipulationType.LOCK, address),
+                dataManipulationEvent,
+                lockManipulationEvent(context, LockManipulationType.UNLOCK, address)
+        );
+    }
+
+    private static CompactEvent dataManipulationEvent(
+            Context context, int dataSizeInBytes, Address address, VariableInt value, CompactType compactType) {
+        return new CompactEvent(context, compactType) {
+                int dataSizeInBytes() {
+                    return dataSizeInBytes;
+                }
+                long dataAddress() {
+                    return address.getAsLong();
+                }
+                long value() {
+                    return value.getAsLong();
+                }
+            };
     }
 
     public static List<CompactEvent> atomicReadModifyWrite(
             Context context,
             int dataSizeInBytes,
             Address address, VariableInt readValue, VariableInt writeValue) {
-        return Collections.singletonList(new CompactEvent(context) {
-        });
+        return Arrays.asList(
+                lockManipulationEvent(context, LockManipulationType.LOCK, address),
+                dataManipulationEvent(context, dataSizeInBytes, address, readValue, CompactType.READ),
+                dataManipulationEvent(context, dataSizeInBytes, address, writeValue, CompactType.WRITE),
+                lockManipulationEvent(context, LockManipulationType.UNLOCK, address));
     }
 
     public static List<CompactEvent> changeOfGeneration(Context context, Generation generation) {
@@ -260,14 +293,21 @@ public abstract class CompactEvent {
 
 
     public static List<CompactEvent> join(Context context, ThreadId threadId) {
-        return Collections.singletonList(new CompactEvent(context) {
+        return Collections.singletonList(new CompactEvent(context, CompactType.JOIN) {
+            @Override
+            long getOtherThreadId() {
+                return threadId.getAsLong();
+            }
         });
     }
 
     public static List<CompactEvent> lockManipulation(
             Context context, LockManipulationType lockManipulationType, Address address) {
-        return Collections.singletonList(new CompactEvent(context) {
-        });
+        return Collections.singletonList(lockManipulationEvent(context, lockManipulationType, address));
+    }
+
+    private static CompactEvent lockManipulationEvent(
+            Context context, LockManipulationType lockManipulationType, Address address) {
     }
 
     public static List<CompactEvent> disestablishSignal(
@@ -277,17 +317,25 @@ public abstract class CompactEvent {
     }
 
     public static List<CompactEvent> enterSignal(
-            Context context, Generation generation, SignalNumber signalNumber) {
+            Context context, Generation generation, SignalNumber signalNumber) throws InvalidTraceDataException {
         context.enterSignal(generation);
-        return Collections.singletonList(new CompactEvent(context) {
-            zuma;
+        return Collections.singletonList(new CompactEvent(context, CompactType.ENTER_SIGNAL) {
+            long signalNumber() {
+                return signalNumber.getAsLong();
+            }
         });
     }
 
     public static List<CompactEvent> establishSignal(
             Context context,
-            Address handler, SignalNumber signalNumber, SignalMask signalMask) {
-        return Collections.singletonList(new CompactEvent(context) {
+            Address handler, SignalNumber signalNumber, SignalMaskNumber signalMaskNumber) {
+        long signalMask = context.getMemoizedSignalMask(signalMaskNumber.getAsLong());
+        return Collections.singletonList(new CompactEvent(context, CompactType.ESTABLISH_SIGNAL) {
+            @Override
+            long getSignalMask() {
+                return signalMask;
+            }
+            zuma;
         });
     }
 

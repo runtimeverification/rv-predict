@@ -1,6 +1,8 @@
 package com.runtimeverification.rvpredict.log.compact;
 
 import com.runtimeverification.rvpredict.log.compact.datatypes.Generation;
+import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMask;
+import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMaskNumber;
 import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
 
 import java.util.ArrayList;
@@ -47,12 +49,20 @@ public class Context {
         currentThread.setGeneration(outstandingInterruptCount, generation);
     }
 
+    public void changeOfGeneration(Generation generation) {
+        currentThread.setGeneration(outstandingInterruptCount, generation);
+    }
+
+    public long getMemoizedSignalMask(long signalMaskNumber) {
+        return memoizedSignalMasks.get(signalMaskNumber);
+    }
+
     private class ThreadState {
         private final long threadId;
         private final List<Long> lastPC;
         private final Stack<Long> callStack;
         private final List<Long> generation;
-        // TODO(virgi): What does nops mean?
+        // TODO(virgil): What does nops mean?
         private final List<Long> nops;
         private boolean signalsMasked;
 

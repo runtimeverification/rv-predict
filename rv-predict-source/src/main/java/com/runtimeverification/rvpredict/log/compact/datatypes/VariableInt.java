@@ -38,7 +38,7 @@ public class VariableInt implements ReadableData {
             case 8:
                 uInt64 = new UInt64();
                 readableData = uInt64;
-                valueGetter = () -> uInt64.getValueAsLong();
+                valueGetter = () -> uInt64.getAsLong();
                 break;
             default:
                 throw new InvalidTraceDataException("Can't handle ints with size=" + storageDataSizeInBytes + ".");

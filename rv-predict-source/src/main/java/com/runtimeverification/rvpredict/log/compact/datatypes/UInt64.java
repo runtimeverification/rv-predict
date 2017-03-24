@@ -18,7 +18,7 @@ public class UInt64 implements ReadableData {
         value = buffer.getInt();
     }
 
-    public long getValueAsLong() {
+    public long getAsLong() {
         return value;
     }
 }

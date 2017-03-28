@@ -306,8 +306,8 @@ trace ::= (delta, 'load[n]') addr value
 	| (delta, 'sig-dis') signal-number
 
                 The current thread added `delta` to its program counter
-                and disestablished its signal handler on signal number
-                `signal-number`.
+                and disestablished the signal handler on signal number
+                `signal-number` for all threads.
 
                 `signal-number` is 32 bits wide.  It begins on the first
                 32-bit boundary after the deltop.
@@ -331,7 +331,7 @@ trace ::= (delta, 'load[n]') addr value
 
                 `self.PC <- self.PC + delta`
                 `self.signal_depth <- self.signal_depth + 1`
-		`push(self.signal_mask_stack, top(self.signal_mask) |
+		`push(self.signal_mask_stack, top(self.signal_mask_stack) |
 			handler_mask[signal-number])`
 
 	| (delta, 'exit-signal') 

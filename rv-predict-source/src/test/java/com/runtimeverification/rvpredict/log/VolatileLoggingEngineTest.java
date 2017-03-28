@@ -34,7 +34,7 @@ public class VolatileLoggingEngineTest {
     }
 
     @Test
-    public void getGidRace() throws InterruptedException {
+    public void getGidDeadlock() throws InterruptedException {
         Configuration configuration = mock(Configuration.class);
         configuration.windowSize = 1;
 
@@ -79,6 +79,37 @@ public class VolatileLoggingEngineTest {
         // it deadlocked would be nice.
         t2.join(1000);
         Assert.assertTrue(!t2.isAlive());
+    }
+
+    @Test
+    public void noRecursiveLogging() throws InterruptedException {
+        Configuration configuration = mock(Configuration.class);
+        configuration.windowSize = 1;
+
+        Metadata metadata = mock(Metadata.class);
+
+        VolatileLoggingEngine loggingEngine = new VolatileLoggingEngine(configuration, metadata) {
+            @Override
+            protected void runRaceDetection(int numOfEvents) {
+                // The window is already full, so if the logging engine
+                // does not reject this log, it will try to get a GID and it will
+                // enter an infinite loop.
+                log(EventType.WRITE, LOC_ID, ADDR, ADDR, VALUE, VALUE);
+            }
+        };
+
+        Thread t1 = new Thread(() -> {
+            // This will use one GID, filling the window.
+            loggingEngine.log(EventType.WRITE, LOC_ID, ADDR, ADDR, VALUE, VALUE);
+            // This will try to use one GID, which does not fit in the window anymore,
+            // so it will trigger race detection, cleaning the window afterwards.
+            loggingEngine.log(EventType.WRITE, LOC_ID, ADDR, ADDR, VALUE, VALUE);
+        });
+        t1.start();
+        // One second should be enough for it to finish, but another way to detect whether
+        // it deadlocked would be nice.
+        t1.join(1000);
+        Assert.assertTrue(!t1.isAlive());
     }
 
     private static class ControlFlags {

@@ -8,6 +8,7 @@ import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMask;
 import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMaskNumber;
 import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
+import com.runtimeverification.rvpredict.log.compact.datatypes.VariableInt;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -26,22 +27,23 @@ public class SignalMaskMemoizationReader implements CompactEvent.Reader {
         TraceElement memoization = reader.getInit(header);
         memoization.read(buffer);
         return CompactEvent.signalMaskMemoization(
-                memoization.signalMask.getAsLong(),
-                memoization.origin.getAsLong(),
-                memoization.signalMaskNumber.getAsLong());
+                context,
+                memoization.signalMask,
+                memoization.originBitCount,
+                memoization.signalMaskNumber);
     }
 
     private class TraceElement extends ReadableAggregateData {
         private final SignalMask signalMask;
-        private final ThreadId? origin;
+        private final VariableInt originBitCount;
         private final SignalMaskNumber signalMaskNumber;
 
         private TraceElement(TraceHeader header) throws InvalidTraceDataException {
             signalMask = new SignalMask(header);
-            origin = new ThreadId(header);
+            originBitCount = new VariableInt(header, 4);
             signalMaskNumber = new SignalMaskNumber(header);
 
-            setData(Arrays.asList(signalMask, origin, signalMaskNumber));
+            setData(Arrays.asList(signalMask, originBitCount, signalMaskNumber));
         }
     }
 }

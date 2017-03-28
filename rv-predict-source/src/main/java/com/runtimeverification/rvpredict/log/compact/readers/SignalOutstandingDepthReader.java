@@ -21,6 +21,6 @@ public class SignalOutstandingDepthReader implements CompactEvent.Reader {
     public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
         VariableInt outstandingDepth = reader.getInit(header);
         outstandingDepth.read(buffer);
-        return CompactEvent.signalOutstandingDepth(outstandingDepth.getAsLong());
+        return CompactEvent.signalOutstandingDepth(context, outstandingDepth.getAsLong());
     }
 }

@@ -172,8 +172,9 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                 }
             } else {
                 /* busy waiting until the counter is reset */
-                while (globalEventID.get() >= windowSize && !closed) {
+                while (numOfEvents > windowSize && !closed) {
                     LockSupport.parkNanos(1);
+                    numOfEvents = globalEventID.get();
                 }
                 /* try again, small chance to fail and get into busy waiting again */
                 return closed ? Integer.MIN_VALUE : claimGID(n);
@@ -183,7 +184,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
     }
 
-    private void runRaceDetection(int numOfEvents) {
+    protected void runRaceDetection(int numOfEvents) {
         /* makes sure that all the events have been finalized */
         while (finalized.sum() < numOfEvents) {
             LockSupport.parkNanos(1);
@@ -286,6 +287,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
          */
         final AtomicBoolean isLastBatchFinalized = new AtomicBoolean(false);
 
+        boolean alreadyLogging = false;
+
         Buffer(Thread owner, int bound) {
             this.owner = owner;
             tid = owner.getId();
@@ -334,6 +337,19 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
          * logged trace look closer to the execution.
          */
         void append(EventType eventType, int locId, int addr1, int addr2, long value1, long value2,
+                int extra) {
+            if (alreadyLogging) {
+                return;
+            }
+            try {
+                alreadyLogging = true;
+                unsafeAppend(eventType, locId, addr1, addr2, value1, value2, extra);
+            } finally {
+                alreadyLogging = false;
+            }
+        }
+
+        void unsafeAppend(EventType eventType, int locId, int addr1, int addr2, long value1, long value2,
                 int extra) {
             int atomLock;
             switch (eventType) {

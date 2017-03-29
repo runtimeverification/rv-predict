@@ -1,12 +1,5 @@
 package com.runtimeverification.rvpredict.log.compact;
 
-import com.runtimeverification.rvpredict.log.compact.datatypes.Address;
-import com.runtimeverification.rvpredict.log.compact.datatypes.Generation;
-import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMask;
-import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMaskNumber;
-import com.runtimeverification.rvpredict.log.compact.datatypes.SignalNumber;
-import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,20 +26,20 @@ public class Context {
     }
 
     void beginThread(
-            long deltop_first, ThreadId threadId, Generation generation)
+            long deltop_first, long threadId, long generation)
             throws InvalidTraceDataException {
-        if (threadIdToState.containsKey(threadId.getAsLong())) {
-            throw new InvalidTraceDataException("Thread started twice: " + threadId.getAsLong() + ".");
+        if (threadIdToState.containsKey(threadId)) {
+            throw new InvalidTraceDataException("Thread started twice: " + threadId + ".");
         }
         currentThread = new ThreadState(deltop_first, threadId, generation);
         threadIdToState.put(currentThread.getThreadId(), currentThread);
     }
 
-    void enterSignal(SignalNumber signalNumber, Generation generation) throws InvalidTraceDataException {
+    void enterSignal(long signalNumber, long generation) throws InvalidTraceDataException {
         currentThread.enterSignal(signalNumber, generation);
     }
 
-    void changeOfGeneration(Generation generation) {
+    void changeOfGeneration(long generation) {
         currentThread.setGeneration(generation);
     }
 
@@ -54,59 +47,59 @@ public class Context {
         return memoizedSignalMasks.get(signalMaskNumber);
     }
 
-    void removeSignalHandler(SignalNumber signalNumber) {
+    void removeSignalHandler(long signalNumber) {
         currentThread.removeSignalHandler(signalNumber);
     }
 
-    public void setSignalHandler(SignalNumber signalNumber, Address signalHandlerAddress) {
+    void setSignalHandler(long signalNumber, long signalHandlerAddress) {
         currentThread.setSignalHandler(signalNumber, signalHandlerAddress);
     }
 
-    public void setSignalMask(SignalNumber signalNumber, long signalMask) {
+    void setSignalMask(long signalNumber, long signalMask) {
         currentThread.setSignalMask(signalNumber, signalMask);
     }
 
-    public long getSignalNumber() {
+    long getSignalNumber() {
         return currentThread.getSignalNumber();
     }
 
-    public void exitSignal() {
+    void exitSignal() {
         currentThread.exitSignal();
     }
 
-    public void setSignalDepth(long signalDepth) {
+    void setSignalDepth(long signalDepth) {
         currentThread.setSignalDepth(signalDepth);
     }
 
-    public void memoizeSignalMask(SignalMask signalMask, long originBitCount, SignalMaskNumber signalMaskNumber) {
-        memoizedSignalMasks.put(signalMaskNumber.getAsLong(), signalMask.getAsLong() << originBitCount);
+    void memoizeSignalMask(long signalMask, long originBitCount, long signalMaskNumber) {
+        memoizedSignalMasks.put(signalMaskNumber, signalMask << originBitCount);
     }
 
-    public void maskSignals(long signalMask) {
+    void maskSignals(long signalMask) {
         currentThread.maskSignals(signalMask);
     }
 
-    public void endThread() {
+    void endThread() {
         currentThread.end();
     }
 
-    public void joinThread(ThreadId otherThreadId) {
-        threadIdToState.get(otherThreadId.getAsLong()).wasJoined();
+    void joinThread(long otherThreadId) {
+        threadIdToState.get(otherThreadId).wasJoined();
     }
 
-    public void forkThread(ThreadId threadId) {
+    void forkThread(long threadId) {
     }
 
-    public void switchThread(ThreadId threadId) {
-        currentThread = threadIdToState.get(threadId.getAsLong());
+    void switchThread(long threadId) {
+        currentThread = threadIdToState.get(threadId);
         // TODO: Why, oh why?
         currentThread.setSignalDepth(0);
     }
 
-    public long newId() {
+    long newId() {
     }
 
-    public long getThreadId() {
+    long getThreadId() {
         return currentThread.getThreadId();
     }
 
@@ -119,12 +112,12 @@ public class Context {
         private final Map<Long, Long> signalNumberToHandlerAddress;
         private int signalDepth;
 
-        private ThreadState(long initialPC, ThreadId threadId, Generation generation) {
-            this.threadId = threadId.getAsLong();
+        private ThreadState(long initialPC, long threadId, long generation) {
+            this.threadId = threadId;
             lastPC = new ArrayList<>();
             lastPC.add(initialPC);
             this.generation = new ArrayList<>();
-            this.generation.add(generation.getAsLong());
+            this.generation.add(generation);
             this.generation.add(0L);
             this.signalDepth = 0;
             // TODO: How should this be initialized?
@@ -145,57 +138,55 @@ public class Context {
             return threadId;
         }
 
-        void setGeneration(Generation generation) {
-            this.generation.set(signalDepth, generation.getAsLong());
+        void setGeneration(long generation) {
+            this.generation.set(signalDepth, generation);
         }
 
-        void enterSignal(SignalNumber signalNumber, Generation generation) throws InvalidTraceDataException {
-            // TODO: The docs say that one should increment the signal depth.
+        void enterSignal(long signalNumber, long generation) throws InvalidTraceDataException {
             signalDepth++;
             currentThread.setGeneration(generation);
             // TODO: This is defined in a slightly different way in the docs.
-            signalMaskStack.push(signalMaskStack.peek() | signalMasks.get(signalNumber.getAsLong()));
+            signalMaskStack.push(signalMaskStack.peek() | signalMasks.get(signalNumber));
         }
 
-        public void setSignalMask(SignalNumber signalNumber, long signalMask) {
-            signalMasks.put(signalNumber.getAsLong(), signalMask);
+        void setSignalMask(long signalNumber, long signalMask) {
+            signalMasks.put(signalNumber, signalMask);
         }
 
-        public void exitSignal() {
+        void exitSignal() {
             // TODO: Shouldn't I do something with the value?
             signalMaskStack.pop();
         }
 
-        public void setSignalDepth(long signalDepth) {
+        void setSignalDepth(long signalDepth) {
             // TODO: Should I do something with the stack here?
             signalDepth = signalDepth;
         }
 
-        public void maskSignals(long signalMask) {
+        void maskSignals(long signalMask) {
             // TODO: This is defined in a different way in the documentation.
             // Why is there a signal depth which can be set to a given value
             // instead of just pushing and popping?
             signalMaskStack.push(signalMaskStack.pop() | signalMask);
         }
 
-        public void end() {
+        void end() {
+        }
+
+        void wasJoined() {
 
         }
 
-        public void wasJoined() {
-
-        }
-
-        public long getSignalNumber() {
+        long getSignalNumber() {
             return signalMaskStack.peek();
         }
 
-        void removeSignalHandler(SignalNumber signalNumber) {
-            signalNumberToHandlerAddress.remove(signalNumber.getAsLong());
+        void removeSignalHandler(long signalNumber) {
+            signalNumberToHandlerAddress.remove(signalNumber);
         }
 
-        public void setSignalHandler(SignalNumber signalNumber, Address signalHandlerAddress) {
-            signalNumberToHandlerAddress.put(signalNumber.getAsLong(), signalHandlerAddress.getAsLong());
+        void setSignalHandler(long signalNumber, long signalHandlerAddress) {
+            signalNumberToHandlerAddress.put(signalNumber, signalHandlerAddress);
         }
     }
 }

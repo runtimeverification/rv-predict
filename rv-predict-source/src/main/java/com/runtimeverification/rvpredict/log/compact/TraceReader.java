@@ -23,7 +23,7 @@ public class TraceReader implements Closeable {
         inputStream = new BufferedInputStream(new FileInputStream(file));
         traceHeader = new TraceHeader(inputStream);
         TraceData traceData = new TraceData(traceHeader);
-        read("first event", traceData);
+        read("first event", traceData, false);
         minDeltaAndEventType = toIntExact(traceData.getPc().getAsLong())
                 - (Constants.JUMPS_IN_DELTA / 2) * CompactEvent.Type.getNumberOfValues();
         maxDeltaAndEventType = minDeltaAndEventType
@@ -48,7 +48,9 @@ public class TraceReader implements Closeable {
             return event;
         }
         Address pc = new Address(traceHeader);
-        read("event identifier", pc);
+        if (!read("event identifier", pc, true)) {
+            return null;
+        }
         DeltaAndEventType deltaAndEventType =
                 DeltaAndEventType.parseFromPC(minDeltaAndEventType, maxDeltaAndEventType, pc);
         if (deltaAndEventType == null) {
@@ -66,15 +68,25 @@ public class TraceReader implements Closeable {
         }
     }
 
-    private void read(String name, ReadableData data) throws IOException, InvalidTraceDataException {
+    private boolean read(String name, ReadableData data, boolean allowEof)
+            throws IOException, InvalidTraceDataException {
         // TODO(virgil): I could optimize this and not create the array each time. On the other hand,
         // java is supposed to be good at optimizing these things.
         byte[] bytes = new byte[data.size()];
-        if (bytes.length != inputStream.read(bytes)) {
-            throw new InvalidTraceDataException("Short read while reading " + name + ".");
+        if (bytes.length == 0) {
+            throw new RuntimeException("Cannot read data of size 0.");
+        }
+        int readCount = inputStream.read(bytes);
+        if (allowEof && readCount == -1) {
+            return false;
+        }
+        if (bytes.length != readCount) {
+            throw new InvalidTraceDataException("Short read while reading " + name
+                    + ", wanted " + bytes.length + " bytes but got " + readCount + ".");
         }
         ByteBuffer buffer = ByteBuffer.wrap(bytes).order(traceHeader.getByteOrder());
         data.read(buffer);
+        return true;
     }
 
     private static class DeltaAndEventType {

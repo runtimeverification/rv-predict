@@ -19,22 +19,19 @@ public class Context {
         this.minDeltaAndEventType = minDeltaAndEventType;
     }
 
-    void jump(long address) {
+    void jump(long address) throws InvalidTraceDataException {
         currentThread.setLastPC(address);
     }
 
-    void updatePcWithDelta(int jumpDelta) {
-        currentThread.setLastPC(
-                currentThread.getLastPC() + jumpDelta);
+    void updatePcWithDelta(int jumpDelta) throws InvalidTraceDataException {
+        currentThread.setLastPC(currentThread.getLastPC() + jumpDelta);
         currentThread.newOperation();
     }
 
     void beginThread(long threadId, long generation) throws InvalidTraceDataException {
-        System.out.println("begin-thread" + threadId);
-        if (threadIdToState.containsKey(threadId)) {
-            throw new InvalidTraceDataException("Thread started twice: " + threadId + ".");
-        }
-        currentThread = new ThreadState(minDeltaAndEventType, threadId, generation);
+        currentThread = threadIdToState.computeIfAbsent(
+                threadId, tid -> new ThreadState(minDeltaAndEventType, threadId));
+        currentThread.begin(generation);
         threadIdToState.put(currentThread.getThreadId(), currentThread);
     }
 
@@ -82,7 +79,6 @@ public class Context {
     void endThread() {
         System.out.println("Ending thread " + currentThread.getThreadId());
         currentThread.end();
-        threadIdToState.remove(currentThread.getThreadId());
     }
 
     void joinThread(long otherThreadId) {
@@ -95,14 +91,8 @@ public class Context {
     }
 
     void switchThread(long threadId) throws InvalidTraceDataException {
-        ThreadState state = currentThread;
-        currentThread = threadIdToState.get(threadId);
-        if (currentThread == null) {
-            currentThread = state;
-            System.out.println("Switching to unstarted thread: " + threadId + ".");
-            return;
-            // throw new InvalidTraceDataException("Switching to unstarted thread: " + threadId + ".");
-        }
+        currentThread = threadIdToState.computeIfAbsent(
+                threadId, tid -> new ThreadState(minDeltaAndEventType, threadId));
         // TODO: Why, oh why?
         currentThread.setSignalDepth(0);
     }
@@ -115,7 +105,12 @@ public class Context {
         return currentThread.getThreadId();
     }
 
-    private class ThreadState {
+    private static class ThreadState {
+        private enum State {
+            NOT_STARTED,
+            STARTED,
+            ENDED,
+        }
         private final long threadId;
         private final List<Long> lastPC;
         private final Stack<Long> signalMaskStack;
@@ -124,19 +119,29 @@ public class Context {
         private final HashMap<Long, Long> signalMasks;
         private final Map<Long, Long> signalNumberToHandlerAddress;
         private int signalDepth;
+        private State state;
 
-        private ThreadState(long initialPC, long threadId, long generation) {
+        private ThreadState(long initialPC, long threadId) {
             this.threadId = threadId;
             lastPC = new ArrayList<>();
             lastPC.add(initialPC);
             this.generation = new ArrayList<>();
-            this.generation.add(generation);
-            this.generation.add(0L);
             // TODO: How should this be initialized?
             this.signalMasks = new HashMap<>();
             this.signalNumberToHandlerAddress = new HashMap<>();
             this.signalMaskStack = new Stack<>();
             this.numberOfOperations = new ArrayList<>();
+            state = State.NOT_STARTED;
+        }
+
+        private void begin(long generation) throws InvalidTraceDataException {
+            if (state != State.NOT_STARTED && state != State.ENDED) {
+                throw new InvalidTraceDataException(
+                        "Attempting to (re)start thread that did not end, state = " + state + ".");
+            }
+            state = State.STARTED;
+            this.generation.add(generation);
+            // this.generation.add(0L);
             setSignalDepth(0);
         }
 
@@ -163,7 +168,7 @@ public class Context {
 
         void enterSignal(long signalNumber, long generation) throws InvalidTraceDataException {
             signalDepth++;
-            currentThread.setGeneration(generation);
+            setGeneration(generation);
             // TODO: This is defined in a slightly different way in the docs.
             signalMaskStack.push(signalMaskStack.peek() | signalMasks.get(signalNumber));
         }
@@ -200,6 +205,7 @@ public class Context {
         }
 
         void end() {
+            state = State.ENDED;
         }
 
         void wasJoined() {

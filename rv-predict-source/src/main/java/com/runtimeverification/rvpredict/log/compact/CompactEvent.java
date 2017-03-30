@@ -454,7 +454,7 @@ public abstract class CompactEvent {
         });
     }
 
-    static List<CompactEvent> jump(Context context, long address) {
+    static List<CompactEvent> jump(Context context, long address) throws InvalidTraceDataException {
         context.jump(address);
         return NO_EVENTS;
     }

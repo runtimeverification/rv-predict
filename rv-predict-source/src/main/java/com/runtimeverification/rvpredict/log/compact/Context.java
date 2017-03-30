@@ -9,11 +9,14 @@ import java.util.Stack;
 public class Context {
     private final Map<Long, ThreadState> threadIdToState;
     private final Map<Long, Long> memoizedSignalMasks;
+    private final long minDeltaAndEventType;
+
     private ThreadState currentThread;
 
-    public Context() {
+    public Context(long minDeltaAndEventType) {
         threadIdToState = new HashMap<>();
         memoizedSignalMasks = new HashMap<>();
+        this.minDeltaAndEventType = minDeltaAndEventType;
     }
 
     void jump(long address) {
@@ -23,15 +26,14 @@ public class Context {
     void updatePcWithDelta(int jumpDelta) {
         currentThread.setLastPC(
                 currentThread.getLastPC() + jumpDelta);
+        currentThread.newOperation();
     }
 
-    void beginThread(
-            long deltop_first, long threadId, long generation)
-            throws InvalidTraceDataException {
+    void beginThread(long threadId, long generation) throws InvalidTraceDataException {
         if (threadIdToState.containsKey(threadId)) {
             throw new InvalidTraceDataException("Thread started twice: " + threadId + ".");
         }
-        currentThread = new ThreadState(deltop_first, threadId, generation);
+        currentThread = new ThreadState(minDeltaAndEventType, threadId, generation);
         threadIdToState.put(currentThread.getThreadId(), currentThread);
     }
 
@@ -47,16 +49,13 @@ public class Context {
         return memoizedSignalMasks.get(signalMaskNumber);
     }
 
-    void removeSignalHandler(long signalNumber) {
+    void disestablishSignal(long signalNumber) {
         currentThread.removeSignalHandler(signalNumber);
     }
 
-    void setSignalHandler(long signalNumber, long signalHandlerAddress) {
-        currentThread.setSignalHandler(signalNumber, signalHandlerAddress);
-    }
-
-    void setSignalMask(long signalNumber, long signalMask) {
-        currentThread.setSignalMask(signalNumber, signalMask);
+    void establishSignal(long handlerAddress, long signalNumber, long signalMaskNumber) {
+        currentThread.setSignalHandler(signalNumber, handlerAddress);
+        currentThread.setSignalMask(signalNumber, getMemoizedSignalMask(signalMaskNumber));
     }
 
     long getSignalNumber() {
@@ -97,6 +96,7 @@ public class Context {
     }
 
     long newId() {
+        return currentThread.newId();
     }
 
     long getThreadId() {
@@ -106,9 +106,10 @@ public class Context {
     private class ThreadState {
         private final long threadId;
         private final List<Long> lastPC;
-        private final List<Long> generation;
         private final Stack<Long> signalMaskStack;
-        private HashMap<Long, Long> signalMasks;
+        private final List<Long> numberOfOperations;
+        private final List<Long> generation;
+        private final HashMap<Long, Long> signalMasks;
         private final Map<Long, Long> signalNumberToHandlerAddress;
         private int signalDepth;
 
@@ -124,6 +125,7 @@ public class Context {
             this.signalMasks = new HashMap<>();
             this.signalNumberToHandlerAddress = new HashMap<>();
             this.signalMaskStack = new Stack<>();
+            this.numberOfOperations = new ArrayList<>();
         }
 
         private void setLastPC(long programCounter) {
@@ -139,7 +141,12 @@ public class Context {
         }
 
         void setGeneration(long generation) {
-            this.generation.set(signalDepth, generation);
+            if (this.generation.size() == signalDepth) {
+                this.generation.add(generation);
+            } else {
+                this.generation.set(signalDepth, generation);
+            }
+            numberOfOperations.set(signalDepth, 0L);
         }
 
         void enterSignal(long signalNumber, long generation) throws InvalidTraceDataException {
@@ -187,6 +194,16 @@ public class Context {
 
         void setSignalHandler(long signalNumber, long signalHandlerAddress) {
             signalNumberToHandlerAddress.put(signalNumber, signalHandlerAddress);
+        }
+
+        void newOperation() {
+            numberOfOperations.set(signalDepth, numberOfOperations.get(signalDepth) + 1);
+        }
+
+        long newId() {
+            return (generation.get(signalDepth) << 48)
+                    | (numberOfOperations.get(signalDepth) << 16)
+                    | threadId;
         }
     }
 }

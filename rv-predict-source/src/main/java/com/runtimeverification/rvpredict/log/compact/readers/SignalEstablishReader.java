@@ -27,9 +27,9 @@ public class SignalEstablishReader implements CompactEvent.Reader {
         element.read(buffer);
         return CompactEvent.establishSignal(
                 context,
-                element.handler.getAsLong(),
-                element.signalNumber.getAsLong(),
-                element.signalMask.getAsLong());
+                element.handler,
+                element.signalNumber,
+                element.signalMask);
     }
 
     private class TraceElement extends ReadableAggregateData {

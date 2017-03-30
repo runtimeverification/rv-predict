@@ -5,6 +5,8 @@ import com.runtimeverification.rvpredict.engine.deadlock.LockGraph;
 import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.IEventReader;
 import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
+import com.runtimeverification.rvpredict.log.compact.TraceReader;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.EOFException;
@@ -34,6 +36,7 @@ public class TraceCache {
     protected final ArrayList<Event> eventsBuffer;
 
     protected final List<IEventReader> readers = new ArrayList<>();
+    protected TraceReader traceReader;
 
     /**
      * Creates a new {@code TraceCahce} structure for a trace log.
@@ -49,7 +52,7 @@ public class TraceCache {
         lockGraph = new LockGraph(config, metadata);
     }
 
-    public void setup() throws IOException {
+    public void setup() throws IOException, InvalidTraceDataException {
         int logFileId = 0;
         while (true) {
             Path path = config.getTraceFilePath(logFileId++);
@@ -58,6 +61,8 @@ public class TraceCache {
             }
             readers.add(new EventReader(path));
         }
+        traceReader = new TraceReader(config.getCompactTraceFilePath());
+        while(traceReader.getNextEvents() != null) {}
     }
 
     public LockGraph getLockGraph() {

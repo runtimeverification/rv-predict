@@ -39,8 +39,8 @@ public class DataManipulationReader implements CompactEvent.Reader {
                 context,
                 dataManipulationType,
                 dataSizeInBytes,
-                element.address.getAsLong(),
-                element.value.getAsLong(),
+                element.address,
+                element.value,
                 atomicity);
     }
 

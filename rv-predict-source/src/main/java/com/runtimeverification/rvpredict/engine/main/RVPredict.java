@@ -38,6 +38,7 @@ import java.util.List;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
+import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -91,7 +92,7 @@ public class RVPredict {
                 reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
             }
             traceCache.getLockGraph().runDeadlockDetection();
-        } catch (IOException e) {
+        } catch (InvalidTraceDataException | IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());
             e.printStackTrace();

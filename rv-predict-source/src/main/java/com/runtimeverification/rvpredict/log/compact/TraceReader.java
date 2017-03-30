@@ -4,6 +4,7 @@ import com.runtimeverification.rvpredict.log.compact.datatypes.Address;
 
 import java.io.*;
 import java.nio.*;
+import java.nio.file.Path;
 import java.util.List;
 
 import static java.lang.Math.toIntExact;
@@ -17,8 +18,8 @@ public class TraceReader implements Closeable {
     private List<CompactEvent> firstEvent;
     private Context context;
 
-    public TraceReader(String path) throws IOException, InvalidTraceDataException {
-        File file = new File(path);
+    public TraceReader(Path path) throws IOException, InvalidTraceDataException {
+        File file = path.toFile();
         inputStream = new BufferedInputStream(new FileInputStream(file));
         traceHeader = new TraceHeader(inputStream);
         TraceData traceData = new TraceData(traceHeader);
@@ -27,16 +28,14 @@ public class TraceReader implements Closeable {
                 - (Constants.JUMPS_IN_DELTA / 2) * CompactEvent.Type.getNumberOfValues();
         maxDeltaAndEventType = minDeltaAndEventType
                 + Constants.JUMPS_IN_DELTA * CompactEvent.Type.getNumberOfValues() - 1;
-        context = new Context();
+        context = new Context(minDeltaAndEventType);
         DeltaAndEventType deltaAndEventType = DeltaAndEventType.parseFromPC(
                 minDeltaAndEventType, maxDeltaAndEventType, traceData.getPc());
         if (deltaAndEventType == null
                 || deltaAndEventType.getEventType() != CompactEvent.Type.THREAD_BEGIN) {
             throw new InvalidTraceDataException("All traces should start with begin.");
         }
-        context.setJumpDeltaForBegin(deltaAndEventType.getJumpDelta());
-        firstEvent = CompactEvent.begin(
-                minDeltaAndEventType, context, traceData.getThreadId(), traceData.getGeneration());
+        firstEvent = CompactEvent.begin(context, traceData.getThreadId(), traceData.getGeneration());
     }
 
     public List<CompactEvent> getNextEvents()
@@ -53,11 +52,7 @@ public class TraceReader implements Closeable {
         if (deltaAndEventType == null) {
             return CompactEvent.jump(context, pc.getAsLong());
         }
-        if (deltaAndEventType.getEventType() == CompactEvent.Type.THREAD_BEGIN) {
-            context.setJumpDeltaForBegin(deltaAndEventType.getJumpDelta());
-        } else {
-            context.updatePcWithDelta(deltaAndEventType.getJumpDelta());
-        }
+        context.updatePcWithDelta(deltaAndEventType.getJumpDelta());
         return deltaAndEventType.getEventType().read(context, traceHeader, inputStream);
     }
 

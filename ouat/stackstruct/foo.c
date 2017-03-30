@@ -24,6 +24,8 @@ foo(void)
 	printf("s.a, s.b = %d, %d\n", s.a, s.b);
 	printf("&s - __builtin_frame_address() = %td\n",
 	    (char *)&s - (char *)frmaddr);
+	printf("&s = %p\n", &s);
+	printf("frame address = %p\n", frmaddr);
 #ifdef use_q
 	printf("&q - __builtin_frame_address() = %td\n",
 	    (char *)&q - (char *)frmaddr);

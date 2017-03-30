@@ -1,5 +1,7 @@
 *.core
-*.o
 .gdbinit
+.Makefile.tags
+*.o
+.*.swp
 tags
 walker

@@ -41,6 +41,7 @@
 #include <assert.h>
 #include <err.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <fcntl.h>	/* for open() */
 #include <stdbool.h>
 #include <stdio.h>
@@ -51,14 +52,21 @@
 #include <libdwarf.h>
 #include <dwarf.h>
 
-static void print_die_data(Dwarf_Debug, Dwarf_Die);
+#include "nbcompat.h"
 
 typedef bool (*dwarf_walk_predicate_t)(Dwarf_Debug, Dwarf_Die);
 
+typedef struct _dwarf_walk_ctx {
+	Dwarf_Addr lopc, hipc;
+} dwarf_walk_ctx_t;
+
 typedef struct _dwarf_walk {
 	int stack_height;
-	Dwarf_Die stack[16];
+	struct {
+		Dwarf_Die die;
+	} stack[16];
 	Dwarf_Debug dbg;
+	dwarf_walk_ctx_t ctx;
 	dwarf_walk_predicate_t predicate;
 } dwarf_walk_t;
 
@@ -75,6 +83,11 @@ static Dwarf_Die dwarf_walk_next_in_tree(dwarf_walk_t *);
 static char *dwarf_c_typestring(Dwarf_Debug, Dwarf_Die);
 static char *dwarf_c_typestring_component(Dwarf_Debug, Dwarf_Die,
     dwarf_type_kind_t *);
+static void print_die_data(Dwarf_Debug, Dwarf_Die, dwarf_walk_ctx_t *);
+
+static int verbosity = 0;
+static bool have_dataptr = false, have_frameptr = false, have_insnptr = false;
+static uint64_t dataptr, frameptr, insnptr;
 
 static Dwarf_Die
 dwarf_walk_first(Dwarf_Debug dbg, dwarf_walk_t *walk,
@@ -120,9 +133,8 @@ dwarf_walk_next_in_tree(dwarf_walk_t *walk)
 		if (res == DW_DLV_NO_ENTRY)
 			return NULL;
 
-#if 0
-		printf("version %hd\n", version_stamp);
-#endif
+		if (verbosity > 0)
+			printf("version %hd\n", version_stamp);
 
 		if (res != DW_DLV_OK) {
 			errx(EXIT_FAILURE,
@@ -138,15 +150,16 @@ dwarf_walk_next_in_tree(dwarf_walk_t *walk)
 			    "%s: dwarf_siblingof level %d: %s",
 			    __func__, walk->stack_height, dwarf_errmsg(error));
 		}
+		walk->ctx.lopc = walk->ctx.hipc = 0;
 		walk->stack_height = 1;
-	} else 
-		last = walk->stack[walk->stack_height - 1];
+	} else
+		last = walk->stack[walk->stack_height - 1].die;
 
 	res = dwarf_siblingof(walk->dbg, last, &sibling, &error);
 	if (res == DW_DLV_OK) {
-		walk->stack[walk->stack_height - 1] = sibling;
+		walk->stack[walk->stack_height - 1].die = sibling;
 	} else if (res == DW_DLV_NO_ENTRY) {
-		walk->stack[--walk->stack_height] = NULL;
+		walk->stack[--walk->stack_height].die = NULL;
 	} else {
 		errx(EXIT_FAILURE, "%s: dwarf_siblingof: %s",
 		    __func__, dwarf_errmsg(error));
@@ -158,7 +171,7 @@ dwarf_walk_next_in_tree(dwarf_walk_t *walk)
 			errx(EXIT_FAILURE, "%s: stack overflow",
 			    __func__);
 		}
-		walk->stack[walk->stack_height++] = child;
+		walk->stack[walk->stack_height++].die = child;
 	} else if (res != DW_DLV_NO_ENTRY) {
 		errx(EXIT_FAILURE, "%s: dwarf_child: %s",
 		    __func__, dwarf_errmsg(error));
@@ -195,7 +208,7 @@ dwarf_follow_type_to_die(Dwarf_Debug dbg, Dwarf_Die die)
 	}
 
 	if (dwarf_offdie(dbg, offset, &typedie, &error) != DW_DLV_OK) {
-		warnx("\n%s: dwarf_offdie: %s", __func__, dwarf_errmsg(error));
+		warnx("\n%s: dwarf_offdie(, %lx, ): %s", __func__, offset, dwarf_errmsg(error));
 		return NULL;
 	}
 
@@ -255,7 +268,7 @@ dwarf_c_typestring_component(Dwarf_Debug dbg, Dwarf_Die die, dwarf_type_kind_t *
 	case DW_TAG_base_type:
 		res = dwarf_diename(die, &name, &error);
 		if (res != DW_DLV_OK) {
-			warnx("\n%s: dwarf_diename: %s", __func__,
+			warnx("\n%s.%d: dwarf_diename: %s", __func__, __LINE__,
 			    dwarf_errmsg(error));
 			return new_empty_string();
 		}
@@ -269,7 +282,7 @@ dwarf_c_typestring_component(Dwarf_Debug dbg, Dwarf_Die die, dwarf_type_kind_t *
 		if (res == DW_DLV_NO_ENTRY) {
 			return strdup("enum");
 		} else if (res != DW_DLV_OK) {
-			warnx("\n%s: dwarf_diename: %s", __func__,
+			warnx("\n%s.%d: dwarf_diename: %s", __func__, __LINE__,
 			    dwarf_errmsg(error));
 			return new_empty_string();
 		}
@@ -278,12 +291,15 @@ dwarf_c_typestring_component(Dwarf_Debug dbg, Dwarf_Die die, dwarf_type_kind_t *
 		return typestr;
 	case DW_TAG_structure_type:
 		res = dwarf_diename(die, &name, &error);
-		if (res != DW_DLV_OK) {
-			warnx("\n%s: dwarf_diename: %s", __func__,
+		if (res == DW_DLV_NO_ENTRY) {
+			typestr = strdup("struct");
+			if (typestr == NULL)
+				err(EXIT_FAILURE, "%s: strdup", __func__);
+		} else if (res != DW_DLV_OK) {
+			warnx("\n%s.%d: dwarf_diename: %s", __func__, __LINE__,
 			    dwarf_errmsg(error));
 			return new_empty_string();
-		}
-		if (asprintf(&typestr, "struct %s", name) == -1)
+		} else if (asprintf(&typestr, "struct %s", name) == -1)
 			err(EXIT_FAILURE, "%s: asprintf", __func__);
 		return typestr;
 	case DW_TAG_pointer_type:
@@ -350,7 +366,7 @@ print_op(const Dwarf_Loc *lr)
 }
 
 static void
-print_location(Dwarf_Debug dbg, Dwarf_Die die)
+print_location(Dwarf_Debug dbg, Dwarf_Die die, const dwarf_walk_ctx_t *ctx)
 {
 	Dwarf_Error error;
 	Dwarf_Attribute loc_attr;
@@ -365,24 +381,53 @@ print_location(Dwarf_Debug dbg, Dwarf_Die die)
 	if (dwarf_attr(die, DW_AT_location, &loc_attr, &error) != DW_DLV_OK)
 		return;
 
+#if 0
+	Dwarf_Attribute fb_attr;
+	if (dwarf_attr(die, DW_AT_frame_base, &fb_attr, &error) != DW_DLV_OK)
+		return;
+#endif
+
 	if (dwarf_formexprloc(loc_attr, &loc_len, &loc_ptr,
 	                           &error) == DW_DLV_OK &&
 	    dwarf_loclist_from_expr(dbg, loc_ptr, loc_len, &ld,
 	                            &nlocdescs, &error) == DW_DLV_OK) {
 		int j;
 		const char *delim = "";
-
-		printf(" location ");
+		struct {
+			Dwarf_Addr lopc, hipc;
+		} inner;
 
 		assert(nlocdescs == 1);
 
-		assert(ld->ld_lopc < ld->ld_hipc);
+		inner.lopc = ld->ld_lopc;
+		inner.hipc = ld->ld_hipc;
 
-#if 0
-		printf("pc %0" PRIx64 " - %0" PRIx64 ": ",
-		    ld->ld_lopc, ld->ld_hipc);
-#endif
-		for (j = 0; j < ld->ld_cents; j++) {
+		assert(inner.lopc < inner.hipc);
+
+		inner.lopc = MAX(ctx->lopc, inner.lopc);
+		inner.hipc = MIN(ctx->hipc, inner.hipc);
+
+		Dwarf_Loc *lr0 = &ld->ld_s[0];
+
+		printf(" pc %0" PRIx64 " - %0" PRIx64 ": ",
+		    inner.lopc, inner.hipc);
+
+		if (have_insnptr &&
+		    (insnptr < inner.lopc || inner.hipc <= insnptr))
+			;
+		else if (!have_dataptr || ld->ld_cents != 1)
+			;
+		else if (lr0->lr_atom == DW_OP_addr &&
+			 lr0->lr_number == dataptr) {
+			printf(" at static 0x%0" PRIx64, dataptr);
+		} else if (!have_frameptr)
+			;
+		else if (lr0->lr_atom == DW_OP_fbreg &&
+			 frameptr + (int64_t)lr0->lr_number == dataptr){
+			printf(" on stack at 0x%0" PRIx64
+			    " + %0" PRId64 " = 0x%0" PRIx64,
+			    frameptr, lr0->lr_number, dataptr);
+		} else for (j = 0; j < ld->ld_cents; j++) {
 			Dwarf_Loc *lr = &ld->ld_s[j];
 			printf("%s", delim);
 			print_op(lr);
@@ -398,17 +443,31 @@ print_location(Dwarf_Debug dbg, Dwarf_Die die)
 		int i, j;
 
 		const char *odelim = "";
-		printf(" location [");
 
 		for (i = 0; i < nlocdescs; i++) {
 			const char *idelim = "";
 			ld = locdescp[i];
+			struct {
+				Dwarf_Addr lopc, hipc;
+			} inner;
 
-			if (ld->ld_lopc == ld->ld_hipc)
+			inner.lopc = ld->ld_lopc;
+			inner.hipc = ld->ld_hipc;
+
+			if (inner.lopc == inner.hipc)
+				continue;
+
+			if (inner.lopc < ctx->lopc || ctx->hipc < inner.lopc) {
+				inner.lopc += ctx->lopc;
+				inner.hipc += ctx->lopc;
+			}
+
+			if (have_insnptr &&
+			    (insnptr < inner.lopc || inner.hipc <= insnptr))
 				continue;
 
 			printf("%spc %0" PRIx64 " - %0" PRIx64 ": ", odelim,
-			    ld->ld_lopc, ld->ld_hipc);
+			    inner.lopc, inner.hipc);
 			odelim = ", ";
 			for (j = 0; j < ld->ld_cents; j++) {
 				Dwarf_Loc *lr = &ld->ld_s[j];
@@ -417,7 +476,6 @@ print_location(Dwarf_Debug dbg, Dwarf_Die die)
 				idelim = " ";
 			}
 		}
-		printf("]");
 		assert(nlocdescs > 0);
 #if 0
 		for (i = 0; i < nlocdescs; i++) {
@@ -435,61 +493,59 @@ print_location(Dwarf_Debug dbg, Dwarf_Die die)
 		Dwarf_Error nerror;
 		if (dwarf_whatform(loc_attr, &loc_form, &nerror) != DW_DLV_OK ||
 		    dwarf_get_FORM_name(loc_form, &formname) != DW_DLV_OK)
-			printf(" location form unknown");
+			printf("unknown");
 		else {
-			printf(" location form %s err %s", formname,
+			printf("unknown form %s err %s", formname,
 			    dwarf_errmsg(error));
 		}
 	}
 }
 
 static void
-print_die_data(Dwarf_Debug dbg, Dwarf_Die die)
+print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 {
-	char *typename;
-	char *name = NULL;
+	char *name = NULL, *typename;
 	Dwarf_Error error;
-	Dwarf_Half tag = 0;
+	Dwarf_Half lopc_form, hipc_form, tag = 0;
 	const char *tagname = NULL;
 	int res;
+	Dwarf_Attribute lopc_attr, hipc_attr;
+	struct {
+		Dwarf_Addr lopc, hipc;
+	} inner;
+	Dwarf_Unsigned hipcofs;
 
 	res = dwarf_tag(die, &tag, &error);
 	if (res != DW_DLV_OK) {
 		errx(EXIT_FAILURE, "%s: dwarf_tag", __func__);
 	}
-	printf("tag: %d", tag);
+	if (verbosity > 1)
+		printf("tag: %d ", tag);
 	res = dwarf_get_TAG_name(tag, &tagname);
 	if (res == DW_DLV_OK) {
-		printf(" %s", tagname);
+		printf("%s", tagname);
 	}
 	res = dwarf_diename(die, &name, &error);
 	switch (res) {
 	case DW_DLV_ERROR:
 	default:
-		errx(EXIT_FAILURE, "\n%s: dwarf_diename: %s",
-		    __func__, dwarf_errmsg(error));
+		errx(EXIT_FAILURE, "\n%s.%d: dwarf_diename: %s",
+		    __func__, __LINE__, dwarf_errmsg(error));
 		break;
 	case DW_DLV_NO_ENTRY:
 		printf("\n");
 		return;
 	case DW_DLV_OK:
-		printf("  %s", name);
+		printf(" %s", name);
 		dwarf_dealloc(dbg, name, DW_DLA_STRING);
 		break;
 	}
-
-	print_location(dbg, die);
-
-	Dwarf_Attribute lopc_attr, hipc_attr;
-	Dwarf_Half lopc_form, hipc_form;
-	Dwarf_Addr lopc, hipc;
-	Dwarf_Unsigned hipcofs;
 
 	if (dwarf_attr(die, DW_AT_high_pc, &hipc_attr, &error) == DW_DLV_OK &&
 	    dwarf_attr(die, DW_AT_low_pc, &lopc_attr, &error) == DW_DLV_OK &&
 	    dwarf_whatform(lopc_attr, &lopc_form, &error) == DW_DLV_OK &&
 	    dwarf_whatform(hipc_attr, &hipc_form, &error) == DW_DLV_OK) {
-		if (dwarf_formaddr(lopc_attr, &lopc, &error) !=
+		if (dwarf_formaddr(lopc_attr, &inner.lopc, &error) !=
 		    DW_DLV_OK) {
 			errx(EXIT_FAILURE, "\n%s: dwarf_formaddr: %s",
 			    __func__, dwarf_errmsg(error));
@@ -505,10 +561,10 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die)
 				errx(EXIT_FAILURE, "\n%s: dwarf_formudata: %s",
 				    __func__, dwarf_errmsg(error));
 			}
-			hipc = lopc + hipcofs;
+			inner.hipc = inner.lopc + hipcofs;
 			break;
 		case DW_FORM_addr:
-			if (dwarf_formaddr(hipc_attr, &hipc, &error) !=
+			if (dwarf_formaddr(hipc_attr, &inner.hipc, &error) !=
 			    DW_DLV_OK) {
 				errx(EXIT_FAILURE, "\n%s: dwarf_formaddr: %s",
 				    __func__, dwarf_errmsg(error));
@@ -517,8 +573,15 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die)
 		default:
 			errx(EXIT_FAILURE, "%s: unknown hipc form", __func__);
 		}
-		printf(" pc %0" PRIx64 " - %0" PRIx64, lopc, hipc);
+		printf(" pc %0" PRIx64 " - %0" PRIx64, inner.lopc, inner.hipc);
+		if (tag == DW_TAG_compile_unit) {
+			printf(" (new compile unit, new lopc, hipc)");
+			ctx->lopc = inner.lopc;
+			ctx->hipc = inner.hipc;
+		}
 	}
+
+	print_location(dbg, die, ctx);
 
 	if ((typename = dwarf_c_typestring(dbg, die)) != NULL) {
 		printf(" %s\n", typename);
@@ -527,24 +590,82 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die)
 		printf("\n");
 }
 
+static void __dead
+usage(const char *progname)
+{
+	fprintf(stderr, "usage: %s [-v] [object file]\n", progname);
+	exit(EXIT_FAILURE);
+}
+
 int 
 main(int argc, char **argv)
 {
 	Dwarf_Debug dbg = 0;
 	Dwarf_Die die;
-	int fd;
-	int res;
+	int ch, fd, ofs, rc;
 	Dwarf_Error error;
 	dwarf_walk_t walk;
+	const char *progname = argv[0];
 
-	if (argc < 2) {
-		fd = STDIN_FILENO; /* stdin */
-	} else if ((fd = open(argv[1], O_RDONLY)) == -1) {
-		err(EXIT_FAILURE, "%s: open(\"%s\")", __func__, argv[1]);
+	while ((ch = getopt(argc, argv, "d:f:i:v")) != -1) {
+		switch (ch) {
+		case 'v':
+			verbosity++;
+			break;
+		case 'f':
+			if (have_frameptr) {
+				errx(EXIT_FAILURE,
+				    "%s: too many frame pointers", __func__);
+			}
+			have_frameptr = true;
+			rc = sscanf(optarg, "0x%" SCNx64 "%n", &frameptr, &ofs);
+			if (rc != 1 || optarg[ofs] != '\0') {
+				errx(EXIT_FAILURE,
+				    "%s: malformed frame pointer", __func__);
+			}
+			break;
+		case 'i':
+			if (have_insnptr) {
+				errx(EXIT_FAILURE,
+				    "%s: too many instruction pointers",
+				    __func__);
+			}
+			have_insnptr = true;
+			rc = sscanf(optarg, "0x%" SCNx64 "%n", &insnptr, &ofs);
+			if (rc != 1 || optarg[ofs] != '\0') {
+				errx(EXIT_FAILURE,
+				    "%s: malformed instruction pointer",
+				    __func__);
+			}
+			break;
+		case 'd':
+			if (have_dataptr) {
+				errx(EXIT_FAILURE,
+				    "%s: too many data pointers", __func__);
+			}
+			have_dataptr = true;
+			rc = sscanf(optarg, "0x%" SCNx64 "%n", &dataptr, &ofs);
+			if (rc != 1 || optarg[ofs] != '\0') {
+				errx(EXIT_FAILURE,
+				    "%s: malformed data pointer", __func__);
+			}
+			break;
+		default:
+			usage(progname);
+		}
 	}
 
-	res = dwarf_init(fd, DW_DLC_READ, NULL, NULL, &dbg, &error);
-	if (res != DW_DLV_OK) {
+	argc -= optind;
+	argv += optind;
+
+	if (argc < 1) {
+		fd = STDIN_FILENO; /* stdin */
+	} else if ((fd = open(argv[0], O_RDONLY)) == -1) {
+		err(EXIT_FAILURE, "%s: open(\"%s\")", __func__, argv[0]);
+	}
+
+	rc = dwarf_init(fd, DW_DLC_READ, NULL, NULL, &dbg, &error);
+	if (rc != DW_DLV_OK) {
 		errx(EXIT_FAILURE, "%s: dwarf_init: %s", __func__,
 		    dwarf_errmsg(error));
 	}
@@ -552,12 +673,12 @@ main(int argc, char **argv)
 	for (die = dwarf_walk_first(dbg, &walk, NULL);
 	     die != NULL;
 	     die = dwarf_walk_next(&walk)) {
-		print_die_data(dbg, die);
+		print_die_data(dbg, die, &walk.ctx);
 	        dwarf_dealloc(dbg, die, DW_DLA_DIE);
 	}
 
-	res = dwarf_finish(dbg, &error);
-	if (res != DW_DLV_OK) {
+	rc = dwarf_finish(dbg, &error);
+	if (rc != DW_DLV_OK) {
 		warnx("%s: dwarf_finish: %s", __func__, dwarf_errmsg(error));
 	}
 	close(fd);

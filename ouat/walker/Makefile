@@ -1,10 +1,13 @@
 NOMAN=
-.include <bsd.own.mk>
+.include "../compat.mk"
 
+CC=clang
 PROG=walker
 SRCS=walker.c
-WARNS=5
-COPTS+=-g
-LDADD+=-lelf -ldwarf
+WARNS=4
+COPTS+=-g -O3
+LDADD+=$(DWARF_LDDIR) -ldwarf $(ELF_LDDIR) -lelf
+CPPFLAGS+=-D_GNU_SOURCE		# for asprintf(3)
+CPPFLAGS+=-I../../llvm/ngrt/
 
-.include <bsd.prog.mk>
+.include <mkc.prog.mk>

@@ -1,10 +1,10 @@
 NOMAN=
-.include <bsd.own.mk>
+.include "../compat.mk"
 
 PROG=stackstruct
 SRCS=stackstruct.c foo.c
 WARNS=5
-COPTS+=-g -O0
-LDADD+=-lelf -ldwarf
+DBG+=-g -O0
+LDADD+=$(DWARF_LDDIR) -ldwarf $(ELF_LDDIR) -lelf
 
-.include <bsd.prog.mk>
+.include <mkc.prog.mk>

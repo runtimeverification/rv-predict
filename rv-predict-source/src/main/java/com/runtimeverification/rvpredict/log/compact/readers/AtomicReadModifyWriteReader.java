@@ -9,6 +9,7 @@ import com.runtimeverification.rvpredict.log.compact.TraceHeader;
 import com.runtimeverification.rvpredict.log.compact.datatypes.VariableInt;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
 
 public class AtomicReadModifyWriteReader implements CompactEvent.Reader{
@@ -47,8 +48,7 @@ public class AtomicReadModifyWriteReader implements CompactEvent.Reader{
             address = new Address(header);
             readValue = new VariableInt(header, valueSizeInBytes);
             writeValue = new VariableInt(header, valueSizeInBytes);
-            throw new InvalidTraceDataException("Atomic read-modifi-write operations are not supported.");
-            // setData(Arrays.asList(address, value));
+            setData(Arrays.asList(address, readValue, writeValue));
         }
     }
 }

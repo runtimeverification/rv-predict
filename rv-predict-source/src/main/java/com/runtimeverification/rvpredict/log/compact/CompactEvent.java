@@ -390,7 +390,7 @@ public abstract class CompactEvent {
         });
     }
 
-    public static List<CompactEvent> signalOutstandingDepth(Context context, long signalDepth) {
+    public static List<CompactEvent> signalOutstandingDepth(Context context, int signalDepth) {
         context.setSignalDepth(signalDepth);
         return NO_EVENTS;
     }

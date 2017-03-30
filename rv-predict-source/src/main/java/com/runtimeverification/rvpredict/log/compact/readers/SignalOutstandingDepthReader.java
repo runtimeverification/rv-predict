@@ -9,6 +9,8 @@ import com.runtimeverification.rvpredict.log.compact.datatypes.VariableInt;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+import static java.lang.Math.toIntExact;
+
 public class SignalOutstandingDepthReader implements CompactEvent.Reader {
     private final LazyInitializer<VariableInt> reader = new LazyInitializer<>(header -> new VariableInt(header, 4));
 
@@ -21,6 +23,6 @@ public class SignalOutstandingDepthReader implements CompactEvent.Reader {
     public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
         VariableInt outstandingDepth = reader.getInit(header);
         outstandingDepth.read(buffer);
-        return CompactEvent.signalOutstandingDepth(context, outstandingDepth.getAsLong());
+        return CompactEvent.signalOutstandingDepth(context, toIntExact(outstandingDepth.getAsLong()));
     }
 }

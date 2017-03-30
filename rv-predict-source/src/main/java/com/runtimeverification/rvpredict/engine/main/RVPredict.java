@@ -71,7 +71,9 @@ public class RVPredict {
     }
 
     public void start() {
+        System.out.println("Here.1");
         try {
+            System.out.println("Here.2");
             traceCache.setup();
             long fromIndex = 0;
             // process the trace window by window

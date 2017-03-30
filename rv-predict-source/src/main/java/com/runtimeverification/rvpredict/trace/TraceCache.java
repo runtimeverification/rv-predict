@@ -53,6 +53,7 @@ public class TraceCache {
     }
 
     public void setup() throws IOException, InvalidTraceDataException {
+        System.out.println("Heres.");
         int logFileId = 0;
         while (true) {
             Path path = config.getTraceFilePath(logFileId++);
@@ -61,8 +62,6 @@ public class TraceCache {
             }
             readers.add(new EventReader(path));
         }
-        traceReader = new TraceReader(config.getCompactTraceFilePath());
-        while(traceReader.getNextEvents() != null) {}
     }
 
     public LockGraph getLockGraph() {

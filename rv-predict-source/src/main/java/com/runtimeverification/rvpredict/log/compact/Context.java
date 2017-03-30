@@ -30,6 +30,7 @@ public class Context {
     }
 
     void beginThread(long threadId, long generation) throws InvalidTraceDataException {
+        System.out.println("begin-thread" + threadId);
         if (threadIdToState.containsKey(threadId)) {
             throw new InvalidTraceDataException("Thread started twice: " + threadId + ".");
         }
@@ -66,7 +67,7 @@ public class Context {
         currentThread.exitSignal();
     }
 
-    void setSignalDepth(long signalDepth) {
+    void setSignalDepth(int signalDepth) {
         currentThread.setSignalDepth(signalDepth);
     }
 
@@ -79,18 +80,29 @@ public class Context {
     }
 
     void endThread() {
+        System.out.println("Ending thread " + currentThread.getThreadId());
         currentThread.end();
+        threadIdToState.remove(currentThread.getThreadId());
     }
 
     void joinThread(long otherThreadId) {
+        System.out.println("Joining thread: " + otherThreadId);
         threadIdToState.get(otherThreadId).wasJoined();
     }
 
     void forkThread(long threadId) {
+        System.out.println("Forking thread " + threadId);
     }
 
-    void switchThread(long threadId) {
+    void switchThread(long threadId) throws InvalidTraceDataException {
+        ThreadState state = currentThread;
         currentThread = threadIdToState.get(threadId);
+        if (currentThread == null) {
+            currentThread = state;
+            System.out.println("Switching to unstarted thread: " + threadId + ".");
+            return;
+            // throw new InvalidTraceDataException("Switching to unstarted thread: " + threadId + ".");
+        }
         // TODO: Why, oh why?
         currentThread.setSignalDepth(0);
     }
@@ -120,12 +132,12 @@ public class Context {
             this.generation = new ArrayList<>();
             this.generation.add(generation);
             this.generation.add(0L);
-            this.signalDepth = 0;
             // TODO: How should this be initialized?
             this.signalMasks = new HashMap<>();
             this.signalNumberToHandlerAddress = new HashMap<>();
             this.signalMaskStack = new Stack<>();
             this.numberOfOperations = new ArrayList<>();
+            setSignalDepth(0);
         }
 
         private void setLastPC(long programCounter) {
@@ -165,9 +177,19 @@ public class Context {
             signalMaskStack.pop();
         }
 
-        void setSignalDepth(long signalDepth) {
+        void setSignalDepth(int signalDepth) {
             // TODO: Should I do something with the stack here?
-            signalDepth = signalDepth;
+            while (signalMaskStack.size() <= signalDepth) {
+                // TODO: What is a valid value to put here? Does it matter?
+                signalMaskStack.push(0L);
+            }
+            while (numberOfOperations.size() <= signalDepth) {
+                numberOfOperations.add(0L);
+            }
+            while (generation.size() <= signalDepth) {
+                generation.add(0L);
+            }
+            this.signalDepth = signalDepth;
         }
 
         void maskSignals(long signalMask) {
@@ -204,6 +226,10 @@ public class Context {
             return (generation.get(signalDepth) << 48)
                     | (numberOfOperations.get(signalDepth) << 16)
                     | threadId;
+        }
+
+        long getGeneration() {
+            return generation.get(signalDepth);
         }
     }
 }

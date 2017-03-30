@@ -33,7 +33,9 @@ public class TraceReader implements Closeable {
                 minDeltaAndEventType, maxDeltaAndEventType, traceData.getPc());
         if (deltaAndEventType == null
                 || deltaAndEventType.getEventType() != CompactEvent.Type.THREAD_BEGIN) {
-            throw new InvalidTraceDataException("All traces should start with begin.");
+            throw new InvalidTraceDataException("All traces should start with begin, this one starts with "
+                    + (deltaAndEventType == null ? "a jump" : deltaAndEventType.getEventType())
+                    + ".");
         }
         firstEvent = CompactEvent.begin(context, traceData.getThreadId(), traceData.getGeneration());
     }
@@ -52,6 +54,7 @@ public class TraceReader implements Closeable {
         if (deltaAndEventType == null) {
             return CompactEvent.jump(context, pc.getAsLong());
         }
+        // TODO: Handle this correctly when a new thread begins. Currently it updates the pc of the last thread.
         context.updatePcWithDelta(deltaAndEventType.getJumpDelta());
         return deltaAndEventType.getEventType().read(context, traceHeader, inputStream);
     }

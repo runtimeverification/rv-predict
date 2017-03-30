@@ -17,7 +17,8 @@ public class UInt16 implements ReadableData {
     public void read(ByteBuffer buffer) throws InvalidTraceDataException {
         value = buffer.getShort();
     }
-    public short getValueAsShort() {
+
+    short getAsShort() {
         return value;
     }
 }

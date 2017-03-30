@@ -18,7 +18,7 @@ public class UInt32 implements ReadableData {
         value = buffer.getInt();
     }
 
-    public int getValueAsInt() {
+    int getAsInt() {
         return value;
     }
 }

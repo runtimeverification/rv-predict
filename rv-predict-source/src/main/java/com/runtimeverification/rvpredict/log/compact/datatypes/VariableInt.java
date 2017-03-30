@@ -23,17 +23,17 @@ public class VariableInt implements ReadableData {
             case 1:
                 uInt8 = new UInt8();
                 readableData = uInt8;
-                valueGetter = () -> uInt8.getValueAsByte();
+                valueGetter = () -> uInt8.getAsByte();
                 break;
             case 2:
                 uInt16 = new UInt16();
                 readableData = uInt16;
-                valueGetter = () -> uInt16.getValueAsShort();
+                valueGetter = () -> uInt16.getAsShort();
                 break;
             case 4:
                 uInt32 = new UInt32();
                 readableData = uInt32;
-                valueGetter = () -> uInt32.getValueAsInt();
+                valueGetter = () -> uInt32.getAsInt();
                 break;
             case 8:
                 uInt64 = new UInt64();

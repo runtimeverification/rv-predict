@@ -17,7 +17,8 @@ public class UInt8 implements ReadableData {
     public void read(ByteBuffer buffer) throws InvalidTraceDataException {
         value = buffer.get();
     }
-    public byte getValueAsByte() {
+
+    byte getAsByte() {
         return value;
     }
 }

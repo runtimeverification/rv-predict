@@ -15,10 +15,10 @@ public class UInt64 implements ReadableData {
 
     @Override
     public void read(ByteBuffer buffer) throws InvalidTraceDataException {
-        value = buffer.getInt();
+        value = buffer.getLong();
     }
 
-    public long getAsLong() {
+    long getAsLong() {
         return value;
     }
 }

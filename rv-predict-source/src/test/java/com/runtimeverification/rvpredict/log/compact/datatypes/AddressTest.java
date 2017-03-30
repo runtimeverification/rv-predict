@@ -1,6 +1,5 @@
 package com.runtimeverification.rvpredict.log.compact.datatypes;
 
-import com.runtimeverification.rvpredict.log.compact.CompactEvent;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
 import org.junit.Assert;

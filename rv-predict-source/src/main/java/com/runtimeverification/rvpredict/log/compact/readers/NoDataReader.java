@@ -9,6 +9,10 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.function.Function;
 
+/**
+ * This class should be used for aggregate data types that do not have any actual data besides the
+ * delta-operation header, e.g. the thread end event.
+ */
 public class NoDataReader implements CompactEvent.Reader {
     private final Function<Context, List<CompactEvent>> eventFactory;
 
@@ -22,7 +26,8 @@ public class NoDataReader implements CompactEvent.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
+            throws InvalidTraceDataException {
         return eventFactory.apply(context);
     }
 }

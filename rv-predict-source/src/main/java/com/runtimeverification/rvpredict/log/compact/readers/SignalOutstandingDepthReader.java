@@ -12,7 +12,8 @@ import java.util.List;
 import static java.lang.Math.toIntExact;
 
 public class SignalOutstandingDepthReader implements CompactEvent.Reader {
-    private final LazyInitializer<VariableInt> reader = new LazyInitializer<>(header -> new VariableInt(header, 4));
+    private final LazyInitializer<VariableInt> reader =
+            new LazyInitializer<>(header -> new VariableInt(header, 4));
 
     @Override
     public int size(TraceHeader header) throws InvalidTraceDataException {
@@ -20,7 +21,8 @@ public class SignalOutstandingDepthReader implements CompactEvent.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
+            throws InvalidTraceDataException {
         VariableInt outstandingDepth = reader.getInit(header);
         outstandingDepth.read(buffer);
         return CompactEvent.signalOutstandingDepth(context, toIntExact(outstandingDepth.getAsLong()));

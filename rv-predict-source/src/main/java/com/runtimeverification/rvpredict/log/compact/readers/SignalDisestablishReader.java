@@ -18,7 +18,8 @@ public class SignalDisestablishReader implements CompactEvent.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
+            throws InvalidTraceDataException {
         SignalNumber signalNumber = this.signalNumber.getInit(header);
         signalNumber.read(buffer);
         return CompactEvent.disestablishSignal(context, signalNumber.getAsLong());

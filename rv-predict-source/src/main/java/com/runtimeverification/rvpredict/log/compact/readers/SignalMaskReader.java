@@ -18,7 +18,8 @@ public class SignalMaskReader implements CompactEvent.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
+            throws InvalidTraceDataException {
         SignalMaskNumber maskNumber = reader.getInit(header);
         maskNumber.read(buffer);
         return CompactEvent.signalMask(context, maskNumber.getAsLong());

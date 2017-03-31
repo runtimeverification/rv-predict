@@ -22,7 +22,8 @@ public class SignalEstablishReader implements CompactEvent.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
+            throws InvalidTraceDataException {
         TraceElement element = reader.getInit(header);
         element.read(buffer);
         return CompactEvent.establishSignal(

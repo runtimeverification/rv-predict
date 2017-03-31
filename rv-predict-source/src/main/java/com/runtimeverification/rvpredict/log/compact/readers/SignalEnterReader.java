@@ -21,7 +21,8 @@ public class SignalEnterReader implements CompactEvent.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
+            throws InvalidTraceDataException {
         TraceElement element = reader.getInit(header);
         element.read(buffer);
         return CompactEvent.enterSignal(
@@ -34,8 +35,7 @@ public class SignalEnterReader implements CompactEvent.Reader {
         private final Generation generation;
         private final SignalNumber signalNumber;
 
-        private TraceElement(TraceHeader header)
-                throws InvalidTraceDataException {
+        private TraceElement(TraceHeader header) throws InvalidTraceDataException {
             generation = new Generation(header);
             signalNumber = new SignalNumber(header);
             setData(Arrays.asList(generation, signalNumber));

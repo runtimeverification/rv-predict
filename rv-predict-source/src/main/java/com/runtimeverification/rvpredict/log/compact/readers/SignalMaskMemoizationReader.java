@@ -22,7 +22,8 @@ public class SignalMaskMemoizationReader implements CompactEvent.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
+            throws InvalidTraceDataException {
         TraceElement memoization = reader.getInit(header);
         memoization.read(buffer);
         return CompactEvent.signalMaskMemoization(

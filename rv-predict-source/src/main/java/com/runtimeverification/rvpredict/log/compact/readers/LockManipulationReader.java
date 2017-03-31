@@ -23,7 +23,8 @@ public class LockManipulationReader implements CompactEvent.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
+            throws InvalidTraceDataException {
         Address address = reader.getInit(header);
         address.read(buffer);
         return CompactEvent.lockManipulation(context, lockManipulationType, address.getAsLong());

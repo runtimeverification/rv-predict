@@ -12,7 +12,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
-public class AtomicReadModifyWriteReader implements CompactEvent.Reader{
+public class AtomicReadModifyWriteReader implements CompactEvent.Reader {
     private final int dataSizeInBytes;
     private final LazyInitializer<TraceElement> reader;
 
@@ -27,7 +27,8 @@ public class AtomicReadModifyWriteReader implements CompactEvent.Reader{
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
+    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
+            throws InvalidTraceDataException {
         TraceElement element = reader.getInit(header);
         element.read(buffer);
         return CompactEvent.atomicReadModifyWrite(

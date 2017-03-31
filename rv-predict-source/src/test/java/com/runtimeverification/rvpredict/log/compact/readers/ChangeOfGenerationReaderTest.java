@@ -30,7 +30,6 @@ public class ChangeOfGenerationReaderTest {
     public void readsData() throws InvalidTraceDataException {
         CompactEvent mockCompactEvent = mock(CompactEvent.class);
 
-        ChangeOfGenerationReader reader = new ChangeOfGenerationReader();
         Context mockContext = mock(Context.class);
         TraceHeader mockHeader = mock(TraceHeader.class);
         when(mockHeader.getDefaultDataWidthInBytes()).thenReturn(4);
@@ -40,7 +39,10 @@ public class ChangeOfGenerationReaderTest {
 
         ByteBuffer buffer = ByteBuffer.allocate(16).putLong(GENERATION).putLong(Long.MAX_VALUE);
         buffer.rewind();
+
+        ChangeOfGenerationReader reader = new ChangeOfGenerationReader();
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockHeader, buffer);
+
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));
     }

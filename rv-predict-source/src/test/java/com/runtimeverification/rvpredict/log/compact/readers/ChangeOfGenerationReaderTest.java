@@ -1,11 +1,14 @@
-package com.runtimeverification.rvpredict.log.compact;
+package com.runtimeverification.rvpredict.log.compact.readers;
 
-import com.runtimeverification.rvpredict.log.compact.readers.ChangeOfGenerationReader;
+import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
+import com.runtimeverification.rvpredict.log.compact.Context;
+import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
+import com.runtimeverification.rvpredict.log.compact.TraceHeader;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 

@@ -18,8 +18,8 @@ import java.util.List;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class LockManipulationReaderTest {
-    private static final long ADDRESS = 1234567890123456L;
+public class SignalDisestablishReaderTest {
+    private static final int SIGNAL = 12345;
 
     @Mock private TraceHeader mockTraceHeader;
     @Mock private CompactEvent mockCompactEvent;
@@ -28,35 +28,35 @@ public class LockManipulationReaderTest {
     @Mock private CompactEventReader mockCompactEventReader;
 
     @Test
-    public void computesTheCorrectSizeDataSize_UsesPointerSizeForAddress8Bytes() throws InvalidTraceDataException {
+    public void computesTheCorrectSizeDataSize_UsesDefaultDataSize4Bytes() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
-        LockManipulationReader reader = new LockManipulationReader(CompactEventReader.LockManipulationType.LOCK);
-        Assert.assertEquals(8, reader.size(mockTraceHeader));
+        SignalDisestablishReader reader = new SignalDisestablishReader();
+        Assert.assertEquals(4, reader.size(mockTraceHeader));
     }
 
     @Test
-    public void computesTheCorrectSizeDataSize_UsesPointerSizeForAddress4Bytes() throws InvalidTraceDataException {
-        when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
+    public void computesTheCorrectSizeDataSize_UsesDefaultDataSize8Bytes() throws InvalidTraceDataException {
+        when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(8);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        LockManipulationReader reader = new LockManipulationReader(CompactEventReader.LockManipulationType.LOCK);
-        Assert.assertEquals(4, reader.size(mockTraceHeader));
+        SignalDisestablishReader reader = new SignalDisestablishReader();
+        Assert.assertEquals(8, reader.size(mockTraceHeader));
     }
 
     @Test
     public void readsData() throws InvalidTraceDataException {
         when(mockHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockHeader.getPointerWidthInBytes()).thenReturn(8);
-        when(mockCompactEventReader.lockManipulation(
-                mockContext, CompactEventReader.LockManipulationType.LOCK, ADDRESS))
+        when(mockCompactEventReader.disestablishSignal(
+                mockContext, SIGNAL))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
-        ByteBuffer buffer = ByteBuffer.allocate(24).putLong(ADDRESS).putLong(Long.MAX_VALUE);
+        ByteBuffer buffer = ByteBuffer.allocate(24).putInt(SIGNAL).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        LockManipulationReader reader = new LockManipulationReader(CompactEventReader.LockManipulationType.LOCK);
+        SignalDisestablishReader reader = new SignalDisestablishReader();
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockHeader, buffer);
 
         Assert.assertEquals(1, events.size());

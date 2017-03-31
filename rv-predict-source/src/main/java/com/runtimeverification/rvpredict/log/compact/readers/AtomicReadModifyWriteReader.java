@@ -33,9 +33,9 @@ public class AtomicReadModifyWriteReader implements CompactEvent.Reader{
         return CompactEvent.atomicReadModifyWrite(
                 context,
                 dataSizeInBytes,
-                element.address,
-                element.readValue,
-                element.writeValue);
+                element.address.getAsLong(),
+                element.readValue.getAsLong(),
+                element.writeValue.getAsLong());
     }
 
     private static class TraceElement extends ReadableAggregateData {

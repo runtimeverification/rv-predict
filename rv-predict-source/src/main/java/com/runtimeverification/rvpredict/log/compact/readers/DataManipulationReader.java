@@ -39,11 +39,8 @@ public class DataManipulationReader implements CompactEvent.Reader {
                 context,
                 dataManipulationType,
                 dataSizeInBytes,
-                // TODO(virgil): Since these are reused, this does not work properly if the
-                // dataManipulation method reuses these in a locally defined class, which it actually does.
-                // I should just pass the long values.
-                element.address,
-                element.value,
+                element.address.getAsLong(),
+                element.value.getAsLong(),
                 atomicity);
     }
 

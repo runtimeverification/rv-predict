@@ -21,6 +21,6 @@ public class ChangeOfGenerationReader implements CompactEvent.Reader {
     public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer) throws InvalidTraceDataException {
         Generation element = generation.getInit(header);
         element.read(buffer);
-        return CompactEvent.changeOfGeneration(context, element);
+        return CompactEvent.changeOfGeneration(context, element.getAsLong());
     }
 }

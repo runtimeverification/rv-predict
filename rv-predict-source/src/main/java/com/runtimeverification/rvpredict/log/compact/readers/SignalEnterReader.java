@@ -26,8 +26,8 @@ public class SignalEnterReader implements CompactEvent.Reader {
         element.read(buffer);
         return CompactEvent.enterSignal(
                 context,
-                element.generation,
-                element.signalNumber);
+                element.generation.getAsLong(),
+                element.signalNumber.getAsLong());
     }
 
     private static class TraceElement extends ReadableAggregateData {

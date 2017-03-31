@@ -27,9 +27,9 @@ public class SignalMaskMemoizationReader implements CompactEvent.Reader {
         memoization.read(buffer);
         return CompactEvent.signalMaskMemoization(
                 context,
-                memoization.signalMask,
-                memoization.originBitCount,
-                memoization.signalMaskNumber);
+                memoization.signalMask.getAsLong(),
+                memoization.originBitCount.getAsLong(),
+                memoization.signalMaskNumber.getAsLong());
     }
 
     private class TraceElement extends ReadableAggregateData {

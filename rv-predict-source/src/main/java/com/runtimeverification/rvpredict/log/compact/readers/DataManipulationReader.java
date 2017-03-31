@@ -15,14 +15,14 @@ import java.util.List;
 
 public class DataManipulationReader implements CompactEventReader.Reader {
     private final int dataSizeInBytes;
-    private final CompactEvent.DataManipulationType dataManipulationType;
-    private final CompactEvent.Atomicity atomicity;
+    private final CompactEventReader.DataManipulationType dataManipulationType;
+    private final CompactEventReader.Atomicity atomicity;
     private final LazyInitializer<TraceElement> reader;
 
     public DataManipulationReader(
             int sizeInBytes,
-            CompactEvent.DataManipulationType dataManipulationType,
-            CompactEvent.Atomicity atomicity) {
+            CompactEventReader.DataManipulationType dataManipulationType,
+            CompactEventReader.Atomicity atomicity) {
         this.dataSizeInBytes = sizeInBytes;
         this.dataManipulationType = dataManipulationType;
         this.atomicity = atomicity;

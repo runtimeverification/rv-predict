@@ -11,10 +11,10 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 public class LockManipulationReader implements CompactEventReader.Reader {
-    private final CompactEvent.LockManipulationType lockManipulationType;
+    private final CompactEventReader.LockManipulationType lockManipulationType;
     private LazyInitializer<Address> reader = new LazyInitializer<>(Address::new);
 
-    public LockManipulationReader(CompactEvent.LockManipulationType lockManipulationType) {
+    public LockManipulationReader(CompactEventReader.LockManipulationType lockManipulationType) {
         this.lockManipulationType = lockManipulationType;
     }
 

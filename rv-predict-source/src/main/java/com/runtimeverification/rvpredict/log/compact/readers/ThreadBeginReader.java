@@ -22,7 +22,7 @@ public class ThreadBeginReader implements CompactEventReader.Reader {
             throws InvalidTraceDataException {
         TraceElement element = reader.getInit(header);
         element.read(buffer);
-        return compactEventReader.begin(
+        return compactEventReader.beginThread(
                 context, element.threadId.getAsLong(), element.generation.getAsLong());
     }
 

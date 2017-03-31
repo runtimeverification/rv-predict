@@ -11,10 +11,10 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 public class ThreadSyncReader implements CompactEventReader.Reader {
-    private final CompactEvent.ThreadSyncType threadSyncType;
+    private final CompactEventReader.ThreadSyncType threadSyncType;
     private final LazyInitializer<ThreadId> reader;
 
-    public ThreadSyncReader(CompactEvent.ThreadSyncType threadSyncType) {
+    public ThreadSyncReader(CompactEventReader.ThreadSyncType threadSyncType) {
         this.threadSyncType = threadSyncType;
         this.reader = new LazyInitializer<>(ThreadId::new);
     }

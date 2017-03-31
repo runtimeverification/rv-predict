@@ -7,14 +7,12 @@ import java.nio.ByteOrder;
 import java.util.Arrays;
 
 public class TraceHeader {
-    private final byte[] magic;
-    private final int versionNumber;
     private final ByteOrder byteOrder;
     private final int pointerWidthInBytes;
     private final int defaultDataWidthInBytes;
 
     public TraceHeader(InputStream stream) throws IOException, InvalidTraceDataException {
-        magic = read("magic", stream, 4);
+        byte[] magic = read("magic", stream, 4);
         checkBytesValue("magic", magic, "RVP_");
 
         // TODO(virgil): The program must give up if it does not recognize
@@ -32,7 +30,7 @@ public class TraceHeader {
             byteOrder = ByteOrder.BIG_ENDIAN;
         }
 
-        versionNumber = ByteBuffer.wrap(versionNumberBytes)
+        int versionNumber = ByteBuffer.wrap(versionNumberBytes)
                 .order(byteOrder).getInt();
         if (versionNumber != 0) {
             throw new InvalidTraceDataException("Unknown version: " + versionNumber);

@@ -32,7 +32,7 @@ public class SignalEnterReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(2);
 
-        SignalEnterReader reader = new SignalEnterReader();
+        CompactEventReader.Reader reader = SignalEnterReader.createReader();
         Assert.assertEquals(12, reader.size(mockTraceHeader));
     }
 
@@ -41,7 +41,7 @@ public class SignalEnterReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(8);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(2);
 
-        SignalEnterReader reader = new SignalEnterReader();
+        CompactEventReader.Reader reader = SignalEnterReader.createReader();
         Assert.assertEquals(16, reader.size(mockTraceHeader));
     }
 
@@ -55,7 +55,7 @@ public class SignalEnterReaderTest {
         ByteBuffer buffer = ByteBuffer.allocate(24).putLong(GENERATION).putInt(SIGNAL_NUMBER).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        SignalEnterReader reader = new SignalEnterReader();
+        CompactEventReader.Reader reader = SignalEnterReader.createReader();
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());

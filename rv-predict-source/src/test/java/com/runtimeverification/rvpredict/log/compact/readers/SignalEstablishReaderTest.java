@@ -33,7 +33,7 @@ public class SignalEstablishReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        SignalEstablishReader reader = new SignalEstablishReader();
+        CompactEventReader.Reader reader = SignalEstablishReader.createReader();
         Assert.assertEquals(12, reader.size(mockTraceHeader));
     }
 
@@ -42,7 +42,7 @@ public class SignalEstablishReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(8);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
-        SignalEstablishReader reader = new SignalEstablishReader();
+        CompactEventReader.Reader reader = SignalEstablishReader.createReader();
         Assert.assertEquals(24, reader.size(mockTraceHeader));
     }
 
@@ -51,7 +51,7 @@ public class SignalEstablishReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
-        SignalEstablishReader reader = new SignalEstablishReader();
+        CompactEventReader.Reader reader = SignalEstablishReader.createReader();
         Assert.assertEquals(16, reader.size(mockTraceHeader));
     }
 
@@ -66,7 +66,7 @@ public class SignalEstablishReaderTest {
                 .putLong(ADDRESS).putInt(SIGNAL_NUMBER).putInt(SIGNAL_MASK_NUMBER).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        SignalEstablishReader reader = new SignalEstablishReader();
+        CompactEventReader.Reader reader = SignalEstablishReader.createReader();
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());

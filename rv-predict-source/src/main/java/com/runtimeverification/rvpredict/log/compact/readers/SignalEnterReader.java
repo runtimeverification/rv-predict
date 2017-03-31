@@ -13,24 +13,15 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
-public class SignalEnterReader implements CompactEventReader.Reader {
-    private final LazyInitializer<TraceElement> reader = new LazyInitializer<>(TraceElement::new);
-
-    @Override
-    public int size(TraceHeader header) throws InvalidTraceDataException {
-        return reader.getInit(header).size();
-    }
-
-    @Override
-    public List<CompactEvent> readEvent(
-            Context context, CompactEventReader compactEventReader, TraceHeader header, ByteBuffer buffer)
-            throws InvalidTraceDataException {
-        TraceElement element = reader.getInit(header);
-        element.read(buffer);
-        return compactEventReader.enterSignal(
-                context,
-                element.generation.getAsLong(),
-                element.signalNumber.getAsLong());
+public class SignalEnterReader {
+    public static CompactEventReader.Reader createReader() {
+        return new SimpleDataReader<>(
+                TraceElement::new,
+                (context, compactEventReader, element) ->
+                        compactEventReader.enterSignal(
+                                context,
+                                element.generation.getAsLong(),
+                                element.signalNumber.getAsLong()));
     }
 
     private static class TraceElement extends ReadableAggregateData {

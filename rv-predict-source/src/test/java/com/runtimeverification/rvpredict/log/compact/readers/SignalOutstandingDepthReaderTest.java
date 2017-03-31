@@ -31,7 +31,7 @@ public class SignalOutstandingDepthReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        SignalOutstandingDepthReader reader = new SignalOutstandingDepthReader();
+        CompactEventReader.Reader reader = SignalOutstandingDepthReader.createReader();
         Assert.assertEquals(4, reader.size(mockTraceHeader));
     }
 
@@ -40,7 +40,7 @@ public class SignalOutstandingDepthReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(8);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        SignalOutstandingDepthReader reader = new SignalOutstandingDepthReader();
+        CompactEventReader.Reader reader = SignalOutstandingDepthReader.createReader();
         Assert.assertEquals(8, reader.size(mockTraceHeader));
     }
 
@@ -55,7 +55,7 @@ public class SignalOutstandingDepthReaderTest {
                 .putInt(SIGNAL_DEPTH).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        SignalOutstandingDepthReader reader = new SignalOutstandingDepthReader();
+        CompactEventReader.Reader reader = SignalOutstandingDepthReader.createReader();
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());

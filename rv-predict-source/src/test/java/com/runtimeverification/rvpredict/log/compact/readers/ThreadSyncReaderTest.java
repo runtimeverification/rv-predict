@@ -31,7 +31,7 @@ public class ThreadSyncReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        ThreadSyncReader reader = new ThreadSyncReader(CompactEventReader.ThreadSyncType.SWITCH);
+        CompactEventReader.Reader reader = ThreadSyncReader.createReader(CompactEventReader.ThreadSyncType.SWITCH);
         Assert.assertEquals(4, reader.size(mockTraceHeader));
     }
 
@@ -40,7 +40,7 @@ public class ThreadSyncReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(8);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        ThreadSyncReader reader = new ThreadSyncReader(CompactEventReader.ThreadSyncType.SWITCH);
+        CompactEventReader.Reader reader = ThreadSyncReader.createReader(CompactEventReader.ThreadSyncType.SWITCH);
         Assert.assertEquals(8, reader.size(mockTraceHeader));
     }
 
@@ -55,7 +55,7 @@ public class ThreadSyncReaderTest {
                 .putInt(THREAD_ID).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        ThreadSyncReader reader = new ThreadSyncReader(CompactEventReader.ThreadSyncType.SWITCH);
+        CompactEventReader.Reader reader = ThreadSyncReader.createReader(CompactEventReader.ThreadSyncType.SWITCH);
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());

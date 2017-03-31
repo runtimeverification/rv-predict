@@ -31,7 +31,8 @@ public class LockManipulationReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
-        LockManipulationReader reader = new LockManipulationReader(CompactEventReader.LockManipulationType.LOCK);
+        CompactEventReader.Reader reader =
+                LockManipulationReader.createReader(CompactEventReader.LockManipulationType.LOCK);
         Assert.assertEquals(8, reader.size(mockTraceHeader));
     }
 
@@ -40,7 +41,8 @@ public class LockManipulationReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        LockManipulationReader reader = new LockManipulationReader(CompactEventReader.LockManipulationType.LOCK);
+        CompactEventReader.Reader reader =
+                LockManipulationReader.createReader(CompactEventReader.LockManipulationType.LOCK);
         Assert.assertEquals(4, reader.size(mockTraceHeader));
     }
 
@@ -55,7 +57,8 @@ public class LockManipulationReaderTest {
         ByteBuffer buffer = ByteBuffer.allocate(24).putLong(ADDRESS).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        LockManipulationReader reader = new LockManipulationReader(CompactEventReader.LockManipulationType.LOCK);
+        CompactEventReader.Reader reader =
+                LockManipulationReader.createReader(CompactEventReader.LockManipulationType.LOCK);
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());

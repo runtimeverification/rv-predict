@@ -15,7 +15,6 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -34,7 +33,7 @@ public class AtomicReadModifyWriteReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        AtomicReadModifyWriteReader reader = new AtomicReadModifyWriteReader(2);
+        CompactEventReader.Reader reader = AtomicReadModifyWriteReader.createReader(2);
         Assert.assertEquals(12, reader.size(mockTraceHeader));
     }
 
@@ -43,7 +42,7 @@ public class AtomicReadModifyWriteReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(1);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        AtomicReadModifyWriteReader reader = new AtomicReadModifyWriteReader(2);
+        CompactEventReader.Reader reader = AtomicReadModifyWriteReader.createReader(2);
         Assert.assertEquals(8, reader.size(mockTraceHeader));
     }
 
@@ -52,7 +51,7 @@ public class AtomicReadModifyWriteReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
-        AtomicReadModifyWriteReader reader = new AtomicReadModifyWriteReader(2);
+        CompactEventReader.Reader reader = AtomicReadModifyWriteReader.createReader(2);
         Assert.assertEquals(16, reader.size(mockTraceHeader));
     }
 
@@ -68,7 +67,7 @@ public class AtomicReadModifyWriteReaderTest {
                 .putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        AtomicReadModifyWriteReader reader = new AtomicReadModifyWriteReader(2);
+        CompactEventReader.Reader reader = AtomicReadModifyWriteReader.createReader(2);
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());

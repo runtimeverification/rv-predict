@@ -33,7 +33,7 @@ public class SignalMaskMemoizationReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        SignalMaskMemoizationReader reader = new SignalMaskMemoizationReader();
+        CompactEventReader.Reader reader = SignalMaskMemoizationReader.createReader();
         Assert.assertEquals(16, reader.size(mockTraceHeader));
     }
 
@@ -42,7 +42,7 @@ public class SignalMaskMemoizationReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(8);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        SignalMaskMemoizationReader reader = new SignalMaskMemoizationReader();
+        CompactEventReader.Reader reader = SignalMaskMemoizationReader.createReader();
         Assert.assertEquals(24, reader.size(mockTraceHeader));
     }
 
@@ -57,7 +57,7 @@ public class SignalMaskMemoizationReaderTest {
                 .putLong(SIGNAL_MASK).putInt(ORIGIN).putInt(SIGNAL_MASK_NUMBER).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        SignalMaskMemoizationReader reader = new SignalMaskMemoizationReader();
+        CompactEventReader.Reader reader = SignalMaskMemoizationReader.createReader();
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());

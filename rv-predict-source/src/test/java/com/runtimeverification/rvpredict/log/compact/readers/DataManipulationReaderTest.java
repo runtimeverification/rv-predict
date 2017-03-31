@@ -32,7 +32,7 @@ public class DataManipulationReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        DataManipulationReader reader = new DataManipulationReader(
+        CompactEventReader.Reader reader = DataManipulationReader.createReader(
                 2, CompactEventReader.DataManipulationType.LOAD, CompactEventReader.Atomicity.NOT_ATOMIC);
         Assert.assertEquals(8, reader.size(mockTraceHeader));
     }
@@ -42,7 +42,7 @@ public class DataManipulationReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(1);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        DataManipulationReader reader = new DataManipulationReader(
+        CompactEventReader.Reader reader = DataManipulationReader.createReader(
                 2, CompactEventReader.DataManipulationType.LOAD, CompactEventReader.Atomicity.NOT_ATOMIC);
         Assert.assertEquals(6, reader.size(mockTraceHeader));
     }
@@ -52,7 +52,7 @@ public class DataManipulationReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
-        DataManipulationReader reader = new DataManipulationReader(
+        CompactEventReader.Reader reader = DataManipulationReader.createReader(
                 2, CompactEventReader.DataManipulationType.LOAD, CompactEventReader.Atomicity.NOT_ATOMIC);
         Assert.assertEquals(12, reader.size(mockTraceHeader));
     }
@@ -70,7 +70,7 @@ public class DataManipulationReaderTest {
                 .putLong(ADDRESS).putInt(READ_VALUE).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        DataManipulationReader reader = new DataManipulationReader(
+        CompactEventReader.Reader reader = DataManipulationReader.createReader(
                 2, CompactEventReader.DataManipulationType.LOAD, CompactEventReader.Atomicity.NOT_ATOMIC);
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 

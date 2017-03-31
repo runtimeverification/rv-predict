@@ -30,7 +30,7 @@ public class ChangeOfGenerationReaderTest {
     public void computesTheCorrectSize() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
 
-        ChangeOfGenerationReader reader = new ChangeOfGenerationReader();
+        CompactEventReader.Reader reader = ChangeOfGenerationReader.createReader();
         Assert.assertEquals(8, reader.size(mockTraceHeader));
     }
 
@@ -43,7 +43,7 @@ public class ChangeOfGenerationReaderTest {
         ByteBuffer buffer = ByteBuffer.allocate(16).putLong(GENERATION).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        ChangeOfGenerationReader reader = new ChangeOfGenerationReader();
+        CompactEventReader.Reader reader = ChangeOfGenerationReader.createReader();
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());

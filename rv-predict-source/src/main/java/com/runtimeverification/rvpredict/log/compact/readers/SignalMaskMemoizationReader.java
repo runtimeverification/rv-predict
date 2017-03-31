@@ -1,8 +1,6 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
-import com.runtimeverification.rvpredict.log.compact.CompactEvent;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
-import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.ReadableAggregateData;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
@@ -10,31 +8,21 @@ import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMask;
 import com.runtimeverification.rvpredict.log.compact.datatypes.SignalMaskNumber;
 import com.runtimeverification.rvpredict.log.compact.datatypes.VariableInt;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.List;
 
-public class SignalMaskMemoizationReader implements CompactEventReader.Reader {
-    private final LazyInitializer<TraceElement> reader = new LazyInitializer<>(TraceElement::new);
-
-    @Override
-    public int size(TraceHeader header) throws InvalidTraceDataException {
-        return reader.getInit(header).size();
+public class SignalMaskMemoizationReader {
+    public static CompactEventReader.Reader createReader() {
+        return new SimpleDataReader<>(
+                TraceElement::new,
+                (context, compactEventReader, element) ->
+                        compactEventReader.signalMaskMemoization(
+                                context,
+                                element.signalMask.getAsLong(),
+                                element.originBitCount.getAsLong(),
+                                element.signalMaskNumber.getAsLong()));
     }
 
-    @Override
-    public List<CompactEvent> readEvent(Context context, CompactEventReader compactEventReader, TraceHeader header, ByteBuffer buffer)
-            throws InvalidTraceDataException {
-        TraceElement memoization = reader.getInit(header);
-        memoization.read(buffer);
-        return compactEventReader.signalMaskMemoization(
-                context,
-                memoization.signalMask.getAsLong(),
-                memoization.originBitCount.getAsLong(),
-                memoization.signalMaskNumber.getAsLong());
-    }
-
-    private class TraceElement extends ReadableAggregateData {
+    private static class TraceElement extends ReadableAggregateData {
         private final SignalMask signalMask;
         private final VariableInt originBitCount;
         private final SignalMaskNumber signalMaskNumber;

@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
-public class ThreadBeginReader implements CompactEvent.Reader {
+public class ThreadBeginReader implements CompactEventReader.Reader {
     private final LazyInitializer<TraceElement> reader = new LazyInitializer<>(TraceElement::new);
 
     @Override
@@ -17,11 +17,12 @@ public class ThreadBeginReader implements CompactEvent.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
+    public List<CompactEvent> readEvent(
+            Context context, CompactEventReader compactEventReader, TraceHeader header, ByteBuffer buffer)
             throws InvalidTraceDataException {
         TraceElement element = reader.getInit(header);
         element.read(buffer);
-        return CompactEvent.begin(
+        return compactEventReader.begin(
                 context, element.threadId.getAsLong(), element.generation.getAsLong());
     }
 

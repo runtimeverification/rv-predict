@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
 import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.datatypes.Generation;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
@@ -12,7 +13,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
-public class SignalEnterReader implements CompactEvent.Reader {
+public class SignalEnterReader implements CompactEventReader.Reader {
     private final LazyInitializer<TraceElement> reader = new LazyInitializer<>(TraceElement::new);
 
     @Override
@@ -21,11 +22,12 @@ public class SignalEnterReader implements CompactEvent.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
+    public List<CompactEvent> readEvent(
+            Context context, CompactEventReader compactEventReader, TraceHeader header, ByteBuffer buffer)
             throws InvalidTraceDataException {
         TraceElement element = reader.getInit(header);
         element.read(buffer);
-        return CompactEvent.enterSignal(
+        return compactEventReader.enterSignal(
                 context,
                 element.generation.getAsLong(),
                 element.signalNumber.getAsLong());

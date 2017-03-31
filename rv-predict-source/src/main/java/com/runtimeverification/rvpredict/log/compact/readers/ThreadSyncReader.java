@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
 import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
@@ -9,7 +10,7 @@ import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class ThreadSyncReader implements CompactEvent.Reader {
+public class ThreadSyncReader implements CompactEventReader.Reader {
     private final CompactEvent.ThreadSyncType threadSyncType;
     private final LazyInitializer<ThreadId> reader;
 
@@ -24,10 +25,11 @@ public class ThreadSyncReader implements CompactEvent.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
+    public List<CompactEvent> readEvent(
+            Context context, CompactEventReader compactEventReader, TraceHeader header, ByteBuffer buffer)
             throws InvalidTraceDataException {
         ThreadId threadId = reader.getInit(header);
         threadId.read(buffer);
-        return CompactEvent.threadSync(context, threadSyncType, threadId.getAsLong());
+        return compactEventReader.threadSync(context, threadSyncType, threadId.getAsLong());
     }
 }

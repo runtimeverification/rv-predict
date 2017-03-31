@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
+import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.datatypes.Address;
 import com.runtimeverification.rvpredict.log.compact.CompactEvent;
 import com.runtimeverification.rvpredict.log.compact.Context;
@@ -12,7 +13,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
-public class AtomicReadModifyWriteReader implements CompactEvent.Reader {
+public class AtomicReadModifyWriteReader implements CompactEventReader.Reader {
     private final int dataSizeInBytes;
     private final LazyInitializer<TraceElement> reader;
 
@@ -27,11 +28,12 @@ public class AtomicReadModifyWriteReader implements CompactEvent.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, TraceHeader header, ByteBuffer buffer)
+    public List<CompactEvent> readEvent(
+            Context context, CompactEventReader compactEventReader, TraceHeader header, ByteBuffer buffer)
             throws InvalidTraceDataException {
         TraceElement element = reader.getInit(header);
         element.read(buffer);
-        return CompactEvent.atomicReadModifyWrite(
+        return compactEventReader.atomicReadModifyWrite(
                 context,
                 dataSizeInBytes,
                 element.address.getAsLong(),

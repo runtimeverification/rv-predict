@@ -10,13 +10,14 @@ import java.util.List;
 import static java.lang.Math.toIntExact;
 
 public class TraceReader implements Closeable {
-    private InputStream inputStream = null;
-
-    private TraceHeader traceHeader;
+    private final InputStream inputStream;
+    private final TraceHeader traceHeader;
     private final int minDeltaAndEventType;
     private final int maxDeltaAndEventType;
+    private final Context context;
+    private final CompactEventReader compactEventReader;
+
     private List<CompactEvent> firstEvent;
-    private Context context;
 
     public TraceReader(Path path) throws IOException, InvalidTraceDataException {
         File file = path.toFile();
@@ -25,19 +26,21 @@ public class TraceReader implements Closeable {
         TraceData traceData = new TraceData(traceHeader);
         read("first event", traceData, false);
         minDeltaAndEventType = toIntExact(traceData.getPc().getAsLong())
-                - (Constants.JUMPS_IN_DELTA / 2) * CompactEvent.Type.getNumberOfValues();
+                - (Constants.JUMPS_IN_DELTA / 2) * CompactEventReader.Type.getNumberOfValues();
         maxDeltaAndEventType = minDeltaAndEventType
-                + Constants.JUMPS_IN_DELTA * CompactEvent.Type.getNumberOfValues() - 1;
+                + Constants.JUMPS_IN_DELTA * CompactEventReader.Type.getNumberOfValues() - 1;
         context = new Context(minDeltaAndEventType);
+        compactEventReader = new CompactEventReader();
         DeltaAndEventType deltaAndEventType = DeltaAndEventType.parseFromPC(
                 minDeltaAndEventType, maxDeltaAndEventType, traceData.getPc());
         if (deltaAndEventType == null
-                || deltaAndEventType.getEventType() != CompactEvent.Type.THREAD_BEGIN) {
+                || deltaAndEventType.getEventType() != CompactEventReader.Type.THREAD_BEGIN) {
             throw new InvalidTraceDataException("All traces should start with begin, this one starts with "
                     + (deltaAndEventType == null ? "a jump" : deltaAndEventType.getEventType())
                     + ".");
         }
-        firstEvent = CompactEvent.begin(context, traceData.getThreadId(), traceData.getGeneration());
+        firstEvent = compactEventReader.begin(
+                context, traceData.getThreadId().getAsLong(), traceData.getGeneration().getAsLong());
     }
 
     public List<CompactEvent> getNextEvents()
@@ -54,11 +57,11 @@ public class TraceReader implements Closeable {
         DeltaAndEventType deltaAndEventType =
                 DeltaAndEventType.parseFromPC(minDeltaAndEventType, maxDeltaAndEventType, pc);
         if (deltaAndEventType == null) {
-            return CompactEvent.jump(context, pc.getAsLong());
+            return CompactEventReader.jump(context, pc.getAsLong());
         }
         // TODO: Handle this correctly when a new thread begins. Currently it updates the pc of the last thread.
         context.updatePcWithDelta(deltaAndEventType.getJumpDelta());
-        return deltaAndEventType.getEventType().read(context, traceHeader, inputStream);
+        return deltaAndEventType.getEventType().read(context, compactEventReader, traceHeader, inputStream);
     }
 
     @Override
@@ -90,10 +93,10 @@ public class TraceReader implements Closeable {
     }
 
     private static class DeltaAndEventType {
-        private final CompactEvent.Type eventType;
+        private final CompactEventReader.Type eventType;
         private final int jumpDelta;
 
-        private DeltaAndEventType(CompactEvent.Type eventType, int jumpDelta) {
+        private DeltaAndEventType(CompactEventReader.Type eventType, int jumpDelta) {
             this.eventType = eventType;
             this.jumpDelta = jumpDelta;
         }
@@ -104,13 +107,13 @@ public class TraceReader implements Closeable {
             if (pc < minDeltaAndEventType || pc > maxDeltaAndEventType) {
                 return null;
             }
-            int eventCount = CompactEvent.Type.getNumberOfValues();
+            int eventCount = CompactEventReader.Type.getNumberOfValues();
             return new DeltaAndEventType(
-                    CompactEvent.Type.fromInt(toIntExact(pc % eventCount)),
+                    CompactEventReader.Type.fromInt(toIntExact(pc % eventCount)),
                     toIntExact(pc / eventCount - eventCount / 2));
         }
 
-        private CompactEvent.Type getEventType() {
+        private CompactEventReader.Type getEventType() {
             return eventType;
         }
 

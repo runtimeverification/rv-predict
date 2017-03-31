@@ -27,7 +27,8 @@ public class NoDataReader implements CompactEventReader.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(Context context, CompactEventReader compactEventReader, TraceHeader header, ByteBuffer buffer)
+    public List<CompactEvent> readEvent(
+            Context context, CompactEventReader compactEventReader, TraceHeader header, ByteBuffer buffer)
             throws InvalidTraceDataException {
         return eventFactory.apply(context);
     }

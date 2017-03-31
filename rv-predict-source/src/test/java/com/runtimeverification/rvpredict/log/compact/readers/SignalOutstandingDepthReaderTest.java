@@ -21,10 +21,9 @@ import static org.mockito.Mockito.when;
 public class SignalOutstandingDepthReaderTest {
     private static final int SIGNAL_DEPTH = 6789;
 
-    @Mock private TraceHeader mockTraceHeader;
     @Mock private CompactEvent mockCompactEvent;
     @Mock private Context mockContext;
-    @Mock private TraceHeader mockHeader;
+    @Mock private TraceHeader mockTraceHeader;
     @Mock private CompactEventReader mockCompactEventReader;
 
     @Test
@@ -47,8 +46,8 @@ public class SignalOutstandingDepthReaderTest {
 
     @Test
     public void readsData() throws InvalidTraceDataException {
-        when(mockHeader.getDefaultDataWidthInBytes()).thenReturn(4);
-        when(mockHeader.getPointerWidthInBytes()).thenReturn(8);
+        when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
+        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
         when(mockCompactEventReader.signalOutstandingDepth(mockContext, SIGNAL_DEPTH))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
@@ -57,7 +56,7 @@ public class SignalOutstandingDepthReaderTest {
         buffer.rewind();
 
         SignalOutstandingDepthReader reader = new SignalOutstandingDepthReader();
-        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockHeader, buffer);
+        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

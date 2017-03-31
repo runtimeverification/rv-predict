@@ -20,11 +20,10 @@ import static org.mockito.Mockito.when;
 @RunWith(MockitoJUnitRunner.class)
 public class ThreadSyncReaderTest {
     private static final int THREAD_ID = 1234;
-    
-    @Mock private TraceHeader mockTraceHeader;
+
     @Mock private CompactEvent mockCompactEvent;
     @Mock private Context mockContext;
-    @Mock private TraceHeader mockHeader;
+    @Mock private TraceHeader mockTraceHeader;
     @Mock private CompactEventReader mockCompactEventReader;
 
     @Test
@@ -47,8 +46,8 @@ public class ThreadSyncReaderTest {
 
     @Test
     public void readsData() throws InvalidTraceDataException {
-        when(mockHeader.getDefaultDataWidthInBytes()).thenReturn(4);
-        when(mockHeader.getPointerWidthInBytes()).thenReturn(8);
+        when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
+        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
         when(mockCompactEventReader.threadSync(mockContext, CompactEventReader.ThreadSyncType.SWITCH, THREAD_ID))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
@@ -57,7 +56,7 @@ public class ThreadSyncReaderTest {
         buffer.rewind();
 
         ThreadSyncReader reader = new ThreadSyncReader(CompactEventReader.ThreadSyncType.SWITCH);
-        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockHeader, buffer);
+        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

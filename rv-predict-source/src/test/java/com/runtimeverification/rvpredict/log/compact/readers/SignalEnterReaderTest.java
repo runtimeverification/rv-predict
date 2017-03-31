@@ -22,11 +22,9 @@ public class SignalEnterReaderTest {
     private static final long GENERATION = 1234567890123456L;
     private static final int SIGNAL_NUMBER = 12345;
 
-    @Mock
-    private TraceHeader mockTraceHeader;
     @Mock private CompactEvent mockCompactEvent;
     @Mock private Context mockContext;
-    @Mock private TraceHeader mockHeader;
+    @Mock private TraceHeader mockTraceHeader;
     @Mock private CompactEventReader mockCompactEventReader;
 
     @Test
@@ -49,8 +47,8 @@ public class SignalEnterReaderTest {
 
     @Test
     public void readsData() throws InvalidTraceDataException {
-        when(mockHeader.getDefaultDataWidthInBytes()).thenReturn(4);
-        when(mockHeader.getPointerWidthInBytes()).thenReturn(2);
+        when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
+        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(2);
         when(mockCompactEventReader.enterSignal(mockContext, GENERATION, SIGNAL_NUMBER))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
@@ -58,7 +56,7 @@ public class SignalEnterReaderTest {
         buffer.rewind();
 
         SignalEnterReader reader = new SignalEnterReader();
-        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockHeader, buffer);
+        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

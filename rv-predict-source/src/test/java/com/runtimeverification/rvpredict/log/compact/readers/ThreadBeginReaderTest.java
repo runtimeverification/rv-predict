@@ -22,11 +22,9 @@ public class ThreadBeginReaderTest {
     private static final int THREAD_ID = 1234;
     private static final long GENERATION = 1234567890123456L;
 
-    @Mock
-    private TraceHeader mockTraceHeader;
     @Mock private CompactEvent mockCompactEvent;
     @Mock private Context mockContext;
-    @Mock private TraceHeader mockHeader;
+    @Mock private TraceHeader mockTraceHeader;
     @Mock private CompactEventReader mockCompactEventReader;
 
     @Test
@@ -49,8 +47,8 @@ public class ThreadBeginReaderTest {
 
     @Test
     public void readsData() throws InvalidTraceDataException {
-        when(mockHeader.getDefaultDataWidthInBytes()).thenReturn(4);
-        when(mockHeader.getPointerWidthInBytes()).thenReturn(8);
+        when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
+        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
         when(mockCompactEventReader.beginThread(mockContext, THREAD_ID, GENERATION))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
@@ -59,7 +57,7 @@ public class ThreadBeginReaderTest {
         buffer.rewind();
 
         ThreadBeginReader reader = new ThreadBeginReader();
-        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockHeader, buffer);
+        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

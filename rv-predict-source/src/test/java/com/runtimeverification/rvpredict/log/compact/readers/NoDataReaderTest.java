@@ -19,10 +19,9 @@ import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class NoDataReaderTest {
-    @Mock private TraceHeader mockTraceHeader;
     @Mock private CompactEvent mockCompactEvent;
     @Mock private Context mockContext;
-    @Mock private TraceHeader mockHeader;
+    @Mock private TraceHeader mockTraceHeader;
     @Mock private CompactEventReader mockCompactEventReader;
 
     @Test
@@ -38,7 +37,7 @@ public class NoDataReaderTest {
     public void usesFactoryToCreate() throws InvalidTraceDataException {
         ByteBuffer buffer = ByteBuffer.allocate(0);
         NoDataReader reader = new NoDataReader(context -> Collections.singletonList(mockCompactEvent));
-        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockHeader, buffer);
+        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

@@ -18,8 +18,8 @@ import java.util.List;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class SignalMaskReaderTest {
-    private static final int SIGNAL_MASK_NUMBER = 6789;
+public class SignalOutstandingDepthReaderTest {
+    private static final int SIGNAL_DEPTH = 6789;
 
     @Mock private TraceHeader mockTraceHeader;
     @Mock private CompactEvent mockCompactEvent;
@@ -32,7 +32,7 @@ public class SignalMaskReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        SignalMaskReader reader = new SignalMaskReader();
+        SignalOutstandingDepthReader reader = new SignalOutstandingDepthReader();
         Assert.assertEquals(4, reader.size(mockTraceHeader));
     }
 
@@ -41,7 +41,7 @@ public class SignalMaskReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(8);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        SignalMaskReader reader = new SignalMaskReader();
+        SignalOutstandingDepthReader reader = new SignalOutstandingDepthReader();
         Assert.assertEquals(8, reader.size(mockTraceHeader));
     }
 
@@ -49,14 +49,14 @@ public class SignalMaskReaderTest {
     public void readsData() throws InvalidTraceDataException {
         when(mockHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockHeader.getPointerWidthInBytes()).thenReturn(8);
-        when(mockCompactEventReader.signalMask(mockContext, SIGNAL_MASK_NUMBER))
+        when(mockCompactEventReader.signalOutstandingDepth(mockContext, SIGNAL_DEPTH))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
         ByteBuffer buffer = ByteBuffer.allocate(24)
-                .putInt(SIGNAL_MASK_NUMBER).putLong(Long.MAX_VALUE);
+                .putInt(SIGNAL_DEPTH).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        SignalMaskReader reader = new SignalMaskReader();
+        SignalOutstandingDepthReader reader = new SignalOutstandingDepthReader();
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockHeader, buffer);
 
         Assert.assertEquals(1, events.size());

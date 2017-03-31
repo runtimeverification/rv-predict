@@ -22,7 +22,7 @@ class SimpleDataReader<T extends ReadableData> implements CompactEventReader.Rea
 
     SimpleDataReader(
             LazyInitializer.Factory<T> readerFactory, ReadableDataToEventListConverter<T> converter) {
-        this.reader = new LazyInitializer<T>(readerFactory);
+        this.reader = new LazyInitializer<>(readerFactory);
         this.converter = converter;
     }
 

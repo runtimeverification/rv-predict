@@ -18,10 +18,12 @@ import java.util.List;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class SignalDisestablishReaderTest {
-    private static final int SIGNAL = 12345;
+public class SignalEnterReaderTest {
+    private static final long GENERATION = 1234567890123456L;
+    private static final int SIGNAL_NUMBER = 12345;
 
-    @Mock private TraceHeader mockTraceHeader;
+    @Mock
+    private TraceHeader mockTraceHeader;
     @Mock private CompactEvent mockCompactEvent;
     @Mock private Context mockContext;
     @Mock private TraceHeader mockHeader;
@@ -30,32 +32,32 @@ public class SignalDisestablishReaderTest {
     @Test
     public void computesTheCorrectSizeDataSize_UsesDefaultDataSize4Bytes() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
-        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
+        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(2);
 
-        SignalDisestablishReader reader = new SignalDisestablishReader();
-        Assert.assertEquals(4, reader.size(mockTraceHeader));
+        SignalEnterReader reader = new SignalEnterReader();
+        Assert.assertEquals(12, reader.size(mockTraceHeader));
     }
 
     @Test
     public void computesTheCorrectSizeDataSize_UsesDefaultDataSize8Bytes() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(8);
-        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
+        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(2);
 
-        SignalDisestablishReader reader = new SignalDisestablishReader();
-        Assert.assertEquals(8, reader.size(mockTraceHeader));
+        SignalEnterReader reader = new SignalEnterReader();
+        Assert.assertEquals(16, reader.size(mockTraceHeader));
     }
 
     @Test
     public void readsData() throws InvalidTraceDataException {
         when(mockHeader.getDefaultDataWidthInBytes()).thenReturn(4);
-        when(mockHeader.getPointerWidthInBytes()).thenReturn(8);
-        when(mockCompactEventReader.disestablishSignal(mockContext, SIGNAL))
+        when(mockHeader.getPointerWidthInBytes()).thenReturn(2);
+        when(mockCompactEventReader.enterSignal(mockContext, GENERATION, SIGNAL_NUMBER))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
-        ByteBuffer buffer = ByteBuffer.allocate(24).putInt(SIGNAL).putLong(Long.MAX_VALUE);
+        ByteBuffer buffer = ByteBuffer.allocate(24).putLong(GENERATION).putInt(SIGNAL_NUMBER).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        SignalDisestablishReader reader = new SignalDisestablishReader();
+        SignalEnterReader reader = new SignalEnterReader();
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockHeader, buffer);
 
         Assert.assertEquals(1, events.size());

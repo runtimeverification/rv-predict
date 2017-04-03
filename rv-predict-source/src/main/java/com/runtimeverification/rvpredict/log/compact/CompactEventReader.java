@@ -128,7 +128,7 @@ public class CompactEventReader {
 
         static {
             OptionalInt max = EnumSet.allOf(Type.class).stream()
-                    .mapToInt(Type::intValue)
+                    .mapToInt(CompactEventReader.Type::intValue)
                     .max();
             assert max.isPresent();
             maxIntValue = max.getAsInt();
@@ -179,13 +179,13 @@ public class CompactEventReader {
             long address,
             long value,
             Atomicity atomicity) throws InvalidTraceDataException {
-        CompactEvent.CompactType compactType;
+        CompactEvent.Type compactType;
         switch (dataManipulationType) {
             case LOAD:
-                compactType = CompactEvent.CompactType.READ;
+                compactType = CompactEvent.Type.READ;
                 break;
             case STORE:
-                compactType = CompactEvent.CompactType.WRITE;
+                compactType = CompactEvent.Type.WRITE;
                 break;
             default:
                 throw new IllegalArgumentException(
@@ -197,8 +197,8 @@ public class CompactEventReader {
             return Collections.singletonList(dataManipulationEvent);
         }
         // TODO(virgil): These locks should be something more fine-grained, e.g. write_locks.
-        // Also, it would probably be nice if an atomic write to this would also be atomic for
-        // access to a part of the address (i.e. union in c/c++), if that's indeed how it should
+        // Also, it would probably be nice if an atomic write to a variable would also be atomic for
+        // access to a part of the variable (i.e. union in c/c++), if that's indeed how it should
         // work.
         return Arrays.asList(
                 lockManipulationEvent(context, LockManipulationType.LOCK, address),
@@ -208,7 +208,7 @@ public class CompactEventReader {
     }
 
     private CompactEvent dataManipulationEvent(
-            Context context, int dataSizeInBytes, long address, long value, CompactEvent.CompactType compactType) {
+            Context context, int dataSizeInBytes, long address, long value, CompactEvent.Type compactType) {
         return new CompactEvent(context, compactType) {
             int dataSizeInBytes() {
                 return dataSizeInBytes;
@@ -228,8 +228,8 @@ public class CompactEventReader {
             long address, long readValue, long writeValue) throws InvalidTraceDataException {
         return Arrays.asList(
                 lockManipulationEvent(context, LockManipulationType.LOCK, address),
-                dataManipulationEvent(context, dataSizeInBytes, address, readValue, CompactEvent.CompactType.READ),
-                dataManipulationEvent(context, dataSizeInBytes, address, writeValue, CompactEvent.CompactType.WRITE),
+                dataManipulationEvent(context, dataSizeInBytes, address, readValue, CompactEvent.Type.READ),
+                dataManipulationEvent(context, dataSizeInBytes, address, writeValue, CompactEvent.Type.WRITE),
                 lockManipulationEvent(context, LockManipulationType.UNLOCK, address));
     }
 
@@ -247,13 +247,13 @@ public class CompactEventReader {
     private CompactEvent lockManipulationEvent(
             Context context, LockManipulationType lockManipulationType, long address)
             throws InvalidTraceDataException {
-        CompactEvent.CompactType compactType;
+        CompactEvent.Type compactType;
         switch (lockManipulationType) {
             case LOCK:
-                compactType = CompactEvent.CompactType.LOCK;
+                compactType = CompactEvent.Type.LOCK;
                 break;
             case UNLOCK:
-                compactType = CompactEvent.CompactType.UNLOCK;
+                compactType = CompactEvent.Type.UNLOCK;
                 break;
             default:
                 throw new InvalidTraceDataException("Unknown lock manipulation type: " + lockManipulationType);
@@ -278,8 +278,7 @@ public class CompactEventReader {
             long handler, long signalNumber, long signalMaskNumber) {
         context.establishSignal(handler, signalNumber, signalMaskNumber);
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
-        // TODO: If I set the handler and mask on the context, do I need the event?
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.CompactType.ESTABLISH_SIGNAL) {
+        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.ESTABLISH_SIGNAL) {
             @Override
             long signalMask() {
                 return signalMask;
@@ -298,8 +297,7 @@ public class CompactEventReader {
     public List<CompactEvent> disestablishSignal(
             Context context, long signalNumber) {
         context.disestablishSignal(signalNumber);
-        // TODO: If I set the handler and mask on the context, do I need the event?
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.CompactType.DISESTABLISH_SIGNAL) {
+        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.DISESTABLISH_SIGNAL) {
             long signalNumber() {
                 return signalNumber;
             }
@@ -309,7 +307,7 @@ public class CompactEventReader {
     public List<CompactEvent> enterSignal(
             Context context, long generation, long signalNumber) throws InvalidTraceDataException {
         context.enterSignal(signalNumber, generation);
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.CompactType.ENTER_SIGNAL) {
+        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.ENTER_SIGNAL) {
             long signalNumber() {
                 return signalNumber;
             }
@@ -319,7 +317,7 @@ public class CompactEventReader {
     private static List<CompactEvent> exitSignal(Context context) {
         long currentSignal = context.getSignalNumber();
         context.exitSignal();
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.CompactType.EXIT_SIGNAL) {
+        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.EXIT_SIGNAL) {
             @Override
             long signalNumber() {
                 return currentSignal;
@@ -347,12 +345,12 @@ public class CompactEventReader {
     // Function events.
 
     private static List<CompactEvent> enterFunction(Context context) {
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.CompactType.ENTER_FUNCTION) {
+        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.ENTER_FUNCTION) {
         });
     }
 
     private static List<CompactEvent> exitFunction(Context context) {
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.CompactType.EXIT_FUNCTION) {
+        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.EXIT_FUNCTION) {
         });
     }
 
@@ -361,25 +359,36 @@ public class CompactEventReader {
     public List<CompactEvent> beginThread(Context context, long threadId, long generation)
             throws InvalidTraceDataException {
         context.beginThread(threadId, generation);
-        return NO_EVENTS;
+        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.BEGIN_THREAD) {
+            @Override
+            long getThreadId() {
+                return threadId;
+            }
+        });
     }
 
     private static List<CompactEvent> endThread(Context context) {
+        long threadId = context.getThreadId();
         context.endThread();
-        return NO_EVENTS;
+        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.END_THREAD) {
+            @Override
+            long getThreadId() {
+                return threadId;
+            }
+        });
     }
 
     public List<CompactEvent> threadSync(
             Context context, ThreadSyncType threadSyncType, long threadId) throws InvalidTraceDataException {
-        CompactEvent.CompactType compactType;
+        CompactEvent.Type compactType;
         switch (threadSyncType) {
             case JOIN:
                 context.joinThread(threadId);
-                compactType = CompactEvent.CompactType.JOIN;
+                compactType = CompactEvent.Type.JOIN_THREAD;
                 break;
             case FORK:
                 context.forkThread(threadId);
-                compactType = CompactEvent.CompactType.FORK;
+                compactType = CompactEvent.Type.FORK;
                 break;
             case SWITCH:
                 context.switchThread(threadId);

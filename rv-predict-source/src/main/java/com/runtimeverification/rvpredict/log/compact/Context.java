@@ -178,14 +178,11 @@ public class Context {
         }
 
         void exitSignal() {
-            // TODO: Shouldn't I do something with the value?
             signalMaskStack.pop();
         }
 
         void setSignalDepth(int signalDepth) {
-            // TODO: Should I do something with the stack here?
             while (signalMaskStack.size() <= signalDepth) {
-                // TODO: What is a valid value to put here? Does it matter?
                 signalMaskStack.push(0L);
             }
             while (numberOfOperations.size() <= signalDepth) {

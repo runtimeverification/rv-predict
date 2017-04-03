@@ -2,6 +2,8 @@ package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LLVMEventReader;
+import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
+import com.runtimeverification.rvpredict.log.compact.TraceReader;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.util.Logger;
 
@@ -100,7 +102,7 @@ public class LLVMTraceCache extends TraceCache {
     }
 
     @Override
-    public void setup() throws IOException {
+    public void setup() throws IOException, InvalidTraceDataException {
         readMetadata();
         int logId = 0;
         Path path = config.getTraceFilePath(logId);
@@ -108,6 +110,9 @@ public class LLVMTraceCache extends TraceCache {
             readers.add(new LLVMEventReader(path));
             ++logId;
             path = config.getTraceFilePath(logId);
+        }
+        traceReader = new TraceReader(config.getCompactTraceFilePath());
+        while(traceReader.getNextEvents() != null) {
         }
     }
 }

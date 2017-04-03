@@ -65,7 +65,7 @@ public class TraceHeader {
         return bytes;
     }
 
-    public ByteOrder getByteOrder() {
+    ByteOrder getByteOrder() {
         return byteOrder;
     }
 

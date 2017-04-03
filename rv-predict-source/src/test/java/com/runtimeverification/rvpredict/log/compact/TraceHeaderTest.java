@@ -21,8 +21,8 @@ public class TraceHeaderTest {
                 0, 0,  // filler bytes.
         }));
         try {
-            TraceHeader traceHeader = new TraceHeader(inputStream);
-            Assert.assertTrue("The magic string is wrong, should have thrown an exception.", false);
+            new TraceHeader(inputStream);
+            Assert.fail("The magic string is wrong, should have thrown an exception.");
         } catch (InvalidTraceDataException e) {
             // This is what we're testing here.
         }

@@ -66,6 +66,7 @@ public class Configuration implements Constants {
     public static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "rv-predict.jar";
 
     public static final String TRACE_SUFFIX = "trace.bin";
+    public static final String COMPACT_TRACE_NAME = "rvpredict.trace";
 
     public static final String METADATA_BIN = "metadata.bin";
     public static final String AGENT_RESOURCE_PATH = Agent.class.getName().replace(".","/") + ".class";
@@ -718,6 +719,10 @@ public class Configuration implements Constants {
 
     public Path getTraceFilePath(int id) {
         return Paths.get(logDir, id + "_" + TRACE_SUFFIX);
+    }
+
+    public Path getCompactTraceFilePath() {
+        return Paths.get(logDir, COMPACT_TRACE_NAME);
     }
 
     public Path getLLVMMetadataPath(String id) {

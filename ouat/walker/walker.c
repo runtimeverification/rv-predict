@@ -58,6 +58,12 @@ typedef bool (*dwarf_walk_predicate_t)(Dwarf_Debug, Dwarf_Die);
 
 typedef struct _dwarf_walk_ctx {
 	Dwarf_Addr lopc, hipc;
+	Dwarf_Cie *cie_list;
+	Dwarf_Signed ncies;
+	Dwarf_Fde *fde_list;
+	Dwarf_Signed nfdes;
+	Dwarf_Signed cfa_offset;
+	bool have_cfa_offset;
 } dwarf_walk_ctx_t;
 
 typedef struct _dwarf_walk {
@@ -96,6 +102,10 @@ dwarf_walk_first(Dwarf_Debug dbg, dwarf_walk_t *walk,
 	walk->stack_height = 0;
 	walk->dbg = dbg;
 	walk->predicate = predicate;
+	walk->ctx.cie_list = NULL;
+	walk->ctx.fde_list = NULL;
+	walk->ctx.have_cfa_offset = false;
+	walk->ctx.ncies = walk->ctx.nfdes = 0;
 
 	return dwarf_walk_next(walk);
 }
@@ -202,7 +212,7 @@ dwarf_follow_type_to_die(Dwarf_Debug dbg, Dwarf_Die die)
 		    __func__, dwarf_errmsg(error));
 	}
 
-	if (dwarf_formref(attr, &offset, &error) != DW_DLV_OK) {
+	if (dwarf_global_formref(attr, &offset, &error) != DW_DLV_OK) {
 		warnx("\n%s: dwarf_formref: %s", __func__, dwarf_errmsg(error));
 		return NULL;
 	}
@@ -233,8 +243,8 @@ dwarf_c_typestring(Dwarf_Debug dbg, Dwarf_Die die)
 		    dwarf_c_typestring_component(dbg, typedie, &kind);
 		otypestr = typestr;
 		assert(component != NULL);
-		if (asprintf(&typestr, "%s %s",
-		    (otypestr == NULL) ? "" : otypestr, component) == -1)
+		if (asprintf(&typestr, "%s%s%s",
+		    (otypestr == NULL) ? "" : otypestr, (otypestr == NULL) ? "" : " ", component) == -1)
 			err(EXIT_FAILURE, "%s: asprintf", __func__);
 		if (otypestr != NULL)
 			free(otypestr);
@@ -265,6 +275,7 @@ dwarf_c_typestring_component(Dwarf_Debug dbg, Dwarf_Die die, dwarf_type_kind_t *
 		return new_empty_string();
 	}
 	switch (tag) {
+	case DW_TAG_typedef:
 	case DW_TAG_base_type:
 		res = dwarf_diename(die, &name, &error);
 		if (res != DW_DLV_OK) {
@@ -378,21 +389,45 @@ print_location(Dwarf_Debug dbg, Dwarf_Die die, const dwarf_walk_ctx_t *ctx)
 	Dwarf_Ptr loc_ptr;
 	Dwarf_Unsigned loc_len;
 
+#if 0
+	Dwarf_Attribute size_attr;
+	Dwarf_Half size_form;
+	Dwarf_Unsigned size;
+
+	if (dwarf_attr(die, DW_AT_byte_size, &size_attr, &error) != DW_DLV_OK) {
+		printf(" missing size attribute");
+		return;
+	}
+
+	if (dwarf_whatform(size_attr, &size_form, &error) != DW_DLV_OK) {
+		printf(" cannot fetch size-attribute form");
+		return;
+	}
+
+	switch (size_form) {
+	case DW_FORM_data1:
+	case DW_FORM_data2:
+	case DW_FORM_data4:
+	case DW_FORM_data8:
+	case DW_FORM_udata:
+		if (dwarf_formudata(size_attr, &size, &error) == DW_DLV_OK)
+			break;
+		/*FALLTHROUGH*/
+	default:
+		printf(" cannot interpret size attribute");
+		return;
+	}
+#endif
+
 	if (dwarf_attr(die, DW_AT_location, &loc_attr, &error) != DW_DLV_OK)
 		return;
-
-#if 0
-	Dwarf_Attribute fb_attr;
-	if (dwarf_attr(die, DW_AT_frame_base, &fb_attr, &error) != DW_DLV_OK)
-		return;
-#endif
 
 	if (dwarf_formexprloc(loc_attr, &loc_len, &loc_ptr,
 	                           &error) == DW_DLV_OK &&
 	    dwarf_loclist_from_expr(dbg, loc_ptr, loc_len, &ld,
 	                            &nlocdescs, &error) == DW_DLV_OK) {
 		int j;
-		const char *delim = "";
+		const char *delim = "at ";
 		struct {
 			Dwarf_Addr lopc, hipc;
 		} inner;
@@ -409,29 +444,30 @@ print_location(Dwarf_Debug dbg, Dwarf_Die die, const dwarf_walk_ctx_t *ctx)
 
 		Dwarf_Loc *lr0 = &ld->ld_s[0];
 
-		printf(" pc %0" PRIx64 " - %0" PRIx64 ": ",
-		    inner.lopc, inner.hipc);
-
-		if (have_insnptr &&
+		if (!have_insnptr ||
 		    (insnptr < inner.lopc || inner.hipc <= insnptr))
-			;
-		else if (!have_dataptr || ld->ld_cents != 1)
-			;
-		else if (lr0->lr_atom == DW_OP_addr &&
+			printf(" pc in %0" PRIx64 " - %0" PRIx64 ": ",
+			    inner.lopc, inner.hipc);
+		else
+			printf(" pc at %0" PRIx64 ": ", insnptr);
+
+		if (have_dataptr && ld->ld_cents == 1 &&
+			 lr0->lr_atom == DW_OP_addr &&
 			 lr0->lr_number == dataptr) {
-			printf(" at static 0x%0" PRIx64, dataptr);
-		} else if (!have_frameptr)
-			;
-		else if (lr0->lr_atom == DW_OP_fbreg &&
-			 frameptr + (int64_t)lr0->lr_number == dataptr){
-			printf(" on stack at 0x%0" PRIx64
-			    " + %0" PRId64 " = 0x%0" PRIx64,
-			    frameptr, lr0->lr_number, dataptr);
+			printf("at static 0x%0" PRIx64, dataptr);
+		} else if (have_dataptr && have_frameptr &&
+			   ctx->have_cfa_offset && ld->ld_cents == 1 &&
+			   lr0->lr_atom == DW_OP_fbreg &&
+			   frameptr - ctx->cfa_offset +
+			   (int64_t)lr0->lr_number == dataptr) {
+			printf("on stack at 0x%0" PRIx64
+			    " - %" PRId64 " + %" PRId64 " = 0x%0" PRIx64,
+			    frameptr, ctx->cfa_offset, lr0->lr_number, dataptr);
 		} else for (j = 0; j < ld->ld_cents; j++) {
 			Dwarf_Loc *lr = &ld->ld_s[j];
 			printf("%s", delim);
 			print_op(lr);
-			delim = " ";
+			delim = " or at";
 		}
 #if 0
 		for (i = 0; i < nlocdescs; i++)
@@ -442,10 +478,9 @@ print_location(Dwarf_Debug dbg, Dwarf_Die die, const dwarf_walk_ctx_t *ctx)
 	                                  &error)) == DW_DLV_OK) {
 		int i, j;
 
-		const char *odelim = "";
+		const char *odelim = " ";
 
 		for (i = 0; i < nlocdescs; i++) {
-			const char *idelim = "";
 			ld = locdescp[i];
 			struct {
 				Dwarf_Addr lopc, hipc;
@@ -462,18 +497,20 @@ print_location(Dwarf_Debug dbg, Dwarf_Die die, const dwarf_walk_ctx_t *ctx)
 				inner.hipc += ctx->lopc;
 			}
 
-			if (have_insnptr &&
-			    (insnptr < inner.lopc || inner.hipc <= insnptr))
-				continue;
-
-			printf("%spc %0" PRIx64 " - %0" PRIx64 ": ", odelim,
-			    inner.lopc, inner.hipc);
+			printf("%s", odelim);
 			odelim = ", ";
+
+			if (!have_insnptr ||
+			    (insnptr < inner.lopc || inner.hipc <= insnptr))
+				printf("pc in %0" PRIx64 " - %0" PRIx64,
+				    inner.lopc, inner.hipc);
+			else
+				printf("pc at %0" PRIx64, insnptr);
+
 			for (j = 0; j < ld->ld_cents; j++) {
 				Dwarf_Loc *lr = &ld->ld_s[j];
-				printf("%s", idelim);
+				printf(" ");
 				print_op(lr);
-				idelim = " ";
 			}
 		}
 		assert(nlocdescs > 0);
@@ -499,6 +536,95 @@ print_location(Dwarf_Debug dbg, Dwarf_Die die, const dwarf_walk_ctx_t *ctx)
 			    dwarf_errmsg(error));
 		}
 	}
+}
+
+static int
+locdesc_to_regnum(Dwarf_Locdesc *ld)
+{
+	int regnum = 0;
+	Dwarf_Loc *lr0;
+
+	if (ld->ld_cents != 1)
+		return -1;
+
+	lr0 = &ld->ld_s[0];
+
+	switch (lr0->lr_atom) {
+	/* In each of the following cases, the relationship
+	 * between DW_OP_fbreg(ofs) and the CFA is
+	 * straightforward.
+	 */
+	case DW_OP_regx:
+		regnum = lr0->lr_number;
+		break;
+	case DW_OP_reg31:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg30:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg29:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg28:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg27:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg26:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg25:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg24:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg23:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg22:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg21:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg20:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg19:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg18:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg17:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg16:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg15:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg14:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg13:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg12:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg11:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg10:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg9:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg8:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg7:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg6:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg5:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg4:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg3:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg2:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg1:
+		regnum++;	/*FALLTHROUGH*/
+	case DW_OP_reg0:
+		break;
+	default:
+		return -1;
+	}
+	return regnum;
 }
 
 static void
@@ -539,6 +665,93 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 		printf(" %s", name);
 		dwarf_dealloc(dbg, name, DW_DLA_STRING);
 		break;
+	}
+
+	if (tag == DW_TAG_subprogram) {
+		Dwarf_Attribute loc_attr;
+		Dwarf_Locdesc *ld;
+		Dwarf_Signed nlocdescs;
+		Dwarf_Ptr loc_ptr;
+		Dwarf_Unsigned loc_len;
+
+		if (dwarf_attr(die, DW_AT_frame_base, &loc_attr, &error) != DW_DLV_OK)
+			printf(" no frame base");
+		else if (dwarf_formexprloc(loc_attr, &loc_len, &loc_ptr,
+			     &error) != DW_DLV_OK ||
+			 dwarf_loclist_from_expr(dbg, loc_ptr, loc_len, &ld,
+			     &nlocdescs, &error) != DW_DLV_OK) {
+			printf(" malformed frame base");
+		} else if (nlocdescs != 1) {
+			printf(" too %s frame-base location descriptors",
+			    (nlocdescs < 1) ? "few" : "many");
+		} else if (ld->ld_cents != 1) {
+			printf(" too %s frame-base location ops",
+			    (ld->ld_cents < 1) ? "few" : "many");
+		} else {
+			Dwarf_Loc *lr0 = &ld->ld_s[0];
+
+			printf(" frame base %s CFA",
+			    (lr0->lr_atom == DW_OP_call_frame_cfa)
+			        ? "=="
+				: "!=");
+			ctx->have_cfa_offset = false;
+			int regnum;
+			if (lr0->lr_atom == DW_OP_call_frame_cfa) {
+				ctx->have_cfa_offset = true;
+				ctx->cfa_offset = 0;
+			} else if ((regnum = locdesc_to_regnum(ld)) == -1) {
+				printf(" ");
+				print_op(lr0);
+			} else if (have_insnptr) {
+				Dwarf_Fde fde;
+				Dwarf_Addr lopc, hipc;
+				Dwarf_Small exprtype;
+				Dwarf_Signed offset_relevant;
+				Dwarf_Signed offset, fde_regnum;
+				Dwarf_Addr row_pc;
+				Dwarf_Ptr block_ptr;
+
+				ctx->have_cfa_offset = false;
+
+				if (ctx->fde_list == NULL &&
+				    dwarf_get_fde_list(dbg, &ctx->cie_list,
+				        &ctx->ncies, &ctx->fde_list,
+					&ctx->nfdes, &error) != DW_DLV_OK &&
+				    dwarf_get_fde_list_eh(dbg, &ctx->cie_list,
+				        &ctx->ncies, &ctx->fde_list,
+					&ctx->nfdes, &error) != DW_DLV_OK) {
+					printf(" could not retrieve FDEs %s",
+					    dwarf_errmsg(error));
+				} else if (dwarf_get_fde_at_pc(ctx->fde_list,
+				           insnptr, &fde, &lopc, &hipc,
+					   &error) != DW_DLV_OK)
+					printf(" FDE unknown for PC %" PRIx64,
+					    insnptr);
+				else if (dwarf_get_fde_info_for_cfa_reg3(fde,
+					 insnptr, &exprtype, &offset_relevant,
+					 &fde_regnum, &offset, &block_ptr,
+					 &row_pc, &error) != DW_DLV_OK)
+					printf(" cannot get CFA FDE info");
+				else if (exprtype != DW_EXPR_OFFSET) {
+					printf(" expression type not understood");
+				} else if (fde_regnum == regnum && offset_relevant == 1) {
+					ctx->cfa_offset = offset;
+					ctx->have_cfa_offset = true;
+				} else if (fde_regnum == regnum) {
+					ctx->cfa_offset = 0;
+					ctx->have_cfa_offset = true;
+				} else {
+					printf(" CFA register mismatch %ld<>%d pc %" PRIx64 " - %" PRIx64,
+					    fde_regnum, regnum, lopc, hipc);
+					print_op(lr0);
+				}
+			}
+		}
+#if 0
+		for (i = 0; i < nlocdescs; i++)
+			dwarf_dealloc(dbg, locdesc[i].ld_s, DW_DLA_LOC_BLOCK);
+		dwarf_dealloc(dbg, locdesc, DW_DLA_LOCDESC);
+#endif
 	}
 
 	if (dwarf_attr(die, DW_AT_high_pc, &hipc_attr, &error) == DW_DLV_OK &&
@@ -584,10 +797,11 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 	print_location(dbg, die, ctx);
 
 	if ((typename = dwarf_c_typestring(dbg, die)) != NULL) {
-		printf(" %s\n", typename);
+		printf(" %s", typename);
 		free(typename);
-	} else
-		printf("\n");
+	}
+
+	printf("\n");
 }
 
 static void __dead

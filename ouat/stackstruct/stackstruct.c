@@ -13,7 +13,7 @@ main(int argc, char **argv)
 	int fd, rc;
 	Dwarf_Debug dbg;
 	Dwarf_Error dwerr;
-	void *frmaddr = __builtin_frame_address(0);
+	void *cfa = __builtin_dwarf_cfa();
 
 	fd = open(argv[0], O_RDONLY);
 
@@ -27,7 +27,7 @@ main(int argc, char **argv)
 		    dwarf_errmsg(dwerr));
 	}
 	foo();
-	printf("frame address %p\n", frmaddr);
+	printf("DWARF Canonical Frame Address (CFA) %p\n", cfa);
 	dwarf_finish(dbg, NULL);
 	return EXIT_SUCCESS;
 }

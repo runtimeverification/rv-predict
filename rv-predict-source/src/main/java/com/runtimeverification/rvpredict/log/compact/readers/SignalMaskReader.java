@@ -7,7 +7,7 @@ public class SignalMaskReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 SignalMaskNumber::new,
-                (context, compactEventReader, signalMaskNumber) ->
-                        compactEventReader.signalMask(context, signalMaskNumber.getAsLong()));
+                (context, compactEventFactory, signalMaskNumber) ->
+                        compactEventFactory.signalMask(context, signalMaskNumber.getAsLong()));
     }
 }

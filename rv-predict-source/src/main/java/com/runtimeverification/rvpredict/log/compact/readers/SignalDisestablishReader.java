@@ -7,7 +7,7 @@ public class SignalDisestablishReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 SignalNumber::new,
-                (context, compactEventReader, signalNumber) ->
-                        compactEventReader.disestablishSignal(context, signalNumber.getAsLong()));
+                (context, compactEventFactory, signalNumber) ->
+                        compactEventFactory.disestablishSignal(context, signalNumber.getAsLong()));
     }
 }

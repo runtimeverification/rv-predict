@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
 import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.compact.CompactEventFactory;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
@@ -26,7 +27,7 @@ public class AtomicReadModifyWriteReaderTest {
     @Mock private CompactEvent mockCompactEvent;
     @Mock private Context mockContext;
     @Mock private TraceHeader mockTraceHeader;
-    @Mock private CompactEventReader mockCompactEventReader;
+    @Mock private CompactEventFactory mockCompactEventFactory;
 
     @Test
     public void computesTheCorrectSizeDataSize_UsesDefaultSizeWhenLarger() throws InvalidTraceDataException {
@@ -59,7 +60,7 @@ public class AtomicReadModifyWriteReaderTest {
     public void readsData() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
-        when(mockCompactEventReader.atomicReadModifyWrite(mockContext, 2, ADDRESS, READ_VALUE, WRITE_VALUE))
+        when(mockCompactEventFactory.atomicReadModifyWrite(mockContext, 2, ADDRESS, READ_VALUE, WRITE_VALUE))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
         ByteBuffer buffer = ByteBuffer.allocate(24)
@@ -68,7 +69,7 @@ public class AtomicReadModifyWriteReaderTest {
         buffer.rewind();
 
         CompactEventReader.Reader reader = AtomicReadModifyWriteReader.createReader(2);
-        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
+        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

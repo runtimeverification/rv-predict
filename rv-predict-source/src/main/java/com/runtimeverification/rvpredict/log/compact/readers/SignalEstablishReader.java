@@ -14,8 +14,8 @@ public class SignalEstablishReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 TraceElement::new,
-                (context, compactEventReader, element) ->
-                        compactEventReader.establishSignal(
+                (context, compactEventFactory, element) ->
+                        compactEventFactory.establishSignal(
                                 context,
                                 element.handler.getAsLong(),
                                 element.signalNumber.getAsLong(),

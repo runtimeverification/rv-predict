@@ -16,8 +16,8 @@ public class DataManipulationReader {
             CompactEventReader.Atomicity atomicity) {
         return new SimpleDataReader<>(
                 header -> new TraceElement(header, dataSizeInBytes),
-                (context, compactEventReader, element) ->
-                        compactEventReader.dataManipulation(
+                (context, compactEventFactory, element) ->
+                        compactEventFactory.dataManipulation(
                                 context,
                                 dataManipulationType,
                                 dataSizeInBytes,

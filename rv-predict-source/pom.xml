@@ -182,7 +182,7 @@
                 <artifactId>maven-dependency-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>preparelibz3fortests</id>
+                        <id>prepare-libz3-for-tests</id>
                         <phase>compile</phase>
                         <goals>
                             <goal>copy</goal>
@@ -229,7 +229,6 @@
                                     <type>dll</type>
                                     <classifier>windows64</classifier>
                                     <overWrite>true</overWrite>
-                                    <outputDirectory>${project.build.directory}/lib</outputDirectory>
                                     <outputDirectory>${project.build.directory}/lib/native/windows64</outputDirectory>
                                     <destFileName>z3java.dll</destFileName>
                                 </artifactItem>

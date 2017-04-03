@@ -39,7 +39,7 @@ public class TraceReader implements Closeable {
                     + (deltaAndEventType == null ? "a jump" : deltaAndEventType.getEventType())
                     + ".");
         }
-        firstEvent = compactEventReader.begin(
+        firstEvent = compactEventReader.beginThread(
                 context, traceData.getThreadId().getAsLong(), traceData.getGeneration().getAsLong());
     }
 

@@ -27,6 +27,7 @@ import java.util.OptionalInt;
 
 public abstract class CompactEvent {
 
+    /*
     public enum Atomicity {
         ATOMIC,
         NOT_ATOMIC,
@@ -46,6 +47,7 @@ public abstract class CompactEvent {
         LOCK,
         UNLOCK,
     }
+    */
 
     public enum CompactType {
         READ,

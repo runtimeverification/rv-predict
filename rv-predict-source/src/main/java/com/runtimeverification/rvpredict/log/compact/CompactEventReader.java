@@ -17,6 +17,7 @@ import com.runtimeverification.rvpredict.log.compact.readers.ThreadSyncReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -192,7 +193,7 @@ public class CompactEventReader {
         }
         CompactEvent dataManipulationEvent =
                 dataManipulationEvent(context, dataSizeInBytes, address, value, compactType);
-        if (atomicity == CompactEvent.Atomicity.NOT_ATOMIC) {
+        if (atomicity == Atomicity.NOT_ATOMIC) {
             return Collections.singletonList(dataManipulationEvent);
         }
         // TODO(virgil): These locks should be something more fine-grained, e.g. write_locks.
@@ -200,9 +201,9 @@ public class CompactEventReader {
         // access to a part of the address (i.e. union in c/c++), if that's indeed how it should
         // work.
         return Arrays.asList(
-                lockManipulationEvent(context, CompactEvent.LockManipulationType.LOCK, address),
+                lockManipulationEvent(context, LockManipulationType.LOCK, address),
                 dataManipulationEvent,
-                lockManipulationEvent(context, CompactEvent.LockManipulationType.UNLOCK, address)
+                lockManipulationEvent(context, LockManipulationType.UNLOCK, address)
         );
     }
 
@@ -226,10 +227,10 @@ public class CompactEventReader {
             int dataSizeInBytes,
             long address, long readValue, long writeValue) throws InvalidTraceDataException {
         return Arrays.asList(
-                lockManipulationEvent(context, CompactEvent.LockManipulationType.LOCK, address),
+                lockManipulationEvent(context, LockManipulationType.LOCK, address),
                 dataManipulationEvent(context, dataSizeInBytes, address, readValue, CompactEvent.CompactType.READ),
                 dataManipulationEvent(context, dataSizeInBytes, address, writeValue, CompactEvent.CompactType.WRITE),
-                lockManipulationEvent(context, CompactEvent.LockManipulationType.UNLOCK, address));
+                lockManipulationEvent(context, LockManipulationType.UNLOCK, address));
     }
 
     public List<CompactEvent> changeOfGeneration(Context context, long generation) {
@@ -244,7 +245,7 @@ public class CompactEventReader {
     }
 
     private CompactEvent lockManipulationEvent(
-            Context context, CompactEvent.LockManipulationType lockManipulationType, long address)
+            Context context, LockManipulationType lockManipulationType, long address)
             throws InvalidTraceDataException {
         CompactEvent.CompactType compactType;
         switch (lockManipulationType) {

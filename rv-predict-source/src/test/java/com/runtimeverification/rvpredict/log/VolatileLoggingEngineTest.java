@@ -1,11 +1,11 @@
 package com.runtimeverification.rvpredict.log;
 
-import static org.mockito.Mockito.mock;
-
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.mockito.Mockito.mock;
 
 public class VolatileLoggingEngineTest {
     private static final int LOC_ID = 10;

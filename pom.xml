@@ -19,6 +19,7 @@
         </profile>
     </profiles>
     <modules>
+        <module>native-z3</module>
         <module>rv-predict</module>
         <module>rv-predict-jar</module>
         <module>rv-predict-source</module>

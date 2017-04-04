@@ -137,9 +137,6 @@
                     <includes>
                         <include>**/*.class</include>
                     </includes>
-                    <additionalClasspathElements>
-                        <additionalClasspathElement>${project.build.directory}/lib</additionalClasspathElement>
-                    </additionalClasspathElements>
                 </configuration>
             </plugin>
          </plugins>

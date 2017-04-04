@@ -9,7 +9,7 @@ public class SignalOutstandingDepthReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 header -> new VariableInt(header, 4),
-                (context, compactEventReader, outstandingDepth) ->
-                        compactEventReader.signalOutstandingDepth(context, toIntExact(outstandingDepth.getAsLong())));
+                (context, compactEventFactory, outstandingDepth) ->
+                        compactEventFactory.signalOutstandingDepth(context, toIntExact(outstandingDepth.getAsLong())));
     }
 }

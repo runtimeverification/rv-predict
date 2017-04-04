@@ -14,8 +14,8 @@ public class SignalMaskMemoizationReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 TraceElement::new,
-                (context, compactEventReader, element) ->
-                        compactEventReader.signalMaskMemoization(
+                (context, compactEventFactory, element) ->
+                        compactEventFactory.signalMaskMemoization(
                                 context,
                                 element.signalMask.getAsLong(),
                                 element.originBitCount.getAsLong(),

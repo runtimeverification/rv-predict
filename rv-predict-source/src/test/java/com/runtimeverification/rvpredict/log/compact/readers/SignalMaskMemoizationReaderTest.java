@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
 import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.compact.CompactEventFactory;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
@@ -26,7 +27,7 @@ public class SignalMaskMemoizationReaderTest {
     @Mock private CompactEvent mockCompactEvent;
     @Mock private Context mockContext;
     @Mock private TraceHeader mockTraceHeader;
-    @Mock private CompactEventReader mockCompactEventReader;
+    @Mock private CompactEventFactory mockCompactEventFactory;
 
     @Test
     public void computesDataSize_UsesDefaultDataSize4() throws InvalidTraceDataException {
@@ -50,7 +51,7 @@ public class SignalMaskMemoizationReaderTest {
     public void readsData() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
-        when(mockCompactEventReader.signalMaskMemoization(mockContext, SIGNAL_MASK, ORIGIN, SIGNAL_MASK_NUMBER))
+        when(mockCompactEventFactory.signalMaskMemoization(mockContext, SIGNAL_MASK, ORIGIN, SIGNAL_MASK_NUMBER))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
         ByteBuffer buffer = ByteBuffer.allocate(24)
@@ -58,7 +59,7 @@ public class SignalMaskMemoizationReaderTest {
         buffer.rewind();
 
         CompactEventReader.Reader reader = SignalMaskMemoizationReader.createReader();
-        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
+        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

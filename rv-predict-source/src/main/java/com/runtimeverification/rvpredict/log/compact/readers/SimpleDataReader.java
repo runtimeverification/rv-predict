@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
 import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.compact.CompactEventFactory;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
@@ -16,7 +17,7 @@ class SimpleDataReader<T extends ReadableData> implements CompactEventReader.Rea
 
     interface ReadableDataToEventListConverter<T> {
         List<CompactEvent> dataElementToEvent(
-                Context context, CompactEventReader compactEventReader, T element)
+                Context context, CompactEventFactory compactEventFactory, T element)
                 throws InvalidTraceDataException;
     }
 
@@ -33,10 +34,10 @@ class SimpleDataReader<T extends ReadableData> implements CompactEventReader.Rea
 
     @Override
     public List<CompactEvent> readEvent(
-            Context context, CompactEventReader compactEventReader, TraceHeader header, ByteBuffer buffer)
+            Context context, CompactEventFactory compactEventFactory, TraceHeader header, ByteBuffer buffer)
             throws InvalidTraceDataException {
         T element = reader.getInit(header);
         element.read(buffer);
-        return converter.dataElementToEvent(context, compactEventReader, element);
+        return converter.dataElementToEvent(context, compactEventFactory, element);
     }
 }

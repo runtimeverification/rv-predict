@@ -29,14 +29,14 @@ public class NoDataReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
-        NoDataReader reader = new NoDataReader(context -> Collections.singletonList(mockCompactEvent));
+        NoDataReader reader = new NoDataReader((factory, context) -> Collections.singletonList(mockCompactEvent));
         Assert.assertEquals(0, reader.size(mockTraceHeader));
     }
 
     @Test
     public void usesFactoryToCreate() throws InvalidTraceDataException {
         ByteBuffer buffer = ByteBuffer.allocate(0);
-        NoDataReader reader = new NoDataReader(context -> Collections.singletonList(mockCompactEvent));
+        NoDataReader reader = new NoDataReader((factory, context) -> Collections.singletonList(mockCompactEvent));
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());

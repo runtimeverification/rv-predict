@@ -45,28 +45,28 @@ public abstract class CompactEvent {
 
     Type getCompactType() {return compactType;}
 
-    int dataSizeInBytes() {
+    int getDataSizeInBytes() {
         throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
     }
-    long dataAddress() {
+    long getDataAddress() {
         throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
     }
-    long value() {
+    long getDataValue() {
         throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
     }
-    long signalNumber() {
+    long getSignalNumber() {
         throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
     }
-    long signalMask() {
+    long getSignalMask() {
         throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
     }
-    long signalHandlerAddress() {
+    long getSignalHandlerAddress() {
         throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
     }
-    long otherThreadId() {
+    long getOtherThreadId() {
         throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
     }
-    long lockAddress() {
+    long getLockAddress() {
         throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
     }
 }

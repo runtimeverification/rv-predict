@@ -9,6 +9,7 @@ import com.runtimeverification.rvpredict.log.compact.TraceHeader;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -16,9 +17,9 @@ import java.util.function.Function;
  * delta-operation header, e.g. the thread end event.
  */
 public class NoDataReader implements CompactEventReader.Reader {
-    private final Function<Context, List<CompactEvent>> eventFactory;
+    private final BiFunction<CompactEventFactory, Context, List<CompactEvent>> eventFactory;
 
-    public NoDataReader(Function<Context, List<CompactEvent>> eventFactory) {
+    public NoDataReader(BiFunction<CompactEventFactory, Context, List<CompactEvent>> eventFactory) {
         this.eventFactory = eventFactory;
     }
 
@@ -31,6 +32,6 @@ public class NoDataReader implements CompactEventReader.Reader {
     public List<CompactEvent> readEvent(
             Context context, CompactEventFactory compactEventFactory, TraceHeader header, ByteBuffer buffer)
             throws InvalidTraceDataException {
-        return eventFactory.apply(context);
+        return eventFactory.apply(compactEventFactory, context);
     }
 }

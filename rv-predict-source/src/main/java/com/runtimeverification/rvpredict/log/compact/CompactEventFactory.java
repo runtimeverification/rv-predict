@@ -7,6 +7,8 @@ import java.util.List;
 public class CompactEventFactory {
     private static final List<CompactEvent> NO_EVENTS = Collections.emptyList();
 
+    // TODO(virgil): Make the Context a private local variable here, I don't think anyone else needs it.
+
     public List<CompactEvent> dataManipulation(
             Context context,
             CompactEventReader.DataManipulationType dataManipulationType,
@@ -26,10 +28,9 @@ public class CompactEventFactory {
                 throw new IllegalArgumentException(
                         "Unknown data manipulation type: " + dataManipulationType);
         }
-        CompactEvent dataManipulationEvent =
-                dataManipulationEvent(context, dataSizeInBytes, address, value, compactType);
         if (atomicity == CompactEventReader.Atomicity.NOT_ATOMIC) {
-            return Collections.singletonList(dataManipulationEvent);
+            return Collections.singletonList(
+                    dataManipulationEvent(context, dataSizeInBytes, address, value, compactType));
         }
         // TODO(virgil): These locks should be something more fine-grained, e.g. write_locks.
         // Also, it would probably be nice if an atomic write to a variable would also be atomic for
@@ -37,7 +38,7 @@ public class CompactEventFactory {
         // work.
         return Arrays.asList(
                 lockManipulationEvent(context, CompactEventReader.LockManipulationType.LOCK, address),
-                dataManipulationEvent,
+                dataManipulationEvent(context, dataSizeInBytes, address, value, compactType),
                 lockManipulationEvent(context, CompactEventReader.LockManipulationType.UNLOCK, address)
         );
     }
@@ -45,13 +46,13 @@ public class CompactEventFactory {
     private CompactEvent dataManipulationEvent(
             Context context, int dataSizeInBytes, long address, long value, CompactEvent.Type compactType) {
         return new CompactEvent(context, compactType) {
-            int dataSizeInBytes() {
+            int getDataSizeInBytes() {
                 return dataSizeInBytes;
             }
-            long dataAddress() {
+            long getDataAddress() {
                 return address;
             }
-            long value() {
+            long getDataValue() {
                 return value;
             }
         };
@@ -95,12 +96,13 @@ public class CompactEventFactory {
         }
         return new CompactEvent(context, compactType) {
             @Override
-            long lockAddress() {
+            long getLockAddress() {
                 return address;
             }
         };
     }
-    static List<CompactEvent> jump(Context context, long address) throws InvalidTraceDataException {
+
+    List<CompactEvent> jump(Context context, long address) throws InvalidTraceDataException {
         context.jump(address);
         return NO_EVENTS;
     }
@@ -114,15 +116,15 @@ public class CompactEventFactory {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.ESTABLISH_SIGNAL) {
             @Override
-            long signalMask() {
+            long getSignalMask() {
                 return signalMask;
             }
             @Override
-            long signalNumber() {
+            long getSignalNumber() {
                 return signalNumber;
             }
             @Override
-            long signalHandlerAddress() {
+            long getSignalHandlerAddress() {
                 return handler;
             }
         });
@@ -132,7 +134,7 @@ public class CompactEventFactory {
             Context context, long signalNumber) {
         context.disestablishSignal(signalNumber);
         return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.DISESTABLISH_SIGNAL) {
-            long signalNumber() {
+            long getSignalNumber() {
                 return signalNumber;
             }
         });
@@ -142,18 +144,18 @@ public class CompactEventFactory {
             Context context, long generation, long signalNumber) throws InvalidTraceDataException {
         context.enterSignal(signalNumber, generation);
         return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.ENTER_SIGNAL) {
-            long signalNumber() {
+            long getSignalNumber() {
                 return signalNumber;
             }
         });
     }
 
-    static List<CompactEvent> exitSignal(Context context) {
+    List<CompactEvent> exitSignal(Context context) {
         long currentSignal = context.getSignalNumber();
         context.exitSignal();
         return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.EXIT_SIGNAL) {
             @Override
-            long signalNumber() {
+            long getSignalNumber() {
                 return currentSignal;
             }
         });
@@ -178,12 +180,12 @@ public class CompactEventFactory {
 
     // Function events.
 
-    static List<CompactEvent> enterFunction(Context context) {
+    List<CompactEvent> enterFunction(Context context) {
         return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.ENTER_FUNCTION) {
         });
     }
 
-    static List<CompactEvent> exitFunction(Context context) {
+    List<CompactEvent> exitFunction(Context context) {
         return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.EXIT_FUNCTION) {
         });
     }
@@ -194,14 +196,10 @@ public class CompactEventFactory {
             throws InvalidTraceDataException {
         context.beginThread(threadId, generation);
         return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.BEGIN_THREAD) {
-            @Override
-            long getThreadId() {
-                return threadId;
-            }
         });
     }
 
-    static List<CompactEvent> endThread(Context context) {
+    List<CompactEvent> endThread(Context context) {
         long threadId = context.getThreadId();
         context.endThread();
         return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.END_THREAD) {
@@ -233,7 +231,7 @@ public class CompactEventFactory {
         }
         return Collections.singletonList(new CompactEvent(context, compactType) {
             @Override
-            long otherThreadId() {
+            long getOtherThreadId() {
                 return threadId;
             }
         });

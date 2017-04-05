@@ -156,12 +156,10 @@ rvp_buf_put_pc_and_op(rvp_buf_t *b, const char **lastpcp, const char *pc,
 void
 rvp_ring_put_begin(rvp_ring_t *r, uint32_t tid, uint64_t generation)
 {
-	r->r_lastpc = __builtin_return_address(0);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 	rvp_buf_put_addr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN));
 	rvp_buf_put(&b, tid);
 	rvp_buf_put_u64(&b, generation);
-	rvp_buf_put_addr(&b, r->r_lastpc);
 	rvp_ring_put_buf(r, b);
 }
 

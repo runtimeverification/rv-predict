@@ -1,0 +1,7 @@
+*.core
+.gdbinit
+.Makefile.tags
+*.o
+rvsyms
+.*.swp
+tags

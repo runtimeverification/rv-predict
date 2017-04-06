@@ -16,14 +16,12 @@ public class Context {
     private final Map<Long, ThreadState> threadIdToState;
     private final Map<Long, Long> memoizedSignalMasks;
     private final long minDeltaAndEventType;
-    private final Map<Long, SignalInformation> signalNumberToInformation;
 
     private ThreadState currentThread;
 
     public Context(long minDeltaAndEventType) {
         threadIdToState = new HashMap<>();
         memoizedSignalMasks = new HashMap<>();
-        signalNumberToInformation = new HashMap<>();
         this.minDeltaAndEventType = minDeltaAndEventType;
     }
 
@@ -82,13 +80,12 @@ public class Context {
     void switchThread(long threadId) throws InvalidTraceDataException {
         currentThread = threadIdToState.computeIfAbsent(
                 threadId, tid -> new ThreadState(minDeltaAndEventType, threadId));
-        // TODO: Why, oh why?
-        currentThread.setSignalDepth(0);
+        // TODO(virgil): Why?
+        // currentThread.setSignalDepth(0);
     }
 
     void enterSignal(long signalNumber, long generation) throws InvalidTraceDataException {
-        currentThread.enterSignal(
-                signalNumber, generation, signalNumberToInformation.get(signalNumber).getSignalMask());
+        currentThread.enterSignal(signalNumber, generation);
     }
 
     void exitSignal() {
@@ -96,19 +93,21 @@ public class Context {
     }
 
     void establishSignal(long handlerAddress, long signalNumber, long signalMaskNumber) {
-        // TODO(virgil): Since this information may be written in the trace after the signal
-        // events, it's probably not part of the context.
-        signalNumberToInformation.put(
-                signalNumber,
-                new SignalInformation(handlerAddress, getMemoizedSignalMask(signalMaskNumber)));
+        // Since this information may be written in the trace after the signal
+        // events, it's likely that in can be handled reasonably only when analysing the trace,
+        // so it's probably not part of the context.
     }
 
     void disestablishSignal(long signalNumber) {
-        signalNumberToInformation.remove(signalNumber);
+        // Since this information may be written in the trace after the signal
+        // events, it's likely that in can be handled reasonably only when analysing the trace,
+        // so it's probably not part of the context.
     }
 
     void maskSignals(long signalMask) {
-        currentThread.maskSignals(signalMask);
+        // Since this information may be written in the trace after the signal
+        // events, it's likely that in can be handled reasonably only when analysing the trace,
+        // so it's probably not part of the context.
     }
 
     void setSignalDepth(int signalDepth) {
@@ -121,10 +120,6 @@ public class Context {
 
     long getMemoizedSignalMask(long signalMaskNumber) {
         return memoizedSignalMasks.get(signalMaskNumber);
-    }
-
-    long getSignalMask() {
-        return currentThread.getSignalMask();
     }
 
     private static class SignalInformation {
@@ -149,12 +144,6 @@ public class Context {
         }
 
         private final long threadId;
-        // private final List<Long> lastPC;
-        // private final Stack<Long> signalMaskStack;
-        // private final List<Long> numberOfOperations;
-        // private final List<Long> generation;
-        // private final HashMap<Long, Long> signalNumberToMask;
-        // private final Map<Long, Long> signalNumberToHandlerAddress;
         private final List<PerSignalState> signalStack;
         private PerSignalState currentSignalState;
 
@@ -200,11 +189,10 @@ public class Context {
             }
         }
 
-        void enterSignal(long signalNumber, long generation, long signalMask) throws InvalidTraceDataException {
+        void enterSignal(long signalNumber, long generation) throws InvalidTraceDataException {
             setSignalDepth(signalDepth + 1);
             setGeneration(generation);
             currentSignalState.signalNumber = signalNumber;
-            currentSignalState.signalMask = signalStack.get(signalDepth - 1).signalMask | signalMask;
         }
 
         void exitSignal() {
@@ -212,29 +200,18 @@ public class Context {
         }
 
         void setSignalDepth(int signalDepth) {
-            // TODO: Reset the signal state, at least sometimes.
             while (signalStack.size() <= signalDepth) {
                 signalStack.add(new PerSignalState(
                         INVALID_SIGNAL_NUMBER,
                         INVALID_PC,
                         0,
-                        INVALID_GENERATION,
-                        // TODO: Is this a good initial value for the signal mask?
-                        EMPTY_SIGNAL_MASK));
+                        INVALID_GENERATION));
             }
             while (signalStack.size() > signalDepth + 1) {
                 signalStack.remove(signalStack.size() - 1);
             }
             this.signalDepth = signalDepth;
             this.currentSignalState = signalStack.get(signalDepth);
-        }
-
-        void maskSignals(long signalMask) {
-            // TODO: This is defined in a different way in the documentation.
-            // Why is there a signal depth which can be set to a given value
-            // instead of just pushing and popping?
-            // signalMaskStack.push(signalMaskStack.pop() | signalMask);
-            currentSignalState.signalMask |= signalMask;
         }
 
         void end() {
@@ -247,10 +224,6 @@ public class Context {
 
         long getSignalNumber() {
             return currentSignalState.signalNumber;
-        }
-
-        long getSignalMask() {
-            return currentSignalState.signalMask;
         }
 
         void newOperation() {
@@ -272,14 +245,12 @@ public class Context {
             private long lastPC;
             private long numberOfOperations;
             private long generation;
-            private long signalMask;
 
-            PerSignalState(long signalNumber, long lastPC, long numberOfOperations, long generation, long signalMask) {
+            PerSignalState(long signalNumber, long lastPC, long numberOfOperations, long generation) {
                 this.signalNumber = signalNumber;
                 this.lastPC = lastPC;
                 this.numberOfOperations = numberOfOperations;
                 this.generation = generation;
-                this.signalMask = signalMask;
             }
         }
     }

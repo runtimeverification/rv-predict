@@ -17,7 +17,6 @@ import com.runtimeverification.rvpredict.log.compact.readers.ThreadSyncReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -25,8 +24,6 @@ import java.util.Map;
 import java.util.OptionalInt;
 
 public class CompactEventReader {
-    private static final List<CompactEvent> NO_EVENTS = Collections.emptyList();
-
     enum Type {
         // load: 1, 2, 4, 8, 16 bytes wide.
         LOAD1(2, DataManipulationReader.createReader(1, DataManipulationType.LOAD, Atomicity.NOT_ATOMIC)),
@@ -66,28 +63,27 @@ public class CompactEventReader {
         THREAD_FORK(12, ThreadSyncReader.createReader(ThreadSyncType.FORK)),  // create a new thread
         THREAD_JOIN(13, ThreadSyncReader.createReader(ThreadSyncType.JOIN)),  // join an existing thread
         THREAD_BEGIN(0, ThreadBeginReader.createReader()),  // start of a thread
-        THREAD_END(1, new NoDataReader(CompactEventReader::endThread)),  // thread termination
+        THREAD_END(1, new NoDataReader(CompactEventFactory::endThread)),  // thread termination
         THREAD_SWITCH(18, ThreadSyncReader.createReader(ThreadSyncType.SWITCH)),  // switch thread context
 
         LOCK_ACQUIRE(14, LockManipulationReader.createReader(LockManipulationType.LOCK)),  // acquire lock
         LOCK_RELEASE(15, LockManipulationReader.createReader(LockManipulationType.UNLOCK)),  // release lock
 
-        FUNCTION_ENTER(16, new NoDataReader(CompactEventReader::enterFunction)),  // enter a function
-        FUNCTION_EXIT(17, new NoDataReader(CompactEventReader::exitFunction)),  // exit a function
+        FUNCTION_ENTER(16, new NoDataReader(CompactEventFactory::enterFunction)),  // enter a function
+        FUNCTION_EXIT(17, new NoDataReader(CompactEventFactory::exitFunction)),  // exit a function
 
         CHANGE_OF_GENERATION(34, ChangeOfGenerationReader.createReader()),  // change of generation
 
         SIG_ESTABLISH(35, SignalEstablishReader.createReader()),  // establish signal action
         // signal delivery
         SIG_ENTER(36, SignalEnterReader.createReader()),
-        SIG_EXIT(37, new NoDataReader(CompactEventReader::exitSignal)),
+        SIG_EXIT(37, new NoDataReader(CompactEventFactory::exitSignal)),
         SIG_DISESTABLISH(38, SignalDisestablishReader.createReader()),  // disestablish signal action.
         // establish a new number -> mask mapping (memoize mask).
         SIG_MASK_MEMOIZATION(39, SignalMaskMemoizationReader.createReader()),
         SIG_MASK(40, SignalMaskReader.createReader()),  // mask signals
         // Set the number of signals running concurrently on the current thread.  Note that
-        // this is a level of "concurrency," not a signal "depth," because the wrapper function for signal
-        // handlers is reentrant, and it may race with itself to increase the
+        // the wrapper function for signal handlers is reentrant, and it may race with itself to increase the
         // number of interrupts outstanding ("depth").
         SIG_OUTSTANDING_DEPTH(41, SignalOutstandingDepthReader.createReader());
 
@@ -111,7 +107,7 @@ public class CompactEventReader {
         }
 
         public List<CompactEvent> read(
-                Context context, CompactEventReader compactEventReader,
+                Context context, CompactEventFactory compactEventReader,
                 TraceHeader header, InputStream stream)
                 throws InvalidTraceDataException, IOException {
             if (buffer == null) {
@@ -165,101 +161,9 @@ public class CompactEventReader {
         int size(TraceHeader header) throws InvalidTraceDataException;
         List<CompactEvent> readEvent(
                 Context context,
-                CompactEventReader compactEventReader,
+                CompactEventFactory compactEventFactory,
                 TraceHeader header,
                 ByteBuffer buffer)
                 throws InvalidTraceDataException;
-    }
-
-    public List<CompactEvent> dataManipulation(
-            Context context,
-            DataManipulationType dataManipulationType,
-            int dataSizeInBytes,
-            long address,
-            long value,
-            Atomicity atomicity) throws InvalidTraceDataException {
-        return NO_EVENTS;
-    }
-
-    public List<CompactEvent> atomicReadModifyWrite(
-            Context context,
-            int dataSizeInBytes,
-            long address, long readValue, long writeValue) throws InvalidTraceDataException {
-        return NO_EVENTS;
-    }
-
-    public List<CompactEvent> changeOfGeneration(Context context, long generation) {
-        return NO_EVENTS;
-    }
-
-    public List<CompactEvent> lockManipulation(
-            Context context, LockManipulationType lockManipulationType, long address)
-            throws InvalidTraceDataException {
-        return NO_EVENTS;
-    }
-
-    static List<CompactEvent> jump(Context context, long address) throws InvalidTraceDataException {
-        return NO_EVENTS;
-    }
-
-    // Signal events.
-
-    public List<CompactEvent> establishSignal(
-            Context context,
-            long handler, long signalNumber, long signalMaskNumber) {
-        return NO_EVENTS;
-    }
-
-    public List<CompactEvent> disestablishSignal(
-            Context context, long signalNumber) {
-        return NO_EVENTS;
-    }
-
-    public List<CompactEvent> enterSignal(
-            Context context, long generation, long signalNumber) throws InvalidTraceDataException {
-        return NO_EVENTS;
-    }
-
-    private static List<CompactEvent> exitSignal(Context context) {
-        return NO_EVENTS;
-    }
-
-    public List<CompactEvent> signalOutstandingDepth(Context context, int signalDepth) {
-        return NO_EVENTS;
-    }
-
-    public List<CompactEvent> signalMaskMemoization(
-            Context context, long signalMask, long originBitCount, long signalMaskNumber) {
-        return NO_EVENTS;
-    }
-
-    public List<CompactEvent> signalMask(Context context, long signalMaskNumber) {
-        return NO_EVENTS;
-    }
-
-    // Function events.
-
-    private static List<CompactEvent> enterFunction(Context context) {
-        return NO_EVENTS;
-    }
-
-    private static List<CompactEvent> exitFunction(Context context) {
-        return NO_EVENTS;
-    }
-
-    // Thread events.
-
-    public List<CompactEvent> beginThread(Context context, long threadId, long generation)
-            throws InvalidTraceDataException {
-        return NO_EVENTS;
-    }
-
-    private static List<CompactEvent> endThread(Context context) {
-        return NO_EVENTS;
-    }
-
-    public List<CompactEvent> threadSync(
-            Context context, ThreadSyncType threadSyncType, long threadId) throws InvalidTraceDataException {
-        return NO_EVENTS;
     }
 }

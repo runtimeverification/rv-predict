@@ -13,8 +13,8 @@ public class ThreadBeginReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 TraceElement::new,
-                (context, compactEventReader, element) ->
-                        compactEventReader.beginThread(
+                (context, compactEventFactory, element) ->
+                        compactEventFactory.beginThread(
                                 context, element.threadId.getAsLong(), element.generation.getAsLong()));
     }
 

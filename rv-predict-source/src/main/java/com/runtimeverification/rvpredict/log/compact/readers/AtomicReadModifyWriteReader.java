@@ -13,7 +13,7 @@ public class AtomicReadModifyWriteReader {
     public static CompactEventReader.Reader createReader(int dataSizeInBytes) {
         return new SimpleDataReader<>(
                 header -> new TraceElement(header, dataSizeInBytes),
-                (context, compactEventReader, element) -> compactEventReader.atomicReadModifyWrite(
+                (context, compactEventFactory, element) -> compactEventFactory.atomicReadModifyWrite(
                         context,
                         dataSizeInBytes,
                         element.address.getAsLong(),

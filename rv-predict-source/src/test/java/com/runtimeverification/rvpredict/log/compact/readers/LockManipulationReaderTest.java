@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
 import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.compact.CompactEventFactory;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
@@ -24,7 +25,7 @@ public class LockManipulationReaderTest {
     @Mock private CompactEvent mockCompactEvent;
     @Mock private Context mockContext;
     @Mock private TraceHeader mockTraceHeader;
-    @Mock private CompactEventReader mockCompactEventReader;
+    @Mock private CompactEventFactory mockCompactEventFactory;
 
     @Test
     public void computesTheCorrectSizeDataSize_UsesPointerSizeForAddress8Bytes() throws InvalidTraceDataException {
@@ -50,7 +51,7 @@ public class LockManipulationReaderTest {
     public void readsData() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
-        when(mockCompactEventReader.lockManipulation(
+        when(mockCompactEventFactory.lockManipulation(
                 mockContext, CompactEventReader.LockManipulationType.LOCK, ADDRESS))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
@@ -59,7 +60,7 @@ public class LockManipulationReaderTest {
 
         CompactEventReader.Reader reader =
                 LockManipulationReader.createReader(CompactEventReader.LockManipulationType.LOCK);
-        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventReader, mockTraceHeader, buffer);
+        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

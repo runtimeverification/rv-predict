@@ -18,7 +18,7 @@ public class ContextTest {
     private static final long SIGNAL_NUMBER = 12;
     private static final long SECOND_SIGNAL_NUMBER = 13;
     private static final long SIGNAL_MASK_NUMBER = 14;
-    private static final long SECOND_SIGNAL_MASK_NUMBER = 14;
+    private static final long SECOND_SIGNAL_MASK_NUMBER = 16;
     private static final long SIGNAL_MASK = 15;
 
     @Test
@@ -255,7 +255,7 @@ public class ContextTest {
     }
 
     @Test
-    public void signalHandlersUseSigSetMasks() throws InvalidTraceDataException {
+    public void signalHandlersUseMasksFromEstablishSignal() throws InvalidTraceDataException {
         Context context = new Context(MIN_DELTA_AND_EVENT_TYPE);
         context.beginThread(THREAD_ID, FIRST_GENERATION);
         context.jump(PROGRAM_COUNTER);
@@ -285,8 +285,8 @@ public class ContextTest {
         context.enterSignal(SECOND_SIGNAL_NUMBER, THIRD_GENERATION);
 
         Assert.assertEquals(THREAD_ID, context.getThreadId());
-        Assert.assertEquals(SIGNAL_NUMBER, context.getSignalNumber());
-        Assert.assertEquals(SECOND_GENERATION, context.getGeneration());
+        Assert.assertEquals(SECOND_SIGNAL_NUMBER, context.getSignalNumber());
+        Assert.assertEquals(THIRD_GENERATION, context.getGeneration());
         Assert.assertEquals(SIGNAL_MASK << 2, context.getSignalMask());
 
         context.exitSignal();

@@ -1,89 +1,60 @@
 package com.runtimeverification.rvpredict.log.compact;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Stack;
+
 public class Context {
-    public Context() {
-    }
-
-    void jump(long address) throws InvalidTraceDataException {
-    }
-
-    void updatePcWithDelta(int jumpDelta) throws InvalidTraceDataException {
-    }
-
-    void beginThread(long threadId, long generation) throws InvalidTraceDataException {
-    }
-
-    void enterSignal(long signalNumber, long generation) throws InvalidTraceDataException {
-    }
-
-    void changeOfGeneration(long generation) {
-    }
-
-    long getMemoizedSignalMask(long signalMaskNumber) {
-        return 0;
-    }
-
-    void disestablishSignal(long signalNumber) {
-    }
-
-    void establishSignal(long handlerAddress, long signalNumber, long signalMaskNumber) {
-    }
-
-    long getSignalNumber() {
-        return 0;
-    }
-
-    void exitSignal() {
-    }
-
-    void setSignalDepth(int signalDepth) {
-    }
-
-    void memoizeSignalMask(long signalMask, long originBitCount, long signalMaskNumber) {
-    }
-
-    void maskSignals(long signalMask) {
-    }
-
-    void endThread() {
-    }
-
-    void joinThread(long otherThreadId) {
-    }
-
-    void forkThread(long threadId) {
-    }
-
-    void switchThread(long threadId) throws InvalidTraceDataException {
-    }
-
-    long newId() {
-        return 0;
-    }
-
-    long getThreadId() {
-        return 0;
-    }
+    static final long INVALID_SIGNAL_NUMBER = -1;
 
     private final Map<Long, ThreadState> threadIdToState;
     private final Map<Long, Long> memoizedSignalMasks;
     private final long minDeltaAndEventType;
+    private final Map<Long, SignalInformation> signalNumberToInformation;
 
     private ThreadState currentThread;
 
     public Context(long minDeltaAndEventType) {
         threadIdToState = new HashMap<>();
         memoizedSignalMasks = new HashMap<>();
+        signalNumberToInformation = new HashMap<>();
         this.minDeltaAndEventType = minDeltaAndEventType;
+    }
+
+    long newId() {
+        return currentThread.newId();
+    }
+
+    long getThreadId() {
+        return currentThread.getThreadId();
+    }
+
+    long getPC() {
+        return currentThread.getLastPC();
+    }
+
+    long getGeneration() {
+        return currentThread.getGeneration();
+    }
+
+    long getSignalNumber() {
+        return currentThread.getSignalNumber();
     }
 
     void jump(long address) throws InvalidTraceDataException {
         currentThread.setLastPC(address);
+        currentThread.newOperation();
     }
 
     void updatePcWithDelta(int jumpDelta) throws InvalidTraceDataException {
         currentThread.setLastPC(currentThread.getLastPC() + jumpDelta);
         currentThread.newOperation();
+    }
+
+    void changeOfGeneration(long generation) {
+        currentThread.setGeneration(generation);
     }
 
     void beginThread(long threadId, long generation) throws InvalidTraceDataException {
@@ -93,33 +64,44 @@ public class Context {
         threadIdToState.put(currentThread.getThreadId(), currentThread);
     }
 
+    void endThread() {
+        currentThread.end();
+    }
+
+    void forkThread(long threadId) {
+    }
+
+    void joinThread(long otherThreadId) {
+        threadIdToState.get(otherThreadId).wasJoined();
+    }
+
+    void switchThread(long threadId) throws InvalidTraceDataException {
+        currentThread = threadIdToState.computeIfAbsent(
+                threadId, tid -> new ThreadState(minDeltaAndEventType, threadId));
+        // TODO: Why, oh why?
+        currentThread.setSignalDepth(0);
+    }
+
     void enterSignal(long signalNumber, long generation) throws InvalidTraceDataException {
-        currentThread.enterSignal(signalNumber, generation);
-    }
-
-    void changeOfGeneration(long generation) {
-        currentThread.setGeneration(generation);
-    }
-
-    long getMemoizedSignalMask(long signalMaskNumber) {
-        return memoizedSignalMasks.get(signalMaskNumber);
-    }
-
-    void disestablishSignal(long signalNumber) {
-        currentThread.removeSignalHandler(signalNumber);
-    }
-
-    void establishSignal(long handlerAddress, long signalNumber, long signalMaskNumber) {
-        currentThread.setSignalHandler(signalNumber, handlerAddress);
-        currentThread.setSignalMask(signalNumber, getMemoizedSignalMask(signalMaskNumber));
-    }
-
-    long getSignalNumber() {
-        return currentThread.getSignalNumber();
+        currentThread.enterSignal(generation, signalNumberToInformation.get(signalNumber).getSignalMask());
     }
 
     void exitSignal() {
         currentThread.exitSignal();
+    }
+
+    void establishSignal(long handlerAddress, long signalNumber, long signalMaskNumber) {
+        signalNumberToInformation.put(
+                signalNumber,
+                new SignalInformation(handlerAddress, getMemoizedSignalMask(signalMaskNumber)));
+    }
+
+    void disestablishSignal(long signalNumber) {
+        signalNumberToInformation.remove(signalNumber);
+    }
+
+    void maskSignals(long signalMask) {
+        currentThread.maskSignals(signalMask);
     }
 
     void setSignalDepth(int signalDepth) {
@@ -130,37 +112,26 @@ public class Context {
         memoizedSignalMasks.put(signalMaskNumber, signalMask << originBitCount);
     }
 
-    void maskSignals(long signalMask) {
-        currentThread.maskSignals(signalMask);
+    long getMemoizedSignalMask(long signalMaskNumber) {
+        return memoizedSignalMasks.get(signalMaskNumber);
     }
 
-    void endThread() {
-        System.out.println("Ending thread " + currentThread.getThreadId());
-        currentThread.end();
+    long getSignalMask() {
+        return currentThread.getSignalMask();
     }
 
-    void joinThread(long otherThreadId) {
-        System.out.println("Joining thread: " + otherThreadId);
-        threadIdToState.get(otherThreadId).wasJoined();
-    }
+    private static class SignalInformation {
+        private final long signalMask;
+        private final long signalHandler;
 
-    void forkThread(long threadId) {
-        System.out.println("Forking thread " + threadId);
-    }
+        SignalInformation(long signalMask, long signalHandler) {
+            this.signalMask = signalMask;
+            this.signalHandler = signalHandler;
+        }
 
-    void switchThread(long threadId) throws InvalidTraceDataException {
-        currentThread = threadIdToState.computeIfAbsent(
-                threadId, tid -> new ThreadState(minDeltaAndEventType, threadId));
-        // TODO: Why, oh why?
-        currentThread.setSignalDepth(0);
-    }
-
-    long newId() {
-        return currentThread.newId();
-    }
-
-    long getThreadId() {
-        return currentThread.getThreadId();
+        long getSignalMask() {
+            return signalMask;
+        }
     }
 
     private static class ThreadState {
@@ -174,8 +145,8 @@ public class Context {
         private final Stack<Long> signalMaskStack;
         private final List<Long> numberOfOperations;
         private final List<Long> generation;
-        private final HashMap<Long, Long> signalMasks;
-        private final Map<Long, Long> signalNumberToHandlerAddress;
+        // private final HashMap<Long, Long> signalNumberToMask;
+        // private final Map<Long, Long> signalNumberToHandlerAddress;
         private int signalDepth;
         private State state;
 
@@ -185,8 +156,8 @@ public class Context {
             lastPC.add(initialPC);
             this.generation = new ArrayList<>();
             // TODO: How should this be initialized?
-            this.signalMasks = new HashMap<>();
-            this.signalNumberToHandlerAddress = new HashMap<>();
+            // this.signalNumberToMask = new HashMap<>();
+            // this.signalNumberToHandlerAddress = new HashMap<>();
             this.signalMaskStack = new Stack<>();
             this.numberOfOperations = new ArrayList<>();
             state = State.NOT_STARTED;
@@ -199,7 +170,6 @@ public class Context {
             }
             state = State.STARTED;
             this.generation.add(generation);
-            // this.generation.add(0L);
             setSignalDepth(0);
         }
 
@@ -224,15 +194,11 @@ public class Context {
             numberOfOperations.set(signalDepth, 0L);
         }
 
-        void enterSignal(long signalNumber, long generation) throws InvalidTraceDataException {
-            signalDepth++;
+        void enterSignal(long generation, long signalMask) throws InvalidTraceDataException {
+            setSignalDepth(signalDepth + 1);
             setGeneration(generation);
             // TODO: This is defined in a slightly different way in the docs.
-            signalMaskStack.push(signalMaskStack.peek() | signalMasks.get(signalNumber));
-        }
-
-        void setSignalMask(long signalNumber, long signalMask) {
-            signalMasks.put(signalNumber, signalMask);
+            signalMaskStack.push(signalMaskStack.peek() | signalMask);
         }
 
         void exitSignal() {
@@ -268,15 +234,14 @@ public class Context {
         }
 
         long getSignalNumber() {
+            if (signalDepth == 0) {
+                return INVALID_SIGNAL_NUMBER;
+            }
             return signalMaskStack.peek();
         }
 
-        void removeSignalHandler(long signalNumber) {
-            signalNumberToHandlerAddress.remove(signalNumber);
-        }
-
-        void setSignalHandler(long signalNumber, long signalHandlerAddress) {
-            signalNumberToHandlerAddress.put(signalNumber, signalHandlerAddress);
+        long getSignalMask() {
+            return signalMaskStack.get(signalDepth);
         }
 
         void newOperation() {

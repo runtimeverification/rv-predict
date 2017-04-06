@@ -4,14 +4,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 
 public class Context {
     static final long INVALID_SIGNAL_NUMBER = -1;
 
     private static final long INVALID_PC = -1;
     private static final long INVALID_GENERATION = -1;
-    private static final long EMPTY_SIGNAL_MASK = 0;
 
     private final Map<Long, ThreadState> threadIdToState;
     private final Map<Long, Long> memoizedSignalMasks;
@@ -120,20 +118,6 @@ public class Context {
 
     long getMemoizedSignalMask(long signalMaskNumber) {
         return memoizedSignalMasks.get(signalMaskNumber);
-    }
-
-    private static class SignalInformation {
-        private final long signalMask;
-        private final long signalHandler;
-
-        SignalInformation(long signalHandler, long signalMask) {
-            this.signalMask = signalMask;
-            this.signalHandler = signalHandler;
-        }
-
-        long getSignalMask() {
-            return signalMask;
-        }
     }
 
     private static class ThreadState {

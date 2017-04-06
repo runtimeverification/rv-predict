@@ -330,9 +330,8 @@ trace ::= (delta, 'load[n]') addr value
                 XXX is established.
 
                 `self.PC <- self.PC + delta`
-                `self.signal_depth <- self.signal_depth + 1`
-		`push(self.signal_mask_stack, top(self.signal_mask_stack) |
-			handler_mask[signal-number])`
+		`self.signal_mask[self.signal_depth] <-
+		     handler_mask[signal-number]`
 
 	| (delta, 'exit-signal') 
 
@@ -340,8 +339,6 @@ trace ::= (delta, 'load[n]') addr value
                 and exited the last signal handler that it entered.
 
                 `self.PC <- self.PC + delta`
-		`self.signal_depth <- self.signal_depth - 1`
-		`pop(self.signal_mask_stack)`
 
 	| (delta, 'sig-outstanding') depth
 
@@ -374,16 +371,14 @@ trace ::= (delta, 'load[n]') addr value
 	| (delta, 'mask-sigs') mask-number
 
                 The current thread added `delta` to its program counter,
-                and bitwise-OR'd the memoized mask `mask-number` with
-                the current effective signal mask.
+                and changed the current effective signal mask to the
+                memoized mask `mask-number`.
 
                 `mask-number` is 32 bits wide.  It starts on the first
                 32-bit boundary after the deltop, and it is stored in
                 the byte order established by the trace header.
 
-                `self.signal_mask_stack[self.signal_depth] =
-			self.signal_mask_stack[self.signal_depth] |
-			mask_memo[mask-number]`
+                `self.signal_mask[self.signal_depth] = mask_memo[mask-number]`
                 `self.PC <- self.PC + delta`
 
         | program-counter

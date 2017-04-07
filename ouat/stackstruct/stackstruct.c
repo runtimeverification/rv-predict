@@ -7,6 +7,10 @@
 
 #include "foo.h"
 
+static pqr_t pqr = {.p = 0, .q = 1, .r = 2};
+
+static xyz_t xyz = {.x = {3, 4, 5}, .y = {6, 7, 8}, .z = {9, 10, 11}};
+
 int
 main(int argc, char **argv)
 {
@@ -27,6 +31,8 @@ main(int argc, char **argv)
 		    dwarf_errmsg(dwerr));
 	}
 	foo();
+	printf("&pqr = %p\n", &pqr);
+	printf("&xyz = %p\n", &xyz);
 	printf("DWARF Canonical Frame Address (CFA) %p\n", cfa);
 	dwarf_finish(dbg, NULL);
 	return EXIT_SUCCESS;

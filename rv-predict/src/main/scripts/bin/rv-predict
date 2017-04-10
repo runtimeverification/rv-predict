@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 ulimit -s `ulimit -H -s`
 
-bindir=${RV_ROOT:-/usr/local}/bin
-libdir=${RV_ROOT:-/usr/local}/lib
+if test -n "$JENKINS_RV_ROOT"; then
+    bindir=${RV_ROOT:-/usr/local}/bin
+    libdir=${RV_ROOT:-/usr/local}/lib
+else
+    bindir=$JENKINS_RV_ROOT/bin
+    libdir=$JENKINS_RV_ROOT
+fi
 
 ${bindir}/checkJava || exit 1
 

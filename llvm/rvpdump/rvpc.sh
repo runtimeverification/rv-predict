@@ -12,6 +12,12 @@ sources=no
 link=yes
 compile=yes
 
+prog=$(basename $0)
+
+if [ ${prog%%++} != ${prog} ]; then
+	cplusplus=yes
+fi
+
 for arg in "$@"; do
 	case "$arg" in
 	--)	break

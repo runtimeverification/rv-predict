@@ -8,26 +8,14 @@
 void
 foo(void)
 {
-	struct {
-		int b;
-		int a;
-	} s = {0, 0};
-#ifdef use_q
-	int q;
-#endif
+	xyz_t xyz = {.x = {3, 4, 5}, .y = {6, 7, 8}, .z = {9, 10, 11}};
 
-/*
-	void *retaddr = __builtin_return_address(0);
-*/
-	void *frmaddr = __builtin_frame_address(0);
+	void *cfa = __builtin_dwarf_cfa(); /* == llvm.eh.dwarf.cfa */
 
-	printf("s.a, s.b = %d, %d\n", s.a, s.b);
-	printf("&s - __builtin_frame_address() = %td\n",
-	    (char *)&s - (char *)frmaddr);
-#ifdef use_q
-	printf("&q - __builtin_frame_address() = %td\n",
-	    (char *)&q - (char *)frmaddr);
-#endif
+	printf("xyz.x.p, xyz.y.q = %d, %d, &s - cfa = %td\n", xyz.x.p, xyz.y.q,
+	    (char *)&xyz - (char *)cfa);
+	printf("&xyz = %p\n", &xyz);
+	printf("DWARF Canonical Frame Address (CFA) = %p\n", cfa);
 }
 
 

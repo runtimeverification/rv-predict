@@ -107,6 +107,7 @@ rvp_thread0_create(void)
 
 	r = &t->t_ring;
 	r->r_lgen = rvp_ggen_after_load();
+	r->r_lastpc = rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN);
 	rvp_ring_put_begin(r, t->t_id, r->r_lgen);
 }
 
@@ -437,6 +438,7 @@ __rvpredict_thread_wrapper(void *arg)
 		err(EXIT_FAILURE, "%s: pthread_setspecific", __func__);
 
 	r->r_lgen = rvp_ggen_after_load();
+	r->r_lastpc = rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN);
 	rvp_ring_put_begin(&t->t_ring, t->t_id, r->r_lgen);
 
 	rc = real_pthread_sigmask(SIG_SETMASK,

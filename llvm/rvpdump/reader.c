@@ -74,7 +74,8 @@ typedef struct _rvp_thread_pstate {
 struct _rvp_pstate {
 	rvp_thread_pstate_t	*ps_thread;
 	uint32_t		ps_nthreads;
-	rvp_addr_t		ps_deltop_first, ps_deltop_last;
+	rvp_addr_t		ps_deltop_first, ps_deltop_center,
+				ps_deltop_last;
 	uint32_t		ps_curthread;
 	const rvp_emitters_t	*ps_emitters;
 	uint32_t		ps_nintr_outst;
@@ -243,6 +244,8 @@ rvp_pstate_extend_threads_over(rvp_pstate_t *ps, uint32_t tid,
 static void
 rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 {
+	int i;
+
 	if (ps->ps_nthreads <= tid) {
 		rvp_pstate_extend_threads_over(ps, tid, ps->ps_thread,
 		    ps->ps_nthreads);
@@ -251,7 +254,8 @@ rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 	ps->ps_nintr_outst = 0;
 	rvp_thread_pstate_t *ts = &ps->ps_thread[tid];
 	assert(!ts->ts_present);
-	ts->ts_lastpc[0] = ps->ps_deltop_first;
+	for (i = 0; i < __arraycount(ts->ts_lastpc); i++)
+		ts->ts_lastpc[i] = ps->ps_deltop_center;
 	ts->ts_callstack = (rvp_callstack_t){NULL, 0};
 	ts->ts_present = true;
 	ts->ts_generation[0] = generation;
@@ -271,6 +275,7 @@ rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters,
 
 	ps->ps_emitters = emitters;
 
+	ps->ps_deltop_center = op0;
 	ps->ps_deltop_first = op0 -
 	    (&deltops.matrix[RVP_NJMPS / 2][RVP_OP_BEGIN] -
 	     &deltops.matrix[0][0]);

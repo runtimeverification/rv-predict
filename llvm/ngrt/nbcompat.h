@@ -32,6 +32,14 @@
 #define	__packed	__attribute__((__packed__))
 #endif /* __packed */
 
-#endif /* __NetBSD_Version__ */
+/* From <sys/cdefs.h> on NetBSD: */
+
+#define __printflike(fmtarg, firstvararg)       \
+            __attribute__((__format__ (__printf__, fmtarg, firstvararg)))
+#define __scanflike(fmtarg, firstvararg)        \
+            __attribute__((__format__ (__scanf__, fmtarg, firstvararg)))
+#define __format_arg(fmtarg)    __attribute__((__format_arg__ (fmtarg)))
+
+#endif /* __NetBSD__ */
 
 #endif /* _RVP_NBCOMPAT_H_ */

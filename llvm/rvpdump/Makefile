@@ -14,6 +14,7 @@ FILES=rvpc.sh rvpsymbolize.sh rvpx.sh
 FILESNAME_rvpc.sh=rvpc
 FILESNAME_rvpsymbolize.sh=rvpsymbolize
 FILESNAME_rvpx.sh=rvpx
+LINKS=${DESTDIR}${BINDIR}/rvpc ${DESTDIR}${BINDIR}/rvpc++
 
 CC=clang
 CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt

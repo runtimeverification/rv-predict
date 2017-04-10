@@ -1,6 +1,7 @@
 NOMAN=
 .include "../compat.mk"
 
+CC?=clang
 PROG=stackstruct
 SRCS=stackstruct.c foo.c
 WARNS=5

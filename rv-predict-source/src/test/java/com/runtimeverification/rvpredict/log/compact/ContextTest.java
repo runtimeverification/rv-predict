@@ -421,6 +421,13 @@ public class ContextTest {
         context.switchThread(SECOND_THREAD_ID);
 
         Assert.assertEquals(SECOND_THREAD_ID, context.getThreadId());
+        Assert.assertEquals(Context.INVALID_SIGNAL_NUMBER, context.getSignalNumber());
+        Assert.assertEquals(SECOND_GENERATION, context.getGeneration());
+        Assert.assertEquals(SECOND_PROGRAM_COUNTER, context.getPC());
+
+        context.setSignalDepth(1);
+
+        Assert.assertEquals(SECOND_THREAD_ID, context.getThreadId());
         Assert.assertEquals(SIGNAL_NUMBER, context.getSignalNumber());
         Assert.assertEquals(THIRD_GENERATION, context.getGeneration());
         Assert.assertEquals(THIRD_PROGRAM_COUNTER, context.getPC());

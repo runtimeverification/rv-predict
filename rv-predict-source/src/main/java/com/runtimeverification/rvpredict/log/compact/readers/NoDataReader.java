@@ -9,17 +9,20 @@ import com.runtimeverification.rvpredict.log.compact.TraceHeader;
 
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 /**
  * This class should be used for aggregate data types that do not have any actual data besides the
  * delta-operation header, e.g. the thread end event.
  */
 public class NoDataReader implements CompactEventReader.Reader {
-    private final BiFunction<CompactEventFactory, Context, List<CompactEvent>> eventFactory;
+    @FunctionalInterface
+    public interface BiFunctionWithException<T, U, R> {
+        R apply(T t, U u) throws InvalidTraceDataException;
+    }
 
-    public NoDataReader(BiFunction<CompactEventFactory, Context, List<CompactEvent>> eventFactory) {
+    private final BiFunctionWithException<CompactEventFactory, Context, List<CompactEvent>> eventFactory;
+
+    public NoDataReader(BiFunctionWithException<CompactEventFactory, Context, List<CompactEvent>> eventFactory) {
         this.eventFactory = eventFactory;
     }
 

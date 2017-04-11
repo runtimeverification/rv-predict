@@ -59,7 +59,8 @@ public class Context {
 
     void beginThread(long threadId, long generation) throws InvalidTraceDataException {
         currentThread = threadIdToState.computeIfAbsent(
-                threadId, tid -> new ThreadState(minDeltaAndEventType, threadId));
+                threadId, tid -> new ThreadState(threadId));
+        currentThread.initIfNeeded(minDeltaAndEventType);
         currentThread.begin(generation);
         threadIdToState.put(currentThread.getThreadId(), currentThread);
     }
@@ -77,16 +78,16 @@ public class Context {
 
     void switchThread(long threadId) throws InvalidTraceDataException {
         currentThread = threadIdToState.computeIfAbsent(
-                threadId, tid -> new ThreadState(minDeltaAndEventType, threadId));
-        // TODO(virgil): Why?
-        // currentThread.setSignalDepth(0);
+                threadId, tid -> new ThreadState(threadId));
+        currentThread.initIfNeeded(minDeltaAndEventType);
+        currentThread.setSignalDepth(0, false);
     }
 
     void enterSignal(long signalNumber, long generation) throws InvalidTraceDataException {
         currentThread.enterSignal(signalNumber, generation);
     }
 
-    void exitSignal() {
+    void exitSignal() throws InvalidTraceDataException {
         currentThread.exitSignal();
     }
 
@@ -108,8 +109,8 @@ public class Context {
         // so it's probably not part of the context.
     }
 
-    void setSignalDepth(int signalDepth) {
-        currentThread.setSignalDepth(signalDepth);
+    void setSignalDepth(int signalDepth) throws InvalidTraceDataException {
+        currentThread.setSignalDepth(signalDepth, false);
     }
 
     void memoizeSignalMask(long signalMask, long originBitCount, long signalMaskNumber) {
@@ -124,7 +125,7 @@ public class Context {
         private enum State {
             NOT_STARTED,
             STARTED,
-            ENDED,
+            ENDED, UNINITIALIZED,
         }
 
         private final long threadId;
@@ -134,12 +135,18 @@ public class Context {
         private int signalDepth;
         private State state;
 
-        private ThreadState(long initialPC, long threadId) {
+        private ThreadState(long threadId) {
             this.threadId = threadId;
             this.signalStack = new ArrayList<>();
-            setSignalDepth(0);
-            currentSignalState.lastPC = initialPC;
-            state = State.NOT_STARTED;
+            state = State.UNINITIALIZED;
+        }
+
+        private void initIfNeeded(long initialPC) throws InvalidTraceDataException {
+            if (state == State.UNINITIALIZED) {
+                setSignalDepth(0, true);
+                currentSignalState.lastPC = initialPC;
+                state = State.NOT_STARTED;
+            }
         }
 
         private void begin(long generation) throws InvalidTraceDataException {
@@ -149,7 +156,7 @@ public class Context {
             }
             state = State.STARTED;
 
-            setSignalDepth(0);
+            setSignalDepth(0, true);
             setGeneration(generation);
             currentSignalState.generation = generation;
         }
@@ -174,28 +181,42 @@ public class Context {
         }
 
         void enterSignal(long signalNumber, long generation) throws InvalidTraceDataException {
-            setSignalDepth(signalDepth + 1);
+            setSignalDepth(signalDepth + 1, false);
             setGeneration(generation);
             currentSignalState.signalNumber = signalNumber;
         }
 
-        void exitSignal() {
-            setSignalDepth(signalDepth - 1);
+        void exitSignal() throws InvalidTraceDataException {
+            currentSignalState.state = PerSignalState.State.FINISHED;
+            setSignalDepth(signalDepth - 1, false);
         }
 
-        void setSignalDepth(int signalDepth) {
+        void setSignalDepth(int signalDepth, boolean reset) throws InvalidTraceDataException {
             while (signalStack.size() <= signalDepth) {
-                signalStack.add(new PerSignalState(
-                        INVALID_SIGNAL_NUMBER,
-                        INVALID_PC,
-                        0,
-                        INVALID_GENERATION));
+                signalStack.add(createUnstartedSignalState());
             }
-            while (signalStack.size() > signalDepth + 1) {
-                signalStack.remove(signalStack.size() - 1);
+            if (reset) {
+                PerSignalState state = signalStack.get(signalDepth);
+                if (state.state != PerSignalState.State.UNSTARTED
+                        && state.state != PerSignalState.State.FINISHED) {
+                    throw new InvalidTraceDataException("Starting a signal on the same level as an ongoing one.");
+                }
+                if (state.state != PerSignalState.State.UNSTARTED) {
+                    state = createUnstartedSignalState();
+                    signalStack.set(signalDepth, state);
+                    state.state = PerSignalState.State.RUNNING;
+                }
             }
             this.signalDepth = signalDepth;
             this.currentSignalState = signalStack.get(signalDepth);
+        }
+
+        private PerSignalState createUnstartedSignalState() {
+            return new PerSignalState(
+                    INVALID_SIGNAL_NUMBER,
+                    INVALID_PC,
+                    0,
+                    INVALID_GENERATION);
         }
 
         void end() {
@@ -229,13 +250,17 @@ public class Context {
             private long lastPC;
             private long numberOfOperations;
             private long generation;
+            private State state;
 
-            PerSignalState(long signalNumber, long lastPC, long numberOfOperations, long generation) {
+            private PerSignalState(long signalNumber, long lastPC, long numberOfOperations, long generation) {
                 this.signalNumber = signalNumber;
                 this.lastPC = lastPC;
                 this.numberOfOperations = numberOfOperations;
                 this.generation = generation;
+                this.state = State.UNSTARTED;
             }
+
+            private enum State {RUNNING, FINISHED, UNSTARTED}
         }
     }
 }

@@ -88,17 +88,22 @@ typedef enum _dwarf_type_kind {
 	  DTK_QUALIFIER = 0
 	, DTK_POINTER
 	, DTK_BASE
+	, DTK_ARRAY
+	, DTK_UNKNOWN
 } dwarf_type_kind_t;
 
 static Dwarf_Die dwarf_walk_first(Dwarf_Debug, dwarf_walk_t *,
     dwarf_walk_predicate_t);
 static Dwarf_Die dwarf_walk_next(dwarf_walk_t *);
 static Dwarf_Die dwarf_walk_next_in_tree(dwarf_walk_t *);
-static char *dwarf_c_typestring(Dwarf_Debug, Dwarf_Die, dwarf_walk_ctx_t *,
-    Dwarf_Die *);
+static char *dwarf_aggregate_or_base_type(Dwarf_Debug, Dwarf_Die,
+    dwarf_walk_ctx_t *, Dwarf_Die *);
 static char *dwarf_c_typestring_component(Dwarf_Debug, Dwarf_Die,
     dwarf_type_kind_t *);
 static void print_die_data(Dwarf_Debug, Dwarf_Die, dwarf_walk_ctx_t *);
+static bool walk_members(Dwarf_Debug, Dwarf_Die, dwarf_walk_ctx_t *);
+static bool walk_elements(Dwarf_Debug, Dwarf_Die, dwarf_walk_ctx_t *);
+static ssize_t dwarf_array_type_size(Dwarf_Debug, Dwarf_Die);
 
 static int verbosity = 0;
 static bool have_dataptr = false, have_frameptr = false, have_insnptr = false;
@@ -268,16 +273,13 @@ get_unsigned_attribute(Dwarf_Die die, Dwarf_Half attrid, Dwarf_Unsigned *unp)
 	case DW_FORM_data4:
 	case DW_FORM_data8:
 	case DW_FORM_udata:
-		if (dwarf_formudata(attr, unp, &error) == DW_DLV_OK)
-			return true;
-		/*FALLTHROUGH*/
+		return dwarf_formudata(attr, unp, &error) == DW_DLV_OK;
 	default:
 #if 0
 		warnx("%s: cannot interpret attribute", __func__);
 #endif
-		break;
+		return false;
 	}
-	return false;
 }
 
 static ssize_t
@@ -286,15 +288,32 @@ dwarf_type_size(Dwarf_Debug dbg, Dwarf_Die die, Dwarf_Die *typediep)
 	Dwarf_Die typedie, otypedie;
 	ssize_t size = -1;
 
-	for (otypedie = die, typedie = dwarf_follow_type_to_die(dbg, die);
+	for (otypedie = die, typedie = die;
 	     typedie != NULL;
 	     otypedie = typedie,
 	     typedie = dwarf_follow_type_to_die(dbg, typedie)) {
 		Dwarf_Unsigned tmpsize;
+		Dwarf_Error error;
+		Dwarf_Half tag;
 
 		if (get_unsigned_attribute(typedie, DW_AT_byte_size,
 		    &tmpsize)) {
 			size = tmpsize;
+			break;
+		} else if (dwarf_tag(typedie, &tag, &error) != DW_DLV_OK) {
+			errx(EXIT_FAILURE, "%s: dwarf_tag: %s", __func__,
+			    dwarf_errmsg(error));
+		} else if (tag == DW_TAG_array_type) {
+			return dwarf_array_type_size(dbg, typedie);
+		} else if (tag == DW_TAG_pointer_type) {
+			Dwarf_Half addr_size;
+			if (dwarf_get_address_size(dbg, &addr_size,
+			    &error) != DW_DLV_OK) {
+				errx(EXIT_FAILURE,
+				    "%s: dwarf_get_address_size: %s", __func__,
+				    dwarf_errmsg(error));
+			}
+			size = addr_size;
 			break;
 		}
 
@@ -302,7 +321,11 @@ dwarf_type_size(Dwarf_Debug dbg, Dwarf_Die die, Dwarf_Die *typediep)
 			dwarf_dealloc(dbg, otypedie, DW_DLA_DIE);
 	}
 
-	*typediep = (size == -1) ? NULL : typedie;
+	if (typediep != NULL && size == -1) {
+		*typediep = NULL;
+		dwarf_dealloc(dbg, typedie, DW_DLA_DIE);
+	} else if (typediep != NULL)
+		*typediep = typedie;
 
 	if (otypedie != die)
 		dwarf_dealloc(dbg, otypedie, DW_DLA_DIE);
@@ -311,28 +334,24 @@ dwarf_type_size(Dwarf_Debug dbg, Dwarf_Die die, Dwarf_Die *typediep)
 }
 
 static char *
-dwarf_c_typestring(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx,
-    Dwarf_Die *typediep)
+dwarf_aggregate_or_base_type(Dwarf_Debug dbg, Dwarf_Die die,
+    dwarf_walk_ctx_t *ctx, Dwarf_Die *typediep)
 {
 	char *typestr = NULL, *otypestr;
-	Dwarf_Die typedie, otypedie;
-	dwarf_type_kind_t kind;
-	bool addr_match = false;
-	Dwarf_Unsigned size;
+	Dwarf_Die arraydie = NULL, typedie, otypedie;
+	dwarf_type_kind_t kind = DTK_UNKNOWN;
 
 	for (otypedie = die, typedie = dwarf_follow_type_to_die(dbg, die);
 	     typedie != NULL;
 	     otypedie = typedie,
 	     typedie = dwarf_follow_type_to_die(dbg, typedie)) {
-		if (otypedie != die)
+		if (otypedie != die && otypedie != arraydie)
 			dwarf_dealloc(dbg, otypedie, DW_DLA_DIE);
-
-		if (get_unsigned_attribute(typedie, DW_AT_byte_size, &size) &&
-		    ctx->residue < size)
-			addr_match = true;
 
 		char *component =
 		    dwarf_c_typestring_component(dbg, typedie, &kind);
+		if (kind == DTK_ARRAY)
+			arraydie = typedie;
 		otypestr = typestr;
 		assert(component != NULL);
 		if (asprintf(&typestr, "%s%s%s",
@@ -345,15 +364,16 @@ dwarf_c_typestring(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx,
 	if (otypedie == die)
 		*typediep = NULL;
 	else if (typediep != NULL)
-		*typediep = otypedie;
+		*typediep = (arraydie != NULL) ? arraydie : otypedie;
 	else
 		dwarf_dealloc(dbg, otypedie, DW_DLA_DIE);
 
-	return addr_match ? typestr : NULL;
+	return typestr;
 }
 
 static char *
-dwarf_c_typestring_component(Dwarf_Debug dbg, Dwarf_Die die, dwarf_type_kind_t *kindp)
+dwarf_c_typestring_component(Dwarf_Debug dbg, Dwarf_Die die,
+    dwarf_type_kind_t *kindp)
 {
 	int res;
 	char *name;
@@ -363,7 +383,7 @@ dwarf_c_typestring_component(Dwarf_Debug dbg, Dwarf_Die die, dwarf_type_kind_t *
 	char *tagstr;
 	char *typestr;
 
-	*kindp = DTK_BASE;
+	*kindp = DTK_UNKNOWN;
 
 	res = dwarf_tag(die, &tag, &error);
 	if (res != DW_DLV_OK) {
@@ -371,8 +391,10 @@ dwarf_c_typestring_component(Dwarf_Debug dbg, Dwarf_Die die, dwarf_type_kind_t *
 		return new_empty_string();
 	}
 	switch (tag) {
-	case DW_TAG_typedef:
 	case DW_TAG_base_type:
+		*kindp = DTK_BASE;
+		/*FALLTHROUGH*/
+	case DW_TAG_typedef:
 		res = dwarf_diename(die, &name, &error);
 		if (res != DW_DLV_OK) {
 			warnx("\n%s.%d: dwarf_diename: %s", __func__, __LINE__,
@@ -383,6 +405,7 @@ dwarf_c_typestring_component(Dwarf_Debug dbg, Dwarf_Die die, dwarf_type_kind_t *
 	case DW_TAG_const_type:
 		return strdup("const");
 	case DW_TAG_array_type:
+		*kindp = DTK_ARRAY;
 		return strdup("array of");
 	case DW_TAG_enumeration_type:
 		res = dwarf_diename(die, &name, &error);
@@ -715,6 +738,168 @@ locdesc_to_regnum(Dwarf_Locdesc *ld)
 	return regnum;
 }
 
+static ssize_t
+dwarf_array_type_size(Dwarf_Debug dbg, Dwarf_Die typedie)
+{
+	int res;
+	Dwarf_Die child, sibling;
+	Dwarf_Error error;
+	Dwarf_Half tag;
+	Dwarf_Unsigned count;
+	ssize_t eltsz, totalsz;
+
+	res = dwarf_child(typedie, &child, &error);
+	if (res == DW_DLV_NO_ENTRY)
+		return -1;
+
+	if (res != DW_DLV_OK) {
+		errx(EXIT_FAILURE, "%s: dwarf_child: %s",
+		    __func__, dwarf_errmsg(error));
+	}
+
+	eltsz = dwarf_type_size(dbg, dwarf_follow_type_to_die(dbg, typedie), NULL);
+
+	if (eltsz < 0)
+		return -1;
+
+	totalsz = eltsz;
+
+	for (;;) {
+		res = dwarf_tag(child, &tag, &error);
+		if (res != DW_DLV_OK) {
+			errx(EXIT_FAILURE, "%s.%d: dwarf_tag %s", __func__,
+			    __LINE__, dwarf_errmsg(error));
+		}
+		if (tag != DW_TAG_subrange_type)
+			goto next;
+
+		/* TBD handle lower/upper bound */
+		if (!get_unsigned_attribute(child, DW_AT_count, &count)) {
+			errx(EXIT_FAILURE, "%s: no count attribute",
+			    __func__);
+		}
+
+		/* TBD try for the subrange's DW_AT_byte_size, which
+		 * overrides the type's size
+		 */
+
+		totalsz *= count;
+
+next:
+		res = dwarf_siblingof(dbg, child, &sibling, &error);
+		if (res == DW_DLV_NO_ENTRY)
+			break;
+
+		if (res != DW_DLV_OK) {
+			errx(EXIT_FAILURE, "%s: dwarf_siblingof: %s",
+			    __func__, dwarf_errmsg(error));
+		}
+		child = sibling;
+	}
+
+	return totalsz;
+}
+
+static bool
+walk_elements(Dwarf_Debug dbg, Dwarf_Die typedie, dwarf_walk_ctx_t *ctx)
+{
+	int res;
+	Dwarf_Die child, sibling;
+	Dwarf_Error error;
+	Dwarf_Half tag;
+	Dwarf_Die elementtypedie;
+	Dwarf_Unsigned count;
+	ssize_t element_size;
+	strstack_t *ss = &ctx->symstk;
+	Dwarf_Unsigned dim[10];
+	int i, idx, ndims = 0;
+
+	res = dwarf_child(typedie, &child, &error);
+	if (res == DW_DLV_NO_ENTRY)
+		return false;
+
+	if (res != DW_DLV_OK) {
+		errx(EXIT_FAILURE, "%s: dwarf_child: %s",
+		    __func__, dwarf_errmsg(error));
+	}
+
+	element_size = dwarf_type_size(dbg, dwarf_follow_type_to_die(dbg, typedie), &elementtypedie);
+
+	if (element_size < 0)
+		goto next;
+
+	for (;;) {
+		res = dwarf_tag(child, &tag, &error);
+		if (res != DW_DLV_OK) {
+			errx(EXIT_FAILURE, "%s.%d: dwarf_tag %s", __func__,
+			    __LINE__, dwarf_errmsg(error));
+		}
+		if (tag != DW_TAG_subrange_type)
+			goto next;
+
+		/* TBD handle lower/upper bound */
+		if (!get_unsigned_attribute(child, DW_AT_count, &count)) {
+			errx(EXIT_FAILURE, "%s: no count attribute",
+			    __func__);
+		}
+
+		if (ndims++ == __arraycount(dim)) {
+			errx(EXIT_FAILURE, "%s: array dimensions > %zu",
+			    __func__, __arraycount(dim));
+		}
+
+		/* TBD try for the subrange's DW_AT_byte_size, which
+		 * overrides the type's size
+		 */
+
+		dim[ndims - 1] = count;
+
+next:
+		res = dwarf_siblingof(dbg, child, &sibling, &error);
+		if (res == DW_DLV_NO_ENTRY)
+			break;
+
+		if (res != DW_DLV_OK) {
+			errx(EXIT_FAILURE, "%s: dwarf_siblingof: %s",
+			    __func__, dwarf_errmsg(error));
+		}
+		child = sibling;
+	}
+
+	/* TBD handle column-major arrays.  This works for row-major arrays.
+	 */
+	for (i = ndims - 2; i >= 0; i--)
+		dim[i] *= dim[i + 1];
+
+	for (i = 0; i < ndims; i++) {
+		dim[i] *= element_size;
+	}
+
+	for (i = 0; i < ndims; i++) {
+		ssize_t sz;
+
+		sz = (i < ndims - 1) ? dim[i + 1] : element_size;
+
+		if (ctx->residue >= dim[i])
+			return false;
+
+		idx = ctx->residue / sz;
+		ctx->residue -= idx * sz;
+		strstack_pushf(ss, "[%d]", idx);
+	}
+
+	res = dwarf_tag(elementtypedie, &tag, &error);
+	if (res != DW_DLV_OK) {
+		errx(EXIT_FAILURE, "%s.%d: dwarf_tag %s", __func__,
+		    __LINE__, dwarf_errmsg(error));
+	}
+	if (tag == DW_TAG_structure_type)
+		(void)walk_members(dbg, elementtypedie, ctx);
+	else if (tag == DW_TAG_array_type)
+		(void)walk_elements(dbg, elementtypedie, ctx);
+	return true;
+}
+
 static bool
 walk_members(Dwarf_Debug dbg, Dwarf_Die typedie, dwarf_walk_ctx_t *ctx)
 {
@@ -754,7 +939,7 @@ walk_members(Dwarf_Debug dbg, Dwarf_Die typedie, dwarf_walk_ctx_t *ctx)
 		if (res != DW_DLV_OK)
 			goto next;
 
-		member_size = dwarf_type_size(dbg, child, &membertypedie);
+		member_size = dwarf_type_size(dbg, dwarf_follow_type_to_die(dbg, child), &membertypedie);
 
 		if (member_size < 0)
 			goto next;
@@ -805,6 +990,7 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 	int depth = -1;
 	Dwarf_Half typetag;
 	Dwarf_Die typedie;
+	ssize_t size;
 
 	res = dwarf_tag(die, &tag, &error);
 	if (res != DW_DLV_OK) {
@@ -958,20 +1144,28 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 	}
 
 	if (check_location(dbg, die, ctx) &&
-	    (typename = dwarf_c_typestring(dbg, die, ctx, &typedie)) != NULL) {
+	    (typename = dwarf_aggregate_or_base_type(dbg, die, ctx,
+	        &typedie)) != NULL &&
+	    (size = dwarf_type_size(dbg, typedie, NULL)) > 0 &&
+	    ctx->residue < size) {
 
 		/* if typedie is non-NULL and a _structure_type
-		 * or _array_type, get find the member or index;
+		 * or _array_type, find the member or index;
 		 * recurse.
 		 */
 		if (typedie == NULL ||
-		    dwarf_tag(typedie, &typetag, &error) != DW_DLV_OK ||
-		    typetag != DW_TAG_structure_type ||
-		    !walk_members(dbg, typedie, ctx))
-			strstack_pushf(ss, " %s", typename);
-
-		strstack_fprintf(stdout, ss);
-		printf("\n");
+		    dwarf_tag(typedie, &typetag, &error) != DW_DLV_OK)
+			;
+		else if (typetag == DW_TAG_structure_type &&
+			 !walk_members(dbg, typedie, ctx))
+			;
+		else if (typetag == DW_TAG_array_type &&
+			 !walk_elements(dbg, typedie, ctx))
+			;
+		else {
+			strstack_fprintf(stdout, ss);
+			printf("\n");
+		}
 		free(typename);
 	}
 

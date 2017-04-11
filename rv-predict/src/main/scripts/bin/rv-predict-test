@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+ulimit -s `ulimit -H -s`
+
+libdir=$1
+shift
+bindir=$libdir/bin
+
+${bindir}/checkJava || exit 1
+
+java -ea -jar ${libdir}/rv-predict.jar "$@"

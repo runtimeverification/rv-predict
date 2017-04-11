@@ -85,7 +85,8 @@ public class MainTest {
             } else {
                 args.add("/usr/bin/env");
                 args.add("bash");
-                args.add(binPath + "rv-predict");
+                args.add(binPath + "rv-predict-test");
+                args.add(basePath);
             }
             args.addAll(rvArguments);
         }

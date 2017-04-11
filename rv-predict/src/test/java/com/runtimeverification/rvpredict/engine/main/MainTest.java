@@ -85,8 +85,9 @@ public class MainTest {
             } else {
                 args.add("/usr/bin/env");
                 args.add("bash");
-                args.add(binPath + "rv-predict-test");
-                args.add(basePath);
+                args.add(binPath + "rv-predict");
+                args.add("--test");
+                // args.add(basePath);
             }
             args.addAll(rvArguments);
         }
@@ -105,7 +106,7 @@ public class MainTest {
         this.args.toArray(args);
         int n;
         try {
-            n = helper.testCommand("src/test/resources/" + name, numOfRuns, args);
+            n = helper.testCommand("src/test/resources/" + name, numOfRuns, basePath, args);
         } catch (Exception e) {
             e.printStackTrace(System.out);
             throw e;

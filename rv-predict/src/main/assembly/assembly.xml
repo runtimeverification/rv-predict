@@ -19,7 +19,7 @@
       <moduleSet>
             <useAllReactorProjects>true</useAllReactorProjects>
             <includes>
-                <include>com.runtimeverification.rvpredict:rv-predict-jar</include>
+                <include>com.runtimeverification.rvpredict:rv-predict-jar:jar</include>
             </includes>
             <binaries>
                 <outputDirectory>/</outputDirectory>

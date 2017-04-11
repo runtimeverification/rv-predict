@@ -1,3 +1,30 @@
-To check wether there are any races, the dynamic programming model currently works with a graph composed of configurations that look like this: ((e1, e2, ..., en), (v1, v2, ..., vm)) where n is the number of threads, m is the number of variables, ei is an event index for thread i and vj is the value for variable j. Then the dynamic programming algorithm starts with the ((0, 0, ..., 0), (0, 0, ..., 0)) state and recursively expands it into all the reachable states.
+To check whether there are any races, the dynamic programming model currently works with a graph composed of configurations that look like this: ((e1, e2, ..., en), (v1, v2, ..., vm)) where n is the number of threads, m is the number of variables, ei is an event index for thread i and vj is the value for variable j. Then the dynamic programming algorithm starts with the ((0, 0, ..., 0), (0, 0, ..., 0)) state and recursively expands it into all the reachable states.
 
 This is reasonably good, but it's not necessarily better than the SMT model. Indeed, in many cases it is somehow worse.
+
+First, let us notice that, for two threads, if t1 accesses variable v1 with i1 as the event index and t2 accesses v2 at with i1 as the index, then the algorithm has at least one state for the (i1, i2) index pair. However, this pair does not provide anything useful to the analysis. One option would be that we analyse the t1 and t2 threads separately at these indexes, but that gets complicated quickly.
+
+To treat this properly, let us imagine that we have some sort of graph where the nodes are thread events and we have edges between interacting events as such:
+* We have edges only between events on different threads. This is used implicitly below.
+* A write event has an edge to any access to that variable.
+* Any operation made while a lock is held has an edge to any acquire operation on the same lock.
+* All acquire operations on a given lock have an edge to all other acquire and release operations on the same lock.
+* Fork/join thread operations have edges to the begin/end events of the other thread.
+
+Then let us first note that if two events do not have an edge between them, they are independent. Ideally we would require all events in a state to be dependent, otherwise there is something which is redundant. However, we can't do that because we may have three threads, two of them have a race and the third is completely independent, so we will never have an edge to any event of the third graph. We can relax this condition to require all events on unfinished threads to form a connected graph. This is still not enough since we may reach an index on some thread (t1) which points to a read which is independent from everything else, but we can't continue because the read variable has the wrong value. We can treat this case similar to the finished thread one, but even then, on a different thread we may be waiting to acquire a lock which is held by t1, so we will never be able to either finish that thread or reach a state linked to our race.
+
+So then the final (ideal) requirement is that all event indexes in a state are of one of this types:
+1. finished threads;
+2. stuck because we are reading a different variable value;
+4. deadlocked;
+3. waiting to acquire a lock that is held by the threads mentioned at 1, 2, 3 and 4;
+4. not in any of the 1-3 cases, but forming together a connected graph.
+We will call such a state *compact*.
+
+It is obvious that any race will involve two connected indexes. Then, on all other threads we can continue execution until either the thread finishes or can't be continued because we don't know what happens when reading a different variable value, gets stuck either because its lock is held by a finished thread, by a thread stuck because of a finished thread, or by a deadlocked thread or gets connected (directyl or not) to the two indexes involved in the race.
+
+The more interesting question is how to make sure we reach all these compact states without going through all the reachable states, preferably going through none.
+
+The "is reachable" relation defines a directed graph on (compact) states. Then we can say that s1 is *directly reachable* from s2 if s1 is not s2, s1 is reachable from s2 and there is no state s different from s1 and s2 such that s1 is reachable from s and s is reachable from s2. 
+
+Let us imagine that we are in a given state and we want to go to its directly reachable neighbors. Then 

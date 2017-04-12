@@ -334,71 +334,80 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
          * limit the maximum number of events that can be delayed to make the
          * logged trace look closer to the execution.
          */
+        private volatile boolean alreadyLogging = false;
         void append(EventType eventType, int locId, int addr1, int addr2, long value1, long value2,
                 int extra) {
-            int atomLock;
-            switch (eventType) {
-                case JOIN:
-                    /* flush the delayed events in the joined thread before logging JOIN */
-                    for (Buffer b : activeBuffers.toArray(new Buffer[0])) {
-                        if (b.tid == ((long) addr1 << 32 | addr2 & 0xFFFFFFFFL)) {
-                            b.finalizeRemainingEvents();
+            if (alreadyLogging) {
+                return;
+            }
+            try {
+                alreadyLogging = true;
+                int atomLock;
+                switch (eventType) {
+                    case JOIN:
+                        /* flush the delayed events in the joined thread before logging JOIN */
+                        for (Buffer b : activeBuffers.toArray(new Buffer[0])) {
+                            if (b.tid == ((long) addr1 << 32 | addr2 & 0xFFFFFFFFL)) {
+                                b.finalizeRemainingEvents();
+                            }
                         }
-                    }
-                case READ:
-                case WRITE_LOCK:
-                case READ_LOCK:
-                case WAIT_ACQ:
-                case CLINIT_ENTER:
-                case CLINIT_EXIT:
-                    log(eventType, locId, addr1, addr2, value1);
-                    if (numOfUnfinalizedEvents() >= THRESHOLD) {
-                        finalizeEvents();
-                    }
-                    break;
-                case FINISH_METHOD:
-                    int last = prev(end);
-                    if (cursor != end && events[last].isInvokeMethod()) {
-                        numOfCallStackEvents--;
-                        end = last;
+                    case READ:
+                    case WRITE_LOCK:
+                    case READ_LOCK:
+                    case WAIT_ACQ:
+                    case CLINIT_ENTER:
+                    case CLINIT_EXIT:
+                        log(eventType, locId, addr1, addr2, value1);
+                        if (numOfUnfinalizedEvents() >= THRESHOLD) {
+                            finalizeEvents();
+                        }
                         break;
-                    }
-                case INVOKE_METHOD:
-                    numOfCallStackEvents++;
-                    log(eventType, locId, addr1, addr2, value1);
-                    break;
-                case WRITE:
-                case WRITE_UNLOCK:
-                case READ_UNLOCK:
-                case WAIT_REL:
-                case START:
-                    log(eventType, locId, addr1, addr2, value1);
-                    finalizeEvents();
-                    break;
-                case ATOMIC_READ:
-                    atomLock = extra > 0 ? extra : addr1;
-                    log(EventType.WRITE_LOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
-                    log(EventType.READ, locId, addr1, addr2, value1);
-                    log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
-                    finalizeEvents();
-                    break;
-                case ATOMIC_WRITE:
-                    atomLock = extra > 0 ? extra : addr1;
-                    log(EventType.WRITE_LOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
-                    log(EventType.WRITE, locId, addr1, addr2, value1);
-                    log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
-                    finalizeEvents();
-                    break;
-                case ATOMIC_READ_THEN_WRITE:
-                    atomLock = extra > 0 ? extra : addr1;
-                    log(EventType.WRITE_LOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
-                    log(EventType.READ, locId, addr1, addr2, value1);
-                    log(EventType.WRITE, locId, addr1, addr2, value2);
-                    log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
-                    finalizeEvents();
-                    break;
-                default:
-                    assert false;
+                    case FINISH_METHOD:
+                        int last = prev(end);
+                        if (cursor != end && events[last].isInvokeMethod()) {
+                            numOfCallStackEvents--;
+                            end = last;
+                            break;
+                        }
+                    case INVOKE_METHOD:
+                        numOfCallStackEvents++;
+                        log(eventType, locId, addr1, addr2, value1);
+                        break;
+                    case WRITE:
+                    case WRITE_UNLOCK:
+                    case READ_UNLOCK:
+                    case WAIT_REL:
+                    case START:
+                        log(eventType, locId, addr1, addr2, value1);
+                        finalizeEvents();
+                        break;
+                    case ATOMIC_READ:
+                        atomLock = extra > 0 ? extra : addr1;
+                        log(EventType.WRITE_LOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
+                        log(EventType.READ, locId, addr1, addr2, value1);
+                        log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
+                        finalizeEvents();
+                        break;
+                    case ATOMIC_WRITE:
+                        atomLock = extra > 0 ? extra : addr1;
+                        log(EventType.WRITE_LOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
+                        log(EventType.WRITE, locId, addr1, addr2, value1);
+                        log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
+                        finalizeEvents();
+                        break;
+                    case ATOMIC_READ_THEN_WRITE:
+                        atomLock = extra > 0 ? extra : addr1;
+                        log(EventType.WRITE_LOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
+                        log(EventType.READ, locId, addr1, addr2, value1);
+                        log(EventType.WRITE, locId, addr1, addr2, value2);
+                        log(EventType.WRITE_UNLOCK, locId, ATOMIC_LOCK_C, atomLock, 0);
+                        finalizeEvents();
+                        break;
+                    default:
+                        assert false;
+                }
+            } finally {
+                alreadyLogging = false;
             }
         }
 

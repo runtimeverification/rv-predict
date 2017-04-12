@@ -20,11 +20,26 @@ So then the final (ideal) requirement is that all event indexes in a state are o
 3. waiting to acquire a lock that is held by the threads mentioned at 1, 2, 3 and 4;
 4. not in any of the 1-3 cases, but forming together a connected graph.
 We will call such a state *compact*.
+TODO: the initial state should be special.
 
-It is obvious that any race will involve two connected indexes. Then, on all other threads we can continue execution until either the thread finishes or can't be continued because we don't know what happens when reading a different variable value, gets stuck either because its lock is held by a finished thread, by a thread stuck because of a finished thread, or by a deadlocked thread or gets connected (directyl or not) to the two indexes involved in the race.
+It is obvious that any race will involve two connected indexes. Then, on all other threads we can continue execution until either the thread finishes or can't be continued because we don't know what happens when reading a different variable value, gets stuck either because its lock is held by a finished thread, by a thread stuck because of a finished thread, or by a deadlocked thread or gets connected (directly or not) to the two indexes involved in the race.
 
 The more interesting question is how to make sure we reach all these compact states without going through all the reachable states, preferably going through none.
 
 The "is reachable" relation defines a directed graph on (compact) states. Then we can say that s1 is *directly reachable* from s2 if s1 is not s2, s1 is reachable from s2 and there is no state s different from s1 and s2 such that s1 is reachable from s and s is reachable from s2. 
 
-Let us imagine that we are in a given state and we want to go to its directly reachable neighbors. Then 
+Let us imagine that we are in a given state and we want to go to its directly reachable neighbors. Then, for any single thread we will go as far as we can without advancing any other thread. Some of the states that we get this way may be compact, but not necessarily.
+
+For any two threads, we can again advance up to two indexes i1, i2 such that either:
+* i1 and i2 have an edge between them and there is no (j1, j2) != (i1, i2) with j1 <= i1 and j2 <= i2 and j1, j2 have an edge between them
+* there is no index pair that satisfies the condition above and the two threads get stuck (TODO: define get stuck) at (i1, i2).
+Some of these states may be compact, but not necessarily.
+
+For any three threads, we can advance up to three indexes (i1, i2, i3) such that either:
+* i1, i2 and i3 form a connected graph and there is no (j1, j2, j3) != (i1, i2, i3) with jk <= ik.
+* We didn't find any indexes for the above case, one of the two threads gets stuck while the other two have an edge at indexes (i1, i2) that follows the same rule as above.
+* We didn't find any indexes for any of the above cases, but all three threads get stuck at (i1, i2, i3).
+
+This can be generalized to any number of threads. A simpler way of thinking about it is that we advance on each thread until it gets stuck, we mark those positions and we aplly only the first rule for indexes.
+
+Is it true that if we can overlap `;

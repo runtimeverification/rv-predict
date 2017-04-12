@@ -21,6 +21,7 @@ public class MaximalCausalModel {
     private final List<List<Set<Long>>> writeLocksPerInstruction;
     private final List<List<Set<Long>>> readLocksPerInstruction;
     private final List<ThreadLimits> threadLimits;
+    private final boolean[] noReadOrWrite;
 
     public static MaximalCausalModel create(
             Trace trace, com.runtimeverification.rvpredict.config.Configuration globalConfiguration) {
@@ -57,6 +58,7 @@ public class MaximalCausalModel {
                     computeReadLocksPerInstruction(threadEvents, trace.getHeldLocksAt(threadEvents.get(0))));
         });
         threadLimits = computeThreadLimits();
+        noReadOrWrite = new boolean[variables.size()];
     }
 
     private class ProcessingQueue {
@@ -233,31 +235,170 @@ public class MaximalCausalModel {
             }
         }
     }
-    /*
-    private void addRaces(List<ConfigurationWithEvent> configurations, Map<String, Race> races) {
-        List<Event> newEvents = configurations.stream()
-                .map(ConfigurationWithEvent::getEvent)
-                .filter(Event::isReadOrWrite)
-                .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
-        for (int i = 0; i < newEvents.size(); i++) {
-            Event e1 = newEvents.get(i);
-            for (int j = i + 1; j < newEvents.size(); j++) {
-                Event e2 = newEvents.get(j);
-                if (e1.getTID() == e2.getTID()
-                        || e1.getAddr() != e2.getAddr()
-                        || (!e1.isWrite() && !e2.isWrite())) {
-                    continue;
-                }
-                String signature = e1.getGID() + ":" + e2.getGID();
-                if (races.containsKey(signature)) {
-                    continue;
-                }
-                System.out.println(signature + " -> " + e1 + " vs " + e2);
-                races.computeIfAbsent(signature, s -> new Race(e1, e2, trace, globalConfiguration));
-            }
+
+    private class ConfigurationWithPartialExecution {
+        private final Configuration configuration;
+        private final Event event;
+        // TODO(virgil): is it better to use a set?
+        private final boolean[] readVariables;
+        private final boolean[] writtenVariables;
+
+        private ConfigurationWithPartialExecution(
+                Configuration configuration, Event event, boolean[] readVariables, boolean[] writtenVariables) {
+            this.configuration = configuration;
+            this.event = event;
+            this.readVariables = readVariables;
+            this.writtenVariables = writtenVariables;
+        }
+
+        @Override
+        public String toString() {
+            return "{configuration=" + configuration.toString()
+                    + ", event=" + event.toString()
+                    + ", read=" + Arrays.toString(readVariables)
+                    + ", written=" + Arrays.toString(writtenVariables) + "}";
         }
     }
-    */
+
+    private List<ConfigurationWithEvent> expandOptimized(Configuration configuration) {
+        System.out.println("here");
+        int[] breakPoints = new int[eventsForThread.size()];
+        Arrays.fill(breakPoints, -1);
+        ConfigurationWithPartialExecution[] configurations =
+                expandConfigurationsWithMultipleStepsOnAThread(configuration, breakPoints);
+        System.out.println(Arrays.toString(configurations));
+        boolean[] variableHasRace = new boolean[variables.size()];
+        boolean racesExist = detectRaces(configurations, variableHasRace);
+        if (!racesExist) {
+            // Quick exit on the most common case.
+            return toConfigurationsWithEvent(configurations);
+        }
+        for (int threadIndex = 0; threadIndex < configurations.length; threadIndex++) {
+            ConfigurationWithPartialExecution expandedConfiguration = configurations[threadIndex];
+            if (expandedConfiguration == null) {
+                continue;
+            }
+            int startIndex = configuration.getEventIndex(threadIndex);
+            int endIndex = expandedConfiguration.configuration.getEventIndex(threadIndex);
+            for (int eventIndex = startIndex; eventIndex < endIndex; eventIndex++) {
+                Event event = eventsForThread.get(threadIndex).get(eventIndex);
+                if (event.isReadOrWrite() && variableHasRace[variableToIndex.get(event.getAddr())]) {
+                    breakPoints[eventIndex] = eventIndex;
+                    break;
+                }
+            }
+        }
+        System.out.println(breakPoints);
+        // TODO(virgil): This second call can be optimized, a lot of the things done here are not needed.
+        configurations =
+                expandConfigurationsWithMultipleStepsOnAThread(configuration, breakPoints);
+        return toConfigurationsWithEvent(configurations);
+    }
+
+    private boolean detectRaces(ConfigurationWithPartialExecution[] configurations, boolean[] variableHasRace) {
+        boolean racesExist = false;
+        for (int i = 0; i < variables.size(); i++) {
+            boolean readOnAPastThread = false;
+            boolean writtenOnAPastThread = false;
+            for (ConfigurationWithPartialExecution expandedConfiguration : configurations) {
+                if (expandedConfiguration == null) {
+                    continue;
+                }
+                if (expandedConfiguration.writtenVariables[i]) {
+                    if (readOnAPastThread || writtenOnAPastThread) {
+                        variableHasRace[i] = true;
+                        racesExist = true;
+                        break;
+                    }
+                } else if (expandedConfiguration.readVariables[i]) {
+                    if (writtenOnAPastThread) {
+                        variableHasRace[i] = true;
+                        racesExist = true;
+                        break;
+                    }
+                }
+                writtenOnAPastThread |= expandedConfiguration.writtenVariables[i];
+                readOnAPastThread |= expandedConfiguration.readVariables[i];
+            }
+        }
+        return racesExist;
+    }
+
+    private List<ConfigurationWithEvent> toConfigurationsWithEvent(ConfigurationWithPartialExecution[] configurations) {
+        List<ConfigurationWithEvent> finalConfigurations = new ArrayList<>();
+        for (ConfigurationWithPartialExecution expandedConfiguration : configurations) {
+            if (expandedConfiguration == null) {
+                continue;
+            }
+            finalConfigurations.add(
+                    new ConfigurationWithEvent(expandedConfiguration.configuration, expandedConfiguration.event));
+        }
+        return finalConfigurations;
+    }
+
+    private ConfigurationWithPartialExecution[] expandConfigurationsWithMultipleStepsOnAThread(
+            Configuration configuration, int[] breakPoints) {
+        ConfigurationWithPartialExecution[] finalConfigurations =
+                new ConfigurationWithPartialExecution[eventsForThread.size()];
+        for (int threadIndex = 0; threadIndex < eventsForThread.size(); threadIndex++) {
+            int eventIndex = configuration.getEventIndex(threadIndex);
+            if (eventIndex >= eventsForThread.get(threadIndex).size()) {
+                continue;
+            }
+            if (eventIndex == 0 && !threadCanStart(threadIndex, configuration)) {
+                continue;
+            }
+            Event event = eventsForThread.get(threadIndex).get(eventIndex);
+            if (isSynchronizationEvent(event) || breakPoints[threadIndex] == eventIndex) {
+                Configuration expandedConfiguration = expandWithEvent(configuration, threadIndex, event);
+                if (expandedConfiguration != null) {
+                    // It's ok to use noReadOrWrite even when this is a break point because then we know that
+                    // this is a possible race, we don't need to detect it again.
+                    finalConfigurations[threadIndex] =
+                            new ConfigurationWithPartialExecution(
+                                    expandedConfiguration, event, noReadOrWrite, noReadOrWrite);
+                }
+                continue;
+            }
+            Event lastEvent = event;
+            Configuration lastConfiguration = configuration;
+            // TODO: One can skip allocation and fill these.
+            boolean[] written = new boolean[variables.size()];
+            boolean[] read = new boolean[variables.size()];
+            while (!isSynchronizationEvent(event)) {
+                Configuration expandedConfiguration = expandWithEvent(lastConfiguration, threadIndex, event);
+                if (expandedConfiguration == null) {
+                    break;
+                }
+                lastEvent = event;
+                lastConfiguration = expandedConfiguration;
+                if (event.isWrite()) {
+                    int variableIndex = variableToIndex.get(event.getAddr());
+                    written[variableIndex] = true;
+                } else if (event.isRead()) {
+                    int variableIndex = variableToIndex.get(event.getAddr());
+                    read[variableIndex] = true;
+                }
+                eventIndex = expandedConfiguration.getEventIndex(threadIndex);
+                if (eventIndex == breakPoints[threadIndex]) {
+                    lastConfiguration = expandedConfiguration;
+                    break;
+                }
+                if (eventIndex >= eventsForThread.get(threadIndex).size()) {
+                    break;
+                }
+            }
+            if (lastConfiguration != configuration) {  // Intentional pointer comparison.
+                finalConfigurations[threadIndex] =
+                        new ConfigurationWithPartialExecution(lastConfiguration, lastEvent, read, written);
+            }
+        }
+        return finalConfigurations;
+    }
+
+    private boolean isSynchronizationEvent(Event event) {
+        return event.isLock() || event.isUnlock() || event.isFork() || event.isJoin() || event.isStart();
+    }
 
     private List<ConfigurationWithEvent> expand(Configuration configuration) {
         if (globalConfiguration.debug) {

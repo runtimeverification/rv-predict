@@ -38,12 +38,13 @@ def run_with_time(args, timeout_seconds):
         time.sleep(0.1)
     elapsed_time_seconds = time.time() - start_time_seconds
     script_name = os.path.basename(sys.argv[0])
+    print script_name
     subprocess.call(
         ['bash', '-c',
-         "kill -9 $(ps aux | grep 'rv-predict.jar' | grep -v '%s' "
-         + "| grep -v grep | awk '{print $2}')"
-         % script_name],
-        stdout=FNULL)
+         (("kill -9 $(ps aux | grep 'rv-predict.jar' | grep -v '%s' "
+           + "| grep -v grep | awk '{print $2}')")
+          % script_name)],
+        stdout=FNULL, stderr=FNULL)
     return format_time(elapsed_time_seconds)
 
 def run_rv_predict(rv_predict_jar_path, window_size, timeout_seconds, use_smt, extra_arguments):

@@ -58,7 +58,9 @@ public class MaximalCausalModel {
                     computeReadLocksPerInstruction(threadEvents, trace.getHeldLocksAt(threadEvents.get(0))));
         });
         threadLimits = computeThreadLimits();
+        // System.out.println(threadLimits);
         noReadOrWrite = new boolean[variables.size()];
+        // System.out.println(eventsForThread);
     }
 
     private class ProcessingQueue {
@@ -110,21 +112,23 @@ public class MaximalCausalModel {
 
         toProcess.add(new Configuration(threads.size(), computeInitialVariableValues()));
 
+        /*
         List<Thread> threads = new ArrayList<>();
         for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
-            Thread thread = new Thread(() -> {
+            Thread thread = new Thread(() -> {*/
                 toProcess.registerProducerConsumer();
                 for (Configuration configuration = toProcess.remove();
                      configuration != null;
                      configuration = toProcess.remove()) {
                     addRaces(configuration, races);
 
-                    List<ConfigurationWithEvent> expandedConfigurations = expand(configuration);
+                    List<ConfigurationWithEvent> expandedConfigurations = expandOptimized(configuration);
                     expandedConfigurations.forEach(expanded -> {
                         Configuration expandedConfiguration = expanded.getConfiguration();
                         toProcess.add(expandedConfiguration);
                     });
                 }
+                /*
             });
             thread.start();
             threads.add(thread);
@@ -140,6 +144,7 @@ public class MaximalCausalModel {
                 }
             }
         } while (interrupted);
+        */
         return races;
     }
 
@@ -227,13 +232,20 @@ public class MaximalCausalModel {
                         || (!e1.isWrite() && !e2.isWrite())) {
                     continue;
                 }
-                String signature = e1.getGID() + ":" + e2.getGID();
+                String signature = raceSignature(e1, e2);
                 if (races.containsKey(signature)) {
                     continue;
                 }
                 races.computeIfAbsent(signature, s -> new Race(e1, e2, trace, globalConfiguration));
             }
         }
+    }
+
+    private String raceSignature(Event e1, Event e2) {
+        int addr = Math.min(0, e1.getFieldIdOrArrayIndex()); // collapse all array indices to 0
+        int loc1 = Math.min(e1.getLocId(), e2.getLocId());
+        int loc2 = Math.max(e1.getLocId(), e2.getLocId());
+        return "Race(" + addr + "," + loc1 + "," + loc2 + ")";
     }
 
     private class ConfigurationWithPartialExecution {
@@ -261,12 +273,12 @@ public class MaximalCausalModel {
     }
 
     private List<ConfigurationWithEvent> expandOptimized(Configuration configuration) {
-        System.out.println("here");
+        // System.out.println("here");
         int[] breakPoints = new int[eventsForThread.size()];
         Arrays.fill(breakPoints, -1);
         ConfigurationWithPartialExecution[] configurations =
                 expandConfigurationsWithMultipleStepsOnAThread(configuration, breakPoints);
-        System.out.println(Arrays.toString(configurations));
+        // System.out.println(Arrays.toString(configurations));
         boolean[] variableHasRace = new boolean[variables.size()];
         boolean racesExist = detectRaces(configurations, variableHasRace);
         if (!racesExist) {
@@ -279,16 +291,19 @@ public class MaximalCausalModel {
                 continue;
             }
             int startIndex = configuration.getEventIndex(threadIndex);
-            int endIndex = expandedConfiguration.configuration.getEventIndex(threadIndex);
+            int endIndex = Math.min(
+                    // Should be fine to also look at the event on which we stopped. Looking at it helps with detecting
+                    // races on undefined reads.
+                    expandedConfiguration.configuration.getEventIndex(threadIndex) + 1,
+                    eventsForThread.get(threadIndex).size());
             for (int eventIndex = startIndex; eventIndex < endIndex; eventIndex++) {
                 Event event = eventsForThread.get(threadIndex).get(eventIndex);
                 if (event.isReadOrWrite() && variableHasRace[variableToIndex.get(event.getAddr())]) {
-                    breakPoints[eventIndex] = eventIndex;
+                    breakPoints[threadIndex] = eventIndex;
                     break;
                 }
             }
         }
-        System.out.println(breakPoints);
         // TODO(virgil): This second call can be optimized, a lot of the things done here are not needed.
         configurations =
                 expandConfigurationsWithMultipleStepsOnAThread(configuration, breakPoints);
@@ -366,12 +381,9 @@ public class MaximalCausalModel {
             boolean[] written = new boolean[variables.size()];
             boolean[] read = new boolean[variables.size()];
             while (!isSynchronizationEvent(event)) {
+                // System.out.println(eventIndex + " -> " + event);
                 Configuration expandedConfiguration = expandWithEvent(lastConfiguration, threadIndex, event);
-                if (expandedConfiguration == null) {
-                    break;
-                }
-                lastEvent = event;
-                lastConfiguration = expandedConfiguration;
+                // This needs to be before the expandedConfiguration test below.
                 if (event.isWrite()) {
                     int variableIndex = variableToIndex.get(event.getAddr());
                     written[variableIndex] = true;
@@ -379,6 +391,11 @@ public class MaximalCausalModel {
                     int variableIndex = variableToIndex.get(event.getAddr());
                     read[variableIndex] = true;
                 }
+                if (expandedConfiguration == null) {
+                    break;
+                }
+                lastEvent = event;
+                lastConfiguration = expandedConfiguration;
                 eventIndex = expandedConfiguration.getEventIndex(threadIndex);
                 if (eventIndex == breakPoints[threadIndex]) {
                     lastConfiguration = expandedConfiguration;
@@ -387,11 +404,12 @@ public class MaximalCausalModel {
                 if (eventIndex >= eventsForThread.get(threadIndex).size()) {
                     break;
                 }
+                event = eventsForThread.get(threadIndex).get(eventIndex);
             }
-            if (lastConfiguration != configuration) {  // Intentional pointer comparison.
+            // if (lastConfiguration != configuration) {  // Intentional pointer comparison.
                 finalConfigurations[threadIndex] =
                         new ConfigurationWithPartialExecution(lastConfiguration, lastEvent, read, written);
-            }
+            // }
         }
         return finalConfigurations;
     }
@@ -676,6 +694,11 @@ public class MaximalCausalModel {
         private void setStart(int threadIndex, int eventIndex) {
             startThreadIndex = threadIndex;
             startEventIndex = eventIndex;
+        }
+
+        @Override
+        public String toString() {
+            return "{thread=" + startThreadIndex + ", event=" + startEventIndex + "}";
         }
     }
 }

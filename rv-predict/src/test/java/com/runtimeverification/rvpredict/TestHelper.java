@@ -59,7 +59,8 @@ public class TestHelper {
      * @return the number of runs before success
      * @throws Exception
      */
-    public int testCommand(final String expectedFilePrefix, int numOfRuns, final String... command)
+    public int testCommand(
+            final String expectedFilePrefix, int numOfRuns, String rvRoot, final String... command)
             throws Exception {
         Assert.assertTrue(expectedFilePrefix != null);
 
@@ -78,7 +79,7 @@ public class TestHelper {
 
         ExecutorService executor = Executors.newFixedThreadPool(NUM_OF_WORKER_THREADS);
         List<Task> tasks = IntStream.range(0, numOfRuns).boxed()
-                .map(id -> new Task(testsPrefix, id, basePathFile, inFile, inputTest, command))
+                .map(id -> new Task(testsPrefix, id, rvRoot, basePathFile, inFile, inputTest, command))
                 .collect(Collectors.toList());
         Map<Task, Future<Integer>> taskToFuture = tasks.stream()
                 .collect(Collectors.toMap(x -> x, task -> executor.submit(task)));
@@ -141,7 +142,10 @@ public class TestHelper {
 
         private final File stderrFile;
 
-        private Task(String testsPrefix, int id, File basePathFile, File inputFile, boolean inputTest, String... command) {
+        private Task(
+                String testsPrefix, int id,
+                String rvRoot, File basePathFile, File inputFile, boolean inputTest,
+                String... command) {
             stdoutFile = new File(testsPrefix + id + ".actual.out");
             stderrFile = new File(testsPrefix + id + ".actual.err");
             if (inputTest) {
@@ -155,6 +159,7 @@ public class TestHelper {
             processBuilder.directory(basePathFile);
             processBuilder.redirectOutput(stdoutFile);
             processBuilder.redirectError(stderrFile);
+            processBuilder.environment().put("RV_ROOT", rvRoot);
             if (!inputTest && inputFile.exists() && !inputFile.isDirectory()) {
                 processBuilder.redirectInput(inputFile);
             }

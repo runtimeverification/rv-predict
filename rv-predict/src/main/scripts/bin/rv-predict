@@ -2,7 +2,12 @@
 ulimit -s `ulimit -H -s`
 
 bindir=${RV_ROOT:-/usr/local}/bin
-libdir=${RV_ROOT:-/usr/local}/lib
+if [ "$1" = "--test" ]; then
+    shift
+    libdir="$RV_ROOT"
+else
+    libdir=${RV_ROOT:-/usr/local}/lib
+fi
 
 ${bindir}/checkJava || exit 1
 

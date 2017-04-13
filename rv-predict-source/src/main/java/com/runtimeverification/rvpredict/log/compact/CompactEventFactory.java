@@ -150,7 +150,7 @@ public class CompactEventFactory {
         });
     }
 
-    List<CompactEvent> exitSignal(Context context) {
+    List<CompactEvent> exitSignal(Context context) throws InvalidTraceDataException {
         long currentSignal = context.getSignalNumber();
         context.exitSignal();
         return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.EXIT_SIGNAL) {
@@ -161,7 +161,8 @@ public class CompactEventFactory {
         });
     }
 
-    public List<CompactEvent> signalOutstandingDepth(Context context, int signalDepth) {
+    public List<CompactEvent> signalOutstandingDepth(Context context, int signalDepth)
+            throws InvalidTraceDataException {
         context.setSignalDepth(signalDepth);
         return NO_EVENTS;
     }

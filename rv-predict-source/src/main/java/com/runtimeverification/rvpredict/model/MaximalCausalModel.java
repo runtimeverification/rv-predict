@@ -112,9 +112,11 @@ public class MaximalCausalModel {
 
         toProcess.add(new Configuration(threads.size(), computeInitialVariableValues()));
 
+        /*
         List<Thread> threads = new ArrayList<>();
         for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
             Thread thread = new Thread(() -> {
+            */
                 toProcess.registerProducerConsumer();
                 for (Configuration configuration = toProcess.remove();
                      configuration != null;
@@ -127,6 +129,7 @@ public class MaximalCausalModel {
                         toProcess.add(expandedConfiguration);
                     });
                 }
+                /*
             });
             thread.start();
             threads.add(thread);
@@ -141,7 +144,7 @@ public class MaximalCausalModel {
                     interrupted = true;
                 }
             }
-        } while (interrupted);
+        } while (interrupted);*/
         return races;
     }
 

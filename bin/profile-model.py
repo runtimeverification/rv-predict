@@ -83,7 +83,18 @@ def run_for_windows(rv_predict_jar_path, windows, name, timeout_seconds, algorit
 def run_for_all_algorithms(rv_predict_jar_path, windows, name, timeout_seconds, extra_arguments):
     """Runs the rv-predict tool with the smt model first, then with the dynamic programming model,
        for all the window sizes given as argument."""
-    for algorithm in ['smt', 'dp', 'none']:
+    is_offline = ('--llvm-predict' in extra_arguments) or ('--predict' in extra_arguments)
+    if not is_offline:
+        if not os.path.exists(name):
+            os.makedirs(name)
+        run_for_windows(rv_predict_jar_path=rv_predict_jar_path,
+                        windows=None,
+                        name=name,
+                        timeout_seconds=timeout_seconds,
+                        algorithm="none",
+                        extra_arguments=['--log', '--base-log-dir', name] + extra_arguments)
+        extra_arguments = ['--predict', name] + extra_arguments
+    for algorithm in ['smt', 'dp']:
         run_for_windows(rv_predict_jar_path=rv_predict_jar_path,
                         windows=windows,
                         name=name,
@@ -106,6 +117,36 @@ def run_dacapo_tests(rv_predict_jar_path, dacapo_jar, windows, timeout_seconds):
             name='dacapo-%s' % test,
             timeout_seconds=timeout_seconds,
             extra_arguments=['-jar', dacapo_jar, test])
+
+RV_PREDICT_TESTS = [
+    'rv-predict-tests/ftpserver/trace',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.account.account.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.examples.RaceOnArrayList.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.examples.DoubleCheckedLocking.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.examples.BrokenSpinningLoop.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.demo.Stack.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.examples.SimpleRace.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.demo.example2.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.deadlock.simple.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.account.account.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.examples.RaceOnArrayList.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.examples.DoubleCheckedLocking.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.examples.BrokenSpinningLoop.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.demo.Stack.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.examples.SimpleRace.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.demo.example2.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.deadlock.simple.in',
+]
+
+def run_rvpredict_tests(rv_predict_jar_path, rv_predict_base_path, windows, timeout_seconds):
+    """Runs the rv-predict tool for all the rv_predict tests, changing the model and window size."""
+    for test in RV_PREDICT_TESTS:
+        run_for_all_algorithms(
+            rv_predict_jar_path=rv_predict_jar_path,
+            windows=windows,
+            name='dacapo-%s' % test,
+            timeout_seconds=timeout_seconds,
+            extra_arguments=['--predict', os.path.join(rv_predict_base_path, test)])
 
 def read_extra_arguments(argv):
     """Returns the arguments before the first '--' argument and after it as two separate lists."""

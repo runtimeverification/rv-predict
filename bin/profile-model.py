@@ -69,6 +69,8 @@ def run_for_windows(rv_predict_jar_path, windows, name, timeout_seconds, algorit
             timeout_seconds=timeout_seconds,
             algorithm=algorithm, extra_arguments=extra_arguments)
         print full_name, formatted_time
+        sys.stdout.flush()
+        return
     for window in windows:
         full_name = ('%s %s timeout=%s algorithm=%s, window=%s'
                      % (datetime.datetime.now(), name, timeout_seconds, algorithm, window))
@@ -173,9 +175,10 @@ def main(argv):
     parser.add_argument('--windows', '-w', action='append')
     parser.add_argument('--timeout-seconds', action='store')
     parser.add_argument('--name', action='store')
-    parser.add_argument('--llvm-directory', dest='llvm_directory', action='store')
-    parser.add_argument('--dacapo_jar', action='store')
-    parser.add_argument('--rv_predict_jar', action='store', default=rv_predict_default_jar_path)
+    parser.add_argument('--llvm-directory',
+                        dest='llvm_directory', action='store')
+    parser.add_argument('--dacapo-jar', action='store')
+    parser.add_argument('--rv-predict-jar', action='store', default=rv_predict_default_jar_path)
     args = parser.parse_args(argv)
 
     if args.dacapo_jar:

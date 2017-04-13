@@ -26,8 +26,7 @@ public class Event implements Comparable<Event> {
             = SIZEOF_LONG       //GID
             + SIZEOF_LONG       //TID
             + SIZEOF_INT        //ID
-            + SIZEOF_INT        //ADDRL
-            + SIZEOF_INT        //ADDRR
+            + SIZEOF_LONG       //ADDR
             + SIZEOF_LONG       //VALUE
             + SIZEOF_EVENT_TYPE //TYPE
             ;

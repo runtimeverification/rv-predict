@@ -38,7 +38,6 @@ def run_with_time(args, timeout_seconds):
         time.sleep(0.1)
     elapsed_time_seconds = time.time() - start_time_seconds
     script_name = os.path.basename(sys.argv[0])
-    print script_name
     subprocess.call(
         ['bash', '-c',
          (("kill -9 $(ps aux | grep 'rv-predict.jar' | grep -v '%s' "
@@ -47,55 +46,50 @@ def run_with_time(args, timeout_seconds):
         stdout=FNULL, stderr=FNULL)
     return format_time(elapsed_time_seconds)
 
-def run_rv_predict(rv_predict_jar_path, window_size, timeout_seconds, use_smt, extra_arguments):
+def run_rv_predict(rv_predict_jar_path, window_size, timeout_seconds, algorithm, extra_arguments):
     """Runs the rv-predict tool."""
     args = []
     args.extend(['java', '-ea', '-jar',
                  rv_predict_jar_path,])
     if window_size:
         args.extend(['--window', '%s' % 1000])
-    if not use_smt:
-        args.append('--no-smt')
+    args.extend(['--race-algorithm', algorithm])
     args.extend(extra_arguments)
 
     return run_with_time(args, timeout_seconds)
 
-def run_for_windows(rv_predict_jar_path, windows, name, timeout_seconds, use_smt, extra_arguments):
+def run_for_windows(rv_predict_jar_path, windows, name, timeout_seconds, algorithm,
+                    extra_arguments):
     """Runs the rv-predict tool for all the window sizes given as argument."""
     if not windows:
-        full_name = '%s timeout=%s use_smt=%s' % (name, timeout_seconds, use_smt)
+        full_name = '%s timeout=%s algorithm=%s' % (name, timeout_seconds, algorithm)
         print >> sys.stderr, full_name
         formatted_time = run_rv_predict(
             rv_predict_jar_path=rv_predict_jar_path, window_size=None,
             timeout_seconds=timeout_seconds,
-            use_smt=use_smt, extra_arguments=extra_arguments)
+            algorithm=algorithm, extra_arguments=extra_arguments)
         print full_name, formatted_time
     for window in windows:
-        full_name = ('%s %s timeout=%s use_smt=%s, window=%s'
-                     % (datetime.datetime.now(), name, timeout_seconds, use_smt, window))
+        full_name = ('%s %s timeout=%s algorithm=%s, window=%s'
+                     % (datetime.datetime.now(), name, timeout_seconds, algorithm, window))
         print >> sys.stderr, full_name
         formatted_time = run_rv_predict(
             rv_predict_jar_path=rv_predict_jar_path, window_size=window,
-            timeout_seconds=timeout_seconds, use_smt=use_smt,
+            timeout_seconds=timeout_seconds, algorithm=algorithm,
             extra_arguments=extra_arguments)
         print full_name, formatted_time
         sys.stdout.flush()
 
-def run_with_and_without_smt(rv_predict_jar_path, windows, name, timeout_seconds, extra_arguments):
+def run_for_all_algorithms(rv_predict_jar_path, windows, name, timeout_seconds, extra_arguments):
     """Runs the rv-predict tool with the smt model first, then with the dynamic programming model,
        for all the window sizes given as argument."""
-    run_for_windows(rv_predict_jar_path=rv_predict_jar_path,
-                    windows=windows,
-                    name=name,
-                    timeout_seconds=timeout_seconds,
-                    use_smt=True,
-                    extra_arguments=extra_arguments)
-    run_for_windows(rv_predict_jar_path=rv_predict_jar_path,
-                    windows=windows,
-                    name=name,
-                    timeout_seconds=timeout_seconds,
-                    use_smt=False,
-                    extra_arguments=extra_arguments)
+    for algorithm in ['smt', 'dp', 'none']:
+        run_for_windows(rv_predict_jar_path=rv_predict_jar_path,
+                        windows=windows,
+                        name=name,
+                        timeout_seconds=timeout_seconds,
+                        algorithm=algorithm,
+                        extra_arguments=extra_arguments)
 
 #TODO(virgil): it would be much nicer to read these from the output of
 # dacapo -l.
@@ -106,7 +100,7 @@ DACAPO_TESTS = [
 def run_dacapo_tests(rv_predict_jar_path, dacapo_jar, windows, timeout_seconds):
     """Runs the rv-predict tool for all the dacapo tests, changing the model and window size."""
     for test in DACAPO_TESTS:
-        run_with_and_without_smt(
+        run_for_all_algorithms(
             rv_predict_jar_path=rv_predict_jar_path,
             windows=windows,
             name='dacapo-%s' % test,
@@ -153,7 +147,7 @@ def main(argv):
 
     if args.llvm_directory:
         extra_arguments.extend(['--llvm-predict', args.llvm_directory])
-    run_with_and_without_smt(
+    run_for_all_algorithms(
         rv_predict_jar_path=args.rv_predict_jar,
         windows=[int(w) for w in args.windows],
         name=args.name,

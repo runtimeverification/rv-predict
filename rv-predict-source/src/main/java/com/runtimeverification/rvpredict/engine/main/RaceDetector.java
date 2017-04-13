@@ -112,12 +112,20 @@ public class RaceDetector implements Constants {
         }
 
         Map<String, Race> result;
-        if (config.isSmt()) {
-             result = MaximalCausalModel.create(trace, z3filter, solver)
-                    .checkRaceSuspects(sigToRaceSuspects);
-        } else {
-            result =
-                    com.runtimeverification.rvpredict.model.MaximalCausalModel.create(trace, config).findRaces();
+        switch (config.raceAlgorithm()) {
+            case SMT:
+                result = MaximalCausalModel.create(trace, z3filter, solver)
+                        .checkRaceSuspects(sigToRaceSuspects);
+                break;
+            case DP:
+                result =
+                        com.runtimeverification.rvpredict.model.MaximalCausalModel.create(trace, config).findRaces();
+                break;
+            case NONE:
+                result = new HashMap<>();
+                break;
+            default:
+                throw new IllegalStateException("Unknown race algorithm: " + config.raceAlgorithm() + ".");
         }
 
         sigToRealRace.putAll(result);

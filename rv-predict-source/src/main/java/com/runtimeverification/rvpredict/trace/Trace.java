@@ -368,7 +368,7 @@ public class Trace {
                         }
                     } else if (event.isUnlock()) {
                         if (event.isWaitRel()) {
-                            // a WAIT_REL event can be matched with one or more
+                            // a WAIT_RELEASE event can be matched with one or more
                             // lock events because locks can be reentrant
                             outermostLockEvents.add(event);
                         } else if (state.releaseLock(event) == 0) {
@@ -385,8 +385,6 @@ public class Trace {
                     } else if (type == EventType.CLINIT_EXIT) {
                         isInsideClinit = state.isInsideClassInitializer(tid);
                     }
-                } else if (event.isFork()) {
-                    //TODO(TraianSF): Add behavior for forking
                 } else {
 		    if (Configuration.debug)
 		        System.err.println(event.getType());

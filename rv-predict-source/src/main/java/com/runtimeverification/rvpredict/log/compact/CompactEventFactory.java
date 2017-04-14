@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.log.compact;
 
+import com.runtimeverification.rvpredict.log.EventType;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -16,13 +18,13 @@ public class CompactEventFactory {
             long address,
             long value,
             CompactEventReader.Atomicity atomicity) throws InvalidTraceDataException {
-        CompactEvent.Type compactType;
+        EventType compactType;
         switch (dataManipulationType) {
             case LOAD:
-                compactType = CompactEvent.Type.READ;
+                compactType = EventType.READ;
                 break;
             case STORE:
-                compactType = CompactEvent.Type.WRITE;
+                compactType = EventType.WRITE;
                 break;
             default:
                 throw new IllegalArgumentException(
@@ -44,7 +46,7 @@ public class CompactEventFactory {
     }
 
     private CompactEvent dataManipulationEvent(
-            Context context, int dataSizeInBytes, long address, long value, CompactEvent.Type compactType) {
+            Context context, int dataSizeInBytes, long address, long value, EventType compactType) {
         return new CompactEvent(context, compactType) {
             int getDataSizeInBytes() {
                 return dataSizeInBytes;
@@ -64,8 +66,8 @@ public class CompactEventFactory {
             long address, long readValue, long writeValue) throws InvalidTraceDataException {
         return Arrays.asList(
                 lockManipulationEvent(context, CompactEventReader.LockManipulationType.LOCK, address),
-                dataManipulationEvent(context, dataSizeInBytes, address, readValue, CompactEvent.Type.READ),
-                dataManipulationEvent(context, dataSizeInBytes, address, writeValue, CompactEvent.Type.WRITE),
+                dataManipulationEvent(context, dataSizeInBytes, address, readValue, EventType.READ),
+                dataManipulationEvent(context, dataSizeInBytes, address, writeValue, EventType.WRITE),
                 lockManipulationEvent(context, CompactEventReader.LockManipulationType.UNLOCK, address));
     }
 
@@ -83,13 +85,13 @@ public class CompactEventFactory {
     private CompactEvent lockManipulationEvent(
             Context context, CompactEventReader.LockManipulationType lockManipulationType, long address)
             throws InvalidTraceDataException {
-        CompactEvent.Type compactType;
+        EventType compactType;
         switch (lockManipulationType) {
             case LOCK:
-                compactType = CompactEvent.Type.LOCK;
+                compactType = EventType.WRITE_LOCK;
                 break;
             case UNLOCK:
-                compactType = CompactEvent.Type.UNLOCK;
+                compactType = EventType.WRITE_UNLOCK;
                 break;
             default:
                 throw new InvalidTraceDataException("Unknown lock manipulation type: " + lockManipulationType);
@@ -114,7 +116,7 @@ public class CompactEventFactory {
             long handler, long signalNumber, long signalMaskNumber) {
         context.establishSignal(handler, signalNumber, signalMaskNumber);
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.ESTABLISH_SIGNAL) {
+        return Collections.singletonList(new CompactEvent(context, EventType.ESTABLISH_SIGNAL) {
             @Override
             long getSignalMask() {
                 return signalMask;
@@ -133,7 +135,7 @@ public class CompactEventFactory {
     public List<CompactEvent> disestablishSignal(
             Context context, long signalNumber) {
         context.disestablishSignal(signalNumber);
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.DISESTABLISH_SIGNAL) {
+        return Collections.singletonList(new CompactEvent(context, EventType.DISESTABLISH_SIGNAL) {
             long getSignalNumber() {
                 return signalNumber;
             }
@@ -143,7 +145,7 @@ public class CompactEventFactory {
     public List<CompactEvent> enterSignal(
             Context context, long generation, long signalNumber) throws InvalidTraceDataException {
         context.enterSignal(signalNumber, generation);
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.ENTER_SIGNAL) {
+        return Collections.singletonList(new CompactEvent(context, EventType.ENTER_SIGNAL) {
             long getSignalNumber() {
                 return signalNumber;
             }
@@ -153,7 +155,7 @@ public class CompactEventFactory {
     List<CompactEvent> exitSignal(Context context) throws InvalidTraceDataException {
         long currentSignal = context.getSignalNumber();
         context.exitSignal();
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.EXIT_SIGNAL) {
+        return Collections.singletonList(new CompactEvent(context, EventType.EXIT_SIGNAL) {
             @Override
             long getSignalNumber() {
                 return currentSignal;
@@ -182,12 +184,12 @@ public class CompactEventFactory {
     // Function events.
 
     List<CompactEvent> enterFunction(Context context) {
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.ENTER_FUNCTION) {
+        return Collections.singletonList(new CompactEvent(context, EventType.INVOKE_METHOD) {
         });
     }
 
     List<CompactEvent> exitFunction(Context context) {
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.EXIT_FUNCTION) {
+        return Collections.singletonList(new CompactEvent(context, EventType.FINISH_METHOD) {
         });
     }
 
@@ -196,14 +198,14 @@ public class CompactEventFactory {
     public List<CompactEvent> beginThread(Context context, long threadId, long generation)
             throws InvalidTraceDataException {
         context.beginThread(threadId, generation);
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.BEGIN_THREAD) {
+        return Collections.singletonList(new CompactEvent(context, EventType.BEGIN_THREAD) {
         });
     }
 
     List<CompactEvent> endThread(Context context) {
         long threadId = context.getThreadId();
         context.endThread();
-        return Collections.singletonList(new CompactEvent(context, CompactEvent.Type.END_THREAD) {
+        return Collections.singletonList(new CompactEvent(context, EventType.END_THREAD) {
             @Override
             long getThreadId() {
                 return threadId;
@@ -214,15 +216,15 @@ public class CompactEventFactory {
     public List<CompactEvent> threadSync(
             Context context, CompactEventReader.ThreadSyncType threadSyncType, long threadId)
             throws InvalidTraceDataException {
-        CompactEvent.Type compactType;
+        EventType compactType;
         switch (threadSyncType) {
             case JOIN:
                 context.joinThread(threadId);
-                compactType = CompactEvent.Type.JOIN_THREAD;
+                compactType = EventType.JOIN_THREAD;
                 break;
             case FORK:
-                context.forkThread(threadId);
-                compactType = CompactEvent.Type.FORK;
+                context.startThread(threadId);
+                compactType = EventType.START_THREAD;
                 break;
             case SWITCH:
                 context.switchThread(threadId);

@@ -353,8 +353,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                 int extra) {
             int atomLock;
             switch (eventType) {
-            case JOIN:
-                /* flush the delayed events in the joined thread before logging JOIN */
+            case JOIN_THREAD:
+                /* flush the delayed events in the joined thread before logging JOIN_THREAD */
                 for (Buffer b : activeBuffers.toArray(new Buffer[0])) {
                     if (b.tid == ((long) addr1 << 32 | addr2 & 0xFFFFFFFFL)) {
                         b.finalizeRemainingEvents();
@@ -363,7 +363,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             case READ:
             case WRITE_LOCK:
             case READ_LOCK:
-            case WAIT_ACQ:
+            case WAIT_ACQUIRE:
             case CLINIT_ENTER:
             case CLINIT_EXIT:
                 log(eventType, locId, addr1, addr2, value1);
@@ -385,8 +385,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             case WRITE:
             case WRITE_UNLOCK:
             case READ_UNLOCK:
-            case WAIT_REL:
-            case START:
+            case WAIT_RELEASE:
+            case START_THREAD:
                 log(eventType, locId, addr1, addr2, value1);
                 finalizeEvents();
                 break;

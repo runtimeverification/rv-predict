@@ -69,7 +69,7 @@ public class Context {
         currentThread.end();
     }
 
-    void forkThread(long threadId) {
+    void startThread(long threadId) {
     }
 
     void joinThread(long otherThreadId) {

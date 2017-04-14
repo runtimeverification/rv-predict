@@ -137,21 +137,21 @@ public class Event implements Comparable<Event> {
     }
 
     public boolean isStart() {
-        return TYPE == EventType.START;
+        return TYPE == EventType.START_THREAD;
     }
 
     public boolean isJoin() {
-        return TYPE == EventType.JOIN;
+        return TYPE == EventType.JOIN_THREAD;
     }
 
     /**
      * Returns {@code true} if this event has type {@link EventType#WRITE_LOCK},
-     * {@link EventType#READ_LOCK}, or {@link EventType#WAIT_ACQ}; otherwise,
+     * {@link EventType#READ_LOCK}, or {@link EventType#WAIT_ACQUIRE}; otherwise,
      * {@code false}.
      */
     public boolean isLock() {
         return TYPE == EventType.READ_LOCK || TYPE == EventType.WRITE_LOCK
-                || TYPE == EventType.WAIT_ACQ;
+                || TYPE == EventType.WAIT_ACQUIRE;
     }
 
     public boolean isPreLock() {
@@ -167,17 +167,17 @@ public class Event implements Comparable<Event> {
     }
 
     public boolean isWaitAcq() {
-        return TYPE == EventType.WAIT_ACQ;
+        return TYPE == EventType.WAIT_ACQUIRE;
     }
 
     /**
      * Returns {@code true} if this event has type
      * {@link EventType#WRITE_UNLOCK}, {@link EventType#READ_UNLOCK}, or
-     * {@link EventType#WAIT_REL}; otherwise, {@code false}.
+     * {@link EventType#WAIT_RELEASE}; otherwise, {@code false}.
      */
     public boolean isUnlock() {
         return TYPE == EventType.READ_UNLOCK || TYPE == EventType.WRITE_UNLOCK
-                || TYPE == EventType.WAIT_REL;
+                || TYPE == EventType.WAIT_RELEASE;
     }
 
     public boolean isReadUnlock() {
@@ -189,7 +189,7 @@ public class Event implements Comparable<Event> {
     }
 
     public boolean isWaitRel() {
-        return TYPE == EventType.WAIT_REL;
+        return TYPE == EventType.WAIT_RELEASE;
     }
 
     public boolean isSyncEvent() {
@@ -198,10 +198,6 @@ public class Event implements Comparable<Event> {
 
     public boolean isMetaEvent() {
         return TYPE.isMetaType();
-    }
-
-    public boolean isFork() {
-        return TYPE == EventType.FORK;
     }
 
     public boolean isCallStackEvent() {

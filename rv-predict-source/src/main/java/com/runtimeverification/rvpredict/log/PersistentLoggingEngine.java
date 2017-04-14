@@ -100,10 +100,10 @@ public class PersistentLoggingEngine implements ILoggingEngine, Constants {
         case WRITE_UNLOCK:
         case READ_LOCK:
         case READ_UNLOCK:
-        case WAIT_ACQ:
-        case WAIT_REL:
-        case START:
-        case JOIN:
+        case WAIT_ACQUIRE:
+        case WAIT_RELEASE:
+        case START_THREAD:
+        case JOIN_THREAD:
         case CLINIT_ENTER:
         case CLINIT_EXIT:
             gid = globalEventID.getAndIncrement();

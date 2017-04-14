@@ -28,14 +28,14 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.smt;
 
+import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.trace.LockRegion;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.trace.LockRegion;
 
 /**
  * Engine for computing the lockset algorithm.
@@ -52,10 +52,10 @@ public class LockSetEngine {
     }
 
     /**
-     * Checks if two given {@code Event}'s hold a common lock.
+     * Checks if two given {@code ReadonlyEvent}'s hold a common lock.
      */
-    public boolean hasCommonLock(Event e1, Event e2) {
-        if (e1.getTID() == e2.getTID()) {
+    public boolean hasCommonLock(ReadonlyEvent e1, ReadonlyEvent e2) {
+        if (e1.getThreadId() == e2.getThreadId()) {
             throw new IllegalArgumentException();
         }
 
@@ -72,12 +72,12 @@ public class LockSetEngine {
         return false;
     }
 
-    private LockRegion getLockRegion(Event e, long lockId) {
+    private LockRegion getLockRegion(ReadonlyEvent e, long lockId) {
         /* given a lockId, an event can be protected by at most one write-locked
          * region and one read-locked region (due to reentrant read-write lock
          * downgrading); always prefer to return the write-locked region */
         LockRegion result = null;
-        for (LockRegion region : lockIdToTidToLockRegions.get(lockId).getOrDefault(e.getTID(),
+        for (LockRegion region : lockIdToTidToLockRegions.get(lockId).getOrDefault(e.getThreadId(),
                 Collections.emptyList())) {
             if (region.include(e)) {
                 if (region.isWriteLocked()) {

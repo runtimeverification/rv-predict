@@ -1,7 +1,7 @@
 package com.runtimeverification.rvpredict.trace;
 
-import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
+import com.runtimeverification.rvpredict.log.ReadonlyEvent;
 
 /**
  * Unprocessed trace of events, implemented as a thin wrapper around the array
@@ -19,10 +19,10 @@ public class RawTrace {
 
     private final int mask;
 
-    private final Event[] events;
+    private final ReadonlyEvent[] events;
 
-    public RawTrace(int start, int end, Event[] events) {
-        this.tid = events[start].getTID();
+    public RawTrace(int start, int end, ReadonlyEvent[] events) {
+        this.tid = events[start].getThreadId();
         this.start = start;
         this.mask = events.length - 1;
         this.size = (end - start + events.length) & mask;
@@ -37,7 +37,7 @@ public class RawTrace {
     }
 
     public long getMinGID() {
-        return events[start].getGID();
+        return events[start].getEventId();
     }
 
     public int size() {
@@ -54,7 +54,7 @@ public class RawTrace {
     /**
      * Returns the {@code n}-th event in the trace.
      */
-    public Event event(int n) {
+    public ReadonlyEvent event(int n) {
         return events[getIndex(n)];
     }
 

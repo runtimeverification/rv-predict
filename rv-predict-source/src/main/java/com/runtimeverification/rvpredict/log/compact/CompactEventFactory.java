@@ -98,7 +98,7 @@ public class CompactEventFactory {
         }
         return new CompactEvent(context, compactType) {
             @Override
-            long getLockAddress() {
+            long getSyncObject() {
                 return address;
             }
         };
@@ -234,7 +234,7 @@ public class CompactEventFactory {
         }
         return Collections.singletonList(new CompactEvent(context, compactType) {
             @Override
-            long getOtherThreadId() {
+            long getSyncedThreadId() {
                 return threadId;
             }
         });

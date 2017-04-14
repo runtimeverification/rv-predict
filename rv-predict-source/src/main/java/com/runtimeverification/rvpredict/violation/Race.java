@@ -28,15 +28,17 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.violation;
 
-import java.util.*;
-
 import com.google.common.base.StandardSystemProperty;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
-import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.log.ReadonlyEvent;
 import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
+import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
 import com.runtimeverification.rvpredict.trace.Trace;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Represents a data race. A data race is uniquely identified by the two memory
@@ -49,15 +51,15 @@ import com.runtimeverification.rvpredict.trace.Trace;
  */
 public class Race {
 
-    private final Event e1;
-    private final Event e2;
+    private final ReadonlyEvent e1;
+    private final ReadonlyEvent e2;
     private final Configuration config;
     private final Trace trace;
     private final SignatureProcessor signatureProcessor;
 
-    public Race(Event e1, Event e2, Trace trace, Configuration config) {
-        if (e1.getGID() > e2.getGID()) {
-            Event tmp = e1;
+    public Race(ReadonlyEvent e1, ReadonlyEvent e2, Trace trace, Configuration config) {
+        if (e1.getEventId() > e2.getEventId()) {
+            ReadonlyEvent tmp = e1;
             e1 = e2;
             e2 = tmp;
         }
@@ -73,11 +75,11 @@ public class Race {
         }
     }
 
-    public Event firstEvent() {
+    public ReadonlyEvent firstEvent() {
         return e1;
     }
 
-    public Event secondEvent() {
+    public ReadonlyEvent secondEvent() {
         return e2;
     }
 
@@ -99,8 +101,8 @@ public class Race {
     @Override
     public String toString() {
         int addr = Math.min(0, e1.getFieldIdOrArrayIndex()); // collapse all array indices to 0
-        int loc1 = Math.min(e1.getLocId(), e2.getLocId());
-        int loc2 = Math.max(e1.getLocId(), e2.getLocId());
+        int loc1 = Math.min(e1.getLocationId(), e2.getLocationId());
+        int loc2 = Math.max(e1.getLocationId(), e2.getLocationId());
         return "Race(" + addr + "," + loc1 + "," + loc2 + ")";
     }
 
@@ -141,8 +143,8 @@ public class Race {
         sb.append(String.format("Data race on %s: {{{%n", locSig));
         boolean reportableRace = false;
 
-        if (trace.metadata().getLocationSig(e1.getLocId())
-                .compareTo(trace.metadata().getLocationSig(e2.getLocId())) <= 0) {
+        if (trace.metadata().getLocationSig(e1.getLocationId())
+                .compareTo(trace.metadata().getLocationSig(e2.getLocationId())) <= 0) {
             reportableRace |= generateMemAccReport(e1, sb);
             sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
             reportableRace |= generateMemAccReport(e2, sb);
@@ -156,21 +158,21 @@ public class Race {
         return reportableRace ? signatureProcessor.simplify(sb.toString()) : "";
     }
 
-    private boolean generateMemAccReport(Event e, StringBuilder sb) {
+    private boolean generateMemAccReport(ReadonlyEvent e, StringBuilder sb) {
         int stackSize = 0;
-        long tid = e.getTID();
+        long tid = e.getThreadId();
         Metadata metadata = trace.metadata();
-        List<Event> heldLocks = trace.getHeldLocksAt(e);
+        List<ReadonlyEvent> heldLocks = trace.getHeldLocksAt(e);
         sb.append(String.format("    Concurrent %s in thread T%s (locks held: {%s})%n",
                 e.isWrite() ? "write" : "read",
                 tid,
                 getHeldLocksReport(heldLocks)));
         boolean isTopmostStack = true;
-        List<Event> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
+        List<ReadonlyEvent> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
         stacktrace.addAll(heldLocks);
         Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
-        for (Event elem : stacktrace) {
-            int locId = elem.getLocId();
+        for (ReadonlyEvent elem : stacktrace) {
+            int locId = elem.getLocationId();
             String locSig = locId >= 0 ? metadata.getLocationSig(locId)
                     : "... not available ...";
             if (config.isExcludedLibrary(locSig)) {
@@ -211,7 +213,7 @@ public class Race {
         return stackSize>0;
     }
 
-    private String getHeldLocksReport(List<Event> heldLocks) {
+    private String getHeldLocksReport(List<ReadonlyEvent> heldLocks) {
         StringBuilder sb = new StringBuilder();
         if (!heldLocks.isEmpty()) {
             for (int i = 0; i < heldLocks.size(); i++) {

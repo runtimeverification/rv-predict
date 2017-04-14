@@ -28,24 +28,24 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.trace;
 
-import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.log.ReadonlyEvent;
 
 public class LockRegion implements Comparable<LockRegion> {
-    private final Event lock;
-    private final Event unlock;
+    private final ReadonlyEvent lock;
+    private final ReadonlyEvent unlock;
 
     private final long tid;
     private final long lockId;
 
     private boolean isReadLocked = false;
 
-    public LockRegion(Event lock, Event unlock) {
+    public LockRegion(ReadonlyEvent lock, ReadonlyEvent unlock) {
         this.lock = lock;
         this.unlock = unlock;
 
         if (lock != null) {
-            tid = lock.getTID();
+            tid = lock.getThreadId();
             lockId = lock.getLockId();
             if (lock.getType() == EventType.READ_LOCK) {
                 if (unlock != null && unlock.getType() != EventType.READ_UNLOCK) {
@@ -54,7 +54,7 @@ public class LockRegion implements Comparable<LockRegion> {
                 isReadLocked = true;
             }
         } else {
-            tid = unlock.getTID();
+            tid = unlock.getThreadId();
             lockId = unlock.getLockId();
             if (unlock.getType() == EventType.READ_UNLOCK) {
                 isReadLocked = true;
@@ -62,11 +62,11 @@ public class LockRegion implements Comparable<LockRegion> {
         }
     }
 
-    public Event getLock() {
+    public ReadonlyEvent getLock() {
         return lock;
     }
 
-    public Event getUnlock() {
+    public ReadonlyEvent getUnlock() {
         return unlock;
     }
 
@@ -82,8 +82,8 @@ public class LockRegion implements Comparable<LockRegion> {
         return !isReadLocked;
     }
 
-    public boolean include(Event e) {
-        return tid == e.getTID() && (lock == null || lock.compareTo(e) < 0)
+    public boolean include(ReadonlyEvent e) {
+        return tid == e.getThreadId() && (lock == null || lock.compareTo(e) < 0)
                 && (unlock == null || unlock.compareTo(e) > 0);
     }
 
@@ -94,10 +94,10 @@ public class LockRegion implements Comparable<LockRegion> {
 
     @Override
     public int compareTo(LockRegion otherRegion) {
-        long x1 = lock == null ? Integer.MIN_VALUE : lock.getGID();
-        long y1 = unlock == null ? Integer.MAX_VALUE : unlock.getGID();
-        long x2 = otherRegion.lock == null ? Integer.MIN_VALUE : otherRegion.lock.getGID();
-        long y2 = otherRegion.unlock == null ? Integer.MAX_VALUE : otherRegion.unlock.getGID();
+        long x1 = lock == null ? Integer.MIN_VALUE : lock.getEventId();
+        long y1 = unlock == null ? Integer.MAX_VALUE : unlock.getEventId();
+        long x2 = otherRegion.lock == null ? Integer.MIN_VALUE : otherRegion.lock.getEventId();
+        long y2 = otherRegion.unlock == null ? Integer.MAX_VALUE : otherRegion.unlock.getEventId();
         return x1 != x2 ? Long.compare(x1, x2) : Long.compare(y1, y2);
     }
 

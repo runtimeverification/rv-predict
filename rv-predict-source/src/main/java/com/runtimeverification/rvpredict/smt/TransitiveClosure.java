@@ -5,28 +5,28 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.runtimeverification.rvpredict.log.ReadonlyEvent;
 import org.apache.commons.lang3.tuple.Pair;
 
-import com.runtimeverification.rvpredict.log.Event;
 
 public class TransitiveClosure {
 
     /**
      * Map from event to its group ID in the contracted graph.
      */
-    private final Map<Event, Integer> eventToGroupId;
+    private final Map<ReadonlyEvent, Integer> eventToGroupId;
 
     /**
      * Relation matrix indexed by group ID.
      */
     private final boolean[][] relation;
 
-    private TransitiveClosure(Map<Event, Integer> eventToGroupId, boolean[][] inRelation) {
+    private TransitiveClosure(Map<ReadonlyEvent, Integer> eventToGroupId, boolean[][] inRelation) {
         this.eventToGroupId = eventToGroupId;
         this.relation = inRelation;
     }
 
-    public boolean inRelation(Event e1, Event e2) {
+    public boolean inRelation(ReadonlyEvent e1, ReadonlyEvent e2) {
         return relation[eventToGroupId.get(e1)][eventToGroupId.get(e2)];
     }
 
@@ -36,26 +36,26 @@ public class TransitiveClosure {
 
     public static class Builder {
 
-        private final Map<Event, Integer> eventToGroupId;
+        private final Map<ReadonlyEvent, Integer> eventToGroupId;
 
-        private final List<Pair<Event, Event>> relations = new ArrayList<>();
+        private final List<Pair<ReadonlyEvent, ReadonlyEvent>> relations = new ArrayList<>();
 
         private Builder(int size) {
             eventToGroupId = new HashMap<>(size);
         }
 
-        public void createNewGroup(Event e) {
+        public void createNewGroup(ReadonlyEvent e) {
             eventToGroupId.put(e, eventToGroupId.size());
         }
 
         /**
          * Add event {@code y} to the group of event {@code x}.
          */
-        public void addToGroup(Event y, Event x) {
+        public void addToGroup(ReadonlyEvent y, ReadonlyEvent x) {
             eventToGroupId.put(y, eventToGroupId.get(x));
         }
 
-        public void addRelation(Event x, Event y) {
+        public void addRelation(ReadonlyEvent x, ReadonlyEvent y) {
             relations.add(Pair.of(x, y));
         }
 

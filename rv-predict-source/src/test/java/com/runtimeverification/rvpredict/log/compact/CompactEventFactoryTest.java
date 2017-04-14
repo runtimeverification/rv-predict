@@ -35,21 +35,21 @@ public class CompactEventFactoryTest {
     private static final List<CompactEventMethod> ALL_METHODS = new ArrayList<>();
 
     private static final CompactEventMethod<Long> GET_ID =
-            new CompactEventMethod<>(ALL_METHODS, "getId", CompactEvent::getId);
+            new CompactEventMethod<>(ALL_METHODS, "getEventId", CompactEvent::getEventId);
     private static final CompactEventMethod<Long> GET_THREAD_ID =
             new CompactEventMethod<>(ALL_METHODS, "getThreadId", CompactEvent::getThreadId);
     private static final CompactEventMethod<EventType> GET_COMPACT_TYPE =
-            new CompactEventMethod<>(ALL_METHODS, "getCompactType", CompactEvent::getCompactType);
+            new CompactEventMethod<>(ALL_METHODS, "getType", CompactEvent::getType);
     private static final CompactEventMethod<Integer> GET_DATA_SIZE_IN_BYTES =
             new CompactEventMethod<>(ALL_METHODS, "getDataSizeInBytes", CompactEvent::getDataSizeInBytes);
     private static final CompactEventMethod<Long> GET_DATA_ADDRESS =
             new CompactEventMethod<>(ALL_METHODS, "getAddress", CompactEvent::getDataAddress);
     private static final CompactEventMethod<Long> GET_DATA_VALUE =
-            new CompactEventMethod<>(ALL_METHODS, "getValue", CompactEvent::getDataValue);
+            new CompactEventMethod<>(ALL_METHODS, "getDataValue", CompactEvent::getDataValue);
     private static final CompactEventMethod<Long> GET_LOCK_ADDRESS =
-            new CompactEventMethod<>(ALL_METHODS, "getLockAddress", CompactEvent::getLockAddress);
+            new CompactEventMethod<>(ALL_METHODS, "getSyncObject", CompactEvent::getSyncObject);
     private static final CompactEventMethod<Long> GET_OTHER_THREAD_ID =
-            new CompactEventMethod<>(ALL_METHODS, "getOtherThreadId", CompactEvent::getOtherThreadId);
+            new CompactEventMethod<>(ALL_METHODS, "getSyncedThreadId", CompactEvent::getSyncedThreadId);
     private static final CompactEventMethod<Long> GET_SIGNAL_HANDLER_ADDRESS =
             new CompactEventMethod<>(ALL_METHODS, "getSignalHandlerAddress", CompactEvent::getSignalHandlerAddress);
     private static final CompactEventMethod<Long> GET_SIGNAL_MASK =

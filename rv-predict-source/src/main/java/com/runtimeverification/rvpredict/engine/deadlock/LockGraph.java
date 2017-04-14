@@ -1,14 +1,20 @@
 package com.runtimeverification.rvpredict.engine.deadlock;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
-import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
 import com.runtimeverification.rvpredict.util.Logger;
 import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Class for representing the lock acquisition graph abstraction
@@ -20,8 +26,8 @@ public class LockGraph {
     private final Configuration config;
     private final Metadata metadata;
     private final SCCTarjan<Long> sccGraph = new SCCTarjan<>();
-    private final Map<Long,Event> lockEvents = new HashMap<>();
-    private final Map<Pair<Long,Long>, Pair<Event,Event>> eventEdges = new HashMap<>();
+    private final Map<Long,ReadonlyEvent> lockEvents = new HashMap<>();
+    private final Map<Pair<Long,Long>, Pair<ReadonlyEvent, ReadonlyEvent>> eventEdges = new HashMap<>();
     private final Map<Long, Set<Long>> lockSet = new HashMap<>();
     private final SignatureProcessor signatureProcessor;
 
@@ -42,10 +48,10 @@ public class LockGraph {
      *
      * @param event  a lock/unlock event
      */
-    public void handle(Event event) {
+    public void handle(ReadonlyEvent event) {
         assert event.isPreLock() || event.isLock() || event.isUnlock();
         long lockId = event.getLockId();
-        long tid = event.getTID();
+        long tid = event.getThreadId();
         Set<Long> locks = lockSet.get(tid);
         if (event.isUnlock()) {
             if (locks == null) {
@@ -81,14 +87,14 @@ public class LockGraph {
         eventEdges.put(Pair.of(l1,l2),Pair.of(lockEvents.get(l1), lockEvents.get(l2)));
     }
 
-    private List<List<Pair<Event,Event>>> getCycles() {
+    private List<List<Pair<ReadonlyEvent, ReadonlyEvent>>> getCycles() {
         Collection<List<Long>> cycles = sccGraph.getScc();
-        List<List<Pair<Event,Event>>> eventCycles = new ArrayList<>();
+        List<List<Pair<ReadonlyEvent, ReadonlyEvent>>> eventCycles = new ArrayList<>();
         for (List<Long> cycle : cycles) {
             // reverse the order of vertices because getScc returns them as they were stored on an internal stack
             java.util.Collections.reverse((List<?>) cycle);
             if (cycle.size()==1) continue;
-            List<Pair<Event,Event>> eventCycle = new ArrayList<>();
+            List<Pair<ReadonlyEvent, ReadonlyEvent>> eventCycle = new ArrayList<>();
             for (int i = 0; i < cycle.size()-1; i++) {
                 long v1 = cycle.get(i);
                 long v2 = cycle.get(i+1);
@@ -106,28 +112,28 @@ public class LockGraph {
     }
 
 
-    private void reportDeadlock(List<Pair<Event, Event>> cycle) {
+    private void reportDeadlock(List<Pair<ReadonlyEvent, ReadonlyEvent>> cycle) {
         signatureProcessor.reset();
         StringBuilder report = new StringBuilder();
         StringBuilder summary = new StringBuilder();
         StringBuilder details = new StringBuilder();
         cycle.forEach(eventEventPair -> {
             String locSig;
-            Event before = eventEventPair.getLeft();
+            ReadonlyEvent before = eventEventPair.getLeft();
             summary.append("M"+ before.getLockId() + " " +
                     "(" + before.getLockRepresentation() + ")" +
                     " => ");
-            Event after = eventEventPair.getRight();
+            ReadonlyEvent after = eventEventPair.getRight();
             details.append('\n');
             details.append("    M" + after.getLockId() + " acquired " +
                     "while holding M" + before.getLockId());
             details.append('\n');
             details.append(" ---->  at ");
-            locSig = metadata.getLocationSig(after.getLocId());
+            locSig = metadata.getLocationSig(after.getLocationId());
             signatureProcessor.process(locSig);
             details.append(locSig);
             details.append('\n');
-            locSig = metadata.getLocationSig(before.getLocId());
+            locSig = metadata.getLocationSig(before.getLocationId());
             signatureProcessor.process(locSig);
             details.append(String.format("        - locked %s at %s %n",
                     "M"+ before.getLockId(),
@@ -143,11 +149,11 @@ public class LockGraph {
         config.logger().report(signatureProcessor.simplify(report.toString()), Logger.MSGTYPE.REAL);
     }
 
-    private void reportUnlockOfUnlockedMutex(Event event) {
+    private void reportUnlockOfUnlockedMutex(ReadonlyEvent event) {
         assert(event.isUnlock());
         StringBuilder report = new StringBuilder();
         report.append("Unlock of an unlocked mutex: \n");
-        report.append("\t\t" + metadata.getLocationSig(event.getLocId()));
+        report.append("\t\t" + metadata.getLocationSig(event.getLocationId()));
         report.append("\n");
         config.logger().report(report.toString(), Logger.MSGTYPE.REAL);
     }

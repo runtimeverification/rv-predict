@@ -297,7 +297,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             events = new Event[length];
             for (int i = 0; i < length; i++) {
                 events[i] = new Event();
-                events[i].setTID(tid);
+                events[i].setThreadId(tid);
             }
         }
 
@@ -420,9 +420,9 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         private void log(EventType eventType, int locId, int addr1, int addr2, long value) {
             Event event = events[end];
             end = next(end);
-            event.setLocId(locId);
-            event.setAddr((long) addr1 << 32 | addr2 & 0xFFFFFFFFL);
-            event.setValue(value);
+            event.setLocationId(locId);
+            event.setAddress((long) addr1 << 32 | addr2 & 0xFFFFFFFFL);
+            event.setDataValue(value);
             event.setType(eventType);
         }
 
@@ -433,14 +433,14 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             cursor = end;
             if (numOfCallStackEvents == 0) {
                 for (int i = 0; i < d; i++) {
-                    events[p].setGID(gid++);
+                    events[p].setEventId(gid++);
                     p = next(p);
                 }
             } else {
                 for (int i = 0; i < d + numOfCallStackEvents; i++) {
                     /* a dirty hack based on the fact that we never use the GID
                      * of a MetaEvent */
-                    events[p].setGID(events[p].isCallStackEvent() ? gid : gid++);
+                    events[p].setEventId(events[p].isCallStackEvent() ? gid : gid++);
                     p = next(p);
                 }
             }

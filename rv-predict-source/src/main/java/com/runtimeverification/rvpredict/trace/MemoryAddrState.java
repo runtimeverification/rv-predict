@@ -1,12 +1,12 @@
 package com.runtimeverification.rvpredict.trace;
 
-import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
 public class MemoryAddrState {
     private long reader1, reader2;
     private long writer1, writer2;
 
-    public void touch(ReadonlyEvent event) {
+    public void touch(ReadonlyEventInterface event) {
         long tid = event.getThreadId();
         if (event.isRead()) {
             if (reader1 == 0) {

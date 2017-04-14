@@ -39,9 +39,9 @@ public class CompactEventFactory {
         // access to a part of the variable (i.e. union in c/c++), if that's indeed how it should
         // work.
         return Arrays.asList(
-                lockManipulationEvent(context, CompactEventReader.LockManipulationType.LOCK, address),
+                lockManipulationEvent(context, CompactEventReader.LockManipulationType.LOCK, address, true),
                 dataManipulationEvent(context, dataSizeInBytes, address, value, compactType),
-                lockManipulationEvent(context, CompactEventReader.LockManipulationType.UNLOCK, address)
+                lockManipulationEvent(context, CompactEventReader.LockManipulationType.UNLOCK, address, true)
         );
     }
 
@@ -51,10 +51,10 @@ public class CompactEventFactory {
             int getDataSizeInBytes() {
                 return dataSizeInBytes;
             }
-            long getDataAddress() {
+            public long getDataAddress() {
                 return address;
             }
-            long getDataValue() {
+            public long getDataValue() {
                 return value;
             }
         };
@@ -65,10 +65,10 @@ public class CompactEventFactory {
             int dataSizeInBytes,
             long address, long readValue, long writeValue) throws InvalidTraceDataException {
         return Arrays.asList(
-                lockManipulationEvent(context, CompactEventReader.LockManipulationType.LOCK, address),
+                lockManipulationEvent(context, CompactEventReader.LockManipulationType.LOCK, address, true),
                 dataManipulationEvent(context, dataSizeInBytes, address, readValue, EventType.READ),
                 dataManipulationEvent(context, dataSizeInBytes, address, writeValue, EventType.WRITE),
-                lockManipulationEvent(context, CompactEventReader.LockManipulationType.UNLOCK, address));
+                lockManipulationEvent(context, CompactEventReader.LockManipulationType.UNLOCK, address, true));
     }
 
     public List<CompactEvent> changeOfGeneration(Context context, long generation) {
@@ -79,11 +79,14 @@ public class CompactEventFactory {
     public List<CompactEvent> lockManipulation(
             Context context, CompactEventReader.LockManipulationType lockManipulationType, long address)
             throws InvalidTraceDataException {
-        return Collections.singletonList(lockManipulationEvent(context, lockManipulationType, address));
+        return Collections.singletonList(lockManipulationEvent(context, lockManipulationType, address, true));
     }
 
     private CompactEvent lockManipulationEvent(
-            Context context, CompactEventReader.LockManipulationType lockManipulationType, long address)
+            Context context,
+            CompactEventReader.LockManipulationType lockManipulationType,
+            long address,
+            boolean isAtomic)
             throws InvalidTraceDataException {
         EventType compactType;
         switch (lockManipulationType) {
@@ -98,8 +101,14 @@ public class CompactEventFactory {
         }
         return new CompactEvent(context, compactType) {
             @Override
-            long getSyncObject() {
+            public long getSyncObject() {
                 return address;
+            }
+
+            @Override
+            public String getLockRepresentation() {
+                String prefix = isAtomic ? "AtomicLock@" : "WriteLock@";
+                return prefix + getLockId();
             }
         };
     }
@@ -207,7 +216,7 @@ public class CompactEventFactory {
         context.endThread();
         return Collections.singletonList(new CompactEvent(context, EventType.END_THREAD) {
             @Override
-            long getThreadId() {
+            public long getThreadId() {
                 return threadId;
             }
         });
@@ -234,7 +243,7 @@ public class CompactEventFactory {
         }
         return Collections.singletonList(new CompactEvent(context, compactType) {
             @Override
-            long getSyncedThreadId() {
+            public long getSyncedThreadId() {
                 return threadId;
             }
         });

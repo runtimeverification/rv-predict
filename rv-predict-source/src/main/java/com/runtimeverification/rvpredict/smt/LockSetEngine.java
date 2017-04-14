@@ -28,7 +28,7 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.smt;
 
-import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.trace.LockRegion;
 
 import java.util.ArrayList;
@@ -52,9 +52,9 @@ public class LockSetEngine {
     }
 
     /**
-     * Checks if two given {@code ReadonlyEvent}'s hold a common lock.
+     * Checks if two given {@code ReadonlyEventInterface}'s hold a common lock.
      */
-    public boolean hasCommonLock(ReadonlyEvent e1, ReadonlyEvent e2) {
+    public boolean hasCommonLock(ReadonlyEventInterface e1, ReadonlyEventInterface e2) {
         if (e1.getThreadId() == e2.getThreadId()) {
             throw new IllegalArgumentException();
         }
@@ -72,7 +72,7 @@ public class LockSetEngine {
         return false;
     }
 
-    private LockRegion getLockRegion(ReadonlyEvent e, long lockId) {
+    private LockRegion getLockRegion(ReadonlyEventInterface e, long lockId) {
         /* given a lockId, an event can be protected by at most one write-locked
          * region and one read-locked region (due to reentrant read-write lock
          * downgrading); always prefer to return the write-locked region */

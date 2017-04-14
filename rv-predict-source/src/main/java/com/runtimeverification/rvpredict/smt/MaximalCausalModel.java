@@ -42,7 +42,7 @@ import com.microsoft.z3.Model;
 import com.microsoft.z3.Solver;
 import com.microsoft.z3.Status;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
 import com.runtimeverification.rvpredict.smt.formula.ConcretePhiVariable;
@@ -73,14 +73,14 @@ public class MaximalCausalModel {
     /**
      * Map from read events to the corresponding concrete feasibility formulas.
      */
-    private final Map<ReadonlyEvent, BoolFormula> readToPhiConc = new HashMap<>();
+    private final Map<ReadonlyEventInterface, BoolFormula> readToPhiConc = new HashMap<>();
 
     /**
      * The formula that describes the maximal causal model of the trace tau.
      */
     private final FormulaTerm.Builder phiTau = FormulaTerm.andBuilder();
 
-    private final Map<String, ReadonlyEvent> nameToEvent = new HashMap<>();
+    private final Map<String, ReadonlyEventInterface> nameToEvent = new HashMap<>();
 
     private final Z3Filter z3filter;
 
@@ -99,13 +99,13 @@ public class MaximalCausalModel {
         this.solver = solver;
     }
 
-    private BoolFormula HB(ReadonlyEvent event1, ReadonlyEvent event2) {
+    private BoolFormula HB(ReadonlyEventInterface event1, ReadonlyEventInterface event2) {
         return LESS_THAN(OrderVariable.get(event1), OrderVariable.get(event2));
     }
 
     private BoolFormula HB(LockRegion lockRegion1, LockRegion lockRegion2) {
-        ReadonlyEvent unlock = lockRegion1.getUnlock();
-        ReadonlyEvent lock = lockRegion2.getLock();
+        ReadonlyEventInterface unlock = lockRegion1.getUnlock();
+        ReadonlyEventInterface lock = lockRegion2.getLock();
         return (unlock == null || lock == null) ? BooleanConstant.FALSE : HB(unlock, lock);
     }
 
@@ -124,8 +124,8 @@ public class MaximalCausalModel {
             mhbClosureBuilder.createNewGroup(events.get(0));
             events.forEach(event -> nameToEvent.put(OrderVariable.get(event).toString(), event));
             for (int i = 1; i < events.size(); i++) {
-                ReadonlyEvent e1 = events.get(i - 1);
-                ReadonlyEvent e2 = events.get(i);
+                ReadonlyEventInterface e1 = events.get(i - 1);
+                ReadonlyEventInterface e2 = events.get(i);
                 phiTau.add(HB(e1, e2));
                 /* every group should start with a join event and end with a start event */
                 if (e1.isStart() || e2.isJoin()) {
@@ -140,13 +140,13 @@ public class MaximalCausalModel {
         /* build inter-thread synchronization constraint */
         trace.getInterThreadSyncEvents().forEach(event -> {
             if (event.isStart()) {
-                ReadonlyEvent fst = trace.getFirstEvent(event.getSyncObject());
+                ReadonlyEventInterface fst = trace.getFirstEvent(event.getSyncObject());
                 if (fst != null) {
                     phiTau.add(HB(event, fst));
                     mhbClosureBuilder.addRelation(event, fst);
                 }
             } else if (event.isJoin()) {
-                ReadonlyEvent last = trace.getLastEvent(event.getSyncObject());
+                ReadonlyEventInterface last = trace.getLastEvent(event.getSyncObject());
                 if (last != null) {
                     phiTau.add(HB(last, event));
                     mhbClosureBuilder.addRelation(last, event);
@@ -177,7 +177,7 @@ public class MaximalCausalModel {
     }
 
     private BoolFormula getPhiConc(MemoryAccessBlock block) {
-        ReadonlyEvent read = block.getFirstRead();
+        ReadonlyEventInterface read = block.getFirstRead();
         if (read == null) {
             return getPhiAbs(block);
         } else {
@@ -193,10 +193,10 @@ public class MaximalCausalModel {
         return block.prev() != null ? getPhiConc(block.prev()) : BooleanConstant.TRUE;
     }
 
-    private BoolFormula getPhiSC(ReadonlyEvent read) {
+    private BoolFormula getPhiSC(ReadonlyEventInterface read) {
         /* compute all the write events that could interfere with the read event */
-        List<ReadonlyEvent> diffThreadSameAddrSameValWrites = new ArrayList<>();
-        List<ReadonlyEvent> diffThreadSameAddrDiffValWrites = new ArrayList<>();
+        List<ReadonlyEventInterface> diffThreadSameAddrSameValWrites = new ArrayList<>();
+        List<ReadonlyEventInterface> diffThreadSameAddrDiffValWrites = new ArrayList<>();
         trace.getWriteEvents(read.getDataAddress()).forEach(write -> {
             if (write.getThreadId() != read.getThreadId() && !happensBefore(read, write)) {
                 if (write.getDataValue() == read.getDataValue()) {
@@ -207,7 +207,7 @@ public class MaximalCausalModel {
             }
         });
 
-        ReadonlyEvent sameThreadPrevWrite = trace.getSameThreadPrevWrite(read);
+        ReadonlyEventInterface sameThreadPrevWrite = trace.getSameThreadPrevWrite(read);
         if (sameThreadPrevWrite != null) {
             /* sameThreadPrevWrite is available in the current window */
             if (read.getDataValue() == sameThreadPrevWrite.getDataValue()) {
@@ -259,7 +259,7 @@ public class MaximalCausalModel {
             }
         } else {
             /* sameThreadPrevWrite is unavailable in the current window */
-            ReadonlyEvent diffThreadPrevWrite = trace.getAllThreadsPrevWrite(read);
+            ReadonlyEventInterface diffThreadPrevWrite = trace.getAllThreadsPrevWrite(read);
             if (diffThreadPrevWrite == null) {
                 /* the initial value of this address must be read.getDataValue() */
                 FormulaTerm.Builder and = FormulaTerm.andBuilder();
@@ -293,20 +293,20 @@ public class MaximalCausalModel {
     /**
      * Checks if one event happens before another.
      */
-    private boolean happensBefore(ReadonlyEvent e1, ReadonlyEvent e2) {
+    private boolean happensBefore(ReadonlyEventInterface e1, ReadonlyEventInterface e2) {
         return mhbClosure.inRelation(e1, e2);
     }
 
     private boolean failPecanCheck(Race race) {
-        ReadonlyEvent e1 = race.firstEvent();
-        ReadonlyEvent e2 = race.secondEvent();
+        ReadonlyEventInterface e1 = race.firstEvent();
+        ReadonlyEventInterface e2 = race.secondEvent();
         return locksetEngine.hasCommonLock(e1, e2) || happensBefore(e1, e2)
                 || happensBefore(e2, e1);
     }
 
     private BoolFormula getRaceAssertion(Race race) {
-        ReadonlyEvent e1 = race.firstEvent();
-        ReadonlyEvent e2 = race.secondEvent();
+        ReadonlyEventInterface e1 = race.firstEvent();
+        ReadonlyEventInterface e2 = race.secondEvent();
         FormulaTerm.Builder raceAsst = FormulaTerm.andBuilder();
         raceAsst.add(INT_EQUAL(OrderVariable.get(e1), OrderVariable.get(e2)),
                 getPhiAbs(trace.getMemoryAccessBlock(e1)),
@@ -315,13 +315,13 @@ public class MaximalCausalModel {
     }
 
     private class EventWithOrder {
-        private final ReadonlyEvent event;
+        private final ReadonlyEventInterface event;
         private final long orderId;
-        public EventWithOrder(ReadonlyEvent event, long orderId) {
+        public EventWithOrder(ReadonlyEventInterface event, long orderId) {
             this.event = event;
             this.orderId = orderId;
         }
-        public ReadonlyEvent getEvent() {
+        public ReadonlyEventInterface getEvent() {
             return event;
         }
         public long getOrderId() {
@@ -356,7 +356,7 @@ public class MaximalCausalModel {
             solver.push();
             /* translate our formula into Z3 AST format */
             solver.add(z3filter.filter(phiTau.build()));
-            for (Map.Entry<ReadonlyEvent, BoolFormula> entry : readToPhiConc.entrySet()) {
+            for (Map.Entry<ReadonlyEventInterface, BoolFormula> entry : readToPhiConc.entrySet()) {
                 solver.add(z3filter.filter(BOOL_EQUAL(new ConcretePhiVariable(entry.getKey()),
                         entry.getValue())));
             }
@@ -396,7 +396,7 @@ public class MaximalCausalModel {
             for (FuncDecl f : model.getConstDecls()) {
                 String name = f.getName().toString();
                 if (nameToEvent.containsKey(name)) {
-                    ReadonlyEvent event = nameToEvent.get(name);
+                    ReadonlyEventInterface event = nameToEvent.get(name);
                     EventWithOrder eventWithOrder =
                             new EventWithOrder(event, Long.parseLong(model.getConstInterp(f).toString()));
                     threadToExecution.computeIfAbsent(event.getThreadId(), a -> new ArrayList<>()).add(eventWithOrder);
@@ -430,8 +430,8 @@ public class MaximalCausalModel {
 
         solver.push();
         /* simply assign the GID of an event to its order variable */
-        for (List<ReadonlyEvent> l : trace.eventsByThreadID().values()) {
-            for (ReadonlyEvent event : l) {
+        for (List<ReadonlyEventInterface> l : trace.eventsByThreadID().values()) {
+            for (ReadonlyEventInterface event : l) {
                 solver.add(z3filter.filter(
                         INT_EQUAL(OrderVariable.get(event), new IntConstant(event.getEventId()))));
             }

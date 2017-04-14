@@ -2,8 +2,6 @@ package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.util.Constants;
 
-import javax.management.DescriptorKey;
-
 /**
  * Class for representing an event as it is recorded in the log
  * @author TraianSF
@@ -91,7 +89,7 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    protected long unsafeGetDataValue() { return dataValue; };
+    public long unsafeGetDataValue() { return dataValue; };
 
     @Override
     public EventType getType() {
@@ -113,7 +111,7 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    protected long unsafeGetAddress() { return  address; }
+    public long unsafeGetAddress() { return  address; }
 
     @Override
     public long getSyncObject() {
@@ -175,7 +173,7 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    public ReadonlyEvent destructiveWithLocationId(int locationId) {
+    public ReadonlyEventInterface destructiveWithLocationId(int locationId) {
         this.locationId = locationId;
         return this;
     }

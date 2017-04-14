@@ -3,7 +3,7 @@ package com.runtimeverification.rvpredict.trace;
 import java.util.Iterator;
 import java.util.List;
 
-import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
 /**
  * Consecutive read and write events that have the same abstract feasibility
@@ -17,27 +17,27 @@ import com.runtimeverification.rvpredict.log.ReadonlyEvent;
  * @author YilongL
  *
  */
-public class MemoryAccessBlock implements Iterable<ReadonlyEvent>, Comparable<MemoryAccessBlock> {
+public class MemoryAccessBlock implements Iterable<ReadonlyEventInterface>, Comparable<MemoryAccessBlock> {
 
-    private final List<ReadonlyEvent> events;
+    private final List<ReadonlyEventInterface> events;
 
     private final MemoryAccessBlock prev;
 
-    private final ReadonlyEvent firstRead;
+    private final ReadonlyEventInterface firstRead;
 
-    public MemoryAccessBlock(List<ReadonlyEvent> events, MemoryAccessBlock prev) {
+    public MemoryAccessBlock(List<ReadonlyEventInterface> events, MemoryAccessBlock prev) {
         this.events = events;
         this.prev = prev;
         if (events.get(0).isRead()) {
             firstRead = events.get(0);
-//            if (!events.stream().allMatch(ReadonlyEvent::isRead)) {
+//            if (!events.stream().allMatch(ReadonlyEventInterface::isRead)) {
 //                throw new IllegalArgumentException();
 //            }
         } else {
             int lastIdx = events.size() - 1;
-            ReadonlyEvent lastEvent = events.get(lastIdx);
+            ReadonlyEventInterface lastEvent = events.get(lastIdx);
             firstRead = lastEvent.isRead() ? lastEvent : null;
-//            if (lastIdx > 0 && events.subList(0, lastIdx - 1).stream().anyMatch(ReadonlyEvent::isRead)) {
+//            if (lastIdx > 0 && events.subList(0, lastIdx - 1).stream().anyMatch(ReadonlyEventInterface::isRead)) {
 //                throw new IllegalArgumentException();
 //            }
         }
@@ -48,15 +48,15 @@ public class MemoryAccessBlock implements Iterable<ReadonlyEvent>, Comparable<Me
     }
 
     @Override
-    public Iterator<ReadonlyEvent> iterator() {
+    public Iterator<ReadonlyEventInterface> iterator() {
         return events.iterator();
     }
 
-    public ReadonlyEvent getFirst() {
+    public ReadonlyEventInterface getFirst() {
         return events.get(0);
     }
 
-    public ReadonlyEvent getLast() {
+    public ReadonlyEventInterface getLast() {
         return events.get(events.size() - 1);
     }
 
@@ -64,7 +64,7 @@ public class MemoryAccessBlock implements Iterable<ReadonlyEvent>, Comparable<Me
         return prev;
     }
 
-    public ReadonlyEvent getFirstRead() {
+    public ReadonlyEventInterface getFirstRead() {
         return firstRead;
     }
 

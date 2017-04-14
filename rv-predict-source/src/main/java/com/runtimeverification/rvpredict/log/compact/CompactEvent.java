@@ -1,8 +1,11 @@
 package com.runtimeverification.rvpredict.log.compact;
 
 import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.log.ReadonlyEventDecorator;
+import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
-public abstract class CompactEvent {
+public abstract class CompactEvent extends ReadonlyEvent {
     private final long eventId;
     private final long locationId;
     private final long threadId;
@@ -15,29 +18,49 @@ public abstract class CompactEvent {
         this.type = type;
     }
 
-    long getEventId() {
+    @Override
+    public long getEventId() {
         return eventId;
     }
 
-    long getLocationId() {
-        return locationId;
+    // TODO(virgil): Convert getLocationId to long.
+    @Override
+    public int getLocationId() {
+        return (int)locationId;
     }
 
-    long getThreadId() {
+    @Override
+    public long getThreadId() {
         return threadId;
     }
 
-    EventType getType() {return type;}
+    @Override
+    public EventType getType() {return type;}
 
     int getDataSizeInBytes() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
-    long getDataAddress() {
+
+    @Override
+    public long getDataAddress() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
-    long getDataValue() {
+
+    @Override
+    public long getDataValue() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
+
+    @Override
+    public long getSyncedThreadId() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+
+    @Override
+    public long getSyncObject() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+
     long getSignalNumber() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
@@ -47,10 +70,34 @@ public abstract class CompactEvent {
     long getSignalHandlerAddress() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
-    long getSyncedThreadId() {
+
+    @Override
+    public String getLockRepresentation() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
-    long getSyncObject() {
-        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+
+    @Override
+    public long unsafeGetAddress() {
+        return 0;
+    }
+
+    @Override
+    public long unsafeGetDataValue() {
+        return 0;
+    }
+
+    @Override
+    public ReadonlyEvent copy() {
+        return this;
+    }
+
+    @Override
+    public ReadonlyEventInterface destructiveWithLocationId(int locationId) {
+        return new ReadonlyEventDecorator(this) {
+            @Override
+            public int getLocationId() {
+                return locationId;
+            }
+        };
     }
 }

@@ -1,13 +1,13 @@
 package com.runtimeverification.rvpredict.trace;
 
-import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
 public class LockState {
 
     private final long lockId;
 
-    private ReadonlyEvent readLock;
-    private ReadonlyEvent writeLock;
+    private ReadonlyEventInterface readLock;
+    private ReadonlyEventInterface writeLock;
 
     private int readLockLevel = 0;
     private int writeLockLevel = 0;
@@ -20,7 +20,7 @@ public class LockState {
         return lockId;
     }
 
-    public ReadonlyEvent lock() {
+    public ReadonlyEventInterface lock() {
         if (writeLockLevel > 0) {
             return writeLock;
         } else if (readLockLevel > 0) {
@@ -42,7 +42,7 @@ public class LockState {
         return writeLockLevel;
     }
 
-    public void acquire(ReadonlyEvent lock) {
+    public void acquire(ReadonlyEventInterface lock) {
         if (lock.isReadLock()) {
             if (readLockLevel++ == 0) {
                 this.readLock = lock;
@@ -56,7 +56,7 @@ public class LockState {
         }
     }
 
-    public void release(ReadonlyEvent unlock) {
+    public void release(ReadonlyEventInterface unlock) {
         if (unlock.isReadUnlock()) {
             if (--readLockLevel < 0) {
                 throw new IllegalStateException("Lock entrance level cannot be less than 0!");

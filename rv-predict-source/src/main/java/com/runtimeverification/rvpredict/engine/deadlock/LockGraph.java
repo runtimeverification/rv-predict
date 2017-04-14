@@ -1,7 +1,7 @@
 package com.runtimeverification.rvpredict.engine.deadlock;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
@@ -26,8 +26,8 @@ public class LockGraph {
     private final Configuration config;
     private final Metadata metadata;
     private final SCCTarjan<Long> sccGraph = new SCCTarjan<>();
-    private final Map<Long,ReadonlyEvent> lockEvents = new HashMap<>();
-    private final Map<Pair<Long,Long>, Pair<ReadonlyEvent, ReadonlyEvent>> eventEdges = new HashMap<>();
+    private final Map<Long,ReadonlyEventInterface> lockEvents = new HashMap<>();
+    private final Map<Pair<Long,Long>, Pair<ReadonlyEventInterface, ReadonlyEventInterface>> eventEdges = new HashMap<>();
     private final Map<Long, Set<Long>> lockSet = new HashMap<>();
     private final SignatureProcessor signatureProcessor;
 
@@ -48,7 +48,7 @@ public class LockGraph {
      *
      * @param event  a lock/unlock event
      */
-    public void handle(ReadonlyEvent event) {
+    public void handle(ReadonlyEventInterface event) {
         assert event.isPreLock() || event.isLock() || event.isUnlock();
         long lockId = event.getLockId();
         long tid = event.getThreadId();
@@ -87,14 +87,14 @@ public class LockGraph {
         eventEdges.put(Pair.of(l1,l2),Pair.of(lockEvents.get(l1), lockEvents.get(l2)));
     }
 
-    private List<List<Pair<ReadonlyEvent, ReadonlyEvent>>> getCycles() {
+    private List<List<Pair<ReadonlyEventInterface, ReadonlyEventInterface>>> getCycles() {
         Collection<List<Long>> cycles = sccGraph.getScc();
-        List<List<Pair<ReadonlyEvent, ReadonlyEvent>>> eventCycles = new ArrayList<>();
+        List<List<Pair<ReadonlyEventInterface, ReadonlyEventInterface>>> eventCycles = new ArrayList<>();
         for (List<Long> cycle : cycles) {
             // reverse the order of vertices because getScc returns them as they were stored on an internal stack
             java.util.Collections.reverse((List<?>) cycle);
             if (cycle.size()==1) continue;
-            List<Pair<ReadonlyEvent, ReadonlyEvent>> eventCycle = new ArrayList<>();
+            List<Pair<ReadonlyEventInterface, ReadonlyEventInterface>> eventCycle = new ArrayList<>();
             for (int i = 0; i < cycle.size()-1; i++) {
                 long v1 = cycle.get(i);
                 long v2 = cycle.get(i+1);
@@ -112,18 +112,18 @@ public class LockGraph {
     }
 
 
-    private void reportDeadlock(List<Pair<ReadonlyEvent, ReadonlyEvent>> cycle) {
+    private void reportDeadlock(List<Pair<ReadonlyEventInterface, ReadonlyEventInterface>> cycle) {
         signatureProcessor.reset();
         StringBuilder report = new StringBuilder();
         StringBuilder summary = new StringBuilder();
         StringBuilder details = new StringBuilder();
         cycle.forEach(eventEventPair -> {
             String locSig;
-            ReadonlyEvent before = eventEventPair.getLeft();
+            ReadonlyEventInterface before = eventEventPair.getLeft();
             summary.append("M"+ before.getLockId() + " " +
                     "(" + before.getLockRepresentation() + ")" +
                     " => ");
-            ReadonlyEvent after = eventEventPair.getRight();
+            ReadonlyEventInterface after = eventEventPair.getRight();
             details.append('\n');
             details.append("    M" + after.getLockId() + " acquired " +
                     "while holding M" + before.getLockId());
@@ -149,7 +149,7 @@ public class LockGraph {
         config.logger().report(signatureProcessor.simplify(report.toString()), Logger.MSGTYPE.REAL);
     }
 
-    private void reportUnlockOfUnlockedMutex(ReadonlyEvent event) {
+    private void reportUnlockOfUnlockedMutex(ReadonlyEventInterface event) {
         assert(event.isUnlock());
         StringBuilder report = new StringBuilder();
         report.append("Unlock of an unlocked mutex: \n");

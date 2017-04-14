@@ -29,18 +29,18 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.log.EventType;
-import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
 public class LockRegion implements Comparable<LockRegion> {
-    private final ReadonlyEvent lock;
-    private final ReadonlyEvent unlock;
+    private final ReadonlyEventInterface lock;
+    private final ReadonlyEventInterface unlock;
 
     private final long tid;
     private final long lockId;
 
     private boolean isReadLocked = false;
 
-    public LockRegion(ReadonlyEvent lock, ReadonlyEvent unlock) {
+    public LockRegion(ReadonlyEventInterface lock, ReadonlyEventInterface unlock) {
         this.lock = lock;
         this.unlock = unlock;
 
@@ -62,11 +62,11 @@ public class LockRegion implements Comparable<LockRegion> {
         }
     }
 
-    public ReadonlyEvent getLock() {
+    public ReadonlyEventInterface getLock() {
         return lock;
     }
 
-    public ReadonlyEvent getUnlock() {
+    public ReadonlyEventInterface getUnlock() {
         return unlock;
     }
 
@@ -82,7 +82,7 @@ public class LockRegion implements Comparable<LockRegion> {
         return !isReadLocked;
     }
 
-    public boolean include(ReadonlyEvent e) {
+    public boolean include(ReadonlyEventInterface e) {
         return tid == e.getThreadId() && (lock == null || lock.compareTo(e) < 0)
                 && (unlock == null || unlock.compareTo(e) > 0);
     }

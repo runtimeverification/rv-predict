@@ -1,6 +1,6 @@
 package com.runtimeverification.rvpredict.smt.formula;
 
-import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.smt.visitors.Visitor;
 
 public class OrderVariable extends SMTVariable implements IntFormula {
@@ -9,11 +9,11 @@ public class OrderVariable extends SMTVariable implements IntFormula {
      */
     private static final String O = "o";
 
-    public static OrderVariable get(ReadonlyEvent event) {
+    public static OrderVariable get(ReadonlyEventInterface event) {
         return new OrderVariable(event);
     }
 
-    private OrderVariable(ReadonlyEvent event) {
+    private OrderVariable(ReadonlyEventInterface event) {
         super(event.getEventId());
     }
 

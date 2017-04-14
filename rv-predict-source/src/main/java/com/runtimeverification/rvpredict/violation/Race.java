@@ -30,7 +30,7 @@ package com.runtimeverification.rvpredict.violation;
 
 import com.google.common.base.StandardSystemProperty;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
@@ -51,15 +51,15 @@ import java.util.List;
  */
 public class Race {
 
-    private final ReadonlyEvent e1;
-    private final ReadonlyEvent e2;
+    private final ReadonlyEventInterface e1;
+    private final ReadonlyEventInterface e2;
     private final Configuration config;
     private final Trace trace;
     private final SignatureProcessor signatureProcessor;
 
-    public Race(ReadonlyEvent e1, ReadonlyEvent e2, Trace trace, Configuration config) {
+    public Race(ReadonlyEventInterface e1, ReadonlyEventInterface e2, Trace trace, Configuration config) {
         if (e1.getEventId() > e2.getEventId()) {
-            ReadonlyEvent tmp = e1;
+            ReadonlyEventInterface tmp = e1;
             e1 = e2;
             e2 = tmp;
         }
@@ -75,11 +75,11 @@ public class Race {
         }
     }
 
-    public ReadonlyEvent firstEvent() {
+    public ReadonlyEventInterface firstEvent() {
         return e1;
     }
 
-    public ReadonlyEvent secondEvent() {
+    public ReadonlyEventInterface secondEvent() {
         return e2;
     }
 
@@ -158,20 +158,20 @@ public class Race {
         return reportableRace ? signatureProcessor.simplify(sb.toString()) : "";
     }
 
-    private boolean generateMemAccReport(ReadonlyEvent e, StringBuilder sb) {
+    private boolean generateMemAccReport(ReadonlyEventInterface e, StringBuilder sb) {
         int stackSize = 0;
         long tid = e.getThreadId();
         Metadata metadata = trace.metadata();
-        List<ReadonlyEvent> heldLocks = trace.getHeldLocksAt(e);
+        List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
         sb.append(String.format("    Concurrent %s in thread T%s (locks held: {%s})%n",
                 e.isWrite() ? "write" : "read",
                 tid,
                 getHeldLocksReport(heldLocks)));
         boolean isTopmostStack = true;
-        List<ReadonlyEvent> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
+        List<ReadonlyEventInterface> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
         stacktrace.addAll(heldLocks);
         Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
-        for (ReadonlyEvent elem : stacktrace) {
+        for (ReadonlyEventInterface elem : stacktrace) {
             int locId = elem.getLocationId();
             String locSig = locId >= 0 ? metadata.getLocationSig(locId)
                     : "... not available ...";
@@ -213,7 +213,7 @@ public class Race {
         return stackSize>0;
     }
 
-    private String getHeldLocksReport(List<ReadonlyEvent> heldLocks) {
+    private String getHeldLocksReport(List<ReadonlyEventInterface> heldLocks) {
         StringBuilder sb = new StringBuilder();
         if (!heldLocks.isEmpty()) {
             for (int i = 0; i < heldLocks.size(); i++) {

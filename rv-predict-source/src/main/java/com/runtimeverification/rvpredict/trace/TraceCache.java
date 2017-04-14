@@ -5,7 +5,7 @@ import com.runtimeverification.rvpredict.engine.deadlock.LockGraph;
 import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.IEventReader;
 import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.EOFException;
@@ -93,7 +93,7 @@ public class TraceCache {
         /* sort readers by their last read events */
         readers.sort((r1, r2) -> r1.lastReadEvent().compareTo(r2.lastReadEvent()));
         Iterator<IEventReader> iter = readers.iterator();
-        ReadonlyEvent event;
+        ReadonlyEventInterface event;
         while (iter.hasNext()) {
             IEventReader reader = iter.next();
             if ((event = reader.lastReadEvent()).getEventId() >= toIndex) {
@@ -101,7 +101,7 @@ public class TraceCache {
             }
 
             assert event.getEventId() >= fromIndex;
-            List<ReadonlyEvent> events = new ArrayList<>(capacity);
+            List<ReadonlyEventInterface> events = new ArrayList<>(capacity);
             do {
                 events.add(event);
                 //TODO(TraianSF): the following conditional does not belong here. Consider moving it.
@@ -119,7 +119,7 @@ public class TraceCache {
                 }
             } while (event.getEventId() < toIndex);
             int length = getNextPowerOfTwo(events.size());
-            rawTraces.add(new RawTrace(0, events.size(), events.toArray(new ReadonlyEvent[length])));
+            rawTraces.add(new RawTrace(0, events.size(), events.toArray(new ReadonlyEventInterface[length])));
         }
         return rawTraces;
     }
@@ -208,12 +208,12 @@ public class TraceCache {
 	rawTraces.add(tidSpanToRawTrace(events, tidStart, nextGenStart));
         return rawTraces;
     }
-    private static RawTrace tidSpanToRawTrace(List<? extends ReadonlyEvent> events,
+    private static RawTrace tidSpanToRawTrace(List<? extends ReadonlyEventInterface> events,
 	    int tidStart, int tidEnd) {
-	List<? extends ReadonlyEvent> tidEvents = events.subList(tidStart, tidEnd);
+	List<? extends ReadonlyEventInterface> tidEvents = events.subList(tidStart, tidEnd);
 	int n = tidEvents.size(), length = getNextPowerOfTwo(n);
-	tidEvents.sort(ReadonlyEvent::compareTo);
-	return new RawTrace(0, n, tidEvents.toArray(new ReadonlyEvent[length]));
+	tidEvents.sort(ReadonlyEventInterface::compareTo);
+	return new RawTrace(0, n, tidEvents.toArray(new ReadonlyEventInterface[length]));
     }
     public Trace getTraceWindow() throws IOException {
         List<RawTrace> rawTraces = readEventWindow();

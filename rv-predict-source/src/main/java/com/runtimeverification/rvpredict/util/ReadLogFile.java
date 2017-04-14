@@ -2,8 +2,7 @@ package com.runtimeverification.rvpredict.util;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventReader;
-import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import java.io.*;
 import java.nio.file.Path;
@@ -51,7 +50,7 @@ public class ReadLogFile {
             try (EventReader reader = new EventReader(Paths.get(file))) {
                 System.out.println("Dumping events from " + file);
                 while (true) {
-                    ReadonlyEvent event = reader.readEvent();
+                    ReadonlyEventInterface event = reader.readEvent();
                     String locSig = event.getLocationId() < 0 ? "n/a" : metadata.getLocationSig(event.getLocationId());
                     System.out.printf("%-60s %s%n", event.toString(), locSig);
                 }

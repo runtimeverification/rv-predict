@@ -16,13 +16,14 @@ FILESNAME_rvpsymbolize.sh=rvpsymbolize
 FILESNAME_rvpx.sh=rvpx
 LINKS=${DESTDIR}${BINDIR}/rvpc ${DESTDIR}${BINDIR}/rvpc++
 
-CC=clang
+CC?=clang
 CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt
 SRCS.rvpdump=main.c reader.c
 SRCS.metadatadump=metadatadump.c
 SRCS.tracedump=tracedump.c
 WARNS=4
+STRIPFLAG=
 
-DBG+=-O3 -g -O0
+COPTS+=-O3 -g -O0
 
 .include <mkc.prog.mk>

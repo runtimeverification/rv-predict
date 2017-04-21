@@ -24,7 +24,7 @@ typedef struct _rvp_ring rvp_ring_t;
 
 typedef struct _rvp_lastctx {
 	uint32_t lc_tid;
-	uint32_t lc_nintr_outst;
+	uint32_t lc_idepth;
 } rvp_lastctx_t;
 
 struct _rvp_ring {
@@ -36,7 +36,7 @@ struct _rvp_ring {
 	rvp_ring_t *r_next;
 	rvp_ring_state_t _Atomic r_state;
 	uint32_t r_tid;
-	uint32_t r_nintr_outst;
+	uint32_t r_idepth;
 };
 
 extern volatile _Atomic uint64_t rvp_ggen;
@@ -112,7 +112,7 @@ rvp_ring_nempty(rvp_ring_t *r)
 static inline void
 rvp_ring_request_service(rvp_ring_t *r)
 {
-	if (r->r_nintr_outst == 0)
+	if (r->r_idepth == 0)
 		rvp_wake_transmitter();
 	else
 		rvp_wake_relay();

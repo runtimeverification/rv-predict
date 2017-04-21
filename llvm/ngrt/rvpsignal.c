@@ -61,7 +61,8 @@ rvp_signal_table_init(void)
 	signal_tbl = tbl;
 	nsignals = lastsig;
 
-	if ((nsignals - signals_origin + 7) / 8 > (int)sizeof(uint64_t)) {
+	if ((nsignals - signals_origin + NBBY - 1) / NBBY >
+	    (int)sizeof(uint64_t)) {
 		errx(EXIT_FAILURE, "%s: too many signals (%d - %d = %d) "
 		     "for a trace to represent", __func__, nsignals,
 		     signals_origin, nsignals - signals_origin);
@@ -143,12 +144,12 @@ rvp_signal_rings_flush_to_fd(int fd, rvp_lastctx_t *lc)
 }
 
 static rvp_ring_t *
-rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t noutst)
+rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t idepth)
 {
 	rvp_ring_t *r;
 	const uint32_t tid = t->t_id;
 
-	assert(noutst > 0);
+	assert(idepth > 0);
 
 	/* XXX In principle, between reading the list of
 	 * signal rings, and checking a ring's state, 
@@ -162,7 +163,7 @@ rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t noutst)
 		if (!atomic_compare_exchange_weak(&r->r_state, &dirty,
 						 RVP_RING_S_INUSE))
 			continue;
-		if (r->r_tid == tid && r->r_nintr_outst == noutst)
+		if (r->r_tid == tid && r->r_idepth == idepth)
 			return r;
 		/* Not a match, put it back. */
 		atomic_store_explicit(&r->r_state, RVP_RING_S_DIRTY,
@@ -175,7 +176,7 @@ rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t noutst)
 		if (atomic_compare_exchange_weak(&r->r_state, &clean,
 						 RVP_RING_S_INUSE)) {
 			r->r_tid = tid;
-			r->r_nintr_outst = noutst;
+			r->r_idepth = idepth;
 			/* XXX some other thread may have changed to
 			 * XXX a later generation already.  probably
 			 * XXX should log a _COG immediately before _ENTERSIG
@@ -227,11 +228,11 @@ rvp_signal_rings_replenish(void)
 }
 
 rvp_ring_t *
-rvp_signal_ring_get(rvp_thread_t *t, uint32_t noutst)
+rvp_signal_ring_get(rvp_thread_t *t, uint32_t idepth)
 {
 	rvp_ring_t *r;
 
-	while ((r = rvp_signal_ring_get_scan(t, noutst)) == NULL) {
+	while ((r = rvp_signal_ring_get_scan(t, idepth)) == NULL) {
 		// TBD backoff
 		rvp_wake_replenisher();
 	}
@@ -262,9 +263,9 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	 */
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	rvp_signal_t *s = rvp_signal_lookup(signum);
-	uint32_t noutst = atomic_fetch_add_explicit(&t->t_nintr_outst, 1,
+	uint32_t idepth = atomic_fetch_add_explicit(&t->t_idepth, 1,
 	    memory_order_acquire);
-	rvp_ring_t *r = rvp_signal_ring_get(t, noutst + 1);
+	rvp_ring_t *r = rvp_signal_ring_get(t, idepth + 1);
 	rvp_ring_t *oldr = atomic_exchange(&t->t_intr_ring, r);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
@@ -293,7 +294,7 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 		t->t_ring.r_lgen = r->r_lgen;
 
 	atomic_store(&t->t_intr_ring, oldr);
-	atomic_store_explicit(&t->t_nintr_outst, noutst, memory_order_release);
+	atomic_store_explicit(&t->t_idepth, idepth, memory_order_release);
 	rvp_buf_put_addr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_EXITSIG));
 	rvp_ring_put_buf(r, b);
 	rvp_signal_ring_put(t, r);
@@ -410,23 +411,99 @@ rvp_trace_sigdis(int signum, const void *return_address)
 }
 
 static void
-rvp_trace_masksigs(uint32_t masknum, const void *return_address)
+rvp_trace_getsetmask(uint32_t omasknum, uint32_t masknum,
+    const void *return_address)
 {
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, return_address,
-	    RVP_OP_MASKSIGS);
+	    RVP_OP_SIGGETSETMASK);
+	rvp_buf_put(&b, omasknum);
 	rvp_buf_put(&b, masknum);
 	rvp_ring_put_buf(r, b);
 	rvp_ring_request_service(r);
 }
 
 static void
-rvp_thread_finish_sigmask(rvp_thread_t *t, int how, uint64_t mask)
+rvp_trace_mask(rvp_op_t op, uint32_t masknum, const void *return_address)
+{
+	rvp_ring_t *r = rvp_ring_for_curthr();
+	rvp_buf_t b = RVP_BUF_INITIALIZER;
+
+	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, return_address, op);
+	rvp_buf_put(&b, masknum);
+	rvp_ring_put_buf(r, b);
+	rvp_ring_request_service(r);
+}
+
+static void
+rvp_thread_trace_getsetmask(rvp_thread_t *t, uint64_t omask, uint64_t mask,
+    const void *retaddr)
+{
+	sigset_t oset, set;
+	rvp_sigblockset_t *obs, *bs;
+
+	obs = intern_sigset(mask_to_sigset(t->t_intrmask, &oset));
+	bs = intern_sigset(mask_to_sigset(t->t_intrmask, &set));
+	rvp_trace_getsetmask(obs->bs_number, bs->bs_number, retaddr);
+}
+
+static void
+rvp_thread_trace_setmask(rvp_thread_t *t, int how, uint64_t mask,
+    const void *retaddr)
+{
+	rvp_op_t op;
+	sigset_t set;
+	rvp_sigblockset_t *bs;
+
+	if (how == SIG_SETMASK)
+		op = RVP_OP_SIGSETMASK;
+	else if (how == SIG_BLOCK)
+		op = RVP_OP_SIGBLOCK;
+	else if (how == SIG_UNBLOCK)
+		op = RVP_OP_SIGUNBLOCK;
+	else 
+		errx(EXIT_FAILURE, "%s: unknown `how`, %d", __func__, how);
+
+	bs = intern_sigset(mask_to_sigset(mask, &set));
+	rvp_trace_mask(op, bs->bs_number, retaddr);
+}
+
+static void
+rvp_thread_trace_getmask(rvp_thread_t *t, uint64_t omask, const void *retaddr)
 {
 	sigset_t set;
 	rvp_sigblockset_t *bs;
+
+	bs = intern_sigset(mask_to_sigset(omask, &set));
+	rvp_trace_mask(RVP_OP_SIGGETMASK, bs->bs_number, retaddr);
+}
+
+int
+__rvpredict_pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset)
+{
+	rvp_thread_t *t = rvp_thread_for_curthr();
+	uint64_t mask, omask;
+	const void *retaddr = __builtin_return_address(0);
+	int rc;
+
+	/* TBD trace a read from `set` and, if `oldset` is not NULL,
+	 * a write to it.
+	 */
+
+	if ((rc = real_pthread_sigmask(how, set, oldset)) != 0)
+		return rc;
+
+	omask = t->t_intrmask;
+
+	if (set == NULL) {
+		if (oldset != NULL)
+			rvp_thread_trace_getmask(t, omask, retaddr);
+		return 0;
+	}
+
+	mask = sigset_to_mask(set);
 
 	switch (how) {
 	case SIG_BLOCK:
@@ -439,20 +516,11 @@ rvp_thread_finish_sigmask(rvp_thread_t *t, int how, uint64_t mask)
 		t->t_intrmask = mask;
 		break;
 	}
-	bs = intern_sigset(mask_to_sigset(t->t_intrmask, &set));
-	rvp_trace_masksigs(bs->bs_number, __builtin_return_address(0));
-}
 
-int
-__rvpredict_pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset)
-{
-	rvp_thread_t *t = rvp_thread_for_curthr();
-	int rc;
-
-	if ((rc = real_pthread_sigmask(how, set, oldset)) != 0)
-		return rc;
-
-	rvp_thread_finish_sigmask(t, how, sigset_to_mask(set));
+	if (oldset != NULL)
+		rvp_thread_trace_getsetmask(t, omask, t->t_intrmask, retaddr);
+	else
+		rvp_thread_trace_setmask(t, how, mask, retaddr);
 
 	return 0;
 }
@@ -466,7 +534,8 @@ __rvpredict_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 	if ((rc = real_sigprocmask(how, set, oldset)) != 0)
 		return rc;
 
-	rvp_thread_finish_sigmask(t, how, sigset_to_mask(set));
+	rvp_thread_trace_setmask(t, how, sigset_to_mask(set),
+	    __builtin_return_address(0));
 
 	return 0;
 }

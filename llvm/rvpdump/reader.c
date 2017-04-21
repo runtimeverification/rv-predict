@@ -17,7 +17,7 @@
 #include "legacy.h"
 #include "reader.h"
 
-#define	RSVD_NINTR_OUTST 0
+#define	RSVD_IDEPTH 0
 
 typedef union {
 	rvp_addr_t ub_pc;
@@ -29,11 +29,12 @@ typedef union {
 	rvp_cog_t ub_cog;
 	rvp_entersig_t ub_entersig;
 	rvp_exitsig_t ub_exitsig;
-	rvp_sigoutst_t ub_sigoutst;
+	rvp_sigdepth_t ub_sigdepth;
 	rvp_sigest_t ub_sigest;
 	rvp_sigdis_t ub_sigdis;
 	rvp_sigmaskmemo_t ub_sigmaskmemo;
-	rvp_masksigs_t ub_masksigs;
+	rvp_sigmask_access_t ub_sigmask_access;
+	rvp_sigmask_rmw_t ub_sigmask_rmw;
 	char ub_bytes[4096];
 } rvp_ubuf_t;
 
@@ -61,9 +62,9 @@ typedef struct _rvp_emitters {
 
 /* parse state: per-thread */
 typedef struct _rvp_thread_pstate {
-	rvp_addr_t	ts_lastpc[2];
 	rvp_callstack_t	ts_callstack;
 	bool		ts_present;
+	rvp_addr_t	ts_lastpc[2];
 	uint64_t	ts_generation[2];
 	uint64_t	ts_nops[2];
 	uint64_t	ts_last_gid[2];
@@ -78,7 +79,7 @@ struct _rvp_pstate {
 				ps_deltop_last;
 	uint32_t		ps_curthread;
 	const rvp_emitters_t	*ps_emitters;
-	uint32_t		ps_nintr_outst;
+	uint32_t		ps_idepth;
 	int			ps_zeromasknum;
 };
 
@@ -111,8 +112,8 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 	, [RVP_OP_BEGIN] = OP_INFO_INIT(rvp_begin_t, "begin thread")
 	, [RVP_OP_COG] = OP_INFO_INIT(rvp_cog_t, "change of generation")
 	, [RVP_OP_END] = OP_INFO_INIT(rvp_end_enterfn_exitfn_t, "end thread")
-	, [RVP_OP_SIGOUTST] = OP_INFO_INIT(rvp_sigoutst_t,
-	    "outstanding signals")
+	, [RVP_OP_SIGDEPTH] = OP_INFO_INIT(rvp_sigdepth_t,
+	    "signal depth")
 	, [RVP_OP_SWITCH] = OP_INFO_INIT(rvp_fork_join_switch_t,
 					 "switch thread")
 	, [RVP_OP_FORK] = OP_INFO_INIT(rvp_fork_join_switch_t,
@@ -150,8 +151,16 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 	    OP_INFO_INIT(rvp_sigdis_t, "disestablish signal action")
 	, [RVP_OP_SIGMASKMEMO] =
 	    OP_INFO_INIT(rvp_sigmaskmemo_t, "memoize signal mask")
-	, [RVP_OP_MASKSIGS] =
-	    OP_INFO_INIT(rvp_masksigs_t, "set signal mask")
+	, [RVP_OP_SIGSETMASK] =
+	    OP_INFO_INIT(rvp_sigmask_access_t, "set signal mask")
+	, [RVP_OP_SIGGETMASK] =
+	    OP_INFO_INIT(rvp_sigmask_access_t, "get signal mask")
+	, [RVP_OP_SIGGETSETMASK] = OP_INFO_INIT(rvp_sigmask_rmw_t,
+	    "get & set signal mask")
+	, [RVP_OP_SIGBLOCK] =
+	    OP_INFO_INIT(rvp_sigmask_access_t, "block signals")
+	, [RVP_OP_SIGUNBLOCK] =
+	    OP_INFO_INIT(rvp_sigmask_access_t, "unblock signals")
 };
 
 static void emit_no_jump(const rvp_pstate_t *, rvp_addr_t);
@@ -251,7 +260,7 @@ rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 		    ps->ps_nthreads);
 	}
 	ps->ps_curthread = tid;
-	ps->ps_nintr_outst = 0;
+	ps->ps_idepth = 0;
 	rvp_thread_pstate_t *ts = &ps->ps_thread[tid];
 	assert(!ts->ts_present);
 	for (i = 0; i < __arraycount(ts->ts_lastpc); i++)
@@ -260,7 +269,7 @@ rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 	ts->ts_present = true;
 	ts->ts_generation[0] = generation;
 	ts->ts_generation[1] = 0;
-	ts->ts_nops[ps->ps_nintr_outst] = 0;
+	ts->ts_nops[ps->ps_idepth] = 0;
 	ts->ts_sigs_masked = false;
 }
 
@@ -514,17 +523,17 @@ rvp_pstate_next_gid(const rvp_pstate_t *ps)
 	uint64_t gid;
 	rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
 
-	assert(ts->ts_generation[ps->ps_nintr_outst] <= UINT16_MAX);
-	assert(ts->ts_nops[ps->ps_nintr_outst] < UINT32_MAX);
+	assert(ts->ts_generation[ps->ps_idepth] <= UINT16_MAX);
+	assert(ts->ts_nops[ps->ps_idepth] < UINT32_MAX);
 	assert(ps->ps_curthread <= UINT16_MAX);
 
-	++ts->ts_nops[ps->ps_nintr_outst];
-	gid = (ts->ts_generation[ps->ps_nintr_outst] << 48) |
-	    (ts->ts_nops[ps->ps_nintr_outst] << 16) | ps->ps_curthread;
+	++ts->ts_nops[ps->ps_idepth];
+	gid = (ts->ts_generation[ps->ps_idepth] << 48) |
+	    (ts->ts_nops[ps->ps_idepth] << 16) | ps->ps_curthread;
 
-	assert(ts->ts_last_gid[ps->ps_nintr_outst] < gid);
+	assert(ts->ts_last_gid[ps->ps_idepth] < gid);
 
-	ts->ts_last_gid[ps->ps_nintr_outst] = gid;
+	ts->ts_last_gid[ps->ps_idepth] = gid;
 	return gid;
 }
 
@@ -534,9 +543,9 @@ legacy_tid(const rvp_pstate_t *ps)
 	/* TBD when we're handling multiple outstanding signals, put that
 	 * into the TID
 	 */
-	assert(ps->ps_nintr_outst <= 0x7fffffff);
-	if (ps->ps_nintr_outst != RSVD_NINTR_OUTST) {
-		return ps->ps_curthread | ((uint64_t)ps->ps_nintr_outst << 32) |
+	assert(ps->ps_idepth <= 0x7fffffff);
+	if (ps->ps_idepth != RSVD_IDEPTH) {
+		return ps->ps_curthread | ((uint64_t)ps->ps_idepth << 32) |
 		    ((uint64_t)1 << 63);
 	}
 
@@ -546,7 +555,7 @@ legacy_tid(const rvp_pstate_t *ps)
 static uint64_t
 legacy_signal_tid(uint32_t signum)
 {
-	return (uint64_t)signum | ((uint64_t)RSVD_NINTR_OUTST << 32) |
+	return (uint64_t)signum | ((uint64_t)RSVD_IDEPTH << 32) |
 	    ((uint64_t)1 << 63);
 }
 
@@ -561,11 +570,15 @@ emit_signal_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op)
 	switch (op) {
 	case RVP_OP_SIGMASKMEMO:
 		assert(ub->ub_sigmaskmemo.masknum <= INT_MAX);
-		if (ub->ub_sigmaskmemo.mask == 0)
-			zeromasknum = ub->ub_sigmaskmemo.masknum;
+		if (ub->ub_sigmaskmemo.mask != 0)
+			; /* do nothing */
+		else if (zeromasknum == -1)
+			zeromasknum = (int)ub->ub_sigmaskmemo.masknum;
+		else
+			assert(zeromasknum == (int)ub->ub_sigmaskmemo.masknum);
 		return;
-	case RVP_OP_MASKSIGS:
-		assert(ub->ub_masksigs.masknum <= INT_MAX);
+	case RVP_OP_SIGSETMASK:
+		assert(ub->ub_sigmask_access.masknum <= INT_MAX);
 		bool masksigs;
 		if (zeromasknum == -1) {
 			// if no zero mask memo has been seen, then assume
@@ -574,7 +587,7 @@ emit_signal_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op)
 			// TBD what keeps a memo from appearing before its
 			// first use in a trace, anyway?
 			masksigs = true;
-		} else if ((int)ub->ub_masksigs.masknum == zeromasknum) {
+		} else if ((int)ub->ub_sigmask_access.masknum == zeromasknum) {
 			// release signal-blocking mutex
 			masksigs = false;
 		} else {
@@ -595,7 +608,7 @@ emit_signal_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op)
 		ev.value = 0;
 		emit_fork_metadata(
 		    legacy_tid(ps), legacy_signal_tid(ub->ub_sigest.signum),
-		    compress_pc(ts->ts_lastpc[ps->ps_nintr_outst]));
+		    compress_pc(ts->ts_lastpc[ps->ps_idepth]));
 		break;
 	case RVP_OP_ENTERSIG:
 		/* Emit events 'begin' and 'acquire'.
@@ -611,7 +624,7 @@ emit_signal_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op)
 
 		auxev.type = START;
 		auxev.tid = legacy_signal_tid(ub->ub_entersig.signum);
-		auxev.stmtid = compress_pc(ts->ts_lastpc[ps->ps_nintr_outst]);
+		auxev.stmtid = compress_pc(ts->ts_lastpc[ps->ps_idepth]);
 		auxev.gid = rvp_pstate_next_gid(ps);
 		auxev.addr = legacy_tid(ps);
 		auxev.value = 0;
@@ -622,7 +635,7 @@ emit_signal_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op)
 
 		emit_fork_metadata(
 		    legacy_signal_tid(ub->ub_entersig.signum),
-		    legacy_tid(ps), compress_pc(ts->ts_lastpc[ps->ps_nintr_outst]));
+		    legacy_tid(ps), compress_pc(ts->ts_lastpc[ps->ps_idepth]));
 
 #if 0
 		assert(!ts->ts_sigs_masked);
@@ -656,7 +669,7 @@ emit_signal_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op)
 	}
 
 	ev.tid = legacy_tid(ps);
-	ev.stmtid = compress_pc(ts->ts_lastpc[ps->ps_nintr_outst]);
+	ev.stmtid = compress_pc(ts->ts_lastpc[ps->ps_idepth]);
 	// assign GID after we're sure this op is one we can handle
 	ev.gid = rvp_pstate_next_gid(ps);
 
@@ -699,7 +712,7 @@ emit_extended_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub,
 		 */
 		ev[i].gid = rvp_pstate_next_gid(ps);
 		ev[i].tid = legacy_tid(ps);
-		ev[i].stmtid = compress_pc(ts->ts_lastpc[ps->ps_nintr_outst]);
+		ev[i].stmtid = compress_pc(ts->ts_lastpc[ps->ps_idepth]);
 	}
 
 	switch (op) {
@@ -761,7 +774,7 @@ emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 
 	ev.gid = rvp_pstate_next_gid(ps);
 	ev.tid = legacy_tid(ps);
-	ev.stmtid = compress_pc(ts->ts_lastpc[ps->ps_nintr_outst]);
+	ev.stmtid = compress_pc(ts->ts_lastpc[ps->ps_idepth]);
 
 	assert(lop <= UINT8_MAX);
 
@@ -794,7 +807,7 @@ emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		errx(EXIT_FAILURE, "%s: conversion unknown", __func__);
 	case RVP_OP_FORK:
 		emit_fork_metadata(ps->ps_curthread,
-		    ub->ub_fork_join_switch.tid, compress_pc(ts->ts_lastpc[ps->ps_nintr_outst]));
+		    ub->ub_fork_join_switch.tid, compress_pc(ts->ts_lastpc[ps->ps_idepth]));
 		/*FALLTHROUGH*/
 	case RVP_OP_JOIN:
 		ev.addr = ub->ub_fork_join_switch.tid;
@@ -817,7 +830,7 @@ static void
 print_jump(const rvp_pstate_t *ps, rvp_addr_t pc)
 { 
 	printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " jump\n",
-	    ps->ps_curthread, ps->ps_nintr_outst, pc);
+	    ps->ps_curthread, ps->ps_idepth, pc);
 }
 
 static void
@@ -833,9 +846,9 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_STORE8:
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s %#.*" PRIx64 " %s [%#016" PRIxPTR "]\n",
-		    ps->ps_curthread, ps->ps_nintr_outst,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst], oi->oi_descr,
-		    field_width,
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    oi->oi_descr, field_width,
 		    ub->ub_load8_store8.data,
 		    is_load ? "<-" : "->",
 		    ub->ub_load8_store8.addr);
@@ -854,9 +867,9 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_STORE1:
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s %#.*" PRIx32 " %s [%#016" PRIxPTR "]\n",
-		    ps->ps_curthread, ps->ps_nintr_outst,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst], oi->oi_descr,
-		    field_width,
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    oi->oi_descr, field_width,
 		    ub->ub_load1_2_4_store1_2_4.data,
 		    is_load ? "<-" : "->",
 		    ub->ub_load1_2_4_store1_2_4.addr);
@@ -865,39 +878,41 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		printf(
 		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
 		    " generation %" PRIu64 "\n",
-		    ps->ps_curthread, ps->ps_nintr_outst,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst],
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
 		    oi->oi_descr, ub->ub_begin.generation);
 		break;
-	case RVP_OP_SIGOUTST:
+	case RVP_OP_SIGDEPTH:
 		printf(
 		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
 		    " -> %" PRIu32 "\n",
-		    ps->ps_curthread, ps->ps_nintr_outst,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst],
-		    oi->oi_descr, ub->ub_sigoutst.noutst);
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    oi->oi_descr, ub->ub_sigdepth.depth);
 		break;
 	case RVP_OP_COG:
 		printf(
 		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
 		    " -> %" PRIu64 "\n",
-		    ps->ps_curthread, ps->ps_nintr_outst,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst],
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
 		    oi->oi_descr, ub->ub_cog.generation);
 		break;
 	case RVP_OP_END:
 	default:
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s\n",
-		    ps->ps_curthread, ps->ps_nintr_outst,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst], oi->oi_descr);
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    oi->oi_descr);
 		break;
 	case RVP_OP_FORK:
 	case RVP_OP_JOIN:
 	case RVP_OP_SWITCH:
 		printf(
-		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s tid %" PRIu32 "\n",
-		    ps->ps_curthread, ps->ps_nintr_outst,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst],
+		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
+		    " %s tid %" PRIu32 "\n",
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
 		    oi->oi_descr, ub->ub_fork_join_switch.tid);
 		// TBD create a fledgling rvp_thread_pstate_t on fork?
 		break;
@@ -905,8 +920,8 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		printf(
 		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s signal %" PRIu32 " generation %" PRIu64 "\n",
-		    ps->ps_curthread, ps->ps_nintr_outst,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst],
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
 		    oi->oi_descr, ub->ub_entersig.signum,
 		    ub->ub_entersig.generation);
 		break;
@@ -914,23 +929,24 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_RELEASE:
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s [%#016" PRIxPTR "]\n",
-		    ps->ps_curthread, ps->ps_nintr_outst,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst], oi->oi_descr,
-		    ub->ub_acquire_release.addr);
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    oi->oi_descr, ub->ub_acquire_release.addr);
 		break;
 	case RVP_OP_SIGDIS:
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s signal %" PRIu32 "\n",
-		    ps->ps_curthread, ps->ps_nintr_outst,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst], oi->oi_descr,
-		    ub->ub_sigest.signum);
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    oi->oi_descr, ub->ub_sigest.signum);
 		break;
 	case RVP_OP_SIGEST:
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s signal %" PRIu32 " handler %#016" PRIxPTR
 		    " mask #%" PRIu32 "\n",
-		    ps->ps_curthread, ps->ps_nintr_outst,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst], oi->oi_descr,
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    oi->oi_descr,
 		    ub->ub_sigest.signum,
 		    ub->ub_sigest.handler,
 		    ub->ub_sigest.masknum);
@@ -939,18 +955,31 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s #%" PRIu32 " origin %" PRIu32
 		    " bits %#016" PRIx64 "\n",
-		    ps->ps_curthread, ps->ps_nintr_outst,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst], oi->oi_descr,
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    oi->oi_descr,
 		    ub->ub_sigmaskmemo.masknum,
 		    ub->ub_sigmaskmemo.origin,
 		    ub->ub_sigmaskmemo.mask);
 		break;
-	case RVP_OP_MASKSIGS:
+	case RVP_OP_SIGGETMASK:
+	case RVP_OP_SIGSETMASK:
+	case RVP_OP_SIGBLOCK:
+	case RVP_OP_SIGUNBLOCK:
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
 		    " %s #%" PRIu32 "\n",
-		    ps->ps_curthread, ps->ps_nintr_outst,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst], oi->oi_descr,
-		    ub->ub_masksigs.masknum);
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    oi->oi_descr, ub->ub_sigmask_access.masknum);
+		break;
+	case RVP_OP_SIGGETSETMASK:
+		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
+		    " %s #%" PRIu32 " -> #%" PRIu32 "\n",
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    oi->oi_descr,
+		    ub->ub_sigmask_rmw.omasknum,
+		    ub->ub_sigmask_rmw.masknum);
 		break;
 	}
 }
@@ -974,7 +1003,7 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	int field_width = 0;
 
 	if (pc_is_not_deltop(ps, ub->ub_pc)) {
-		ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst] = ub->ub_pc;
+		ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth] = ub->ub_pc;
 		(*emitters->emit_jump)(ps, ub->ub_pc);
 		advance(&ub->ub_bytes[0], nfullp, sizeof(ub->ub_pc));
 		return 0;
@@ -996,13 +1025,13 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 		    ub->ub_begin.generation);
 	} else if (op == RVP_OP_ENTERSIG) {
 		rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
-		ts->ts_generation[ps->ps_nintr_outst] =
+		ts->ts_generation[ps->ps_idepth] =
 		    ub->ub_entersig.generation;
 	}
-	assert(op != RVP_OP_ENTERSIG || ps->ps_nintr_outst != 0);
+	assert(op != RVP_OP_ENTERSIG || ps->ps_idepth != 0);
 
-	lastpc = ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst];
-	ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_nintr_outst] = lastpc + jmpvec;
+	lastpc = ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth];
+	ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth] = lastpc + jmpvec;
 	switch (op) {
 	case RVP_OP_ATOMIC_LOAD8:
 	case RVP_OP_ATOMIC_STORE8:
@@ -1050,10 +1079,10 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 
 	if (op == RVP_OP_COG) {
 		rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
-		assert(ps->ps_nintr_outst < __arraycount(ts->ts_generation));
-		assert(ts->ts_generation[ps->ps_nintr_outst] < ub->ub_cog.generation);
-		ts->ts_generation[ps->ps_nintr_outst] = ub->ub_cog.generation;
-		ts->ts_nops[ps->ps_nintr_outst] = 0;
+		assert(ps->ps_idepth < __arraycount(ts->ts_generation));
+		assert(ts->ts_generation[ps->ps_idepth] < ub->ub_cog.generation);
+		ts->ts_generation[ps->ps_idepth] = ub->ub_cog.generation;
+		ts->ts_nops[ps->ps_idepth] = 0;
 	}
 
 	if (op == RVP_OP_END) {
@@ -1063,15 +1092,15 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 
 	if (op == RVP_OP_SWITCH) {
 		ps->ps_curthread = ub->ub_fork_join_switch.tid;
-		ps->ps_nintr_outst = 0;
+		ps->ps_idepth = 0;
 	} else if (op == RVP_OP_EXITSIG) {
-		assert(ps->ps_nintr_outst != 0);
-	} else if (op == RVP_OP_SIGOUTST) {
+		assert(ps->ps_idepth != 0);
+	} else if (op == RVP_OP_SIGDEPTH) {
 		rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
 
-		assert(ub->ub_sigoutst.noutst <
+		assert(ub->ub_sigdepth.depth <
 		    __arraycount(ts->ts_generation));
-		ps->ps_nintr_outst = ub->ub_sigoutst.noutst;
+		ps->ps_idepth = ub->ub_sigdepth.depth;
 	}
 
 	advance(&ub->ub_bytes[0], nfullp, oi->oi_reclen);

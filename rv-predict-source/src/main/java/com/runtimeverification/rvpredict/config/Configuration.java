@@ -311,6 +311,31 @@ public class Configuration implements Constants {
         }
     }
 
+    public enum RaceAlgorithm {
+        NONE,
+        SMT,
+        DP;
+        public static RaceAlgorithm fromString(String name) {
+            for (RaceAlgorithm value : RaceAlgorithm.values()) {
+                if (value.toString().equals(name.toUpperCase())) {
+                    return value;
+                }
+            }
+            return null;
+        }
+    }
+    public class RaceAlgorithmConverter implements IStringConverter<RaceAlgorithm> {
+        @Override
+        public RaceAlgorithm convert(String name) {
+            RaceAlgorithm algorithm = RaceAlgorithm.fromString(name);
+            if (algorithm == null) {
+                throw new ParameterException("'" + name + "' is not a valid race algorithm. Valid values are: "
+                        + Arrays.toString(RaceAlgorithm.values()));
+            }
+            return algorithm;
+        }
+    }
+
     private static final String RV_PREDICT = "rv-predict";
 
     private String[] args;
@@ -387,6 +412,12 @@ public class Configuration implements Constants {
     @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2500")
     public String smt_solver = "z3";
     */
+
+    public final static String opt_race_algorithm = "--race-algorithm";
+    @Parameter(names = opt_race_algorithm,
+            description = "The algorithm to use for race detection. Possible values include dp and smt.",
+            hidden = true, descriptionKey = "2550")
+    private String race_algorithm = "smt";
 
     final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2600")
@@ -753,5 +784,9 @@ public class Configuration implements Constants {
 
     public boolean stacks() {
         return !nostacks;
+    }
+
+    public RaceAlgorithm raceAlgorithm() {
+        return RaceAlgorithm.fromString(race_algorithm);
     }
 }

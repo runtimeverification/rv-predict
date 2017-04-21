@@ -12,6 +12,8 @@ import com.microsoft.z3.Context;
 import com.microsoft.z3.Params;
 import com.microsoft.z3.Z3Exception;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.model.EventStepper;
+import com.runtimeverification.rvpredict.model.ModelTrace;
 import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -111,8 +113,25 @@ public class RaceDetector implements Constants {
             return;
         }
 
-        Map<String, Race> result = MaximalCausalModel.create(trace, z3filter, solver)
-                .checkRaceSuspects(sigToRaceSuspects);
+        Map<String, Race> result;
+        switch (config.raceAlgorithm()) {
+            case SMT:
+                result = MaximalCausalModel.create(trace, z3filter, solver)
+                        .checkRaceSuspects(sigToRaceSuspects);
+                break;
+            case DP:
+                ModelTrace modelTrace = new ModelTrace(trace);
+                result = com.runtimeverification.rvpredict.model.MaximalCausalModel.create(
+                        trace, config, new EventStepper(modelTrace), modelTrace)
+                        .findRaces();
+                break;
+            case NONE:
+                result = new HashMap<>();
+                break;
+            default:
+                throw new IllegalStateException("Unknown race algorithm: " + config.raceAlgorithm() + ".");
+        }
+
         sigToRealRace.putAll(result);
         result.forEach((sig, race) -> {
             String report = race.generateRaceReport();

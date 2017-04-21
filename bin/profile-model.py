@@ -1,0 +1,239 @@
+#!/usr/bin/env python
+
+"""
+Example runs:
+
+python ../rv-predict/bin/profile-model.py -w 64000 --timeout-seconds 1200 --name rv-tests --rv-predict-jar ../rv-predict/target/release/rv-predict/rv-predict.jar --run-count=10 --rv-predict-tests /home/virgil/runtime-verification/rv-predict/ | tee -a results.20170413.rv-predict-tests
+
+python ../rv-predict/bin/profile-model.py -w 64000 --timeout-seconds 1200 --name rv-tests --rv-predict-jar ../rv-predict/target/release/rv-predict/rv-predict.jar --run-count=10 --dacapo-jar ../benchmarks/dacapo-9.12-bach.jar | tee -a results.20170413.dacapo
+
+"""
+
+import argparse
+import datetime
+import os
+import subprocess
+import sys
+import time
+
+FNULL = open(os.devnull, 'w')
+SECONDS_IN_MINUTE = 60
+SECONDS_IN_HOUR = 60 * SECONDS_IN_MINUTE
+SECONDS_IN_DAY = 24 * SECONDS_IN_HOUR
+
+def format_time(time_seconds):
+    """Formats a time duration in a readable way."""
+    initial_time_seconds = time_seconds
+    days = int(time_seconds / SECONDS_IN_DAY)
+    time_seconds = time_seconds % SECONDS_IN_DAY
+    hours = int(time_seconds / SECONDS_IN_HOUR)
+    time_seconds = time_seconds % SECONDS_IN_HOUR
+    minutes = int(time_seconds / SECONDS_IN_MINUTE)
+    seconds = time_seconds % SECONDS_IN_MINUTE
+
+    time_pieces = []
+    if days:
+        time_pieces.append('%dd' % days)
+    if hours or time_pieces:
+        time_pieces.append('%dh' % hours)
+    if minutes or time_pieces:
+        time_pieces.append('%dm' % minutes)
+    time_pieces.append('%6.3fs' % seconds)
+    time_pieces.append('(=%ds)' % initial_time_seconds)
+    return ''.join(time_pieces)
+
+def run_with_time(args, timeout_seconds):
+    """Runs the given command for the given time lenght"""
+    start_time_seconds = time.time()
+    print >> sys.stderr, args
+    process = subprocess.Popen(args, stdout=FNULL, stderr=FNULL)
+    while (time.time() - start_time_seconds < timeout_seconds) and (process.poll() is None):
+        time.sleep(0.1)
+    elapsed_time_seconds = time.time() - start_time_seconds
+    script_name = os.path.basename(sys.argv[0])
+    subprocess.call(
+        ['bash', '-c',
+         (("kill -9 $(ps aux | grep 'rv-predict.jar' | grep -v '%s' "
+           + "| grep -v grep | awk '{print $2}')")
+          % script_name)],
+        stdout=FNULL, stderr=FNULL)
+    return format_time(elapsed_time_seconds)
+
+def run_rv_predict(rv_predict_jar_path, window_size, timeout_seconds, algorithm, extra_arguments):
+    """Runs the rv-predict tool."""
+    args = []
+    args.extend(['java', '-ea', '-jar',
+                 rv_predict_jar_path,])
+    if window_size:
+        args.extend(['--window', '%s' % window_size])
+    args.extend(['--race-algorithm', algorithm])
+    args.extend(extra_arguments)
+
+    return run_with_time(args, timeout_seconds)
+
+def run_for_windows(rv_predict_jar_path, windows, name, timeout_seconds, algorithm,
+                    extra_arguments):
+    """Runs the rv-predict tool for all the window sizes given as argument."""
+    if not windows:
+        full_name = '%s timeout=%s algorithm=%s' % (name, timeout_seconds, algorithm)
+        print >> sys.stderr, full_name
+        formatted_time = run_rv_predict(
+            rv_predict_jar_path=rv_predict_jar_path, window_size=None,
+            timeout_seconds=timeout_seconds,
+            algorithm=algorithm, extra_arguments=extra_arguments)
+        print full_name, formatted_time
+        sys.stdout.flush()
+        return
+    for window in windows:
+        full_name = ('%s %s timeout=%s algorithm=%s, window=%s'
+                     % (datetime.datetime.now(), name, timeout_seconds, algorithm, window))
+        print >> sys.stderr, full_name
+        formatted_time = run_rv_predict(
+            rv_predict_jar_path=rv_predict_jar_path, window_size=window,
+            timeout_seconds=timeout_seconds, algorithm=algorithm,
+            extra_arguments=extra_arguments)
+        print full_name, formatted_time
+        sys.stdout.flush()
+
+def run_for_all_algorithms(rv_predict_jar_path, windows, name, timeout_seconds,
+                           extra_arguments, run_count):
+    """Runs the rv-predict tool with the smt model first, then with the dynamic
+       programming model, for all the window sizes given as argument."""
+    is_offline = (('--llvm-predict' in extra_arguments) or
+                  ('--predict' in extra_arguments))
+    """
+    if not is_offline:
+        if not os.path.exists(name):
+            os.makedirs(name)
+        run_for_windows(rv_predict_jar_path=rv_predict_jar_path,
+                        windows=None,
+                        name=name,
+                        timeout_seconds=timeout_seconds,
+                        algorithm="none",
+                        extra_arguments=['--log', '--base-log-dir', name] + extra_arguments)
+        extra_arguments = ['--predict', name] + extra_arguments
+        """
+    for _ in xrange(0, run_count):
+        for algorithm in ['smt', 'dp', 'none']:
+            run_for_windows(rv_predict_jar_path=rv_predict_jar_path,
+                            windows=windows,
+                            name=name,
+                            timeout_seconds=timeout_seconds,
+                            algorithm=algorithm,
+                            extra_arguments=extra_arguments)
+
+#TODO(virgil): it would be much nicer to read these from the output of
+# dacapo -l.
+DACAPO_TESTS = [
+    'avrora', 'batik', 'fop', 'h2', 'jython', 'luindex', 'lusearch',
+    'pmd', 'sunflow', 'tomcat', 'tradebeans', 'tradesoap', 'xalan']
+
+def run_dacapo_tests(rv_predict_jar_path, dacapo_jar, windows, timeout_seconds,
+                     run_count):
+    """Runs the rv-predict tool for all the dacapo tests, changing the model and window size."""
+    for test in DACAPO_TESTS:
+        run_for_all_algorithms(
+            rv_predict_jar_path=rv_predict_jar_path,
+            windows=windows,
+            name='dacapo-%s' % test,
+            timeout_seconds=timeout_seconds,
+            extra_arguments=['-jar', dacapo_jar, test],
+            run_count=run_count)
+
+RV_PREDICT_TESTS = [
+    'rv-predict-tests/ftpserver/trace',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.account.account.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.examples.RaceOnArrayList.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.examples.DoubleCheckedLocking.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.examples.BrokenSpinningLoop.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.demo.Stack.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.examples.SimpleRace.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.demo.example2.in',
+    'rv-predict-tests/llvm-tests/target/test-classes/llvm.deadlock.simple.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.account.account.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.examples.RaceOnArrayList.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.examples.DoubleCheckedLocking.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.examples.BrokenSpinningLoop.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.demo.Stack.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.examples.SimpleRace.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.demo.example2.in',
+    'rv-predict-tests/llvm-tests/src/test/resources/llvm.deadlock.simple.in',
+]
+
+def run_rvpredict_tests(rv_predict_jar_path, rv_predict_base_path, windows,
+                        timeout_seconds, run_count):
+    """Runs the rv-predict tool for all the rv_predict tests, changing the model and window size."""
+    for test in RV_PREDICT_TESTS:
+        run_for_all_algorithms(
+            rv_predict_jar_path=rv_predict_jar_path,
+            windows=windows,
+            name='dacapo-%s' % test,
+            timeout_seconds=timeout_seconds,
+            extra_arguments=['--predict',
+                             os.path.join(rv_predict_base_path, test)],
+            run_count=run_count)
+
+def read_extra_arguments(argv):
+    """Returns the arguments before the first '--' argument and after it as two separate lists."""
+    extra_args = []
+    try:
+        index = argv.index('--')
+        if index >= 0:
+            extra_args = argv[index + 1:]
+            argv = argv[:index]
+    except ValueError:
+        pass
+    return argv, extra_args
+
+def main(argv):
+    """Main function. Pylint wants a docstring."""
+    rv_predict_default_jar_path = os.path.join(
+        os.path.dirname(os.path.realpath(sys.argv[0])),
+        '../target/release/rv-predict/rv-predict.jar')
+
+    argv, extra_arguments = read_extra_arguments(argv)
+
+    parser = argparse.ArgumentParser(description="Profile the rv-predict tool")
+
+    parser.add_argument('--windows', '-w', action='append')
+    parser.add_argument('--timeout-seconds', action='store')
+    parser.add_argument('--name', action='store')
+    parser.add_argument('--llvm-directory',
+                        dest='llvm_directory', action='store')
+    parser.add_argument('--dacapo-jar', action='store')
+    parser.add_argument('--rv-predict-jar',
+                        action='store', default=rv_predict_default_jar_path)
+    parser.add_argument('--rv-predict-tests', action='store')
+    parser.add_argument('--run-count', type=int, action='store', default='1')
+    args = parser.parse_args(argv)
+
+    if args.rv_predict_tests:
+        run_rvpredict_tests(
+            rv_predict_jar_path=args.rv_predict_jar,
+            rv_predict_base_path=args.rv_predict_tests,
+            windows=[int(w) for w in args.windows],
+            timeout_seconds=int(args.timeout_seconds),
+            run_count=args.run_count)
+        return
+
+    if args.dacapo_jar:
+        run_dacapo_tests(
+            rv_predict_jar_path=args.rv_predict_jar,
+            dacapo_jar=args.dacapo_jar,
+            windows=[int(w) for w in args.windows],
+            timeout_seconds=int(args.timeout_seconds),
+            run_count=args.run_count)
+        return
+
+    if args.llvm_directory:
+        extra_arguments.extend(['--llvm-predict', args.llvm_directory])
+    run_for_all_algorithms(
+        rv_predict_jar_path=args.rv_predict_jar,
+        windows=[int(w) for w in args.windows],
+        name=args.name,
+        timeout_seconds=int(args.timeout_seconds),
+        extra_arguments=extra_arguments,
+        run_count=args.run_count)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

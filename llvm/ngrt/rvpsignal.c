@@ -14,6 +14,8 @@ REAL_DEFN(int, sigaction, int, const struct sigaction *, struct sigaction *);
 REAL_DEFN(int, sigprocmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 
+typedef int (*rvp_change_sigmask_t)(int, const sigset_t *, sigset_t *);
+
 typedef struct _rvp_signal_couplet {
 	pthread_mutex_t	sc_lock;
 	rvp_signal_t	sc_alternate[2];
@@ -480,12 +482,12 @@ rvp_thread_trace_getmask(rvp_thread_t *t, uint64_t omask, const void *retaddr)
 	rvp_trace_mask(RVP_OP_SIGGETMASK, bs->bs_number, retaddr);
 }
 
-int
-__rvpredict_pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset)
+static int
+rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
+    const sigset_t *set, sigset_t *oldset)
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	uint64_t mask, omask;
-	const void *retaddr = __builtin_return_address(0);
 	int rc;
 
 	/* TBD trace a read from `set` and, if `oldset` is not NULL,
@@ -526,18 +528,17 @@ __rvpredict_pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset)
 }
 
 int
+__rvpredict_pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset)
+{
+	return rvp_change_sigmask(real_pthread_sigmask,
+	    __builtin_return_address(0), how, set, oldset);
+}
+
+int
 __rvpredict_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 {
-	rvp_thread_t *t = rvp_thread_for_curthr();
-	int rc;
-
-	if ((rc = real_sigprocmask(how, set, oldset)) != 0)
-		return rc;
-
-	rvp_thread_trace_setmask(t, how, sigset_to_mask(set),
-	    __builtin_return_address(0));
-
-	return 0;
+	return rvp_change_sigmask(real_sigprocmask,
+	    __builtin_return_address(0), how, set, oldset);
 }
 
 int

@@ -75,10 +75,11 @@ rvp_static_intrs_init(void)
 		errx(EXIT_FAILURE, "too many interrupt priorities");
 
 	for (i = j = 0; i < rvp_static_nintrs; i++) {
-		if (i == 0 ||
+		if (i > 0 &&
 		    rvp_static_intr[i - 1].si_prio !=
 		    rvp_static_intr[i].si_prio)
-			rvp_static_intr[i].si_signum = avail_signals[j++];
+			j++;
+		rvp_static_intr[i].si_signum = avail_signals[j];
 	}
 
 	for (i = 0; i < nprio; i++) {

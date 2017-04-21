@@ -47,6 +47,7 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
+#include "Diagnostic.h"
 #include "InterruptAnnotation.h"
 
 using namespace llvm;
@@ -82,19 +83,6 @@ static const char *const kRVPredictModuleCtorName = "rvpredict.module_ctor";
 static const char *const kRVPredictInitName = "__rvpredict_init";
 
 namespace RVPredict {
-
-	class DiagnosticInfoFatalError : public DiagnosticInfoOptimizationBase {
-	public:
-		DiagnosticInfoFatalError(
-		    const Function &Fn, const DebugLoc &DLoc,
-		    const Twine &Msg) :
-		DiagnosticInfoOptimizationBase(DK_OptimizationFailure, DS_Error,
-		    getPassName(), Fn, DLoc, Msg) {
-		}
-		virtual bool isEnabled(void) const {
-			return true;
-		}
-	};
 
 /// RVPredictInstrument: instrument the code in module to find races.
 class RVPredictInstrument : public FunctionPass {

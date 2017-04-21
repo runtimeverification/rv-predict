@@ -5,10 +5,14 @@
 #include "InterruptAnnotation.h"
 
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+
+#include "Diagnostic.h"
 
 using namespace llvm;
 
@@ -140,15 +144,45 @@ InterruptAnnotation::runOnModule(Module &M)
 				->getAsCString();
 		std::pair<StringRef, StringRef> Pair = annotation.split('@');
 		uint8_t prio;
-		if (!Pair.second.getAsInteger(10, prio)) {
-			StringRef fname = f->getName();
-			if (Pair.first.equals("isr")) {
-				ISRPrioMap.insert(std::make_pair(fname, prio));
-			} else if (Pair.first.equals("disableIRQ")) {
-				DisableIRQFnMap.insert(std::make_pair(fname, prio));
-			} else if (Pair.first.equals("enableIRQ")) {
-				EnableIRQFnMap.insert(std::make_pair(fname, prio));
+		/* true on failure, ugh. */
+		if (!Pair.second.getAsInteger(10, prio))
+			;
+		else if (Pair.first.equals("isr") || Pair.first.equals("disableIRQ") ||
+		         Pair.first.equals("enableIRQ")) {
+			auto first_insn = f->getEntryBlock().getFirstNonPHI();
+#if 1
+			auto debug_loc = first_insn->getDebugLoc();
+#else
+			const MDNode *subprogram = f->getSubprogram();
+			auto debug_loc = (subprogram != NULL)
+			    ? new DebugLoc(subprogram)
+				: nullptr;
+#endif
+			IRBuilder<> builder(first_insn);
+			std::string arg_message;
+			llvm::raw_string_ostream sstr(arg_message);
+
+			sstr << f->getName().str() << " has malformed annotation " 
+			    << Pair.first << "@" << Pair.second;
+
+#if 1
+			if (debug_loc) {
+				debug_loc.print(sstr);
+				builder.getContext().diagnose(
+					DiagnosticInfoFatalError(*f, debug_loc, sstr.str()));
 			}
+#endif
+			builder.getContext().emitError(
+				first_insn,
+			    "expected {isr|disableIRQ|enableIRQ}@{decimal digits}");
+		}
+		StringRef fname = f->getName();
+		if (Pair.first.equals("isr")) {
+			ISRPrioMap.insert(std::make_pair(fname, prio));
+		} else if (Pair.first.equals("disableIRQ")) {
+			DisableIRQFnMap.insert(std::make_pair(fname, prio));
+		} else if (Pair.first.equals("enableIRQ")) {
+			EnableIRQFnMap.insert(std::make_pair(fname, prio));
 		}
 
     }
@@ -158,7 +192,7 @@ InterruptAnnotation::runOnModule(Module &M)
 }
 
 char InterruptAnnotation::ID = 0;
-static RegisterPass<InterruptAnnotation> _("pass0", "pass0", false, false);
+static RegisterPass<InterruptAnnotation> _("rvpinterrupts", "RV-Predict interrupt annotation pass", false, false);
 
 // Auto-registration of ModulePass
 // https://github.com/sampsyo/llvm-pass-skeleton/issues/7

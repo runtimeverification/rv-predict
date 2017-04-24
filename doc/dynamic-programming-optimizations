@@ -4,42 +4,41 @@ This is reasonably good, but it's not necessarily better than the SMT model. Ind
 
 First, let us notice that, for two threads, if t1 accesses variable v1 with i1 as the event index and t2 accesses v2 at with i1 as the index, then the algorithm has at least one state for the (i1, i2) index pair. However, this pair does not provide anything useful to the analysis. One option would be that we analyse the t1 and t2 threads separately at these indexes, but that gets complicated quickly.
 
-To treat this properly, let us imagine that we have some sort of graph where the nodes are thread events and we have edges between interacting events as such:
-* We have edges only between events on different threads. This is used implicitly below.
-* A write event has an edge to any access to that variable.
-* Any operation made while a lock is held has an edge to any acquire operation on the same lock.
-* All acquire operations on a given lock have an edge to all other acquire and release operations on the same lock.
-* Fork/join thread operations have edges to the begin/end events of the other thread.
+A simple way to optimize this is to run threads in jumps, stopping only at lock acquire and release time. I.e. instead of having simple read/write/whatever instructions we have complex instructions made of individual read/write/whatever instructions. Other than that, the algorithm is preety much the same.
 
-Then let us first note that if two events do not have an edge between them, they are independent. Ideally we would require all events in a state to be dependent, otherwise there is something which is redundant. However, we can't do that because we may have three threads, two of them have a race and the third is completely independent, so we will never have an edge to any event of the third graph. We can relax this condition to require all events on unfinished threads to form a connected graph. This is still not enough since we may reach an index on some thread (t1) which points to a read which is independent from everything else, but we can't continue because the read variable has the wrong value. We can treat this case similar to the finished thread one, but even then, on a different thread we may be waiting to acquire a lock which is held by t1, so we will never be able to either finish that thread or reach a state linked to our race.
+However, this does not take advantage of the (i1, i2) independence mentioned above. To use that, let us imagine a data structure that includes all the possible executions. This is NOT the data structure that will be used, it's just used to provide a base on which to build. Let us say that two threads interact on a pair (i1, i2) if one of these happen:
+* Both access the same data and one of them is a write.
+* Both access the same lock and one of them is a lock. (TODO: do I need lock-unlock interactions?)
 
-So then the final (ideal) requirement is that all event indexes in a state are of one of this types:
-1. finished threads;
-2. stuck because we are reading a different variable value;
-4. deadlocked;
-3. waiting to acquire a lock that is held by the threads mentioned at 1, 2, 3 and 4;
-4. not in any of the 1-3 cases, but forming together a connected graph.
-We will call such a state *compact*.
-TODO: the initial state should be special.
+We will start with one thread and we will remember all its indexes in a chain 0->1->2->...->end1.
+Then we will take the second thread. If it does not interact with the first thread on any pair, we will just remember its indexes in a chain. If it does interact, let (ik, jk) be the pairs where the two threads interact. For each (i, j) pair which can be the first to matter (i.e. there is no (p, q) pair with p<=i, q<=j and (i, j) != (p, q)) we will assume that the first thread has executed up to i and the second up to j. Then we will list the indexes 0->1->...->j from the second thread, and we will link this j to i. Note that we may have the same indexes from the second thread in multiple such lists. Then, for each of the (m, n) pairs which can be the first after the (i, j) pairs mentioned above, we will link the end of the j interaction to a chain j->j+1->...->n and we will link n to m. Note that a chain 0->1->...->j will split into multiple chains starting at j. Then we will continue doing this starting at the (m, n) pairs. If, at any point, we reach a (p, q) pair that we explored before, we reuse the end node for the chain ending at q. I.e. if we already have a m->...->q chain with q linked to p and we now want to add a n->...->q chain with q also linked to p, then we add a new chain n->...->q-1, and we link q-1 to the old q index.
 
-It is obvious that any race will involve two connected indexes. Then, on all other threads we can continue execution until either the thread finishes or can't be continued because we don't know what happens when reading a different variable value, gets stuck either because its lock is held by a finished thread, by a thread stuck because of a finished thread, or by a deadlocked thread or gets connected (directly or not) to the two indexes involved in the race.
+Then we will take the third thread and we will ask ourselves which are the first interactions with any of the two threads before, and so on. An index in the third thread can be linked either to an index in the first thread chain, or to a set of indices in the second thread chains. If we can choose between the two links, we will link to the second thread chains [TODO: It's not obvious that this is right]. Now there is a problem of consistency. Let us say that we have two indices (k1, k2) in the third thread, such that k1 is linked to i1 in the first thread, while k2 is linked to j2 in the second thread. We would like to say that we are only interested in the links to j2 which occur after i1. We can first exclude all the j2 occurences in the t2(=thread 2) chains which are forced to occur before i1 (i.e. because they or something after them has a link to something before i1). That may not be trivial, because some of the chains after j2 may be forced to occur before i1, while some may not. However, we might be able to postpone this problem since we can only have the following cases:
+* j2 is not the end of a chain
+-- the beginnig of its chain is after i1 - good (accept)
+-- the beginning of its chain is before i1, but the end is after i1 - good (accept)
+-- the end of its chain is before i1 - good (reject);
+* j2 is the end of a chain
+-- it is after i1 - good (accept)
+-- it is before i1 - good (reject)
+-- it is simultaneous with i1 - good (accept)
+Actually, instead of linking the end of a chain to a set, it is probably better to add separate chains which are linked to the individual indices in that set.
+Ok, what happens if k1 is linked to j1, then k2 to i2? We need somehow to only consider executions where i2 can be after j1. But, for each possible j1, we will have a k1 chain. Each of these j1 instances will have its own restricts relative to i2, so we will only be able to continue some of them.
 
-The more interesting question is how to make sure we reach all these compact states without going through all the reachable states, preferably going through none.
+This means that we may need to add to each end of a chain not only its links, but also the restricts for the other threads, unless we are sure that we can infer them. When merging two chains, we will need to take these restricts into account. On the other hand, we may build a good representation (though it may be useless) of all possible executions without these restricts.
 
-The "is reachable" relation defines a directed graph on (compact) states. Then we can say that s1 is *directly reachable* from s2 if s1 is not s2, s1 is reachable from s2 and there is no state s different from s1 and s2 such that s1 is reachable from s and s is reachable from s2. 
+TODO: Figure out if we need the restricts or we can live without them.
 
-Let us imagine that we are in a given state and we want to go to its directly reachable neighbors. Then, for any single thread we will go as far as we can without advancing any other thread. Some of the states that we get this way may be compact, but not necessarily.
+Now, for each of these chains, we have a precondition and an outcome. We need to figure out how thread execution will work out taking those into account. If, at any point, we find out that we can reach a data access interaction, then we have a race. If we reach a lock interaction, then we have to choose which thread executes first. Actually, we should do this at the data structure building time.
 
-For any two threads, we can again advance up to two indexes i1, i2 such that either:
-* i1 and i2 have an edge between them and there is no (j1, j2) != (i1, i2) with j1 <= i1 and j2 <= i2 and j1, j2 have an edge between them
-* there is no index pair that satisfies the condition above and the two threads get stuck (TODO: define get stuck) at (i1, i2).
-Some of these states may be compact, but not necessarily.
+So when we have an interation (i, j) to add which is a lock one, we will add two chains ending in j, one which says (j goes first), another one which says (i goes first). When lock-linking (i, j, k) we will have, for the (i, j) pair, one of the two cases, i or j goes first. Let's say that j has a higher thread index than i. Then, if (i goes first) then we will add only one chain, which agrees with (i goes first). Otherwise, we will add two chains, one which says (j goes first), the other saying (k goes first). Hm, it's not that simple. Or maybe it is.
 
-For any three threads, we can advance up to three indexes (i1, i2, i3) such that either:
-* i1, i2 and i3 form a connected graph and there is no (j1, j2, j3) != (i1, i2, i3) with jk <= ik.
-* We didn't find any indexes for the above case, one of the two threads gets stuck while the other two have an edge at indexes (i1, i2) that follows the same rule as above.
-* We didn't find any indexes for any of the above cases, but all three threads get stuck at (i1, i2, i3).
+So, we need to add the locks held in the state. Or reuse the per-thread lock information.
 
-This can be generalized to any number of threads. A simpler way of thinking about it is that we advance on each thread until it gets stuck, we mark those positions and we aplly only the first rule for indexes.
+BTW, we also add start-begin and join-end links.
 
-Is it true that if we can overlap `;
+Ok, so we start with the chains at (0,0,...). The state at (0,0,...) is known, so we know for which chains we meet the precondition.
+
+For each of the chains for which the precondition is met, we mark its end as "reachable" and we remember the possible sets of values with which we reach that end [TODO: As with the restricts for the other threads, we may be able to live without these]. Then, for all ends for which all chains ending there were tested, we check the precondition for each chain starting there and, if met, we mark its end as "reachable". And we continue.
+
+* I need to do something for the chains which block in the middle of the chain. Or maybe not.

@@ -5,6 +5,7 @@ import com.runtimeverification.rvpredict.log.compact.readers.BlockSignalsReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ChangeOfGenerationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.DataManipulationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.GetSetSignalMaskReader;
+import com.runtimeverification.rvpredict.log.compact.readers.GetSignalMaskReader;
 import com.runtimeverification.rvpredict.log.compact.readers.LockManipulationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.NoDataReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalDisestablishReader;
@@ -91,7 +92,8 @@ public class CompactEventReader {
         SIG_DEPTH(41, SignalDepthReader.createReader()),
         BLOCK_SIGS(42, BlockSignalsReader.createReader()),
         UNBLOCK_SIGS(43, UnblockSignalsReader.createReader()),
-        SIG_GETSET_MASK(44, GetSetSignalMaskReader.createReader());
+        SIG_GETSET_MASK(44, GetSetSignalMaskReader.createReader()),
+        SIG_GET_MASK(45, GetSignalMaskReader.createReader());
 
         private static int maxIntValue = 0;
         private static Map<Integer, Type> intToType;

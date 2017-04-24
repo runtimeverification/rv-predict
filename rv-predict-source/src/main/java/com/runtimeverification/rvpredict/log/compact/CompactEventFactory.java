@@ -196,11 +196,17 @@ public class CompactEventFactory {
         return NO_EVENTS;
     }
 
-    public List<CompactEvent> readWriteSignalMask(
+    public List<CompactEvent> getSetSignalMask(
             Context context, long readSignalMaskNumber, long writeSignalMaskNumber) {
         long readSignalMask = context.getMemoizedSignalMask(readSignalMaskNumber);
         long writeSignalMask = context.getMemoizedSignalMask(writeSignalMaskNumber);
         context.readWriteSignalMask(readSignalMask, writeSignalMask);
+        return NO_EVENTS;
+    }
+
+    public List<CompactEvent> getSignalMask(Context context, long signalMaskNumber) {
+        long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
+        context.readSignalMask(signalMask);
         return NO_EVENTS;
     }
 

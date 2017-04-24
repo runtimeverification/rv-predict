@@ -127,6 +127,13 @@ public class Context {
         // so it's probably not part of the context.
     }
 
+    void readSignalMask(long signalMask) {
+        // Since this information may be written in the trace after the signal
+        // events, it's likely that in can be handled reasonably only when analysing the trace,
+        // so it's probably not part of the context.
+    }
+
+
     void setSignalDepth(int signalDepth) throws InvalidTraceDataException {
         currentThread.setSignalDepth(signalDepth, false);
     }

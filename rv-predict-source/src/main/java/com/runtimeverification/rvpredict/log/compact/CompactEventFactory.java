@@ -196,6 +196,12 @@ public class CompactEventFactory {
         return NO_EVENTS;
     }
 
+    public List<CompactEvent> unblockSignals(Context context, long signalMaskNumber) {
+        long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
+        context.unblockSignals(signalMask);
+        return NO_EVENTS;
+    }
+
     // Function events.
 
     List<CompactEvent> enterFunction(Context context) {

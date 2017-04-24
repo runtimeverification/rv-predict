@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.log.compact;
 
 import com.runtimeverification.rvpredict.log.compact.readers.AtomicReadModifyWriteReader;
+import com.runtimeverification.rvpredict.log.compact.readers.BlockSignalsReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ChangeOfGenerationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.DataManipulationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.LockManipulationReader;
@@ -85,7 +86,8 @@ public class CompactEventReader {
         // Set the number of signals running concurrently on the current thread.  Note that
         // the wrapper function for signal handlers is reentrant, and it may race with itself to increase the
         // number of interrupts outstanding ("depth").
-        SIG_DEPTH(41, SignalDepthReader.createReader());
+        SIG_DEPTH(41, SignalDepthReader.createReader()),
+        BLOCK_SIGS(42, BlockSignalsReader.createReader());
 
         private static int maxIntValue = 0;
         private static Map<Integer, Type> intToType;

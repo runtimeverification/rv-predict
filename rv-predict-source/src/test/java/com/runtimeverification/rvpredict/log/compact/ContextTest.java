@@ -82,7 +82,7 @@ public class ContextTest {
         context.beginThread(THREAD_ID, FIRST_GENERATION);
         context.jump(PROGRAM_COUNTER);
         context.updatePcWithDelta(PROGRAM_COUNTER_DELTA);
-        context.forkThread(SECOND_THREAD_ID);
+        context.startThread(SECOND_THREAD_ID);
 
         Assert.assertEquals(THREAD_ID, context.getThreadId());
         Assert.assertEquals(PROGRAM_COUNTER + PROGRAM_COUNTER_DELTA, context.getPC());
@@ -104,7 +104,7 @@ public class ContextTest {
         context.beginThread(THREAD_ID, FIRST_GENERATION);
         context.jump(PROGRAM_COUNTER);
         context.updatePcWithDelta(PROGRAM_COUNTER_DELTA);
-        context.forkThread(SECOND_THREAD_ID);
+        context.startThread(SECOND_THREAD_ID);
 
         Assert.assertEquals(THREAD_ID, context.getThreadId());
         Assert.assertEquals(PROGRAM_COUNTER + PROGRAM_COUNTER_DELTA, context.getPC());
@@ -133,7 +133,7 @@ public class ContextTest {
 
         context.jump(PROGRAM_COUNTER);
         context.updatePcWithDelta(PROGRAM_COUNTER_DELTA);
-        context.forkThread(SECOND_THREAD_ID);
+        context.startThread(SECOND_THREAD_ID);
 
         Assert.assertEquals(THREAD_ID, context.getThreadId());
         Assert.assertEquals(FIRST_GENERATION, context.getGeneration());
@@ -176,7 +176,7 @@ public class ContextTest {
 
         context.jump(PROGRAM_COUNTER);
         context.updatePcWithDelta(PROGRAM_COUNTER_DELTA);
-        context.forkThread(SECOND_THREAD_ID);
+        context.startThread(SECOND_THREAD_ID);
 
         long t1_g1_op2_id = context.newId();
 
@@ -387,7 +387,7 @@ public class ContextTest {
         Assert.assertEquals(FIRST_GENERATION, context.getGeneration());
         Assert.assertEquals(PROGRAM_COUNTER, context.getPC());
 
-        context.forkThread(SECOND_THREAD_ID);
+        context.startThread(SECOND_THREAD_ID);
         context.beginThread(SECOND_THREAD_ID, SECOND_GENERATION);
         context.jump(SECOND_PROGRAM_COUNTER);
 

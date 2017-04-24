@@ -935,7 +935,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
             }
         });
         _rvpredict_worker_thread_ids.forEach(tid -> RVPredictRuntime.saveThreadSyncEvent(
-                EventType.JOIN, RVPREDICT_THREAD_POOL_EXECUTOR_LOC_ID, tid));
+                EventType.JOIN_THREAD, RVPREDICT_THREAD_POOL_EXECUTOR_LOC_ID, tid));
     }
 
     /*

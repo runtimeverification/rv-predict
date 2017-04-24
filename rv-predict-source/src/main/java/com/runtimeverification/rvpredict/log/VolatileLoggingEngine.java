@@ -297,7 +297,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             events = new Event[length];
             for (int i = 0; i < length; i++) {
                 events[i] = new Event();
-                events[i].setTID(tid);
+                events[i].setThreadId(tid);
             }
         }
 
@@ -353,8 +353,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                 int extra) {
             int atomLock;
             switch (eventType) {
-            case JOIN:
-                /* flush the delayed events in the joined thread before logging JOIN */
+            case JOIN_THREAD:
+                /* flush the delayed events in the joined thread before logging JOIN_THREAD */
                 for (Buffer b : activeBuffers.toArray(new Buffer[0])) {
                     if (b.tid == ((long) addr1 << 32 | addr2 & 0xFFFFFFFFL)) {
                         b.finalizeRemainingEvents();
@@ -363,7 +363,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             case READ:
             case WRITE_LOCK:
             case READ_LOCK:
-            case WAIT_ACQ:
+            case WAIT_ACQUIRE:
             case CLINIT_ENTER:
             case CLINIT_EXIT:
                 log(eventType, locId, addr1, addr2, value1);
@@ -385,8 +385,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             case WRITE:
             case WRITE_UNLOCK:
             case READ_UNLOCK:
-            case WAIT_REL:
-            case START:
+            case WAIT_RELEASE:
+            case START_THREAD:
                 log(eventType, locId, addr1, addr2, value1);
                 finalizeEvents();
                 break;
@@ -420,9 +420,9 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         private void log(EventType eventType, int locId, int addr1, int addr2, long value) {
             Event event = events[end];
             end = next(end);
-            event.setLocId(locId);
-            event.setAddr((long) addr1 << 32 | addr2 & 0xFFFFFFFFL);
-            event.setValue(value);
+            event.setLocationId(locId);
+            event.setAddress((long) addr1 << 32 | addr2 & 0xFFFFFFFFL);
+            event.setDataValue(value);
             event.setType(eventType);
         }
 
@@ -433,14 +433,14 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             cursor = end;
             if (numOfCallStackEvents == 0) {
                 for (int i = 0; i < d; i++) {
-                    events[p].setGID(gid++);
+                    events[p].setEventId(gid++);
                     p = next(p);
                 }
             } else {
                 for (int i = 0; i < d + numOfCallStackEvents; i++) {
                     /* a dirty hack based on the fact that we never use the GID
                      * of a MetaEvent */
-                    events[p].setGID(events[p].isCallStackEvent() ? gid : gid++);
+                    events[p].setEventId(events[p].isCallStackEvent() ? gid : gid++);
                     p = next(p);
                 }
             }

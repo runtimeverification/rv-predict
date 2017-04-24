@@ -4,6 +4,7 @@ import com.runtimeverification.rvpredict.log.compact.readers.AtomicReadModifyWri
 import com.runtimeverification.rvpredict.log.compact.readers.BlockSignalsReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ChangeOfGenerationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.DataManipulationReader;
+import com.runtimeverification.rvpredict.log.compact.readers.GetSetSignalMaskReader;
 import com.runtimeverification.rvpredict.log.compact.readers.LockManipulationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.NoDataReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalDisestablishReader;
@@ -14,6 +15,7 @@ import com.runtimeverification.rvpredict.log.compact.readers.SignalMaskReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalDepthReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ThreadBeginReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ThreadSyncReader;
+import com.runtimeverification.rvpredict.log.compact.readers.UnblockSignalsReader;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -87,7 +89,9 @@ public class CompactEventReader {
         // the wrapper function for signal handlers is reentrant, and it may race with itself to increase the
         // number of interrupts outstanding ("depth").
         SIG_DEPTH(41, SignalDepthReader.createReader()),
-        BLOCK_SIGS(42, BlockSignalsReader.createReader());
+        BLOCK_SIGS(42, BlockSignalsReader.createReader()),
+        UNBLOCK_SIGS(43, UnblockSignalsReader.createReader()),
+        SIG_GETSET_MASK(44, GetSetSignalMaskReader.createReader());
 
         private static int maxIntValue = 0;
         private static Map<Integer, Type> intToType;

@@ -10,7 +10,7 @@ import com.runtimeverification.rvpredict.log.compact.readers.SignalEnterReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalEstablishReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalMaskMemoizationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalMaskReader;
-import com.runtimeverification.rvpredict.log.compact.readers.SignalOutstandingDepthReader;
+import com.runtimeverification.rvpredict.log.compact.readers.SignalDepthReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ThreadBeginReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ThreadSyncReader;
 
@@ -81,11 +81,11 @@ public class CompactEventReader {
         SIG_DISESTABLISH(38, SignalDisestablishReader.createReader()),  // disestablish signal action.
         // establish a new number -> mask mapping (memoize mask).
         SIG_MASK_MEMOIZATION(39, SignalMaskMemoizationReader.createReader()),
-        SIG_MASK(40, SignalMaskReader.createReader()),  // mask signals
+        SIG_SET_MASK(40, SignalMaskReader.createReader()),  // mask signals
         // Set the number of signals running concurrently on the current thread.  Note that
         // the wrapper function for signal handlers is reentrant, and it may race with itself to increase the
         // number of interrupts outstanding ("depth").
-        SIG_OUTSTANDING_DEPTH(41, SignalOutstandingDepthReader.createReader());
+        SIG_DEPTH(41, SignalDepthReader.createReader());
 
         private static int maxIntValue = 0;
         private static Map<Integer, Type> intToType;

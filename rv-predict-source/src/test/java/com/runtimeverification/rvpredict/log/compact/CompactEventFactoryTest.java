@@ -458,7 +458,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.signalOutstandingDepth(
+        List<CompactEvent> events = eventFactory.signalDepth(
                 mockContext,
                 SIGNAL_DEPTH);
 

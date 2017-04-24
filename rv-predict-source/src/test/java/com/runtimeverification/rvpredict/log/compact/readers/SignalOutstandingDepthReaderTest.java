@@ -32,7 +32,7 @@ public class SignalOutstandingDepthReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        CompactEventReader.Reader reader = SignalOutstandingDepthReader.createReader();
+        CompactEventReader.Reader reader = SignalDepthReader.createReader();
         Assert.assertEquals(4, reader.size(mockTraceHeader));
     }
 
@@ -41,7 +41,7 @@ public class SignalOutstandingDepthReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(8);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        CompactEventReader.Reader reader = SignalOutstandingDepthReader.createReader();
+        CompactEventReader.Reader reader = SignalDepthReader.createReader();
         Assert.assertEquals(8, reader.size(mockTraceHeader));
     }
 
@@ -49,14 +49,14 @@ public class SignalOutstandingDepthReaderTest {
     public void readsData() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
-        when(mockCompactEventFactory.signalOutstandingDepth(mockContext, SIGNAL_DEPTH))
+        when(mockCompactEventFactory.signalDepth(mockContext, SIGNAL_DEPTH))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
         ByteBuffer buffer = ByteBuffer.allocate(24)
                 .putInt(SIGNAL_DEPTH).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        CompactEventReader.Reader reader = SignalOutstandingDepthReader.createReader();
+        CompactEventReader.Reader reader = SignalDepthReader.createReader();
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());

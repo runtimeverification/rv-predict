@@ -172,7 +172,7 @@ public class CompactEventFactory {
         });
     }
 
-    public List<CompactEvent> signalOutstandingDepth(Context context, int signalDepth)
+    public List<CompactEvent> signalDepth(Context context, int signalDepth)
             throws InvalidTraceDataException {
         context.setSignalDepth(signalDepth);
         return NO_EVENTS;

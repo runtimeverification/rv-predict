@@ -6,6 +6,8 @@ import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.IEventReader;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
+import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.EOFException;
@@ -52,6 +54,14 @@ public class TraceCache {
 
     public void setup() throws IOException {
         int logFileId = 0;
+        if (config.isCompactTrace()) {
+            try {
+                readers.add(new CompactEventReader(config.getCompactTraceFilePath()));
+            } catch (InvalidTraceDataException e) {
+                throw new IOException(e);
+            }
+            return;
+        }
         while (true) {
             Path path = config.getTraceFilePath(logFileId++);
             if (!path.toFile().exists()) {

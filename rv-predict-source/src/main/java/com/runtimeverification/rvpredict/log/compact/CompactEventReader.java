@@ -193,7 +193,7 @@ public class CompactEventReader implements IEventReader {
         pcBuffer = ByteBuffer.allocate(pc.size());
 
         if (inputStream.read(pcBuffer.array()) != pcBuffer.capacity()) {
-            throw new InvalidTraceDataException("Cannot read the first event header.");
+            throw new InvalidTraceDataException("Cannot read the first event descriptor.");
         }
         pc.read(pcBuffer);
 
@@ -223,6 +223,13 @@ public class CompactEventReader implements IEventReader {
         while (currentEvent >= events.size()) {
             currentEvent = 0;
             try {
+                int readCount = inputStream.read(pcBuffer.array());
+                if (readCount == 0) {
+                    return null;
+                }
+                if (readCount != pcBuffer.capacity()) {
+                    throw new InvalidTraceDataException("Incomplete event descriptor.");
+                }
                 pc.read(pcBuffer);
                 DeltaAndEventType deltaAndEventType =
                         DeltaAndEventType.parseFromPC(minDeltaAndEventType,maxDeltaAndEventType, pc.getAsLong());
@@ -246,7 +253,7 @@ public class CompactEventReader implements IEventReader {
 
     @Override
     public void close() throws IOException {
-
+        inputStream.close();
     }
 
 }

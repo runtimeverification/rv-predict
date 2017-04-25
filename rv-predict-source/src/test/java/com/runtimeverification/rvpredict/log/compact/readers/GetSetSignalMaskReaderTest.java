@@ -22,8 +22,7 @@ import static org.mockito.Mockito.when;
 public class GetSetSignalMaskReaderTest {
     private static final int READ_SIGNAL_MASK_NUMBER = 10;
     private static final int WRITE_SIGNAL_MASK_NUMBER = 11;
-    @Mock
-    private Context mockContext;
+    @Mock private Context mockContext;
     @Mock private TraceHeader mockTraceHeader;
     @Mock private CompactEventFactory mockCompactEventFactory;
 

@@ -21,7 +21,6 @@ import static org.mockito.Mockito.when;
 @RunWith(MockitoJUnitRunner.class)
 public class UnblockSignalsReaderTest {
     private static final int SIGNAL_MASK_NUMBER = 10;
-    @Mock private CompactEvent mockCompactEvent;
     @Mock private Context mockContext;
     @Mock private TraceHeader mockTraceHeader;
     @Mock private CompactEventFactory mockCompactEventFactory;

@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.log.compact;
 import com.runtimeverification.rvpredict.log.IEventReader;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.datatypes.Address;
+import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
 import com.runtimeverification.rvpredict.log.compact.readers.AtomicReadModifyWriteReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ChangeOfGenerationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.DataManipulationReader;
@@ -120,8 +121,10 @@ public class CompactEventReader implements IEventReader {
             if (buffer == null) {
                 buffer = new byte[reader.size(header)];
             }
-            if (buffer.length != stream.read(buffer)) {
-                throw new InvalidTraceDataException("Short read for " + this + ".");
+            int readSize = stream.read(buffer);
+            if (buffer.length != readSize) {
+                throw new InvalidTraceDataException(
+                        "Short read for " + this + ", expected " + buffer.length + " bytes, got " + readSize + ".");
             }
             return reader.readEvent(
                     context, compactEventFactory, header,
@@ -187,15 +190,15 @@ public class CompactEventReader implements IEventReader {
     private int currentEvent = 0;
 
     public CompactEventReader(Path path) throws IOException, InvalidTraceDataException {
-        inputStream = new BufferedInputStream(new FileInputStream(path.toFile()));
+        this(new BufferedInputStream(new FileInputStream(path.toFile())));
+    }
+    public CompactEventReader(InputStream inputStream) throws IOException, InvalidTraceDataException {
+        this.inputStream = inputStream;
         header = new TraceHeader(inputStream);
         pc = new Address(header);
-        pcBuffer = ByteBuffer.allocate(pc.size());
+        pcBuffer = ByteBuffer.allocate(pc.size()).order(header.getByteOrder());
 
-        if (inputStream.read(pcBuffer.array()) != pcBuffer.capacity()) {
-            throw new InvalidTraceDataException("Cannot read the first event descriptor.");
-        }
-        pc.read(pcBuffer);
+        readData(inputStream, pc, "first event descriptor.");
 
         minDeltaAndEventType =
                 pc.getAsLong() - (Constants.JUMPS_IN_DELTA / 2) * CompactEventReader.Type.getNumberOfValues();
@@ -213,8 +216,25 @@ public class CompactEventReader implements IEventReader {
                     + (deltaAndEventType == null ? "a jump" : deltaAndEventType.getEventType())
                     + ".");
         }
-        events = deltaAndEventType.getEventType().read(context, factory, header, inputStream);
+
+        ThreadId threadId = new ThreadId(header);
+        readData(inputStream, threadId, "thread id for the start event");
+
+        events = factory.beginThread(context, threadId.getAsLong(), 0);  // The first generation is always 0.
+
         currentEvent = -1;
+    }
+
+    private void readData(InputStream inputStream, ReadableData data, String description)
+            throws IOException, InvalidTraceDataException {
+        ByteBuffer dataBuffer = ByteBuffer.allocate(data.size()).order(header.getByteOrder());
+        int readSize = inputStream.read(dataBuffer.array());
+        if (readSize != dataBuffer.capacity()) {
+            throw new InvalidTraceDataException(
+                    "Cannot read the " + description + ", expected " + dataBuffer.capacity()
+                            + " bytes, got " + readSize + ".");
+        }
+        data.read(dataBuffer);
     }
 
     @Override
@@ -224,12 +244,15 @@ public class CompactEventReader implements IEventReader {
             currentEvent = 0;
             try {
                 int readCount = inputStream.read(pcBuffer.array());
-                if (readCount == 0) {
+                if (readCount == -1) {
                     return null;
                 }
                 if (readCount != pcBuffer.capacity()) {
-                    throw new InvalidTraceDataException("Incomplete event descriptor.");
+                    throw new InvalidTraceDataException(
+                            "Incomplete event descriptor, expected " + pcBuffer.capacity() + " bytes, got "
+                                    + readCount + ".");
                 }
+                pcBuffer.rewind();
                 pc.read(pcBuffer);
                 DeltaAndEventType deltaAndEventType =
                         DeltaAndEventType.parseFromPC(minDeltaAndEventType,maxDeltaAndEventType, pc.getAsLong());

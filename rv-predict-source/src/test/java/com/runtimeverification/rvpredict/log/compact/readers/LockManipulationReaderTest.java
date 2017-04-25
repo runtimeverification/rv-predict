@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.CompactEvent;
 import com.runtimeverification.rvpredict.log.compact.CompactEventFactory;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
@@ -60,7 +61,8 @@ public class LockManipulationReaderTest {
 
         CompactEventReader.Reader reader =
                 LockManipulationReader.createReader(CompactEventReader.LockManipulationType.LOCK);
-        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
+        List<ReadonlyEventInterface> events =
+                reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

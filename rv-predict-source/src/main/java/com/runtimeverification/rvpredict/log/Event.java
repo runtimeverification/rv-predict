@@ -177,4 +177,10 @@ public class Event extends ReadonlyEvent {
         this.locationId = locationId;
         return this;
     }
+
+    @Override
+    public ReadonlyEventInterface destructiveWithEventId(long eventId) {
+        this.eventId = eventId;
+        return this;
+    }
 }

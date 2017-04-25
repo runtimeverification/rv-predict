@@ -28,7 +28,7 @@ public class EventReader implements IEventReader {
     }
 
     @Override
-    public Event readEvent() throws IOException {
+    public ReadonlyEventInterface readEvent() throws IOException {
         int bytes;
         int off = 0;
         int len = Event.SIZEOF;
@@ -52,7 +52,7 @@ public class EventReader implements IEventReader {
     }
 
     @Override
-    public Event lastReadEvent() {
+    public ReadonlyEventInterface lastReadEvent() {
         return lastReadEvent;
     }
 

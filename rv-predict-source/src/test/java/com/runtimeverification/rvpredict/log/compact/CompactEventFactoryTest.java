@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.log.compact;
 
 import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -65,7 +66,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.dataManipulation(
+        List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
                 mockContext,
                 CompactEventReader.DataManipulationType.LOAD,
                 DATA_SIZE_IN_BYTES,
@@ -74,7 +75,7 @@ public class CompactEventFactoryTest {
                 CompactEventReader.Atomicity.NOT_ATOMIC);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -94,7 +95,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.dataManipulation(
+        List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
                 mockContext,
                 CompactEventReader.DataManipulationType.STORE,
                 DATA_SIZE_IN_BYTES,
@@ -103,7 +104,7 @@ public class CompactEventFactoryTest {
                 CompactEventReader.Atomicity.NOT_ATOMIC);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -123,7 +124,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.dataManipulation(
+        List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
                 mockContext,
                 CompactEventReader.DataManipulationType.LOAD,
                 DATA_SIZE_IN_BYTES,
@@ -132,7 +133,7 @@ public class CompactEventFactoryTest {
                 CompactEventReader.Atomicity.ATOMIC);
 
         Assert.assertEquals(3, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -172,7 +173,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.dataManipulation(
+        List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
                 mockContext,
                 CompactEventReader.DataManipulationType.LOAD,
                 DATA_SIZE_IN_BYTES,
@@ -181,7 +182,7 @@ public class CompactEventFactoryTest {
                 CompactEventReader.Atomicity.ATOMIC);
 
         Assert.assertEquals(3, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -222,7 +223,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.atomicReadModifyWrite(
+        List<ReadonlyEventInterface> events = eventFactory.atomicReadModifyWrite(
                 mockContext,
                 DATA_SIZE_IN_BYTES,
                 ADDRESS,
@@ -230,7 +231,7 @@ public class CompactEventFactoryTest {
                 OTHER_VALUE);
 
         Assert.assertEquals(4, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -279,7 +280,7 @@ public class CompactEventFactoryTest {
     @Test
     public void changeOfGeneration() throws InvalidTraceDataException {
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.changeOfGeneration(
+        List<ReadonlyEventInterface> events = eventFactory.changeOfGeneration(
                 mockContext,
                 GENERATION);
 
@@ -293,13 +294,13 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.lockManipulation(
+        List<ReadonlyEventInterface> events = eventFactory.lockManipulation(
                 mockContext,
                 CompactEventReader.LockManipulationType.LOCK,
                 ADDRESS);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -317,13 +318,13 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.lockManipulation(
+        List<ReadonlyEventInterface> events = eventFactory.lockManipulation(
                 mockContext,
                 CompactEventReader.LockManipulationType.UNLOCK,
                 ADDRESS);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -338,7 +339,7 @@ public class CompactEventFactoryTest {
     @Test
     public void jump() throws InvalidTraceDataException {
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.jump(
+        List<ReadonlyEventInterface> events = eventFactory.jump(
                 mockContext,
                 ADDRESS);
 
@@ -353,14 +354,14 @@ public class CompactEventFactoryTest {
         when(mockContext.getMemoizedSignalMask(SIGNAL_MASK_NUMBER)).thenReturn(SIGNAL_MASK);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.establishSignal(
+        List<ReadonlyEventInterface> events = eventFactory.establishSignal(
                 mockContext,
                 SIGNAL_HANDLER,
                 SIGNAL_NUMBER,
                 SIGNAL_MASK_NUMBER);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -383,12 +384,12 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.disestablishSignal(
+        List<ReadonlyEventInterface> events = eventFactory.disestablishSignal(
                 mockContext,
                 SIGNAL_NUMBER);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -408,13 +409,13 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.enterSignal(
+        List<ReadonlyEventInterface> events = eventFactory.enterSignal(
                 mockContext,
                 GENERATION,
                 SIGNAL_NUMBER);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -435,10 +436,10 @@ public class CompactEventFactoryTest {
         when(mockContext.getSignalNumber()).thenReturn(SIGNAL_NUMBER);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.exitSignal(mockContext);
+        List<ReadonlyEventInterface> events = eventFactory.exitSignal(mockContext);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -458,7 +459,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.signalOutstandingDepth(
+        List<ReadonlyEventInterface> events = eventFactory.signalOutstandingDepth(
                 mockContext,
                 SIGNAL_DEPTH);
 
@@ -473,7 +474,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.signalMaskMemoization(
+        List<ReadonlyEventInterface> events = eventFactory.signalMaskMemoization(
                 mockContext,
                 SIGNAL_MASK,
                 ORIGIN_BIT_COUNT,
@@ -492,7 +493,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getMemoizedSignalMask(SIGNAL_MASK_NUMBER)).thenReturn(SIGNAL_MASK);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.signalMask(
+        List<ReadonlyEventInterface> events = eventFactory.signalMask(
                 mockContext,
                 SIGNAL_MASK_NUMBER);
 
@@ -508,10 +509,10 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.enterFunction(mockContext);
+        List<ReadonlyEventInterface> events = eventFactory.enterFunction(mockContext);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -528,10 +529,10 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.exitFunction(mockContext);
+        List<ReadonlyEventInterface> events = eventFactory.exitFunction(mockContext);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -548,13 +549,13 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.beginThread(
+        List<ReadonlyEventInterface> events = eventFactory.beginThread(
                 mockContext,
                 THREAD_ID,
                 GENERATION);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -573,11 +574,11 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.endThread(
+        List<ReadonlyEventInterface> events = eventFactory.endThread(
                 mockContext);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -596,7 +597,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.threadSync(
+        List<ReadonlyEventInterface> events = eventFactory.threadSync(
                 mockContext,
                 CompactEventReader.ThreadSyncType.SWITCH,
                 THREAD_ID);
@@ -612,13 +613,13 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.threadSync(
+        List<ReadonlyEventInterface> events = eventFactory.threadSync(
                 mockContext,
                 CompactEventReader.ThreadSyncType.FORK,
                 OTHER_THREAD_ID);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -638,13 +639,13 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.threadSync(
+        List<ReadonlyEventInterface> events = eventFactory.threadSync(
                 mockContext,
                 CompactEventReader.ThreadSyncType.JOIN,
                 OTHER_THREAD_ID);
 
         Assert.assertEquals(1, events.size());
-        CompactEvent event = events.get(0);
+        ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
@@ -658,17 +659,25 @@ public class CompactEventFactoryTest {
         verify(mockContext, times(1)).joinThread(OTHER_THREAD_ID);
     }
 
-    private void testImplementedMethods(CompactEvent event, ReturnValueTest[] tests) {
+    private void testImplementedMethods(ReadonlyEventInterface event, ReturnValueTest[] tests) {
+        Assert.assertTrue(
+                "The event is an instance of "
+                        + event.getClass().getCanonicalName()
+                        + " instead of "
+                        + CompactEvent.class.getCanonicalName()
+                        + ".",
+                event instanceof CompactEvent);
+        CompactEvent compactEvent = (CompactEvent) event;
         List<CompactEventMethod> implementedMethods = new ArrayList<>();
         for (ReturnValueTest test : tests) {
-            test.runTest(implementedMethods, event);
+            test.runTest(implementedMethods, compactEvent);
         }
         for (CompactEventMethod method : ALL_METHODS) {
             if (implementedMethods.contains(method)) {
                 continue;
             }
             try {
-                method.run(event);
+                method.run(compactEvent);
             } catch (UnsupportedOperationException e) {
                 continue;
             }

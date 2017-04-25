@@ -49,7 +49,7 @@ public class GetSignalMaskReaderTest {
     public void readsData() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
-        when(mockCompactEventFactory.unblockSignals(mockContext, SIGNAL_MASK_NUMBER))
+        when(mockCompactEventFactory.getSignalMask(mockContext, SIGNAL_MASK_NUMBER))
                 .thenReturn(Collections.emptyList());
 
         ByteBuffer buffer = ByteBuffer.allocate(24)

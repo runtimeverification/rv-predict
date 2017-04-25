@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -21,6 +22,8 @@ import static org.mockito.Mockito.when;
 @RunWith(MockitoJUnitRunner.class)
 public class UnblockSignalsReaderTest {
     private static final int SIGNAL_MASK_NUMBER = 10;
+    private static final List<CompactEvent> EVENT_LIST = new ArrayList<>();
+
     @Mock private Context mockContext;
     @Mock private TraceHeader mockTraceHeader;
     @Mock private CompactEventFactory mockCompactEventFactory;
@@ -49,7 +52,7 @@ public class UnblockSignalsReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
         when(mockCompactEventFactory.unblockSignals(mockContext, SIGNAL_MASK_NUMBER))
-                .thenReturn(Collections.emptyList());
+                .thenReturn(EVENT_LIST);
 
         ByteBuffer buffer = ByteBuffer.allocate(24)
                 .putInt(SIGNAL_MASK_NUMBER).putLong(Long.MAX_VALUE);
@@ -58,6 +61,6 @@ public class UnblockSignalsReaderTest {
         CompactEventReader.Reader reader = UnblockSignalsReader.createReader();
         List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 
-        Assert.assertEquals(0, events.size());
+        Assert.assertTrue(EVENT_LIST == events);
     }
 }

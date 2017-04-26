@@ -66,3 +66,22 @@ Claim 3: if I is index instance that is reachable, then we can find for each thr
 * Is(q) <= I(q) for q <= s
 * Js(q) >= I(q) for q <= s
 
+----------------------------------------------
+
+I what is above to be kind of reliable, what is below is just intuition.
+
+----------------------------------------------
+
+On top of this structure, we need somehow to find out when we can read a certain value. Therefore we need to find out if a node can be reached with a certain value. But if only some possible executions will provide that value, then we need to take into account, for everything that follows that node, which executions allowed us to move past it.
+
+Observation 1. for any read x, value1 and any write x, value2 either there is an interaction between them, or they are accessed using locks and there is an edge between their locks (TODO: What happens with locks in locks in this algorithm? Does anything break?). Then, for any write x that happens before a read x, there is an interaction between an instruction which is before or equal to the read x and one which is after or equal to write x.
+
+Claim 1. To check the value of x at the time we try to pass the "read x" event on thread t (i.e. there are two nodes I, J it t's DAG with an edge between them and I(t) <= read x < J(t)), we need to do one of the following:
+* Find the last "write x" on a thread s <= t, that find the most recent transition K->L->...->I in t's DAG such that in K->L x is modified, but not after it. There can be multiple such write x events, but either L is the "read x" event or L is the lock acquire event for a lock that is held at the "read x" event.
+* Find the last "write x" event on a thread s > t. Then, on thread s's DAG we will have a similar K->L transition where K is either the write x event or the unlock and L is the read or the lock for the read.
+
+* Only some of these are compatible with the read x event.
+* In the first case, we can "cut" the edges that do not give us the correct value. When we cut these edges, we also need to cut them in other DAGs s > t, and also cut orphan nodes.
+* In the second case, we can "cut" the edges in a similar way in the greater node's DAG.
+
+After this, the DAG for thread t is a representation on what is reachable using only threads <= t. Then, a node is globally reachable if it is reachable on thread t or on greater thread's projections. We can completely remove nodes (and their edges, and the edge equivalents in all graphs) if they are not globally reachable. Then we get the final representation of what can be executed.

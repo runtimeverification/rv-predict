@@ -86,9 +86,7 @@ public class CompactEventReader {
         // establish a new number -> mask mapping (memoize mask).
         SIG_MASK_MEMOIZATION(39, SignalMaskMemoizationReader.createReader()),
         SIG_SET_MASK(40, SignalMaskReader.createReader()),  // mask signals
-        // Set the number of signals running concurrently on the current thread.  Note that
-        // the wrapper function for signal handlers is reentrant, and it may race with itself to increase the
-        // number of interrupts outstanding ("depth").
+        // Set the number of signals running concurrently on the current thread.
         SIG_DEPTH(41, SignalDepthReader.createReader()),
         BLOCK_SIGS(42, BlockSignalsReader.createReader()),
         UNBLOCK_SIGS(43, UnblockSignalsReader.createReader()),

@@ -6,39 +6,63 @@ First, let us notice that, for two threads, if t1 accesses variable v1 with i1 a
 
 A simple way to optimize this is to run threads in jumps, stopping only at lock acquire and release time. I.e. instead of having simple read/write/whatever instructions we have complex instructions made of individual read/write/whatever instructions. Other than that, the algorithm is preety much the same.
 
-However, this does not take advantage of the (i1, i2) independence mentioned above. To use that, let us imagine a data structure that includes all the possible executions. This is NOT the data structure that will be used, it's just used to provide a base on which to build. Let us say that two threads interact on a pair (i1, i2) if one of these happen:
-* Both access the same data and one of them is a write.
-* Both access the same lock and one of them is a lock. (TODO: do I need lock-unlock interactions?)
+However, this does not take advantage of the (i1, i2) independence mentioned above. To use that, we will build a data structure that includes all the possible executions.
 
-We will start with one thread and we will remember all its indexes in a chain 0->1->2->...->end1.
-Then we will take the second thread. If it does not interact with the first thread on any pair, we will just remember its indexes in a chain. If it does interact, let (ik, jk) be the pairs where the two threads interact. For each (i, j) pair which can be the first to matter (i.e. there is no (p, q) pair with p<=i, q<=j and (i, j) != (p, q)) we will assume that the first thread has executed up to i and the second up to j. Then we will list the indexes 0->1->...->j from the second thread, and we will link this j to i. Note that we may have the same indexes from the second thread in multiple such lists. Then, for each of the (m, n) pairs which can be the first after the (i, j) pairs mentioned above, we will link the end of the j interaction to a chain j->j+1->...->n and we will link n to m. Note that a chain 0->1->...->j will split into multiple chains starting at j. Then we will continue doing this starting at the (m, n) pairs. If, at any point, we reach a (p, q) pair that we explored before, we reuse the end node for the chain ending at q. I.e. if we already have a m->...->q chain with q linked to p and we now want to add a n->...->q chain with q also linked to p, then we add a new chain n->...->q-1, and we link q-1 to the old q index.
+Let us say that two threads interact on a pair (i1, i2) if one of these happen:
+* Both access the same data, one of them is a write and the two threads do not hold the same lock.
+* Both access the same lock and one of them is a lock.
+* One is a fork/start thread event and the other is a begin thread event.
+* One is a join event and the other is an end thread event.
+* On each thread we add an extra event before its beginning and an extra event after its end. All the before-begin events interact. All the after-end events interact.
 
-Then we will take the third thread and we will ask ourselves which are the first interactions with any of the two threads before, and so on. An index in the third thread can be linked either to an index in the first thread chain, or to a set of indices in the second thread chains. If we can choose between the two links, we will link to the second thread chains [TODO: It's not obvious that this is right]. Now there is a problem of consistency. Let us say that we have two indices (k1, k2) in the third thread, such that k1 is linked to i1 in the first thread, while k2 is linked to j2 in the second thread. We would like to say that we are only interested in the links to j2 which occur after i1. We can first exclude all the j2 occurences in the t2(=thread 2) chains which are forced to occur before i1 (i.e. because they or something after them has a link to something before i1). That may not be trivial, because some of the chains after j2 may be forced to occur before i1, while some may not. However, we might be able to postpone this problem since we can only have the following cases:
-* j2 is not the end of a chain
--- the beginnig of its chain is after i1 - good (accept)
--- the beginning of its chain is before i1, but the end is after i1 - good (accept)
--- the end of its chain is before i1 - good (reject);
-* j2 is the end of a chain
--- it is after i1 - good (accept)
--- it is before i1 - good (reject)
--- it is simultaneous with i1 - good (accept)
-Actually, instead of linking the end of a chain to a set, it is probably better to add separate chains which are linked to the individual indices in that set.
-Ok, what happens if k1 is linked to j1, then k2 to i2? We need somehow to only consider executions where i2 can be after j1. But, for each possible j1, we will have a k1 chain. Each of these j1 instances will have its own restricts relative to i2, so we will only be able to continue some of them.
+If t, s are two threads, then we define Interactions(t, s) as all pairs (i, j) on which t and s interact.
 
-This means that we may need to add to each end of a chain not only its links, but also the restricts for the other threads, unless we are sure that we can infer them. When merging two chains, we will need to take these restricts into account. On the other hand, we may build a good representation (though it may be useless) of all possible executions without these restricts.
+From a discussion with Traian: We can give up on the "hold the same lock" above by considering locks/unlocks as (roughly) an atomic read+write to a variable, or something like that. While that would provide a more general framework, for the rv-predict tool it is better to treat them as mentioned above since it reduces the number of interactions that need to be taken into account.
 
-TODO: Figure out if we need the restricts or we can live without them.
+Interaction data structure
+--------------------------
 
-Now, for each of these chains, we have a precondition and an outcome. We need to figure out how thread execution will work out taking those into account. If, at any point, we find out that we can reach a data access interaction, then we have a race. If we reach a lock interaction, then we have to choose which thread executes first. Actually, we should do this at the data structure building time.
+Given a subset of threads T:
 
-So when we have an interation (i, j) to add which is a lock one, we will add two chains ending in j, one which says (j goes first), another one which says (i goes first). When lock-linking (i, j, k) we will have, for the (i, j) pair, one of the two cases, i or j goes first. Let's say that j has a higher thread index than i. Then, if (i goes first) then we will add only one chain, which agrees with (i goes first). Otherwise, we will add two chains, one which says (j goes first), the other saying (k goes first). Hm, it's not that simple. Or maybe it is.
+An index instance is any function I : T -> Nat such that I(t) is a valid index for thread t.
 
-So, we need to add the locks held in the state. Or reuse the per-thread lock information.
+If I, J are two index instances then I < J if I(t) <= J(t) for all t in T and I != J.
 
-BTW, we also add start-begin and join-end links.
+Given a set S of index instances and an index I then Next(I, S) = {J in S | I < J and there is no K with I < K < J}. If t and s are two threads and (i, j) is a tuple in Interactions(t, s), then Next(i, j) = Next(I, Interactions(t, s)) where I:{t, s}->N is given by I(t) = i, I(s) = j.
 
-Ok, so we start with the chains at (0,0,...). The state at (0,0,...) is known, so we know for which chains we meet the precondition.
+Now let us recursively define a data structure that models interactions in a way that is useful for analysis. We will take each thread and add it to the data structure as such (any order on threads would work):
 
-For each of the chains for which the precondition is met, we mark its end as "reachable" and we remember the possible sets of values with which we reach that end [TODO: As with the restricts for the other threads, we may be able to live without these]. Then, for all ends for which all chains ending there were tested, we check the precondition for each chain starting there and, if met, we mark its end as "reachable". And we continue.
+For the first thread t we build a chain I0->I1->I2->...->Iend1, with Ik:{t}->N given by Ik(t) = k. Obviously, this chain is a DAG.
 
-* I need to do something for the chains which block in the middle of the chain. Or maybe not.
+For any other thread t, let Interactions(t) be the set of tuples (i, s, j) such that s is a previously processed thread and (i, j) is an interaction between event i on s ond j on t.
+
+Let FullInteractions(t) be the set of index instances I such that:
+* There is a thread s that was previously processed such that there is a tuple (I(s), s, I(t)) in Interactions(t).
+* For any thread q!=s that was previously processed, there is a tuple (I(q), q, j) in Interactions(t) with j <= I(t).
+
+The intent of these full interactions is to model that we executed thread t until we reached I(t) and, for any other thread p, the last interaction between t and p was I(p). To realize this intent, we do the following:
+
+We start a DAG by adding the (full) interaction I0 between the before-beginning events for all the processed threads and the current one. This interaction is in the "unexpanded" state. Then, while possible, we take an unexpanded full interaction I and we expand it as such:
+
+For any previously processed thread s, and for any (i, j) in Next(I(s), I(t)), and for any J in s's DAG with:
+* J(s) = i
+* J(q) >= I(q) for all q < s
+* For all q < s, there is no interaction (k, l) in Next(I(q), I(t)) with (k, l) < (J(q), j)
+* For all q < s, in the [I(q), J(q)) interval q does not acquire any lock that is held by any thread p with s < p <= t just before executing I(p). (TODO: Make sure that I don't need q<=s).
+
+To resume, for any J with those properties, let us define K:{q | q <= t}->N by K(q) = J(q) for q <= s, K(q) = I(q) for s<q<t, K(t) = j. We add K to t's DAG (if it's not already there) and we link I to K.
+
+After that, we mark I as "processed".
+
+End of algorithm.
+
+Given two DAG nodes I, J (can be on the same thread), they are incompatible if there are two threads p, q such that I(p)<J(p) and I(q) > J(q)
+A compatible set of DAG nodes {Is} with s in S where S is a subset of nodes, is as set of nodes without any incompatible nodes in it.
+
+Claim 1: Any node in any of the DAGs is reachable (if we ignore the compatibility between read and write events, e.g. we replace them by nop events).
+Claim 2: Given any compatible set of nodes {Is} there is an execution that goes through all of them (again, ignoring r/w compatibility).
+Claim 3: if I is index instance that is reachable, then we can find for each thread s two nodes Is and Js in s's DAG such that:
+* There is an path Is -> Js
+* Is(q) <= I(q) for q <= s
+* Js(q) >= I(q) for q <= s
+

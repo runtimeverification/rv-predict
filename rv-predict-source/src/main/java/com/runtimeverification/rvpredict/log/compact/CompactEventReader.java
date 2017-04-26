@@ -23,6 +23,7 @@ import com.runtimeverification.rvpredict.log.compact.readers.ThreadSyncReader;
 import com.runtimeverification.rvpredict.log.compact.readers.UnblockSignalsReader;
 
 import java.io.BufferedInputStream;
+import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -251,7 +252,8 @@ public class CompactEventReader implements IEventReader {
             try {
                 int readCount = inputStream.read(pcBuffer.array());
                 if (readCount == -1) {
-                    return null;
+                    events = null;
+                    throw new EOFException();
                 }
                 if (readCount != pcBuffer.capacity()) {
                     throw new InvalidTraceDataException(

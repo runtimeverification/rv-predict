@@ -20,16 +20,19 @@ public class MoreAsserts {
         assertException(Throwable.class, exceptionMessageSubstring, runnable);
     }
     public static void assertException(
+            String explanation, Class exceptionClass, ThrowingRunnable runnable) {
+        assertException(explanation, exceptionClass, null, runnable);
+    }
+    public static void assertException(
             Class exceptionClass, String exceptionMessageSubstring, ThrowingRunnable runnable) {
         assertException("", exceptionClass, exceptionMessageSubstring, runnable);
     }
     public static void assertException(
             String explanation, Class exceptionClass, String exceptionMessageSubstring, ThrowingRunnable runnable) {
+        boolean noException = false;
         try {
             runnable.run();
-            Assert.fail(
-                    "Expected exception of type " + exceptionClass.getCanonicalName() + " but none thrown.\n"
-                            + explanation);
+            noException = true;
         } catch (Throwable t) {
             if (!exceptionClass.isInstance(t)) {
                 Assert.fail("Expected exception of type " + exceptionClass.getCanonicalName()
@@ -41,6 +44,11 @@ public class MoreAsserts {
                         + "' but got " + t.getMessage() + ".\n"
                         + explanation + "\n" + t);
             }
+        }
+        if (noException) {
+            Assert.fail(
+                    "Expected exception of type " + exceptionClass.getCanonicalName() + " but none thrown.\n"
+                            + explanation);
         }
     }
 }

@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.log.compact;
 
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.testutils.MoreAsserts;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -676,14 +677,10 @@ public class CompactEventFactoryTest {
             if (implementedMethods.contains(method)) {
                 continue;
             }
-            try {
-                method.run(compactEvent);
-            } catch (UnsupportedOperationException e) {
-                continue;
-            }
-            Assert.fail(
-                    "Expected UnsupportedOperationException for method "
-                            + method.getName() + ", but none was thrown.");
+            MoreAsserts.assertException(
+                    "Expecting exception for " + method.getName() + ".",
+                    UnsupportedOperationException.class,
+                    () -> method.run(compactEvent));
         }
     }
 

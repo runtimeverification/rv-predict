@@ -1,8 +1,19 @@
+
 package com.runtimeverification.rvpredict.testutils;
 
 import org.junit.Assert;
 
 public class MoreAsserts {
+    public static void assertNull(Object o) {
+        assertNull("", o);
+    }
+    public static void assertNull(String message, Object o) {
+        if (o == null) {
+            return;
+        }
+        Assert.fail("Expected null object, but got " + o + ".\n" + message);
+    }
+
     public interface ThrowingRunnable {
         void run() throws Throwable;
     }

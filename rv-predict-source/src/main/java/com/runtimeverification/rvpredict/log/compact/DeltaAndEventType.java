@@ -15,9 +15,12 @@ class DeltaAndEventType {
             return null;
         }
         int eventCount = CompactEventReader.Type.getNumberOfValues();
+
+        long normalizedPc = pc - minDeltaAndEventType;
+
         return new DeltaAndEventType(
-                CompactEventReader.Type.fromInt(toIntExact(pc % eventCount)),
-                toIntExact(pc / eventCount - eventCount / 2));
+                CompactEventReader.Type.fromInt(toIntExact(normalizedPc % eventCount)),
+                toIntExact(normalizedPc / eventCount - Constants.JUMPS_IN_DELTA / 2));
     }
 
     CompactEventReader.Type getEventType() {

@@ -173,7 +173,7 @@ public class CompactEventFactory {
         });
     }
 
-    public List<ReadonlyEventInterface> signalOutstandingDepth(Context context, int signalDepth)
+    public List<ReadonlyEventInterface> signalDepth(Context context, int signalDepth)
             throws InvalidTraceDataException {
         context.setSignalDepth(signalDepth);
         return NO_EVENTS;
@@ -188,6 +188,32 @@ public class CompactEventFactory {
     public List<ReadonlyEventInterface> signalMask(Context context, long signalMaskNumber) {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         context.maskSignals(signalMask);
+        return NO_EVENTS;
+    }
+
+    public List<ReadonlyEventInterface> blockSignals(Context context, long signalMaskNumber) {
+        long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
+        context.blockSignals(signalMask);
+        return NO_EVENTS;
+    }
+
+    public List<ReadonlyEventInterface> getSetSignalMask(
+            Context context, long readSignalMaskNumber, long writeSignalMaskNumber) {
+        long readSignalMask = context.getMemoizedSignalMask(readSignalMaskNumber);
+        long writeSignalMask = context.getMemoizedSignalMask(writeSignalMaskNumber);
+        context.readWriteSignalMask(readSignalMask, writeSignalMask);
+        return NO_EVENTS;
+    }
+
+    public List<ReadonlyEventInterface> getSignalMask(Context context, long signalMaskNumber) {
+        long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
+        context.readSignalMask(signalMask);
+        return NO_EVENTS;
+    }
+
+    public List<ReadonlyEventInterface> unblockSignals(Context context, long signalMaskNumber) {
+        long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
+        context.unblockSignals(signalMask);
         return NO_EVENTS;
     }
 

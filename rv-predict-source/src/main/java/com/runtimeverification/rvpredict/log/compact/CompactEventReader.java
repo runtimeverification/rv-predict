@@ -5,8 +5,11 @@ import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.datatypes.Address;
 import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
 import com.runtimeverification.rvpredict.log.compact.readers.AtomicReadModifyWriteReader;
+import com.runtimeverification.rvpredict.log.compact.readers.BlockSignalsReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ChangeOfGenerationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.DataManipulationReader;
+import com.runtimeverification.rvpredict.log.compact.readers.GetSetSignalMaskReader;
+import com.runtimeverification.rvpredict.log.compact.readers.GetSignalMaskReader;
 import com.runtimeverification.rvpredict.log.compact.readers.LockManipulationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.NoDataReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalDisestablishReader;
@@ -14,9 +17,10 @@ import com.runtimeverification.rvpredict.log.compact.readers.SignalEnterReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalEstablishReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalMaskMemoizationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalMaskReader;
-import com.runtimeverification.rvpredict.log.compact.readers.SignalOutstandingDepthReader;
+import com.runtimeverification.rvpredict.log.compact.readers.SignalDepthReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ThreadBeginReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ThreadSyncReader;
+import com.runtimeverification.rvpredict.log.compact.readers.UnblockSignalsReader;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -89,11 +93,13 @@ public class CompactEventReader implements IEventReader {
         SIG_DISESTABLISH(38, SignalDisestablishReader.createReader()),  // disestablish signal action.
         // establish a new number -> mask mapping (memoize mask).
         SIG_MASK_MEMOIZATION(39, SignalMaskMemoizationReader.createReader()),
-        SIG_MASK(40, SignalMaskReader.createReader()),  // mask signals
-        // Set the number of signals running concurrently on the current thread.  Note that
-        // the wrapper function for signal handlers is reentrant, and it may race with itself to increase the
-        // number of interrupts outstanding ("depth").
-        SIG_OUTSTANDING_DEPTH(41, SignalOutstandingDepthReader.createReader());
+        SIG_SET_MASK(40, SignalMaskReader.createReader()),  // mask signals
+        // Set the number of signals running concurrently on the current thread.
+        SIG_DEPTH(41, SignalDepthReader.createReader()),
+        BLOCK_SIGS(42, BlockSignalsReader.createReader()),
+        UNBLOCK_SIGS(43, UnblockSignalsReader.createReader()),
+        SIG_GETSET_MASK(44, GetSetSignalMaskReader.createReader()),
+        SIG_GET_MASK(45, GetSignalMaskReader.createReader());
 
         private static int maxIntValue = 0;
         private static Map<Integer, Type> intToType;

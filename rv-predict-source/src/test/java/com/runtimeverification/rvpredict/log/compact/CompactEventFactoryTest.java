@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.log.compact;
 
+import com.runtimeverification.rvpredict.log.EventType;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,21 +35,21 @@ public class CompactEventFactoryTest {
     private static final List<CompactEventMethod> ALL_METHODS = new ArrayList<>();
 
     private static final CompactEventMethod<Long> GET_ID =
-            new CompactEventMethod<>(ALL_METHODS, "getId", CompactEvent::getId);
+            new CompactEventMethod<>(ALL_METHODS, "getEventId", CompactEvent::getEventId);
     private static final CompactEventMethod<Long> GET_THREAD_ID =
             new CompactEventMethod<>(ALL_METHODS, "getThreadId", CompactEvent::getThreadId);
-    private static final CompactEventMethod<CompactEvent.Type> GET_COMPACT_TYPE =
-            new CompactEventMethod<>(ALL_METHODS, "getCompactType", CompactEvent::getCompactType);
+    private static final CompactEventMethod<EventType> GET_COMPACT_TYPE =
+            new CompactEventMethod<>(ALL_METHODS, "getType", CompactEvent::getType);
     private static final CompactEventMethod<Integer> GET_DATA_SIZE_IN_BYTES =
             new CompactEventMethod<>(ALL_METHODS, "getDataSizeInBytes", CompactEvent::getDataSizeInBytes);
     private static final CompactEventMethod<Long> GET_DATA_ADDRESS =
             new CompactEventMethod<>(ALL_METHODS, "getAddress", CompactEvent::getDataAddress);
     private static final CompactEventMethod<Long> GET_DATA_VALUE =
-            new CompactEventMethod<>(ALL_METHODS, "getValue", CompactEvent::getDataValue);
+            new CompactEventMethod<>(ALL_METHODS, "getDataValue", CompactEvent::getDataValue);
     private static final CompactEventMethod<Long> GET_LOCK_ADDRESS =
-            new CompactEventMethod<>(ALL_METHODS, "getLockAddress", CompactEvent::getLockAddress);
+            new CompactEventMethod<>(ALL_METHODS, "getSyncObject", CompactEvent::getSyncObject);
     private static final CompactEventMethod<Long> GET_OTHER_THREAD_ID =
-            new CompactEventMethod<>(ALL_METHODS, "getOtherThreadId", CompactEvent::getOtherThreadId);
+            new CompactEventMethod<>(ALL_METHODS, "getSyncedThreadId", CompactEvent::getSyncedThreadId);
     private static final CompactEventMethod<Long> GET_SIGNAL_HANDLER_ADDRESS =
             new CompactEventMethod<>(ALL_METHODS, "getSignalHandlerAddress", CompactEvent::getSignalHandlerAddress);
     private static final CompactEventMethod<Long> GET_SIGNAL_MASK =
@@ -79,7 +80,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.READ, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
                         new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
@@ -108,7 +109,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.WRITE, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.WRITE, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
                         new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
@@ -137,7 +138,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.LOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.WRITE_LOCK, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(ADDRESS, GET_LOCK_ADDRESS),
                 }
         );
@@ -147,7 +148,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID + 1, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.READ, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
                         new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
@@ -159,7 +160,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID + 2, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.UNLOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.WRITE_UNLOCK, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(ADDRESS, GET_LOCK_ADDRESS),
                 }
         );
@@ -186,7 +187,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.LOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.WRITE_LOCK, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(ADDRESS, GET_LOCK_ADDRESS),
                 }
         );
@@ -196,7 +197,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID + 1, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.READ, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
                         new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
@@ -208,7 +209,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID + 2, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.UNLOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.WRITE_UNLOCK, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(ADDRESS, GET_LOCK_ADDRESS),
                 }
         );
@@ -235,7 +236,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.LOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.WRITE_LOCK, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(ADDRESS, GET_LOCK_ADDRESS),
                 }
         );
@@ -245,7 +246,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID + 1, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.READ, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
                         new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
@@ -257,7 +258,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID + 2, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.WRITE, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.WRITE, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
                         new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(OTHER_VALUE, GET_DATA_VALUE),
@@ -269,7 +270,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID + 3, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.UNLOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.WRITE_UNLOCK, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(ADDRESS, GET_LOCK_ADDRESS),
                 }
         );
@@ -304,7 +305,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.LOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.WRITE_LOCK, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(ADDRESS, GET_LOCK_ADDRESS),
                 }
         );
@@ -328,7 +329,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.UNLOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.WRITE_UNLOCK, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(ADDRESS, GET_LOCK_ADDRESS),
                 }
         );
@@ -365,7 +366,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.ESTABLISH_SIGNAL, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.ESTABLISH_SIGNAL, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(SIGNAL_MASK, GET_SIGNAL_MASK),
                         new ReturnValueTest<>(SIGNAL_NUMBER, GET_SIGNAL_NUMBER),
                         new ReturnValueTest<>(SIGNAL_HANDLER, GET_SIGNAL_HANDLER_ADDRESS),
@@ -393,7 +394,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.DISESTABLISH_SIGNAL, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.DISESTABLISH_SIGNAL, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(SIGNAL_NUMBER, GET_SIGNAL_NUMBER),
                 }
         );
@@ -419,7 +420,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.ENTER_SIGNAL, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.ENTER_SIGNAL, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(SIGNAL_NUMBER, GET_SIGNAL_NUMBER),
                 }
         );
@@ -443,7 +444,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.EXIT_SIGNAL, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.EXIT_SIGNAL, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(SIGNAL_NUMBER, GET_SIGNAL_NUMBER),
                 }
         );
@@ -457,7 +458,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<CompactEvent> events = eventFactory.signalOutstandingDepth(
+        List<CompactEvent> events = eventFactory.signalDepth(
                 mockContext,
                 SIGNAL_DEPTH);
 
@@ -516,7 +517,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.ENTER_FUNCTION, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.INVOKE_METHOD, GET_COMPACT_TYPE),
                 }
         );
     }
@@ -536,7 +537,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.EXIT_FUNCTION, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.FINISH_METHOD, GET_COMPACT_TYPE),
                 }
         );
     }
@@ -559,7 +560,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.BEGIN_THREAD, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.BEGIN_THREAD, GET_COMPACT_TYPE),
                 }
         );
 
@@ -582,7 +583,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.END_THREAD, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.END_THREAD, GET_COMPACT_TYPE),
                 }
         );
 
@@ -623,12 +624,12 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.FORK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.START_THREAD, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(OTHER_THREAD_ID, GET_OTHER_THREAD_ID),
                 }
         );
 
-        verify(mockContext, times(1)).forkThread(OTHER_THREAD_ID);
+        verify(mockContext, times(1)).startThread(OTHER_THREAD_ID);
     }
 
     @Test
@@ -649,7 +650,7 @@ public class CompactEventFactoryTest {
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
-                        new ReturnValueTest<>(CompactEvent.Type.JOIN_THREAD, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(EventType.JOIN_THREAD, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(OTHER_THREAD_ID, GET_OTHER_THREAD_ID),
                 }
         );

@@ -1,72 +1,103 @@
 package com.runtimeverification.rvpredict.log.compact;
 
-public abstract class CompactEvent {
-    public enum Type {
-        READ,
-        WRITE,
+import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.log.ReadonlyEventDecorator;
+import com.runtimeverification.rvpredict.log.ReadonlyEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
-        LOCK,
-        UNLOCK,
-
-        FORK,
-        /**
-         * Event generated after a thread is awakened from {@code Thread#join()}
-         * because the joining thread finishes.
-         */
-        JOIN_THREAD,
-
-        ESTABLISH_SIGNAL,
-        DISESTABLISH_SIGNAL,
-
-        ENTER_SIGNAL,
-        EXIT_SIGNAL,
-
-        ENTER_FUNCTION,
-        EXIT_FUNCTION, BEGIN_THREAD, END_THREAD,
-    }
-
-    private final long id;
+public abstract class CompactEvent extends ReadonlyEvent {
+    private final long eventId;
+    private final long locationId;
     private final long threadId;
-    private final Type compactType;
+    private final EventType type;
 
-    CompactEvent(Context context, Type compactType) {
-        this.id = context.newId();
+    CompactEvent(Context context, EventType type) {
+        this.eventId = context.newId();
+        this.locationId = context.getPC();
         this.threadId = context.getThreadId();
-        this.compactType = compactType;
+        this.type = type;
     }
 
-    long getId() {
-        return id;
+    @Override
+    public long getEventId() {
+        return eventId;
     }
 
-    long getThreadId() {
+    // TODO(virgil): Convert getLocationId to long.
+    @Override
+    public int getLocationId() {
+        return (int)locationId;
+    }
+
+    @Override
+    public long getThreadId() {
         return threadId;
     }
 
-    Type getCompactType() {return compactType;}
+    @Override
+    public EventType getType() {return type;}
 
     int getDataSizeInBytes() {
-        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
-    long getDataAddress() {
-        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
+
+    @Override
+    public long getDataAddress() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
-    long getDataValue() {
-        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
+
+    @Override
+    public long getDataValue() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
+
+    @Override
+    public long getSyncedThreadId() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+
+    @Override
+    public long getSyncObject() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+
     long getSignalNumber() {
-        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
     long getSignalMask() {
-        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
     long getSignalHandlerAddress() {
-        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
-    long getOtherThreadId() {
-        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
+
+    @Override
+    public String getLockRepresentation() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
-    long getLockAddress() {
-        throw new UnsupportedOperationException("Unsupported operation for " + getCompactType());
+
+    @Override
+    public long unsafeGetAddress() {
+        return 0;
+    }
+
+    @Override
+    public long unsafeGetDataValue() {
+        return 0;
+    }
+
+    @Override
+    public ReadonlyEvent copy() {
+        return this;
+    }
+
+    @Override
+    public ReadonlyEventInterface destructiveWithLocationId(int locationId) {
+        return new ReadonlyEventDecorator(this) {
+            @Override
+            public int getLocationId() {
+                return locationId;
+            }
+        };
     }
 }

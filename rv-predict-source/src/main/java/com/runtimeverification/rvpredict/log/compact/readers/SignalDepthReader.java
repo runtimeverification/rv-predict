@@ -5,11 +5,11 @@ import com.runtimeverification.rvpredict.log.compact.datatypes.VariableInt;
 
 import static java.lang.Math.toIntExact;
 
-public class SignalOutstandingDepthReader {
+public class SignalDepthReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 header -> new VariableInt(header, 4),
-                (context, compactEventFactory, outstandingDepth) ->
-                        compactEventFactory.signalOutstandingDepth(context, toIntExact(outstandingDepth.getAsLong())));
+                (context, compactEventFactory, depth) ->
+                        compactEventFactory.signalDepth(context, toIntExact(depth.getAsLong())));
     }
 }

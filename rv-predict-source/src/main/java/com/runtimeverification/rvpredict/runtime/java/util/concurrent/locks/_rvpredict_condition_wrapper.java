@@ -29,12 +29,12 @@ class _rvpredict_condition_wrapper implements Condition {
     }
 
     private void _rvpredict_wait_acq() {
-        RVPredictRuntime.saveLockEvent(EventType.WAIT_ACQ, RVPREDICT_CONDITION_WRAPPER_LOC_ID,
+        RVPredictRuntime.saveLockEvent(EventType.WAIT_ACQUIRE, RVPREDICT_CONDITION_WRAPPER_LOC_ID,
                 JUC_LOCK_C, sync);
     }
 
     private void _rvpredict_wait_rel() {
-        RVPredictRuntime.saveLockEvent(EventType.WAIT_REL, RVPREDICT_CONDITION_WRAPPER_LOC_ID,
+        RVPredictRuntime.saveLockEvent(EventType.WAIT_RELEASE, RVPREDICT_CONDITION_WRAPPER_LOC_ID,
                 JUC_LOCK_C, sync);
     }
 

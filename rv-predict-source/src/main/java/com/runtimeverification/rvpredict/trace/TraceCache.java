@@ -135,38 +135,38 @@ public class TraceCache {
     }
 
     protected final List<RawTrace> readEventWindow() throws IOException {
-        List<RawTrace> rawTraces =  new ArrayList<>();
-        final int maxEvents = config.windowSize;
+	List<RawTrace> rawTraces =  new ArrayList<>();
+	final int maxEvents = config.windowSize;
         if (Configuration.debug)
-            System.err.println(readers.size() + " readers");
+	    System.err.println(readers.size() + " readers");
         ArrayList<ReadonlyEventInterface> events = new ArrayList<>(eventsBuffer);
-        eventsBuffer.clear();
-        events.ensureCapacity(capacity);
-        for (int i = events.size(); i < maxEvents + 1; i++) {
-                ReadonlyEventInterface event;
-                long leastGID = Long.MAX_VALUE;
-                IEventReader leastReader = null;
-                Iterator<IEventReader> iter = readers.iterator();
-                while (iter.hasNext()) {
-                        IEventReader reader = iter.next();
-                        event = reader.lastReadEvent();
-                        if (event != null && event.getEventId() < leastGID) {
-//                                System.err.println("choosing new reader because gid " + event.getEventId() + " < " + leastGID);
-                                leastReader = reader;
-                                leastGID = event.getEventId();
-                        }
+	eventsBuffer.clear();
+	events.ensureCapacity(capacity);
+	for (int i = events.size(); i < maxEvents + 1; i++) {
+            ReadonlyEventInterface event;
+            long leastGID = Long.MAX_VALUE;
+            IEventReader leastReader = null;
+            Iterator<IEventReader> iter = readers.iterator();
+            while (iter.hasNext()) {
+                IEventReader reader = iter.next();
+                event = reader.lastReadEvent();
+                if (event != null && event.getEventId() < leastGID) {
+//                      System.err.println("choosing new reader because gid " + event.getEventId() + " < " + leastGID);
+                        leastReader = reader;
+                        leastGID = event.getEventId();
                 }
-                if (leastReader == null)
-                        break;
-                event = leastReader.lastReadEvent();
-                assert event != null;
-                events.add(event);
-//                System.err.println("adding event " + event.getEventId());
-                try {
-                        leastReader.readEvent();
-                } catch (EOFException e) {
-                        readers.remove(leastReader);
-                }
+            }
+            if (leastReader == null)
+                break;
+            event = leastReader.lastReadEvent();
+            assert event != null;
+            events.add(event);
+//          System.err.println("adding event " + event.getEventId());
+            try {
+		leastReader.readEvent();
+            } catch (EOFException e) {
+		readers.remove(leastReader);
+            }
         }
         if (Configuration.debug)
             System.err.println("got " + events.size() + " events out of " + maxEvents);
@@ -219,9 +219,9 @@ public class TraceCache {
         return rawTraces;
     }
     private static RawTrace tidSpanToRawTrace(List<? extends ReadonlyEventInterface> events,
-            int tidStart, int tidEnd) {
+	    int tidStart, int tidEnd) {
         List<? extends ReadonlyEventInterface> tidEvents = events.subList(tidStart, tidEnd);
-        int n = tidEvents.size(), length = getNextPowerOfTwo(n);
+	int n = tidEvents.size(), length = getNextPowerOfTwo(n);
         tidEvents.sort(ReadonlyEventInterface::compareTo);
         return new RawTrace(0, n, tidEvents.toArray(new ReadonlyEventInterface[length]));
     }

@@ -44,10 +44,10 @@ public class TraceCache {
     public TraceCache(Configuration config, Metadata metadata) {
         this.config = config;
         // Used to be config.windowSize - 1, but I try to read 1 more
-        // than the window size, now.
-        capacity = getNextPowerOfTwo(config.windowSize) *
-            (config.stacks() ? 2 : 1);
-        eventsBuffer = new ArrayList<>(capacity);
+	// than the window size, now.
+	capacity = getNextPowerOfTwo(config.windowSize) *
+	    (config.stacks() ? 2 : 1);
+	eventsBuffer = new ArrayList<>(capacity);
         this.crntState = new TraceState(config, metadata);
         lockGraph = new LockGraph(config, metadata);
     }

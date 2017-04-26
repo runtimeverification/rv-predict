@@ -15,9 +15,12 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public class CompactEventReaderTest {
+    private static final byte[] DELTA_0_THREAD_BEGIN =
+            encodeInt(encodePcDelta(0, CompactEventReader.Type.THREAD_BEGIN));
+    private static final byte[] DELTA_1_LOAD1 =
+            encodeInt(encodePcDelta(1, CompactEventReader.Type.LOAD1));
     @Test
     public void readsFirstEvent() throws IOException, InvalidTraceDataException {
-        byte[] firstPcBytes = encodeInt(encodePcDelta(0, CompactEventReader.Type.THREAD_BEGIN));
         InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
                 // Event header
                 'R', 'V', 'P', '_',  // magic string, should be "RVP_"
@@ -28,7 +31,7 @@ public class CompactEventReaderTest {
                 0, 0,  // filler bytes.
 
                 // The first event.
-                firstPcBytes[0], firstPcBytes[1], firstPcBytes[2], firstPcBytes[3],  // PC-delta bytes.
+                DELTA_0_THREAD_BEGIN[0], DELTA_0_THREAD_BEGIN[1], DELTA_0_THREAD_BEGIN[2], DELTA_0_THREAD_BEGIN[3],
                 5, 0, 0, 0,  // Thread id.
         }));
         IEventReader reader = new CompactEventReader(inputStream);
@@ -40,9 +43,7 @@ public class CompactEventReaderTest {
     }
 
     @Test
-    public void readsTwoEvents() throws IOException, InvalidTraceDataException {
-        byte[] firstPcBytes = encodeInt(encodePcDelta(0, CompactEventReader.Type.THREAD_BEGIN));
-        byte[] secondPcBytes = encodeInt(encodePcDelta(1, CompactEventReader.Type.LOAD1));
+    public void failsForIncompleteFirstEventDeltaOp() throws IOException, InvalidTraceDataException {
         InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
                 // Event header
                 'R', 'V', 'P', '_',  // magic string, should be "RVP_"
@@ -53,14 +54,79 @@ public class CompactEventReaderTest {
                 0, 0,  // filler bytes.
 
                 // The first event.
-                firstPcBytes[0], firstPcBytes[1], firstPcBytes[2], firstPcBytes[3],  // PC-delta bytes.
+                DELTA_0_THREAD_BEGIN[0], DELTA_0_THREAD_BEGIN[1], DELTA_0_THREAD_BEGIN[2],
+        }));
+        MoreAsserts.assertException(
+                "Expected exception for invalid first event deltop.",
+                InvalidTraceDataException.class,
+                "event descriptor",
+                () -> new CompactEventReader(inputStream));
+    }
+
+    @Test
+    public void failsForIncompleteFirstEvent() throws IOException, InvalidTraceDataException {
+        InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
+                // Event header
+                'R', 'V', 'P', '_',  // magic string, should be "RVP_"
+                0, 0, 0, 0,  // version number
+                '0', '1', '2', '3',  // byte order identifier
+                4,  // pointer width
+                4,  // default data width
+                0, 0,  // filler bytes.
+
+                // The first event.
+                DELTA_0_THREAD_BEGIN[0], DELTA_0_THREAD_BEGIN[1], DELTA_0_THREAD_BEGIN[2], DELTA_0_THREAD_BEGIN[3],
+                5, 0, 0,
+        }));
+        MoreAsserts.assertException(
+                "Expected exception for invalid first event deltop.",
+                InvalidTraceDataException.class,
+                "thread id",
+                () -> new CompactEventReader(inputStream));
+    }
+
+    @Test
+    public void failsForFirstEventWithoutBegin() throws IOException, InvalidTraceDataException {
+        InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
+                // Event header
+                'R', 'V', 'P', '_',  // magic string, should be "RVP_"
+                0, 0, 0, 0,  // version number
+                '0', '1', '2', '3',  // byte order identifier
+                4,  // pointer width
+                4,  // default data width
+                0, 0,  // filler bytes.
+
+                // The first event.
+                DELTA_1_LOAD1[0], DELTA_1_LOAD1[1], DELTA_1_LOAD1[2], DELTA_1_LOAD1[3],
+                5, 0, 0, 0,
+        }));
+        MoreAsserts.assertException(
+                "Expected exception for invalid first event deltop.",
+                InvalidTraceDataException.class,
+                "start with begin",
+                () -> new CompactEventReader(inputStream));
+    }
+
+    @Test
+    public void readsTwoEvents() throws IOException, InvalidTraceDataException {
+        InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
+                // Event header
+                'R', 'V', 'P', '_',  // magic string, should be "RVP_"
+                0, 0, 0, 0,  // version number
+                '0', '1', '2', '3',  // byte order identifier
+                4,  // pointer width
+                4,  // default data width
+                0, 0,  // filler bytes.
+
+                // The first event.
+                DELTA_0_THREAD_BEGIN[0], DELTA_0_THREAD_BEGIN[1], DELTA_0_THREAD_BEGIN[2], DELTA_0_THREAD_BEGIN[3],
                 5, 0, 0, 0,  // Thread id.
 
                 // Jump
                 0, 0, 0, 1,  // Normal program counter = 2^24
 
                 // The second event.
-                secondPcBytes[0], secondPcBytes[1], secondPcBytes[2], secondPcBytes[3],  // PC-delta bytes.
+                DELTA_1_LOAD1[0], DELTA_1_LOAD1[1], DELTA_1_LOAD1[2], DELTA_1_LOAD1[3],  // PC-delta bytes.
                 0, 1, 0, 0,  // Address = 256.
                 2, 0, 0, 0,  // Value = 2.
         }));
@@ -79,10 +145,7 @@ public class CompactEventReaderTest {
     }
 
     @Test
-    public void readsCompoundEvent() throws IOException, InvalidTraceDataException {
-        byte[] firstPcBytes = encodeInt(encodePcDelta(0, CompactEventReader.Type.THREAD_BEGIN));
-        byte[] secondPcBytes = encodeInt(encodePcDelta(1, CompactEventReader.Type.ATOMIC_LOAD1));
-        byte[] thirdPcBytes = encodeInt(encodePcDelta(1, CompactEventReader.Type.LOAD1));
+    public void exceptionForIncompleteDeltaOp() throws IOException, InvalidTraceDataException {
         InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
                 // Event header
                 'R', 'V', 'P', '_',  // magic string, should be "RVP_"
@@ -93,7 +156,41 @@ public class CompactEventReaderTest {
                 0, 0,  // filler bytes.
 
                 // The first event.
-                firstPcBytes[0], firstPcBytes[1], firstPcBytes[2], firstPcBytes[3],  // PC-delta bytes.
+                DELTA_0_THREAD_BEGIN[0], DELTA_0_THREAD_BEGIN[1], DELTA_0_THREAD_BEGIN[2], DELTA_0_THREAD_BEGIN[3],
+                5, 0, 0, 0,  // Thread id.
+
+                // Jump
+                0, 0, 0, 1,  // Normal program counter = 2^24
+
+                // The second event.
+                DELTA_1_LOAD1[0], DELTA_1_LOAD1[1], DELTA_1_LOAD1[2],
+        }));
+        IEventReader reader = new CompactEventReader(inputStream);
+        ReadonlyEventInterface event = reader.readEvent();
+        Assert.assertEquals(5, event.getThreadId());
+        Assert.assertEquals(EventType.BEGIN_THREAD, event.getType());
+
+        MoreAsserts.assertException(
+                "Expected exception for invalid event descriptor.",
+                IOException.class,
+                "event descriptor",
+                reader::readEvent);
+    }
+
+    @Test
+    public void readsCompoundEvent() throws IOException, InvalidTraceDataException {
+        byte[] secondPcBytes = encodeInt(encodePcDelta(2, CompactEventReader.Type.ATOMIC_LOAD1));
+        InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
+                // Event header
+                'R', 'V', 'P', '_',  // magic string, should be "RVP_"
+                0, 0, 0, 0,  // version number
+                '0', '1', '2', '3',  // byte order identifier
+                4,  // pointer width
+                4,  // default data width
+                0, 0,  // filler bytes.
+
+                // The first event.
+                DELTA_0_THREAD_BEGIN[0], DELTA_0_THREAD_BEGIN[1], DELTA_0_THREAD_BEGIN[2], DELTA_0_THREAD_BEGIN[3],
                 5, 0, 0, 0,  // Thread id.
 
                 // Jump
@@ -105,7 +202,7 @@ public class CompactEventReaderTest {
                 3, 0, 0, 0,  // Value = 3.
 
                 // The third event.
-                thirdPcBytes[0], thirdPcBytes[1], thirdPcBytes[2], thirdPcBytes[3],  // PC-delta bytes.
+                DELTA_1_LOAD1[0], DELTA_1_LOAD1[1], DELTA_1_LOAD1[2], DELTA_1_LOAD1[3],  // PC-delta bytes.
                 0, 1, 0, 0,  // Address = 256.
                 2, 0, 0, 0,  // Value = 2.
         }));
@@ -139,11 +236,11 @@ public class CompactEventReaderTest {
         MoreAsserts.assertException(EOFException.class, reader::readEvent);
     }
 
-    private byte[] encodeInt(int i) {
+    private static byte[] encodeInt(int i) {
         return ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(i).array();
     }
 
-    private int encodePcDelta(int pcDelta, CompactEventReader.Type type) {
+    private static int encodePcDelta(int pcDelta, CompactEventReader.Type type) {
         return (pcDelta + Constants.JUMPS_IN_DELTA / 2) * CompactEventReader.Type.getNumberOfValues() + type.intValue();
     }
 }

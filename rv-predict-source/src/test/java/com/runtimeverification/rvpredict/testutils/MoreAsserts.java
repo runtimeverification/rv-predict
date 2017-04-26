@@ -40,8 +40,8 @@ public class MoreAsserts {
                         + explanation + "\n" + t);
             }
             if (exceptionMessageSubstring != null && !t.getMessage().contains(exceptionMessageSubstring)) {
-                Assert.fail("Expected exception message to contain '" + exceptionClass.getCanonicalName()
-                        + "' but got " + t.getMessage() + ".\n"
+                Assert.fail("Expected exception message to contain '" + exceptionMessageSubstring
+                        + "' but got '" + t.getMessage() + "'.\n"
                         + explanation + "\n" + t);
             }
         }

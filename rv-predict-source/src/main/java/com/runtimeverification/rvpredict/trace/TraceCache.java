@@ -135,9 +135,9 @@ public class TraceCache {
     }
 
     protected final List<RawTrace> readEventWindow() throws IOException {
-	List<RawTrace> rawTraces =  new ArrayList<>();
+        List<RawTrace> rawTraces =  new ArrayList<>();
 	final int maxEvents = config.windowSize;
-        if (Configuration.debug)
+	if (Configuration.debug)
 	    System.err.println(readers.size() + " readers");
         ArrayList<ReadonlyEventInterface> events = new ArrayList<>(eventsBuffer);
 	eventsBuffer.clear();
@@ -220,10 +220,10 @@ public class TraceCache {
     }
     private static RawTrace tidSpanToRawTrace(List<? extends ReadonlyEventInterface> events,
 	    int tidStart, int tidEnd) {
-        List<? extends ReadonlyEventInterface> tidEvents = events.subList(tidStart, tidEnd);
+	List<? extends ReadonlyEventInterface> tidEvents = events.subList(tidStart, tidEnd);
 	int n = tidEvents.size(), length = getNextPowerOfTwo(n);
-        tidEvents.sort(ReadonlyEventInterface::compareTo);
-        return new RawTrace(0, n, tidEvents.toArray(new ReadonlyEventInterface[length]));
+	tidEvents.sort(ReadonlyEventInterface::compareTo);
+	return new RawTrace(0, n, tidEvents.toArray(new ReadonlyEventInterface[length]));
     }
     public Trace getTraceWindow() throws IOException {
         List<RawTrace> rawTraces = readEventWindow();

@@ -8,7 +8,6 @@ import java.util.Map;
 public class Context {
     static final long INVALID_SIGNAL_NUMBER = -1;
 
-    private static final long INVALID_PC = -1;
     private static final long INVALID_GENERATION = -1;
 
     private final Map<Long, ThreadState> threadIdToState;
@@ -49,7 +48,12 @@ public class Context {
     }
 
     void updatePcWithDelta(int jumpDelta) throws InvalidTraceDataException {
-        currentThread.setLastPC(currentThread.getLastPC() + jumpDelta);
+        long lastPC = currentThread.getLastPC();
+        if (lastPC != Constants.INVALID_PROGRAM_COUNTER) {
+            currentThread.setLastPC(lastPC + jumpDelta);
+        } else if (jumpDelta != 0) {
+            throw new InvalidTraceDataException("Cannot jump with an invalid program counter.");
+        }
         currentThread.newOperation();
     }
 
@@ -60,7 +64,7 @@ public class Context {
     void beginThread(long threadId, long generation) throws InvalidTraceDataException {
         currentThread = threadIdToState.computeIfAbsent(
                 threadId, tid -> new ThreadState(threadId));
-        currentThread.initIfNeeded(minDeltaAndEventType);
+        currentThread.initIfNeeded(Constants.INVALID_PROGRAM_COUNTER);
         currentThread.begin(generation);
         threadIdToState.put(currentThread.getThreadId(), currentThread);
     }
@@ -239,7 +243,7 @@ public class Context {
         private PerSignalState createUnstartedSignalState() {
             return new PerSignalState(
                     INVALID_SIGNAL_NUMBER,
-                    INVALID_PC,
+                    Constants.INVALID_PROGRAM_COUNTER,
                     0,
                     INVALID_GENERATION);
         }

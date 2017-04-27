@@ -60,11 +60,11 @@ Given two DAG nodes I, J (can be on the same thread), they are incompatible if t
 A compatible set of DAG nodes {Is} with s in S where S is a subset of nodes, is as set of nodes without any incompatible nodes in it.
 
 Claim 1: Any node in any of the DAGs is reachable (if we ignore the compatibility between read and write events, e.g. we replace them by nop events).
-Claim 2: Given any compatible set of nodes {Is} there is an execution that goes through all of them (again, ignoring r/w compatibility).
-Claim 3: if I is index instance that is reachable, then we can find for each thread s two nodes Is and Js in s's DAG such that:
+Claim 2: if I is index instance that is reachable, then we can find for each thread s two nodes Is and Js in s's DAG such that:
 * There is an path Is -> Js
 * Is(q) <= I(q) for q <= s
 * Js(q) >= I(q) for q <= s
+* Given two threads p <= s and q <= s and given two events, i on thread p and j on thread q, with either [Is(p) <= i <= Js(p) and Is(q) < j < Js(q)] or [Is(p) < i < Js(p) and Is(q) <= j <= Js(q)], then there is no interaction between i and j.
 
 ----------------------------------------------
 

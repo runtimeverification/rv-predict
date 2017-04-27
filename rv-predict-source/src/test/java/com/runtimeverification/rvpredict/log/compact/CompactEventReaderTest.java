@@ -86,28 +86,6 @@ public class CompactEventReaderTest {
     }
 
     @Test
-    public void failsForFirstEventWithoutBegin() throws IOException, InvalidTraceDataException {
-        InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
-                // Event header
-                'R', 'V', 'P', '_',  // magic string, should be "RVP_"
-                0, 0, 0, 0,  // version number
-                '0', '1', '2', '3',  // byte order identifier
-                4,  // pointer width
-                4,  // default data width
-                0, 0,  // filler bytes.
-
-                // The first event.
-                DELTA_1_LOAD1[0], DELTA_1_LOAD1[1], DELTA_1_LOAD1[2], DELTA_1_LOAD1[3],
-                5, 0, 0, 0,
-        }));
-        MoreAsserts.assertException(
-                "Expected exception for invalid first event deltop.",
-                InvalidTraceDataException.class,
-                "start with begin",
-                () -> new CompactEventReader(inputStream));
-    }
-
-    @Test
     public void readsTwoEvents() throws IOException, InvalidTraceDataException {
         InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
                 // Event header

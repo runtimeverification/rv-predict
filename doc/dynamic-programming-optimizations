@@ -66,6 +66,25 @@ Claim 2: if I is index instance that is reachable, then we can find for each thr
 * Js(q) >= I(q) for q <= s
 * Given two threads p <= s and q <= s and given two events, i on thread p and j on thread q, with either [Is(p) <= i <= Js(p) and Is(q) < j < Js(q)] or [Is(p) < i < Js(p) and Is(q) <= j <= Js(q)], then there is no interaction between i and j.
 
+Note that these claims, together, imply that the last thread's DAG is a full representation of all possible interactions.
+
+As it is, this DAG still has some redundancy in it. Consider the following case:
+
+Thread 1: <interactions with things common with thread 2>
+Thread 2: [lock L] <interactions with things common with thread 1> [unlock L]
+Thread 3: [lock L] [unlock L] [lock L] [unlock L] ....
+Note that in this case thread 2's DAG will be copied in several places in thread 3's DAG. This could be easily optimized in this model, however, it's less clear if it is also optimizable when we care about variable values.
+
+----------------------------------------------
+
+Let us consider the DAG for the last thread.
+
+We start with the first node and the initial values for variables. Then we try to move one step on the available edges. Any taken edge will alter some of the variables. For each destination node we remember all the variable values with which we reached that node. When we finished all incoming edges for a node, we start expanding it by taking all the input values and processing them through the outgoing edges. At the end we check all nodes which have variable values and all nodes which are one step away from the nodes with variable values and see if we have any races.
+
+----------------------------------------------
+
+
+
 ----------------------------------------------
 
 I what is above to be kind of reliable, what is below is just intuition.

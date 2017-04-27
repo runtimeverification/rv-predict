@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.log.compact;
 
+import com.runtimeverification.rvpredict.testutils.MoreAsserts;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,7 +33,7 @@ public class ContextTest {
         context.beginThread(THREAD_ID, FIRST_GENERATION);
 
         Assert.assertEquals(THREAD_ID, context.getThreadId());
-        Assert.assertEquals(MIN_DELTA_AND_EVENT_TYPE, context.getPC());
+        Assert.assertEquals(Constants.INVALID_PROGRAM_COUNTER, context.getPC());
         Assert.assertEquals(FIRST_GENERATION, context.getGeneration());
     }
 
@@ -89,7 +90,7 @@ public class ContextTest {
 
         context.beginThread(SECOND_THREAD_ID, SECOND_GENERATION);
         Assert.assertEquals(SECOND_THREAD_ID, context.getThreadId());
-        Assert.assertEquals(MIN_DELTA_AND_EVENT_TYPE, context.getPC());
+        Assert.assertEquals(Constants.INVALID_PROGRAM_COUNTER, context.getPC());
         Assert.assertEquals(SECOND_GENERATION, context.getGeneration());
 
         context.jump(SECOND_PROGRAM_COUNTER);
@@ -111,7 +112,7 @@ public class ContextTest {
 
         context.beginThread(SECOND_THREAD_ID, SECOND_GENERATION);
         Assert.assertEquals(SECOND_THREAD_ID, context.getThreadId());
-        Assert.assertEquals(MIN_DELTA_AND_EVENT_TYPE, context.getPC());
+        Assert.assertEquals(Constants.INVALID_PROGRAM_COUNTER, context.getPC());
 
         context.jump(SECOND_PROGRAM_COUNTER);
         Assert.assertEquals(SECOND_THREAD_ID, context.getThreadId());
@@ -454,6 +455,15 @@ public class ContextTest {
         Assert.assertEquals(SECOND_PROGRAM_COUNTER + PROGRAM_COUNTER_DELTA, context.getPC());
     }
 
+    @Test
+    public void exceptionWhenUpdatingInvalidPC() throws InvalidTraceDataException {
+        Context context = new Context(MIN_DELTA_AND_EVENT_TYPE);
+        context.beginThread(THREAD_ID, FIRST_GENERATION);
+        MoreAsserts.assertException(
+                InvalidTraceDataException.class,
+                "invalid program counter",
+                () -> context.updatePcWithDelta(PROGRAM_COUNTER_DELTA));
+    }
 
     private static void assertLower(long first, long second) {
         Assert.assertTrue(first + " should be lower than " + second, first < second);

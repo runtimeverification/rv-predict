@@ -12,7 +12,7 @@
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>native-z3</artifactId>
-            <version>1.8.4-SNAPSHOT</version>
+            <version>1.8.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.runtimeverification.licensing</groupId>

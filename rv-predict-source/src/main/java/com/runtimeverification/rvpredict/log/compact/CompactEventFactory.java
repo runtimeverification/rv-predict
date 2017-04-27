@@ -128,7 +128,7 @@ public class CompactEventFactory {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         return Collections.singletonList(new CompactEvent(context, EventType.ESTABLISH_SIGNAL) {
             @Override
-            long getFullWrittenSignalMask() {
+            long getFullWriteSignalMask() {
                 return signalMask;
             }
             @Override
@@ -189,7 +189,7 @@ public class CompactEventFactory {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         return Collections.singletonList(new CompactEvent(context, EventType.WRITE_SIGNAL_MASK) {
             @Override
-            long getFullWrittenSignalMask() {
+            long getFullWriteSignalMask() {
                 return signalMask;
             }
         });
@@ -215,7 +215,7 @@ public class CompactEventFactory {
                 return readSignalMask;
             }
             @Override
-            long getFullWrittenSignalMask() {
+            long getFullWriteSignalMask() {
                 return writeSignalMask;
             }
         });

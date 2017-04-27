@@ -57,11 +57,11 @@ public class CompactEventFactoryTest {
     private static final CompactEventMethod<Long> GET_SIGNAL_HANDLER_ADDRESS =
             new CompactEventMethod<>(ALL_METHODS, "getSignalHandlerAddress", CompactEvent::getSignalHandlerAddress);
     private static final CompactEventMethod<Long> GET_FULL_READ_SIGNAL_MASK =
-            new CompactEventMethod<>(ALL_METHODS, "getSignalMask", CompactEvent::getFullReadSignalMask);
-    private static final CompactEventMethod<Long> GET_FULL_WRITTEN_SIGNAL_MASK =
-            new CompactEventMethod<>(ALL_METHODS, "getSignalMask", CompactEvent::getFullWrittenSignalMask);
+            new CompactEventMethod<>(ALL_METHODS, "getFullReadSignalMask", CompactEvent::getFullReadSignalMask);
+    private static final CompactEventMethod<Long> GET_FULL_WRITE_SIGNAL_MASK =
+            new CompactEventMethod<>(ALL_METHODS, "getFullWriteSignalMask", CompactEvent::getFullWriteSignalMask);
     private static final CompactEventMethod<Long> GET_PARTIAL_SIGNAL_MASK =
-            new CompactEventMethod<>(ALL_METHODS, "getSignalMask", CompactEvent::getPartialSignalMask);
+            new CompactEventMethod<>(ALL_METHODS, "getPartialSignalMask", CompactEvent::getPartialSignalMask);
     private static final CompactEventMethod<Long> GET_SIGNAL_NUMBER =
             new CompactEventMethod<>(ALL_METHODS, "getSignalNumber", CompactEvent::getSignalNumber);
 
@@ -375,7 +375,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.ESTABLISH_SIGNAL, GET_COMPACT_TYPE),
-                        new ReturnValueTest<>(SIGNAL_MASK, GET_FULL_WRITTEN_SIGNAL_MASK),
+                        new ReturnValueTest<>(SIGNAL_MASK, GET_FULL_WRITE_SIGNAL_MASK),
                         new ReturnValueTest<>(SIGNAL_NUMBER, GET_SIGNAL_NUMBER),
                         new ReturnValueTest<>(SIGNAL_HANDLER, GET_SIGNAL_HANDLER_ADDRESS),
                 }
@@ -512,7 +512,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.WRITE_SIGNAL_MASK, GET_COMPACT_TYPE),
-                        new ReturnValueTest<>(SIGNAL_MASK, GET_FULL_WRITTEN_SIGNAL_MASK),
+                        new ReturnValueTest<>(SIGNAL_MASK, GET_FULL_WRITE_SIGNAL_MASK),
                 }
         );
     }
@@ -539,7 +539,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.READ_WRITE_SIGNAL_MASK, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(SIGNAL_MASK, GET_FULL_READ_SIGNAL_MASK),
-                        new ReturnValueTest<>(SIGNAL_MASK2, GET_FULL_WRITTEN_SIGNAL_MASK),
+                        new ReturnValueTest<>(SIGNAL_MASK2, GET_FULL_WRITE_SIGNAL_MASK),
                 }
         );
     }

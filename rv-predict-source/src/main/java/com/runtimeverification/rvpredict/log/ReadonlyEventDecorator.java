@@ -78,6 +78,16 @@ public class ReadonlyEventDecorator implements ReadonlyEventInterface {
     }
 
     @Override
+    public ReadonlyEventInterface destructiveWithEventId(long eventId) {
+        return new ReadonlyEventDecorator(this) {
+            @Override
+            public long getEventId() {
+                return eventId;
+            }
+        };
+    }
+
+    @Override
     public boolean isRead() {
         return event.isRead();
     }

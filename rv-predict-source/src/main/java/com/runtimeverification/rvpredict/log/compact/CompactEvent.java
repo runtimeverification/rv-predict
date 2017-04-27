@@ -100,4 +100,14 @@ public abstract class CompactEvent extends ReadonlyEvent {
             }
         };
     }
+
+    @Override
+    public ReadonlyEventInterface destructiveWithEventId(long locationId) {
+        return new ReadonlyEventDecorator(this) {
+            @Override
+            public long getEventId() {
+                return eventId;
+            }
+        };
+    }
 }

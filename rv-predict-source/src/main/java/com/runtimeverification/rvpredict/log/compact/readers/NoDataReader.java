@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.CompactEvent;
 import com.runtimeverification.rvpredict.log.compact.CompactEventFactory;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
@@ -20,9 +21,10 @@ public class NoDataReader implements CompactEventReader.Reader {
         R apply(T t, U u) throws InvalidTraceDataException;
     }
 
-    private final BiFunctionWithException<CompactEventFactory, Context, List<CompactEvent>> eventFactory;
+    private final BiFunctionWithException<CompactEventFactory, Context, List<ReadonlyEventInterface>> eventFactory;
 
-    public NoDataReader(BiFunctionWithException<CompactEventFactory, Context, List<CompactEvent>> eventFactory) {
+    public NoDataReader(
+            BiFunctionWithException<CompactEventFactory, Context, List<ReadonlyEventInterface>> eventFactory) {
         this.eventFactory = eventFactory;
     }
 
@@ -32,7 +34,7 @@ public class NoDataReader implements CompactEventReader.Reader {
     }
 
     @Override
-    public List<CompactEvent> readEvent(
+    public List<ReadonlyEventInterface> readEvent(
             Context context, CompactEventFactory compactEventFactory, TraceHeader header, ByteBuffer buffer)
             throws InvalidTraceDataException {
         return eventFactory.apply(compactEventFactory, context);

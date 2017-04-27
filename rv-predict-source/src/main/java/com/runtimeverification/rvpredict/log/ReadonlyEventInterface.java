@@ -14,7 +14,19 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
 
     String getLockRepresentation();
     ReadonlyEventInterface copy();
+
+    // TODO(virgil): Think about making this a non-readonly interface and removing these destructive calls.
+    /**
+     * Returns an event with the same base data as the current one, except that it has the new location id.
+     * The current object cannot be used anymore after this call.
+     */
     ReadonlyEventInterface destructiveWithLocationId(int locationId);
+
+    /**
+     * Returns an event with the same base data as the current one, except that it has the new event id.
+     * The current object cannot be used anymore after this call.
+     */
+    ReadonlyEventInterface destructiveWithEventId(long eventId);
 
     boolean isRead();
     boolean isWrite();

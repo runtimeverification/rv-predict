@@ -1,6 +1,6 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
-import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.CompactEventFactory;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
@@ -21,7 +21,7 @@ import static org.mockito.Mockito.when;
 @RunWith(MockitoJUnitRunner.class)
 public class BlockSignalsReaderTest {
     private static final int SIGNAL_MASK_NUMBER = 10;
-    private static final List<CompactEvent> EVENT_LIST = new ArrayList<>();
+    private static final List<ReadonlyEventInterface> EVENT_LIST = new ArrayList<>();
 
     @Mock private Context mockContext;
     @Mock private TraceHeader mockTraceHeader;
@@ -58,7 +58,8 @@ public class BlockSignalsReaderTest {
         buffer.rewind();
 
         CompactEventReader.Reader reader = BlockSignalsReader.createReader();
-        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
+        List<ReadonlyEventInterface> events =
+                reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertTrue(EVENT_LIST == events);
     }

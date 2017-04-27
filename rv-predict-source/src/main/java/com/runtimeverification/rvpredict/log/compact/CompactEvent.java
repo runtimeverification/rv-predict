@@ -64,7 +64,13 @@ public abstract class CompactEvent extends ReadonlyEvent {
     long getSignalNumber() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
-    long getSignalMask() {
+    long getPartialSignalMask() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+    long getFullReadSignalMask() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+    long getFullWrittenSignalMask() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
     long getSignalHandlerAddress() {

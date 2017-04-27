@@ -31,6 +31,8 @@ public class CompactEventFactoryTest {
     private static final long SIGNAL_NUMBER = 1002;
     private static final long SIGNAL_MASK_NUMBER = 1003;
     private static final long SIGNAL_MASK = 1004;
+    private static final long SIGNAL_MASK_NUMBER2 = 1005;
+    private static final long SIGNAL_MASK2 = 1006;
     private static final int SIGNAL_DEPTH = 3;
     private static final long ORIGIN_BIT_COUNT = 4;
 
@@ -54,8 +56,12 @@ public class CompactEventFactoryTest {
             new CompactEventMethod<>(ALL_METHODS, "getSyncedThreadId", CompactEvent::getSyncedThreadId);
     private static final CompactEventMethod<Long> GET_SIGNAL_HANDLER_ADDRESS =
             new CompactEventMethod<>(ALL_METHODS, "getSignalHandlerAddress", CompactEvent::getSignalHandlerAddress);
-    private static final CompactEventMethod<Long> GET_SIGNAL_MASK =
-            new CompactEventMethod<>(ALL_METHODS, "getSignalMask", CompactEvent::getSignalMask);
+    private static final CompactEventMethod<Long> GET_FULL_READ_SIGNAL_MASK =
+            new CompactEventMethod<>(ALL_METHODS, "getSignalMask", CompactEvent::getFullReadSignalMask);
+    private static final CompactEventMethod<Long> GET_FULL_WRITTEN_SIGNAL_MASK =
+            new CompactEventMethod<>(ALL_METHODS, "getSignalMask", CompactEvent::getFullWrittenSignalMask);
+    private static final CompactEventMethod<Long> GET_PARTIAL_SIGNAL_MASK =
+            new CompactEventMethod<>(ALL_METHODS, "getSignalMask", CompactEvent::getPartialSignalMask);
     private static final CompactEventMethod<Long> GET_SIGNAL_NUMBER =
             new CompactEventMethod<>(ALL_METHODS, "getSignalNumber", CompactEvent::getSignalNumber);
 
@@ -369,7 +375,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.ESTABLISH_SIGNAL, GET_COMPACT_TYPE),
-                        new ReturnValueTest<>(SIGNAL_MASK, GET_SIGNAL_MASK),
+                        new ReturnValueTest<>(SIGNAL_MASK, GET_FULL_WRITTEN_SIGNAL_MASK),
                         new ReturnValueTest<>(SIGNAL_NUMBER, GET_SIGNAL_NUMBER),
                         new ReturnValueTest<>(SIGNAL_HANDLER, GET_SIGNAL_HANDLER_ADDRESS),
                 }
@@ -498,10 +504,116 @@ public class CompactEventFactoryTest {
                 mockContext,
                 SIGNAL_MASK_NUMBER);
 
-        Assert.assertTrue(events.isEmpty());
+        Assert.assertEquals(1, events.size());
+        ReadonlyEventInterface event = events.get(0);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.WRITE_SIGNAL_MASK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(SIGNAL_MASK, GET_FULL_WRITTEN_SIGNAL_MASK),
+                }
+        );
+    }
 
-        verify(mockContext, times(1))
-                .maskSignals(SIGNAL_MASK);
+    @Test
+    public void getSetSignalMask() throws InvalidTraceDataException {
+        when(mockContext.newId()).thenReturn(NEW_ID);
+        when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.getMemoizedSignalMask(SIGNAL_MASK_NUMBER)).thenReturn(SIGNAL_MASK);
+        when(mockContext.getMemoizedSignalMask(SIGNAL_MASK_NUMBER2)).thenReturn(SIGNAL_MASK2);
+
+        CompactEventFactory eventFactory = new CompactEventFactory();
+        List<ReadonlyEventInterface> events = eventFactory.getSetSignalMask(
+                mockContext,
+                SIGNAL_MASK_NUMBER,
+                SIGNAL_MASK_NUMBER2);
+
+        Assert.assertEquals(1, events.size());
+        ReadonlyEventInterface event = events.get(0);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.READ_WRITE_SIGNAL_MASK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(SIGNAL_MASK, GET_FULL_READ_SIGNAL_MASK),
+                        new ReturnValueTest<>(SIGNAL_MASK2, GET_FULL_WRITTEN_SIGNAL_MASK),
+                }
+        );
+    }
+
+    @Test
+    public void getSignalMask() throws InvalidTraceDataException {
+        when(mockContext.newId()).thenReturn(NEW_ID);
+        when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.getMemoizedSignalMask(SIGNAL_MASK_NUMBER)).thenReturn(SIGNAL_MASK);
+
+        CompactEventFactory eventFactory = new CompactEventFactory();
+        List<ReadonlyEventInterface> events = eventFactory.getSignalMask(
+                mockContext,
+                SIGNAL_MASK_NUMBER);
+
+        Assert.assertEquals(1, events.size());
+        ReadonlyEventInterface event = events.get(0);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.READ_SIGNAL_MASK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(SIGNAL_MASK, GET_FULL_READ_SIGNAL_MASK),
+                }
+        );
+    }
+
+    @Test
+    public void blockSignals() throws InvalidTraceDataException {
+        when(mockContext.newId()).thenReturn(NEW_ID);
+        when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.getMemoizedSignalMask(SIGNAL_MASK_NUMBER)).thenReturn(SIGNAL_MASK);
+
+        CompactEventFactory eventFactory = new CompactEventFactory();
+        List<ReadonlyEventInterface> events = eventFactory.blockSignals(
+                mockContext,
+                SIGNAL_MASK_NUMBER);
+
+        Assert.assertEquals(1, events.size());
+        ReadonlyEventInterface event = events.get(0);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.BLOCK_SIGNALS, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(SIGNAL_MASK, GET_PARTIAL_SIGNAL_MASK),
+                }
+        );
+    }
+
+    @Test
+    public void unblockSignals() throws InvalidTraceDataException {
+        when(mockContext.newId()).thenReturn(NEW_ID);
+        when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.getMemoizedSignalMask(SIGNAL_MASK_NUMBER)).thenReturn(SIGNAL_MASK);
+
+        CompactEventFactory eventFactory = new CompactEventFactory();
+        List<ReadonlyEventInterface> events = eventFactory.unblockSignals(
+                mockContext,
+                SIGNAL_MASK_NUMBER);
+
+        Assert.assertEquals(1, events.size());
+        ReadonlyEventInterface event = events.get(0);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.UNBLOCK_SIGNALS, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(SIGNAL_MASK, GET_PARTIAL_SIGNAL_MASK),
+                }
+        );
     }
 
     @Test

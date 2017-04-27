@@ -39,6 +39,7 @@ import java.util.List;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.profiler.Profiler;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
@@ -70,6 +71,7 @@ public class RVPredict {
     }
 
     public void start() {
+        Profiler.push();
         try {
             traceCache.setup();
             long fromIndex = 0;
@@ -96,6 +98,9 @@ public class RVPredict {
             System.err.println(e.getMessage());
             e.printStackTrace();
             System.exit(1);
+        } finally {
+            Profiler.pop();
+            Profiler.dump();
         }
     }
 
@@ -111,6 +116,8 @@ public class RVPredict {
                         System.err.println(e.getMessage());
                     }
                 }
+                Profiler.pop();
+                Profiler.dump();
 
                 if (config.isOfflinePrediction()) {
                     if (config.isLogging()) {

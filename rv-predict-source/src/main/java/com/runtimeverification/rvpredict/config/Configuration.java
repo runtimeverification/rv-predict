@@ -314,7 +314,8 @@ public class Configuration implements Constants {
     public enum RaceAlgorithm {
         NONE,
         SMT,
-        DP;
+        DP,
+        BOTH;
         public static RaceAlgorithm fromString(String name) {
             for (RaceAlgorithm value : RaceAlgorithm.values()) {
                 if (value.toString().equals(name.toUpperCase())) {

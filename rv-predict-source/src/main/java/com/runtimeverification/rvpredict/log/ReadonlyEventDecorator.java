@@ -194,11 +194,11 @@ public class ReadonlyEventDecorator implements ReadonlyEventInterface {
 
     @Override
     public boolean isSimilarTo(ReadonlyEventInterface event) {
-        return this.event.isSimilarTo(event);
+        return event.isSimilarTo(event);
     }
 
     @Override
     public int compareTo(ReadonlyEventInterface event) {
-        return this.event.compareTo(event);
+        return event.compareTo(event);
     }
 }

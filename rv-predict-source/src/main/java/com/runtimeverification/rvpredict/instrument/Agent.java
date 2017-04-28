@@ -21,6 +21,7 @@ import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.log.PersistentLoggingEngine;
 import com.runtimeverification.rvpredict.log.ProfilerLoggingEngine;
 import com.runtimeverification.rvpredict.log.VolatileLoggingEngine;
+import com.runtimeverification.rvpredict.profiler.Profiler;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 
 import org.apache.tools.ant.DirectoryScanner;
@@ -41,6 +42,7 @@ public class Agent implements ClassFileTransformer, Constants {
     public static Configuration config;
 
     public static void premain(String agentArgs, Instrumentation inst) {
+        Profiler.push();
         instrumentation = inst;
         preinitializeClasses();
         processAgentArguments(agentArgs);

@@ -14,6 +14,7 @@ import com.microsoft.z3.Z3Exception;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.model.EventStepper;
 import com.runtimeverification.rvpredict.model.ModelTrace;
+import com.runtimeverification.rvpredict.profiler.Profiler;
 import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -104,40 +105,62 @@ public class RaceDetector implements Constants {
     }
 
     public void run(Trace trace) {
-        if (!trace.mayContainRaces()) {
-            return;
-        }
+        Profiler.push();
+        try {
+            if (!trace.mayContainRaces()) {
+                return;
+            }
 
-        Map<String, List<Race>> sigToRaceSuspects = computeUnknownRaceSuspects(trace);
-        if (sigToRaceSuspects.isEmpty()) {
-            return;
-        }
+            Map<String, List<Race>> sigToRaceSuspects = computeUnknownRaceSuspects(trace);
+            if (sigToRaceSuspects.isEmpty()) {
+                return;
+            }
 
-        Map<String, Race> result;
-        switch (config.raceAlgorithm()) {
-            case SMT:
-                result = MaximalCausalModel.create(trace, z3filter, solver)
-                        .checkRaceSuspects(sigToRaceSuspects);
-                break;
-            case DP:
-                ModelTrace modelTrace = new ModelTrace(trace);
-                result = com.runtimeverification.rvpredict.model.MaximalCausalModel.create(
-                        trace, config, new EventStepper(modelTrace), modelTrace)
-                        .findRaces();
-                break;
-            case NONE:
-                result = new HashMap<>();
-                break;
-            default:
-                throw new IllegalStateException("Unknown race algorithm: " + config.raceAlgorithm() + ".");
-        }
+            Map<String, Race> result;
+            switch (config.raceAlgorithm()) {
+                case SMT:
+                    result = MaximalCausalModel.create(trace, z3filter, solver)
+                            .checkRaceSuspects(sigToRaceSuspects);
+                    break;
+                case DP:
+                    ModelTrace modelTrace = new ModelTrace(trace);
+                    result = com.runtimeverification.rvpredict.model.MaximalCausalModel.create(
+                            trace, config, new EventStepper(modelTrace), modelTrace)
+                            .findRaces();
+                    break;
+                case BOTH:
+                    Profiler.push();
+                    try {
+                        result = MaximalCausalModel.create(trace, z3filter, solver)
+                                .checkRaceSuspects(sigToRaceSuspects);
+                    } finally {
+                        Profiler.pop();
+                    }
+                    Profiler.push();
+                    try {
+                        ModelTrace modelTrace2 = new ModelTrace(trace);
+                        result = com.runtimeverification.rvpredict.model.MaximalCausalModel.create(
+                                trace, config, new EventStepper(modelTrace2), modelTrace2)
+                                .findRaces();
+                    } finally {
+                        Profiler.pop();
+                    }
+                case NONE:
+                    result = new HashMap<>();
+                    break;
+                default:
+                    throw new IllegalStateException("Unknown race algorithm: " + config.raceAlgorithm() + ".");
+            }
 
-        sigToRealRace.putAll(result);
-        result.forEach((sig, race) -> {
-            String report = race.generateRaceReport();
-            reports.add(report);
-            config.logger().reportRace(report);
-        });
+            sigToRealRace.putAll(result);
+            result.forEach((sig, race) -> {
+                String report = race.generateRaceReport();
+                reports.add(report);
+                config.logger().reportRace(report);
+            });
+        } finally {
+            Profiler.pop();
+        }
     }
 
     public static String getNativeLibraryPath() {

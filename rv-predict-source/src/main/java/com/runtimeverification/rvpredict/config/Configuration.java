@@ -418,7 +418,7 @@ public class Configuration implements Constants {
     @Parameter(names = opt_race_algorithm,
             description = "The algorithm to use for race detection. Possible values include dp and smt.",
             hidden = true, descriptionKey = "2550")
-    private String race_algorithm = "smt";
+    private String race_algorithm = "BOTH";
 
     final static String opt_solver_timeout = "--solver-timeout";
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2600")

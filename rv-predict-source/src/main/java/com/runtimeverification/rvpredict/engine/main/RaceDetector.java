@@ -111,14 +111,13 @@ public class RaceDetector implements Constants {
                 return;
             }
 
-            Map<String, List<Race>> sigToRaceSuspects = computeUnknownRaceSuspects(trace);
-            if (sigToRaceSuspects.isEmpty()) {
-                return;
-            }
-
             Map<String, Race> result;
             switch (config.raceAlgorithm()) {
                 case SMT:
+                    Map<String, List<Race>> sigToRaceSuspects = computeUnknownRaceSuspects(trace);
+                    if (sigToRaceSuspects.isEmpty()) {
+                        return;
+                    }
                     result = MaximalCausalModel.create(trace, z3filter, solver)
                             .checkRaceSuspects(sigToRaceSuspects);
                     break;
@@ -131,8 +130,11 @@ public class RaceDetector implements Constants {
                 case BOTH:
                     Profiler.push();
                     try {
-                        result = MaximalCausalModel.create(trace, z3filter, solver)
-                                .checkRaceSuspects(sigToRaceSuspects);
+                        Map<String, List<Race>> sigToRaceSuspects2 = computeUnknownRaceSuspects(trace);
+                        if (!sigToRaceSuspects2.isEmpty()) {
+                            result = MaximalCausalModel.create(trace, z3filter, solver)
+                                    .checkRaceSuspects(sigToRaceSuspects2);
+                        }
                     } finally {
                         Profiler.pop();
                     }
@@ -145,6 +147,7 @@ public class RaceDetector implements Constants {
                     } finally {
                         Profiler.pop();
                     }
+                    break;
                 case NONE:
                     result = new HashMap<>();
                     break;

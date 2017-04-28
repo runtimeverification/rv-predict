@@ -58,12 +58,17 @@ sets the signal mask, the current signal mask for an event can be detected
 statically by looking at each thread and at each signal trace individually.
 
 When a signal runs, it can interrupt any thread (subject to the above 
-constraints), run for a while, then resume that thread. A signal can interrupt 
-a thread for an unlimited number of times and it can interrupt other signals, 
-including itself. We can try to handle one such interruption as a normal 
-thread, but one can use only a finite number of Oe variables for thread events, 
-so either we only interrupt a thread a given number of times, or we must use a 
-different solution. If we want to detect all possible races, we need to take 
+constraints), run for a while, then resume that thread.
+
+A signal can interrupt a thread for an unlimited number of times and it can 
+interrupt other signals, including itself. Not all of these matter (see the
+question below), but the number of relevant interruptions may be very 
+large. We can try to handle each such interruption as a normal thread, but each
+interruption needs distinct Oe variables, so either we cap the number of
+possible interruptions for a single signal run or we must use a different
+solution.
+
+If we want to detect all possible races, we need to take 
 into account signals running multiple times, e.g. because we may be on a 
 certain execution branch that would soon become undefined because we can't read 
 the needed value. However, a signal may come and set the variable to the right 

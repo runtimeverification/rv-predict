@@ -1,4 +1,5 @@
 NOMAN=
+MKINSTALL=no
 .include "../compat.mk"
 
 CC?=clang

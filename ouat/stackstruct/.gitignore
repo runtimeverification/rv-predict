@@ -1,4 +1,7 @@
-*.o
-.*.swp
+*.d
+.depend
 .gdbinit
+*.ll
+*.o
 stackstruct
+.*.swp

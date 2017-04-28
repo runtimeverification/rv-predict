@@ -83,6 +83,12 @@ strstack_popto(strstack_t *ss, int nfull)
 	}
 }
 
+int
+strstack_depth(const strstack_t *ss)
+{
+	return ss->ss_nfull;
+}
+
 void
 strstack_pop(strstack_t *ss)
 {

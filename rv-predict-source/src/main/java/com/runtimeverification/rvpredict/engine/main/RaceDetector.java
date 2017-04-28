@@ -12,6 +12,8 @@ import com.microsoft.z3.Context;
 import com.microsoft.z3.Params;
 import com.microsoft.z3.Z3Exception;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.model.EventStepper;
+import com.runtimeverification.rvpredict.model.ModelTrace;
 import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -118,8 +120,10 @@ public class RaceDetector implements Constants {
                         .checkRaceSuspects(sigToRaceSuspects);
                 break;
             case DP:
-                result =
-                        com.runtimeverification.rvpredict.model.MaximalCausalModel.create(trace, config).findRaces();
+                ModelTrace modelTrace = new ModelTrace(trace);
+                result = com.runtimeverification.rvpredict.model.MaximalCausalModel.create(
+                        trace, config, new EventStepper(modelTrace), modelTrace)
+                        .findRaces();
                 break;
             case NONE:
                 result = new HashMap<>();

@@ -54,10 +54,10 @@ public class MappedByteBufferOutputStream extends OutputStream {
 
     private void grow() throws IOException {
         long remainingBytes = fileLen - filePos;
-        fileLen += nextChunkSize;
+        long nextBufferSize = Math.min(Integer.MAX_VALUE, nextChunkSize + remainingBytes);
+        fileLen += nextBufferSize - remainingBytes;
         file.setLength(fileLen);
-        buffer = file.getChannel().map(READ_WRITE, filePos,
-                Math.min(Integer.MAX_VALUE, nextChunkSize + remainingBytes));
+        buffer = file.getChannel().map(READ_WRITE, filePos, nextBufferSize);
         buffer.order(ByteOrder.nativeOrder());
         buffer.position(0);
         nextChunkSize = Math.min(Integer.MAX_VALUE, nextChunkSize << 1);

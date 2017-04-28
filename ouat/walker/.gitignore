@@ -1,4 +1,6 @@
 *.core
+*.d
+.depend
 .gdbinit
 .Makefile.tags
 *.o

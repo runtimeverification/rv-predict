@@ -1,37 +1,39 @@
-This uses the current encoding, described in smt-encoding-MCM.pdf (by Yilong, I'd guess) file, as a base.
+This uses the encoding described in smt-encoding-MCM.pdf (by Yilong, I'd guess) file as a base.
 
--- smt-encoding-MCM.pdf description
+-- smt-encoding-MCM.pdf summary
 
-To put it short, each event has an order variable Oe which the SMT solver is supposed to fill with concrete values for a possible execution of all threads.
+Each event has an order variable Oe which the SMT solver is supposed to fill with concrete values for a possible execution of all threads.
 
-Then the execution constraints are encoded as PhiMhb and PhiLock and Phi_e.
+Then the execution constraints are encoded as PhiMhb and PhiLock and AND(Phi_e, for all e).
 
 PhiMhb (must-happen-before) says that, for each thread, the events are in order, i.e. Oe1 < Oe2 < ... < Oen. It also says that a thread must start after its start event and must end before its join event. It may say other similar things.
 
 PhiLock says that locked sections with the same lock are disjoint.
 
 Phi_e says that event e can be reached. It is a disjunction of:
-1. Oe > M, i.e. we give up on using the event e and everything that follows it in a useful way and we mark it as "reachable", although it might not be.
+1. Oe > M, i.e. we give up on using the event e and everything that follows it in a useful way and we mark it as "reachable", although it might not be. However, this will allow us to find races even if some of the events that happen after the race are not reachable.
 2. PhiConc_e, which says that all values read on the current thread, up to and including event e, match the actual variable values.
-3. (O_next(e) and PhiConc_pred(e)) which says that everything was fine until the previous event and we gave up on the current event.
+3. (O_next(e) > M and PhiConc_pred(e)) which says that everything was fine until the previous event and we give up on the next event. This basically says that if we reached event e, even if it's a read with the wrong value, it can have a race with a write on the same variable.
 
-PhiConc_e is defined as And(PhiSc_f) with f over all reads on the same thread before and up to e. PhiSc_e says that either there was no write on the read variable until now and we're reading the initial value, or the last write before this read wrote the expected value.
+PhiConc_e is defined as AND(PhiSc_f, f over all reads on the same thread before and up to e). PhiSc_e says that either there was no write on the read variable until now and we're reading the initial value, or the last write before this read wrote the expected value.
 
-A race condition looks like Oe=Of<M, i.e. there is nothing that forces an order relation between Oe and Of and we didn't give up on them.
+A race condition looks like Oe=Of<M, i.e. there is nothing that forces an order relation between Oe and Of and we didn't give up on trying to reach them.
 
 -- Encoding signals.
 
-First, there are read and write events for the signal masks and handlers. A good question is if we should consider these atomic or we should also detect races between them. If we detect races for all of them, then we can always detect a race between the sig-est signal and any read of the signal mask in a signal handler. 
+First, there are read and write events for the signal masks and handlers. Since these are per-thread and signal run, then we can't have races between them.
+
+Second, in many cases below a signal trace run can be thought of as a thread that does not need a start call on the parent. However, I think it's more clear to explicitly say what happens to a signal trace run in each case.
 
 For a signal trace to run, the following things must happen:
-1. That signal should not be masked
-2. The handler must be set to the address of the enter-signal event in the signal trace.
+1. Its signal should not be masked.
+2. The handler for its signal must be set to the address of the enter-signal event in the signal trace.
 
 Since the signal handler is global, one can't detect its value by looking at a single thread, but one can attempt to treat them as reads and writes and build something similar to PhiConc.
 
-The signal mask is per-thread and running signal. It can be detected statically by looking at each thread and at each signal trace individually.
+The signal mask is per-thread and running signal. Since starting a signal fully sets the signal mask, the current signal mask for an event can be detected statically by looking at each thread and at each signal trace individually.
 
-When a signal runs, it can interrupt any thread, run for a while, then resume that thread. A signal can interrupt a thread for an unlimited number of times and it can interrupt other signals, including itself. However, one can use only a finite number of variables for thread events, so either we only interrupt a thread a given number of times, or we must use a different solution. If we want to detect all possible races, we need to take into account signals running multiple times, e.g. because we may be on a certain execution branch that would soon become undefined because we can't read the needed value. However, a signal may come and set the variable to the right value, then it may be called again later either to unblock the trace again or to produce a race.
+When a signal runs, it can interrupt any thread (subject to the above constraints), run for a while, then resume that thread. A signal can interrupt a thread for an unlimited number of times and it can interrupt other signals, including itself. We can try to handle one such interruption as a normal thread, but one can use only a finite number of Oe variables for thread events, so either we only interrupt a thread a given number of times, or we must use a different solution. If we want to detect all possible races, we need to take into account signals running multiple times, e.g. because we may be on a certain execution branch that would soon become undefined because we can't read the needed value. However, a signal may come and set the variable to the right value, then it may be called again later either to unblock the trace again or to produce a race.
 
 Let us assume, for now, that we fix a maximum number of times a signal may run and that we assign different variables for each of these runs.
 
@@ -43,13 +45,13 @@ We AND all of the following:
 
 To reduce the search space we may add a formula saying Os1i < Os1j for i < j, but it's not mandatory.
 
-To encode that the signal handler should be set to the right value we use a formula identical to PhiSc.
+To encode that the signal handler should be set to the right value we use a formula similar to PhiSc.
 
 To encode that the signal handler stops a thread to run on it, we AND the following formulas for all Oi and Oj consecutive events on the same thread, where we detected that the signal mask allows the signal to run:
 Oi <= Os1k and Osnk < Oj
 
-To encode that the signal handler stops itself, we AND the same formula as above, with Oli and Olj consecutive events on the same thread, where l < k and we detected that the signal mask allows the signal to run:
-Oli <= Os1k and Osnk < Olj
+To encode that the signal handler stops itself, we AND the same formula as above, with Osli and Oslj consecutive events on the same thread, where l < k and we detected that the signal mask allows the signal to run:
+Osli <= Os1k and Osnk < Oslj
 
 To encode that the signal handler stops another signal handler, we do something similar.
 
@@ -57,8 +59,8 @@ To encode that the signal handler stops another signal handler, we do something 
 
 It's not clear to me exactly what is a race involving a signal (see the question below), but here it goes:
 
-For any two events e, f which are either reads or writes, and at least one of them is a write, e may be on a thread or on a signal run and f is on a signal trace for signal s, and s can run after e, we add the condition Oe = Osk < M
+For any two events e, f which are either reads or writes, and at least one of them is a write, e may be on a thread or on a signal run and f is event i on a signal trace for signal s, and s can run after e, we add the conditions Oe = Osik < M with 1 <= k <= M.
 
 -- Questions
 
-Exactly what is a race? Can writes to the signal mask and handlers be racy? Can any read/write instruction that is immediately before or after a signal trace run race with the events in the signal trace?
+Exactly what is a race? Can any read/write instruction that is immediately before or after a signal trace run race with the events in the signal trace?

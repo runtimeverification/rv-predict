@@ -1,6 +1,6 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
-import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.CompactEventFactory;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
@@ -14,7 +14,6 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.Mockito.when;
@@ -23,7 +22,7 @@ import static org.mockito.Mockito.when;
 public class GetSetSignalMaskReaderTest {
     private static final int READ_SIGNAL_MASK_NUMBER = 10;
     private static final int WRITE_SIGNAL_MASK_NUMBER = 11;
-    private static final List<CompactEvent> EVENT_LIST = new ArrayList<>();
+    private static final List<ReadonlyEventInterface> EVENT_LIST = new ArrayList<>();
 
     @Mock private Context mockContext;
     @Mock private TraceHeader mockTraceHeader;
@@ -60,7 +59,8 @@ public class GetSetSignalMaskReaderTest {
         buffer.rewind();
 
         CompactEventReader.Reader reader = GetSetSignalMaskReader.createReader();
-        List<CompactEvent> events = reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
+        List<ReadonlyEventInterface> events =
+                reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertTrue(EVENT_LIST == events);
     }

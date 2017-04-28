@@ -78,6 +78,16 @@ public class ReadonlyEventDecorator implements ReadonlyEventInterface {
     }
 
     @Override
+    public ReadonlyEventInterface destructiveWithEventId(long eventId) {
+        return new ReadonlyEventDecorator(this) {
+            @Override
+            public long getEventId() {
+                return eventId;
+            }
+        };
+    }
+
+    @Override
     public boolean isRead() {
         return event.isRead();
     }
@@ -184,11 +194,11 @@ public class ReadonlyEventDecorator implements ReadonlyEventInterface {
 
     @Override
     public boolean isSimilarTo(ReadonlyEventInterface event) {
-        return event.isSimilarTo(event);
+        return this.event.isSimilarTo(event);
     }
 
     @Override
     public int compareTo(ReadonlyEventInterface event) {
-        return event.compareTo(event);
+        return this.event.compareTo(event);
     }
 }

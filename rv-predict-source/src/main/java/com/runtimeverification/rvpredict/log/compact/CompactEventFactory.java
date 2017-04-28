@@ -1,17 +1,18 @@
 package com.runtimeverification.rvpredict.log.compact;
 
 import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 public class CompactEventFactory {
-    private static final List<CompactEvent> NO_EVENTS = Collections.emptyList();
+    private static final List<ReadonlyEventInterface> NO_EVENTS = Collections.emptyList();
 
     // TODO(virgil): Make the Context a private local variable here, I don't think anyone else needs it.
 
-    public List<CompactEvent> dataManipulation(
+    public List<ReadonlyEventInterface> dataManipulation(
             Context context,
             CompactEventReader.DataManipulationType dataManipulationType,
             int dataSizeInBytes,
@@ -45,7 +46,7 @@ public class CompactEventFactory {
         );
     }
 
-    private CompactEvent dataManipulationEvent(
+    private ReadonlyEventInterface dataManipulationEvent(
             Context context, int dataSizeInBytes, long address, long value, EventType compactType) {
         return new CompactEvent(context, compactType) {
             int getDataSizeInBytes() {
@@ -60,7 +61,7 @@ public class CompactEventFactory {
         };
     }
 
-    public List<CompactEvent> atomicReadModifyWrite(
+    public List<ReadonlyEventInterface> atomicReadModifyWrite(
             Context context,
             int dataSizeInBytes,
             long address, long readValue, long writeValue) throws InvalidTraceDataException {
@@ -71,18 +72,18 @@ public class CompactEventFactory {
                 lockManipulationEvent(context, CompactEventReader.LockManipulationType.UNLOCK, address, true));
     }
 
-    public List<CompactEvent> changeOfGeneration(Context context, long generation) {
+    public List<ReadonlyEventInterface> changeOfGeneration(Context context, long generation) {
         context.changeOfGeneration(generation);
         return NO_EVENTS;
     }
 
-    public List<CompactEvent> lockManipulation(
+    public List<ReadonlyEventInterface> lockManipulation(
             Context context, CompactEventReader.LockManipulationType lockManipulationType, long address)
             throws InvalidTraceDataException {
         return Collections.singletonList(lockManipulationEvent(context, lockManipulationType, address, true));
     }
 
-    private CompactEvent lockManipulationEvent(
+    private ReadonlyEventInterface lockManipulationEvent(
             Context context,
             CompactEventReader.LockManipulationType lockManipulationType,
             long address,
@@ -113,14 +114,14 @@ public class CompactEventFactory {
         };
     }
 
-    List<CompactEvent> jump(Context context, long address) throws InvalidTraceDataException {
+    List<ReadonlyEventInterface> jump(Context context, long address) throws InvalidTraceDataException {
         context.jump(address);
         return NO_EVENTS;
     }
 
     // Signal events.
 
-    public List<CompactEvent> establishSignal(
+    public List<ReadonlyEventInterface> establishSignal(
             Context context,
             long handler, long signalNumber, long signalMaskNumber) {
         context.establishSignal(handler, signalNumber, signalMaskNumber);
@@ -141,7 +142,7 @@ public class CompactEventFactory {
         });
     }
 
-    public List<CompactEvent> disestablishSignal(
+    public List<ReadonlyEventInterface> disestablishSignal(
             Context context, long signalNumber) {
         context.disestablishSignal(signalNumber);
         return Collections.singletonList(new CompactEvent(context, EventType.DISESTABLISH_SIGNAL) {
@@ -151,7 +152,7 @@ public class CompactEventFactory {
         });
     }
 
-    public List<CompactEvent> enterSignal(
+    public List<ReadonlyEventInterface> enterSignal(
             Context context, long generation, long signalNumber) throws InvalidTraceDataException {
         context.enterSignal(signalNumber, generation);
         return Collections.singletonList(new CompactEvent(context, EventType.ENTER_SIGNAL) {
@@ -161,7 +162,7 @@ public class CompactEventFactory {
         });
     }
 
-    List<CompactEvent> exitSignal(Context context) throws InvalidTraceDataException {
+    List<ReadonlyEventInterface> exitSignal(Context context) throws InvalidTraceDataException {
         long currentSignal = context.getSignalNumber();
         context.exitSignal();
         return Collections.singletonList(new CompactEvent(context, EventType.EXIT_SIGNAL) {
@@ -172,31 +173,31 @@ public class CompactEventFactory {
         });
     }
 
-    public List<CompactEvent> signalDepth(Context context, int signalDepth)
+    public List<ReadonlyEventInterface> signalDepth(Context context, int signalDepth)
             throws InvalidTraceDataException {
         context.setSignalDepth(signalDepth);
         return NO_EVENTS;
     }
 
-    public List<CompactEvent> signalMaskMemoization(
+    public List<ReadonlyEventInterface> signalMaskMemoization(
             Context context, long signalMask, long originBitCount, long signalMaskNumber) {
         context.memoizeSignalMask(signalMask, originBitCount, signalMaskNumber);
         return NO_EVENTS;
     }
 
-    public List<CompactEvent> signalMask(Context context, long signalMaskNumber) {
+    public List<ReadonlyEventInterface> signalMask(Context context, long signalMaskNumber) {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         context.maskSignals(signalMask);
         return NO_EVENTS;
     }
 
-    public List<CompactEvent> blockSignals(Context context, long signalMaskNumber) {
+    public List<ReadonlyEventInterface> blockSignals(Context context, long signalMaskNumber) {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         context.blockSignals(signalMask);
         return NO_EVENTS;
     }
 
-    public List<CompactEvent> getSetSignalMask(
+    public List<ReadonlyEventInterface> getSetSignalMask(
             Context context, long readSignalMaskNumber, long writeSignalMaskNumber) {
         long readSignalMask = context.getMemoizedSignalMask(readSignalMaskNumber);
         long writeSignalMask = context.getMemoizedSignalMask(writeSignalMaskNumber);
@@ -204,13 +205,13 @@ public class CompactEventFactory {
         return NO_EVENTS;
     }
 
-    public List<CompactEvent> getSignalMask(Context context, long signalMaskNumber) {
+    public List<ReadonlyEventInterface> getSignalMask(Context context, long signalMaskNumber) {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         context.readSignalMask(signalMask);
         return NO_EVENTS;
     }
 
-    public List<CompactEvent> unblockSignals(Context context, long signalMaskNumber) {
+    public List<ReadonlyEventInterface> unblockSignals(Context context, long signalMaskNumber) {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         context.unblockSignals(signalMask);
         return NO_EVENTS;
@@ -218,26 +219,26 @@ public class CompactEventFactory {
 
     // Function events.
 
-    List<CompactEvent> enterFunction(Context context) {
+    List<ReadonlyEventInterface> enterFunction(Context context) {
         return Collections.singletonList(new CompactEvent(context, EventType.INVOKE_METHOD) {
         });
     }
 
-    List<CompactEvent> exitFunction(Context context) {
+    List<ReadonlyEventInterface> exitFunction(Context context) {
         return Collections.singletonList(new CompactEvent(context, EventType.FINISH_METHOD) {
         });
     }
 
     // Thread events.
 
-    public List<CompactEvent> beginThread(Context context, long threadId, long generation)
+    public List<ReadonlyEventInterface> beginThread(Context context, long threadId, long generation)
             throws InvalidTraceDataException {
         context.beginThread(threadId, generation);
         return Collections.singletonList(new CompactEvent(context, EventType.BEGIN_THREAD) {
         });
     }
 
-    List<CompactEvent> endThread(Context context) {
+    List<ReadonlyEventInterface> endThread(Context context) {
         long threadId = context.getThreadId();
         context.endThread();
         return Collections.singletonList(new CompactEvent(context, EventType.END_THREAD) {
@@ -248,7 +249,7 @@ public class CompactEventFactory {
         });
     }
 
-    public List<CompactEvent> threadSync(
+    public List<ReadonlyEventInterface> threadSync(
             Context context, CompactEventReader.ThreadSyncType threadSyncType, long threadId)
             throws InvalidTraceDataException {
         EventType compactType;

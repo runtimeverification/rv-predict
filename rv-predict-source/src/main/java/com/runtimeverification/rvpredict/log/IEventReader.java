@@ -10,7 +10,7 @@ import java.io.IOException;
 
 public interface IEventReader extends Closeable {
 
-    Event readEvent() throws IOException;
+    ReadonlyEventInterface readEvent() throws IOException;
 
-    public Event lastReadEvent();
+    public ReadonlyEventInterface lastReadEvent();
 }

@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.log.compact;
 
 import com.runtimeverification.rvpredict.log.compact.datatypes.ByteBufferBackedInputStream;
+import com.runtimeverification.rvpredict.testutils.MoreAsserts;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -20,12 +21,10 @@ public class TraceHeaderTest {
                 4,  // default data width
                 0, 0,  // filler bytes.
         }));
-        try {
-            TraceHeader traceHeader = new TraceHeader(inputStream);
-            Assert.assertTrue("The magic string is wrong, should have thrown an exception.", false);
-        } catch (InvalidTraceDataException e) {
-            // This is what we're testing here.
-        }
+        MoreAsserts.assertException(
+                "Expected exception for wrong magic string",
+                InvalidTraceDataException.class,
+                () -> new TraceHeader(inputStream));
     }
 
     @Test

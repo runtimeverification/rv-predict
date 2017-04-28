@@ -1,5 +1,9 @@
 package com.runtimeverification.rvpredict.log.compact;
 
+import com.runtimeverification.rvpredict.log.IEventReader;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.log.compact.datatypes.Address;
+import com.runtimeverification.rvpredict.log.compact.datatypes.ThreadId;
 import com.runtimeverification.rvpredict.log.compact.readers.AtomicReadModifyWriteReader;
 import com.runtimeverification.rvpredict.log.compact.readers.BlockSignalsReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ChangeOfGenerationReader;
@@ -18,16 +22,21 @@ import com.runtimeverification.rvpredict.log.compact.readers.ThreadBeginReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ThreadSyncReader;
 import com.runtimeverification.rvpredict.log.compact.readers.UnblockSignalsReader;
 
+import java.io.BufferedInputStream;
+import java.io.EOFException;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
 
-public class CompactEventReader {
+public class CompactEventReader implements IEventReader {
     enum Type {
         // load: 1, 2, 4, 8, 16 bytes wide.
         LOAD1(2, DataManipulationReader.createReader(1, DataManipulationType.LOAD, Atomicity.NOT_ATOMIC)),
@@ -112,18 +121,20 @@ public class CompactEventReader {
             return maxIntValue + 1;
         }
 
-        public List<CompactEvent> read(
-                Context context, CompactEventFactory compactEventReader,
+        public List<ReadonlyEventInterface> read(
+                Context context, CompactEventFactory compactEventFactory,
                 TraceHeader header, InputStream stream)
                 throws InvalidTraceDataException, IOException {
             if (buffer == null) {
                 buffer = new byte[reader.size(header)];
             }
-            if (buffer.length != stream.read(buffer)) {
-                throw new InvalidTraceDataException("Short read for " + this + ".");
+            int readSize = stream.read(buffer);
+            if (buffer.length != readSize) {
+                throw new InvalidTraceDataException(
+                        "Short read for " + this + ", expected " + buffer.length + " bytes, got " + readSize + ".");
             }
             return reader.readEvent(
-                    context, compactEventReader, header,
+                    context, compactEventFactory, header,
                     ByteBuffer.wrap(buffer).order(header.getByteOrder()));
         }
 
@@ -165,11 +176,115 @@ public class CompactEventReader {
 
     public interface Reader {
         int size(TraceHeader header) throws InvalidTraceDataException;
-        List<CompactEvent> readEvent(
+        List<ReadonlyEventInterface> readEvent(
                 Context context,
                 CompactEventFactory compactEventFactory,
                 TraceHeader header,
                 ByteBuffer buffer)
                 throws InvalidTraceDataException;
     }
+
+    private TraceHeader header;
+    private CompactEventFactory factory;
+    private Context context;
+    private InputStream inputStream;
+    private ByteBuffer pcBuffer;
+    private Address pc;
+    private long minDeltaAndEventType;
+    private long maxDeltaAndEventType;
+
+    private List<ReadonlyEventInterface> events = Collections.emptyList();
+    private int currentEvent = 0;
+
+    public CompactEventReader(Path path) throws IOException, InvalidTraceDataException {
+        this(new BufferedInputStream(new FileInputStream(path.toFile())));
+    }
+    public CompactEventReader(InputStream inputStream) throws IOException, InvalidTraceDataException {
+        this.inputStream = inputStream;
+        header = new TraceHeader(inputStream);
+        pc = new Address(header);
+        pcBuffer = ByteBuffer.allocate(pc.size()).order(header.getByteOrder());
+
+        readData(inputStream, pc, "first event descriptor.");
+
+        minDeltaAndEventType =
+                pc.getAsLong() - (Constants.JUMPS_IN_DELTA / 2) * CompactEventReader.Type.getNumberOfValues();
+        maxDeltaAndEventType =
+                minDeltaAndEventType + Constants.JUMPS_IN_DELTA * CompactEventReader.Type.getNumberOfValues() - 1;
+
+        context = new Context(minDeltaAndEventType);
+        factory = new CompactEventFactory();
+
+        DeltaAndEventType deltaAndEventType =
+                DeltaAndEventType.parseFromPC(minDeltaAndEventType, maxDeltaAndEventType, pc.getAsLong());
+        if (deltaAndEventType == null
+                || deltaAndEventType.getEventType() != CompactEventReader.Type.THREAD_BEGIN) {
+            throw new InvalidTraceDataException("All traces should start with begin, this one starts with "
+                    + (deltaAndEventType == null ? "a jump" : deltaAndEventType.getEventType())
+                    + ".");
+        }
+
+        ThreadId threadId = new ThreadId(header);
+        readData(inputStream, threadId, "thread id for the start event");
+
+        events = factory.beginThread(context, threadId.getAsLong(), 0);  // The first generation is always 0.
+
+        currentEvent = -1;
+    }
+
+    private void readData(InputStream inputStream, ReadableData data, String description)
+            throws IOException, InvalidTraceDataException {
+        ByteBuffer dataBuffer = ByteBuffer.allocate(data.size()).order(header.getByteOrder());
+        int readSize = inputStream.read(dataBuffer.array());
+        if (readSize != dataBuffer.capacity()) {
+            throw new InvalidTraceDataException(
+                    "Cannot read the " + description + ", expected " + dataBuffer.capacity()
+                            + " bytes, got " + readSize + ".");
+        }
+        data.read(dataBuffer);
+    }
+
+    @Override
+    public ReadonlyEventInterface readEvent() throws IOException {
+        currentEvent++;
+        while (currentEvent >= events.size()) {
+            currentEvent = 0;
+            try {
+                int readCount = inputStream.read(pcBuffer.array());
+                if (readCount == -1) {
+                    events = null;
+                    throw new EOFException();
+                }
+                if (readCount != pcBuffer.capacity()) {
+                    throw new InvalidTraceDataException(
+                            "Incomplete event descriptor, expected " + pcBuffer.capacity() + " bytes, got "
+                                    + readCount + ".");
+                }
+                pcBuffer.rewind();
+                pc.read(pcBuffer);
+                DeltaAndEventType deltaAndEventType =
+                        DeltaAndEventType.parseFromPC(minDeltaAndEventType,maxDeltaAndEventType, pc.getAsLong());
+                if (deltaAndEventType == null) {
+                    events = factory.jump(context, pc.getAsLong());
+                    continue;
+                }
+                context.updatePcWithDelta(deltaAndEventType.getPcDelta());
+                events = deltaAndEventType.getEventType().read(context, factory, header, inputStream);
+            } catch(InvalidTraceDataException e) {
+                throw new IOException(e);
+            }
+        }
+        return events.get(currentEvent);
+    }
+
+    @Override
+    public ReadonlyEventInterface lastReadEvent() {
+        return events.get(currentEvent);
+    }
+
+    @Override
+    public void close() throws IOException {
+        inputStream.close();
+    }
+
 }

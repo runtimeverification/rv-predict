@@ -128,7 +128,7 @@ public class CompactEventFactory {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         return Collections.singletonList(new CompactEvent(context, EventType.ESTABLISH_SIGNAL) {
             @Override
-            long getSignalMask() {
+            long getFullWriteSignalMask() {
                 return signalMask;
             }
             @Override
@@ -187,34 +187,58 @@ public class CompactEventFactory {
 
     public List<ReadonlyEventInterface> signalMask(Context context, long signalMaskNumber) {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
-        context.maskSignals(signalMask);
-        return NO_EVENTS;
+        return Collections.singletonList(new CompactEvent(context, EventType.WRITE_SIGNAL_MASK) {
+            @Override
+            long getFullWriteSignalMask() {
+                return signalMask;
+            }
+        });
     }
 
     public List<ReadonlyEventInterface> blockSignals(Context context, long signalMaskNumber) {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
-        context.blockSignals(signalMask);
-        return NO_EVENTS;
+        return Collections.singletonList(new CompactEvent(context, EventType.BLOCK_SIGNALS) {
+            @Override
+            long getPartialSignalMask() {
+                return signalMask;
+            }
+        });
     }
 
     public List<ReadonlyEventInterface> getSetSignalMask(
             Context context, long readSignalMaskNumber, long writeSignalMaskNumber) {
         long readSignalMask = context.getMemoizedSignalMask(readSignalMaskNumber);
         long writeSignalMask = context.getMemoizedSignalMask(writeSignalMaskNumber);
-        context.readWriteSignalMask(readSignalMask, writeSignalMask);
-        return NO_EVENTS;
+        return Collections.singletonList(new CompactEvent(context, EventType.READ_WRITE_SIGNAL_MASK) {
+            @Override
+            long getFullReadSignalMask() {
+                return readSignalMask;
+            }
+            @Override
+            long getFullWriteSignalMask() {
+                return writeSignalMask;
+            }
+        });
     }
 
     public List<ReadonlyEventInterface> getSignalMask(Context context, long signalMaskNumber) {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
-        context.readSignalMask(signalMask);
-        return NO_EVENTS;
+        return Collections.singletonList(new CompactEvent(context, EventType.READ_SIGNAL_MASK) {
+            @Override
+            long getFullReadSignalMask() {
+                return signalMask;
+            }
+        });
     }
 
     public List<ReadonlyEventInterface> unblockSignals(Context context, long signalMaskNumber) {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
-        context.unblockSignals(signalMask);
-        return NO_EVENTS;
+        return Collections.singletonList(new CompactEvent(context, EventType.UNBLOCK_SIGNALS) {
+            @Override
+            long getPartialSignalMask() {
+                return signalMask;
+            }
+        });
     }
 
     // Function events.

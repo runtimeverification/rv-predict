@@ -8,20 +8,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
-/**
- * Created by virgil on 3/10/17.
- */
 public class Profiler {
+    private static final String TAG = "PrOfIlEr ";
     private static final Map<String, Long> lineToTimeNano = new HashMap<>();
     private static final Map<String, Long> stackToTimeNano = new HashMap<>();
     private static final Stack<StackElement> timeStackNano = new Stack<>();
     private static final long startTimeNano = System.nanoTime();
     private static long currentTimeNano = System.nanoTime();
 
-    public static void push() {
+    public static void push(String name) {
         synchronized (Profiler.class) {
             long ctNano = System.nanoTime();
-            timeStackNano.add(new StackElement(getTag(), ctNano, currentTimeNano));
+            timeStackNano.add(new StackElement(getTag(name + " "), ctNano, currentTimeNano));
             currentTimeNano = ctNano;
         }
     }
@@ -34,26 +32,26 @@ public class Profiler {
             currentTimeNano = se.formerCurrentTimeNano;
         }
     }
-    public static void log() {
+    public static void log(String name) {
         synchronized (Profiler.class) {
             long ctNano = System.nanoTime();
             long deltaNano = ctNano - currentTimeNano;
             currentTimeNano = ctNano;
-            String tag = getTag();
+            String tag = getTag(name + " ");
             lineToTimeNano.compute(tag, (k, v) -> (v == null) ? deltaNano : deltaNano + v);
         }
     }
     public static void dump() {
         long ctNano = System.nanoTime();
-        System.out.println("---------------------------");
-        System.out.println("Log times:");
+        System.out.println(TAG + "---------------------------");
+        System.out.println(TAG + "Log times:");
         dumpSortedMap(lineToTimeNano, ctNano);
 
-        System.out.println("---------------------------");
-        System.out.println("Stack times:");
+        System.out.println(TAG + "---------------------------");
+        System.out.println(TAG + "Stack times:");
         dumpSortedMap(stackToTimeNano, ctNano);
 
-        System.out.println("---------------------------");
+        System.out.println(TAG + "---------------------------");
         if (!timeStackNano.empty()) {
             System.err.println("Profiler stack not empty! The profiling data may be wrong.");
         }
@@ -62,7 +60,7 @@ public class Profiler {
     private static void dumpSortedMap(Map<String, Long> map, Long ctNano) {
         List<Map.Entry<String, Long>> sorted = new ArrayList<>(map.entrySet());
         Collections.sort(sorted, (a, b) -> b.getValue().compareTo(a.getValue()));
-        sorted.forEach(a -> System.out.println(formatTime(a.getValue(), ctNano) + " : " + a.getKey()));
+        sorted.forEach(a -> System.out.println(TAG + formatTime(a.getValue(), ctNano) + " : " + a.getKey()));
     }
 
     private static String formatTime(long deltaNano, long currentTimeNano) {
@@ -84,9 +82,9 @@ public class Profiler {
         return String.format("%1$8.3fs (%2$5.2f%%)", length, percentage);
     }
 
-    private static String getTag() {
+    private static String getTag(String prefix) {
         StackTraceElement ste = Thread.currentThread().getStackTrace()[3];
-        return ste.getFileName() + ":" + ste.getLineNumber();
+        return prefix + ste.getFileName() + ":" + ste.getLineNumber();
     }
     private static class StackElement {
         private final String tag;

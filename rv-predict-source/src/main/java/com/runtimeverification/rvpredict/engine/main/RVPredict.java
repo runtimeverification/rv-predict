@@ -71,7 +71,7 @@ public class RVPredict {
     }
 
     public void start() {
-        Profiler.push();
+        Profiler.push("rv-predict");
         try {
             traceCache.setup();
             long fromIndex = 0;

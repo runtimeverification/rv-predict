@@ -105,10 +105,15 @@ public class RaceDetector implements Constants {
     }
 
     public void run(Trace trace) {
-        Profiler.push();
+        Profiler.push("race-detection");
         try {
-            if (!trace.mayContainRaces()) {
-                return;
+            Profiler.push("may-contain-races");
+            try {
+                if (!trace.mayContainRaces()) {
+                    return;
+                }
+            } finally {
+                Profiler.pop();
             }
 
             Map<String, Race> result;
@@ -128,7 +133,7 @@ public class RaceDetector implements Constants {
                             .findRaces();
                     break;
                 case BOTH:
-                    Profiler.push();
+                    Profiler.push("smt");
                     try {
                         Map<String, List<Race>> sigToRaceSuspects2 = computeUnknownRaceSuspects(trace);
                         if (!sigToRaceSuspects2.isEmpty()) {
@@ -138,7 +143,7 @@ public class RaceDetector implements Constants {
                     } finally {
                         Profiler.pop();
                     }
-                    Profiler.push();
+                    Profiler.push("dp");
                     try {
                         ModelTrace modelTrace2 = new ModelTrace(trace);
                         result = com.runtimeverification.rvpredict.model.MaximalCausalModel.create(
@@ -155,12 +160,17 @@ public class RaceDetector implements Constants {
                     throw new IllegalStateException("Unknown race algorithm: " + config.raceAlgorithm() + ".");
             }
 
-            sigToRealRace.putAll(result);
-            result.forEach((sig, race) -> {
-                String report = race.generateRaceReport();
-                reports.add(report);
-                config.logger().reportRace(report);
-            });
+            Profiler.push("race-reporting");
+            try {
+                sigToRealRace.putAll(result);
+                result.forEach((sig, race) -> {
+                    String report = race.generateRaceReport();
+                    reports.add(report);
+                    config.logger().reportRace(report);
+                });
+            } finally {
+                Profiler.pop();
+            }
         } finally {
             Profiler.pop();
         }

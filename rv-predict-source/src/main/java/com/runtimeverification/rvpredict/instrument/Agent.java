@@ -42,7 +42,7 @@ public class Agent implements ClassFileTransformer, Constants {
     public static Configuration config;
 
     public static void premain(String agentArgs, Instrumentation inst) {
-        Profiler.push();
+        Profiler.push("rv-predict");
         instrumentation = inst;
         preinitializeClasses();
         processAgentArguments(agentArgs);

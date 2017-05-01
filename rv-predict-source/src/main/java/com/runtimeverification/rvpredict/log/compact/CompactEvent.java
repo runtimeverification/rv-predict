@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.log.compact;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventDecorator;
 import com.runtimeverification.rvpredict.log.ReadonlyEvent;
@@ -9,12 +10,19 @@ public abstract class CompactEvent extends ReadonlyEvent {
     private final long eventId;
     private final long locationId;
     private final long threadId;
+    private final int signalDepth;
     private final EventType type;
 
     CompactEvent(Context context, EventType type) {
-        this.eventId = context.newId();
-        this.locationId = context.getPC();
-        this.threadId = context.getThreadId();
+        this(context.newId(), context.getPC(), context.getThreadId(), context.getSignalDepth(), type);
+    }
+
+    @VisibleForTesting
+    public CompactEvent(long eventId, long locationId, long threadId, int signalDepth, EventType type) {
+        this.eventId = eventId;
+        this.locationId = locationId;
+        this.threadId = threadId;
+        this.signalDepth = signalDepth;
         this.type = type;
     }
 
@@ -32,6 +40,11 @@ public abstract class CompactEvent extends ReadonlyEvent {
     @Override
     public long getThreadId() {
         return threadId;
+    }
+
+    @Override
+    public int getSignalDepth() {
+        return signalDepth;
     }
 
     @Override

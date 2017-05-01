@@ -13,6 +13,8 @@ public class RawTrace {
 
     private final long tid;
 
+    private final int signalDepth;
+
     private final int start;
 
     private final int size;
@@ -21,8 +23,9 @@ public class RawTrace {
 
     private final ReadonlyEventInterface[] events;
 
-    public RawTrace(int start, int end, ReadonlyEventInterface[] events) {
+    public RawTrace(int start, int end, ReadonlyEventInterface[] events, int signalDepth) {
         this.tid = events[start].getThreadId();
+        this.signalDepth = signalDepth;
         this.start = start;
         this.mask = events.length - 1;
         this.size = (end - start + events.length) & mask;
@@ -34,6 +37,10 @@ public class RawTrace {
 
     public long getTID() {
         return tid;
+    }
+
+    public int getSignalDepth() {
+        return signalDepth;
     }
 
     public long getMinGID() {

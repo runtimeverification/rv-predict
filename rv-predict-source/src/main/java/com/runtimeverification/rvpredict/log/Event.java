@@ -65,6 +65,11 @@ public class Event extends ReadonlyEvent {
         return threadId;
     }
 
+    @Override
+    public int getSignalDepth() {
+        return 0;
+    }
+
     public void setThreadId(long tid) {
         threadId = tid;
     }

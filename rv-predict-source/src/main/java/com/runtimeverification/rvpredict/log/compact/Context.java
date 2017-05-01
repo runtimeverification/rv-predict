@@ -111,6 +111,10 @@ public class Context {
         currentThread.setSignalDepth(signalDepth, false);
     }
 
+    public int getSignalDepth() {
+        return currentThread.getSignalDepth();
+    }
+
     void memoizeSignalMask(long signalMask, long originBitCount, long signalMaskNumber) {
         memoizedSignalMasks.put(signalMaskNumber, signalMask << originBitCount);
     }
@@ -207,6 +211,10 @@ public class Context {
             }
             this.signalDepth = signalDepth;
             this.currentSignalState = signalStack.get(signalDepth);
+        }
+
+        private int getSignalDepth() {
+            return signalDepth;
         }
 
         private PerSignalState createUnstartedSignalState() {

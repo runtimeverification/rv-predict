@@ -3,7 +3,7 @@ package com.runtimeverification.rvpredict.log;
 public class ReadonlyEventDecorator implements ReadonlyEventInterface {
     private final ReadonlyEventInterface event;
 
-    public ReadonlyEventDecorator(ReadonlyEventInterface event) {
+    protected ReadonlyEventDecorator(ReadonlyEventInterface event) {
         this.event = event;
     }
 
@@ -15,6 +15,11 @@ public class ReadonlyEventDecorator implements ReadonlyEventInterface {
     @Override
     public long getThreadId() {
         return event.getThreadId();
+    }
+
+    @Override
+    public int getSignalDepth() {
+        return event.getSignalDepth();
     }
 
     @Override

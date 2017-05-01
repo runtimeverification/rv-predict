@@ -87,7 +87,8 @@ of times a signal trace can be executed.
 We AND all of the following:
 
 To reduce the search space we may add a formula saying Os1i < Os1j for i < j, 
-but it's not mandatory.
+but it's not mandatory. Note that, if a signal blocks itself, the best formula
+would be Osni < Os1j, but the formula above always works.
 
 To encode that the signal handler should be set to the right value we use a 
 formula similar to PhiSc.
@@ -123,7 +124,8 @@ may repeat at will that signal handler call, each of these is also a "run".
 
 A signal can race with any instruction on a given thread. However, a single run
 is enough for detecting this if we can reach that instruction without 
-having another signal run before. See below for more about reachability.
+having another signal run before. So we need <signal runs for reachability> + 1
+runs for detecting the race. See below for more about reachability.
 
 A signal can also race with other signals. As an example, let's say that signal
 s1 is enabled and s2 is disabled. s1 runs and enables s2, s2 starts with s1

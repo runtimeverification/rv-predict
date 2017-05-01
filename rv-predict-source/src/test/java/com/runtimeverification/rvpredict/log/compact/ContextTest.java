@@ -359,7 +359,7 @@ public class ContextTest {
         Assert.assertEquals(SECOND_PROGRAM_COUNTER, context.getPC());
         Assert.assertEquals(1, context.getSignalDepth());
 
-        context.setSignalDepth(3);
+        context.setSignalDepth(2);
         context.enterSignal(SECOND_SIGNAL_NUMBER, THIRD_GENERATION);
         context.jump(THIRD_PROGRAM_COUNTER);
 

@@ -187,7 +187,7 @@ public class TraceCache {
         if (nextGenStart == maxEvents + 1) {
                 System.err.println("no change of generation in " +
                     (maxEvents + 1) + " events");
-                return null;                // XXX
+                return rawTraces;                // XXX
         }
         if (Configuration.debug) {
                 System.err.println("buffering " + (n - nextGenStart) +

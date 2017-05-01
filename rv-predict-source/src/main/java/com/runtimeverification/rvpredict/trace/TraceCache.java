@@ -1,10 +1,11 @@
 package com.runtimeverification.rvpredict.trace;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.deadlock.LockGraph;
 import com.runtimeverification.rvpredict.log.EventReader;
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.IEventReader;
-import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
@@ -14,6 +15,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -42,14 +44,27 @@ public class TraceCache {
      * Creates a new {@code TraceCahce} structure for a trace log.
      */
     public TraceCache(Configuration config, Metadata metadata) {
+        this(config, new TraceState(config, metadata), new LockGraph(config, metadata), Collections.emptyList());
+    }
+
+    private TraceCache(
+            Configuration config, TraceState traceState, LockGraph lockGraph, List<IEventReader> defaultReaders) {
         this.config = config;
+        this.crntState = traceState;
+        this.lockGraph = lockGraph;
+        this.readers.addAll(defaultReaders);
+
         // Used to be config.windowSize - 1, but I try to read 1 more
-	// than the window size, now.
-	capacity = getNextPowerOfTwo(config.windowSize) *
-	    (config.stacks() ? 2 : 1);
-	eventsBuffer = new ArrayList<>(capacity);
-        this.crntState = new TraceState(config, metadata);
-        lockGraph = new LockGraph(config, metadata);
+        // than the window size, now.
+        capacity = getNextPowerOfTwo(config.windowSize) *
+                (config.stacks() ? 2 : 1);
+        eventsBuffer = new ArrayList<>(capacity);
+    }
+
+    @VisibleForTesting
+    static TraceCache createForTesting(
+            Configuration config, TraceState traceState, LockGraph lockGraph, List<IEventReader> readers) {
+        return new TraceCache(config, traceState, lockGraph, readers);
     }
 
     public void setup() throws IOException {
@@ -80,58 +95,6 @@ public class TraceCache {
      */
     protected static final int getNextPowerOfTwo(int x) {
         return 1 << (32 - Integer.numberOfLeadingZeros(x));
-    }
-
-    /**
-     * Load trace segment starting from event {@code fromIndex}.
-     *
-     * @param fromIndex
-     *            low endpoint (inclusive) of the trace segment
-     * @return a {@link Trace} representing the trace segment read or
-     *         {@code null} if the end of file is reached
-     */
-    public Trace getTrace(long fromIndex) throws IOException {
-        long toIndex = fromIndex + config.windowSize;
-        List<RawTrace> rawTraces = readEvents(fromIndex, toIndex);
-
-        /* finish reading events and create the Trace object */
-        return rawTraces.isEmpty() ? null : crntState.initNextTraceWindow(rawTraces);
-    }
-
-    protected final List<RawTrace> readEvents(long fromIndex, long toIndex) throws IOException {
-        List<RawTrace> rawTraces =  new ArrayList<>();
-        /* sort readers by their last read events */
-        readers.sort((r1, r2) -> r1.lastReadEvent().compareTo(r2.lastReadEvent()));
-        Iterator<IEventReader> iter = readers.iterator();
-        ReadonlyEventInterface event;
-        while (iter.hasNext()) {
-            IEventReader reader = iter.next();
-            if ((event = reader.lastReadEvent()).getEventId() >= toIndex) {
-                break;
-            }
-
-            assert event.getEventId() >= fromIndex;
-            List<ReadonlyEventInterface> events = new ArrayList<>(capacity);
-            do {
-                events.add(event);
-                //TODO(TraianSF): the following conditional does not belong here. Consider moving it.
-                if (event.isPreLock() || event.isLock() || event.isUnlock()) {
-                    if (config.isLLVMPrediction()) {
-                        //TODO(TraianSF): remove above condition once instrumentation works for Java
-                        lockGraph.handle(event);
-                    }
-                }
-                try {
-                    event = reader.readEvent();
-                } catch (EOFException e) {
-                    iter.remove();
-                    break;
-                }
-            } while (event.getEventId() < toIndex);
-            int length = getNextPowerOfTwo(events.size());
-            rawTraces.add(new RawTrace(0, events.size(), events.toArray(new ReadonlyEventInterface[length])));
-        }
-        return rawTraces;
     }
 
     protected final List<RawTrace> readEventWindow() throws IOException {
@@ -199,31 +162,57 @@ public class TraceCache {
         for (int i = 0; i < nextGenStart; i++)
                 events.set(i, events.get(i).destructiveWithEventId(lastGID + i));
         lastGID += maxEvents;
-        int tidStart = 0;
-        events.sort((l, r) -> {
-                long lt = l.getThreadId(), rt = r.getThreadId();
-                return (lt < rt) ? -1 : ((lt > rt) ? 1 : 0);
-        });
-        long prevTID = events.get(0).getThreadId();
-
-        for (int i = 1; i < nextGenStart; i++) {
-                if (events.get(i).getThreadId() == prevTID)
-                        continue;
-
-                rawTraces.add(tidSpanToRawTrace(events, tidStart, i));
-                prevTID = events.get(i).getThreadId();
-                tidStart = i;
-        }
-
-        rawTraces.add(tidSpanToRawTrace(events, tidStart, nextGenStart));
+        splitTracesIntoThreads(rawTraces, events, nextGenStart);
         return rawTraces;
     }
+
+    private void splitTracesIntoThreads(
+            List<RawTrace> rawTraces, ArrayList<ReadonlyEventInterface> events, int eventCount) {
+        int tidStart = 0;
+        events.sort((l, r) -> {
+            long lt = l.getThreadId(), rt = r.getThreadId();
+            if (lt < rt)
+                return -1;
+            if (lt > rt)
+                return 1;
+            int lsd = l.getSignalDepth(), rsd = r.getSignalDepth();
+            if (lsd < rsd)
+                return -1;
+            if (lsd > rsd)
+                return 1;
+            long lid = l.getEventId(), rid = r.getEventId();
+            if (lid < rid)
+                return -1;
+            if (lid > rid)
+                return 1;
+            return 0;
+        });
+        long prevTID = events.get(0).getThreadId();
+        int prevSignalDepth = events.get(0).getSignalDepth();
+
+        for (int i = 1; i < eventCount; i++) {
+            ReadonlyEventInterface event = events.get(i);
+            if (event.getThreadId() == prevTID
+                    && event.getSignalDepth() == prevSignalDepth
+                    && (event.getType() != EventType.ENTER_SIGNAL || tidStart == i-1)) {
+                continue;
+            }
+
+            rawTraces.add(tidSpanToRawTrace(events, tidStart, i, prevSignalDepth));
+            prevTID = event.getThreadId();
+            prevSignalDepth = event.getSignalDepth();
+            tidStart = i;
+        }
+
+        rawTraces.add(tidSpanToRawTrace(events, tidStart, eventCount, prevSignalDepth));
+    }
+
     private static RawTrace tidSpanToRawTrace(List<? extends ReadonlyEventInterface> events,
-	    int tidStart, int tidEnd) {
+	    int tidStart, int tidEnd, int signalDepth) {
 	List<? extends ReadonlyEventInterface> tidEvents = events.subList(tidStart, tidEnd);
 	int n = tidEvents.size(), length = getNextPowerOfTwo(n);
 	tidEvents.sort(ReadonlyEventInterface::compareTo);
-	return new RawTrace(0, n, tidEvents.toArray(new ReadonlyEventInterface[length]));
+	return new RawTrace(0, n, tidEvents.toArray(new ReadonlyEventInterface[length]), signalDepth);
     }
     public Trace getTraceWindow() throws IOException {
         List<RawTrace> rawTraces = readEventWindow();

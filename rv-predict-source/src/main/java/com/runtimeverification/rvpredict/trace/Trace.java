@@ -65,6 +65,11 @@ public class Trace {
     private final List<RawTrace> rawTraces;
 
     /**
+     * Map from a thread's ID to its type.
+     */
+    private final Map<Long, ThreadType> tidToType;
+
+    /**
      * Map from thread ID to critical events.
      */
     private final Map<Long, List<ReadonlyEventInterface>> tidToEvents;
@@ -107,6 +112,7 @@ public class Trace {
     private final TraceState state;
 
     public Trace(TraceState state, List<RawTrace> rawTraces,
+            Map<Long, ThreadType> tidToType,
             Map<Long, List<ReadonlyEventInterface>> tidToEvents,
             Map<Long, List<MemoryAccessBlock>> tidToMemoryAccessBlocks,
             Map<Long, ThreadState> tidToThreadState,
@@ -116,6 +122,7 @@ public class Trace {
             Set<ReadonlyEventInterface> clinitEvents) {
         this.state = state;
         this.rawTraces = rawTraces;
+        this.tidToType = tidToType;
         this.tidToEvents = tidToEvents;
         this.tidToMemoryAccessBlocks = tidToMemoryAccessBlocks;
         this.tidToThreadState = tidToThreadState;
@@ -347,6 +354,7 @@ public class Trace {
         for (RawTrace rawTrace : rawTraces) {
             long tid = rawTrace.getTID();
             tidToThreadState.put(tid, state.getThreadStateSnapshot(tid));
+            tidToType.put(tid, rawTrace.getSignalDepth() > 0 ? ThreadType.SIGNAL : ThreadType.THREAD);
             boolean isInsideClinit = state.isInsideClassInitializer(tid);
 
             for (int i = 0; i < rawTrace.size(); i++) {

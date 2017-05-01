@@ -194,7 +194,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             List<RawTrace> rawTraces = new ArrayList<>();
             activeBuffers.forEach(b -> {
                 if (!b.isEmpty()) {
-                    rawTraces.add(new RawTrace(b.start, b.cursor, b.events));
+                    rawTraces.add(new RawTrace(b.start, b.cursor, b.events, 0));
                 }
             });
             if (rawTraces.size() == 1) {

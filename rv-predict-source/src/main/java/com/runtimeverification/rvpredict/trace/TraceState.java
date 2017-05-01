@@ -48,6 +48,8 @@ public class TraceState {
 
     private final Metadata metadata;
 
+    private final Map<Long, ThreadType> t_tidToType;
+
     private final Map<Long, List<ReadonlyEventInterface>> t_tidToEvents;
 
     private final Map<Long, List<MemoryAccessBlock>> t_tidToMemoryAccessBlocks;
@@ -65,6 +67,7 @@ public class TraceState {
     public TraceState(Configuration config, Metadata metadata) {
         this.config = config;
         this.metadata = metadata;
+        this.t_tidToType               = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToThreadState        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
@@ -84,6 +87,7 @@ public class TraceState {
     }
 
     public Trace initNextTraceWindow(List<RawTrace> rawTraces) {
+        t_tidToType.clear();
         t_tidToEvents.clear();
         t_tidToMemoryAccessBlocks.clear();
         t_tidToThreadState.clear();
@@ -92,6 +96,7 @@ public class TraceState {
         t_lockIdToLockRegions.clear();
         t_clinitEvents.clear();
         return new Trace(this, rawTraces,
+                t_tidToType,
                 t_tidToEvents,
                 t_tidToMemoryAccessBlocks,
                 t_tidToThreadState,

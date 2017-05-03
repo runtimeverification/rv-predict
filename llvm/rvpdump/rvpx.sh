@@ -7,7 +7,7 @@ exitcode=1
 
 exit_hook()
 {
-	for core in $(ls $tmpdir/*core); do
+	for core in $(ls $tmpdir/*core 2> /dev/null); do
 		echo "$(basename $0): there are cores in $tmpdir/." 1>&2
 		exit $exitcode
 	done
@@ -39,7 +39,7 @@ set -e
 cd $tmpdir
 ${RV_ROOT:-/usr/local}/bin/rvpdump -t legacy rvpredict.trace
 rv-predict --offline --window 4000 --llvm-predict . 2>&1 | \
-rvpsymbolize --pc $progpath 1>&2
+rvpsymbolize $progpath 1>&2
 
 trap - EXIT ALRM HUP INT PIPE QUIT TERM
 

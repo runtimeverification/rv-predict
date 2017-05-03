@@ -279,6 +279,10 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	 */
 	r->r_lastpc = rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN);
 	rvp_buf_put_addr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_ENTERSIG));
+	rvp_buf_put_addr(&b,
+	    (s->s_handler != NULL)
+	        ? (const void *)s->s_handler
+		: (const void *)s->s_sigaction);
 	rvp_buf_put_u64(&b, r->r_lgen);
 	rvp_buf_put(&b, signum);
 	rvp_ring_put_buf(r, b);

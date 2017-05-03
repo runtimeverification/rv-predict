@@ -924,11 +924,12 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_ENTERSIG:
 		printf(
 		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s signal %" PRIu32 " generation %" PRIu64 "\n",
+		    " %s signal %" PRIu32 " handler %#016" PRIxPTR
+		    " generation %" PRIu64 "\n",
 		    ps->ps_curthread, ps->ps_idepth,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
 		    oi->oi_descr, ub->ub_entersig.signum,
-		    ub->ub_entersig.generation);
+		    ub->ub_entersig.handler, ub->ub_entersig.generation);
 		break;
 	case RVP_OP_ACQUIRE:
 	case RVP_OP_RELEASE:
@@ -1124,7 +1125,7 @@ rvp_trace_dump(rvp_output_type_t otype, int fd)
 	 */
 	const rvp_trace_header_t expected_th = {
 		  .th_magic = "RVP_"
-		, .th_version = 0
+		, .th_version = {0, 0, 0, 1}
 		, .th_byteorder = '0' | ('1' << 8) | ('2' << 16) | ('3' << 24)
 		, .th_pointer_width = sizeof(rvp_addr_t)
 		, .th_data_width = sizeof(uint32_t)
@@ -1163,10 +1164,16 @@ rvp_trace_dump(rvp_output_type_t otype, int fd)
 		    __func__);
 	}
 
-	if (memcmp(th.th_magic, expected_th.th_magic, sizeof(th.th_magic)) != 0)
-		errx(EXIT_FAILURE, "%s: bad magic %4s", __func__, th.th_magic);
-	if (th.th_version != expected_th.th_version)
-		errx(EXIT_FAILURE, "%s: unsupported version", __func__);
+	if (memcmp(th.th_magic, expected_th.th_magic, sizeof(th.th_magic)) != 0) {
+		errx(EXIT_FAILURE, "%s: bad magic %4s", __func__,
+		    th.th_magic);
+	}
+	if (memcmp(th.th_version, expected_th.th_version,
+	    sizeof(th.th_version)) != 0) {
+		errx(EXIT_FAILURE, "%s: unsupported version %d.%d.%d.%d",
+		    __func__, th.th_version[0], th.th_version[1],
+		    th.th_version[2], th.th_version[3]);
+	}
 	if (th.th_byteorder != expected_th.th_byteorder)
 		errx(EXIT_FAILURE, "%s: unsupported byteorder", __func__);
 	if (th.th_pointer_width != expected_th.th_pointer_width)

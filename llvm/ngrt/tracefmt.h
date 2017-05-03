@@ -20,7 +20,8 @@ typedef uintptr_t rvp_addr_t;
 struct _rvp_trace_header {
 	char th_magic[4];               // 'R' 'V' 'P' '_'
 					//
-	uint32_t th_version;            // 0
+	uint8_t th_version[4];          // major minor teeny tiny
+					// 0     0     0     1
 					//
 	uint32_t th_byteorder;          // byte-order indication,
 					// see discussion
@@ -123,6 +124,7 @@ typedef struct {
 
 typedef struct {
 	rvp_addr_t deltop;
+	rvp_addr_t handler;
 	uint64_t generation;
 	uint32_t signum;
 } __packed __aligned(sizeof(uint32_t)) rvp_entersig_t;

@@ -8,6 +8,7 @@ lpcq
 memcpy
 _mkc_*
 *.o
+raceless-signal
 simple-state-machine
 spcq
 spinning-loop

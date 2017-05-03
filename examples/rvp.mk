@@ -11,7 +11,7 @@ LDADD+=-ldl -lrt
 COPTS+=-Xclang -load -Xclang ${PASS_DIR}/rvpinstrument.so
 .else
 CC=rvpc
-CXX=rvpc
+CXX=rvpc++
 .endif
 .endif
 

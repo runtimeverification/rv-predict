@@ -1,5 +1,3 @@
-.include <bsd.own.mk>
-
 CC=clang++
 CXX=clang++
 CXXFLAGS+=-std=c++11
@@ -15,4 +13,5 @@ SRCS.unsafe-vector=unsafe-vector.cpp
 
 LDADD+=${RV_PREDICT_CXX_LDADD}
 
-.include <bsd.prog.mk>
+.include "../rvp.mk"
+.include <mkc.prog.mk>

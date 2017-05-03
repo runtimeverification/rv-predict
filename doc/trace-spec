@@ -33,7 +33,7 @@ should suppose that data narrower than the default data width was
 converted to the default data width before it was written to the trace
 file.  That is, if the default data width is 4, then 1- and 2-byte loads
 and stores were "cast" to uint32_t before they were written to the trace
-file.  The reader stores the pointer width in a variable `dataw`.
+file.  The reader stores the data width in a variable `dataw`.
 
 After the default data width there are two bytes that pad the header to
 a whole number of 32-bit words.
@@ -259,7 +259,7 @@ trace ::= (delta, 'load[n]') addr value
                 `new-value` starts on the first `dataw`-byte boundary
                 after `old-value`.  If `n < dataw`, then `old-value`
                 and `new-value` are combined into a single word with
-                `old-value` in bits (dataw * 8 - 1:dataw * 4) and
+                `new-value` in bits (dataw * 8 - 1:dataw * 4) and
                 `old-value` in bits (dataw * 4 - 1:0).  The single
                 `n`-byte word is written in at the first `dataw`-byte
                 boundary after `addr`.  In this way, if `dataw` is 4 and

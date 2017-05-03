@@ -163,7 +163,7 @@ public class Race {
         long tid = e.getThreadId();
         Metadata metadata = trace.metadata();
         List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
-        sb.append(String.format("    Concurrent %s in thread T%s %s%n",
+        sb.append(String.format("    Concurrent %s in thread T%s%s%n",
                 e.isWrite() ? "write" : "read",
                 tid,
                 getHeldLocksReport(heldLocks)));

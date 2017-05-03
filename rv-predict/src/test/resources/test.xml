@@ -7,6 +7,7 @@
         <rvarg key="--window" value="2000" />
         <rvarg value="--debug" />
     </test>
+    <!-- TODO(virgil): This prints a "generation not found error" with window sizes < 128000. -->
     <test name="ftpserver.jar" module="ftpserver">
         <jar/>
         <runs value="32" />
@@ -128,6 +129,7 @@
         <arg value="instrumentation.InstrumentationTests" />
     </test>
 
+    <!-- TODO(virgil): This prints a "generation not found error" with window sizes < 64000. -->
     <test name="llvm.demo.Stack" module="llvm-tests">
         <in/>
         <rvarg key="--llvm-predict" value="$in" />
@@ -146,6 +148,7 @@
     <test name="llvm.account.account" module="llvm-tests">
         <in/>
         <rvarg key="--llvm-predict" value="$in" />
+        <rvarg key="--window" value="4000" />
     </test>
 
     <test name="llvm.deadlock.simple" module="llvm-tests">

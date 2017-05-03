@@ -1,0 +1,175 @@
+This uses the encoding described in smt-encoding-MCM.pdf file as a base.
+
+-- smt-encoding-MCM.pdf summary
+
+Each event has an order variable Oe which the SMT solver is supposed to fill 
+with concrete values for a possible execution of all threads.
+
+Then the execution constraints are encoded as PhiMhb and PhiLock and AND(Phi_e, 
+for all e).
+
+PhiMhb (must-happen-before) says that, for each thread, the events are in 
+order, i.e. Oe1 < Oe2 < ... < Oen. It also says that a thread must start after 
+its start event and must end before its join event. It may say other similar 
+things.
+
+PhiLock says that locked sections with the same lock are disjoint.
+
+Phi_e says that event e can be reached. It is a disjunction of:
+1. Oe > M, where M is a large number that means "infinity", 
+i.e. we give up on using the event e and everything that follows it 
+in a useful way and we mark it as "reachable", although it might not be.
+Note that we can't actually use infinity because, in order to have a satisfiable
+formula, we need to be able to order events with Oe>M.
+However, this will allow us to find races even if some of the events that 
+happen after the race are not reachable.
+2. PhiConc_e, which says that all values read on the current thread, up to and 
+including event e, match the actual variable values.
+3. (O_next(e) > M and PhiConc_pred(e)) which says that everything was fine 
+until the previous event and we give up on the next event. This basically says 
+that if we reached event e, even if it's a read with the wrong value, it can 
+have a race with a write on the same variable.
+
+PhiConc_e is defined as AND(PhiSc_f, f over all reads on the same thread before 
+and up to e). PhiSc_e says that either there was no write on the read variable 
+until now and we're reading the initial value, or the last write before this 
+read wrote the expected value.
+
+A race condition looks like Oe=Of<M, i.e. there is nothing that forces an order 
+relation between Oe and Of and we didn't give up on trying to reach them.
+
+-- Encoding signals.
+
+First, there are read and write events for the signal masks and handlers. Since 
+these are per-thread and signal run, then we can't have races between them.
+
+Second, in many cases below a signal trace run can be thought of as a thread 
+that does not need a start call on the parent. However, I think it's more clear 
+to explicitly say what happens to a signal trace run in each case.
+
+For a signal trace to run, the following things must happen:
+1. Its signal should not be masked.
+2. The handler for its signal must be set to the address of the enter-signal 
+event in the signal trace.
+
+Since the signal handler is global, one can't detect its value by looking at a 
+single thread, but one can attempt to treat them as reads and writes and build 
+something similar to PhiConc.
+
+The signal mask is per-thread and running signal. Since starting a signal fully 
+sets the signal mask, the current signal mask for an event can be detected 
+statically by looking at each thread and at each signal trace individually.
+
+When a signal runs, it can interrupt any thread (subject to the above 
+constraints), run for a while, then resume that thread.
+
+A signal can interrupt a thread for an unlimited number of times and it can 
+interrupt other signals, including itself. Not all of these matter (see the
+question below), but the number of relevant interruptions may be very 
+large. We can try to handle each such interruption as a normal thread, but each
+interruption needs distinct Oe variables, so either we cap the number of
+possible interruptions for a single signal run or we must use a different
+solution. See the "How many interruptions" section below for an estimation of
+the number of times we may need to run the same signal event for detecting
+races. However, note that until now the model that describes how the events fit
+with each other was independent from its usage (i.e. detecting races).
+
+Let us assume, for now, that we fix a maximum number of times a signal may run 
+and that we assign different variables for each of these runs.
+
+Then we will encode this in the following way:
+
+If s is a signal trace, then we denote its events by s1, s2, ..., sn. We also 
+denote the order variables for a possible execution by Osij where 1<=i<=n is 
+the event number, 1<=j<=N is the execution number, N being the maximum number 
+of times a signal trace can be executed.
+
+We AND all of the following:
+
+To reduce the search space we may add a formula saying Os1i < Os1j for i < j, 
+but it's not mandatory. Note that, if a signal blocks itself, the best formula
+would be Osni < Os1j, but the formula above always works.
+
+To encode that the signal handler should be set to the right value we use a 
+formula similar to PhiSc.
+
+To encode that the signal handler stops a thread to run on it, we AND the 
+following formulas for all Oi and Oj consecutive events on the same thread, 
+where we detected that the signal mask allows the signal to run:
+Oi <= Os1k and Osnk < Oj
+
+To encode that the signal handler stops itself, we AND the same formula as 
+above, with Osli and Oslj consecutive events on the same thread, where l < k 
+and we detected that the signal mask allows the signal to run:
+Osli <= Os1k and Osnk < Oslj
+
+To encode that the signal handler stops another signal handler, we do something 
+similar.
+
+-- Encoding races involving signals.
+
+It's not clear to me exactly what is a race involving a signal (see the 
+question below), but here it goes:
+
+For any two events e, f which are either reads or writes, and at least one of 
+them is a write, e may be on a thread or on a signal run and f is event i on a 
+signal trace for signal s, and s can run after e, we add the conditions Oe = 
+Osik < M with 1 <= k <= N.
+
+-- How many interruptions with the same signal run we may need for detecting
+races.
+
+The events generated by a single signal handler call are called a run. We
+may repeat at will that signal handler call, each of these is also a "run".
+
+A signal can race with any instruction on a given thread. However, a single run
+is enough for detecting this if we can reach that instruction without 
+having another signal run before. So we need <signal runs for reachability> + 1
+runs for detecting the race. See below for more about reachability.
+
+A signal can also race with other signals. As an example, let's say that signal
+s1 is enabled and s2 is disabled. s1 runs and enables s2, s2 starts with s1
+enabled, s1 preempts it again and there is a race between the last run of s1
+and one of the instructions in s2. If this can happen, then we need to have two
+interruptions with that exact s1 run.
+
+Note that this is not enough, since s2 or another thread may set the signal
+handler to a certain run of s3, which can then interrupt the second run of s1,
+which can then be interrupted by a third run of s1, which can race with s3.
+This game of what handlers can be set and when gets complicated quickly, but
+the number of s1 runs are probably limited by the number of other signal runs
+that we have in our trace.
+TODO(virgil): Expand on this.
+
+However, if we want to detect all possible races, we need to take 
+into account that on a certain execution branch that would soon become 
+undefined because we can't read the needed value, that value could be set by a
+signal handler. Of course, the same signal handler run can happen later,
+unblocking the trace again. Since a repeated signal run that finishes will be 
+identical to any other, if we want to use signals to enable code execution, 
+there is no point in running it twice without a write in between. So we need at
+most <number of writes in other executions (including all signal runs mentioned
+above) that write to the same variables as the signal> + 2 runs (that +2 can
+actually be +1 if we only care about races).
+
+But things are even worse, since a partial execution of a run s1 can enable an
+execution branch on a different thread, but s2 can interrupt s1 and enable
+another branch, and so on. So, with the right signal handlers, we may be able
+to write any custom value to any variable, enabling any branch that would have
+otherwise stopped because the right value wasn't available. Think of a signal
+handler that can preempt itself and which does the following:
+
+for i = 1 to max_values(v1):
+  atomic_set(v1, i)
+for i = 1 to max_values(v2):
+  atomic_set(v2, i)
+......
+
+Then we need one run for each read. But, since that read can be in another signal,
+things may be even more complicated.
+TODO(virgil): Expand this.
+
+-- Questions
+
+Exactly what is a race? Can any read/write instruction that is immediately 
+before or after a signal trace run race with the events in the signal trace?

@@ -135,6 +135,10 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 	, [RVP_OP_ATOMIC_RMW4] = OP_INFO_INIT(rvp_rmw4_t, "atomic RMW 4")
 	, [RVP_OP_ATOMIC_RMW8] = OP_INFO_INIT(rvp_rmw8_t, "atomic RMW 8")
 
+	, [RVP_OP_ATOMIC_LOAD1] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t,
+					       "atomic load 1")
+	, [RVP_OP_ATOMIC_STORE1] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t,
+						"atomic store 1")
 	, [RVP_OP_ATOMIC_LOAD4] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t,
 					       "atomic load 4")
 	, [RVP_OP_ATOMIC_STORE4] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t,

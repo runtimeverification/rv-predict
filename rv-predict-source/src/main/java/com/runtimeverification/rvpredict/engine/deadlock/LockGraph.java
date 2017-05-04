@@ -28,7 +28,7 @@ public class LockGraph {
     private final SCCTarjan<Long> sccGraph = new SCCTarjan<>();
     private final Map<Long,ReadonlyEventInterface> lockEvents = new HashMap<>();
     private final Map<Pair<Long,Long>, Pair<ReadonlyEventInterface, ReadonlyEventInterface>> eventEdges = new HashMap<>();
-    private final Map<Long, Set<Long>> lockSet = new HashMap<>();
+    private final Map<Integer, Set<Long>> lockSet = new HashMap<>();
     private final SignatureProcessor signatureProcessor;
 
     public LockGraph(Configuration config, Metadata metadata) {
@@ -48,11 +48,10 @@ public class LockGraph {
      *
      * @param event  a lock/unlock event
      */
-    public void handle(ReadonlyEventInterface event) {
+    public void handle(ReadonlyEventInterface event, int ttid) {
         assert event.isPreLock() || event.isLock() || event.isUnlock();
         long lockId = event.getLockId();
-        long tid = event.getThreadId();
-        Set<Long> locks = lockSet.get(tid);
+        Set<Long> locks = lockSet.get(ttid);
         if (event.isUnlock()) {
             if (locks == null) {
                 reportUnlockOfUnlockedMutex(event);
@@ -65,7 +64,7 @@ public class LockGraph {
         lockEvents.put(lockId, event);
         if (locks == null) {
             locks = new HashSet<>();
-            lockSet.put(tid, locks);
+            lockSet.put(ttid, locks);
         } else {
             if (locks.contains(lockId)) return; // TODO(TraianSF): handle recursive locking
             locks.forEach(lock -> addEdge(lock, lockId));

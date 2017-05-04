@@ -100,7 +100,7 @@ public class Race {
 
     @Override
     public String toString() {
-        int addr = Math.min(0, e1.getFieldIdOrArrayIndex()); // collapse all array indices to 0
+        int addr = Math.min(0, e1.getDataAddress().getFieldIdOrArrayIndex()); // collapse all array indices to 0
         int loc1 = Math.min(e1.getLocationId(), e2.getLocationId());
         int loc2 = Math.max(e1.getLocationId(), e2.getLocationId());
         return "Race(" + addr + "," + loc1 + "," + loc2 + ")";
@@ -108,18 +108,18 @@ public class Race {
 
     public String getRaceLocationSig() {
         if(config.isLLVMPrediction()) {
-            int idx = e1.getObjectHashCode();
+            int idx = e1.getDataAddress().getObjectHashCode();
             if(idx != 0) {
                 String sig = trace.metadata().getVariableSig(idx).replace("/", ".");
                 return "@" + sig;
             } else {
-                return "#" + e1.getFieldIdOrArrayIndex();
+                return "#" + e1.getDataAddress().getFieldIdOrArrayIndex();
             }
         } else {
-            int idx = e1.getFieldIdOrArrayIndex();
+            int idx = e1.getDataAddress().getFieldIdOrArrayIndex();
             if (idx < 0) {
                 String sig = trace.metadata().getVariableSig(-idx).replace("/", ".");
-                int object = e1.getObjectHashCode();
+                int object = e1.getDataAddress().getObjectHashCode();
                 return object == 0 ? "@" + sig : sig;
             }
             return "#" + idx;
@@ -160,13 +160,25 @@ public class Race {
 
     private boolean generateMemAccReport(ReadonlyEventInterface e, StringBuilder sb) {
         int stackSize = 0;
-        long tid = e.getThreadId();
+        long otid = e.getOriginalThreadId();
+        long sid = e.getSignalNumber();
         Metadata metadata = trace.metadata();
         List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
-        sb.append(String.format("    Concurrent %s in thread T%s (locks held: {%s})%n",
-                e.isWrite() ? "write" : "read",
-                tid,
-                getHeldLocksReport(heldLocks)));
+        if (e.getSignalDepth() == 0) {
+            sb.append(String.format("    Concurrent %s in thread T%s signal S%s (locks held: {%s})%n",
+                    e.isWrite() ? "write" : "read",
+                    otid,
+                    sid,
+                    getHeldLocksReport(heldLocks)));
+        } else {
+            // TODO(virgil): The signal number is not enough to identify what is happening, one also needs
+            // the signal handler or something similar.
+            sb.append(String.format("    Concurrent %s in thread T%s signal S%s (locks held: {%s})%n",
+                    e.isWrite() ? "write" : "read",
+                    otid,
+                    sid,
+                    getHeldLocksReport(heldLocks)));
+        }
         boolean isTopmostStack = true;
         List<ReadonlyEventInterface> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
         stacktrace.addAll(heldLocks);
@@ -192,10 +204,10 @@ public class Race {
             }
         }
 
-        long parentTID = metadata.getParentTID(tid);
-        if (parentTID > 0) {
-            int locId = metadata.getThreadCreationLocId(tid);
-            sb.append(String.format("    T%s is created by T%s%n", tid, parentTID));
+        long parentOTID = metadata.getParentOTID(otid);
+        if (parentOTID > 0) {
+            int locId = metadata.getOriginalThreadCreationLocId(otid);
+            sb.append(String.format("    T%s is created by T%s%n", otid, parentOTID));
             if (locId >= 0) {
                 String locationSig = metadata.getLocationSig(locId);
                 signatureProcessor.process(locationSig);
@@ -204,10 +216,10 @@ public class Race {
                 sb.append("        at unknown location%n");
             }
         } else {
-            if (tid == 1) {
-                sb.append(String.format("    T%s is the main thread%n", tid));
+            if (otid == 1) {
+                sb.append(String.format("    T%s is the main thread%n", otid));
             } else {
-                sb.append(String.format("    T%s is created by n/a%n", tid));
+                sb.append(String.format("    T%s is created by n/a%n", otid));
             }
         }
         return stackSize>0;

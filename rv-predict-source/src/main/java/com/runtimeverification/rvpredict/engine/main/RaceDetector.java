@@ -75,11 +75,13 @@ public class RaceDetector implements Constants {
             trace.eventsByThreadID().forEach((tid2, events2) -> {
                 if (tid1 < tid2) {
                     events1.forEach(e1 -> {
+                        long addressForVolatileCheck =
+                                e1.isReadOrWrite() ? e1.getDataAddress().getDataAddressOr0() : 0;
                         events2.forEach(e2 -> {
                             if ((e1.isWrite() && e2.isReadOrWrite() ||
                                     e1.isReadOrWrite() && e2.isWrite())
-                                    && e1.getDataAddress() == e2.getDataAddress()
-                                    && !trace.metadata().isVolatile(e1.getDataAddress())
+                                    && e1.getDataAddress().equals(e2.getDataAddress())
+                                    && !trace.metadata().isVolatile(addressForVolatileCheck)
                                     && !isThreadSafeLocation(trace, e1.getLocationId())
                                     && !trace.isInsideClassInitializer(e1)
                                     && !trace.isInsideClassInitializer(e2)) {
@@ -151,7 +153,7 @@ public class RaceDetector implements Constants {
         }
     }
 
-    public Context getZ3Context() {
+    public static Context getZ3Context() {
         String z3LibDir = System.getProperty("java.io.tmpdir");
         extractZ3Library(z3LibDir);
         Context context = null;
@@ -183,7 +185,7 @@ public class RaceDetector implements Constants {
         return context;
     }
 
-    private void extractZ3Library(String logDir) {
+    private static void extractZ3Library(String logDir) {
         String z3LibraryName = getNativeLibraryName();
         Path z3LibraryTarget = Paths.get(logDir, z3LibraryName);
         if (Files.exists(z3LibraryTarget)) return;
@@ -191,7 +193,7 @@ public class RaceDetector implements Constants {
         try {
             Path z3LibraryTempPath = Files.createTempFile(z3LibraryTarget.getParent(), "rvpredict-z3-", ".library");
             File z3LibraryTempFile = z3LibraryTempPath.toFile();
-            InputStream in = getClass().getResourceAsStream(z3LibraryPath);
+            InputStream in = RaceDetector.class.getResourceAsStream(z3LibraryPath);
             BufferedInputStream reader = new BufferedInputStream(in);
             byte[] buffer = new byte[8192];
             int read;

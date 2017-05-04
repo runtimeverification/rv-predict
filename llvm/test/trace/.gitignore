@@ -1,0 +1,4 @@
+*.d
+.depend
+mask
+*.o

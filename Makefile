@@ -1,3 +1,3 @@
-SUBDIR=llvm maven ouat
+SUBDIR=scripts .WAIT llvm maven ouat
 
 .include <mkc.subdir.mk>

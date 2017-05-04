@@ -192,11 +192,13 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
         try {
             List<RawTrace> rawTraces = new ArrayList<>();
-            activeBuffers.forEach(b -> {
+            int currentThreadId = 0;
+            for (Buffer b : activeBuffers) {
                 if (!b.isEmpty()) {
-                    rawTraces.add(new RawTrace(b.start, b.cursor, b.events, 0));
+                    rawTraces.add(new RawTrace(b.start, b.cursor, b.events, 0, currentThreadId));
+                    currentThreadId++;
                 }
-            });
+            };
             if (rawTraces.size() == 1) {
                 crntState.fastProcess(rawTraces.iterator().next());
             } else {
@@ -297,7 +299,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             events = new Event[length];
             for (int i = 0; i < length; i++) {
                 events[i] = new Event();
-                events[i].setThreadId(tid);
+                events[i].setOriginalThreadId(tid);
             }
         }
 

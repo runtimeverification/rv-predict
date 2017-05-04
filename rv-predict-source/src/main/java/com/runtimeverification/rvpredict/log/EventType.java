@@ -110,4 +110,8 @@ public enum EventType {
     public boolean isMetaType() {
         return CLINIT_ENTER.ordinal() <= this.ordinal() && this.ordinal() <= FINISH_METHOD.ordinal();
     }
+
+    public boolean isSignalType() {
+        return ESTABLISH_SIGNAL.ordinal() <= this.ordinal() && this.ordinal() <= EXIT_SIGNAL.ordinal();
+    }
 }

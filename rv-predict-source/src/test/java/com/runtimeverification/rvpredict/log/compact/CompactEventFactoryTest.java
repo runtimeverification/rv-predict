@@ -41,13 +41,13 @@ public class CompactEventFactoryTest {
     private static final CompactEventMethod<Long> GET_ID =
             new CompactEventMethod<>(ALL_METHODS, "getEventId", CompactEvent::getEventId);
     private static final CompactEventMethod<Long> GET_THREAD_ID =
-            new CompactEventMethod<>(ALL_METHODS, "getThreadId", CompactEvent::getThreadId);
+            new CompactEventMethod<>(ALL_METHODS, "getOriginalThreadId", CompactEvent::getOriginalThreadId);
     private static final CompactEventMethod<EventType> GET_COMPACT_TYPE =
             new CompactEventMethod<>(ALL_METHODS, "getType", CompactEvent::getType);
     private static final CompactEventMethod<Integer> GET_DATA_SIZE_IN_BYTES =
             new CompactEventMethod<>(ALL_METHODS, "getDataSizeInBytes", CompactEvent::getDataSizeInBytes);
     private static final CompactEventMethod<Long> GET_DATA_ADDRESS =
-            new CompactEventMethod<>(ALL_METHODS, "getAddress", CompactEvent::getDataAddress);
+            new CompactEventMethod<>(ALL_METHODS, "getLongAddress", CompactEvent::getLongAddress);
     private static final CompactEventMethod<Long> GET_DATA_VALUE =
             new CompactEventMethod<>(ALL_METHODS, "getDataValue", CompactEvent::getDataValue);
     private static final CompactEventMethod<Long> GET_LOCK_ADDRESS =
@@ -419,7 +419,8 @@ public class CompactEventFactoryTest {
         List<ReadonlyEventInterface> events = eventFactory.enterSignal(
                 mockContext,
                 GENERATION,
-                SIGNAL_NUMBER);
+                SIGNAL_NUMBER,
+                SIGNAL_HANDLER);
 
         Assert.assertEquals(1, events.size());
         ReadonlyEventInterface event = events.get(0);

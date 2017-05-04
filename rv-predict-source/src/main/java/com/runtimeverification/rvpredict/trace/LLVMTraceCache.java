@@ -72,7 +72,7 @@ public class LLVMTraceCache extends TraceCache {
 
             @Override
             public void log(Object[] args) {
-                metadata.addThreadCreationInfo((long)args[0], (long)args[1], (int)args[2]);
+                metadata.addOriginalThreadCreationInfo((long)args[0], (long)args[1], (int)args[2]);
 
             }
         }, new BinaryReader() {

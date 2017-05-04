@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 public class SignalEnterReaderTest {
     private static final long GENERATION = 1234567890123456L;
     private static final int SIGNAL_NUMBER = 12345;
+    private static final long SIGNAL_HANDLER = 12346L;
 
     @Mock private CompactEvent mockCompactEvent;
     @Mock private Context mockContext;
@@ -51,10 +52,11 @@ public class SignalEnterReaderTest {
     public void readsData() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(2);
-        when(mockCompactEventFactory.enterSignal(mockContext, GENERATION, SIGNAL_NUMBER))
+        when(mockCompactEventFactory.enterSignal(mockContext, GENERATION, SIGNAL_NUMBER, SIGNAL_HANDLER))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
-        ByteBuffer buffer = ByteBuffer.allocate(24).putLong(GENERATION).putInt(SIGNAL_NUMBER).putLong(Long.MAX_VALUE);
+        ByteBuffer buffer = ByteBuffer.allocate(32)
+                .putLong(GENERATION).putInt(SIGNAL_NUMBER).putLong(SIGNAL_HANDLER).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
         CompactEventReader.Reader reader = SignalEnterReader.createReader();

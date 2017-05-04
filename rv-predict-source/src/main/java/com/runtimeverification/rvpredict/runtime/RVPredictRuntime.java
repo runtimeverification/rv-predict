@@ -324,7 +324,7 @@ public final class RVPredictRuntime implements Constants {
     public static void rvPredictStart0(Thread thread, int locId) {
         locId = metadata.getLocationId(new Throwable().getStackTrace()[2].toString());
         saveThreadSyncEvent(EventType.START_THREAD, locId, thread.getId());
-        metadata.addThreadCreationInfo(thread.getId(), Thread.currentThread().getId(), locId);
+        metadata.addOriginalThreadCreationInfo(thread.getId(), Thread.currentThread().getId(), locId);
         try {
             THREAD_START0.invoke(thread);
         } catch (Throwable e) {

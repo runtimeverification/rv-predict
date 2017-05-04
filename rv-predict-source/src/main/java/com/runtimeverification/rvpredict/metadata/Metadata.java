@@ -1,21 +1,19 @@
 package com.runtimeverification.rvpredict.metadata;
 
+import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.LZ4Utils;
+import org.apache.commons.lang3.tuple.Pair;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.log.LZ4Utils;
-import org.apache.commons.lang3.tuple.Pair;
 
 @SuppressWarnings("serial")
 public class Metadata implements Serializable {
@@ -40,7 +38,7 @@ public class Metadata implements Serializable {
     private final Set<Integer> volatileVarIds = Collections
             .newSetFromMap(new ConcurrentHashMap<>());
 
-    private final Map<Long, Pair<Long, Integer>> tidToCreationInfo = new ConcurrentHashMap<>();
+    private final Map<Long, Pair<Long, Integer>> otidToCreationInfo = new ConcurrentHashMap<>();
 
     private static final Metadata instance = new Metadata();
 
@@ -120,17 +118,17 @@ public class Metadata implements Serializable {
         return varId < 0 && volatileVarIds.contains(-varId);
     }
 
-    public void addThreadCreationInfo(long childTID, long parentTID, int locId) {
-        tidToCreationInfo.put(childTID, Pair.of(parentTID, locId));
+    public void addOriginalThreadCreationInfo(long childOTID, long parentOTID, int locId) {
+        otidToCreationInfo.put(childOTID, Pair.of(parentOTID, locId));
     }
 
-    public long getParentTID(long tid) {
-        Pair<Long, Integer> info = tidToCreationInfo.get(tid);
+    public long getParentOTID(long otid) {
+        Pair<Long, Integer> info = otidToCreationInfo.get(otid);
         return info == null ? 0 : info.getLeft();
     }
 
-    public int getThreadCreationLocId(long tid) {
-        Pair<Long, Integer> info = tidToCreationInfo.get(tid);
+    public int getOriginalThreadCreationLocId(long otid) {
+        Pair<Long, Integer> info = otidToCreationInfo.get(otid);
         return info == null ? -1 : info.getRight();
     }
 

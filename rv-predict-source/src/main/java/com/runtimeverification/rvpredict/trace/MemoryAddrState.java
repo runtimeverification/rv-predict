@@ -6,19 +6,18 @@ public class MemoryAddrState {
     private long reader1, reader2;
     private long writer1, writer2;
 
-    public void touch(ReadonlyEventInterface event) {
-        long tid = event.getThreadId();
+    public void touch(ReadonlyEventInterface event, long ttid) {
         if (event.isRead()) {
             if (reader1 == 0) {
-                reader1 = tid;
-            } else if (reader1 != tid && reader2 == 0) {
-                reader2 = tid;
+                reader1 = ttid;
+            } else if (reader1 != ttid && reader2 == 0) {
+                reader2 = ttid;
             }
         } else {
             if (writer1 == 0) {
-                writer1 = tid;
-            } else if (writer1 != tid && writer2 == 0) {
-                writer2 = tid;
+                writer1 = ttid;
+            } else if (writer1 != ttid && writer2 == 0) {
+                writer2 = ttid;
             }
         }
     }

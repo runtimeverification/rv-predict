@@ -1,7 +1,9 @@
 package com.runtimeverification.rvpredict.trace;
 
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.util.Constants;
 
 /**
  * Unprocessed trace of events, implemented as a thin wrapper around the array
@@ -11,7 +13,7 @@ import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
  */
 public class RawTrace {
 
-    private final long tid;
+    private final ThreadInfo threadInfo;
 
     private final int signalDepth;
 
@@ -23,8 +25,26 @@ public class RawTrace {
 
     private final ReadonlyEventInterface[] events;
 
-    public RawTrace(int start, int end, ReadonlyEventInterface[] events, int signalDepth) {
-        this.tid = events[start].getThreadId();
+    public RawTrace(int start, int end, ReadonlyEventInterface[] events, int signalDepth, int threadId) {
+        long signalNumber = com.runtimeverification.rvpredict.util.Constants.INVALID_SIGNAL;
+        if (signalDepth != 0) {
+            for (int i = start; i < end; i++) {
+                ReadonlyEventInterface event = events[i];
+                if (event.getType() == EventType.ENTER_SIGNAL) {
+                    signalNumber = event.getSignalNumber();
+                    break;
+                }
+            }
+        }
+        long originalThreadId = Constants.INVALID_THREAD_ID;
+        if (start < end) {
+            originalThreadId = events[start].getOriginalThreadId();
+        }
+        this.threadInfo = new ThreadInfo(
+                signalDepth == 0 ? ThreadType.THREAD : ThreadType.SIGNAL,
+                threadId,
+                originalThreadId,
+                signalNumber);
         this.signalDepth = signalDepth;
         this.start = start;
         this.mask = events.length - 1;
@@ -33,10 +53,6 @@ public class RawTrace {
         if ((events.length & mask) != 0) {
             throw new IllegalArgumentException("The length of events must be a power of two!");
         }
-    }
-
-    public long getTID() {
-        return tid;
     }
 
     public int getSignalDepth() {
@@ -65,4 +81,7 @@ public class RawTrace {
         return events[getIndex(n)];
     }
 
+    public ThreadInfo getThreadInfo() {
+        return threadInfo;
+    }
 }

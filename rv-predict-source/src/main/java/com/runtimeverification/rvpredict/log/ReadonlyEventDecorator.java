@@ -13,13 +13,28 @@ public class ReadonlyEventDecorator implements ReadonlyEventInterface {
     }
 
     @Override
-    public long getThreadId() {
-        return event.getThreadId();
+    public long getOriginalThreadId() {
+        return event.getOriginalThreadId();
     }
 
     @Override
     public int getSignalDepth() {
         return event.getSignalDepth();
+    }
+
+    @Override
+    public long getSignalNumber() {
+        return event.getSignalNumber();
+    }
+
+    @Override
+    public long getPartialSignalMask() {
+        return event.getPartialSignalMask();
+    }
+
+    @Override
+    public long getFullWriteSignalMask() {
+        return event.getFullWriteSignalMask();
     }
 
     @Override
@@ -38,7 +53,7 @@ public class ReadonlyEventDecorator implements ReadonlyEventInterface {
     }
 
     @Override
-    public long getDataAddress() {
+    public DataAddress getDataAddress() {
         return event.getDataAddress();
     }
 
@@ -53,7 +68,7 @@ public class ReadonlyEventDecorator implements ReadonlyEventInterface {
     }
 
     @Override
-    public long unsafeGetAddress() {
+    public DataAddress unsafeGetAddress() {
         return event.unsafeGetAddress();
     }
 
@@ -183,13 +198,8 @@ public class ReadonlyEventDecorator implements ReadonlyEventInterface {
     }
 
     @Override
-    public int getObjectHashCode() {
-        return event.getObjectHashCode();
-    }
-
-    @Override
-    public int getFieldIdOrArrayIndex() {
-        return event.getFieldIdOrArrayIndex();
+    public boolean isSignalEvent() {
+        return event.isSignalEvent();
     }
 
     @Override

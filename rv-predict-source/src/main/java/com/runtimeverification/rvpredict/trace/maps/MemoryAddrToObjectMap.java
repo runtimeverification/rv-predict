@@ -1,8 +1,9 @@
 package com.runtimeverification.rvpredict.trace.maps;
 
+import java.util.HashMap;
 import java.util.function.Supplier;
 
-import com.runtimeverification.rvpredict.trace.LongToObjectMap;
+import com.runtimeverification.rvpredict.log.DataAddress;
 
 /**
  * Map from long value that represents memory address to Object.
@@ -11,24 +12,28 @@ import com.runtimeverification.rvpredict.trace.LongToObjectMap;
  *
  * @param <T>
  */
-public class MemoryAddrToObjectMap<T> extends LongToObjectMap<T> {
+// TODO(virgil): This used to extend a LongToObjectMap<T>. I should profile it to see if I need a custom implementation.
+public class MemoryAddrToObjectMap<T> extends HashMap<DataAddress, T> {
+    private final Supplier<T> newValue;
 
-    public MemoryAddrToObjectMap(int expected, Supplier<T> newValue) {
-        super(expected, newValue);
+    MemoryAddrToObjectMap(int expected, Supplier<T> newValue) {
+        super(expected);
+        this.newValue = newValue;
     }
 
     public MemoryAddrToObjectMap(int expected) {
-        super(expected, null);
+        super(expected);
+        this.newValue = null;
     }
 
-    /**
-     * The high 32 bit value that obtains from {@code System.identityHashCode}
-     * is already random. The bitwise {@code xor} operation is then used to
-     * scatter the likely consecutive low 32 bit value.
-     */
-    @Override
-    protected final int hash(long key) {
-        return ((int) (key >> 32) ^ (int) key) & mask;
+    public final T computeIfAbsent(DataAddress key) {
+        return computeIfAbsent(key, k -> newValue());
     }
 
+    protected T newValue() {
+        if (newValue == null) {
+            throw new UnsupportedOperationException("No supplier function available!");
+        }
+        return newValue.get();
+    }
 }

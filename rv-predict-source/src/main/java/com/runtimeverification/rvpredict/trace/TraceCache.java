@@ -170,7 +170,7 @@ public class TraceCache {
             List<RawTrace> rawTraces, ArrayList<ReadonlyEventInterface> events, int eventCount) {
         int tidStart = 0;
         events.sort((l, r) -> {
-            long lt = l.getThreadId(), rt = r.getThreadId();
+            long lt = l.getOriginalThreadId(), rt = r.getOriginalThreadId();
             if (lt < rt)
                 return -1;
             if (lt > rt)
@@ -187,32 +187,34 @@ public class TraceCache {
                 return 1;
             return 0;
         });
-        long prevTID = events.get(0).getThreadId();
+        long prevOTID = events.get(0).getOriginalThreadId();
         int prevSignalDepth = events.get(0).getSignalDepth();
+        int currentTraceThreadId = 1;
 
         for (int i = 1; i < eventCount; i++) {
             ReadonlyEventInterface event = events.get(i);
-            if (event.getThreadId() == prevTID
+            if (event.getOriginalThreadId() == prevOTID
                     && event.getSignalDepth() == prevSignalDepth
                     && (event.getType() != EventType.ENTER_SIGNAL || tidStart == i-1)) {
                 continue;
             }
 
-            rawTraces.add(tidSpanToRawTrace(events, tidStart, i, prevSignalDepth));
-            prevTID = event.getThreadId();
+            rawTraces.add(tidSpanToRawTrace(events, tidStart, i, prevSignalDepth, currentTraceThreadId));
+            currentTraceThreadId++;
+            prevOTID = event.getOriginalThreadId();
             prevSignalDepth = event.getSignalDepth();
             tidStart = i;
         }
 
-        rawTraces.add(tidSpanToRawTrace(events, tidStart, eventCount, prevSignalDepth));
+        rawTraces.add(tidSpanToRawTrace(events, tidStart, eventCount, prevSignalDepth, currentTraceThreadId));
     }
 
     private static RawTrace tidSpanToRawTrace(List<? extends ReadonlyEventInterface> events,
-	    int tidStart, int tidEnd, int signalDepth) {
+	    int tidStart, int tidEnd, int signalDepth, int threadId) {
 	List<? extends ReadonlyEventInterface> tidEvents = events.subList(tidStart, tidEnd);
 	int n = tidEvents.size(), length = getNextPowerOfTwo(n);
 	tidEvents.sort(ReadonlyEventInterface::compareTo);
-	return new RawTrace(0, n, tidEvents.toArray(new ReadonlyEventInterface[length]), signalDepth);
+	return new RawTrace(0, n, tidEvents.toArray(new ReadonlyEventInterface[length]), signalDepth, threadId);
     }
     public Trace getTraceWindow() throws IOException {
         List<RawTrace> rawTraces = readEventWindow();

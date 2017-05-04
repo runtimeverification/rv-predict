@@ -2,15 +2,18 @@ package com.runtimeverification.rvpredict.log;
 
 public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterface> {
     long getEventId();
-    long getThreadId();
+    long getOriginalThreadId();
     int getSignalDepth();
+    long getSignalNumber();
     int getLocationId();
     long getDataValue();
+    DataAddress getDataAddress();
     EventType getType();
-    long getDataAddress();
     long getSyncObject();
     long getSyncedThreadId();
-    long unsafeGetAddress();
+    long getPartialSignalMask();
+    long getFullWriteSignalMask();
+    DataAddress unsafeGetAddress();
     long unsafeGetDataValue();
 
     String getLockRepresentation();
@@ -59,8 +62,7 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     boolean isMetaEvent();
     boolean isCallStackEvent();
     boolean isInvokeMethod();
-    int getObjectHashCode();
-    int getFieldIdOrArrayIndex();
+    boolean isSignalEvent();
     long getLockId();
     boolean isSimilarTo(ReadonlyEventInterface event);
 }

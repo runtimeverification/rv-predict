@@ -88,7 +88,4 @@ public class RawTrace {
         return events[getIndex(n)];
     }
 
-    public ThreadInfo getThreadInfo() {
-        return threadInfo;
-    }
 }

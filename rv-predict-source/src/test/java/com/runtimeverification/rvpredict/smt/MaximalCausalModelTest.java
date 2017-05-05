@@ -544,7 +544,7 @@ public class MaximalCausalModelTest {
     // reach a racing instruction.
     // TODO: Tests for get, set and getset for signal masks.
     // TODO: Test that threads are not interrupted before being started / after being joined.
-    // TODO: Test that a signal can interrupt an empty thread (i.e. a thread which otherwise has no interactions).s
+    // TODO: Test that a signal can interrupt an empty thread (i.e. a thread which otherwise has no interactions).
     // TODO: Test for disestablishSignal
     // TODO: Test for signals using the same lock as the interrupted thread.
 

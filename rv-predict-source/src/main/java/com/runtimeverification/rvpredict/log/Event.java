@@ -73,7 +73,6 @@ public class Event extends ReadonlyEvent {
 
     @Override
     public int getSignalDepth() {
-        assert false;
         return 0;
     }
 

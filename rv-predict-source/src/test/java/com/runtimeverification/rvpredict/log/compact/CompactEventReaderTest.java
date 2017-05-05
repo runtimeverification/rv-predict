@@ -35,7 +35,7 @@ public class CompactEventReaderTest {
                 5, 0, 0, 0,  // Thread id.
         }));
         IEventReader reader = new CompactEventReader(inputStream);
-        ReadonlyEventInterface event = reader.readEvent();
+        ReadonlyEventInterface event = reader.lastReadEvent();
         Assert.assertEquals(5, event.getOriginalThreadId());
         Assert.assertEquals(EventType.BEGIN_THREAD, event.getType());
         Assert.assertEquals(Constants.INVALID_PROGRAM_COUNTER, event.getLocationId());
@@ -110,7 +110,7 @@ public class CompactEventReaderTest {
                 2, 0, 0, 0,  // Value = 2.
         }));
         IEventReader reader = new CompactEventReader(inputStream);
-        ReadonlyEventInterface event = reader.readEvent();
+        ReadonlyEventInterface event = reader.lastReadEvent();
         Assert.assertEquals(5, event.getOriginalThreadId());
         Assert.assertEquals(EventType.BEGIN_THREAD, event.getType());
         Assert.assertEquals(Constants.INVALID_PROGRAM_COUNTER, event.getLocationId());
@@ -147,7 +147,7 @@ public class CompactEventReaderTest {
                 DELTA_1_LOAD1[0], DELTA_1_LOAD1[1], DELTA_1_LOAD1[2],
         }));
         IEventReader reader = new CompactEventReader(inputStream);
-        ReadonlyEventInterface event = reader.readEvent();
+        ReadonlyEventInterface event = reader.lastReadEvent();
         Assert.assertEquals(5, event.getOriginalThreadId());
         Assert.assertEquals(EventType.BEGIN_THREAD, event.getType());
 
@@ -188,7 +188,7 @@ public class CompactEventReaderTest {
                 2, 0, 0, 0,  // Value = 2.
         }));
         IEventReader reader = new CompactEventReader(inputStream);
-        ReadonlyEventInterface event = reader.readEvent();
+        ReadonlyEventInterface event = reader.lastReadEvent();
         Assert.assertEquals(5, event.getOriginalThreadId());
         Assert.assertEquals(EventType.BEGIN_THREAD, event.getType());
         Assert.assertEquals(Constants.INVALID_PROGRAM_COUNTER, event.getLocationId());

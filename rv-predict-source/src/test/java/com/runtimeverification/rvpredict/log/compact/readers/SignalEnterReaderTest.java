@@ -33,30 +33,30 @@ public class SignalEnterReaderTest {
     @Test
     public void computesTheCorrectSizeDataSize_UsesDefaultDataSize4Bytes() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
-        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(2);
+        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
         CompactEventReader.Reader reader = SignalEnterReader.createReader();
-        Assert.assertEquals(12, reader.size(mockTraceHeader));
+        Assert.assertEquals(20, reader.size(mockTraceHeader));
     }
 
     @Test
     public void computesTheCorrectSizeDataSize_UsesDefaultDataSize8Bytes() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(8);
-        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(2);
+        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
         CompactEventReader.Reader reader = SignalEnterReader.createReader();
-        Assert.assertEquals(16, reader.size(mockTraceHeader));
+        Assert.assertEquals(24, reader.size(mockTraceHeader));
     }
 
     @Test
     public void readsData() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
-        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(2);
+        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
         when(mockCompactEventFactory.enterSignal(mockContext, GENERATION, SIGNAL_NUMBER, SIGNAL_HANDLER))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
         ByteBuffer buffer = ByteBuffer.allocate(32)
-                .putLong(GENERATION).putInt(SIGNAL_NUMBER).putLong(SIGNAL_HANDLER).putLong(Long.MAX_VALUE);
+                .putLong(SIGNAL_HANDLER).putLong(GENERATION).putInt(SIGNAL_NUMBER).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
         CompactEventReader.Reader reader = SignalEnterReader.createReader();

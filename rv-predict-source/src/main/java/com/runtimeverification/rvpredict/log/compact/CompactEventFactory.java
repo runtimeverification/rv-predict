@@ -242,6 +242,7 @@ public class CompactEventFactory {
                         context, CompactEventReader.LockManipulationType.LOCK,
                         com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL),
                 new CompactEvent(context, EventType.ENTER_SIGNAL) {
+                    @Override
                     public long getSignalNumber() {
                         return signalNumber;
                     }

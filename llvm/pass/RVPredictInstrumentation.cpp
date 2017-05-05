@@ -211,22 +211,27 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 		 * void __rvpredict_unaligned_load{m}(uint{n}_t *addr,
 		 *     uint{n}_t val);
 		 *
-		 * void __rvpredict_atomic_store{m}(uint{n}_t *addr,
+		 * void __rvpredict_atomic_store{m}(
+		 *     volatile _Atomic uint{n}_t *addr,
 		 *     uint{n}_t val, int32_t memory_order);
 		 *
-		 * void __rvpredict_atomic_load{m}(uint{n}_t *addr,
+		 * void __rvpredict_atomic_load{m}(
+		 *     volatile _Atomic uint{n}_t *addr,
 		 *     uint{n}_t val, int32_t memory_order);
 		 *
-		 * uint{n}_t __rvpredict_atomic_cas{m}(uint{n}_t *addr,
+		 * uint{n}_t __rvpredict_atomic_cas{m}(
+		 *     volatile _Atomic uint{n}_t *addr,
 		 *     uint{n}_t expected, uint{n}_t desired,
 		 *     int32_t memory_order_success,
 		 *     int32_t memory_order_failure);
 		 *
-		 * uint{n}_t __rvpredict_atomic_exchange{m}(uint{n}_t *addr,
+		 * uint{n}_t __rvpredict_atomic_exchange{m}(
+		 *     volatile _Atomic uint{n}_t *addr,
 		 *     uint{n}_t val, int32_t memory_order);
 		 *
 		 * void __rvpredict_atomic_fetch_{add,
-		 *     sub, and, or, xor, nand}{m}(uint{n}_t *addr,
+		 *     sub, and, or, xor, nand}{m}(
+		 *     volatile _Atomic uint{n}_t *addr,
 		 *     uint{n}_t oval, uint{n}_t arg, int32_t memory_order);
 		 */
 		SmallString<32> load_name("__rvpredict_load" + byte_size_str);

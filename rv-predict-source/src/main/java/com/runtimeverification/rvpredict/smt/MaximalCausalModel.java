@@ -33,7 +33,6 @@ import com.microsoft.z3.Model;
 import com.microsoft.z3.Solver;
 import com.microsoft.z3.Status;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.signals.Signals;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
@@ -98,18 +97,22 @@ public class MaximalCausalModel {
 
     private final com.microsoft.z3.Solver solver;
 
-    public static MaximalCausalModel create(Trace trace, Z3Filter z3filter, Solver solver) {
-        MaximalCausalModel model = new MaximalCausalModel(trace, z3filter, solver);
+    private final boolean detectInterruptedThreadRace;
+
+    public static MaximalCausalModel create(
+            Trace trace, Z3Filter z3filter, Solver solver, boolean detectInterruptedThreadRace) {
+        MaximalCausalModel model = new MaximalCausalModel(trace, z3filter, solver, detectInterruptedThreadRace);
         model.addPhiMHB();
         model.addPhiLock();
         model.addSignalInterruptsRestricts();
         return model;
     }
 
-    private MaximalCausalModel(Trace trace, Z3Filter z3filter, Solver solver) {
+    private MaximalCausalModel(Trace trace, Z3Filter z3filter, Solver solver, boolean detectInterruptedThreadRace) {
         this.trace = trace;
         this.z3filter = z3filter;
         this.solver = solver;
+        this.detectInterruptedThreadRace = detectInterruptedThreadRace;
     }
 
     private BoolFormula HB(ReadonlyEventInterface event1, ReadonlyEventInterface event2) {
@@ -277,27 +280,20 @@ public class MaximalCausalModel {
                                 boolean enabled = otidWhereEnabledAtStart.contains(entryOtid);
                                 if (events.isEmpty() && enabled) {
                                     // TODO: The signal can simply interrupt this thread. I should add its start/join
-                                    // constraints.
+                                    // constraints. I can probably add them directly to the top AND.
                                     or.add(BooleanConstant.TRUE);
                                     return;
                                 }
-                                if (enabled) {
-                                    // TODO: I should also add a restrict with this thread's start.
-                                    or.add(HB(lastEvent, events.get(0)));
-                                }
-                                enabled = Signals.updateEnabledWithEvent(enabled, signalNumber, events.get(0));
-                                for (int i = 1; i < events.size(); i++) {
-                                    ReadonlyEventInterface event = events.get(i);
-                                    if (enabled) {
-                                        or.add(AND(
-                                                HB(events.get(i - 1), firstEvent),
-                                                HB(lastEvent, event)));
-                                    }
-                                    enabled = Signals.updateEnabledWithEvent(enabled, signalNumber, event);
-                                }
-                                if (enabled) {
-                                    // TODO: I should also add a restrict with this thread's join.
-                                    or.add(HB(events.get(events.size() - 1), firstEvent));
+                                Signals.EnabledEventsIterator iterator =
+                                        new Signals.EnabledEventsIterator(
+                                                events, detectInterruptedThreadRace, signalNumber, enabled);
+                                while (iterator.advance()) {
+                                    FormulaTerm.Builder threadInterruptionAtPoint = FormulaTerm.andBuilder();
+                                    iterator.getPreviousEvent().ifPresent(
+                                            event -> threadInterruptionAtPoint.add(HB(event, firstEvent)));
+                                    iterator.getCurrentEvent().ifPresent(
+                                            event -> threadInterruptionAtPoint.add(HB(lastEvent, event)));
+                                    or.add(threadInterruptionAtPoint.build());
                                 }
                             });
                     and.add(or.build());
@@ -534,14 +530,14 @@ public class MaximalCausalModel {
     private class EventWithOrder {
         private final ReadonlyEventInterface event;
         private final long orderId;
-        public EventWithOrder(ReadonlyEventInterface event, long orderId) {
+        private EventWithOrder(ReadonlyEventInterface event, long orderId) {
             this.event = event;
             this.orderId = orderId;
         }
-        public ReadonlyEventInterface getEvent() {
+        private ReadonlyEventInterface getEvent() {
             return event;
         }
-        public long getOrderId() {
+        private long getOrderId() {
             return orderId;
         }
         @Override

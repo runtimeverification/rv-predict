@@ -562,14 +562,14 @@ public class MaximalCausalModel {
     private class EventWithOrder {
         private final ReadonlyEventInterface event;
         private final long orderId;
-        private EventWithOrder(ReadonlyEventInterface event, long orderId) {
+        public EventWithOrder(ReadonlyEventInterface event, long orderId) {
             this.event = event;
             this.orderId = orderId;
         }
-        private ReadonlyEventInterface getEvent() {
+        public ReadonlyEventInterface getEvent() {
             return event;
         }
-        private long getOrderId() {
+        public long getOrderId() {
             return orderId;
         }
         @Override
@@ -582,7 +582,7 @@ public class MaximalCausalModel {
      * Checks if the given race suspects are real. Race suspects are grouped by
      * their signatures.
      *
-     * @param sigToRaceSuspects The race suspects to check.
+     * @param sigToRaceSuspects
      * @return a map from race signatures to real race instances
      */
     public Map<String, Race> checkRaceSuspects(Map<String, List<Race>> sigToRaceSuspects) {
@@ -666,10 +666,8 @@ public class MaximalCausalModel {
                 events.sort(Comparator.comparingLong(EventWithOrder::getOrderId)));
 
         System.out.println("Possible ordering of events, per thread ..........");
-        // TODO(virgil): Dump the total order, not the per-thread one.
         threadToExecution.forEach((tid, events) -> {
             ArrayList<String> description = new ArrayList<>();
-            // TODO(virgil): Actually dump the event.
             events.forEach(e -> description.add(e.getEvent().getEventId() + ":" + e.getOrderId()));
             System.out.print("  Thread:" + tid);
             System.out.print(" -> ");

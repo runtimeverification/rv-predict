@@ -539,7 +539,6 @@ public class MaximalCausalModelTest {
     }
 
     // TODO: Tests with writes that enable certain reads, both with and without signals.
-    // TODO: Tests with signals racing with their own thread.
     // TODO: Test that a signals stops their thread, i.e. it does not conflict with its own thread in a complex way,
     // i.e. it does not race with the interruption point, but it enables a subsequent read which allows one to
     // reach a racing instruction.
@@ -547,6 +546,7 @@ public class MaximalCausalModelTest {
     // TODO: Test that threads are not interrupted before being started / after being joined.
     // TODO: Test that a signal can interrupt an empty thread (i.e. a thread which otherwise has no interactions).s
     // TODO: Test for disestablishSignal
+    // TODO: Test for signals using the same lock as the interrupted thread.
 
     private List<ReadonlyEventInterface> enterSignal(
             long signalNumber, long signalHandler, long threadId, int signalDepth) throws InvalidTraceDataException {

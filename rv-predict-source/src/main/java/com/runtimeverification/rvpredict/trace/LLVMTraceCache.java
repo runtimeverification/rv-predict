@@ -105,6 +105,14 @@ public class LLVMTraceCache extends TraceCache {
     @Override
     public void setup() throws IOException {
         readMetadata();
+        if (config.isCompactTrace()) {
+            try {
+                readers.add(new CompactEventReader(config.getCompactTraceFilePath()));
+            } catch (InvalidTraceDataException e) {
+                throw new IOException(e);
+            }
+            return;
+        }
         int logId = 0;
         Path path = config.getTraceFilePath(logId);
         while(path.toFile().exists()) {

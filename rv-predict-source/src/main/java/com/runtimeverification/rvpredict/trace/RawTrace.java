@@ -5,6 +5,8 @@ import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.util.Constants;
 
+import java.util.Arrays;
+
 /**
  * Unprocessed trace of events, implemented as a thin wrapper around the array
  * of events obtained from an {@link ILoggingEngine}.

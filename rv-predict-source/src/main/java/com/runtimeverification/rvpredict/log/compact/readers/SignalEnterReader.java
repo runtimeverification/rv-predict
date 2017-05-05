@@ -31,7 +31,7 @@ public class SignalEnterReader {
             handler = new Address(header);
             generation = new Generation(header);
             signalNumber = new SignalNumber(header);
-            setData(Arrays.asList(generation, signalNumber));
+            setData(Arrays.asList(handler, generation, signalNumber));
         }
     }
 }

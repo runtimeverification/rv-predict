@@ -31,6 +31,7 @@ public class TraceCacheTest {
     private static final long THREAD_ID = 30;
     private static final int NO_SIGNAL = 0;
     private static final int ONE_SIGNAL = 1;
+    private static final long SIGNAL_NUMBER = 40;
 
     @Mock private Configuration mockConfiguration;
     @Mock private TraceState mockTraceState;
@@ -93,7 +94,7 @@ public class TraceCacheTest {
         ReadonlyEventInterface readData2Thread1 =
                 readData(EVENT_ID + 4, LOCATION_ID + 4, THREAD_ID, NO_SIGNAL);
         ReadonlyEventInterface beginSignal =
-                beginSignal(EVENT_ID + 2, LOCATION_ID + 2, THREAD_ID, ONE_SIGNAL);
+                beginSignal(SIGNAL_NUMBER, EVENT_ID + 2, LOCATION_ID + 2, THREAD_ID, ONE_SIGNAL);
         ReadonlyEventInterface readDataSignal =
                 readData(EVENT_ID + 3, LOCATION_ID + 3, THREAD_ID, ONE_SIGNAL);
 
@@ -137,14 +138,14 @@ public class TraceCacheTest {
                 readData(EVENT_ID + 8, LOCATION_ID + 8, THREAD_ID, NO_SIGNAL);
 
         ReadonlyEventInterface beginSignal1 =
-                beginSignal(EVENT_ID + 2, LOCATION_ID + 2, THREAD_ID, ONE_SIGNAL);
+                beginSignal(SIGNAL_NUMBER, EVENT_ID + 2, LOCATION_ID + 2, THREAD_ID, ONE_SIGNAL);
         ReadonlyEventInterface readDataSignal1 =
                 readData(EVENT_ID + 3, LOCATION_ID + 3, THREAD_ID, ONE_SIGNAL);
         ReadonlyEventInterface endSignal1 =
                 endSignal(EVENT_ID + 4, LOCATION_ID + 4, THREAD_ID, ONE_SIGNAL);
 
         ReadonlyEventInterface beginSignal2 =
-                beginSignal(EVENT_ID + 5, LOCATION_ID + 5, THREAD_ID, ONE_SIGNAL);
+                beginSignal(SIGNAL_NUMBER, EVENT_ID + 5, LOCATION_ID + 5, THREAD_ID, ONE_SIGNAL);
         ReadonlyEventInterface readDataSignal2 =
                 readData(EVENT_ID + 6, LOCATION_ID + 6, THREAD_ID, ONE_SIGNAL);
         ReadonlyEventInterface endSignal2 =
@@ -193,8 +194,14 @@ public class TraceCacheTest {
         return new CompactEvent(eventId, locationId, threadId, signalDepth, EventType.EXIT_SIGNAL) {};
     }
 
-    private ReadonlyEventInterface beginSignal(long eventId, long locationId, long threadId, int signalDepth) {
-        return new CompactEvent(eventId, locationId, threadId, signalDepth, EventType.ENTER_SIGNAL) {};
+    private ReadonlyEventInterface beginSignal(
+            long signalNumber, long eventId, long locationId, long threadId, int signalDepth) {
+        return new CompactEvent(eventId, locationId, threadId, signalDepth, EventType.ENTER_SIGNAL) {
+            @Override
+            public long getSignalNumber() {
+                return signalNumber;
+            }
+        };
     }
 
     private ReadonlyEventInterface readData(long eventId, long locationId, long threadId, int signalDepth) {

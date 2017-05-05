@@ -140,7 +140,7 @@ public class Race {
                 locSig = "field " + locSig;
         }
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Data race on %s: {{{%n", locSig));
+        sb.append(String.format("Data race on %s: %n", locSig));
         boolean reportableRace = false;
 
         if (trace.metadata().getLocationSig(e1.getLocationId())
@@ -154,7 +154,7 @@ public class Race {
             reportableRace |= generateMemAccReport(e1, sb);
         }
 
-        sb.append(String.format("}}}%n"));
+        sb.append(String.format("%n"));
         return reportableRace ? signatureProcessor.simplify(sb.toString()) : "";
     }
 
@@ -165,15 +165,14 @@ public class Race {
         Metadata metadata = trace.metadata();
         List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
         if (e.getSignalDepth() == 0) {
-            sb.append(String.format("    Concurrent %s in thread T%s signal S%s (locks held: {%s})%n",
+            sb.append(String.format("    Concurrent %s in thread T%s%s%n",
                     e.isWrite() ? "write" : "read",
                     otid,
-                    sid,
                     getHeldLocksReport(heldLocks)));
         } else {
             // TODO(virgil): The signal number is not enough to identify what is happening, one also needs
             // the signal handler or something similar.
-            sb.append(String.format("    Concurrent %s in thread T%s signal S%s (locks held: {%s})%n",
+            sb.append(String.format("    Concurrent %s in thread T%s signal S%s%s%n",
                     e.isWrite() ? "write" : "read",
                     otid,
                     sid,
@@ -199,7 +198,7 @@ public class Race {
                 sb.append(String.format("        - locked %s at %s %n", elem.getLockRepresentation(),
                         locSig));
             } else {
-                sb.append(String.format(" %s  at %s%n", isTopmostStack ? "---->" : "     ", locSig));
+                sb.append(String.format("      %s at %s%n", isTopmostStack ? ">" : " ", locSig));
                 isTopmostStack = false;
             }
         }
@@ -226,14 +225,15 @@ public class Race {
     }
 
     private String getHeldLocksReport(List<ReadonlyEventInterface> heldLocks) {
+	if (heldLocks.isEmpty())
+		return "";
         StringBuilder sb = new StringBuilder();
-        if (!heldLocks.isEmpty()) {
-            for (int i = 0; i < heldLocks.size(); i++) {
-                if (i > 0) {
-                    sb.append(", ");
-                }
-                sb.append(heldLocks.get(i).getLockRepresentation());
+        sb.append(", locks held: ");
+        for (int i = 0; i < heldLocks.size(); i++) {
+            if (i > 0) {
+                sb.append(", ");
             }
+            sb.append(heldLocks.get(i).getLockRepresentation());
         }
         return sb.toString();
     }

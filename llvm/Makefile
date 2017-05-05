@@ -1,3 +1,3 @@
-SUBDIR=cmade ngrt rvpdump 
+SUBDIR=cmade ngrt rvpdump .WAIT test
 
 .include <mkc.subdir.mk>

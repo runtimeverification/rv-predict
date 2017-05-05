@@ -11,10 +11,12 @@ RV-Predict[C] trace file from files in other formats.  The magic
 consists of the 8-bit ASCII representations for the characters 'R' 'V'
 'P' '_', in that order.
 
-Immediately following the magic is a 32-bit version number.  The initial
-version number is 0.  We will increase it with every incompatible change
-to the file format.  A trace-file reader MUST give up if it reads a
-version number that it does not recognize.
+Immediately following the magic is a 4-byte version number.  The bytes
+provide the major, minor, teeny, and tiny number, in that order.
+The initial version number was 0.0.0.0.  The current version number
+is 0.0.0.1.  We will increase it with every incompatible change to the
+file format.  A trace-file reader MUST give up if it reads a version
+number that it does not recognize.
 
 After the version number is a 32-bit byte-order indication: this is the
 word formed from the 8-bit ASCII representations of the digits 0, 1, 2,
@@ -33,7 +35,7 @@ should suppose that data narrower than the default data width was
 converted to the default data width before it was written to the trace
 file.  That is, if the default data width is 4, then 1- and 2-byte loads
 and stores were "cast" to uint32_t before they were written to the trace
-file.  The reader stores the pointer width in a variable `dataw`.
+file.  The reader stores the data width in a variable `dataw`.
 
 After the default data width there are two bytes that pad the header to
 a whole number of 32-bit words.
@@ -47,8 +49,8 @@ Here is a trace header in code:
   struct _rvp_trace_header {
           char th_magic[4];               // 'R' 'V' 'P' '_'
                                           //
-          uint32_t th_version;            // 0
-                                          //
+          uint8_t th_version[4];         // major minor teeny tiny
+                                          // 0     0     0     1
           uint32_t th_byteorder;          // byte-order indication,
                                           // see discussion
                                           //
@@ -259,7 +261,7 @@ trace ::= (delta, 'load[n]') addr value
                 `new-value` starts on the first `dataw`-byte boundary
                 after `old-value`.  If `n < dataw`, then `old-value`
                 and `new-value` are combined into a single word with
-                `old-value` in bits (dataw * 8 - 1:dataw * 4) and
+                `new-value` in bits (dataw * 8 - 1:dataw * 4) and
                 `old-value` in bits (dataw * 4 - 1:0).  The single
                 `n`-byte word is written in at the first `dataw`-byte
                 boundary after `addr`.  In this way, if `dataw` is 4 and
@@ -322,16 +324,12 @@ trace ::= (delta, 'load[n]') addr value
 		`self.handler[signal-number] <- nil`
                 `self.PC <- self.PC + delta`
 
-	| (delta, 'enter-signal') generation signal-number
+	| (delta, 'enter-signal') handler generation signal-number
 
                 The current thread added `delta` to its program counter,
-                adopted the global generation number `generation`, and
-                entered the signal handler established on `signal-number`.
-
-                XXX I should add the handler's address to this event so
-                XXX that the analysis can avoid producing a model that
-                XXX allows for handler X to be entered while handler Y
-                XXX is established.
+                adopted the global generation number `generation`,
+                and entered the signal handler, `handler` that was
+                established on `signal-number`.
 
                 `self.PC <- self.PC + delta`
 		`self.signal_mask[self.signal_depth] <-
@@ -594,26 +592,35 @@ actually implemented:
 
 4) acquire/release do not come in multiple byte widths.
 
-5) there is no 'branch' event, since the backend doesn't support
-   it
+5) there is no 'branch' event, since the backend doesn't support it
 
 6) events were renumbered
 
-7) 1-, 2-, 4-, 8-, 16-byte atomic read-modify-write events
-   are defined.
+7) 1-, 2-, 4-, 8-, 16-byte atomic read-modify-write events are defined.
 
-8) 1-, 2-, 4-, 8-, 16-byte atomic load and store events are
-   assigned event numbers.
+8) 1-, 2-, 4-, 8-, 16-byte atomic load and store events are assigned
+   event numbers.
 
 9) the change-of-generation ('cog') event is defined
 
-10) 'sig-est', 'enter-signal', 'exit-signal', 'sig-dis', 'sig-mask-memo',
-    'mask-sigs' events, and 'sig-outstanding' events are defined
+10) 'sig-est', 'enter-signal', 'exit-signal', 'sig-dis',
+    'sig-mask-memo', 'mask-sigs' events, and 'sig-outstanding' events
+    are defined
 
 Subsequent changes:
 
 11) Event 'mask-sigs' renamed to 'sig-set-mask', and event
     'sig-outstanding' renamed to 'sig-depth'.
 
-12) 'sig-get-mask', 'sig-get-set-mask', 'sig-block', 'sig-unblock' events
-    are defined.
+12) 'sig-get-mask', 'sig-get-set-mask', 'sig-block', 'sig-unblock'
+    events are defined.
+
+More changes:
+
+13) add to the enter-signal event the address of the signal handler so
+    that the analysis backend can ensure that a signal handler does not
+    run before it is scheduled.
+
+14) change the version number specification: it's 4 bytes, major / minor
+    / teeny / tiny, not a 32-bit word.  Increase the current version
+    number to 0.0.0.1.

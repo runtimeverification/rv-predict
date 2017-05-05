@@ -60,7 +60,7 @@ typedef bool (*dwarf_walk_predicate_t)(Dwarf_Debug, Dwarf_Die);
 typedef struct _dwarf_walk_params {
 	Dwarf_Debug dbg;
 	dwarf_walk_predicate_t predicate;
-	bool have_dataptr, have_frameptr, have_insnptr;
+	bool print_address, have_dataptr, have_frameptr, have_insnptr;
 	uint64_t dataptr, frameptr, insnptr;
 } dwarf_walk_params_t;
 
@@ -71,11 +71,12 @@ typedef struct _dwarf_walk_ctx {
 	Dwarf_Fde *fde_list;
 	Dwarf_Signed nfdes;
 	Dwarf_Signed cfa_offset;
-	bool have_cfa_offset, have_dataptr, have_frameptr, have_insnptr;
+	bool print_address, have_cfa_offset, have_dataptr, have_frameptr,
+	    have_insnptr;
 	int subprogram_stkdepth, cu_stkdepth;
 	strstack_t symstk;
 	strstack_t locstk;
-	int residue;
+	uint64_t residue;
 	uint64_t dataptr, frameptr, insnptr;
 } dwarf_walk_ctx_t;
 
@@ -83,6 +84,7 @@ typedef struct _dwarf_walk {
 	int stack_height;
 	struct {
 		Dwarf_Die die;
+		int strstk_depth;
 	} stack[16];
 	Dwarf_Debug dbg;
 	dwarf_walk_ctx_t ctx;
@@ -90,6 +92,7 @@ typedef struct _dwarf_walk {
 	bool cu_by_cu;	// `true` if this is a CU-by-CU walk at the top of the
 			// debug information; `false` if this is a walk of
 			// some subtree rooted at a DIE
+	int *pushp;
 } dwarf_walk_t;
 
 typedef enum _dwarf_type_kind {
@@ -121,6 +124,7 @@ dwarf_walk_first(dwarf_walk_t *walk, const dwarf_walk_params_t *params)
 	walk->stack_height = 0;
 	walk->dbg = params->dbg;
 	walk->predicate = params->predicate;
+	walk->ctx.print_address = params->print_address;
 	walk->ctx.have_dataptr = params->have_dataptr;
 	walk->ctx.have_frameptr = params->have_frameptr;
 	walk->ctx.have_insnptr = params->have_insnptr;
@@ -164,6 +168,22 @@ dwarf_walk_next_in_tree(dwarf_walk_t *walk)
 	Dwarf_Off abbrev_offset;
 	Dwarf_Half address_size;
 	Dwarf_Unsigned next_cu_header;
+ 
+ 	if (walk->pushp != NULL) {
+		*walk->pushp = strstack_depth(&walk->ctx.symstk);
+		walk->pushp = NULL;
+	}
+
+	while (walk->stack_height > 0 &&
+	    walk->stack[walk->stack_height - 1].die == NULL) {
+		walk->stack_height--;
+		if (walk->stack_height > 0) {
+			strstack_popto(&walk->ctx.symstk,
+			    walk->stack[walk->stack_height - 1].strstk_depth);
+		} else {
+			strstack_popto(&walk->ctx.symstk, 0);
+		}
+	}
 
 	if (walk->stack_height == 0) {
 		if (!walk->cu_by_cu)
@@ -191,14 +211,19 @@ dwarf_walk_next_in_tree(dwarf_walk_t *walk)
 		}
 		walk->ctx.lopc = walk->ctx.hipc = 0;
 		walk->stack_height = 1;
-	} else
+		walk->pushp = &walk->stack[walk->stack_height - 1].strstk_depth;
+		walk->stack[walk->stack_height - 1].die = NULL;
+	} else {
 		last = walk->stack[walk->stack_height - 1].die;
+		strstack_popto(&walk->ctx.symstk,
+		    walk->stack[walk->stack_height - 1].strstk_depth);
+	}
 
 	res = dwarf_siblingof(walk->dbg, last, &sibling, &error);
 	if (res == DW_DLV_OK) {
 		walk->stack[walk->stack_height - 1].die = sibling;
 	} else if (res == DW_DLV_NO_ENTRY) {
-		walk->stack[--walk->stack_height].die = NULL;
+		walk->stack[walk->stack_height - 1].die = NULL;
 	} else {
 		errx(EXIT_FAILURE, "%s: dwarf_siblingof: %s",
 		    __func__, dwarf_errmsg(error));
@@ -211,6 +236,7 @@ dwarf_walk_next_in_tree(dwarf_walk_t *walk)
 			    __func__);
 		}
 		walk->stack[walk->stack_height++].die = child;
+		walk->pushp = &walk->stack[walk->stack_height - 1].strstk_depth;
 	} else if (res != DW_DLV_NO_ENTRY) {
 		errx(EXIT_FAILURE, "%s: dwarf_child: %s",
 		    __func__, dwarf_errmsg(error));
@@ -219,18 +245,18 @@ dwarf_walk_next_in_tree(dwarf_walk_t *walk)
 }
 
 static Dwarf_Die
-dwarf_follow_type_to_die(Dwarf_Debug dbg, Dwarf_Die die)
+dwarf_follow_attr_to_die(Dwarf_Debug dbg, Dwarf_Die die, Dwarf_Half which)
 {
-	Dwarf_Die typedie;
+	Dwarf_Die attrdie;
 	Dwarf_Attribute attr;
 	Dwarf_Off offset;
 	Dwarf_Error error;
 	int res;
 
-	res = dwarf_attr(die, DW_AT_type, &attr, &error);
-	if (res == DW_DLV_NO_ENTRY) {
+	res = dwarf_attr(die, which, &attr, &error);
+	if (res == DW_DLV_NO_ENTRY)
 		return NULL;
-	} else if (res != DW_DLV_OK) {
+	if (res != DW_DLV_OK) {
 		errx(EXIT_FAILURE, "\n%s: dwarf_attr: %s",
 		    __func__, dwarf_errmsg(error));
 	}
@@ -240,12 +266,24 @@ dwarf_follow_type_to_die(Dwarf_Debug dbg, Dwarf_Die die)
 		return NULL;
 	}
 
-	if (dwarf_offdie(dbg, offset, &typedie, &error) != DW_DLV_OK) {
+	if (dwarf_offdie(dbg, offset, &attrdie, &error) != DW_DLV_OK) {
 		warnx("\n%s: dwarf_offdie(, %lx, ): %s", __func__, offset, dwarf_errmsg(error));
 		return NULL;
 	}
 
-	return typedie;
+	return attrdie;
+}
+
+static Dwarf_Die
+dwarf_follow_spec_to_die(Dwarf_Debug dbg, Dwarf_Die die)
+{
+	return dwarf_follow_attr_to_die(dbg, die, DW_AT_specification);
+}
+
+static Dwarf_Die
+dwarf_follow_type_to_die(Dwarf_Debug dbg, Dwarf_Die die)
+{
+	return dwarf_follow_attr_to_die(dbg, die, DW_AT_type);
 }
 
 static bool
@@ -443,6 +481,65 @@ print_op(const Dwarf_Loc *lr, dwarf_walk_ctx_t *ctx)
 	default:
 		break;
 	}
+}
+
+static bool
+check_line(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx,
+    char **filenamep, unsigned int *linep, int *colp)
+{
+	Dwarf_Addr addr, paddr;
+	Dwarf_Line *line;
+	Dwarf_Signed nlines;
+	Dwarf_Error err;
+	int i;
+	Dwarf_Unsigned lineno, plineno;
+	Dwarf_Signed colno;
+	char *filename, *pfilename = NULL;
+
+	if (!ctx->have_insnptr)
+		return false;
+
+	if (dwarf_srclines(die, &line, &nlines, &err) != DW_DLV_OK)
+		return false;
+
+	for (i = 0; i < nlines; i++) {
+		if (dwarf_lineaddr(line[i], &addr, &err) != DW_DLV_OK) {
+			errx(EXIT_FAILURE, "%s: dwarf_lineaddr: %s", __func__,
+			    dwarf_errmsg(err));
+		}
+		if (dwarf_lineno(line[i], &lineno, &err) != DW_DLV_OK) {
+			errx(EXIT_FAILURE, "%s: dwarf_lineno: %s", __func__,
+			    dwarf_errmsg(err));
+		}
+		if (dwarf_lineoff(line[i], &colno, &err) != DW_DLV_OK) {
+			errx(EXIT_FAILURE, "%s: dwarf_lineoff: %s", __func__,
+			    dwarf_errmsg(err));
+		}
+		if (dwarf_linesrc(line[i], &filename, &err) != DW_DLV_OK) {
+			errx(EXIT_FAILURE, "%s: dwarf_linesrc: %s", __func__,
+			    dwarf_errmsg(err));
+		}
+		if (addr == ctx->insnptr)
+			break;
+		if (paddr < ctx->insnptr && ctx->insnptr < addr) {
+			addr = paddr;
+			filename = pfilename;
+			lineno = plineno;
+			colno = -1;
+			break;
+		}
+		paddr = addr;
+		pfilename = filename;
+		plineno = lineno;
+	}
+	dwarf_srclines_dealloc(dbg, line, nlines);
+	if (i < nlines) {
+		*filenamep = filename;
+		*linep = lineno;
+		*colp = colno;
+		return true;
+	}
+	return false;
 }
 
 static bool
@@ -929,7 +1026,7 @@ next:
 static void
 print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 {
-	char *name = NULL;
+	char *name;
 	Dwarf_Error error;
 	Dwarf_Half lopc_form, hipc_form, tag = 0;
 	int res;
@@ -943,12 +1040,23 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 	Dwarf_Half typetag;
 	Dwarf_Die typedie;
 	ssize_t size;
+	unsigned int line;
+	int column;
+	char *filename;
 
 	res = dwarf_tag(die, &tag, &error);
 	if (res != DW_DLV_OK) {
 		errx(EXIT_FAILURE, "%s: dwarf_tag", __func__);
 	}
-	res = dwarf_diename(die, &name, &error);
+	if ((res = dwarf_diename(die, &name, &error)) == DW_DLV_NO_ENTRY) {
+		Dwarf_Die specdie;
+
+		if (tag != DW_TAG_subprogram ||
+		    (specdie = dwarf_follow_spec_to_die(dbg, die)) == NULL)
+			return;
+		res = dwarf_diename(specdie, &name, &error);
+		dwarf_dealloc(dbg, specdie, DW_DLA_DIE);
+	}
 	switch (res) {
 	case DW_DLV_ERROR:
 	default:
@@ -966,10 +1074,17 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 	}
 
 	if (tag == DW_TAG_compile_unit) {
-		if (ctx->cu_stkdepth != -1)
+#if 0
+		if (ctx->cu_stkdepth != -1) {
 			strstack_popto(ss, ctx->cu_stkdepth);
+			if (ctx->subprogram_stkdepth > ctx->cu_stkdepth)
+				ctx->subprogram_stkdepth = -1;
+		}
+#endif
 
-		ctx->cu_stkdepth = strstack_pushf(ss, "%s:", name);
+		if (!ctx->have_insnptr || ctx->have_dataptr ||
+		    ctx->have_frameptr)
+			ctx->cu_stkdepth = strstack_pushf(ss, "%s", name);
 	} else if (tag == DW_TAG_subprogram) {
 		Dwarf_Attribute loc_attr;
 		Dwarf_Locdesc *ld;
@@ -977,10 +1092,12 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 		Dwarf_Ptr loc_ptr;
 		Dwarf_Unsigned loc_len;
 
+#if 0
 		if (ctx->subprogram_stkdepth != -1)
 			strstack_popto(ss, ctx->subprogram_stkdepth);
+#endif
 
-		ctx->subprogram_stkdepth = strstack_pushf(ss, "%s::", name);
+		ctx->subprogram_stkdepth = strstack_pushf(ss, ";%s", name);
 
 		if (dwarf_attr(die, DW_AT_frame_base, &loc_attr, &error) != DW_DLV_OK) {
 			/* no frame base */
@@ -1052,7 +1169,7 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 		dwarf_dealloc(dbg, locdesc, DW_DLA_LOCDESC);
 #endif
 	} else {
-		depth = strstack_pushf(ss, "%s", name);
+		depth = strstack_pushf(ss, ";;%s", name);
 	}
 
 	dwarf_dealloc(dbg, name, DW_DLA_STRING);
@@ -1095,7 +1212,22 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 		}
 	}
 
-	if (check_location(dbg, die, ctx) &&
+	if (tag == DW_TAG_compile_unit &&
+	    ctx->have_insnptr && !ctx->have_dataptr &&
+	    !ctx->have_frameptr && check_line(dbg, die, ctx, &filename, &line,
+	        &column)) {
+		strstack_pushf(ss, "%s:%d", filename, line);
+		if (column != -1)
+			strstack_pushf(ss, ":%d", column);
+	} else if (tag == DW_TAG_subprogram && ctx->have_insnptr &&
+	    !ctx->have_dataptr && !ctx->have_frameptr) {
+		if (inner.lopc <= ctx->insnptr && ctx->insnptr <= inner.hipc) {
+			if (ctx->print_address)
+				strstack_pushf(ss, " 0x%" PRIx64, ctx->insnptr);
+			strstack_fprintf(stdout, ss);
+			printf("\n");
+		}
+	} else if (check_location(dbg, die, ctx) &&
 	    (typedie = dwarf_aggregate_or_base_type(dbg, die, ctx)) != NULL &&
 	    (size = dwarf_type_size(dbg, typedie, NULL)) > 0 &&
 	    ctx->residue < size) {
@@ -1114,6 +1246,8 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 			 !walk_elements(dbg, typedie, ctx))
 			;
 		else {
+			if (ctx->print_address && ctx->have_dataptr)
+				strstack_pushf(ss, " 0x%" PRIx64, ctx->dataptr);
 			strstack_fprintf(stdout, ss);
 			printf("\n");
 		}
@@ -1135,40 +1269,44 @@ main(int argc, char **argv)
 {
 	Dwarf_Debug dbg = 0;
 	Dwarf_Die die;
-	int ch, fd, i, ofs, rc;
+	int ch, fd, ofs, rc;
 	Dwarf_Error error;
 	dwarf_walk_t walk;
 	const char *progname = argv[0];
-	dwarf_walk_params_t params = {
+	dwarf_walk_params_t clparams = {
 		  .have_dataptr = false
 		, .have_frameptr = false
 		, .have_insnptr = false
+		, .print_address = false
 		, .predicate = NULL};
 
-	while ((ch = getopt(argc, argv, "d:f:i:")) != -1) {
+	while ((ch = getopt(argc, argv, "ad:f:i:")) != -1) {
 		switch (ch) {
+		case 'a':
+			clparams.print_address = true;
+			break;
 		case 'f':
-			if (params.have_frameptr) {
+			if (clparams.have_frameptr) {
 				errx(EXIT_FAILURE,
 				    "%s: too many frame pointers", __func__);
 			}
-			params.have_frameptr = true;
+			clparams.have_frameptr = true;
 			rc = sscanf(optarg, "0x%" SCNx64 "%n",
-			    &params.frameptr, &ofs);
+			    &clparams.frameptr, &ofs);
 			if (rc != 1 || optarg[ofs] != '\0') {
 				errx(EXIT_FAILURE,
 				    "%s: malformed frame pointer", __func__);
 			}
 			break;
 		case 'i':
-			if (params.have_insnptr) {
+			if (clparams.have_insnptr) {
 				errx(EXIT_FAILURE,
 				    "%s: too many instruction pointers",
 				    __func__);
 			}
-			params.have_insnptr = true;
+			clparams.have_insnptr = true;
 			rc = sscanf(optarg, "0x%" SCNx64 "%n",
-			    &params.insnptr, &ofs);
+			    &clparams.insnptr, &ofs);
 			if (rc != 1 || optarg[ofs] != '\0') {
 				errx(EXIT_FAILURE,
 				    "%s: malformed instruction pointer",
@@ -1176,13 +1314,13 @@ main(int argc, char **argv)
 			}
 			break;
 		case 'd':
-			if (params.have_dataptr) {
+			if (clparams.have_dataptr) {
 				errx(EXIT_FAILURE,
 				    "%s: too many data pointers", __func__);
 			}
-			params.have_dataptr = true;
+			clparams.have_dataptr = true;
 			rc = sscanf(optarg, "0x%" SCNx64 "%n",
-			    &params.dataptr, &ofs);
+			    &clparams.dataptr, &ofs);
 			if (rc != 1 || optarg[ofs] != '\0') {
 				errx(EXIT_FAILURE,
 				    "%s: malformed data pointer", __func__);
@@ -1208,10 +1346,65 @@ main(int argc, char **argv)
 		    dwarf_errmsg(error));
 	}
 
-	params.dbg = dbg;
+	clparams.dbg = dbg;
 
-	for (i = 0; i < 2; i++) {
-		for (die = dwarf_walk_first(&walk, &params);
+	dwarf_walk_params_t params[2] = {clparams, clparams};
+	int nparams = 0;
+	int paramidx = 0;
+	bool replenish = true;
+
+	if (clparams.have_dataptr || clparams.have_insnptr) {
+		nparams = 1;
+		replenish = false;
+	}
+
+	for (paramidx = 0;; paramidx++) {
+		char lbuf[sizeof("[0x0123456789abcdef : 0x0123456789abcdef/0x0123456789abcdef 0x0123456789abcdef/0x0123456789abcdef]\n")];
+
+		if (paramidx < nparams)
+			;	// do nothing
+		else if (!replenish)
+			break;
+		else if (fgets(lbuf, sizeof(lbuf), stdin) == NULL)
+			break;
+		else if (sscanf(lbuf,
+		    "\[0x%" SCNx64 " : 0x%" SCNx64 "/0x%" SCNx64
+		    " 0x%" SCNx64 "/0x%" SCNx64 "]\n",
+		    &params[0].dataptr,
+		    &params[0].insnptr, &params[0].frameptr,
+		    &params[1].insnptr, &params[1].frameptr) == 5) {
+			params[1].dataptr = params[0].dataptr;
+			params[0].have_dataptr = params[1].have_dataptr =
+			    params[0].have_insnptr = params[1].have_insnptr =
+			    params[0].have_frameptr = params[1].have_frameptr =
+			    true;
+			paramidx = 0;
+			nparams = 2;
+		} else if (sscanf(lbuf,
+		    "\[0x%" SCNx64 " : 0x%" SCNx64 "/0x%" SCNx64 "]\n",
+		    &params[0].dataptr,
+		    &params[0].insnptr, &params[0].frameptr) == 3) {
+			params[0].have_dataptr = params[0].have_insnptr =
+			    params[0].have_frameptr = true;
+			paramidx = 0;
+			nparams = 1;
+		} else if (sscanf(lbuf, "\[0x%" SCNx64 "]\n",
+		    &params[0].dataptr) == 1) {
+			params[0].have_dataptr = true;
+			paramidx = 0;
+			nparams = 1;
+		} else if (sscanf(lbuf, "{0x%" SCNx64 "}\n",
+		    &params[0].insnptr) == 1) {
+			params[0].have_insnptr = true;
+			params[0].have_dataptr = params[0].have_frameptr =
+			    false;
+			paramidx = 0;
+			nparams = 1;
+		} else {
+			errx(EXIT_FAILURE, "%s: syntax error: `%s`", __func__,
+			    lbuf);
+		}
+		for (die = dwarf_walk_first(&walk, &params[paramidx]);
 		     die != NULL;
 		     die = dwarf_walk_next(&walk)) {
 			print_die_data(dbg, die, &walk.ctx);

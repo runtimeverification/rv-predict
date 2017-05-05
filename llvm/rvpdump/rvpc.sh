@@ -22,7 +22,7 @@ for arg in "$@"; do
 	case "$arg" in
 	--)	break
 		;;
-	-E)	compile=no
+	-M*|-E)	compile=no
 		link=no
 		continue
 		;;

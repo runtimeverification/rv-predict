@@ -113,8 +113,9 @@ public class RaceDetector implements Constants {
             return;
         }
 
-        Map<String, Race> result = MaximalCausalModel.create(trace, z3filter, solver)
-                .checkRaceSuspects(sigToRaceSuspects);
+        Map<String, Race> result =
+                MaximalCausalModel.create(trace, z3filter, solver, config.detectInterruptedThreadRace())
+                        .checkRaceSuspects(sigToRaceSuspects);
         sigToRealRace.putAll(result);
         result.forEach((sig, race) -> {
             String report = race.generateRaceReport();

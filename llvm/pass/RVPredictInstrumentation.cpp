@@ -185,7 +185,7 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 	 */
 	fnenter = checkSanitizerInterfaceFunction(
 	    m.getOrInsertFunction( "__rvpredict_func_entry", void_type,
-	        int8_ptr_type, nullptr));
+	        int8_ptr_type, int8_ptr_type, nullptr));
 	fnexit = checkSanitizerInterfaceFunction(
 	    m.getOrInsertFunction("__rvpredict_func_exit", void_type,
 	        int8_ptr_type, nullptr));
@@ -623,15 +623,19 @@ RVPredictInstrument::runOnFunction(Function &F)
         // Instrument function entry/exit points if there were
         // instrumented accesses.
 	if ((didInstrument || hasCalls) && ClInstrumentFuncEntryExit) {
-		IRBuilder<> IRB(F.getEntryBlock().getFirstNonPHI());
-		Value *ReturnAddress = IRB.CreateCall(
-		Intrinsic::getDeclaration(F.getParent(),
-		    Intrinsic::returnaddress),
-		IRB.getInt32(0));
-		IRB.CreateCall(fnenter, ReturnAddress);
-		for (auto RetInst : RetVec) {
-			IRBuilder<> IRBRet(RetInst);
-			IRBRet.CreateCall(fnexit, ReturnAddress);
+		IRBuilder<> builder(F.getEntryBlock().getFirstNonPHI());
+		Value *retaddr = builder.CreateCall(
+		    Intrinsic::getDeclaration(F.getParent(),
+		        Intrinsic::returnaddress),
+		    builder.getInt32(0));
+		Value *cfa = builder.CreateCall(
+		    Intrinsic::getDeclaration(F.getParent(),
+		        Intrinsic::eh_dwarf_cfa),
+		    builder.getInt32(0));
+		builder.CreateCall(fnenter, {retaddr, cfa});
+		for (auto return_insn : RetVec) {
+			IRBuilder<> ret_builder(return_insn);
+			ret_builder.CreateCall(fnexit, retaddr);
 		}
 		didInstrument = true;
 	}

@@ -44,7 +44,7 @@ trace_mutex_op(const void *retaddr, pthread_mutex_t *mtx, rvp_op_t op)
 		gen = rvp_ggen_before_store();
 
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, op);
-	rvp_buf_put_addr(&b, mtx);
+	rvp_buf_put_voidptr(&b, mtx);
 
 	if (op != RVP_OP_ACQUIRE)
 		rvp_buf_trace_cog(&b, &r->r_lgen, gen);

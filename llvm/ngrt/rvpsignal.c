@@ -278,8 +278,8 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	 * interrupts, if necessary, before emitting the events on the ring.
 	 */
 	r->r_lastpc = rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN);
-	rvp_buf_put_addr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_ENTERSIG));
-	rvp_buf_put_addr(&b,
+	rvp_buf_put_voidptr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_ENTERSIG));
+	rvp_buf_put_voidptr(&b,
 	    (s->s_handler != NULL)
 	        ? (const void *)s->s_handler
 		: (const void *)s->s_sigaction);
@@ -301,7 +301,7 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 
 	atomic_store(&t->t_intr_ring, oldr);
 	atomic_store_explicit(&t->t_idepth, idepth, memory_order_release);
-	rvp_buf_put_addr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_EXITSIG));
+	rvp_buf_put_voidptr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_EXITSIG));
 	rvp_ring_put_buf(r, b);
 	rvp_signal_ring_put(t, r);
 }
@@ -397,7 +397,7 @@ rvp_trace_sigest(int signum, const void *handler, uint32_t masknum,
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, return_address, RVP_OP_SIGEST);
-	rvp_buf_put_addr(&b, handler);
+	rvp_buf_put_voidptr(&b, handler);
 	rvp_buf_put(&b, signum);
 	rvp_buf_put(&b, masknum);
 	rvp_ring_put_buf(r, b);

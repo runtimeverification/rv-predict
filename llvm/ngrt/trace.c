@@ -23,7 +23,7 @@ typedef struct _threadswitch {
 
 static const rvp_trace_header_t header = {
 	  .th_magic = "RVP_"
-	, . th_version = {0, 0, 0, 1}
+	, . th_version = {0, 0, 0, 2}
 	, .th_byteorder = '0' | ('1' << 8) | ('2' << 16) | ('3' << 24)
 	, .th_pointer_width = sizeof(rvp_addr_t)
 	, .th_data_width = sizeof(uint32_t)
@@ -146,18 +146,18 @@ rvp_buf_put_pc_and_op(rvp_buf_t *b, const char **lastpcp, const char *pc,
 	*lastpcp = pc;
 
 	if (deltop == NULL) {
-		rvp_buf_put_addr(b, pc);
+		rvp_buf_put_voidptr(b, pc);
 		deltop = rvp_vec_and_op_to_deltop(0, op);
 		assert(deltop != NULL);
 	}
-	rvp_buf_put_addr(b, deltop);
+	rvp_buf_put_voidptr(b, deltop);
 }
 
 void
 rvp_ring_put_begin(rvp_ring_t *r, uint32_t tid, uint64_t generation)
 {
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
-	rvp_buf_put_addr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN));
+	rvp_buf_put_voidptr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN));
 	rvp_buf_put(&b, tid);
 	rvp_buf_put_u64(&b, generation);
 	rvp_ring_put_buf(r, b);
@@ -166,6 +166,6 @@ rvp_ring_put_begin(rvp_ring_t *r, uint32_t tid, uint64_t generation)
 void
 rvp_buf_put_cog(rvp_buf_t *b, uint64_t generation)
 {
-	rvp_buf_put_addr(b, rvp_vec_and_op_to_deltop(0, RVP_OP_COG));
+	rvp_buf_put_voidptr(b, rvp_vec_and_op_to_deltop(0, RVP_OP_COG));
 	rvp_buf_put_u64(b, generation);
 }

@@ -200,7 +200,12 @@ typedef struct {
 
 typedef struct {
 	rvp_addr_t deltop;
-} __packed __aligned(sizeof(uint32_t)) rvp_end_enterfn_exitfn_t;
+} __packed __aligned(sizeof(uint32_t)) rvp_end_exitfn_t;
+
+typedef struct {
+	rvp_addr_t deltop;
+	rvp_addr_t cfa;
+} __packed __aligned(sizeof(uint32_t)) rvp_enterfn_t;
 
 typedef struct {
 	rvp_addr_t deltop;

@@ -35,6 +35,10 @@ typedef union {
 	rvp_sigmaskmemo_t ub_sigmaskmemo;
 	rvp_sigmask_access_t ub_sigmask_access;
 	rvp_sigmask_rmw_t ub_sigmask_rmw;
+	rvp_rmw1_2_t ub_rmw1_2;
+	rvp_rmw4_t ub_rmw4;
+	rvp_rmw8_t ub_rmw8;
+	rvp_enterfn_t ub_enterfn;
 	char ub_bytes[4096];
 } rvp_ubuf_t;
 
@@ -104,14 +108,12 @@ typedef struct _intmax_table {
 } intmax_table_t;
 
 static const op_info_t op_to_info[RVP_NOPS] = {
-	  [RVP_OP_ENTERFN] = OP_INFO_INIT(rvp_end_enterfn_exitfn_t,
-	     "enter function")
-	, [RVP_OP_EXITFN] = OP_INFO_INIT(rvp_end_enterfn_exitfn_t,
-	    "exit function")
+	  [RVP_OP_ENTERFN] = OP_INFO_INIT(rvp_enterfn_t, "enter function")
+	, [RVP_OP_EXITFN] = OP_INFO_INIT(rvp_end_exitfn_t, "exit function")
 
 	, [RVP_OP_BEGIN] = OP_INFO_INIT(rvp_begin_t, "begin thread")
 	, [RVP_OP_COG] = OP_INFO_INIT(rvp_cog_t, "change of generation")
-	, [RVP_OP_END] = OP_INFO_INIT(rvp_end_enterfn_exitfn_t, "end thread")
+	, [RVP_OP_END] = OP_INFO_INIT(rvp_end_exitfn_t, "end thread")
 	, [RVP_OP_SIGDEPTH] = OP_INFO_INIT(rvp_sigdepth_t,
 	    "signal depth")
 	, [RVP_OP_SWITCH] = OP_INFO_INIT(rvp_fork_join_switch_t,
@@ -862,6 +864,31 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		    is_load ? "<-" : "->",
 		    ub->ub_load8_store8.addr);
 		break;
+	case RVP_OP_ATOMIC_RMW4:
+		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
+		    " %#.*" PRIx32 " <- [%#016" PRIxPTR "]"
+		    " <- %#.*" PRIx32 "\n",
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    oi->oi_descr,
+		    field_width, ub->ub_rmw4.oval,
+		    ub->ub_rmw4.addr,
+		    field_width, ub->ub_rmw4.nval);
+		break;
+	case RVP_OP_ATOMIC_RMW2:
+	case RVP_OP_ATOMIC_RMW1:
+		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
+		    " %#.*" PRIxMAX " <- [%#016" PRIxPTR "]"
+		    " <- %#.*" PRIxMAX "\n",
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    oi->oi_descr,
+		    field_width,
+		    __SHIFTOUT(ub->ub_rmw1_2.onval, __BITS(15, 0)),
+		    ub->ub_rmw1_2.addr,
+		    field_width,
+		    __SHIFTOUT(ub->ub_rmw1_2.onval, __BITS(31, 16)));
+		break;
 	case RVP_OP_ATOMIC_LOAD4:
 	case RVP_OP_ATOMIC_STORE4:
 	case RVP_OP_ATOMIC_LOAD2:
@@ -906,6 +933,13 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		    ps->ps_curthread, ps->ps_idepth,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
 		    oi->oi_descr, ub->ub_cog.generation);
+		break;
+	case RVP_OP_ENTERFN:
+		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s cfa %" PRIxPTR "\n",
+		    ps->ps_curthread, ps->ps_idepth,
+		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    oi->oi_descr,
+		    ub->ub_enterfn.cfa);
 		break;
 	case RVP_OP_END:
 	default:
@@ -1045,24 +1079,28 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	switch (op) {
 	case RVP_OP_ATOMIC_LOAD8:
 	case RVP_OP_ATOMIC_STORE8:
+	case RVP_OP_ATOMIC_RMW8:
 	case RVP_OP_LOAD8:
 	case RVP_OP_STORE8:
 		field_width = 16;
 		break;
 	case RVP_OP_ATOMIC_LOAD4:
 	case RVP_OP_ATOMIC_STORE4:
+	case RVP_OP_ATOMIC_RMW4:
 	case RVP_OP_LOAD4:
 	case RVP_OP_STORE4:
 		field_width = 8;
 		break;
 	case RVP_OP_ATOMIC_LOAD2:
 	case RVP_OP_ATOMIC_STORE2:
+	case RVP_OP_ATOMIC_RMW2:
 	case RVP_OP_LOAD2:
 	case RVP_OP_STORE2:
 		field_width = 4;
 		break;
 	case RVP_OP_ATOMIC_LOAD1:
 	case RVP_OP_ATOMIC_STORE1:
+	case RVP_OP_ATOMIC_RMW1:
 	case RVP_OP_LOAD1:
 	case RVP_OP_STORE1:
 		field_width = 2;

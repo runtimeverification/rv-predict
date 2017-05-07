@@ -344,7 +344,8 @@ dwarf_type_size(Dwarf_Debug dbg, Dwarf_Die die, Dwarf_Die *typediep)
 			errx(EXIT_FAILURE, "%s: dwarf_tag: %s", __func__,
 			    dwarf_errmsg(error));
 		} else if (tag == DW_TAG_array_type) {
-			return dwarf_array_type_size(dbg, typedie);
+			size = dwarf_array_type_size(dbg, typedie);
+			break;
 		} else if (tag == DW_TAG_pointer_type) {
 			Dwarf_Half addr_size;
 			if (dwarf_get_address_size(dbg, &addr_size,
@@ -1008,6 +1009,8 @@ walk_members(Dwarf_Debug dbg, Dwarf_Die typedie, dwarf_walk_ctx_t *ctx)
 		}
 		if (tag == DW_TAG_structure_type)
 			(void)walk_members(dbg, membertypedie, ctx);
+		else if (tag == DW_TAG_array_type)
+			(void)walk_elements(dbg, membertypedie, ctx);
 		return true;
 next:
 		res = dwarf_siblingof(dbg, child, &sibling, &error);

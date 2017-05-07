@@ -14,7 +14,7 @@ consists of the 8-bit ASCII representations for the characters 'R' 'V'
 Immediately following the magic is a 4-byte version number.  The bytes
 provide the major, minor, teeny, and tiny number, in that order.
 The initial version number was 0.0.0.0.  The current version number
-is 0.0.0.1.  We will increase it with every incompatible change to the
+is 0.0.0.2.  We will increase it with every incompatible change to the
 file format.  A trace-file reader MUST give up if it reads a version
 number that it does not recognize.
 

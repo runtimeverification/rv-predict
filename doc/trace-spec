@@ -516,11 +516,14 @@ trace ::= (delta, 'load[n]') addr value
 
                 `self.PC <- self.PC + delta`
 
-        | (delta, 'enterfn')
+        | (delta, 'enterfn') cfa
 
-                The current thread added `delta` to its program
-                counter and entered a function at the new program
-                counter.
+                The current thread added `delta` to its program counter
+                and entered a function at the new program counter.
+                The DWARF Canonical Frame Address (CFA) for the function's
+                new stack frame is given by the address `cfa`, which
+                begins on the first 32-bit boundary after the deltop;
+                it is `ptrw` bytes wide.
 
                 `self.PC <- self.PC + delta`
 

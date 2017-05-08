@@ -262,19 +262,19 @@ public class MaximalCausalModel {
                             otidWhereDisabledAtStart));
         });
 
-        Map<Integer, ReadonlyEventInterface> threadToStartEvent = new HashMap<>();
-        Map<Integer, ReadonlyEventInterface> threadToJoinEvent = new HashMap<>();
+        Map<Integer, ReadonlyEventInterface> ttidToStartEvent = new HashMap<>();
+        Map<Integer, ReadonlyEventInterface> ttidToJoinEvent = new HashMap<>();
         /* build inter-thread synchronization constraint */
         trace.getInterThreadSyncEvents().forEach(event -> {
             if (event.isStart()) {
                 Integer ttid = trace.getMainTraceThreadForOriginalThread(event.getSyncedThreadId());
                 if (ttid != null) {
-                    threadToStartEvent.put(ttid, event);
+                    ttidToStartEvent.put(ttid, event);
                 }
             } else if (event.isJoin()) {
                 Integer ttid = trace.getMainTraceThreadForOriginalThread(event.getSyncedThreadId());
                 if (ttid != null) {
-                    threadToJoinEvent.put(ttid, event);
+                    ttidToJoinEvent.put(ttid, event);
                 }
             }
         });
@@ -297,25 +297,29 @@ public class MaximalCausalModel {
                                 List<ReadonlyEventInterface> events = entry.getValue();
                                 long entryOtid = trace.getOriginalThreadIdForTraceThreadId(entry.getKey());
                                 boolean enabled = otidWhereEnabledAtStart.contains(entryOtid);
+                                ReadonlyEventInterface startThreadEvent = ttidToStartEvent.get(ttid);
+                                ReadonlyEventInterface joinThreadEvent = ttidToJoinEvent.get(ttid);
                                 if (events.isEmpty() && enabled) {
 
                                     // TODO: The signal can simply interrupt this thread. I should add its start/join
                                     // constraints. I can probably add them directly to the top AND.
-                                    if ()
-                                    or.add();
-                                    or.add(BooleanConstant.TRUE);
+
+                                    or.add(signalInterruption(
+                                            startThreadEvent,
+                                            joinThreadEvent,
+                                            firstEvent,
+                                            lastEvent));
                                     return;
                                 }
                                 Signals.EnabledEventsIterator iterator =
                                         new Signals.EnabledEventsIterator(
                                                 events, detectInterruptedThreadRace, signalNumber, enabled);
                                 while (iterator.advance()) {
-                                    FormulaTerm.Builder threadInterruptionAtPoint = FormulaTerm.andBuilder();
-                                    iterator.getPreviousEvent().ifPresent(
-                                            event -> threadInterruptionAtPoint.add(HB(event, firstEvent)));
-                                    iterator.getCurrentEvent().ifPresent(
-                                            event -> threadInterruptionAtPoint.add(HB(lastEvent, event)));
-                                    or.add(threadInterruptionAtPoint.build());
+                                    or.add(signalInterruption(
+                                            iterator.getPreviousEventWithDefault(startThreadEvent),
+                                            iterator.getCurrentEventWithDefault(joinThreadEvent),
+                                            firstEvent,
+                                            lastEvent));
                                 }
                             });
                     and.add(or.build());
@@ -327,8 +331,12 @@ public class MaximalCausalModel {
             ReadonlyEventInterface before, ReadonlyEventInterface after,
             ReadonlyEventInterface firstSignalEvent, ReadonlyEventInterface lastSignalEvent) {
         FormulaTerm.Builder threadInterruptionAtPoint = FormulaTerm.andBuilder();
-        threadInterruptionAtPoint.add(HB(before, firstSignalEvent));
-        threadInterruptionAtPoint.add(HB(lastSignalEvent, after));
+        if (before != null) {
+            threadInterruptionAtPoint.add(HB(before, firstSignalEvent));
+        }
+        if (after != null) {
+            threadInterruptionAtPoint.add(HB(lastSignalEvent, after));
+        }
         return threadInterruptionAtPoint.build();
     }
 

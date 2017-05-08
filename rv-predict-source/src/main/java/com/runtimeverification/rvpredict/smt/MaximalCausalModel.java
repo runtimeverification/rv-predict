@@ -295,10 +295,11 @@ public class MaximalCausalModel {
                             .filter(entry -> trace.getThreadType(entry.getKey()) == ThreadType.THREAD)
                             .forEach(entry -> {
                                 List<ReadonlyEventInterface> events = entry.getValue();
-                                long entryOtid = trace.getOriginalThreadIdForTraceThreadId(entry.getKey());
+                                int entryTtid = entry.getKey();
+                                long entryOtid = trace.getOriginalThreadIdForTraceThreadId(entryTtid);
                                 boolean enabled = otidWhereEnabledAtStart.contains(entryOtid);
-                                ReadonlyEventInterface startThreadEvent = ttidToStartEvent.get(ttid);
-                                ReadonlyEventInterface joinThreadEvent = ttidToJoinEvent.get(ttid);
+                                ReadonlyEventInterface startThreadEvent = ttidToStartEvent.get(entryTtid);
+                                ReadonlyEventInterface joinThreadEvent = ttidToJoinEvent.get(entryTtid);
                                 if (events.isEmpty() && enabled) {
 
                                     // TODO: The signal can simply interrupt this thread. I should add its start/join

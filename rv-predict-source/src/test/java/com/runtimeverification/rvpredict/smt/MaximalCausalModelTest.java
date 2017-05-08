@@ -560,15 +560,39 @@ public class MaximalCausalModelTest {
         Assert.assertFalse(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2)));
     }
 
+    @Test
+    public void doesNotGenerateRacesByInterruptingThreadAfterBeingJoined() throws InvalidTraceDataException {
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                createRawTrace(
+                        setSignalHandler(
+                                SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK, THREAD_1, NO_SIGNAL),
+                        nonAtomicStore(ADDRESS_2, VALUE_1, THREAD_1, NO_SIGNAL),
+                        enableSignal(SIGNAL_NUMBER_1, THREAD_1, NO_SIGNAL),
+                        threadStart(THREAD_2, THREAD_1, NO_SIGNAL),
+                        disableSignal(SIGNAL_NUMBER_1, THREAD_1, NO_SIGNAL),
+                        threadJoin(THREAD_2, THREAD_1, NO_SIGNAL),
+                        e1 = nonAtomicLoad(ADDRESS_1, VALUE_1, THREAD_1, NO_SIGNAL)),
+                createRawTrace(
+                        nonAtomicLoad(ADDRESS_2, VALUE_1, THREAD_2, NO_SIGNAL)),
+                createRawTrace(
+                        enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, THREAD_2, ONE_SIGNAL),
+                        e2 = nonAtomicStore(ADDRESS_1, VALUE_1, THREAD_2, NO_SIGNAL)));
+
+        Assert.assertFalse(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2)));
+    }
+
     // TODO: Tests with writes that enable certain reads, both with and without signals.
     // TODO: Test that a signals stops their thread, i.e. it does not conflict with its own thread in a complex way,
     // i.e. it does not race with the interruption point, but it enables a subsequent read which allows one to
     // reach a racing instruction.
     // TODO: Tests for get, set and getset for signal masks.
-    // TODO: Test that threads are not interrupted before being started / after being joined.
     // TODO: Test that a signal can interrupt an empty thread (i.e. a thread which otherwise has no interactions).
     // TODO: Test for disestablishSignal
     // TODO: Test for signals using the same lock as the interrupted thread.
+    // TODO: Can interrupt a thread even if fully disabled (start to join) on a different one.
 
     private List<ReadonlyEventInterface> enterSignal(
             long signalNumber, long signalHandler, long threadId, int signalDepth) throws InvalidTraceDataException {
@@ -699,9 +723,23 @@ public class MaximalCausalModelTest {
         Trace trace = traceState.initNextTraceWindow(rawTraces);
         MaximalCausalModel model = MaximalCausalModel.create(trace, z3Filter, solver, detectInterruptedThreadRace);
 
+        int ttid1 = -1;
+        int ttid2 = -1;
+        for (int i = 0; i < rawTraces.size(); i++) {
+            for (int j = 0; j < rawTraces.get(i).size(); j++) {
+                ReadonlyEventInterface e = rawTraces.get(i).event(j);
+                if (e == e1) {  // Intentional == use
+                    ttid1 = i;
+                }
+                if (e == e2) {  // Intentional == use
+                    ttid2 = i;
+                }
+            }
+        }
+
         Map<String, List<Race>> sigToRaceSuspects = new HashMap<>();
         ArrayList<Race> raceSuspects = new ArrayList<>();
-        raceSuspects.add(new Race(e1, e2, trace, mockConfiguration));
+        raceSuspects.add(new Race(e1, e2, ttid1, ttid2, trace, mockConfiguration));
         sigToRaceSuspects.put("race", raceSuspects);
 
         Map<String, Race> races = model.checkRaceSuspects(sigToRaceSuspects);

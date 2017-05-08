@@ -34,6 +34,7 @@ import com.microsoft.z3.Solver;
 import com.microsoft.z3.Status;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.log.compact.Constants;
 import com.runtimeverification.rvpredict.signals.Signals;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
@@ -248,6 +249,20 @@ public class MaximalCausalModel {
                 fillEnabledAtStartIfEnabledAtEventId(
                         signalNumber, otid, maybeMinSignalStart.getAsLong(),
                         otidWhereEnabledAtStart, otidToItsStartEventWithIndex);
+            });
+        });
+        trace.eventsByThreadID().entrySet().forEach(entry -> {
+            entry.getValue().stream().filter(event -> event.isSignalMaskRead()).forEach(event -> {
+                long mask = event.getFullReadSignalMask();
+                signalNumberToOtidToInterruptedEventIds.keySet().forEach(signalNumber -> {
+                    Set<Long> otidWhereEnabledAtStart =
+                            signalToOtidWhereEnabledAtStart.computeIfAbsent(signalNumber, k -> new HashSet<>());
+                    if (Signals.signalIsEnabled(signalNumber, mask)) {
+                        fillEnabledAtStartIfEnabledAtEventId(
+                                signalNumber, event.getOriginalThreadId(), event.getEventId(),
+                                otidWhereEnabledAtStart, otidToItsStartEventWithIndex);
+                    }
+                });
             });
         });
         // TODO: Signal mask reads also work, so I should do something similar to the above for reads.
@@ -590,7 +605,7 @@ public class MaximalCausalModel {
      * Checks if the given race suspects are real. Race suspects are grouped by
      * their signatures.
      *
-     * @param sigToRaceSuspects
+     * @param sigToRaceSuspects The race suspects to check.
      * @return a map from race signatures to real race instances
      */
     public Map<String, Race> checkRaceSuspects(Map<String, List<Race>> sigToRaceSuspects) {

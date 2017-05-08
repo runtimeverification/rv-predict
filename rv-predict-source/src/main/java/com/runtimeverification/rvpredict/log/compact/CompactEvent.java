@@ -34,7 +34,7 @@ public abstract class CompactEvent extends ReadonlyEvent {
     // TODO(virgil): Convert getLocationId to long.
     @Override
     public long getLocationId() {
-        return (int)locationId;
+        return locationId;
     }
 
     @Override
@@ -83,7 +83,8 @@ public abstract class CompactEvent extends ReadonlyEvent {
     public long getPartialSignalMask() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
-    long getFullReadSignalMask() {
+    @Override
+    public long getFullReadSignalMask() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
     @Override

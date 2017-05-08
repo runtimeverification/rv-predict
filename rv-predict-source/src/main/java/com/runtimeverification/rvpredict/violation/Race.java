@@ -53,16 +53,12 @@ public class Race {
 
     private final ReadonlyEventInterface e1;
     private final ReadonlyEventInterface e2;
-    private final int ttid1;
-    private final int ttid2;
     private final Configuration config;
     private final Trace trace;
     private final SignatureProcessor signatureProcessor;
 
     public Race(
-            ReadonlyEventInterface e1, ReadonlyEventInterface e2, int ttid1, int ttid2, Trace trace, Configuration config) {
-        this.ttid1 = ttid1;
-        this.ttid2 = ttid2;
+            ReadonlyEventInterface e1, ReadonlyEventInterface e2, Trace trace, Configuration config) {
         if (e1.getEventId() > e2.getEventId()) {
             ReadonlyEventInterface tmp = e1;
             e1 = e2;
@@ -150,23 +146,23 @@ public class Race {
 
         if (trace.metadata().getLocationSig(e1.getLocationId())
                 .compareTo(trace.metadata().getLocationSig(e2.getLocationId())) <= 0) {
-            reportableRace |= generateMemAccReport(e1, ttid1, sb);
+            reportableRace |= generateMemAccReport(e1, sb);
             sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
-            reportableRace |= generateMemAccReport(e2, ttid2, sb);
+            reportableRace |= generateMemAccReport(e2, sb);
         } else {
-            reportableRace |= generateMemAccReport(e2, ttid2, sb);
+            reportableRace |= generateMemAccReport(e2, sb);
             sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
-            reportableRace |= generateMemAccReport(e1, ttid1, sb);
+            reportableRace |= generateMemAccReport(e1, sb);
         }
 
         sb.append(String.format("%n"));
         return reportableRace ? signatureProcessor.simplify(sb.toString()) : "";
     }
 
-    private boolean generateMemAccReport(ReadonlyEventInterface e, int ttid, StringBuilder sb) {
+    private boolean generateMemAccReport(ReadonlyEventInterface e, StringBuilder sb) {
         int stackSize = 0;
         long otid = e.getOriginalThreadId();
-        long sid = trace.getSignalNumber(ttid);
+        long sid = trace.getSignalNumber(trace.getTraceThreadId(e));
         Metadata metadata = trace.metadata();
         List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
         if (e.getSignalDepth() == 0) {
@@ -178,7 +174,7 @@ public class Race {
         } else {
             // TODO(virgil): The signal number is not enough to identify what is happening, one also needs
             // the signal handler or something similar.
-            sb.append(String.format("    Concurrent %s in thread T%s signal S%s%s%n",
+            sb.append(String.format("    Concurrent %s in signal S%s%s%n",
                     e.isWrite() ? "write" : "read",
                     otid,
                     sid,

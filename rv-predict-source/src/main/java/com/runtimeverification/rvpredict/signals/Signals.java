@@ -84,15 +84,15 @@ public class Signals {
             iterator = events.iterator();
         }
 
-        public Optional<ReadonlyEventInterface> getPreviousEvent() {
+        public ReadonlyEventInterface getPreviousEventWithDefault(ReadonlyEventInterface defaultValue) {
             assert previousEnabled;
             if (detectInterruptedThreadRace && previousPreviousEnabled) {
-                return Optional.ofNullable(previousPreviousEvent);
+                return optionalEventWithDefault(previousPreviousEvent, defaultValue);
             }
-            return Optional.ofNullable(previousEvent);
+            return optionalEventWithDefault(previousEvent, defaultValue);
         }
-        public Optional<ReadonlyEventInterface> getCurrentEvent() {
-            return Optional.ofNullable(currentEvent);
+        public ReadonlyEventInterface getCurrentEventWithDefault(ReadonlyEventInterface defaultValue) {
+            return optionalEventWithDefault(currentEvent, defaultValue);
         }
         public boolean advance() {
             while (advanceOneStep()) {
@@ -114,6 +114,13 @@ public class Signals {
             currentEvent = iterator.next();
             enabled = Signals.updateEnabledWithEvent(enabled, signalNumber, currentEvent);
             return true;
+        }
+        private static ReadonlyEventInterface optionalEventWithDefault(
+                ReadonlyEventInterface event, ReadonlyEventInterface defaultValue) {
+            if (event == null) {
+                return defaultValue;
+            }
+            return event;
         }
     }
 }

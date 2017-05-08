@@ -538,6 +538,28 @@ public class MaximalCausalModelTest {
         Assert.assertTrue(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2)));
     }
 
+    @Test
+    public void doesNotGenerateRacesByInterruptingThreadBeforeBeingStarted() throws InvalidTraceDataException {
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                createRawTrace(
+                        nonAtomicStore(ADDRESS_2, VALUE_1, THREAD_1, NO_SIGNAL),
+                        setSignalHandler(
+                                SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK, THREAD_1, NO_SIGNAL),
+                        e1 = nonAtomicLoad(ADDRESS_1, VALUE_1, THREAD_1, NO_SIGNAL),
+                        enableSignal(SIGNAL_NUMBER_1, THREAD_1, NO_SIGNAL),
+                        threadStart(THREAD_2, THREAD_1, NO_SIGNAL)),
+                createRawTrace(
+                        nonAtomicLoad(ADDRESS_2, VALUE_1, THREAD_2, NO_SIGNAL)),
+                createRawTrace(
+                        enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, THREAD_2, ONE_SIGNAL),
+                        e2 = nonAtomicStore(ADDRESS_1, VALUE_1, THREAD_2, NO_SIGNAL)));
+
+        Assert.assertFalse(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2)));
+    }
+
     // TODO: Tests with writes that enable certain reads, both with and without signals.
     // TODO: Test that a signals stops their thread, i.e. it does not conflict with its own thread in a complex way,
     // i.e. it does not race with the interruption point, but it enables a subsequent read which allows one to

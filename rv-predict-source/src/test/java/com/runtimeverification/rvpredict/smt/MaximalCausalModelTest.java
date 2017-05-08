@@ -714,9 +714,11 @@ public class MaximalCausalModelTest {
     // TODO: Test that a signals stops their thread, i.e. it does not conflict with its own thread in a complex way,
     // i.e. it does not race with the interruption point, but it enables a subsequent read which allows one to
     // reach a racing instruction.
+    // TODO: Tests for get, set and getset for signal masks.
+    // TODO: Test that threads are not interrupted before being started / after being joined.
     // TODO: Test that a signal can interrupt an empty thread (i.e. a thread which otherwise has no interactions).
+    // TODO: Test for disestablishSignal
     // TODO: Test for signals using the same lock as the interrupted thread.
-    // TODO: Test that atomic variables do not generate races.
 
     private List<ReadonlyEventInterface> enterSignal(
             long signalNumber, long signalHandler, long threadId, int signalDepth) throws InvalidTraceDataException {
@@ -730,32 +732,6 @@ public class MaximalCausalModelTest {
         prepareContextForEvent(threadId, signalDepth);
         when(mockContext.getMemoizedSignalMask(123)).thenReturn(disabledSignalMask);
         return compactEventFactory.establishSignal(mockContext, signalHandler, signalNumber, 123);
-    }
-
-    private List<ReadonlyEventInterface> getSignalMask(long signalMask, long threadId, int signalDepth) {
-        prepareContextForEvent(threadId, signalDepth);
-        when(mockContext.getMemoizedSignalMask(123)).thenReturn(signalMask);
-        return compactEventFactory.getSignalMask(mockContext, 123);
-    }
-
-    private List<ReadonlyEventInterface> setSignalMask(long signalMask, long threadId, int signalDepth) {
-        prepareContextForEvent(threadId, signalDepth);
-        when(mockContext.getMemoizedSignalMask(123)).thenReturn(signalMask);
-        return compactEventFactory.signalMask(mockContext, 123);
-    }
-
-    private List<ReadonlyEventInterface> getSetSignalMask(
-            long readSignalMask, long writeSignalMask, long threadId, int signalDepth) {
-        prepareContextForEvent(threadId, signalDepth);
-        when(mockContext.getMemoizedSignalMask(123)).thenReturn(readSignalMask);
-        when(mockContext.getMemoizedSignalMask(124)).thenReturn(writeSignalMask);
-        return compactEventFactory.getSetSignalMask(mockContext, 123, 124);
-    }
-
-    private List<ReadonlyEventInterface> disestablishSignal(long signalNumber, long threadId, int signalDepth)
-            throws InvalidTraceDataException {
-        prepareContextForEvent(threadId, signalDepth);
-        return compactEventFactory.disestablishSignal(mockContext, signalNumber);
     }
 
     private List<ReadonlyEventInterface> disableSignal(long signalNumber, long threadId, int signalDepth)

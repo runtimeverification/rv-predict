@@ -85,7 +85,7 @@ public class RaceDetector implements Constants {
                                     && !isThreadSafeLocation(trace, e1.getLocationId())
                                     && !trace.isInsideClassInitializer(e1)
                                     && !trace.isInsideClassInitializer(e2)) {
-                                Race race = new Race(e1, e2, trace, config);
+                                Race race = new Race(e1, e2, tid1, tid2, trace, config);
                                 if (!config.suppressPattern.matcher(race.getRaceLocationSig())
                                         .matches()) {
                                     String raceSig = race.toString();

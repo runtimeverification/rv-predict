@@ -216,7 +216,7 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    public ReadonlyEventInterface destructiveWithLocationId(int locationId) {
+    public ReadonlyEventInterface destructiveWithLocationId(long locationId) {
         this.locationId = locationId;
         return this;
     }

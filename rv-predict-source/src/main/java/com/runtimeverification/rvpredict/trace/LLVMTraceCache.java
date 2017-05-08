@@ -92,6 +92,7 @@ public class LLVMTraceCache extends TraceCache {
     }
 
     private void readMetadata() throws IOException {
+        metadata.setIsCompactTrace(config.isCompactTrace());
         try {
             parseVarInfo();
         } catch (Metadata.TooManyVariables e) {

@@ -17,6 +17,6 @@ SRCS.tracedump=tracedump.c
 WARNS=4
 STRIPFLAG=
 
-COPTS+=-O3 -g -O0
+COPTS+=-g -O3
 
 .include <mkc.prog.mk>

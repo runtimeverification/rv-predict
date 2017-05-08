@@ -11,7 +11,7 @@ import javax.xml.crypto.Data;
 public class Event extends ReadonlyEvent {
     private long eventId;
     private long originalThreadId;
-    private int locationId;
+    private long locationId;
     private DataAddress address;
     private long dataValue;
     private EventType type;
@@ -44,11 +44,11 @@ public class Event extends ReadonlyEvent {
      * @param dataValue data for read/write events.
      * @param type type of event
      */
-    public Event(long eventId, long tid, int locationId, long address, long dataValue, EventType type) {
+    public Event(long eventId, long tid, long locationId, long address, long dataValue, EventType type) {
         this(eventId, tid, locationId, DataAddress.createPlainDataAddress(address), dataValue, type);
     }
 
-    public Event(long eventId, long tid, int locationId, DataAddress address, long dataValue, EventType type) {
+    public Event(long eventId, long tid, long locationId, DataAddress address, long dataValue, EventType type) {
         this.eventId = eventId;
         this.originalThreadId = tid;
         this.locationId = locationId;
@@ -99,7 +99,7 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    public int getLocationId() {
+    public long getLocationId() {
         return locationId;
     }
 
@@ -206,7 +206,7 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    public ReadonlyEventInterface destructiveWithLocationId(int locationId) {
+    public ReadonlyEventInterface destructiveWithLocationId(long locationId) {
         this.locationId = locationId;
         return this;
     }

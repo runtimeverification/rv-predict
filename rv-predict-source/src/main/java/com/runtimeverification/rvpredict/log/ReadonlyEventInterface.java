@@ -5,7 +5,7 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     long getOriginalThreadId();
     int getSignalDepth();
     long getSignalNumber();
-    int getLocationId();
+    long getLocationId();
     long getDataValue();
     DataAddress getDataAddress();
     EventType getType();
@@ -24,7 +24,7 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
      * Returns an event with the same base data as the current one, except that it has the new location id.
      * The current object cannot be used anymore after this call.
      */
-    ReadonlyEventInterface destructiveWithLocationId(int locationId);
+    ReadonlyEventInterface destructiveWithLocationId(long locationId);
 
     /**
      * Returns an event with the same base data as the current one, except that it has the new event id.

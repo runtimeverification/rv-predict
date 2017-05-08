@@ -55,7 +55,7 @@ public class RaceDetector implements Constants {
         return reports;
     }
 
-    private boolean isThreadSafeLocation(Trace trace, int locId) {
+    private boolean isThreadSafeLocation(Trace trace, long locId) {
         String locationSig = trace.metadata().getLocationSig(locId);
         if (locationSig.startsWith("java.util.concurrent")
             || locationSig.startsWith("java.util.stream")) {
@@ -85,7 +85,7 @@ public class RaceDetector implements Constants {
                                     && !isThreadSafeLocation(trace, e1.getLocationId())
                                     && !trace.isInsideClassInitializer(e1)
                                     && !trace.isInsideClassInitializer(e2)) {
-                                Race race = new Race(e1, e2, trace, config);
+                                Race race = new Race(e1, e2, tid1, tid2, trace, config);
                                 if (!config.suppressPattern.matcher(race.getRaceLocationSig())
                                         .matches()) {
                                     String raceSig = race.toString();

@@ -63,7 +63,7 @@ public class RVPredict {
             metadata = Metadata.singleton();
             traceCache = new LLVMTraceCache(config, metadata);
         } else {
-            this.metadata = Metadata.readFrom(config.getMetadataPath());
+            this.metadata = Metadata.readFrom(config.getMetadataPath(), config.isCompactTrace());
             traceCache = new TraceCache(config, metadata);
         }
         this.detector = new RaceDetector(config);

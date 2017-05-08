@@ -1,7 +1,7 @@
 package com.runtimeverification.rvpredict.log;
 
 public class ReadonlyEventDecorator implements ReadonlyEventInterface {
-    private final ReadonlyEventInterface event;
+    protected final ReadonlyEventInterface event;
 
     protected ReadonlyEventDecorator(ReadonlyEventInterface event) {
         this.event = event;
@@ -38,7 +38,7 @@ public class ReadonlyEventDecorator implements ReadonlyEventInterface {
     }
 
     @Override
-    public int getLocationId() {
+    public long getLocationId() {
         return event.getLocationId();
     }
 
@@ -88,10 +88,10 @@ public class ReadonlyEventDecorator implements ReadonlyEventInterface {
     }
 
     @Override
-    public ReadonlyEventInterface destructiveWithLocationId(int locationId) {
+    public ReadonlyEventInterface destructiveWithLocationId(long locationId) {
         return new ReadonlyEventDecorator(this) {
             @Override
-            public int getLocationId() {
+            public long getLocationId() {
                 return locationId;
             }
         };
@@ -215,5 +215,10 @@ public class ReadonlyEventDecorator implements ReadonlyEventInterface {
     @Override
     public int compareTo(ReadonlyEventInterface event) {
         return this.event.compareTo(event);
+    }
+
+    @Override
+    public String toString() {
+        return "Decorator(" + event.toString() + ")";
     }
 }

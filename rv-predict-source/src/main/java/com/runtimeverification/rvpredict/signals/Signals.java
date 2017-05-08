@@ -4,8 +4,6 @@ import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.Optional;
-import java.util.OptionalLong;
 
 public class Signals {
     public static Boolean signalEnableChange(ReadonlyEventInterface event, long signalNumber) {
@@ -87,12 +85,12 @@ public class Signals {
         public ReadonlyEventInterface getPreviousEventWithDefault(ReadonlyEventInterface defaultValue) {
             assert previousEnabled;
             if (detectInterruptedThreadRace && previousPreviousEnabled) {
-                return optionalEventWithDefault(previousPreviousEvent, defaultValue);
+                return eventWithDefault(previousPreviousEvent, defaultValue);
             }
-            return optionalEventWithDefault(previousEvent, defaultValue);
+            return eventWithDefault(previousEvent, defaultValue);
         }
         public ReadonlyEventInterface getCurrentEventWithDefault(ReadonlyEventInterface defaultValue) {
-            return optionalEventWithDefault(currentEvent, defaultValue);
+            return eventWithDefault(currentEvent, defaultValue);
         }
         public boolean advance() {
             while (advanceOneStep()) {
@@ -115,7 +113,7 @@ public class Signals {
             enabled = Signals.updateEnabledWithEvent(enabled, signalNumber, currentEvent);
             return true;
         }
-        private static ReadonlyEventInterface optionalEventWithDefault(
+        private static ReadonlyEventInterface eventWithDefault(
                 ReadonlyEventInterface event, ReadonlyEventInterface defaultValue) {
             if (event == null) {
                 return defaultValue;

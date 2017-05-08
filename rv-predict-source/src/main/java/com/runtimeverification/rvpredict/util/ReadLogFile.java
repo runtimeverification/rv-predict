@@ -25,7 +25,8 @@ public class ReadLogFile {
         }
         Path path = Paths.get(args[0]).toAbsolutePath();
         Path directory = path.getParent();
-        Metadata metadata = Metadata.readFrom(Paths.get(directory.toString(), Configuration.METADATA_BIN));
+        Metadata metadata =
+                Metadata.readFrom(Paths.get(directory.toString(), Configuration.METADATA_BIN), false);
         String file = args[0];
         if (file.endsWith("metadata.bin")) {
             System.out.println("#variable section#");

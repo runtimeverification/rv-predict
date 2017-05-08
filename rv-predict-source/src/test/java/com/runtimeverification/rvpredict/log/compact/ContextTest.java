@@ -267,6 +267,7 @@ public class ContextTest {
         Assert.assertEquals(PROGRAM_COUNTER, context.getPC());
         Assert.assertEquals(0, context.getSignalDepth());
 
+        context.setSignalDepth(1);
         context.enterSignal(SIGNAL_NUMBER, SECOND_GENERATION);
         context.jump(SECOND_PROGRAM_COUNTER);
 
@@ -277,6 +278,7 @@ public class ContextTest {
         Assert.assertEquals(1, context.getSignalDepth());
 
         context.exitSignal();
+        context.setSignalDepth(0);
 
         Assert.assertEquals(THREAD_ID, context.getThreadId());
         Assert.assertEquals(Context.INVALID_SIGNAL_NUMBER, context.getSignalNumber());
@@ -297,6 +299,7 @@ public class ContextTest {
         Assert.assertEquals(PROGRAM_COUNTER, context.getPC());
         Assert.assertEquals(0, context.getSignalDepth());
 
+        context.setSignalDepth(1);
         context.enterSignal(SIGNAL_NUMBER, SECOND_GENERATION);
         context.jump(SECOND_PROGRAM_COUNTER);
 
@@ -306,6 +309,7 @@ public class ContextTest {
         Assert.assertEquals(SECOND_PROGRAM_COUNTER, context.getPC());
         Assert.assertEquals(1, context.getSignalDepth());
 
+        context.setSignalDepth(2);
         context.enterSignal(SECOND_SIGNAL_NUMBER, THIRD_GENERATION);
         context.jump(THIRD_PROGRAM_COUNTER);
 
@@ -316,6 +320,7 @@ public class ContextTest {
         Assert.assertEquals(2, context.getSignalDepth());
 
         context.exitSignal();
+        context.setSignalDepth(1);
 
         Assert.assertEquals(THREAD_ID, context.getThreadId());
         Assert.assertEquals(SIGNAL_NUMBER, context.getSignalNumber());
@@ -324,6 +329,7 @@ public class ContextTest {
         Assert.assertEquals(1, context.getSignalDepth());
 
         context.exitSignal();
+        context.setSignalDepth(0);
         Assert.assertEquals(THREAD_ID, context.getThreadId());
         Assert.assertEquals(Context.INVALID_SIGNAL_NUMBER, context.getSignalNumber());
         Assert.assertEquals(FIRST_GENERATION, context.getGeneration());
@@ -343,6 +349,7 @@ public class ContextTest {
         Assert.assertEquals(PROGRAM_COUNTER, context.getPC());
         Assert.assertEquals(0, context.getSignalDepth());
 
+        context.setSignalDepth(1);
         context.enterSignal(SIGNAL_NUMBER, SECOND_GENERATION);
         context.jump(SECOND_PROGRAM_COUNTER);
 
@@ -352,7 +359,7 @@ public class ContextTest {
         Assert.assertEquals(SECOND_PROGRAM_COUNTER, context.getPC());
         Assert.assertEquals(1, context.getSignalDepth());
 
-        context.setSignalDepth(2);
+        context.setSignalDepth(3);
         context.enterSignal(SECOND_SIGNAL_NUMBER, THIRD_GENERATION);
         context.jump(THIRD_PROGRAM_COUNTER);
 
@@ -363,7 +370,7 @@ public class ContextTest {
         Assert.assertEquals(3, context.getSignalDepth());
 
         context.exitSignal();
-        context.setSignalDepth(1);
+        context.setSignalDepth(2);
         context.enterSignal(THIRD_SIGNAL_NUMBER, FOURTH_GENERATION);
         context.jump(FOURTH_PROGRAM_COUNTER);
 
@@ -374,6 +381,7 @@ public class ContextTest {
         Assert.assertEquals(2, context.getSignalDepth());
 
         context.exitSignal();
+        context.setSignalDepth(1);
 
         Assert.assertEquals(THREAD_ID, context.getThreadId());
         Assert.assertEquals(SIGNAL_NUMBER, context.getSignalNumber());
@@ -382,6 +390,7 @@ public class ContextTest {
         Assert.assertEquals(1, context.getSignalDepth());
 
         context.exitSignal();
+        context.setSignalDepth(0);
 
         Assert.assertEquals(THREAD_ID, context.getThreadId());
         Assert.assertEquals(Context.INVALID_SIGNAL_NUMBER, context.getSignalNumber());
@@ -413,6 +422,7 @@ public class ContextTest {
         Assert.assertEquals(SECOND_PROGRAM_COUNTER, context.getPC());
         Assert.assertEquals(0, context.getSignalDepth());
 
+        context.setSignalDepth(1);
         context.enterSignal(SIGNAL_NUMBER, THIRD_GENERATION);
         context.jump(THIRD_PROGRAM_COUNTER);
 
@@ -463,6 +473,7 @@ public class ContextTest {
         Assert.assertEquals(1, context.getSignalDepth());
 
         context.exitSignal();
+        context.setSignalDepth(0);
 
         Assert.assertEquals(SECOND_THREAD_ID, context.getThreadId());
         Assert.assertEquals(Context.INVALID_SIGNAL_NUMBER, context.getSignalNumber());

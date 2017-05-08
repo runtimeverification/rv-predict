@@ -148,7 +148,7 @@ public class TraceState {
             break;
         case FINISH_METHOD:
 	    ReadonlyEventInterface lastEvent = tidToStacktrace.get(ttid).removeLast();
-            int locId = lastEvent.getLocationId();
+            long locId = lastEvent.getLocationId();
             if (locId != event.getLocationId()) {
                 throw new IllegalStateException("Unmatched method entry/exit events!" +
                         (Configuration.debug ?
@@ -210,7 +210,7 @@ public class TraceState {
      * @param event a lock acquiring event.  Assumed to be the latest in the current trace window.
      */
     protected ReadonlyEventInterface updateLockLocToUserLoc(ReadonlyEventInterface event, int ttid) {
-        int locId = findUserCallLocation(event, ttid);
+        long locId = findUserCallLocation(event, ttid);
         if (locId != event.getLocationId()) {
             event = event.destructiveWithLocationId(locId);
         }
@@ -222,7 +222,7 @@ public class TraceState {
      * @param event an event creating a new thread.  Assumed to be the latest in the current trace window.
      */
     protected void updateThreadLocToUserLoc(ReadonlyEventInterface event, int ttid) {
-        int locId = findUserCallLocation(event, ttid);
+        long locId = findUserCallLocation(event, ttid);
         if (locId != metadata.getOriginalThreadCreationLocId(event.getSyncedThreadId())) {
             metadata().addOriginalThreadCreationInfo(event.getSyncedThreadId(), ttid, locId);
         }
@@ -231,12 +231,15 @@ public class TraceState {
     /**
      * Retrieves the most recent non-library call location from the stack trace associated to an event.
      */
-    private int findUserCallLocation(ReadonlyEventInterface e, int ttid) {
-        int locId = e.getLocationId();
+    private long findUserCallLocation(ReadonlyEventInterface e, int ttid) {
+        long locId = e.getLocationId();
         if (locId >= 0 && !config().isExcludedLibrary(metadata().getLocationSig(locId))) {
             return locId;
         }
         Deque<ReadonlyEventInterface> stacktrace = tidToStacktrace.get(ttid);
+        if (stacktrace == null) {
+            return -1;
+        }
         String sig;
         for (ReadonlyEventInterface event : stacktrace) {
             locId = event.getLocationId();

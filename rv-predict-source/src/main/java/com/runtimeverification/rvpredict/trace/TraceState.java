@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.trace;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.DataAddress;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
@@ -41,22 +42,28 @@ public class TraceState {
     /**
      * Map from (thread ID, lock ID) to lock state.
      */
-    private final Table<Long, Long, LockState> tidToLockIdToLockState = HashBasedTable.create(
+    private final Table<Integer, Long, LockState> tidToLockIdToLockState = HashBasedTable.create(
             DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_LOCKS);
 
     private final Configuration config;
 
     private final Metadata metadata;
 
-    private final Map<Long, List<ReadonlyEventInterface>> t_tidToEvents;
+    private final Map<Long, Integer> t_eventIdToTtid;
 
-    private final Map<Long, List<MemoryAccessBlock>> t_tidToMemoryAccessBlocks;
+    private final Map<Integer, ThreadInfo> t_ttidToThreadInfo;
 
-    private final Map<Long, ThreadState> t_tidToThreadState;
+    private final Map<Long, Integer> t_originalTidToTraceTid;
+
+    private final Map<Integer, List<ReadonlyEventInterface>> t_tidToEvents;
+
+    private final Map<Integer, List<MemoryAccessBlock>> t_tidToMemoryAccessBlocks;
+
+    private final Map<Integer, ThreadState> t_tidToThreadState;
 
     private final MemoryAddrToStateMap t_addrToState;
 
-    private final Table<Long, Long, List<ReadonlyEventInterface>> t_tidToAddrToEvents;
+    private final Table<Integer, DataAddress, List<ReadonlyEventInterface>> t_tidToAddrToEvents;
 
     private final Map<Long, List<LockRegion>> t_lockIdToLockRegions;
 
@@ -65,6 +72,9 @@ public class TraceState {
     public TraceState(Configuration config, Metadata metadata) {
         this.config = config;
         this.metadata = metadata;
+        this.t_eventIdToTtid           = new LinkedHashMap<>();
+        this.t_ttidToThreadInfo        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_originalTidToTraceTid   = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToThreadState        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
@@ -84,6 +94,9 @@ public class TraceState {
     }
 
     public Trace initNextTraceWindow(List<RawTrace> rawTraces) {
+        t_eventIdToTtid.clear();
+        t_ttidToThreadInfo.clear();
+        t_originalTidToTraceTid.clear();
         t_tidToEvents.clear();
         t_tidToMemoryAccessBlocks.clear();
         t_tidToThreadState.clear();
@@ -92,47 +105,49 @@ public class TraceState {
         t_lockIdToLockRegions.clear();
         t_clinitEvents.clear();
         return new Trace(this, rawTraces,
+                t_eventIdToTtid,
+                t_ttidToThreadInfo,
                 t_tidToEvents,
                 t_tidToMemoryAccessBlocks,
                 t_tidToThreadState,
                 t_addrToState,
                 t_tidToAddrToEvents,
                 t_lockIdToLockRegions,
-                t_clinitEvents);
+                t_clinitEvents,
+                t_originalTidToTraceTid);
     }
 
-    public int acquireLock(ReadonlyEventInterface lock) {
+    public int acquireLock(ReadonlyEventInterface lock, int ttid) {
         lock = lock.copy();
-        LockState st = tidToLockIdToLockState.row(lock.getThreadId())
+        LockState st = tidToLockIdToLockState.row(ttid)
                 .computeIfAbsent(lock.getLockId(), LockState::new);
         st.acquire(lock);
         return lock.isReadLock() ? st.readLockLevel() : st.writeLockLevel();
     }
 
-    public int releaseLock(ReadonlyEventInterface unlock) {
-        LockState st = tidToLockIdToLockState.get(unlock.getThreadId(), unlock.getLockId());
+    public int releaseLock(ReadonlyEventInterface unlock, int ttid) {
+        LockState st = tidToLockIdToLockState.get(ttid, unlock.getLockId());
         if (st == null) return -1;
 
         st.release(unlock);
         return unlock.isReadUnlock() ? st.readLockLevel() : st.writeLockLevel();
     }
 
-    public void onMetaEvent(ReadonlyEventInterface event) {
-        long tid = event.getThreadId();
+    public void onMetaEvent(ReadonlyEventInterface event, int ttid) {
         switch (event.getType()) {
         case CLINIT_ENTER:
-            tidToClinitDepth.computeIfAbsent(tid).increment();
+            tidToClinitDepth.computeIfAbsent(ttid).increment();
             tidToClinitDepth = ThreadIDToObjectMap.growOnFull(tidToClinitDepth);
             break;
         case CLINIT_EXIT:
-            tidToClinitDepth.get(tid).decrement();
+            tidToClinitDepth.get(ttid).decrement();
             break;
         case INVOKE_METHOD:
-            tidToStacktrace.computeIfAbsent(tid).add(event.copy());
+            tidToStacktrace.computeIfAbsent(ttid).add(event.copy());
             tidToStacktrace = ThreadIDToObjectMap.growOnFull(tidToStacktrace);
             break;
         case FINISH_METHOD:
-	    ReadonlyEventInterface lastEvent = tidToStacktrace.get(tid).removeLast();
+	    ReadonlyEventInterface lastEvent = tidToStacktrace.get(ttid).removeLast();
             int locId = lastEvent.getLocationId();
             if (locId != event.getLocationId()) {
                 throw new IllegalStateException("Unmatched method entry/exit events!" +
@@ -146,21 +161,21 @@ public class TraceState {
         }
     }
 
-    public boolean isInsideClassInitializer(long tid) {
+    public boolean isInsideClassInitializer(int ttid) {
         try {
-            return tidToClinitDepth.computeIfAbsent(tid).intValue() > 0;
+            return tidToClinitDepth.computeIfAbsent(ttid).intValue() > 0;
         } finally {
             tidToClinitDepth = ThreadIDToObjectMap.growOnFull(tidToClinitDepth);
         }
     }
 
-    public ThreadState getThreadStateSnapshot(long tid) {
+    public ThreadState getThreadStateSnapshot(int ttid) {
         /* copy stack trace */
-        Deque<ReadonlyEventInterface> stacktrace = tidToStacktrace.get(tid);
+        Deque<ReadonlyEventInterface> stacktrace = tidToStacktrace.get(ttid);
         stacktrace = stacktrace == null ? new ArrayDeque<>() : new ArrayDeque<>(stacktrace);
         /* copy each lock state */
         List<LockState> lockStates = new ArrayList<>();
-        tidToLockIdToLockState.row(tid).values().forEach(st -> lockStates.add(st.copy()));
+        tidToLockIdToLockState.row(ttid).values().forEach(st -> lockStates.add(st.copy()));
         return new ThreadState(stacktrace, lockStates);
     }
 
@@ -174,17 +189,18 @@ public class TraceState {
      * @param rawTrace
      */
     public void fastProcess(RawTrace rawTrace) {
+        int ttid = rawTrace.getThreadInfo().getId();
         for (int i = 0; i < rawTrace.size(); i++) {
             ReadonlyEventInterface event = rawTrace.event(i);
             if (event.isLock() && !event.isWaitAcq()) {
-                event = updateLockLocToUserLoc(event);
-                acquireLock(event);
+                event = updateLockLocToUserLoc(event, ttid);
+                acquireLock(event, ttid);
             } else if (event.isUnlock() && !event.isWaitRel()) {
-                releaseLock(event);
+                releaseLock(event, ttid);
             } else if (event.isMetaEvent()) {
-                onMetaEvent(event);
+                onMetaEvent(event, ttid);
             } else if (event.isStart()) {
-                updateThreadLocToUserLoc(event);
+                updateThreadLocToUserLoc(event, ttid);
             }
         }
     }
@@ -193,8 +209,8 @@ public class TraceState {
      * Updates the location at which a lock was acquired to the most recent reportable location on the call stack.
      * @param event a lock acquiring event.  Assumed to be the latest in the current trace window.
      */
-    protected ReadonlyEventInterface updateLockLocToUserLoc(ReadonlyEventInterface event) {
-        int locId = findUserCallLocation(event);
+    protected ReadonlyEventInterface updateLockLocToUserLoc(ReadonlyEventInterface event, int ttid) {
+        int locId = findUserCallLocation(event, ttid);
         if (locId != event.getLocationId()) {
             event = event.destructiveWithLocationId(locId);
         }
@@ -205,23 +221,22 @@ public class TraceState {
      * Updates the location about thread creation to the most recent reportable location on the call stack.
      * @param event an event creating a new thread.  Assumed to be the latest in the current trace window.
      */
-    protected void updateThreadLocToUserLoc(ReadonlyEventInterface event) {
-        int locId = findUserCallLocation(event);
-        if (locId != metadata.getThreadCreationLocId(event.getSyncedThreadId())) {
-            metadata().addThreadCreationInfo(event.getSyncedThreadId(), event.getThreadId(), locId);
+    protected void updateThreadLocToUserLoc(ReadonlyEventInterface event, int ttid) {
+        int locId = findUserCallLocation(event, ttid);
+        if (locId != metadata.getOriginalThreadCreationLocId(event.getSyncedThreadId())) {
+            metadata().addOriginalThreadCreationInfo(event.getSyncedThreadId(), ttid, locId);
         }
     }
 
     /**
      * Retrieves the most recent non-library call location from the stack trace associated to an event.
      */
-    private int findUserCallLocation(ReadonlyEventInterface e) {
+    private int findUserCallLocation(ReadonlyEventInterface e, int ttid) {
         int locId = e.getLocationId();
         if (locId >= 0 && !config().isExcludedLibrary(metadata().getLocationSig(locId))) {
             return locId;
         }
-        long tid = e.getThreadId();
-        Deque<ReadonlyEventInterface> stacktrace = tidToStacktrace.get(tid);
+        Deque<ReadonlyEventInterface> stacktrace = tidToStacktrace.get(ttid);
         String sig;
         for (ReadonlyEventInterface event : stacktrace) {
             locId = event.getLocationId();
@@ -234,5 +249,4 @@ public class TraceState {
         }
         return -1;
     }
-
 }

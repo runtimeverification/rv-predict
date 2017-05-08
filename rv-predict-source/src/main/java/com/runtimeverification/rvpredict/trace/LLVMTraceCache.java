@@ -2,6 +2,8 @@ package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LLVMEventReader;
+import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
+import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.util.Logger;
 
@@ -72,7 +74,7 @@ public class LLVMTraceCache extends TraceCache {
 
             @Override
             public void log(Object[] args) {
-                metadata.addThreadCreationInfo((long)args[0], (long)args[1], (int)args[2]);
+                metadata.addOriginalThreadCreationInfo((long)args[0], (long)args[1], (int)args[2]);
 
             }
         }, new BinaryReader() {
@@ -102,6 +104,14 @@ public class LLVMTraceCache extends TraceCache {
     @Override
     public void setup() throws IOException {
         readMetadata();
+        if (config.isCompactTrace()) {
+            try {
+                readers.add(new CompactEventReader(config.getCompactTraceFilePath()));
+            } catch (InvalidTraceDataException e) {
+                throw new IOException(e);
+            }
+            return;
+        }
         int logId = 0;
         Path path = config.getTraceFilePath(logId);
         while(path.toFile().exists()) {

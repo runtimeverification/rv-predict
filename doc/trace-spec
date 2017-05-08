@@ -348,6 +348,11 @@ trace ::= (delta, 'load[n]') addr value
                 Subsequent events occurred on the current thread at
                 signal depth `depth`.
 
+                Events occuring at different depths are not written to
+                the trace in the order in which they occured, but events
+                occuring at the same depth on the same thread are ordered,
+                even if they were part of different signal handler calls.
+
                 `self.PC <- self.PC + delta`
 		`self.signal_depth <- depth`
 

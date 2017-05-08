@@ -22,15 +22,15 @@ public class Context {
         this.minDeltaAndEventType = minDeltaAndEventType;
     }
 
-    long newId() {
+    public long newId() {
         return currentThread.newId();
     }
 
-    long getThreadId() {
+    public long getThreadId() {
         return currentThread.getThreadId();
     }
 
-    long getPC() {
+    public long getPC() {
         return currentThread.getLastPC();
     }
 
@@ -111,11 +111,15 @@ public class Context {
         currentThread.setSignalDepth(signalDepth, false);
     }
 
+    public int getSignalDepth() {
+        return currentThread.getSignalDepth();
+    }
+
     void memoizeSignalMask(long signalMask, long originBitCount, long signalMaskNumber) {
         memoizedSignalMasks.put(signalMaskNumber, signalMask << originBitCount);
     }
 
-    long getMemoizedSignalMask(long signalMaskNumber) {
+    public long getMemoizedSignalMask(long signalMaskNumber) {
         return memoizedSignalMasks.get(signalMaskNumber);
     }
 
@@ -207,6 +211,10 @@ public class Context {
             }
             this.signalDepth = signalDepth;
             this.currentSignalState = signalStack.get(signalDepth);
+        }
+
+        private int getSignalDepth() {
+            return signalDepth;
         }
 
         private PerSignalState createUnstartedSignalState() {

@@ -183,14 +183,14 @@ public class Context {
         }
 
         void enterSignal(long signalNumber, long generation) throws InvalidTraceDataException {
-            setSignalDepth(signalDepth + 1, false);
+            //setSignalDepth(signalDepth + 1, false);
             setGeneration(generation);
             currentSignalState.signalNumber = signalNumber;
         }
 
         void exitSignal() throws InvalidTraceDataException {
             currentSignalState.state = PerSignalState.State.FINISHED;
-            setSignalDepth(signalDepth - 1, false);
+            // setSignalDepth(signalDepth - 1, false);
         }
 
         void setSignalDepth(int signalDepth, boolean reset) throws InvalidTraceDataException {

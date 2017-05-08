@@ -9,6 +9,7 @@ import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.*;
 import java.nio.file.Path;
+import java.util.Arrays;
 
 /**
  * Class reading the trace from an LLVM execution debug log.
@@ -91,6 +92,7 @@ public class LLVMTraceCache extends TraceCache {
     }
 
     private void readMetadata() throws IOException {
+        metadata.setIsCompactTrace(config.isCompactTrace());
         try {
             parseVarInfo();
         } catch (Metadata.TooManyVariables e) {

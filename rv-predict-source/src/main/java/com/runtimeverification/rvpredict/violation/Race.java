@@ -53,11 +53,16 @@ public class Race {
 
     private final ReadonlyEventInterface e1;
     private final ReadonlyEventInterface e2;
+    private final int ttid1;
+    private final int ttid2;
     private final Configuration config;
     private final Trace trace;
     private final SignatureProcessor signatureProcessor;
 
-    public Race(ReadonlyEventInterface e1, ReadonlyEventInterface e2, Trace trace, Configuration config) {
+    public Race(
+            ReadonlyEventInterface e1, ReadonlyEventInterface e2, int ttid1, int ttid2, Trace trace, Configuration config) {
+        this.ttid1 = ttid1;
+        this.ttid2 = ttid2;
         if (e1.getEventId() > e2.getEventId()) {
             ReadonlyEventInterface tmp = e1;
             e1 = e2;
@@ -101,8 +106,8 @@ public class Race {
     @Override
     public String toString() {
         int addr = Math.min(0, e1.getDataAddress().getFieldIdOrArrayIndex()); // collapse all array indices to 0
-        int loc1 = Math.min(e1.getLocationId(), e2.getLocationId());
-        int loc2 = Math.max(e1.getLocationId(), e2.getLocationId());
+        long loc1 = Math.min(e1.getLocationId(), e2.getLocationId());
+        long loc2 = Math.max(e1.getLocationId(), e2.getLocationId());
         return "Race(" + addr + "," + loc1 + "," + loc2 + ")";
     }
 
@@ -145,23 +150,23 @@ public class Race {
 
         if (trace.metadata().getLocationSig(e1.getLocationId())
                 .compareTo(trace.metadata().getLocationSig(e2.getLocationId())) <= 0) {
-            reportableRace |= generateMemAccReport(e1, sb);
+            reportableRace |= generateMemAccReport(e1, ttid1, sb);
             sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
-            reportableRace |= generateMemAccReport(e2, sb);
+            reportableRace |= generateMemAccReport(e2, ttid2, sb);
         } else {
-            reportableRace |= generateMemAccReport(e2, sb);
+            reportableRace |= generateMemAccReport(e2, ttid2, sb);
             sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
-            reportableRace |= generateMemAccReport(e1, sb);
+            reportableRace |= generateMemAccReport(e1, ttid1, sb);
         }
 
         sb.append(String.format("%n"));
         return reportableRace ? signatureProcessor.simplify(sb.toString()) : "";
     }
 
-    private boolean generateMemAccReport(ReadonlyEventInterface e, StringBuilder sb) {
+    private boolean generateMemAccReport(ReadonlyEventInterface e, int ttid, StringBuilder sb) {
         int stackSize = 0;
         long otid = e.getOriginalThreadId();
-        long sid = e.getSignalNumber();
+        long sid = trace.getSignalNumber(ttid);
         Metadata metadata = trace.metadata();
         List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
         if (e.getSignalDepth() == 0) {
@@ -184,7 +189,7 @@ public class Race {
         stacktrace.addAll(heldLocks);
         Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
         for (ReadonlyEventInterface elem : stacktrace) {
-            int locId = elem.getLocationId();
+            long locId = elem.getLocationId();
             String locSig = locId >= 0 ? metadata.getLocationSig(locId)
                     : "... not available ...";
             if (config.isExcludedLibrary(locSig)) {
@@ -206,7 +211,7 @@ public class Race {
 
         long parentOTID = metadata.getParentOTID(otid);
         if (parentOTID > 0) {
-            int locId = metadata.getOriginalThreadCreationLocId(otid);
+            long locId = metadata.getOriginalThreadCreationLocId(otid);
             sb.append(String.format("    T%s is created by T%s%n", otid, parentOTID));
             if (locId >= 0) {
                 String locationSig = metadata.getLocationSig(locId);

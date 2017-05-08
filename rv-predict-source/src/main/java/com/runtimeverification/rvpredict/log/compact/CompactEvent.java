@@ -3,13 +3,12 @@ package com.runtimeverification.rvpredict.log.compact;
 import com.google.common.annotations.VisibleForTesting;
 import com.runtimeverification.rvpredict.log.DataAddress;
 import com.runtimeverification.rvpredict.log.EventType;
-import com.runtimeverification.rvpredict.log.ReadonlyEventDecorator;
 import com.runtimeverification.rvpredict.log.ReadonlyEvent;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
 public abstract class CompactEvent extends ReadonlyEvent {
-    private final long eventId;
-    private final long locationId;
+    private long eventId;
+    private long locationId;
     private final long originalThreadId;
     private final int signalDepth;
     private final EventType type;
@@ -34,7 +33,7 @@ public abstract class CompactEvent extends ReadonlyEvent {
 
     // TODO(virgil): Convert getLocationId to long.
     @Override
-    public int getLocationId() {
+    public long getLocationId() {
         return (int)locationId;
     }
 
@@ -116,23 +115,15 @@ public abstract class CompactEvent extends ReadonlyEvent {
     }
 
     @Override
-    public ReadonlyEventInterface destructiveWithLocationId(int locationId) {
-        return new ReadonlyEventDecorator(this) {
-            @Override
-            public int getLocationId() {
-                return locationId;
-            }
-        };
+    public ReadonlyEventInterface destructiveWithLocationId(long locationId) {
+        this.locationId = locationId;
+        return this;
     }
 
     @Override
-    public ReadonlyEventInterface destructiveWithEventId(long locationId) {
-        return new ReadonlyEventDecorator(this) {
-            @Override
-            public long getEventId() {
-                return eventId;
-            }
-        };
+    public ReadonlyEventInterface destructiveWithEventId(long eventId) {
+        this.eventId = eventId;
+        return this;
     }
 
     long getLongAddress() {

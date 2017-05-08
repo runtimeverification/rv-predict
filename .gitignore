@@ -9,4 +9,5 @@ _mkc_*
 .project
 .recommenders
 .settings/
+tags
 target/

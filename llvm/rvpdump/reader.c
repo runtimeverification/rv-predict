@@ -213,7 +213,8 @@ extract_jmpvec_and_op_from_deltop(rvp_addr_t deltop0,
 	int row = (pc - deltop0) / __arraycount(deltops.matrix[0]);
 	int jmpvec = row - RVP_NJMPS / 2;
 
-	rvp_op_t op = (pc - deltop0) - (&deltops.matrix[row][0] - &deltops.matrix[0][0]);
+	rvp_op_t op = (pc - deltop0) -
+	    (&deltops.matrix[row][0] - &deltops.matrix[0][0]);
 
 	assert(op < RVP_NOPS);
 
@@ -818,7 +819,8 @@ emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		errx(EXIT_FAILURE, "%s: conversion unknown", __func__);
 	case RVP_OP_FORK:
 		emit_fork_metadata(ps->ps_curthread,
-		    ub->ub_fork_join_switch.tid, compress_pc(ts->ts_lastpc[ps->ps_idepth]));
+		    ub->ub_fork_join_switch.tid,
+		    compress_pc(ts->ts_lastpc[ps->ps_idepth]));
 		/*FALLTHROUGH*/
 	case RVP_OP_JOIN:
 		ev.addr = ub->ub_fork_join_switch.tid;
@@ -935,7 +937,8 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		    oi->oi_descr, ub->ub_cog.generation);
 		break;
 	case RVP_OP_ENTERFN:
-		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s cfa %" PRIxPTR "\n",
+		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
+		    " %s cfa %" PRIxPTR "\n",
 		    ps->ps_curthread, ps->ps_idepth,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
 		    oi->oi_descr,
@@ -1047,7 +1050,8 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	int field_width = 0;
 
 	if (pc_is_not_deltop(ps, ub->ub_pc)) {
-		ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth] = ub->ub_pc;
+		ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth] =
+		    ub->ub_pc;
 		(*emitters->emit_jump)(ps, ub->ub_pc);
 		advance(&ub->ub_bytes[0], nfullp, sizeof(ub->ub_pc));
 		return 0;
@@ -1075,7 +1079,8 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	assert(op != RVP_OP_ENTERSIG || ps->ps_idepth != 0);
 
 	lastpc = ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth];
-	ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth] = lastpc + jmpvec;
+	ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth] =
+	    lastpc + jmpvec;
 	switch (op) {
 	case RVP_OP_ATOMIC_LOAD8:
 	case RVP_OP_ATOMIC_STORE8:
@@ -1128,7 +1133,8 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	if (op == RVP_OP_COG) {
 		rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
 		assert(ps->ps_idepth < __arraycount(ts->ts_generation));
-		assert(ts->ts_generation[ps->ps_idepth] < ub->ub_cog.generation);
+		assert(ts->ts_generation[ps->ps_idepth] <
+		    ub->ub_cog.generation);
 		ts->ts_generation[ps->ps_idepth] = ub->ub_cog.generation;
 		ts->ts_nops[ps->ps_idepth] = 0;
 	}
@@ -1158,6 +1164,7 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 void
 rvp_trace_dump(rvp_output_type_t otype, int fd)
 {
+	int cmp;
 	rvp_pstate_t ps0;
 	rvp_pstate_t *ps = &ps0;
 	rvp_trace_header_t th;
@@ -1202,16 +1209,19 @@ rvp_trace_dump(rvp_output_type_t otype, int fd)
 		err(EXIT_FAILURE, "%s: readv(header)", __func__);
 
 	if (nread < iovsum(iov, __arraycount(iov))) {
-		errx(EXIT_FAILURE, "%s: short read (header + 1st deltop + ggen init)",
+		errx(EXIT_FAILURE,
+		    "%s: short read (header + 1st deltop + ggen init)",
 		    __func__);
 	}
 
-	if (memcmp(th.th_magic, expected_th.th_magic, sizeof(th.th_magic)) != 0) {
+	cmp = memcmp(th.th_magic, expected_th.th_magic, sizeof(th.th_magic));
+	if (cmp != 0) {
 		errx(EXIT_FAILURE, "%s: bad magic %4s", __func__,
 		    th.th_magic);
 	}
-	if (memcmp(th.th_version, expected_th.th_version,
-	    sizeof(th.th_version)) != 0) {
+	cmp = memcmp(th.th_version, expected_th.th_version,
+	    sizeof(th.th_version));
+	if (cmp != 0) {
 		errx(EXIT_FAILURE, "%s: unsupported version %d.%d.%d.%d",
 		    __func__, th.th_version[0], th.th_version[1],
 		    th.th_version[2], th.th_version[3]);

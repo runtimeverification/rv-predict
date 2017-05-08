@@ -286,7 +286,7 @@ rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 
 static void
 rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters,
-    rvp_addr_t op0, uint32_t tid, uint64_t generation)
+    rvp_addr_t op0, uint32_t tid __unused, uint64_t generation __unused)
 {
 	/* XXX it's not strictly necessary for deltops to have any concrete
 	 * storage
@@ -329,7 +329,7 @@ pc_is_not_deltop(rvp_pstate_t *ps, rvp_addr_t pc)
 }
 
 static void
-legacy_init(const rvp_pstate_t *ps)
+legacy_init(const rvp_pstate_t *ps __unused)
 {
 	thdfd = open("thd_metadata.bin", O_WRONLY|O_CREAT|O_TRUNC, 0600);
 	if (thdfd == -1)
@@ -337,7 +337,7 @@ legacy_init(const rvp_pstate_t *ps)
 }
 
 static void
-emit_no_jump(const rvp_pstate_t *ps, rvp_addr_t pc)
+emit_no_jump(const rvp_pstate_t *ps __unused, rvp_addr_t pc __unused)
 {
 	return;
 }
@@ -500,7 +500,7 @@ compress_pc(uint64_t pc)
 }
 
 static uint32_t
-get_next_thdfd(uintmax_t tid)
+get_next_thdfd(uintmax_t tid __unused)
 {
 	int fd, rc;
 	static int next_trace_fileid = 0;
@@ -772,7 +772,7 @@ emit_fork_metadata(uint64_t curtid, uint64_t newtid, uint32_t stmtid)
 
 static void
 emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
-    bool is_load, int field_width)
+    bool is_load __unused, int field_width __unused)
 {
 	legacy_event_t ev;
 	rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];

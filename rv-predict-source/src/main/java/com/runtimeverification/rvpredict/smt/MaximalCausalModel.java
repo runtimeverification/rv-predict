@@ -261,6 +261,25 @@ public class MaximalCausalModel {
                             otidWhereEnabledAtStart,
                             otidWhereDisabledAtStart));
         });
+
+        Map<Integer, ReadonlyEventInterface> threadToStartEvent = new HashMap<>();
+        Map<Integer, ReadonlyEventInterface> threadToJoinEvent = new HashMap<>();
+        /* build inter-thread synchronization constraint */
+        trace.getInterThreadSyncEvents().forEach(event -> {
+            if (event.isStart()) {
+                Integer ttid = trace.getMainTraceThreadForOriginalThread(event.getSyncedThreadId());
+                if (ttid != null) {
+                    threadToStartEvent.put(ttid, event);
+                }
+            } else if (event.isJoin()) {
+                Integer ttid = trace.getMainTraceThreadForOriginalThread(event.getSyncedThreadId());
+                if (ttid != null) {
+                    threadToJoinEvent.put(ttid, event);
+                }
+            }
+        });
+
+
         FormulaTerm.Builder and = FormulaTerm.andBuilder();
         and.add(BooleanConstant.TRUE);
         trace.eventsByThreadID().keySet().stream()
@@ -279,8 +298,11 @@ public class MaximalCausalModel {
                                 long entryOtid = trace.getOriginalThreadIdForTraceThreadId(entry.getKey());
                                 boolean enabled = otidWhereEnabledAtStart.contains(entryOtid);
                                 if (events.isEmpty() && enabled) {
+
                                     // TODO: The signal can simply interrupt this thread. I should add its start/join
                                     // constraints. I can probably add them directly to the top AND.
+                                    if ()
+                                    or.add();
                                     or.add(BooleanConstant.TRUE);
                                     return;
                                 }
@@ -299,6 +321,15 @@ public class MaximalCausalModel {
                     and.add(or.build());
                 });
         phiTau.add(and.build());
+    }
+
+    private FormulaTerm signalInterruption(
+            ReadonlyEventInterface before, ReadonlyEventInterface after,
+            ReadonlyEventInterface firstSignalEvent, ReadonlyEventInterface lastSignalEvent) {
+        FormulaTerm.Builder threadInterruptionAtPoint = FormulaTerm.andBuilder();
+        threadInterruptionAtPoint.add(HB(before, firstSignalEvent));
+        threadInterruptionAtPoint.add(HB(lastSignalEvent, after));
+        return threadInterruptionAtPoint.build();
     }
 
     private class EventWithIndex {

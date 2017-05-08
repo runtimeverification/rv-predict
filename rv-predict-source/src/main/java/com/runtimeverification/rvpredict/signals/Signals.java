@@ -25,13 +25,19 @@ public class Signals {
         return null;
     }
 
-    public static boolean updateEnabledWithEvent(boolean eventIsEnabled, long signalNumber, ReadonlyEventInterface event) {
+    public static boolean signalIsEnabled(long signalNumber, long signalMask) {
+        return !signalInMask(signalNumber, signalMask);
+    }
+
+    private static boolean updateEnabledWithEvent(boolean eventIsEnabled, long signalNumber, ReadonlyEventInterface event) {
         Boolean change = Signals.signalEnableChange(event, signalNumber);
         if (change == null) {
             return eventIsEnabled;
         }
         return change;
     }
+
+
 
     private static boolean signalInMask(long signalNumber, long mask) {
         return (mask & (1 << signalNumber)) != 0;

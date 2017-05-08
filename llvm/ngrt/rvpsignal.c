@@ -74,9 +74,15 @@ rvp_signal_table_init(void)
 void
 rvp_signal_init(void)
 {
-	ESTABLISH_PTR_TO_REAL(sigaction);
-	ESTABLISH_PTR_TO_REAL(sigprocmask);
-	ESTABLISH_PTR_TO_REAL(pthread_sigmask);
+	ESTABLISH_PTR_TO_REAL(
+	    int (*)(int, const struct sigaction *, struct sigaction *),
+	    sigaction);
+	ESTABLISH_PTR_TO_REAL(
+	    int (*)(int, const sigset_t *, sigset_t *),
+	    sigprocmask);
+	ESTABLISH_PTR_TO_REAL(
+	    int (*)(int, const sigset_t *, sigset_t *),
+	    pthread_sigmask);
 	rvp_signal_table_init();
 }
 
@@ -242,7 +248,7 @@ rvp_signal_ring_get(rvp_thread_t *t, uint32_t idepth)
 }
 
 void
-rvp_signal_ring_put(rvp_thread_t *t, rvp_ring_t *r)
+rvp_signal_ring_put(rvp_thread_t *t __unused, rvp_ring_t *r)
 {
 	rvp_ring_state_t inuse = RVP_RING_S_INUSE;
 
@@ -390,14 +396,14 @@ intern_sigset(const sigset_t *s)
 }
 
 static void
-rvp_trace_sigest(int signum, const void *handler, uint32_t masknum,
+rvp_trace_sigest(int signum, rvp_addr_t handler, uint32_t masknum,
     const void *return_address)
 {
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, return_address, RVP_OP_SIGEST);
-	rvp_buf_put_voidptr(&b, handler);
+	rvp_buf_put_addr(&b, handler);
 	rvp_buf_put(&b, signum);
 	rvp_buf_put(&b, masknum);
 	rvp_ring_put_buf(r, b);
@@ -444,19 +450,19 @@ rvp_trace_mask(rvp_op_t op, uint32_t masknum, const void *return_address)
 }
 
 static void
-rvp_thread_trace_getsetmask(rvp_thread_t *t, uint64_t omask, uint64_t mask,
-    const void *retaddr)
+rvp_thread_trace_getsetmask(rvp_thread_t *t __unused,
+    uint64_t omask, uint64_t mask, const void *retaddr)
 {
 	sigset_t oset, set;
 	rvp_sigblockset_t *obs, *bs;
 
-	obs = intern_sigset(mask_to_sigset(t->t_intrmask, &oset));
-	bs = intern_sigset(mask_to_sigset(t->t_intrmask, &set));
+	obs = intern_sigset(mask_to_sigset(omask, &oset));
+	bs = intern_sigset(mask_to_sigset(mask, &set));
 	rvp_trace_getsetmask(obs->bs_number, bs->bs_number, retaddr);
 }
 
 static void
-rvp_thread_trace_setmask(rvp_thread_t *t, int how, uint64_t mask,
+rvp_thread_trace_setmask(rvp_thread_t *t __unused, int how, uint64_t mask,
     const void *retaddr)
 {
 	rvp_op_t op;
@@ -477,7 +483,8 @@ rvp_thread_trace_setmask(rvp_thread_t *t, int how, uint64_t mask,
 }
 
 static void
-rvp_thread_trace_getmask(rvp_thread_t *t, uint64_t omask, const void *retaddr)
+rvp_thread_trace_getmask(rvp_thread_t *t __unused,
+    uint64_t omask, const void *retaddr)
 {
 	sigset_t set;
 	rvp_sigblockset_t *bs;
@@ -498,7 +505,7 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	 * a write to it.
 	 */
 
-	if ((rc = real_pthread_sigmask(how, set, oldset)) != 0)
+	if ((rc = (*changefn)(how, set, oldset)) != 0)
 		return rc;
 
 	omask = t->t_intrmask;
@@ -554,6 +561,7 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 	struct sigaction act_copy;
 	const struct sigaction *act = act0;
 	int rc;
+	rvp_addr_t handler;
 
 	if (act == NULL)
 		goto out;
@@ -564,13 +572,11 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 		err(EXIT_FAILURE, "%s: malloc", __func__);
 
 	if ((act->sa_flags & SA_SIGINFO) != 0) {
-		s->s_sigaction = act->sa_sigaction;
+		handler = (rvp_addr_t)(s->s_sigaction = act->sa_sigaction);
 	} else {
-		void (*handler)(int);
+		handler = (rvp_addr_t)(s->s_handler = act->sa_handler);
 
-		handler = s->s_handler = act->sa_handler;
-
-		if (handler == SIG_IGN || handler == SIG_DFL) {
+		if (s->s_handler == SIG_IGN || s->s_handler == SIG_DFL) {
 			rvp_trace_sigdis(signum, __builtin_return_address(0));
 			goto out;
 		}
@@ -584,7 +590,7 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 	
 	s->s_blockset = intern_sigset(&mask);
 
-	rvp_trace_sigest(signum, s->s_handler, s->s_blockset->bs_number,
+	rvp_trace_sigest(signum, handler, s->s_blockset->bs_number,
 	    __builtin_return_address(0));
 
 	act_copy = *act;

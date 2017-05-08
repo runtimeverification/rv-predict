@@ -153,7 +153,7 @@ rvp_stop_transmitter(void)
 }
 
 static void *
-serialize(void *arg)
+serialize(void *arg __unused)
 {
 	int fd = serializer_fd;
 	rvp_thread_t *t, *next_t;
@@ -240,9 +240,12 @@ rvp_serializer_create(void)
 void
 rvp_thread_init(void)
 {
-	ESTABLISH_PTR_TO_REAL(pthread_join);
-	ESTABLISH_PTR_TO_REAL(pthread_create);
-	ESTABLISH_PTR_TO_REAL(pthread_exit);
+	ESTABLISH_PTR_TO_REAL(int (*)(pthread_t, void **), pthread_join);
+	ESTABLISH_PTR_TO_REAL(
+	    int (*)(pthread_t *, const pthread_attr_t *, void *(*)(void *),
+	        void *),
+	    pthread_create);
+	ESTABLISH_PTR_TO_REAL(void (*)(void *), pthread_exit);
 }
 
 static void

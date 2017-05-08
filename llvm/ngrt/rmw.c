@@ -8,7 +8,7 @@
 /* TBD emit requisite changes of generation. */
 static inline void
 trace_atomic_rmw4(const void *retaddr, rvp_addr_t addr,
-    uint32_t oval, uint32_t nval, int32_t memory_order)
+    uint32_t oval, uint32_t nval, int32_t memory_order __unused)
 {
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
@@ -22,7 +22,7 @@ trace_atomic_rmw4(const void *retaddr, rvp_addr_t addr,
 
 void
 __rvpredict_atomic_fetch_add4(volatile _Atomic uint32_t *addr,
-    uint32_t oval, uint32_t arg, int32_t memory_order)
+    uint32_t oval, uint32_t arg, int32_t memory_order __unused)
 {
 	trace_atomic_rmw4(
 	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval + arg,
@@ -34,18 +34,20 @@ __rvpredict_atomic_fetch_add4(volatile _Atomic uint32_t *addr,
  *      int32_t memory_order_failure)
  */
 uint8_t
-__rvpredict_atomic_cas1(volatile _Atomic uint8_t *addr,
-    uint8_t expected, uint8_t desired,
-    int32_t memory_order_success, int32_t memory_order_failure)
+__rvpredict_atomic_cas1(volatile _Atomic uint8_t *addr __unused,
+    uint8_t expected __unused, uint8_t desired __unused,
+    int32_t memory_order_success __unused,
+    int32_t memory_order_failure __unused)
 {
 	not_implemented(__func__);
 	return 0;
 }
 
 uint16_t
-__rvpredict_atomic_cas2(volatile _Atomic uint16_t *addr,
-    uint16_t expected, uint16_t desired,
-    int32_t memory_order_success, int32_t memory_order_failure)
+__rvpredict_atomic_cas2(volatile _Atomic uint16_t *addr __unused,
+    uint16_t expected __unused, uint16_t desired __unused,
+    int32_t memory_order_success __unused,
+    int32_t memory_order_failure __unused)
 {
 	not_implemented(__func__);
 	return 0;
@@ -54,7 +56,8 @@ __rvpredict_atomic_cas2(volatile _Atomic uint16_t *addr,
 uint32_t
 __rvpredict_atomic_cas4(volatile _Atomic uint32_t *addr,
     uint32_t expected, uint32_t desired,
-    int32_t memory_order_success, int32_t memory_order_failure)
+    int32_t memory_order_success __unused,
+    int32_t memory_order_failure __unused)
 {
 	if (atomic_compare_exchange_strong_explicit(addr, &expected, desired,
 	    memory_order_success, memory_order_failure)) {
@@ -72,18 +75,20 @@ __rvpredict_atomic_cas4(volatile _Atomic uint32_t *addr,
 }
 
 uint64_t
-__rvpredict_atomic_cas8(volatile _Atomic uint64_t *addr,
-    uint64_t expected, uint64_t desired,
-    int32_t memory_order_success, int32_t memory_order_failure)
+__rvpredict_atomic_cas8(volatile _Atomic uint64_t *addr __unused,
+    uint64_t expected __unused, uint64_t desired __unused,
+    int32_t memory_order_success __unused,
+    int32_t memory_order_failure __unused)
 {
 	not_implemented(__func__);
 	return 0;
 }
 
 rvp_uint128_t
-__rvpredict_atomic_cas16(volatile _Atomic rvp_uint128_t *addr,
-    rvp_uint128_t expected, rvp_uint128_t desired,
-    int32_t memory_order_success, int32_t memory_order_failure)
+__rvpredict_atomic_cas16(volatile _Atomic rvp_uint128_t *addr __unused,
+    rvp_uint128_t expected __unused, rvp_uint128_t desired __unused,
+    int32_t memory_order_success __unused,
+    int32_t memory_order_failure __unused)
 {
 	not_implemented(__func__);
 	return (rvp_uint128_t){.elts = {0, 0}};

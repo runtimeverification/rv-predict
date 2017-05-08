@@ -61,6 +61,8 @@
 #define	__SHIFTIN(__x, __mask) ((__x) * __LOWEST_SET_BIT(__mask))
 #define	__SHIFTOUT_MASK(__mask) __SHIFTOUT((__mask), (__mask))
 
+#define	__unused	__attribute__((__unused__))
+
 #endif /* __NetBSD__ */
 
 #endif /* _RVP_NBCOMPAT_H_ */

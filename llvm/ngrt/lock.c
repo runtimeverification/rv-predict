@@ -16,10 +16,13 @@ REAL_DEFN(int, pthread_mutex_init, pthread_mutex_t *restrict,
 void
 rvp_lock_init(void)
 {
-	ESTABLISH_PTR_TO_REAL(pthread_mutex_lock);
-	ESTABLISH_PTR_TO_REAL(pthread_mutex_trylock);
-	ESTABLISH_PTR_TO_REAL(pthread_mutex_unlock);
-	ESTABLISH_PTR_TO_REAL(pthread_mutex_init);
+	ESTABLISH_PTR_TO_REAL(int (*)(pthread_mutex_t *), pthread_mutex_lock);
+	ESTABLISH_PTR_TO_REAL(int (*)(pthread_mutex_t *),
+	    pthread_mutex_trylock);
+	ESTABLISH_PTR_TO_REAL(int (*)(pthread_mutex_t *), pthread_mutex_unlock);
+	ESTABLISH_PTR_TO_REAL(
+	    int (*)(pthread_mutex_t *restrict,
+	            const pthread_mutexattr_t *restrict), pthread_mutex_init);
 }
 
 int

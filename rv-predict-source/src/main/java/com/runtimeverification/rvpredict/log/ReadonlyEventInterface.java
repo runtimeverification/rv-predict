@@ -13,6 +13,7 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     long getSyncedThreadId();
     long getPartialSignalMask();
     long getFullWriteSignalMask();
+    long getFullReadSignalMask();
     DataAddress unsafeGetAddress();
     long unsafeGetDataValue();
 
@@ -65,4 +66,5 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     boolean isSignalEvent();
     long getLockId();
     boolean isSimilarTo(ReadonlyEventInterface event);
+    boolean isSignalMaskRead();
 }

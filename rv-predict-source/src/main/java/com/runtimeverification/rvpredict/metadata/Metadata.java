@@ -102,8 +102,9 @@ public class Metadata implements Serializable {
 
     public String getLocationSig(long locId) {
         String sig = isCompactTrace ? addressToLocationSig.get(locId) : locIdToLocSig[Math.toIntExact(locId)];
-        if (Configuration.debug && sig == null)
+        if (Configuration.debug && sig == null) {
             System.err.println("getLocationSig(" + locId + ") -> null");
+        }
         return sig;
     }
 

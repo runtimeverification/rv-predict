@@ -562,14 +562,14 @@ public class MaximalCausalModel {
     private class EventWithOrder {
         private final ReadonlyEventInterface event;
         private final long orderId;
-        public EventWithOrder(ReadonlyEventInterface event, long orderId) {
+        private EventWithOrder(ReadonlyEventInterface event, long orderId) {
             this.event = event;
             this.orderId = orderId;
         }
-        public ReadonlyEventInterface getEvent() {
+        private ReadonlyEventInterface getEvent() {
             return event;
         }
-        public long getOrderId() {
+        private long getOrderId() {
             return orderId;
         }
         @Override

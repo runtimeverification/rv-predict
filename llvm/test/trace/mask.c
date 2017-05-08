@@ -3,8 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "nbcompat.h"
+
 int
-main(int argc, char **argv)
+main(int argc __unused, char **argv __unused)
 {
 	int rc;
 	sigset_t oset, set;

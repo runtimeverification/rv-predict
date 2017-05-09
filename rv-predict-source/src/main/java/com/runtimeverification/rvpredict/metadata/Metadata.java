@@ -1,21 +1,20 @@
 package com.runtimeverification.rvpredict.metadata;
 
+import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.LZ4Utils;
+import org.apache.commons.lang3.tuple.Pair;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.log.LZ4Utils;
-import org.apache.commons.lang3.tuple.Pair;
 
 @SuppressWarnings("serial")
 public class Metadata implements Serializable {
@@ -33,6 +32,13 @@ public class Metadata implements Serializable {
 
     private transient final ConcurrentHashMap<String, Integer> locSigToLocId = new ConcurrentHashMap<>();
 
+    // Only for compact traces.
+    // TODO(virgil): The compact trace metadata is different in many ways from the normal metadata, I should
+    // extract a common interface and have two implementations.
+    private transient final ConcurrentHashMap<Long, String> addressToLocationSig = new ConcurrentHashMap<>();
+
+    private transient boolean isCompactTrace = false;
+
     private final String[] varIdToVarSig = new String[MAX_NUM_OF_VARIABLES];
 
     private final String[] locIdToLocSig = new String[MAX_NUM_OF_LOCATIONS];
@@ -40,14 +46,14 @@ public class Metadata implements Serializable {
     private final Set<Integer> volatileVarIds = Collections
             .newSetFromMap(new ConcurrentHashMap<>());
 
-    private final Map<Long, Pair<Long, Integer>> tidToCreationInfo = new ConcurrentHashMap<>();
+    private final Map<Long, Pair<Long, Long>> otidToCreationInfo = new ConcurrentHashMap<>();
 
     private static final Metadata instance = new Metadata();
 
     /**
      * Note: This method should be used only in a few places and definitely NOT
      * in offline prediction which should get its {@code Metadata} instance from
-     * {@link #readFrom(Path)}.
+     * {@link #readFrom(Path, boolean)}.
      *
      * @return a singleton instance of {@code Metadata}.
      */
@@ -72,6 +78,10 @@ public class Metadata implements Serializable {
         return varIdToVarSig[varId];
     }
 
+    public void setIsCompactTrace(boolean isCompactTrace) {
+        this.isCompactTrace = isCompactTrace;
+    }
+
     public class TooManyVariables extends RuntimeException {}
 
     public void setVariableSig(int varId, String sig) {
@@ -92,15 +102,20 @@ public class Metadata implements Serializable {
         return locId;
     }
 
-    public String getLocationSig(int locId) {
-	if (Configuration.debug && locIdToLocSig[locId] == null)
-	    System.err.println("getLocationSig(" + locId + ") -> null");
-        return locIdToLocSig[locId];
+    public String getLocationSig(long locId) {
+        String sig = isCompactTrace ? addressToLocationSig.get(locId) : locIdToLocSig[Math.toIntExact(locId)];
+        if (Configuration.debug && sig == null) {
+            System.err.println("getLocationSig(" + locId + ") -> null");
+        }
+        return sig;
     }
 
     public void setLocationSig(int locId, String sig) {
         assert locIdToLocSig[locId] == null;
         locIdToLocSig[locId] = sig;
+        if (isCompactTrace) {
+            setLocationAddress(sig);
+        }
     }
 
     public void addVolatileVariable(String cname, String fname) {
@@ -120,18 +135,34 @@ public class Metadata implements Serializable {
         return varId < 0 && volatileVarIds.contains(-varId);
     }
 
-    public void addThreadCreationInfo(long childTID, long parentTID, int locId) {
-        tidToCreationInfo.put(childTID, Pair.of(parentTID, locId));
+    public void addOriginalThreadCreationInfo(long childOTID, long parentOTID, long locId) {
+        otidToCreationInfo.put(childOTID, Pair.of(parentOTID, locId));
     }
 
-    public long getParentTID(long tid) {
-        Pair<Long, Integer> info = tidToCreationInfo.get(tid);
+    public long getParentOTID(long otid) {
+        Pair<Long, Long> info = otidToCreationInfo.get(otid);
         return info == null ? 0 : info.getLeft();
     }
 
-    public int getThreadCreationLocId(long tid) {
-        Pair<Long, Integer> info = tidToCreationInfo.get(tid);
+    public long getOriginalThreadCreationLocId(long otid) {
+        Pair<Long, Long> info = otidToCreationInfo.get(otid);
         return info == null ? -1 : info.getRight();
+    }
+
+    private void fillLocationAddressMap() {
+        assert isCompactTrace;
+        for (String signature : locIdToLocSig) {
+            setLocationAddress(signature);
+        }
+    }
+
+    private void setLocationAddress(String signature) {
+        String[] signatureParts = signature.split(";");
+        String[] addressParts = signatureParts[0].split(":");
+        String addressString = addressParts[1];
+        assert addressString.startsWith("0x");
+        long address = Long.parseLong(addressString.substring(2), 16);
+        addressToLocationSig.put(address, signature);
     }
 
     /**
@@ -144,10 +175,15 @@ public class Metadata implements Serializable {
      *            the location where the metadata is stored
      * @return the {@code Metadata} object
      */
-    public static Metadata readFrom(Path path) {
+    public static Metadata readFrom(Path path, boolean isCompactTrace) {
         try (ObjectInputStream metadataIS = new ObjectInputStream(
                 LZ4Utils.createDecompressionStream(path))) {
-            return (Metadata) metadataIS.readObject();
+            Metadata metadata = (Metadata) metadataIS.readObject();
+            metadata.isCompactTrace = isCompactTrace;
+            if (isCompactTrace) {
+                metadata.fillLocationAddressMap();
+            }
+            return metadata;
         } catch (FileNotFoundException e) {
             System.err.println("Error: Metadata file not found.");
             System.err.println(e.getMessage());

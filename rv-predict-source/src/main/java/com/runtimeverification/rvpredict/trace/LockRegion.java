@@ -35,17 +35,17 @@ public class LockRegion implements Comparable<LockRegion> {
     private final ReadonlyEventInterface lock;
     private final ReadonlyEventInterface unlock;
 
-    private final long tid;
+    private final long ttid;
     private final long lockId;
 
     private boolean isReadLocked = false;
 
-    public LockRegion(ReadonlyEventInterface lock, ReadonlyEventInterface unlock) {
+    public LockRegion(ReadonlyEventInterface lock, ReadonlyEventInterface unlock, long ttid) {
         this.lock = lock;
         this.unlock = unlock;
+        this.ttid = ttid;
 
         if (lock != null) {
-            tid = lock.getThreadId();
             lockId = lock.getLockId();
             if (lock.getType() == EventType.READ_LOCK) {
                 if (unlock != null && unlock.getType() != EventType.READ_UNLOCK) {
@@ -54,7 +54,6 @@ public class LockRegion implements Comparable<LockRegion> {
                 isReadLocked = true;
             }
         } else {
-            tid = unlock.getThreadId();
             lockId = unlock.getLockId();
             if (unlock.getType() == EventType.READ_UNLOCK) {
                 isReadLocked = true;
@@ -74,16 +73,16 @@ public class LockRegion implements Comparable<LockRegion> {
         return lockId;
     }
 
-    public long getTID() {
-        return tid;
+    public long getTTID() {
+        return ttid;
     }
 
     public boolean isWriteLocked() {
         return !isReadLocked;
     }
 
-    public boolean include(ReadonlyEventInterface e) {
-        return tid == e.getThreadId() && (lock == null || lock.compareTo(e) < 0)
+    public boolean include(ReadonlyEventInterface e, long ettid) {
+        return ttid == ettid && (lock == null || lock.compareTo(e) < 0)
                 && (unlock == null || unlock.compareTo(e) > 0);
     }
 

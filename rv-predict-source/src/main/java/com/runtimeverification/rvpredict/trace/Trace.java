@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.DataAddress;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
@@ -65,21 +66,39 @@ public class Trace {
     private final List<RawTrace> rawTraces;
 
     /**
+     * Map from an event's ID to its thread information.
+     */
+    private final Map<Long, Integer> eventIdToTtid;
+
+    /**
+     * Map from a thread ID to the information about that thread.
+     */
+    private final Map<Integer, ThreadInfo> ttidToThreadInfo;
+
+    /**
+     * Map from a thread's ID to the internal id assigned when preparing the trace.
+     *
+     * This is needed because a signal interrupting a thread has the same
+     * original thread ID as the interrupted thread.
+     */
+    private final Map<Long, Integer> originalTidToTraceTid;
+
+    /**
      * Map from thread ID to critical events.
      */
-    private final Map<Long, List<ReadonlyEventInterface>> tidToEvents;
+    private final Map<Integer, List<ReadonlyEventInterface>> tidToEvents;
 
     /**
      * Map from thread ID to critical memory access events grouped into blocks.
      */
-    private final Map<Long, List<MemoryAccessBlock>> tidToMemoryAccessBlocks;
+    private final Map<Integer, List<MemoryAccessBlock>> tidToMemoryAccessBlocks;
 
     /**
      * The initial states for all threads referenced in this trace segment.
      * It is computed as the value in the {@link #state} before the first
      * event of that thread occurs in this trace segment.
      */
-    private final Map<Long, ThreadState> tidToThreadState;
+    private final Map<Integer, ThreadState> tidToThreadState;
 
     /**
      * Map from memory addresses referenced in this trace segment to their states.
@@ -89,7 +108,8 @@ public class Trace {
     /**
      * Map from (thread ID, memory address) to write events.
      */
-    private final Table<Long, Long, List<ReadonlyEventInterface>> tidToAddrToWriteEvents;
+    private final Table<Integer, DataAddress, List<ReadonlyEventInterface>>
+            ttidToAddrToWriteEvents;
 
     /**
      * Map from lock ID to critical lock pairs.
@@ -107,22 +127,28 @@ public class Trace {
     private final TraceState state;
 
     public Trace(TraceState state, List<RawTrace> rawTraces,
-            Map<Long, List<ReadonlyEventInterface>> tidToEvents,
-            Map<Long, List<MemoryAccessBlock>> tidToMemoryAccessBlocks,
-            Map<Long, ThreadState> tidToThreadState,
+            Map<Long, Integer> eventIdToTtid,
+            Map<Integer, ThreadInfo> ttidToThreadInfo,
+            Map<Integer, List<ReadonlyEventInterface>> tidToEvents,
+            Map<Integer, List<MemoryAccessBlock>> tidToMemoryAccessBlocks,
+            Map<Integer, ThreadState> tidToThreadState,
             MemoryAddrToStateMap addrToState,
-            Table<Long, Long, List<ReadonlyEventInterface>> tidToAddrToEvents,
+            Table<Integer, DataAddress, List<ReadonlyEventInterface>> tidToAddrToEvents,
             Map<Long, List<LockRegion>> lockIdToLockRegions,
-            Set<ReadonlyEventInterface> clinitEvents) {
+            Set<ReadonlyEventInterface> clinitEvents,
+            Map<Long, Integer> originalTidToTraceTid) {
         this.state = state;
         this.rawTraces = rawTraces;
+        this.eventIdToTtid = eventIdToTtid;
+        this.ttidToThreadInfo = ttidToThreadInfo;
         this.tidToEvents = tidToEvents;
         this.tidToMemoryAccessBlocks = tidToMemoryAccessBlocks;
         this.tidToThreadState = tidToThreadState;
         this.addrToState = addrToState;
-        this.tidToAddrToWriteEvents = tidToAddrToEvents;
+        this.ttidToAddrToWriteEvents = tidToAddrToEvents;
         this.lockIdToLockRegions = lockIdToLockRegions;
         this.clinitEvents = clinitEvents;
+        this.originalTidToTraceTid = originalTidToTraceTid;
 
         if (rawTraces.isEmpty()) {
             baseGID = -1;
@@ -135,7 +161,7 @@ public class Trace {
         }
         processEvents();
         this.size = tidToEvents.values().stream().collect(Collectors.summingInt(List::size));
-        if (rawTraces.size() != rawTraces.stream().map(RawTrace::getTID)
+        if (rawTraces.size() != rawTraces.stream().map(rawTrace -> rawTrace.getThreadInfo().getId())
                 .collect(Collectors.toSet()).size()) {
             throw new IllegalStateException();
         }
@@ -164,25 +190,25 @@ public class Trace {
         return !tidToEvents.isEmpty();
     }
 
-    public ReadonlyEventInterface getFirstEvent(long tid) {
-        List<ReadonlyEventInterface> events = tidToEvents.get(tid);
+    public ReadonlyEventInterface getFirstEvent(int ttid) {
+        List<ReadonlyEventInterface> events = tidToEvents.get(ttid);
         return events == null ? null : events.get(0);
     }
 
-    public ReadonlyEventInterface getLastEvent(long tid) {
-        List<ReadonlyEventInterface> events = tidToEvents.get(tid);
+    public ReadonlyEventInterface getLastEvent(int ttid) {
+        List<ReadonlyEventInterface> events = tidToEvents.get(ttid);
         return events == null ? null : events.get(events.size() - 1);
     }
 
-    public List<ReadonlyEventInterface> getEvents(long tid) {
-        return tidToEvents.getOrDefault(tid, Collections.emptyList());
+    public List<ReadonlyEventInterface> getEvents(int ttid) {
+        return tidToEvents.getOrDefault(ttid, Collections.emptyList());
     }
 
-    public Map<Long, List<ReadonlyEventInterface>> eventsByThreadID() {
+    public Map<Integer, List<ReadonlyEventInterface>> eventsByThreadID() {
         return tidToEvents;
     }
 
-    public Map<Long, List<MemoryAccessBlock>> memoryAccessBlocksByThreadID() {
+    public Map<Integer, List<MemoryAccessBlock>> memoryAccessBlocksByThreadID() {
         return tidToMemoryAccessBlocks;
     }
 
@@ -190,7 +216,7 @@ public class Trace {
      * Returns the {@link MemoryAccessBlock} that {@code event} belongs to.
      */
     public MemoryAccessBlock getMemoryAccessBlock(ReadonlyEventInterface event) {
-        List<MemoryAccessBlock> l = tidToMemoryAccessBlocks.get(event.getThreadId());
+        List<MemoryAccessBlock> l = tidToMemoryAccessBlocks.get(getTraceThreadId(event));
         /* doing binary search on l */
         int low = 0;
         int high = l.size() - 1;
@@ -209,6 +235,26 @@ public class Trace {
         throw new IllegalArgumentException("No such block!");
     }
 
+    public int getTraceThreadId(ReadonlyEventInterface event) {
+        return eventIdToTtid.get(event.getEventId());
+    }
+
+    public ThreadType getThreadType(ReadonlyEventInterface event) {
+        return ttidToThreadInfo.get(eventIdToTtid.get(event.getEventId())).getThreadType();
+    }
+
+    public ThreadType getThreadType(Integer traceThreadId) {
+        return ttidToThreadInfo.get(traceThreadId).getThreadType();
+    }
+
+    public long getSignalNumber(Integer traceThreadId) {
+        return ttidToThreadInfo.get(traceThreadId).getSignalNumber();
+    }
+
+    public long getOriginalThreadIdForTraceThreadId(Integer traceThreadId) {
+        return ttidToThreadInfo.get(traceThreadId).getOriginalThreadId();
+    }
+
     public List<ReadonlyEventInterface> getInterThreadSyncEvents() {
         List<ReadonlyEventInterface> events = new ArrayList<>();
         tidToEvents.values().forEach(l -> {
@@ -217,12 +263,12 @@ public class Trace {
         return events;
     }
 
-    public Iterable<ReadonlyEventInterface> getWriteEvents(long addr) {
-        return Iterables.concat(tidToAddrToWriteEvents.column(addr).values());
+    public Iterable<ReadonlyEventInterface> getWriteEvents(DataAddress addr) {
+        return Iterables.concat(ttidToAddrToWriteEvents.column(addr).values());
     }
 
-    private ReadonlyEventInterface getPrevWrite(long gid, long tid, long addr) {
-        List<ReadonlyEventInterface> list = tidToAddrToWriteEvents.get(tid, addr);
+    private ReadonlyEventInterface getPrevWrite(long gid, int ttid, DataAddress addr) {
+        List<ReadonlyEventInterface> list = ttidToAddrToWriteEvents.get(ttid, addr);
         if (list == null || list.isEmpty() || list.get(0).getEventId() >= gid) {
             return null;
         }
@@ -250,13 +296,13 @@ public class Trace {
     }
 
     public ReadonlyEventInterface getSameThreadPrevWrite(ReadonlyEventInterface read) {
-        return getPrevWrite(read.getEventId(), read.getThreadId(), read.getDataAddress());
+        return getPrevWrite(read.getEventId(), getTraceThreadId(read), read.getDataAddress());
     }
 
     public ReadonlyEventInterface getAllThreadsPrevWrite(ReadonlyEventInterface read) {
         ReadonlyEventInterface prevWrite = null;
-        for (long tid : tidToAddrToWriteEvents.rowKeySet()) {
-           ReadonlyEventInterface e = getPrevWrite(read.getEventId(), tid, read.getDataAddress());
+        for (int ttid : ttidToAddrToWriteEvents.rowKeySet()) {
+           ReadonlyEventInterface e = getPrevWrite(read.getEventId(), ttid, read.getDataAddress());
            if (prevWrite == null || e != null && e.getEventId() < prevWrite.getEventId()) {
                prevWrite = e;
            }
@@ -281,16 +327,16 @@ public class Trace {
      * @return a {@code Deque} of call stack events
      */
     public Deque<ReadonlyEventInterface> getStacktraceAt(ReadonlyEventInterface event) {
-        long tid = event.getThreadId();
+        long ttid = getTraceThreadId(event);
         long gid = event.getEventId();
         Deque<ReadonlyEventInterface> stacktrace = new ArrayDeque<>();
         if (!state.config().stacks()) {
             stacktrace.add(event);
         } else if (gid >= baseGID) {
             /* event is in the current window; reassemble its stack trace */
-            tidToThreadState.getOrDefault(tid, new ThreadState()).getStacktrace()
+            tidToThreadState.getOrDefault(ttid, new ThreadState()).getStacktrace()
                     .forEach(stacktrace::addFirst);
-            RawTrace t = rawTraces.stream().filter(p -> p.getTID() == tid).findAny().get();
+            RawTrace t = rawTraces.stream().filter(p -> p.getThreadInfo().getId() == ttid).findAny().get();
             for (int i = 0; i < t.size(); i++) {
                 ReadonlyEventInterface e = t.event(i);
                 if (e.getEventId() > gid) break;
@@ -313,11 +359,11 @@ public class Trace {
      * Returns the locks held by the owner thread when a given {@code ReadonlyEventInterface} occurs.
      */
     public List<ReadonlyEventInterface> getHeldLocksAt(ReadonlyEventInterface event) {
-        long tid = event.getThreadId();
+        long ttid = getTraceThreadId(event);
         Map<Long, LockState> lockIdToLockState = tidToThreadState
-                .getOrDefault(tid, new ThreadState()).getLockStates().stream()
+                .getOrDefault(ttid, new ThreadState()).getLockStates().stream()
                 .collect(Collectors.toMap(LockState::lockId, LockState::copy));
-        RawTrace t = rawTraces.stream().filter(p -> p.getTID() == tid).findAny().get();
+        RawTrace t = rawTraces.stream().filter(p -> p.getThreadInfo().getId() == ttid).findAny().get();
         for (int i = 0; i < t.size(); i++) {
             ReadonlyEventInterface e = t.event(i);
             if (e.getEventId() >= event.getEventId()) break;
@@ -345,9 +391,15 @@ public class Trace {
         /// PHASE 1
         Set<ReadonlyEventInterface> outermostLockEvents = new HashSet<>();
         for (RawTrace rawTrace : rawTraces) {
-            long tid = rawTrace.getTID();
-            tidToThreadState.put(tid, state.getThreadStateSnapshot(tid));
-            boolean isInsideClinit = state.isInsideClassInitializer(tid);
+            ThreadInfo threadInfo = rawTrace.getThreadInfo();
+            int ttid = threadInfo.getId();
+            ttidToThreadInfo.put(ttid, threadInfo);
+            if (threadInfo.getThreadType() == ThreadType.THREAD && rawTrace.size() > 0) {
+                ReadonlyEventInterface event = rawTrace.event(0);
+                originalTidToTraceTid.put(event.getOriginalThreadId(), ttid);
+            }
+            tidToThreadState.put(ttid, state.getThreadStateSnapshot(ttid));
+            boolean isInsideClinit = state.isInsideClassInitializer(ttid);
 
             for (int i = 0; i < rawTrace.size(); i++) {
                 ReadonlyEventInterface event = rawTrace.event(i);
@@ -358,13 +410,13 @@ public class Trace {
                 if (event.isReadOrWrite()) {
                     /* update memory address state */
                     MemoryAddrState st = addrToState.computeIfAbsent(event.getDataAddress());
-                    st.touch(event);
+                    st.touch(event, ttid);
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
-                        event = state.updateLockLocToUserLoc(event);
+                        event = state.updateLockLocToUserLoc(event, ttid);
                         if (event.isWaitAcq()) {
                             outermostLockEvents.add(event);
-                        } else if (state.acquireLock(event) == 1) {
+                        } else if (state.acquireLock(event, ttid) == 1) {
                             outermostLockEvents.add(event);
                         }
                     } else if (event.isUnlock()) {
@@ -372,20 +424,22 @@ public class Trace {
                             // a WAIT_RELEASE event can be matched with one or more
                             // lock events because locks can be reentrant
                             outermostLockEvents.add(event);
-                        } else if (state.releaseLock(event) == 0) {
+                        } else if (state.releaseLock(event, ttid) == 0) {
                             outermostLockEvents.add(event);
                         }
                     } else if (event.isStart()) {
-                        state.updateThreadLocToUserLoc(event);
+                        state.updateThreadLocToUserLoc(event, ttid);
                     }
                 } else if (event.isMetaEvent()) {
-                    state.onMetaEvent(event);
+                    state.onMetaEvent(event, ttid);
                     EventType type = event.getType();
                     if (type == EventType.CLINIT_ENTER) {
                         isInsideClinit = true;
                     } else if (type == EventType.CLINIT_EXIT) {
-                        isInsideClinit = state.isInsideClassInitializer(tid);
+                        isInsideClinit = state.isInsideClassInitializer(ttid);
                     }
+                } else if (event.isSignalEvent()) {
+                    // Do nothing for now.
                 } else {
 		    if (Configuration.debug)
 		        System.err.println(event.getType());
@@ -394,21 +448,18 @@ public class Trace {
             }
         }
 
-        Set<Long> sharedAddr = new HashSet<>();
-        for (LongToObjectMap<MemoryAddrState>.EntryIterator iter = addrToState.iterator();
-                iter.hasNext(); iter.incCursor()) {
-            long addr = iter.getNextKey();
-            MemoryAddrState st = iter.getNextValue();
-
+        Set<DataAddress> sharedAddr = new HashSet<>();
+        for (MemoryAddrToStateMap.Entry<DataAddress, MemoryAddrState> entry : addrToState.entrySet()) {
             /* compute shared memory addresses */
-            if (st.isWriteShared()) {
-                sharedAddr.add(addr);
+            if (entry.getValue().isWriteShared()) {
+                sharedAddr.add(entry.getKey());
             }
         }
 
         /// PHASE 2
         if (!sharedAddr.isEmpty()) {
             for (RawTrace rawTrace : rawTraces) {
+                int ttid = rawTrace.getThreadInfo().getId();
                 /* step 1: remove thread-local events and nested lock events */
                 int tmp_size = 0;
                 ReadonlyEventInterface[] tmp_events = new ReadonlyEventInterface[rawTrace.size()];
@@ -426,6 +477,8 @@ public class Trace {
                         } else {
                             tmp_events[tmp_size++] = event;
                         }
+                    } else if (event.isSignalEvent()) {
+                        tmp_events[tmp_size++] = event;
                     } else {
                         // MetaEvents are thrown away
                     }
@@ -479,7 +532,7 @@ public class Trace {
                         if (critical[i]) {
                             lockIdToLockRegions
                                 .computeIfAbsent(event.getLockId(), p -> new ArrayList<>())
-                                .add(new LockRegion(idx == null ? null : tmp_events[idx], event));
+                                .add(new LockRegion(idx == null ? null : tmp_events[idx], event, ttid));
                         }
                     } else {
                         critical[i] = true;
@@ -497,7 +550,7 @@ public class Trace {
                    if (critical[idx]) {
                        lockIdToLockRegions
                            .computeIfAbsent(tmp_events[idx].getLockId(), p -> new ArrayList<>())
-                           .add(new LockRegion(tmp_events[idx], null));
+                           .add(new LockRegion(tmp_events[idx], null, ttid));
                    }
                 });
 
@@ -510,8 +563,9 @@ public class Trace {
 
                         /* update tidToEvents & tidToAddrToWriteEvents */
                         events[c++] = event;
+                        eventIdToTtid.put(event.getEventId(), ttid);
                         if (event.isWrite()) {
-                            tidToAddrToWriteEvents.row(event.getThreadId())
+                            ttidToAddrToWriteEvents.row(ttid)
                                     .computeIfAbsent(event.getDataAddress(), p -> new ArrayList<>())
                                     .add(event);
                         }
@@ -519,8 +573,8 @@ public class Trace {
                 }
                 if (numOfCriticalEvents > 0) {
                     List<ReadonlyEventInterface> list = Arrays.asList(events);
-                    tidToEvents.put(rawTrace.getTID(), list);
-                    tidToMemoryAccessBlocks.put(rawTrace.getTID(), divideMemoryAccessBlocks(list));
+                    tidToEvents.put(ttid, list);
+                    tidToMemoryAccessBlocks.put(ttid, divideMemoryAccessBlocks(list));
                 }
             }
 
@@ -584,16 +638,24 @@ public class Trace {
                 endCrntBlock = true;
             } else if (event.isReadOrWrite()) {
                 if (event.isRead()) {
-                    /* do not end the block if the previous event is a write or
+                    /* Do not end the block if the previous event is a write or
                      * a duplicate read (i.e., a read event that differs only in
-                     * global ID and location ID) */
-                    endCrntBlock = lastEvent != null &&
-                            !(lastEvent.isWrite() || lastEvent.isRead()
-                            && lastEvent.getDataAddress() == event.getDataAddress()
-                            && lastEvent.getDataValue() == event.getDataValue());
+                     * global ID and location ID).
+                     */
+                    if (lastEvent != null) {
+                        boolean isSameRead = lastEvent.isRead()
+                                && lastEvent.getDataAddress().equals(event.getDataAddress())
+                                && lastEvent.getDataValue() == event.getDataValue();
+                        endCrntBlock = !(lastEvent.isWrite() || isSameRead);
+                    } else {
+                        endCrntBlock = false;
+                    }
                 } else {
                     endCrntBlock = lastEvent != null && lastEvent.isRead();
                 }
+            } else if (event.isSignalEvent()) {
+                // Do nothing for now. since signal events themselves are not involved with r/w.
+                endCrntBlock = false;
             } else {
                 throw new IllegalStateException("Unexpected critical event: " + event);
             }
@@ -624,4 +686,7 @@ public class Trace {
                 .debug((event + " at " + metadata().getLocationSig(event.getLocationId()))));
     }
 
+    public Integer getMainTraceThreadForOriginalThread(long originalThreadId) {
+        return originalTidToTraceTid.get(originalThreadId);
+    }
 }

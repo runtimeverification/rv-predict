@@ -2,6 +2,7 @@
 #include <sys/stat.h>	/* for open(2) */
 #include <err.h>
 #include <fcntl.h>	/* for open(2) */
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>	/* for EXIT_* */
 #include <string.h>	/* strcmp(3) */
@@ -13,7 +14,8 @@
 static void __dead
 usage(const char *progname)
 {
-	fprintf(stderr, "usage: %s [-t <plain|legacy>] [<trace file>]\n",
+	fprintf(stderr,
+	    "usage: %s [-t <plain|legacy|symbol-friendly>] [<trace file>]\n",
 	    progname);
 	exit(EXIT_FAILURE);
 }
@@ -33,6 +35,8 @@ main(int argc, char **argv)
 				otype = RVP_OUTPUT_LEGACY_BINARY;
 			else if (strcmp(optarg, "plain") == 0)
 				otype = RVP_OUTPUT_PLAIN_TEXT;
+			else if (strcmp(optarg, "symbol-friendly") == 0)
+				otype = RVP_OUTPUT_SYMBOL_FRIENDLY;
 			else
 				usage(progname);
 			break;

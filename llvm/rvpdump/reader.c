@@ -49,9 +49,17 @@ typedef struct {
 
 #define OP_INFO_INIT(__ty, __descr) {.oi_reclen = sizeof(__ty), .oi_descr = __descr}
 
+typedef struct _rvp_frame {
+	rvp_addr_t	f_pc;	/* Program Counter where runtime logged
+				 * function entry
+				 */
+	rvp_addr_t	f_cfa;	/* DWARF Canonical Frame Address */
+} rvp_frame_t;
+
 typedef struct _rvp_call {
-	rvp_addr_t	*cs_funcs;
+	rvp_frame_t	*cs_frame;
 	int		cs_depth;
+	int		cs_nframes;
 } rvp_callstack_t;
 
 struct _rvp_pstate;
@@ -62,12 +70,14 @@ typedef struct _rvp_emitters {
 	void (*emit_jump)(const rvp_pstate_t *, rvp_addr_t);
 	void (*emit_op)(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
 	    bool, int);
+	char *(*dataptr_to_string)(const rvp_pstate_t *, char *, size_t,
+	    rvp_addr_t);
 } rvp_emitters_t;
 
 /* parse state: per-thread */
 typedef struct _rvp_thread_pstate {
-	rvp_callstack_t	ts_callstack;
 	bool		ts_present;
+	rvp_callstack_t	ts_callstack[2];
 	rvp_addr_t	ts_lastpc[2];
 	uint64_t	ts_generation[2];
 	uint64_t	ts_nops[2];
@@ -106,6 +116,24 @@ typedef struct _intmax_table {
 	uint32_t	t_next_id;
 	uint32_t	(*t_get_next_id)(uintmax_t);
 } intmax_table_t;
+
+char *dataptr_to_simple_string(const rvp_pstate_t *, char *, size_t,
+    rvp_addr_t);
+char *dataptr_to_symbol_friendly_string(const rvp_pstate_t *, char *, size_t,
+    rvp_addr_t);
+
+static void emit_no_jump(const rvp_pstate_t *, rvp_addr_t);
+static void emit_legacy_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
+    bool, int);
+static void emit_fork_metadata(uint64_t, uint64_t, uint32_t);
+
+static uint32_t get_next_thdfd(uintmax_t);
+
+static void legacy_init(const rvp_pstate_t *);
+
+static void print_jump(const rvp_pstate_t *, rvp_addr_t);
+static void print_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
+    bool, int);
 
 static const op_info_t op_to_info[RVP_NOPS] = {
 	  [RVP_OP_ENTERFN] = OP_INFO_INIT(rvp_enterfn_t, "enter function")
@@ -174,22 +202,16 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 	    OP_INFO_INIT(rvp_sigmask_access_t, "unblock signals")
 };
 
-static void emit_no_jump(const rvp_pstate_t *, rvp_addr_t);
-static void emit_legacy_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
-    bool, int);
-static void emit_fork_metadata(uint64_t, uint64_t, uint32_t);
-
-static uint32_t get_next_thdfd(uintmax_t);
-
-static void legacy_init(const rvp_pstate_t *);
-
-static void print_jump(const rvp_pstate_t *, rvp_addr_t);
-static void print_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
-    bool, int);
-
 static const rvp_emitters_t plain_text = {
 	  .emit_jump = print_jump
 	, .emit_op = print_op
+	, .dataptr_to_string = dataptr_to_simple_string
+};
+
+static const rvp_emitters_t symbol_friendly = {
+	  .emit_jump = print_jump
+	, .emit_op = print_op
+	, .dataptr_to_string = dataptr_to_symbol_friendly_string
 };
 
 static const rvp_emitters_t legacy_binary = {
@@ -200,6 +222,39 @@ static const rvp_emitters_t legacy_binary = {
 
 static intmax_table_t thd_table = {.t_get_next_id = get_next_thdfd};
 static int thdfd = -1;
+
+static void
+rvp_callstack_expand(rvp_callstack_t *cs)
+{
+	int i, nframes;
+	rvp_frame_t *frame;
+
+	nframes = MAX(8, 2 * cs->cs_nframes);
+
+	frame = realloc(cs->cs_frame, nframes * sizeof(*cs->cs_frame));
+
+	if (frame == NULL)
+		errx(EXIT_FAILURE, "%s: calloc", __func__);
+	for (i = cs->cs_nframes; i < nframes; i++)
+		frame[i] = (rvp_frame_t){0, 0};
+	cs->cs_frame = frame;
+	cs->cs_nframes = nframes;
+}
+
+static void
+rvp_callstack_push(rvp_callstack_t *cs, rvp_addr_t pc, rvp_addr_t cfa)
+{
+	if (cs->cs_depth == cs->cs_nframes)
+		rvp_callstack_expand(cs);
+	cs->cs_frame[cs->cs_depth++] = (rvp_frame_t){.f_pc = pc, .f_cfa = cfa};
+}
+
+static void
+rvp_callstack_pop(rvp_callstack_t *cs)
+{
+	assert(cs->cs_depth > 0);
+	--cs->cs_depth;
+}
 
 static void
 extract_jmpvec_and_op_from_deltop(rvp_addr_t deltop0,
@@ -277,7 +332,7 @@ rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 	assert(!ts->ts_present);
 	for (i = 0; i < __arraycount(ts->ts_lastpc); i++)
 		ts->ts_lastpc[i] = ps->ps_deltop_center;
-	ts->ts_callstack = (rvp_callstack_t){NULL, 0};
+	ts->ts_callstack[0] = ts->ts_callstack[1] = (rvp_callstack_t){NULL, 0};
 	ts->ts_present = true;
 	ts->ts_generation[0] = generation;
 	ts->ts_generation[1] = 0;
@@ -847,10 +902,78 @@ print_jump(const rvp_pstate_t *ps, rvp_addr_t pc)
 }
 
 static void
+rvp_callstack_nearest_frames(const rvp_callstack_t *cs, rvp_addr_t addr,
+    const rvp_frame_t **loframep, const rvp_frame_t **hiframep)
+{
+	int i;
+
+	for (i = 0; i < cs->cs_depth; i++) {
+		rvp_frame_t *f = &cs->cs_frame[i];
+		if (addr <= f->f_cfa) {
+			if (*hiframep == NULL || f->f_cfa < (*hiframep)->f_cfa)
+				*hiframep = f;
+		}
+		if (f->f_cfa < addr) {
+			if (*loframep == NULL || (*loframep)->f_cfa < f->f_cfa)
+				*loframep = f;
+		}
+	}
+}
+
+static void
+rvp_nearest_frames(const rvp_pstate_t *ps, rvp_addr_t addr,
+    const rvp_frame_t **loframep, const rvp_frame_t **hiframep)
+{
+	rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
+	rvp_callstack_t *cs = &ts->ts_callstack[ps->ps_idepth];
+
+	*loframep = *hiframep = NULL;
+	rvp_callstack_nearest_frames(cs, addr, loframep, hiframep);
+}
+
+char *
+dataptr_to_simple_string(const rvp_pstate_t *ps __unused,
+    char *buf, size_t buflen, rvp_addr_t addr)
+{
+	const int nwritten = snprintf(buf, buflen, "[%#016" PRIxPTR "]", addr);
+
+	if (nwritten < 0 || nwritten >= buflen)
+		errx(EXIT_FAILURE, "%s: snprintf failed", __func__);
+
+	return buf;
+}
+
+char *
+dataptr_to_symbol_friendly_string(const rvp_pstate_t *ps,
+    char *buf, size_t buflen, rvp_addr_t addr)
+{
+	const rvp_frame_t *loframe, *hiframe;
+	int nwritten;
+
+	rvp_nearest_frames(ps, addr, &loframe, &hiframe);
+
+	if (loframe != NULL && hiframe != NULL) {
+		nwritten = snprintf(buf, buflen, "[%#016" PRIxPTR " : %#" PRIxPTR "/%#" PRIxPTR " %#" PRIxPTR "/%#" PRIxPTR "]", addr, loframe->f_pc, loframe->f_cfa, hiframe->f_pc, hiframe->f_cfa);
+	} else if (loframe != NULL) {
+		nwritten = snprintf(buf, buflen, "[%#016" PRIxPTR " : %#" PRIxPTR "/%#" PRIxPTR "]", addr, loframe->f_pc, loframe->f_cfa);
+	} else if (hiframe != NULL) {
+		nwritten = snprintf(buf, buflen, "[%#016" PRIxPTR " : %#" PRIxPTR "/%#" PRIxPTR "]", addr, hiframe->f_pc, hiframe->f_cfa);
+	} else
+		nwritten = snprintf(buf, buflen, "[%#016" PRIxPTR "]", addr);
+
+	if (nwritten < 0 || nwritten >= buflen)
+		errx(EXIT_FAILURE, "%s: snprintf failed", __func__);
+
+	return buf;
+}
+
+static void
 print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
     bool is_load, int field_width)
 {
 	const op_info_t *oi = &op_to_info[op];
+	const rvp_emitters_t *emitters = ps->ps_emitters;
+	char buf[2][sizeof("[0x0123456789abcdef : 0x0123456789abcdef/0x0123456789abcdef 0x0123456789abcdef/0x0123456789abcdef]")];
 
 	switch (op) {
 	case RVP_OP_ATOMIC_LOAD8:
@@ -858,36 +981,37 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_LOAD8:
 	case RVP_OP_STORE8:
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s %#.*" PRIx64 " %s [%#016" PRIxPTR "]\n",
+		    " %s %#.*" PRIx64 " %s %s\n",
 		    ps->ps_curthread, ps->ps_idepth,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
 		    oi->oi_descr, field_width,
 		    ub->ub_load8_store8.data,
 		    is_load ? "<-" : "->",
-		    ub->ub_load8_store8.addr);
+		    (*emitters->dataptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ub->ub_load8_store8.addr));
 		break;
 	case RVP_OP_ATOMIC_RMW4:
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
-		    " %#.*" PRIx32 " <- [%#016" PRIxPTR "]"
-		    " <- %#.*" PRIx32 "\n",
+		    " %#.*" PRIx32 " <- %s <- %#.*" PRIx32 "\n",
 		    ps->ps_curthread, ps->ps_idepth,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
 		    oi->oi_descr,
 		    field_width, ub->ub_rmw4.oval,
-		    ub->ub_rmw4.addr,
+		    (*emitters->dataptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ub->ub_rmw4.addr),
 		    field_width, ub->ub_rmw4.nval);
 		break;
 	case RVP_OP_ATOMIC_RMW2:
 	case RVP_OP_ATOMIC_RMW1:
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
-		    " %#.*" PRIxMAX " <- [%#016" PRIxPTR "]"
-		    " <- %#.*" PRIxMAX "\n",
+		    " %#.*" PRIxMAX " <- %s <- %#.*" PRIxMAX "\n",
 		    ps->ps_curthread, ps->ps_idepth,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
 		    oi->oi_descr,
 		    field_width,
 		    __SHIFTOUT(ub->ub_rmw1_2.onval, __BITS(15, 0)),
-		    ub->ub_rmw1_2.addr,
+		    (*emitters->dataptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ub->ub_rmw1_2.addr),
 		    field_width,
 		    __SHIFTOUT(ub->ub_rmw1_2.onval, __BITS(31, 16)));
 		break;
@@ -904,13 +1028,14 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_LOAD1:
 	case RVP_OP_STORE1:
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s %#.*" PRIx32 " %s [%#016" PRIxPTR "]\n",
+		    " %s %#.*" PRIx32 " %s %s\n",
 		    ps->ps_curthread, ps->ps_idepth,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
 		    oi->oi_descr, field_width,
 		    ub->ub_load1_2_4_store1_2_4.data,
 		    is_load ? "<-" : "->",
-		    ub->ub_load1_2_4_store1_2_4.addr);
+		    (*emitters->dataptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ub->ub_load1_2_4_store1_2_4.addr));
 		break;
 	case RVP_OP_BEGIN:
 		printf(
@@ -975,10 +1100,12 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_ACQUIRE:
 	case RVP_OP_RELEASE:
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s [%#016" PRIxPTR "]\n",
+		    " %s %s\n",
 		    ps->ps_curthread, ps->ps_idepth,
 		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
-		    oi->oi_descr, ub->ub_acquire_release.addr);
+		    oi->oi_descr,
+		    (*emitters->dataptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ub->ub_acquire_release.addr));
 		break;
 	case RVP_OP_SIGDIS:
 		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
@@ -1044,7 +1171,7 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 {
 	const rvp_emitters_t *emitters = ps->ps_emitters;
 	rvp_op_t op;
-	rvp_addr_t lastpc;
+	rvp_addr_t lastpc, pc;
 	int jmpvec;
 	bool is_load = false;
 	int field_width = 0;
@@ -1079,8 +1206,19 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	assert(op != RVP_OP_ENTERSIG || ps->ps_idepth != 0);
 
 	lastpc = ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth];
-	ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth] =
-	    lastpc + jmpvec;
+	pc = lastpc + jmpvec;
+	ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth] = pc;
+
+	if (op == RVP_OP_ENTERFN) {
+		rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
+		rvp_callstack_t *cs = &ts->ts_callstack[ps->ps_idepth];
+		rvp_callstack_push(cs, pc, ub->ub_enterfn.cfa);
+	} else if (op == RVP_OP_EXITFN) {
+		rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
+		rvp_callstack_t *cs = &ts->ts_callstack[ps->ps_idepth];
+		rvp_callstack_pop(cs);
+	}
+
 	switch (op) {
 	case RVP_OP_ATOMIC_LOAD8:
 	case RVP_OP_ATOMIC_STORE8:
@@ -1194,6 +1332,9 @@ rvp_trace_dump(rvp_output_type_t otype, int fd)
 	const rvp_emitters_t *emitters;
 
 	switch (otype) {
+	case RVP_OUTPUT_SYMBOL_FRIENDLY:
+		emitters = &symbol_friendly;
+		break;
 	case RVP_OUTPUT_PLAIN_TEXT:
 		emitters = &plain_text;
 		break;

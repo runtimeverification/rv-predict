@@ -376,7 +376,7 @@ static Dwarf_Die
 dwarf_aggregate_or_base_type(Dwarf_Debug dbg, Dwarf_Die die)
 {
 	Dwarf_Die arraydie = NULL, typedie, otypedie;
-	dwarf_type_kind_t kind = DTK_UNKNOWN;
+	dwarf_type_kind_t kind;
 
 	for (otypedie = die, typedie = dwarf_follow_type_to_die(dbg, die);
 	     typedie != NULL;
@@ -387,6 +387,8 @@ dwarf_aggregate_or_base_type(Dwarf_Debug dbg, Dwarf_Die die)
 
 		kind = dwarf_type_kind(typedie);
 
+		if (kind == DTK_POINTER)
+			arraydie = typedie;
 		if (kind == DTK_ARRAY)
 			arraydie = typedie;
 	}

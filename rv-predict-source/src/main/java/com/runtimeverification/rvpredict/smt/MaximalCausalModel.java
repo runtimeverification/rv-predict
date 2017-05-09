@@ -265,7 +265,6 @@ public class MaximalCausalModel {
                 });
             });
         });
-        // TODO: Signal mask reads also work, so I should do something similar to the above for reads.
         signalToOtidWhereEnabledAtStart.forEach((signalNumber, otidWhereEnabledAtStart) -> {
             Set<Long> otidWhereDisabledAtStart = new HashSet<>();
             otidToItsStartEventWithIndex.forEach(
@@ -279,7 +278,6 @@ public class MaximalCausalModel {
 
         Map<Integer, ReadonlyEventInterface> ttidToStartEvent = new HashMap<>();
         Map<Integer, ReadonlyEventInterface> ttidToJoinEvent = new HashMap<>();
-        /* build inter-thread synchronization constraint */
         trace.getInterThreadSyncEvents().forEach(event -> {
             if (event.isStart()) {
                 Integer ttid = trace.getMainTraceThreadForOriginalThread(event.getSyncedThreadId());
@@ -316,10 +314,6 @@ public class MaximalCausalModel {
                                 ReadonlyEventInterface startThreadEvent = ttidToStartEvent.get(entryTtid);
                                 ReadonlyEventInterface joinThreadEvent = ttidToJoinEvent.get(entryTtid);
                                 if (events.isEmpty() && enabled) {
-
-                                    // TODO: The signal can simply interrupt this thread. I should add its start/join
-                                    // constraints. I can probably add them directly to the top AND.
-
                                     or.add(signalInterruption(
                                             startThreadEvent,
                                             joinThreadEvent,

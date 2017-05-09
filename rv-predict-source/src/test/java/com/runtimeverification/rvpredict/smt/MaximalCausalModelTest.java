@@ -661,13 +661,46 @@ public class MaximalCausalModelTest {
     }
 
     @Test
-    public void getSetSignalMaskMayShowThatASignalIsEnabled() throws InvalidTraceDataException {
+    public void enableSignalStopsFromDetectingRacesBeforeEnabling() throws InvalidTraceDataException {
         List<ReadonlyEventInterface> e1;
         List<ReadonlyEventInterface> e2;
 
         List<RawTrace> rawTraces = Arrays.asList(
                 createRawTrace(
+                        e1 = nonAtomicLoad(ADDRESS_1, VALUE_1, THREAD_1, NO_SIGNAL),
+                        enableSignal(SIGNAL_NUMBER_1, THREAD_1, NO_SIGNAL)),
+                createRawTrace(
+                        enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, THREAD_1, ONE_SIGNAL),
+                        e2 = nonAtomicStore(ADDRESS_1, VALUE_1, THREAD_1, NO_SIGNAL)));
+
+        Assert.assertFalse(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
+    }
+
+    @Test
+    public void getSetSignalMaskMayShowThatASignalIsEnabledBefore() throws InvalidTraceDataException {
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                createRawTrace(
+                        e1 = nonAtomicLoad(ADDRESS_1, VALUE_1, THREAD_1, NO_SIGNAL),
                         getSetSignalMask(SIGNAL_1_ENABLED_MASK, ALL_SIGNALS_DISABLED_MASK, THREAD_1, NO_SIGNAL),
+                        enableSignal(SIGNAL_NUMBER_1, THREAD_1, NO_SIGNAL)),
+                createRawTrace(
+                        enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, THREAD_1, ONE_SIGNAL),
+                        e2 = nonAtomicStore(ADDRESS_1, VALUE_1, THREAD_1, NO_SIGNAL)));
+
+        Assert.assertTrue(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
+    }
+
+    @Test
+    public void setSignalMaskEnablesSignals() throws InvalidTraceDataException {
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                createRawTrace(
+                        setSignalMask(SIGNAL_1_ENABLED_MASK, THREAD_1, NO_SIGNAL),
                         e1 = nonAtomicLoad(ADDRESS_1, VALUE_1, THREAD_1, NO_SIGNAL),
                         enableSignal(SIGNAL_NUMBER_1, THREAD_1, NO_SIGNAL)),
                 createRawTrace(
@@ -681,7 +714,6 @@ public class MaximalCausalModelTest {
     // TODO: Test that a signals stops their thread, i.e. it does not conflict with its own thread in a complex way,
     // i.e. it does not race with the interruption point, but it enables a subsequent read which allows one to
     // reach a racing instruction.
-    // TODO: Tests for get, set and getset for signal masks.
     // TODO: Test that a signal can interrupt an empty thread (i.e. a thread which otherwise has no interactions).
     // TODO: Test for signals using the same lock as the interrupted thread.
     // TODO: Test that atomic variables do not generate races.
@@ -704,6 +736,12 @@ public class MaximalCausalModelTest {
         prepareContextForEvent(threadId, signalDepth);
         when(mockContext.getMemoizedSignalMask(123)).thenReturn(signalMask);
         return compactEventFactory.getSignalMask(mockContext, 123);
+    }
+
+    private List<ReadonlyEventInterface> setSignalMask(long signalMask, long threadId, int signalDepth) {
+        prepareContextForEvent(threadId, signalDepth);
+        when(mockContext.getMemoizedSignalMask(123)).thenReturn(signalMask);
+        return compactEventFactory.signalMask(mockContext, 123);
     }
 
     private List<ReadonlyEventInterface> getSetSignalMask(

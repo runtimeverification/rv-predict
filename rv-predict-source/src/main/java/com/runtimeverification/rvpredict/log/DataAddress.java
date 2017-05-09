@@ -25,10 +25,6 @@ public interface DataAddress {
         return new SignalHandlerDataAddress(signalNumber);
     }
 
-    static DataAddress signalMaskBit(long signalNumber) {
-        return new SignalMaskBitDataAdrress(signalNumber);
-    }
-
     long getDataAddressOr0();
     int getObjectHashCode();
     int getFieldIdOrArrayIndex();
@@ -115,47 +111,5 @@ class SignalHandlerDataAddress implements DataAddress {
     @Override
     public String toString() {
         return String.format("SH(%s)", signalNumber);
-    }
-}
-
-class SignalMaskBitDataAdrress implements DataAddress {
-    private final long signalNumber;
-
-    SignalMaskBitDataAdrress(long signalNumber) {
-        this.signalNumber = signalNumber;
-    }
-
-    @Override
-    public long getDataAddressOr0() {
-        return 0;
-    }
-
-    @Override
-    public int getObjectHashCode() {
-        return 0;
-    }
-
-    @Override
-    public int getFieldIdOrArrayIndex() {
-        return 0;
-    }
-
-    @Override
-    public int hashCode() {
-        return Long.hashCode(signalNumber);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (!(obj instanceof SignalMaskBitDataAdrress)) {
-            return false;
-        }
-        SignalMaskBitDataAdrress shd = (SignalMaskBitDataAdrress)obj;
-        return signalNumber == shd.signalNumber;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("SMB(%s)", signalNumber);
     }
 }

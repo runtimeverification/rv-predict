@@ -14,6 +14,7 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     long getPartialSignalMask();
     long getFullWriteSignalMask();
     long getFullReadSignalMask();
+    long getCanonicalFrameAddress();
     DataAddress unsafeGetAddress();
     long unsafeGetDataValue();
 

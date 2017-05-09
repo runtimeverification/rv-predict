@@ -2,8 +2,6 @@ package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.util.Constants;
 
-import javax.xml.crypto.Data;
-
 /**
  * Class for representing an event as it is recorded in the log
  * @author TraianSF
@@ -158,6 +156,12 @@ public class Event extends ReadonlyEvent {
     public long getSyncedThreadId() {
         assert isStart() || isJoin();
         return address.getDataAddressOr0();
+    }
+
+    @Override
+    public long getCanonicalFrameAddress() {
+        assert false;
+        return 0;
     }
 
     @Override

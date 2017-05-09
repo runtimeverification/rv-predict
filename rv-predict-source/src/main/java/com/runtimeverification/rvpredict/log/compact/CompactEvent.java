@@ -100,6 +100,11 @@ public abstract class CompactEvent extends ReadonlyEvent {
     }
 
     @Override
+    public long getCanonicalFrameAddress() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+
+    @Override
     public DataAddress unsafeGetAddress() {
         return DataAddress.NULL_OBJECT;
     }

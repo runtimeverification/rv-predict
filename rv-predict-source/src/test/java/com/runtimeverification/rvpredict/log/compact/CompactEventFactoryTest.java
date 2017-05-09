@@ -36,6 +36,7 @@ public class CompactEventFactoryTest {
     private static final long SIGNAL_MASK = 1004;
     private static final long SIGNAL_MASK_NUMBER2 = 1005;
     private static final long SIGNAL_MASK2 = 1006;
+    private static final long CANONICAL_FRAME_ADDRESS = 1007;
     private static final int SIGNAL_DEPTH = 3;
     private static final long ORIGIN_BIT_COUNT = 4;
 
@@ -68,6 +69,8 @@ public class CompactEventFactoryTest {
             new CompactEventMethod<>(ALL_METHODS, "getPartialSignalMask", CompactEvent::getPartialSignalMask);
     private static final CompactEventMethod<Long> GET_SIGNAL_NUMBER =
             new CompactEventMethod<>(ALL_METHODS, "getSignalNumber", CompactEvent::getSignalNumber);
+    private static final CompactEventMethod<Long> GET_CANONICAL_FRAME_ADDRESS =
+            new CompactEventMethod<>(ALL_METHODS, "getCanonicalFrameAddress", CompactEvent::getCanonicalFrameAddress);
 
     @Mock private Context mockContext;
 
@@ -732,7 +735,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<ReadonlyEventInterface> events = eventFactory.enterFunction(mockContext);
+        List<ReadonlyEventInterface> events = eventFactory.enterFunction(mockContext, CANONICAL_FRAME_ADDRESS);
 
         Assert.assertEquals(1, events.size());
         ReadonlyEventInterface event = events.get(0);
@@ -742,6 +745,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.INVOKE_METHOD, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(CANONICAL_FRAME_ADDRESS, GET_CANONICAL_FRAME_ADDRESS),
                 }
         );
     }

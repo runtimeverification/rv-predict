@@ -376,8 +376,12 @@ public class CompactEventFactory {
 
     // Function events.
 
-    List<ReadonlyEventInterface> enterFunction(Context context) {
+    public List<ReadonlyEventInterface> enterFunction(Context context, long canonicalFrameAddress) {
         return Collections.singletonList(new CompactEvent(context, EventType.INVOKE_METHOD) {
+            @Override
+            public long getCanonicalFrameAddress() {
+                return canonicalFrameAddress;
+            }
         });
     }
 

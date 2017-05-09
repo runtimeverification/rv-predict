@@ -666,8 +666,10 @@ public class MaximalCausalModel {
                 events.sort(Comparator.comparingLong(EventWithOrder::getOrderId)));
 
         System.out.println("Possible ordering of events, per thread ..........");
+        // TODO(virgil): Dump the total order, not the per-thread one.
         threadToExecution.forEach((tid, events) -> {
             ArrayList<String> description = new ArrayList<>();
+            // TODO(virgil): Actually dump the event.
             events.forEach(e -> description.add(e.getEvent().getEventId() + ":" + e.getOrderId()));
             System.out.print("  Thread:" + tid);
             System.out.print(" -> ");

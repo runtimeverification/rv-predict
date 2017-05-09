@@ -108,8 +108,8 @@ class SignalHandlerDataAddress implements DataAddress {
         if (!(obj instanceof SignalHandlerDataAddress)) {
             return false;
         }
-        SignalHandlerDataAddress pda = (SignalHandlerDataAddress)obj;
-        return signalNumber == pda.signalNumber;
+        SignalHandlerDataAddress shd = (SignalHandlerDataAddress)obj;
+        return signalNumber == shd.signalNumber;
     }
 
     @Override
@@ -150,8 +150,8 @@ class SignalMaskBitDataAdrress implements DataAddress {
         if (!(obj instanceof SignalMaskBitDataAdrress)) {
             return false;
         }
-        SignalMaskBitDataAdrress pda = (SignalMaskBitDataAdrress)obj;
-        return signalNumber == pda.signalNumber;
+        SignalMaskBitDataAdrress shd = (SignalMaskBitDataAdrress)obj;
+        return signalNumber == shd.signalNumber;
     }
 
     @Override

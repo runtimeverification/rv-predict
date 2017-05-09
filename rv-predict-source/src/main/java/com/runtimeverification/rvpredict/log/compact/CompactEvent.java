@@ -31,7 +31,6 @@ public abstract class CompactEvent extends ReadonlyEvent {
         return eventId;
     }
 
-    // TODO(virgil): Convert getLocationId to long.
     @Override
     public long getLocationId() {
         return locationId;

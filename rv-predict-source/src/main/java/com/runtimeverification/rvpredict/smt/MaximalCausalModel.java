@@ -34,7 +34,7 @@ import com.microsoft.z3.Solver;
 import com.microsoft.z3.Status;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
-import com.runtimeverification.rvpredict.log.compact.Constants;
+import com.runtimeverification.rvpredict.signals.EventsEnabledForSignalIterator;
 import com.runtimeverification.rvpredict.signals.Signals;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
@@ -130,76 +130,79 @@ public class MaximalCausalModel {
         return OR(HB(lockRegion1, lockRegion2), HB(lockRegion2, lockRegion1));
     }
 
-    private void fillEnabledAtStartIfEnabledAtEventId(
+    private void fillSignalEnabledAtStartIfEnabledAtEventId(
             Long signalNumber, Long otid, Long eventId,
             Set<Long> otidWhereEnabledAtStart,
-            Map<Long, EventWithIndex> otidToItsStartEventWithIndex) {
+            Map<Long, ReadonlyEventInterface> otidToItsStartEvent) {
         if (otidWhereEnabledAtStart.contains(otid)) {
             return;
         }
-        if (trace.getEvents(trace.getMainTraceThreadForOriginalThread(otid)).stream()
-                .anyMatch(event -> event.getEventId() < eventId
-                        && Signals.signalEnableChange(event, signalNumber) != null)) {
+        Optional<Boolean> maybeLastWrittenValue =
+                getLastSignalMaskChangeBeforeEvent(eventId, otid, signalNumber);
+        if (maybeLastWrittenValue.isPresent()) {
             return;
         }
         otidWhereEnabledAtStart.add(otid);
-        EventWithIndex start = otidToItsStartEventWithIndex.get(otid);
+        ReadonlyEventInterface start = otidToItsStartEvent.get(otid);
         if (start == null) {
             return;
         }
-        fillEnabledAtStartIfEnabledAtEventId(
-                signalNumber, start.getEvent().getOriginalThreadId(), start.getEvent().getEventId(),
-                otidWhereEnabledAtStart, otidToItsStartEventWithIndex);
+        fillSignalEnabledAtStartIfEnabledAtEventId(
+                signalNumber, start.getOriginalThreadId(), start.getEventId(),
+                otidWhereEnabledAtStart, otidToItsStartEvent);
     }
 
-    private Boolean fillEnabledDisabledAtStartIfEnabledByTheParentThread(
+    private Optional<Boolean> fillSignalEnabledDisabledAtStartIfEnabledByTheParentThread(
             long signalNumber,
             long otid,
-            Map<Long, EventWithIndex> otidToItsStartEventWithIndex,
+            Map<Long, ReadonlyEventInterface> otidToItsStartEvent,
             Set<Long> otidWhereEnabledAtStart, Set<Long> otidWhereDisabledAtStart) {
         if (otidWhereEnabledAtStart.contains(otid)) {
-            return Boolean.TRUE;
+            return Optional.of(Boolean.TRUE);
         }
         if (otidWhereDisabledAtStart.contains(otid)) {
-            return Boolean.FALSE;
+            return Optional.of(Boolean.FALSE);
         }
-        EventWithIndex startEvent = otidToItsStartEventWithIndex.get(otid);
+        ReadonlyEventInterface startEvent = otidToItsStartEvent.get(otid);
         if (startEvent == null) {
-            return null;
+            return Optional.empty();
         }
         Optional<Boolean> maybeLastWrittenValue =
-                trace.getEvents(trace.getMainTraceThreadForOriginalThread(startEvent.getEvent().getOriginalThreadId()))
-                        // TODO: This is the only place where I use getEventIndex, maybe I should just remove it.
-                        // If I do that, I may be able to refactor this.
-                        .subList(0, startEvent.getEventIndex()).stream()
-                        .map(event -> Signals.signalEnableChange(event, signalNumber))
-                        .filter(Objects::nonNull)
-                        .reduce((e1, e2) -> e2);
+                getLastSignalMaskChangeBeforeEvent(
+                        startEvent.getEventId(), startEvent.getOriginalThreadId(), signalNumber);
         if (maybeLastWrittenValue.isPresent()) {
             boolean isEnabled = maybeLastWrittenValue.get();
             if (isEnabled) {
                 otidWhereEnabledAtStart.add(otid);
-                return Boolean.TRUE;
+                return Optional.of(Boolean.TRUE);
             } else {
                 otidWhereDisabledAtStart.add(otid);
-                return Boolean.FALSE;
+                return Optional.of(Boolean.FALSE);
             }
         } else {
-            Boolean enabled = fillEnabledDisabledAtStartIfEnabledByTheParentThread(
+            Optional<Boolean> maybeEnabled = fillSignalEnabledDisabledAtStartIfEnabledByTheParentThread(
                     signalNumber,
-                    startEvent.event.getOriginalThreadId(),
-                    otidToItsStartEventWithIndex,
+                    startEvent.getOriginalThreadId(),
+                    otidToItsStartEvent,
                     otidWhereEnabledAtStart, otidWhereDisabledAtStart);
-            if (enabled == null) {
-                return null;
+            if (!maybeEnabled.isPresent()) {
+                return maybeEnabled;
             }
-            if (enabled) {
+            if (maybeEnabled.get()) {
                 otidWhereEnabledAtStart.add(otid);
             } else {
                 otidWhereDisabledAtStart.add(otid);
             }
-            return enabled;
+            return maybeEnabled;
         }
+    }
+
+    private Optional<Boolean> getLastSignalMaskChangeBeforeEvent(long eventId, long otid, long signalNumber) {
+        return trace.getEvents(trace.getMainTraceThreadForOriginalThread(otid)).stream()
+                .filter(event -> event.getEventId() < eventId)
+                .map(event -> Signals.signalEnableChange(event, signalNumber))
+                .filter(Objects::nonNull)
+                .reduce((e1, e2) -> e2);
     }
 
     /**
@@ -214,23 +217,20 @@ public class MaximalCausalModel {
      *    started, we will assume that the mask was enabled at the beginning of the thread.
      */
     private void addSignalInterruptsRestricts() {
-        Map<Long, EventWithIndex> otidToItsStartEventWithIndex = new HashMap<>();
-        trace.eventsByThreadID().values().forEach(events -> {
-            for (int i = 0; i < events.size(); i++) {
-                ReadonlyEventInterface event = events.get(i);
-                if (!event.isStart()) {
-                    continue;
-                }
-                otidToItsStartEventWithIndex.put(event.getSyncedThreadId(), new EventWithIndex(event, i));
-            }
-        });
+        Map<Long, ReadonlyEventInterface> otidToItsStartEvent = new HashMap<>();
+        trace.eventsByThreadID().values().forEach(
+                events -> events.stream()
+                        .filter(ReadonlyEventInterface::isStart)
+                        .forEach(event -> otidToItsStartEvent.put(event.getSyncedThreadId(), event)));
         Map<Long, Map<Long, List<Long>>> signalNumberToOtidToInterruptedEventIds = new HashMap<>();
         trace.eventsByThreadID().entrySet().stream()
                 .filter(entry -> trace.getThreadType(entry.getKey()) == ThreadType.SIGNAL)
                 .forEach(entry -> {
                     long signalNumber = trace.getSignalNumber(entry.getKey());
                     long originalThreadId = trace.getOriginalThreadIdForTraceThreadId(entry.getKey());
-                    // TODO: Make it work with empty lists.
+                    // This assumes that a signal's event list is never empty. This should be true when a
+                    // signal is not split across multiple windows, but may not be true when splitting.
+                    // TODO(virgil): make this work with empty signal lists.
                     long firstEventId = entry.getValue().get(0).getEventId();
                     signalNumberToOtidToInterruptedEventIds
                             .computeIfAbsent(signalNumber, k -> new HashMap<>())
@@ -246,36 +246,37 @@ public class MaximalCausalModel {
                 if (!maybeMinSignalStart.isPresent()) {
                     return;
                 }
-                fillEnabledAtStartIfEnabledAtEventId(
+                fillSignalEnabledAtStartIfEnabledAtEventId(
                         signalNumber, otid, maybeMinSignalStart.getAsLong(),
-                        otidWhereEnabledAtStart, otidToItsStartEventWithIndex);
+                        otidWhereEnabledAtStart, otidToItsStartEvent);
             });
         });
-        trace.eventsByThreadID().entrySet().forEach(entry -> {
-            entry.getValue().stream().filter(event -> event.isSignalMaskRead()).forEach(event -> {
-                long mask = event.getFullReadSignalMask();
-                signalNumberToOtidToInterruptedEventIds.keySet().forEach(signalNumber -> {
-                    Set<Long> otidWhereEnabledAtStart =
-                            signalToOtidWhereEnabledAtStart.computeIfAbsent(signalNumber, k -> new HashSet<>());
-                    if (Signals.signalIsEnabled(signalNumber, mask)) {
-                        fillEnabledAtStartIfEnabledAtEventId(
-                                signalNumber, event.getOriginalThreadId(), event.getEventId(),
-                                otidWhereEnabledAtStart, otidToItsStartEventWithIndex);
-                    }
-                });
-            });
-        });
+        trace.eventsByThreadID().values().forEach(events -> events.stream()
+                .filter(ReadonlyEventInterface::isSignalMaskRead)
+                .forEach(event -> {
+                    long mask = event.getFullReadSignalMask();
+                    signalNumberToOtidToInterruptedEventIds.keySet().forEach(signalNumber -> {
+                        Set<Long> otidWhereEnabledAtStart =
+                                signalToOtidWhereEnabledAtStart.computeIfAbsent(signalNumber, k -> new HashSet<>());
+                        if (Signals.signalIsEnabled(signalNumber, mask)) {
+                            fillSignalEnabledAtStartIfEnabledAtEventId(
+                                    signalNumber, event.getOriginalThreadId(), event.getEventId(),
+                                    otidWhereEnabledAtStart, otidToItsStartEvent);
+                        }
+                    });
+                }));
         signalToOtidWhereEnabledAtStart.forEach((signalNumber, otidWhereEnabledAtStart) -> {
             Set<Long> otidWhereDisabledAtStart = new HashSet<>();
-            otidToItsStartEventWithIndex.forEach(
-                    (otid, startEvent) -> fillEnabledDisabledAtStartIfEnabledByTheParentThread(
+            otidToItsStartEvent.forEach(
+                    (otid, startEvent) -> fillSignalEnabledDisabledAtStartIfEnabledByTheParentThread(
                             signalNumber,
                             otid,
-                            otidToItsStartEventWithIndex,
+                            otidToItsStartEvent,
                             otidWhereEnabledAtStart,
                             otidWhereDisabledAtStart));
         });
 
+        // TODO(virgil): This is almost a duplicate of the otidToItsStartEvent map, I should keep only one.
         Map<Integer, ReadonlyEventInterface> ttidToStartEvent = new HashMap<>();
         Map<Integer, ReadonlyEventInterface> ttidToJoinEvent = new HashMap<>();
         trace.getInterThreadSyncEvents().forEach(event -> {
@@ -293,8 +294,8 @@ public class MaximalCausalModel {
         });
 
 
-        FormulaTerm.Builder and = FormulaTerm.andBuilder();
-        and.add(BooleanConstant.TRUE);
+        FormulaTerm.Builder allSignalsAndRestrict = FormulaTerm.andBuilder();
+        allSignalsAndRestrict.add(BooleanConstant.TRUE);
         trace.eventsByThreadID().keySet().stream()
                 .filter(ttid -> trace.getThreadType(trace.getFirstEvent(ttid)) == ThreadType.SIGNAL)
                 .forEach(ttid -> {
@@ -303,7 +304,7 @@ public class MaximalCausalModel {
                     long signalNumber = trace.getSignalNumber(ttid);
                     Set<Long> otidWhereEnabledAtStart = signalToOtidWhereEnabledAtStart.get(signalNumber);
 
-                    FormulaTerm.Builder or = FormulaTerm.orBuilder();
+                    FormulaTerm.Builder oneSignalOrRestrict = FormulaTerm.orBuilder();
                     trace.eventsByThreadID().entrySet().stream()
                             .filter(entry -> trace.getThreadType(entry.getKey()) == ThreadType.THREAD)
                             .forEach(entry -> {
@@ -314,27 +315,27 @@ public class MaximalCausalModel {
                                 ReadonlyEventInterface startThreadEvent = ttidToStartEvent.get(entryTtid);
                                 ReadonlyEventInterface joinThreadEvent = ttidToJoinEvent.get(entryTtid);
                                 if (events.isEmpty() && enabled) {
-                                    or.add(signalInterruption(
+                                    oneSignalOrRestrict.add(signalInterruption(
                                             startThreadEvent,
                                             joinThreadEvent,
                                             firstEvent,
                                             lastEvent));
                                     return;
                                 }
-                                Signals.EnabledEventsIterator iterator =
-                                        new Signals.EnabledEventsIterator(
+                                EventsEnabledForSignalIterator iterator =
+                                        new EventsEnabledForSignalIterator(
                                                 events, detectInterruptedThreadRace, signalNumber, enabled);
                                 while (iterator.advance()) {
-                                    or.add(signalInterruption(
+                                    oneSignalOrRestrict.add(signalInterruption(
                                             iterator.getPreviousEventWithDefault(startThreadEvent),
                                             iterator.getCurrentEventWithDefault(joinThreadEvent),
                                             firstEvent,
                                             lastEvent));
                                 }
                             });
-                    and.add(or.build());
+                    allSignalsAndRestrict.add(oneSignalOrRestrict.build());
                 });
-        phiTau.add(and.build());
+        phiTau.add(allSignalsAndRestrict.build());
     }
 
     private FormulaTerm signalInterruption(
@@ -348,24 +349,6 @@ public class MaximalCausalModel {
             threadInterruptionAtPoint.add(HB(lastSignalEvent, after));
         }
         return threadInterruptionAtPoint.build();
-    }
-
-    private class EventWithIndex {
-        private final ReadonlyEventInterface event;
-        private final int eventIndex;
-
-        private EventWithIndex(ReadonlyEventInterface event, int eventIndex) {
-            this.event = event;
-            this.eventIndex = eventIndex;
-        }
-
-        private ReadonlyEventInterface getEvent() {
-            return event;
-        }
-
-        private int getEventIndex() {
-            return eventIndex;
-        }
     }
 
     /**

@@ -10,7 +10,7 @@ public class Signals {
         switch (event.getType()) {
             case WRITE_SIGNAL_MASK:
             case READ_WRITE_SIGNAL_MASK:
-                return signalInMask(signalNumber, event.getFullWriteSignalMask());
+                return !signalInMask(signalNumber, event.getFullWriteSignalMask());
             case BLOCK_SIGNALS:
                 if (signalInMask(signalNumber, event.getPartialSignalMask())) {
                     return false;
@@ -51,14 +51,13 @@ public class Signals {
      * thread.
      */
     public static class EnabledEventsIterator {
-        private final Collection<ReadonlyEventInterface> events;
         private final boolean detectInterruptedThreadRace;
         private final long signalNumber;
 
         ReadonlyEventInterface previousPreviousEvent;
         ReadonlyEventInterface previousEvent;
         ReadonlyEventInterface currentEvent;
-        Iterator<ReadonlyEventInterface> iterator;
+        Iterator<ReadonlyEventInterface> eventsIterator;
         /**
          * Whether the signal is enabled after the {@link #previousPreviousEvent} event.
          */
@@ -76,7 +75,6 @@ public class Signals {
                 Collection<ReadonlyEventInterface> events,
                 boolean detectInterruptedThreadRace,
                 long signalNumber, boolean enabledAtStart) {
-            this.events = events;
             this.detectInterruptedThreadRace = detectInterruptedThreadRace;
             this.signalNumber = signalNumber;
             previousPreviousEvent = null;
@@ -85,7 +83,7 @@ public class Signals {
             previousPreviousEnabled = false;
             previousEnabled = false;
             enabled = enabledAtStart;
-            iterator = events.iterator();
+            eventsIterator = events.iterator();
         }
 
         public ReadonlyEventInterface getPreviousEventWithDefault(ReadonlyEventInterface defaultValue) {
@@ -111,11 +109,11 @@ public class Signals {
             previousEnabled = enabled;
             previousPreviousEvent = previousEvent;
             previousEvent = currentEvent;
-            if (!iterator.hasNext()) {
+            if (!eventsIterator.hasNext()) {
                 currentEvent = null;
                 return detectInterruptedThreadRace ? previousPreviousEvent != null : previousEvent != null;
             }
-            currentEvent = iterator.next();
+            currentEvent = eventsIterator.next();
             enabled = Signals.updateEnabledWithEvent(enabled, signalNumber, currentEvent);
             return true;
         }

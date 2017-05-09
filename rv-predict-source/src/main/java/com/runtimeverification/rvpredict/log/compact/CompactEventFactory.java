@@ -338,22 +338,6 @@ public class CompactEventFactory {
                 });
     }
 
-    private void addSignalWritesForMask(
-            List<ReadonlyEventInterface> events, Context context, long signalMask, long value)
-            throws InvalidTraceDataException {
-        int signalNumber = 0;
-        long remainingSignalMask = signalMask;
-        while (remainingSignalMask != 0) {
-            if ((remainingSignalMask & 1) != 0) {
-                events.add(dataManipulationEvent(
-                        context, Constants.LONG_SIZE_IN_BYTES,
-                        DataAddress.signalMaskBit(signalNumber), value, EventType.WRITE));
-            }
-            remainingSignalMask >>>= 1;
-            signalNumber++;
-        }
-    }
-
     public List<ReadonlyEventInterface> getSetSignalMask(
             Context context, long readSignalMaskNumber, long writeSignalMaskNumber) {
         long readSignalMask = context.getMemoizedSignalMask(readSignalMaskNumber);

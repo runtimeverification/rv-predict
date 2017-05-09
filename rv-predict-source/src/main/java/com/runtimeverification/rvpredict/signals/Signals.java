@@ -29,7 +29,7 @@ public class Signals {
         return !signalInMask(signalNumber, signalMask);
     }
 
-    private static boolean updateEnabledWithEvent(boolean eventIsEnabled, long signalNumber, ReadonlyEventInterface event) {
+    static boolean updateEnabledWithEvent(boolean eventIsEnabled, long signalNumber, ReadonlyEventInterface event) {
         Boolean change = Signals.signalEnableChange(event, signalNumber);
         if (change == null) {
             return eventIsEnabled;
@@ -37,92 +37,8 @@ public class Signals {
         return change;
     }
 
-
-
     private static boolean signalInMask(long signalNumber, long mask) {
         return (mask & (1 << signalNumber)) != 0;
     }
 
-    /**
-     * For each iterator position, the signal can run between the previous event and the current one.
-     *
-     * If the previous event is absent, then one should consider the START event on the parent thread as
-     * the previous event. Similarly, an absent current event is equivalent to the JOIN event on the parent
-     * thread.
-     */
-    public static class EnabledEventsIterator {
-        private final boolean detectInterruptedThreadRace;
-        private final long signalNumber;
-
-        ReadonlyEventInterface previousPreviousEvent;
-        ReadonlyEventInterface previousEvent;
-        ReadonlyEventInterface currentEvent;
-        Iterator<ReadonlyEventInterface> eventsIterator;
-        /**
-         * Whether the signal is enabled after the {@link #previousPreviousEvent} event.
-         */
-        boolean previousPreviousEnabled;
-        /**
-         * Whether the signal is enabled after the {@link #previousEvent} event.
-         */
-        boolean previousEnabled;
-        /**
-         * Whether the signal is enabled after the {@link #currentEvent} event.
-         */
-        boolean enabled;
-
-        public EnabledEventsIterator(
-                Collection<ReadonlyEventInterface> events,
-                boolean detectInterruptedThreadRace,
-                long signalNumber, boolean enabledAtStart) {
-            this.detectInterruptedThreadRace = detectInterruptedThreadRace;
-            this.signalNumber = signalNumber;
-            previousPreviousEvent = null;
-            previousEvent = null;
-            currentEvent = null;
-            previousPreviousEnabled = false;
-            previousEnabled = false;
-            enabled = enabledAtStart;
-            eventsIterator = events.iterator();
-        }
-
-        public ReadonlyEventInterface getPreviousEventWithDefault(ReadonlyEventInterface defaultValue) {
-            assert previousEnabled;
-            if (detectInterruptedThreadRace && previousPreviousEnabled) {
-                return eventWithDefault(previousPreviousEvent, defaultValue);
-            }
-            return eventWithDefault(previousEvent, defaultValue);
-        }
-        public ReadonlyEventInterface getCurrentEventWithDefault(ReadonlyEventInterface defaultValue) {
-            return eventWithDefault(currentEvent, defaultValue);
-        }
-        public boolean advance() {
-            while (advanceOneStep()) {
-                if (previousEnabled) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        private boolean advanceOneStep() {
-            previousPreviousEnabled = previousEnabled;
-            previousEnabled = enabled;
-            previousPreviousEvent = previousEvent;
-            previousEvent = currentEvent;
-            if (!eventsIterator.hasNext()) {
-                currentEvent = null;
-                return detectInterruptedThreadRace ? previousPreviousEvent != null : previousEvent != null;
-            }
-            currentEvent = eventsIterator.next();
-            enabled = Signals.updateEnabledWithEvent(enabled, signalNumber, currentEvent);
-            return true;
-        }
-        private static ReadonlyEventInterface eventWithDefault(
-                ReadonlyEventInterface event, ReadonlyEventInterface defaultValue) {
-            if (event == null) {
-                return defaultValue;
-            }
-            return event;
-        }
-    }
 }

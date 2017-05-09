@@ -33,6 +33,8 @@ public class Metadata implements Serializable {
     private transient final ConcurrentHashMap<String, Integer> locSigToLocId = new ConcurrentHashMap<>();
 
     // Only for compact traces.
+    // TODO(virgil): The compact trace metadata is different in many ways from the normal metadata, I should
+    // extract a common interface and have two implementations.
     private transient final ConcurrentHashMap<Long, String> addressToLocationSig = new ConcurrentHashMap<>();
 
     private transient boolean isCompactTrace = false;

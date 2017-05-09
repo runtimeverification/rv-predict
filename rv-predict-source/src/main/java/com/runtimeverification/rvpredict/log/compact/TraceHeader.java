@@ -21,7 +21,7 @@ public class TraceHeader {
                 versionNumberBytes[0] != 0
                         && versionNumberBytes[1] != 0
                         && versionNumberBytes[2] != 0
-                        && versionNumberBytes[3] != 1) {
+                        && versionNumberBytes[3] != 2) {
             throw new InvalidTraceDataException("Unknown version: " + Arrays.asList(versionNumberBytes));
         }
 

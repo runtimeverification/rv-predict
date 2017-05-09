@@ -233,7 +233,6 @@ public class Race {
             if (i > 0) {
                 sb.append(", ");
             }
-            sb.append(heldLocks.get(i).getLockRepresentation());
         }
         return sb.toString();
     }

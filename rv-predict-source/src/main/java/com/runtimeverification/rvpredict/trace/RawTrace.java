@@ -6,6 +6,7 @@ import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.util.Constants;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 /**
  * Unprocessed trace of events, implemented as a thin wrapper around the array

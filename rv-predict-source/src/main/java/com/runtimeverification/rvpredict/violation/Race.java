@@ -166,10 +166,9 @@ public class Race {
         Metadata metadata = trace.metadata();
         List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
         if (e.getSignalDepth() == 0) {
-            sb.append(String.format("    Concurrent %s in thread T%s signal S%s%s)%n",
+            sb.append(String.format("    Concurrent %s in thread T%s%s)%n",
                     e.isWrite() ? "write" : "read",
                     otid,
-                    sid,
                     getHeldLocksReport(heldLocks)));
         } else {
             // TODO(virgil): The signal number is not enough to identify what is happening, one also needs
@@ -227,18 +226,15 @@ public class Race {
     }
 
     private String getHeldLocksReport(List<ReadonlyEventInterface> heldLocks) {
-	if (heldLocks.isEmpty())
-		return "";
+        if (heldLocks.isEmpty())
+            return "";
         StringBuilder sb = new StringBuilder();
-        if (!heldLocks.isEmpty()) {
-            for (int i = 0; i < heldLocks.size(); i++) {
-                if (i > 0) {
-                    sb.append(", ");
-                }
-                sb.append(heldLocks.get(i).getLockRepresentation());
+        for (int i = 0; i < heldLocks.size(); i++) {
+            if (i > 0) {
+                sb.append(", ");
             }
+            sb.append(heldLocks.get(i).getLockRepresentation());
         }
         return sb.toString();
     }
-
 }

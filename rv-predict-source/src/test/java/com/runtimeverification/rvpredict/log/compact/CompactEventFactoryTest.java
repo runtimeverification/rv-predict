@@ -49,6 +49,7 @@ public class CompactEventFactoryTest {
             new CompactEventMethod<>(ALL_METHODS, "getType", CompactEvent::getType);
     private static final CompactEventMethod<Integer> GET_DATA_SIZE_IN_BYTES =
             new CompactEventMethod<>(ALL_METHODS, "getDataSizeInBytes", CompactEvent::getDataSizeInBytes);
+    // TODO(virgil): Use getDataAddress instead of getLongAddress.
     private static final CompactEventMethod<Long> GET_DATA_ADDRESS =
             new CompactEventMethod<>(ALL_METHODS, "getLongAddress", CompactEvent::getLongAddress);
     private static final CompactEventMethod<Long> GET_DATA_VALUE =

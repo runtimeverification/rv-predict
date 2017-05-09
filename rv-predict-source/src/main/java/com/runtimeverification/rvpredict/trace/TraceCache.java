@@ -195,7 +195,7 @@ public class TraceCache {
             ReadonlyEventInterface event = events.get(i);
             if (event.getOriginalThreadId() == prevOTID
                     && event.getSignalDepth() == prevSignalDepth
-                    && (event.getType() != EventType.ENTER_SIGNAL || tidStart == i-1)) {
+                    && (event.getType() != EventType.ENTER_SIGNAL || tidStart == i - 1)) {
                 continue;
             }
 

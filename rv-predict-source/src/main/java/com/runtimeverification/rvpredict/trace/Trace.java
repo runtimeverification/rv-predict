@@ -643,10 +643,10 @@ public class Trace {
                      * global ID and location ID).
                      */
                     if (lastEvent != null) {
-                        boolean isSameRead = lastEvent.isRead()
+                        boolean readsTheSameThing = lastEvent.isRead()
                                 && lastEvent.getDataAddress().equals(event.getDataAddress())
                                 && lastEvent.getDataValue() == event.getDataValue();
-                        endCrntBlock = !(lastEvent.isWrite() || isSameRead);
+                        endCrntBlock = !(lastEvent.isWrite() || readsTheSameThing);
                     } else {
                         endCrntBlock = false;
                     }
@@ -654,7 +654,7 @@ public class Trace {
                     endCrntBlock = lastEvent != null && lastEvent.isRead();
                 }
             } else if (event.isSignalEvent()) {
-                // Do nothing for now. since signal events themselves are not involved with r/w.
+                // Do nothing for now, since signal events themselves are not involved with r/w.
                 endCrntBlock = false;
             } else {
                 throw new IllegalStateException("Unexpected critical event: " + event);

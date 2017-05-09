@@ -10,7 +10,7 @@ NOMAN=
 PROGS=mask
 
 CC?=rvpc
-CPPFLAGS+=-I$(.CURDIR)/../../ngrt
+CPPFLAGS+=-I$(.CURDIR)/../../../include
 SRCS.mask=mask.c
 WARNS=4
 STRIPFLAG=

@@ -1,5 +1,6 @@
 // Copyright (c) 2016 Runtime Verification Inc. (RV-Predict Team). All Rights Reserved.
 
+#include <iostream>
 #include <thread>
 
 using namespace std;
@@ -21,6 +22,8 @@ int main() {
 
     t1.join();
     t2.join();
+
+    cout << sharedVar << endl;
 
     return 0;
 }

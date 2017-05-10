@@ -631,7 +631,7 @@ public class MaximalCausalModelTest {
                         e1 = nonAtomicLoad(ADDRESS_1, VALUE_1, THREAD_1, NO_SIGNAL)),
                 createRawTrace(
                         enableSignal(SIGNAL_NUMBER_1, THREAD_2, NO_SIGNAL),
-                        disestablishSignal(SIGNAL_NUMBER_1, THREAD_1, NO_SIGNAL),
+                        disestablishSignal(SIGNAL_NUMBER_1, THREAD_2, NO_SIGNAL),
                         lock(LOCK_1, THREAD_2, NO_SIGNAL),
                         nonAtomicStore(ADDRESS_3, VALUE_1, THREAD_2, NO_SIGNAL),
                         unlock(LOCK_1, THREAD_2, NO_SIGNAL),

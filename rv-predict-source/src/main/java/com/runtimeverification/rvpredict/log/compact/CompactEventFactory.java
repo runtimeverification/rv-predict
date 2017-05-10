@@ -60,7 +60,7 @@ public class CompactEventFactory {
             Context context, int dataSizeInBytes, long address, long value, EventType compactType)
             throws InvalidTraceDataException {
         return dataManipulationEvent(
-                context, dataSizeInBytes, DataAddress.createPlainDataAddress(address), value, compactType);
+                context, dataSizeInBytes, DataAddress.createCompactDataAddress(address), value, compactType);
     }
     private ReadonlyEventInterface dataManipulationEvent(
             Context context, int dataSizeInBytes, DataAddress dataAddress, long value, EventType compactType)

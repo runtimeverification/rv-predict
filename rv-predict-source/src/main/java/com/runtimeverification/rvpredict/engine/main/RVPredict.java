@@ -38,7 +38,9 @@ import java.util.List;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
+import com.runtimeverification.rvpredict.metadata.CompactMetadata;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.trace.LLVMCompactTraceCache;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
@@ -54,17 +56,18 @@ public class RVPredict {
 
     private final Configuration config;
     private final TraceCache traceCache;
-    private final Metadata metadata;
     private final RaceDetector detector;
 
     public RVPredict(Configuration config) {
         this.config = config;
         if (config.isLLVMPrediction()) {
-            metadata = Metadata.singleton();
-            traceCache = new LLVMTraceCache(config, metadata);
+            if (config.isCompactTrace()) {
+                traceCache = new LLVMCompactTraceCache(config, new CompactMetadata());
+            } else {
+                traceCache = new LLVMTraceCache(config, Metadata.singleton());
+            }
         } else {
-            this.metadata = Metadata.readFrom(config.getMetadataPath(), config.isCompactTrace());
-            traceCache = new TraceCache(config, metadata);
+            traceCache = new TraceCache(config, Metadata.readFrom(config.getMetadataPath(), config.isCompactTrace()));
         }
         this.detector = new RaceDetector(config);
     }
@@ -72,12 +75,10 @@ public class RVPredict {
     public void start() {
         try {
             traceCache.setup();
-            long fromIndex = 0;
             // process the trace window by window
             Trace trace;
             while (true) {
                 if ((trace = traceCache.getTraceWindow()) != null) {
-                    fromIndex += config.windowSize;
                     detector.run(trace);
                 } else {
                     break;

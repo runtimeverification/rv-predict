@@ -3,7 +3,7 @@ package com.runtimeverification.rvpredict.engine.deadlock;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
-import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
 import com.runtimeverification.rvpredict.util.Logger;
 import org.apache.commons.lang3.tuple.Pair;
@@ -24,14 +24,14 @@ import java.util.Set;
  */
 public class LockGraph {
     private final Configuration config;
-    private final Metadata metadata;
+    private final MetadataInterface metadata;
     private final SCCTarjan<Long> sccGraph = new SCCTarjan<>();
     private final Map<Long,ReadonlyEventInterface> lockEvents = new HashMap<>();
     private final Map<Pair<Long,Long>, Pair<ReadonlyEventInterface, ReadonlyEventInterface>> eventEdges = new HashMap<>();
     private final Map<Integer, Set<Long>> lockSet = new HashMap<>();
     private final SignatureProcessor signatureProcessor;
 
-    public LockGraph(Configuration config, Metadata metadata) {
+    public LockGraph(Configuration config, MetadataInterface metadata) {
         this.config = config;
         this.metadata = metadata;
         if (config.isLLVMPrediction()) {

@@ -4,8 +4,9 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.DataAddress;
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
-import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
 import com.runtimeverification.rvpredict.trace.maps.ThreadIDToObjectMap;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -13,10 +14,12 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
 
 public class TraceState {
@@ -47,7 +50,7 @@ public class TraceState {
 
     private final Configuration config;
 
-    private final Metadata metadata;
+    private final MetadataInterface metadata;
 
     private final Map<Long, Integer> t_eventIdToTtid;
 
@@ -69,7 +72,11 @@ public class TraceState {
 
     private final Set<ReadonlyEventInterface> t_clinitEvents;
 
-    public TraceState(Configuration config, Metadata metadata) {
+    private final Map<SignalThreadId, Integer> t_unfinishedThreads;
+
+    private int t_threadId;
+
+    public TraceState(Configuration config, MetadataInterface metadata) {
         this.config = config;
         this.metadata = metadata;
         this.t_eventIdToTtid           = new LinkedHashMap<>();
@@ -83,13 +90,15 @@ public class TraceState {
                                             DEFAULT_NUM_OF_ADDR);
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
+        this.t_unfinishedThreads       = new HashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_threadId                = 0;
     }
 
     public Configuration config() {
         return config;
     }
 
-    public Metadata metadata() {
+    public MetadataInterface metadata() {
         return metadata;
     }
 
@@ -252,4 +261,56 @@ public class TraceState {
         }
         return -1;
     }
-}
+
+    OptionalInt getUnfinishedThreadId(int signalDepth, long otid) {
+        Integer id = t_unfinishedThreads.get(new SignalThreadId(signalDepth, otid));
+        if (id == null) {
+            return OptionalInt.empty();
+        }
+        return OptionalInt.of(id);
+    }
+
+    int enterSignal(int signalDepth, long otid) {
+        int id = getNewThreadId();
+        t_unfinishedThreads.put(new SignalThreadId(signalDepth, otid), id);
+        return id;
+    }
+
+    void exitSignal(int signalDepth, long otid) {
+        t_unfinishedThreads.remove(new SignalThreadId(signalDepth, otid));
+    }
+
+    int getNewThreadId() {
+        return t_threadId++;
+    }
+
+    int getNewThreadId(long otid) {
+        int id = getNewThreadId();
+        t_unfinishedThreads.put(new SignalThreadId(0, otid), id);
+        return id;
+    }
+
+    private class SignalThreadId {
+        private final int signalDepth;
+        private final long otid;
+
+        private SignalThreadId(int signalDepth, long otid) {
+            this.signalDepth = signalDepth;
+            this.otid = otid;
+        }
+
+        @Override
+        public int hashCode() {
+            return Integer.hashCode(signalDepth) ^ Long.hashCode(otid);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (!(obj instanceof SignalThreadId)) {
+                return false;
+            }
+            SignalThreadId sti = (SignalThreadId)obj;
+            return signalDepth == sti.signalDepth && otid == sti.otid;
+        }
+    }
+ }

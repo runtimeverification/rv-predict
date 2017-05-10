@@ -92,7 +92,6 @@ public class LLVMTraceCache extends TraceCache {
     }
 
     private void readMetadata() throws IOException {
-        metadata.setIsCompactTrace(config.isCompactTrace());
         try {
             parseVarInfo();
         } catch (Metadata.TooManyVariables e) {
@@ -106,14 +105,6 @@ public class LLVMTraceCache extends TraceCache {
     @Override
     public void setup() throws IOException {
         readMetadata();
-        if (config.isCompactTrace()) {
-            try {
-                readers.add(new CompactEventReader(config.getCompactTraceFilePath()));
-            } catch (InvalidTraceDataException e) {
-                throw new IOException(e);
-            }
-            return;
-        }
         int logId = 0;
         Path path = config.getTraceFilePath(logId);
         while(path.toFile().exists()) {

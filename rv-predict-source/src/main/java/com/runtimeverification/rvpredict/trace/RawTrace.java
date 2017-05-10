@@ -42,6 +42,9 @@ public class RawTrace {
         long originalThreadId = Constants.INVALID_THREAD_ID;
         if (start < end) {
             originalThreadId = events[start].getOriginalThreadId();
+            for (int i = start; i < end; i++) {
+                assert events[i].getOriginalThreadId() == originalThreadId;
+            }
         }
         this.threadInfo = new ThreadInfo(
                 signalDepth == 0 ? ThreadType.THREAD : ThreadType.SIGNAL,

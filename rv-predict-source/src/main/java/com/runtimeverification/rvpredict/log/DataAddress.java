@@ -8,7 +8,7 @@ public interface DataAddress {
         }
 
         @Override
-        public int getObjectHashCode() {
+        public long getObjectHashCode() {
             return 0;
         }
 
@@ -17,16 +17,19 @@ public interface DataAddress {
             return 0;
         }
     };
+
     static DataAddress createPlainDataAddress(long address) {
         return new PlainDataAddress(address);
     }
-
+    static DataAddress createCompactDataAddress(long address) {
+        return new CompactDataAddress(address);
+    }
     static DataAddress signalHandler(long signalNumber) {
         return new SignalHandlerDataAddress(signalNumber);
     }
 
     long getDataAddressOr0();
-    int getObjectHashCode();
+    long getObjectHashCode();
     int getFieldIdOrArrayIndex();
 }
 
@@ -43,7 +46,7 @@ class PlainDataAddress implements DataAddress {
     }
 
     @Override
-    public int getObjectHashCode() {
+    public long getObjectHashCode() {
         return (int) (address >> 32);
     }
 
@@ -72,6 +75,48 @@ class PlainDataAddress implements DataAddress {
     }
 }
 
+class CompactDataAddress implements DataAddress {
+    private final long address;
+
+    CompactDataAddress(long address) {
+        this.address = address;
+    }
+
+    @Override
+    public long getDataAddressOr0() {
+        return address;
+    }
+
+    @Override
+    public long getObjectHashCode() {
+        return address;
+    }
+
+    @Override
+    public int getFieldIdOrArrayIndex() {
+        return 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return Long.hashCode(address);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof CompactDataAddress)) {
+            return false;
+        }
+        CompactDataAddress pda = (CompactDataAddress)obj;
+        return address == pda.address;
+    }
+
+    @Override
+    public String toString() {
+        return Long.toString(address, 16);
+    }
+}
+
 class SignalHandlerDataAddress implements DataAddress {
     private final long signalNumber;
 
@@ -85,7 +130,7 @@ class SignalHandlerDataAddress implements DataAddress {
     }
 
     @Override
-    public int getObjectHashCode() {
+    public long getObjectHashCode() {
         return 0;
     }
 

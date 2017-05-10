@@ -19,8 +19,11 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.OptionalInt;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -46,6 +49,7 @@ public class TraceCacheTest {
         when(mockConfiguration.stacks()).thenReturn(false);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
+        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
 
         ReadonlyEventInterface beginThread1 = beginThread(EVENT_ID, LOCATION_ID, THREAD_ID);
         ReadonlyEventInterface readData1Thread1 =
@@ -87,6 +91,7 @@ public class TraceCacheTest {
         when(mockConfiguration.stacks()).thenReturn(false);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
+        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
 
         ReadonlyEventInterface beginThread1 = beginThread(EVENT_ID, LOCATION_ID, THREAD_ID);
         ReadonlyEventInterface readData1Thread1 =
@@ -130,6 +135,7 @@ public class TraceCacheTest {
         when(mockConfiguration.stacks()).thenReturn(false);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
+        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
 
         ReadonlyEventInterface beginThread1 = beginThread(EVENT_ID, LOCATION_ID, THREAD_ID);
         ReadonlyEventInterface readData1Thread1 =

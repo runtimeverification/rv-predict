@@ -17,10 +17,10 @@ foo(void)
 	printf("xyz.x.p, array[1][2].y.q, iarray[0][0][0] = %d, %d, %d, "
 	    "&s - cfa = %td\n", xyz.x.p, array[1][2].y.q, iarray[0][0][0],
 	    (char *)&xyz - (char *)cfa);
-	printf("&xyz = %p\n", &xyz);
-	printf("&cfa = %p\n", &cfa);
-	printf("&array[0] = %p\n", &array[0]);
-	printf("&iarray[0] = %p\n", &iarray[0]);
+	printf("&xyz = %p\n", (const void *)&xyz);
+	printf("&cfa = %p\n", (const void *)&cfa);
+	printf("&array[0] = %p\n", (const void *)&array[0]);
+	printf("&iarray[0] = %p\n", (const void *)&iarray[0]);
 	printf("DWARF Canonical Frame Address (CFA) = %p\n", cfa);
 }
 

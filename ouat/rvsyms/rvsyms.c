@@ -109,14 +109,12 @@ typedef enum _dwarf_type_kind {
 static Dwarf_Die dwarf_walk_first(dwarf_walk_t *, const dwarf_walk_params_t *);
 static Dwarf_Die dwarf_walk_next(dwarf_walk_t *);
 static Dwarf_Die dwarf_walk_next_in_tree(dwarf_walk_t *);
-static Dwarf_Die dwarf_aggregate_or_base_type(Dwarf_Debug, Dwarf_Die,
-    dwarf_walk_ctx_t *);
-static dwarf_type_kind_t dwarf_type_kind(Dwarf_Debug, Dwarf_Die);
+static Dwarf_Die dwarf_aggregate_or_base_type(Dwarf_Debug, Dwarf_Die);
+static dwarf_type_kind_t dwarf_type_kind(Dwarf_Die);
 static void print_die_data(Dwarf_Debug, Dwarf_Die, dwarf_walk_ctx_t *);
 static bool walk_members(Dwarf_Debug, Dwarf_Die, dwarf_walk_ctx_t *);
 static bool walk_elements(Dwarf_Debug, Dwarf_Die, dwarf_walk_ctx_t *);
 static ssize_t dwarf_array_type_size(Dwarf_Debug, Dwarf_Die);
-static dwarf_type_kind_t dwarf_type_kind(Dwarf_Debug, Dwarf_Die);
 
 static Dwarf_Die
 dwarf_walk_first(dwarf_walk_t *walk, const dwarf_walk_params_t *params)
@@ -375,11 +373,10 @@ dwarf_type_size(Dwarf_Debug dbg, Dwarf_Die die, Dwarf_Die *typediep)
 }
 
 static Dwarf_Die
-dwarf_aggregate_or_base_type(Dwarf_Debug dbg, Dwarf_Die die,
-    dwarf_walk_ctx_t *ctx)
+dwarf_aggregate_or_base_type(Dwarf_Debug dbg, Dwarf_Die die)
 {
 	Dwarf_Die arraydie = NULL, typedie, otypedie;
-	dwarf_type_kind_t kind = DTK_UNKNOWN;
+	dwarf_type_kind_t kind;
 
 	for (otypedie = die, typedie = dwarf_follow_type_to_die(dbg, die);
 	     typedie != NULL;
@@ -388,8 +385,10 @@ dwarf_aggregate_or_base_type(Dwarf_Debug dbg, Dwarf_Die die,
 		if (otypedie != die && otypedie != arraydie)
 			dwarf_dealloc(dbg, otypedie, DW_DLA_DIE);
 
-		kind = dwarf_type_kind(dbg, typedie);
+		kind = dwarf_type_kind(typedie);
 
+		if (kind == DTK_POINTER)
+			arraydie = typedie;
 		if (kind == DTK_ARRAY)
 			arraydie = typedie;
 	}
@@ -401,7 +400,7 @@ dwarf_aggregate_or_base_type(Dwarf_Debug dbg, Dwarf_Die die,
 }
 
 static dwarf_type_kind_t
-dwarf_type_kind(Dwarf_Debug dbg, Dwarf_Die die)
+dwarf_type_kind(Dwarf_Die die)
 {
 	int res;
 	Dwarf_Error error;
@@ -1231,7 +1230,7 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 			printf("\n");
 		}
 	} else if (check_location(dbg, die, ctx) &&
-	    (typedie = dwarf_aggregate_or_base_type(dbg, die, ctx)) != NULL &&
+	    (typedie = dwarf_aggregate_or_base_type(dbg, die)) != NULL &&
 	    (size = dwarf_type_size(dbg, typedie, NULL)) > 0 &&
 	    ctx->residue < size) {
 
@@ -1371,7 +1370,7 @@ main(int argc, char **argv)
 		else if (fgets(lbuf, sizeof(lbuf), stdin) == NULL)
 			break;
 		else if (sscanf(lbuf,
-		    "\[0x%" SCNx64 " : 0x%" SCNx64 "/0x%" SCNx64
+		    "[0x%" SCNx64 " : 0x%" SCNx64 "/0x%" SCNx64
 		    " 0x%" SCNx64 "/0x%" SCNx64 "]\n",
 		    &params[0].dataptr,
 		    &params[0].insnptr, &params[0].frameptr,
@@ -1384,14 +1383,14 @@ main(int argc, char **argv)
 			paramidx = 0;
 			nparams = 2;
 		} else if (sscanf(lbuf,
-		    "\[0x%" SCNx64 " : 0x%" SCNx64 "/0x%" SCNx64 "]\n",
+		    "[0x%" SCNx64 " : 0x%" SCNx64 "/0x%" SCNx64 "]\n",
 		    &params[0].dataptr,
 		    &params[0].insnptr, &params[0].frameptr) == 3) {
 			params[0].have_dataptr = params[0].have_insnptr =
 			    params[0].have_frameptr = true;
 			paramidx = 0;
 			nparams = 1;
-		} else if (sscanf(lbuf, "\[0x%" SCNx64 "]\n",
+		} else if (sscanf(lbuf, "[0x%" SCNx64 "]\n",
 		    &params[0].dataptr) == 1) {
 			params[0].have_dataptr = true;
 			paramidx = 0;

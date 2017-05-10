@@ -87,8 +87,7 @@ static Dwarf_Die dwarf_walk_first(Dwarf_Debug, dwarf_walk_t *,
 static Dwarf_Die dwarf_walk_next(dwarf_walk_t *);
 static Dwarf_Die dwarf_walk_next_in_tree(dwarf_walk_t *);
 static char *dwarf_c_typestring(Dwarf_Debug, Dwarf_Die);
-static char *dwarf_c_typestring_component(Dwarf_Debug, Dwarf_Die,
-    dwarf_type_kind_t *);
+static char *dwarf_c_typestring_component(Dwarf_Die, dwarf_type_kind_t *);
 static void print_die_data(Dwarf_Debug, Dwarf_Die, dwarf_walk_ctx_t *);
 
 static int verbosity = 0;
@@ -240,7 +239,7 @@ dwarf_c_typestring(Dwarf_Debug dbg, Dwarf_Die die)
 			dwarf_dealloc(dbg, otypedie, DW_DLA_DIE);
 
 		char *component =
-		    dwarf_c_typestring_component(dbg, typedie, &kind);
+		    dwarf_c_typestring_component(typedie, &kind);
 		otypestr = typestr;
 		assert(component != NULL);
 		if (asprintf(&typestr, "%s%s%s",
@@ -257,7 +256,7 @@ dwarf_c_typestring(Dwarf_Debug dbg, Dwarf_Die die)
 }
 
 static char *
-dwarf_c_typestring_component(Dwarf_Debug dbg, Dwarf_Die die, dwarf_type_kind_t *kindp)
+dwarf_c_typestring_component(Dwarf_Die die, dwarf_type_kind_t *kindp)
 {
 	int res;
 	char *name;

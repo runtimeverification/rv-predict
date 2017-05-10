@@ -20,8 +20,8 @@ __rettype __func(__VA_ARGS__) __attribute__((weak,			\
 			             alias("__rvpredict_" #__func),	\
 				     visibility("default")))
 
-#define	ESTABLISH_PTR_TO_REAL(__func)	do {		\
-	real_##__func = dlsym(RTLD_NEXT, #__func);	\
+#define	ESTABLISH_PTR_TO_REAL(__fntype, __fn)	do {		\
+	real_##__fn = (__fntype)dlsym(RTLD_NEXT, #__fn);	\
 } while (/*CONSTCOND*/false)
 
 INTERPOSE_DECLS(int, pthread_join, pthread_t, void **);

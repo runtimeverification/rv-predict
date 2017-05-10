@@ -4,7 +4,8 @@
 # Mac OS X by installing a Pkgsrc bootstrap kit from pkgsrc.org.
 #
 
-PROGS=	dot-product lpcq memcpy raceless-signal spcq square-sum
+PROGS=	dot-product lpcq memcpy raceless-signal simplerace spcq square-sum
+PROGS+=	stolz-queue
 
 CC=clang
 CFLAGS+=-std=c11
@@ -15,9 +16,11 @@ WARNS=4
 SRCS.dot-product=dot-product.c
 SRCS.square-sum=square-sum.c
 SRCS.memcpy=memcpy.c
+SRCS.simplerace=simplerace.c
 SRCS.lpcq=lpcq.c lpcq_main.c signals.c
 SRCS.spcq=spcq.c spcq_main.c
 SRCS.raceless-signal=raceless-signal.c signals.c
+SRCS.stolz-queue=stolz-queue.c
 
 .include "../rvp.mk"
 .include <mkc.prog.mk>

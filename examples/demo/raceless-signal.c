@@ -20,6 +20,10 @@
 
 #include "signals.h"
 
+#ifndef __unused
+#define	__unused	__attribute__((__unused__))
+#endif /* __unused */
+
 bool use_signal = false;
 
 typedef struct _shared {
@@ -29,35 +33,32 @@ typedef struct _shared {
 } shared_t;
 
 static shared_t shared = {
-	  .count = 0
+	  .count = 1
 	, .alarm_blocked = false
 	, .interrupted = false
 };
 
 static void
-alarm_handler(int signum)
+alarm_handler(int signum __unused)
 {
 	if (shared.alarm_blocked)
 		return;
 
-	while (shared.count > 10)
-		shared.count--;
+	shared.count = -shared.count;
 }
 
 static void *
-consume(void *arg)
+consume(void *arg __unused)
 {
-	fprintf(stderr, "%s: starting\n", __func__);
 	while (!shared.interrupted) {
 		alarm_handler(SIGALRM);
 		sched_yield();
 	}
-	fprintf(stderr, "%s: stopping\n", __func__);
 	return NULL;
 }
 
 static void
-interrupt_handler(int signum)
+interrupt_handler(int signum __unused)
 {
 	char msg[] = "interrupted\n";
 	(void)write(STDOUT_FILENO, msg, sizeof(msg));
@@ -122,9 +123,9 @@ main(int argc, char **argv)
 	} else {
 		pthread_create(&consumer, NULL, &consume, NULL);
 	}
-	for (i = 0; i < 100; i++) {
+	for (i = 0; i < 50; i++) {
 		shared.alarm_blocked = true;
-		shared.count++;
+		shared.count = -shared.count;
 		shared.alarm_blocked = false;
 		sched_yield();
 	}

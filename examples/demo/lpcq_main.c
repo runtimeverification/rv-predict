@@ -18,6 +18,7 @@
 
 #include <sys/time.h>	/* getitimer(2) */
 
+#include "nbcompat.h"
 #include "lpcq.h"
 #include "signals.h"
 
@@ -128,7 +129,7 @@ consume(void *arg)
 }
 
 static void
-handler(int signum)
+handler(int signum __unused)
 {
 	lpcq_t *q = sigq;
 	static int i = 0;
@@ -181,7 +182,7 @@ main(int argc, char **argv)
 	int i, opt;
 	lpcq_t q;
 	pthread_mutex_t mutex;
-	pthread_t producer, consumer;
+	pthread_t consumer;
 
 	while ((opt = getopt(argc, argv, "slmn:t")) != -1) {
 		unsigned long v;
@@ -239,8 +240,7 @@ main(int argc, char **argv)
 		if (setitimer(ITIMER_REAL, &it, NULL) == -1)
 			err(EXIT_FAILURE, "%s: setitimer", __func__);
 	} else {
-		pthread_create(&producer, NULL, &produce, &q);
-		pthread_join(producer, NULL);
+		produce(&q);
 	}
 	pthread_join(consumer, NULL);
 	signals_restore(&oset);

@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include "nbcompat.h"
 #include "spcq.h"
 
 #if defined(SPCQ_ORDERED)
@@ -8,11 +9,6 @@
 #define	spcq_order_acquire memory_order_relaxed
 #define	spcq_order_release memory_order_relaxed
 #endif /* defined(SPCQ_ORDERED) */
-
-#ifndef offsetof
-#define offsetof(__type, __member)	\
-	(size_t)((char *)&((__type)NULL)->__member - (char *)((__type)NULL))
-#endif
 
 spcq_t *
 spcq_alloc(int nitems)

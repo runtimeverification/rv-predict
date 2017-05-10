@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "nbcompat.h"
+
 /*   
 The following structure contains the necessary information  
 to allow the function "dotprod" to access its input data and 
@@ -76,7 +78,7 @@ threads it creates. Note also that we free up handles when they are
 no longer needed.
 */
 
-int main (int argc, char *argv[]) {
+int main (int argc __unused, char *argv[] __unused) {
    long i;
    float *a, *b;
    void *status;

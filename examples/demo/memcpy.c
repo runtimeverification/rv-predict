@@ -2,17 +2,19 @@
 #include <stdio.h>
 #include <string.h>	/* for memcpy */
 
+#include "nbcompat.h"
+
 int x;
 
 static void *
-assignfn(void *arg)
+assignfn(void *arg __unused)
 {
 	x = 5;
 	return NULL;
 }
 
 static void *
-copyfn(void *arg)
+copyfn(void *arg __unused)
 {
 	int y = 10;
 	memcpy(&x, &y, sizeof(x));
@@ -20,7 +22,7 @@ copyfn(void *arg)
 }
 
 int
-main(int argc, char *argv[])
+main(int argc __unused, char *argv[] __unused)
 {
 	pthread_t assign, copy;
 

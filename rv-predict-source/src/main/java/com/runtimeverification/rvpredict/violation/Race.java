@@ -32,7 +32,7 @@ import com.google.common.base.StandardSystemProperty;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
-import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
 import com.runtimeverification.rvpredict.trace.Trace;
 
@@ -109,7 +109,7 @@ public class Race {
 
     public String getRaceLocationSig() {
         if(config.isLLVMPrediction()) {
-            int idx = e1.getDataAddress().getObjectHashCode();
+            long idx = e1.getDataAddress().getObjectHashCode();
             if(idx != 0) {
                 String sig = trace.metadata().getVariableSig(idx).replace("/", ".");
                 return "@" + sig;
@@ -120,7 +120,7 @@ public class Race {
             int idx = e1.getDataAddress().getFieldIdOrArrayIndex();
             if (idx < 0) {
                 String sig = trace.metadata().getVariableSig(-idx).replace("/", ".");
-                int object = e1.getDataAddress().getObjectHashCode();
+                long object = e1.getDataAddress().getObjectHashCode();
                 return object == 0 ? "@" + sig : sig;
             }
             return "#" + idx;
@@ -163,7 +163,7 @@ public class Race {
         int stackSize = 0;
         long otid = e.getOriginalThreadId();
         long sid = trace.getSignalNumber(trace.getTraceThreadId(e));
-        Metadata metadata = trace.metadata();
+        MetadataInterface metadata = trace.metadata();
         List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
         if (e.getSignalDepth() == 0) {
             sb.append(String.format("    Concurrent %s in thread T%s%s)%n",

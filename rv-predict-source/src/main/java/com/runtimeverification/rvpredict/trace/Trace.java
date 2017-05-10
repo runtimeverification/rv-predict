@@ -47,7 +47,7 @@ import com.runtimeverification.rvpredict.log.DataAddress;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
-import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToObjectMap;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
 import com.runtimeverification.rvpredict.util.Logger;
@@ -167,7 +167,7 @@ public class Trace {
         }
     }
 
-    public Metadata metadata() {
+    public MetadataInterface metadata() {
         return state.metadata();
     }
 

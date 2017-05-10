@@ -190,7 +190,7 @@ public class Event extends ReadonlyEvent {
     public String toString() {
         int signalDepth = getSignalDepth();
         if (isReadOrWrite()) {
-            int addrl = address.getObjectHashCode();
+            int addrl = Math.toIntExact(address.getObjectHashCode());
             int addrr = address.getFieldIdOrArrayIndex();
             String addr = addrr < 0 ?
                     Integer.toHexString(addrl) + "." + -addrr :

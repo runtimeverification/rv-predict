@@ -19,8 +19,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.OptionalInt;
-import java.util.function.IntSupplier;
-import java.util.function.Supplier;
 
 /**
  * Class adding a transparency layer between the prediction engine and the
@@ -193,7 +191,7 @@ public class TraceCache {
         long prevOTID = events.get(0).getOriginalThreadId();
         int prevSignalDepth = events.get(0).getSignalDepth();
 
-        for (int i = 1; i < eventCount; i++) {
+        for (int i = 0; i < eventCount; i++) {
             ReadonlyEventInterface event = events.get(i);
             if (event.getOriginalThreadId() == prevOTID
                     && event.getSignalDepth() == prevSignalDepth
@@ -205,7 +203,9 @@ public class TraceCache {
                 i++;
             }
 
-            rawTraces.add(tidSpanToRawTrace(events, tidStart, i, prevSignalDepth, prevOTID));
+            if (tidStart < i) {
+                rawTraces.add(tidSpanToRawTrace(events, tidStart, i, prevSignalDepth, prevOTID));
+            }
             prevOTID = event.getOriginalThreadId();
             prevSignalDepth = event.getSignalDepth();
             tidStart = i;
@@ -226,8 +226,8 @@ public class TraceCache {
             OptionalInt maybeThreadId = crntState.getUnfinishedThreadId(signalDepth, otid);
             threadId = maybeThreadId.orElseGet(() -> crntState.getNewThreadId(otid));
         } else {
-            boolean signalEnds = signalEndsNow(events, tidStart, tidEnd);
-            if (!signalStartsNow(events, tidStart, tidEnd)) {
+            boolean signalEnds = signalEndsNow(tidEvents);
+            if (!signalStartsNow(tidEvents)) {
                 OptionalInt maybeThreadId = crntState.getUnfinishedThreadId(signalDepth, otid);
                 if (!maybeThreadId.isPresent()) {
                     throw new IllegalStateException("No thread id for existing signal.");
@@ -247,22 +247,12 @@ public class TraceCache {
                 signalDepth, threadId);
     }
 
-    private boolean signalStartsNow(List<? extends ReadonlyEventInterface> events, int tidStart, int tidEnd) {
-        for (int i = tidStart; i < tidEnd; i++) {
-            if (events.get(i).getType() == EventType.ENTER_SIGNAL) {
-                return true;
-            }
-        }
-        return false;
+    private boolean signalStartsNow(List<? extends ReadonlyEventInterface> events) {
+        return events.stream().anyMatch(event -> event.getType() == EventType.ENTER_SIGNAL);
     }
 
-    private boolean signalEndsNow(List<? extends ReadonlyEventInterface> events, int tidStart, int tidEnd) {
-        for (int i = tidStart; i < tidEnd; i++) {
-            if (events.get(i).getType() == EventType.EXIT_SIGNAL) {
-                return true;
-            }
-        }
-        return false;
+    private boolean signalEndsNow(List<? extends ReadonlyEventInterface> events) {
+        return events.stream().anyMatch(event -> event.getType() == EventType.EXIT_SIGNAL);
     }
 
     public Trace getTraceWindow() throws IOException {

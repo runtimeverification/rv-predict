@@ -31,6 +31,7 @@ public class RawTrace {
     public RawTrace(int start, int end, ReadonlyEventInterface[] events, int signalDepth, int threadId) {
         long signalNumber = com.runtimeverification.rvpredict.util.Constants.INVALID_SIGNAL;
         if (signalDepth != 0) {
+            // TODO(virgil): Keep the signal number in the ThreadState class.
             for (int i = start; i < end; i++) {
                 ReadonlyEventInterface event = events[i];
                 if (event.getType() == EventType.ENTER_SIGNAL) {
@@ -42,9 +43,9 @@ public class RawTrace {
         long originalThreadId = Constants.INVALID_THREAD_ID;
         if (start < end) {
             originalThreadId = events[start].getOriginalThreadId();
-            for (int i = start; i < end; i++) {
-                assert events[i].getOriginalThreadId() == originalThreadId;
-            }
+        }
+        for (int i = start; i < end; i++) {
+            assert events[i].getOriginalThreadId() == originalThreadId;
         }
         this.threadInfo = new ThreadInfo(
                 signalDepth == 0 ? ThreadType.THREAD : ThreadType.SIGNAL,

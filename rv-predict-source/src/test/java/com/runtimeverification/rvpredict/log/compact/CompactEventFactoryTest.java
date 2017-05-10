@@ -4,7 +4,6 @@ import com.runtimeverification.rvpredict.log.DataAddress;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.testutils.MoreAsserts;
-import com.runtimeverification.rvpredict.util.*;
 import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Test;
@@ -24,6 +23,7 @@ import static org.mockito.Mockito.when;
 public class CompactEventFactoryTest {
     private static final int DATA_SIZE_IN_BYTES = 2;
     private static final long ADDRESS = 1234;
+    private static final DataAddress DATA_ADDRESS = DataAddress.createCompactDataAddress(ADDRESS);
     private static final long VALUE = 5678;
     private static final long OTHER_VALUE = 5679;
     private static final long NEW_ID = 100;
@@ -32,6 +32,7 @@ public class CompactEventFactoryTest {
     private static final long GENERATION = 1000;
     private static final long SIGNAL_HANDLER = 1001;
     private static final long SIGNAL_NUMBER = 1002;
+    private static final DataAddress SIGNAL_HANDLER_ADDRESS = DataAddress.signalHandler(SIGNAL_NUMBER);
     private static final long SIGNAL_MASK_NUMBER = 1003;
     private static final long SIGNAL_MASK = 1004;
     private static final long SIGNAL_MASK_NUMBER2 = 1005;
@@ -50,8 +51,9 @@ public class CompactEventFactoryTest {
             new CompactEventMethod<>(ALL_METHODS, "getType", CompactEvent::getType);
     private static final CompactEventMethod<Integer> GET_DATA_SIZE_IN_BYTES =
             new CompactEventMethod<>(ALL_METHODS, "getDataSizeInBytes", CompactEvent::getDataSizeInBytes);
-    // TODO(virgil): Use getDataAddress instead of getLongAddress.
-    private static final CompactEventMethod<Long> GET_DATA_ADDRESS =
+    private static final CompactEventMethod<DataAddress> GET_DATA_ADDRESS =
+            new CompactEventMethod<>(ALL_METHODS, "getDataAddress", CompactEvent::getDataAddress);
+    private static final CompactEventMethod<Long> GET_LONG_ADDRESS =
             new CompactEventMethod<>(ALL_METHODS, "getLongAddress", CompactEvent::getLongAddress);
     private static final CompactEventMethod<Long> GET_DATA_VALUE =
             new CompactEventMethod<>(ALL_METHODS, "getDataValue", CompactEvent::getDataValue);
@@ -97,7 +99,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(ADDRESS, GET_LONG_ADDRESS),
+                        new ReturnValueTest<>(DATA_ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
@@ -126,7 +129,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.WRITE, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(ADDRESS, GET_LONG_ADDRESS),
+                        new ReturnValueTest<>(DATA_ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
@@ -165,7 +169,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(ADDRESS, GET_LONG_ADDRESS),
+                        new ReturnValueTest<>(DATA_ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
@@ -214,7 +219,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(ADDRESS, GET_LONG_ADDRESS),
+                        new ReturnValueTest<>(DATA_ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
@@ -263,7 +269,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(ADDRESS, GET_LONG_ADDRESS),
+                        new ReturnValueTest<>(DATA_ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
@@ -275,7 +282,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.WRITE, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(ADDRESS, GET_LONG_ADDRESS),
+                        new ReturnValueTest<>(DATA_ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(OTHER_VALUE, GET_DATA_VALUE),
                 }
         );
@@ -407,7 +415,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.WRITE, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(com.runtimeverification.rvpredict.log.compact.Constants.LONG_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(0L, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(0L, GET_LONG_ADDRESS),
+                        new ReturnValueTest<>(SIGNAL_HANDLER_ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(SIGNAL_HANDLER, GET_DATA_VALUE),
                 }
         );
@@ -468,7 +477,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.WRITE, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(com.runtimeverification.rvpredict.log.compact.Constants.LONG_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(0L, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(0L, GET_LONG_ADDRESS),
+                        new ReturnValueTest<>(SIGNAL_HANDLER_ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(com.runtimeverification.rvpredict.log.compact.Constants.INVALID_PROGRAM_COUNTER, GET_DATA_VALUE),
                 }
         );
@@ -530,7 +540,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(com.runtimeverification.rvpredict.log.compact.Constants.LONG_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(0L, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(0L, GET_LONG_ADDRESS),
+                        new ReturnValueTest<>(SIGNAL_HANDLER_ADDRESS, GET_DATA_ADDRESS),
                         new ReturnValueTest<>(SIGNAL_HANDLER, GET_DATA_VALUE),
                 }
         );

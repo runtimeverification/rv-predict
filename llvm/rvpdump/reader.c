@@ -47,7 +47,8 @@ typedef struct {
 	const char *oi_descr;
 } op_info_t;
 
-#define OP_INFO_INIT(__ty, __descr) {.oi_reclen = sizeof(__ty), .oi_descr = __descr}
+#define OP_INFO_INIT(__ty, __descr)	\
+	{.oi_reclen = sizeof(__ty), .oi_descr = __descr}
 
 typedef struct _rvp_frame {
 	rvp_addr_t	f_pc;	/* Program Counter where runtime logged
@@ -71,6 +72,8 @@ typedef struct _rvp_emitters {
 	void (*emit_op)(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
 	    bool, int);
 	char *(*dataptr_to_string)(const rvp_pstate_t *, char *, size_t,
+	    rvp_addr_t);
+	char *(*insnptr_to_string)(const rvp_pstate_t *, char *, size_t,
 	    rvp_addr_t);
 } rvp_emitters_t;
 
@@ -117,6 +120,10 @@ typedef struct _intmax_table {
 	uint32_t	(*t_get_next_id)(uintmax_t);
 } intmax_table_t;
 
+char *insnptr_to_simple_string(const rvp_pstate_t *, char *, size_t,
+    rvp_addr_t);
+char *insnptr_to_symbol_friendly_string(const rvp_pstate_t *, char *, size_t,
+    rvp_addr_t);
 char *dataptr_to_simple_string(const rvp_pstate_t *, char *, size_t,
     rvp_addr_t);
 char *dataptr_to_symbol_friendly_string(const rvp_pstate_t *, char *, size_t,
@@ -206,12 +213,14 @@ static const rvp_emitters_t plain_text = {
 	  .emit_jump = print_jump
 	, .emit_op = print_op
 	, .dataptr_to_string = dataptr_to_simple_string
+	, .insnptr_to_string = insnptr_to_simple_string
 };
 
 static const rvp_emitters_t symbol_friendly = {
 	  .emit_jump = print_jump
 	, .emit_op = print_op
 	, .dataptr_to_string = dataptr_to_symbol_friendly_string
+	, .insnptr_to_string = insnptr_to_symbol_friendly_string
 };
 
 static const rvp_emitters_t legacy_binary = {
@@ -897,8 +906,13 @@ emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 static void
 print_jump(const rvp_pstate_t *ps, rvp_addr_t pc)
 { 
-	printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " jump\n",
-	    ps->ps_curthread, ps->ps_idepth, pc);
+	const rvp_emitters_t *emitters = ps->ps_emitters;
+	char buf[MAX(sizeof("{0x0123456789abcdef}"),
+		     sizeof("pc 0x0123456789abcdef"))];
+
+	printf("tid %" PRIu32 ".%" PRIu32 " %s jump\n",
+	    ps->ps_curthread, ps->ps_idepth,
+	    (*emitters->insnptr_to_string)(ps, buf, sizeof(buf), pc));
 }
 
 static void
@@ -932,6 +946,30 @@ rvp_nearest_frames(const rvp_pstate_t *ps, rvp_addr_t addr,
 }
 
 char *
+insnptr_to_symbol_friendly_string(const rvp_pstate_t *ps __unused,
+    char *buf, size_t buflen, rvp_addr_t addr)
+{
+	const int nwritten = snprintf(buf, buflen, "{%#016" PRIxPTR "}", addr);
+
+	if (nwritten < 0 || nwritten >= buflen)
+		errx(EXIT_FAILURE, "%s: snprintf failed", __func__);
+
+	return buf;
+}
+
+char *
+insnptr_to_simple_string(const rvp_pstate_t *ps __unused,
+    char *buf, size_t buflen, rvp_addr_t addr)
+{
+	const int nwritten = snprintf(buf, buflen, "pc %#016" PRIxPTR, addr);
+
+	if (nwritten < 0 || nwritten >= buflen)
+		errx(EXIT_FAILURE, "%s: snprintf failed", __func__);
+
+	return buf;
+}
+
+char *
 dataptr_to_simple_string(const rvp_pstate_t *ps __unused,
     char *buf, size_t buflen, rvp_addr_t addr)
 {
@@ -953,11 +991,19 @@ dataptr_to_symbol_friendly_string(const rvp_pstate_t *ps,
 	rvp_nearest_frames(ps, addr, &loframe, &hiframe);
 
 	if (loframe != NULL && hiframe != NULL) {
-		nwritten = snprintf(buf, buflen, "[%#016" PRIxPTR " : %#" PRIxPTR "/%#" PRIxPTR " %#" PRIxPTR "/%#" PRIxPTR "]", addr, loframe->f_pc, loframe->f_cfa, hiframe->f_pc, hiframe->f_cfa);
+		nwritten = snprintf(buf, buflen, "[%#016" PRIxPTR " : "
+		    "%#" PRIxPTR "/%#" PRIxPTR
+		    " %#" PRIxPTR "/%#" PRIxPTR "]", addr,
+		    loframe->f_pc, loframe->f_cfa,
+		    hiframe->f_pc, hiframe->f_cfa);
 	} else if (loframe != NULL) {
-		nwritten = snprintf(buf, buflen, "[%#016" PRIxPTR " : %#" PRIxPTR "/%#" PRIxPTR "]", addr, loframe->f_pc, loframe->f_cfa);
+		nwritten = snprintf(buf, buflen, "[%#016" PRIxPTR " : "
+		"%#" PRIxPTR "/%#" PRIxPTR "]", addr,
+		loframe->f_pc, loframe->f_cfa);
 	} else if (hiframe != NULL) {
-		nwritten = snprintf(buf, buflen, "[%#016" PRIxPTR " : %#" PRIxPTR "/%#" PRIxPTR "]", addr, hiframe->f_pc, hiframe->f_cfa);
+		nwritten = snprintf(buf, buflen, "[%#016" PRIxPTR " : "
+		"%#" PRIxPTR "/%#" PRIxPTR "]", addr,
+		hiframe->f_pc, hiframe->f_cfa);
 	} else
 		nwritten = snprintf(buf, buflen, "[%#016" PRIxPTR "]", addr);
 
@@ -973,44 +1019,53 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 {
 	const op_info_t *oi = &op_to_info[op];
 	const rvp_emitters_t *emitters = ps->ps_emitters;
-	char buf[2][sizeof("[0x0123456789abcdef : 0x0123456789abcdef/0x0123456789abcdef 0x0123456789abcdef/0x0123456789abcdef]")];
+	char buf[3][MAX(sizeof("{0x0123456789abcdef}"),
+			sizeof("[0x0123456789abcdef : "
+			       "0x0123456789abcdef/0x0123456789abcdef "
+			       "0x0123456789abcdef/0x0123456789abcdef]"))];
 
 	switch (op) {
 	case RVP_OP_ATOMIC_LOAD8:
 	case RVP_OP_ATOMIC_STORE8:
 	case RVP_OP_LOAD8:
 	case RVP_OP_STORE8:
-		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
+		printf("tid %" PRIu32 ".%" PRIu32 " %s"
 		    " %s %#.*" PRIx64 " %s %s\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr, field_width,
 		    ub->ub_load8_store8.data,
 		    is_load ? "<-" : "->",
-		    (*emitters->dataptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_load8_store8.addr));
 		break;
 	case RVP_OP_ATOMIC_RMW4:
-		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s"
 		    " %#.*" PRIx32 " <- %s <- %#.*" PRIx32 "\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr,
 		    field_width, ub->ub_rmw4.oval,
-		    (*emitters->dataptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_rmw4.addr),
 		    field_width, ub->ub_rmw4.nval);
 		break;
 	case RVP_OP_ATOMIC_RMW2:
 	case RVP_OP_ATOMIC_RMW1:
-		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s"
 		    " %#.*" PRIxMAX " <- %s <- %#.*" PRIxMAX "\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr,
 		    field_width,
 		    __SHIFTOUT(ub->ub_rmw1_2.onval, __BITS(15, 0)),
-		    (*emitters->dataptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_rmw1_2.addr),
 		    field_width,
 		    __SHIFTOUT(ub->ub_rmw1_2.onval, __BITS(31, 16)));
@@ -1027,110 +1082,122 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_STORE2:
 	case RVP_OP_LOAD1:
 	case RVP_OP_STORE1:
-		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s %#.*" PRIx32 " %s %s\n",
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s %#.*" PRIx32
+		    " %s %s\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr, field_width,
 		    ub->ub_load1_2_4_store1_2_4.data,
 		    is_load ? "<-" : "->",
-		    (*emitters->dataptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_load1_2_4_store1_2_4.addr));
 		break;
 	case RVP_OP_BEGIN:
-		printf(
-		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s"
 		    " generation %" PRIu64 "\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr, ub->ub_begin.generation);
 		break;
 	case RVP_OP_SIGDEPTH:
-		printf(
-		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
-		    " -> %" PRIu32 "\n",
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s -> %" PRIu32 "\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr, ub->ub_sigdepth.depth);
 		break;
 	case RVP_OP_COG:
-		printf(
-		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s"
-		    " -> %" PRIu64 "\n",
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s -> %" PRIu64 "\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr, ub->ub_cog.generation);
 		break;
 	case RVP_OP_ENTERFN:
-		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s cfa %" PRIxPTR "\n",
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s cfa %" PRIxPTR "\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr,
 		    ub->ub_enterfn.cfa);
 		break;
 	case RVP_OP_END:
 	default:
-		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR " %s\n",
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr);
 		break;
 	case RVP_OP_FORK:
 	case RVP_OP_JOIN:
 	case RVP_OP_SWITCH:
 		printf(
-		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s tid %" PRIu32 "\n",
+		    "tid %" PRIu32 ".%" PRIu32 " %s %s tid %" PRIu32 "\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr, ub->ub_fork_join_switch.tid);
 		// TBD create a fledgling rvp_thread_pstate_t on fork?
 		break;
 	case RVP_OP_ENTERSIG:
 		printf(
-		    "tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s signal %" PRIu32 " handler %#016" PRIxPTR
-		    " generation %" PRIu64 "\n",
+		    "tid %" PRIu32 ".%" PRIu32 " %s %s signal %" PRIu32
+		    " handler %#016" PRIxPTR " generation %" PRIu64 "\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr, ub->ub_entersig.signum,
 		    ub->ub_entersig.handler, ub->ub_entersig.generation);
 		break;
 	case RVP_OP_ACQUIRE:
 	case RVP_OP_RELEASE:
-		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s %s\n",
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s %s\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr,
-		    (*emitters->dataptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_acquire_release.addr));
 		break;
 	case RVP_OP_SIGDIS:
-		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s signal %" PRIu32 "\n",
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s signal %" PRIu32 "\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr, ub->ub_sigest.signum);
 		break;
 	case RVP_OP_SIGEST:
-		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s signal %" PRIu32 " handler %#016" PRIxPTR
-		    " mask #%" PRIu32 "\n",
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s signal %" PRIu32
+		    " handler %#016" PRIxPTR " mask #%" PRIu32 "\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr,
 		    ub->ub_sigest.signum,
 		    ub->ub_sigest.handler,
 		    ub->ub_sigest.masknum);
 		break;
 	case RVP_OP_SIGMASKMEMO:
-		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s #%" PRIu32 " origin %" PRIu32
-		    " bits %#016" PRIx64 "\n",
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s #%" PRIu32
+		    " origin %" PRIu32 " bits %#016" PRIx64 "\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr,
 		    ub->ub_sigmaskmemo.masknum,
 		    ub->ub_sigmaskmemo.origin,
@@ -1140,17 +1207,20 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_SIGSETMASK:
 	case RVP_OP_SIGBLOCK:
 	case RVP_OP_SIGUNBLOCK:
-		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s #%" PRIu32 "\n",
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s #%" PRIu32 "\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr, ub->ub_sigmask_access.masknum);
 		break;
 	case RVP_OP_SIGGETSETMASK:
-		printf("tid %" PRIu32 ".%" PRIu32 " pc %#016" PRIxPTR
-		    " %s #%" PRIu32 " -> #%" PRIu32 "\n",
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s #%" PRIu32
+		    " -> #%" PRIu32 "\n",
 		    ps->ps_curthread, ps->ps_idepth,
-		    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth],
+		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
+		        ps->ps_thread[ps->ps_curthread].
+			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr,
 		    ub->ub_sigmask_rmw.omasknum,
 		    ub->ub_sigmask_rmw.masknum);

@@ -180,11 +180,11 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 	auto void_type = builder.getVoidTy();
 	auto int8_ptr_type = builder.getInt8PtrTy();
 
-	/* void __rvpredict_func_entry(void *);
-	 * void __rvpredict_func_exit(void *);
+	/* const void *__rvpredict_func_entry(const void *, const void *);
+	 * void __rvpredict_func_exit(const void *);
 	 */
 	fnenter = checkSanitizerInterfaceFunction(
-	    m.getOrInsertFunction( "__rvpredict_func_entry", void_type,
+	    m.getOrInsertFunction( "__rvpredict_func_entry",
 	        int8_ptr_type, int8_ptr_type, nullptr));
 	fnexit = checkSanitizerInterfaceFunction(
 	    m.getOrInsertFunction("__rvpredict_func_exit", void_type,
@@ -624,15 +624,17 @@ RVPredictInstrument::runOnFunction(Function &F)
         // instrumented accesses.
 	if ((didInstrument || hasCalls) && ClInstrumentFuncEntryExit) {
 		IRBuilder<> builder(F.getEntryBlock().getFirstNonPHI());
+#if 0
 		Value *retaddr = builder.CreateCall(
 		    Intrinsic::getDeclaration(F.getParent(),
 		        Intrinsic::returnaddress),
 		    builder.getInt32(0));
+#endif
 		Value *cfa = builder.CreateCall(
 		    Intrinsic::getDeclaration(F.getParent(),
 		        Intrinsic::eh_dwarf_cfa),
 		    builder.getInt32(0));
-		builder.CreateCall(fnenter, {retaddr, cfa});
+		CallInst *retaddr = builder.CreateCall(fnenter, cfa);
 		for (auto return_insn : RetVec) {
 			IRBuilder<> ret_builder(return_insn);
 			ret_builder.CreateCall(fnexit, retaddr);

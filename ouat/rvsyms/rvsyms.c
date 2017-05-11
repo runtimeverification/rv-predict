@@ -1264,7 +1264,10 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 				// [... : .../... .../...]
 				// [... : .../...]
 				strstack_pushf(ss, ";;\\[0x0*%" PRIx64
-				    " : \\(0x[0-9a-f]\\+\\/0x[0-9a-f]\\+ \\)\\?0x0*%" PRIx64 "\\/0x0*%" PRIx64 "\\( 0x[0-9a-f]\\+\\/0x[0-9a-f]\\+\\)\\?\\]",
+				    " : \\(0x[0-9a-f]\\+\\/0x[0-9a-f]\\+ \\)"
+				    "\\?0x0*%" PRIx64 "\\/0x0*%" PRIx64
+				    "\\( 0x[0-9a-f]\\+\\/0x[0-9a-f]\\+\\)\\?"
+				    "\\]",
 				    ctx->dataptr, ctx->insnptr, ctx->frameptr);
 			} else {
 				strstack_pushf(ss, ";;[0x0*%" PRIx64 "]",
@@ -1282,7 +1285,10 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 static void __dead
 usage(const char *progname)
 {
-	fprintf(stderr, "usage: %s [-a | -r] [-d data address] [-f DWARF Canonical Frame Address (CFA) ] [-i instruction pointer] object-file\n", progname);
+	fprintf(stderr, "usage: %s [-a | -r] "
+	    "[-d data address] "
+	    "[-f DWARF Canonical Frame Address (CFA) ] "
+	    "[-i instruction pointer] object-file\n", progname);
 	exit(EXIT_FAILURE);
 }
 

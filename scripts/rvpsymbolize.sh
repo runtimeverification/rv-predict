@@ -11,10 +11,11 @@ usage()
 [ $# -eq 1 ] || usage
 
 func_addr_regex='at \(0x[0-9a-f]\+\) dummy.c:999'
-func_sym_sed_template='s,^0x\([0-9a-f]\+\) \([^@]\+\)@\(.*\)$,s|at 0x0\\+\1 dummy.c:999|at \2 \3|g,'
+func_sym_sed_template='s,^0x\([0-9a-f]\+\) \([^@]\+\)@\(.*\)$,s|at 0x0*\1 dummy.c:999|at \2 \3|g,'
 
-data_addr_regex='\[\(0x[0-9a-f]\+\)\]'
-data_sym_sed_template='s,^0x\([0-9a-f]\+\) \([^@]\+\)@\(.*\)$,s|\\[0x0\\+\1\]|\2 at \3|g,'
+data_addr_regex='\(\[0x[0-9a-f]\+[^]]*\]\)'
+#data_sym_sed_template='s,^0x\([0-9a-f]\+\) \([^@]\+\)@\(.*\)$,s|\\[0x0*\1\]|\2 at \3|g,'
+data_sym_sed_template='s,^\(.\+\);;\(.\+\);;\(.\+\)$,s|\3|\2 at \1|g,'
 
 tmpdir=$(mktemp -d)
 
@@ -49,13 +50,10 @@ while read addr path linecol symbol; do
 done | tee $tmpdir/funcsyms_proto_script | sed "$func_sym_sed_template" > $tmpdir/funcsyms_sed_script
 
 grep "$data_addr_regex" < $tmpdir/original | \
-sed "s/.*$data_addr_regex.*/[\1]/g" | sort -u | \
-    rvsyms -a $1 | \
-    sed 's/\(.\+\);;\(.\+\) \(0x.*\)$/\3 \2 \1/' | \
-tee $tmpdir/datasyms_proto_proto_scripts | \
-while read addr symbol path; do
-	echo $addr ${symbol}@${path}
-done | tee $tmpdir/datasyms_proto_script | sed "$data_sym_sed_template" > $tmpdir/datasyms_sed_script
+sed "s/.*$data_addr_regex.*/\1/g" | sort -u | \
+    rvsyms -r $1 | \
+    tee $tmpdir/datasyms_proto_script | \
+    sed "$data_sym_sed_template" > $tmpdir/datasyms_sed_script
 
 sed -f $tmpdir/datasyms_sed_script < $tmpdir/original | \
     sed -f $tmpdir/funcsyms_sed_script

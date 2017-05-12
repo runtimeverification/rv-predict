@@ -65,18 +65,22 @@ typedef struct _dwarf_walk_params {
 	uint64_t dataptr, frameptr, insnptr;
 } dwarf_walk_params_t;
 
-typedef struct _dwarf_walk_ctx {
+typedef struct _dwarf_recursion_state {
 	Dwarf_Addr lopc, hipc;
+	Dwarf_Signed cfa_offset;
+	bool have_cfa_offset;
+	int strstk_depth;
+} dwarf_recursion_state_t;
+
+typedef struct _dwarf_walk_ctx {
+	dwarf_recursion_state_t rstate;
 	Dwarf_Cie *cie_list;
 	Dwarf_Signed ncies;
 	Dwarf_Fde *fde_list;
 	Dwarf_Signed nfdes;
-	Dwarf_Signed cfa_offset;
-	bool print_address, print_regex,
-	    have_cfa_offset, have_dataptr, have_frameptr, have_insnptr;
-	int subprogram_stkdepth, cu_stkdepth;
+	bool print_address, print_regex;
+	bool have_dataptr, have_frameptr, have_insnptr;
 	strstack_t symstk;
-	strstack_t locstk;
 	uint64_t residue;
 	uint64_t dataptr, frameptr, insnptr;
 } dwarf_walk_ctx_t;
@@ -85,7 +89,7 @@ typedef struct _dwarf_walk {
 	int stack_height;
 	struct {
 		Dwarf_Die die;
-		int strstk_depth;
+		dwarf_recursion_state_t rstate;
 	} stack[16];
 	Dwarf_Debug dbg;
 	dwarf_walk_ctx_t ctx;
@@ -93,7 +97,7 @@ typedef struct _dwarf_walk {
 	bool cu_by_cu;	// `true` if this is a CU-by-CU walk at the top of the
 			// debug information; `false` if this is a walk of
 			// some subtree rooted at a DIE
-	int *pushp;
+	dwarf_recursion_state_t *pushp;
 } dwarf_walk_t;
 
 typedef enum _dwarf_type_kind {
@@ -133,13 +137,10 @@ dwarf_walk_first(dwarf_walk_t *walk, const dwarf_walk_params_t *params)
 	walk->ctx.insnptr = params->insnptr;
 	walk->ctx.cie_list = NULL;
 	walk->ctx.fde_list = NULL;
-	walk->ctx.have_cfa_offset = false;
+	walk->ctx.rstate.have_cfa_offset = false;
 	walk->ctx.ncies = walk->ctx.nfdes = 0;
-	walk->ctx.cu_stkdepth = -1;
-	walk->ctx.subprogram_stkdepth = -1;
 	walk->cu_by_cu = true;
 	strstack_init(&walk->ctx.symstk);
-	strstack_init(&walk->ctx.locstk);
 
 	return dwarf_walk_next(walk);
 }
@@ -170,7 +171,8 @@ dwarf_walk_next_in_tree(dwarf_walk_t *walk)
 	Dwarf_Unsigned next_cu_header;
  
  	if (walk->pushp != NULL) {
-		*walk->pushp = strstack_depth(&walk->ctx.symstk);
+		*walk->pushp = walk->ctx.rstate;
+		walk->pushp->strstk_depth = strstack_depth(&walk->ctx.symstk);
 		walk->pushp = NULL;
 	}
 
@@ -178,11 +180,19 @@ dwarf_walk_next_in_tree(dwarf_walk_t *walk)
 	    walk->stack[walk->stack_height - 1].die == NULL) {
 		walk->stack_height--;
 		if (walk->stack_height > 0) {
-			strstack_popto(&walk->ctx.symstk,
-			    walk->stack[walk->stack_height - 1].strstk_depth);
+			walk->ctx.rstate =
+			    walk->stack[walk->stack_height - 1].rstate;
 		} else {
-			strstack_popto(&walk->ctx.symstk, 0);
+			walk->ctx.rstate = (dwarf_recursion_state_t){
+			  .have_cfa_offset = false
+			, .cfa_offset = 0
+			, .lopc = 0
+			, .hipc = 0
+			, .strstk_depth = 0
+			};
 		}
+		strstack_popto(&walk->ctx.symstk,
+		    walk->ctx.rstate.strstk_depth);
 	}
 
 	if (walk->stack_height == 0) {
@@ -209,14 +219,15 @@ dwarf_walk_next_in_tree(dwarf_walk_t *walk)
 			    "%s: dwarf_siblingof level %d: %s",
 			    __func__, walk->stack_height, dwarf_errmsg(error));
 		}
-		walk->ctx.lopc = walk->ctx.hipc = 0;
+		walk->ctx.rstate.lopc = walk->ctx.rstate.hipc = 0;
 		walk->stack_height = 1;
-		walk->pushp = &walk->stack[walk->stack_height - 1].strstk_depth;
+		walk->pushp = &walk->stack[walk->stack_height - 1].rstate;
 		walk->stack[walk->stack_height - 1].die = NULL;
 	} else {
 		last = walk->stack[walk->stack_height - 1].die;
+		walk->ctx.rstate = walk->stack[walk->stack_height - 1].rstate;
 		strstack_popto(&walk->ctx.symstk,
-		    walk->stack[walk->stack_height - 1].strstk_depth);
+		    walk->ctx.rstate.strstk_depth);
 	}
 
 	res = dwarf_siblingof(walk->dbg, last, &sibling, &error);
@@ -236,7 +247,7 @@ dwarf_walk_next_in_tree(dwarf_walk_t *walk)
 			    __func__);
 		}
 		walk->stack[walk->stack_height++].die = child;
-		walk->pushp = &walk->stack[walk->stack_height - 1].strstk_depth;
+		walk->pushp = &walk->stack[walk->stack_height - 1].rstate;
 	} else if (res != DW_DLV_NO_ENTRY) {
 		errx(EXIT_FAILURE, "%s: dwarf_child: %s",
 		    __func__, dwarf_errmsg(error));
@@ -553,10 +564,8 @@ check_location(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 	Dwarf_Locdesc **locdescp;
 	Dwarf_Signed nlocdescs;
 	int res;
-	Dwarf_Half loc_form;
 	Dwarf_Ptr loc_ptr;
 	Dwarf_Unsigned loc_len;
-	strstack_t *ss = &ctx->locstk;
 
 	if (dwarf_attr(die, DW_AT_location, &loc_attr, &error) != DW_DLV_OK)
 		return false;
@@ -579,48 +588,33 @@ check_location(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 
 		assert(inner.lopc < inner.hipc);
 
-		inner.lopc = MAX(ctx->lopc, inner.lopc);
-		inner.hipc = MIN(ctx->hipc, inner.hipc);
+		inner.lopc = MAX(ctx->rstate.lopc, inner.lopc);
+		inner.hipc = MIN(ctx->rstate.hipc, inner.hipc);
 
 		Dwarf_Loc *lr0 = &ld->ld_s[0];
 
 		if (ctx->have_insnptr &&
 		    inner.lopc <= ctx->insnptr && ctx->insnptr < inner.hipc) {
-			strstack_pushf(&ctx->locstk,
-			    " at pc %0" PRIx64
-			    " in pc %0" PRIx64 " - %0" PRIx64, ctx->insnptr,
-			    inner.lopc, inner.hipc);
 			insn_match = true;
-		} else {
-			strstack_pushf(&ctx->locstk,
-			    " in pc %0" PRIx64 " - %0" PRIx64,
-			    inner.lopc, inner.hipc);
 		}
 
 		if (ctx->have_dataptr && ld->ld_cents == 1 &&
 			 lr0->lr_atom == DW_OP_addr &&
 			 lr0->lr_number <= ctx->dataptr) {
-			strstack_pushf(ss, " at static 0x%0" PRIx64,
-			    ctx->dataptr);
 			ctx->residue = ctx->dataptr - lr0->lr_number;
 			return true;
 		} else if (insn_match && ctx->have_dataptr &&
 			   ctx->have_frameptr &&
-			   ctx->have_cfa_offset && ld->ld_cents == 1 &&
+			   ctx->rstate.have_cfa_offset && ld->ld_cents == 1 &&
 			   lr0->lr_atom == DW_OP_fbreg &&
-			   ctx->frameptr - ctx->cfa_offset +
+			   ctx->frameptr - ctx->rstate.cfa_offset +
 			   (int64_t)lr0->lr_number <= ctx->dataptr) {
-			strstack_pushf(ss, " on stack at 0x%0" PRIx64
-			    " - %" PRId64 " + %" PRId64 " = 0x%0" PRIx64,
-			    ctx->frameptr, ctx->cfa_offset, lr0->lr_number,
-			    ctx->dataptr);
 			ctx->residue = ctx->dataptr -
-			    (ctx->frameptr - ctx->cfa_offset +
+			    (ctx->frameptr - ctx->rstate.cfa_offset +
 			     (int64_t)lr0->lr_number);
 			return true;
 		} else for (j = 0; j < ld->ld_cents; j++) {
 			Dwarf_Loc *lr = &ld->ld_s[j];
-			strstack_pushf(ss, "%s", delim);
 			print_op(lr, ctx);
 			delim = " or at";
 		}
@@ -648,30 +642,22 @@ check_location(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 			if (inner.lopc == inner.hipc)
 				continue;
 
-			if (inner.lopc < ctx->lopc || ctx->hipc < inner.lopc) {
-				inner.lopc += ctx->lopc;
-				inner.hipc += ctx->lopc;
+			if (inner.lopc < ctx->rstate.lopc ||
+			    ctx->rstate.hipc < inner.lopc) {
+				inner.lopc += ctx->rstate.lopc;
+				inner.hipc += ctx->rstate.lopc;
 			}
 
-			strstack_pushf(ss, "%s", odelim);
 			odelim = ", ";
-
-			strstack_pushf(ss, " pc");
 
 			if (ctx->have_insnptr &&
 			    inner.lopc <= ctx->insnptr &&
 			    ctx->insnptr < inner.hipc) {
-				strstack_pushf(ss,
-				    " at %0" PRIx64, ctx->insnptr);
 				insn_match = true;
 			}
 
-			strstack_pushf(ss, " in %0" PRIx64 " - %0" PRIx64 ": ",
-			    inner.lopc, inner.hipc);
-
 			for (j = 0; j < ld->ld_cents; j++) {
 				Dwarf_Loc *lr = &ld->ld_s[j];
-				strstack_pushf(ss, " ");
 				print_op(lr, ctx);
 			}
 		}
@@ -686,17 +672,6 @@ check_location(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 		}
 		dwarf_dealloc(dbg, locdescp, DW_DLA_LIST);
 #endif
-	} else {
-		const char *formname;
-
-		Dwarf_Error nerror;
-		if (dwarf_whatform(loc_attr, &loc_form, &nerror) != DW_DLV_OK ||
-		    dwarf_get_FORM_name(loc_form, &formname) != DW_DLV_OK)
-			strstack_pushf(ss, "unknown");
-		else {
-			strstack_pushf(ss, "unknown form %s err %s", formname,
-			    dwarf_errmsg(error));
-		}
 	}
 	return false;
 }
@@ -1078,17 +1053,10 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 	}
 
 	if (tag == DW_TAG_compile_unit) {
-#if 0
-		if (ctx->cu_stkdepth != -1) {
-			strstack_popto(ss, ctx->cu_stkdepth);
-			if (ctx->subprogram_stkdepth > ctx->cu_stkdepth)
-				ctx->subprogram_stkdepth = -1;
-		}
-#endif
 
 		if (!ctx->have_insnptr || ctx->have_dataptr ||
 		    ctx->have_frameptr)
-			ctx->cu_stkdepth = strstack_pushf(ss, "%s", name);
+			strstack_pushf(ss, "%s", name);
 	} else if (tag == DW_TAG_subprogram) {
 		Dwarf_Attribute loc_attr;
 		Dwarf_Locdesc *ld;
@@ -1096,12 +1064,7 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 		Dwarf_Ptr loc_ptr;
 		Dwarf_Unsigned loc_len;
 
-#if 0
-		if (ctx->subprogram_stkdepth != -1)
-			strstack_popto(ss, ctx->subprogram_stkdepth);
-#endif
-
-		ctx->subprogram_stkdepth = strstack_pushf(ss, ";%s", name);
+		strstack_pushf(ss, ";%s", name);
 
 		if (dwarf_attr(die, DW_AT_frame_base, &loc_attr, &error) != DW_DLV_OK) {
 			/* no frame base */
@@ -1126,12 +1089,12 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 			Dwarf_Loc *lr0 = &ld->ld_s[0];
 
 			if (lr0->lr_atom == DW_OP_call_frame_cfa) {
-				ctx->have_cfa_offset = true;
-				ctx->cfa_offset = 0;
+				ctx->rstate.have_cfa_offset = true;
+				ctx->rstate.cfa_offset = 0;
 			} else if ((regnum = locdesc_to_regnum(ld)) == -1) {
-				ctx->have_cfa_offset = false;
+				ctx->rstate.have_cfa_offset = false;
 			} else if (!ctx->have_insnptr) {
-				ctx->have_cfa_offset = false;
+				ctx->rstate.have_cfa_offset = false;
 			} else if (ctx->fde_list == NULL &&
 			    dwarf_get_fde_list(dbg, &ctx->cie_list,
 				&ctx->ncies, &ctx->fde_list,
@@ -1140,31 +1103,31 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 				&ctx->ncies, &ctx->fde_list,
 				&ctx->nfdes, &error) != DW_DLV_OK) {
 				/* could not retrieve FDEs */
-				ctx->have_cfa_offset = false;
+				ctx->rstate.have_cfa_offset = false;
 			} else if (dwarf_get_fde_at_pc(ctx->fde_list,
 				   ctx->insnptr, &fde, &lopc, &hipc,
 				   &error) != DW_DLV_OK) {
 				/* FDE unknown for PC */
-				ctx->have_cfa_offset = false;
+				ctx->rstate.have_cfa_offset = false;
 			} else if (dwarf_get_fde_info_for_cfa_reg3(fde,
 				 ctx->insnptr, &exprtype, &offset_relevant,
 				 &fde_regnum, &offset, &block_ptr,
 				 &row_pc, &error) != DW_DLV_OK) {
 				/* cannot get CFA FDE info */
-				ctx->have_cfa_offset = false;
+				ctx->rstate.have_cfa_offset = false;
 			} else if (exprtype != DW_EXPR_OFFSET) {
 				/* expression type not understood */
-				ctx->have_cfa_offset = false;
+				ctx->rstate.have_cfa_offset = false;
 			} else if (fde_regnum == regnum &&
 				   offset_relevant == 1) {
-				ctx->cfa_offset = offset;
-				ctx->have_cfa_offset = true;
+				ctx->rstate.cfa_offset = offset;
+				ctx->rstate.have_cfa_offset = true;
 			} else if (fde_regnum == regnum) {
-				ctx->cfa_offset = 0;
-				ctx->have_cfa_offset = true;
+				ctx->rstate.cfa_offset = 0;
+				ctx->rstate.have_cfa_offset = true;
 			} else {
 				/* CFA register mismatch */
-				ctx->have_cfa_offset = false;
+				ctx->rstate.have_cfa_offset = false;
 			}
 		}
 #if 0
@@ -1210,9 +1173,9 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 		default:
 			errx(EXIT_FAILURE, "%s: unknown hipc form", __func__);
 		}
-		if (tag == DW_TAG_compile_unit) {
-			ctx->lopc = inner.lopc;
-			ctx->hipc = inner.hipc;
+		if (tag == DW_TAG_compile_unit || tag == DW_TAG_subprogram) {
+			ctx->rstate.lopc = inner.lopc;
+			ctx->rstate.hipc = inner.hipc;
 		}
 	}
 
@@ -1270,7 +1233,7 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 				    "\\]",
 				    ctx->dataptr, ctx->insnptr, ctx->frameptr);
 			} else {
-				strstack_pushf(ss, ";;[0x0*%" PRIx64 "]",
+				strstack_pushf(ss, ";;\\[0x0*%" PRIx64 "\\]",
 				    ctx->dataptr);
 			}
 			strstack_fprintf(stdout, ss);

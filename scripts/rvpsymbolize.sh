@@ -14,7 +14,6 @@ func_addr_regex='at \(0x[0-9a-f]\+\) dummy.c:999'
 func_sym_sed_template='s,^0x\([0-9a-f]\+\) \([^@]\+\)@\(.*\)$,s|at 0x0*\1 dummy.c:999|at \2 \3|g,'
 
 data_addr_regex='\(\[0x[0-9a-f]\+[^]]*\]\)'
-#data_sym_sed_template='s,^0x\([0-9a-f]\+\) \([^@]\+\)@\(.*\)$,s|\\[0x0*\1\]|\2 at \3|g,'
 data_sym_sed_template='s,^\(.\+\);;\(.\+\);;\(.\+\)$,s|\3|\2 at \1|g,'
 
 tmpdir=$(mktemp -d)

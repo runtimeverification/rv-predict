@@ -1189,9 +1189,10 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 	} else if (tag == DW_TAG_subprogram && ctx->have_insnptr &&
 	    !ctx->have_dataptr && !ctx->have_frameptr) {
 		if (inner.lopc <= ctx->insnptr && ctx->insnptr <= inner.hipc) {
-			if (ctx->print_regex)
-				strstack_pushf(ss, " {0x0*%" PRIx64 "}", ctx->insnptr);
-			else if (ctx->print_address)
+			if (ctx->print_regex) {
+				strstack_pushf(ss, ";;{0x0*%" PRIx64 "}",
+				    ctx->insnptr);
+			} else if (ctx->print_address)
 				strstack_pushf(ss, " 0x%" PRIx64, ctx->insnptr);
 			strstack_fprintf(stdout, ss);
 			printf("\n");

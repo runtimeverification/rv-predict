@@ -10,8 +10,13 @@ usage()
 
 [ $# -eq 1 ] || usage
 
-func_addr_regex='at \(0x[0-9a-f]\+\) dummy.c:999'
-func_sym_sed_template='s,^0x\([0-9a-f]\+\) \([^@]\+\)@\(.*\)$,s|at 0x0*\1 dummy.c:999|at \2 \3|g,'
+normalize()
+{
+	sed 's/at \(0x[0-9a-f]\+\) dummy.c:999/{\1}/g'
+}
+
+func_addr_regex='{\(0x[0-9a-f]\+\)}'
+func_sym_sed_template='s,^\(.\+\);;\(.\+\);;\(.*\)$,s|\1|in \2 at \3|g,'
 
 data_addr_regex='\(\[0x[0-9a-f]\+[^]]*\]\)'
 data_sym_sed_template='s,^\(.\+\);;\(.\+\);;\(.\+\)$,s|\3|\2 at \1|g,'
@@ -36,16 +41,16 @@ last_n_components()
 	fi
 }
 
-tee $tmpdir/original | \
+normalize | tee $tmpdir/original | \
 grep "$func_addr_regex" | sed "s/.*$func_addr_regex.*/{\1}/g" | sort -u | \
-    rvsyms -a $1 | \
-    sed 's/\([^:]\+\)\(:[^:]\+:[^;]\+\);\(.\+\) \(0x[0-9a-f]\+\)$/\4 \1 \2 \3/
-s/\([^:]\+\)\(:[^;]\+\);\(.\+\) \(0x[0-9a-f]\+\)$/\4 \1 \2 \3/
-s/\([^;]\+\);\(.\+\) \(0x[0-9a-f]\+\)$/\3 \1 :: \2/' | \
+    rvsyms -r $1 | \
+    sed 's/\([^:]\+\)\(:[^:]\+:[^;]\+\);\(.\+\);;\(.\+\)$/\4 \1 \2 \3/
+s/\([^:]\+\)\(:[^;]\+\);\(.\+\);;\(.\+\)$/\4 \1 \2 \3/
+s/\([^;]\+\);\(.\+\);;\(.\+\)$/\3 \1 :: \2/' | \
 tee $tmpdir/funcsyms_proto_proto_script | \
-while read addr path linecol symbol; do
+while read regex path linecol symbol; do
 	shortened_path=$(last_n_components 2 $path)
-	echo $addr ${symbol}@${shortened_path}${linecol##::}
+	echo "${regex};;${symbol};;${shortened_path}${linecol##::}"
 done | tee $tmpdir/funcsyms_proto_script | sed "$func_sym_sed_template" > $tmpdir/funcsyms_sed_script
 
 grep "$data_addr_regex" < $tmpdir/original | \

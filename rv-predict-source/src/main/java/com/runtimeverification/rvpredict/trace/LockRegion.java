@@ -35,12 +35,12 @@ public class LockRegion implements Comparable<LockRegion> {
     private final ReadonlyEventInterface lock;
     private final ReadonlyEventInterface unlock;
 
-    private final long ttid;
+    private final int ttid;
     private final long lockId;
 
     private boolean isReadLocked = false;
 
-    public LockRegion(ReadonlyEventInterface lock, ReadonlyEventInterface unlock, long ttid) {
+    public LockRegion(ReadonlyEventInterface lock, ReadonlyEventInterface unlock, int ttid) {
         this.lock = lock;
         this.unlock = unlock;
         this.ttid = ttid;

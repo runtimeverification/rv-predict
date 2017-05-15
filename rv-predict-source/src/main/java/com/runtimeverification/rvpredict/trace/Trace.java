@@ -327,7 +327,7 @@ public class Trace {
      * @return a {@code Deque} of call stack events
      */
     public Deque<ReadonlyEventInterface> getStacktraceAt(ReadonlyEventInterface event) {
-        long ttid = getTraceThreadId(event);
+        int ttid = getTraceThreadId(event);
         long gid = event.getEventId();
         Deque<ReadonlyEventInterface> stacktrace = new ArrayDeque<>();
         if (!state.config().stacks()) {
@@ -359,9 +359,9 @@ public class Trace {
      * Returns the locks held by the owner thread when a given {@code ReadonlyEventInterface} occurs.
      */
     public List<ReadonlyEventInterface> getHeldLocksAt(ReadonlyEventInterface event) {
-        long ttid = getTraceThreadId(event);
+        int ttid = getTraceThreadId(event);
         Map<Long, LockState> lockIdToLockState = tidToThreadState
-                .getOrDefault(ttid, new ThreadState()).getLockStates().stream()
+                .computeIfAbsent(ttid, key -> new ThreadState()).getLockStates().stream()
                 .collect(Collectors.toMap(LockState::lockId, LockState::copy));
         RawTrace t = rawTraces.stream().filter(p -> p.getThreadInfo().getId() == ttid).findAny().get();
         for (int i = 0; i < t.size(); i++) {

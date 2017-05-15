@@ -3,10 +3,10 @@ package com.runtimeverification.rvpredict.trace;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
 public class MemoryAddrState {
-    private long reader1, reader2;
-    private long writer1, writer2;
+    private int reader1, reader2;
+    private int writer1, writer2;
 
-    public void touch(ReadonlyEventInterface event, long ttid) {
+    public void touch(ReadonlyEventInterface event, int ttid) {
         if (event.isRead()) {
             if (reader1 == 0) {
                 reader1 = ttid;

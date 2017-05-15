@@ -262,7 +262,7 @@ public class TraceState {
         return -1;
     }
 
-    OptionalInt getUnfinishedThreadId(int signalDepth, long otid) {
+    public OptionalInt getUnfinishedThreadId(int signalDepth, long otid) {
         Integer id = t_unfinishedThreads.get(new SignalThreadId(signalDepth, otid));
         if (id == null) {
             return OptionalInt.empty();
@@ -284,7 +284,7 @@ public class TraceState {
         return t_threadId++;
     }
 
-    int getNewThreadId(long otid) {
+    public int getNewThreadId(long otid) {
         int id = getNewThreadId();
         t_unfinishedThreads.put(new SignalThreadId(0, otid), id);
         return id;

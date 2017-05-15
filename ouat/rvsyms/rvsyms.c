@@ -60,7 +60,8 @@ typedef bool (*dwarf_walk_predicate_t)(Dwarf_Debug, Dwarf_Die);
 typedef struct _dwarf_walk_params {
 	Dwarf_Debug dbg;
 	dwarf_walk_predicate_t predicate;
-	bool print_address, have_dataptr, have_frameptr, have_insnptr;
+	bool print_address, print_regex,
+	    have_dataptr, have_frameptr, have_insnptr;
 	uint64_t dataptr, frameptr, insnptr;
 } dwarf_walk_params_t;
 
@@ -71,8 +72,8 @@ typedef struct _dwarf_walk_ctx {
 	Dwarf_Fde *fde_list;
 	Dwarf_Signed nfdes;
 	Dwarf_Signed cfa_offset;
-	bool print_address, have_cfa_offset, have_dataptr, have_frameptr,
-	    have_insnptr;
+	bool print_address, print_regex,
+	    have_cfa_offset, have_dataptr, have_frameptr, have_insnptr;
 	int subprogram_stkdepth, cu_stkdepth;
 	strstack_t symstk;
 	strstack_t locstk;
@@ -123,6 +124,7 @@ dwarf_walk_first(dwarf_walk_t *walk, const dwarf_walk_params_t *params)
 	walk->dbg = params->dbg;
 	walk->predicate = params->predicate;
 	walk->ctx.print_address = params->print_address;
+	walk->ctx.print_regex = params->print_regex;
 	walk->ctx.have_dataptr = params->have_dataptr;
 	walk->ctx.have_frameptr = params->have_frameptr;
 	walk->ctx.have_insnptr = params->have_insnptr;
@@ -1224,7 +1226,9 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 	} else if (tag == DW_TAG_subprogram && ctx->have_insnptr &&
 	    !ctx->have_dataptr && !ctx->have_frameptr) {
 		if (inner.lopc <= ctx->insnptr && ctx->insnptr <= inner.hipc) {
-			if (ctx->print_address)
+			if (ctx->print_regex)
+				strstack_pushf(ss, " {0x0*%" PRIx64 "}", ctx->insnptr);
+			else if (ctx->print_address)
 				strstack_pushf(ss, " 0x%" PRIx64, ctx->insnptr);
 			strstack_fprintf(stdout, ss);
 			printf("\n");
@@ -1248,8 +1252,27 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 			 !walk_elements(dbg, typedie, ctx))
 			;
 		else {
-			if (ctx->print_address && ctx->have_dataptr)
+			if (!ctx->have_dataptr)
+				; // do nothing
+			else if (ctx->print_address)
 				strstack_pushf(ss, " 0x%" PRIx64, ctx->dataptr);
+			else if (!ctx->print_regex)
+				; // do nothing
+			else if (ctx->have_insnptr && ctx->have_frameptr) {
+				// a little too lenient, this matches
+				// [... : .../... .../... .../...]
+				// [... : .../... .../...]
+				// [... : .../...]
+				strstack_pushf(ss, ";;\\[0x0*%" PRIx64
+				    " : \\(0x[0-9a-f]\\+\\/0x[0-9a-f]\\+ \\)"
+				    "\\?0x0*%" PRIx64 "\\/0x0*%" PRIx64
+				    "\\( 0x[0-9a-f]\\+\\/0x[0-9a-f]\\+\\)\\?"
+				    "\\]",
+				    ctx->dataptr, ctx->insnptr, ctx->frameptr);
+			} else {
+				strstack_pushf(ss, ";;[0x0*%" PRIx64 "]",
+				    ctx->dataptr);
+			}
 			strstack_fprintf(stdout, ss);
 			printf("\n");
 		}
@@ -1262,7 +1285,10 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 static void __dead
 usage(const char *progname)
 {
-	fprintf(stderr, "usage: %s [-d data address] [-f DWARF Canonical Frame Address (CFA) ] [-i instruction pointer] object-file\n", progname);
+	fprintf(stderr, "usage: %s [-a | -r] "
+	    "[-d data address] "
+	    "[-f DWARF Canonical Frame Address (CFA) ] "
+	    "[-i instruction pointer] object-file\n", progname);
 	exit(EXIT_FAILURE);
 }
 
@@ -1280,10 +1306,14 @@ main(int argc, char **argv)
 		, .have_frameptr = false
 		, .have_insnptr = false
 		, .print_address = false
+		, .print_regex = false
 		, .predicate = NULL};
 
-	while ((ch = getopt(argc, argv, "ad:f:i:")) != -1) {
+	while ((ch = getopt(argc, argv, "ad:f:i:r")) != -1) {
 		switch (ch) {
+		case 'r':
+			clparams.print_regex = true;
+			break;
 		case 'a':
 			clparams.print_address = true;
 			break;
@@ -1338,6 +1368,11 @@ main(int argc, char **argv)
 
 	if (argc < 1)
 		usage(progname);
+
+	if (clparams.print_address && clparams.print_regex) {
+		fprintf(stderr, "-r and -a are mutually exclusive\n");
+		usage(progname);
+	}
 
 	if ((fd = open(argv[0], O_RDONLY)) == -1)
 		err(EXIT_FAILURE, "%s: open(\"%s\")", __func__, argv[0]);

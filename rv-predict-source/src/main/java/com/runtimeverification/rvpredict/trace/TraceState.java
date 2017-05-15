@@ -3,8 +3,6 @@ package com.runtimeverification.rvpredict.trace;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.DataAddress;
-import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
@@ -66,7 +64,7 @@ public class TraceState {
 
     private final MemoryAddrToStateMap t_addrToState;
 
-    private final Table<Integer, DataAddress, List<ReadonlyEventInterface>> t_tidToAddrToEvents;
+    private final Table<Integer, Long, List<ReadonlyEventInterface>> t_tidToAddrToEvents;
 
     private final Map<Long, List<LockRegion>> t_lockIdToLockRegions;
 

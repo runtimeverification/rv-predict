@@ -12,13 +12,19 @@ public class Context {
 
     private final Map<Long, ThreadState> threadIdToState;
     private final Map<Long, Long> memoizedSignalMasks;
+    private final Map<Long, Long> signalHandlerIds;
+    private final Map<Long, Long> dataAddressIds;
     private final long minDeltaAndEventType;
 
     private ThreadState currentThread;
+    private long lastAddressId;
 
     public Context(long minDeltaAndEventType) {
         threadIdToState = new HashMap<>();
         memoizedSignalMasks = new HashMap<>();
+        signalHandlerIds = new HashMap<>();
+        dataAddressIds = new HashMap<>();
+        lastAddressId = 1;
         this.minDeltaAndEventType = minDeltaAndEventType;
     }
 
@@ -121,6 +127,17 @@ public class Context {
 
     public long getMemoizedSignalMask(long signalMaskNumber) {
         return memoizedSignalMasks.get(signalMaskNumber);
+    }
+
+    public long createUniqueSignalHandlerId(long signalNumber) {
+        return getOrCreateId(signalHandlerIds, signalNumber);
+    }
+    public long createUniqueDataAddressId(long dataAddress) {
+        return getOrCreateId(dataAddressIds, dataAddress);
+    }
+
+    private long getOrCreateId(Map<Long, Long> ids, long addr) {
+        return ids.computeIfAbsent(addr, k -> lastAddressId++);
     }
 
     private static class ThreadState {

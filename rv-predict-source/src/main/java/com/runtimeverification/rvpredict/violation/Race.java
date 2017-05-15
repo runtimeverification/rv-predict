@@ -101,7 +101,7 @@ public class Race {
 
     @Override
     public String toString() {
-        int addr = Math.min(0, e1.getDataAddress().getFieldIdOrArrayIndex()); // collapse all array indices to 0
+        int addr = Math.min(0, e1.getFieldIdOrArrayIndex()); // collapse all array indices to 0
         long loc1 = Math.min(e1.getLocationId(), e2.getLocationId());
         long loc2 = Math.max(e1.getLocationId(), e2.getLocationId());
         return "Race(" + addr + "," + loc1 + "," + loc2 + ")";
@@ -109,18 +109,18 @@ public class Race {
 
     public String getRaceLocationSig() {
         if(config.isLLVMPrediction()) {
-            long idx = e1.getDataAddress().getObjectHashCode();
+            long idx = e1.getObjectHashCode();
             if(idx != 0) {
                 String sig = trace.metadata().getVariableSig(idx).replace("/", ".");
                 return "@" + sig;
             } else {
-                return "#" + e1.getDataAddress().getFieldIdOrArrayIndex();
+                return "#" + e1.getFieldIdOrArrayIndex();
             }
         } else {
-            int idx = e1.getDataAddress().getFieldIdOrArrayIndex();
+            int idx = e1.getFieldIdOrArrayIndex();
             if (idx < 0) {
                 String sig = trace.metadata().getVariableSig(-idx).replace("/", ".");
-                long object = e1.getDataAddress().getObjectHashCode();
+                long object = e1.getObjectHashCode();
                 return object == 0 ? "@" + sig : sig;
             }
             return "#" + idx;

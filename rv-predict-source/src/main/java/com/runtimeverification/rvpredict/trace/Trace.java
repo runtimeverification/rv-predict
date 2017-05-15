@@ -28,22 +28,9 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.trace;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.DataAddress;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
@@ -51,6 +38,18 @@ import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToObjectMap;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
 import com.runtimeverification.rvpredict.util.Logger;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a
@@ -108,7 +107,7 @@ public class Trace {
     /**
      * Map from (thread ID, memory address) to write events.
      */
-    private final Table<Integer, DataAddress, List<ReadonlyEventInterface>>
+    private final Table<Integer, Long, List<ReadonlyEventInterface>>
             ttidToAddrToWriteEvents;
 
     /**
@@ -133,7 +132,7 @@ public class Trace {
             Map<Integer, List<MemoryAccessBlock>> tidToMemoryAccessBlocks,
             Map<Integer, ThreadState> tidToThreadState,
             MemoryAddrToStateMap addrToState,
-            Table<Integer, DataAddress, List<ReadonlyEventInterface>> tidToAddrToEvents,
+            Table<Integer, Long, List<ReadonlyEventInterface>> tidToAddrToEvents,
             Map<Long, List<LockRegion>> lockIdToLockRegions,
             Set<ReadonlyEventInterface> clinitEvents,
             Map<Long, Integer> originalTidToTraceTid) {
@@ -263,11 +262,11 @@ public class Trace {
         return events;
     }
 
-    public Iterable<ReadonlyEventInterface> getWriteEvents(DataAddress addr) {
+    public Iterable<ReadonlyEventInterface> getWriteEvents(Long addr) {
         return Iterables.concat(ttidToAddrToWriteEvents.column(addr).values());
     }
 
-    private ReadonlyEventInterface getPrevWrite(long gid, int ttid, DataAddress addr) {
+    private ReadonlyEventInterface getPrevWrite(long gid, int ttid, Long addr) {
         List<ReadonlyEventInterface> list = ttidToAddrToWriteEvents.get(ttid, addr);
         if (list == null || list.isEmpty() || list.get(0).getEventId() >= gid) {
             return null;
@@ -448,11 +447,14 @@ public class Trace {
             }
         }
 
-        Set<DataAddress> sharedAddr = new HashSet<>();
-        for (MemoryAddrToStateMap.Entry<DataAddress, MemoryAddrState> entry : addrToState.entrySet()) {
+        Set<Long> sharedAddr = new HashSet<>();
+        for (LongToObjectMap<MemoryAddrState>.EntryIterator iter = addrToState.iterator();
+                iter.hasNext(); iter.incCursor()) {
+            long addr = iter.getNextKey();
+            MemoryAddrState st = iter.getNextValue();
             /* compute shared memory addresses */
-            if (entry.getValue().isWriteShared()) {
-                sharedAddr.add(entry.getKey());
+            if (st.isWriteShared()) {
+                sharedAddr.add(addr);
             }
         }
 
@@ -644,7 +646,7 @@ public class Trace {
                      */
                     if (lastEvent != null) {
                         boolean readsTheSameThing = lastEvent.isRead()
-                                && lastEvent.getDataAddress().equals(event.getDataAddress())
+                                && lastEvent.getDataAddress() == event.getDataAddress()
                                 && lastEvent.getDataValue() == event.getDataValue();
                         endCrntBlock = !(lastEvent.isWrite() || readsTheSameThing);
                     } else {

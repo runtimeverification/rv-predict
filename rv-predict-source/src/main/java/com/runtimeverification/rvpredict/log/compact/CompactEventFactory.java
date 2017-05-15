@@ -1,10 +1,8 @@
 package com.runtimeverification.rvpredict.log.compact;
 
-import com.runtimeverification.rvpredict.log.DataAddress;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -39,9 +37,10 @@ public class CompactEventFactory {
                 throw new IllegalArgumentException(
                         "Unknown data manipulation type: " + dataManipulationType);
         }
+        long addressId = context.createUniqueDataAddressId(address);
         if (atomicity == CompactEventReader.Atomicity.NOT_ATOMIC) {
             return Collections.singletonList(
-                    dataManipulationEvent(context, dataSizeInBytes, address, value, compactType));
+                    dataManipulationEvent(context, dataSizeInBytes, address, addressId, value, compactType));
         }
         // TODO(virgil): These locks should be something more fine-grained, e.g. write_locks.
         // Also, it would probably be nice if an atomic write to a variable would also be atomic for
@@ -50,20 +49,15 @@ public class CompactEventFactory {
         return Arrays.asList(
                 lockManipulationEvent(
                         context, CompactEventReader.LockManipulationType.LOCK, address, LockReason.ATOMIC),
-                dataManipulationEvent(context, dataSizeInBytes, address, value, compactType),
+                dataManipulationEvent(context, dataSizeInBytes, address, addressId, value, compactType),
                 lockManipulationEvent(
                         context, CompactEventReader.LockManipulationType.UNLOCK, address, LockReason.ATOMIC)
         );
     }
 
     private ReadonlyEventInterface dataManipulationEvent(
-            Context context, int dataSizeInBytes, long address, long value, EventType compactType)
-            throws InvalidTraceDataException {
-        return dataManipulationEvent(
-                context, dataSizeInBytes, DataAddress.createCompactDataAddress(address), value, compactType);
-    }
-    private ReadonlyEventInterface dataManipulationEvent(
-            Context context, int dataSizeInBytes, DataAddress dataAddress, long value, EventType compactType)
+            Context context, int dataSizeInBytes, long dataAddress, long dataAddressId, long value,
+            EventType compactType)
             throws InvalidTraceDataException {
         return new CompactEvent(context, compactType) {
             @Override
@@ -72,8 +66,18 @@ public class CompactEventFactory {
             }
 
             @Override
-            public DataAddress getDataAddress() {
+            public long getDataAddress() {
+                return dataAddressId;
+            }
+
+            @Override
+            public long getObjectHashCode() {
                 return dataAddress;
+            }
+
+            @Override
+            public int getFieldIdOrArrayIndex() {
+                return 0;
             }
 
             @Override
@@ -91,14 +95,15 @@ public class CompactEventFactory {
     public List<ReadonlyEventInterface> atomicReadModifyWrite(
             Context context,
             int dataSizeInBytes,
-            long address, long readValue, long writeValue) throws InvalidTraceDataException {
+            long dataAddress, long readValue, long writeValue) throws InvalidTraceDataException {
+        long addressId = context.createUniqueDataAddressId(dataAddress);
         return Arrays.asList(
                 lockManipulationEvent(
-                        context, CompactEventReader.LockManipulationType.LOCK, address, LockReason.ATOMIC),
-                dataManipulationEvent(context, dataSizeInBytes, address, readValue, EventType.READ),
-                dataManipulationEvent(context, dataSizeInBytes, address, writeValue, EventType.WRITE),
+                        context, CompactEventReader.LockManipulationType.LOCK, dataAddress, LockReason.ATOMIC),
+                dataManipulationEvent(context, dataSizeInBytes, dataAddress, addressId, readValue, EventType.READ),
+                dataManipulationEvent(context, dataSizeInBytes, dataAddress, addressId, writeValue, EventType.WRITE),
                 lockManipulationEvent(
-                        context, CompactEventReader.LockManipulationType.UNLOCK, address, LockReason.ATOMIC));
+                        context, CompactEventReader.LockManipulationType.UNLOCK, dataAddress, LockReason.ATOMIC));
     }
 
     public List<ReadonlyEventInterface> changeOfGeneration(Context context, long generation) {
@@ -174,6 +179,7 @@ public class CompactEventFactory {
             long handler, long signalNumber, long signalMaskNumber) throws InvalidTraceDataException {
         context.establishSignal(handler, signalNumber, signalMaskNumber);
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
+        long addressId = context.createUniqueSignalHandlerId(signalNumber);
         return Arrays.asList(
                 lockManipulationEvent(
                         context, CompactEventReader.LockManipulationType.LOCK,
@@ -201,7 +207,7 @@ public class CompactEventFactory {
                 },
                 dataManipulationEvent(
                         context, Constants.LONG_SIZE_IN_BYTES,
-                        DataAddress.signalHandler(signalNumber), handler, EventType.WRITE),
+                        signalNumber, addressId, handler, EventType.WRITE),
                 lockManipulationEvent(
                         context, CompactEventReader.LockManipulationType.UNLOCK,
                         com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL)
@@ -211,6 +217,7 @@ public class CompactEventFactory {
     public List<ReadonlyEventInterface> disestablishSignal(
             Context context, long signalNumber) throws InvalidTraceDataException {
         context.disestablishSignal(signalNumber);
+        long addressId = context.createUniqueSignalHandlerId(signalNumber);
         return Arrays.asList(
                 lockManipulationEvent(
                         context, CompactEventReader.LockManipulationType.LOCK,
@@ -227,7 +234,7 @@ public class CompactEventFactory {
                 },
                 dataManipulationEvent(
                         context, Constants.LONG_SIZE_IN_BYTES,
-                        DataAddress.signalHandler(signalNumber), Constants.INVALID_PROGRAM_COUNTER, EventType.WRITE),
+                        signalNumber, addressId, Constants.INVALID_PROGRAM_COUNTER, EventType.WRITE),
                 lockManipulationEvent(
                         context, CompactEventReader.LockManipulationType.UNLOCK,
                         com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL)
@@ -237,6 +244,7 @@ public class CompactEventFactory {
     public List<ReadonlyEventInterface> enterSignal(
             Context context, long generation, long signalNumber, long signalHandler) throws InvalidTraceDataException {
         context.enterSignal(signalNumber, generation);
+        long addressId = context.createUniqueSignalHandlerId(signalNumber);
         return Arrays.asList(
                 lockManipulationEvent(
                         context, CompactEventReader.LockManipulationType.LOCK,
@@ -254,7 +262,7 @@ public class CompactEventFactory {
                 },
                 dataManipulationEvent(
                         context, Constants.LONG_SIZE_IN_BYTES,
-                        DataAddress.signalHandler(signalNumber), signalHandler, EventType.READ),
+                        signalNumber, addressId, signalHandler, EventType.READ),
                 lockManipulationEvent(
                         context, CompactEventReader.LockManipulationType.UNLOCK,
                         com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL)
@@ -347,6 +355,7 @@ public class CompactEventFactory {
             public long getFullReadSignalMask() {
                 return readSignalMask;
             }
+
             @Override
             public long getFullWriteSignalMask() {
                 return writeSignalMask;

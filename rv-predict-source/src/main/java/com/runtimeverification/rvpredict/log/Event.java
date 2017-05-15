@@ -10,7 +10,7 @@ public class Event extends ReadonlyEvent {
     private long eventId;
     private long originalThreadId;
     private long locationId;
-    private DataAddress address;
+    private long address;
     private long dataValue;
     private EventType type;
 
@@ -43,10 +43,6 @@ public class Event extends ReadonlyEvent {
      * @param type type of event
      */
     public Event(long eventId, long tid, long locationId, long address, long dataValue, EventType type) {
-        this(eventId, tid, locationId, DataAddress.createPlainDataAddress(address), dataValue, type);
-    }
-
-    public Event(long eventId, long tid, long locationId, DataAddress address, long dataValue, EventType type) {
         this.eventId = eventId;
         this.originalThreadId = tid;
         this.locationId = locationId;
@@ -134,28 +130,28 @@ public class Event extends ReadonlyEvent {
     }
 
     public void setAddress(long addr) {
-        address = DataAddress.createPlainDataAddress(addr);
+        address = addr;
     }
 
     @Override
-    public DataAddress getDataAddress() {
+    public long getDataAddress() {
         assert isReadOrWrite();
         return address;
     }
 
     @Override
-    public DataAddress unsafeGetAddress() { return  address; }
+    public long unsafeGetAddress() { return  address; }
 
     @Override
     public long getSyncObject() {
         assert getType().isSyncType();
-        return address.getDataAddressOr0();
+        return address;
     }
 
     @Override
     public long getSyncedThreadId() {
         assert isStart() || isJoin();
-        return address.getDataAddressOr0();
+        return address;
     }
 
     @Override
@@ -190,8 +186,8 @@ public class Event extends ReadonlyEvent {
     public String toString() {
         int signalDepth = getSignalDepth();
         if (isReadOrWrite()) {
-            int addrl = Math.toIntExact(address.getObjectHashCode());
-            int addrr = address.getFieldIdOrArrayIndex();
+            int addrl = Math.toIntExact(getObjectHashCode());
+            int addrr = getFieldIdOrArrayIndex();
             String addr = addrr < 0 ?
                     Integer.toHexString(addrl) + "." + -addrr :
                     Integer.toHexString(addrl) + "[" + addrr + "]";
@@ -208,6 +204,16 @@ public class Event extends ReadonlyEvent {
         } else {
             return "UNKNOWN EVENT";
         }
+    }
+
+    @Override
+    public long getObjectHashCode() {
+        return (int) (address >> 32);
+    }
+
+    @Override
+    public int getFieldIdOrArrayIndex() {
+        return (int) address;
     }
 
     @Override

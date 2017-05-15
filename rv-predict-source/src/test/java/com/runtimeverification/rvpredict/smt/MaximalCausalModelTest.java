@@ -70,6 +70,10 @@ public class MaximalCausalModelTest {
         nextPcDelta = 0;
         nextThreadNumber = 1;
         when(mockContext.newId()).then(invocation -> BASE_ID + nextIdDelta++);
+        when(mockContext.createUniqueSignalHandlerId(SIGNAL_NUMBER_1)).thenReturn(1L);
+        when(mockContext.createUniqueDataAddressId(ADDRESS_1)).thenReturn(2L);
+        when(mockContext.createUniqueDataAddressId(ADDRESS_2)).thenReturn(3L);
+        when(mockContext.createUniqueDataAddressId(ADDRESS_3)).thenReturn(4L);
     }
 
     @Test

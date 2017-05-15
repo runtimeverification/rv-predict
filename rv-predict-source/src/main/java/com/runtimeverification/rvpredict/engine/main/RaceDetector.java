@@ -75,13 +75,11 @@ public class RaceDetector implements Constants {
             trace.eventsByThreadID().forEach((tid2, events2) -> {
                 if (tid1 < tid2) {
                     events1.forEach(e1 -> {
-                        long addressForVolatileCheck =
-                                e1.isReadOrWrite() ? e1.getDataAddress().getDataAddressOr0() : 0;
                         events2.forEach(e2 -> {
                             if ((e1.isWrite() && e2.isReadOrWrite() ||
                                     e1.isReadOrWrite() && e2.isWrite())
-                                    && e1.getDataAddress().equals(e2.getDataAddress())
-                                    && !trace.metadata().isVolatile(addressForVolatileCheck)
+                                    && e1.getDataAddress() == e2.getDataAddress()
+                                    && !trace.metadata().isVolatile(e1.getDataAddress())
                                     && !isThreadSafeLocation(trace, e1.getLocationId())
                                     && !trace.isInsideClassInitializer(e1)
                                     && !trace.isInsideClassInitializer(e2)) {

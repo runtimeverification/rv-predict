@@ -87,7 +87,7 @@ public class CompactEventFactory {
 
             @Override
             public String toString() {
-                return super.toString() + "/" + dataAddress + "=" + value;
+                return super.toString() + "/" + dataAddressId + "(" + Long.toHexString(dataAddress) + ")=" + value;
             }
         };
     }

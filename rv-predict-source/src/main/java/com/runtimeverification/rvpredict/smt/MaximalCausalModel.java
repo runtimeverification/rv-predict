@@ -611,18 +611,17 @@ public class MaximalCausalModel {
             }
 //            checkTraceConsistency(z3filter, solver);
 
-            if (Configuration.debug) {
-                findAndDumpOrdering();
-            }
             /* check race suspects */
 
+            boolean atLeastOneRace = false;
             for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
                 for (Race race : entry.getValue()) {
                     solver.push();
                     solver.add(z3filter.filter(suspectToAsst.get(race)));
                     boolean isRace = solver.check() == Status.SATISFIABLE;
+                    atLeastOneRace |= isRace;
                     if (isRace && Configuration.debug) {
-                        dumpOrdering();
+                        dumpOrdering(race.firstEvent(), race.secondEvent());
                     }
                     solver.pop();
                     if (isRace) {
@@ -630,6 +629,9 @@ public class MaximalCausalModel {
                         break;
                     }
                 }
+            }
+            if (!atLeastOneRace && Configuration.debug) {
+                findAndDumpOrdering();
             }
             solver.pop();
             z3filter.clear();
@@ -643,12 +645,12 @@ public class MaximalCausalModel {
     private void findAndDumpOrdering() {
         solver.push();
         if (solver.check() == Status.SATISFIABLE) {
-            dumpOrdering();
+            dumpOrdering(null, null);
         }
         solver.pop();
     }
 
-    private void dumpOrdering() {
+    private void dumpOrdering(ReadonlyEventInterface firstRaceEvent, ReadonlyEventInterface secondRaceEvent) {
         Model model = solver.getModel();
         Map<Integer, List<EventWithOrder>> threadToExecution = new HashMap<>();
         for (FuncDecl f : model.getConstDecls()) {
@@ -665,17 +667,86 @@ public class MaximalCausalModel {
         threadToExecution.values().forEach(events ->
                 events.sort(Comparator.comparingLong(EventWithOrder::getOrderId)));
 
-        System.out.println("Possible ordering of events, per thread ..........");
-        // TODO(virgil): Dump the total order, not the per-thread one.
-        threadToExecution.forEach((tid, events) -> {
-            ArrayList<String> description = new ArrayList<>();
-            // TODO(virgil): Actually dump the event.
-            events.forEach(e -> description.add(e.getEvent().getEventId() + ":" + e.getOrderId()));
-            System.out.print("  Thread:" + tid);
-            System.out.print(" -> ");
-            System.out.println(String.join(" ", description));
-        });
-        System.out.println(".......... That's all folks!");
+        System.out.println("Possible ordering of events ..........");
+        Map<Integer, Integer> lastIndexPerThread = new HashMap<>();
+        threadToExecution.keySet().forEach(threadId -> lastIndexPerThread.put(threadId, 0));
+
+        long lastThread = ((long) Integer.MAX_VALUE) + 1;
+        boolean hasData;
+        do {
+            hasData = false;
+            long minOrder = Integer.MAX_VALUE;
+            int minIndex = Integer.MAX_VALUE;
+            int minThread = Integer.MAX_VALUE;
+            for (Map.Entry<Integer, Integer> indexEntry : lastIndexPerThread.entrySet()) {
+                Integer threadId = indexEntry.getKey();
+                Integer index = indexEntry.getValue();
+                List<EventWithOrder> execution = threadToExecution.get(threadId);
+                if (index >= execution.size()) {
+                    continue;
+                }
+                EventWithOrder currentEvent = execution.get(index);
+                if (minOrder > currentEvent.getOrderId()
+                        || (minOrder == currentEvent.getOrderId() && minThread == threadId)) {
+                    minOrder = currentEvent.getOrderId();
+                    minIndex = index;
+                    minThread = threadId;
+                    hasData = true;
+                }
+            }
+            if (hasData) {
+                boolean foundRace = false;
+                EventWithOrder event = threadToExecution.get(minThread).get(minIndex);
+                lastIndexPerThread.put(minThread, minIndex + 1);
+                if (isRaceEvent(event, firstRaceEvent, secondRaceEvent)) {
+                    for (Map.Entry<Integer, Integer> indexEntry : lastIndexPerThread.entrySet()) {
+                        Integer threadId = indexEntry.getKey();
+                        Integer index = indexEntry.getValue();
+                        List<EventWithOrder> execution = threadToExecution.get(threadId);
+                        if (index >= execution.size()) {
+                            continue;
+                        }
+                        EventWithOrder currentEvent = execution.get(index);
+                        if (currentEvent.getEvent().getEventId() != event.getEvent().getEventId()
+                                && isRaceEvent(currentEvent, firstRaceEvent, secondRaceEvent)) {
+                            foundRace = true;
+                            lastIndexPerThread.put(threadId, index + 1);
+                            System.out.println("-- Found race for threads "
+                                    + threadDescription(minThread, event) + " and "
+                                    + threadDescription(threadId, currentEvent) + " --");
+                            lastThread = Integer.MAX_VALUE;
+                            System.out.println(event.getEvent() + " vs " + currentEvent.getEvent());
+                            break;
+                        }
+                    }
+                    assert foundRace;
+                }
+                if (!foundRace) {
+                    if (lastThread != minThread) {
+                        System.out.println("-- Switching to thread " + threadDescription(minThread, event) + " --");
+                        lastThread = minThread;
+                    }
+                    System.out.println(event.getEvent());
+                }
+            }
+        } while (hasData);
+    }
+    private boolean isRaceEvent(
+            EventWithOrder event,
+            ReadonlyEventInterface firstRaceEvent,
+            ReadonlyEventInterface secondRaceEvent) {
+        return (firstRaceEvent != null && firstRaceEvent.getEventId() == event.getEvent().getEventId())
+                || (secondRaceEvent != null && secondRaceEvent.getEventId() == event.getEvent().getEventId());
+    }
+
+    private String threadDescription(int threadId, EventWithOrder event) {
+        String description = threadId
+                + " (T" + event.getEvent().getOriginalThreadId();
+        if (event.getEvent().getSignalDepth() != 0) {
+            description += ", SD" + event.getEvent().getSignalDepth()
+                    + ", S" + trace.getSignalNumber(threadId);
+        }
+        return description + ")";
     }
 
     /**

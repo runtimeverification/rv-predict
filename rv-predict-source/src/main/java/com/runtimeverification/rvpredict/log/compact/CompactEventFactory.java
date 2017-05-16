@@ -71,6 +71,11 @@ public class CompactEventFactory {
             }
 
             @Override
+            public long unsafeGetAddress() {
+                return getDataAddress();
+            }
+
+            @Override
             public long getObjectHashCode() {
                 return dataAddress;
             }
@@ -83,6 +88,11 @@ public class CompactEventFactory {
             @Override
             public long getDataValue() {
                 return value;
+            }
+
+            @Override
+            public long unsafeGetDataValue() {
+                return getDataValue();
             }
 
             @Override

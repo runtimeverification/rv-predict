@@ -11,7 +11,6 @@ import java.util.function.Supplier;
  *
  * @param <T>
  */
-// TODO(virgil): This used to extend a LongToObjectMap<T>. I should profile it to see if I need a custom implementation.
 public class MemoryAddrToObjectMap<T> extends LongToObjectMap<T> {
     MemoryAddrToObjectMap(int expected, Supplier<T> newValue) {
         super(expected, newValue);

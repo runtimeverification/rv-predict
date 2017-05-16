@@ -75,6 +75,7 @@ public class CompactEventFactoryTest {
     public void readNonatomicData() throws InvalidTraceDataException {
         when(mockContext.newId()).thenReturn(NEW_ID);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueDataAddressId(ADDRESS)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
@@ -98,12 +99,15 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(VALUE, event.unsafeGetDataValue());
     }
 
     @Test
     public void writeNonatomicData() throws InvalidTraceDataException {
         when(mockContext.newId()).thenReturn(NEW_ID);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueDataAddressId(ADDRESS)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
@@ -127,12 +131,15 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(VALUE, event.unsafeGetDataValue());
     }
 
     @Test
     public void readAtomicData() throws InvalidTraceDataException {
         when(mockContext.newId()).thenReturn(NEW_ID).thenReturn(NEW_ID + 1).thenReturn(NEW_ID + 2);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueDataAddressId(ADDRESS)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
@@ -166,6 +173,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(VALUE, event.unsafeGetDataValue());
         event = events.get(2);
         testImplementedMethods(
                 event,
@@ -182,6 +191,7 @@ public class CompactEventFactoryTest {
     public void writeAtomicData() throws InvalidTraceDataException {
         when(mockContext.newId()).thenReturn(NEW_ID).thenReturn(NEW_ID + 1).thenReturn(NEW_ID + 2);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueDataAddressId(ADDRESS)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
@@ -215,6 +225,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(VALUE, event.unsafeGetDataValue());
         event = events.get(2);
         testImplementedMethods(
                 event,
@@ -232,6 +244,7 @@ public class CompactEventFactoryTest {
         when(mockContext.newId())
                 .thenReturn(NEW_ID).thenReturn(NEW_ID + 1).thenReturn(NEW_ID + 2).thenReturn(NEW_ID + 3);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueDataAddressId(ADDRESS)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.atomicReadModifyWrite(
@@ -264,6 +277,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(VALUE, event.unsafeGetDataValue());
         event = events.get(2);
         testImplementedMethods(
                 event,
@@ -276,6 +291,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(OTHER_VALUE, GET_DATA_VALUE),
                 }
         );
+        Assert.assertNotEquals(0, event.unsafeGetAddress());
+        Assert.assertEquals(OTHER_VALUE, event.unsafeGetDataValue());
         event = events.get(3);
         testImplementedMethods(
                 event,
@@ -365,6 +382,7 @@ public class CompactEventFactoryTest {
                 .thenReturn(NEW_ID + 4);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
         when(mockContext.getMemoizedSignalMask(SIGNAL_MASK_NUMBER)).thenReturn(SIGNAL_MASK);
+        when(mockContext.createUniqueSignalHandlerId(SIGNAL_NUMBER)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.establishSignal(
@@ -408,6 +426,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(SIGNAL_HANDLER, GET_DATA_VALUE),
                 }
         );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(SIGNAL_HANDLER, event.unsafeGetDataValue());
         event = events.get(3);
         testImplementedMethods(
                 event,
@@ -429,6 +449,7 @@ public class CompactEventFactoryTest {
                 .thenReturn(NEW_ID).thenReturn(NEW_ID + 1).thenReturn(NEW_ID + 2).thenReturn(NEW_ID + 3)
                 .thenReturn(NEW_ID + 4);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueSignalHandlerId(SIGNAL_NUMBER)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.disestablishSignal(
@@ -468,6 +489,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(com.runtimeverification.rvpredict.log.compact.Constants.INVALID_PROGRAM_COUNTER, GET_DATA_VALUE),
                 }
         );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(com.runtimeverification.rvpredict.log.compact.Constants.INVALID_PROGRAM_COUNTER, event.unsafeGetDataValue());
         event = events.get(3);
         testImplementedMethods(
                 event,
@@ -488,6 +511,7 @@ public class CompactEventFactoryTest {
                 .thenReturn(NEW_ID).thenReturn(NEW_ID + 1).thenReturn(NEW_ID + 2).thenReturn(NEW_ID + 3)
                 .thenReturn(NEW_ID + 4);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueSignalHandlerId(SIGNAL_NUMBER)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.enterSignal(
@@ -529,6 +553,8 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(SIGNAL_HANDLER, GET_DATA_VALUE),
                 }
         );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(SIGNAL_HANDLER, event.unsafeGetDataValue());
         event = events.get(3);
         testImplementedMethods(
                 event,

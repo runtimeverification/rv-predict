@@ -89,7 +89,7 @@ public class TraceState {
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
         this.t_unfinishedThreads       = new HashMap<>(DEFAULT_NUM_OF_THREADS);
-        this.t_threadId                = 0;
+        this.t_threadId                = 1;
     }
 
     public Configuration config() {

@@ -588,17 +588,10 @@ public class MaximalCausalModel {
     public Map<String, Race> checkRaceSuspects(Map<String, List<Race>> sigToRaceSuspects) {
         /* specialize the maximal causal model based on race queries */
         Map<Race, BoolFormula> suspectToAsst = new HashMap<>();
-        sigToRaceSuspects.values().forEach(
-                suspects -> suspects.forEach(
-                        race -> System.out.println(race.firstEvent() + "  -->  " + race.secondEvent())));
         sigToRaceSuspects.values().forEach(suspects -> {
             suspects.removeIf(this::failPecanCheck);
             suspects.forEach(p -> suspectToAsst.computeIfAbsent(p, this::getRaceAssertion));
         });
-        System.out.println("-------------");
-        sigToRaceSuspects.values().forEach(
-                suspects -> suspects.forEach(
-                        race -> System.out.println(race.firstEvent() + "  -->  " + race.secondEvent())));
 
         sigToRaceSuspects.entrySet().removeIf(e -> e.getValue().isEmpty());
         if (sigToRaceSuspects.isEmpty()) {

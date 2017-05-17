@@ -21,4 +21,6 @@ public interface Constants {
     long INVALID_SIGNAL = -1L;
 
     long INVALID_THREAD_ID = -1L;
+
+    int INVALID_TTID = -1;
 }

@@ -21,6 +21,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.omg.CORBA.DynAnyPackage.Invalid;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -704,6 +705,23 @@ public class MaximalCausalModelTest {
 
         List<RawTrace> rawTraces = Arrays.asList(
                 createRawTrace(
+                        setSignalMask(SIGNAL_1_ENABLED_MASK, THREAD_1, NO_SIGNAL),
+                        e1 = nonAtomicLoad(ADDRESS_1, VALUE_1, THREAD_1, NO_SIGNAL),
+                        enableSignal(SIGNAL_NUMBER_1, THREAD_1, NO_SIGNAL)),
+                createRawTrace(
+                        enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, THREAD_1, ONE_SIGNAL),
+                        e2 = nonAtomicStore(ADDRESS_1, VALUE_1, THREAD_1, NO_SIGNAL)));
+
+        Assert.assertTrue(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
+    }
+
+    public void recurrentSignalFix() throws InvalidTraceDataException {
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                createRawTrace(
+
                         setSignalMask(SIGNAL_1_ENABLED_MASK, THREAD_1, NO_SIGNAL),
                         e1 = nonAtomicLoad(ADDRESS_1, VALUE_1, THREAD_1, NO_SIGNAL),
                         enableSignal(SIGNAL_NUMBER_1, THREAD_1, NO_SIGNAL)),

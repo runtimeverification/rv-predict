@@ -17,21 +17,14 @@ public class EventsEnabledForSignalIterator {
     private final long signalNumber;
     private final Iterator<ReadonlyEventInterface> eventsIterator;
 
-    private ReadonlyEventInterface previousPreviousEvent;
     private ReadonlyEventInterface previousEvent;
     private ReadonlyEventInterface currentEvent;
-    /**
-     * Whether the signal is enabled after the {@link #previousPreviousEvent} event.
-     */
-    private boolean previousPreviousEnabled;
-    /**
-     * Whether the signal is enabled after the {@link #previousEvent} event.
-     */
-    private boolean previousEnabled;
+
     /**
      * Whether the signal is enabled after the {@link #currentEvent} event.
      */
     private boolean enabled;
+    private boolean firstStep;
 
     public EventsEnabledForSignalIterator(
             Collection<ReadonlyEventInterface> events,
@@ -39,20 +32,14 @@ public class EventsEnabledForSignalIterator {
             long signalNumber, boolean enabledAtStart) {
         this.detectInterruptedThreadRace = detectInterruptedThreadRace;
         this.signalNumber = signalNumber;
-        previousPreviousEvent = null;
         previousEvent = null;
         currentEvent = null;
-        previousPreviousEnabled = false;
-        previousEnabled = false;
         enabled = enabledAtStart;
         eventsIterator = events.iterator();
+        firstStep = true;
     }
 
     public ReadonlyEventInterface getPreviousEventWithDefault(ReadonlyEventInterface defaultValue) {
-        assert previousEnabled;
-        if (detectInterruptedThreadRace && previousPreviousEnabled) {
-            return eventWithDefault(previousPreviousEvent, defaultValue);
-        }
         return eventWithDefault(previousEvent, defaultValue);
     }
 
@@ -61,22 +48,46 @@ public class EventsEnabledForSignalIterator {
     }
 
     public boolean advance() {
-        while (advanceOneStep()) {
-            if (previousEnabled) {
-                return true;
+        if (!enabled) {
+            if (!findNextEnabledEvent()) {
+                previousEvent = null;
+                return false;
             }
         }
-        return false;
+        previousEvent = currentEvent;
+        if (detectInterruptedThreadRace) {
+            findNextDisabledEvent();
+        } else {
+            advanceOneStep();
+        }
+        if (firstStep) {
+            firstStep = false;
+            return true;
+        }
+        return previousEvent != null || currentEvent != null;
+    }
+
+    private boolean findNextEnabledEvent() {
+        do {
+            if (!advanceOneStep()) {
+                return false;
+            }
+        } while (!enabled);
+        return true;
+    }
+
+    private void findNextDisabledEvent() {
+        do {
+            if (!advanceOneStep()) {
+                return;
+            }
+        } while (enabled);
     }
 
     private boolean advanceOneStep() {
-        previousPreviousEnabled = previousEnabled;
-        previousEnabled = enabled;
-        previousPreviousEvent = previousEvent;
-        previousEvent = currentEvent;
         if (!eventsIterator.hasNext()) {
             currentEvent = null;
-            return detectInterruptedThreadRace ? previousPreviousEvent != null : previousEvent != null;
+            return false;
         }
         currentEvent = eventsIterator.next();
         enabled = Signals.updateEnabledWithEvent(enabled, signalNumber, currentEvent);

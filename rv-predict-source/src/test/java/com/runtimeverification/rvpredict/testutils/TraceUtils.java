@@ -197,4 +197,12 @@ public class TraceUtils {
         this.nextThreadNumber++;
         return new RawTrace(0, pos, paddedEvents, paddedEvents[0].getSignalDepth(), currentThreadNumber);
     }
+    @SafeVarargs
+    public final List<ReadonlyEventInterface> flatten(List<ReadonlyEventInterface>... events) {
+        List<ReadonlyEventInterface> flattened = new ArrayList<>();
+        for (List<ReadonlyEventInterface> eventList : events) {
+            flattened.addAll(eventList);
+        }
+        return flattened;
+    }
 }

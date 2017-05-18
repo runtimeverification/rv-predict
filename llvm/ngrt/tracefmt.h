@@ -20,7 +20,8 @@ typedef uintptr_t rvp_addr_t;
 struct _rvp_trace_header {
 	char th_magic[4];               // 'R' 'V' 'P' '_'
 					//
-	uint32_t th_version;            // 0
+	uint8_t th_version[4];          // major minor teeny tiny
+					// 0     0     0     1
 					//
 	uint32_t th_byteorder;          // byte-order indication,
 					// see discussion
@@ -83,17 +84,14 @@ typedef enum _rvp_op {
 	, RVP_OP_SIGDIS		= 38	// disestablish signal action
 	, RVP_OP_SIGMASKMEMO	= 39	// establish a new number -> mask
 					// mapping (memoize mask)
-	, RVP_OP_MASKSIGS	= 40	// mask signals
-	, RVP_OP_SIGOUTST	= 41	// set the number of signals
+	, RVP_OP_SIGSETMASK	= 40	// set signal mask
+	, RVP_OP_SIGDEPTH	= 41	// set the number of signals
 					// running concurrently on the
-					// current thread.  Note that
-					// this is a level of "concurrency,"
-					// not a signal "depth," because
-					// the wrapper function for signal
-					// handlers is reentrant, and it may
-					// race with itself to increase the
-					// number of interrupts outstanding
-					// ("depth").
+					// current thread.
+	, RVP_OP_SIGBLOCK	= 42	// block signals
+	, RVP_OP_SIGUNBLOCK	= 43	// unblock signals
+	, RVP_OP_SIGGETSETMASK	= 44	// get old mask, set new mask
+	, RVP_OP_SIGGETMASK	= 45	// get current mask
 	, RVP_NOPS
 } rvp_op_t;
 
@@ -126,19 +124,26 @@ typedef struct {
 
 typedef struct {
 	rvp_addr_t deltop;
+	rvp_addr_t handler;
 	uint64_t generation;
 	uint32_t signum;
 } __packed __aligned(sizeof(uint32_t)) rvp_entersig_t;
 
 typedef struct {
 	rvp_addr_t deltop;
-	uint32_t noutst;
-} __packed __aligned(sizeof(uint32_t)) rvp_sigoutst_t;
+	uint32_t depth;
+} __packed __aligned(sizeof(uint32_t)) rvp_sigdepth_t;
 
 typedef struct {
 	rvp_addr_t deltop;
 	uint32_t masknum;
-} __packed __aligned(sizeof(uint32_t)) rvp_masksigs_t;
+} __packed __aligned(sizeof(uint32_t)) rvp_sigmask_access_t;
+
+typedef struct {
+	rvp_addr_t deltop;
+	uint32_t omasknum;
+	uint32_t masknum;
+} __packed __aligned(sizeof(uint32_t)) rvp_sigmask_rmw_t;
 
 typedef struct {
 	rvp_addr_t deltop;
@@ -160,6 +165,27 @@ typedef struct {
 	uint32_t signum;
 } __packed __aligned(sizeof(uint32_t)) rvp_sigdis_t;
 
+/* Assumes a data width of 32 bits. */
+typedef struct {
+	rvp_addr_t deltop;
+	rvp_addr_t addr;
+	uint32_t onval;
+} __packed __aligned(sizeof(uint32_t)) rvp_rmw1_2_t;
+
+/* Assumes a data width of 32 bits. */
+typedef struct {
+	rvp_addr_t deltop;
+	rvp_addr_t addr;
+	uint32_t oval, nval;
+} __packed __aligned(sizeof(uint32_t)) rvp_rmw4_t;
+
+/* Assumes a data width of 64 bits or less. */
+typedef struct {
+	rvp_addr_t deltop;
+	rvp_addr_t addr;
+	uint64_t oval, nval;
+} __packed __aligned(sizeof(uint32_t)) rvp_rmw8_t;
+
 typedef struct {
 	rvp_addr_t deltop;
 	rvp_addr_t addr;
@@ -174,7 +200,12 @@ typedef struct {
 
 typedef struct {
 	rvp_addr_t deltop;
-} __packed __aligned(sizeof(uint32_t)) rvp_end_enterfn_exitfn_t;
+} __packed __aligned(sizeof(uint32_t)) rvp_end_exitfn_t;
+
+typedef struct {
+	rvp_addr_t deltop;
+	rvp_addr_t cfa;
+} __packed __aligned(sizeof(uint32_t)) rvp_enterfn_t;
 
 typedef struct {
 	rvp_addr_t deltop;

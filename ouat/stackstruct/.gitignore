@@ -1,0 +1,8 @@
+*.d
+.depend
+.gdbinit
+*.ll
+.Makefile.tags
+*.o
+stackstruct
+.*.swp

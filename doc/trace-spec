@@ -1,15 +1,3 @@
-Here is an updated specification for trace files.  Major changes:
-
-1) I don't align fields to the pointer width (e.g., to 8 bytes on a
-   64-bit system).  Rather, 32-bit alignment.
-
-2) I replace "throps" (thread/opcode tuples) with "deltops"
-   (delta-PC/opcode tuples).
-
-3) The trace header tells the trace byte order of the trace contents.
-
-***
-
 An RV-Predict[C] event trace file starts with a header that indicates
 the format and version of the file.  Following the header are the event
 traces.  Traces continue right up to the end of the file, and in a
@@ -23,10 +11,12 @@ RV-Predict[C] trace file from files in other formats.  The magic
 consists of the 8-bit ASCII representations for the characters 'R' 'V'
 'P' '_', in that order.
 
-Immediately following the magic is a 32-bit version number.  The initial
-version number is 0.  We will increase it with every incompatible change
-to the file format.  A trace-file reader MUST give up if it reads a
-version number that it does not recognize.
+Immediately following the magic is a 4-byte version number.  The bytes
+provide the major, minor, teeny, and tiny number, in that order.
+The initial version number was 0.0.0.0.  The current version number
+is 0.0.0.2.  We will increase it with every incompatible change to the
+file format.  A trace-file reader MUST give up if it reads a version
+number that it does not recognize.
 
 After the version number is a 32-bit byte-order indication: this is the
 word formed from the 8-bit ASCII representations of the digits 0, 1, 2,
@@ -45,7 +35,7 @@ should suppose that data narrower than the default data width was
 converted to the default data width before it was written to the trace
 file.  That is, if the default data width is 4, then 1- and 2-byte loads
 and stores were "cast" to uint32_t before they were written to the trace
-file.  The reader stores the pointer width in a variable `dataw`.
+file.  The reader stores the data width in a variable `dataw`.
 
 After the default data width there are two bytes that pad the header to
 a whole number of 32-bit words.
@@ -59,8 +49,8 @@ Here is a trace header in code:
   struct _rvp_trace_header {
           char th_magic[4];               // 'R' 'V' 'P' '_'
                                           //
-          uint32_t th_version;            // 0
-                                          //
+          uint8_t th_version[4];         // major minor teeny tiny
+                                          // 0     0     0     1
           uint32_t th_byteorder;          // byte-order indication,
                                           // see discussion
                                           //
@@ -101,20 +91,41 @@ Right now I have in mind just 28 opcodes, which I assign these numbers:
         store16         11
         fork            12      // create a new thread 
         join            13      // join an existing thread
-        acquire1        14      // exclude reads/writes on  1 byte
-        release1        15
-        acquire2        16      //          ...             2 bytes
-        release2        17
-        acquire4        18      //          ...             4 bytes
-        release4        19
-        acquire8        20      //          ...             8 bytes
-        release8        21
-        acquire16       22      //          ...            16 bytes
-        release16       23
-        branch          24
-        enterfn         25      // enter a function
-        exitfn          26      // exit a function
-        switch          27      // switch thread context
+        acquire         14      // acquire/release lock
+        release         15
+        enterfn         16      // enter a function
+        exitfn          17      // exit a function
+        switch          18      // switch thread context
+	atomic-rmw1	19	// atomic read-modify-write:
+	atomic-rmw2	20	// 1, 2, 4, 8, 16 bytes wide
+	atomic-rmw4	21
+	atomic-rmw8	22
+	atomic-rmw16	23
+	atomic-load1	24	// atomic load: 1, 2, 4, 8, 16 bytes wide
+	atomic-load2	25
+	atomic-load4	26
+	atomic-load8	27
+	atomic-load16	28
+	atomic-store1	29	// atomic store: 1, 2, 4, 8, 16 bytes wide
+	atomic-store2	30
+	atomic-store4	31
+	atomic-store8	32
+	atomic-store16	33
+	cog		34	// change of generation
+	sig-est		35	// establish signal action
+	enter-signal	36	// enter/exit signal handler
+	exit-signal	37
+	sig-dis		38	// disestablish signal action
+	sig-mask-memo	39	// establish a new number -> mask
+	      			// mapping (memoize mask)
+	sig-set-mask	40	// set the signal mask
+	sig-depth	41	// set the number of signals
+				// running concurrently on the
+				// current thread.
+	block-sigs	42	// add signals to the current mask	
+	unblock-sigs	43	// remove signals from the current mask
+	sig-getset-mask	44	// get old mask, set new mask
+	sig-get-mask	45	// get old mask
 
 The first trace helps the reader to establish an important fact that
 lets it interpret the following traces: PC = (0, begin).  That
@@ -239,13 +250,18 @@ trace ::= (delta, 'load[n]') addr value
 
                 `n` must be a power of two.
 
+                `old-value` is the value that `addr` had before the
+                read-modify-write (rmw---e.g., atomic add) took place,
+                and `new-value` is the value that `addr` took when the
+                rmw was complete.
+
                 `old-value` and `new-value` are values max(`n`, `dataw`)
-                bytes wide.  .  If `n >= dataw`, then `old-value` starts
+                bytes wide.  If `n >= dataw`, then `old-value` starts
                 on the first `dataw`-byte boundary after `addr`, and
                 `new-value` starts on the first `dataw`-byte boundary
                 after `old-value`.  If `n < dataw`, then `old-value`
                 and `new-value` are combined into a single word with
-                `old-value` in bits (dataw * 8 - 1:dataw * 4) and
+                `new-value` in bits (dataw * 8 - 1:dataw * 4) and
                 `old-value` in bits (dataw * 4 - 1:0).  The single
                 `n`-byte word is written in at the first `dataw`-byte
                 boundary after `addr`.  In this way, if `dataw` is 4 and
@@ -258,6 +274,172 @@ trace ::= (delta, 'load[n]') addr value
 
                 `self.PC <- self.PC + delta`
 
+	| (delta, 'cog') generation
+
+                The current thread added `delta` to its program counter
+		and adopted the global generation number `generation`.
+
+                `generation` is a 64-bit unsigned integer that begins
+                on the first 32-bit boundary after the deltop.  It is
+                stored in the byte order established by the trace header.
+
+                `self.PC <- self.PC + delta`
+
+	| (delta, 'sig-est') handler signal-number mask-number
+
+                The current thread added `delta` to its program counter
+                and established, for all threads, the signal handler
+                at address `handler` on signal number `signal-number`.
+                `mask-number` tells the number of a previously-memoized
+                signal mask (see operation `sig-mask-memo`); that mask
+                will be in effect while `handler` runs for the given
+                signal number.
+
+		`handler` is an address `ptrw` that starts on the first
+		32-bit boundary after the deltop.
+
+                `signal-number` and `mask-number` are 32 bits wide.
+                They begin on the first 32-bit boundary after `handler`
+                and `signal-number`, respectively.
+
+                `handler`, `signal-number`, and `mask-number` are stored
+                in the byte order established by the trace header.
+
+                `handler[signal-number] <- handler`
+                `handler_mask[signal-number] <- mask_memo[mask-number]`
+                `self.PC <- self.PC + delta`
+
+	| (delta, 'sig-dis') signal-number
+
+                The current thread added `delta` to its program counter
+                and disestablished the signal handler on signal number
+                `signal-number` for all threads.
+
+                `signal-number` is 32 bits wide.  It begins on the first
+                32-bit boundary after the deltop.
+
+                `signal-number` is stored in the byte order established
+                by the trace header.
+
+		`self.handler[signal-number] <- nil`
+                `self.PC <- self.PC + delta`
+
+	| (delta, 'enter-signal') handler generation signal-number
+
+                The current thread added `delta` to its program counter,
+                adopted the global generation number `generation`,
+                and entered the signal handler, `handler` that was
+                established on `signal-number`.
+
+                `self.PC <- self.PC + delta`
+		`self.signal_mask[self.signal_depth] <-
+		     handler_mask[signal-number]`
+
+	| (delta, 'exit-signal') 
+
+                The current thread added `delta` to its program counter
+                and exited the last signal handler that it entered.
+
+                `self.PC <- self.PC + delta`
+
+	| (delta, 'sig-depth') depth
+
+                The current thread added `delta` to its program counter.
+                Subsequent events occurred on the current thread at
+                signal depth `depth`.
+
+                `self.PC <- self.PC + delta`
+		`self.signal_depth <- depth`
+
+	| (delta, 'sig-mask-memo') mask origin mask-number
+
+                The current thread added `delta` to its program counter,
+                and saved the mask formed by shifting `mask` left by
+                `origin` bits in slot `mask-number` of the masks table
+                shared by all threads.
+
+                `mask` is 64 bits wide.  `origin` and `mask-number` are
+                both 32 bits wide.  `mask`, `origin`, and `mask-number`
+                each start on the first 32-bit boundary after the previous
+                element, and they are stored in the byte order established
+                by the trace header.
+
+                TBD add to this document an explanation of mask
+                    memoization
+
+                `self.PC <- self.PC + delta`
+                `mask_memo[mask-number] <- mask << origin`
+
+	| (delta, 'sig-get-set-mask') old-mask-number mask-number
+
+                The current thread added `delta` to its program
+                counter, read the current signal mask (memoized mask
+                `old-mask-number`), and changed the current effective
+                signal mask to the memoized mask `mask-number`.
+
+                `old-mask-number` is 32 bits wide.  It starts on the
+                first 32-bit boundary after the deltop, and it is stored
+                in the byte order established by the trace header.
+                `mask-number` is also 32 bits wide, and it starts on
+                the first 32-bit boundary after `old-mask-number`.
+
+                `self.signal_mask[self.signal_depth] = mask_memo[mask-number]`
+                `self.PC <- self.PC + delta`
+
+	| (delta, 'sig-get-mask') mask-number
+
+                The current thread added `delta` to its program
+                counter, and read the current signal mask (memoized mask
+                `old-mask-number`).
+
+                `mask-number` is 32 bits wide.  It starts on the first
+                32-bit boundary after the deltop, and it is stored in
+                the byte order established by the trace header.
+
+                `self.PC <- self.PC + delta`
+
+	| (delta, 'sig-set-mask') mask-number
+
+                The current thread added `delta` to its program counter,
+                and changed the current effective signal mask to the
+                memoized mask `mask-number`.
+
+                `mask-number` is 32 bits wide.  It starts on the first
+                32-bit boundary after the deltop, and it is stored in
+                the byte order established by the trace header.
+
+                `self.signal_mask[self.signal_depth] = mask_memo[mask-number]`
+                `self.PC <- self.PC + delta`
+
+	| (delta, 'block-sigs') mask-number
+
+                The current thread added `delta` to its program counter,
+                and changed the current effective signal mask to the
+		union of the old mask and the memoized mask `mask-number`.
+
+                `mask-number` is 32 bits wide.  It starts on the first
+                32-bit boundary after the deltop, and it is stored in
+                the byte order established by the trace header.
+
+                `self.signal_mask[self.signal_depth] =
+		  self.signal_mask[self.signal_depth] | mask_memo[mask-number]`
+                `self.PC <- self.PC + delta`
+
+	| (delta, 'unblock-sigs') mask-number
+
+                The current thread added `delta` to its program counter,
+                and changed the current effective signal mask to the
+                intersection of the old mask and the complement of the
+                memoized mask `mask-number`.
+
+                `mask-number` is 32 bits wide.  It starts on the first
+                32-bit boundary after the deltop, and it is stored in
+                the byte order established by the trace header.
+
+                `self.signal_mask[self.signal_depth] =
+		  self.signal_mask[self.signal_depth] & ~mask_memo[mask-number]`
+                `self.PC <- self.PC + delta`
+
         | program-counter
 
                 The current thread changed its program counter to
@@ -267,12 +449,16 @@ trace ::= (delta, 'load[n]') addr value
 
                 `self.PC <- program-counter`
 
-        | (delta, 'begin') tid
+        | (delta, 'begin') tid generation
 
-                A new thread, `tid`, started.
+                A new thread, `tid`, started, and adopted the
+		global generation number `generation`.
 
                 `tid` begins on the first 32-bit boundary after
                 the deltop, and it is `dataw` bytes wide.
+
+                `generation` begins on the first 32-bit boundary after
+                `tid`, and it is 64 bits wide.
 
                 XXX Perhaps `tid` should be `ptrw` bytes wide, instead?
                 XXX That is how I originally specified it, but
@@ -286,6 +472,7 @@ trace ::= (delta, 'load[n]') addr value
                 `t <- new tid`
                 `t.PC <- self.PC + delta`
                 `self <- t`
+		`self.signal_depth <- 0`
 
         | (delta, 'end')           
 
@@ -329,18 +516,14 @@ trace ::= (delta, 'load[n]') addr value
 
                 `self.PC <- self.PC + delta`
 
-        | (delta, 'branch')
+        | (delta, 'enterfn') cfa
 
-                The current thread added `delta` to its program
-                counter and performed a conditional branch.
-
-                `self.PC <- self.PC + delta`
-
-        | (delta, 'enterfn')
-
-                The current thread added `delta` to its program
-                counter and entered a function at the new program
-                counter.
+                The current thread added `delta` to its program counter
+                and entered a function at the new program counter.
+                The DWARF Canonical Frame Address (CFA) for the function's
+                new stack frame is given by the address `cfa`, which
+                begins on the first 32-bit boundary after the deltop;
+                it is `ptrw` bytes wide.
 
                 `self.PC <- self.PC + delta`
 
@@ -352,39 +535,90 @@ trace ::= (delta, 'load[n]') addr value
 
                 `self.PC <- self.PC + delta`
 
-        | (delta, 'acquire[n]') addr
+        | (delta, 'acquire') addr
 
                 The current thread added `delta` to its program counter
-                and acquired a lock on the `n`-byte memory region at
-                address `addr`.
+                and acquired a lock on the byte at address `addr`.
 
                 `addr` begins on the first 32-bit boundary after
                 the deltop, and it is `ptrw` bytes wide.
 
-                Note: no thread may have already locked any
-                part of the region.
+                Note: no thread may have already locked the byte.
 
                 `self.PC <- self.PC + delta`
 
-        | (delta, 'release[n]') addr
+        | (delta, 'release') addr
 
-                The current thread added `delta` to its program
-                counter and released a lock on the `n`-byte memory
-                region at address `addr`.
+                The current thread added `delta` to its program counter
+                and released a lock on the byte at address `addr`.
 
                 `addr` begins on the first 32-bit boundary after
                 the deltop, and it is `ptrw` bytes wide.
 
                 Note: the current thread must hold the lock on the
-                identical region, no subregion or superior region.
+                same byte.
 
                 `self.PC <- self.PC + delta`
 
         | (delta, 'switch') tid
 
-                The current thread added `delta` to its program
-                counter.  Then the current thread changed to `tid`.
+                The current thread added `delta` to its program counter.
+                Then the current thread changed to `tid` and reset the
+                signal depth to 0.
+
+                `tid` begins on the first 32-bit boundary after the
+                deltop, and it is 32 bits wide.
 
                 `self.PC <- self.PC + delta`
                 `self <- tid`
+		`self.signal_depth <- 0`
 
+# History
+
+Major changes from the version that was discussed on all@ mailing list: 
+
+1) I don't align fields to the pointer width (e.g., to 8 bytes on a
+   64-bit system).  Rather, 32-bit alignment.
+
+2) I replace "throps" (thread/opcode tuples) with "deltops"
+   (delta-PC/opcode tuples).
+
+3) The trace header tells the trace byte order of the trace contents.
+
+Major changes from the second version and the version that I
+actually implemented:
+
+4) acquire/release do not come in multiple byte widths.
+
+5) there is no 'branch' event, since the backend doesn't support it
+
+6) events were renumbered
+
+7) 1-, 2-, 4-, 8-, 16-byte atomic read-modify-write events are defined.
+
+8) 1-, 2-, 4-, 8-, 16-byte atomic load and store events are assigned
+   event numbers.
+
+9) the change-of-generation ('cog') event is defined
+
+10) 'sig-est', 'enter-signal', 'exit-signal', 'sig-dis',
+    'sig-mask-memo', 'mask-sigs' events, and 'sig-outstanding' events
+    are defined
+
+Subsequent changes:
+
+11) Event 'mask-sigs' renamed to 'sig-set-mask', and event
+    'sig-outstanding' renamed to 'sig-depth'.
+
+12) 'sig-get-mask', 'sig-get-set-mask', 'sig-block', 'sig-unblock'
+    events are defined.
+
+More changes:
+
+13) add to the enter-signal event the address of the signal handler so
+    that the analysis backend can ensure that a signal handler does not
+    run before it is scheduled.
+
+14) change the version number specification: it's 4 bytes, major / minor
+    / teeny / tiny, not a 32-bit word.  Increase the current version
+    number to 0.0.0.1.

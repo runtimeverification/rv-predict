@@ -22,17 +22,23 @@ rvp_buf_put(rvp_buf_t *b, uint32_t item)
 }
 
 static inline void
-rvp_buf_put_addr(rvp_buf_t *b, const void *addr)
+rvp_buf_put_addr(rvp_buf_t *b, rvp_addr_t addr)
 {
 	unsigned int i;
 	union {
 		rvp_addr_t uaddr;
 		uint32_t u32[sizeof(rvp_addr_t) / sizeof(uint32_t)];
-	} addru = {.uaddr = (rvp_addr_t)addr};
+	} addru = {.uaddr = addr};
 
 	for (i = 0; i < __arraycount(addru.u32); i++) {
 		rvp_buf_put(b, addru.u32[i]);
 	}
+}
+
+static inline void
+rvp_buf_put_voidptr(rvp_buf_t *b, const void *addr)
+{
+	rvp_buf_put_addr(b, (rvp_addr_t)addr);
 }
 
 static inline void

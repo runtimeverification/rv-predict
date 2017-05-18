@@ -4,7 +4,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.BinaryParser;
 
 /**
@@ -25,7 +24,7 @@ public class LLVMEventReader implements IEventReader {
     }
 
     @Override
-    public final Event readEvent() throws IOException {
+    public final ReadonlyEventInterface readEvent() throws IOException {
         try {
             lastReadEvent = new Event(
                     in.readLong(),
@@ -43,7 +42,7 @@ public class LLVMEventReader implements IEventReader {
     }
 
     @Override
-    public Event lastReadEvent() {
+    public ReadonlyEventInterface lastReadEvent() {
         return this.lastReadEvent;
     }
 

@@ -23,7 +23,7 @@ typedef struct _threadswitch {
 
 static const rvp_trace_header_t header = {
 	  .th_magic = "RVP_"
-	, . th_version = 0
+	, . th_version = {0, 0, 0, 2}
 	, .th_byteorder = '0' | ('1' << 8) | ('2' << 16) | ('3' << 24)
 	, .th_pointer_width = sizeof(rvp_addr_t)
 	, .th_data_width = sizeof(uint32_t)
@@ -74,10 +74,10 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 		      (rvp_addr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SWITCH)
 		, .tid = r->r_tid
 	};
-	rvp_sigoutst_t sigoutst = {
+	rvp_sigdepth_t sigdepth = {
 		  .deltop =
-		      (rvp_addr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SIGOUTST)
-		, .noutst = r->r_nintr_outst
+		      (rvp_addr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SIGDEPTH)
+		, .depth = r->r_idepth
 	};
 	struct iovec iov[4] = {
 		  [0] = (struct iovec){
@@ -85,8 +85,8 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 			, .iov_len = sizeof(threadswitch)
 		}
 		, [1] = (struct iovec){
-			  .iov_base = &sigoutst
-			, .iov_len = sizeof(sigoutst)
+			  .iov_base = &sigdepth
+			, .iov_len = sizeof(sigdepth)
 		}
 	};
 	struct iovec *iovp = &iov[0];
@@ -95,12 +95,12 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 		;
 	else if (lc->lc_tid != r->r_tid) {
 		iovp++; /* emit 'switch' to r->r_tid */
-		if (r->r_nintr_outst != 0) {
-			iovp++; /* emit 'sigoutst' to r->r_nintr_outst */
+		if (r->r_idepth != 0) {
+			iovp++; /* emit 'sigdepth' to r->r_idepth */
 		}
-	} else if (lc->lc_nintr_outst != r->r_nintr_outst) {
+	} else if (lc->lc_idepth != r->r_idepth) {
 		iov[0] = iov[1];
-		iovp++; /* emit 'sigoutst' to r->r_nintr_outst */
+		iovp++; /* emit 'sigdepth' to r->r_idepth */
 	}
 
 	if (!rvp_ring_get_iovs(r, &iovp, &next_consumer))
@@ -116,7 +116,7 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 	r->r_consumer = next_consumer;
 	if (lc != NULL) {
 		lc->lc_tid = r->r_tid;
-		lc->lc_nintr_outst = r->r_nintr_outst;
+		lc->lc_idepth = r->r_idepth;
 	}
 	return true;
 }
@@ -146,28 +146,26 @@ rvp_buf_put_pc_and_op(rvp_buf_t *b, const char **lastpcp, const char *pc,
 	*lastpcp = pc;
 
 	if (deltop == NULL) {
-		rvp_buf_put_addr(b, pc);
+		rvp_buf_put_voidptr(b, pc);
 		deltop = rvp_vec_and_op_to_deltop(0, op);
 		assert(deltop != NULL);
 	}
-	rvp_buf_put_addr(b, deltop);
+	rvp_buf_put_voidptr(b, deltop);
 }
 
 void
 rvp_ring_put_begin(rvp_ring_t *r, uint32_t tid, uint64_t generation)
 {
-	r->r_lastpc = __builtin_return_address(0);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
-	rvp_buf_put_addr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN));
+	rvp_buf_put_voidptr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN));
 	rvp_buf_put(&b, tid);
 	rvp_buf_put_u64(&b, generation);
-	rvp_buf_put_addr(&b, r->r_lastpc);
 	rvp_ring_put_buf(r, b);
 }
 
 void
 rvp_buf_put_cog(rvp_buf_t *b, uint64_t generation)
 {
-	rvp_buf_put_addr(b, rvp_vec_and_op_to_deltop(0, RVP_OP_COG));
+	rvp_buf_put_voidptr(b, rvp_vec_and_op_to_deltop(0, RVP_OP_COG));
 	rvp_buf_put_u64(b, generation);
 }

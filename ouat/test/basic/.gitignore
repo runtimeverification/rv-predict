@@ -1,0 +1,8 @@
+basic
+core
+*.core
+*.d
+.depend
+*.o
+.*.swp
+*.test.out

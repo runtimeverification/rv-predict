@@ -4,19 +4,25 @@
 # That is, it is not reliant on any bash-isms.
 #
 
-PASS_DIR=$RV_ROOT/rv-predict/llvm/build/pass
-RUNTIME_DIR=$RV_ROOT/rv-predict/llvm/ngrt
+PASS_DIR=${RV_ROOT:-/usr/local}/lib
+RUNTIME_DIR=${RV_ROOT:-/usr/local}/lib
 
 cplusplus=no
 sources=no
 link=yes
 compile=yes
 
+prog=$(basename $0)
+
+if [ ${prog%%++} != ${prog} ]; then
+	cplusplus=yes
+fi
+
 for arg in "$@"; do
 	case "$arg" in
 	--)	break
 		;;
-	-E)	compile=no
+	-M*|-E)	compile=no
 		link=no
 		continue
 		;;

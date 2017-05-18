@@ -69,9 +69,9 @@ import com.runtimeverification.rvpredict.util.Constants;
  * <ul>
  * <li><b>Program order + Start/Join constraint</b>
  * <p>
- * Therefore, {@link EventType#START} and {@link EventType#PRE_JOIN} must be
+ * Therefore, {@link EventType#START_THREAD} and {@link EventType#PRE_JOIN} must be
  * logged before {@link Thread#start()} and {@link Thread#join()} respectively,
- * while {@link EventType#JOIN}, {@link EventType#JOIN_MAYBE_FAILED} must be
+ * while {@link EventType#JOIN_THREAD}, {@link EventType#JOIN_MAYBE_FAILED} must be
  * logged after {@link Thread#join()}.
  *
  * <li><b>Lock mutual exclusion</b>
@@ -211,16 +211,16 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictWait(Object object, long timeout, int locId)
             throws InterruptedException {
-        saveLockEvent(EventType.WAIT_REL, locId, MONITOR_C, object);
+        saveLockEvent(EventType.WAIT_RELEASE, locId, MONITOR_C, object);
         try {
             object.wait(timeout);
         } catch (InterruptedException e) {
             clearInterruptedStatus(Thread.currentThread(), locId);
-            saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
+            saveLockEvent(EventType.WAIT_ACQUIRE, locId, MONITOR_C, object);
             throw e;
         }
 
-        saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
+        saveLockEvent(EventType.WAIT_ACQUIRE, locId, MONITOR_C, object);
     }
 
     /**
@@ -238,16 +238,16 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictWait(Object object, long timeout, int nano, int locId)
             throws InterruptedException {
-        saveLockEvent(EventType.WAIT_REL, locId, MONITOR_C, object);
+        saveLockEvent(EventType.WAIT_RELEASE, locId, MONITOR_C, object);
         try {
             object.wait(timeout, nano);
         } catch (InterruptedException e) {
             clearInterruptedStatus(Thread.currentThread(), locId);
-            saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
+            saveLockEvent(EventType.WAIT_ACQUIRE, locId, MONITOR_C, object);
             throw e;
         }
 
-        saveLockEvent(EventType.WAIT_ACQ, locId, MONITOR_C, object);
+        saveLockEvent(EventType.WAIT_ACQUIRE, locId, MONITOR_C, object);
     }
 
     /**
@@ -323,7 +323,7 @@ public final class RVPredictRuntime implements Constants {
      */
     public static void rvPredictStart0(Thread thread, int locId) {
         locId = metadata.getLocationId(new Throwable().getStackTrace()[2].toString());
-        saveThreadSyncEvent(EventType.START, locId, thread.getId());
+        saveThreadSyncEvent(EventType.START_THREAD, locId, thread.getId());
         metadata.addThreadCreationInfo(thread.getId(), Thread.currentThread().getId(), locId);
         try {
             THREAD_START0.invoke(thread);
@@ -342,7 +342,7 @@ public final class RVPredictRuntime implements Constants {
      */
     public static boolean rvPredictIsAlive(Thread thread, int locId) {
         if (!thread.isAlive()) {
-            saveThreadSyncEvent(EventType.JOIN, locId, thread.getId());
+            saveThreadSyncEvent(EventType.JOIN_THREAD, locId, thread.getId());
             return false;
         }
         return true;
@@ -368,7 +368,7 @@ public final class RVPredictRuntime implements Constants {
         }
 
         if (millis == 0) {
-            saveThreadSyncEvent(EventType.JOIN, locId, thread.getId());
+            saveThreadSyncEvent(EventType.JOIN_THREAD, locId, thread.getId());
         }
     }
 
@@ -385,7 +385,7 @@ public final class RVPredictRuntime implements Constants {
         }
 
         if (millis == 0 && nanos == 0) {
-            saveThreadSyncEvent(EventType.JOIN, locId, thread.getId());
+            saveThreadSyncEvent(EventType.JOIN_THREAD, locId, thread.getId());
         }
     }
 

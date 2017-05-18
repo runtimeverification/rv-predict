@@ -31,7 +31,7 @@ struct _rvp_thread {
 	 * the signal mask that's in effect.
 	 */
 	uint64_t		t_intrmask;
-	uint32_t _Atomic	t_nintr_outst;
+	uint32_t _Atomic	t_idepth;
 	rvp_ring_t * _Atomic	t_intr_ring;
 };
 

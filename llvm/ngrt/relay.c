@@ -23,7 +23,7 @@ rvp_wake_relay(void)
 }
 
 static void *
-relay(void *arg)
+relay(void *arg __unused)
 {
 	sigset_t sigset, maskall;
 	int expected_signum = -1, rc, rcvd_signum;

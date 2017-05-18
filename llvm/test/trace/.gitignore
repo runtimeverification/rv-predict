@@ -1,0 +1,6 @@
+*.d
+.depend
+.Makefile.tags
+mask
+*.o
+tags

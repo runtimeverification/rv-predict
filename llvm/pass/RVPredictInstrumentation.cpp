@@ -29,6 +29,7 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -45,6 +46,9 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+
+#include "Diagnostic.h"
+#include "InterruptAnnotation.h"
 
 using namespace llvm;
 
@@ -90,6 +94,7 @@ public:
   GlobalVariable *createOrderingPointer(IRBuilder<> *, AtomicOrdering);
   Value *createOrdering(IRBuilder<> *, AtomicOrdering);
   static char ID;  // Pass identification, replacement for typeid.
+  virtual void getAnalysisUsage(AnalysisUsage &Info) const;
 
  private:
   void initializeCallbacks(Module &M);
@@ -161,6 +166,13 @@ RVPredictInstrument::getPassName() const
 }
 
 void
+RVPredictInstrument::getAnalysisUsage(AnalysisUsage &AU) const
+{
+    // The RVPredictInstrument function pass invalidates all other passes.
+    AU.addRequired<InterruptAnnotation>();
+}
+
+void
 RVPredictInstrument::initializeCallbacks(Module &m)
 {
 	IRBuilder<> builder(m.getContext());
@@ -168,12 +180,12 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 	auto void_type = builder.getVoidTy();
 	auto int8_ptr_type = builder.getInt8PtrTy();
 
-	/* void __rvpredict_func_entry(void *);
-	 * void __rvpredict_func_exit(void *);
+	/* const void *__rvpredict_func_entry(const void *, const void *);
+	 * void __rvpredict_func_exit(const void *);
 	 */
 	fnenter = checkSanitizerInterfaceFunction(
-	    m.getOrInsertFunction( "__rvpredict_func_entry", void_type,
-	        int8_ptr_type, nullptr));
+	    m.getOrInsertFunction( "__rvpredict_func_entry",
+	        int8_ptr_type, int8_ptr_type, nullptr));
 	fnexit = checkSanitizerInterfaceFunction(
 	    m.getOrInsertFunction("__rvpredict_func_exit", void_type,
 	        int8_ptr_type, nullptr));
@@ -199,22 +211,27 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 		 * void __rvpredict_unaligned_load{m}(uint{n}_t *addr,
 		 *     uint{n}_t val);
 		 *
-		 * void __rvpredict_atomic_store{m}(uint{n}_t *addr,
+		 * void __rvpredict_atomic_store{m}(
+		 *     volatile _Atomic uint{n}_t *addr,
 		 *     uint{n}_t val, int32_t memory_order);
 		 *
-		 * void __rvpredict_atomic_load{m}(uint{n}_t *addr,
+		 * void __rvpredict_atomic_load{m}(
+		 *     volatile _Atomic uint{n}_t *addr,
 		 *     uint{n}_t val, int32_t memory_order);
 		 *
-		 * uint{n}_t __rvpredict_atomic_cas{m}(uint{n}_t *addr,
+		 * uint{n}_t __rvpredict_atomic_cas{m}(
+		 *     volatile _Atomic uint{n}_t *addr,
 		 *     uint{n}_t expected, uint{n}_t desired,
 		 *     int32_t memory_order_success,
 		 *     int32_t memory_order_failure);
 		 *
-		 * uint{n}_t __rvpredict_atomic_exchange{m}(uint{n}_t *addr,
+		 * uint{n}_t __rvpredict_atomic_exchange{m}(
+		 *     volatile _Atomic uint{n}_t *addr,
 		 *     uint{n}_t val, int32_t memory_order);
 		 *
 		 * void __rvpredict_atomic_fetch_{add,
-		 *     sub, and, or, xor, nand}{m}(uint{n}_t *addr,
+		 *     sub, and, or, xor, nand}{m}(
+		 *     volatile _Atomic uint{n}_t *addr,
 		 *     uint{n}_t oval, uint{n}_t arg, int32_t memory_order);
 		 */
 		SmallString<32> load_name("__rvpredict_load" + byte_size_str);
@@ -606,17 +623,56 @@ RVPredictInstrument::runOnFunction(Function &F)
         // Instrument function entry/exit points if there were
         // instrumented accesses.
 	if ((didInstrument || hasCalls) && ClInstrumentFuncEntryExit) {
-		IRBuilder<> IRB(F.getEntryBlock().getFirstNonPHI());
-		Value *ReturnAddress = IRB.CreateCall(
-		Intrinsic::getDeclaration(F.getParent(),
-		    Intrinsic::returnaddress),
-		IRB.getInt32(0));
-		IRB.CreateCall(fnenter, ReturnAddress);
-		for (auto RetInst : RetVec) {
-			IRBuilder<> IRBRet(RetInst);
-			IRBRet.CreateCall(fnexit, ReturnAddress);
+		IRBuilder<> builder(F.getEntryBlock().getFirstNonPHI());
+#if 0
+		Value *retaddr = builder.CreateCall(
+		    Intrinsic::getDeclaration(F.getParent(),
+		        Intrinsic::returnaddress),
+		    builder.getInt32(0));
+#endif
+		Value *cfa = builder.CreateCall(
+		    Intrinsic::getDeclaration(F.getParent(),
+		        Intrinsic::eh_dwarf_cfa),
+		    builder.getInt32(0));
+		CallInst *retaddr = builder.CreateCall(fnenter, cfa);
+		for (auto return_insn : RetVec) {
+			IRBuilder<> ret_builder(return_insn);
+			ret_builder.CreateCall(fnexit, retaddr);
 		}
 		didInstrument = true;
+	}
+
+	InterruptAnnotation &analysis = getAnalysis<InterruptAnnotation>();
+	uint8_t prio;
+	if (analysis.getISRPrioLevel(F, prio)) {
+		IRBuilder<> builder(ctorfn->getEntryBlock().getFirstNonPHI());
+		auto void_type = builder.getVoidTy();
+		auto int32_type = builder.getInt32Ty();
+		FunctionType *handler_type =
+		    FunctionType::get(void_type, {}, false);
+
+		if (handler_type != F.getFunctionType()) {
+			std::string type_message;
+			llvm::raw_string_ostream sstr(type_message);
+
+			sstr << F.getName().str() << " has type ";
+			F.getFunctionType()->print(sstr);
+
+			builder.getContext().diagnose(
+			    DiagnosticInfoFatalError(F,
+				F.getEntryBlock().getFirstNonPHI()->getDebugLoc(),
+				sstr.str()));
+			builder.getContext().emitError(
+			    F.getEntryBlock().getFirstNonPHI(),
+			    "expected void <fn>(void)");
+		}
+
+		Function *regnfn = checkSanitizerInterfaceFunction(
+		    m.getOrInsertFunction("__rvpredict_intr_register",
+			void_type, handler_type, int32_type, nullptr));
+
+		builder.CreateCall(regnfn,
+		    {&F, ConstantInt::get(int32_type, prio)});
 	}
 	return didInstrument;
 }

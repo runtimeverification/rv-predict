@@ -9,13 +9,14 @@ NOMAN=
 
 PROGS=rvpdump metadatadump tracedump
 
-CC=clang
-CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt
+CC?=clang
+CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt -I${.CURDIR}/../../include
 SRCS.rvpdump=main.c reader.c
 SRCS.metadatadump=metadatadump.c
 SRCS.tracedump=tracedump.c
 WARNS=4
+STRIPFLAG=
 
-DBG+=-O3 -g -O0
+COPTS+=-g -O3
 
 .include <mkc.prog.mk>

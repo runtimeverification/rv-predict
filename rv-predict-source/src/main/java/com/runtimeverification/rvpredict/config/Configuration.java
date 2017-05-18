@@ -66,6 +66,7 @@ public class Configuration implements Constants {
     public static final String RV_PREDICT_JAR = Configuration.getBasePath() + SEPARATOR + "rv-predict.jar";
 
     public static final String TRACE_SUFFIX = "trace.bin";
+    private static final String COMPACT_TRACE_FILE_NAME = "rvpredict.trace";
 
     public static final String METADATA_BIN = "metadata.bin";
     public static final String AGENT_RESOURCE_PATH = Agent.class.getName().replace(".","/") + ".class";
@@ -354,6 +355,10 @@ public class Configuration implements Constants {
     public final static String opt_log_dirname = "--log-dirname";
     @Parameter(names = opt_log_dirname, description = "The name of the log directory where RV-Predict stores log files", descriptionKey = "1600")
     private String logDirName;
+
+    public final static String opt_compact_trace = "--compact-trace";
+    @Parameter(names = opt_compact_trace, description = "Whether to use the compact trace format.", hidden = true, descriptionKey = "1700")
+    private boolean compactTrace;
 
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include",
@@ -724,6 +729,10 @@ public class Configuration implements Constants {
         return Paths.get(logDir, id + "_" + METADATA_BIN);
     }
 
+    public Path getCompactTraceFilePath() {
+        return Paths.get(logDir, COMPACT_TRACE_FILE_NAME);
+    }
+
     public boolean isProfiling() {
         return profile;
     }
@@ -745,6 +754,10 @@ public class Configuration implements Constants {
 
     public boolean isLLVMPrediction() {
         return prediction == LLVM_PREDICTION;
+    }
+
+    public boolean isCompactTrace() {
+        return compactTrace;
     }
 
     public boolean noPrediction() {

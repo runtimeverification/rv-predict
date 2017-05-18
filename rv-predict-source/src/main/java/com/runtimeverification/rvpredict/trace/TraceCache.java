@@ -5,6 +5,9 @@ import com.runtimeverification.rvpredict.engine.deadlock.LockGraph;
 import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.IEventReader;
 import com.runtimeverification.rvpredict.log.Event;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
+import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.io.EOFException;
@@ -31,7 +34,7 @@ public class TraceCache {
 
     protected long lastGID = 0;
     protected final int capacity;
-    protected final ArrayList<Event> eventsBuffer;
+    private final ArrayList<ReadonlyEventInterface> eventsBuffer;
 
     protected final List<IEventReader> readers = new ArrayList<>();
 
@@ -51,6 +54,14 @@ public class TraceCache {
 
     public void setup() throws IOException {
         int logFileId = 0;
+        if (config.isCompactTrace()) {
+            try {
+                readers.add(new CompactEventReader(config.getCompactTraceFilePath()));
+            } catch (InvalidTraceDataException e) {
+                throw new IOException(e);
+            }
+            return;
+        }
         while (true) {
             Path path = config.getTraceFilePath(logFileId++);
             if (!path.toFile().exists()) {
@@ -92,15 +103,15 @@ public class TraceCache {
         /* sort readers by their last read events */
         readers.sort((r1, r2) -> r1.lastReadEvent().compareTo(r2.lastReadEvent()));
         Iterator<IEventReader> iter = readers.iterator();
-        Event event;
+        ReadonlyEventInterface event;
         while (iter.hasNext()) {
             IEventReader reader = iter.next();
-            if ((event = reader.lastReadEvent()).getGID() >= toIndex) {
+            if ((event = reader.lastReadEvent()).getEventId() >= toIndex) {
                 break;
             }
 
-            assert event.getGID() >= fromIndex;
-            List<Event> events = new ArrayList<>(capacity);
+            assert event.getEventId() >= fromIndex;
+            List<ReadonlyEventInterface> events = new ArrayList<>(capacity);
             do {
                 events.add(event);
                 //TODO(TraianSF): the following conditional does not belong here. Consider moving it.
@@ -116,9 +127,9 @@ public class TraceCache {
                     iter.remove();
                     break;
                 }
-            } while (event.getGID() < toIndex);
+            } while (event.getEventId() < toIndex);
             int length = getNextPowerOfTwo(events.size());
-            rawTraces.add(new RawTrace(0, events.size(), events.toArray(new Event[length])));
+            rawTraces.add(new RawTrace(0, events.size(), events.toArray(new ReadonlyEventInterface[length])));
         }
         return rawTraces;
     }
@@ -128,91 +139,91 @@ public class TraceCache {
 	final int maxEvents = config.windowSize;
 	if (Configuration.debug)
 	    System.err.println(readers.size() + " readers");
-        ArrayList<Event> events = (ArrayList<Event>)eventsBuffer.clone();
+        ArrayList<ReadonlyEventInterface> events = new ArrayList<>(eventsBuffer);
 	eventsBuffer.clear();
 	events.ensureCapacity(capacity);
 	for (int i = events.size(); i < maxEvents + 1; i++) {
-		Event event;
-		long leastGID = Long.MAX_VALUE;
-		IEventReader leastReader = null;
-		Iterator<IEventReader> iter = readers.iterator();
-		while (iter.hasNext()) {
-			IEventReader reader = iter.next();
-			event = reader.lastReadEvent();
-			if (event != null && event.getGID() < leastGID) {
-//				System.err.println("choosing new reader because gid " + event.getGID() + " < " + leastGID);
-				leastReader = reader;
-				leastGID = event.getGID();
-			}
-		}
-		if (leastReader == null)
-			break;
-		event = leastReader.lastReadEvent();
-		assert event != null;
-		events.add(event);
-//		System.err.println("adding event " + event.getGID());
-                try {
-			leastReader.readEvent();
-                } catch (EOFException e) {
-			readers.remove(leastReader);
+            ReadonlyEventInterface event;
+            long leastGID = Long.MAX_VALUE;
+            IEventReader leastReader = null;
+            Iterator<IEventReader> iter = readers.iterator();
+            while (iter.hasNext()) {
+                IEventReader reader = iter.next();
+                event = reader.lastReadEvent();
+                if (event != null && event.getEventId() < leastGID) {
+//                      System.err.println("choosing new reader because gid " + event.getEventId() + " < " + leastGID);
+                        leastReader = reader;
+                        leastGID = event.getEventId();
                 }
-	}
-	if (Configuration.debug)
-	    System.err.println("got " + events.size() + " events out of " + maxEvents);
-	final int n = events.size();
-	if (n <= 0)
-		return rawTraces;
-	int nextGenStart = maxEvents + 1;
-	final long genMask = (long)0xffff << 48;
-	if (n < nextGenStart)
-		nextGenStart = n;
-	else for (int i = n - 1; i > 0; i--) {
-		if ((events.get(i - 1).getGID() & genMask) !=
-		    (events.get(i).getGID() & genMask)) {
-			nextGenStart = i;
-			break;
-		}
-	}
-	if (nextGenStart == maxEvents + 1) {
-		System.err.println("no change of generation in " +
-		    (maxEvents + 1) + " events");
-		return null;		// XXX
-	}
-	if (Configuration.debug) {
-		System.err.println("buffering " + (n - nextGenStart) +
-		    " events after window boundary");
-	}
-	eventsBuffer.addAll(events.subList(nextGenStart, n));
-	events.subList(nextGenStart, n).clear();
-	/* Make GIDs compact. */
-	for (int i = 0; i < nextGenStart; i++)
-		events.get(i).setGID(lastGID + i);
-	lastGID += maxEvents;
-	int tidStart = 0;
-	events.sort((l, r) -> {
-		long lt = l.getTID(), rt = r.getTID();
-		return (lt < rt) ? -1 : ((lt > rt) ? 1 : 0);
-	});
-	long prevTID = events.get(0).getTID();
+            }
+            if (leastReader == null)
+                break;
+            event = leastReader.lastReadEvent();
+            assert event != null;
+            events.add(event);
+//          System.err.println("adding event " + event.getEventId());
+            try {
+		leastReader.readEvent();
+            } catch (EOFException e) {
+		readers.remove(leastReader);
+            }
+        }
+        if (Configuration.debug)
+            System.err.println("got " + events.size() + " events out of " + maxEvents);
+        final int n = events.size();
+        if (n <= 0)
+                return rawTraces;
+        int nextGenStart = maxEvents + 1;
+        final long genMask = (long)0xffff << 48;
+        if (n < nextGenStart)
+                nextGenStart = n;
+        else for (int i = n - 1; i > 0; i--) {
+                if ((events.get(i - 1).getEventId() & genMask) !=
+                    (events.get(i).getEventId() & genMask)) {
+                        nextGenStart = i;
+                        break;
+                }
+        }
+        if (nextGenStart == maxEvents + 1) {
+                System.err.println("no change of generation in " +
+                    (maxEvents + 1) + " events");
+                return rawTraces;                // XXX
+        }
+        if (Configuration.debug) {
+                System.err.println("buffering " + (n - nextGenStart) +
+                    " events after window boundary");
+        }
+        eventsBuffer.addAll(events.subList(nextGenStart, n));
+        events.subList(nextGenStart, n).clear();
+        /* Make GIDs compact. */
+        for (int i = 0; i < nextGenStart; i++)
+                events.set(i, events.get(i).destructiveWithEventId(lastGID + i));
+        lastGID += maxEvents;
+        int tidStart = 0;
+        events.sort((l, r) -> {
+                long lt = l.getThreadId(), rt = r.getThreadId();
+                return (lt < rt) ? -1 : ((lt > rt) ? 1 : 0);
+        });
+        long prevTID = events.get(0).getThreadId();
 
-	for (int i = 1; i < nextGenStart; i++) {
-		if (events.get(i).getTID() == prevTID)
-			continue;
+        for (int i = 1; i < nextGenStart; i++) {
+                if (events.get(i).getThreadId() == prevTID)
+                        continue;
 
-		rawTraces.add(tidSpanToRawTrace(events, tidStart, i));
-		prevTID = events.get(i).getTID();
-		tidStart = i;
-	}
+                rawTraces.add(tidSpanToRawTrace(events, tidStart, i));
+                prevTID = events.get(i).getThreadId();
+                tidStart = i;
+        }
 
-	rawTraces.add(tidSpanToRawTrace(events, tidStart, nextGenStart));
+        rawTraces.add(tidSpanToRawTrace(events, tidStart, nextGenStart));
         return rawTraces;
     }
-    private static RawTrace tidSpanToRawTrace(List<Event> events,
+    private static RawTrace tidSpanToRawTrace(List<? extends ReadonlyEventInterface> events,
 	    int tidStart, int tidEnd) {
-	List<Event> tidEvents = events.subList(tidStart, tidEnd);
+	List<? extends ReadonlyEventInterface> tidEvents = events.subList(tidStart, tidEnd);
 	int n = tidEvents.size(), length = getNextPowerOfTwo(n);
-	tidEvents.sort((l, r) -> l.compareTo(r));
-	return new RawTrace(0, n, tidEvents.toArray(new Event[length]));
+	tidEvents.sort(ReadonlyEventInterface::compareTo);
+	return new RawTrace(0, n, tidEvents.toArray(new ReadonlyEventInterface[length]));
     }
     public Trace getTraceWindow() throws IOException {
         List<RawTrace> rawTraces = readEventWindow();

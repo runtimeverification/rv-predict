@@ -1,0 +1,9 @@
+*.core
+*.d
+.depend
+.gdbinit
+.Makefile.tags
+*.o
+.*.swp
+tags
+walker

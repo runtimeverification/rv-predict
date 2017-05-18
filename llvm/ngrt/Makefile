@@ -8,11 +8,12 @@
 
 LIB?=rvprt
 
+INCS=intr_exports.h
 CC=clang
 CFLAGS+=-std=c11
-COPTS+=-O3 -O0
+COPTS+=-O3
 DBG+=-g
-CPPFLAGS+=-Wuninitialized
+CPPFLAGS+=-I$(.CURDIR)/../../include
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
 SRCS=access.c const.c func.c lock.c notimpl.c
 SRCS+=relay.c ring.c rmw.c rvpsignal.c sigutil.c

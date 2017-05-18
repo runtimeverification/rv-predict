@@ -12,6 +12,11 @@
             <artifactId>rv-predict-source</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.runtimeverification.rvpredict</groupId>
+            <artifactId>native-z3</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

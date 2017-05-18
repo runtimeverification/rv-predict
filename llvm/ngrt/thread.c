@@ -107,6 +107,7 @@ rvp_thread0_create(void)
 
 	r = &t->t_ring;
 	r->r_lgen = rvp_ggen_after_load();
+	r->r_lastpc = rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN);
 	rvp_ring_put_begin(r, t->t_id, r->r_lgen);
 }
 
@@ -152,7 +153,7 @@ rvp_stop_transmitter(void)
 }
 
 static void *
-serialize(void *arg)
+serialize(void *arg __unused)
 {
 	int fd = serializer_fd;
 	rvp_thread_t *t, *next_t;
@@ -224,7 +225,7 @@ rvp_serializer_create(void)
 	rvp_ring_flush_to_fd(&thread_head->t_ring, serializer_fd, NULL);
 	serializer_lc = (rvp_lastctx_t){
 		  .lc_tid = thread_head->t_id
-		, .lc_nintr_outst = 0
+		, .lc_idepth = 0
 	};
 	thread_unlock();
 
@@ -239,9 +240,12 @@ rvp_serializer_create(void)
 void
 rvp_thread_init(void)
 {
-	ESTABLISH_PTR_TO_REAL(pthread_join);
-	ESTABLISH_PTR_TO_REAL(pthread_create);
-	ESTABLISH_PTR_TO_REAL(pthread_exit);
+	ESTABLISH_PTR_TO_REAL(int (*)(pthread_t, void **), pthread_join);
+	ESTABLISH_PTR_TO_REAL(
+	    int (*)(pthread_t *, const pthread_attr_t *, void *(*)(void *),
+	        void *),
+	    pthread_create);
+	ESTABLISH_PTR_TO_REAL(void (*)(void *), pthread_exit);
 }
 
 static void
@@ -299,7 +303,7 @@ rvp_thread_attach(rvp_thread_t *t)
 	rvp_update_nthreads(t->t_id);
 
 	t->t_ring.r_tid = t->t_id;
-	t->t_ring.r_nintr_outst = 0;
+	t->t_ring.r_idepth = 0;
 
 	t->t_next = thread_head;
 	thread_head = t;
@@ -437,6 +441,7 @@ __rvpredict_thread_wrapper(void *arg)
 		err(EXIT_FAILURE, "%s: pthread_setspecific", __func__);
 
 	r->r_lgen = rvp_ggen_after_load();
+	r->r_lastpc = rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN);
 	rvp_ring_put_begin(&t->t_ring, t->t_id, r->r_lgen);
 
 	rc = real_pthread_sigmask(SIG_SETMASK,

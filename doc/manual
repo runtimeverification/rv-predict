@@ -1,0 +1,90 @@
+# Installation
+
+RV-Predict is distributed in a gzip-compressed TAR file called rv-predict.tgz.
+rv-predict.tgz contains three directories, bin/, lib/, and include/.
+
+Select an installation directory for RV-Predict, and extract rv-predict.tgz
+there.  Set the environment variable RV_ROOT to the path to the installation
+directory.  In csh/tcsh, run:
+
+	setenv RV_ROOT ...path to installation directory...
+
+Or in a Bourne-compatible shell (e.g., bash) run:
+
+	export RV_ROOT=...path to installation directory...
+
+Add $RV_ROOT/bin to your $PATH:
+
+	setenv PATH ${PATH}:${RV_ROOT}/bin
+
+or
+
+	export PATH=${PATH}:${RV_ROOT}/bin
+
+Consider adding a line to your shell's resource ("rc") file or profile that
+sets RV_ROOT and PATH when you log in.
+
+# Getting started
+
+Before you try to produce an RV-Predict race report for the first time,
+by running `rvpx` (see "Using RV-Predict", below), you should install a
+license key.  To do that, run `rv-predict`, which will ask for your email
+and password so that it can download your license key.  It is normal for
+`rv-predict` to print
+
+        [RV-Predict] Error: You must provide a class or a jar to run.
+
+and the usage information after it has downloaded your license key.
+
+# Using RV-Predict
+
+The RV-Predict programs are installed at $HOME/bin/.  Make sure it is part of
+the executable search path, $PATH.  The important RV-Predict programs are
+`rvpc`, `rvpx`, and `rvpdump`.
+
+`rvpc`: a wrapper for `clang` that compiles and links programs with
+    RV-Predict instrumentation.  When a program built with `rvpc` runs,
+    it will ordinarily leave a trace file called `rvpredict.trace` in
+    the current working directory.
+
+`rvpx`: a wrapper for programs that were built with RV-Predict
+    instrumentation.  If you ordinarily run your program like `<command>
+    <arguments>`, then run `rvpx <command> <arguments>` to see data-race
+    reports. `rvpx` redirects the trace file for <command> from
+    `./rvpredict.trace` to a temporary directory.  Then it analyzes
+    the trace for data races.  After reporting any data races on the
+    standard error output, `rvpx` deletes the temporary directory.
+
+    Before you run `rvpx` for the first time, see the note below.
+
+`rvpsymbolize`: a filter that takes the name of an ELF executable file,
+    `program` as an argument.  `rvpsymbolize` copies its standard input
+    to its standard output with data and instruction addresses converted
+    to symbols: using the DWARF debug information in
+    `program`, `rvpsymbolize` replaces each hexadecimal instruction
+    pointer enclosed in curly braces, {0x...}, with the corresponding function
+    name, file, line number, and optional column number.  It also
+    replaces each hexadecimal data address enclosed in square brackets,
+    [0x...], with the corresponding symbol name.  For structures,
+    `rvpsymbolize` makes a best effort to tell a data member name, and
+    for arrays, `rvpsymbolize` makes a best effort to tell an array index.
+
+`rvpdump`: a program that will read an RV-Predict compact trace
+    file, `rvpredict.trace`, and print it to standard output in a
+    human-readable format (default action) or, if the `-t legacy` option
+    is provided, translate from the compact trace format to the legacy
+    trace format.  Either provide the name of the trace file on the
+    command line, `rvpdump rvpredict.trace`, or feed the trace into
+    standard input, `rvpdump < rvpredict.trace`.
+
+    Use the option `-t symbol-friendly` to produce human-readable
+    output that is suitable for symbolization using `rvpsymbolize`.
+
+    A user does not ordinarily need to run `rvpdump`.  The `-t legacy`
+    option is deprecated; it may be removed from a future version of
+    `rvpdump`.
+
+In /home/vagrant/lib/ are the RV-Predict Java classes, the runtime libraries
+for both the new and the legacy editions of RV-Predict for C, and the product
+license key.  Those files must be present for RV-Predict to work, but the user
+does not ordinarily need to do anything with them.

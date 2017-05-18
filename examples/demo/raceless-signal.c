@@ -81,7 +81,7 @@ establish(int signum, void (*handler)(int))
 static void
 usage(const char *progname)
 {
-	fprintf(stderr, "usage: %s [-s]\n", progname);
+	fprintf(stderr, "usage: %s [-s|-S]\n", progname);
 	exit(EXIT_FAILURE);
 }
 
@@ -91,11 +91,15 @@ main(int argc, char **argv)
 	int i, opt;
 	sigset_t oset;
 	pthread_t consumer;
+	bool use_blocking = false;
 
-	while ((opt = getopt(argc, argv, "s")) != -1) {
+	while ((opt = getopt(argc, argv, "Ss")) != -1) {
 		switch (opt) {
-		case 's':
+		case 'S':
 			use_signal = true;
+			break;
+		case 's':
+			use_signal = use_blocking = true;
 			break;
 		default:
 			usage(argv[0]);
@@ -123,11 +127,16 @@ main(int argc, char **argv)
 	} else {
 		pthread_create(&consumer, NULL, &consume, NULL);
 	}
-	for (i = 0; i < 50; i++) {
-		shared.alarm_blocked = true;
+	for (i = 0; i < 100; i++) {
+		if (use_blocking)
+			shared.alarm_blocked = true;
 		shared.count = -shared.count;
-		shared.alarm_blocked = false;
-		sched_yield();
+		if (use_blocking)
+			shared.alarm_blocked = false;
+		if (use_signal)
+			pause();
+		else
+			sched_yield();
 	}
 	if (!use_signal) {
 		shared.interrupted = true;

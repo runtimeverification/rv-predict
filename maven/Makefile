@@ -13,22 +13,26 @@ FILESDIR_checkJava.copy=$(BINDIR)
 FILESDIR_rv-predict.copy=$(BINDIR)
 FILESDIR_rv-predict.jar.copy=$(LIBDIR)
 
-SRC_PATHADD+=$(.CURDIR)/../target/release/rv-predict
-SRC_PATHADD+=$(.CURDIR)/../target/release/rv-predict/bin
+buildit: .PHONY
+	cd $(.CURDIR)/.. && mvn -q -DskipTests -DskipDocs package
 
-installit: .USE
-	@$(INSTALL) -c -m 0644 $(.ALLSRC:Ninstallit) $(.OBJDIR)/$(.TARGET)
+copyit: .USE
+	@$(INSTALL) -c -m 0644 $(.ALLSRC:Ncopyit) $(.OBJDIR)/$(.TARGET)
 
-checkJava.copy: checkJava installit
-rv-predict.copy: rv-predict installit
-rv-predict.jar.copy: rv-predict.jar installit
+checkJava.copy: $(.CURDIR)/../target/release/rv-predict/bin/checkJava copyit
+rv-predict.copy: $(.CURDIR)/../target/release/rv-predict/bin/rv-predict copyit
+rv-predict.jar.copy: $(.CURDIR)/../target/release/rv-predict/rv-predict.jar copyit
 
-target:
-	@rm -rf $(.CURDIR)/../target
-	@cd $(.CURDIR)/.. && mvn -q -DskipTests -DskipDocs package
+$(.CURDIR)/../target/release/rv-predict/bin/checkJava: buildit
 
-checkJava rv-predict rv-predict.jar! target
+$(.CURDIR)/../target/release/rv-predict/bin/rv-predict: buildit
 
+$(.CURDIR)/../target/release/rv-predict/rv-predict.jar: buildit
+
+#clean:
+#	@rm -rf $(.CURDIR)/../target
+
+CLEANDIRS+=$(.CURDIR)/../target
 CLEANFILES+=$(CLEANABLE_FILES)
 
 .include <mkc.files.mk>

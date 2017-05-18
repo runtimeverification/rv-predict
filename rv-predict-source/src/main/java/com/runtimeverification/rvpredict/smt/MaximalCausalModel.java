@@ -582,7 +582,7 @@ public class MaximalCausalModel {
      * Checks if the given race suspects are real. Race suspects are grouped by
      * their signatures.
      *
-     * @param sigToRaceSuspects
+     * @param sigToRaceSuspects The race suspects to check.
      * @return a map from race signatures to real race instances
      */
     public Map<String, Race> checkRaceSuspects(Map<String, List<Race>> sigToRaceSuspects) {

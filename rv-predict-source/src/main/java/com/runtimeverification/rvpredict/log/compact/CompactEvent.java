@@ -2,7 +2,6 @@ package com.runtimeverification.rvpredict.log.compact;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.runtimeverification.rvpredict.log.EventType;
-import com.runtimeverification.rvpredict.log.ReadonlyEventDecorator;
 import com.runtimeverification.rvpredict.log.ReadonlyEvent;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
@@ -105,6 +104,16 @@ public abstract class CompactEvent extends ReadonlyEvent {
     }
 
     @Override
+    public long getObjectHashCode() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+
+    @Override
+    public int getFieldIdOrArrayIndex() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+
+    @Override
     public long unsafeGetAddress() {
         return 0;
     }
@@ -129,10 +138,6 @@ public abstract class CompactEvent extends ReadonlyEvent {
     public ReadonlyEventInterface destructiveWithEventId(long eventId) {
         this.eventId = eventId;
         return this;
-    }
-
-    long getLongAddress() {
-        return getDataAddress();
     }
 
     @Override

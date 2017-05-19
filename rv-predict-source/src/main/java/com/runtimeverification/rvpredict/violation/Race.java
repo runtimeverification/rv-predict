@@ -141,7 +141,7 @@ public class Race {
                 locSig = "field " + locSig;
         }
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Data race on %s: %n", locSig));
+        sb.append(String.format("Data race on [%s]: %n", locSig));
         boolean reportableRace = false;
 
         if (trace.metadata().getLocationSig(e1.getLocationId())

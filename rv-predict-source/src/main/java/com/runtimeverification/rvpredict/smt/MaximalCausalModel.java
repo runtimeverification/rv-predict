@@ -41,6 +41,7 @@ import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
 import com.runtimeverification.rvpredict.smt.formula.ConcretePhiVariable;
 import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
 import com.runtimeverification.rvpredict.smt.formula.IntConstant;
+import com.runtimeverification.rvpredict.smt.formula.InterruptedThreadVariable;
 import com.runtimeverification.rvpredict.smt.formula.OrderVariable;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.LockRegion;
@@ -58,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 
@@ -319,7 +321,9 @@ public class MaximalCausalModel {
                                             startThreadEvent,
                                             joinThreadEvent,
                                             firstEvent,
-                                            lastEvent));
+                                            lastEvent,
+                                            ttid,
+                                            entryTtid));
                                     return;
                                 }
                                 EventsEnabledForSignalIterator iterator =
@@ -330,7 +334,9 @@ public class MaximalCausalModel {
                                             iterator.getPreviousEventWithDefault(startThreadEvent),
                                             iterator.getCurrentEventWithDefault(joinThreadEvent),
                                             firstEvent,
-                                            lastEvent));
+                                            lastEvent,
+                                            ttid,
+                                            entryTtid));
                                 }
                             });
                     allSignalsAndRestrict.add(oneSignalOrRestrict.build());
@@ -340,7 +346,8 @@ public class MaximalCausalModel {
 
     private FormulaTerm signalInterruption(
             ReadonlyEventInterface before, ReadonlyEventInterface after,
-            ReadonlyEventInterface firstSignalEvent, ReadonlyEventInterface lastSignalEvent) {
+            ReadonlyEventInterface firstSignalEvent, ReadonlyEventInterface lastSignalEvent,
+            int signalTtid, int interruptedTtid) {
         FormulaTerm.Builder threadInterruptionAtPoint = FormulaTerm.andBuilder();
         if (before != null) {
             threadInterruptionAtPoint.add(HB(before, firstSignalEvent));
@@ -348,6 +355,8 @@ public class MaximalCausalModel {
         if (after != null) {
             threadInterruptionAtPoint.add(HB(lastSignalEvent, after));
         }
+        threadInterruptionAtPoint.add(
+                INT_EQUAL(new InterruptedThreadVariable(signalTtid), new IntConstant(interruptedTtid)));
         return threadInterruptionAtPoint.build();
     }
 
@@ -621,8 +630,13 @@ public class MaximalCausalModel {
                     solver.add(z3filter.filter(suspectToAsst.get(race)));
                     boolean isRace = solver.check() == Status.SATISFIABLE;
                     atLeastOneRace |= isRace;
-                    if (isRace && Configuration.debug) {
-                        dumpOrdering(race.firstEvent(), race.secondEvent());
+                    if (isRace) {
+                        Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution();
+                        Map<Integer, Integer> signalParents = extractSignalParents();
+                        fillSignalStack(threadToExecution, signalParents, race);
+                        if (Configuration.debug) {
+                            dumpOrdering(threadToExecution, race.firstEvent(), race.secondEvent());
+                        }
                     }
                     solver.pop();
                     if (isRace) {
@@ -643,15 +657,78 @@ public class MaximalCausalModel {
         return result;
     }
 
+    private Map<Integer, Integer> extractSignalParents() {
+        Model model = solver.getModel();
+        Map<Integer, Integer> signalParents = new HashMap<>();
+        for (FuncDecl f : model.getConstDecls()) {
+            String name = f.getName().toString();
+            OptionalInt maybeSignalTtid = InterruptedThreadVariable.extractSignalTtidIfPossible(name);
+            if (!maybeSignalTtid.isPresent()) {
+                continue;
+            }
+            int parentTid = Integer.parseInt(model.getConstInterp(f).toString());
+            signalParents.put(maybeSignalTtid.getAsInt(), parentTid);
+        }
+        return signalParents;
+    }
+
+    private void fillSignalStack(
+            Map<Integer, List<EventWithOrder>> threadToExecution,
+            Map<Integer, Integer> signalParents,
+            Race race) {
+        race.setFirstSignalStack(computeSignalStack(threadToExecution, signalParents, race.firstEvent()));
+        race.setSecondSignalStack(computeSignalStack(threadToExecution, signalParents, race.secondEvent()));
+    }
+
+    private List<Race.SignalStackEvent> computeSignalStack(
+            Map<Integer, List<EventWithOrder>> threadToExecution,
+            Map<Integer, Integer> signalParents,
+            ReadonlyEventInterface event) {
+        List<Race.SignalStackEvent> signalStack = new ArrayList<>();
+        int ttid = trace.getTraceThreadId(event);
+        signalStack.add(Race.SignalStackEvent.fromEvent(event, ttid));
+
+        Long firstEventOrder = null;
+        for (EventWithOrder eventWithOrder : threadToExecution.get(ttid)) {
+            if (eventWithOrder.getEvent().getEventId() == event.getEventId()) {
+                firstEventOrder = eventWithOrder.getOrderId();
+                break;
+            }
+        }
+        assert firstEventOrder != null;
+        long currentEventOrder = firstEventOrder;
+
+        while (trace.getThreadType(ttid) != ThreadType.THREAD) {
+            int parentTtid = signalParents.get(ttid);
+            List<EventWithOrder> parentThreadEvents = threadToExecution.get(parentTtid);
+            EventWithOrder parentEvent = null;
+            for (EventWithOrder maybeParentEvent : parentThreadEvents) {
+                if (maybeParentEvent.getOrderId() > currentEventOrder) {
+                    break;
+                }
+                parentEvent = maybeParentEvent;
+            }
+            ttid = parentTtid;
+            if (parentEvent != null) {
+                currentEventOrder = parentEvent.getOrderId();
+                signalStack.add(Race.SignalStackEvent.fromEvent(parentEvent.getEvent(), parentTtid));
+            } else {
+                signalStack.add(Race.SignalStackEvent.fromBeforeFirstEvent(parentTtid));
+            }
+        }
+        return signalStack;
+    }
+
     private void findAndDumpOrdering() {
         solver.push();
         if (solver.check() == Status.SATISFIABLE) {
-            dumpOrdering(null, null);
+            Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution();
+            dumpOrdering(threadToExecution, null, null);
         }
         solver.pop();
     }
 
-    private void dumpOrdering(ReadonlyEventInterface firstRaceEvent, ReadonlyEventInterface secondRaceEvent) {
+    private Map<Integer, List<EventWithOrder>> extractExecution() {
         Model model = solver.getModel();
         Map<Integer, List<EventWithOrder>> threadToExecution = new HashMap<>();
         for (FuncDecl f : model.getConstDecls()) {
@@ -667,7 +744,12 @@ public class MaximalCausalModel {
         }
         threadToExecution.values().forEach(events ->
                 events.sort(Comparator.comparingLong(EventWithOrder::getOrderId)));
+        return threadToExecution;
+    }
 
+    private void dumpOrdering(
+            Map<Integer, List<EventWithOrder>> threadToExecution,
+            ReadonlyEventInterface firstRaceEvent, ReadonlyEventInterface secondRaceEvent) {
         System.out.println("Possible ordering of events ..........");
         Map<Integer, Integer> lastIndexPerThread = new HashMap<>();
         threadToExecution.keySet().forEach(threadId -> lastIndexPerThread.put(threadId, 0));

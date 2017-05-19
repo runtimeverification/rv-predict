@@ -22,6 +22,8 @@ public class Z3Filter {
 
     private final IntExpr[] orderVariables;
 
+    private final IntExpr[] interruptedThreadVariables;
+
     private final List<IDisposable> disposables;
 
     public Z3Filter(Context context, int windowSize) {
@@ -30,6 +32,7 @@ public class Z3Filter {
         this.visitor = new Visitor();
         this.concPhiVariables = new BoolExpr[windowSize];
         this.orderVariables = new IntExpr[windowSize];
+        this.interruptedThreadVariables = new IntExpr[windowSize];
         this.disposables = new ArrayList<>();
     }
 
@@ -73,6 +76,16 @@ public class Z3Filter {
                 orderVariables[idx] = context.mkIntConst(variable.getNamePrefix() + idx);
             }
             result = orderVariables[idx];
+        }
+
+        @Override
+        public void visit(InterruptedThreadVariable variable) throws Z3Exception {
+            // TODO(virgil): doing this modulo windowSize seems wrong.
+            int idx = (int) (variable.getId() % windowSize);
+            if (interruptedThreadVariables[idx] == null) {
+                interruptedThreadVariables[idx] = context.mkIntConst(variable.getNamePrefix() + idx);
+            }
+            result = interruptedThreadVariables[idx];
         }
 
         @Override

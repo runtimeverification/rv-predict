@@ -34,11 +34,12 @@ import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
+import com.runtimeverification.rvpredict.trace.ThreadType;
 import com.runtimeverification.rvpredict.trace.Trace;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Represents a data race. A data race is uniquely identified by the two memory
@@ -56,6 +57,9 @@ public class Race {
     private final Configuration config;
     private final Trace trace;
     private final SignatureProcessor signatureProcessor;
+
+    private List<SignalStackEvent> firstSignalStack;
+    private List<SignalStackEvent> secondSignalStack;
 
     public Race(
             ReadonlyEventInterface e1, ReadonlyEventInterface e2, Trace trace, Configuration config) {
@@ -142,28 +146,69 @@ public class Race {
         }
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("Data race on %s: %n", locSig));
-        boolean reportableRace = false;
+        boolean reportableRace;
 
         if (trace.metadata().getLocationSig(e1.getLocationId())
                 .compareTo(trace.metadata().getLocationSig(e2.getLocationId())) <= 0) {
-            reportableRace |= generateMemAccReport(e1, sb);
+            reportableRace = generateMemAccReport(e1, getFirstSignalStack(), sb);
             sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
-            reportableRace |= generateMemAccReport(e2, sb);
+            reportableRace |= generateMemAccReport(e2, getSecondSignalStack(), sb);
         } else {
-            reportableRace |= generateMemAccReport(e2, sb);
+            reportableRace = generateMemAccReport(e2, getSecondSignalStack(), sb);
             sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
-            reportableRace |= generateMemAccReport(e1, sb);
+            reportableRace |= generateMemAccReport(e1, getFirstSignalStack(), sb);
         }
 
         sb.append(String.format("%n"));
         return reportableRace ? signatureProcessor.simplify(sb.toString()) : "";
     }
 
-    private boolean generateMemAccReport(ReadonlyEventInterface e, StringBuilder sb) {
-        int stackSize = 0;
+    public List<SignalStackEvent> getFirstSignalStack() {
+        return firstSignalStack;
+    }
+
+    public List<SignalStackEvent> getSecondSignalStack() {
+        return secondSignalStack;
+    }
+
+    public void setFirstSignalStack(List<SignalStackEvent> firstSignalStack) {
+        this.firstSignalStack = firstSignalStack;
+    }
+
+    public void setSecondSignalStack(List<SignalStackEvent> secondSignalStack) {
+        this.secondSignalStack = secondSignalStack;
+    }
+
+    public static class SignalStackEvent {
+        private final ReadonlyEventInterface event;
+        private final int ttid;
+
+        public static SignalStackEvent fromEvent(ReadonlyEventInterface event, int ttid) {
+            return new SignalStackEvent(event, ttid);
+        }
+
+        public static SignalStackEvent fromBeforeFirstEvent(int ttid) {
+            return new SignalStackEvent(null, ttid);
+        }
+
+        private SignalStackEvent(ReadonlyEventInterface event, int ttid) {
+            this.event = event;
+            this.ttid = ttid;
+        }
+
+        public Optional<ReadonlyEventInterface> getEvent() {
+            return Optional.ofNullable(event);
+        }
+
+        public int getTtid() {
+            return ttid;
+        }
+    }
+
+    private boolean generateMemAccReport(
+            ReadonlyEventInterface e, List<SignalStackEvent> signalStackEvents, StringBuilder sb) {
         long otid = e.getOriginalThreadId();
         long sid = trace.getSignalNumber(trace.getTraceThreadId(e));
-        MetadataInterface metadata = trace.metadata();
         List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
         if (e.getSignalDepth() == 0) {
             sb.append(String.format("    Concurrent %s in thread T%s%s%n",
@@ -171,18 +216,47 @@ public class Race {
                     otid,
                     getHeldLocksReport(heldLocks)));
         } else {
-            // TODO(virgil): The signal number is not enough to identify what is happening, one also needs
-            // the signal handler or something similar.
             sb.append(String.format("    Concurrent %s in signal S%s%s%n",
                     e.isWrite() ? "write" : "read",
-                    otid,
                     sid,
                     getHeldLocksReport(heldLocks)));
         }
+        boolean atLeastOneKnownElementInTheTrace = generateStackTrace(e, heldLocks, sb);
+        for (int stackIndex = 1; stackIndex < signalStackEvents.size(); stackIndex++) {
+            SignalStackEvent stackEvent = signalStackEvents.get(stackIndex);
+            sb.append("    Interrupting ");
+            int ttid = stackEvent.getTtid();
+            if (trace.getThreadType(ttid) == ThreadType.THREAD) {
+                sb.append("thread ");
+                sb.append(trace.getOriginalThreadIdForTraceThreadId(ttid));
+            } else {
+                sb.append("signal ");
+                sb.append(trace.getSignalNumber(ttid));
+            }
+            sb.append("\n");
+            Optional<ReadonlyEventInterface> maybeEvent = signalStackEvents.get(stackIndex).getEvent();
+            if (!maybeEvent.isPresent()) {
+                sb.append(" before any event.");
+                continue;
+            }
+            heldLocks = trace.getHeldLocksAt(maybeEvent.get());
+            sb.append(getHeldLocksReport(heldLocks));
+            generateStackTrace(maybeEvent.get(), heldLocks, sb);
+        }
+        return atLeastOneKnownElementInTheTrace;
+    }
+
+    private boolean generateStackTrace(
+            ReadonlyEventInterface e,
+            List<ReadonlyEventInterface> heldLocks,
+            StringBuilder sb) {
+        MetadataInterface metadata = trace.metadata();
+        long otid = e.getOriginalThreadId();
+        int stackSize = 0;
         boolean isTopmostStack = true;
         List<ReadonlyEventInterface> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
         stacktrace.addAll(heldLocks);
-        Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
+        stacktrace.sort((e1, e2) -> -e1.compareTo(e2));
         for (ReadonlyEventInterface elem : stacktrace) {
             long locId = elem.getLocationId();
             String locSig = locId >= 0 ? metadata.getLocationSig(locId)
@@ -204,22 +278,24 @@ public class Race {
             }
         }
 
-        long parentOTID = metadata.getParentOTID(otid);
-        if (parentOTID > 0) {
-            long locId = metadata.getOriginalThreadCreationLocId(otid);
-            sb.append(String.format("    T%s is created by T%s%n", otid, parentOTID));
-            if (locId >= 0) {
-                String locationSig = metadata.getLocationSig(locId);
-                signatureProcessor.process(locationSig);
-                sb.append(String.format("        at %s%n", locationSig));
+        if (trace.getThreadType(e) == ThreadType.THREAD) {
+            long parentOTID = metadata.getParentOTID(otid);
+            if (parentOTID > 0) {
+                long locId = metadata.getOriginalThreadCreationLocId(otid);
+                sb.append(String.format("    T%s is created by T%s%n", otid, parentOTID));
+                if (locId >= 0) {
+                    String locationSig = metadata.getLocationSig(locId);
+                    signatureProcessor.process(locationSig);
+                    sb.append(String.format("        at %s%n", locationSig));
+                } else {
+                    sb.append("        at unknown location%n");
+                }
             } else {
-                sb.append("        at unknown location%n");
-            }
-        } else {
-            if (otid == 1) {
-                sb.append(String.format("    T%s is the main thread%n", otid));
-            } else {
-                sb.append(String.format("    T%s is created by n/a%n", otid));
+                if (otid == 1) {
+                    sb.append(String.format("    T%s is the main thread%n", otid));
+                } else {
+                    sb.append(String.format("    T%s is created by n/a%n", otid));
+                }
             }
         }
         return stackSize>0;

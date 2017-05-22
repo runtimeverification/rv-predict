@@ -307,38 +307,37 @@ public class MaximalCausalModel {
                     Set<Long> otidWhereEnabledAtStart = signalToOtidWhereEnabledAtStart.get(signalNumber);
 
                     FormulaTerm.Builder oneSignalOrRestrict = FormulaTerm.orBuilder();
-                    trace.eventsByThreadID().entrySet().stream()
-                            .filter(entry -> trace.getThreadType(entry.getKey()) == ThreadType.THREAD)
-                            .forEach(entry -> {
-                                List<ReadonlyEventInterface> events = entry.getValue();
-                                int entryTtid = entry.getKey();
-                                long entryOtid = trace.getOriginalThreadIdForTraceThreadId(entryTtid);
-                                boolean enabled = otidWhereEnabledAtStart.contains(entryOtid);
-                                ReadonlyEventInterface startThreadEvent = ttidToStartEvent.get(entryTtid);
-                                ReadonlyEventInterface joinThreadEvent = ttidToJoinEvent.get(entryTtid);
-                                if (events.isEmpty() && enabled) {
-                                    oneSignalOrRestrict.add(signalInterruption(
-                                            startThreadEvent,
-                                            joinThreadEvent,
-                                            firstEvent,
-                                            lastEvent,
-                                            ttid,
-                                            entryTtid));
-                                    return;
-                                }
-                                EventsEnabledForSignalIterator iterator =
-                                        new EventsEnabledForSignalIterator(
-                                                events, detectInterruptedThreadRace, signalNumber, enabled);
-                                while (iterator.advance()) {
-                                    oneSignalOrRestrict.add(signalInterruption(
-                                            iterator.getPreviousEventWithDefault(startThreadEvent),
-                                            iterator.getCurrentEventWithDefault(joinThreadEvent),
-                                            firstEvent,
-                                            lastEvent,
-                                            ttid,
-                                            entryTtid));
-                                }
-                            });
+                    trace.eventsByThreadID().forEach((entryTtid, events) -> {
+                        long entryOtid = trace.getOriginalThreadIdForTraceThreadId(entryTtid);
+                        boolean enabled = otidWhereEnabledAtStart.contains(entryOtid);
+                        boolean isSignal = trace.getThreadType(entryTtid) == ThreadType.SIGNAL;
+                        ReadonlyEventInterface startThreadEvent =
+                                isSignal ? trace.getFirstEvent(entryTtid) : ttidToStartEvent.get(entryTtid);
+                        ReadonlyEventInterface joinThreadEvent =
+                                isSignal ? trace.getLastEvent(entryTtid) : ttidToJoinEvent.get(entryTtid);
+                        if (events.isEmpty() && enabled) {
+                            oneSignalOrRestrict.add(signalInterruption(
+                                    startThreadEvent,
+                                    joinThreadEvent,
+                                    firstEvent,
+                                    lastEvent,
+                                    ttid,
+                                    entryTtid));
+                            return;
+                        }
+                        EventsEnabledForSignalIterator iterator =
+                                new EventsEnabledForSignalIterator(
+                                        events, detectInterruptedThreadRace, signalNumber, enabled);
+                        while (iterator.advance()) {
+                            oneSignalOrRestrict.add(signalInterruption(
+                                    iterator.getPreviousEventWithDefault(startThreadEvent),
+                                    iterator.getCurrentEventWithDefault(joinThreadEvent),
+                                    firstEvent,
+                                    lastEvent,
+                                    ttid,
+                                    entryTtid));
+                        }
+                    });
                     allSignalsAndRestrict.add(oneSignalOrRestrict.build());
                 });
         phiTau.add(allSignalsAndRestrict.build());

@@ -50,6 +50,11 @@ public class TraceUtils {
         return compactEventFactory.enterSignal(mockContext, generation, signalNumber, signalHandler);
     }
 
+    public List<ReadonlyEventInterface> exitSignal() throws InvalidTraceDataException {
+        prepareContextForEvent(threadId, signalDepth);
+        return compactEventFactory.exitSignal(mockContext);
+    }
+
     public List<ReadonlyEventInterface> setSignalHandler(
             long signalNumber, long signalHandler, long disabledSignalMask)
             throws InvalidTraceDataException {

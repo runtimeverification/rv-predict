@@ -49,11 +49,13 @@ public class MaximalCausalModelTest {
     private static final int ONE_SIGNAL = 1;
     private static final long LOCK_1 = 500;
     private static final long SIGNAL_NUMBER_1 = 1;
+    private static final long SIGNAL_NUMBER_2 = 2;
     private static final long SIGNAL_HANDLER_1 = 600;
     private static final long SIGNAL_HANDLER_2 = 601;
     private static final long ALL_SIGNALS_DISABLED_MASK = 0xffffffffffffffffL;
-    private static final long GENERATION_1 = 700;
     private static final long SIGNAL_1_ENABLED_MASK = ~(1 << SIGNAL_NUMBER_1);
+    private static final long SIGNAL_2_ENABLED_MASK = ~(1 << SIGNAL_NUMBER_2);
+    private static final long GENERATION_1 = 700;
 
     private int nextIdDelta = 0;
 
@@ -723,7 +725,8 @@ public class MaximalCausalModelTest {
                         tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
 
-        Assert.assertTrue(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
+        Assert.assertTrue(
+                hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
     }
 
     @Test
@@ -742,7 +745,8 @@ public class MaximalCausalModelTest {
                         tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
 
-        Assert.assertFalse(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
+        Assert.assertFalse(
+                hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
     }
 
     @Test
@@ -762,7 +766,8 @@ public class MaximalCausalModelTest {
                         tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
 
-        Assert.assertTrue(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
+        Assert.assertTrue(
+                hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
     }
 
     @Test
@@ -782,7 +787,8 @@ public class MaximalCausalModelTest {
                         tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
 
-        Assert.assertTrue(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
+        Assert.assertTrue(
+                hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
     }
 
     public void recurrentSignalFix() throws InvalidTraceDataException {
@@ -801,7 +807,8 @@ public class MaximalCausalModelTest {
                         tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
 
-        Assert.assertTrue(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
+        Assert.assertTrue(
+                hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
     }
 
     @Test
@@ -823,7 +830,7 @@ public class MaximalCausalModelTest {
         ReadonlyEventInterface event1 = extractSingleEvent(e1);
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
         Optional<Race> maybeRace =
-                findRace(rawTraces, event1, event2, true);
+                findRace(rawTraces, event1, event2);
         Assert.assertTrue(maybeRace.isPresent());
         Race race = maybeRace.get();
         List<Race.SignalStackEvent> signalEvents = race.getFirstSignalStack();
@@ -876,7 +883,7 @@ public class MaximalCausalModelTest {
         ReadonlyEventInterface event1 = extractSingleEvent(e1);
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
         Optional<Race> maybeRace =
-                findRace(rawTraces, event1, event2, true);
+                findRace(rawTraces, event1, event2);
         Assert.assertTrue(maybeRace.isPresent());
         Race race = maybeRace.get();
         List<Race.SignalStackEvent> signalEvents = race.getFirstSignalStack();
@@ -922,7 +929,7 @@ public class MaximalCausalModelTest {
         ReadonlyEventInterface event1 = extractSingleEvent(e1);
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
         Optional<Race> maybeRace =
-                findRace(rawTraces, event1, event2, true);
+                findRace(rawTraces, event1, event2);
         Assert.assertTrue(maybeRace.isPresent());
         Race race = maybeRace.get();
         List<Race.SignalStackEvent> signalEvents = race.getFirstSignalStack();
@@ -943,6 +950,136 @@ public class MaximalCausalModelTest {
         stackEvent = signalEvents.get(1);
         Assert.assertFalse(stackEvent.getEvent().isPresent());
         Assert.assertEquals(2, stackEvent.getTtid());
+    }
+
+    @Test
+    public void raceWithSignalThatInterruptsSignal() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.disableSignal(SIGNAL_NUMBER_1),
+                        tu.disableSignal(SIGNAL_NUMBER_2),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
+                        tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, ALL_SIGNALS_DISABLED_MASK),
+                        tu.enableSignal(SIGNAL_NUMBER_1),
+                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        tu.disableSignal(SIGNAL_NUMBER_1),
+                        tu.enableSignal(SIGNAL_NUMBER_2)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.enableSignal(SIGNAL_NUMBER_2),
+                        tu.exitSignal()),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
+                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
+    }
+
+    @Test
+    public void signalEndsBeforeInterruptedSignal() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.disableSignal(SIGNAL_NUMBER_1),
+                        tu.disableSignal(SIGNAL_NUMBER_2),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
+                        tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, ALL_SIGNALS_DISABLED_MASK),
+                        tu.enableSignal(SIGNAL_NUMBER_1),
+                        tu.disableSignal(SIGNAL_NUMBER_1),
+                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        tu.enableSignal(SIGNAL_NUMBER_2)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.enableSignal(SIGNAL_NUMBER_2),
+                        tu.exitSignal()),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
+                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, true));
+    }
+
+    /*
+    @Test
+    public void signalInterruptsSignalWhenAllowedByTheHandlerMask() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.disableSignal(SIGNAL_NUMBER_1),
+                        tu.disableSignal(SIGNAL_NUMBER_2),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_2_ENABLED_MASK),
+                        tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, ALL_SIGNALS_DISABLED_MASK),
+                        tu.enableSignal(SIGNAL_NUMBER_1),
+                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        tu.disableSignal(SIGNAL_NUMBER_1),
+                        tu.enableSignal(SIGNAL_NUMBER_2)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.exitSignal()),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
+                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.exitSignal()));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
+    }
+    */
+
+    @Test
+    public void signalDoesNotInterruptSignalWhenDisabledByTheHandlerMask() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.disableSignal(SIGNAL_NUMBER_1),
+                        tu.disableSignal(SIGNAL_NUMBER_2),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
+                        tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, ALL_SIGNALS_DISABLED_MASK),
+                        tu.enableSignal(SIGNAL_NUMBER_1),
+                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        tu.disableSignal(SIGNAL_NUMBER_1),
+                        tu.enableSignal(SIGNAL_NUMBER_2)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.exitSignal()),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
+                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.exitSignal()));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, true));
     }
 
     // TODO: Tests with writes that enable certain reads, both with and without signals.
@@ -969,9 +1106,8 @@ public class MaximalCausalModelTest {
 
     private Optional<Race> findRace(
             List<RawTrace> rawTraces,
-            ReadonlyEventInterface e1, ReadonlyEventInterface e2,
-            boolean detectInterruptedThreadRace) {
-        Map<String, Race> races = findRaces(rawTraces, e1, e2, detectInterruptedThreadRace);
+            ReadonlyEventInterface e1, ReadonlyEventInterface e2) {
+        Map<String, Race> races = findRaces(rawTraces, e1, e2, true);
         Assert.assertTrue(races.size() < 2);
         if (!races.isEmpty()) {
             return Optional.of(races.values().iterator().next());

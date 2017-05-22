@@ -954,35 +954,6 @@ public class MaximalCausalModelTest {
     }
 
     @Test
-    public void eventIdsDoNotCollide() throws InvalidTraceDataException {
-        when(mockContext.newId()).thenReturn(1L).thenReturn(2L).thenReturn(3L).thenReturn(4L)
-                .thenReturn(1L + WINDOW_SIZE).thenReturn(2L + WINDOW_SIZE).thenReturn(3L + WINDOW_SIZE)
-                .thenReturn(4L + WINDOW_SIZE);
-        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
-
-        List<ReadonlyEventInterface> e1;
-        List<ReadonlyEventInterface> e2;
-
-        List<RawTrace> rawTraces = Arrays.asList(
-                tu.createRawTrace(
-                        tu.lock(LOCK_1),
-                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
-                        tu.unlock(LOCK_1),
-                        e1 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)),
-                tu.createRawTrace(
-                        tu.switchThread(THREAD_2, NO_SIGNAL),
-                        tu.lock(LOCK_1),
-                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
-                        tu.unlock(LOCK_1),
-                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
-
-        ReadonlyEventInterface event1 = extractSingleEvent(e1);
-        ReadonlyEventInterface event2 = extractSingleEvent(e2);
-
-        Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
-    }
-
-    @Test
     public void raceWithSignalMovedToInterruptSignal() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 

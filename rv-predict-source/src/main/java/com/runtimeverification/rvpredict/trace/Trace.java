@@ -246,6 +246,10 @@ public class Trace {
         return ttidToThreadInfo.get(traceThreadId).getThreadType();
     }
 
+    public int getSignalDepth(Integer traceThreadId) {
+        return ttidToThreadInfo.get(traceThreadId).getSignalDepth();
+    }
+
     public long getSignalNumber(Integer traceThreadId) {
         return ttidToThreadInfo.get(traceThreadId).getSignalNumber();
     }

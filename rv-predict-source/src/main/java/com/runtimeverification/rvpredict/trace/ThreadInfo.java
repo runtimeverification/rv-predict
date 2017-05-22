@@ -5,12 +5,14 @@ class ThreadInfo {
     private final int id;
     private final long originalThreadId;
     private final long signalNumber;
+    private final int signalDepth;
 
-    ThreadInfo(ThreadType threadType, int id, long originalThreadId, long signalNumber) {
+    ThreadInfo(ThreadType threadType, int id, long originalThreadId, long signalNumber, int signalDepth) {
         this.threadType = threadType;
         this.id = id;
         this.originalThreadId = originalThreadId;
         this.signalNumber = signalNumber;
+        this.signalDepth = signalDepth;
     }
 
     public int getId() {
@@ -27,5 +29,9 @@ class ThreadInfo {
 
     public long getOriginalThreadId() {
         return originalThreadId;
+    }
+
+    public int getSignalDepth() {
+        return signalDepth;
     }
 }

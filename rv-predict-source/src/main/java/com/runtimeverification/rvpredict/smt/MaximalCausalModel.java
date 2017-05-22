@@ -61,7 +61,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.OptionalLong;
 import java.util.Set;
 
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.AND;

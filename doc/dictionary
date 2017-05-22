@@ -1,0 +1,12 @@
+Canonical Frame Address, CFA, DWARF CFA, n: the Canonical Frame Address
+    (CFA) is defined by DWARF.  If an object with automatic storage
+    duration is on the stack, then DWARF tells you its location with
+    an offset from the CFA.  The CFA itself is commonly EBP or ESP
+    or an offset therefrom.  It is constant throughout a function's
+    runtime, however, its *expression* may change from instruction
+    to instruction: ESP in the first instruction, EBP + constant in
+    subsequent instructions, or something entirely different if you
+    compile with -momit-frame-pointer.
+
+    Fortunately, LLVM provides an intrinsic (for bitcode) and a __builtin
+    (for C) for the CFA, so I can ignore some of the details.

@@ -6,6 +6,7 @@
 #include <inttypes.h>	/* for PRIu64 */
 #include <limits.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>	/* for uint64_t */
 #include <stdio.h>
@@ -28,13 +29,13 @@ bool use_signal = false;
 
 typedef struct _shared {
 	volatile int count;
-	volatile bool alarm_blocked;
+	volatile _Atomic bool alarm_blocked;
 	volatile bool interrupted;
 } shared_t;
 
 static shared_t shared = {
 	  .count = 1
-	, .alarm_blocked = false
+	, .alarm_blocked = ATOMIC_VAR_INIT(false)
 	, .interrupted = false
 };
 
@@ -44,7 +45,8 @@ alarm_handler(int signum __unused)
 	if (shared.alarm_blocked)
 		return;
 
-	shared.count = -shared.count;
+	if (shared.count < -1 || 1 < shared.count)
+		abort();
 }
 
 static void *
@@ -91,15 +93,18 @@ main(int argc, char **argv)
 	int i, opt;
 	sigset_t oset;
 	pthread_t consumer;
-	bool use_blocking = false;
+	bool block_with_variable = false, block_with_mask = false;
 
-	while ((opt = getopt(argc, argv, "Ss")) != -1) {
+	while ((opt = getopt(argc, argv, "msv")) != -1) {
 		switch (opt) {
-		case 'S':
-			use_signal = true;
+		case 'm':
+			block_with_mask = true;
 			break;
 		case 's':
-			use_signal = use_blocking = true;
+			use_signal = true;
+			break;
+		case 'v':
+			block_with_variable = true;
 			break;
 		default:
 			usage(argv[0]);
@@ -119,7 +124,7 @@ main(int argc, char **argv)
 		establish(SIGALRM, alarm_handler);
 		if (getitimer(ITIMER_REAL, &it) == -1)
 			err(EXIT_FAILURE, "%s: getitimer", __func__);
-		it.it_interval = (struct timeval){.tv_sec = 0, .tv_usec = 100};
+		it.it_interval = (struct timeval){.tv_sec = 0, .tv_usec = 1000 * 1000 / 10};
 		it.it_value.tv_usec++;
 		if (setitimer(ITIMER_REAL, &it, NULL) == -1)
 			err(EXIT_FAILURE, "%s: setitimer", __func__);
@@ -127,12 +132,17 @@ main(int argc, char **argv)
 	} else {
 		pthread_create(&consumer, NULL, &consume, NULL);
 	}
-	for (i = 0; i < 100; i++) {
-		if (use_blocking)
+	for (i = 0; i < 25; i++) {
+		sigset_t tset;
+		if (block_with_variable)
 			shared.alarm_blocked = true;
+		else if (block_with_mask)
+			signals_mask(SIGALRM, &tset);
 		shared.count = -shared.count;
-		if (use_blocking)
+		if (block_with_variable)
 			shared.alarm_blocked = false;
+		else if (block_with_mask)
+			signals_restore(&tset);
 		if (use_signal)
 			pause();
 		else

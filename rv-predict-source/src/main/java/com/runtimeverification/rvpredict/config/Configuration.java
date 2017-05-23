@@ -387,9 +387,9 @@ public class Configuration implements Constants {
     @Parameter(names = opt_suppress, description = "Suppress race reports on the fields that match the given (comma-separated) list of regular expressions", descriptionKey = "2400")
     private String suppress = "";
 
-    private final static String opt_detect_interrupted_thread_race = "--dectect-interrupted-thread-race";
+    private final static String opt_detect_interrupted_thread_race = "--detect-interrupted-thread-race";
     @Parameter(names = opt_detect_interrupted_thread_race, description = "Detect races between a data access event in a signal/interrupt and a data access event in the interrupted thread.")
-    private boolean detectInterruptedThreadRace = false;
+    private boolean detectInterruptedThreadRace = true;
 
     /*
     final static String opt_smt_solver = "--solver";

@@ -166,7 +166,7 @@ public class Race {
         MetadataInterface metadata = trace.metadata();
         List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
         if (e.getSignalDepth() == 0) {
-            sb.append(String.format("    Concurrent %s in thread T%s%s)%n",
+            sb.append(String.format("    Concurrent %s in thread T%s%s%n",
                     e.isWrite() ? "write" : "read",
                     otid,
                     getHeldLocksReport(heldLocks)));

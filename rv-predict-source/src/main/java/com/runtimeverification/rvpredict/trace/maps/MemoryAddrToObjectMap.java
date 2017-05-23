@@ -1,8 +1,8 @@
 package com.runtimeverification.rvpredict.trace.maps;
 
-import java.util.function.Supplier;
-
 import com.runtimeverification.rvpredict.trace.LongToObjectMap;
+
+import java.util.function.Supplier;
 
 /**
  * Map from long value that represents memory address to Object.
@@ -12,8 +12,7 @@ import com.runtimeverification.rvpredict.trace.LongToObjectMap;
  * @param <T>
  */
 public class MemoryAddrToObjectMap<T> extends LongToObjectMap<T> {
-
-    public MemoryAddrToObjectMap(int expected, Supplier<T> newValue) {
+    MemoryAddrToObjectMap(int expected, Supplier<T> newValue) {
         super(expected, newValue);
     }
 
@@ -30,5 +29,4 @@ public class MemoryAddrToObjectMap<T> extends LongToObjectMap<T> {
     protected final int hash(long key) {
         return ((int) (key >> 32) ^ (int) key) & mask;
     }
-
 }

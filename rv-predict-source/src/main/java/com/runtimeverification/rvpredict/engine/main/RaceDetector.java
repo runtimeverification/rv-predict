@@ -55,7 +55,7 @@ public class RaceDetector implements Constants {
         return reports;
     }
 
-    private boolean isThreadSafeLocation(Trace trace, int locId) {
+    private boolean isThreadSafeLocation(Trace trace, long locId) {
         String locationSig = trace.metadata().getLocationSig(locId);
         if (locationSig.startsWith("java.util.concurrent")
             || locationSig.startsWith("java.util.stream")) {
@@ -111,8 +111,9 @@ public class RaceDetector implements Constants {
             return;
         }
 
-        Map<String, Race> result = MaximalCausalModel.create(trace, z3filter, solver)
-                .checkRaceSuspects(sigToRaceSuspects);
+        Map<String, Race> result =
+                MaximalCausalModel.create(trace, z3filter, solver, config.detectInterruptedThreadRace())
+                        .checkRaceSuspects(sigToRaceSuspects);
         sigToRealRace.putAll(result);
         result.forEach((sig, race) -> {
             String report = race.generateRaceReport();
@@ -151,7 +152,7 @@ public class RaceDetector implements Constants {
         }
     }
 
-    public Context getZ3Context() {
+    public static Context getZ3Context() {
         String z3LibDir = System.getProperty("java.io.tmpdir");
         extractZ3Library(z3LibDir);
         Context context = null;
@@ -183,7 +184,7 @@ public class RaceDetector implements Constants {
         return context;
     }
 
-    private void extractZ3Library(String logDir) {
+    private static void extractZ3Library(String logDir) {
         String z3LibraryName = getNativeLibraryName();
         Path z3LibraryTarget = Paths.get(logDir, z3LibraryName);
         if (Files.exists(z3LibraryTarget)) return;
@@ -191,7 +192,7 @@ public class RaceDetector implements Constants {
         try {
             Path z3LibraryTempPath = Files.createTempFile(z3LibraryTarget.getParent(), "rvpredict-z3-", ".library");
             File z3LibraryTempFile = z3LibraryTempPath.toFile();
-            InputStream in = getClass().getResourceAsStream(z3LibraryPath);
+            InputStream in = RaceDetector.class.getResourceAsStream(z3LibraryPath);
             BufferedInputStream reader = new BufferedInputStream(in);
             byte[] buffer = new byte[8192];
             int read;

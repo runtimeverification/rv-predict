@@ -1,34 +1,35 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.util.Constants;
 
 public class MemoryAddrState {
-    private long reader1, reader2;
-    private long writer1, writer2;
+    private int reader1 = Constants.INVALID_TTID, reader2 = Constants.INVALID_TTID;
+    private int writer1 = Constants.INVALID_TTID, writer2 = Constants.INVALID_TTID;
 
-    public void touch(ReadonlyEventInterface event) {
-        long tid = event.getThreadId();
+    void touch(ReadonlyEventInterface event, int ttid) {
         if (event.isRead()) {
-            if (reader1 == 0) {
-                reader1 = tid;
-            } else if (reader1 != tid && reader2 == 0) {
-                reader2 = tid;
+            if (reader1 == Constants.INVALID_TTID) {
+                reader1 = ttid;
+            } else if (reader1 != ttid && reader2 == Constants.INVALID_TTID) {
+                reader2 = ttid;
             }
         } else {
-            if (writer1 == 0) {
-                writer1 = tid;
-            } else if (writer1 != tid && writer2 == 0) {
-                writer2 = tid;
+            if (writer1 == Constants.INVALID_TTID) {
+                writer1 = ttid;
+            } else if (writer1 != ttid && writer2 == Constants.INVALID_TTID) {
+                writer2 = ttid;
             }
         }
     }
 
-    public boolean isWriteShared() {
-        if (writer1 == 0) { // most common case: no write at all
+    boolean isWriteShared() {
+        if (writer1 == Constants.INVALID_TTID) { // most common case: no write at all
             return false;
-        } else {
-            return writer2 != 0 || reader1 != 0 && reader1 != writer1 || reader2 != 0;
         }
+        return writer2 != Constants.INVALID_TTID
+                || (reader1 != Constants.INVALID_TTID && reader1 != writer1)
+                || reader2 != Constants.INVALID_TTID;
     }
 
 }

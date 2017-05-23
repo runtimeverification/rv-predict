@@ -31,6 +31,7 @@ package com.runtimeverification.rvpredict.log;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
@@ -192,11 +193,17 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
         try {
             List<RawTrace> rawTraces = new ArrayList<>();
-            activeBuffers.forEach(b -> {
+            for (Buffer b : activeBuffers) {
                 if (!b.isEmpty()) {
-                    rawTraces.add(new RawTrace(b.start, b.cursor, b.events));
+                    Event oneEvent = b.events[b.start];
+                    long otid = oneEvent.getOriginalThreadId();
+                    OptionalInt maybeThreadId = crntState.getUnfinishedThreadId(0, otid);
+                    int threadId = maybeThreadId.orElseGet(() -> crntState.getNewThreadId(otid));
+                    config.logger().debug(otid + " -> " + threadId);
+
+                    rawTraces.add(new RawTrace(b.start, b.cursor, b.events, 0, threadId));
                 }
-            });
+            }
             if (rawTraces.size() == 1) {
                 crntState.fastProcess(rawTraces.iterator().next());
             } else {
@@ -297,7 +304,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             events = new Event[length];
             for (int i = 0; i < length; i++) {
                 events[i] = new Event();
-                events[i].setThreadId(tid);
+                events[i].setOriginalThreadId(tid);
             }
         }
 

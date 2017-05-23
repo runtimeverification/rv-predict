@@ -1,24 +1,22 @@
 package com.runtimeverification.rvpredict.metadata;
 
+import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.LZ4Utils;
+import org.apache.commons.lang3.tuple.Pair;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.Event;
-import com.runtimeverification.rvpredict.log.LZ4Utils;
-import org.apache.commons.lang3.tuple.Pair;
-
 @SuppressWarnings("serial")
-public class Metadata implements Serializable {
+public class Metadata implements MetadataInterface, Serializable {
 
     public static final int MAX_NUM_OF_VARIABLES = 1024 * 1024;
 
@@ -40,14 +38,14 @@ public class Metadata implements Serializable {
     private final Set<Integer> volatileVarIds = Collections
             .newSetFromMap(new ConcurrentHashMap<>());
 
-    private final Map<Long, Pair<Long, Integer>> tidToCreationInfo = new ConcurrentHashMap<>();
+    private final Map<Long, Pair<Long, Long>> otidToCreationInfo = new ConcurrentHashMap<>();
 
     private static final Metadata instance = new Metadata();
 
     /**
      * Note: This method should be used only in a few places and definitely NOT
      * in offline prediction which should get its {@code Metadata} instance from
-     * {@link #readFrom(Path)}.
+     * {@link #readFrom(Path, boolean)}.
      *
      * @return a singleton instance of {@code Metadata}.
      */
@@ -68,8 +66,9 @@ public class Metadata implements Serializable {
         return varId;
     }
 
-    public String getVariableSig(int varId) {
-        return varIdToVarSig[varId];
+    @Override
+    public String getVariableSig(long varId) {
+        return varIdToVarSig[Math.toIntExact(varId)];
     }
 
     public class TooManyVariables extends RuntimeException {}
@@ -92,10 +91,13 @@ public class Metadata implements Serializable {
         return locId;
     }
 
-    public String getLocationSig(int locId) {
-	if (Configuration.debug && locIdToLocSig[locId] == null)
-	    System.err.println("getLocationSig(" + locId + ") -> null");
-        return locIdToLocSig[locId];
+    @Override
+    public String getLocationSig(long locId) {
+        String sig = locIdToLocSig[Math.toIntExact(locId)];
+        if (Configuration.debug && sig == null) {
+            System.err.println("getLocationSig(" + locId + ") -> null");
+        }
+        return sig;
     }
 
     public void setLocationSig(int locId, String sig) {
@@ -115,22 +117,26 @@ public class Metadata implements Serializable {
      * @return {@code true} if the address is {@code volatile}; otherwise,
      *         {@code false}
      */
+    @Override
     public boolean isVolatile(long addr) {
         int varId = (int) addr;
         return varId < 0 && volatileVarIds.contains(-varId);
     }
 
-    public void addThreadCreationInfo(long childTID, long parentTID, int locId) {
-        tidToCreationInfo.put(childTID, Pair.of(parentTID, locId));
+    @Override
+    public void addOriginalThreadCreationInfo(long childOTID, long parentOTID, long locId) {
+        otidToCreationInfo.put(childOTID, Pair.of(parentOTID, locId));
     }
 
-    public long getParentTID(long tid) {
-        Pair<Long, Integer> info = tidToCreationInfo.get(tid);
+    @Override
+    public long getParentOTID(long otid) {
+        Pair<Long, Long> info = otidToCreationInfo.get(otid);
         return info == null ? 0 : info.getLeft();
     }
 
-    public int getThreadCreationLocId(long tid) {
-        Pair<Long, Integer> info = tidToCreationInfo.get(tid);
+    @Override
+    public long getOriginalThreadCreationLocId(long otid) {
+        Pair<Long, Long> info = otidToCreationInfo.get(otid);
         return info == null ? -1 : info.getRight();
     }
 
@@ -144,10 +150,11 @@ public class Metadata implements Serializable {
      *            the location where the metadata is stored
      * @return the {@code Metadata} object
      */
-    public static Metadata readFrom(Path path) {
+    public static Metadata readFrom(Path path, boolean isCompactTrace) {
         try (ObjectInputStream metadataIS = new ObjectInputStream(
                 LZ4Utils.createDecompressionStream(path))) {
-            return (Metadata) metadataIS.readObject();
+            Metadata metadata = (Metadata) metadataIS.readObject();
+            return metadata;
         } catch (FileNotFoundException e) {
             System.err.println("Error: Metadata file not found.");
             System.err.println(e.getMessage());

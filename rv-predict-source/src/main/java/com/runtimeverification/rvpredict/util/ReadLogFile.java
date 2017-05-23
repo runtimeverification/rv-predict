@@ -4,6 +4,8 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.metadata.MetadataInterface;
+
 import java.io.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,7 +27,8 @@ public class ReadLogFile {
         }
         Path path = Paths.get(args[0]).toAbsolutePath();
         Path directory = path.getParent();
-        Metadata metadata = Metadata.readFrom(Paths.get(directory.toString(), Configuration.METADATA_BIN));
+        MetadataInterface metadata =
+                Metadata.readFrom(Paths.get(directory.toString(), Configuration.METADATA_BIN), false);
         String file = args[0];
         if (file.endsWith("metadata.bin")) {
             System.out.println("#variable section#");

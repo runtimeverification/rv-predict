@@ -16,4 +16,11 @@ public interface Constants {
 
     byte ATOMIC_LOCK_C = 43;
 
+    long SIGNAL_LOCK_C = 44;
+
+    long INVALID_SIGNAL = -1L;
+
+    long INVALID_THREAD_ID = -1L;
+
+    int INVALID_TTID = -1;
 }

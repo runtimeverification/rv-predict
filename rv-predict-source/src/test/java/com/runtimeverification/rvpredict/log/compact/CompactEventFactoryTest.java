@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.log.compact;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.testutils.MoreAsserts;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -33,6 +34,7 @@ public class CompactEventFactoryTest {
     private static final long SIGNAL_MASK = 1004;
     private static final long SIGNAL_MASK_NUMBER2 = 1005;
     private static final long SIGNAL_MASK2 = 1006;
+    private static final long CANONICAL_FRAME_ADDRESS = 1007;
     private static final int SIGNAL_DEPTH = 3;
     private static final long ORIGIN_BIT_COUNT = 4;
 
@@ -41,13 +43,13 @@ public class CompactEventFactoryTest {
     private static final CompactEventMethod<Long> GET_ID =
             new CompactEventMethod<>(ALL_METHODS, "getEventId", CompactEvent::getEventId);
     private static final CompactEventMethod<Long> GET_THREAD_ID =
-            new CompactEventMethod<>(ALL_METHODS, "getThreadId", CompactEvent::getThreadId);
+            new CompactEventMethod<>(ALL_METHODS, "getOriginalThreadId", CompactEvent::getOriginalThreadId);
     private static final CompactEventMethod<EventType> GET_COMPACT_TYPE =
             new CompactEventMethod<>(ALL_METHODS, "getType", CompactEvent::getType);
     private static final CompactEventMethod<Integer> GET_DATA_SIZE_IN_BYTES =
             new CompactEventMethod<>(ALL_METHODS, "getDataSizeInBytes", CompactEvent::getDataSizeInBytes);
-    private static final CompactEventMethod<Long> GET_DATA_ADDRESS =
-            new CompactEventMethod<>(ALL_METHODS, "getAddress", CompactEvent::getDataAddress);
+    private static final CompactEventMethod<Long> GET_OBJECT_HASH_CODE =
+            new CompactEventMethod<>(ALL_METHODS, "getObjectHashCode", CompactEvent::getObjectHashCode);
     private static final CompactEventMethod<Long> GET_DATA_VALUE =
             new CompactEventMethod<>(ALL_METHODS, "getDataValue", CompactEvent::getDataValue);
     private static final CompactEventMethod<Long> GET_LOCK_ADDRESS =
@@ -64,6 +66,8 @@ public class CompactEventFactoryTest {
             new CompactEventMethod<>(ALL_METHODS, "getPartialSignalMask", CompactEvent::getPartialSignalMask);
     private static final CompactEventMethod<Long> GET_SIGNAL_NUMBER =
             new CompactEventMethod<>(ALL_METHODS, "getSignalNumber", CompactEvent::getSignalNumber);
+    private static final CompactEventMethod<Long> GET_CANONICAL_FRAME_ADDRESS =
+            new CompactEventMethod<>(ALL_METHODS, "getCanonicalFrameAddress", CompactEvent::getCanonicalFrameAddress);
 
     @Mock private Context mockContext;
 
@@ -71,6 +75,7 @@ public class CompactEventFactoryTest {
     public void readNonatomicData() throws InvalidTraceDataException {
         when(mockContext.newId()).thenReturn(NEW_ID);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueDataAddressId(ADDRESS)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
@@ -90,16 +95,19 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(ADDRESS, GET_OBJECT_HASH_CODE),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(VALUE, event.unsafeGetDataValue());
     }
 
     @Test
     public void writeNonatomicData() throws InvalidTraceDataException {
         when(mockContext.newId()).thenReturn(NEW_ID);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueDataAddressId(ADDRESS)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
@@ -119,16 +127,19 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.WRITE, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(ADDRESS, GET_OBJECT_HASH_CODE),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(VALUE, event.unsafeGetDataValue());
     }
 
     @Test
     public void readAtomicData() throws InvalidTraceDataException {
         when(mockContext.newId()).thenReturn(NEW_ID).thenReturn(NEW_ID + 1).thenReturn(NEW_ID + 2);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueDataAddressId(ADDRESS)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
@@ -158,10 +169,12 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(ADDRESS, GET_OBJECT_HASH_CODE),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(VALUE, event.unsafeGetDataValue());
         event = events.get(2);
         testImplementedMethods(
                 event,
@@ -178,6 +191,7 @@ public class CompactEventFactoryTest {
     public void writeAtomicData() throws InvalidTraceDataException {
         when(mockContext.newId()).thenReturn(NEW_ID).thenReturn(NEW_ID + 1).thenReturn(NEW_ID + 2);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueDataAddressId(ADDRESS)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
@@ -207,10 +221,12 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(ADDRESS, GET_OBJECT_HASH_CODE),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(VALUE, event.unsafeGetDataValue());
         event = events.get(2);
         testImplementedMethods(
                 event,
@@ -228,6 +244,7 @@ public class CompactEventFactoryTest {
         when(mockContext.newId())
                 .thenReturn(NEW_ID).thenReturn(NEW_ID + 1).thenReturn(NEW_ID + 2).thenReturn(NEW_ID + 3);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueDataAddressId(ADDRESS)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.atomicReadModifyWrite(
@@ -256,10 +273,12 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(ADDRESS, GET_OBJECT_HASH_CODE),
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(VALUE, event.unsafeGetDataValue());
         event = events.get(2);
         testImplementedMethods(
                 event,
@@ -268,10 +287,12 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.WRITE, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(DATA_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
-                        new ReturnValueTest<>(ADDRESS, GET_DATA_ADDRESS),
+                        new ReturnValueTest<>(ADDRESS, GET_OBJECT_HASH_CODE),
                         new ReturnValueTest<>(OTHER_VALUE, GET_DATA_VALUE),
                 }
         );
+        Assert.assertNotEquals(0, event.unsafeGetAddress());
+        Assert.assertEquals(OTHER_VALUE, event.unsafeGetDataValue());
         event = events.get(3);
         testImplementedMethods(
                 event,
@@ -356,9 +377,12 @@ public class CompactEventFactoryTest {
 
     @Test
     public void establishSignal() throws InvalidTraceDataException {
-        when(mockContext.newId()).thenReturn(NEW_ID);
+        when(mockContext.newId())
+                .thenReturn(NEW_ID).thenReturn(NEW_ID + 1).thenReturn(NEW_ID + 2).thenReturn(NEW_ID + 3)
+                .thenReturn(NEW_ID + 4);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
         when(mockContext.getMemoizedSignalMask(SIGNAL_MASK_NUMBER)).thenReturn(SIGNAL_MASK);
+        when(mockContext.createUniqueSignalHandlerId(SIGNAL_NUMBER)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.establishSignal(
@@ -367,17 +391,51 @@ public class CompactEventFactoryTest {
                 SIGNAL_NUMBER,
                 SIGNAL_MASK_NUMBER);
 
-        Assert.assertEquals(1, events.size());
+        Assert.assertEquals(4, events.size());
         ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.WRITE_LOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(Constants.SIGNAL_LOCK_C, GET_LOCK_ADDRESS),
+                }
+        );
+        event = events.get(1);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID + 1, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.ESTABLISH_SIGNAL, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(SIGNAL_MASK, GET_FULL_WRITE_SIGNAL_MASK),
                         new ReturnValueTest<>(SIGNAL_NUMBER, GET_SIGNAL_NUMBER),
                         new ReturnValueTest<>(SIGNAL_HANDLER, GET_SIGNAL_HANDLER_ADDRESS),
+                }
+        );
+        event = events.get(2);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID + 2, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.WRITE, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(com.runtimeverification.rvpredict.log.compact.Constants.LONG_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
+                        new ReturnValueTest<>(SIGNAL_NUMBER, GET_OBJECT_HASH_CODE),
+                        new ReturnValueTest<>(SIGNAL_HANDLER, GET_DATA_VALUE),
+                }
+        );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(SIGNAL_HANDLER, event.unsafeGetDataValue());
+        event = events.get(3);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID + 3, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.WRITE_UNLOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(Constants.SIGNAL_LOCK_C, GET_LOCK_ADDRESS),
                 }
         );
 
@@ -387,23 +445,60 @@ public class CompactEventFactoryTest {
 
     @Test
     public void disestablishSignal() throws InvalidTraceDataException {
-        when(mockContext.newId()).thenReturn(NEW_ID);
+        when(mockContext.newId())
+                .thenReturn(NEW_ID).thenReturn(NEW_ID + 1).thenReturn(NEW_ID + 2).thenReturn(NEW_ID + 3)
+                .thenReturn(NEW_ID + 4);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueSignalHandlerId(SIGNAL_NUMBER)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.disestablishSignal(
                 mockContext,
                 SIGNAL_NUMBER);
 
-        Assert.assertEquals(1, events.size());
+        Assert.assertEquals(4, events.size());
         ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.WRITE_LOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(Constants.SIGNAL_LOCK_C, GET_LOCK_ADDRESS),
+                }
+        );
+        event = events.get(1);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID + 1, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.DISESTABLISH_SIGNAL, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(SIGNAL_NUMBER, GET_SIGNAL_NUMBER),
+                }
+        );
+        event = events.get(2);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID + 2, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.WRITE, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(com.runtimeverification.rvpredict.log.compact.Constants.LONG_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
+                        new ReturnValueTest<>(SIGNAL_NUMBER, GET_OBJECT_HASH_CODE),
+                        new ReturnValueTest<>(com.runtimeverification.rvpredict.log.compact.Constants.INVALID_PROGRAM_COUNTER, GET_DATA_VALUE),
+                }
+        );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(com.runtimeverification.rvpredict.log.compact.Constants.INVALID_PROGRAM_COUNTER, event.unsafeGetDataValue());
+        event = events.get(3);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID + 3, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.WRITE_UNLOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(Constants.SIGNAL_LOCK_C, GET_LOCK_ADDRESS),
                 }
         );
 
@@ -412,24 +507,62 @@ public class CompactEventFactoryTest {
 
     @Test
     public void enterSignal() throws InvalidTraceDataException {
-        when(mockContext.newId()).thenReturn(NEW_ID);
+        when(mockContext.newId())
+                .thenReturn(NEW_ID).thenReturn(NEW_ID + 1).thenReturn(NEW_ID + 2).thenReturn(NEW_ID + 3)
+                .thenReturn(NEW_ID + 4);
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+        when(mockContext.createUniqueSignalHandlerId(SIGNAL_NUMBER)).thenReturn(1L);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.enterSignal(
                 mockContext,
                 GENERATION,
-                SIGNAL_NUMBER);
+                SIGNAL_NUMBER,
+                SIGNAL_HANDLER);
 
-        Assert.assertEquals(1, events.size());
+        Assert.assertEquals(4, events.size());
         ReadonlyEventInterface event = events.get(0);
         testImplementedMethods(
                 event,
                 new ReturnValueTest[] {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.WRITE_LOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(Constants.SIGNAL_LOCK_C, GET_LOCK_ADDRESS),
+                }
+        );
+        event = events.get(1);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID + 1, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.ENTER_SIGNAL, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(SIGNAL_NUMBER, GET_SIGNAL_NUMBER),
+                }
+        );
+        event = events.get(2);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID + 2, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.READ, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(com.runtimeverification.rvpredict.log.compact.Constants.LONG_SIZE_IN_BYTES, GET_DATA_SIZE_IN_BYTES),
+                        new ReturnValueTest<>(SIGNAL_NUMBER, GET_OBJECT_HASH_CODE),
+                        new ReturnValueTest<>(SIGNAL_HANDLER, GET_DATA_VALUE),
+                }
+        );
+        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(SIGNAL_HANDLER, event.unsafeGetDataValue());
+        event = events.get(3);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID + 3, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.WRITE_UNLOCK, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(Constants.SIGNAL_LOCK_C, GET_LOCK_ADDRESS),
                 }
         );
 
@@ -622,7 +755,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<ReadonlyEventInterface> events = eventFactory.enterFunction(mockContext);
+        List<ReadonlyEventInterface> events = eventFactory.enterFunction(mockContext, CANONICAL_FRAME_ADDRESS);
 
         Assert.assertEquals(1, events.size());
         ReadonlyEventInterface event = events.get(0);
@@ -632,6 +765,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(NEW_ID, GET_ID),
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.INVOKE_METHOD, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(CANONICAL_FRAME_ADDRESS, GET_CANONICAL_FRAME_ADDRESS),
                 }
         );
     }

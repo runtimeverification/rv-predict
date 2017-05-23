@@ -8,6 +8,7 @@ import com.runtimeverification.rvpredict.log.compact.readers.AtomicReadModifyWri
 import com.runtimeverification.rvpredict.log.compact.readers.BlockSignalsReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ChangeOfGenerationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.DataManipulationReader;
+import com.runtimeverification.rvpredict.log.compact.readers.FunctionEnterReader;
 import com.runtimeverification.rvpredict.log.compact.readers.GetSetSignalMaskReader;
 import com.runtimeverification.rvpredict.log.compact.readers.GetSignalMaskReader;
 import com.runtimeverification.rvpredict.log.compact.readers.LockManipulationReader;
@@ -82,7 +83,7 @@ public class CompactEventReader implements IEventReader {
         LOCK_ACQUIRE(14, LockManipulationReader.createReader(LockManipulationType.LOCK)),  // acquire lock
         LOCK_RELEASE(15, LockManipulationReader.createReader(LockManipulationType.UNLOCK)),  // release lock
 
-        FUNCTION_ENTER(16, new NoDataReader(CompactEventFactory::enterFunction)),  // enter a function
+        FUNCTION_ENTER(16, FunctionEnterReader.createReader()),  // enter a function
         FUNCTION_EXIT(17, new NoDataReader(CompactEventFactory::exitFunction)),  // exit a function
 
         CHANGE_OF_GENERATION(34, ChangeOfGenerationReader.createReader()),  // change of generation
@@ -230,6 +231,7 @@ public class CompactEventReader implements IEventReader {
         events = factory.beginThread(context, threadId.getAsLong(), 0);  // The first generation is always 0.
 
         currentEvent = -1;
+        readEvent();
     }
 
     private void readData(InputStream inputStream, ReadableData data, String description)
@@ -279,6 +281,9 @@ public class CompactEventReader implements IEventReader {
 
     @Override
     public ReadonlyEventInterface lastReadEvent() {
+        if (events == null) {
+            return null;
+        }
         return events.get(currentEvent);
     }
 

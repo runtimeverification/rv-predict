@@ -32,7 +32,7 @@ import com.google.common.base.StandardSystemProperty;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
-import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
 import com.runtimeverification.rvpredict.trace.Trace;
 
@@ -57,7 +57,8 @@ public class Race {
     private final Trace trace;
     private final SignatureProcessor signatureProcessor;
 
-    public Race(ReadonlyEventInterface e1, ReadonlyEventInterface e2, Trace trace, Configuration config) {
+    public Race(
+            ReadonlyEventInterface e1, ReadonlyEventInterface e2, Trace trace, Configuration config) {
         if (e1.getEventId() > e2.getEventId()) {
             ReadonlyEventInterface tmp = e1;
             e1 = e2;
@@ -101,14 +102,14 @@ public class Race {
     @Override
     public String toString() {
         int addr = Math.min(0, e1.getFieldIdOrArrayIndex()); // collapse all array indices to 0
-        int loc1 = Math.min(e1.getLocationId(), e2.getLocationId());
-        int loc2 = Math.max(e1.getLocationId(), e2.getLocationId());
+        long loc1 = Math.min(e1.getLocationId(), e2.getLocationId());
+        long loc2 = Math.max(e1.getLocationId(), e2.getLocationId());
         return "Race(" + addr + "," + loc1 + "," + loc2 + ")";
     }
 
     public String getRaceLocationSig() {
         if(config.isLLVMPrediction()) {
-            int idx = e1.getObjectHashCode();
+            long idx = e1.getObjectHashCode();
             if(idx != 0) {
                 String sig = trace.metadata().getVariableSig(idx).replace("/", ".");
                 return "@" + sig;
@@ -119,7 +120,7 @@ public class Race {
             int idx = e1.getFieldIdOrArrayIndex();
             if (idx < 0) {
                 String sig = trace.metadata().getVariableSig(-idx).replace("/", ".");
-                int object = e1.getObjectHashCode();
+                long object = e1.getObjectHashCode();
                 return object == 0 ? "@" + sig : sig;
             }
             return "#" + idx;
@@ -160,19 +161,30 @@ public class Race {
 
     private boolean generateMemAccReport(ReadonlyEventInterface e, StringBuilder sb) {
         int stackSize = 0;
-        long tid = e.getThreadId();
-        Metadata metadata = trace.metadata();
+        long otid = e.getOriginalThreadId();
+        long sid = trace.getSignalNumber(trace.getTraceThreadId(e));
+        MetadataInterface metadata = trace.metadata();
         List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
-        sb.append(String.format("    Concurrent %s in thread T%s%s%n",
-                e.isWrite() ? "write" : "read",
-                tid,
-                getHeldLocksReport(heldLocks)));
+        if (e.getSignalDepth() == 0) {
+            sb.append(String.format("    Concurrent %s in thread T%s%s%n",
+                    e.isWrite() ? "write" : "read",
+                    otid,
+                    getHeldLocksReport(heldLocks)));
+        } else {
+            // TODO(virgil): The signal number is not enough to identify what is happening, one also needs
+            // the signal handler or something similar.
+            sb.append(String.format("    Concurrent %s in signal S%s%s%n",
+                    e.isWrite() ? "write" : "read",
+                    otid,
+                    sid,
+                    getHeldLocksReport(heldLocks)));
+        }
         boolean isTopmostStack = true;
         List<ReadonlyEventInterface> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
         stacktrace.addAll(heldLocks);
         Collections.sort(stacktrace, (e1, e2) -> -e1.compareTo(e2));
         for (ReadonlyEventInterface elem : stacktrace) {
-            int locId = elem.getLocationId();
+            long locId = elem.getLocationId();
             String locSig = locId >= 0 ? metadata.getLocationSig(locId)
                     : "... not available ...";
             if (config.isExcludedLibrary(locSig)) {
@@ -192,10 +204,10 @@ public class Race {
             }
         }
 
-        long parentTID = metadata.getParentTID(tid);
-        if (parentTID > 0) {
-            int locId = metadata.getThreadCreationLocId(tid);
-            sb.append(String.format("    T%s is created by T%s%n", tid, parentTID));
+        long parentOTID = metadata.getParentOTID(otid);
+        if (parentOTID > 0) {
+            long locId = metadata.getOriginalThreadCreationLocId(otid);
+            sb.append(String.format("    T%s is created by T%s%n", otid, parentOTID));
             if (locId >= 0) {
                 String locationSig = metadata.getLocationSig(locId);
                 signatureProcessor.process(locationSig);
@@ -204,20 +216,19 @@ public class Race {
                 sb.append("        at unknown location%n");
             }
         } else {
-            if (tid == 1) {
-                sb.append(String.format("    T%s is the main thread%n", tid));
+            if (otid == 1) {
+                sb.append(String.format("    T%s is the main thread%n", otid));
             } else {
-                sb.append(String.format("    T%s is created by n/a%n", tid));
+                sb.append(String.format("    T%s is created by n/a%n", otid));
             }
         }
         return stackSize>0;
     }
 
     private String getHeldLocksReport(List<ReadonlyEventInterface> heldLocks) {
-	if (heldLocks.isEmpty())
-		return "";
+        if (heldLocks.isEmpty())
+            return "";
         StringBuilder sb = new StringBuilder();
-        sb.append(", locks held: ");
         for (int i = 0; i < heldLocks.size(); i++) {
             if (i > 0) {
                 sb.append(", ");
@@ -226,5 +237,4 @@ public class Race {
         }
         return sb.toString();
     }
-
 }

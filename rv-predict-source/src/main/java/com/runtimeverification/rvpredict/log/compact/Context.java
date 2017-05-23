@@ -12,25 +12,31 @@ public class Context {
 
     private final Map<Long, ThreadState> threadIdToState;
     private final Map<Long, Long> memoizedSignalMasks;
+    private final Map<Long, Long> signalHandlerIds;
+    private final Map<Long, Long> dataAddressIds;
     private final long minDeltaAndEventType;
 
     private ThreadState currentThread;
+    private long lastAddressId;
 
     public Context(long minDeltaAndEventType) {
         threadIdToState = new HashMap<>();
         memoizedSignalMasks = new HashMap<>();
+        signalHandlerIds = new HashMap<>();
+        dataAddressIds = new HashMap<>();
+        lastAddressId = 1;
         this.minDeltaAndEventType = minDeltaAndEventType;
     }
 
-    long newId() {
+    public long newId() {
         return currentThread.newId();
     }
 
-    long getThreadId() {
+    public long getThreadId() {
         return currentThread.getThreadId();
     }
 
-    long getPC() {
+    public long getPC() {
         return currentThread.getLastPC();
     }
 
@@ -111,12 +117,27 @@ public class Context {
         currentThread.setSignalDepth(signalDepth, false);
     }
 
+    public int getSignalDepth() {
+        return currentThread.getSignalDepth();
+    }
+
     void memoizeSignalMask(long signalMask, long originBitCount, long signalMaskNumber) {
         memoizedSignalMasks.put(signalMaskNumber, signalMask << originBitCount);
     }
 
-    long getMemoizedSignalMask(long signalMaskNumber) {
+    public long getMemoizedSignalMask(long signalMaskNumber) {
         return memoizedSignalMasks.get(signalMaskNumber);
+    }
+
+    public long createUniqueSignalHandlerId(long signalNumber) {
+        return getOrCreateId(signalHandlerIds, signalNumber);
+    }
+    public long createUniqueDataAddressId(long dataAddress) {
+        return getOrCreateId(dataAddressIds, dataAddress);
+    }
+
+    private long getOrCreateId(Map<Long, Long> ids, long addr) {
+        return ids.computeIfAbsent(addr, k -> lastAddressId++);
     }
 
     private static class ThreadState {
@@ -179,14 +200,12 @@ public class Context {
         }
 
         void enterSignal(long signalNumber, long generation) throws InvalidTraceDataException {
-            setSignalDepth(signalDepth + 1, false);
             setGeneration(generation);
             currentSignalState.signalNumber = signalNumber;
         }
 
         void exitSignal() throws InvalidTraceDataException {
             currentSignalState.state = PerSignalState.State.FINISHED;
-            setSignalDepth(signalDepth - 1, false);
         }
 
         void setSignalDepth(int signalDepth, boolean reset) throws InvalidTraceDataException {
@@ -207,6 +226,10 @@ public class Context {
             }
             this.signalDepth = signalDepth;
             this.currentSignalState = signalStack.get(signalDepth);
+        }
+
+        private int getSignalDepth() {
+            return signalDepth;
         }
 
         private PerSignalState createUnstartedSignalState() {

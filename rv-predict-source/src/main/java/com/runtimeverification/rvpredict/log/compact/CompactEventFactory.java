@@ -10,6 +10,12 @@ import java.util.List;
 public class CompactEventFactory {
     private static final List<ReadonlyEventInterface> NO_EVENTS = Collections.emptyList();
 
+    private enum LockReason {
+        NORMAL,
+        ATOMIC,
+        SIGNAL
+    }
+
     // TODO(virgil): Make the Context a private local variable here, I don't think anyone else needs it.
 
     public List<ReadonlyEventInterface> dataManipulation(
@@ -31,32 +37,67 @@ public class CompactEventFactory {
                 throw new IllegalArgumentException(
                         "Unknown data manipulation type: " + dataManipulationType);
         }
+        long addressId = context.createUniqueDataAddressId(address);
         if (atomicity == CompactEventReader.Atomicity.NOT_ATOMIC) {
             return Collections.singletonList(
-                    dataManipulationEvent(context, dataSizeInBytes, address, value, compactType));
+                    dataManipulationEvent(context, dataSizeInBytes, address, addressId, value, compactType));
         }
         // TODO(virgil): These locks should be something more fine-grained, e.g. write_locks.
         // Also, it would probably be nice if an atomic write to a variable would also be atomic for
         // access to a part of the variable (i.e. union in c/c++), if that's indeed how it should
         // work.
         return Arrays.asList(
-                lockManipulationEvent(context, CompactEventReader.LockManipulationType.LOCK, address, true),
-                dataManipulationEvent(context, dataSizeInBytes, address, value, compactType),
-                lockManipulationEvent(context, CompactEventReader.LockManipulationType.UNLOCK, address, true)
+                lockManipulationEvent(
+                        context, CompactEventReader.LockManipulationType.LOCK, address, LockReason.ATOMIC),
+                dataManipulationEvent(context, dataSizeInBytes, address, addressId, value, compactType),
+                lockManipulationEvent(
+                        context, CompactEventReader.LockManipulationType.UNLOCK, address, LockReason.ATOMIC)
         );
     }
 
     private ReadonlyEventInterface dataManipulationEvent(
-            Context context, int dataSizeInBytes, long address, long value, EventType compactType) {
+            Context context, int dataSizeInBytes, long dataAddress, long dataAddressId, long value,
+            EventType compactType)
+            throws InvalidTraceDataException {
         return new CompactEvent(context, compactType) {
+            @Override
             int getDataSizeInBytes() {
                 return dataSizeInBytes;
             }
+
+            @Override
             public long getDataAddress() {
-                return address;
+                return dataAddressId;
             }
+
+            @Override
+            public long unsafeGetAddress() {
+                return getDataAddress();
+            }
+
+            @Override
+            public long getObjectHashCode() {
+                return dataAddress;
+            }
+
+            @Override
+            public int getFieldIdOrArrayIndex() {
+                return 0;
+            }
+
+            @Override
             public long getDataValue() {
                 return value;
+            }
+
+            @Override
+            public long unsafeGetDataValue() {
+                return getDataValue();
+            }
+
+            @Override
+            public String toString() {
+                return super.toString() + "/" + dataAddressId + "(" + Long.toHexString(dataAddress) + ")=" + value;
             }
         };
     }
@@ -64,12 +105,15 @@ public class CompactEventFactory {
     public List<ReadonlyEventInterface> atomicReadModifyWrite(
             Context context,
             int dataSizeInBytes,
-            long address, long readValue, long writeValue) throws InvalidTraceDataException {
+            long dataAddress, long readValue, long writeValue) throws InvalidTraceDataException {
+        long addressId = context.createUniqueDataAddressId(dataAddress);
         return Arrays.asList(
-                lockManipulationEvent(context, CompactEventReader.LockManipulationType.LOCK, address, true),
-                dataManipulationEvent(context, dataSizeInBytes, address, readValue, EventType.READ),
-                dataManipulationEvent(context, dataSizeInBytes, address, writeValue, EventType.WRITE),
-                lockManipulationEvent(context, CompactEventReader.LockManipulationType.UNLOCK, address, true));
+                lockManipulationEvent(
+                        context, CompactEventReader.LockManipulationType.LOCK, dataAddress, LockReason.ATOMIC),
+                dataManipulationEvent(context, dataSizeInBytes, dataAddress, addressId, readValue, EventType.READ),
+                dataManipulationEvent(context, dataSizeInBytes, dataAddress, addressId, writeValue, EventType.WRITE),
+                lockManipulationEvent(
+                        context, CompactEventReader.LockManipulationType.UNLOCK, dataAddress, LockReason.ATOMIC));
     }
 
     public List<ReadonlyEventInterface> changeOfGeneration(Context context, long generation) {
@@ -80,14 +124,15 @@ public class CompactEventFactory {
     public List<ReadonlyEventInterface> lockManipulation(
             Context context, CompactEventReader.LockManipulationType lockManipulationType, long address)
             throws InvalidTraceDataException {
-        return Collections.singletonList(lockManipulationEvent(context, lockManipulationType, address, true));
+        return Collections.singletonList(
+                lockManipulationEvent(context, lockManipulationType, address, LockReason.NORMAL));
     }
 
     private ReadonlyEventInterface lockManipulationEvent(
             Context context,
             CompactEventReader.LockManipulationType lockManipulationType,
             long address,
-            boolean isAtomic)
+            LockReason lockReason)
             throws InvalidTraceDataException {
         EventType compactType;
         switch (lockManipulationType) {
@@ -108,8 +153,26 @@ public class CompactEventFactory {
 
             @Override
             public String getLockRepresentation() {
-                String prefix = isAtomic ? "AtomicLock@" : "WriteLock@";
+                String prefix;
+                switch (lockReason) {
+                    case NORMAL:
+                        prefix = "WriteLock@";
+                        break;
+                    case ATOMIC:
+                        prefix = "AtomicLock@";
+                        break;
+                    case SIGNAL:
+                        prefix = "SignalLock@";
+                        break;
+                    default:
+                        throw new IllegalStateException("Unknown lock type: " + lockReason);
+                }
                 return prefix + getLockId();
+            }
+
+            @Override
+            public String toString() {
+                return super.toString() + "/" + getLockRepresentation();
             }
         };
     }
@@ -123,43 +186,97 @@ public class CompactEventFactory {
 
     public List<ReadonlyEventInterface> establishSignal(
             Context context,
-            long handler, long signalNumber, long signalMaskNumber) {
+            long handler, long signalNumber, long signalMaskNumber) throws InvalidTraceDataException {
         context.establishSignal(handler, signalNumber, signalMaskNumber);
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
-        return Collections.singletonList(new CompactEvent(context, EventType.ESTABLISH_SIGNAL) {
-            @Override
-            long getFullWriteSignalMask() {
-                return signalMask;
-            }
-            @Override
-            long getSignalNumber() {
-                return signalNumber;
-            }
-            @Override
-            long getSignalHandlerAddress() {
-                return handler;
-            }
-        });
+        long addressId = context.createUniqueSignalHandlerId(signalNumber);
+        return Arrays.asList(
+                lockManipulationEvent(
+                        context, CompactEventReader.LockManipulationType.LOCK,
+                        com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL),
+                new CompactEvent(context, EventType.ESTABLISH_SIGNAL) {
+                    @Override
+                    public long getFullWriteSignalMask() {
+                        return signalMask;
+                    }
+
+                    @Override
+                    public long getSignalNumber() {
+                        return signalNumber;
+                    }
+
+                    @Override
+                    long getSignalHandlerAddress() {
+                        return handler;
+                    }
+
+                    @Override
+                    public String toString() {
+                        return super.toString() + "/" + signalNumber + "=@" + handler + " |=" + signalMask;
+                    }
+                },
+                dataManipulationEvent(
+                        context, Constants.LONG_SIZE_IN_BYTES,
+                        signalNumber, addressId, handler, EventType.WRITE),
+                lockManipulationEvent(
+                        context, CompactEventReader.LockManipulationType.UNLOCK,
+                        com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL)
+        );
     }
 
     public List<ReadonlyEventInterface> disestablishSignal(
-            Context context, long signalNumber) {
+            Context context, long signalNumber) throws InvalidTraceDataException {
         context.disestablishSignal(signalNumber);
-        return Collections.singletonList(new CompactEvent(context, EventType.DISESTABLISH_SIGNAL) {
-            long getSignalNumber() {
-                return signalNumber;
-            }
-        });
+        long addressId = context.createUniqueSignalHandlerId(signalNumber);
+        return Arrays.asList(
+                lockManipulationEvent(
+                        context, CompactEventReader.LockManipulationType.LOCK,
+                        com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL),
+                new CompactEvent(context, EventType.DISESTABLISH_SIGNAL) {
+                    public long getSignalNumber() {
+                        return signalNumber;
+                    }
+
+                    @Override
+                    public String toString() {
+                        return super.toString() + "/" + signalNumber;
+                    }
+                },
+                dataManipulationEvent(
+                        context, Constants.LONG_SIZE_IN_BYTES,
+                        signalNumber, addressId, Constants.INVALID_PROGRAM_COUNTER, EventType.WRITE),
+                lockManipulationEvent(
+                        context, CompactEventReader.LockManipulationType.UNLOCK,
+                        com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL)
+        );
     }
 
     public List<ReadonlyEventInterface> enterSignal(
-            Context context, long generation, long signalNumber) throws InvalidTraceDataException {
+            Context context, long generation, long signalNumber, long signalHandler) throws InvalidTraceDataException {
         context.enterSignal(signalNumber, generation);
-        return Collections.singletonList(new CompactEvent(context, EventType.ENTER_SIGNAL) {
-            long getSignalNumber() {
-                return signalNumber;
-            }
-        });
+        long addressId = context.createUniqueSignalHandlerId(signalNumber);
+        return Arrays.asList(
+                lockManipulationEvent(
+                        context, CompactEventReader.LockManipulationType.LOCK,
+                        com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL),
+                new CompactEvent(context, EventType.ENTER_SIGNAL) {
+                    @Override
+                    public long getSignalNumber() {
+                        return signalNumber;
+                    }
+
+                    @Override
+                    public String toString() {
+                        return super.toString() + "/" + signalNumber;
+                    }
+                },
+                dataManipulationEvent(
+                        context, Constants.LONG_SIZE_IN_BYTES,
+                        signalNumber, addressId, signalHandler, EventType.READ),
+                lockManipulationEvent(
+                        context, CompactEventReader.LockManipulationType.UNLOCK,
+                        com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL)
+        );
     }
 
     List<ReadonlyEventInterface> exitSignal(Context context) throws InvalidTraceDataException {
@@ -167,8 +284,13 @@ public class CompactEventFactory {
         context.exitSignal();
         return Collections.singletonList(new CompactEvent(context, EventType.EXIT_SIGNAL) {
             @Override
-            long getSignalNumber() {
+            public long getSignalNumber() {
                 return currentSignal;
+            }
+
+            @Override
+            public String toString() {
+                return super.toString() + "/" + currentSignal;
             }
         });
     }
@@ -189,20 +311,49 @@ public class CompactEventFactory {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         return Collections.singletonList(new CompactEvent(context, EventType.WRITE_SIGNAL_MASK) {
             @Override
-            long getFullWriteSignalMask() {
+            public long getFullWriteSignalMask() {
                 return signalMask;
+            }
+
+            @Override
+            public String toString() {
+                return super.toString() + "/" + signalMask;
             }
         });
     }
 
-    public List<ReadonlyEventInterface> blockSignals(Context context, long signalMaskNumber) {
+    public List<ReadonlyEventInterface> blockSignals(Context context, long signalMaskNumber)
+            throws InvalidTraceDataException {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
-        return Collections.singletonList(new CompactEvent(context, EventType.BLOCK_SIGNALS) {
-            @Override
-            long getPartialSignalMask() {
-                return signalMask;
-            }
-        });
+        return Collections.singletonList(
+                new CompactEvent(context, EventType.BLOCK_SIGNALS) {
+                    @Override
+                    public long getPartialSignalMask() {
+                        return signalMask;
+                    }
+
+                    @Override
+                    public String toString() {
+                        return super.toString() + "/" + signalMask;
+                    }
+                });
+    }
+
+    public List<ReadonlyEventInterface> unblockSignals(Context context, long signalMaskNumber)
+            throws InvalidTraceDataException {
+        long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
+        return Collections.singletonList(
+                new CompactEvent(context, EventType.UNBLOCK_SIGNALS) {
+                    @Override
+                    public long getPartialSignalMask() {
+                        return signalMask;
+                    }
+
+                    @Override
+                    public String toString() {
+                        return super.toString() + "/" + signalMask;
+                    }
+                });
     }
 
     public List<ReadonlyEventInterface> getSetSignalMask(
@@ -211,12 +362,18 @@ public class CompactEventFactory {
         long writeSignalMask = context.getMemoizedSignalMask(writeSignalMaskNumber);
         return Collections.singletonList(new CompactEvent(context, EventType.READ_WRITE_SIGNAL_MASK) {
             @Override
-            long getFullReadSignalMask() {
+            public long getFullReadSignalMask() {
                 return readSignalMask;
             }
+
             @Override
-            long getFullWriteSignalMask() {
+            public long getFullWriteSignalMask() {
                 return writeSignalMask;
+            }
+
+            @Override
+            public String toString() {
+                return super.toString() + "/" + readSignalMask + "/" + writeSignalMask;
             }
         });
     }
@@ -225,26 +382,25 @@ public class CompactEventFactory {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         return Collections.singletonList(new CompactEvent(context, EventType.READ_SIGNAL_MASK) {
             @Override
-            long getFullReadSignalMask() {
+            public long getFullReadSignalMask() {
                 return signalMask;
             }
-        });
-    }
 
-    public List<ReadonlyEventInterface> unblockSignals(Context context, long signalMaskNumber) {
-        long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
-        return Collections.singletonList(new CompactEvent(context, EventType.UNBLOCK_SIGNALS) {
             @Override
-            long getPartialSignalMask() {
-                return signalMask;
+            public String toString() {
+                return super.toString() + "/" + signalMask;
             }
         });
     }
 
     // Function events.
 
-    List<ReadonlyEventInterface> enterFunction(Context context) {
+    public List<ReadonlyEventInterface> enterFunction(Context context, long canonicalFrameAddress) {
         return Collections.singletonList(new CompactEvent(context, EventType.INVOKE_METHOD) {
+            @Override
+            public long getCanonicalFrameAddress() {
+                return canonicalFrameAddress;
+            }
         });
     }
 
@@ -263,13 +419,8 @@ public class CompactEventFactory {
     }
 
     List<ReadonlyEventInterface> endThread(Context context) {
-        long threadId = context.getThreadId();
         context.endThread();
         return Collections.singletonList(new CompactEvent(context, EventType.END_THREAD) {
-            @Override
-            public long getThreadId() {
-                return threadId;
-            }
         });
     }
 

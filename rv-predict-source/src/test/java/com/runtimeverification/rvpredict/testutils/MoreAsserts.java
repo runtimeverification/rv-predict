@@ -1,7 +1,10 @@
 
 package com.runtimeverification.rvpredict.testutils;
 
+import com.runtimeverification.rvpredict.trace.RawTrace;
 import org.junit.Assert;
+
+import java.util.List;
 
 public class MoreAsserts {
     public static void assertNull(Object o) {
@@ -12,6 +15,17 @@ public class MoreAsserts {
             return;
         }
         Assert.fail("Expected null object, but got " + o + ".\n" + message);
+    }
+
+    public static void assertNotNull(Object o) {
+        assertNotNull("", o);
+    }
+
+    public static void assertNotNull(String message, Object o) {
+        if (o != null) {
+            return;
+        }
+        Assert.fail("Expected non-null object, but got a null one.\n" + message);
     }
 
     public interface ThrowingRunnable {

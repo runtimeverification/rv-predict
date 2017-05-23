@@ -64,6 +64,9 @@ public enum EventType {
      */
     JOIN_THREAD,
 
+    BEGIN_THREAD,
+    END_THREAD,
+
     /**
      * Event generated after entering the class initializer code, i.e.
      * {@code <clinit>}.
@@ -97,17 +100,18 @@ public enum EventType {
     UNBLOCK_SIGNALS,
 
     ENTER_SIGNAL,
-    EXIT_SIGNAL,
-
-    BEGIN_THREAD,
-    END_THREAD;
+    EXIT_SIGNAL;
 
 
     public boolean isSyncType() {
-        return WRITE_LOCK.ordinal() <= this.ordinal() && this.ordinal() <= JOIN_THREAD.ordinal() || this == PRE_LOCK;
+        return WRITE_LOCK.ordinal() <= this.ordinal() && this.ordinal() <= END_THREAD.ordinal() || this == PRE_LOCK;
     }
 
     public boolean isMetaType() {
         return CLINIT_ENTER.ordinal() <= this.ordinal() && this.ordinal() <= FINISH_METHOD.ordinal();
+    }
+
+    public boolean isSignalType() {
+        return ESTABLISH_SIGNAL.ordinal() <= this.ordinal() && this.ordinal() <= EXIT_SIGNAL.ordinal();
     }
 }

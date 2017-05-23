@@ -80,6 +80,17 @@ public abstract class ReadonlyEvent implements ReadonlyEventInterface {
     }
 
     @Override
+    public boolean isSignalEvent() {
+        return getType().isSignalType();
+    }
+
+    @Override
+    public boolean isSignalMaskRead() {
+        return getType() == EventType.READ_WRITE_SIGNAL_MASK
+                || getType() == EventType.READ_SIGNAL_MASK;
+    }
+
+    @Override
     public boolean isMetaEvent() {
         return getType().isMetaType();
     }
@@ -92,16 +103,6 @@ public abstract class ReadonlyEvent implements ReadonlyEventInterface {
     @Override
     public boolean isInvokeMethod() {
         return getType() == EventType.INVOKE_METHOD;
-    }
-
-    @Override
-    public int getObjectHashCode() {
-        return (int) (getDataAddress() >> 32);
-    }
-
-    @Override
-    public int getFieldIdOrArrayIndex() {
-        return (int) getDataAddress();
     }
 
     @Override

@@ -2,11 +2,14 @@ package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LLVMEventReader;
+import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
+import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.*;
 import java.nio.file.Path;
+import java.util.Arrays;
 
 /**
  * Class reading the trace from an LLVM execution debug log.
@@ -72,7 +75,7 @@ public class LLVMTraceCache extends TraceCache {
 
             @Override
             public void log(Object[] args) {
-                metadata.addThreadCreationInfo((long)args[0], (long)args[1], (int)args[2]);
+                metadata.addOriginalThreadCreationInfo((long)args[0], (long)args[1], (int)args[2]);
 
             }
         }, new BinaryReader() {

@@ -20,10 +20,8 @@ import java.util.List;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class SignalEnterReaderTest {
-    private static final long GENERATION = 1234567890123456L;
-    private static final int SIGNAL_NUMBER = 12345;
-    private static final long SIGNAL_HANDLER = 12346L;
+public class FunctionEnterReaderTest {
+    private static final long CANONICAL_FRAME_ADDRESS = 1234567890123456L;
 
     @Mock private CompactEvent mockCompactEvent;
     @Mock private Context mockContext;
@@ -31,35 +29,25 @@ public class SignalEnterReaderTest {
     @Mock private CompactEventFactory mockCompactEventFactory;
 
     @Test
-    public void computesTheCorrectSizeDataSize_UsesDefaultDataSize4Bytes() throws InvalidTraceDataException {
+    public void computesTheCorrectSize() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
-        CompactEventReader.Reader reader = SignalEnterReader.createReader();
-        Assert.assertEquals(20, reader.size(mockTraceHeader));
-    }
-
-    @Test
-    public void computesTheCorrectSizeDataSize_UsesDefaultDataSize8Bytes() throws InvalidTraceDataException {
-        when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(8);
-        when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
-
-        CompactEventReader.Reader reader = SignalEnterReader.createReader();
-        Assert.assertEquals(24, reader.size(mockTraceHeader));
+        CompactEventReader.Reader reader = FunctionEnterReader.createReader();
+        Assert.assertEquals(8, reader.size(mockTraceHeader));
     }
 
     @Test
     public void readsData() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
-        when(mockCompactEventFactory.enterSignal(mockContext, GENERATION, SIGNAL_NUMBER, SIGNAL_HANDLER))
+        when(mockCompactEventFactory.enterFunction(mockContext, CANONICAL_FRAME_ADDRESS))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
-        ByteBuffer buffer = ByteBuffer.allocate(32)
-                .putLong(SIGNAL_HANDLER).putLong(GENERATION).putInt(SIGNAL_NUMBER).putLong(Long.MAX_VALUE);
+        ByteBuffer buffer = ByteBuffer.allocate(16).putLong(CANONICAL_FRAME_ADDRESS).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        CompactEventReader.Reader reader = SignalEnterReader.createReader();
+        CompactEventReader.Reader reader = FunctionEnterReader.createReader();
         List<ReadonlyEventInterface> events =
                 reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 

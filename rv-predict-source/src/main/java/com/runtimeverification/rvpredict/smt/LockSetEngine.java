@@ -42,27 +42,28 @@ import java.util.Map;
  */
 public class LockSetEngine {
 
-    private final Map<Long, Map<Long, List<LockRegion>>> lockIdToTidToLockRegions = new HashMap<>();
+    private final Map<Long, Map<Long, List<LockRegion>>> lockIdToTtidToLockRegions = new HashMap<>();
 
     public void add(LockRegion region) {
-        lockIdToTidToLockRegions
+        lockIdToTtidToLockRegions
                 .computeIfAbsent(region.getLockId(), p -> new HashMap<>())
-                .computeIfAbsent(region.getTID(), p -> new ArrayList<>())
+                .computeIfAbsent(region.getTTID(), p -> new ArrayList<>())
                 .add(region);
     }
 
     /**
      * Checks if two given {@code ReadonlyEventInterface}'s hold a common lock.
      */
-    public boolean hasCommonLock(ReadonlyEventInterface e1, ReadonlyEventInterface e2) {
-        if (e1.getThreadId() == e2.getThreadId()) {
+    public boolean hasCommonLock(
+            ReadonlyEventInterface e1, ReadonlyEventInterface e2, int ttid1, int ttid2) {
+        if (ttid1 == ttid2) {
             throw new IllegalArgumentException();
         }
 
-        for (long lockId : lockIdToTidToLockRegions.keySet()) {
+        for (long lockId : lockIdToTtidToLockRegions.keySet()) {
             /* check if both events hold lockId */
-            LockRegion r1 = getLockRegion(e1, lockId);
-            LockRegion r2 = getLockRegion(e2, lockId);
+            LockRegion r1 = getLockRegion(e1, lockId, ttid1);
+            LockRegion r2 = getLockRegion(e2, lockId, ttid2);
             if (r1 != null && r2 != null
                     && (r1.isWriteLocked() || r2.isWriteLocked())) {
                 return true;
@@ -72,14 +73,14 @@ public class LockSetEngine {
         return false;
     }
 
-    private LockRegion getLockRegion(ReadonlyEventInterface e, long lockId) {
+    private LockRegion getLockRegion(ReadonlyEventInterface e, long lockId, int ttid) {
         /* given a lockId, an event can be protected by at most one write-locked
          * region and one read-locked region (due to reentrant read-write lock
          * downgrading); always prefer to return the write-locked region */
         LockRegion result = null;
-        for (LockRegion region : lockIdToTidToLockRegions.get(lockId).getOrDefault(e.getThreadId(),
+        for (LockRegion region : lockIdToTtidToLockRegions.get(lockId).getOrDefault(ttid,
                 Collections.emptyList())) {
-            if (region.include(e)) {
+            if (region.include(e, ttid)) {
                 if (region.isWriteLocked()) {
                     return region;
                 } else if (result == null) {

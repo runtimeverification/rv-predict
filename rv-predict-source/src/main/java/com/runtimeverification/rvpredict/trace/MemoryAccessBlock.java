@@ -43,10 +43,6 @@ public class MemoryAccessBlock implements Iterable<ReadonlyEventInterface>, Comp
         }
     }
 
-    public long getTID() {
-        return events.get(0).getThreadId();
-    }
-
     @Override
     public Iterator<ReadonlyEventInterface> iterator() {
         return events.iterator();

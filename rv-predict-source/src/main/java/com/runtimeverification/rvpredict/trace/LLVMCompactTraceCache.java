@@ -41,7 +41,7 @@ public class LLVMCompactTraceCache  extends TraceCache {
 
     private void parseLocInfo() throws IOException {
         parseInfo(
-                args -> metadata.setLocationSig((String)args[1]),
+                args -> {},
                 new BinaryReader(),
                 "loc");
     }

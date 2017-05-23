@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.log;
 public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterface> {
     long getEventId();
     long getThreadId();
+    int getSignalDepth();
     int getLocationId();
     long getDataValue();
     EventType getType();

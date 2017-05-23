@@ -230,6 +230,7 @@ public class CompactEventReader implements IEventReader {
         events = factory.beginThread(context, threadId.getAsLong(), 0);  // The first generation is always 0.
 
         currentEvent = -1;
+        readEvent();
     }
 
     private void readData(InputStream inputStream, ReadableData data, String description)
@@ -279,6 +280,9 @@ public class CompactEventReader implements IEventReader {
 
     @Override
     public ReadonlyEventInterface lastReadEvent() {
+        if (events == null) {
+            return null;
+        }
         return events.get(currentEvent);
     }
 

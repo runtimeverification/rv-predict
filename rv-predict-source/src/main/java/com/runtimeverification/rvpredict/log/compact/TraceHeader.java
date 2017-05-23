@@ -15,11 +15,15 @@ public class TraceHeader {
         byte[] magic = read("magic", stream, 4);
         checkBytesValue("magic", magic, "RVP_");
 
-        // TODO(virgil): The program must give up if it does not recognize
-        // the version number, but it can't do that before knowing the byte order.
-        // For now, I'll assume that the file contains the byte order regardless
-        // of version.
+        // The version number is made of 4 bytes, major, minor, teeny, tiny, in this order.
         byte[] versionNumberBytes = read("version number", stream, 4);
+        if (
+                versionNumberBytes[0] != 0
+                        && versionNumberBytes[1] != 0
+                        && versionNumberBytes[2] != 0
+                        && versionNumberBytes[3] != 1) {
+            throw new InvalidTraceDataException("Unknown version: " + Arrays.asList(versionNumberBytes));
+        }
 
         byte[] byteOrderBytes = read("byte order", stream, 4);
         if (byteOrderBytes[0] == (int)'0') {
@@ -28,12 +32,6 @@ public class TraceHeader {
         } else {
             checkBytesValue("byte order", byteOrderBytes, "3210");
             byteOrder = ByteOrder.BIG_ENDIAN;
-        }
-
-        int versionNumber = ByteBuffer.wrap(versionNumberBytes)
-                .order(byteOrder).getInt();
-        if (versionNumber != 0) {
-            throw new InvalidTraceDataException("Unknown version: " + versionNumber);
         }
 
         byte[] otherBytes = read("header end", stream, 4);

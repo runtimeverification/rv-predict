@@ -2,14 +2,19 @@ package com.runtimeverification.rvpredict.log;
 
 public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterface> {
     long getEventId();
-    long getThreadId();
-    int getLocationId();
+    long getOriginalThreadId();
+    int getSignalDepth();
+    long getSignalNumber();
+    long getLocationId();
     long getDataValue();
+    DataAddress getDataAddress();
     EventType getType();
-    long getDataAddress();
     long getSyncObject();
     long getSyncedThreadId();
-    long unsafeGetAddress();
+    long getPartialSignalMask();
+    long getFullWriteSignalMask();
+    long getFullReadSignalMask();
+    DataAddress unsafeGetAddress();
     long unsafeGetDataValue();
 
     String getLockRepresentation();
@@ -20,7 +25,7 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
      * Returns an event with the same base data as the current one, except that it has the new location id.
      * The current object cannot be used anymore after this call.
      */
-    ReadonlyEventInterface destructiveWithLocationId(int locationId);
+    ReadonlyEventInterface destructiveWithLocationId(long locationId);
 
     /**
      * Returns an event with the same base data as the current one, except that it has the new event id.
@@ -58,8 +63,8 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     boolean isMetaEvent();
     boolean isCallStackEvent();
     boolean isInvokeMethod();
-    int getObjectHashCode();
-    int getFieldIdOrArrayIndex();
+    boolean isSignalEvent();
     long getLockId();
     boolean isSimilarTo(ReadonlyEventInterface event);
+    boolean isSignalMaskRead();
 }

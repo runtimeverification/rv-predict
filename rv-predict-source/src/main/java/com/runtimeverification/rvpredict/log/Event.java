@@ -2,15 +2,17 @@ package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.util.Constants;
 
+import javax.xml.crypto.Data;
+
 /**
  * Class for representing an event as it is recorded in the log
  * @author TraianSF
  */
 public class Event extends ReadonlyEvent {
     private long eventId;
-    private long threadId;
-    private int locationId;
-    private long address;
+    private long originalThreadId;
+    private long locationId;
+    private DataAddress address;
     private long dataValue;
     private EventType type;
 
@@ -42,9 +44,13 @@ public class Event extends ReadonlyEvent {
      * @param dataValue data for read/write events.
      * @param type type of event
      */
-    public Event(long eventId, long tid, int locationId, long address, long dataValue, EventType type) {
+    public Event(long eventId, long tid, long locationId, long address, long dataValue, EventType type) {
+        this(eventId, tid, locationId, DataAddress.createPlainDataAddress(address), dataValue, type);
+    }
+
+    public Event(long eventId, long tid, long locationId, DataAddress address, long dataValue, EventType type) {
         this.eventId = eventId;
-        this.threadId = tid;
+        this.originalThreadId = tid;
         this.locationId = locationId;
         this.address = address;
         this.dataValue = dataValue;
@@ -61,16 +67,45 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    public long getThreadId() {
-        return threadId;
-    }
-
-    public void setThreadId(long tid) {
-        threadId = tid;
+    public long getOriginalThreadId() {
+        return originalThreadId;
     }
 
     @Override
-    public int getLocationId() {
+    public int getSignalDepth() {
+        return 0;
+    }
+
+    @Override
+    public long getSignalNumber() {
+        assert false;
+        return Constants.INVALID_SIGNAL;
+    }
+
+    @Override
+    public long getPartialSignalMask() {
+        assert false;
+        return 0;
+    }
+
+    @Override
+    public long getFullWriteSignalMask() {
+        assert false;
+        return 0;
+    }
+
+    @Override
+    public long getFullReadSignalMask() {
+        assert false;
+        return 0;
+    }
+
+    public void setOriginalThreadId(long tid) {
+        originalThreadId = tid;
+    }
+
+    @Override
+    public long getLocationId() {
         return locationId;
     }
 
@@ -101,28 +136,28 @@ public class Event extends ReadonlyEvent {
     }
 
     public void setAddress(long addr) {
-        address = addr;
+        address = DataAddress.createPlainDataAddress(addr);
     }
 
     @Override
-    public long getDataAddress() {
+    public DataAddress getDataAddress() {
         assert isReadOrWrite();
         return address;
     }
 
     @Override
-    public long unsafeGetAddress() { return  address; }
+    public DataAddress unsafeGetAddress() { return  address; }
 
     @Override
     public long getSyncObject() {
         assert getType().isSyncType();
-        return address;
+        return address.getDataAddressOr0();
     }
 
     @Override
     public long getSyncedThreadId() {
         assert isStart() || isJoin();
-        return address;
+        return address.getDataAddressOr0();
     }
 
     @Override
@@ -149,19 +184,23 @@ public class Event extends ReadonlyEvent {
 
     @Override
     public String toString() {
+        int signalDepth = getSignalDepth();
         if (isReadOrWrite()) {
-            int addrl = getObjectHashCode();
-            int addrr = getFieldIdOrArrayIndex();
+            int addrl = address.getObjectHashCode();
+            int addrr = address.getFieldIdOrArrayIndex();
             String addr = addrr < 0 ?
                     Integer.toHexString(addrl) + "." + -addrr :
                     Integer.toHexString(addrl) + "[" + addrr + "]";
-            return String.format("(%s, E%s, T%s, L%s, %s, %s)", type, eventId, threadId, locationId, addr,
+            return String.format("(%s, E%s, T%s, D%s, L%s, %s, %s)",
+                    type, eventId, originalThreadId, signalDepth, locationId, addr,
                     Long.toHexString(dataValue));
         } else if (isSyncEvent()) {
-            return String.format("(%s, E%s, T%s, L%s, %s)", type, eventId, threadId, locationId,
+            return String.format("(%s, E%s, T%s, D%s, L%s, %s)",
+                    type, eventId, originalThreadId, signalDepth, locationId,
                     Long.toHexString(getSyncObject()));
         } else if (isMetaEvent()) {
-            return String.format("(%s, E%s, T%s, L%s)", type, eventId, threadId, locationId);
+            return String.format("(%s, E%s, T%s, D%s, L%s)",
+                    type, eventId, originalThreadId, signalDepth, locationId);
         } else {
             return "UNKNOWN EVENT";
         }
@@ -169,11 +208,11 @@ public class Event extends ReadonlyEvent {
 
     @Override
     public Event copy() {
-        return new Event(eventId, threadId, locationId, address, dataValue, type);
+        return new Event(eventId, originalThreadId, locationId, address, dataValue, type);
     }
 
     @Override
-    public ReadonlyEventInterface destructiveWithLocationId(int locationId) {
+    public ReadonlyEventInterface destructiveWithLocationId(long locationId) {
         this.locationId = locationId;
         return this;
     }

@@ -945,6 +945,35 @@ public class MaximalCausalModelTest {
         Assert.assertEquals(2, stackEvent.getTtid());
     }
 
+    @Test
+    public void eventIdsDoNotCollide() throws InvalidTraceDataException {
+        when(mockContext.newId()).thenReturn(1L).thenReturn(2L).thenReturn(3L).thenReturn(4L)
+                .thenReturn(1L + WINDOW_SIZE).thenReturn(2L + WINDOW_SIZE).thenReturn(3L + WINDOW_SIZE)
+                .thenReturn(4L + WINDOW_SIZE);
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.lock(LOCK_1),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.unlock(LOCK_1),
+                        e1 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.lock(LOCK_1),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.unlock(LOCK_1),
+                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+
+        Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
+    }
+
     // TODO: Tests with writes that enable certain reads, both with and without signals.
     // TODO: Test that a signals stops their thread, i.e. it does not conflict with its own thread in a complex way,
     // i.e. it does not race with the interruption point, but it enables a subsequent read which allows one to

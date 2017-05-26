@@ -5,7 +5,9 @@ import com.runtimeverification.rvpredict.smt.formula.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author TraianSF
@@ -18,9 +20,11 @@ public class Z3Filter {
 
     private final Visitor visitor;
 
-    private final BoolExpr[] concPhiVariables;
+    private final Map<Long, BoolExpr> concPhiVariables;
 
-    private final IntExpr[] orderVariables;
+    private final Map<Long, IntExpr> orderVariables;
+
+    private final Map<Long, IntExpr> interruptedThreadVariables;
 
     private final List<IDisposable> disposables;
 
@@ -28,8 +32,9 @@ public class Z3Filter {
         this.context = context;
         this.windowSize = windowSize;
         this.visitor = new Visitor();
-        this.concPhiVariables = new BoolExpr[windowSize];
-        this.orderVariables = new IntExpr[windowSize];
+        this.concPhiVariables = new HashMap<>(windowSize);
+        this.orderVariables = new HashMap<>(windowSize);
+        this.interruptedThreadVariables = new HashMap<>(windowSize);
         this.disposables = new ArrayList<>();
     }
 
@@ -59,20 +64,20 @@ public class Z3Filter {
 
         @Override
         public void visit(ConcretePhiVariable variable) throws Z3Exception {
-            int idx = (int) (variable.getId() % windowSize);
-            if (concPhiVariables[idx] == null) {
-                concPhiVariables[idx] = context.mkBoolConst(variable.getNamePrefix() + idx);
-            }
-            result = concPhiVariables[idx];
+            result = concPhiVariables.computeIfAbsent(
+                    variable.getId(), k -> context.mkBoolConst(variable.toString()));
         }
 
         @Override
         public void visit(OrderVariable variable) throws Z3Exception {
-            int idx = (int) (variable.getId() % windowSize);
-            if (orderVariables[idx] == null) {
-                orderVariables[idx] = context.mkIntConst(variable.getNamePrefix() + idx);
-            }
-            result = orderVariables[idx];
+            result = orderVariables.computeIfAbsent(
+                    variable.getId(), k -> context.mkIntConst(variable.toString()));
+        }
+
+        @Override
+        public void visit(InterruptedThreadVariable variable) throws Z3Exception {
+            result = interruptedThreadVariables.computeIfAbsent(
+                    variable.getId(), k -> context.mkIntConst(variable.toString()));
         }
 
         @Override
@@ -92,7 +97,7 @@ public class Z3Filter {
             }
         }
 
-        public BoolExpr[] transformFormulas(Collection<SMTFormula> smtFormulas) throws Exception {
+        BoolExpr[] transformFormulas(Collection<SMTFormula> smtFormulas) throws Exception {
             BoolExpr[] formulas = new BoolExpr[smtFormulas.size()];
             int i = 0;
             for (SMTFormula f : smtFormulas) {

@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractSingleEvent;
 import static org.mockito.Mockito.when;
@@ -803,12 +804,182 @@ public class MaximalCausalModelTest {
         Assert.assertTrue(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
     }
 
+    @Test
+    public void detectedSignalRaceContainsInterruptedEventWhenOnSameThread() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.enableSignal(SIGNAL_NUMBER_1),
+                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Optional<Race> maybeRace =
+                findRace(rawTraces, event1, event2, true);
+        Assert.assertTrue(maybeRace.isPresent());
+        Race race = maybeRace.get();
+        List<Race.SignalStackEvent> signalEvents = race.getFirstSignalStack();
+        Assert.assertEquals(1, signalEvents.size());
+        Race.SignalStackEvent stackEvent = signalEvents.get(0);
+        Optional<ReadonlyEventInterface> maybeEvent = stackEvent.getEvent();
+        Assert.assertTrue(maybeEvent.isPresent());
+        Assert.assertEquals(event1.getEventId(), maybeEvent.get().getEventId());
+        Assert.assertEquals(1, stackEvent.getTtid());
+        signalEvents = race.getSecondSignalStack();
+        Assert.assertEquals(2, signalEvents.size());
+        stackEvent = signalEvents.get(0);
+        maybeEvent = stackEvent.getEvent();
+        Assert.assertTrue(maybeEvent.isPresent());
+        Assert.assertEquals(event2.getEventId(), maybeEvent.get().getEventId());
+        Assert.assertEquals(2, stackEvent.getTtid());
+        stackEvent = signalEvents.get(1);
+        maybeEvent = stackEvent.getEvent();
+        Assert.assertTrue(maybeEvent.isPresent());
+        Assert.assertEquals(event1.getEventId(), maybeEvent.get().getEventId());
+        Assert.assertEquals(1, stackEvent.getTtid());
+    }
+
+    @Test
+    public void detectedSignalRaceContainsInterruptedEventWhenOnDifferentThread() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.lock(LOCK_1),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_2),
+                        tu.unlock(LOCK_1),
+                        tu.enableSignal(SIGNAL_NUMBER_1),
+                        tu.threadStart(THREAD_2),
+                        tu.disableSignal(SIGNAL_NUMBER_1),
+                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.lock(LOCK_1),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.unlock(LOCK_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Optional<Race> maybeRace =
+                findRace(rawTraces, event1, event2, true);
+        Assert.assertTrue(maybeRace.isPresent());
+        Race race = maybeRace.get();
+        List<Race.SignalStackEvent> signalEvents = race.getFirstSignalStack();
+        Assert.assertEquals(1, signalEvents.size());
+        Race.SignalStackEvent stackEvent = signalEvents.get(0);
+        Optional<ReadonlyEventInterface> maybeEvent = stackEvent.getEvent();
+        Assert.assertTrue(maybeEvent.isPresent());
+        Assert.assertEquals(event1.getEventId(), maybeEvent.get().getEventId());
+        Assert.assertEquals(1, stackEvent.getTtid());
+
+        signalEvents = race.getSecondSignalStack();
+        Assert.assertEquals(2, signalEvents.size());
+        stackEvent = signalEvents.get(0);
+        maybeEvent = stackEvent.getEvent();
+        Assert.assertTrue(maybeEvent.isPresent());
+        Assert.assertEquals(event2.getEventId(), maybeEvent.get().getEventId());
+        Assert.assertEquals(3, stackEvent.getTtid());
+        stackEvent = signalEvents.get(1);
+        Assert.assertEquals(2, stackEvent.getTtid());
+    }
+
+    @Test
+    public void stackTraceBeforeTheFirstEventOfAThread() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.enableSignal(SIGNAL_NUMBER_1),
+                        tu.threadStart(THREAD_2),
+                        tu.disableSignal(SIGNAL_NUMBER_1),
+                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.disableSignal(SIGNAL_NUMBER_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Optional<Race> maybeRace =
+                findRace(rawTraces, event1, event2, true);
+        Assert.assertTrue(maybeRace.isPresent());
+        Race race = maybeRace.get();
+        List<Race.SignalStackEvent> signalEvents = race.getFirstSignalStack();
+        Assert.assertEquals(1, signalEvents.size());
+        Race.SignalStackEvent stackEvent = signalEvents.get(0);
+        Optional<ReadonlyEventInterface> maybeEvent = stackEvent.getEvent();
+        Assert.assertTrue(maybeEvent.isPresent());
+        Assert.assertEquals(event1.getEventId(), maybeEvent.get().getEventId());
+        Assert.assertEquals(1, stackEvent.getTtid());
+
+        signalEvents = race.getSecondSignalStack();
+        Assert.assertEquals(2, signalEvents.size());
+        stackEvent = signalEvents.get(0);
+        maybeEvent = stackEvent.getEvent();
+        Assert.assertTrue(maybeEvent.isPresent());
+        Assert.assertEquals(event2.getEventId(), maybeEvent.get().getEventId());
+        Assert.assertEquals(3, stackEvent.getTtid());
+        stackEvent = signalEvents.get(1);
+        Assert.assertFalse(stackEvent.getEvent().isPresent());
+        Assert.assertEquals(2, stackEvent.getTtid());
+    }
+
+    @Test
+    public void eventIdsDoNotCollide() throws InvalidTraceDataException {
+        when(mockContext.newId()).thenReturn(1L).thenReturn(2L).thenReturn(3L).thenReturn(4L)
+                .thenReturn(1L + WINDOW_SIZE).thenReturn(2L + WINDOW_SIZE).thenReturn(3L + WINDOW_SIZE)
+                .thenReturn(4L + WINDOW_SIZE);
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.lock(LOCK_1),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.unlock(LOCK_1),
+                        e1 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.lock(LOCK_1),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.unlock(LOCK_1),
+                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+
+        Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
+    }
+
     // TODO: Tests with writes that enable certain reads, both with and without signals.
     // TODO: Test that a signals stops their thread, i.e. it does not conflict with its own thread in a complex way,
     // i.e. it does not race with the interruption point, but it enables a subsequent read which allows one to
     // reach a racing instruction.
     // TODO: Test that a signal can interrupt an empty thread (i.e. a thread which otherwise has no interactions).
-    // TODO: Test for signals using the same tu.lock as the interrupted thread.
+    // TODO: Test for signals using the same lock as the interrupted thread.
     // TODO: Test that atomic variables do not generate races.
 
     private boolean hasRace(
@@ -816,7 +987,28 @@ public class MaximalCausalModelTest {
             ReadonlyEventInterface e1, ReadonlyEventInterface e2) {
         return hasRace(rawTraces, e1, e2, false);
     }
+
     private boolean hasRace(
+            List<RawTrace> rawTraces,
+            ReadonlyEventInterface e1, ReadonlyEventInterface e2,
+            boolean detectInterruptedThreadRace) {
+        Map<String, Race> races = findRaces(rawTraces, e1, e2, detectInterruptedThreadRace);
+        return races.size() > 0;
+    }
+
+    private Optional<Race> findRace(
+            List<RawTrace> rawTraces,
+            ReadonlyEventInterface e1, ReadonlyEventInterface e2,
+            boolean detectInterruptedThreadRace) {
+        Map<String, Race> races = findRaces(rawTraces, e1, e2, detectInterruptedThreadRace);
+        Assert.assertTrue(races.size() < 2);
+        if (!races.isEmpty()) {
+            return Optional.of(races.values().iterator().next());
+        }
+        return Optional.empty();
+    }
+
+    private Map<String, Race> findRaces(
             List<RawTrace> rawTraces,
             ReadonlyEventInterface e1, ReadonlyEventInterface e2,
             boolean detectInterruptedThreadRace) {
@@ -837,7 +1029,6 @@ public class MaximalCausalModelTest {
         raceSuspects.add(new Race(e1, e2, trace, mockConfiguration));
         sigToRaceSuspects.put("race", raceSuspects);
 
-        Map<String, Race> races = model.checkRaceSuspects(sigToRaceSuspects);
-        return races.size() > 0;
+        return model.checkRaceSuspects(sigToRaceSuspects);
     }
 }

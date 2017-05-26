@@ -98,6 +98,11 @@ public class BasicVisitor<TResult> implements Visitor<TResult> {
     }
 
     @Override
+    public void visit(InterruptedThreadVariable node) throws Exception {
+        visit((SMTVariable) node);
+    }
+
+    @Override
     public void visit(SMTASTNode node) throws Exception {
     }
 }

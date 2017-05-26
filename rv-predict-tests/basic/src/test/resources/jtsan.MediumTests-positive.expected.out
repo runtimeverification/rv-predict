@@ -1,9 +1,9 @@
-Data race on field java.util.ArrayList.\$state: \{\{\{(.*)---->  at jtsan.MediumTests\$1.thread1\(MediumTests.java:51\)(.*)---->  at jtsan.MediumTests\$1.thread2\(MediumTests.java:56\)(.*)\}\}\}
+Data race on field java.util.ArrayList.\$state: (.*)> at jtsan.MediumTests\$1.thread1\(MediumTests.java:51\)(.*)> at jtsan.MediumTests\$1.thread2\(MediumTests.java:56\)(.*)
 
-Data race on field java.util.HashSet.\$state: \{\{\{(.*)---->  at jtsan.MediumTests\$2.thread1\(MediumTests.java:71\)(.*)---->  at jtsan.MediumTests\$2.thread2\(MediumTests.java:76\)(.*)\}\}\}
+Data race on field java.util.HashSet.\$state: (.*)> at jtsan.MediumTests\$2.thread1\(MediumTests.java:71\)(.*)> at jtsan.MediumTests\$2.thread2\(MediumTests.java:76\)(.*)
 
-Data race on field java.util.TreeMap.\$state: \{\{\{(.*)---->  at jtsan.MediumTests\$3.thread1\(MediumTests.java:89\)(.*)---->  at jtsan.MediumTests\$3.thread2\(MediumTests.java:94\)(.*)\}\}\}
+Data race on field java.util.TreeMap.\$state: (.*)> at jtsan.MediumTests\$3.thread1\(MediumTests.java:89\)(.*)> at jtsan.MediumTests\$3.thread2\(MediumTests.java:94\)(.*)
 
-Data race on array element #(\d)*: \{\{\{(.*)---->  at jtsan.MediumTests\$4.thread1\(MediumTests.java:107\)(.*)---->  at jtsan.MediumTests\$4.thread2\(MediumTests.java:112\)(.*)\}\}\}
+Data race on array element #(\d)*: (.*)> at jtsan.MediumTests\$4.thread1\(MediumTests.java:107\)(.*)> at jtsan.MediumTests\$4.thread2\(MediumTests.java:112\)(.*)
 
-Data race on field jtsan.ThreadRunner.sharedVar: \{\{\{(.*)---->  at jtsan.MediumTests\$5.thread1\(MediumTests.java:124\)(.*)---->  at jtsan.MediumTests\$5.thread2\(MediumTests.java:134\)(.*)\}\}\}
+Data race on field jtsan.ThreadRunner.sharedVar: (.*)> at jtsan.MediumTests\$5.thread1\(MediumTests.java:124\)(.*)> at jtsan.MediumTests\$5.thread2\(MediumTests.java:134\)(.*)

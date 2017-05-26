@@ -31,6 +31,7 @@ package com.runtimeverification.rvpredict.violation;
 import com.google.common.base.StandardSystemProperty;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.metadata.CompactTraceSignatureProcessor;
 import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
@@ -69,7 +70,9 @@ public class Race {
         this.e2 = e2.copy();
         this.trace = trace;
         this.config = config;
-        if (config.isLLVMPrediction()) {
+        if (config.isCompactTrace()) {
+            this.signatureProcessor = new CompactTraceSignatureProcessor();
+        } else if (config.isLLVMPrediction()) {
             signatureProcessor = new LLVMSignatureProcessor();
         } else {
             signatureProcessor = new SignatureProcessor();

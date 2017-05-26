@@ -279,7 +279,7 @@ public class CompactEventFactory {
         );
     }
 
-    List<ReadonlyEventInterface> exitSignal(Context context) throws InvalidTraceDataException {
+    public List<ReadonlyEventInterface> exitSignal(Context context) throws InvalidTraceDataException {
         long currentSignal = context.getSignalNumber();
         context.exitSignal();
         return Collections.singletonList(new CompactEvent(context, EventType.EXIT_SIGNAL) {

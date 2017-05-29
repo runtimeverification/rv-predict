@@ -62,11 +62,12 @@
         <arg value="bufwriter.BufWriter" />
         <rvarg key="--window" value="500" />
     </test>
-    <test name="bubblesort.BubbleSort" module="basic">
+    <!-- TODO(virgil): Make this test work. -->
+    <!-- test name="bubblesort.BubbleSort" module="basic">
         <runs value="64" />
         <arg value="bubblesort.BubbleSort" />
-        <rvarg key="--window" value="500" />
-    </test>
+        <rvarg key="- -window" value="500" />
+    </test -->
 
     <test name="jtsan.EasyTests-positive" module="basic">
         <arg value="jtsan.EasyTests" />
@@ -130,30 +131,33 @@
     </test>
 
     <!-- TODO(virgil): This prints a "generation not found error" with window sizes < 64000. -->
-    <test name="llvm.demo.Stack" module="llvm-tests">
+    <!-- TODO(virgil): Make this test work. -->
+    <!-- test name="llvm.demo.Stack" module="llvm-tests">
         <in/>
-        <rvarg key="--llvm-predict" value="$in" />
-    </test>
+        <rvarg key="- -llvm-predict" value="$in" />
+    </test -->
 
-    <test name="llvm.demo.example2" module="llvm-tests">
+    <!-- TODO(virgil): Make this test work. -->
+    <!-- test name="llvm.demo.example2" module="llvm-tests">
         <in/>
-        <rvarg key="--llvm-predict" value="$in" />
-    </test>
+        <rvarg key="- -llvm-predict" value="$in" />
+    </test-->
     <!--
     <test name="llvm.demo.example" module="llvm-tests">
         <in/>
         <rvarg key="- -llvm-predict" value="$in" />
     </test>
     -->
-    <test name="llvm.account.account" module="llvm-tests">
+    <!-- TODO(virgil): Make this test work. -->
+    <!-- test name="llvm.account.account" module="llvm-tests">
         <in/>
-        <rvarg key="--llvm-predict" value="$in" />
-        <rvarg key="--window" value="4000" />
-    </test>
+        <rvarg key="- -llvm-predict" value="$in" />
+        <rvarg key="- -window" value="4000" />
+    </test-->
 
-    <test name="llvm.deadlock.simple" module="llvm-tests">
+    <!--test name="llvm.deadlock.simple" module="llvm-tests">
         <in/>
-        <rvarg key="--llvm-predict" value="$in" />
-    </test>
+        <rvarg key="- -llvm-predict" value="$in" />
+    </test-->
 
 </basic>

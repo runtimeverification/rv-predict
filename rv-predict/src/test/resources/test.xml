@@ -8,6 +8,7 @@
         <rvarg value="--debug" />
     </test>
     <!-- TODO(virgil): This prints a "generation not found error" with window sizes < 128000. -->
+    <!-- TODO(virgil): Make this test work. -->
     <!-- test name="ftpserver.jar" module="ftpserver">
         <jar/>
         <runs value="32" />

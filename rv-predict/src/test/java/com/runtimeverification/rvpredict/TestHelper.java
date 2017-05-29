@@ -1,6 +1,12 @@
 package com.runtimeverification.rvpredict;
 
-import java.io.*;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
+import com.google.common.io.Files;
+import org.junit.Assert;
+
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -14,10 +20,6 @@ import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
-import com.google.common.base.Joiner;
-import com.google.common.io.Files;
-import org.junit.Assert;
 
 /**
  * Helper class for testing the output of external commands against the expected output.
@@ -57,10 +59,11 @@ public class TestHelper {
      *            list of arguments describing the system command to be
      *            executed.
      * @return the number of runs before success
-     * @throws Exception
+     * @throws Exception when the test fails.
      */
     public int testCommand(
-            final String expectedFilePrefix, int numOfRuns, String rvRoot, final String... command)
+            final String expectedFilePrefix, int numOfRuns, String rvRoot,
+            final String... command)
             throws Exception {
         Assert.assertTrue(expectedFilePrefix != null);
 
@@ -68,9 +71,25 @@ public class TestHelper {
         final File inFile = new File(testsPrefix + ".in");
 
         // compile regex patterns
+        String[] expected =  Files.toString(new File(testsPrefix + ".expected.out"),
+                Charset.defaultCharset()).split("[\n\r]");
+
+        List<Task> tasks = IntStream.range(0, numOfRuns).boxed()
+                .map(id -> new Task(testsPrefix, id, rvRoot, basePathFile, inFile, inputTest, command))
+                .collect(Collectors.toList());
+
+        return testCommand(expected, tasks, command);
+    }
+
+    @VisibleForTesting
+    static int testCommand(
+            String[] expected,
+            List<Task> tasks,
+            final String... command)
+            throws Exception {
+        // compile regex patterns
         final List<Pattern> expectedPatterns = new ArrayList<>();
-        for (String regex : Files.toString(new File(testsPrefix + ".expected.out"),
-                Charset.defaultCharset()).split("(\n|\r)")) {
+        for (String regex : expected) {
             regex = regex.trim();
             if (!regex.isEmpty()) {
                 expectedPatterns.add(Pattern.compile(regex, Pattern.DOTALL));
@@ -78,11 +97,8 @@ public class TestHelper {
         }
 
         ExecutorService executor = Executors.newFixedThreadPool(NUM_OF_WORKER_THREADS);
-        List<Task> tasks = IntStream.range(0, numOfRuns).boxed()
-                .map(id -> new Task(testsPrefix, id, rvRoot, basePathFile, inFile, inputTest, command))
-                .collect(Collectors.toList());
         Map<Task, Future<Integer>> taskToFuture = tasks.stream()
-                .collect(Collectors.toMap(x -> x, task -> executor.submit(task)));
+                .collect(Collectors.toMap(x -> x, executor::submit));
 
         List<String> outputs = new ArrayList<>();
         int numOfDoneTasks = 0;
@@ -93,7 +109,7 @@ public class TestHelper {
                 if (future.isDone()) {
                     numOfDoneTasks++;
                     int returnCode = future.get();
-                    String output = Files.toString(task.stderrFile, Charset.defaultCharset());
+                    String output = task.output();
                     outputs.add(output);
                     if (returnCode != 0) {
                         Assert.fail("Expected no error during " + Arrays.toString(command)
@@ -101,7 +117,7 @@ public class TestHelper {
                                 + output);
                     } else {
                         extractRaceReports(output).forEach(report ->
-                            expectedPatterns.removeIf(p -> p.matcher(report).matches()));
+                                expectedPatterns.removeIf(p -> p.matcher(report).matches()));
                     }
                     tasksDone.add(task);
                 }
@@ -129,7 +145,7 @@ public class TestHelper {
                 posEndAnchor = output.length();
             }
             result.add(output.substring(posStartAnchor, posEndAnchor));
-            fromIdx = posEndAnchor + 1;
+            fromIdx = posEndAnchor;
         }
         if (result.isEmpty()) {
             result.add("No races found");
@@ -137,7 +153,8 @@ public class TestHelper {
         return result;
     }
 
-    private static class Task implements Callable<Integer> {
+    @VisibleForTesting
+    static class Task implements Callable<Integer> {
 
         private final ProcessBuilder processBuilder;
 
@@ -177,6 +194,11 @@ public class TestHelper {
                 process.destroyForcibly();
                 throw e;
             }
+        }
+
+        @VisibleForTesting
+        String output() throws IOException {
+            return Files.toString(stderrFile, Charset.defaultCharset());
         }
 
     }

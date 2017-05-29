@@ -5,9 +5,6 @@ import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.util.Constants;
 
-import java.util.Arrays;
-import java.util.Optional;
-
 /**
  * Unprocessed trace of events, implemented as a thin wrapper around the array
  * of events obtained from an {@link ILoggingEngine}.
@@ -17,8 +14,6 @@ import java.util.Optional;
 public class RawTrace {
 
     private final ThreadInfo threadInfo;
-
-    private final int signalDepth;
 
     private final int start;
 
@@ -51,8 +46,8 @@ public class RawTrace {
                 signalDepth == 0 ? ThreadType.THREAD : ThreadType.SIGNAL,
                 threadId,
                 originalThreadId,
-                signalNumber);
-        this.signalDepth = signalDepth;
+                signalNumber,
+                signalDepth);
         this.start = start;
         this.mask = events.length - 1;
         this.size = (end - start + events.length) & mask;
@@ -63,7 +58,7 @@ public class RawTrace {
     }
 
     public int getSignalDepth() {
-        return signalDepth;
+        return threadInfo.getSignalDepth();
     }
 
     public long getMinGID() {
@@ -88,7 +83,7 @@ public class RawTrace {
         return events[getIndex(n)];
     }
 
-    public ThreadInfo getThreadInfo() {
+    ThreadInfo getThreadInfo() {
         return threadInfo;
     }
 }

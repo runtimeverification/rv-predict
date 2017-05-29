@@ -29,6 +29,10 @@ public class Signals {
         return !signalInMask(signalNumber, signalMask);
     }
 
+    public static boolean signalIsDisabledInFullMask(long signalNumber, long signalMask) {
+        return signalInMask(signalNumber, signalMask);
+    }
+
     static boolean updateEnabledWithEvent(boolean eventIsEnabled, long signalNumber, ReadonlyEventInterface event) {
         Boolean change = Signals.signalEnableChange(event, signalNumber);
         if (change == null) {

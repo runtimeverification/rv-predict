@@ -1,1 +1,1 @@
-Data race on global 'Account::Bank_Total' of size 4 at 0x000001532b28 \(a\.out \+ 0x000001532b29\): \{\{\{(.*)---->  at Account::Service\(int, int\) account\.cc:47(.*)---->  at Account::Service\(int, int\) account\.cc:47(.*)}}}
+Data race on global 'Account::Bank_Total' of size 4 at 0x000001532b28 \(a\.out \+ 0x000001532b29\): (.*)> at Account::Service\(int, int\) account\.cc:47(.*)> at Account::Service\(int, int\) account\.cc:47(.*)}}}

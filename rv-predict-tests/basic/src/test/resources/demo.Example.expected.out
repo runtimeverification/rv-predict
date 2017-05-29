@@ -1,1 +1,1 @@
-Data race on field demo.Example.x: \{\{\{(.*)---->  at demo.Example\$MyThread.run\(Example.java:68\)(.*)---->  at demo.Example.main\(Example.java:51\)(.*)\}\}\}
+Data race on field demo.Example.x: (.*)> at demo.Example\$MyThread.run\(Example.java:68\)(.*)> at demo.Example.main\(Example.java:51\)(.*)

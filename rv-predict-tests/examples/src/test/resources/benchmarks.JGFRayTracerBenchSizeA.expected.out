@@ -1,5 +1,5 @@
-Data race on array element #(\d)*: \{\{\{(.*)---->  at benchmarks.raytracer.TournamentBarrier.DoBarrier\(TournamentBarrier.java:65\)(.*)---->  at benchmarks.raytracer.TournamentBarrier.DoBarrier\(TournamentBarrier.java:76\)(.*)\}\}\}
+Data race on array element #(\d)*: (.*)> at benchmarks.raytracer.TournamentBarrier.DoBarrier\(TournamentBarrier.java:65\)(.*)> at benchmarks.raytracer.TournamentBarrier.DoBarrier\(TournamentBarrier.java:76\)(.*)
 
-Data race on array element #(\d)*: \{\{\{(.*)---->  at benchmarks.raytracer.TournamentBarrier.DoBarrier\(TournamentBarrier.java:76\)(.*)---->  at benchmarks.raytracer.TournamentBarrier.DoBarrier\(TournamentBarrier.java:78\)(.*)\}\}\}
+Data race on array element #(\d)*: (.*)> at benchmarks.raytracer.TournamentBarrier.DoBarrier\(TournamentBarrier.java:76\)(.*)> at benchmarks.raytracer.TournamentBarrier.DoBarrier\(TournamentBarrier.java:78\)(.*)
 
-Data race on field benchmarks.raytracer.JGFRayTracerBench.checksum1: \{\{\{(.*)---->  at benchmarks.raytracer.RayTracerRunner.run\(JGFRayTracerBench.java:176\)(.*)---->  at benchmarks.raytracer.RayTracerRunner.run0\(JGFRayTracerBench.java:205\)(.*)\}\}\}
+Data race on field benchmarks.raytracer.JGFRayTracerBench.checksum1: (.*)> at benchmarks.raytracer.RayTracerRunner.run\(JGFRayTracerBench.java:176\)(.*)> at benchmarks.raytracer.RayTracerRunner.run0\(JGFRayTracerBench.java:205\)(.*)

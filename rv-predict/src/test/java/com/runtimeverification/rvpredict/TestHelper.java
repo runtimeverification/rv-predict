@@ -124,7 +124,10 @@ public class TestHelper {
             if (posStartAnchor < 0) {
                 break;
             }
-            int posEndAnchor = output.indexOf("}}}", posStartAnchor) + "}}}".length();
+            int posEndAnchor = output.indexOf("Data race on ", posStartAnchor + 1);
+            if (posEndAnchor < 0) {
+                posEndAnchor = output.length();
+            }
             result.add(output.substring(posStartAnchor, posEndAnchor));
             fromIdx = posEndAnchor + 1;
         }

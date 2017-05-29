@@ -1261,9 +1261,8 @@ public class MaximalCausalModelTest {
 
     private Optional<Race> findRace(
             List<RawTrace> rawTraces,
-            ReadonlyEventInterface e1, ReadonlyEventInterface e2,
-            boolean detectInterruptedThreadRace) {
-        Map<String, Race> races = findRaces(rawTraces, e1, e2, detectInterruptedThreadRace);
+            ReadonlyEventInterface e1, ReadonlyEventInterface e2) {
+        Map<String, Race> races = findRaces(rawTraces, e1, e2, true);
         Assert.assertTrue(races.size() < 2);
         if (!races.isEmpty()) {
             return Optional.of(races.values().iterator().next());

@@ -124,7 +124,7 @@ public class TestHelper {
             if (posStartAnchor < 0) {
                 break;
             }
-            int posEndAnchor = output.indexOf("}}}", posStartAnchor) + "}}}".length();
+            int posEndAnchor = output.indexOf(":", posStartAnchor);
             result.add(output.substring(posStartAnchor, posEndAnchor));
             fromIdx = posEndAnchor + 1;
         }

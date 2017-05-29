@@ -148,6 +148,23 @@ public class TraceUtils {
                 CompactEventReader.Atomicity.NOT_ATOMIC);
     }
 
+    public List<ReadonlyEventInterface> atomicLoad(
+            long address, long value) throws InvalidTraceDataException {
+        prepareContextForEvent(threadId, signalDepth);
+        return compactEventFactory.dataManipulation(
+                mockContext, CompactEventReader.DataManipulationType.LOAD, LONG_SIZE_IN_BYTES,
+                address, value,
+                CompactEventReader.Atomicity.ATOMIC);
+    }
+
+    public List<ReadonlyEventInterface> atomicStore(long address, long value) throws InvalidTraceDataException {
+        prepareContextForEvent(threadId, signalDepth);
+        return compactEventFactory.dataManipulation(
+                mockContext, CompactEventReader.DataManipulationType.STORE, LONG_SIZE_IN_BYTES,
+                address, value,
+                CompactEventReader.Atomicity.ATOMIC);
+    }
+
     public static ReadonlyEventInterface extractSingleEvent(List<ReadonlyEventInterface> events) {
         Assert.assertEquals(1, events.size());
         return events.get(0);

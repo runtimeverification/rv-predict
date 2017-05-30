@@ -35,7 +35,7 @@
         <arg value="airlinetickets.Airlinetickets" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA" module="examples">
-        <runs value="8" />
+        <runs value="16" />
         <rvarg key="--window" value="5000" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />
     </test>
@@ -138,23 +138,21 @@
         <rvarg key="- -llvm-predict" value="$in" />
     </test -->
 
-    <!-- TODO(virgil): Make this test work. -->
-    <!-- test name="llvm.demo.example2" module="llvm-tests">
+    <test name="llvm.demo.example2" module="llvm-tests">
         <in/>
-        <rvarg key="- -llvm-predict" value="$in" />
-    </test-->
+        <rvarg key="--llvm-predict" value="$in" />
+    </test>
     <!--
     <test name="llvm.demo.example" module="llvm-tests">
         <in/>
         <rvarg key="- -llvm-predict" value="$in" />
     </test>
     -->
-    <!-- TODO(virgil): Make this test work. -->
-    <!-- test name="llvm.account.account" module="llvm-tests">
+    <test name="llvm.account.account" module="llvm-tests">
         <in/>
-        <rvarg key="- -llvm-predict" value="$in" />
-        <rvarg key="- -window" value="4000" />
-    </test-->
+        <rvarg key="--llvm-predict" value="$in" />
+        <rvarg key="--window" value="4000" />
+    </test>
 
     <!--test name="llvm.deadlock.simple" module="llvm-tests">
         <in/>

@@ -388,7 +388,7 @@ public class Configuration implements Constants {
     private String suppress = "";
 
     private final static String opt_detect_interrupted_thread_race = "--detect-interrupted-thread-race";
-    @Parameter(names = opt_detect_interrupted_thread_race, description = "Detect races between a data access event in a signal/interrupt and a data access event in the interrupted thread.")
+    @Parameter(names = opt_detect_interrupted_thread_race, description = "Detect races between a data access event in a signal/interrupt and a data access event in the interrupted thread.", descriptionKey = "2450")
     private boolean detectInterruptedThreadRace = true;
 
     /*

@@ -286,4 +286,33 @@ public class EventsEnabledForSignalIteratorTest {
 
         Assert.assertFalse(iterator.advance());
     }
+
+    @Test
+    public void fastIterationStopsAtLockBorders()
+            throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
+        List<ReadonlyEventInterface> events = tu.flatten(
+                tu.enableSignal(SIGNAL_NUMBER),
+                tu.nonAtomicStore(ADDRESS, VALUE_1),
+                tu.nonAtomicStore(ADDRESS, VALUE_2),
+                tu.atomicStore(ADDRESS, VALUE_3),
+                tu.nonAtomicStore(ADDRESS, VALUE_4),
+                tu.disableSignal(SIGNAL_NUMBER)
+        );
+        ReadonlyEventInterface defaultEvent = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4));
+        EventsEnabledForSignalIterator iterator =
+                new EventsEnabledForSignalIterator(
+                        events, true, SIGNAL_NUMBER, false);
+
+        Assert.assertTrue(iterator.advance());
+        Assert.assertEquals(EventType.UNBLOCK_SIGNALS, iterator.getPreviousEventWithDefault(defaultEvent).getType());
+        Assert.assertEquals(EventType.WRITE_LOCK, iterator.getCurrentEventWithDefault(defaultEvent).getType());
+
+        Assert.assertTrue(iterator.advance());
+        Assert.assertEquals(EventType.WRITE_LOCK, iterator.getPreviousEventWithDefault(defaultEvent).getType());
+        Assert.assertEquals(ADDRESS, iterator.getPreviousEventWithDefault(defaultEvent).getLockId());
+        Assert.assertEquals(EventType.BLOCK_SIGNALS, iterator.getCurrentEventWithDefault(defaultEvent).getType());
+
+        Assert.assertFalse(iterator.advance());
+    }
 }

@@ -56,7 +56,7 @@ public class EventsEnabledForSignalIterator {
         }
         previousEvent = currentEvent;
         if (detectInterruptedThreadRace) {
-            findNextDisabledEvent();
+            findNextDisabledOrLockEvent();
         } else {
             advanceOneStep();
         }
@@ -76,9 +76,12 @@ public class EventsEnabledForSignalIterator {
         return true;
     }
 
-    private void findNextDisabledEvent() {
+    private void findNextDisabledOrLockEvent() {
         do {
             if (!advanceOneStep()) {
+                return;
+            }
+            if (currentEvent.isLock()) {
                 return;
             }
         } while (enabled);

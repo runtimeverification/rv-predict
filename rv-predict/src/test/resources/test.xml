@@ -7,15 +7,14 @@
         <rvarg key="--window" value="2000" />
         <rvarg value="--debug" />
     </test>
-    <!-- TODO(virgil): This prints a "generation not found error" with window sizes < 128000. -->
-    <!-- TODO(virgil): Make this test work. -->
-    <!-- test name="ftpserver.jar" module="ftpserver">
+    <test name="ftpserver.jar" module="ftpserver">
         <jar/>
         <runs value="32" />
-        <rvarg key="- -window" value="2000" />
-        <rvarg value="- -offline" />
-        <rvarg value="- -debug" />
-    </test-->
+        <rvarg key="--window" value="2000" />
+        <rvarg value="--offline" />
+        <rvarg value="--without-generation" />
+        <rvarg value="--debug" />
+    </test>
 
     <test name="SpringExample.jar" module="SpringExample">
         <jar/>

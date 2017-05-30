@@ -148,7 +148,7 @@ public class TraceCache {
                         break;
                 }
         }
-        if (nextGenStart == maxEvents + 1) {
+        if (nextGenStart == maxEvents + 1 && !config.withoutGeneration()) {
                 System.err.println("no change of generation in " +
                     (maxEvents + 1) + " events");
                 return rawTraces;                // XXX

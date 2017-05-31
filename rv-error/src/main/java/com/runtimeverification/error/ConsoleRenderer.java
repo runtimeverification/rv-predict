@@ -23,7 +23,7 @@ public class ConsoleRenderer extends Renderer {
     }
 
     @Override
-    protected void renderImpl(StackError error, PrintStream out) {
+    protected void renderImpl(StackError error, PrintStream out, String json) {
         StringBuilder sb = new StringBuilder();
         sb.append(" ");
         sb.append(error.description);
@@ -58,7 +58,7 @@ public class ConsoleRenderer extends Renderer {
     }
 
     @Override
-    protected void renderImpl(LocationError error, PrintStream out) {
+    protected void renderImpl(LocationError error, PrintStream out, String json) {
         StringBuilder sb = new StringBuilder();
         renderLoc(sb, error.loc.loc);
         sb.append(": ");

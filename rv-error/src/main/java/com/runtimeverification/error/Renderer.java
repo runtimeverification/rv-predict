@@ -62,10 +62,10 @@ public abstract class Renderer {
             return false;
         }
         try (PrintStream stream = getOutStream(data.output)) {
-            renderImpl(error, stream);
+            renderImpl(error, stream, json);
         }
         try (PrintStream stream = getOutStream(new File(System.getProperty("user.home"), ".kcc-report.csv").getAbsolutePath())) {
-            getCSV().renderImpl(error, stream);
+            getCSV().renderImpl(error, stream, json);
         }
         return data.fatal_errors;
     }
@@ -112,7 +112,7 @@ public abstract class Renderer {
         return array;
     }
 
-    protected abstract void renderImpl(StackError error, PrintStream out);
+    protected abstract void renderImpl(StackError error, PrintStream out, String json);
 
     public boolean render(LocationError error, String json) {
         error.error_id = getRealErrorId(error.error_id, error.category);
@@ -121,10 +121,14 @@ public abstract class Renderer {
             return false;
         }
         try (PrintStream stream = getOutStream(data.output)) {
-            renderImpl(error, stream);
+            renderImpl(error, stream, json);
         }
         try (PrintStream stream = getOutStream(new File(System.getProperty("user.home"), ".kcc-report.csv").getAbsolutePath())) {
-            getCSV().renderImpl(error, stream);
+            getCSV().renderImpl(error, stream, json);
+        }
+        try (PrintStream stream = getOutStream(new File(System.getProperty("user.home"), ".kcc-report.json").getAbsolutePath())) {
+            stream.println(json);
+            stream.flush();
         }
         return data.fatal_errors;
     }
@@ -204,7 +208,7 @@ public abstract class Renderer {
         }
     }
 
-    protected abstract void renderImpl(LocationError error, PrintStream out);
+    protected abstract void renderImpl(LocationError error, PrintStream out, String json);
 
     public CSVRenderer getCSV() {
         CSVRenderer csv = this.csv;
@@ -350,6 +354,8 @@ public abstract class Renderer {
             return new ConsoleRenderer(data);
         case CSV:
             return new CSVRenderer(data);
+        case JSON:
+            return new JsonRenderer(data);
         default:
             throw new AssertionError("unimplemented renderer");
         }

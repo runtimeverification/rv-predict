@@ -230,10 +230,10 @@ public class Race {
             sb.append("    Interrupting ");
             int ttid = stackEvent.getTtid();
             if (trace.getThreadType(ttid) == ThreadType.THREAD) {
-                sb.append("thread ");
+                sb.append("thread T");
                 sb.append(trace.getOriginalThreadIdForTraceThreadId(ttid));
             } else {
-                sb.append("signal ");
+                sb.append("signal S");
                 sb.append(trace.getSignalNumber(ttid));
             }
             sb.append("\n");

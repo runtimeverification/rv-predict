@@ -7,15 +7,14 @@
         <rvarg key="--window" value="2000" />
         <rvarg value="--debug" />
     </test>
-    <!-- TODO(virgil): This prints a "generation not found error" with window sizes < 128000. -->
-    <!-- TODO(virgil): Make this test work. -->
-    <!-- test name="ftpserver.jar" module="ftpserver">
+    <test name="ftpserver.jar" module="ftpserver">
         <jar/>
         <runs value="32" />
-        <rvarg key="- -window" value="2000" />
-        <rvarg value="- -offline" />
-        <rvarg value="- -debug" />
-    </test-->
+        <rvarg key="--window" value="2000" />
+        <rvarg value="--offline" />
+        <rvarg value="--without-generation" />
+        <rvarg value="--debug" />
+    </test>
 
     <test name="SpringExample.jar" module="SpringExample">
         <jar/>
@@ -131,29 +130,25 @@
         <arg value="instrumentation.InstrumentationTests" />
     </test>
 
-    <!-- TODO(virgil): This prints a "generation not found error" with window sizes < 64000. -->
-    <!-- TODO(virgil): Make this test work. -->
-    <!-- test name="llvm.demo.Stack" module="llvm-tests">
+    <test name="llvm.demo.Stack" module="llvm-tests">
         <in/>
-        <rvarg key="- -llvm-predict" value="$in" />
-    </test -->
+        <rvarg value="--without-generation" />
+        <rvarg key="--window" value="4000"/>
+        <rvarg key="--llvm-predict" value="$in" />
+    </test>
 
     <test name="llvm.demo.example2" module="llvm-tests">
         <in/>
         <rvarg key="--llvm-predict" value="$in" />
     </test>
-    <!--
-    <test name="llvm.demo.example" module="llvm-tests">
-        <in/>
-        <rvarg key="- -llvm-predict" value="$in" />
-    </test>
-    -->
     <test name="llvm.account.account" module="llvm-tests">
         <in/>
         <rvarg key="--llvm-predict" value="$in" />
         <rvarg key="--window" value="4000" />
     </test>
 
+    <!-- TODO(virgil): Consider deleting this test or replacing it with something else.
+         Its trace has only one thread, which means that it can't actually have a deadlock.-->
     <!--test name="llvm.deadlock.simple" module="llvm-tests">
         <in/>
         <rvarg key="- -llvm-predict" value="$in" />

@@ -360,6 +360,10 @@ public class Configuration implements Constants {
     @Parameter(names = opt_compact_trace, description = "Whether to use the compact trace format.", hidden = true, descriptionKey = "1700")
     private boolean compactTrace;
 
+    public final static String opt_without_generation = "--without-generation";
+    @Parameter(names = opt_without_generation, description = "Whether the trace contains generations.", hidden = true, descriptionKey = "1800")
+    private boolean withoutGeneration = false;
+
     public final static String opt_include = "--include";
     @Parameter(names = opt_include, validateWith = PackageValidator.class, description = "Comma separated list of packages to include",
             descriptionKey = "2000")
@@ -775,4 +779,6 @@ public class Configuration implements Constants {
     public boolean detectInterruptedThreadRace() {
         return detectInterruptedThreadRace;
     }
+
+    public boolean withoutGeneration() { return withoutGeneration; }
 }

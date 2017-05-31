@@ -1,1 +1,1 @@
-Data race on global 'sharedVar' of size 4 at 0x000001527ee8 \(a\.out \+ 0x000001527ee8\): (.*) > at fn:thread1\(\);file:racy-c-programs/examples/SimpleRace\.cpp;line:10(.*) > at fn:thread2\(\);file:racy-c-programs/examples/SimpleRace\.cpp;line:14(.*)}}}
+Data race on global 'sharedVar' of size 4 at 0x000001527ee8 \(a\.out \+ 0x000001527ee8\): (.*) > at fn:thread1\(\);file:racy-c-programs/examples/SimpleRace\.cpp;line:10(.*) > at fn:thread2\(\);file:racy-c-programs/examples/SimpleRace\.cpp;line:14(.*)

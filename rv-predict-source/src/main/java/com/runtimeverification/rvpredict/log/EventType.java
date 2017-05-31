@@ -107,7 +107,7 @@ public enum EventType {
     public boolean isSyncType() {
         return (WRITE_LOCK.ordinal() <= this.ordinal() && this.ordinal() <= JOIN_THREAD.ordinal())
                 || this == PRE_LOCK
-                || (BEGIN_THREAD.ordinal() <= this.ordinal() && END_THREAD.ordinal() <= this.ordinal());
+                || (BEGIN_THREAD.ordinal() <= this.ordinal() && this.ordinal() <= END_THREAD.ordinal());
     }
 
     public boolean isMetaType() {

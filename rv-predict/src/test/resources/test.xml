@@ -141,18 +141,14 @@
         <in/>
         <rvarg key="--llvm-predict" value="$in" />
     </test>
-    <!--
-    <test name="llvm.demo.example" module="llvm-tests">
-        <in/>
-        <rvarg key="- -llvm-predict" value="$in" />
-    </test>
-    -->
     <test name="llvm.account.account" module="llvm-tests">
         <in/>
         <rvarg key="--llvm-predict" value="$in" />
         <rvarg key="--window" value="4000" />
     </test>
 
+    <!-- TODO(virgil): Consider deleting this test or replacing it with something else.
+         Its trace has only one thread, which means that it can't actually have a deadlock.-->
     <!--test name="llvm.deadlock.simple" module="llvm-tests">
         <in/>
         <rvarg key="- -llvm-predict" value="$in" />

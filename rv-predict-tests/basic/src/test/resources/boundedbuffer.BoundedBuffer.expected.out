@@ -1,23 +1,23 @@
-Data race on field boundedbuffer.Buffer._active: \{\{\{(.*)---->  at boundedbuffer.Buffer.enq\(Buffer.java:128\)(.*)---->  at boundedbuffer.Buffer.isActive\(Buffer.java:104\)(.*)\}\}\}
+Data race on field boundedbuffer.Buffer._active: (.*)> at boundedbuffer.Buffer.enq\(Buffer.java:128\)(.*)> at boundedbuffer.Buffer.isActive\(Buffer.java:104\)(.*)
 
-Data race on field boundedbuffer.Buffer._active: \{\{\{(.*)---->  at boundedbuffer.Buffer.deq\(Buffer.java:150\)(.*)---->  at boundedbuffer.Buffer.isActive\(Buffer.java:104\)(.*)\}\}\}
+Data race on field boundedbuffer.Buffer._active: (.*)> at boundedbuffer.Buffer.deq\(Buffer.java:150\)(.*)> at boundedbuffer.Buffer.isActive\(Buffer.java:104\)(.*)
 
-Data race on field boundedbuffer.Buffer._active: \{\{\{(.*)---->  at boundedbuffer.Buffer.enq\(Buffer.java:128\)(.*)---->  at boundedbuffer.Buffer.resetActive\(Buffer.java:100\)(.*)\}\}\}
+Data race on field boundedbuffer.Buffer._active: (.*)> at boundedbuffer.Buffer.enq\(Buffer.java:128\)(.*)> at boundedbuffer.Buffer.resetActive\(Buffer.java:100\)(.*)
 
-Data race on field boundedbuffer.Buffer._active: \{\{\{(.*)---->  at boundedbuffer.Buffer.deq\(Buffer.java:150\)(.*)---->  at boundedbuffer.Buffer.resetActive\(Buffer.java:100\)(.*)\}\}\}
+Data race on field boundedbuffer.Buffer._active: (.*)> at boundedbuffer.Buffer.deq\(Buffer.java:150\)(.*)> at boundedbuffer.Buffer.resetActive\(Buffer.java:100\)(.*)
 
-Data race on field boundedbuffer.BoundedBuffer._finish: \{\{\{(.*)---->  at boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:291\)(.*)---->  at boundedbuffer.Consumer.run\(BoundedBuffer.java:400\)(.*)\}\}\}
+Data race on field boundedbuffer.BoundedBuffer._finish: (.*)> at boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:291\)(.*)> at boundedbuffer.Consumer.run\(BoundedBuffer.java:400\)(.*)
 
-Data race on field boundedbuffer.BoundedBuffer._finish: \{\{\{(.*)---->  at boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:294\)(.*)---->  at boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)\}\}\}
+Data race on field boundedbuffer.BoundedBuffer._finish: (.*)> at boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:294\)(.*)> at boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)
 
-Data race on field boundedbuffer.BoundedBuffer._finish: \{\{\{(.*)---->  at boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:294\)(.*)---->  at boundedbuffer.Consumer.run\(BoundedBuffer.java:400\)(.*)\}\}\}
+Data race on field boundedbuffer.BoundedBuffer._finish: (.*)> at boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:294\)(.*)> at boundedbuffer.Consumer.run\(BoundedBuffer.java:400\)(.*)
 
-Data race on field boundedbuffer.BoundedBuffer._finish: \{\{\{(.*)---->  at boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:302\)(.*)---->  at boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)\}\}\}
+Data race on field boundedbuffer.BoundedBuffer._finish: (.*)> at boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:302\)(.*)> at boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)
 
-Data race on field boundedbuffer.BoundedBuffer._finish: \{\{\{(.*)---->  at boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:302\)(.*)---->  at boundedbuffer.Consumer.run\(BoundedBuffer.java:400\)(.*)\}\}\}
+Data race on field boundedbuffer.BoundedBuffer._finish: (.*)> at boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:302\)(.*)> at boundedbuffer.Consumer.run\(BoundedBuffer.java:400\)(.*)
 
-Data race on field boundedbuffer.BoundedBuffer._finish: \{\{\{(.*)---->  at boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:291\)(.*)---->  at boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)\}\}\}
+Data race on field boundedbuffer.BoundedBuffer._finish: (.*)> at boundedbuffer.BoundedBuffer.WaitForBug\(BoundedBuffer.java:291\)(.*)> at boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)
 
-Data race on field boundedbuffer.BoundedBuffer._finish: \{\{\{(.*)---->  at boundedbuffer.Consumer.run\(BoundedBuffer.java:400\)(.*)---->  at boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)\}\}\}
+Data race on field boundedbuffer.BoundedBuffer._finish: (.*)> at boundedbuffer.Consumer.run\(BoundedBuffer.java:400\)(.*)> at boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)
 
-Data race on field boundedbuffer.BoundedBuffer._finish: \{\{\{(.*)---->  at boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)---->  at boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)\}\}\}
+Data race on field boundedbuffer.BoundedBuffer._finish: (.*)> at boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)> at boundedbuffer.Producer.run\(BoundedBuffer.java:381\)(.*)

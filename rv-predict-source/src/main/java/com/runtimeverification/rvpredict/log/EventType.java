@@ -64,9 +64,6 @@ public enum EventType {
      */
     JOIN_THREAD,
 
-    BEGIN_THREAD,
-    END_THREAD,
-
     /**
      * Event generated after entering the class initializer code, i.e.
      * {@code <clinit>}.
@@ -91,6 +88,10 @@ public enum EventType {
     //TODO(TraianSF): Consider moving this with the other SYNC events
     PRE_LOCK,
 
+
+    BEGIN_THREAD,
+    END_THREAD,
+
     ESTABLISH_SIGNAL,
     DISESTABLISH_SIGNAL,
     WRITE_SIGNAL_MASK,
@@ -104,7 +105,9 @@ public enum EventType {
 
 
     public boolean isSyncType() {
-        return WRITE_LOCK.ordinal() <= this.ordinal() && this.ordinal() <= END_THREAD.ordinal() || this == PRE_LOCK;
+        return (WRITE_LOCK.ordinal() <= this.ordinal() && this.ordinal() <= JOIN_THREAD.ordinal())
+                || this == PRE_LOCK
+                || (BEGIN_THREAD.ordinal() <= this.ordinal() && END_THREAD.ordinal() <= this.ordinal());
     }
 
     public boolean isMetaType() {

@@ -130,12 +130,12 @@
         <arg value="instrumentation.InstrumentationTests" />
     </test>
 
-    <!-- TODO(virgil): This prints a "generation not found error" with window sizes < 64000. -->
-    <!-- TODO(virgil): Make this test work. -->
-    <!-- test name="llvm.demo.Stack" module="llvm-tests">
+    <test name="llvm.demo.Stack" module="llvm-tests">
         <in/>
-        <rvarg key="- -llvm-predict" value="$in" />
-    </test -->
+        <rvarg value="--without-generation" />
+        <rvarg key="--window" value="4000"/>
+        <rvarg key="--llvm-predict" value="$in" />
+    </test>
 
     <test name="llvm.demo.example2" module="llvm-tests">
         <in/>

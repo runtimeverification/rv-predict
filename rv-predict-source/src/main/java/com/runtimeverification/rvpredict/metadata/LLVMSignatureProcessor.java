@@ -6,11 +6,14 @@ package com.runtimeverification.rvpredict.metadata;
  * @author TraianSF
  */
 public class LLVMSignatureProcessor extends SignatureProcessor {
-    String basePath = null;
+    private String basePath = null;
 
     private static String extractFilePath(String locationSig) {
         int start = locationSig.indexOf(";file:") + ";file:".length();
         int end = locationSig.indexOf(";line:");
+        if (start < 0 || end < 0) {
+            return null;
+        }
         return locationSig.substring(start,end);
     }
 

@@ -124,7 +124,7 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    public long unsafeGetDataValue() { return dataValue; };
+    public long unsafeGetDataValue() { return dataValue; }
 
     @Override
     public EventType getType() {

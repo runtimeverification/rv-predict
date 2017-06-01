@@ -462,7 +462,6 @@ public class Trace {
                                 .computeIfAbsent(event.getSignalHandlerAddress(), k -> new ArrayList<>())
                                 .add(event);
                     }
-                    // Do nothing for now.
                 } else {
 		    if (Configuration.debug)
 		        System.err.println(event.getType());

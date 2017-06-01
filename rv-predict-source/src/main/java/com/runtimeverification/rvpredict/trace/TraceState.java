@@ -72,7 +72,7 @@ public class TraceState {
 
     private final Map<SignalThreadId, Integer> t_unfinishedThreads;
 
-    Map<Long, Map<Long, List<ReadonlyEventInterface>>> t_signalNumberToSignalHandlerToEstablishSignalEvents;
+    private final Map<Long, Map<Long, List<ReadonlyEventInterface>>> t_signalNumberToSignalHandlerToEstablishSignalEvents;
 
     private int t_threadId;
 

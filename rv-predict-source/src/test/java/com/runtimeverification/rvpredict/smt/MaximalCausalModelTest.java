@@ -959,8 +959,10 @@ public class MaximalCausalModelTest {
                 .thenReturn(1L + WINDOW_SIZE).thenReturn(2L + WINDOW_SIZE).thenReturn(3L + WINDOW_SIZE)
                 .thenReturn(4L + WINDOW_SIZE);
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
         List<ReadonlyEventInterface> e1;
         List<ReadonlyEventInterface> e2;
+
         List<RawTrace> rawTraces = Arrays.asList(
                 tu.createRawTrace(
                         tu.lock(LOCK_1),
@@ -973,8 +975,10 @@ public class MaximalCausalModelTest {
                         tu.nonAtomicStore(ADDRESS_1, VALUE_1),
                         tu.unlock(LOCK_1),
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
+
         ReadonlyEventInterface event1 = extractSingleEvent(e1);
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
+
         Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
     }
 
@@ -1073,41 +1077,6 @@ public class MaximalCausalModelTest {
         Assert.assertFalse(hasRace(rawTraces, event1, event2, true));
     }
 
-    /*
-    @Test
-    public void signalEndsBeforeInterruptedSignal() throws InvalidTraceDataException {
-        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
-
-        List<ReadonlyEventInterface> e1;
-        List<ReadonlyEventInterface> e2;
-
-        List<RawTrace> rawTraces = Arrays.asList(
-                tu.createRawTrace(
-                        tu.disableSignal(SIGNAL_NUMBER_1),
-                        tu.disableSignal(SIGNAL_NUMBER_2),
-                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
-                        tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, ALL_SIGNALS_DISABLED_MASK),
-                        tu.enableSignal(SIGNAL_NUMBER_1),
-                        tu.disableSignal(SIGNAL_NUMBER_1),
-                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
-                        tu.enableSignal(SIGNAL_NUMBER_2)),
-                tu.createRawTrace(
-                        tu.switchThread(THREAD_1, ONE_SIGNAL),
-                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
-                        tu.enableSignal(SIGNAL_NUMBER_2),
-                        tu.exitSignal()),
-                tu.createRawTrace(
-                        tu.switchThread(THREAD_1, ONE_SIGNAL),
-                        tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
-                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
-                        tu.exitSignal()));
-
-        ReadonlyEventInterface event1 = extractSingleEvent(e1);
-        ReadonlyEventInterface event2 = extractSingleEvent(e2);
-        Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
-    }
-    */
-
     @Test
     public void raceWithSignalThatInterruptsSignal() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
@@ -1144,6 +1113,41 @@ public class MaximalCausalModelTest {
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
         Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
     }
+
+    /*
+    @Test
+    public void signalEndsBeforeInterruptedSignal() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.disableSignal(SIGNAL_NUMBER_1),
+                        tu.disableSignal(SIGNAL_NUMBER_2),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
+                        tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, ALL_SIGNALS_DISABLED_MASK),
+                        tu.enableSignal(SIGNAL_NUMBER_1),
+                        tu.disableSignal(SIGNAL_NUMBER_1),
+                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        tu.enableSignal(SIGNAL_NUMBER_2)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.enableSignal(SIGNAL_NUMBER_2),
+                        tu.exitSignal()),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
+                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.exitSignal()));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
+    }
+    */
 
     @Test
     public void signalInterruptsSignalWhenAllowedByTheHandlerMask() throws InvalidTraceDataException {

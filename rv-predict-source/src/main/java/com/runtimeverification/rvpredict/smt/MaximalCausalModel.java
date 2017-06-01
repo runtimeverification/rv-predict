@@ -419,17 +419,21 @@ public class MaximalCausalModel {
                 trace.getEstablishSignalEvents(threadSignalNumber, threadSignalHandler);
         FormulaTerm.Builder signalIsEnabled = FormulaTerm.orBuilder();
         establishSignalEvents.stream()
-                .filter(event -> Signals.signalIsEnabled(interruptingSignalNumber, event.getFullWriteSignalMask()))
-                .forEach(event -> {
-            FormulaTerm.Builder enabledJustBefore = FormulaTerm.andBuilder();
-            andBuilder().add(HB(event, startThreadEvent));
-            establishSignalEvents.stream()
-                    .filter(disableEvent ->
-                            !Signals.signalIsEnabled(interruptingSignalNumber, disableEvent.getFullWriteSignalMask()))
-                    .forEach(disableEvent ->
-                            enabledJustBefore.add(OR(HB(disableEvent, event), HB(startThreadEvent, event))));
-            signalIsEnabled.add(enabledJustBefore.build());
-        });
+                .filter(establishEvent ->
+                        Signals.signalIsEnabled(interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
+                .forEach(establishWithEnableEvent -> {
+                    FormulaTerm.Builder enabledJustBefore = FormulaTerm.andBuilder();
+                    andBuilder().add(HB(establishWithEnableEvent, startThreadEvent));
+                    establishSignalEvents.stream()
+                            .filter(establishEvent ->
+                                    !Signals.signalIsEnabled(
+                                            interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
+                            .forEach(establishWithDisableEvent ->
+                                    enabledJustBefore.add(OR(
+                                            HB(establishWithDisableEvent, establishWithEnableEvent),
+                                            HB(startThreadEvent, establishWithDisableEvent))));
+                    signalIsEnabled.add(enabledJustBefore.build());
+                });
         return AND(signalInterruption, signalIsEnabled.build());
     }
 

@@ -193,6 +193,7 @@ public class TraceCache {
 
         for (int i = 0; i < eventCount; i++) {
             ReadonlyEventInterface event = events.get(i);
+            System.out.println(event);
             if (event.getOriginalThreadId() == prevOTID
                     && event.getSignalDepth() == prevSignalDepth
                     && event.getType() != EventType.EXIT_SIGNAL) {

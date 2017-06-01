@@ -39,6 +39,8 @@ import com.runtimeverification.rvpredict.trace.ThreadType;
 import com.runtimeverification.rvpredict.trace.Trace;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -151,6 +153,8 @@ public class Race {
         sb.append(String.format("Data race on %s: %n", locSig));
         boolean reportableRace;
 
+        generateBracketing(e1, Arrays.asList(trace.getStacktraceAt(e1), trace.getStacktraceAt(e2)), sb);
+
         if (trace.metadata().getLocationSig(e1.getLocationId())
                 .compareTo(trace.metadata().getLocationSig(e2.getLocationId())) <= 0) {
             reportableRace = generateMemAccReport(e1, getFirstSignalStack(), sb);
@@ -164,6 +168,111 @@ public class Race {
 
         sb.append(String.format("%n"));
         return reportableRace ? signatureProcessor.simplify(sb.toString()) : "";
+    }
+
+    private static class EventBracket {
+        private Optional<ReadonlyEventInterface> bracket = Optional.empty();
+        private final long target;
+        private final Where where;
+
+        private enum Where {
+            BEFORE(-1),
+            AFTER(1);
+
+            private final long comparisonSign;
+
+            Where(long comparisonSign) {
+                this.comparisonSign = comparisonSign;
+            }
+
+            public long getComparisonSign() {
+                return comparisonSign;
+            }
+        }
+
+        private EventBracket(long target, Where where) {
+            this.target = target;
+            this.where = where;
+        }
+
+        private void processStackEvent(ReadonlyEventInterface event) {
+            long eventCfa = event.getCanonicalFrameAddress();
+            if (bracket.isPresent()) {
+                long bracketCfa = bracket.get().getCanonicalFrameAddress();
+                if (Math.signum(bracketCfa - eventCfa) * (target - eventCfa) < 0) {
+                    bracket = Optional.of(event);
+                }
+            } else if ((eventCfa - target) * where.getComparisonSign() > 0) {
+                bracket = Optional.of(event);
+            }
+        }
+
+        Optional<ReadonlyEventInterface> getBracket() {
+            return bracket;
+        }
+    }
+
+    private void generateBracketing(
+            ReadonlyEventInterface event, List<Collection<ReadonlyEventInterface>> stackTraces, StringBuilder sb) {
+        if (!config.isLLVMPrediction() || !config.isCompactTrace()) {
+            return;
+        }
+        long address = event.getObjectHashCode();
+        EventBracket globalBefore = new EventBracket(address, EventBracket.Where.BEFORE);
+        EventBracket globalAfter = new EventBracket(address, EventBracket.Where.AFTER);
+        for (Collection<ReadonlyEventInterface> stack : stackTraces) {
+            EventBracket stackBefore = new EventBracket(address, EventBracket.Where.BEFORE);
+            EventBracket stackAfter = new EventBracket(address, EventBracket.Where.AFTER);
+            stack.stream().filter(ReadonlyEventInterface::isCallStackEvent).forEach(stackEvent -> {
+                stackBefore.processStackEvent(stackEvent);
+                stackAfter.processStackEvent(stackEvent);
+            });
+            Optional<ReadonlyEventInterface> maybeCfaBefore = stackBefore.getBracket();
+            Optional<ReadonlyEventInterface> maybeCfaAfter = stackAfter.getBracket();
+
+            maybeCfaBefore.ifPresent(globalBefore::processStackEvent);
+            maybeCfaAfter.ifPresent(globalAfter::processStackEvent);
+
+            if (maybeCfaBefore.isPresent() && maybeCfaAfter.isPresent()) {
+                ReadonlyEventInterface cfaBefore = maybeCfaBefore.get();
+                ReadonlyEventInterface cfaAfter = maybeCfaAfter.get();
+                sb.append(String.format(
+                        "    Bracketed by [0x%016x] ({0x%016x}) and [0x%016x] ({0x%016x})}.%n%n",
+                        cfaBefore.getCanonicalFrameAddress(),
+                        cfaBefore.getLocationId(),
+                        cfaAfter.getCanonicalFrameAddress(),
+                        cfaAfter.getLocationId()));
+                return;
+            }
+        }
+        Optional<ReadonlyEventInterface> maybeCfaAfter = globalAfter.getBracket();
+        if (maybeCfaAfter.isPresent()) {
+            ReadonlyEventInterface cfaAfter = maybeCfaAfter.get();
+            sb.append(String.format(
+                    "    Before [0x%016x] ({0x%016x}).%n%n",
+                    cfaAfter.getCanonicalFrameAddress(),
+                    cfaAfter.getLocationId()));
+            return;
+        }
+        // TODO(virgil): I guess that only the frame AFTER the race address matters (i.e. the above one).
+        // I should check that and delete the following code if it's not needed.
+        //
+        // Basically, if an address belongs to the stack, it belongs to a function's frame and,
+        // at least on PC platforms, is lower than that function's CFA. If that function calls
+        // another function, the called function CFA will be below both the address mentioned above
+        // and the caller's CFA.
+        //
+        // So then, any variable on the stack will be lower than at least one CFA, and any variable
+        // which does not have a CFA after it is not on the stack. However, I should check that
+        // this is not platform-dependent.
+        Optional<ReadonlyEventInterface> maybeCfaBefore = globalBefore.getBracket();
+        if (maybeCfaBefore.isPresent()) {
+            ReadonlyEventInterface cfaBefore = maybeCfaBefore.get();
+            sb.append(String.format(
+                    "    After [0x%016x] ({0x%016x}).%n%n",
+                    cfaBefore.getCanonicalFrameAddress(),
+                    cfaBefore.getLocationId()));
+        }
     }
 
     public List<SignalStackEvent> getFirstSignalStack() {

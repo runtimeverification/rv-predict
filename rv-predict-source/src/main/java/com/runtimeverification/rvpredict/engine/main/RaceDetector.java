@@ -79,7 +79,7 @@ public class RaceDetector implements Constants {
                     events1.forEach(e1 -> events2.forEach(e2 -> {
                         if ((e1.isWrite() && e2.isReadOrWrite() || e1.isReadOrWrite() && e2.isWrite())
                                 && e1.getDataInternalIdentifier() == e2.getDataInternalIdentifier()
-                                && !trace.metadata().isVolatile(e1.getDataInternalIdentifier())
+                                && !trace.metadata().isVolatile(e1.getDataObjectExternalIdentifier())
                                 && !isThreadSafeLocation(trace, e1.getLocationId())
                                 && !trace.isInsideClassInitializer(e1)
                                 && !trace.isInsideClassInitializer(e2)) {
@@ -92,10 +92,11 @@ public class RaceDetector implements Constants {
                                             x -> new ArrayList<>()).add(race);
                                 }
                             }
-                        }
-                    }));
-
-                }));
+                        });
+                    });
+                }
+            });
+        });
         return sigToRaceCandidates;
     }
 

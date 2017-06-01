@@ -62,6 +62,9 @@ public class TraceTest {
     private Table<Integer, Long, List<ReadonlyEventInterface>> tidToAddrToEvents;
     private Map<Long, List<LockRegion>> lockIdToLockRegions;
     private Set<ReadonlyEventInterface> clinitEvents;
+    private Map<Integer, ReadonlyEventInterface> ttidToStartEvent;
+    private Map<Integer, ReadonlyEventInterface> ttidToJoinEvent;
+    private Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart;
     private Map<Long, Integer> originalTidToTraceTid;
     private Map<Long, Map<Long, List<ReadonlyEventInterface>>> signalNumberToSignalHandlerToEstablishSignalEvents;
 
@@ -77,6 +80,9 @@ public class TraceTest {
         lockIdToLockRegions = new HashMap<>();
         clinitEvents = new HashSet<>();
         originalTidToTraceTid = new HashMap<>();
+        ttidToStartEvent = new HashMap<>();
+        ttidToJoinEvent = new HashMap<>();
+        signalToTtidWhereEnabledAtStart = new HashMap<>();
         signalNumberToSignalHandlerToEstablishSignalEvents = new HashMap<>();
 
         when(mockContext.createUniqueDataAddressId(ADDRESS_1)).thenReturn(1L);
@@ -294,7 +300,8 @@ public class TraceTest {
         return new Trace(
                 mockTraceState, rawTraces,
                 eventIdToTtid, ttidToThreadInfo, tidToEvents, tidToMemoryAccessBlocks, tidToThreadState,
-                addrToState, tidToAddrToEvents, lockIdToLockRegions, clinitEvents, originalTidToTraceTid,
+                addrToState, tidToAddrToEvents, lockIdToLockRegions, clinitEvents,
+                ttidToStartEvent, ttidToJoinEvent, signalToTtidWhereEnabledAtStart, originalTidToTraceTid,
                 signalNumberToSignalHandlerToEstablishSignalEvents);
     }
 }

@@ -73,7 +73,7 @@ public class RaceDetector implements Constants {
         Map<String, List<Race>> sigToRaceCandidates = new HashMap<>();
         trace.eventsByThreadID().forEach((tid1, events1) -> {
             trace.eventsByThreadID().forEach((tid2, events2) -> {
-                if (tid1 < tid2) {
+                if (tid1 < tid2 && trace.threadsCanOverlap(tid1, tid2)) {
                     events1.forEach(e1 -> {
                         events2.forEach(e2 -> {
                             if ((e1.isWrite() && e2.isReadOrWrite() ||

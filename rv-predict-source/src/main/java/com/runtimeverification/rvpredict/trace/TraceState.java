@@ -70,6 +70,12 @@ public class TraceState {
 
     private final Set<ReadonlyEventInterface> t_clinitEvents;
 
+    private final Map<Integer, ReadonlyEventInterface> t_ttidToStartEvent;
+
+    private final Map<Integer, ReadonlyEventInterface> t_ttidToJoinEvent;
+
+    private final Map<Long, Set<Integer>> t_signalToTtidWhereEnabledAtStart;
+
     private final Map<SignalThreadId, Integer> t_unfinishedThreads;
 
     private final Map<Long, Map<Long, List<ReadonlyEventInterface>>> t_signalNumberToSignalHandlerToEstablishSignalEvents;
@@ -90,6 +96,9 @@ public class TraceState {
                                             DEFAULT_NUM_OF_ADDR);
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
+        this.t_ttidToStartEvent        = new HashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_ttidToJoinEvent         = new HashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_signalToTtidWhereEnabledAtStart = new HashMap<>();
         this.t_unfinishedThreads       = new HashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_signalNumberToSignalHandlerToEstablishSignalEvents = new HashMap<>();
         this.t_threadId                = 1;
@@ -114,6 +123,9 @@ public class TraceState {
         t_tidToAddrToEvents.clear();
         t_lockIdToLockRegions.clear();
         t_clinitEvents.clear();
+        t_ttidToStartEvent.clear();
+        t_ttidToJoinEvent.clear();
+        t_signalToTtidWhereEnabledAtStart.clear();
         return new Trace(this, rawTraces,
                 t_eventIdToTtid,
                 t_ttidToThreadInfo,
@@ -124,6 +136,9 @@ public class TraceState {
                 t_tidToAddrToEvents,
                 t_lockIdToLockRegions,
                 t_clinitEvents,
+                t_ttidToStartEvent,
+                t_ttidToJoinEvent,
+                t_signalToTtidWhereEnabledAtStart,
                 t_originalTidToTraceTid,
                 t_signalNumberToSignalHandlerToEstablishSignalEvents);
     }

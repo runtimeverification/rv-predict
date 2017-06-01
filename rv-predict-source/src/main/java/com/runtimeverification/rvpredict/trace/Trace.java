@@ -35,6 +35,7 @@ import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
+import com.runtimeverification.rvpredict.signals.Signals;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToObjectMap;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
 import com.runtimeverification.rvpredict.util.Logger;
@@ -48,6 +49,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -120,6 +123,9 @@ public class Trace {
      */
     private final Set<ReadonlyEventInterface> clinitEvents;
 
+    private final Map<Integer, ReadonlyEventInterface> ttidToStartEvent;
+    private final Map<Integer, ReadonlyEventInterface> ttidToJoinEvent;
+    private final Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart;
     private final Map<Long, Map<Long, List<ReadonlyEventInterface>>> signalNumberToSignalHandlerToEstablishSignalEvents;
 
     /**
@@ -137,6 +143,9 @@ public class Trace {
             Table<Integer, Long, List<ReadonlyEventInterface>> tidToAddrToEvents,
             Map<Long, List<LockRegion>> lockIdToLockRegions,
             Set<ReadonlyEventInterface> clinitEvents,
+            Map<Integer, ReadonlyEventInterface> ttidToStartEvent,
+            Map<Integer, ReadonlyEventInterface> ttidToJoinEvent,
+            Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart,
             Map<Long, Integer> originalTidToTraceTid,
             Map<Long, Map<Long, List<ReadonlyEventInterface>>> signalNumberToSignalHandlerToEstablishSignalEvents) {
         this.state = state;
@@ -150,6 +159,9 @@ public class Trace {
         this.ttidToAddrToWriteEvents = tidToAddrToEvents;
         this.lockIdToLockRegions = lockIdToLockRegions;
         this.clinitEvents = clinitEvents;
+        this.ttidToStartEvent = ttidToStartEvent;
+        this.ttidToJoinEvent = ttidToJoinEvent;
+        this.signalToTtidWhereEnabledAtStart = signalToTtidWhereEnabledAtStart;
         this.originalTidToTraceTid = originalTidToTraceTid;
         this.signalNumberToSignalHandlerToEstablishSignalEvents = signalNumberToSignalHandlerToEstablishSignalEvents;
 
@@ -168,6 +180,8 @@ public class Trace {
                 .collect(Collectors.toSet()).size()) {
             throw new IllegalStateException();
         }
+        computeTtidToStartAndJoinEvents();
+        computeSignalEnableStatusAtStart(ttidToStartEvent, signalToTtidWhereEnabledAtStart);
     }
 
     public MetadataInterface metadata() {
@@ -276,6 +290,189 @@ public class Trace {
 
     public Iterable<ReadonlyEventInterface> getWriteEvents(Long addr) {
         return Iterables.concat(ttidToAddrToWriteEvents.column(addr).values());
+    }
+
+    private void computeTtidToStartAndJoinEvents() {
+        getInterThreadSyncEvents().forEach(event -> {
+            if (event.isStart()) {
+                Integer ttid = getMainTraceThreadForOriginalThread(event.getSyncedThreadId());
+                if (ttid != null) {
+                    ttidToStartEvent.put(ttid, event);
+                }
+            } else if (event.isJoin()) {
+                Integer ttid = getMainTraceThreadForOriginalThread(event.getSyncedThreadId());
+                if (ttid != null) {
+                    ttidToJoinEvent.put(ttid, event);
+                }
+            }
+        });
+    }
+    private void computeSignalEnableStatusAtStart(
+            Map<Integer, ReadonlyEventInterface> threadTtidToStartEvent,
+            Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart) {
+        Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart = new HashMap<>();
+        Map<Integer, ReadonlyEventInterface> signalTtidToInterruptedEvent = new HashMap<>();
+        tidToEvents.keySet().stream()
+                .filter(ttid -> getThreadType(ttid) == ThreadType.SIGNAL)
+                .forEach(ttid -> {
+                    // This assumes that a signal's event list is never empty. This should be true when a
+                    // signal is not split across multiple windows, but may not be true when splitting.
+                    // TODO(virgil): make this work with empty signal lists.
+                    ReadonlyEventInterface firstEvent = getFirstEvent(ttid);
+                    int signalDepth = getSignalDepth(ttid);
+                    long otid = getOriginalThreadIdForTraceThreadId(ttid);
+                    Optional<Map.Entry<Integer, List<ReadonlyEventInterface>>> maybeInterruptedThread =
+                            tidToEvents.entrySet().stream()
+                                    .filter(entry ->
+                                            getOriginalThreadIdForTraceThreadId(entry.getKey()) == otid
+                                                    && getSignalDepth(entry.getKey()) == signalDepth - 1
+                                                    && getFirstEvent(entry.getKey()).getEventId() <= firstEvent.getEventId()
+                                                    && getLastEvent(entry.getKey()).getEventId() >= firstEvent.getEventId())
+                                    .findAny();
+                    if (!maybeInterruptedThread.isPresent()) {
+                        signalTtidToInterruptedEvent.put(ttid, null);
+                        return;
+                    }
+                    List<ReadonlyEventInterface> interruptedThreadEvents = maybeInterruptedThread.get().getValue();
+                    for (ReadonlyEventInterface event : interruptedThreadEvents) {
+                        if (event.getEventId() >= firstEvent.getEventId()) {
+                            signalTtidToInterruptedEvent.put(ttid, event);
+                            break;
+                        }
+                    }
+                });
+        Map<Long, Map<Integer, Long>> signalNumberToTtidToMinEventId = new HashMap<>();
+        signalTtidToInterruptedEvent.forEach((signalTtid, interruptedEvent) -> {
+            Map<Integer, Long> ttidToMinEventId =
+                    signalNumberToTtidToMinEventId
+                            .computeIfAbsent(getSignalNumber(signalTtid), k -> new HashMap<>());
+            if (interruptedEvent == null) {
+                return;
+            }
+            ttidToMinEventId.compute(
+                    getTraceThreadId(interruptedEvent),
+                    (k, v) -> v == null
+                            ? interruptedEvent.getEventId()
+                            : Math.min(v, interruptedEvent.getEventId()));
+        });
+        signalNumberToTtidToMinEventId.forEach((signalNumber, ttidToMinEventId) -> {
+            Set<Integer> ttidWhereEnabledAtStart = new HashSet<>();
+            signalToTtidWhereEnabledAtStart.put(signalNumber, ttidWhereEnabledAtStart);
+            ttidToMinEventId.forEach((ttid, minEventId) -> {
+                fillEnabledAtStartStatusFromEnabledStatusAtEventId(
+                        signalNumber, ttid, minEventId,
+                        ttidWhereEnabledAtStart, threadTtidToStartEvent);
+            });
+        });
+        tidToEvents.values().forEach(events -> events.stream()
+                .filter(ReadonlyEventInterface::isSignalMaskRead)
+                .forEach(event -> {
+                    long mask = event.getFullReadSignalMask();
+                    signalNumberToTtidToMinEventId.keySet().forEach(signalNumber -> {
+                        Set<Integer> ttidWhereEnabledAtStart =
+                                signalToTtidWhereEnabledAtStart.computeIfAbsent(signalNumber, k -> new HashSet<>());
+                        if (Signals.signalIsEnabled(signalNumber, mask)) {
+                            fillEnabledAtStartStatusFromEnabledStatusAtEventId(
+                                    signalNumber, getTraceThreadId(event), event.getEventId(),
+                                    ttidWhereEnabledAtStart, threadTtidToStartEvent);
+                        }
+                        Set<Integer> ttidWhereDisabledAtStart =
+                                signalToTtidWhereDisabledAtStart.computeIfAbsent(signalNumber, k -> new HashSet<>());
+                        if (Signals.signalIsDisabledInFullMask(signalNumber, mask)) {
+                            fillEnabledAtStartStatusFromEnabledStatusAtEventId(
+                                    signalNumber, getTraceThreadId(event), event.getEventId(),
+                                    ttidWhereDisabledAtStart, threadTtidToStartEvent);
+                        }
+                    });
+                }));
+        signalNumberToTtidToMinEventId.keySet().forEach(signalNumber -> {
+            Set<Integer> ttidWhereEnabledAtStart =
+                    signalToTtidWhereEnabledAtStart.computeIfAbsent(signalNumber, k -> new HashSet<>());
+            Set<Integer> ttidWhereDisabledAtStart =
+                    signalToTtidWhereDisabledAtStart.computeIfAbsent(signalNumber, k -> new HashSet<>());
+            threadTtidToStartEvent.forEach(
+                    (ttid, startEvent) -> fillSignalEnabledDisabledAtStartIfEnabledByTheParentThread(
+                            signalNumber,
+                            ttid,
+                            threadTtidToStartEvent,
+                            ttidWhereEnabledAtStart,
+                            ttidWhereDisabledAtStart));
+        });
+    }
+
+    private void fillEnabledAtStartStatusFromEnabledStatusAtEventId(
+            Long signalNumber, int ttid, Long eventId,
+            Set<Integer> ttidWhereEnabledAtStart,
+            Map<Integer, ReadonlyEventInterface> threadTtidToItsStartEvent) {
+        if (ttidWhereEnabledAtStart.contains(ttid)) {
+            return;
+        }
+        Optional<Boolean> maybeLastWrittenValue =
+                getLastSignalMaskChangeBeforeEvent(eventId, ttid, signalNumber);
+        if (maybeLastWrittenValue.isPresent()) {
+            return;
+        }
+        ttidWhereEnabledAtStart.add(ttid);
+        ReadonlyEventInterface start = threadTtidToItsStartEvent.get(ttid);
+        if (start == null) {
+            return;
+        }
+        fillEnabledAtStartStatusFromEnabledStatusAtEventId(
+                signalNumber, getTraceThreadId(start), start.getEventId(),
+                ttidWhereEnabledAtStart, threadTtidToItsStartEvent);
+    }
+
+    private Optional<Boolean> fillSignalEnabledDisabledAtStartIfEnabledByTheParentThread(
+            long signalNumber,
+            int ttid,
+            Map<Integer, ReadonlyEventInterface> ttidToItsStartEvent,
+            Set<Integer> ttidWhereEnabledAtStart, Set<Integer> ttidWhereDisabledAtStart) {
+        if (ttidWhereEnabledAtStart.contains(ttid)) {
+            return Optional.of(Boolean.TRUE);
+        }
+        if (ttidWhereDisabledAtStart.contains(ttid)) {
+            return Optional.of(Boolean.FALSE);
+        }
+        ReadonlyEventInterface startEvent = ttidToItsStartEvent.get(ttid);
+        if (startEvent == null) {
+            return Optional.empty();
+        }
+        Optional<Boolean> maybeLastWrittenValue =
+                getLastSignalMaskChangeBeforeEvent(
+                        startEvent.getEventId(), getTraceThreadId(startEvent), signalNumber);
+        if (maybeLastWrittenValue.isPresent()) {
+            boolean isEnabled = maybeLastWrittenValue.get();
+            if (isEnabled) {
+                ttidWhereEnabledAtStart.add(ttid);
+                return Optional.of(Boolean.TRUE);
+            } else {
+                ttidWhereDisabledAtStart.add(ttid);
+                return Optional.of(Boolean.FALSE);
+            }
+        } else {
+            Optional<Boolean> maybeEnabled = fillSignalEnabledDisabledAtStartIfEnabledByTheParentThread(
+                    signalNumber,
+                    getTraceThreadId(startEvent),
+                    ttidToItsStartEvent,
+                    ttidWhereEnabledAtStart, ttidWhereDisabledAtStart);
+            if (!maybeEnabled.isPresent()) {
+                return maybeEnabled;
+            }
+            if (maybeEnabled.get()) {
+                ttidWhereEnabledAtStart.add(ttid);
+            } else {
+                ttidWhereDisabledAtStart.add(ttid);
+            }
+            return maybeEnabled;
+        }
+    }
+
+    private Optional<Boolean> getLastSignalMaskChangeBeforeEvent(long eventId, int ttid, long signalNumber) {
+        return getEvents(ttid).stream()
+                .filter(event -> event.getEventId() < eventId)
+                .map(event -> Signals.signalEnableChange(event, signalNumber))
+                .filter(Objects::nonNull)
+                .reduce((e1, e2) -> e2);
     }
 
     private ReadonlyEventInterface getPrevWrite(long gid, int ttid, Long addr) {

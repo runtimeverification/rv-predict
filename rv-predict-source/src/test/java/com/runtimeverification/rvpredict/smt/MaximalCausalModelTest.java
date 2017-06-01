@@ -1114,7 +1114,6 @@ public class MaximalCausalModelTest {
         Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
     }
 
-    /*
     @Test
     public void signalEndsBeforeInterruptedSignal() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
@@ -1145,9 +1144,8 @@ public class MaximalCausalModelTest {
 
         ReadonlyEventInterface event1 = extractSingleEvent(e1);
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
-        Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, true));
     }
-    */
 
     @Test
     public void signalInterruptsSignalWhenAllowedByTheHandlerMask() throws InvalidTraceDataException {

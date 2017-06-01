@@ -120,6 +120,8 @@ public class Trace {
      */
     private final Set<ReadonlyEventInterface> clinitEvents;
 
+    private final Map<Long, Map<Long, List<ReadonlyEventInterface>>> signalNumberToSignalHandlerToEstablishSignalEvents;
+
     /**
      * Maintains the current values for every location, as recorded into the trace
      */
@@ -135,7 +137,8 @@ public class Trace {
             Table<Integer, Long, List<ReadonlyEventInterface>> tidToAddrToEvents,
             Map<Long, List<LockRegion>> lockIdToLockRegions,
             Set<ReadonlyEventInterface> clinitEvents,
-            Map<Long, Integer> originalTidToTraceTid) {
+            Map<Long, Integer> originalTidToTraceTid,
+            Map<Long, Map<Long, List<ReadonlyEventInterface>>> signalNumberToSignalHandlerToEstablishSignalEvents) {
         this.state = state;
         this.rawTraces = rawTraces;
         this.eventIdToTtid = eventIdToTtid;
@@ -148,6 +151,7 @@ public class Trace {
         this.lockIdToLockRegions = lockIdToLockRegions;
         this.clinitEvents = clinitEvents;
         this.originalTidToTraceTid = originalTidToTraceTid;
+        this.signalNumberToSignalHandlerToEstablishSignalEvents = signalNumberToSignalHandlerToEstablishSignalEvents;
 
         if (rawTraces.isEmpty()) {
             baseGID = -1;
@@ -252,6 +256,10 @@ public class Trace {
 
     public long getSignalNumber(Integer traceThreadId) {
         return ttidToThreadInfo.get(traceThreadId).getSignalNumber();
+    }
+
+    public long getSignalHandler(Integer traceThreadId) {
+        return ttidToThreadInfo.get(traceThreadId).getSignalHandler();
     }
 
     public long getOriginalThreadIdForTraceThreadId(Integer traceThreadId) {
@@ -385,6 +393,12 @@ public class Trace {
         return lockEvents;
     }
 
+    public List<ReadonlyEventInterface> getEstablishSignalEvents(long signalNumber, long signalHandler) {
+        return signalNumberToSignalHandlerToEstablishSignalEvents
+                .getOrDefault(signalNumber, Collections.emptyMap())
+                .getOrDefault(signalHandler, Collections.emptyList());
+    }
+
     private void processEvents() {
         if (rawTraces.size() == 1) {
             state.fastProcess(rawTraces.iterator().next());
@@ -442,6 +456,12 @@ public class Trace {
                         isInsideClinit = state.isInsideClassInitializer(ttid);
                     }
                 } else if (event.isSignalEvent()) {
+                    if (event.getType() == EventType.ESTABLISH_SIGNAL) {
+                        signalNumberToSignalHandlerToEstablishSignalEvents
+                                .computeIfAbsent(event.getSignalNumber(), k -> new HashMap<>())
+                                .computeIfAbsent(event.getSignalHandlerAddress(), k -> new ArrayList<>())
+                                .add(event);
+                    }
                     // Do nothing for now.
                 } else {
 		    if (Configuration.debug)

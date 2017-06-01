@@ -539,6 +539,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
                         new ReturnValueTest<>(EventType.ENTER_SIGNAL, GET_COMPACT_TYPE),
                         new ReturnValueTest<>(SIGNAL_NUMBER, GET_SIGNAL_NUMBER),
+                        new ReturnValueTest<>(SIGNAL_HANDLER, GET_SIGNAL_HANDLER_ADDRESS),
                 }
         );
         event = events.get(2);

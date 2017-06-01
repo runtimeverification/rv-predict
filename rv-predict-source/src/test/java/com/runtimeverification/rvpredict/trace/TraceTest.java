@@ -12,7 +12,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.stubbing.Answer;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -22,6 +24,7 @@ import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Set;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.when;
 
@@ -36,6 +39,16 @@ public class TraceTest {
     private static final long ADDRESS_3 = 302;
     private static final long VALUE_1 = 400;
     private static final long VALUE_2 = 401;
+    private static final long SIGNAL_NUMBER_1 = 500;
+    private static final long SIGNAL_NUMBER_2 = 501;
+    private static final long SIGNAL_HANDLER_1 = 600;
+    private static final long SIGNAL_HANDLER_2 = 601;
+    private static final long SIGNAL_HANDLER_3 = 602;
+    private static final long SIGNAL_MASK_1 = 700;
+    private static final long SIGNAL_MASK_2 = 701;
+    private static final long SIGNAL_MASK_3 = 702;
+    private static final long SIGNAL_MASK_4 = 703;
+    private static final long SIGNAL_MASK_5 = 704;
 
     @Mock private TraceState mockTraceState;
     @Mock private Context mockContext;
@@ -50,6 +63,7 @@ public class TraceTest {
     private Map<Long, List<LockRegion>> lockIdToLockRegions;
     private Set<ReadonlyEventInterface> clinitEvents;
     private Map<Long, Integer> originalTidToTraceTid;
+    private Map<Long, Map<Long, List<ReadonlyEventInterface>>> signalNumberToSignalHandlerToEstablishSignalEvents;
 
     @Before
     public void setUp() {
@@ -63,10 +77,13 @@ public class TraceTest {
         lockIdToLockRegions = new HashMap<>();
         clinitEvents = new HashSet<>();
         originalTidToTraceTid = new HashMap<>();
+        signalNumberToSignalHandlerToEstablishSignalEvents = new HashMap<>();
 
         when(mockContext.createUniqueDataAddressId(ADDRESS_1)).thenReturn(1L);
         when(mockContext.createUniqueDataAddressId(ADDRESS_2)).thenReturn(2L);
         when(mockContext.createUniqueDataAddressId(ADDRESS_3)).thenReturn(3L);
+        when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
+                .thenAnswer(invocation -> invocation.getArguments()[0]);
     }
 
     @Test
@@ -246,10 +263,38 @@ public class TraceTest {
         Assert.assertEquals(2, events.size());
     }
 
+    @Test
+    public void extractsEstablishSignalEvents() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.setPc(PC_BASE),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_MASK_1),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_MASK_2),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_2, SIGNAL_MASK_3),
+                        tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_3, SIGNAL_MASK_4)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_ID_2, NO_SIGNAL),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_MASK_5),
+                        tu.nonAtomicStore(ADDRESS_2, VALUE_1)));
+
+        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
+        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
+        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        Trace trace = createTrace(rawTraces);
+
+        Assert.assertEquals(3, trace.getEstablishSignalEvents(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1).size());
+        Assert.assertEquals(1, trace.getEstablishSignalEvents(SIGNAL_NUMBER_1, SIGNAL_HANDLER_2).size());
+        Assert.assertEquals(1, trace.getEstablishSignalEvents(SIGNAL_NUMBER_2, SIGNAL_HANDLER_3).size());
+    }
+
     private Trace createTrace(List<RawTrace> rawTraces) {
         return new Trace(
                 mockTraceState, rawTraces,
                 eventIdToTtid, ttidToThreadInfo, tidToEvents, tidToMemoryAccessBlocks, tidToThreadState,
-                addrToState, tidToAddrToEvents, lockIdToLockRegions, clinitEvents, originalTidToTraceTid);
+                addrToState, tidToAddrToEvents, lockIdToLockRegions, clinitEvents, originalTidToTraceTid,
+                signalNumberToSignalHandlerToEstablishSignalEvents);
     }
 }

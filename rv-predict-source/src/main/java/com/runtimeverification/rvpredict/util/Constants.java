@@ -22,5 +22,7 @@ public interface Constants {
 
     long INVALID_THREAD_ID = -1L;
 
+    long INVALID_ADDRESS = -1L;
+
     int INVALID_TTID = -1;
 }

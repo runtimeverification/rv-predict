@@ -928,30 +928,80 @@ public class Trace {
         return e1.getEventId() < e2.getEventId() && getTraceThreadId(e1) == getTraceThreadId(e2);
     }
 
+    private boolean normalThreadsAreInHappensBeforeRelation(int ttid1, int ttid2) {
+        Optional<ReadonlyEventInterface> start1 = Optional.ofNullable(ttidToStartEvent.get(ttid1));
+        Optional<ReadonlyEventInterface> join1 = Optional.ofNullable(ttidToJoinEvent.get(ttid1));
+        Optional<ReadonlyEventInterface> start2 = Optional.ofNullable(ttidToStartEvent.get(ttid2));
+        Optional<ReadonlyEventInterface> join2 = Optional.ofNullable(ttidToJoinEvent.get(ttid2));
+        return     (start1.isPresent() && join2.isPresent() && eventsAreInThreadOrder(join2.get(), start1.get()))
+                || (start2.isPresent() && join1.isPresent() && eventsAreInThreadOrder(join1.get(), start2.get()));
+    }
+
+    private boolean signalIsEnabledForThread(int signalTtid, int ttid) {
+        long signalNumber = getSignalNumber(signalTtid);
+        return signalIsEnabledForThreadCache
+                .computeIfAbsent(signalNumber, k -> new HashMap<>())
+                .computeIfAbsent(ttid, k -> signalIsEnabledForThreadComputation(signalNumber, ttid));
+    }
+
+    private boolean signalIsEnabledForThreadComputation(long signalNumber, int ttid) {
+        return signalToTtidWhereEnabledAtStart.getOrDefault(signalNumber, Collections.emptySet()).contains(ttid)
+                || getEvents(ttid).stream().anyMatch(
+                        event -> Signals.signalEnableChange(event, signalNumber).orElse(Boolean.FALSE));
+    }
+
+    private boolean atLeastOneSigsetAllowsSignal(long interruptingSignalNumber, long interruptedSignalNumber) {
+        return atLeastOneSigsetAllowsSignalCache
+                .computeIfAbsent(interruptingSignalNumber, k -> new HashMap<>())
+                .computeIfAbsent(
+                        interruptedSignalNumber,
+                        k -> atLeastOneSigsetAllowsSignalComputation(interruptingSignalNumber, interruptedSignalNumber));
+    }
+
+    private boolean atLeastOneSigsetAllowsSignalComputation(long interruptingSignalNumber, long interruptedSignalNumber) {
+        return tidToEvents.values().stream().anyMatch(events -> events.stream().anyMatch(event ->
+                event.getType() == EventType.ESTABLISH_SIGNAL
+                        && event.getSignalNumber() == interruptedSignalNumber
+                        && Signals.signalIsEnabled(interruptingSignalNumber, event.getFullWriteSignalMask())));
+    }
+
+    private void computeThreadsWhichCanOverlap() {
+        ttidToThreadInfo.keySet().forEach(ttid1 ->
+                ttidToThreadInfo.keySet().stream().filter(ttid -> ttid > ttid1).forEach(ttid2 -> {
+                    if (getThreadType(ttid1) == ThreadType.THREAD && getThreadType(ttid2) == ThreadType.THREAD) {
+                        if (!normalThreadsAreInHappensBeforeRelation(ttid1, ttid2)) {
+                            ttidsThatCanOverlap.computeIfAbsent(ttid1, HashSet::new).add(ttid2);
+                        }
+                        return;
+                    }
+                    if (getThreadType(ttid1) == ThreadType.SIGNAL) {
+                        if (signalIsEnabledForThread(ttid1, ttid2)) {
+                            ttidsThatCanOverlap.computeIfAbsent(ttid1, HashSet::new).add(ttid2);
+                            return;
+                        }
+                        if (getThreadType(ttid2) == ThreadType.SIGNAL) {
+                            long signalNumber1 = getSignalNumber(ttid1);
+                            long signalNumber2 = getSignalNumber(ttid2);
+                            if (atLeastOneSigsetAllowsSignal(signalNumber1, signalNumber2)
+                                    || atLeastOneSigsetAllowsSignal(signalNumber2, signalNumber1)) {
+                                ttidsThatCanOverlap.computeIfAbsent(ttid1, HashSet::new).add(ttid2);
+                                return;
+                            }
+                        }
+                    }
+                    if (getThreadType(ttid1) == ThreadType.SIGNAL) {
+                        if (signalIsEnabledForThread(ttid1, ttid2)) {
+                            ttidsThatCanOverlap.computeIfAbsent(ttid1, HashSet::new).add(ttid2);
+                        }
+                    }
+                }));
+    }
+
     public boolean threadsCanOverlap(int ttid1, int ttid2) {
-        if (getThreadType(ttid1) == ThreadType.THREAD && getThreadType(ttid2) == ThreadType.THREAD) {
-            Optional<ReadonlyEventInterface> start1 = Optional.ofNullable(ttidToStartEvent.get(ttid1));
-            Optional<ReadonlyEventInterface> end1 = Optional.ofNullable(ttidToJoinEvent.get(ttid1));
-            Optional<ReadonlyEventInterface> start2 = Optional.ofNullable(ttidToStartEvent.get(ttid2));
-            Optional<ReadonlyEventInterface> end2 = Optional.ofNullable(ttidToJoinEvent.get(ttid2));
-            return !(start1.isPresent() && end2.isPresent() && eventsAreInThreadOrder(end2.get(), start1.get()))
-                    && !(start2.isPresent() && end1.isPresent() && eventsAreInThreadOrder(end1.get(), start2.get()));
+        if (ttid1 > ttid2) {
+            return threadsCanOverlap(ttid2, ttid1);
         }
-        zuma
-        return true;
-        /*
-        if (getThreadType(ttid1) == ThreadType.SIGNAL) {
-            if (signalIsEnabledOnThread(ttid1, ttid2)) {
-                return true;
-            }
-        }
-        if (getThreadType(ttid2) == ThreadType.SIGNAL) {
-            if (signalIsEnabledOnThread(ttid2, ttid1)) {
-                return true;
-            }
-        }
-        return false;
-        */
+        return ttidsThatCanOverlap.getOrDefault(ttid1, Collections.emptySet()).contains(ttid2);
     }
 
     public Set<Integer> getTtidsWhereSignalIsEnabledAtStart(long signalNumber) {

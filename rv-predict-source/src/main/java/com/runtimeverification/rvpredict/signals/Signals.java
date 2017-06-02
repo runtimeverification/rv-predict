@@ -33,8 +33,7 @@ public class Signals {
     }
 
     static boolean updateEnabledWithEvent(boolean eventIsEnabled, long signalNumber, ReadonlyEventInterface event) {
-        Optional<Boolean> change = Signals.signalEnableChange(event, signalNumber);
-        return change.orElse(eventIsEnabled);
+        return Signals.signalEnableChange(event, signalNumber).orElse(eventIsEnabled);
     }
 
     private static boolean signalInMask(long signalNumber, long mask) {

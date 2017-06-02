@@ -145,31 +145,6 @@ public class MaximalCausalModel {
      *    started, we will assume that the mask was enabled at the beginning of the thread.
      */
     private void addSignalInterruptsRestricts() {
-        /*
-        Map<Integer, ReadonlyEventInterface> ttidToStartEvent = new HashMap<>();
-        Map<Integer, ReadonlyEventInterface> ttidToJoinEvent = new HashMap<>();
-        trace.getInterThreadSyncEvents().forEach(event -> {
-            if (event.isStart()) {
-                Integer ttid = trace.getMainTraceThreadForOriginalThread(event.getSyncedThreadId());
-                if (ttid != null) {
-                    ttidToStartEvent.put(ttid, event);
-                }
-            } else if (event.isJoin()) {
-                Integer ttid = trace.getMainTraceThreadForOriginalThread(event.getSyncedThreadId());
-                if (ttid != null) {
-                    ttidToJoinEvent.put(ttid, event);
-                }
-            }
-        });
-        */
-
-        /*
-        Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart = new HashMap<>();
-        Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart = new HashMap<>();
-        computeSignalEnableStatusAtStart(
-                ttidToStartEvent, signalToTtidWhereEnabledAtStart, signalToTtidWhereDisabledAtStart);
-                */
-
         FormulaTerm.Builder allSignalsAndRestrict = FormulaTerm.andBuilder();
         allSignalsAndRestrict.add(BooleanConstant.TRUE);
         trace.eventsByThreadID().keySet().stream()

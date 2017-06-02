@@ -65,6 +65,9 @@ public class TraceTest {
     private Map<Integer, ReadonlyEventInterface> ttidToStartEvent;
     private Map<Integer, ReadonlyEventInterface> ttidToJoinEvent;
     private Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart;
+    private Map<Long, Map<Integer, Boolean>> signalIsEnabledForThreadCache;
+    private Map<Long, Map<Long, Boolean>> atLeastOneSigsetAllowsSignalCache;
+    private Map<Integer, Set<Integer>> ttidsThatCanOverlap;
     private Map<Long, Integer> originalTidToTraceTid;
     private Map<Long, Map<Long, List<ReadonlyEventInterface>>> signalNumberToSignalHandlerToEstablishSignalEvents;
 
@@ -83,6 +86,9 @@ public class TraceTest {
         ttidToStartEvent = new HashMap<>();
         ttidToJoinEvent = new HashMap<>();
         signalToTtidWhereEnabledAtStart = new HashMap<>();
+        signalIsEnabledForThreadCache = new HashMap<>();
+        atLeastOneSigsetAllowsSignalCache = new HashMap<>();
+        ttidsThatCanOverlap = new HashMap<>();
         signalNumberToSignalHandlerToEstablishSignalEvents = new HashMap<>();
 
         when(mockContext.createUniqueDataAddressId(ADDRESS_1)).thenReturn(1L);
@@ -301,7 +307,8 @@ public class TraceTest {
                 mockTraceState, rawTraces,
                 eventIdToTtid, ttidToThreadInfo, tidToEvents, tidToMemoryAccessBlocks, tidToThreadState,
                 addrToState, tidToAddrToEvents, lockIdToLockRegions, clinitEvents,
-                ttidToStartEvent, ttidToJoinEvent, signalToTtidWhereEnabledAtStart, originalTidToTraceTid,
+                ttidToStartEvent, ttidToJoinEvent, signalToTtidWhereEnabledAtStart, ttidsThatCanOverlap,
+                signalIsEnabledForThreadCache, atLeastOneSigsetAllowsSignalCache, originalTidToTraceTid,
                 signalNumberToSignalHandlerToEstablishSignalEvents);
     }
 }

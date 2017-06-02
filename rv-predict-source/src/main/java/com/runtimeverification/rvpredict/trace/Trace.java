@@ -126,6 +126,10 @@ public class Trace {
     private final Map<Integer, ReadonlyEventInterface> ttidToStartEvent;
     private final Map<Integer, ReadonlyEventInterface> ttidToJoinEvent;
     private final Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart;
+    private final Map<Integer, Set<Integer>> ttidsThatCanOverlap;
+
+    private final Map<Long, Map<Integer, Boolean>> signalIsEnabledForThreadCache;
+    private final Map<Long, Map<Long, Boolean>> atLeastOneSigsetAllowsSignalCache;
     private final Map<Long, Map<Long, List<ReadonlyEventInterface>>> signalNumberToSignalHandlerToEstablishSignalEvents;
 
     /**
@@ -146,6 +150,9 @@ public class Trace {
             Map<Integer, ReadonlyEventInterface> ttidToStartEvent,
             Map<Integer, ReadonlyEventInterface> ttidToJoinEvent,
             Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart,
+            Map<Integer, Set<Integer>> ttidsThatCanOverlap,
+            Map<Long, Map<Integer, Boolean>> signalIsEnabledForThreadCache,
+            Map<Long, Map<Long, Boolean>> atLeastOneSigsetAllowsSignalCache,
             Map<Long, Integer> originalTidToTraceTid,
             Map<Long, Map<Long, List<ReadonlyEventInterface>>> signalNumberToSignalHandlerToEstablishSignalEvents) {
         this.state = state;
@@ -162,7 +169,10 @@ public class Trace {
         this.ttidToStartEvent = ttidToStartEvent;
         this.ttidToJoinEvent = ttidToJoinEvent;
         this.signalToTtidWhereEnabledAtStart = signalToTtidWhereEnabledAtStart;
+        this.ttidsThatCanOverlap = ttidsThatCanOverlap;
         this.originalTidToTraceTid = originalTidToTraceTid;
+        this.signalIsEnabledForThreadCache = signalIsEnabledForThreadCache;
+        this.atLeastOneSigsetAllowsSignalCache = atLeastOneSigsetAllowsSignalCache;
         this.signalNumberToSignalHandlerToEstablishSignalEvents = signalNumberToSignalHandlerToEstablishSignalEvents;
 
         if (rawTraces.isEmpty()) {
@@ -182,6 +192,7 @@ public class Trace {
         }
         computeTtidToStartAndJoinEvents();
         computeSignalEnableStatusAtStart(ttidToStartEvent, signalToTtidWhereEnabledAtStart);
+        computeThreadsWhichCanOverlap();
     }
 
     public MetadataInterface metadata() {
@@ -358,11 +369,10 @@ public class Trace {
         signalNumberToTtidToMinEventId.forEach((signalNumber, ttidToMinEventId) -> {
             Set<Integer> ttidWhereEnabledAtStart = new HashSet<>();
             signalToTtidWhereEnabledAtStart.put(signalNumber, ttidWhereEnabledAtStart);
-            ttidToMinEventId.forEach((ttid, minEventId) -> {
-                fillEnabledAtStartStatusFromEnabledStatusAtEventId(
-                        signalNumber, ttid, minEventId,
-                        ttidWhereEnabledAtStart, threadTtidToStartEvent);
-            });
+            ttidToMinEventId.forEach((ttid, minEventId) ->
+                    fillEnabledAtStartStatusFromEnabledStatusAtEventId(
+                            signalNumber, ttid, minEventId,
+                            ttidWhereEnabledAtStart, threadTtidToStartEvent));
         });
         tidToEvents.values().forEach(events -> events.stream()
                 .filter(ReadonlyEventInterface::isSignalMaskRead)
@@ -471,8 +481,9 @@ public class Trace {
         return getEvents(ttid).stream()
                 .filter(event -> event.getEventId() < eventId)
                 .map(event -> Signals.signalEnableChange(event, signalNumber))
-                .filter(Objects::nonNull)
-                .reduce((e1, e2) -> e2);
+                .filter(Optional::isPresent)
+                .reduce((e1, e2) -> e2)
+                .orElse(Optional.empty());
     }
 
     private ReadonlyEventInterface getPrevWrite(long gid, int ttid, Long addr) {

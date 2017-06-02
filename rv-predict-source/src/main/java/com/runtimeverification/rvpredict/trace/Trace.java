@@ -912,4 +912,46 @@ public class Trace {
     public Integer getMainTraceThreadForOriginalThread(long originalThreadId) {
         return originalTidToTraceTid.get(originalThreadId);
     }
+
+    private boolean eventsAreInThreadOrder(ReadonlyEventInterface e1, ReadonlyEventInterface e2) {
+        return e1.getEventId() < e2.getEventId() && getTraceThreadId(e1) == getTraceThreadId(e2);
+    }
+
+    public boolean threadsCanOverlap(int ttid1, int ttid2) {
+        if (getThreadType(ttid1) == ThreadType.THREAD && getThreadType(ttid2) == ThreadType.THREAD) {
+            Optional<ReadonlyEventInterface> start1 = Optional.ofNullable(ttidToStartEvent.get(ttid1));
+            Optional<ReadonlyEventInterface> end1 = Optional.ofNullable(ttidToJoinEvent.get(ttid1));
+            Optional<ReadonlyEventInterface> start2 = Optional.ofNullable(ttidToStartEvent.get(ttid2));
+            Optional<ReadonlyEventInterface> end2 = Optional.ofNullable(ttidToJoinEvent.get(ttid2));
+            return !(start1.isPresent() && end2.isPresent() && eventsAreInThreadOrder(end2.get(), start1.get()))
+                    && !(start2.isPresent() && end1.isPresent() && eventsAreInThreadOrder(end1.get(), start2.get()));
+        }
+        zuma
+        return true;
+        /*
+        if (getThreadType(ttid1) == ThreadType.SIGNAL) {
+            if (signalIsEnabledOnThread(ttid1, ttid2)) {
+                return true;
+            }
+        }
+        if (getThreadType(ttid2) == ThreadType.SIGNAL) {
+            if (signalIsEnabledOnThread(ttid2, ttid1)) {
+                return true;
+            }
+        }
+        return false;
+        */
+    }
+
+    public Set<Integer> getTtidsWhereSignalIsEnabledAtStart(long signalNumber) {
+        return signalToTtidWhereEnabledAtStart.get(signalNumber);
+    }
+
+    public Optional<ReadonlyEventInterface> getStartEventForTtid(Integer entryTtid) {
+        return Optional.ofNullable(ttidToStartEvent.get(entryTtid));
+    }
+
+    public Optional<ReadonlyEventInterface> getJoinEventForTtid(Integer entryTtid) {
+        return Optional.ofNullable(ttidToJoinEvent.get(entryTtid));
+    }
 }

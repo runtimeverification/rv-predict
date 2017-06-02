@@ -252,19 +252,7 @@ public class Race {
                     "    Before [0x%016x] ({0x%016x}).%n%n",
                     cfaAfter.getCanonicalFrameAddress(),
                     cfaAfter.getLocationId()));
-            return;
         }
-        // TODO(virgil): I guess that only the frame AFTER the race address matters (i.e. the above one).
-        // I should check that and delete the following code if it's not needed.
-        //
-        // Basically, if an address belongs to the stack, it belongs to a function's frame and,
-        // at least on PC platforms, is lower than that function's CFA. If that function calls
-        // another function, the called function CFA will be below both the address mentioned above
-        // and the caller's CFA.
-        //
-        // So then, any variable on the stack will be lower than at least one CFA, and any variable
-        // which does not have a CFA after it is not on the stack. However, I should check that
-        // this is not platform-dependent.
         Optional<ReadonlyEventInterface> maybeCfaBefore = globalBefore.getBracket();
         if (maybeCfaBefore.isPresent()) {
             ReadonlyEventInterface cfaBefore = maybeCfaBefore.get();

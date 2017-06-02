@@ -28,6 +28,19 @@ public class MoreAsserts {
         Assert.fail("Expected non-null object, but got a null one.\n" + message);
     }
 
+    public static void assertSubstring(String substring, String container) {
+        assertSubstring(
+                "",
+                substring, container);
+    }
+
+    public static void assertSubstring(String message, String substring, String container) {
+        Assert.assertTrue(
+                "Expecting that '" + container + "' contains '" + substring + "', but that is not true.\n"
+                        + message,
+                container.contains(substring));
+    }
+
     public interface ThrowingRunnable {
         void run() throws Throwable;
     }

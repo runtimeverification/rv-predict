@@ -401,6 +401,11 @@ public class CompactEventFactory {
             public long getCanonicalFrameAddress() {
                 return canonicalFrameAddress;
             }
+
+            @Override
+            public String toString() {
+                return super.toString() + String.format("/(cfa=%016x)", canonicalFrameAddress);
+            }
         });
     }
 

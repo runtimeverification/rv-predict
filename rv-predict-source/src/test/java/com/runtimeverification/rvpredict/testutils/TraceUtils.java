@@ -165,6 +165,11 @@ public class TraceUtils {
                 CompactEventReader.Atomicity.ATOMIC);
     }
 
+    public List<ReadonlyEventInterface> enterFunction(long canonicalFrameAddress) {
+        prepareContextForEvent(threadId, signalDepth);
+        return compactEventFactory.enterFunction(mockContext, canonicalFrameAddress);
+    }
+
     public static ReadonlyEventInterface extractSingleEvent(List<ReadonlyEventInterface> events) {
         Assert.assertEquals(1, events.size());
         return events.get(0);

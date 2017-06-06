@@ -53,7 +53,7 @@ public abstract class CompactEvent extends ReadonlyEvent {
     }
 
     @Override
-    public long getDataObjectInternalIdentifier() {
+    public long getDataInternalIdentifier() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
 
@@ -114,7 +114,7 @@ public abstract class CompactEvent extends ReadonlyEvent {
     }
 
     @Override
-    public long unsafeGetAddress() {
+    public long unsafeGetDataInternalIdentifier() {
         return 0;
     }
 

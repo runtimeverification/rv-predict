@@ -7,7 +7,11 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     long getSignalNumber();
     long getLocationId();
     long getDataValue();
-    long getDataObjectInternalIdentifier();
+    /**
+     * Returns an internal identifier of the data that is accessed
+     * by a read or write event.
+     */
+    long getDataInternalIdentifier();
     EventType getType();
     long getSyncObject();
     long getSyncedThreadId();
@@ -15,11 +19,19 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     long getFullWriteSignalMask();
     long getFullReadSignalMask();
     long getCanonicalFrameAddress();
-    long unsafeGetAddress();
+    long unsafeGetDataInternalIdentifier();
     long unsafeGetDataValue();
 
     String getLockRepresentation();
     ReadonlyEventInterface copy();
+    /**
+     * Returns an identifier of the object containing the data that is accessed
+     * by a read or write event (e.g. if the event accesses an array element,
+     * this method may, but is not required to, return an identifier of the entire array).
+     *
+     * The identifier returned by this method may be used to produce an external representation
+     * of the event (e.g. it may be used for pretty-printing the event).
+     */
     long getDataObjectExternalIdentifier();
     int getFieldIdOrArrayIndex();
 

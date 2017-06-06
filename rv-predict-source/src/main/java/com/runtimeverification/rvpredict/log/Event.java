@@ -134,13 +134,13 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    public long getDataObjectInternalIdentifier() {
+    public long getDataInternalIdentifier() {
         assert isReadOrWrite();
         return address;
     }
 
     @Override
-    public long unsafeGetAddress() { return  address; }
+    public long unsafeGetDataInternalIdentifier() { return  address; }
 
     @Override
     public long getSyncObject() {

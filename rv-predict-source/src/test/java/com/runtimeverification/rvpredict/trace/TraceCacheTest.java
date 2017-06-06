@@ -42,6 +42,7 @@ public class TraceCacheTest {
     private static final int NEW_THREAD_ID = 500;
     private static final int NEW_THREAD_ID_2 = 501;
     private static final int NEW_THREAD_ID_3 = 502;
+    private static final long SIGNAL_HANDLER_ADDRESS = 600;
 
     @Mock private Configuration mockConfiguration;
     @Mock private TraceState mockTraceState;
@@ -117,7 +118,7 @@ public class TraceCacheTest {
         List<ReadonlyEventInterface> beginThread1 = beginThread(THREAD_ID);
         List<ReadonlyEventInterface> readData1Thread1 = readData(THREAD_ID, NO_SIGNAL);
 
-        List<ReadonlyEventInterface> beginSignal = beginSignal(SIGNAL_NUMBER, THREAD_ID, ONE_SIGNAL);
+        List<ReadonlyEventInterface> beginSignal = beginSignal(SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, THREAD_ID, ONE_SIGNAL);
         List<ReadonlyEventInterface> readDataSignal = readData(THREAD_ID, ONE_SIGNAL);
         List<ReadonlyEventInterface> readData2Thread1 = readData(THREAD_ID, NO_SIGNAL);
 
@@ -162,11 +163,13 @@ public class TraceCacheTest {
         List<ReadonlyEventInterface> beginThread1 = beginThread(THREAD_ID);
         List<ReadonlyEventInterface> readData1Thread1 = readData(THREAD_ID, NO_SIGNAL);
 
-        List<ReadonlyEventInterface> beginSignal1 = beginSignal(SIGNAL_NUMBER, THREAD_ID, ONE_SIGNAL);
+        List<ReadonlyEventInterface> beginSignal1 = beginSignal(
+                SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, THREAD_ID, ONE_SIGNAL);
         List<ReadonlyEventInterface> readDataSignal1 = readData(THREAD_ID, ONE_SIGNAL);
         List<ReadonlyEventInterface> endSignal1 = endSignal(THREAD_ID, ONE_SIGNAL);
 
-        List<ReadonlyEventInterface> beginSignal2 = beginSignal(SIGNAL_NUMBER, THREAD_ID, ONE_SIGNAL);
+        List<ReadonlyEventInterface> beginSignal2 = beginSignal(
+                SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, THREAD_ID, ONE_SIGNAL);
         List<ReadonlyEventInterface> readDataSignal2 = readData(THREAD_ID, ONE_SIGNAL);
         List<ReadonlyEventInterface> endSignal2 = endSignal(THREAD_ID, ONE_SIGNAL);
 
@@ -298,7 +301,8 @@ public class TraceCacheTest {
         when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_2);
         when(mockTraceState.enterSignal(ONE_SIGNAL, THREAD_ID)).thenReturn(NEW_THREAD_ID);
 
-        List<ReadonlyEventInterface> beginSignal = beginSignal(SIGNAL_NUMBER, THREAD_ID, ONE_SIGNAL);
+        List<ReadonlyEventInterface> beginSignal = beginSignal(
+                SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, THREAD_ID, ONE_SIGNAL);
 
         ListEventReader eventReader =
                 new ListEventReader(Collections.singletonList(beginSignal));
@@ -395,7 +399,7 @@ public class TraceCacheTest {
     }
 
     @Test
-    public void clearsThreadIdAndGetsNonreusableIdForEndingSignalContainedWithinWindow() throws IOException {
+    public void clearsThreadIdAndGetsNonReusableIdForEndingSignalContainedWithinWindow() throws IOException {
         mockConfiguration.windowSize = 100;
         when(mockConfiguration.stacks()).thenReturn(false);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
@@ -406,7 +410,8 @@ public class TraceCacheTest {
         when(mockTraceState.getNewThreadId(THREAD_ID)).thenReturn(NEW_THREAD_ID_2);
         when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID);
 
-        List<ReadonlyEventInterface> beginSignal = beginSignal(SIGNAL_NUMBER, THREAD_ID, ONE_SIGNAL);
+        List<ReadonlyEventInterface> beginSignal = beginSignal(
+                SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, THREAD_ID, ONE_SIGNAL);
         List<ReadonlyEventInterface> readData = readData(THREAD_ID, ONE_SIGNAL);
         List<ReadonlyEventInterface> endSignal = endSignal(THREAD_ID, ONE_SIGNAL);
 
@@ -446,7 +451,8 @@ public class TraceCacheTest {
         when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_3);
 
         List<ReadonlyEventInterface> endSignal1 = endSignal(THREAD_ID, ONE_SIGNAL);
-        List<ReadonlyEventInterface> beginSignal2 = beginSignal(SIGNAL_NUMBER, THREAD_ID, ONE_SIGNAL);
+        List<ReadonlyEventInterface> beginSignal2 = beginSignal(
+                SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, THREAD_ID, ONE_SIGNAL);
 
         ListEventReader eventReader =
                 new ListEventReader(Arrays.asList(endSignal1, beginSignal2));
@@ -480,7 +486,7 @@ public class TraceCacheTest {
     }
 
     private List<ReadonlyEventInterface> beginSignal(
-            long signalNumber, long threadId, int signalDepth) {
+            long signalNumber, long signalHandlerAddress, long threadId, int signalDepth) {
         long locationId = this.locationId++;
         return Arrays.asList(
                 new CompactEvent(eventId++, locationId, threadId, signalDepth, EventType.WRITE_LOCK) {
@@ -493,6 +499,11 @@ public class TraceCacheTest {
                     @Override
                     public long getSignalNumber() {
                         return signalNumber;
+                    }
+
+                    @Override
+                    public long getSignalHandlerAddress() {
+                        return signalHandlerAddress;
                     }
                 },
                 new CompactEvent(eventId++, locationId, threadId, signalDepth, EventType.WRITE_UNLOCK) {

@@ -16,7 +16,7 @@ predict()
 {
 	cd $tmpdir
 	${RV_ROOT:-/usr/local}/bin/rvpdump -t legacy rvpredict.trace
-	rv-predict --offline --window 2000 --compact-trace --llvm-predict . 2>&1 | \
+	rv-predict --offline --window 2000 --detect-interrupted-thread-race --compact-trace --llvm-predict . 2>&1 | \
 	rvpsymbolize $progpath 1>&2
 }
 

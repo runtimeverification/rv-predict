@@ -94,6 +94,12 @@ public class Event extends ReadonlyEvent {
         return 0;
     }
 
+    @Override
+    public long getSignalHandlerAddress() {
+        assert false;
+        return 0;
+    }
+
     public void setOriginalThreadId(long tid) {
         originalThreadId = tid;
     }
@@ -118,7 +124,7 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    public long unsafeGetDataValue() { return dataValue; };
+    public long unsafeGetDataValue() { return dataValue; }
 
     @Override
     public EventType getType() {

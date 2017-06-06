@@ -79,7 +79,7 @@ public class RaceDetector implements Constants {
                             if ((e1.isWrite() && e2.isReadOrWrite() ||
                                     e1.isReadOrWrite() && e2.isWrite())
                                     && e1.getDataObjectInternalIdentifier() == e2.getDataObjectInternalIdentifier()
-                                    && !trace.metadata().isVolatile(e1.getDataObjectInternalIdentifier())
+                                    && !trace.metadata().isVolatile(e1.getDataObjectExternalIdentifier())
                                     && !isThreadSafeLocation(trace, e1.getLocationId())
                                     && !trace.isInsideClassInitializer(e1)
                                     && !trace.isInsideClassInitializer(e2)) {

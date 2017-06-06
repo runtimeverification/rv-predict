@@ -118,7 +118,7 @@ public class Race {
 
     public String getRaceLocationSig() {
         if(config.isLLVMPrediction()) {
-            long idx = e1.getObjectHashCode();
+            long idx = e1.getDataObjectExternalIdentifier();
             if(idx != 0) {
                 String sig = trace.metadata().getVariableSig(idx).replace("/", ".");
                 return "@" + sig;
@@ -129,7 +129,7 @@ public class Race {
             int idx = e1.getFieldIdOrArrayIndex();
             if (idx < 0) {
                 String sig = trace.metadata().getVariableSig(-idx).replace("/", ".");
-                long object = e1.getObjectHashCode();
+                long object = e1.getDataObjectExternalIdentifier();
                 return object == 0 ? "@" + sig : sig;
             }
             return "#" + idx;
@@ -217,7 +217,7 @@ public class Race {
         if (!config.isLLVMPrediction() || !config.isCompactTrace()) {
             return;
         }
-        long address = event.getObjectHashCode();
+        long address = event.getDataObjectExternalIdentifier();
         EventBracket globalBefore = new EventBracket(address, EventBracket.Where.BEFORE);
         EventBracket globalAfter = new EventBracket(address, EventBracket.Where.AFTER);
         for (Collection<ReadonlyEventInterface> stack : stackTraces) {

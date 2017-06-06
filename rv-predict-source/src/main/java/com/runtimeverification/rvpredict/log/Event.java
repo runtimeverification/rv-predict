@@ -94,6 +94,12 @@ public class Event extends ReadonlyEvent {
         return 0;
     }
 
+    @Override
+    public long getSignalHandlerAddress() {
+        assert false;
+        return 0;
+    }
+
     public void setOriginalThreadId(long tid) {
         originalThreadId = tid;
     }
@@ -118,7 +124,7 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    public long unsafeGetDataValue() { return dataValue; };
+    public long unsafeGetDataValue() { return dataValue; }
 
     @Override
     public EventType getType() {
@@ -134,13 +140,13 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    public long getDataAddress() {
+    public long getDataInternalIdentifier() {
         assert isReadOrWrite();
         return address;
     }
 
     @Override
-    public long unsafeGetAddress() { return  address; }
+    public long unsafeGetDataInternalIdentifier() { return  address; }
 
     @Override
     public long getSyncObject() {
@@ -186,7 +192,7 @@ public class Event extends ReadonlyEvent {
     public String toString() {
         int signalDepth = getSignalDepth();
         if (isReadOrWrite()) {
-            int addrl = Math.toIntExact(getObjectHashCode());
+            int addrl = Math.toIntExact(getDataObjectExternalIdentifier());
             int addrr = getFieldIdOrArrayIndex();
             String addr = addrr < 0 ?
                     Integer.toHexString(addrl) + "." + -addrr :
@@ -207,7 +213,7 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    public long getObjectHashCode() {
+    public long getDataObjectExternalIdentifier() {
         return (int) (address >> 32);
     }
 

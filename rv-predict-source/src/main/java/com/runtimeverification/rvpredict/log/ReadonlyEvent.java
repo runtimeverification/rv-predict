@@ -114,7 +114,7 @@ public abstract class ReadonlyEvent implements ReadonlyEventInterface {
     @Override
     public boolean isSimilarTo(ReadonlyEventInterface event) {
         return getType() == event.getType() && getLocationId() == event.getLocationId()
-                && unsafeGetAddress() == event.unsafeGetAddress() && unsafeGetDataValue() == event.unsafeGetDataValue();
+                && unsafeGetDataInternalIdentifier() == event.unsafeGetDataInternalIdentifier() && unsafeGetDataValue() == event.unsafeGetDataValue();
     }
 
     @Override

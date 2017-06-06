@@ -25,12 +25,14 @@ public class RawTrace {
 
     public RawTrace(int start, int end, ReadonlyEventInterface[] events, int signalDepth, int threadId) {
         long signalNumber = com.runtimeverification.rvpredict.util.Constants.INVALID_SIGNAL;
+        long signalHandler = Constants.INVALID_ADDRESS;
         if (signalDepth != 0) {
             // TODO(virgil): Keep the signal number in the ThreadState class.
             for (int i = start; i < end; i++) {
                 ReadonlyEventInterface event = events[i];
                 if (event.getType() == EventType.ENTER_SIGNAL) {
                     signalNumber = event.getSignalNumber();
+                    signalHandler = event.getSignalHandlerAddress();
                     break;
                 }
             }
@@ -47,6 +49,7 @@ public class RawTrace {
                 threadId,
                 originalThreadId,
                 signalNumber,
+                signalHandler,
                 signalDepth);
         this.start = start;
         this.mask = events.length - 1;

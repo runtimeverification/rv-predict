@@ -66,17 +66,17 @@ public class CompactEventFactory {
             }
 
             @Override
-            public long getDataAddress() {
+            public long getDataInternalIdentifier() {
                 return dataAddressId;
             }
 
             @Override
-            public long unsafeGetAddress() {
-                return getDataAddress();
+            public long unsafeGetDataInternalIdentifier() {
+                return getDataInternalIdentifier();
             }
 
             @Override
-            public long getObjectHashCode() {
+            public long getDataObjectExternalIdentifier() {
                 return dataAddress;
             }
 
@@ -206,7 +206,7 @@ public class CompactEventFactory {
                     }
 
                     @Override
-                    long getSignalHandlerAddress() {
+                    public long getSignalHandlerAddress() {
                         return handler;
                     }
 
@@ -263,6 +263,11 @@ public class CompactEventFactory {
                     @Override
                     public long getSignalNumber() {
                         return signalNumber;
+                    }
+
+                    @Override
+                    public long getSignalHandlerAddress() {
+                        return signalHandler;
                     }
 
                     @Override

@@ -120,6 +120,8 @@ public class Trace {
      */
     private final Set<ReadonlyEventInterface> clinitEvents;
 
+    private final Map<Long, Map<Long, List<ReadonlyEventInterface>>> signalNumberToSignalHandlerToEstablishSignalEvents;
+
     /**
      * Maintains the current values for every location, as recorded into the trace
      */
@@ -135,7 +137,8 @@ public class Trace {
             Table<Integer, Long, List<ReadonlyEventInterface>> tidToAddrToEvents,
             Map<Long, List<LockRegion>> lockIdToLockRegions,
             Set<ReadonlyEventInterface> clinitEvents,
-            Map<Long, Integer> originalTidToTraceTid) {
+            Map<Long, Integer> originalTidToTraceTid,
+            Map<Long, Map<Long, List<ReadonlyEventInterface>>> signalNumberToSignalHandlerToEstablishSignalEvents) {
         this.state = state;
         this.rawTraces = rawTraces;
         this.eventIdToTtid = eventIdToTtid;
@@ -148,6 +151,7 @@ public class Trace {
         this.lockIdToLockRegions = lockIdToLockRegions;
         this.clinitEvents = clinitEvents;
         this.originalTidToTraceTid = originalTidToTraceTid;
+        this.signalNumberToSignalHandlerToEstablishSignalEvents = signalNumberToSignalHandlerToEstablishSignalEvents;
 
         if (rawTraces.isEmpty()) {
             baseGID = -1;
@@ -254,6 +258,10 @@ public class Trace {
         return ttidToThreadInfo.get(traceThreadId).getSignalNumber();
     }
 
+    public long getSignalHandler(Integer traceThreadId) {
+        return ttidToThreadInfo.get(traceThreadId).getSignalHandler();
+    }
+
     public long getOriginalThreadIdForTraceThreadId(Integer traceThreadId) {
         return ttidToThreadInfo.get(traceThreadId).getOriginalThreadId();
     }
@@ -299,13 +307,13 @@ public class Trace {
     }
 
     public ReadonlyEventInterface getSameThreadPrevWrite(ReadonlyEventInterface read) {
-        return getPrevWrite(read.getEventId(), getTraceThreadId(read), read.getDataAddress());
+        return getPrevWrite(read.getEventId(), getTraceThreadId(read), read.getDataInternalIdentifier());
     }
 
     public ReadonlyEventInterface getAllThreadsPrevWrite(ReadonlyEventInterface read) {
         ReadonlyEventInterface prevWrite = null;
         for (int ttid : ttidToAddrToWriteEvents.rowKeySet()) {
-           ReadonlyEventInterface e = getPrevWrite(read.getEventId(), ttid, read.getDataAddress());
+           ReadonlyEventInterface e = getPrevWrite(read.getEventId(), ttid, read.getDataInternalIdentifier());
            if (prevWrite == null || e != null && e.getEventId() < prevWrite.getEventId()) {
                prevWrite = e;
            }
@@ -385,6 +393,12 @@ public class Trace {
         return lockEvents;
     }
 
+    public List<ReadonlyEventInterface> getEstablishSignalEvents(long signalNumber, long signalHandler) {
+        return signalNumberToSignalHandlerToEstablishSignalEvents
+                .getOrDefault(signalNumber, Collections.emptyMap())
+                .getOrDefault(signalHandler, Collections.emptyList());
+    }
+
     private void processEvents() {
         if (rawTraces.size() == 1) {
             state.fastProcess(rawTraces.iterator().next());
@@ -412,7 +426,7 @@ public class Trace {
 
                 if (event.isReadOrWrite()) {
                     /* update memory address state */
-                    MemoryAddrState st = addrToState.computeIfAbsent(event.getDataAddress());
+                    MemoryAddrState st = addrToState.computeIfAbsent(event.getDataInternalIdentifier());
                     st.touch(event, ttid);
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
@@ -442,7 +456,12 @@ public class Trace {
                         isInsideClinit = state.isInsideClassInitializer(ttid);
                     }
                 } else if (event.isSignalEvent()) {
-                    // Do nothing for now.
+                    if (event.getType() == EventType.ESTABLISH_SIGNAL) {
+                        signalNumberToSignalHandlerToEstablishSignalEvents
+                                .computeIfAbsent(event.getSignalNumber(), k -> new HashMap<>())
+                                .computeIfAbsent(event.getSignalHandlerAddress(), k -> new ArrayList<>())
+                                .add(event);
+                    }
                 } else {
 		    if (Configuration.debug)
 		        System.err.println(event.getType());
@@ -473,7 +492,7 @@ public class Trace {
                 for (int i = 0; i < rawTrace.size(); i++) {
                     ReadonlyEventInterface event = rawTrace.event(i);
                     if (event.isReadOrWrite()) {
-                        if (sharedAddr.contains(event.getDataAddress())) {
+                        if (sharedAddr.contains(event.getDataInternalIdentifier())) {
                             tmp_events[tmp_size++] = event;
                         }
                     } else if (event.isSyncEvent()) {
@@ -503,7 +522,7 @@ public class Trace {
                 for (int i = 0; i < tmp_size; i++) {
                     ReadonlyEventInterface event = tmp_events[i];
                     if (event.isRead()) {
-                        Integer lastReadIdx = addrToLastReadIdx.put(event.getDataAddress(), i);
+                        Integer lastReadIdx = addrToLastReadIdx.put(event.getDataInternalIdentifier(), i);
                         if (lastReadIdx != null) {
                             /* attempts to skip recurrent pattern */
                             int nextIdx = skipRecurrentPatterns(tmp_events, tmp_size, lastReadIdx, i);
@@ -573,7 +592,7 @@ public class Trace {
                         eventIdToTtid.put(event.getEventId(), ttid);
                         if (event.isWrite()) {
                             ttidToAddrToWriteEvents.row(ttid)
-                                    .computeIfAbsent(event.getDataAddress(), p -> new ArrayList<>())
+                                    .computeIfAbsent(event.getDataInternalIdentifier(), p -> new ArrayList<>())
                                     .add(event);
                         }
                     }
@@ -651,7 +670,7 @@ public class Trace {
                      */
                     if (lastEvent != null) {
                         boolean readsTheSameThing = lastEvent.isRead()
-                                && lastEvent.getDataAddress() == event.getDataAddress()
+                                && lastEvent.getDataInternalIdentifier() == event.getDataInternalIdentifier()
                                 && lastEvent.getDataValue() == event.getDataValue();
                         endCrntBlock = !(lastEvent.isWrite() || readsTheSameThing);
                     } else {

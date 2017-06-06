@@ -538,6 +538,30 @@ public class TraceTest {
     }
 
     @Test
+    public void infersSignalEnablingFromMaskReadWrite() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.getSetSignalMask(SIGNAL_1_ENABLED, ALL_SIGNALS_DISABLED)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_ID_2, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1)
+                ));
+
+        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
+        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
+        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
+                .thenAnswer(invocation -> invocation.getArguments()[0]);
+        Trace trace = createTrace(rawTraces);
+
+        Assert.assertTrue(trace.getTtidsWhereSignalIsEnabledAtStart(SIGNAL_NUMBER_1).contains(1));
+    }
+
+    @Test
     public void doesNotInferSignalEnablingFromDisabledMaskRead() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
 

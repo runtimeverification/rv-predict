@@ -399,7 +399,7 @@ public class Trace {
             signalToTtidWhereEnabledAtStart.put(signalNumber, ttidWhereEnabledAtStart);
             ttidToMinEventId.forEach((ttid, minEventId) ->
                     fillEnabledAtStartStatusFromEnabledStatusAtEventId(
-                            signalNumber, ttid, minEventId,
+                            signalNumber, ttid, minEventId + 1,
                             ttidWhereEnabledAtStart, threadTtidToStartEvent));
         });
         tidToEvents.values().forEach(events -> events.stream()
@@ -446,7 +446,7 @@ public class Trace {
             return;
         }
         Optional<Boolean> maybeLastWrittenValue =
-                getLastSignalMaskChangeBeforeEvent(eventId + 1, ttid, signalNumber);
+                getLastSignalMaskChangeBeforeEvent(eventId, ttid, signalNumber);
         if (maybeLastWrittenValue.isPresent()) {
             return;
         }

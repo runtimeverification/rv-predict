@@ -7,7 +7,7 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     long getSignalNumber();
     long getLocationId();
     long getDataValue();
-    long getDataAddress();
+    long getDataObjectInternalIdentifier();
     EventType getType();
     long getSyncObject();
     long getSyncedThreadId();
@@ -20,7 +20,7 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
 
     String getLockRepresentation();
     ReadonlyEventInterface copy();
-    long getObjectHashCode();
+    long getDataObjectExternalIdentifier();
     int getFieldIdOrArrayIndex();
 
     // TODO(virgil): Make this a non-readonly interface and remove these destructive calls since they

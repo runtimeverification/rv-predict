@@ -49,7 +49,7 @@ public class CompactEventFactoryTest {
     private static final CompactEventMethod<Integer> GET_DATA_SIZE_IN_BYTES =
             new CompactEventMethod<>(ALL_METHODS, "getDataSizeInBytes", CompactEvent::getDataSizeInBytes);
     private static final CompactEventMethod<Long> GET_OBJECT_HASH_CODE =
-            new CompactEventMethod<>(ALL_METHODS, "getObjectHashCode", CompactEvent::getObjectHashCode);
+            new CompactEventMethod<>(ALL_METHODS, "getDataObjectExternalIdentifier", CompactEvent::getDataObjectExternalIdentifier);
     private static final CompactEventMethod<Long> GET_DATA_VALUE =
             new CompactEventMethod<>(ALL_METHODS, "getDataValue", CompactEvent::getDataValue);
     private static final CompactEventMethod<Long> GET_LOCK_ADDRESS =

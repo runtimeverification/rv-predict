@@ -118,7 +118,7 @@ public class CompactEventReaderTest {
         event = reader.readEvent();
         Assert.assertEquals(5, event.getOriginalThreadId());
         Assert.assertEquals(EventType.READ, event.getType());
-        Assert.assertEquals(256, event.getObjectHashCode());
+        Assert.assertEquals(256, event.getDataObjectExternalIdentifier());
         Assert.assertEquals(2, event.getDataValue());
         Assert.assertEquals((1 << 24) + 1, event.getLocationId());
 
@@ -202,7 +202,7 @@ public class CompactEventReaderTest {
         event = reader.readEvent();
         Assert.assertEquals(5, event.getOriginalThreadId());
         Assert.assertEquals(EventType.READ, event.getType());
-        Assert.assertEquals(512, event.getObjectHashCode());
+        Assert.assertEquals(512, event.getDataObjectExternalIdentifier());
         Assert.assertEquals(3, event.getDataValue());
         Assert.assertEquals((1 << 24) + 2, event.getLocationId());
 
@@ -215,7 +215,7 @@ public class CompactEventReaderTest {
         event = reader.readEvent();
         Assert.assertEquals(5, event.getOriginalThreadId());
         Assert.assertEquals(EventType.READ, event.getType());
-        Assert.assertEquals(256, event.getObjectHashCode());
+        Assert.assertEquals(256, event.getDataObjectExternalIdentifier());
         Assert.assertEquals(2, event.getDataValue());
         Assert.assertEquals((1 << 24) + 3, event.getLocationId());
 

@@ -1,3 +1,4 @@
-SUBDIR=rvsyms stackstruct walker .WAIT test
+#SUBDIR=stackstruct walker
+SUBDIR+=rvsyms .WAIT test
 
 .include <mkc.subdir.mk>

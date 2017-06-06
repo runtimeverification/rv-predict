@@ -10,3 +10,6 @@ Canonical Frame Address, CFA, DWARF CFA, n: the Canonical Frame Address
 
     Fortunately, LLVM provides an intrinsic (for bitcode) and a __builtin
     (for C) for the CFA, so I can ignore some of the details.
+
+interrupt service routine, ISR, n: a subroutine that is called to
+    handle an interrupt

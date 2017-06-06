@@ -7,7 +7,8 @@ NOMAN=
 # pkgsrc bootstrap kit. The package for mk-configure is in devel/.
 #
 
-PROGS=rvpdump metadatadump tracedump
+PROGS=rvpdump
+#PROGS+=metadatadump tracedump
 
 CC?=clang
 CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt -I${.CURDIR}/../../include

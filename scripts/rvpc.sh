@@ -4,8 +4,8 @@
 # That is, it is not reliant on any bash-isms.
 #
 
-PASS_DIR=${RV_ROOT:-/usr/local}/lib
-RUNTIME_DIR=${RV_ROOT:-/usr/local}/lib
+pass_dir=$(dirname $0)/../lib
+runtime_dir=$(dirname $0)/../lib
 
 cplusplus=no
 sources=no
@@ -53,14 +53,14 @@ else
 fi
 
 if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ]; then
-	pass="-Xclang -load -Xclang $PASS_DIR/rvpinstrument.so -g"
+	pass="-Xclang -load -Xclang $pass_dir/rvpinstrument.so -g"
 fi
 
 # -ldl for dlsym()
 # -lrt for timer_create() et cetera, in hacks.c
 # -pthread for POSIX threads
 if [ ${link:-yes} = yes ]; then
-	runtime="-L${RUNTIME_DIR} -lrvprt${bits:-} -ldl -lrt -pthread -g"
+	runtime="-L${runtime_dir} -lrvprt${bits:-} -ldl -lrt -pthread -g"
 fi
 
 $compiler ${pass:-} "$@" ${runtime:-}

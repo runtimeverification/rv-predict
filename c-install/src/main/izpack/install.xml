@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="iso-8859-1" standalone="yes" ?>
+
+<installation version="5.0">
+
+    <jar src="res/panels/RVPanels.jar" />
+    <jar src="rv-licensing.jar" />
+
+    <!-- General Application Information -->
+    <info>
+        <appname>RV-Predict-C</appname>
+        <appversion>@{rvpredict.version}</appversion>
+        <uninstaller write="no"/>
+        <writeinstallationinformation>false</writeinstallationinformation>
+        <run-privileged condition="izpack.windowsinstall|izpack.macinstall" />
+    </info>
+
+    <variables>
+        <variable name="TargetPanel.dir.windows" value="C:\$APP_NAME"/>
+        <!-- Variables required for adding RV key to installer -->
+        <variable name="rvFullProductName" value="RV-Predict-C"/>
+        <variable name="rvProductId" value="predict"/>
+        <variable name="rvLicensePath" value="lib"/>
+    </variables>
+
+    <!-- GUI-Specific Preferences -->
+    <guiprefs width="750" height="500" resizable="yes">
+        <modifier key="useHeadingPanel" value="yes"/>
+        <modifier key="useHeadingForSummary" value="no"/>
+        <modifier key="headingImageOnLeft" value="yes"/>
+        <modifier key="headingLineCount" value="2"/>
+        <modifier key="headingFontSize" value="1.5"/>
+        <modifier key="headingBackgroundColor" value="0x00ffffff"/>
+    </guiprefs>
+
+    <locale>
+        <langpack iso3="eng"/>
+    </locale>
+
+    <!-- Installer Resources -->
+    <resources>
+        <res id="CustomLangPack.xml_eng" src="res/izpack-rv-eng-lang.xml"/>
+        <!-- User input spec defining RV key inputs -->
+        <res id="userInputSpec.xml" src="res/userInputSpec.xml"/>
+        <res id="LicencePanel.licence" src="EVALUATION-LICENSE.md"/>
+        <res id="HTMLFinishInfoPanel.finish" src="res/rvdependencies/finish.html"/>
+        <res id="Heading.image" src="res/images/predict.png"/>
+<!--        <res id="TargetPanel.dir.windows" src="res/windows-installpath.txt"/> -->
+    </resources>
+
+    <!-- Installer Panel Sequence -->
+    <panels>
+        <panel classname="TargetPanel"/>
+        <!-- Check RV key and make sure it validates properly -->
+        <panel classname="UserInputPanel" id="rvkey">
+            <validator classname="com.izforge.izpack.panels.rvkey.RVKeyValidator"/>
+        </panel>
+        <panel classname="LicencePanel"/>
+        <panel classname="PacksPanel"/>
+        <panel classname="InstallPanel"/>
+        <panel classname="com.izforge.izpack.panels.htmlfinishinfo.HTMLFinishInfoPanel" id="finish" />
+    </panels>
+
+    <!-- Installable Package Tasks -->
+    <packs>
+        <pack name="RV-Predict" required="yes" installGroups="New Application" >
+            <description>Required RV-Predict libraries and executables.</description>
+<!-- TBD move LICENSE.md somewhere sensible -->
+            <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>
+<!-- TBD new docs
+            <singlefile src="README.md" target="$INSTALL_PATH/README.md"/>
+            <file src="docs" targetdir="$INSTALL_PATH"/>
+-->
+            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
+                <include name="*.bat" />
+                <os family="windows"/>
+            </fileset>
+            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
+                <exclude name="*.bat" />
+                <exclude name="checkJava" />
+                <exclude name="rv-predict" />
+                <os family="unix"/>
+            </fileset>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpc" type="bin" keep="true" stage="never"/>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpc++" type="bin" keep="true" stage="never"/>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpdump" type="bin" keep="true" stage="never"/>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpsymbolize" type="bin" keep="true" stage="never"/>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvsyms" type="bin" keep="true" stage="never"/>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpx" type="bin" keep="true" stage="never"/>
+            <fileset dir="lib" targetdir="$INSTALL_PATH/lib">
+		<exclude name="libclang_rt.*"/>
+		<exclude name="native"/>
+            </fileset>
+        </pack>
+<!--
+        <pack name="Examples" required="no" installGroups="New Application" >
+            <description>Example Java programs illustrating RV-Predict's features.</description>
+            <fileset dir="examples" casesensitive="yes" targetdir="$INSTALL_PATH/examples">
+                <exclude name="bin/*"/>
+                <exclude name="log/*"/>
+            </fileset>
+            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
+                <include name="*.py" />
+            </fileset>
+            <executable targetfile="$INSTALL_PATH/bin/rv-predict" keep="true" stage="never" condition="!izpack.windowsinstall"/>
+        </pack>
+-->
+<!--
+        <pack name="MSVC++ redistributable package" required="yes" installGroups="New Application" condition="izpack.windowsinstall">
+            <description>Microsoft Visual C++ dependent dlls required (on Windows) by the z3java library.</description>
+            <fileset dir="lib/native/windows32" targetdir="${ENV[SystemRoot]}/System32">
+                <os family="windows" arch="x86"/>
+            </fileset>
+            <fileset dir="lib/native/windows64" targetdir="${ENV[SystemRoot]}/System32">
+                <os family="windows" arch="amd64"/>
+            </fileset>
+        </pack>
+-->
+    </packs>
+
+    <!-- The native libraries to add. This is required for creating shortcuts on Windows -->
+    <native type="izpack" name="ShellLink.dll"/>
+
+</installation>

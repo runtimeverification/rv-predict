@@ -72,6 +72,8 @@ public class TraceState {
 
     private final Map<SignalThreadId, Integer> t_unfinishedThreads;
 
+    private final Map<Long, Map<Long, List<ReadonlyEventInterface>>> t_signalNumberToSignalHandlerToEstablishSignalEvents;
+
     private int t_threadId;
 
     public TraceState(Configuration config, MetadataInterface metadata) {
@@ -89,6 +91,7 @@ public class TraceState {
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
         this.t_unfinishedThreads       = new HashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_signalNumberToSignalHandlerToEstablishSignalEvents = new HashMap<>();
         this.t_threadId                = 1;
     }
 
@@ -121,7 +124,8 @@ public class TraceState {
                 t_tidToAddrToEvents,
                 t_lockIdToLockRegions,
                 t_clinitEvents,
-                t_originalTidToTraceTid);
+                t_originalTidToTraceTid,
+                t_signalNumberToSignalHandlerToEstablishSignalEvents);
     }
 
     public int acquireLock(ReadonlyEventInterface lock, int ttid) {

@@ -49,7 +49,7 @@ public class CompactEventFactoryTest {
     private static final CompactEventMethod<Integer> GET_DATA_SIZE_IN_BYTES =
             new CompactEventMethod<>(ALL_METHODS, "getDataSizeInBytes", CompactEvent::getDataSizeInBytes);
     private static final CompactEventMethod<Long> GET_OBJECT_HASH_CODE =
-            new CompactEventMethod<>(ALL_METHODS, "getObjectHashCode", CompactEvent::getObjectHashCode);
+            new CompactEventMethod<>(ALL_METHODS, "getDataObjectExternalIdentifier", CompactEvent::getDataObjectExternalIdentifier);
     private static final CompactEventMethod<Long> GET_DATA_VALUE =
             new CompactEventMethod<>(ALL_METHODS, "getDataValue", CompactEvent::getDataValue);
     private static final CompactEventMethod<Long> GET_LOCK_ADDRESS =
@@ -99,7 +99,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
-        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(1L, event.unsafeGetDataInternalIdentifier());
         Assert.assertEquals(VALUE, event.unsafeGetDataValue());
     }
 
@@ -131,7 +131,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
-        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(1L, event.unsafeGetDataInternalIdentifier());
         Assert.assertEquals(VALUE, event.unsafeGetDataValue());
     }
 
@@ -173,7 +173,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
-        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(1L, event.unsafeGetDataInternalIdentifier());
         Assert.assertEquals(VALUE, event.unsafeGetDataValue());
         event = events.get(2);
         testImplementedMethods(
@@ -225,7 +225,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
-        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(1L, event.unsafeGetDataInternalIdentifier());
         Assert.assertEquals(VALUE, event.unsafeGetDataValue());
         event = events.get(2);
         testImplementedMethods(
@@ -277,7 +277,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(VALUE, GET_DATA_VALUE),
                 }
         );
-        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(1L, event.unsafeGetDataInternalIdentifier());
         Assert.assertEquals(VALUE, event.unsafeGetDataValue());
         event = events.get(2);
         testImplementedMethods(
@@ -291,7 +291,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(OTHER_VALUE, GET_DATA_VALUE),
                 }
         );
-        Assert.assertNotEquals(0, event.unsafeGetAddress());
+        Assert.assertNotEquals(0, event.unsafeGetDataInternalIdentifier());
         Assert.assertEquals(OTHER_VALUE, event.unsafeGetDataValue());
         event = events.get(3);
         testImplementedMethods(
@@ -426,7 +426,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(SIGNAL_HANDLER, GET_DATA_VALUE),
                 }
         );
-        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(1L, event.unsafeGetDataInternalIdentifier());
         Assert.assertEquals(SIGNAL_HANDLER, event.unsafeGetDataValue());
         event = events.get(3);
         testImplementedMethods(
@@ -489,7 +489,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(com.runtimeverification.rvpredict.log.compact.Constants.INVALID_PROGRAM_COUNTER, GET_DATA_VALUE),
                 }
         );
-        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(1L, event.unsafeGetDataInternalIdentifier());
         Assert.assertEquals(com.runtimeverification.rvpredict.log.compact.Constants.INVALID_PROGRAM_COUNTER, event.unsafeGetDataValue());
         event = events.get(3);
         testImplementedMethods(
@@ -554,7 +554,7 @@ public class CompactEventFactoryTest {
                         new ReturnValueTest<>(SIGNAL_HANDLER, GET_DATA_VALUE),
                 }
         );
-        Assert.assertEquals(1L, event.unsafeGetAddress());
+        Assert.assertEquals(1L, event.unsafeGetDataInternalIdentifier());
         Assert.assertEquals(SIGNAL_HANDLER, event.unsafeGetDataValue());
         event = events.get(3);
         testImplementedMethods(

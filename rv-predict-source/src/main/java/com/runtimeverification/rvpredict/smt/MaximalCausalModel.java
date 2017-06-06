@@ -560,7 +560,7 @@ public class MaximalCausalModel {
         /* compute all the write events that could interfere with the read event */
         List<ReadonlyEventInterface> diffThreadSameAddrSameValWrites = new ArrayList<>();
         List<ReadonlyEventInterface> diffThreadSameAddrDiffValWrites = new ArrayList<>();
-        trace.getWriteEvents(read.getDataAddress()).forEach(write -> {
+        trace.getWriteEvents(read.getDataInternalIdentifier()).forEach(write -> {
             if (trace.getTraceThreadId(write) != trace.getTraceThreadId(read) && !happensBefore(read, write)) {
                 if (write.getDataValue() == read.getDataValue()) {
                     diffThreadSameAddrSameValWrites.add(write);
@@ -616,7 +616,7 @@ public class MaximalCausalModel {
                     return or.build();
                 } else {
                     /* the read-write consistency constraint is UNSAT */
-                    trace.logger().debug("Missing write events on " + read.getDataAddress());
+                    trace.logger().debug("Missing write events on " + read.getDataInternalIdentifier());
                     return BooleanConstant.TRUE;
                 }
             }
@@ -646,7 +646,7 @@ public class MaximalCausalModel {
                     return or.build();
                 } else {
                     /* the read-write consistency constraint is UNSAT */
-                    trace.logger().debug("Missing write events on " + read.getDataAddress());
+                    trace.logger().debug("Missing write events on " + read.getDataInternalIdentifier());
                     return BooleanConstant.TRUE;
                 }
             }

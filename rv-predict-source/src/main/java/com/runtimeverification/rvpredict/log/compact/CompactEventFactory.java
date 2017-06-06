@@ -66,17 +66,17 @@ public class CompactEventFactory {
             }
 
             @Override
-            public long getDataAddress() {
+            public long getDataInternalIdentifier() {
                 return dataAddressId;
             }
 
             @Override
-            public long unsafeGetAddress() {
-                return getDataAddress();
+            public long unsafeGetDataInternalIdentifier() {
+                return getDataInternalIdentifier();
             }
 
             @Override
-            public long getObjectHashCode() {
+            public long getDataObjectExternalIdentifier() {
                 return dataAddress;
             }
 

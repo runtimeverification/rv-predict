@@ -307,13 +307,13 @@ public class Trace {
     }
 
     public ReadonlyEventInterface getSameThreadPrevWrite(ReadonlyEventInterface read) {
-        return getPrevWrite(read.getEventId(), getTraceThreadId(read), read.getDataAddress());
+        return getPrevWrite(read.getEventId(), getTraceThreadId(read), read.getDataInternalIdentifier());
     }
 
     public ReadonlyEventInterface getAllThreadsPrevWrite(ReadonlyEventInterface read) {
         ReadonlyEventInterface prevWrite = null;
         for (int ttid : ttidToAddrToWriteEvents.rowKeySet()) {
-           ReadonlyEventInterface e = getPrevWrite(read.getEventId(), ttid, read.getDataAddress());
+           ReadonlyEventInterface e = getPrevWrite(read.getEventId(), ttid, read.getDataInternalIdentifier());
            if (prevWrite == null || e != null && e.getEventId() < prevWrite.getEventId()) {
                prevWrite = e;
            }
@@ -426,7 +426,7 @@ public class Trace {
 
                 if (event.isReadOrWrite()) {
                     /* update memory address state */
-                    MemoryAddrState st = addrToState.computeIfAbsent(event.getDataAddress());
+                    MemoryAddrState st = addrToState.computeIfAbsent(event.getDataInternalIdentifier());
                     st.touch(event, ttid);
                 } else if (event.isSyncEvent()) {
                     if (event.isLock()) {
@@ -492,7 +492,7 @@ public class Trace {
                 for (int i = 0; i < rawTrace.size(); i++) {
                     ReadonlyEventInterface event = rawTrace.event(i);
                     if (event.isReadOrWrite()) {
-                        if (sharedAddr.contains(event.getDataAddress())) {
+                        if (sharedAddr.contains(event.getDataInternalIdentifier())) {
                             tmp_events[tmp_size++] = event;
                         }
                     } else if (event.isSyncEvent()) {
@@ -522,7 +522,7 @@ public class Trace {
                 for (int i = 0; i < tmp_size; i++) {
                     ReadonlyEventInterface event = tmp_events[i];
                     if (event.isRead()) {
-                        Integer lastReadIdx = addrToLastReadIdx.put(event.getDataAddress(), i);
+                        Integer lastReadIdx = addrToLastReadIdx.put(event.getDataInternalIdentifier(), i);
                         if (lastReadIdx != null) {
                             /* attempts to skip recurrent pattern */
                             int nextIdx = skipRecurrentPatterns(tmp_events, tmp_size, lastReadIdx, i);
@@ -592,7 +592,7 @@ public class Trace {
                         eventIdToTtid.put(event.getEventId(), ttid);
                         if (event.isWrite()) {
                             ttidToAddrToWriteEvents.row(ttid)
-                                    .computeIfAbsent(event.getDataAddress(), p -> new ArrayList<>())
+                                    .computeIfAbsent(event.getDataInternalIdentifier(), p -> new ArrayList<>())
                                     .add(event);
                         }
                     }
@@ -670,7 +670,7 @@ public class Trace {
                      */
                     if (lastEvent != null) {
                         boolean readsTheSameThing = lastEvent.isRead()
-                                && lastEvent.getDataAddress() == event.getDataAddress()
+                                && lastEvent.getDataInternalIdentifier() == event.getDataInternalIdentifier()
                                 && lastEvent.getDataValue() == event.getDataValue();
                         endCrntBlock = !(lastEvent.isWrite() || readsTheSameThing);
                     } else {

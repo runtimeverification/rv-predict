@@ -55,7 +55,7 @@ EOF
 predict()
 {
 	cd $tmpdir
-	rvpredict --offline --window 2000 --compact-trace --llvm-predict . 2>&1 | \
+	rvpredict --offline --window 2000 --detect-interrupted-thread-race --compact-trace --llvm-predict . 2>&1 | \
 	rvpsymbolize $progpath 1>&2
 }
 

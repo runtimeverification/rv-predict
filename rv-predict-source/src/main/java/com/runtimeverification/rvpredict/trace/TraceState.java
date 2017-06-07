@@ -76,6 +76,8 @@ public class TraceState {
 
     private final Map<Long, Set<Integer>> t_signalToTtidWhereEnabledAtStart;
 
+    private final Map<Long, Set<Integer>> t_signalToTtidWhereDisabledAtStart;
+
     private final Map<SignalThreadId, Integer> t_unfinishedThreads;
 
     private final Map<Integer, Set<Integer>> t_ttidsThatCanOverlap;
@@ -105,6 +107,7 @@ public class TraceState {
         this.t_ttidToStartEvent        = new HashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_ttidToJoinEvent         = new HashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_signalToTtidWhereEnabledAtStart = new HashMap<>();
+        this.t_signalToTtidWhereDisabledAtStart = new HashMap<>();
         this.t_ttidsThatCanOverlap = new HashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_signalIsEnabledForThreadCache = new HashMap<>();
         this.t_atLeastOneSigsetAllowsSignalCache = new HashMap<>();
@@ -135,6 +138,7 @@ public class TraceState {
         t_ttidToStartEvent.clear();
         t_ttidToJoinEvent.clear();
         t_signalToTtidWhereEnabledAtStart.clear();
+        t_signalToTtidWhereDisabledAtStart.clear();
         return new Trace(this, rawTraces,
                 t_eventIdToTtid,
                 t_ttidToThreadInfo,
@@ -148,6 +152,7 @@ public class TraceState {
                 t_ttidToStartEvent,
                 t_ttidToJoinEvent,
                 t_signalToTtidWhereEnabledAtStart,
+                t_signalToTtidWhereDisabledAtStart,
                 t_ttidsThatCanOverlap,
                 t_signalIsEnabledForThreadCache,
                 t_atLeastOneSigsetAllowsSignalCache,

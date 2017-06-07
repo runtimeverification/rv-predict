@@ -141,6 +141,11 @@ public class Trace {
     private final Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart;
 
     /**
+     * For each signal, the threads where the signal is disabled at start.
+     */
+    private final Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart;
+
+    /**
      * For each thread, the list of threads with which it can overlap.
      */
     private final Map<Integer, Set<Integer>> ttidsThatCanOverlap;
@@ -174,6 +179,7 @@ public class Trace {
             Map<Integer, ReadonlyEventInterface> ttidToStartEvent,
             Map<Integer, ReadonlyEventInterface> ttidToJoinEvent,
             Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart,
+            Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart,
             Map<Integer, Set<Integer>> ttidsThatCanOverlap,
             Map<Long, Map<Integer, Boolean>> signalIsEnabledForThreadCache,
             Map<Long, Map<Long, Boolean>> atLeastOneSigsetAllowsSignalCache,
@@ -193,6 +199,7 @@ public class Trace {
         this.ttidToStartEvent = ttidToStartEvent;
         this.ttidToJoinEvent = ttidToJoinEvent;
         this.signalToTtidWhereEnabledAtStart = signalToTtidWhereEnabledAtStart;
+        this.signalToTtidWhereDisabledAtStart = signalToTtidWhereDisabledAtStart;
         this.ttidsThatCanOverlap = ttidsThatCanOverlap;
         this.originalTidToTraceTid = originalTidToTraceTid;
         this.signalIsEnabledForThreadCache = signalIsEnabledForThreadCache;
@@ -215,7 +222,8 @@ public class Trace {
             throw new IllegalStateException();
         }
         computeTtidToStartAndJoinEvents();
-        computeSignalEnableStatusAtStart(ttidToStartEvent, signalToTtidWhereEnabledAtStart);
+        computeSignalEnableStatusAtStart(
+                ttidToStartEvent, signalToTtidWhereEnabledAtStart, signalToTtidWhereDisabledAtStart);
         computeThreadsWhichCanOverlap();
     }
 
@@ -345,8 +353,8 @@ public class Trace {
 
     private void computeSignalEnableStatusAtStart(
             Map<Integer, ReadonlyEventInterface> threadTtidToStartEvent,
-            Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart) {
-        Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart = new HashMap<>();
+            Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart,
+            Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart) {
         Map<Integer, Optional<ReadonlyEventInterface>> signalTtidToInterruptedEvent = new HashMap<>();
         tidToEvents.keySet().stream()
                 .filter(ttid -> getThreadType(ttid) == ThreadType.SIGNAL)
@@ -1036,6 +1044,10 @@ public class Trace {
 
     public Set<Integer> getTtidsWhereSignalIsEnabledAtStart(long signalNumber) {
         return signalToTtidWhereEnabledAtStart.getOrDefault(signalNumber, Collections.emptySet());
+    }
+
+    public Set<Integer> getTtidsWhereSignalIsDisabledAtStart(long signalNumber) {
+        return signalToTtidWhereDisabledAtStart.getOrDefault(signalNumber, Collections.emptySet());
     }
 
     public Optional<ReadonlyEventInterface> getStartEventForTtid(Integer entryTtid) {

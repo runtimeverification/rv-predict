@@ -154,7 +154,7 @@ public class MaximalCausalModel {
                     ReadonlyEventInterface lastEvent = trace.getLastEvent(ttid);
                     long signalNumber = trace.getSignalNumber(ttid);
                     Set<Integer> ttidWhereEnabledAtStart = trace.getTtidsWhereSignalIsEnabledAtStart(signalNumber);
-                    Set<Integer> ttidWhereDisabledAtStart = signalToTtidWhereDisabledAtStart.get(signalNumber);
+                    Set<Integer> ttidWhereDisabledAtStart = trace.getTtidsWhereSignalIsDisabledAtStart(signalNumber);
 
                     FormulaTerm.Builder oneSignalOrRestrict = FormulaTerm.orBuilder();
                     trace.eventsByThreadID().forEach((entryTtid, events) -> {
@@ -173,7 +173,7 @@ public class MaximalCausalModel {
                                         ? Optional.of(trace.getLastEvent(entryTtid))
                                         : trace.getJoinEventForTtid(entryTtid);
                         OptionalInt ttidForEnablingAtStart = OptionalInt.empty();
-                        ReadonlyEventInterface firstSignalMaskEvent = null;
+                        Optional<ReadonlyEventInterface> firstSignalMaskEvent = Optional.empty();
                         if (!enabled && !disabled) {
                             ttidForEnablingAtStart = findThreadIdForEnablingAtStart(entryTtid);
                             if (ttidForEnablingAtStart.isPresent()) {
@@ -223,7 +223,7 @@ public class MaximalCausalModel {
     }
 
     private SMTFormula signalInterruptionWhenEnabledByMaskEvent(
-            ReadonlyEventInterface startThreadEvent, ReadonlyEventInterface endThreadEvent,
+            Optional<ReadonlyEventInterface> startThreadEvent, Optional<ReadonlyEventInterface> endThreadEvent,
             ReadonlyEventInterface firstSignalEvent, ReadonlyEventInterface lastSignalEvent,
             Integer signalTtid, Integer interruptedTtid,
             long threadSignalNumber, long threadSignalHandler, long interruptingSignalNumber) {
@@ -235,30 +235,32 @@ public class MaximalCausalModel {
         List<ReadonlyEventInterface> establishSignalEvents =
                 trace.getEstablishSignalEvents(threadSignalNumber, threadSignalHandler);
         FormulaTerm.Builder signalIsEnabled = FormulaTerm.orBuilder();
-        establishSignalEvents.stream()
-                .filter(establishEvent ->
-                        Signals.signalIsEnabled(interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
-                .forEach(establishWithEnableEvent -> {
-                    FormulaTerm.Builder enabledJustBefore = FormulaTerm.andBuilder();
-                    andBuilder().add(HB(establishWithEnableEvent, startThreadEvent));
-                    establishSignalEvents.stream()
-                            .filter(establishEvent ->
-                                    !Signals.signalIsEnabled(
-                                            interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
-                            .forEach(establishWithDisableEvent ->
-                                    enabledJustBefore.add(OR(
-                                            HB(establishWithDisableEvent, establishWithEnableEvent),
-                                            HB(startThreadEvent, establishWithDisableEvent))));
-                    signalIsEnabled.add(enabledJustBefore.build());
-                });
+        startThreadEvent.ifPresent(
+                startThread -> establishSignalEvents.stream()
+                        .filter(establishEvent ->
+                                Signals.signalIsEnabled(
+                                        interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
+                        .forEach(establishWithEnableEvent -> {
+                            FormulaTerm.Builder enabledJustBefore = FormulaTerm.andBuilder();
+                            andBuilder().add(HB(establishWithEnableEvent, startThread));
+                            establishSignalEvents.stream()
+                                    .filter(establishEvent ->
+                                            !Signals.signalIsEnabled(
+                                                    interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
+                                    .forEach(establishWithDisableEvent ->
+                                            enabledJustBefore.add(OR(
+                                                    HB(establishWithDisableEvent, establishWithEnableEvent),
+                                                    HB(startThread, establishWithDisableEvent))));
+                            signalIsEnabled.add(enabledJustBefore.build());
+                        }));
         return AND(signalInterruption, signalIsEnabled.build());
     }
 
-    private ReadonlyEventInterface findFirstMaskEventForSignalWithDefault(
-            int ttid, long signalNumber, ReadonlyEventInterface defaultEvent) {
+    private Optional<ReadonlyEventInterface> findFirstMaskEventForSignalWithDefault(
+            int ttid, long signalNumber, Optional<ReadonlyEventInterface> defaultEvent) {
         for (ReadonlyEventInterface event : trace.getEvents(ttid)) {
-            if (Signals.signalEnableChange(event, signalNumber) != null) {
-                return event;
+            if (Signals.signalEnableChange(event, signalNumber).isPresent()) {
+                return Optional.of(event);
             }
         }
         return defaultEvent;

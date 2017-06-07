@@ -12,13 +12,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -35,6 +32,7 @@ public class TraceTest {
     private static final int NO_SIGNAL = 0;
     private static final int ONE_SIGNAL = 1;
     private static final long SIGNAL_NUMBER_1 = 10;
+    private static final long SIGNAL_NUMBER_2 = 11;
     private static final long SIGNAL_1_ENABLED = ~(1 << SIGNAL_NUMBER_1);
     private static final long ALL_SIGNALS_DISABLED = ~0;
     private static final long THREAD_ID_1 = 100;
@@ -47,8 +45,6 @@ public class TraceTest {
     private static final long ADDRESS_3 = 302;
     private static final long VALUE_1 = 400;
     private static final long VALUE_2 = 401;
-    private static final long SIGNAL_NUMBER_1 = 500;
-    private static final long SIGNAL_NUMBER_2 = 501;
     private static final long SIGNAL_HANDLER_1 = 600;
     private static final long SIGNAL_HANDLER_2 = 601;
     private static final long SIGNAL_HANDLER_3 = 602;
@@ -76,6 +72,7 @@ public class TraceTest {
     private Map<Integer, ReadonlyEventInterface> ttidToStartEvent;
     private Map<Integer, ReadonlyEventInterface> ttidToJoinEvent;
     private Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart;
+    private Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart;
     private Map<Long, Map<Integer, Boolean>> signalIsEnabledForThreadCache;
     private Map<Long, Map<Long, Boolean>> atLeastOneSigsetAllowsSignalCache;
     private Map<Integer, Set<Integer>> ttidsThatCanOverlap;
@@ -97,6 +94,7 @@ public class TraceTest {
         ttidToStartEvent = new HashMap<>();
         ttidToJoinEvent = new HashMap<>();
         signalToTtidWhereEnabledAtStart = new HashMap<>();
+        signalToTtidWhereDisabledAtStart = new HashMap<>();
         signalIsEnabledForThreadCache = new HashMap<>();
         atLeastOneSigsetAllowsSignalCache = new HashMap<>();
         ttidsThatCanOverlap = new HashMap<>();
@@ -759,7 +757,8 @@ public class TraceTest {
                 mockTraceState, rawTraces,
                 eventIdToTtid, ttidToThreadInfo, tidToEvents, tidToMemoryAccessBlocks, tidToThreadState,
                 addrToState, tidToAddrToEvents, lockIdToLockRegions, clinitEvents,
-                ttidToStartEvent, ttidToJoinEvent, signalToTtidWhereEnabledAtStart, ttidsThatCanOverlap,
+                ttidToStartEvent, ttidToJoinEvent, signalToTtidWhereEnabledAtStart, signalToTtidWhereDisabledAtStart,
+                ttidsThatCanOverlap,
                 signalIsEnabledForThreadCache, atLeastOneSigsetAllowsSignalCache, originalTidToTraceTid,
                 signalNumberToSignalHandlerToEstablishSignalEvents);
     }

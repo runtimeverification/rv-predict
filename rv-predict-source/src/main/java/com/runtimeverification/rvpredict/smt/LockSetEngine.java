@@ -42,7 +42,7 @@ import java.util.Map;
  */
 public class LockSetEngine {
 
-    private final Map<Long, Map<Long, List<LockRegion>>> lockIdToTtidToLockRegions = new HashMap<>();
+    private final Map<Long, Map<Integer, List<LockRegion>>> lockIdToTtidToLockRegions = new HashMap<>();
 
     public void add(LockRegion region) {
         lockIdToTtidToLockRegions

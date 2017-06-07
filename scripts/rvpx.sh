@@ -14,8 +14,6 @@ fi
 
 rvpredict()
 {
-	ulimit -s `ulimit -H -s`
-
 	libdir=$(dirname $0)/../lib
 
 	min_major="1"

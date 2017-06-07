@@ -1,5 +1,6 @@
 *.a
 build
 *.so
+.*.swp
 *.syms
 tags

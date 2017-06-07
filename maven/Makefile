@@ -1,38 +1,34 @@
-CLEANABLE_FILES=checkJava.copy rv-predict.copy rv-predict.jar.copy
+CLEANABLE_FILES=rv-predict.jar.copy
 FILES=$(CLEANABLE_FILES)
 
-FILESNAME_checkJava.copy=checkJava
-FILESNAME_rv-predict.copy=rv-predict
 FILESNAME_rv-predict.jar.copy=rv-predict.jar
 
-FILESMODE_checkJava.copy=0755
-FILESMODE_rv-predict.copy=0755
 FILESMODE_rv-predict.jar.copy=0644
 
-FILESDIR_checkJava.copy=$(BINDIR)
-FILESDIR_rv-predict.copy=$(BINDIR)
 FILESDIR_rv-predict.jar.copy=$(LIBDIR)
 
 buildit: .PHONY
-	cd $(.CURDIR)/.. && mvn -q -DskipTests -DskipDocs package
+.if $(RELEASE:Uno) == "no"
+	@cd $(.CURDIR)/../rv-predict-source && mvn -q -DskipTests -DskipDocs compile
+	@[ -d $(.CURDIR)/../target/release/rv-predict ] || mkdir -p $(.CURDIR)/../target/release/rv-predict
+	@cd $(.CURDIR)/../rv-predict-source/target/classes && jar cf $(.CURDIR)/../target/release/rv-predict/rv-predict.jar .
+.else
+	# I used to pass -DskipTests -DskipDocs here.
+	cd $(.CURDIR)/.. && mvn -q package
+.endif
 
-copyit: .USE
+rv-predict.jar.copy: $(.CURDIR)/../target/release/rv-predict/rv-predict.jar
 	@$(INSTALL) -c -m 0644 $(.ALLSRC:Ncopyit) $(.OBJDIR)/$(.TARGET)
-
-checkJava.copy: $(.CURDIR)/../target/release/rv-predict/bin/checkJava copyit
-rv-predict.copy: $(.CURDIR)/../target/release/rv-predict/bin/rv-predict copyit
-rv-predict.jar.copy: $(.CURDIR)/../target/release/rv-predict/rv-predict.jar copyit
-
-$(.CURDIR)/../target/release/rv-predict/bin/checkJava: buildit
-
-$(.CURDIR)/../target/release/rv-predict/bin/rv-predict: buildit
+.if $(RELEASE:Uno) == "no"
+	@$(.CURDIR)/add-metainfo.sh $(.OBJDIR) $(.TARGET)
+.endif
 
 $(.CURDIR)/../target/release/rv-predict/rv-predict.jar: buildit
 
 #clean:
 #	@rm -rf $(.CURDIR)/../target
 
-CLEANDIRS+=$(.CURDIR)/../target
+CLEANDIRS+=$(.CURDIR)/../target $(.CURDIR)/../rv-predict-source/target
 CLEANFILES+=$(CLEANABLE_FILES)
 
 .include <mkc.files.mk>

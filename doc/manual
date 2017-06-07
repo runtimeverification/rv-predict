@@ -1,28 +1,36 @@
 # Installation
 
-RV-Predict is distributed in a gzip-compressed TAR file called rv-predict.tgz.
-rv-predict.tgz contains three directories, bin/, lib/, and include/.
+RV-Predict uses Clang 3.8.  Make sure that it is installed.  On Ubuntu
+Linux 16.04, you can install Clang 3.8 with these commands:
 
-Select an installation directory for RV-Predict, and extract rv-predict.tgz
-there.  Set the environment variable RV_ROOT to the path to the installation
-directory.  In csh/tcsh, run:
+	apt-get install clang-3.8
+	apt-get install clang
 
-	setenv RV_ROOT ...path to installation directory...
+Run `which clang` to make sure that `clang` is in your PATH.
+ 
+## Using the installer
 
-Or in a Bourne-compatible shell (e.g., bash) run:
+TBD
 
-	export RV_ROOT=...path to installation directory...
+## Installing from rv-predict.tgz
 
-Add $RV_ROOT/bin to your $PATH:
+RV-Predict is also distributed in a gzip-compressed TAR file called
+rv-predict.tgz.  rv-predict.tgz contains three directories, bin/, lib/,
+and include/.
 
-	setenv PATH ${PATH}:${RV_ROOT}/bin
+Select an installation directory, $INSTDIR, for RV-Predict, and extract
+rv-predict.tgz there.
+
+Add $INSTDIR/bin to your $PATH:
+
+	setenv PATH ${PATH}:${INSTDIR}/bin
 
 or
 
-	export PATH=${PATH}:${RV_ROOT}/bin
+	export PATH=${PATH}:${INSTDIR}/bin
 
 Consider adding a line to your shell's resource ("rc") file or profile that
-sets RV_ROOT and PATH when you log in.
+sets PATH when you log in.
 
 # Getting started
 

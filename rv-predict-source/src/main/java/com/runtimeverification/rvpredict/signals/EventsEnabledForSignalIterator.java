@@ -4,6 +4,7 @@ import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Optional;
 
 /**
  * For each iterator position, the signal can run between the previous event and the current one.
@@ -17,8 +18,8 @@ public class EventsEnabledForSignalIterator {
     private final long signalNumber;
     private final Iterator<ReadonlyEventInterface> eventsIterator;
 
-    private ReadonlyEventInterface previousEvent;
-    private ReadonlyEventInterface currentEvent;
+    private Optional<ReadonlyEventInterface> previousEvent;
+    private Optional<ReadonlyEventInterface> currentEvent;
 
     /**
      * Whether the signal is enabled after the {@link #currentEvent} event.
@@ -32,25 +33,25 @@ public class EventsEnabledForSignalIterator {
             long signalNumber, boolean enabledAtStart) {
         this.detectInterruptedThreadRace = detectInterruptedThreadRace;
         this.signalNumber = signalNumber;
-        previousEvent = null;
-        currentEvent = null;
+        previousEvent = Optional.empty();
+        currentEvent = Optional.empty();
         enabled = enabledAtStart;
         eventsIterator = events.iterator();
         firstStep = true;
     }
 
-    public ReadonlyEventInterface getPreviousEventWithDefault(ReadonlyEventInterface defaultValue) {
+    public Optional<ReadonlyEventInterface> getPreviousEventWithDefault(Optional<ReadonlyEventInterface> defaultValue) {
         return eventWithDefault(previousEvent, defaultValue);
     }
 
-    public ReadonlyEventInterface getCurrentEventWithDefault(ReadonlyEventInterface defaultValue) {
+    public Optional<ReadonlyEventInterface> getCurrentEventWithDefault(Optional<ReadonlyEventInterface> defaultValue) {
         return eventWithDefault(currentEvent, defaultValue);
     }
 
     public boolean advance() {
         if (!enabled) {
             if (!findNextEnabledEvent()) {
-                previousEvent = null;
+                previousEvent = Optional.empty();
                 return false;
             }
         }
@@ -64,7 +65,7 @@ public class EventsEnabledForSignalIterator {
             firstStep = false;
             return true;
         }
-        return previousEvent != null || currentEvent != null;
+        return previousEvent.isPresent() || currentEvent.isPresent();
     }
 
     private boolean findNextEnabledEvent() {
@@ -81,7 +82,8 @@ public class EventsEnabledForSignalIterator {
             if (!advanceOneStep()) {
                 return;
             }
-            if (currentEvent.isLock()) {
+            Optional<ReadonlyEventInterface> event = currentEvent;
+            if (event.isPresent() && event.get().isLock()) {
                 return;
             }
         } while (enabled);
@@ -89,19 +91,17 @@ public class EventsEnabledForSignalIterator {
 
     private boolean advanceOneStep() {
         if (!eventsIterator.hasNext()) {
-            currentEvent = null;
+            currentEvent = Optional.empty();
             return false;
         }
-        currentEvent = eventsIterator.next();
-        enabled = Signals.updateEnabledWithEvent(enabled, signalNumber, currentEvent);
+        ReadonlyEventInterface event = eventsIterator.next();
+        enabled = Signals.updateEnabledWithEvent(enabled, signalNumber, event);
+        currentEvent = Optional.of(event);
         return true;
     }
 
-    private static ReadonlyEventInterface eventWithDefault(
-            ReadonlyEventInterface event, ReadonlyEventInterface defaultValue) {
-        if (event == null) {
-            return defaultValue;
-        }
-        return event;
+    private static Optional<ReadonlyEventInterface> eventWithDefault(
+            Optional<ReadonlyEventInterface> event, Optional<ReadonlyEventInterface> defaultValue) {
+        return event.isPresent() ? event : defaultValue;
     }
 }

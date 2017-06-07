@@ -71,33 +71,31 @@ public class RaceDetector implements Constants {
 
     private Map<String, List<Race>> computeUnknownRaceSuspects(Trace trace) {
         Map<String, List<Race>> sigToRaceCandidates = new HashMap<>();
-        trace.eventsByThreadID().forEach((tid1, events1) -> {
-            trace.eventsByThreadID().forEach((tid2, events2) -> {
-                if (tid1 < tid2) {
-                    events1.forEach(e1 -> {
-                        events2.forEach(e2 -> {
-                            if ((e1.isWrite() && e2.isReadOrWrite() ||
-                                    e1.isReadOrWrite() && e2.isWrite())
-                                    && e1.getDataInternalIdentifier() == e2.getDataInternalIdentifier()
-                                    && !trace.metadata().isVolatile(e1.getDataObjectExternalIdentifier())
-                                    && !isThreadSafeLocation(trace, e1.getLocationId())
-                                    && !trace.isInsideClassInitializer(e1)
-                                    && !trace.isInsideClassInitializer(e2)) {
-                                Race race = new Race(e1, e2, trace, config);
-                                if (!config.suppressPattern.matcher(race.getRaceLocationSig())
-                                        .matches()) {
-                                    String raceSig = race.toString();
-                                    if (!sigToRealRace.containsKey(raceSig)) {
-                                        sigToRaceCandidates.computeIfAbsent(raceSig,
-                                                x -> new ArrayList<>()).add(race);
-                                    }
+        trace.eventsByThreadID().forEach((ttid1, events1) ->
+                trace.eventsByThreadID().forEach((ttid2, events2) -> {
+                    if (ttid1 >= ttid2 || !trace.threadsCanOverlap(ttid1, ttid2)) {
+                        return;
+                    }
+                    events1.forEach(e1 -> events2.forEach(e2 -> {
+                        if ((e1.isWrite() && e2.isReadOrWrite() || e1.isReadOrWrite() && e2.isWrite())
+                                && e1.getDataInternalIdentifier() == e2.getDataInternalIdentifier()
+                                && !trace.metadata().isVolatile(e1.getDataInternalIdentifier())
+                                && !isThreadSafeLocation(trace, e1.getLocationId())
+                                && !trace.isInsideClassInitializer(e1)
+                                && !trace.isInsideClassInitializer(e2)) {
+                            Race race = new Race(e1, e2, trace, config);
+                            if (!config.suppressPattern.matcher(race.getRaceLocationSig())
+                                    .matches()) {
+                                String raceSig = race.toString();
+                                if (!sigToRealRace.containsKey(raceSig)) {
+                                    sigToRaceCandidates.computeIfAbsent(raceSig,
+                                            x -> new ArrayList<>()).add(race);
                                 }
                             }
-                        });
-                    });
-                }
-            });
-        });
+                        }
+                    }));
+
+                }));
         return sigToRaceCandidates;
     }
 

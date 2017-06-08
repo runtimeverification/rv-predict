@@ -6,7 +6,10 @@ import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.IEventReader;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.CompactEvent;
+import com.runtimeverification.rvpredict.log.compact.Context;
+import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.testutils.MoreAsserts;
+import com.runtimeverification.rvpredict.testutils.TraceUtils;
 import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Before;
@@ -35,15 +38,21 @@ import static org.mockito.Mockito.when;
 public class TraceCacheTest {
     private static final long FIRST_EVENT_ID = 100;
     private static final long FIRST_LOCATION_ID = 200;
-    private static final long THREAD_ID = 30;
+    private static final long THREAD_ID = 300;
+    private static final long THREAD_ID_2 = 301;
     private static final int NO_SIGNAL = 0;
     private static final int ONE_SIGNAL = 1;
-    private static final long SIGNAL_NUMBER = 40;
+    private static final long SIGNAL_NUMBER = 4;
     private static final int NEW_THREAD_ID = 500;
     private static final int NEW_THREAD_ID_2 = 501;
     private static final int NEW_THREAD_ID_3 = 502;
     private static final long SIGNAL_HANDLER_ADDRESS = 600;
+    private static final long PC_BASE = 700;
+    private static final long DATA_ADDRESS_1 = 800;
+    private static final long VALUE_1 = 900;
+    private static final long GENERATION = 1000;
 
+    @Mock private Context mockContext;
     @Mock private Configuration mockConfiguration;
     @Mock private TraceState mockTraceState;
     @Mock private LockGraph mockLockGraph;
@@ -477,6 +486,63 @@ public class TraceCacheTest {
         Assert.assertEquals(ONE_SIGNAL, rawTraces.get(1).getSignalDepth());
         Assert.assertEquals(NEW_THREAD_ID, rawTraces.get(1).getThreadInfo().getId());
         Assert.assertEquals(THREAD_ID, rawTraces.get(1).getThreadInfo().getOriginalThreadId());
+    }
+
+
+    @Test
+    public void canProcessThreadWithIdLargerThanAThreadWithSignals() throws IOException, InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
+        mockConfiguration.windowSize = 100;
+        when(mockConfiguration.stacks()).thenReturn(false);
+        when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
+        when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
+        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
+
+        when(mockTraceState.getUnfinishedThreadId(ONE_SIGNAL, THREAD_ID)).thenReturn(OptionalInt.empty());
+        when(mockTraceState.getNewThreadId(THREAD_ID)).thenReturn(NEW_THREAD_ID);
+        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(NEW_THREAD_ID_3);
+        when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_2);
+
+        List<List<ReadonlyEventInterface>> events = Arrays.asList(
+                tu.nonAtomicLoad(DATA_ADDRESS_1, VALUE_1),
+
+                tu.switchThread(THREAD_ID, ONE_SIGNAL),
+                tu.enterSignal(SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, GENERATION),
+                tu.nonAtomicLoad(DATA_ADDRESS_1, VALUE_1),
+                tu.exitSignal(),
+
+                tu.switchThread(THREAD_ID_2, NO_SIGNAL),
+                tu.nonAtomicLoad(DATA_ADDRESS_1, VALUE_1)
+        );
+
+        ListEventReader eventReader = new ListEventReader(events);
+
+        TraceCache traceCache =
+                TraceCache.createForTesting(
+                        mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
+
+        Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
+
+        verify(mockTraceState).initNextTraceWindow(rawTraceArgumentCaptor.capture());
+
+        List<RawTrace> rawTraces = rawTraceArgumentCaptor.getValue();
+        MoreAsserts.assertNotNull(rawTraces);
+
+        Assert.assertEquals(3, rawTraces.size());
+
+        Assert.assertEquals(NO_SIGNAL, rawTraces.get(0).getSignalDepth());
+        Assert.assertEquals(NEW_THREAD_ID, rawTraces.get(0).getThreadInfo().getId());
+        Assert.assertEquals(THREAD_ID, rawTraces.get(0).getThreadInfo().getOriginalThreadId());
+
+        Assert.assertEquals(ONE_SIGNAL, rawTraces.get(1).getSignalDepth());
+        Assert.assertEquals(NEW_THREAD_ID_2, rawTraces.get(1).getThreadInfo().getId());
+        Assert.assertEquals(THREAD_ID, rawTraces.get(1).getThreadInfo().getOriginalThreadId());
+
+        Assert.assertEquals(NO_SIGNAL, rawTraces.get(2).getSignalDepth());
+        Assert.assertEquals(NEW_THREAD_ID_3, rawTraces.get(2).getThreadInfo().getId());
+        Assert.assertEquals(THREAD_ID_2, rawTraces.get(2).getThreadInfo().getOriginalThreadId());
+
+        verify(mockTraceState, never()).exitSignal(ONE_SIGNAL, THREAD_ID);
     }
 
     private List<ReadonlyEventInterface> endSignal(long threadId, int signalDepth) {

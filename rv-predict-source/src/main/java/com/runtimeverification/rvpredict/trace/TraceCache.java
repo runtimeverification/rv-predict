@@ -201,6 +201,9 @@ public class TraceCache {
 
             if (event.getType() == EventType.EXIT_SIGNAL) {
                 i++;
+                if (i < eventCount) {
+                    event = events.get(i);
+                }
             }
 
             if (tidStart < i) {

@@ -12,7 +12,9 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.List;
+import java.util.Optional;
 
+import static com.runtimeverification.rvpredict.testutils.TestUtils.fromOptional;
 import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractSingleEvent;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -38,26 +40,35 @@ public class EventsEnabledForSignalIteratorTest {
                 tu.nonAtomicStore(ADDRESS, VALUE_2),
                 tu.nonAtomicStore(ADDRESS, VALUE_3)
         );
-        ReadonlyEventInterface defaultEvent = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4));
+        Optional<ReadonlyEventInterface> defaultEvent =
+                Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
                         events, false, SIGNAL_NUMBER, true);
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(VALUE_4, iterator.getPreviousEventWithDefault(defaultEvent).getDataValue());
-        Assert.assertEquals(VALUE_1, iterator.getCurrentEventWithDefault(defaultEvent).getDataValue());
+        Assert.assertEquals(VALUE_4,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getDataValue());
+        Assert.assertEquals(VALUE_1,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getDataValue());
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(VALUE_1, iterator.getPreviousEventWithDefault(defaultEvent).getDataValue());
-        Assert.assertEquals(VALUE_2, iterator.getCurrentEventWithDefault(defaultEvent).getDataValue());
+        Assert.assertEquals(VALUE_1,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getDataValue());
+        Assert.assertEquals(VALUE_2,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getDataValue());
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(VALUE_2, iterator.getPreviousEventWithDefault(defaultEvent).getDataValue());
-        Assert.assertEquals(VALUE_3, iterator.getCurrentEventWithDefault(defaultEvent).getDataValue());
+        Assert.assertEquals(VALUE_2,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getDataValue());
+        Assert.assertEquals(VALUE_3,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getDataValue());
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(VALUE_3, iterator.getPreviousEventWithDefault(defaultEvent).getDataValue());
-        Assert.assertEquals(VALUE_4, iterator.getCurrentEventWithDefault(defaultEvent).getDataValue());
+        Assert.assertEquals(VALUE_3,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getDataValue());
+        Assert.assertEquals(VALUE_4,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getDataValue());
 
         Assert.assertFalse(iterator.advance());
     }
@@ -86,22 +97,27 @@ public class EventsEnabledForSignalIteratorTest {
                 tu.nonAtomicStore(ADDRESS, VALUE_2),
                 tu.nonAtomicStore(ADDRESS, VALUE_3)
         );
-        ReadonlyEventInterface defaultEvent = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4));
+        Optional<ReadonlyEventInterface> defaultEvent =
+                Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
                         events, false, SIGNAL_NUMBER, false);
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(EventType.UNBLOCK_SIGNALS, iterator.getPreviousEventWithDefault(defaultEvent).getType());
-        Assert.assertEquals(VALUE_2, iterator.getCurrentEventWithDefault(defaultEvent).getDataValue());
+        Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(VALUE_2,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getDataValue());
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(VALUE_2, iterator.getPreviousEventWithDefault(defaultEvent).getDataValue());
-        Assert.assertEquals(VALUE_3, iterator.getCurrentEventWithDefault(defaultEvent).getDataValue());
+        Assert.assertEquals(VALUE_2,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getDataValue());
+        Assert.assertEquals(VALUE_3,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getDataValue());
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(VALUE_3, iterator.getPreviousEventWithDefault(defaultEvent).getDataValue());
-        Assert.assertEquals(VALUE_4, iterator.getCurrentEventWithDefault(defaultEvent).getDataValue());
+        Assert.assertEquals(VALUE_3, fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getDataValue());
+        Assert.assertEquals(VALUE_4, fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getDataValue());
 
         Assert.assertFalse(iterator.advance());
     }
@@ -116,18 +132,21 @@ public class EventsEnabledForSignalIteratorTest {
                 tu.disableSignal(SIGNAL_NUMBER),
                 tu.nonAtomicStore(ADDRESS, VALUE_3)
         );
-        ReadonlyEventInterface defaultEvent = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4));
+        Optional<ReadonlyEventInterface> defaultEvent =
+                Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
                         events, false, SIGNAL_NUMBER, false);
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(EventType.UNBLOCK_SIGNALS, iterator.getPreviousEventWithDefault(defaultEvent).getType());
-        Assert.assertEquals(VALUE_2, iterator.getCurrentEventWithDefault(defaultEvent).getDataValue());
+        Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(VALUE_2, fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getDataValue());
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(VALUE_2, iterator.getPreviousEventWithDefault(defaultEvent).getDataValue());
-        Assert.assertEquals(EventType.BLOCK_SIGNALS, iterator.getCurrentEventWithDefault(defaultEvent).getType());
+        Assert.assertEquals(VALUE_2, fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getDataValue());
+        Assert.assertEquals(EventType.BLOCK_SIGNALS,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
 
         Assert.assertFalse(iterator.advance());
     }
@@ -144,22 +163,27 @@ public class EventsEnabledForSignalIteratorTest {
                 tu.disableSignal(SIGNAL_NUMBER),
                 tu.nonAtomicStore(ADDRESS, VALUE_3)
         );
-        ReadonlyEventInterface defaultEvent = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4));
+        Optional<ReadonlyEventInterface> defaultEvent =
+                Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
                         events, false, SIGNAL_NUMBER, false);
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(EventType.UNBLOCK_SIGNALS, iterator.getPreviousEventWithDefault(defaultEvent).getType());
-        Assert.assertEquals(EventType.BLOCK_SIGNALS, iterator.getCurrentEventWithDefault(defaultEvent).getType());
+        Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(EventType.BLOCK_SIGNALS,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(EventType.BLOCK_SIGNALS, iterator.getPreviousEventWithDefault(defaultEvent).getType());
-        Assert.assertEquals(VALUE_2, iterator.getCurrentEventWithDefault(defaultEvent).getDataValue());
+        Assert.assertEquals(EventType.BLOCK_SIGNALS,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(VALUE_2, fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getDataValue());
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(VALUE_2, iterator.getPreviousEventWithDefault(defaultEvent).getDataValue());
-        Assert.assertEquals(EventType.BLOCK_SIGNALS, iterator.getCurrentEventWithDefault(defaultEvent).getType());
+        Assert.assertEquals(VALUE_2, fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getDataValue());
+        Assert.assertEquals(EventType.BLOCK_SIGNALS,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
 
         Assert.assertFalse(iterator.advance());
     }
@@ -174,14 +198,17 @@ public class EventsEnabledForSignalIteratorTest {
                 tu.nonAtomicStore(ADDRESS, VALUE_2),
                 tu.nonAtomicStore(ADDRESS, VALUE_3)
         );
-        ReadonlyEventInterface defaultEvent = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4));
+        Optional<ReadonlyEventInterface> defaultEvent =
+                Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
                         events, false, SIGNAL_NUMBER, false);
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(EventType.UNBLOCK_SIGNALS, iterator.getPreviousEventWithDefault(defaultEvent).getType());
-        Assert.assertEquals(EventType.BLOCK_SIGNALS, iterator.getCurrentEventWithDefault(defaultEvent).getType());
+        Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(EventType.BLOCK_SIGNALS,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
 
         Assert.assertFalse(iterator.advance());
     }
@@ -194,15 +221,19 @@ public class EventsEnabledForSignalIteratorTest {
                 tu.nonAtomicStore(ADDRESS, VALUE_2),
                 tu.nonAtomicStore(ADDRESS, VALUE_3)
         );
-        ReadonlyEventInterface defaultEvent1 = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4));
-        ReadonlyEventInterface defaultEvent2 = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_5));
+        Optional<ReadonlyEventInterface> defaultEvent1 =
+                Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
+        Optional<ReadonlyEventInterface> defaultEvent2 =
+                Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_5)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
                         events, true, SIGNAL_NUMBER, true);
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(VALUE_4, iterator.getPreviousEventWithDefault(defaultEvent1).getDataValue());
-        Assert.assertEquals(VALUE_5, iterator.getCurrentEventWithDefault(defaultEvent2).getDataValue());
+        Assert.assertEquals(VALUE_4,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent1)).getDataValue());
+        Assert.assertEquals(VALUE_5,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent2)).getDataValue());
 
         Assert.assertFalse(iterator.advance());
     }
@@ -216,15 +247,18 @@ public class EventsEnabledForSignalIteratorTest {
                 tu.disableSignal(SIGNAL_NUMBER),
                 tu.nonAtomicStore(ADDRESS, VALUE_3)
         );
-        ReadonlyEventInterface defaultEvent1 = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4));
-        ReadonlyEventInterface defaultEvent2 = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_5));
+        Optional<ReadonlyEventInterface> defaultEvent1 =
+                Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
+        Optional<ReadonlyEventInterface> defaultEvent2 =
+                Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_5)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
                         events, true, SIGNAL_NUMBER, true);
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(VALUE_4, iterator.getPreviousEventWithDefault(defaultEvent1).getDataValue());
-        Assert.assertEquals(EventType.BLOCK_SIGNALS, iterator.getCurrentEventWithDefault(defaultEvent2).getType());
+        Assert.assertEquals(VALUE_4, fromOptional(iterator.getPreviousEventWithDefault(defaultEvent1)).getDataValue());
+        Assert.assertEquals(EventType.BLOCK_SIGNALS,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent2)).getType());
 
         Assert.assertFalse(iterator.advance());
     }
@@ -238,15 +272,18 @@ public class EventsEnabledForSignalIteratorTest {
                 tu.nonAtomicStore(ADDRESS, VALUE_2),
                 tu.nonAtomicStore(ADDRESS, VALUE_3)
         );
-        ReadonlyEventInterface defaultEvent1 = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4));
-        ReadonlyEventInterface defaultEvent2 = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_5));
+        Optional<ReadonlyEventInterface> defaultEvent1 =
+                Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
+        Optional<ReadonlyEventInterface> defaultEvent2 =
+                Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_5)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
                         events, true, SIGNAL_NUMBER, false);
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(EventType.UNBLOCK_SIGNALS, iterator.getPreviousEventWithDefault(defaultEvent2).getType());
-        Assert.assertEquals(VALUE_4, iterator.getCurrentEventWithDefault(defaultEvent1).getDataValue());
+        Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent2)).getType());
+        Assert.assertEquals(VALUE_4, fromOptional(iterator.getCurrentEventWithDefault(defaultEvent1)).getDataValue());
 
         Assert.assertFalse(iterator.advance());
     }
@@ -267,22 +304,29 @@ public class EventsEnabledForSignalIteratorTest {
                 tu.enableSignal(SIGNAL_NUMBER),
                 tu.disableSignal(SIGNAL_NUMBER)
         );
-        ReadonlyEventInterface defaultEvent = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4));
+        Optional<ReadonlyEventInterface> defaultEvent =
+                Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
                         events, true, SIGNAL_NUMBER, false);
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(EventType.UNBLOCK_SIGNALS, iterator.getPreviousEventWithDefault(defaultEvent).getType());
-        Assert.assertEquals(EventType.BLOCK_SIGNALS, iterator.getCurrentEventWithDefault(defaultEvent).getType());
+        Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(EventType.BLOCK_SIGNALS,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(EventType.UNBLOCK_SIGNALS, iterator.getPreviousEventWithDefault(defaultEvent).getType());
-        Assert.assertEquals(EventType.BLOCK_SIGNALS, iterator.getCurrentEventWithDefault(defaultEvent).getType());
+        Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(EventType.BLOCK_SIGNALS,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(EventType.UNBLOCK_SIGNALS, iterator.getPreviousEventWithDefault(defaultEvent).getType());
-        Assert.assertEquals(EventType.BLOCK_SIGNALS, iterator.getCurrentEventWithDefault(defaultEvent).getType());
+        Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(EventType.BLOCK_SIGNALS,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
 
         Assert.assertFalse(iterator.advance());
     }
@@ -299,19 +343,24 @@ public class EventsEnabledForSignalIteratorTest {
                 tu.nonAtomicStore(ADDRESS, VALUE_4),
                 tu.disableSignal(SIGNAL_NUMBER)
         );
-        ReadonlyEventInterface defaultEvent = extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4));
+        Optional<ReadonlyEventInterface> defaultEvent = Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
                         events, true, SIGNAL_NUMBER, false);
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(EventType.UNBLOCK_SIGNALS, iterator.getPreviousEventWithDefault(defaultEvent).getType());
-        Assert.assertEquals(EventType.WRITE_LOCK, iterator.getCurrentEventWithDefault(defaultEvent).getType());
+        Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(EventType.WRITE_LOCK,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
 
         Assert.assertTrue(iterator.advance());
-        Assert.assertEquals(EventType.WRITE_LOCK, iterator.getPreviousEventWithDefault(defaultEvent).getType());
-        Assert.assertEquals(ADDRESS, iterator.getPreviousEventWithDefault(defaultEvent).getLockId());
-        Assert.assertEquals(EventType.BLOCK_SIGNALS, iterator.getCurrentEventWithDefault(defaultEvent).getType());
+        Assert.assertEquals(EventType.WRITE_LOCK,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(ADDRESS,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getLockId());
+        Assert.assertEquals(EventType.BLOCK_SIGNALS,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
 
         Assert.assertFalse(iterator.advance());
     }

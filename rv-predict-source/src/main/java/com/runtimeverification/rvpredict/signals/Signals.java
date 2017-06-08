@@ -2,27 +2,26 @@ package com.runtimeverification.rvpredict.signals;
 
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
-import java.util.Collection;
-import java.util.Iterator;
+import java.util.Optional;
 
 public class Signals {
-    public static Boolean signalEnableChange(ReadonlyEventInterface event, long signalNumber) {
+    public static Optional<Boolean> signalEnableChange(ReadonlyEventInterface event, long signalNumber) {
         switch (event.getType()) {
             case WRITE_SIGNAL_MASK:
             case READ_WRITE_SIGNAL_MASK:
-                return !signalInMask(signalNumber, event.getFullWriteSignalMask());
+                return Optional.of(!signalInMask(signalNumber, event.getFullWriteSignalMask()));
             case BLOCK_SIGNALS:
                 if (signalInMask(signalNumber, event.getPartialSignalMask())) {
-                    return false;
+                    return Optional.of(Boolean.FALSE);
                 }
-                return null;
+                return Optional.empty();
             case UNBLOCK_SIGNALS:
                 if (signalInMask(signalNumber, event.getPartialSignalMask())) {
-                    return true;
+                    return Optional.of(Boolean.TRUE);
                 }
-                return null;
+                return Optional.empty();
         }
-        return null;
+        return Optional.empty();
     }
 
     public static boolean signalIsEnabled(long signalNumber, long signalMask) {
@@ -34,11 +33,7 @@ public class Signals {
     }
 
     static boolean updateEnabledWithEvent(boolean eventIsEnabled, long signalNumber, ReadonlyEventInterface event) {
-        Boolean change = Signals.signalEnableChange(event, signalNumber);
-        if (change == null) {
-            return eventIsEnabled;
-        }
-        return change;
+        return Signals.signalEnableChange(event, signalNumber).orElse(eventIsEnabled);
     }
 
     private static boolean signalInMask(long signalNumber, long mask) {

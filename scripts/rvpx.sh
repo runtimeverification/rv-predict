@@ -85,7 +85,7 @@ set +e
 exitcode=$?
 set -e
 
-predict
+[ $exitcode -ne 126 -a $exitcode -ne 127 ] && predict
 
 trap - EXIT ALRM HUP INT PIPE QUIT TERM
 

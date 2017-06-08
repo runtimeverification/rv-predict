@@ -822,6 +822,26 @@ public class MaximalCausalModel {
     private Map<OrderedEventWithThread, Set<OrderedEventWithThread>> buildDependencyGraph(
             Map<Integer, List<EventWithOrder>> threadToExecution) {
         Map<OrderedEventWithThread, Set<OrderedEventWithThread>> dependencies = new HashMap<>();
+        threadToExecution.keySet().forEach(ttid -> {
+            Optional<ReadonlyEventInterface> maybeStartEvent = trace.getStartEventForTtid(ttid);
+            if (!maybeStartEvent.isPresent()) {
+                return;
+            }
+            ReadonlyEventInterface startEvent = maybeStartEvent.get();
+            int parentThreadTtid = trace.getTraceThreadId(startEvent);
+            List<EventWithOrder> parentExecution = threadToExecution.get(parentThreadTtid);
+            OptionalInt maybeStartEventIndex = OptionalInt.empty();
+            for (int i = 0; i < parentExecution.size(); i++) {
+                if (parentExecution.get(i).getEvent().getEventId() == startEvent.getEventId()) {
+                    maybeStartEventIndex = OptionalInt.of(i);
+                    break;
+                }
+            }
+            assert maybeStartEventIndex.isPresent();
+            dependencies
+                    .computeIfAbsent(new OrderedEventWithThread(ttid, 0), key -> new HashSet<>())
+                    .add(new OrderedEventWithThread(parentThreadTtid, maybeStartEventIndex.getAsInt()));
+        });
         Map<Long, OrderedEventWithThread> lastReadForVariable = new HashMap<>();
         Map<Long, OrderedEventWithThread> lastWriteForVariable = new HashMap<>();
         // TODO(virgil): signal control can be more fine-grained.

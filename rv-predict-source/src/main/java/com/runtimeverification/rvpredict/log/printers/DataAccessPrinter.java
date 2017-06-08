@@ -10,6 +10,6 @@ public class DataAccessPrinter extends EventPrinter {
 
     @Override
     protected String getEventContent(ReadonlyEventInterface event) {
-        return String.format(" [0x%016x], 0x%-16x ", event.getObjectHashCode(), event.getDataValue());
+        return String.format(" [0x%016x], 0x%-16x ", event.getDataObjectExternalIdentifier(), event.getDataValue());
     }
 }

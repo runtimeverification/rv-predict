@@ -92,11 +92,9 @@ public class RaceDetector implements Constants {
                                             x -> new ArrayList<>()).add(race);
                                 }
                             }
-                        });
-                    });
-                }
-            });
-        });
+                        }
+                    }));
+                }));
         return sigToRaceCandidates;
     }
 

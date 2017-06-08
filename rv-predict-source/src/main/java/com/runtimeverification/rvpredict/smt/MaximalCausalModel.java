@@ -55,7 +55,6 @@ import com.runtimeverification.rvpredict.violation.Race;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -582,7 +581,10 @@ public class MaximalCausalModel {
                         Map<Integer, Integer> signalParents = extractSignalParents();
                         fillSignalStack(threadToExecution, signalParents, race);
                         if (Configuration.debug) {
-                            dumpOrdering(threadToExecution, race.firstEvent(), race.secondEvent());
+                            dumpOrderingWithLessThreadSwitches(
+                                    threadToExecution,
+                                    Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
+                                    signalParents);
                         }
                     }
                     solver.pop();
@@ -669,8 +671,8 @@ public class MaximalCausalModel {
     private void findAndDumpOrdering() {
         solver.push();
         if (solver.check() == Status.SATISFIABLE) {
-            Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution();
-            dumpOrdering(threadToExecution, null, null);
+            dumpOrderingWithLessThreadSwitches(
+                    extractExecution(), Optional.empty(), Optional.empty(), extractSignalParents());
         }
         solver.pop();
     }
@@ -766,7 +768,8 @@ public class MaximalCausalModel {
 
     private void dumpOrderingWithLessThreadSwitches(
             Map<Integer, List<EventWithOrder>> threadToExecution,
-            Optional<ReadonlyEventInterface> firstRaceEvent, Optional<ReadonlyEventInterface> secondRaceEvent) {
+            Optional<ReadonlyEventInterface> firstRaceEvent, Optional<ReadonlyEventInterface> secondRaceEvent,
+            Map<Integer, Integer> signalParents) {
         Optional<OrderedEventWithThread> firstRaceOrderedEvent = Optional.empty();
         Optional<OrderedEventWithThread> secondRaceOrderedEvent = Optional.empty();
         if (firstRaceEvent.isPresent()) {
@@ -792,23 +795,26 @@ public class MaximalCausalModel {
         for (OrderedEventWithThread oewt : sortedEvents) {
             EventWithOrder eventWithOrder = getOrderedEvent(threadToExecution, oewt);
             if (oewt.thread != previousThread) {
-                System.out.println("-- Switching to thread " + threadDescription(oewt.thread, eventWithOrder) + " --");
+                System.out.println(
+                        "-- Switching to thread "
+                                + threadDescription(oewt.thread, eventWithOrder, signalParents) + " --");
                 previousThread = oewt.thread;
             }
-            System.out.println(eventWithOrder.getEvent());
+            System.out.println(prettyPrint(eventWithOrder.getEvent()));
         }
         if (firstRaceOrderedEvent.isPresent()) {
             EventWithOrder first = getOrderedEvent(threadToExecution, firstRaceOrderedEvent.get());
             EventWithOrder second = getOrderedEvent(threadToExecution, secondRaceOrderedEvent.get());
             System.out.println("-- Found race for threads "
-                    + threadDescription(firstRaceOrderedEvent.get().thread, first)
+                    + threadDescription(firstRaceOrderedEvent.get().thread, first, signalParents)
                     + " and "
-                    + threadDescription(secondRaceOrderedEvent.get().thread, second)
+                    + threadDescription(secondRaceOrderedEvent.get().thread, second, signalParents)
                     + " --");
             System.out.println(prettyPrint(first.getEvent()));
             System.out.println(" -- vs");
             System.out.println(prettyPrint(second.getEvent()));
         }
+        System.out.println("------------------------------------------");
     }
 
     private Map<OrderedEventWithThread, Set<OrderedEventWithThread>> buildDependencyGraph(
@@ -832,6 +838,7 @@ public class MaximalCausalModel {
             maybePreviousThreadEvent.ifPresent(previousEvent ->
                     addDependency(dependencies, nextEvent, previousEvent));
             ReadonlyEventInterface event = eventWithOrder.getEvent();
+            lastEventForThread.put(nextEvent.thread, nextEvent);
             if (event.isRead()) {
                 Optional<OrderedEventWithThread> maybePreviousWrite =
                         Optional.ofNullable(lastWriteForVariable.get(event.getDataAddress()));
@@ -846,7 +853,7 @@ public class MaximalCausalModel {
                 Optional<OrderedEventWithThread> maybePreviousLock =
                         Optional.ofNullable(lastLockEvent.get(event.getLockId()));
                 maybePreviousLock.ifPresent(previousLock -> addDependency(dependencies, nextEvent, previousLock));
-                lastLockEvent.put(event.getDataAddress(), nextEvent);
+                lastLockEvent.put(event.getLockId(), nextEvent);
                 if (event.isAtomic()) {
                     lastSignalEvent.ifPresent(signalEvent -> addDependency(dependencies, nextEvent, signalEvent));
                     lastAtomicEvent = Optional.of(nextEvent);
@@ -922,12 +929,14 @@ public class MaximalCausalModel {
                 currentThread = threadToEventWithoutDependencies.keySet().iterator().next();
             }
             OrderedEventWithThread oetw = threadToEventWithoutDependencies.get(currentThread);
+            sorted.add(oetw);
             threadToEventWithoutDependencies.remove(currentThread);
             eventToEventsThatDependOnIt.getOrDefault(oetw, Collections.emptyList()).forEach(dependent ->
-                    dependencyCount.compute(oetw, (key, value) -> {
+                    dependencyCount.compute(dependent, (key, value) -> {
                         value = value - 1;
                         if (value == 0) {
-                            threadToEventWithoutDependencies.put(oetw.thread, oetw);
+                            assert !threadToEventWithoutDependencies.containsKey(dependent.thread);
+                            threadToEventWithoutDependencies.put(dependent.thread, dependent);
                         }
                         return value;
                     }));
@@ -953,12 +962,8 @@ public class MaximalCausalModel {
                 toProcess.push(dependency);
             }
         }
-        for (OrderedEventWithThread oetw : validEvents) {
-            dependencyGraph.remove(oetw);
-        }
-        for (OrderedEventWithThread oetw : validEvents) {
-            dependencyGraph.values().forEach(oetws -> oetws.remove(oetw));
-        }
+        dependencyGraph.keySet().removeIf(oetw -> !validEvents.contains(oetw));
+        dependencyGraph.values().forEach(oetws -> oetws.removeIf(oetw -> !validEvents.contains(oetw)));
     }
 
     private EventWithOrder getOrderedEvent(
@@ -1004,6 +1009,11 @@ public class MaximalCausalModel {
             OrderedEventWithThread other = (OrderedEventWithThread) obj;
             return other.thread.equals(thread) && other.eventIndex == eventIndex;
         }
+
+        @Override
+        public String toString() {
+            return thread + " " + eventIndex;
+        }
     }
 
     private String prettyPrint(ReadonlyEventInterface event) {
@@ -1018,14 +1028,35 @@ public class MaximalCausalModel {
                 || (secondRaceEvent != null && secondRaceEvent.getEventId() == event.getEvent().getEventId());
     }
 
-    private String threadDescription(int threadId, EventWithOrder event) {
-        String description = threadId
-                + " (T" + event.getEvent().getOriginalThreadId();
+    private String threadDescription(int threadId, EventWithOrder event, Map<Integer, Integer> signalParents) {
+        String description = " T" + event.getEvent().getOriginalThreadId();
         if (event.getEvent().getSignalDepth() != 0) {
             description += ", SD" + event.getEvent().getSignalDepth()
-                    + ", S" + trace.getSignalNumber(threadId);
+                    + ", <S" + trace.getSignalNumber(threadId) + "> "
+                    + getInterruptionDescription(threadId, signalParents);
         }
-        return description + ")";
+        return description;
+    }
+
+    private String getInterruptionDescription(int threadId, Map<Integer, Integer> signalParents) {
+        StringBuilder description = new StringBuilder();
+        int currentThreadId = threadId;
+        while (true) {
+            Optional<Integer> maybeNextThreadId = Optional.ofNullable(signalParents.get(currentThreadId));
+            assert maybeNextThreadId.isPresent();
+            int nextThreadId = maybeNextThreadId.get();
+            description.append(currentThreadId == threadId ? "interrupting " : "which interrupts ");
+            if (trace.getThreadType(nextThreadId) == ThreadType.THREAD) {
+                description.append("T");
+                description.append(trace.getOriginalThreadIdForTraceThreadId(nextThreadId));
+                break;
+            }
+            description.append("<S");
+            description.append(trace.getSignalNumber(nextThreadId));
+            description.append(">");
+            currentThreadId = nextThreadId;
+        }
+        return description.toString();
     }
 
     /**

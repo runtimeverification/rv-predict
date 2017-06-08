@@ -28,14 +28,13 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.smt;
 
+import com.google.common.collect.ImmutableList;
 import com.microsoft.z3.FuncDecl;
 import com.microsoft.z3.Model;
 import com.microsoft.z3.Solver;
 import com.microsoft.z3.Status;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
-import com.runtimeverification.rvpredict.signals.EventsEnabledForSignalIterator;
-import com.runtimeverification.rvpredict.signals.Signals;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
 import com.runtimeverification.rvpredict.smt.formula.ConcretePhiVariable;
@@ -43,9 +42,12 @@ import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
 import com.runtimeverification.rvpredict.smt.formula.IntConstant;
 import com.runtimeverification.rvpredict.smt.formula.InterruptedThreadVariable;
 import com.runtimeverification.rvpredict.smt.formula.OrderVariable;
-import com.runtimeverification.rvpredict.smt.formula.SMTFormula;
+import com.runtimeverification.rvpredict.smt.restrictsources.DisjointLocks;
+import com.runtimeverification.rvpredict.smt.restrictsources.InterThreadOrdering;
+import com.runtimeverification.rvpredict.smt.restrictsources.IntraThreadOrdering;
+import com.runtimeverification.rvpredict.smt.restrictsources.SignalInterruptLocationsRestrictSource;
+import com.runtimeverification.rvpredict.smt.restrictsources.SignalsDoNotOverlapWhenInterruptingTheSameThread;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
-import com.runtimeverification.rvpredict.trace.LockRegion;
 import com.runtimeverification.rvpredict.trace.MemoryAccessBlock;
 import com.runtimeverification.rvpredict.trace.ThreadType;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -71,7 +73,6 @@ import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.BOOL_EQU
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.INT_EQUAL;
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.LESS_THAN;
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.OR;
-import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.andBuilder;
 
 public class MaximalCausalModel {
 
@@ -109,9 +110,8 @@ public class MaximalCausalModel {
     public static MaximalCausalModel create(
             Trace trace, Z3Filter z3filter, Solver solver, boolean detectInterruptedThreadRace) {
         MaximalCausalModel model = new MaximalCausalModel(trace, z3filter, solver, detectInterruptedThreadRace);
-        model.addPhiMHB();
-        model.addPhiLock();
-        model.addSignalInterruptsRestricts();
+
+        model.addRestricts();
         return model;
     }
 
@@ -120,267 +120,60 @@ public class MaximalCausalModel {
         this.z3filter = z3filter;
         this.solver = solver;
         this.detectInterruptedThreadRace = detectInterruptedThreadRace;
+        trace.eventsByThreadID().forEach((tid, events) ->
+                events.forEach(event -> nameToEvent.put(OrderVariable.get(event).toString(), event)));
     }
 
     private BoolFormula HB(ReadonlyEventInterface event1, ReadonlyEventInterface event2) {
         return LESS_THAN(OrderVariable.get(event1), OrderVariable.get(event2));
     }
 
-    private BoolFormula HB(LockRegion lockRegion1, LockRegion lockRegion2) {
-        ReadonlyEventInterface unlock = lockRegion1.getUnlock();
-        ReadonlyEventInterface lock = lockRegion2.getLock();
-        return (unlock == null || lock == null) ? BooleanConstant.FALSE : HB(unlock, lock);
-    }
+    private void addRestricts() {
+        ImmutableList<RestrictSourceWithHappensBefore> happensBeforeRestricts =
+                new ImmutableList.Builder<RestrictSourceWithHappensBefore>()
+                        .add(new IntraThreadOrdering(trace.eventsByThreadID()))
+                        .add(new InterThreadOrdering(
+                                trace.getInterThreadSyncEvents(),
+                                trace::getMainTraceThreadForOriginalThread,
+                                trace::getFirstEvent,
+                                trace::getLastEvent))
+                        .build();
 
-    private BoolFormula MUTEX(LockRegion lockRegion1, LockRegion lockRegion2) {
-        return OR(HB(lockRegion1, lockRegion2), HB(lockRegion2, lockRegion1));
-    }
-
-    /**
-     * Adds restricts that specify that a signal must interrupt a thread. It also specifies when a signal
-     * can interrupt a thread. In order for a signal to interrupt a thread, the following things must happen:
-     *
-     * 1. The signal handler must be set to the signal's handler. The signal handler is global, so it can
-     *    be handled as a variable read, so it is NOT checked here.
-     * 2. The signal mask must be set to the right value. This is a bit more complex, since the mask is per-thread.
-     *    A thread inherits its caller mask, so we must check what was the mask at the beginning of each thread
-     *    and if the current thread changed it. If there is no mask change for a thread or its parents, but a signal
-     *    started, we will assume that the mask was enabled at the beginning of the thread.
-     */
-    private void addSignalInterruptsRestricts() {
-        FormulaTerm.Builder allSignalsAndRestrict = FormulaTerm.andBuilder();
-        allSignalsAndRestrict.add(BooleanConstant.TRUE);
-        List<Integer> allSignalTtids = trace.eventsByThreadID().keySet().stream()
-                .filter(ttid -> trace.getThreadType(trace.getFirstEvent(ttid)) == ThreadType.SIGNAL)
-                .collect(Collectors.toList());
-        allSignalTtids.forEach(ttid -> {
-                    ReadonlyEventInterface firstEvent = trace.getFirstEvent(ttid);
-                    ReadonlyEventInterface lastEvent = trace.getLastEvent(ttid);
-                    long signalNumber = trace.getSignalNumber(ttid);
-                    Set<Integer> ttidWhereEnabledAtStart = trace.getTtidsWhereSignalIsEnabledAtStart(signalNumber);
-                    Set<Integer> ttidWhereDisabledAtStart = trace.getTtidsWhereSignalIsDisabledAtStart(signalNumber);
-
-                    FormulaTerm.Builder oneSignalOrRestrict = FormulaTerm.orBuilder();
-                    trace.eventsByThreadID().forEach((entryTtid, events) -> {
-                        if (entryTtid.equals(ttid)) {
-                            return;
-                        }
-                        boolean enabled = ttidWhereEnabledAtStart.contains(entryTtid);
-                        boolean disabled = ttidWhereDisabledAtStart.contains(entryTtid);
-                        boolean isSignal = trace.getThreadType(entryTtid) == ThreadType.SIGNAL;
-                        Optional<ReadonlyEventInterface> startThreadEvent =
-                                isSignal
-                                        ? Optional.of(trace.getFirstEvent(entryTtid))
-                                        : trace.getStartEventForTtid(entryTtid);
-                        Optional<ReadonlyEventInterface> joinThreadEvent =
-                                isSignal
-                                        ? Optional.of(trace.getLastEvent(entryTtid))
-                                        : trace.getJoinEventForTtid(entryTtid);
-                        OptionalInt ttidForEnablingAtStart = OptionalInt.empty();
-                        Optional<ReadonlyEventInterface> firstSignalMaskEvent = Optional.empty();
-                        if (!enabled && !disabled) {
-                            ttidForEnablingAtStart = findThreadIdForEnablingAtStart(entryTtid);
-                            if (ttidForEnablingAtStart.isPresent()) {
-                                firstSignalMaskEvent = findFirstMaskEventForSignalWithDefault(
-                                        entryTtid, signalNumber, joinThreadEvent);
-                            }
-                        }
-                        if (events.isEmpty() && enabled) {
-                            oneSignalOrRestrict.add(signalInterruption(
-                                    startThreadEvent,
-                                    joinThreadEvent,
-                                    firstEvent,
-                                    lastEvent,
-                                    ttid,
-                                    entryTtid));
-                            return;
-                        }
-                        if (!enabled && ttidForEnablingAtStart.isPresent()) {
-                            long entrySignalNumber = trace.getSignalNumber(ttidForEnablingAtStart.getAsInt());
-                            long entrySignalHandler = trace.getSignalHandler(ttidForEnablingAtStart.getAsInt());
-                            oneSignalOrRestrict.add(signalInterruptionWhenEnabledByMaskEvent(
-                                    startThreadEvent, firstSignalMaskEvent,
-                                    firstEvent, lastEvent,
-                                    ttid, entryTtid,
-                                    entrySignalNumber, entrySignalHandler,
-                                    signalNumber));
-                        }
-                        if (events.isEmpty()) {
-                            return;
-                        }
-                        EventsEnabledForSignalIterator iterator =
-                                new EventsEnabledForSignalIterator(
-                                        events, detectInterruptedThreadRace, signalNumber, enabled);
-                        while (iterator.advance()) {
-                            oneSignalOrRestrict.add(signalInterruption(
-                                    iterator.getPreviousEventWithDefault(startThreadEvent),
-                                    iterator.getCurrentEventWithDefault(joinThreadEvent),
-                                    firstEvent,
-                                    lastEvent,
-                                    ttid,
-                                    entryTtid));
-                        }
-                    });
-                    allSignalsAndRestrict.add(oneSignalOrRestrict.build());
-                });
-        allSignalTtids.forEach(ttid1 -> allSignalTtids.stream().filter(ttid -> ttid > ttid1).forEach(ttid2 -> {
-            ReadonlyEventInterface firstEvent1 = trace.getFirstEvent(ttid1);
-            ReadonlyEventInterface lastEvent1 = trace.getLastEvent(ttid1);
-            ReadonlyEventInterface firstEvent2 = trace.getFirstEvent(ttid2);
-            ReadonlyEventInterface lastEvent2 = trace.getLastEvent(ttid2);
-
-            FormulaTerm.Builder noOverlapOrDifferentThreads = FormulaTerm.orBuilder();
-            noOverlapOrDifferentThreads.add(HB(lastEvent2, firstEvent1));
-            noOverlapOrDifferentThreads.add(HB(lastEvent1, firstEvent2));
-
-            InterruptedThreadVariable v1 = new InterruptedThreadVariable(ttid1);
-            InterruptedThreadVariable v2 = new InterruptedThreadVariable(ttid2);
-            noOverlapOrDifferentThreads.add(LESS_THAN(v1, v2));
-            noOverlapOrDifferentThreads.add(LESS_THAN(v2, v1));
-
-            allSignalsAndRestrict.add(noOverlapOrDifferentThreads.build());
-        }));
-        phiTau.add(allSignalsAndRestrict.build());
-    }
-
-    private SMTFormula signalInterruptionWhenEnabledByMaskEvent(
-            Optional<ReadonlyEventInterface> startThreadEvent, Optional<ReadonlyEventInterface> endThreadEvent,
-            ReadonlyEventInterface firstSignalEvent, ReadonlyEventInterface lastSignalEvent,
-            Integer signalTtid, Integer interruptedTtid,
-            long threadSignalNumber, long threadSignalHandler, long interruptingSignalNumber) {
-        if (!startThreadEvent.isPresent()) {
-            return BooleanConstant.FALSE;
-        }
-        ReadonlyEventInterface startThread = startThreadEvent.get();
-        List<ReadonlyEventInterface> establishSignalEvents =
-                trace.getEstablishSignalEvents(threadSignalNumber, threadSignalHandler);
-        List<ReadonlyEventInterface> enablingEvents = establishSignalEvents.stream()
-                .filter(establishEvent ->
-                        Signals.signalIsEnabled(
-                                interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
-                .collect(Collectors.toList());
-        if (enablingEvents.isEmpty()) {
-            return BooleanConstant.FALSE;
-        }
-        FormulaTerm.Builder signalIsEnabled = FormulaTerm.orBuilder();
-        enablingEvents
-                .forEach(establishWithEnableEvent -> {
-                    FormulaTerm.Builder enabledJustBefore = FormulaTerm.andBuilder();
-                    andBuilder().add(HB(establishWithEnableEvent, startThread));
-                    establishSignalEvents.stream()
-                            .filter(establishEvent ->
-                                    !Signals.signalIsEnabled(
-                                            interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
-                            .forEach(establishWithDisableEvent ->
-                                    enabledJustBefore.add(OR(
-                                            HB(establishWithDisableEvent, establishWithEnableEvent),
-                                            HB(startThread, establishWithDisableEvent))));
-                    signalIsEnabled.add(enabledJustBefore.build());
-                });
-
-        FormulaTerm signalInterruption =
-                signalInterruption(
-                        startThreadEvent, endThreadEvent,
-                        firstSignalEvent, lastSignalEvent,
-                        signalTtid, interruptedTtid);
-        return AND(signalInterruption, signalIsEnabled.build());
-    }
-
-    private Optional<ReadonlyEventInterface> findFirstMaskEventForSignalWithDefault(
-            int ttid, long signalNumber, Optional<ReadonlyEventInterface> defaultEvent) {
-        for (ReadonlyEventInterface event : trace.getEvents(ttid)) {
-            if (Signals.signalEnableChange(event, signalNumber).isPresent()) {
-                return Optional.of(event);
-            }
-        }
-        return defaultEvent;
-    }
-
-    private OptionalInt findThreadIdForEnablingAtStart(Integer entryTtid) {
-        if (trace.getThreadType(entryTtid) == ThreadType.SIGNAL) {
-            return OptionalInt.of(entryTtid);
-        }
-        return OptionalInt.empty();
-    }
-
-    private FormulaTerm signalInterruption(
-            Optional<ReadonlyEventInterface> before, Optional<ReadonlyEventInterface> after,
-            ReadonlyEventInterface firstSignalEvent, ReadonlyEventInterface lastSignalEvent,
-            int signalTtid, int interruptedTtid) {
-        FormulaTerm.Builder threadInterruptionAtPoint = FormulaTerm.andBuilder();
-        before.ifPresent(beforeEvent -> threadInterruptionAtPoint.add(HB(beforeEvent, firstSignalEvent)));
-        after.ifPresent(afterEvent -> threadInterruptionAtPoint.add(HB(lastSignalEvent, afterEvent)));
-        threadInterruptionAtPoint.add(
-                INT_EQUAL(new InterruptedThreadVariable(signalTtid), new IntConstant(interruptedTtid)));
-        return threadInterruptionAtPoint.build();
-    }
-
-    /**
-     * Adds must-happen-before (MHB) constraints.
-     */
-    private void addPhiMHB() {
         TransitiveClosure.Builder mhbClosureBuilder = TransitiveClosure.builder(trace.getSize());
-
-        /* build intra-thread program order constraint */
-        trace.eventsByThreadID().forEach((tid, events) -> {
-            mhbClosureBuilder.createNewGroup(events.get(0));
-            events.forEach(event -> nameToEvent.put(OrderVariable.get(event).toString(), event));
-            for (int i = 1; i < events.size(); i++) {
-                ReadonlyEventInterface e1 = events.get(i - 1);
-                ReadonlyEventInterface e2 = events.get(i);
-                phiTau.add(HB(e1, e2));
-                /* every group should start with a join event and end with a start event */
-                if (e1.isStart() || e2.isJoin()) {
-                    mhbClosureBuilder.createNewGroup(e2);
-                    mhbClosureBuilder.addRelation(e1, e2);
-                } else {
-                    mhbClosureBuilder.addToGroup(e2, e1);
-                }
-            }
-        });
-
-        /* build inter-thread synchronization constraint */
-        trace.getInterThreadSyncEvents().forEach(event -> {
-            if (event.isStart()) {
-                Integer ttid = trace.getMainTraceThreadForOriginalThread(event.getSyncedThreadId());
-                if (ttid != null) {
-                    ReadonlyEventInterface fst = trace.getFirstEvent(ttid);
-                    if (fst != null) {
-                        phiTau.add(HB(event, fst));
-                        mhbClosureBuilder.addRelation(event, fst);
-                    }
-                }
-            } else if (event.isJoin()) {
-                Integer ttid = trace.getMainTraceThreadForOriginalThread(event.getSyncedThreadId());
-                if (ttid != null) {
-                    ReadonlyEventInterface last = trace.getLastEvent(ttid);
-                    if (last != null) {
-                        phiTau.add(HB(last, event));
-                        mhbClosureBuilder.addRelation(last, event);
-                    }
-                }
-            }
-        });
-
+        happensBeforeRestricts.forEach(source -> source.addToMhbClosure(mhbClosureBuilder));
         mhbClosure = mhbClosureBuilder.build();
-    }
 
-    /**
-     * Adds lock mutual exclusion constraints.
-     */
-    private void addPhiLock() {
-        trace.getLockIdToLockRegions().forEach((lockId, lockRegions) -> {
-            lockRegions.forEach(locksetEngine::add);
+        trace.getLockIdToLockRegions().forEach((lockId, lockRegions) -> lockRegions.forEach(locksetEngine::add));
 
-            /* assert lock regions mutual exclusion */
-            lockRegions.forEach(lr1 -> lockRegions.forEach(lr2 -> {
-                if (lr1.getTTID() < lr2.getTTID()
-                        && (lr1.isWriteLocked() || lr2.isWriteLocked())
-                        && trace.threadsCanOverlap(lr1.getTTID(), lr2.getTTID())) {
-                    phiTau.add(MUTEX(lr1, lr2));
-                }
-            }));
-        });
+        List<Integer> allSignalTtids = trace.getThreadIds().stream()
+                .filter(ttid -> trace.getThreadType(ttid) == ThreadType.SIGNAL)
+                .collect(Collectors.toList());
+
+        List<RestrictSource> restrictSources = new ImmutableList.Builder<RestrictSource>()
+                .addAll(happensBeforeRestricts)
+                .add(new DisjointLocks(
+                        trace.getLockIdToLockRegions().values(),
+                        trace::threadsCanOverlap))
+                .add(new SignalInterruptLocationsRestrictSource(
+                        trace.eventsByThreadID(),
+                        trace::getThreadType,
+                        trace::getSignalNumber,
+                        trace::getSignalHandler,
+                        trace::getEstablishSignalEvents,
+                        trace::getStartEventForTtid,
+                        trace::getJoinEventForTtid,
+                        trace::getTtidsWhereSignalIsEnabledAtStart,
+                        trace::getTtidsWhereSignalIsDisabledAtStart,
+                        detectInterruptedThreadRace,
+                        this::happensBefore))
+                .add(new SignalsDoNotOverlapWhenInterruptingTheSameThread(
+                        allSignalTtids,
+                        trace::getFirstEvent,
+                        trace::getLastEvent,
+                        trace::getThreadStartsInTheCurrentWindow))
+                .build();
+
+        restrictSources.forEach(source -> phiTau.add(source.createRestrict().createSmtFormula()));
     }
 
     private BoolFormula getPhiConc(MemoryAccessBlock block) {

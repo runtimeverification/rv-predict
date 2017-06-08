@@ -1078,7 +1078,7 @@ public class MaximalCausalModelTest {
     }
 
     @Test
-    public void raceWithSignalThatInterruptsSignal() throws InvalidTraceDataException {
+    public void raceWithSignalThatInterruptsSignalExplicitSigset() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
         List<ReadonlyEventInterface> e1;
@@ -1087,6 +1087,7 @@ public class MaximalCausalModelTest {
         List<List<ReadonlyEventInterface>> events = Arrays.asList(
                 tu.disableSignal(SIGNAL_NUMBER_1),
                 tu.disableSignal(SIGNAL_NUMBER_2),
+                tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_2_ENABLED_MASK),
                 tu.enableSignal(SIGNAL_NUMBER_1),
 
                 tu.switchThread(THREAD_1, ONE_SIGNAL),

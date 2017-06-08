@@ -28,7 +28,8 @@ public class EventsEnabledForSignalIteratorTest {
     private static final long VALUE_2 = 401L;
     private static final long VALUE_3 = 402L;
     private static final long VALUE_4 = 403L;
-    private static final long VALUE_5 = 403L;
+    private static final long VALUE_5 = 404L;
+    private static final long VALUE_6 = 405L;
 
     @Mock private Context mockContext;
 
@@ -44,7 +45,10 @@ public class EventsEnabledForSignalIteratorTest {
                 Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
-                        events, false, SIGNAL_NUMBER, true);
+                        events, false, SIGNAL_NUMBER,
+                        true,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                );
 
         Assert.assertTrue(iterator.advance());
         Assert.assertEquals(VALUE_4,
@@ -83,7 +87,10 @@ public class EventsEnabledForSignalIteratorTest {
         );
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
-                        events, false, SIGNAL_NUMBER, false);
+                        events, false, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                );
 
         Assert.assertFalse(iterator.advance());
     }
@@ -101,7 +108,10 @@ public class EventsEnabledForSignalIteratorTest {
                 Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
-                        events, false, SIGNAL_NUMBER, false);
+                        events, false, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                );
 
         Assert.assertTrue(iterator.advance());
         Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
@@ -136,7 +146,10 @@ public class EventsEnabledForSignalIteratorTest {
                 Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
-                        events, false, SIGNAL_NUMBER, false);
+                        events, false, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                );
 
         Assert.assertTrue(iterator.advance());
         Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
@@ -167,7 +180,10 @@ public class EventsEnabledForSignalIteratorTest {
                 Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
-                        events, false, SIGNAL_NUMBER, false);
+                        events, false, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                );
 
         Assert.assertTrue(iterator.advance());
         Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
@@ -202,7 +218,10 @@ public class EventsEnabledForSignalIteratorTest {
                 Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
-                        events, false, SIGNAL_NUMBER, false);
+                        events, false, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                    );
 
         Assert.assertTrue(iterator.advance());
         Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
@@ -227,7 +246,10 @@ public class EventsEnabledForSignalIteratorTest {
                 Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_5)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
-                        events, true, SIGNAL_NUMBER, true);
+                        events, true, SIGNAL_NUMBER,
+                        true,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                );
 
         Assert.assertTrue(iterator.advance());
         Assert.assertEquals(VALUE_4,
@@ -253,7 +275,10 @@ public class EventsEnabledForSignalIteratorTest {
                 Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_5)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
-                        events, true, SIGNAL_NUMBER, true);
+                        events, true, SIGNAL_NUMBER,
+                        true,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                );
 
         Assert.assertTrue(iterator.advance());
         Assert.assertEquals(VALUE_4, fromOptional(iterator.getPreviousEventWithDefault(defaultEvent1)).getDataValue());
@@ -278,7 +303,10 @@ public class EventsEnabledForSignalIteratorTest {
                 Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_5)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
-                        events, true, SIGNAL_NUMBER, false);
+                        events, true, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                );
 
         Assert.assertTrue(iterator.advance());
         Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
@@ -308,7 +336,10 @@ public class EventsEnabledForSignalIteratorTest {
                 Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
-                        events, true, SIGNAL_NUMBER, false);
+                        events, true, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                );
 
         Assert.assertTrue(iterator.advance());
         Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
@@ -346,11 +377,93 @@ public class EventsEnabledForSignalIteratorTest {
         Optional<ReadonlyEventInterface> defaultEvent = Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_4)));
         EventsEnabledForSignalIterator iterator =
                 new EventsEnabledForSignalIterator(
-                        events, true, SIGNAL_NUMBER, false);
+                        events, true, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                );
 
         Assert.assertTrue(iterator.advance());
         Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
                 fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(EventType.WRITE_LOCK,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
+
+        Assert.assertTrue(iterator.advance());
+        Assert.assertEquals(EventType.WRITE_LOCK,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(ADDRESS,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getLockId());
+        Assert.assertEquals(EventType.BLOCK_SIGNALS,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
+
+        Assert.assertFalse(iterator.advance());
+    }
+
+    @Test
+    public void fastIterationStopsAtFirstEnableEventWhenRequested()
+            throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
+        List<ReadonlyEventInterface> events = tu.flatten(
+                tu.nonAtomicStore(ADDRESS, VALUE_1),
+                tu.nonAtomicStore(ADDRESS, VALUE_2),
+                tu.atomicStore(ADDRESS, VALUE_3),
+                tu.nonAtomicStore(ADDRESS, VALUE_4),
+                tu.enableSignal(SIGNAL_NUMBER),
+                tu.nonAtomicStore(ADDRESS, VALUE_5)
+        );
+        Optional<ReadonlyEventInterface> defaultEvent = Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_6)));
+        EventsEnabledForSignalIterator iterator =
+                new EventsEnabledForSignalIterator(
+                        events, true, SIGNAL_NUMBER,
+                        true,  // enabledAtStart
+                        true  // stopAtFirstMaskChangeEvent
+                );
+
+        Assert.assertTrue(iterator.advance());
+        Assert.assertEquals(EventType.WRITE,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(VALUE_6,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getDataValue());
+        Assert.assertEquals(EventType.WRITE_LOCK,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
+
+        Assert.assertTrue(iterator.advance());
+        Assert.assertEquals(EventType.WRITE_LOCK,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(ADDRESS,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getLockId());
+        Assert.assertEquals(EventType.UNBLOCK_SIGNALS,
+                fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
+
+        Assert.assertFalse(iterator.advance());
+    }
+
+    @Test
+    public void fastIterationStopsAtFirstDisableEventWhenRequested()
+            throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
+        List<ReadonlyEventInterface> events = tu.flatten(
+                tu.nonAtomicStore(ADDRESS, VALUE_1),
+                tu.nonAtomicStore(ADDRESS, VALUE_2),
+                tu.atomicStore(ADDRESS, VALUE_3),
+                tu.nonAtomicStore(ADDRESS, VALUE_4),
+                tu.disableSignal(SIGNAL_NUMBER),
+                tu.nonAtomicStore(ADDRESS, VALUE_5)
+        );
+        Optional<ReadonlyEventInterface> defaultEvent =
+                Optional.of(extractSingleEvent(tu.nonAtomicStore(ADDRESS, VALUE_6)));
+        EventsEnabledForSignalIterator iterator =
+                new EventsEnabledForSignalIterator(
+                        events, true, SIGNAL_NUMBER,
+                        true,  // enabledAtStart
+                        true  // stopAtFirstMaskChangeEvent
+                );
+
+        Assert.assertTrue(iterator.advance());
+        Assert.assertEquals(EventType.WRITE,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getType());
+        Assert.assertEquals(VALUE_6,
+                fromOptional(iterator.getPreviousEventWithDefault(defaultEvent)).getDataValue());
         Assert.assertEquals(EventType.WRITE_LOCK,
                 fromOptional(iterator.getCurrentEventWithDefault(defaultEvent)).getType());
 

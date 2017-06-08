@@ -199,9 +199,11 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                     long otid = oneEvent.getOriginalThreadId();
                     OptionalInt maybeThreadId = crntState.getUnfinishedThreadId(0, otid);
                     int threadId = maybeThreadId.orElseGet(() -> crntState.getNewThreadId(otid));
+                    boolean threadStartsInTheCurrentWindow = maybeThreadId.isPresent();
                     config.logger().debug(otid + " -> " + threadId);
 
-                    rawTraces.add(new RawTrace(b.start, b.cursor, b.events, 0, threadId));
+                    rawTraces.add(new RawTrace(
+                            b.start, b.cursor, b.events, 0, threadId, threadStartsInTheCurrentWindow));
                 }
             }
             if (rawTraces.size() == 1) {

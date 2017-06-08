@@ -79,7 +79,10 @@ public class RaceDetector implements Constants {
                     events1.forEach(e1 -> events2.forEach(e2 -> {
                         if ((e1.isWrite() && e2.isReadOrWrite() || e1.isReadOrWrite() && e2.isWrite())
                                 && e1.getDataInternalIdentifier() == e2.getDataInternalIdentifier()
-                                && !trace.metadata().isVolatile(e1.getDataObjectExternalIdentifier())
+                                // TODO(virgil): Metadata should work with external identifiers.
+                                // This code works fine for Java events and we don't handle volatile data
+                                // for compact events, so this is fine for now.
+                                && !trace.metadata().isVolatile(e1.getDataInternalIdentifier())
                                 && !isThreadSafeLocation(trace, e1.getLocationId())
                                 && !trace.isInsideClassInitializer(e1)
                                 && !trace.isInsideClassInitializer(e2)) {

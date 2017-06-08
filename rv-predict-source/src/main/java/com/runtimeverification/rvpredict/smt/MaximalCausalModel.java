@@ -55,16 +55,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.runtimeverification.rvpredict.smt.formula.BooleanConstant.FALSE;
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.AND;
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.BOOL_EQUAL;
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.INT_EQUAL;
@@ -128,7 +125,7 @@ public class MaximalCausalModel {
     private BoolFormula HB(LockRegion lockRegion1, LockRegion lockRegion2) {
         ReadonlyEventInterface unlock = lockRegion1.getUnlock();
         ReadonlyEventInterface lock = lockRegion2.getLock();
-        return (unlock == null || lock == null) ? FALSE : HB(unlock, lock);
+        return (unlock == null || lock == null) ? BooleanConstant.FALSE : HB(unlock, lock);
     }
 
     private BoolFormula MUTEX(LockRegion lockRegion1, LockRegion lockRegion2) {
@@ -248,7 +245,7 @@ public class MaximalCausalModel {
             Integer signalTtid, Integer interruptedTtid,
             long threadSignalNumber, long threadSignalHandler, long interruptingSignalNumber) {
         if (!startThreadEvent.isPresent()) {
-            return FALSE;
+            return BooleanConstant.FALSE;
         }
         ReadonlyEventInterface startThread = startThreadEvent.get();
         List<ReadonlyEventInterface> establishSignalEvents =
@@ -256,9 +253,10 @@ public class MaximalCausalModel {
         List<ReadonlyEventInterface> enablingEvents = establishSignalEvents.stream()
                 .filter(establishEvent ->
                         Signals.signalIsEnabled(
-                                interruptingSignalNumber, establishEvent.getFullWriteSignalMask())).collect(Collectors.toList());
+                                interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
+                .collect(Collectors.toList());
         if (enablingEvents.isEmpty()) {
-            return FALSE;
+            return BooleanConstant.FALSE;
         }
         FormulaTerm.Builder signalIsEnabled = FormulaTerm.orBuilder();
         enablingEvents

@@ -85,6 +85,30 @@
                     </execution>
                 </executions>
             </plugin>
+	    <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.1</version>
+                <executions>
+                    <execution>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <executable>mkcmake</executable>
+                    <arguments>
+                        <argument>-C</argument>
+                        <argument>${basedir}/..</argument>
+                        <argument>MKJAR=no</argument>
+                        <argument>PREFIX=${basedir}/../target/release/rv-predict</argument>
+                        <argument>depend</argument>
+                        <argument>install</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.izpack</groupId>
                 <artifactId>izpack-maven-plugin</artifactId>

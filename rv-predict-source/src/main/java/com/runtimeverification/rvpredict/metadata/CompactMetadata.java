@@ -45,13 +45,13 @@ public class CompactMetadata implements MetadataInterface {
 
     @Override
     public String getRaceLocationSig(ReadonlyEventInterface e1,
-	    ReadonlyEventInterface e2, Trace trace, Configuration config) {
+            ReadonlyEventInterface e2, Trace trace, Configuration config) {
         StringBuilder sb = new StringBuilder();
         long idx = e1.getDataObjectExternalIdentifier();
-	sb.append(String.format("[0x%016x", idx));
+        sb.append(String.format("[0x%016x", idx));
         generateBracketing(e1, Arrays.asList(trace.getStacktraceAt(e1), trace.getStacktraceAt(e2)), sb);
-	sb.append("]");
-	return sb.toString();
+        sb.append("]");
+        return sb.toString();
     }
 
     @Override

@@ -14,8 +14,6 @@ fi
 
 rvpredict()
 {
-	ulimit -s `ulimit -H -s`
-
 	libdir=$(dirname $0)/../lib
 
 	min_major="1"
@@ -87,7 +85,7 @@ set +e
 exitcode=$?
 set -e
 
-predict
+[ $exitcode -ne 126 -a $exitcode -ne 127 ] && predict
 
 trap - EXIT ALRM HUP INT PIPE QUIT TERM
 

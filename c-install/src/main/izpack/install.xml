@@ -88,8 +88,10 @@
             <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpx" type="bin" keep="true" stage="never"/>
             <fileset dir="lib" targetdir="$INSTALL_PATH/lib">
 		<exclude name="libclang_rt.*"/>
+		<exclude name="native/**"/>
 		<exclude name="native"/>
             </fileset>
+            <file src="rv-predict.jar" targetdir="$INSTALL_PATH/lib"/>
         </pack>
 <!--
         <pack name="Examples" required="no" installGroups="New Application" >
